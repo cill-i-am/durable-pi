@@ -7,6 +7,7 @@ import type {
 } from "@earendil-works/pi-ai"
 import * as Schema from "effect/Schema"
 import type { Sqlite } from "./memory"
+import { cacheUsage, memoryPayload, type CacheUsage } from "./cache"
 
 const OAuthCredentialSchema = Schema.Struct({
   type: Schema.Literal("oauth"),
@@ -143,15 +144,35 @@ export class DurableCredentials implements CredentialStore {
   }
 }
 
-export function createAgentModels(credentials: CredentialStore) {
+export function createAgentModels(
+  credentials: CredentialStore,
+  options: { cacheKey?: string; onUsage?: (usage: CacheUsage) => void } = {}
+) {
   const models = createModels({
     credentials,
     authContext: { env: async () => undefined, fileExists: async () => false },
   })
   const provider = openaiProvider()
-  models.setProvider({
+  const configured: typeof provider = {
     ...provider,
     auth: { ...provider.auth, oauth: workerChatGPTAuth },
-  })
+    streamSimple(model, context, request) {
+      return provider.streamSimple(model, context, {
+        ...request,
+        sessionId: options.cacheKey ?? request?.sessionId,
+        cacheRetention: "short",
+        onPayload: async (payload, selected) =>
+          memoryPayload(
+            (await request?.onPayload?.(payload, selected)) ?? payload
+          ),
+        onProviderStreamEvent: async (event, selected) => {
+          const usage = cacheUsage(event)
+          if (usage) options.onUsage?.(usage)
+          await request?.onProviderStreamEvent?.(event, selected)
+        },
+      })
+    },
+  }
+  models.setProvider(configured)
   return models
 }

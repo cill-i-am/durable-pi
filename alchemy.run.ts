@@ -8,6 +8,9 @@ import type { PersonalAgent } from "./src/agent/worker"
 export const AuthDatabase = Cloudflare.D1.Database("AuthDatabase", {
   migrations: "./migrations/auth",
 })
+export const MemoryBackups = Cloudflare.R2.Bucket("MemoryBackups", {
+  publicAccess: false,
+})
 export const AgentWorker = Cloudflare.Worker("AgentWorker", {
   main: "./src/agent/worker.ts",
   dev: { port: 1338, strictPort: true },
@@ -15,6 +18,7 @@ export const AgentWorker = Cloudflare.Worker("AgentWorker", {
   compatibility: { date: "2026-09-25", flags: ["nodejs_compat"] },
   env: {
     AGENT: Cloudflare.DurableObject<PersonalAgent>("PersonalAgent"),
+    MEMORY_BACKUPS: MemoryBackups,
     OPENAI_CREDENTIAL: Config.Redacted("OPENAI_CREDENTIAL").pipe(
       Config.withDefault("")
     ),

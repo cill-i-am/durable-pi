@@ -11,7 +11,9 @@ const request = (path: string, body?: unknown, origin = base) =>
     signal: AbortSignal.timeout(30_000),
   })
 assert.equal((await request("/")).status, 200)
-assert.equal((await request("/api/agent/state")).status, 401)
+for (const path of ["state", "tree", "export", "export?format=html"])
+  assert.equal((await request(`/api/agent/${path}`)).status, 401)
+assert.equal((await request("/api/agent/import", {})).status, 401)
 assert.equal((await request("/api/setup", {})).status, 403)
 assert.equal(
   (await request("/api/agent/send", {}, "https://attacker.invalid")).status,

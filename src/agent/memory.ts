@@ -8,6 +8,11 @@ export type LogEntry = {
 }
 export type Part = { start: number; count: number }
 export type MemoryNode = Part & { text: string; bytes: number }
+export type SummaryJob = Part & {
+  source: string
+  context: string
+  children?: [string, string]
+}
 export type Sqlite = {
   all: <T>(query: string, ...bindings: (string | number | null)[]) => T[]
   run: (query: string, ...bindings: (string | number | null)[]) => void
@@ -72,6 +77,9 @@ export class MemoryStore {
     )
     db.run(
       `CREATE TABLE IF NOT EXISTS memory_view (start INTEGER PRIMARY KEY, count INTEGER NOT NULL)`
+    )
+    db.run(
+      `CREATE TABLE IF NOT EXISTS memory_failures (start INTEGER NOT NULL, count INTEGER NOT NULL, retry_at INTEGER NOT NULL, PRIMARY KEY(start,count))`
     )
     db.run(
       `CREATE TABLE IF NOT EXISTS memory_notes (path TEXT PRIMARY KEY, body TEXT NOT NULL, source_id INTEGER NOT NULL, updated_at TEXT NOT NULL, FOREIGN KEY(source_id) REFERENCES memory_log(id))`
@@ -167,25 +175,58 @@ export class MemoryStore {
         byteLength(text)
       )
       this.fit()
+      this.db.run(
+        "DELETE FROM memory_failures WHERE start=? AND count=?",
+        part.start,
+        part.count
+      )
     })
   }
+  failNode(part: Part, retryAt: number) {
+    const first = !this.db.all(
+      "SELECT 1 FROM memory_failures WHERE start=? AND count=?",
+      part.start,
+      part.count
+    ).length
+    this.db.run(
+      "INSERT INTO memory_failures VALUES (?,?,?) ON CONFLICT(start,count) DO UPDATE SET retry_at=excluded.retry_at",
+      part.start,
+      part.count,
+      retryAt
+    )
+    return first
+  }
+  retryAt() {
+    return (
+      this.db.all<{ time: number | null }>(
+        "SELECT min(retry_at) AS time FROM memory_failures"
+      )[0]?.time ?? undefined
+    )
+  }
   /** Source-order barrier: the summarizer never sees raw or partial older messages. */
-  next(): (Part & { source: string; context: string }) | undefined {
+  next(busy = new Set<string>(), now = Date.now()): SummaryJob | undefined {
     const view = this.viewNodes(),
       first =
         this.db.all<{ start: number }>(
           "SELECT v.start FROM memory_view v LEFT JOIN memory_nodes n ON n.start=v.start AND n.count=v.count WHERE n.start IS NULL ORDER BY v.start LIMIT 1"
         )[0]?.start ?? this.total()
-    const leaf = this.db.all<LogEntry>(
-      "SELECT l.* FROM memory_log l LEFT JOIN memory_nodes n ON n.start=l.id AND n.count=1 WHERE n.start IS NULL AND l.id<=? ORDER BY l.id LIMIT 1",
-      first
-    )[0]
+    const leaf = this.db
+      .all<LogEntry>(
+        "SELECT l.* FROM memory_log l LEFT JOIN memory_nodes n ON n.start=l.id AND n.count=1 LEFT JOIN memory_failures f ON f.start=l.id AND f.count=1 WHERE n.start IS NULL AND l.id<=? AND (f.retry_at IS NULL OR f.retry_at<=?) ORDER BY l.id LIMIT 1",
+        first,
+        now
+      )
+      .find((entry) => !busy.has(nodeKey({ start: entry.id, count: 1 })))
     const parent = leaf
       ? undefined
-      : this.db.all<Part & { left_text: string; right_text: string }>(
-          `SELECT a.start,a.count*2 AS count,a.text AS left_text,b.text AS right_text FROM memory_nodes a JOIN memory_nodes b ON b.start=a.start+a.count AND b.count=a.count LEFT JOIN memory_nodes p ON p.start=a.start AND p.count=a.count*2 WHERE a.start%(a.count*2)=0 AND p.start IS NULL AND b.start+b.count<=? ORDER BY a.count,a.start LIMIT 1`,
-          first
-        )[0]
+      : this.db
+          .all<Part & { left_text: string; right_text: string }>(
+            `SELECT a.start,a.count*2 AS count,a.text AS left_text,b.text AS right_text FROM memory_nodes a JOIN memory_nodes b ON b.start=a.start+a.count AND b.count=a.count LEFT JOIN memory_nodes p ON p.start=a.start AND p.count=a.count*2 LEFT JOIN memory_failures f ON f.start=a.start AND f.count=a.count*2 WHERE a.start%(a.count*2)=0 AND p.start IS NULL AND b.start+b.count<=? AND (f.retry_at IS NULL OR f.retry_at<=?) ORDER BY a.count,a.start LIMIT ?`,
+            first,
+            now,
+            busy.size + 1
+          )
+          .find((part) => !busy.has(nodeKey(part)))
     if (!leaf && !parent) return
     const start = leaf ? leaf.id : parent!.start,
       count = leaf ? 1 : parent!.count
@@ -196,6 +237,11 @@ export class MemoryStore {
       source: leaf
         ? `${leaf.kind}: ${leaf.text}`
         : `${parent!.left_text}\n${parent!.right_text}`,
+      ...(parent
+        ? {
+            children: [parent.left_text, parent.right_text] as [string, string],
+          }
+        : {}),
       context: view
         .filter((p) => p.start + p.count <= end)
         .map((p) => p.text.replaceAll("\n", " "))

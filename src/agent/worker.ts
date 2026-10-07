@@ -11,13 +11,18 @@ import {
   Harness,
   type EntryRecord,
 } from "@earendil-works/pi-durable"
-import { Type, type Message as PiMessage } from "@earendil-works/pi-ai"
+import { Type } from "@earendil-works/pi-ai"
 import * as Schema from "effect/Schema"
 import * as Effect from "effect/Effect"
 import type { AgentEnv } from "../../alchemy.run"
-import { MemoryStore, NODE_BYTES, byteLength, type Sqlite } from "./memory"
+import { MemoryStore, type Sqlite } from "./memory"
 import { createAgentModels, DurableCredentials } from "./models"
-import { COMPACTOR_PROMPT, SYSTEM_PROMPT } from "./prompts"
+import { SYSTEM_PROMPT } from "./prompts"
+import { importHistory, ImportInput } from "./import"
+import { pumpSummaries } from "./compactor"
+import { backupMemory } from "./backup"
+import { exportResponse, watermark } from "./archive"
+import type { CacheUsage } from "./cache"
 import {
   CancelInput,
   SendInput,
@@ -35,12 +40,20 @@ const textContent = (content: readonly { type: string; text?: string }[]) =>
     .join("\n")
 
 class TurnRunner extends LifecycleCapability {
-  constructor(readonly owner: PersonalAgent) {
-    super("personal-chat")
+  constructor(
+    readonly owner: PersonalAgent,
+    readonly capability = "personal-chat"
+  ) {
+    super(capability)
   }
   async wake() {
     await this.lifecycle.jobs.push({
-      id: "pump",
+      // Lifecycle job IDs share a queue across capabilities. Keep the original
+      // chat ID for upgrades; compaction and backup own distinct IDs.
+      id:
+        this.capability === "personal-chat"
+          ? "pump"
+          : `${this.capability}:pump`,
       fn: "pump",
       time: Date.now(),
       singleflight: true,
@@ -54,7 +67,84 @@ class TurnRunner extends LifecycleCapability {
   }
 }
 
+class MemoryRunner extends TurnRunner {
+  constructor(owner: PersonalAgent) {
+    super(owner, "memory-compactor")
+  }
+  async onJob(): Promise<LifecycleJobOutcome> {
+    const before = JSON.stringify(watermark(this.owner.memory))
+    const model = this.owner.models.getModel(
+      "openai",
+      this.owner.summaryModelId
+    )
+    if (!model) throw new Error("Unknown summary model")
+    const next = await pumpSummaries(
+      this.owner.memory,
+      (request) =>
+        this.owner.models.completeSimple(model, request, {
+          reasoning: "medium",
+          signal: AbortSignal.timeout(60_000),
+          cacheRetention: "short",
+        }),
+      {
+        report: (range) =>
+          console.warn(
+            `Memory summary ${range} failed; retrying in 10 seconds`
+          ),
+      }
+    )
+    if (before !== JSON.stringify(watermark(this.owner.memory)))
+      await this.owner.backups.wake()
+    if (this.owner.active()) await this.owner.runner.wake()
+    return next === undefined ? undefined : { rescheduleAt: next }
+  }
+}
+class BackupRunner extends TurnRunner {
+  constructor(owner: PersonalAgent) {
+    super(owner, "memory-backups")
+  }
+  async onJob(): Promise<LifecycleJobOutcome> {
+    const owner = this.owner
+    const before = JSON.stringify(watermark(owner.memory))
+    if (
+      owner.db.all<{ watermark: string }>(
+        "SELECT watermark FROM memory_backup_status WHERE id=1"
+      )[0]?.watermark === before
+    )
+      return
+    try {
+      const result = await backupMemory(
+        owner.memory,
+        owner.backupBucket,
+        owner.backupPrefix()
+      )
+      owner.db.run(
+        "INSERT INTO memory_backup_status VALUES (1,?,?,?) ON CONFLICT(id) DO UPDATE SET date=coalesce(excluded.date,memory_backup_status.date),watermark=excluded.watermark,error=excluded.error",
+        result.pending ? null : result.date,
+        result.pending ? "" : before,
+        result.pending ? "Backup in progress" : null
+      )
+      return result.pending ||
+        before !== JSON.stringify(watermark(owner.memory))
+        ? { rescheduleAt: Date.now() + 100 }
+        : undefined
+    } catch {
+      owner.db.run(
+        "INSERT INTO memory_backup_status VALUES (1,NULL,'',?) ON CONFLICT(id) DO UPDATE SET error=excluded.error",
+        "Backup pending; retrying"
+      )
+      return { rescheduleAt: Date.now() + 10_000 }
+    }
+  }
+}
+
 export class PersonalAgent extends DurableObject<AgentEnv> {
+  get summaryModelId() {
+    return this.env.SUMMARY_MODEL_ID
+  }
+  get backupBucket() {
+    return this.env.MEMORY_BACKUPS
+  }
   readonly db: Sqlite = {
     all: <T>(query: string, ...bindings: (string | number | null)[]) =>
       this.ctx.storage.sql.exec(query, ...bindings).toArray() as T[],
@@ -68,7 +158,19 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     this.db,
     this.env.OPENAI_CREDENTIAL
   )
-  readonly models = createAgentModels(this.credentials)
+  readonly models = createAgentModels(this.credentials, {
+    cacheKey: `pi-${this.ctx.id.toString()}`,
+    onUsage: (usage: CacheUsage) =>
+      this.db.run(
+        "INSERT OR IGNORE INTO model_usage VALUES (?,?,?,?,?,?)",
+        usage.id,
+        usage.model,
+        usage.input,
+        usage.cached,
+        usage.output,
+        new Date().toISOString()
+      ),
+  })
   readonly registry = createRegistry()
   readonly harness = new PiHarness({
     harness: ({ storage, context }) => {
@@ -174,19 +276,40 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     },
   })
   readonly runner = new TurnRunner(this)
+  readonly compactor = new MemoryRunner(this)
+  readonly backups = new BackupRunner(this)
   readonly lifecycle = Lifecycle.install(this)
     .use(this.harness)
     .use(this.runner)
+    .use(this.compactor)
+    .use(this.backups)
 
   constructor(ctx: DurableObjectState, env: AgentEnv) {
     super(ctx, env)
+    this.db.run(
+      "CREATE TABLE IF NOT EXISTS model_usage (id TEXT PRIMARY KEY,model TEXT NOT NULL,input INTEGER NOT NULL,cached INTEGER NOT NULL,output INTEGER NOT NULL,date TEXT NOT NULL)"
+    )
+    this.db.run(
+      "CREATE TABLE IF NOT EXISTS memory_backup_status (id INTEGER PRIMARY KEY,date TEXT,watermark TEXT NOT NULL,error TEXT)"
+    )
     this.db.run(
       "CREATE TABLE IF NOT EXISTS chat_turns (id TEXT PRIMARY KEY,text TEXT NOT NULL,status TEXT NOT NULL,answer TEXT NOT NULL DEFAULT '',error TEXT,created_at TEXT NOT NULL,session_id TEXT,prompt TEXT)"
     )
   }
 
   async onStart() {
-    if (this.active() || !this.memory.settled()) await this.runner.wake()
+    if (this.active()) await this.runner.wake()
+    if (this.memory.next() || this.memory.retryAt()) await this.compactor.wake()
+    if (
+      this.memory.total() &&
+      this.db.all<{ watermark: string }>(
+        "SELECT watermark FROM memory_backup_status WHERE id=1"
+      )[0]?.watermark !== JSON.stringify(watermark(this.memory))
+    )
+      await this.backups.wake()
+  }
+  backupPrefix() {
+    return `memory/${this.ctx.id.toString()}`
   }
   active() {
     return this.db.all<ChatTurn>(
@@ -202,6 +325,35 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     const url = new URL(request.url),
       path = url.pathname.replace("/api/agent/", "")
     try {
+      if (request.method === "GET" && path === "export")
+        return exportResponse(
+          this.memory,
+          url.searchParams.get("format") === "html"
+        )
+      if (request.method === "GET" && path === "tree") {
+        const parts = this.memory.parts()
+        const start = Number(url.searchParams.get("id")),
+          count = Number(url.searchParams.get("n"))
+        if (url.searchParams.has("id")) {
+          const text = this.memory.zoom(start, count)
+          return Response.json({
+            text,
+            children:
+              count > 1
+                ? [start, start + count / 2].map((id) =>
+                    this.memory.node({ start: id, count: count / 2 })
+                  )
+                : [],
+            original: count === 1 ? this.memory.entry(start) : null,
+          })
+        }
+        return Response.json(
+          parts.map((part) => ({
+            ...part,
+            text: this.memory.node(part)?.text ?? "Not summarized yet",
+          }))
+        )
+      }
       if (request.method === "GET" && path === "state")
         return Response.json(await this.snapshot())
       if (request.method === "GET" && path === "search")
@@ -215,6 +367,20 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             Number(url.searchParams.get("n"))
           ),
         })
+      if (request.method === "POST" && path === "import") {
+        const body = Schema.decodeUnknownSync(ImportInput)(
+          await limitedJson(request, 1_100_000)
+        )
+        if (this.active())
+          return Response.json(
+            { error: "Wait for the current reply before importing history." },
+            { status: 409 }
+          )
+        const added = await importHistory(this.memory, body.jsonl)
+        await this.compactor.wake()
+        await this.backups.wake()
+        return Response.json({ added })
+      }
       if (request.method === "POST" && path === "send") {
         const body = Schema.decodeUnknownSync(SendInput)(
           await limitedJson(request)
@@ -296,6 +462,8 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             "note",
             "The user cancelled this request. Do not continue it without a new instruction."
           )
+          await this.compactor.wake()
+          await this.backups.wake()
           await this.runner.wake()
         }
         return Response.json({ ok: true })
@@ -342,6 +510,17 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         summaries: this.memory.nodeCount(),
         ready: this.memory.settled(),
         notes: this.memory.notes(),
+        backup: this.db.all<{ date: string | null; error: string | null }>(
+          "SELECT date,error FROM memory_backup_status WHERE id=1"
+        )[0] ?? { date: null, error: null },
+        usage: this.db.all<{
+          input: number
+          cached: number
+          output: number
+          requests: number
+        }>(
+          "SELECT coalesce(sum(input),0) AS input,coalesce(sum(cached),0) AS cached,coalesce(sum(output),0) AS output,count(*) AS requests FROM model_usage"
+        )[0]!,
       },
     }
   }
@@ -368,62 +547,13 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
                 JSON.stringify({ name: block.name, arguments: block.arguments })
               )
         } else if (message.role === "toolResult") {
-          // Keep the full original in Pi; cap only the memory projection and state the omitted size.
-          const full = textContent(message.content)
-          const text =
-            full.length > 30_000
-              ? `${full.slice(0, 15_000)}\n[${full.length - 30_000} characters omitted; full result remains in Pi transcript]\n${full.slice(-15_000)}`
-              : full
-          this.memory.append(`${source}:echo`, "echo", text)
+          this.memory.append(
+            `${source}:echo`,
+            "echo",
+            textContent(message.content)
+          )
         }
       }
-  }
-  async summarizeOne(): Promise<boolean> {
-    const node = this.memory.next()
-    if (!node) return false
-    if (byteLength(node.source) <= NODE_BYTES) {
-      this.memory.saveNode(node, node.source)
-      return true
-    }
-    const model = this.models.getModel("openai", this.env.SUMMARY_MODEL_ID)
-    if (!model) throw new Error("Unknown summary model")
-    const attempts: string[] = []
-    const messages: PiMessage[] = [
-      {
-        role: "user",
-        timestamp: Date.now(),
-        content: [
-          { type: "text", text: `<chat>\n${node.context}\n</chat>` },
-          {
-            type: "text",
-            text: `${node.count === 1 ? "Compress this whole message" : "Merge these two summaries"} into at most 512 UTF-8 bytes:\n${node.source}`,
-          },
-        ],
-      },
-    ]
-    for (let attempt = 0; attempt < 5; attempt++) {
-      const reply = await this.models.completeSimple(
-        model,
-        { systemPrompt: COMPACTOR_PROMPT, messages },
-        { reasoning: "medium", maxTokens: 1024 }
-      )
-      if (reply.stopReason === "error" || reply.stopReason === "aborted")
-        throw new Error("Summary provider unavailable")
-      const text = textContent(reply.content).trim()
-      if (!text) throw new Error("Empty summary")
-      attempts.push(text)
-      if (byteLength(text) <= NODE_BYTES) break
-      messages.push(reply, {
-        role: "user",
-        timestamp: Date.now(),
-        content: `That line is ${byteLength(text)} UTF-8 bytes. Shorten it to 512 bytes or fewer without inventing information.`,
-      })
-    }
-    this.memory.saveNode(
-      node,
-      attempts.sort((a, b) => byteLength(a) - byteLength(b))[0]!
-    )
-    return true
   }
   async step(): Promise<LifecycleJobOutcome> {
     const turn = this.active()
@@ -434,10 +564,18 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       )
     if (turn?.status === "running" && turn.session_id) {
       const session = this.harness.session(turn.session_id)
+      const before = JSON.stringify(watermark(this.memory))
       this.archive(turn, await session.messages())
+      if (before !== JSON.stringify(watermark(this.memory))) {
+        await this.compactor.wake()
+        await this.backups.wake()
+      }
       if ((await this.harness.pending({ session: turn.session_id })).length)
         return { rescheduleAt: Date.now() + 750 }
       const result = await session.wait(turn.id)
+      this.archive(turn, await session.messages())
+      await this.compactor.wake()
+      await this.backups.wake()
       this.db.run(
         "UPDATE chat_turns SET status=?,answer=?,error=? WHERE id=? AND status='running'",
         result.status === "done" ? "done" : "failed",
@@ -449,16 +587,15 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       )
       return { rescheduleAt: Date.now() + 10 }
     }
-    try {
-      for (let i = 0; i < 8; i++) if (!(await this.summarizeOne())) break
-    } catch {
-      return { rescheduleAt: Date.now() + 10_000 }
-    }
-    if (!turn)
-      return this.memory.next() ? { rescheduleAt: Date.now() + 10 } : undefined
+    if (!turn) return undefined
     if (this.current(turn.id).status === "cancelled")
       return { rescheduleAt: Date.now() + 10 }
-    if (!this.memory.settled()) return { rescheduleAt: Date.now() + 100 }
+    if (!this.memory.settled()) {
+      await this.compactor.wake()
+      return {
+        rescheduleAt: Math.max(Date.now() + 750, this.memory.retryAt() ?? 0),
+      }
+    }
     if (!turn.prompt) {
       this.db.transaction(() => {
         const view = this.memory.render()
@@ -473,7 +610,13 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           .filter((n) => n.path === "MEMORY.md")
           .map((n) => n.body)
           .join("\n")
-        const prompt = `${view}\n\n<private-notes>\n${notes}\n</private-notes>\n\nNew user message (archive ID ${entry.id}):\n${turn.text}`
+        const prompt = JSON.stringify([
+          { type: "text", text: view },
+          {
+            type: "text",
+            text: `<private-notes>\n${notes}\n</private-notes>\n\nNew user message (archive ID ${entry.id}):\n${turn.text}`,
+          },
+        ])
         this.db.run(
           "UPDATE chat_turns SET status='preparing',prompt=? WHERE id=?",
           prompt,
@@ -493,10 +636,25 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     }
     if (this.current(turn.id).status === "cancelled")
       return { rescheduleAt: Date.now() + 10 }
-    await this.harness.submit(turn.prompt!, {
-      session: turn.session_id,
-      operationId: turn.id,
-    })
+    await this.compactor.wake()
+    await this.harness.submit(
+      turn.prompt!.startsWith("[")
+        ? [
+            ...Schema.decodeUnknownSync(
+              Schema.Array(
+                Schema.Struct({
+                  type: Schema.Literal("text"),
+                  text: Schema.String,
+                })
+              )
+            )(JSON.parse(turn.prompt!)),
+          ]
+        : turn.prompt!,
+      {
+        session: turn.session_id,
+        operationId: turn.id,
+      }
+    )
     this.db.run(
       "UPDATE chat_turns SET status='running' WHERE id=? AND status!='cancelled'",
       turn.id
@@ -507,7 +665,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   }
 }
 
-async function limitedJson(request: Request): Promise<unknown> {
+async function limitedJson(
+  request: Request,
+  limit = 140_000
+): Promise<unknown> {
   if (!request.body) throw new Error("Missing body")
   const reader = request.body.getReader(),
     chunks: Uint8Array[] = []
@@ -517,7 +678,7 @@ async function limitedJson(request: Request): Promise<unknown> {
       const next = await reader.read()
       if (next.done) break
       size += next.value.length
-      if (size > 140_000) {
+      if (size > limit) {
         await reader.cancel()
         throw new Error("Request too large")
       }

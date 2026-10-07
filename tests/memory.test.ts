@@ -77,3 +77,39 @@ describe("lossless memory", () => {
     expect(() => memory.writeNote("../secrets.md", "bad", 0)).toThrow()
   })
 })
+
+it("bounds a large view by age without splitting earlier ranges on the next turn", () => {
+  const total = 4096,
+    nodes = new Map<string, MemoryNode>()
+  for (let count = 1; count <= total; count *= 2)
+    for (let start = 0; start + count <= total; start += count)
+      nodes.set(`${start}+${count}`, {
+        start,
+        count,
+        text: "s".repeat(512),
+        bytes: 512,
+      })
+  const parts = Array.from({ length: total }, (_, start) => ({
+    start,
+    count: 1,
+  }))
+  const fitted = fitView(parts, total, nodes, 128_000)
+  expect(
+    fitted.reduce((n, p) => n + nodes.get(`${p.start}+${p.count}`)!.bytes, 0)
+  ).toBeLessThanOrEqual(128_000)
+  expect(fitted.reduce((n, p) => n + p.count, 0)).toBe(total)
+  expect(fitted[0]!.count).toBeGreaterThan(fitted.at(-1)!.count)
+  const next = fitView(
+    [...fitted, { start: total, count: 1 }],
+    total + 1,
+    nodes,
+    128_000
+  )
+  for (const old of fitted)
+    expect(
+      next.some(
+        (p) =>
+          p.start <= old.start && p.start + p.count >= old.start + old.count
+      )
+    ).toBe(true)
+})
