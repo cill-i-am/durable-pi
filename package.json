@@ -11,7 +11,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx}\"",
     "check": "prettier --check \"**/*.{ts,tsx,js,jsx}\"",
     "typecheck": "tsc --noEmit",
-    "deploy": "alchemy deploy --stage production --profile default",
+    "deploy": "alchemy deploy --stage production --profile durable-pi",
     "test": "vitest run",
     "verify": "pnpm generate-routes && pnpm typecheck && pnpm test && pnpm build",
     "model:login": "tsx scripts/model-login.ts"

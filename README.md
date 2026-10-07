@@ -15,6 +15,8 @@ Requires Node 24+ and pnpm 12.4.2. Install with `pnpm install --frozen-lockfile`
 
 `pnpm verify` runs route generation, type checking, unit tests, and the browser/server build. `pnpm lint` checks source. Neither needs provider credentials. `pnpm deploy` provisions the production stage through Alchemy using the explicitly configured profile. A Cloudflare account with Workers and D1 permissions is required; hosting charges are separate from ChatGPT model usage.
 
+Production uses the dedicated `durable-pi` Alchemy profile. Configure it with `pnpm exec alchemy profile create durable-pi` and `pnpm exec alchemy profile edit --profile durable-pi`, selecting Workers scripts read/write, D1 read/write, account settings read, memberships read, and user details read. OAuth adds offline refresh access.
+
 The compatibility date matches Alchemy beta.81's bundled local workerd (`2026-09-25`). Infrastructure state lives in ignored `.alchemy/state`; preserve it privately between deploys. No remote state bootstrap is necessary. Use a separate ChatGPT login for independently running deployments: OAuth refresh tokens rotate.
 
 ## What is implemented
