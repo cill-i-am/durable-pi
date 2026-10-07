@@ -1,0 +1,13 @@
+packages: []
+
+allowBuilds:
+  esbuild: true
+  lightningcss: true
+  unrs-resolver: true
+  msw: false
+  workerd: true
+  "@google/genai": false
+  core-js-pure: false
+  protobufjs: false
+minimumReleaseAgeExclude:
+  - agents@0.27.0

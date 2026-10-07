@@ -1,0 +1,4 @@
+interface:
+  display_name: "Alchemy"
+  short_description: "Build and review Alchemy infrastructure"
+  default_prompt: "Use $alchemy for the requested infrastructure change, checking the installed APIs and actual deployment effects."

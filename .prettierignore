@@ -1,0 +1,9 @@
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+.alchemy
+.research
+dist
+node_modules
+.agents
+src/routeTree.gen.ts
