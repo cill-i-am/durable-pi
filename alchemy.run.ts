@@ -2,6 +2,7 @@ import * as Alchemy from "alchemy"
 import * as Cloudflare from "alchemy/Cloudflare"
 import * as Config from "effect/Config"
 import * as Effect from "effect/Effect"
+import * as Layer from "effect/Layer"
 import type { PersonalAgent } from "./src/agent/worker"
 
 export const AuthDatabase = Cloudflare.D1.Database("AuthDatabase", {
@@ -42,7 +43,11 @@ export default Alchemy.Stack(
   "durable-pi",
   {
     providers: Cloudflare.providers(),
-    state: Alchemy.localState(),
+    state: Layer.unwrap(
+      Effect.map(Alchemy.AlchemyContext, ({ dev }) =>
+        dev ? Alchemy.localState() : Cloudflare.state()
+      )
+    ),
   },
   Effect.gen(function* () {
     const website = yield* Website

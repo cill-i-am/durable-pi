@@ -1,4 +1,4 @@
-name: Check
+name: Check and deploy
 on:
   push:
   pull_request:
@@ -18,3 +18,37 @@ jobs:
       - run: pnpm verify
       - run: pnpm lint
       - run: node --import tsx scripts/check-secrets.ts
+  deploy:
+    needs: check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: production
+      url: https://durable-pi-website-production-ymvgn6wvhopg5b2y.barroncillian.workers.dev
+    concurrency:
+      group: durable-pi-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Deploy production with Alchemy
+        run: |
+          pnpm exec alchemy provider check-env --provider Cloudflare --no-input
+          pnpm run deploy --yes --no-input
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+          SETUP_TOKEN: ${{ secrets.SETUP_TOKEN }}
+          OWNER_EMAIL: ${{ secrets.OWNER_EMAIL }}
+          OPENAI_CREDENTIAL: ${{ secrets.OPENAI_CREDENTIAL }}
+      - name: Verify hosted authentication boundary
+        run: node --import tsx scripts/check-deployment.ts
+        env:
+          APP_URL: https://durable-pi-website-production-ymvgn6wvhopg5b2y.barroncillian.workers.dev
