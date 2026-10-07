@@ -899,8 +899,8 @@ function MemoryFiles({ memory }: { memory: ChatState["memory"] | undefined }) {
       <article>
         <h3>Cloud backup</h3>
         <p className="text-sm text-muted-foreground">
-          {memory?.backup.error ??
-            (memory?.backup.date
+          {memory?.backup?.error ??
+            (memory?.backup?.date
               ? `Last complete backup: ${new Date(memory.backup.date).toLocaleString()}`
               : "Waiting for the first backup.")}
         </p>
@@ -934,7 +934,7 @@ function MemoryFiles({ memory }: { memory: ChatState["memory"] | undefined }) {
           </Alert>
         )}
       </article>
-      {!!memory?.usage.requests && (
+      {!!memory?.usage?.requests && (
         <article>
           <h3>Model cache</h3>
           <p className="text-sm text-muted-foreground">

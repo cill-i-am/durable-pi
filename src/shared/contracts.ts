@@ -25,8 +25,9 @@ export type ChatState = {
     messages: number
     summaries: number
     ready: boolean
-    backup: { date: string | null; error: string | null }
-    usage: { input: number; cached: number; output: number; requests: number }
+    // Additive fields remain optional while Cloudflare rolls older DO instances forward.
+    backup?: { date: string | null; error: string | null }
+    usage?: { input: number; cached: number; output: number; requests: number }
     notes: {
       path: string
       body: string
