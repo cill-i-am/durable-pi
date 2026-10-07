@@ -40,7 +40,10 @@ export default Alchemy.Stack(
             "D1 Read",
             "D1 Write",
             "Account Settings Read",
-            "Secrets Store Read",
+          "Secrets Store Read",
+          // Cloudflare requires Edit even for the temporary binding used to
+          // retrieve Alchemy's state token; Read only exposes secret metadata.
+          "Secrets Store Write",
           ],
           resources: { [`com.cloudflare.api.account.${accountId}`]: "*" },
         },

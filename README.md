@@ -15,7 +15,7 @@ Requires Node 24+ and pnpm 12.4.2. Install with `pnpm install --frozen-lockfile`
 
 `pnpm verify` runs route generation, type checking, unit tests, and the browser/server build. `pnpm lint` checks source. Neither needs provider credentials. `pnpm run deploy` provisions the production stage through Alchemy using the explicitly configured profile. A Cloudflare account with Workers and D1 permissions is required; hosting charges are separate from ChatGPT model usage.
 
-Production uses the dedicated `durable-pi` Alchemy profile. Configure it with `pnpm exec alchemy profile create durable-pi` and `pnpm exec alchemy profile edit --profile durable-pi`, selecting Workers scripts read/write, D1 read/write, account settings read, memberships read, and user details read. OAuth adds offline refresh access.
+Production uses the dedicated `durable-pi` Alchemy profile. Configure it with `pnpm exec alchemy profile create durable-pi` and `pnpm exec alchemy profile edit --profile durable-pi`, selecting Workers scripts read/write, D1 read/write, account settings read, memberships read, and user details read. OAuth adds offline refresh access. A fresh machine also needs Secrets Store read/write to retrieve remote-state credentials; an existing trusted state-credential cache avoids that additional local permission.
 
 The compatibility date matches Alchemy beta.81's bundled local workerd (`2026-09-25`). Local development keeps infrastructure state under ignored `.alchemy/state`; deployments share the encrypted Cloudflare state service. Use a separate ChatGPT login for independently running deployments: OAuth refresh tokens rotate.
 
@@ -23,14 +23,14 @@ The compatibility date matches Alchemy beta.81's bundled local workerd (`2026-09
 
 Following [Alchemy's CI guidance](https://alchemy.run/environments/ci/), `.github/workflows/check.yml` deploys production after verification passes on a push to `main`. Pull requests run checks without deployment credentials. The GitHub `production` environment is restricted to `main`; production deploys are serialized and never canceled halfway through. A post-deploy check verifies the homepage and anonymous access restrictions.
 
-`stacks/github.ts` is a separate, manually deployed setup stack. It creates an account-scoped Cloudflare deploy token and writes the application configuration to encrypted GitHub environment secrets. The token has Workers Scripts read/write, D1 read/write, Account Settings read, and Secrets Store read permissions. It cannot create further API tokens. Only the setup stack uses an administrator profile:
+`stacks/github.ts` is a separate, manually deployed setup stack. It creates an account-scoped Cloudflare deploy token and writes the application configuration to encrypted GitHub environment secrets. The token has Workers Scripts read/write, D1 read/write, Account Settings read, and Secrets Store read/write permissions. Cloudflare requires [Secrets Store Edit](https://developers.cloudflare.com/secrets-store/access-control/) to bind the existing state credential to Alchemy's temporary preview Worker; Read only exposes metadata. The token cannot create further API tokens. Only the setup stack uses an administrator profile:
 
 ```sh
 CLOUDFLARE_ACCOUNT_ID=your-account-id pnpm exec alchemy deploy \
   --config stacks/github.ts --stage production --profile your-admin-profile
 ```
 
-CI resolves credentials from environment secrets, not the local OAuth profile. Its token can access the existing Alchemy state service; creating or upgrading that service is a separate administrator operation. Keep the setup stack's state private, and rerun setup to rotate configuration or permissions.
+CI resolves credentials from environment secrets, not the local OAuth profile. Its token can access the existing Alchemy state service. Keep the Alchemy version pinned and review state-service changes before upgrades, because that service is shared across projects. Keep the setup stack's state private, and rerun setup to rotate configuration or permissions.
 
 For the initial local-to-remote state migration, `scripts/migrate-production-state.ts` copies only this app's production records, rejects conflicting remote records, verifies each write, and retains the local backup. Run it without `--apply` first. Never switch an existing deployment to an empty state store.
 
