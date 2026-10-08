@@ -30,6 +30,15 @@ export const AgentWorker = Cloudflare.Worker("AgentWorker", {
 })
 export const Website = Cloudflare.Website.Vite("Website", {
   dev: { port: 1337, strictPort: true },
+  domain: Effect.map(Alchemy.Stage, (stage) =>
+    stage === "production"
+      ? {
+          name: "bot.cill-i-am.com",
+          // Pin the existing zone so CI needs no account-wide zone discovery.
+          zoneId: "37e485d6619dee244939e66e1ee90d3f",
+        }
+      : undefined
+  ),
   env: {
     DB: AuthDatabase,
     AGENT_SERVICE: AgentWorker,

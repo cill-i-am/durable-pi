@@ -48,6 +48,24 @@ export async function authorizedOwner(request: Request, env: WebsiteEnv) {
 export function sameOrigin(request: Request, appUrl: string) {
   return request.headers.get("origin") === new URL(appUrl).origin
 }
+
+/** Keep bookmarks working while mutations remain bound to the configured origin. */
+export function canonicalOriginResponse(request: Request, appUrl: string) {
+  const target = new URL(appUrl),
+    source = new URL(request.url)
+  if (target.protocol !== "https:" || source.origin === target.origin) return
+  if (request.method !== "GET" && request.method !== "HEAD")
+    return Response.json(
+      { error: `Open ${target.origin} to continue.` },
+      { status: 403 }
+    )
+  target.pathname = source.pathname
+  target.search = source.search
+  return new Response(null, {
+    status: 302,
+    headers: { Location: target.href, "Cache-Control": "no-store" },
+  })
+}
 export async function matchesSecret(actual: string, expected: string) {
   if (!expected || !actual) return false
   const digest = (s: string) =>

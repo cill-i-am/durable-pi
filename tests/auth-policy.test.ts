@@ -1,8 +1,46 @@
 import { describe, expect, it } from "vitest"
-import { matchesSecret, sameOrigin } from "../src/auth/server"
+import {
+  canonicalOriginResponse,
+  matchesSecret,
+  sameOrigin,
+} from "../src/auth/server"
 import { decodeCredential, workerChatGPTAuth } from "../src/agent/models"
 
 describe("private app boundaries", () => {
+  it("redirects old bookmarks to the configured origin without an open redirect", () => {
+    const response = canonicalOriginResponse(
+      new Request("https://old.workers.dev//attacker.test/path?q=one"),
+      "https://bot.example.com"
+    )!
+    expect(response.status).toBe(302)
+    expect(response.headers.get("location")).toBe(
+      "https://bot.example.com//attacker.test/path?q=one"
+    )
+    expect(response.headers.get("cache-control")).toBe("no-store")
+    expect(
+      canonicalOriginResponse(
+        new Request("https://bot.example.com/"),
+        "https://bot.example.com"
+      )
+    ).toBeUndefined()
+    expect(
+      canonicalOriginResponse(
+        new Request("http://127.0.0.1:1337/"),
+        "http://localhost:1337"
+      )
+    ).toBeUndefined()
+  })
+  it("rejects mutations on an old hostname instead of forwarding their bodies", () => {
+    const response = canonicalOriginResponse(
+      new Request("https://old.workers.dev/api/agent/send", {
+        method: "POST",
+        body: "private message",
+      }),
+      "https://bot.example.com"
+    )!
+    expect(response.status).toBe(403)
+    expect(response.headers.has("location")).toBe(false)
+  })
   it("requires an exact browser origin for mutations", () => {
     expect(
       sameOrigin(

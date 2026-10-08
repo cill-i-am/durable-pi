@@ -2,6 +2,8 @@
 
 A private, continuous web chat built with **Pi Durable**, Cloudflare Durable Objects, **TanStack Start**, **shadcn/ui on Base UI**, Better Auth, and **Alchemy Effect**.
 
+Production: [bot.cill-i-am.com](https://bot.cill-i-am.com). Alchemy attaches this hostname to the existing website Worker and manages its DNS and TLS certificate. The production zone is pinned in `alchemy.run.ts`; development keeps its local URL. `Worker.URL` supplies the canonical origin to authentication. The previous `workers.dev` address redirects page requests to this address; mutations require the canonical origin. Sign in again on the new hostname using the existing account.
+
 Pi owns model turns, tool execution, committed transcripts, and recovery. The application adds an owner-only login, a durable submission queue, a lossless message archive, a binary summary tree, and sourced Markdown memory notes. ChatGPT subscription access uses Pi's current OpenAI sign-in flow.
 
 ## Run it

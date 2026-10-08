@@ -25,7 +25,7 @@ jobs:
     timeout-minutes: 20
     environment:
       name: production
-      url: https://durable-pi-website-production-ymvgn6wvhopg5b2y.barroncillian.workers.dev
+      url: https://bot.cill-i-am.com
     concurrency:
       group: durable-pi-production
       cancel-in-progress: false
@@ -51,4 +51,5 @@ jobs:
       - name: Verify hosted authentication boundary
         run: node --import tsx scripts/check-deployment.ts
         env:
-          APP_URL: https://durable-pi-website-production-ymvgn6wvhopg5b2y.barroncillian.workers.dev
+          APP_URL: https://bot.cill-i-am.com
+          LEGACY_APP_URL: https://durable-pi-website-production-ymvgn6wvhopg5b2y.barroncillian.workers.dev
