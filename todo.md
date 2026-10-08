@@ -41,6 +41,6 @@ Start in [the agent registry and lifecycle](src/agent/worker.ts), [memory prompt
 - [Pi Durable README](https://github.com/earendil-works/pi/blob/main/packages/durable/README.md#abort-and-subagents): task ownership, abort behavior, and subagent implementation patterns. The installed package also contains this README.
 - [Foreground subagent example](https://github.com/earendil-works/pi/blob/main/packages/durable/test/examples/22-subagent-foreground.ts) and [background subagent example](https://github.com/earendil-works/pi/blob/main/packages/durable/test/examples/23-subagent-background.ts): replay-safe children, reporting, steering, and stop behavior.
 - [Durable Object code updates](https://developers.cloudflare.com/durable-objects/concepts/durable-object-lifecycle/#code-updates): handling different code versions during rollout.
-- [Project memory and recovery documentation](README.md#memory-design), [Effect skill](.agents/skills/effect-ts/SKILL.md), and [Alchemy skill](.agents/skills/alchemy/SKILL.md): existing implementation and repository guidance.
+- [Project memory and recovery documentation](README.md#memory-design): existing implementation and recovery guidance.
 
 Recheck upstream references against the installed versions before implementing; PiHarness is a beta API.
