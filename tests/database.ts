@@ -1,5 +1,5 @@
 import { DatabaseSync } from "node:sqlite"
-import type { Sqlite } from "../src/agent/memory"
+import type { Sqlite } from "../src/storage/sqlite"
 
 export function database(): Sqlite {
   const sql = new DatabaseSync(":memory:")

@@ -1,9 +1,14 @@
 import { readFile, open, rm } from "node:fs/promises"
 import { resolve, sep } from "node:path"
 import { DatabaseSync } from "node:sqlite"
-import { MemoryStore, type Sqlite } from "../src/agent/memory"
-import { parseArchive, restoreArchive, watermark } from "../src/agent/archive"
-import { readBackup } from "../src/agent/backup"
+import { Effect } from "effect"
+import type { Sqlite } from "../src/storage/sqlite"
+import { makeSqliteMemory } from "../src/memory/adapters/sqlite"
+import { MemoryRepository } from "../src/memory/repository"
+import { bucketLayer } from "../src/memory/adapters/bucket"
+import { webCryptoLayer } from "../src/memory/adapters/crypto"
+import { parseArchive, restoreArchive } from "../src/memory/archive"
+import { readBackup } from "../src/memory/backup"
 
 // Offline only: creates a fresh private database, never contacts or overwrites production.
 async function main() {
@@ -13,27 +18,30 @@ async function main() {
       "Usage: pnpm exec tsx scripts/restore-memory.ts archive.jsonl new.sqlite\nOr: ... downloaded-bucket-directory new.sqlite memory/<object-id>"
     )
   const data = prefix
-    ? await readBackup(
-        {
-          get: async (key) => {
-            const base = resolve(source),
-              path = resolve(base, key)
-            if (!path.startsWith(base + sep))
-              throw new Error("Invalid backup path")
-            const text = await readFile(path, "utf8")
-            return {
-              etag: "offline",
-              text: async () => text,
-              json: async () => JSON.parse(text),
-            }
-          },
-          put: async () => {
-            throw new Error("Offline restore never writes backup objects")
-          },
-        },
-        prefix
+    ? await Effect.runPromise(
+        readBackup(prefix).pipe(
+          Effect.provide(
+            bucketLayer({
+              get: async (key) => {
+                const base = resolve(source),
+                  path = resolve(base, key)
+                if (!path.startsWith(base + sep))
+                  throw new Error("Invalid backup path")
+                const text = await readFile(path, "utf8")
+                return {
+                  etag: "offline",
+                  text: async () => text,
+                }
+              },
+              put: async () => {
+                throw new Error("Offline restore never writes backup objects")
+              },
+            })
+          ),
+          Effect.provide(webCryptoLayer)
+        )
       )
-    : parseArchive(await readFile(source, "utf8"))
+    : Effect.runSync(parseArchive(await readFile(source, "utf8")))
   const file = await open(destination, "wx", 0o600)
   await file.close()
   const sql = new DatabaseSync(destination)
@@ -57,9 +65,15 @@ async function main() {
     },
   }
   try {
-    const memory = new MemoryStore(db)
-    restoreArchive(memory, data.records, data.parts)
-    console.log(JSON.stringify({ restored: watermark(memory) }))
+    const memory = Effect.runSync(makeSqliteMemory(db))
+    Effect.runSync(
+      restoreArchive(data.records, data.parts).pipe(
+        Effect.provideService(MemoryRepository, memory)
+      )
+    )
+    console.log(
+      JSON.stringify({ restored: Effect.runSync(memory.watermark()) })
+    )
   } catch (error) {
     sql.close()
     await rm(destination)
