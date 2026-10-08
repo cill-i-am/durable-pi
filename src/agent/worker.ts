@@ -15,13 +15,19 @@ import { Type } from "@earendil-works/pi-ai"
 import * as Schema from "effect/Schema"
 import * as Effect from "effect/Effect"
 import type { AgentEnv } from "../../alchemy.run"
-import { MemoryStore, type Sqlite } from "./memory"
+import { Clock, Layer, ManagedRuntime } from "effect"
+import type { Sqlite } from "../storage/sqlite"
+import { MemoryRepository } from "../memory/repository"
+import { sqliteMemoryLayer } from "../memory/adapters/sqlite"
+import { piSummaryLayer } from "../memory/adapters/pi"
+import { bucketLayer } from "../memory/adapters/bucket"
+import { webCryptoLayer } from "../memory/adapters/crypto"
 import { createAgentModels, DurableCredentials } from "./models"
 import { SYSTEM_PROMPT } from "./prompts"
-import { importHistory, ImportInput } from "./import"
-import { pumpSummaries } from "./compactor"
-import { backupMemory } from "./backup"
-import { exportResponse, watermark } from "./archive"
+import { importHistory, ImportInput } from "../memory/import"
+import { pumpSummaries } from "../memory/compaction"
+import { backupMemory } from "../memory/backup"
+import { exportResponse } from "../memory/archive"
 import type { CacheUsage } from "./cache"
 import {
   CancelInput,
@@ -71,70 +77,72 @@ class MemoryRunner extends TurnRunner {
   constructor(owner: PersonalAgent) {
     super(owner, "memory-compactor")
   }
-  async onJob(): Promise<LifecycleJobOutcome> {
-    const before = JSON.stringify(watermark(this.owner.memory))
-    const model = this.owner.models.getModel(
-      "openai",
-      this.owner.summaryModelId
+  onJob(): Promise<LifecycleJobOutcome> {
+    const owner = this.owner
+    return owner.memoryRuntime.runPromise(
+      Effect.gen(function* () {
+        const memory = yield* MemoryRepository
+        const before = JSON.stringify(yield* memory.watermark())
+        const next = yield* pumpSummaries()
+        if (before !== JSON.stringify(yield* memory.watermark()))
+          yield* Effect.promise(() => owner.backups.wake())
+        if (owner.active()) yield* Effect.promise(() => owner.runner.wake())
+        return next === undefined ? undefined : { rescheduleAt: next }
+      })
     )
-    if (!model) throw new Error("Unknown summary model")
-    const next = await pumpSummaries(
-      this.owner.memory,
-      (request) =>
-        this.owner.models.completeSimple(model, request, {
-          reasoning: "medium",
-          signal: AbortSignal.timeout(60_000),
-          cacheRetention: "short",
-        }),
-      {
-        report: (range) =>
-          console.warn(
-            `Memory summary ${range} failed; retrying in 10 seconds`
-          ),
-      }
-    )
-    if (before !== JSON.stringify(watermark(this.owner.memory)))
-      await this.owner.backups.wake()
-    if (this.owner.active()) await this.owner.runner.wake()
-    return next === undefined ? undefined : { rescheduleAt: next }
+  }
+  dispose() {
+    return this.owner.memoryRuntime.dispose()
   }
 }
 class BackupRunner extends TurnRunner {
   constructor(owner: PersonalAgent) {
     super(owner, "memory-backups")
   }
-  async onJob(): Promise<LifecycleJobOutcome> {
+  onJob(): Promise<LifecycleJobOutcome> {
     const owner = this.owner
-    const before = JSON.stringify(watermark(owner.memory))
-    if (
-      owner.db.all<{ watermark: string }>(
-        "SELECT watermark FROM memory_backup_status WHERE id=1"
-      )[0]?.watermark === before
+    return owner.memoryRuntime.runPromise(
+      Effect.gen(function* () {
+        const memory = yield* MemoryRepository
+        const before = JSON.stringify(yield* memory.watermark())
+        const previous = yield* Effect.sync(
+          () =>
+            owner.db.all<{ watermark: string }>(
+              "SELECT watermark FROM memory_backup_status WHERE id=1"
+            )[0]?.watermark
+        )
+        if (previous === before) return
+        return yield* backupMemory(owner.backupPrefix()).pipe(
+          Effect.flatMap((result) =>
+            Effect.gen(function* () {
+              yield* Effect.sync(() =>
+                owner.db.run(
+                  "INSERT INTO memory_backup_status VALUES (1,?,?,?) ON CONFLICT(id) DO UPDATE SET date=coalesce(excluded.date,memory_backup_status.date),watermark=excluded.watermark,error=excluded.error",
+                  result.pending ? null : result.date,
+                  result.pending ? "" : before,
+                  result.pending ? "Backup in progress" : null
+                )
+              )
+              return result.pending ||
+                before !== JSON.stringify(yield* memory.watermark())
+                ? { rescheduleAt: (yield* Clock.currentTimeMillis) + 100 }
+                : undefined
+            })
+          ),
+          Effect.catchTag("BackupFailure", () =>
+            Effect.gen(function* () {
+              yield* Effect.sync(() =>
+                owner.db.run(
+                  "INSERT INTO memory_backup_status VALUES (1,NULL,'',?) ON CONFLICT(id) DO UPDATE SET error=excluded.error",
+                  "Backup pending; retrying"
+                )
+              )
+              return { rescheduleAt: (yield* Clock.currentTimeMillis) + 10_000 }
+            })
+          )
+        )
+      })
     )
-      return
-    try {
-      const result = await backupMemory(
-        owner.memory,
-        owner.backupBucket,
-        owner.backupPrefix()
-      )
-      owner.db.run(
-        "INSERT INTO memory_backup_status VALUES (1,?,?,?) ON CONFLICT(id) DO UPDATE SET date=coalesce(excluded.date,memory_backup_status.date),watermark=excluded.watermark,error=excluded.error",
-        result.pending ? null : result.date,
-        result.pending ? "" : before,
-        result.pending ? "Backup in progress" : null
-      )
-      return result.pending ||
-        before !== JSON.stringify(watermark(owner.memory))
-        ? { rescheduleAt: Date.now() + 100 }
-        : undefined
-    } catch {
-      owner.db.run(
-        "INSERT INTO memory_backup_status VALUES (1,NULL,'',?) ON CONFLICT(id) DO UPDATE SET error=excluded.error",
-        "Backup pending; retrying"
-      )
-      return { rescheduleAt: Date.now() + 10_000 }
-    }
   }
 }
 
@@ -153,7 +161,11 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     },
     transaction: (body) => this.ctx.storage.transactionSync(body),
   }
-  readonly memory = new MemoryStore(this.db)
+  // Only host edges use runSync; in particular, Cloudflare transactionSync
+  // cannot suspend while capturing a view and durably admitting a turn.
+  get memory() {
+    return this.memoryRuntime.runSync(MemoryRepository)
+  }
   readonly credentials = new DurableCredentials(
     this.db,
     this.env.OPENAI_CREDENTIAL
@@ -171,6 +183,33 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         new Date().toISOString()
       ),
   })
+  readonly memoryRuntime = ManagedRuntime.make(
+    Layer.mergeAll(
+      sqliteMemoryLayer(this.db),
+      webCryptoLayer,
+      bucketLayer(this.backupBucket),
+      piSummaryLayer((messages, signal) => {
+        const model = this.models.getModel("openai", this.summaryModelId)
+        if (!model) throw new Error("Unknown summary model")
+        return this.models.completeSimple(
+          model,
+          {
+            systemPrompt: SYSTEM_PROMPT,
+            tools: this.registry
+              .snapshot()
+              .tools()
+              .map(({ tool }) => ({
+                name: tool.name,
+                description: tool.description,
+                parameters: tool.parameters,
+              })),
+            messages,
+          },
+          { reasoning: "medium", signal, cacheRetention: "short" }
+        )
+      })
+    )
+  )
   readonly registry = createRegistry()
   readonly harness = new PiHarness({
     harness: ({ storage, context }) => {
@@ -190,7 +229,9 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             }),
             replay: "safe",
             execute: async (args) =>
-              toolText(this.memory.zoom(args.id, args.n)),
+              toolText(
+                this.memoryRuntime.runSync(this.memory.zoom(args.id, args.n))
+              ),
           }),
           defineTool({
             name: "date",
@@ -198,7 +239,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             parameters: Type.Object({ id: Type.Integer({ minimum: 0 }) }),
             replay: "safe",
             execute: async (args) =>
-              toolText(this.memory.entry(args.id)?.date ?? "Message not found"),
+              toolText(
+                this.memoryRuntime.runSync(this.memory.entry(args.id))?.date ??
+                  "Message not found"
+              ),
           }),
           defineTool({
             name: "search_memory",
@@ -211,8 +255,8 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             execute: async (args) =>
               toolText(
                 JSON.stringify(
-                  this.memory
-                    .search(args.query)
+                  this.memoryRuntime
+                    .runSync(this.memory.search(args.query))
                     .map(({ id, kind, text, date }) => ({
                       id,
                       kind,
@@ -231,10 +275,12 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             execute: async (args) =>
               toolText(
                 args.path
-                  ? (this.memory.notes().find((n) => n.path === args.path)
-                      ?.body ?? "Note not found")
-                  : this.memory
-                      .notes()
+                  ? (this.memoryRuntime
+                      .runSync(this.memory.notes())
+                      .find((n) => n.path === args.path)?.body ??
+                      "Note not found")
+                  : this.memoryRuntime
+                      .runSync(this.memory.notes())
                       .map((n) => n.path)
                       .join("\n")
               ),
@@ -250,7 +296,9 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             }),
             replay: "safe",
             execute: async (args) => {
-              this.memory.writeNote(args.path, args.body, args.sourceId)
+              this.memoryRuntime.runSync(
+                this.memory.writeNote(args.path, args.body, args.sourceId)
+              )
               return toolText("Saved private memory note")
             },
           }),
@@ -299,12 +347,17 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
 
   async onStart() {
     if (this.active()) await this.runner.wake()
-    if (this.memory.next() || this.memory.retryAt()) await this.compactor.wake()
     if (
-      this.memory.total() &&
+      this.memoryRuntime.runSync(this.memory.next()) ||
+      this.memoryRuntime.runSync(this.memory.retryAt())
+    )
+      await this.compactor.wake()
+    if (
+      this.memoryRuntime.runSync(this.memory.total()) &&
       this.db.all<{ watermark: string }>(
         "SELECT watermark FROM memory_backup_status WHERE id=1"
-      )[0]?.watermark !== JSON.stringify(watermark(this.memory))
+      )[0]?.watermark !==
+        JSON.stringify(this.memoryRuntime.runSync(this.memory.watermark()))
     )
       await this.backups.wake()
   }
@@ -326,31 +379,40 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       path = url.pathname.replace("/api/agent/", "")
     try {
       if (request.method === "GET" && path === "export")
-        return exportResponse(
-          this.memory,
-          url.searchParams.get("format") === "html"
+        return await this.memoryRuntime.runPromise(
+          exportResponse(url.searchParams.get("format") === "html"),
+          { signal: request.signal }
         )
       if (request.method === "GET" && path === "tree") {
-        const parts = this.memory.parts()
+        const parts = this.memoryRuntime.runSync(this.memory.parts())
         const start = Number(url.searchParams.get("id")),
           count = Number(url.searchParams.get("n"))
         if (url.searchParams.has("id")) {
-          const text = this.memory.zoom(start, count)
+          const text = this.memoryRuntime.runSync(
+            this.memory.zoom(start, count)
+          )
           return Response.json({
             text,
             children:
               count > 1
                 ? [start, start + count / 2].map((id) =>
-                    this.memory.node({ start: id, count: count / 2 })
+                    this.memoryRuntime.runSync(
+                      this.memory.node({ start: id, count: count / 2 })
+                    )
                   )
                 : [],
-            original: count === 1 ? this.memory.entry(start) : null,
+            original:
+              count === 1
+                ? this.memoryRuntime.runSync(this.memory.entry(start))
+                : null,
           })
         }
         return Response.json(
           parts.map((part) => ({
             ...part,
-            text: this.memory.node(part)?.text ?? "Not summarized yet",
+            text:
+              this.memoryRuntime.runSync(this.memory.node(part))?.text ??
+              "Not summarized yet",
           }))
         )
       }
@@ -358,13 +420,17 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         return Response.json(await this.snapshot())
       if (request.method === "GET" && path === "search")
         return Response.json(
-          this.memory.search((url.searchParams.get("q") ?? "").slice(0, 200))
+          this.memoryRuntime.runSync(
+            this.memory.search((url.searchParams.get("q") ?? "").slice(0, 200))
+          )
         )
       if (request.method === "GET" && path === "zoom")
         return Response.json({
-          text: this.memory.zoom(
-            Number(url.searchParams.get("id")),
-            Number(url.searchParams.get("n"))
+          text: this.memoryRuntime.runSync(
+            this.memory.zoom(
+              Number(url.searchParams.get("id")),
+              Number(url.searchParams.get("n"))
+            )
           ),
         })
       if (request.method === "POST" && path === "import") {
@@ -376,7 +442,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             { error: "Wait for the current reply before importing history." },
             { status: 409 }
           )
-        const added = await importHistory(this.memory, body.jsonl)
+        const added = await this.memoryRuntime.runPromise(
+          importHistory(body.jsonl),
+          { signal: request.signal }
+        )
         await this.compactor.wake()
         await this.backups.wake()
         return Response.json({ added })
@@ -451,16 +520,20 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
               turn.id
             )
           }
-          this.memory.append(
-            `user:${turn.id}`,
-            "user",
-            turn.text,
-            turn.created_at
+          this.memoryRuntime.runSync(
+            this.memory.append(
+              `user:${turn.id}`,
+              "user",
+              turn.text,
+              turn.created_at
+            )
           )
-          this.memory.append(
-            `cancel:${turn.id}`,
-            "note",
-            "The user cancelled this request. Do not continue it without a new instruction."
+          this.memoryRuntime.runSync(
+            this.memory.append(
+              `cancel:${turn.id}`,
+              "note",
+              "The user cancelled this request. Do not continue it without a new instruction."
+            )
           )
           await this.compactor.wake()
           await this.backups.wake()
@@ -506,10 +579,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       model: this.env.MODEL_ID,
       connected: !!(await this.credentials.read("openai")),
       memory: {
-        messages: this.memory.total(),
-        summaries: this.memory.nodeCount(),
-        ready: this.memory.settled(),
-        notes: this.memory.notes(),
+        messages: this.memoryRuntime.runSync(this.memory.total()),
+        summaries: this.memoryRuntime.runSync(this.memory.nodeCount()),
+        ready: this.memoryRuntime.runSync(this.memory.settled()),
+        notes: this.memoryRuntime.runSync(this.memory.notes()),
         backup: this.db.all<{ date: string | null; error: string | null }>(
           "SELECT date,error FROM memory_backup_status WHERE id=1"
         )[0] ?? { date: null, error: null },
@@ -538,19 +611,29 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         const source = `${turn.id}:${entry.id}:${i}`
         if (message.role === "assistant") {
           const text = textContent(message.content)
-          if (text) this.memory.append(`${source}:talk`, "talk", text)
+          if (text)
+            this.memoryRuntime.runSync(
+              this.memory.append(`${source}:talk`, "talk", text)
+            )
           for (const block of message.content)
             if (block.type === "toolCall")
-              this.memory.append(
-                `${source}:${block.id}`,
-                "tool",
-                JSON.stringify({ name: block.name, arguments: block.arguments })
+              this.memoryRuntime.runSync(
+                this.memory.append(
+                  `${source}:${block.id}`,
+                  "tool",
+                  JSON.stringify({
+                    name: block.name,
+                    arguments: block.arguments,
+                  })
+                )
               )
         } else if (message.role === "toolResult") {
-          this.memory.append(
-            `${source}:echo`,
-            "echo",
-            textContent(message.content)
+          this.memoryRuntime.runSync(
+            this.memory.append(
+              `${source}:echo`,
+              "echo",
+              textContent(message.content)
+            )
           )
         }
       }
@@ -564,9 +647,14 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       )
     if (turn?.status === "running" && turn.session_id) {
       const session = this.harness.session(turn.session_id)
-      const before = JSON.stringify(watermark(this.memory))
+      const before = JSON.stringify(
+        this.memoryRuntime.runSync(this.memory.watermark())
+      )
       this.archive(turn, await session.messages())
-      if (before !== JSON.stringify(watermark(this.memory))) {
+      if (
+        before !==
+        JSON.stringify(this.memoryRuntime.runSync(this.memory.watermark()))
+      ) {
         await this.compactor.wake()
         await this.backups.wake()
       }
@@ -590,23 +678,28 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     if (!turn) return undefined
     if (this.current(turn.id).status === "cancelled")
       return { rescheduleAt: Date.now() + 10 }
-    if (!this.memory.settled()) {
+    if (!this.memoryRuntime.runSync(this.memory.settled())) {
       await this.compactor.wake()
       return {
-        rescheduleAt: Math.max(Date.now() + 750, this.memory.retryAt() ?? 0),
+        rescheduleAt: Math.max(
+          Date.now() + 750,
+          this.memoryRuntime.runSync(this.memory.retryAt()) ?? 0
+        ),
       }
     }
     if (!turn.prompt) {
       this.db.transaction(() => {
-        const view = this.memory.render()
-        const entry = this.memory.append(
-          `user:${turn.id}`,
-          "user",
-          turn.text,
-          turn.created_at
+        const view = this.memoryRuntime.runSync(this.memory.render())
+        const entry = this.memoryRuntime.runSync(
+          this.memory.append(
+            `user:${turn.id}`,
+            "user",
+            turn.text,
+            turn.created_at
+          )
         )
-        const notes = this.memory
-          .notes()
+        const notes = this.memoryRuntime
+          .runSync(this.memory.notes())
           .filter((n) => n.path === "MEMORY.md")
           .map((n) => n.body)
           .join("\n")

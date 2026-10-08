@@ -6,7 +6,7 @@ import type {
   OAuthAuth,
 } from "@earendil-works/pi-ai"
 import * as Schema from "effect/Schema"
-import type { Sqlite } from "./memory"
+import type { Sqlite } from "../storage/sqlite"
 import { cacheUsage, memoryPayload, type CacheUsage } from "./cache"
 
 const OAuthCredentialSchema = Schema.Struct({

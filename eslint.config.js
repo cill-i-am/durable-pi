@@ -16,6 +16,38 @@ export default [
     },
   },
   {
-    ignores: ["eslint.config.js", ".prettierrc", ".research/**", ".alchemy/**", "dist/**", "src/routeTree.gen.ts"],
+    files: ["src/memory/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: [
+                "./adapters/*",
+                "../agent/*",
+                "../storage/*",
+                "@earendil-works/*",
+                "agents",
+                "agents/*",
+                "cloudflare:*",
+              ],
+              message:
+                "The memory context depends on its ports. Wire infrastructure and conversation adapters at the host.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    ignores: [
+      "eslint.config.js",
+      ".prettierrc",
+      ".research/**",
+      ".alchemy/**",
+      "dist/**",
+      "src/routeTree.gen.ts",
+    ],
   },
 ]
