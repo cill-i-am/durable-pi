@@ -28,27 +28,29 @@ export const AgentWorker = Cloudflare.Worker("AgentWorker", {
     ),
   },
 })
-export const Website = Cloudflare.Website.Vite("Website", {
-  dev: { port: 1337, strictPort: true },
-  domain: Effect.map(Alchemy.Stage, (stage) =>
-    stage === "production"
-      ? {
-          name: "bot.cill-i-am.com",
-          // Pin the existing zone so CI needs no account-wide zone discovery.
-          zoneId: "37e485d6619dee244939e66e1ee90d3f",
-        }
-      : undefined
-  ),
-  env: {
-    DB: AuthDatabase,
-    AGENT_SERVICE: AgentWorker,
-    BETTER_AUTH_SECRET: Config.Redacted("BETTER_AUTH_SECRET"),
-    OWNER_EMAIL: Config.String("OWNER_EMAIL"),
-    SETUP_TOKEN: Config.Redacted("SETUP_TOKEN"),
-    APP_URL: Cloudflare.Worker.URL,
-  },
-  compatibility: { date: "2026-09-25", flags: ["nodejs_compat"] },
-})
+export const Website = Cloudflare.Website.Vite(
+  "Website",
+  Effect.map(Alchemy.Stage, (stage) => ({
+    dev: { port: 1337, strictPort: true },
+    domain:
+      stage === "production"
+        ? {
+            name: "bot.cill-i-am.com",
+            // Pin the existing zone so CI needs no account-wide zone discovery.
+            zoneId: "37e485d6619dee244939e66e1ee90d3f",
+          }
+        : undefined,
+    env: {
+      DB: AuthDatabase,
+      AGENT_SERVICE: AgentWorker,
+      BETTER_AUTH_SECRET: Config.Redacted("BETTER_AUTH_SECRET"),
+      OWNER_EMAIL: Config.String("OWNER_EMAIL"),
+      SETUP_TOKEN: Config.Redacted("SETUP_TOKEN"),
+      APP_URL: Cloudflare.Worker.URL,
+    },
+    compatibility: { date: "2026-09-25", flags: ["nodejs_compat"] },
+  }))
+)
 export type AgentEnv = Cloudflare.InferEnv<typeof AgentWorker>
 export type WebsiteEnv = Cloudflare.InferEnv<typeof Website>
 
