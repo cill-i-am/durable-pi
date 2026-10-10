@@ -5,6 +5,7 @@ import {
   type LifecycleJobOutcome,
 } from "agents/lifecycle"
 import { PiHarness } from "agents/harness/pi"
+import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context"
 import {
   createRegistry,
   defineTool,
@@ -28,6 +29,21 @@ import {
   accountCredentials,
   resolveAccountCredential,
 } from "./models"
+import { ConversationStore } from "../conversations/adapters/sqlite-turns"
+import {
+  readPiReply,
+  placedInputs,
+  archiveEntries,
+  replySettled,
+} from "../conversations/adapters/pi-reply"
+import {
+  ConversationConflict,
+  ConversationFull,
+  ModelSettings,
+  ThinkingLevel,
+  type Submission,
+  type Turn,
+} from "../conversations/turns"
 import { piTimeline } from "../conversations/adapters/pi-timeline"
 import { conversationEvents } from "../conversations/adapters/events"
 import { SYSTEM_PROMPT } from "./prompts"
@@ -40,7 +56,6 @@ import {
   CancelInput,
   SendInput,
   type ChatState,
-  type ChatTurn,
 } from "../conversations/contracts"
 
 import { AgentCatalog, AgentId, agentObjectName, homeAgentId } from "../agents"
@@ -190,6 +205,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   get memory() {
     return this.memoryRuntime.runSync(MemoryRepository)
   }
+  readonly conversations = new ConversationStore(this.db, {
+    model: this.env.MODEL_ID,
+    thinking: "medium",
+  })
   readonly localCredentials = new DurableCredentials(
     this.db,
     this.env.OPENAI_CREDENTIAL
@@ -380,9 +399,6 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     this.db.run(
       "CREATE TABLE IF NOT EXISTS memory_backup_status (id INTEGER PRIMARY KEY,date TEXT,watermark TEXT NOT NULL,error TEXT)"
     )
-    this.db.run(
-      "CREATE TABLE IF NOT EXISTS chat_turns (id TEXT PRIMARY KEY,text TEXT NOT NULL,status TEXT NOT NULL,answer TEXT NOT NULL DEFAULT '',error TEXT,created_at TEXT NOT NULL,session_id TEXT,prompt TEXT)"
-    )
   }
 
   async onStart() {
@@ -405,12 +421,55 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     return `memory/${this.ctx.id.toString()}`
   }
   active() {
-    return this.db.all<ChatTurn>(
-      "SELECT * FROM chat_turns WHERE status IN ('queued','preparing','running') ORDER BY rowid LIMIT 1"
-    )[0]
+    return this.conversations.active()
   }
   current(id: string) {
-    return this.db.all<ChatTurn>("SELECT * FROM chat_turns WHERE id=?", id)[0]!
+    return this.conversations.get(id)!
+  }
+
+  modelChoices() {
+    const levels = Schema.decodeUnknownSync(Schema.Array(ThinkingLevel))([
+      "off",
+      "minimal",
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max",
+    ])
+    return this.models.getModels("openai").map((model) => ({
+      id: model.id,
+      name: model.name,
+      thinking: model.reasoning
+        ? levels.filter((level) => model.thinkingLevelMap?.[level] !== null)
+        : ["off" as const],
+    }))
+  }
+  async acceptMessage(input: Submission) {
+    if (!input.text.trim())
+      return Response.json({ error: "Write a message first." }, { status: 400 })
+    if (!(await this.modelConnected()))
+      return Response.json(
+        { error: "Connect ChatGPT before sending a message." },
+        { status: 503 }
+      )
+    // Wake precedes admission. The archive fence and insertion share one synchronous turn.
+    await this.runner.wake()
+    if (this.botConfiguration.read()?.status === "archived")
+      return Response.json(
+        { error: "Restore this agent before sending a message." },
+        { status: 409 }
+      )
+    const receipt = this.conversations.admit(input)
+    this.notifyConversation()
+    return Response.json(
+      {
+        accepted: receipt.accepted,
+        operationId: receipt.turn.id,
+        replyId: receipt.turn.parent_id ?? receipt.turn.id,
+      },
+      { status: 202 }
+    )
   }
 
   resolveModelCredential(provider: string) {
@@ -591,108 +650,65 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         await this.backups.wake()
         return Response.json({ added })
       }
-      if (request.method === "POST" && path === "send") {
-        const body = Schema.decodeUnknownSync(SendInput)(
+      if (request.method === "GET" && path === "models")
+        return Response.json({
+          models: this.modelChoices(),
+          selection: this.conversations.selection(),
+        })
+      if (request.method === "POST" && path === "settings") {
+        const settings = Schema.decodeUnknownSync(ModelSettings)(
           await limitedJson(request)
         )
-        if (!body.text.trim())
+        const model = this.modelChoices().find(
+          (candidate) => candidate.id === settings.model
+        )
+        if (!model || !model.thinking.includes(settings.thinking))
           return Response.json(
-            { error: "Write a message first." },
+            { error: "Choose an available model and reasoning level." },
             { status: 400 }
           )
-        if (!(await this.modelConnected()))
-          return Response.json(
-            { error: "Connect ChatGPT before sending a message." },
-            { status: 503 }
-          )
-        const previous = this.db.all<ChatTurn>(
-          "SELECT * FROM chat_turns WHERE id=?",
-          body.operationId
-        )[0]
-        if (previous && previous.text !== body.text)
-          return Response.json(
-            { error: "That operation ID belongs to another message." },
-            { status: 409 }
-          )
-        if (
-          !previous &&
-          this.db.all<{ n: number }>(
-            "SELECT count(*) AS n FROM chat_turns WHERE status IN ('queued','preparing','running')"
-          )[0]!.n >= 10
-        )
-          return Response.json(
-            { error: "Wait for the queued messages to finish." },
-            { status: 429 }
-          )
-        // Arm before the synchronous write; a crash cannot strand an accepted turn without a wake.
-        await this.runner.wake()
-        // Archive acknowledgement waits for this object's durable admission fence.
-        // No await may separate this check from the insert.
-        if (this.botConfiguration.read()?.status === "archived")
-          return Response.json(
-            { error: "Restore this agent before sending a message." },
-            { status: 409 }
-          )
-        this.db.run(
-          "INSERT OR IGNORE INTO chat_turns(id,text,status,created_at) VALUES (?,?,'queued',?)",
-          body.operationId,
-          body.text,
-          new Date().toISOString()
-        )
+        const selection = this.conversations.setSettings(settings)
         this.notifyConversation()
-        return Response.json(
-          { accepted: !previous, operationId: body.operationId },
-          { status: 202 }
+        return Response.json(selection)
+      }
+      if (request.method === "POST" && path === "send")
+        return await this.acceptMessage(
+          Schema.decodeUnknownSync(SendInput)(await limitedJson(request))
         )
+      if (request.method === "POST" && path === "retry") {
+        const body = Schema.decodeUnknownSync(
+          Schema.Struct({
+            operationId: CancelInput.fields.operationId,
+            turnId: CancelInput.fields.operationId,
+          })
+        )(await limitedJson(request))
+        const source = this.conversations.get(body.turnId)
+        if (!source)
+          return Response.json({ error: "Reply not found." }, { status: 404 })
+        return await this.acceptMessage({
+          operationId: body.operationId,
+          text: source.text,
+          retryOf: source.id,
+        })
       }
       if (request.method === "POST" && path === "cancel") {
         const { operationId } = Schema.decodeUnknownSync(CancelInput)(
           await limitedJson(request)
         )
-        const turn = this.db.all<ChatTurn>(
-          "SELECT * FROM chat_turns WHERE id=?",
-          operationId
-        )[0]
-        if (turn && ["queued", "preparing", "running"].includes(turn.status)) {
-          this.db.run(
-            "UPDATE chat_turns SET status='cancelled' WHERE id=?",
-            turn.id
-          )
-          if (turn.session_id) {
-            const session = this.harness.session(turn.session_id)
-            await session.abort()
-            const entries = await session.messages()
-            this.archive(turn, entries)
-            this.db.run(
-              "UPDATE chat_turns SET answer=? WHERE id=?",
-              this.answer(entries),
-              turn.id
-            )
-          }
-          this.memoryRuntime.runSync(
-            this.memory.append(
-              `user:${turn.id}`,
-              "user",
-              turn.text,
-              turn.created_at
-            )
-          )
-          this.memoryRuntime.runSync(
-            this.memory.append(
-              `cancel:${turn.id}`,
-              "note",
-              "The user cancelled this request. Do not continue it without a new instruction."
-            )
-          )
-          await this.compactor.wake()
-          await this.backups.wake()
-          await this.runner.wake()
-          this.notifyConversation()
-        }
-        return Response.json({ ok: true })
+        await this.runner.wake()
+        this.conversations.requestStop(operationId)
+        this.notifyConversation()
+        return Response.json({ ok: true }, { status: 202 })
       }
       return new Response("Not found", { status: 404 })
-    } catch {
+    } catch (cause) {
+      if (cause instanceof ConversationConflict)
+        return Response.json({ error: cause.message }, { status: 409 })
+      if (cause instanceof ConversationFull)
+        return Response.json(
+          { error: "Wait for the queued messages to finish." },
+          { status: 429 }
+        )
       return Response.json(
         {
           error:
@@ -704,41 +720,49 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   }
 
   async snapshot(): Promise<ChatState> {
-    const turns = this.db
-      .all<ChatTurn>("SELECT * FROM chat_turns ORDER BY rowid DESC LIMIT 100")
-      .reverse()
+    const turns = this.conversations.recent()
     const activity = new Map<string, ReturnType<typeof piTimeline>>()
     for (const turn of turns) {
-      if (turn.session_id && turn.status === "running") {
-        const stream = await this.harness.session(turn.session_id).events()
-        try {
-          // Entries and partial text belong to one atomic Pi snapshot; reading them separately
-          // can briefly duplicate a partial that committed between the two reads.
-          const snapshot = stream.snapshot
-          const entries = snapshot.entries
-          turn.answer = this.answer(entries)
-          activity.set(turn.id, piTimeline(entries, snapshot))
-          if (snapshot.generation?.message)
-            turn.answer += textContent(snapshot.generation.message.content)
-        } finally {
-          await stream.stop()
-        }
+      if (turn.session_id && ["running", "stopping"].includes(turn.status)) {
+        const members = this.conversations.members(turn.id)
+        const { snapshot, records } = await readPiReply(
+          this.harness,
+          turn,
+          members
+        )
+        turn.answer = this.answer(snapshot.entries)
+        const steers = placedInputs(
+          members.filter((member) => member.parent_id),
+          records
+        )
+        activity.set(turn.id, piTimeline(snapshot.entries, snapshot, steers))
+        if (snapshot.generation?.message)
+          turn.answer += textContent(snapshot.generation.message.content)
       }
     }
     return {
-      turns: turns.map(({ prompt: _prompt, session_id: _session, ...turn }) => {
+      turns: turns.map((turn) => {
         const saved = this.db.all<{ payload: string }>(
           "SELECT payload FROM chat_activity WHERE turn_id=?",
           turn.id
         )[0]
         return {
-          ...turn,
+          id: turn.id,
+          text: turn.text,
+          status: turn.status,
+          answer: turn.answer,
+          error: turn.error,
+          created_at: turn.created_at,
           activity:
             activity.get(turn.id) ??
             (saved ? JSON.parse(saved.payload) : undefined),
+          steering: this.conversations
+            .members(turn.id)
+            .filter((member) => member.parent_id)
+            .map(({ id, text, delivery }) => ({ id, text, delivery })),
         }
       }),
-      model: this.env.MODEL_ID,
+      ...this.conversations.selection(),
       connected: await this.modelConnected(),
       memory: {
         messages: this.memoryRuntime.runSync(this.memory.total()),
@@ -767,57 +791,56 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       .filter(Boolean)
       .join("\n\n")
   }
-  archive(turn: ChatTurn, entries: readonly EntryRecord[]) {
+  archive(
+    turn: Turn,
+    entries: readonly EntryRecord[],
+    users: ReadonlyMap<number, Turn>
+  ) {
+    const steers = new Map([...users].filter(([, member]) => member.parent_id))
     this.db.run(
       "INSERT INTO chat_activity VALUES (?,?) ON CONFLICT(turn_id) DO UPDATE SET payload=excluded.payload",
       turn.id,
-      JSON.stringify(piTimeline(entries))
+      JSON.stringify(piTimeline(entries, undefined, steers))
     )
-    for (const entry of entries)
-      for (const [i, message] of (entry.model ?? []).entries()) {
-        const source = `${turn.id}:${entry.id}:${i}`
-        if (message.role === "assistant") {
-          const text = textContent(message.content)
-          if (text)
-            this.memoryRuntime.runSync(
-              this.memory.append(`${source}:talk`, "talk", text)
-            )
-          for (const block of message.content)
-            if (block.type === "toolCall")
-              this.memoryRuntime.runSync(
-                this.memory.append(
-                  `${source}:${block.id}`,
-                  "tool",
-                  JSON.stringify({
-                    name: block.name,
-                    arguments: block.arguments,
-                  })
-                )
-              )
-        } else if (message.role === "toolResult") {
-          this.memoryRuntime.runSync(
-            this.memory.append(
-              `${source}:echo`,
-              "echo",
-              textContent(message.content)
-            )
-          )
-        }
-      }
+    for (const item of archiveEntries(turn, entries, users))
+      this.memoryRuntime.runSync(
+        this.memory.append(item.source, item.kind, item.text, item.date)
+      )
+    for (const [entryId, member] of users)
+      if (entries.some((entry) => entry.id === entryId))
+        this.conversations.consumed(member.id)
   }
   async step(): Promise<LifecycleJobOutcome> {
-    const turn = this.active()
-    if (turn?.status === "queued")
-      this.db.run(
-        "UPDATE chat_turns SET status='preparing' WHERE id=?",
-        turn.id
-      )
-    if (turn?.status === "running" && turn.session_id) {
-      const session = this.harness.session(turn.session_id)
+    let turn = this.active()
+    if (!turn) return undefined
+    if (turn.status === "queued") this.conversations.prepare(turn.id)
+    if (turn.status === "running" || turn.status === "stopping") {
       const before = JSON.stringify(
         this.memoryRuntime.runSync(this.memory.watermark())
       )
-      this.archive(turn, await session.messages())
+      if (turn.status === "running" && turn.session_id) {
+        for (const member of this.conversations.members(turn.id)) {
+          if (member.id === turn.id || member.status !== "queued") continue
+          if (this.current(turn.id).status === "stopping") break
+          await this.harness
+            .session(turn.session_id)
+            .steer(member.text, { operationId: member.id })
+          this.conversations.submitted(member.id, turn.session_id)
+        }
+      }
+      turn = this.current(turn.id)
+      const members = this.conversations.members(turn.id)
+      if (turn.status === "stopping" && turn.session_id)
+        await this.harness.session(turn.session_id).abort()
+      const reply = turn.session_id
+        ? await readPiReply(this.harness, turn, members)
+        : undefined
+      if (reply)
+        this.archive(
+          turn,
+          reply.snapshot.entries,
+          placedInputs(members, reply.records)
+        )
       if (
         before !==
         JSON.stringify(this.memoryRuntime.runSync(this.memory.watermark()))
@@ -825,25 +848,58 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         await this.compactor.wake()
         await this.backups.wake()
       }
-      if ((await this.harness.pending({ session: turn.session_id })).length)
-        return { rescheduleAt: Date.now() + 750 }
-      const result = await session.wait(turn.id)
-      this.archive(turn, await session.messages())
+      if (reply && !replySettled(turn, members, reply))
+        return { rescheduleAt: Date.now() + 150 }
+      // Admission/stop may have happened during a Pi read or a wake. Recheck before closing.
+      if (this.current(turn.id).revision !== turn.revision)
+        return { rescheduleAt: Date.now() + 10 }
+      const outcomes = members.map((member) => ({
+        id: member.id,
+        delivery:
+          reply?.records.get(member.id)?.status === "done"
+            ? ("answered" as const)
+            : ("unanswered" as const),
+      }))
+      for (const member of members)
+        if (
+          outcomes.find((outcome) => outcome.id === member.id)?.delivery ===
+          "unanswered"
+        ) {
+          this.memoryRuntime.runSync(
+            this.memory.append(
+              `user:${member.id}`,
+              "user",
+              member.text,
+              member.created_at
+            )
+          )
+          this.memoryRuntime.runSync(
+            this.memory.append(
+              `unanswered:${member.id}`,
+              "note",
+              turn.status === "stopping"
+                ? "The user stopped this reply. This input was not answered; do not continue it without a new instruction."
+                : "This reply was interrupted before this input was answered. The user can retry it."
+            )
+          )
+        }
+      const failed = outcomes.some(
+        (outcome) => outcome.delivery === "unanswered"
+      )
+      const finished = this.conversations.finish(
+        turn,
+        outcomes,
+        reply ? this.answer(reply.snapshot.entries) : "",
+        failed
+          ? "The model could not finish. Check the connection and try again."
+          : null
+      )
+      if (!finished) return { rescheduleAt: Date.now() + 10 }
       await this.compactor.wake()
       await this.backups.wake()
-      this.db.run(
-        "UPDATE chat_turns SET status=?,answer=?,error=? WHERE id=? AND status='running'",
-        result.status === "done" ? "done" : "failed",
-        this.answer(await session.messages()),
-        result.status === "done"
-          ? null
-          : "The model could not finish. Reconnect ChatGPT if needed, then send your request again.",
-        turn.id
-      )
       return { rescheduleAt: Date.now() + 10 }
     }
-    if (!turn) return undefined
-    if (this.current(turn.id).status === "cancelled")
+    if (this.current(turn.id).status === "stopping")
       return { rescheduleAt: Date.now() + 10 }
     if (!this.memoryRuntime.runSync(this.memory.settled())) {
       await this.compactor.wake()
@@ -867,35 +923,35 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         )
         const notes = this.memoryRuntime
           .runSync(this.memory.notes())
-          .filter((n) => n.path === "MEMORY.md")
-          .map((n) => n.body)
+          .filter((note) => note.path === "MEMORY.md")
+          .map((note) => note.body)
           .join("\n")
         const prompt = JSON.stringify([
           { type: "text", text: view },
           {
             type: "text",
-            text: `<bot-instructions>\n${this.db.all<{ instructions: string }>("SELECT instructions FROM bot_configuration WHERE id=1")[0]?.instructions ?? ""}\n</bot-instructions>\n<private-notes>\n${notes}\n</private-notes>\n\nNew user message (archive ID ${entry.id}):\n${turn.text}`,
+            text: `<bot-instructions>\n${this.botConfiguration.read()?.instructions ?? ""}\n</bot-instructions>\n<private-notes>\n${notes}\n</private-notes>\n\nNew user message (archive ID ${entry.id}):\n${turn.text}`,
           },
         ])
-        this.db.run(
-          "UPDATE chat_turns SET status='preparing',prompt=? WHERE id=?",
-          prompt,
-          turn.id
-        )
+        this.conversations.savePrompt(turn.id, prompt)
         turn.prompt = prompt
       })
     }
     if (!turn.session_id) {
       const session = await this.harness.sessions.create()
-      this.db.run(
-        "UPDATE chat_turns SET session_id=? WHERE id=?",
-        session.id,
-        turn.id
-      )
+      this.conversations.saveSession(turn.id, session.id)
       turn.session_id = session.id
     }
-    if (this.current(turn.id).status === "cancelled")
+    if (this.current(turn.id).status === "stopping")
       return { rescheduleAt: Date.now() + 10 }
+    const conversation = await this.harness.conversation(turn.session_id)
+    await conversation.configure(
+      {
+        model: { provider: "openai", modelId: turn.model ?? this.env.MODEL_ID },
+        thinkingLevel: turn.thinking ?? "medium",
+      },
+      BACKGROUND_CONTEXT
+    )
     await this.compactor.wake()
     await this.harness.submit(
       turn.prompt!.startsWith("[")
@@ -910,17 +966,9 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             )(JSON.parse(turn.prompt!)),
           ]
         : turn.prompt!,
-      {
-        session: turn.session_id,
-        operationId: turn.id,
-      }
+      { session: turn.session_id, operationId: turn.id }
     )
-    this.db.run(
-      "UPDATE chat_turns SET status='running' WHERE id=? AND status!='cancelled'",
-      turn.id
-    )
-    if (this.current(turn.id).status === "cancelled")
-      await this.harness.session(turn.session_id).abort()
+    this.conversations.submitted(turn.id, turn.session_id)
     return { rescheduleAt: Date.now() + 100 }
   }
 }

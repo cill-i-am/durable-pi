@@ -11,14 +11,20 @@ import {
   MessageFooter,
 } from "@/components/ui/message"
 import { Bubble, BubbleContent } from "@/components/ui/bubble"
-import { TurnActivity } from "./turn-activity"
+import { TurnActivity, SteeringMessage } from "./turn-activity"
 
 export function TurnReply({
   turn,
   agentName,
+  onRetry,
+  retrying,
+  canRetry,
 }: {
   turn: ChatState["turns"][number]
   agentName: string
+  onRetry?: (id: string) => void
+  retrying?: string | null
+  canRetry?: boolean
 }) {
   const stopped = turn.status === "cancelled"
   const failed = turn.status === "failed"
@@ -34,15 +40,52 @@ export function TurnReply({
               <TurnActivity items={turn.activity} />
             ) : turn.answer ? (
               <Markdown text={turn.answer} />
-            ) : ["running", "preparing"].includes(turn.status) ? (
+            ) : ["running", "preparing", "stopping"].includes(turn.status) ? (
               <span className="shimmer text-muted-foreground">
-                {turn.status === "preparing"
-                  ? "Finding the thread…"
-                  : "Thinking…"}
+                {turn.status === "stopping"
+                  ? "Stopping…"
+                  : turn.status === "preparing"
+                    ? "Finding the thread…"
+                    : "Thinking…"}
               </span>
             ) : null}
           </BubbleContent>
         </Bubble>
+        {turn.steering
+          ?.filter(
+            (input) =>
+              !turn.activity?.some((item) => item.id === `steer:${input.id}`)
+          )
+          .map((input) => (
+            <SteeringMessage
+              key={input.id}
+              text={input.text}
+              label={
+                input.delivery === "unanswered"
+                  ? "Not answered · saved"
+                  : input.delivery === "answered"
+                    ? "Steered this reply"
+                    : "Waiting for the next tool boundary…"
+              }
+            />
+          ))}
+        {turn.steering
+          ?.filter((input) => input.delivery === "unanswered")
+          .map(
+            (input) =>
+              onRetry && (
+                <Button
+                  key={`retry:${input.id}`}
+                  variant="ghost"
+                  size="xs"
+                  disabled={!!retrying || !canRetry}
+                  aria-label={`Retry correction: ${input.text.slice(0, 80)}`}
+                  onClick={() => onRetry(input.id)}
+                >
+                  {retrying === input.id ? "Retrying…" : "Retry correction"}
+                </Button>
+              )
+          )}
         {(turn.answer || stopped || failed) && (
           <MessageFooter>
             {turn.answer && <CopyReply text={turn.answer} />}
@@ -51,6 +94,16 @@ export function TurnReply({
               : failed
                 ? "Interrupted"
                 : ""}
+            {(stopped || failed) && onRetry && (
+              <Button
+                variant="ghost"
+                size="xs"
+                disabled={!!retrying || !canRetry}
+                onClick={() => onRetry(turn.id)}
+              >
+                {retrying === turn.id ? "Retrying…" : "Retry message"}
+              </Button>
+            )}
           </MessageFooter>
         )}
         {turn.error && (

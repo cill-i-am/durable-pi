@@ -4,7 +4,8 @@ import type { TimelineItem } from "../contracts"
 /** Deliberately project display fields: never serialize provider tokens/signatures. */
 export function piTimeline(
   entries: readonly EntryRecord[],
-  live?: SnapshotEvent
+  live?: SnapshotEvent,
+  steers: ReadonlyMap<number, { id: string; text: string }> = new Map()
 ): TimelineItem[] {
   const items: TimelineItem[] = []
   type Tool = Extract<TimelineItem, { type: "tool" }>
@@ -12,14 +13,24 @@ export function piTimeline(
   const tools = new Map<string, MutableTool>()
   const messages = entries.flatMap((entry) =>
     (entry.model ?? []).map((message, index) => ({
+      entryId: entry.id,
       id: `${entry.id}:${index}`,
       message,
     }))
   )
   if (live?.generation?.message)
-    messages.push({ id: "partial", message: live.generation.message })
+    messages.push({
+      entryId: -1 as EntryRecord["id"],
+      id: "partial",
+      message: live.generation.message,
+    })
   let assistantIndex = 0
-  for (const { message } of messages) {
+  for (const { message, entryId } of messages) {
+    if (message.role === "user") {
+      const steer = steers.get(entryId)
+      if (steer)
+        items.push({ id: `steer:${steer.id}`, type: "steer", text: steer.text })
+    }
     if (message.role === "assistant") {
       // Sessions are append-only. The in-flight assistant occupies the same ordinal
       // as its eventual entry, keeping expanded disclosures and keyboard focus stable.

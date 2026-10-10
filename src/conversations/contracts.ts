@@ -3,6 +3,7 @@ import * as Schema from "effect/Schema"
 export const SendInput = Schema.Struct({
   operationId: Schema.String.check(Schema.isPattern(/^[a-f0-9-]{36}$/i)),
   text: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(30_000)),
+  mode: Schema.optional(Schema.Literals(["followUp", "steer"])),
 })
 export const CancelInput = Schema.Struct({
   operationId: Schema.String.check(Schema.isPattern(/^[a-f0-9-]{36}$/i)),
@@ -10,7 +11,14 @@ export const CancelInput = Schema.Struct({
 export type ChatTurn = {
   id: string
   text: string
-  status: "queued" | "preparing" | "running" | "done" | "failed" | "cancelled"
+  status:
+    | "queued"
+    | "preparing"
+    | "running"
+    | "stopping"
+    | "done"
+    | "failed"
+    | "cancelled"
   answer: string
   error: string | null
   created_at: string
@@ -26,6 +34,11 @@ export const TimelineItem = Schema.Union([
   Schema.Struct({
     id: Schema.String,
     type: Schema.Literal("thinking"),
+    text: Schema.String,
+  }),
+  Schema.Struct({
+    id: Schema.String,
+    type: Schema.Literal("steer"),
     text: Schema.String,
   }),
   Schema.Struct({
@@ -51,6 +64,7 @@ const VisibleTurn = Schema.Struct({
     "queued",
     "preparing",
     "running",
+    "stopping",
     "done",
     "failed",
     "cancelled",
@@ -59,9 +73,26 @@ const VisibleTurn = Schema.Struct({
   error: Schema.NullOr(Schema.String),
   created_at: Schema.String,
   activity: Schema.optional(Schema.Array(TimelineItem)),
+  steering: Schema.optional(
+    Schema.Array(
+      Schema.Struct({
+        id: Schema.String,
+        text: Schema.String,
+        delivery: Schema.Literals([
+          "queued",
+          "accepted",
+          "consumed",
+          "answered",
+          "unanswered",
+        ]),
+      })
+    )
+  ),
 })
 const Metadata = Schema.Struct({
   model: Schema.String,
+  thinking: Schema.optional(Schema.String),
+  settingsRevision: Schema.optional(Schema.Number),
   connected: Schema.Boolean,
   memory: Schema.Struct({
     messages: Schema.Number,
