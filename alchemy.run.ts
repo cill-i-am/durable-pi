@@ -3,6 +3,7 @@ import * as Cloudflare from "alchemy/Cloudflare"
 import * as Config from "effect/Config"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
+import { PASSWORD_EMAIL_FROM } from "./src/auth/password-email"
 import type { PersonalAgent } from "./src/agent/worker"
 
 export const AuthDatabase = Cloudflare.D1.Database("AuthDatabase", {
@@ -30,26 +31,34 @@ export const AgentWorker = Cloudflare.Worker("AgentWorker", {
 })
 export const Website = Cloudflare.Website.Vite(
   "Website",
-  Effect.map(Alchemy.Stage, (stage) => ({
-    dev: { port: 1337, strictPort: true },
-    domain:
-      stage === "production"
-        ? {
-            name: "bot.cill-i-am.com",
-            // Pin the existing zone so CI needs no account-wide zone discovery.
-            zoneId: "37e485d6619dee244939e66e1ee90d3f",
-          }
-        : undefined,
-    env: {
-      DB: AuthDatabase,
-      AGENT_SERVICE: AgentWorker,
-      BETTER_AUTH_SECRET: Config.Redacted("BETTER_AUTH_SECRET"),
-      OWNER_EMAIL: Config.String("OWNER_EMAIL"),
-      SETUP_TOKEN: Config.Redacted("SETUP_TOKEN"),
-      APP_URL: Cloudflare.Worker.URL,
-    },
-    compatibility: { date: "2026-09-25", flags: ["nodejs_compat"] },
-  }))
+  Effect.gen(function* () {
+    const stage = yield* Alchemy.Stage
+    const owner = yield* Config.String("OWNER_EMAIL").pipe(Effect.orDie)
+    return {
+      dev: { port: 1337, strictPort: true },
+      domain:
+        stage === "production"
+          ? {
+              name: "bot.cill-i-am.com",
+              // Pin the existing zone so CI needs no account-wide zone discovery.
+              zoneId: "37e485d6619dee244939e66e1ee90d3f",
+            }
+          : undefined,
+      env: {
+        DB: AuthDatabase,
+        AGENT_SERVICE: AgentWorker,
+        BETTER_AUTH_SECRET: Config.Redacted("BETTER_AUTH_SECRET"),
+        OWNER_EMAIL: owner,
+        AUTH_EMAIL: Cloudflare.Email.SendEmail("AuthEmail", {
+          allowedSenderAddresses: [PASSWORD_EMAIL_FROM],
+          allowedDestinationAddresses: [owner],
+        }),
+        SETUP_TOKEN: Config.Redacted("SETUP_TOKEN"),
+        APP_URL: Cloudflare.Worker.URL,
+      },
+      compatibility: { date: "2026-09-25", flags: ["nodejs_compat"] },
+    }
+  })
 )
 export type AgentEnv = Cloudflare.InferEnv<typeof AgentWorker>
 export type WebsiteEnv = Cloudflare.InferEnv<typeof Website>
