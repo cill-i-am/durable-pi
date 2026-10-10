@@ -1,11 +1,15 @@
 import type { EntryRecord, SnapshotEvent } from "@earendil-works/pi-durable"
 import type { TimelineItem } from "../contracts"
+import type { FileInfo } from "../../workspace/files"
 
 /** Deliberately project display fields: never serialize provider tokens/signatures. */
 export function piTimeline(
   entries: readonly EntryRecord[],
   live?: SnapshotEvent,
-  steers: ReadonlyMap<number, { id: string; text: string }> = new Map()
+  steers: ReadonlyMap<
+    number,
+    { id: string; text: string; attachments?: readonly FileInfo[] }
+  > = new Map()
 ): TimelineItem[] {
   const items: TimelineItem[] = []
   type Tool = Extract<TimelineItem, { type: "tool" }>
@@ -29,7 +33,12 @@ export function piTimeline(
     if (message.role === "user") {
       const steer = steers.get(entryId)
       if (steer)
-        items.push({ id: `steer:${steer.id}`, type: "steer", text: steer.text })
+        items.push({
+          id: `steer:${steer.id}`,
+          type: "steer",
+          text: steer.text,
+          attachments: steer.attachments,
+        })
     }
     if (message.role === "assistant") {
       // Sessions are append-only. The in-flight assistant occupies the same ordinal

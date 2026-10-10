@@ -1,8 +1,10 @@
 import * as Schema from "effect/Schema"
+import { FileInfo, FileSelection } from "../workspace/files"
 
 export const SendInput = Schema.Struct({
   operationId: Schema.String.check(Schema.isPattern(/^[a-f0-9-]{36}$/i)),
-  text: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(30_000)),
+  text: Schema.String.check(Schema.isMaxLength(30_000)),
+  files: Schema.optional(FileSelection),
   mode: Schema.optional(Schema.Literals(["followUp", "steer"])),
 })
 export const CancelInput = Schema.Struct({
@@ -40,6 +42,7 @@ export const TimelineItem = Schema.Union([
     id: Schema.String,
     type: Schema.Literal("steer"),
     text: Schema.String,
+    attachments: Schema.optional(Schema.Array(FileInfo)),
   }),
   Schema.Struct({
     id: Schema.String,
@@ -72,12 +75,14 @@ const VisibleTurn = Schema.Struct({
   answer: Schema.String,
   error: Schema.NullOr(Schema.String),
   created_at: Schema.String,
+  attachments: Schema.optional(Schema.Array(FileInfo)),
   activity: Schema.optional(Schema.Array(TimelineItem)),
   steering: Schema.optional(
     Schema.Array(
       Schema.Struct({
         id: Schema.String,
         text: Schema.String,
+        attachments: Schema.optional(Schema.Array(FileInfo)),
         delivery: Schema.Literals([
           "queued",
           "accepted",

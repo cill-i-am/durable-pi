@@ -5,6 +5,14 @@ import {
 } from "../src/features/conversation/commands"
 
 describe("conversation command acknowledgement", () => {
+  it("includes attachment identity in uncertain-send retries", () => {
+    const id = crypto.randomUUID()
+    const first = submissionAttempt(null, "", "followUp", [id])
+    expect(submissionAttempt(first, "", "steer", [id])).toEqual(first)
+    expect(submissionAttempt(first, "", "followUp", []).operationId).not.toBe(
+      first.operationId
+    )
+  })
   it("retries the original intent after a lost response and a live activity transition", () => {
     const sent = submissionAttempt(null, "hello", "followUp")
     // SSE becomes active before HTTP delivery is known; do not send a duplicate steer.

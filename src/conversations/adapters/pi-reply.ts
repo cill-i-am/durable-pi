@@ -6,6 +6,7 @@ import type {
   SnapshotEvent,
 } from "@earendil-works/pi-durable"
 import type { Turn } from "../turns"
+import { messageArchiveText } from "../../workspace/files"
 
 export async function readPiReply(
   harness: PiHarness,
@@ -94,7 +95,7 @@ export function archiveEntries(
           output.push({
             source: `user:${user.id}`,
             kind: "user",
-            text: user.text,
+            text: messageArchiveText(user.text, user.attachments),
             date: user.created_at,
           })
       } else if (message.role === "assistant") {

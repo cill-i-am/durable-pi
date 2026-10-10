@@ -16,12 +16,14 @@ import { TurnActivity, SteeringMessage } from "./turn-activity"
 export function TurnReply({
   turn,
   agentName,
+  agentId,
   onRetry,
   retrying,
   canRetry,
 }: {
   turn: ChatState["turns"][number]
   agentName: string
+  agentId?: string
   onRetry?: (id: string) => void
   retrying?: string | null
   canRetry?: boolean
@@ -37,7 +39,7 @@ export function TurnReply({
         <Bubble variant="ghost">
           <BubbleContent className="message-text">
             {turn.activity?.length ? (
-              <TurnActivity items={turn.activity} />
+              <TurnActivity items={turn.activity} agentId={agentId} />
             ) : turn.answer ? (
               <Markdown text={turn.answer} />
             ) : ["running", "preparing", "stopping"].includes(turn.status) ? (
@@ -60,6 +62,8 @@ export function TurnReply({
             <SteeringMessage
               key={input.id}
               text={input.text}
+              attachments={input.attachments}
+              agentId={agentId}
               label={
                 input.delivery === "unanswered"
                   ? "Not answered · saved"

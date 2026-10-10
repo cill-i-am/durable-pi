@@ -12,6 +12,9 @@ export const AuthDatabase = Cloudflare.D1.Database("AuthDatabase", {
 export const MemoryBackups = Cloudflare.R2.Bucket("MemoryBackups", {
   publicAccess: false,
 })
+export const WorkspaceAssets = Cloudflare.R2.Bucket("WorkspaceAssets", {
+  publicAccess: false,
+})
 export const AgentWorker = Cloudflare.Worker("AgentWorker", {
   main: "./src/agent/worker.ts",
   dev: { port: 1338, strictPort: true },
@@ -20,6 +23,7 @@ export const AgentWorker = Cloudflare.Worker("AgentWorker", {
   env: {
     AGENT: Cloudflare.DurableObject<PersonalAgent>("PersonalAgent"),
     MEMORY_BACKUPS: MemoryBackups,
+    WORKSPACE_ASSETS: WorkspaceAssets,
     OPENAI_CREDENTIAL: Config.Redacted("OPENAI_CREDENTIAL").pipe(
       Config.withDefault("")
     ),

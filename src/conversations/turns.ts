@@ -1,5 +1,6 @@
 import { Schema } from "effect"
 import type { ChatTurn } from "./contracts"
+import type { AttachmentContent, FileInfo } from "../workspace/files"
 
 export const ThinkingLevel = Schema.Literals([
   "off",
@@ -32,12 +33,15 @@ export type Turn = ChatTurn & {
   thinking: ThinkingLevel | null
   revision: number
   creation: string | null
+  attachments: readonly FileInfo[]
+  input: readonly AttachmentContent[]
 }
 export type Submission = {
   operationId: string
   text: string
   mode?: SubmissionMode
   retryOf?: string
+  files?: readonly string[]
 }
 export class ConversationConflict extends Schema.TaggedError<ConversationConflict>()(
   "ConversationConflict",

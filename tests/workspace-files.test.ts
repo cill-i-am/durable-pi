@@ -1,0 +1,281 @@
+import { describe, expect, it } from "vitest"
+import { Effect, ManagedRuntime } from "effect"
+import { database } from "./database"
+import {
+  workspaceLayer,
+  type AssetBucket,
+} from "../src/workspace/adapters/storage"
+import { Workspace } from "../src/workspace/workspace"
+import { filesRequest } from "../src/workspace/http"
+import {
+  inspectFile,
+  MAX_FILE_BYTES,
+  MAX_VISION_BYTES,
+  type Upload,
+} from "../src/workspace/files"
+import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
+
+const textUpload = (name = "notes.md", text = "private notes"): Upload => ({
+  id: crypto.randomUUID(),
+  name,
+  mime: "text/plain",
+  bytes: new TextEncoder().encode(text),
+})
+function fixture(
+  prefix = "bot-a",
+  objects = new Map<string, Uint8Array>(),
+  canWrite = () => true
+) {
+  let fail = false
+  const bucket: AssetBucket = {
+    async put(key, bytes) {
+      if (fail) throw new Error("offline")
+      objects.set(key, bytes.slice())
+    },
+    async get(key) {
+      const bytes = objects.get(key)
+      return bytes
+        ? {
+            body: new Blob([new Uint8Array(bytes)]).stream(),
+            arrayBuffer: async () => new Uint8Array(bytes).buffer,
+          }
+        : null
+    },
+  }
+  const db = database()
+  const runtime = ManagedRuntime.make(
+    workspaceLayer(db, bucket, prefix, canWrite)
+  )
+  const run = <T, TError>(
+    f: (workspace: Workspace["Service"]) => Effect.Effect<T, TError>
+  ) => runtime.runPromise(Effect.flatMap(Workspace, f))
+  return {
+    db,
+    run,
+    runtime,
+    objects,
+    fail: (value: boolean) => {
+      fail = value
+    },
+  }
+}
+describe("private workspace files", () => {
+  it("fences new mutations after archival while allowing an existing reservation to finish", async () => {
+    let writable = true
+    const f = fixture("bot", new Map(), () => writable)
+    const existing = textUpload()
+    f.fail(true)
+    await expect(f.run((w) => w.upload(existing))).rejects.toMatchObject({
+      _tag: "WorkspaceUnavailable",
+    })
+    f.fail(false)
+    const pending = f.run((w) => w.upload(textUpload()))
+    writable = false
+    await expect(pending).rejects.toMatchObject({ _tag: "WorkspaceReadOnly" })
+    expect((await f.run((w) => w.upload(existing))).status).toBe("ready")
+    await expect(
+      f.run((w) => w.rename(existing.id, "renamed.txt"))
+    ).rejects.toMatchObject({ _tag: "WorkspaceReadOnly" })
+    await expect(
+      f.run((w) => w.trash(existing.id, true))
+    ).rejects.toMatchObject({ _tag: "WorkspaceReadOnly" })
+    expect(await f.run((w) => w.list())).toHaveLength(1)
+    await f.runtime.dispose()
+  })
+  it("drops consumed image input before writing a large final reply under a SQLite row budget", () => {
+    const db = database()
+    const store = new ConversationStore(db, { model: "test", thinking: "off" })
+    db.run(
+      `CREATE TRIGGER row_budget BEFORE UPDATE ON chat_turns WHEN length(CAST(coalesce(NEW.prompt,'') || NEW.input || NEW.answer AS BLOB)) > 2000000 BEGIN SELECT RAISE(ABORT,'row too large'); END`
+    )
+    const blocks = Array.from({ length: 4 }, () => ({
+      type: "image" as const,
+      mimeType: "image/jpeg",
+      data: "A".repeat((MAX_VISION_BYTES * 4) / 3),
+    }))
+    const command = { operationId: crypto.randomUUID(), text: "Inspect these" }
+    const root = store.admit(command, { files: [], content: blocks }).turn
+    store.savePrompt(root.id, JSON.stringify(blocks))
+    expect(store.get(root.id)?.input).toEqual([])
+    expect(
+      store.finish(
+        store.get(root.id)!,
+        [{ id: root.id, delivery: "answered" }],
+        "answer".repeat(180_000),
+        null
+      )
+    ).toBe(true)
+    expect(store.get(root.id)?.prompt).toBeNull()
+  })
+  it("keeps R2 bytes out of metadata and isolates bot namespaces", async () => {
+    const a = fixture(),
+      b = fixture("bot-b", a.objects)
+    const input = textUpload()
+    const file = await a.run((w) => w.upload(input))
+    expect(file).toMatchObject({
+      name: "notes.md",
+      status: "ready",
+      trashed: false,
+      kind: "text",
+    })
+    expect(JSON.stringify(file)).not.toMatch(/hash|private notes|bot-a/)
+    expect(await a.run((w) => w.readText(file.id, 0, 7))).toMatchObject({
+      text: "private",
+      next: 7,
+      total: 13,
+    })
+    await expect(b.run((w) => w.content(file.id))).rejects.toMatchObject({
+      _tag: "FileNotFound",
+    })
+    await b.run((w) =>
+      w.upload({ ...input, bytes: new TextEncoder().encode("different") })
+    )
+    expect(a.objects.size).toBe(2)
+    expect((await a.run((w) => w.readText(file.id, 0, 20))).text).toBe(
+      "private notes"
+    )
+    await Promise.all([a.runtime.dispose(), b.runtime.dispose()])
+  })
+  it("resumes interrupted uploads without duplicating bytes and fences ID collisions", async () => {
+    const f = fixture(),
+      input = textUpload()
+    f.fail(true)
+    await expect(f.run((w) => w.upload(input))).rejects.toMatchObject({
+      _tag: "WorkspaceUnavailable",
+    })
+    expect((await f.run((w) => w.list()))[0]?.status).toBe("uploading")
+    await expect(f.run((w) => w.attach([input.id]))).rejects.toMatchObject({
+      _tag: "FileNotFound",
+    })
+    f.fail(false)
+    await f.run((w) => w.upload(input))
+    await f.run((w) => w.rename(input.id, "renamed.md"))
+    expect((await f.run((w) => w.upload(input))).name).toBe("renamed.md")
+    expect(f.objects.size).toBe(1)
+    await expect(
+      f.run((w) =>
+        w.upload({ ...input, bytes: new TextEncoder().encode("changed") })
+      )
+    ).rejects.toMatchObject({ _tag: "FileRejected" })
+    await f.runtime.dispose()
+  })
+  it("soft-deletes, denies reads and attachment admission, then restores the same original", async () => {
+    const f = fixture(),
+      input = textUpload()
+    await f.run((w) => w.upload(input))
+    await f.run((w) => w.trash(input.id, true))
+    await expect(f.run((w) => w.content(input.id))).rejects.toMatchObject({
+      _tag: "FileNotFound",
+    })
+    await expect(
+      f.run((w) => w.requireFiles([input.id]))
+    ).rejects.toMatchObject({ _tag: "FileNotFound" })
+    expect((await f.run((w) => w.list()))[0]?.trashed).toBe(true)
+    await f.run((w) => w.trash(input.id, false))
+    expect((await f.run((w) => w.readText(input.id, 8, 20))).text).toBe("notes")
+    await f.runtime.dispose()
+  })
+  it("rejects oversized, unsafe or disguised text and bounds image context", async () => {
+    expect(() => inspectFile(textUpload("../secret"))).toThrow()
+    expect(() =>
+      inspectFile({
+        ...textUpload(),
+        bytes: new Uint8Array(MAX_FILE_BYTES + 1),
+      })
+    ).toThrow()
+    expect(() =>
+      inspectFile({ ...textUpload(), bytes: new Uint8Array([0xff, 0x00]) })
+    ).toThrow()
+    expect(() =>
+      inspectFile({ ...textUpload("evil.svg"), mime: "image/svg+xml" })
+    ).toThrow()
+    const f = fixture()
+    const image: Upload = {
+      id: crypto.randomUUID(),
+      name: "picture.jpg",
+      mime: "image/jpeg",
+      bytes: new Uint8Array([255, 216, 255, 224, 0, 16]),
+      vision: new Uint8Array([255, 216, 255, 224]),
+    }
+    await expect(
+      f.run((w) =>
+        w.upload({ ...image, vision: new Uint8Array(MAX_VISION_BYTES + 1) })
+      )
+    ).rejects.toMatchObject({ _tag: "FileRejected" })
+    await f.run((w) => w.upload(image))
+    expect((await f.run((w) => w.attach([image.id]))).content).toContainEqual({
+      type: "image",
+      mimeType: "image/jpeg",
+      data: "/9j/4A==",
+    })
+    await expect(
+      f.run((w) => w.readText(image.id, 0, 10))
+    ).rejects.toMatchObject({ _tag: "FileRejected" })
+    await f.runtime.dispose()
+  })
+  it("serves HTML as an authenticated plain-text download with no executable context", async () => {
+    const f = fixture(),
+      input = textUpload("page.html", "<script>alert('untrusted')</script>")
+    await f.run((w) => w.upload(input))
+    const path = `files/${input.id}/content`
+    const response = await f.runtime.runPromise(
+      filesRequest(new Request(`https://bot.test/${path}`), path)
+    )
+    expect(response.status).toBe(200)
+    expect(response.headers.get("content-type")).toBe(
+      "text/plain; charset=utf-8"
+    )
+    expect(response.headers.get("content-disposition")).toMatch(/^attachment/)
+    expect(response.headers.get("content-security-policy")).toContain("sandbox")
+    expect(response.headers.get("cache-control")).toBe("private, no-store")
+    expect(await response.text()).toContain("<script>")
+    const largeRename = await f.runtime.runPromise(
+      filesRequest(
+        new Request("https://bot.test/", {
+          method: "POST",
+          body: "x".repeat(2049),
+        }),
+        `files/${input.id}/rename`
+      )
+    )
+    expect(largeRename.status).toBe(400)
+    await f.runtime.dispose()
+  })
+  it("freezes attachment content at admission, omits image bytes from history, and bounds a reply", async () => {
+    const f = fixture(),
+      input = textUpload()
+    await f.run((w) => w.upload(input))
+    const prepared = await f.run((w) => w.attach([input.id]))
+    const store = new ConversationStore(f.db, {
+      model: "test",
+      thinking: "off",
+    })
+    const command = {
+      operationId: crypto.randomUUID(),
+      text: "",
+      files: [input.id],
+    }
+    const first = store.admit(command, prepared)
+    expect(first.turn.attachments).toHaveLength(1)
+    expect(first.turn.input).toEqual(prepared.content)
+    await f.run((w) => w.trash(input.id, true))
+    expect(store.admit(command).accepted).toBe(false)
+    expect(() => store.admit({ ...command, files: [] })).toThrow()
+    expect(store.recent()[0]?.input).toEqual([])
+    store.savePrompt(first.turn.id, JSON.stringify(prepared.content))
+    expect(store.get(first.turn.id)?.input).toEqual([])
+    expect(store.recent()[0]?.prompt).toBeNull()
+    for (let i = 0; i < 3; i++)
+      store.admit(
+        { ...command, operationId: crypto.randomUUID(), mode: "steer" },
+        prepared
+      )
+    expect(() =>
+      store.admit(
+        { ...command, operationId: crypto.randomUUID(), mode: "steer" },
+        prepared
+      )
+    ).toThrow(/four-file/)
+    await f.runtime.dispose()
+  })
+})

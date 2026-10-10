@@ -8,11 +8,18 @@ import type {
 export function submissionAttempt(
   previous: Submission | null,
   text: string,
-  mode: SubmissionMode
+  mode: SubmissionMode,
+  files: readonly string[] = []
 ): Submission {
-  return previous?.text === text
+  return previous?.text === text &&
+    JSON.stringify(previous.files ?? []) === JSON.stringify(files)
     ? previous
-    : { operationId: crypto.randomUUID(), text, mode }
+    : {
+        operationId: crypto.randomUUID(),
+        text,
+        mode,
+        ...(files.length ? { files } : {}),
+      }
 }
 
 /** A confirmed command response stays authoritative until the stream catches up. */

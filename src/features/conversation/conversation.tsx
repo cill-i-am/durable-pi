@@ -13,6 +13,13 @@ import { Schema } from "effect"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import type { AgentProfile } from "@/agents/contracts"
 import { agentApi } from "@/http/client"
+import {
+  useFiles,
+  FilesPanel,
+  FilePicker,
+  UploadStatus,
+  FileAttachments,
+} from "@/features/files"
 import { MemoryPanel } from "@/features/memory"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
@@ -49,6 +56,7 @@ export function Conversation({
   name: string
   agent: AgentProfile
 }) {
+  const files = useFiles(agent.id)
   const api = useMemo(() => agentApi(agent.id), [agent.id])
   const [error, setError] = useState("")
   const [sending, setSending] = useState(false)
@@ -64,9 +72,16 @@ export function Conversation({
   async function send(text: string, mode: SubmissionMode) {
     setSending(true)
     setError("")
-    pending.current = submissionAttempt(pending.current, text, mode)
+    pending.current = submissionAttempt(
+      pending.current,
+      text,
+      mode,
+      files.selected.map((file) => file.id)
+    )
     try {
+      const submittedFiles = pending.current.files ?? []
       await api("send", pending.current)
+      files.clear(submittedFiles)
       pending.current = null
       setRefresh((n) => n + 1)
       return true
@@ -119,7 +134,13 @@ export function Conversation({
                 : "Ready"}
           </Badge>
         </div>
-        <MemoryPanel state={state} agentId={agent.id} />
+        <div className="flex shrink-0 items-center">
+          <FilesPanel
+            state={files}
+            selectionDisabled={sending || files.uploading}
+          />
+          <MemoryPanel state={state} agentId={agent.id} />
+        </div>
       </header>
       <MessageScrollerProvider autoScroll>
         <MessageScroller className="conversation-scroller">
@@ -164,6 +185,10 @@ export function Conversation({
                         <Bubble align="end" variant="secondary">
                           <BubbleContent className="message-text">
                             {turn.text}
+                            <FileAttachments
+                              files={turn.attachments ?? []}
+                              agentId={agent.id}
+                            />
                           </BubbleContent>
                         </Bubble>
                         <MessageFooter>
@@ -197,6 +222,7 @@ export function Conversation({
                     <TurnReply
                       turn={turn}
                       agentName={agent.name}
+                      agentId={agent.id}
                       onRetry={(id) => void retry(id)}
                       retrying={retrying}
                       canRetry={!!state.connected && !retrying}
@@ -239,7 +265,29 @@ export function Conversation({
           onStop={stop}
           active={!!active}
           stopping={active?.status === "stopping"}
-          pending={sending}
+          pending={sending || files.uploading}
+          hasAttachments={files.selected.length > 0}
+          attachments={
+            <>
+              <FileAttachments
+                files={files.selected}
+                agentId={agent.id}
+                onRemove={sending ? undefined : files.remove}
+              />
+              <UploadStatus state={files} />
+              {files.error && (
+                <p role="alert" className="py-2 text-sm text-destructive">
+                  {files.error}
+                </p>
+              )}
+            </>
+          }
+          attachmentControl={
+            <FilePicker
+              state={files}
+              disabled={sending || files.selected.length >= 4}
+            />
+          }
           enabled={!!state?.connected}
           modelControl={
             <ModelMenu
@@ -277,6 +325,9 @@ function Composer({
   pending,
   enabled,
   modelControl,
+  attachments,
+  attachmentControl,
+  hasAttachments,
 }: {
   name: string
   onSend: (text: string, mode: SubmissionMode) => Promise<boolean>
@@ -286,13 +337,16 @@ function Composer({
   pending: boolean
   enabled: boolean
   modelControl: React.ReactNode
+  attachments: React.ReactNode
+  attachmentControl: React.ReactNode
+  hasAttachments: boolean
 }) {
   const [draft, setDraft] = useState("")
   const [mode, setMode] = useState<SubmissionMode>("steer")
   const delivery = active && !stopping ? mode : "followUp"
   async function send() {
     const text = draft.trim()
-    if (!text || pending || !enabled) return
+    if ((!text && !hasAttachments) || pending || !enabled) return
     if (await onSend(text, delivery))
       setDraft((current) => (current.trim() === text ? "" : current))
   }
@@ -303,6 +357,7 @@ function Composer({
         void send()
       }}
     >
+      {attachments}
       <InputGroup className="chat-composer">
         <InputGroupTextarea
           aria-label={`Message ${name}`}
@@ -323,6 +378,7 @@ function Composer({
           }}
         />
         <InputGroupAddon align="block-end" className="flex-wrap">
+          {attachmentControl}
           <div className="max-w-full min-w-0">{modelControl}</div>
           <div className="ml-auto flex gap-2">
             {active && (
@@ -340,7 +396,9 @@ function Composer({
             <InputGroupButton
               type="submit"
               size="icon-sm"
-              disabled={!draft.trim() || pending || !enabled}
+              disabled={
+                (!draft.trim() && !hasAttachments) || pending || !enabled
+              }
               aria-label={
                 active
                   ? delivery === "steer"

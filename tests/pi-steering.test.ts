@@ -24,6 +24,7 @@ import {
   replySettled,
 } from "../src/conversations/adapters/pi-reply"
 import { database } from "./database"
+import { MAX_VISION_BYTES } from "../src/workspace/files"
 
 function gate() {
   let resolve!: () => void
@@ -34,7 +35,7 @@ function gate() {
 }
 
 describe("native Pi steering with SQLite persistence", () => {
-  it.each(["restart", "stop"])(
+  it.each(["restart", "restart-images", "stop"])(
     "handles %s while a tool and steer are pending without losing their receipts",
     async (scenario) => {
       const directory = await mkdtemp(join(tmpdir(), "pi-steering-"))
@@ -42,6 +43,14 @@ describe("native Pi steering with SQLite persistence", () => {
       const toolEntered = gate()
       const releaseTool = gate()
       const faux = fauxProvider({ tokensPerSecond: 100000 })
+      const images =
+        scenario === "restart-images"
+          ? Array.from({ length: 2 }, () => ({
+              type: "image" as const,
+              mimeType: "image/jpeg",
+              data: "A".repeat((MAX_VISION_BYTES * 4) / 3),
+            }))
+          : []
       const models = createModels()
       models.setProvider(faux.provider)
       const registry = createRegistry()
@@ -81,6 +90,14 @@ describe("native Pi steering with SQLite persistence", () => {
           )
           expect(users).toHaveLength(2)
           expect(JSON.stringify(users.at(-1))).toContain("use blue")
+          if (images.length) {
+            for (const user of users) {
+              expect(
+                Array.isArray(user.content) &&
+                  user.content.filter((block) => block.type === "image")
+              ).toEqual(images)
+            }
+          }
           return fauxAssistantMessage("Done in blue")
         },
       ])
@@ -107,7 +124,10 @@ describe("native Pi steering with SQLite persistence", () => {
           {
             type: "input",
             requestId: root.id,
-            content: "PRIVATE MEMORY VIEW: make a design",
+            content: [
+              { type: "text", text: "PRIVATE MEMORY VIEW: make a design" },
+              ...images,
+            ],
           },
           ctx
         )
@@ -120,7 +140,7 @@ describe("native Pi steering with SQLite persistence", () => {
         const command = {
           type: "input" as const,
           requestId: steer.id,
-          content: steer.text,
+          content: [{ type: "text" as const, text: steer.text }, ...images],
           whenBusy: "steer" as const,
         }
         let receipt = await conversation.submit(command, ctx)
