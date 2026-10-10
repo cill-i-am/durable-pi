@@ -10,6 +10,12 @@ import type { TimelineItem } from "../../conversations/contracts"
 import { Markdown } from "../../components/markdown"
 import { Button } from "../../components/ui/button"
 import {
+  Message,
+  MessageContent,
+  MessageFooter,
+} from "../../components/ui/message"
+import { Bubble, BubbleContent } from "../../components/ui/bubble"
+import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
@@ -19,6 +25,14 @@ export function TurnActivity({ items }: { items: readonly TimelineItem[] }) {
   return (
     <div className="flex min-w-0 flex-col gap-3">
       {items.map((item) => {
+        if (item.type === "steer")
+          return (
+            <SteeringMessage
+              key={item.id}
+              text={item.text}
+              label="Steered this reply"
+            />
+          )
         if (item.type === "text")
           return <Markdown key={item.id} text={item.text} />
         if (item.type === "thinking")
@@ -104,5 +118,24 @@ export function TurnActivity({ items }: { items: readonly TimelineItem[] }) {
         )
       })}
     </div>
+  )
+}
+
+export function SteeringMessage({
+  text,
+  label,
+}: {
+  text: string
+  label: string
+}) {
+  return (
+    <Message align="end">
+      <MessageContent>
+        <Bubble align="end" variant="secondary">
+          <BubbleContent className="message-text">{text}</BubbleContent>
+        </Bubble>
+        <MessageFooter>{label}</MessageFooter>
+      </MessageContent>
+    </Message>
   )
 }
