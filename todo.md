@@ -1,6 +1,6 @@
-# Deferred next steps
+# OptChat implementation references
 
-Recorded on 2026-10-07. Steering and subagents are deferred at the owner's request. Resume implementation when requested.
+Recorded on 2026-10-07; implementation authorized on 2026-10-10. Track delivery in [BUILD.md](BUILD.md). The checklist below retains the detailed steering and subagent requirements.
 
 Baseline: `afa124c`. The app has OptChat-style memory, a tree browser, import/export, and private R2 backups. Messages received during a reply still queue for a fresh turn. Pi already supplies the capabilities below; the remaining work is application integration. The installed versions checked were `@earendil-works/pi-durable` 1.0.4 and `agents` 0.27.0.
 
@@ -14,7 +14,7 @@ Follow OptChat §§6–8 and Pi's native steering API.
 - [ ] Update the composer, message status, response grouping, and stop behavior for multiple user messages joining one run.
 - [ ] Test tool-boundary delivery, rapid consecutive messages, completion races, cancellation, and Durable Object restart. Verify encrypted reasoning replay and cache usage after a steering message.
 
-Start in [the agent worker](src/agent/worker.ts), [chat contracts](src/shared/contracts.ts), [the chat UI](src/components/chat-app.tsx), and [the cache adapter](src/agent/cache.ts).
+Start in [the agent worker](src/agent/worker.ts), [chat contracts](src/shared/contracts.ts), [the chat UI](src/features/conversation/conversation.tsx), and [the cache adapter](src/agent/cache.ts).
 
 ## 2. Add optional subagents
 
@@ -26,7 +26,7 @@ OptChat §9 makes subagents optional; the memory system does not require them.
 - [ ] Follow the background-subagent pattern for nonblocking work. When a spawn group finishes, deliver its combined reports once as a main-log `user` entry containing each child's `[id] report`. Steer an active parent or start a fresh turn when idle; do not make the parent poll for completion.
 - [ ] Define child concurrency, model limits, cancellation ownership, and status/stop controls. Test duplicate delivery, child failure, parent cancellation, and restart recovery with work still running.
 
-Start in [the agent registry and lifecycle](src/agent/worker.ts), [memory prompts](src/agent/prompts.ts), and [the chat UI](src/components/chat-app.tsx). Reuse the existing authentication boundary and keep credentials out of prompts, logs, and exports.
+Start in [the agent registry and lifecycle](src/agent/worker.ts), [memory prompts](src/agent/prompts.ts), and [the chat UI](src/features/conversation/conversation.tsx). Reuse the existing authentication boundary and keep credentials out of prompts, logs, and exports.
 
 ## 3. Complete targeted conformance checks
 

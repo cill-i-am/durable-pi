@@ -41,6 +41,32 @@ export default [
     },
   },
   {
+    files: ["src/agents/*.ts"],
+    ignores: ["src/agents/*.test.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: [
+                "./adapters/*",
+                "../agent/*",
+                "../storage/*",
+                "cloudflare:*",
+                "react",
+                "agents",
+                "agents/*",
+              ],
+              message:
+                "Keep the Agents domain independent of its host and storage adapters.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     ignores: [
       "eslint.config.js",
       ".prettierrc",

@@ -1,10 +1,12 @@
 # Durable Pi
 
-A private, continuous web chat built with **Pi Durable**, Cloudflare Durable Objects, **TanStack Start**, **shadcn/ui on Base UI**, Better Auth, and **Alchemy Effect**.
+A private, durable agent workspace built with **Pi Durable**, Cloudflare Durable Objects, **TanStack Start**, **shadcn/ui on Base UI**, Better Auth, and **Alchemy Effect**.
 
 Production: [bot.cill-i-am.com](https://bot.cill-i-am.com). Alchemy attaches this hostname to the existing website Worker and manages its DNS and TLS certificate. The production zone is pinned in `alchemy.run.ts`; development keeps its local URL. `Worker.URL` supplies the canonical origin to authentication. The previous `workers.dev` address redirects page requests to this address; mutations require the canonical origin. Sign in again on the new hostname using the existing account.
 
 Pi owns model turns, tool execution, committed transcripts, and recovery. The application adds an owner-only login, a durable submission queue, a lossless message archive, a binary summary tree, and sourced Markdown memory notes. ChatGPT subscription access uses Pi's current OpenAI sign-in flow.
+
+Implementation progress, acceptance criteria and architecture are tracked in [BUILD.md](BUILD.md).
 
 ## Run it
 
@@ -38,14 +40,15 @@ For the initial local-to-remote state migration, `scripts/migrate-production-sta
 
 ## What is implemented
 
-- One private chat, queued messages, committed response updates, stop, retry-safe submission IDs, and reopening after a restart.
+- A private bot catalog: create, rename, select, archive and restore bots. The original chat remains the personal assistant; each new bot has its own conversation, memory, notes and backups.
+- Queued messages, committed response updates, stop, retry-safe submission IDs, and reopening after a restart.
 - One fresh Pi conversation per user turn. Prior context is a bounded summary view, with `zoom` and `date` tools to recover original messages.
 - The reference compaction prompt, a 512-byte scale example, five byte-feedback attempts, eight concurrent compactions with a source-order barrier, and durable ten-second retries. Aligned binary merges preserve an incremental view that never splits.
 - Exact archive search, private Markdown notes with source message IDs and revision history, and a memory inspector.
-- Better Auth sessions backed by D1. An authenticated server route forwards to a Worker with both public and preview URLs disabled. The Durable Object is addressed only from the authenticated owner ID.
-- Server-side ChatGPT credentials with serialized refresh and durable token rotation. API-key credentials are also supported through the same private configuration.
+- Better Auth sessions backed by D1. An authenticated server route forwards to a Worker with both public and preview URLs disabled. Bot objects are addressed from the authenticated owner ID and a validated catalog identity. The default bot retains its original object ID.
+- Server-side ChatGPT credentials with one account-level refresh owner and durable token rotation shared by all bots. API-key credentials are also supported through the same private configuration.
 
-The first version can remember, retrieve, reason, and draft. External apps, shell/browser execution, attachments, messaging channels, and scheduled autonomous tasks are not connected.
+The current slices can remember, retrieve, reason, and draft. External apps, shell/browser execution, attachments, messaging channels, and scheduled autonomous tasks are not connected.
 
 ## Memory design
 
@@ -59,6 +62,8 @@ The first version can remember, retrieve, reason, and draft. External apps, shel
 - The memory inspector opens summaries down to original messages. Authenticated exports stream a linked, script-free HTML archive or JSONL with the log, tree, view, and note revisions.
 
 The memory bounded context lives in `src/memory`: domain values and merge policy, an Effect repository port, compaction, and archive/import/backup workflows. SQLite, Pi and R2 adapters live under `src/memory/adapters`. `src/agent` owns conversation sessions, turn state, tool registration and Lifecycle alarms. The Durable Object composes one managed Effect runtime; only host callbacks and synchronous transaction boundaries execute it. The SQLite adapter keeps transactions synchronous and exposes no driver handle through the memory port. ESLint enforces the dependency direction.
+
+The Agents context owns the owner catalog. Its SQLite adapter and versioned child admission policy live under `src/agents/adapters`. Archive acknowledgement waits for the child to reject new messages; work admitted before archival may finish. Frontend capabilities live under `src/features`, composed by `src/app/workspace.tsx`.
 
 Incoming messages during a running response remain durably queued for a fresh turn; mid-tool steering is not implemented. Optional OptChat subagents are not connected. These are explicit differences from the reference, rather than hidden memory omissions.
 

@@ -1,0 +1,19 @@
+import { Schema } from "effect"
+import { AgentId, AgentInstructions, AgentName, AgentProfile } from "./domain"
+
+export const CreateAgent = Schema.Struct({
+  id: AgentId,
+  name: AgentName,
+  instructions: AgentInstructions,
+})
+export const UpdateAgent = Schema.Struct({
+  id: AgentId,
+  name: AgentName,
+  instructions: AgentInstructions,
+})
+export const ArchiveAgent = Schema.Struct({
+  id: AgentId,
+  archived: Schema.Boolean,
+})
+export const AgentList = Schema.Struct({ agents: Schema.Array(AgentProfile) })
+export { AgentProfile, AgentId, homeAgentId } from "./domain"

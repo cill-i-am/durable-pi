@@ -144,6 +144,39 @@ export class DurableCredentials implements CredentialStore {
   }
 }
 
+/** All bots resolve rotating tokens through the existing owner object. */
+export async function resolveAccountCredential(
+  credentials: CredentialStore,
+  providerId: string,
+  refresh: NonNullable<OAuthAuth["refresh"]> = workerChatGPTAuth.refresh
+) {
+  const current = await credentials.read(providerId)
+  if (current?.type !== "oauth" || current.expires > Date.now() + 5 * 60_000)
+    return current
+  return credentials.modify(providerId, async (latest) =>
+    latest?.type === "oauth" && latest.expires <= Date.now() + 5 * 60_000
+      ? refresh(latest, AbortSignal.timeout(30_000))
+      : latest
+  )
+}
+
+/** The account owns refresh; the child never persists a refresh token. */
+export function accountCredentials(
+  resolve: (provider: string) => Promise<Credential | undefined>
+): CredentialStore {
+  return {
+    read: resolve,
+    modify: (provider) => resolve(provider),
+    list: async () => {
+      const credential = await resolve("openai")
+      return credential ? [{ providerId: "openai", type: credential.type }] : []
+    },
+    delete: async () => {
+      throw new Error("Manage the model connection on the owner account")
+    },
+  }
+}
+
 export function createAgentModels(
   credentials: CredentialStore,
   options: { cacheKey?: string; onUsage?: (usage: CacheUsage) => void } = {}

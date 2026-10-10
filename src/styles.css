@@ -459,3 +459,82 @@ body {
   border: 1px solid var(--border);
   padding: 8px 12px;
 }
+
+/* Workspace layout follows the approved Paper composition. All colors are semantic. */
+:root {
+  --sidebar: oklch(0.975 0.004 130);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-accent: oklch(0.935 0.019 155);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-border: var(--border);
+}
+.workspace-shell {
+  height: 100svh;
+  min-height: 0;
+  overflow: hidden;
+}
+.workspace-main {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+.workspace-main .chat-workspace {
+  min-height: 0;
+}
+.workspace-main .chat-header {
+  height: 68px;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--border);
+}
+.workspace-sidebar [data-slot="sidebar-header"] {
+  gap: 16px;
+  padding: 16px 12px;
+}
+.workspace-sidebar [data-slot="sidebar-footer"] {
+  padding: 12px;
+}
+.workspace-sidebar [data-slot="sidebar-menu-button"] {
+  height: 64px;
+  gap: 12px;
+}
+.workspace-mark {
+  font-family: Georgia, serif;
+  font-size: 23px;
+  color: var(--primary);
+}
+.bot-avatar {
+  display: inline-grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 12px;
+  background: var(--sidebar-accent);
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+.workspace-main .conversation-content {
+  width: 100%;
+  max-width: 850px;
+  padding-top: 36px;
+}
+.workspace-main .chat-composer {
+  border-radius: var(--radius-xl);
+  box-shadow: none;
+}
+.workspace-main .composer-area {
+  max-width: 850px;
+}
+@media (max-width: 640px) {
+  .workspace-main .chat-header {
+    padding: 0 14px;
+    height: 60px;
+  }
+  .workspace-main .conversation-content {
+    padding-top: 20px;
+  }
+}
