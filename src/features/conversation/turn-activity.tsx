@@ -6,6 +6,8 @@ import {
   LoaderCircle,
   Wrench,
 } from "lucide-react"
+import { FileAttachments } from "@/features/files"
+import type { FileInfo } from "@/workspace/files"
 import type { TimelineItem } from "../../conversations/contracts"
 import { Markdown } from "../../components/markdown"
 import { Button } from "../../components/ui/button"
@@ -21,7 +23,13 @@ import {
   CollapsibleTrigger,
 } from "../../components/ui/collapsible"
 
-export function TurnActivity({ items }: { items: readonly TimelineItem[] }) {
+export function TurnActivity({
+  items,
+  agentId,
+}: {
+  items: readonly TimelineItem[]
+  agentId?: string
+}) {
   return (
     <div className="flex min-w-0 flex-col gap-3">
       {items.map((item) => {
@@ -30,6 +38,8 @@ export function TurnActivity({ items }: { items: readonly TimelineItem[] }) {
             <SteeringMessage
               key={item.id}
               text={item.text}
+              attachments={item.attachments}
+              agentId={agentId}
               label="Steered this reply"
             />
           )
@@ -124,15 +134,24 @@ export function TurnActivity({ items }: { items: readonly TimelineItem[] }) {
 export function SteeringMessage({
   text,
   label,
+  attachments,
+  agentId,
 }: {
   text: string
   label: string
+  attachments?: readonly FileInfo[]
+  agentId?: string
 }) {
   return (
     <Message align="end">
       <MessageContent>
         <Bubble align="end" variant="secondary">
-          <BubbleContent className="message-text">{text}</BubbleContent>
+          <BubbleContent className="message-text">
+            {text}
+            {agentId && (
+              <FileAttachments files={attachments ?? []} agentId={agentId} />
+            )}
+          </BubbleContent>
         </Bubble>
         <MessageFooter>{label}</MessageFooter>
       </MessageContent>

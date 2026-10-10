@@ -9,7 +9,7 @@ async function handle(request: Request) {
   const user = await authorizedOwner(request, env)
   if (!user) return new Response("Unauthorized", { status: 401 })
   const headers = new Headers({
-    "content-type": "application/json",
+    "content-type": request.headers.get("content-type") ?? "application/json",
     "x-owner-id": user.id,
   })
   const response = await env.AGENT_SERVICE.fetch(

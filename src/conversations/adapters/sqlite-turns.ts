@@ -1,4 +1,6 @@
 import type { Sqlite } from "../../storage/sqlite"
+import { Schema } from "effect"
+import { AttachmentContent, FileInfo } from "../../workspace/files"
 import {
   ConversationConflict,
   ConversationFull,
@@ -31,6 +33,8 @@ export class ConversationStore {
       thinking: "TEXT",
       revision: "INTEGER NOT NULL DEFAULT 0",
       creation: "TEXT",
+      attachments: "TEXT NOT NULL DEFAULT '[]'",
+      input: "TEXT NOT NULL DEFAULT '[]'",
     })) {
       if (!columns.has(name))
         db.run(`ALTER TABLE chat_turns ADD COLUMN ${name} ${definition}`)
@@ -75,33 +79,48 @@ export class ConversationStore {
     }
   }
   get(id: string) {
-    return this.db.all<Turn>("SELECT * FROM chat_turns WHERE id=?", id)[0]
+    const row = this.db.all<StoredTurn>(
+      "SELECT * FROM chat_turns WHERE id=?",
+      id
+    )[0]
+    return row ? restore(row) : undefined
   }
   active() {
-    return this.db.all<Turn>(
+    const row = this.db.all<StoredTurn>(
       "SELECT * FROM chat_turns WHERE parent_id IS NULL AND status IN ('queued','preparing','running','stopping') ORDER BY rowid LIMIT 1"
     )[0]
+    return row ? restore(row) : undefined
   }
   recent() {
     return this.db
-      .all<Turn>(
-        "SELECT * FROM chat_turns WHERE parent_id IS NULL ORDER BY rowid DESC LIMIT 100"
+      .all<StoredTurn>(
+        `SELECT ${visibleColumns} FROM chat_turns WHERE parent_id IS NULL ORDER BY rowid DESC LIMIT 100`
       )
       .reverse()
+      .map(restore)
   }
-  members(rootId: string) {
-    return this.db.all<Turn>(
-      "SELECT * FROM chat_turns WHERE id=? OR parent_id=? ORDER BY rowid",
-      rootId,
-      rootId
-    )
+  members(rootId: string, includeInput = true) {
+    return this.db
+      .all<StoredTurn>(
+        `SELECT ${includeInput ? "*" : visibleColumns} FROM chat_turns WHERE id=? OR parent_id=? ORDER BY rowid`,
+        rootId,
+        rootId
+      )
+      .map(restore)
   }
-  admit(input: Submission) {
+  admit(
+    input: Submission,
+    prepared?: {
+      files: readonly FileInfo[]
+      content: readonly AttachmentContent[]
+    }
+  ) {
     return this.db.transaction(() => {
       const creation = JSON.stringify({
         text: input.text,
         mode: input.mode ?? "followUp",
         retryOf: input.retryOf ?? null,
+        ...(input.files?.length ? { files: input.files } : {}),
       })
       const existing = this.get(input.operationId)
       if (existing) {
@@ -134,6 +153,19 @@ export class ConversationStore {
         input.mode === "steer" && active?.status !== "stopping"
           ? active
           : undefined
+      if (
+        parent &&
+        this.members(parent.id, false).reduce(
+          (count, member) => count + member.attachments.length,
+          0
+        ) +
+          (prepared?.files.length ?? 0) >
+          4
+      )
+        throw new ConversationConflict({
+          message:
+            "This reply already has its four-file allowance. Queue the files in a new message.",
+        })
       const settings = parent
         ? {
             model: parent.model ?? this.defaults.model,
@@ -141,7 +173,7 @@ export class ConversationStore {
           }
         : this.settings()
       this.db.run(
-        "INSERT INTO chat_turns(id,text,status,created_at,parent_id,mode,model,thinking,creation) VALUES (?,?,'queued',?,?,?,?,?,?)",
+        "INSERT INTO chat_turns(id,text,status,created_at,parent_id,mode,model,thinking,creation,attachments,input) VALUES (?,?,'queued',?,?,?,?,?,?,?,?)",
         input.operationId,
         input.text,
         new Date().toISOString(),
@@ -149,7 +181,9 @@ export class ConversationStore {
         input.mode ?? "followUp",
         settings.model,
         settings.thinking,
-        creation
+        creation,
+        JSON.stringify(prepared?.files ?? []),
+        JSON.stringify(prepared?.content ?? [])
       )
       if (parent)
         this.db.run(
@@ -167,7 +201,7 @@ export class ConversationStore {
   }
   savePrompt(id: string, prompt: string) {
     this.db.run(
-      "UPDATE chat_turns SET prompt=? WHERE id=? AND prompt IS NULL",
+      "UPDATE chat_turns SET prompt=?,input='[]' WHERE id=? AND prompt IS NULL",
       prompt,
       id
     )
@@ -230,7 +264,7 @@ export class ConversationStore {
       const stopped = current.status === "stopping"
       for (const outcome of outcomes) {
         this.db.run(
-          "UPDATE chat_turns SET status=?,delivery=? WHERE id=?",
+          "UPDATE chat_turns SET status=?,delivery=?,input='[]',prompt=NULL WHERE id=?",
           outcome.id === root.id && stopped
             ? "cancelled"
             : outcome.delivery === "answered"
@@ -250,5 +284,23 @@ export class ConversationStore {
       )
       return true
     })
+  }
+}
+
+type StoredTurn = Omit<Turn, "attachments" | "input"> & {
+  attachments: string
+  input: string
+}
+const visibleColumns =
+  "id,text,status,answer,error,created_at,session_id,NULL AS prompt,parent_id,mode,delivery,model,thinking,revision,creation,attachments,'[]' AS input"
+function restore(row: StoredTurn): Turn {
+  return {
+    ...row,
+    attachments: Schema.decodeUnknownSync(Schema.Array(FileInfo))(
+      JSON.parse(row.attachments)
+    ),
+    input: Schema.decodeUnknownSync(Schema.Array(AttachmentContent))(
+      JSON.parse(row.input)
+    ),
   }
 }
