@@ -1,5 +1,7 @@
 import { useState } from "react"
-import { ArrowUp, LockKeyhole } from "lucide-react"
+import { Link } from "@tanstack/react-router"
+import { AuthFrame } from "./auth-frame"
+import { ArrowUp } from "lucide-react"
 import { authClient } from "@/auth/client"
 import { errorMessage } from "@/http/client"
 import { Button } from "@/components/ui/button"
@@ -12,13 +14,6 @@ import {
 } from "@/components/ui/field"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
-export function PiMark() {
-  return (
-    <span className="pi-mark" aria-label="Pi">
-      π
-    </span>
-  )
-}
 export function Login({ sessionError }: { sessionError?: string }) {
   const [setup, setSetup] = useState(false),
     [error, setError] = useState(sessionError ?? ""),
@@ -59,102 +54,102 @@ export function Login({ sessionError }: { sessionError?: string }) {
     }
   }
   return (
-    <main className="login-page">
-      <div className="login-brand">
-        <PiMark />
-        <span>Pi</span>
-        <span className="login-caption">A little more continuity.</span>
-      </div>
-      <section className="login-panel">
-        <LockKeyhole className="login-lock" />
-        <h1>{setup ? "Make yourself at home." : "Welcome back."}</h1>
-        <p className="text-muted-foreground">
-          {setup
-            ? "Create the single owner account using your private setup key."
-            : "Sign in to your private, continuous chat."}
-        </p>
-        <form onSubmit={submit}>
-          <FieldGroup>
-            {setup ? (
-              <>
-                <Field>
-                  <FieldLabel htmlFor="name">Your name</FieldLabel>
-                  <Input
-                    id="name"
-                    name="name"
-                    autoComplete="name"
-                    required
-                    maxLength={100}
-                  />
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor="setupToken">Setup key</FieldLabel>
-                  <Input
-                    id="setupToken"
-                    name="setupToken"
-                    type="password"
-                    autoComplete="off"
-                    required
-                  />
-                  <FieldDescription>
-                    From your private deployment configuration.
-                  </FieldDescription>
-                </Field>
-              </>
-            ) : (
+    <AuthFrame
+      title={setup ? "Make yourself at home." : "Welcome back."}
+      description={
+        setup
+          ? "Create the single owner account using your private setup key."
+          : "Sign in to your private, continuous chat."
+      }
+    >
+      <form onSubmit={submit}>
+        <FieldGroup>
+          {setup ? (
+            <>
               <Field>
-                <FieldLabel htmlFor="email">Email</FieldLabel>
+                <FieldLabel htmlFor="name">Your name</FieldLabel>
                 <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="username"
-                  placeholder="you@example.com"
+                  id="name"
+                  name="name"
+                  autoComplete="name"
                   required
+                  maxLength={100}
                 />
               </Field>
-            )}
+              <Field>
+                <FieldLabel htmlFor="setupToken">Setup key</FieldLabel>
+                <Input
+                  id="setupToken"
+                  name="setupToken"
+                  type="password"
+                  autoComplete="off"
+                  required
+                />
+                <FieldDescription>
+                  From your private deployment configuration.
+                </FieldDescription>
+              </Field>
+            </>
+          ) : (
             <Field>
-              <FieldLabel htmlFor="password">Password</FieldLabel>
+              <FieldLabel htmlFor="email">Email</FieldLabel>
               <Input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete={setup ? "new-password" : "current-password"}
-                minLength={12}
-                maxLength={128}
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="username"
+                placeholder="you@example.com"
                 required
               />
             </Field>
-            {error && (
-              <Alert>
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-            <Button type="submit" disabled={pending}>
-              {pending
-                ? "Please wait…"
-                : setup
-                  ? "Create owner account"
-                  : "Sign in"}
-              <ArrowUp data-icon="inline-end" />
-            </Button>
-          </FieldGroup>
-        </form>
+          )}
+          <Field>
+            <FieldLabel htmlFor="password">Password</FieldLabel>
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete={setup ? "new-password" : "current-password"}
+              minLength={12}
+              maxLength={128}
+              required
+            />
+          </Field>
+          {error && (
+            <Alert>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          <Button type="submit" disabled={pending}>
+            {pending
+              ? "Please wait…"
+              : setup
+                ? "Create owner account"
+                : "Sign in"}
+            <ArrowUp data-icon="inline-end" />
+          </Button>
+        </FieldGroup>
+      </form>
+      {!setup && (
         <Button
           variant="link"
           size="sm"
-          onClick={() => {
-            setSetup(!setup)
-            setError("")
-          }}
+          render={<Link to="/forgot-password" />}
+          nativeButton={false}
         >
-          {setup ? "Back to sign in" : "First time? Set up your account"}
+          Forgot password?
         </Button>
-      </section>
-      <footer className="login-footer">
-        Private by default. Your conversation stays yours.
-      </footer>
-    </main>
+      )}
+      <Button
+        variant="link"
+        size="sm"
+        onClick={() => {
+          setSetup(!setup)
+          setError("")
+        }}
+      >
+        {setup ? "Back to sign in" : "First time? Set up your account"}
+      </Button>
+    </AuthFrame>
   )
 }

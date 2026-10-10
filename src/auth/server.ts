@@ -3,8 +3,13 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle"
 import { drizzle } from "drizzle-orm/d1"
 import type { WebsiteEnv } from "../../alchemy.run"
 import * as schema from "./schema"
+import { passwordResetEmail, PASSWORD_RESET_SECONDS } from "./password-email"
 
-export function createAuth(env: WebsiteEnv, allowOwnerSetup = false) {
+export function createAuth(
+  env: WebsiteEnv,
+  allowOwnerSetup = false,
+  backgroundTask?: (task: Promise<unknown>) => void
+) {
   return betterAuth({
     appName: "Durable Pi",
     secret: env.BETTER_AUTH_SECRET,
@@ -15,10 +20,43 @@ export function createAuth(env: WebsiteEnv, allowOwnerSetup = false) {
       enabled: true,
       disableSignUp: !allowOwnerSetup,
       minPasswordLength: 12,
+      resetPasswordTokenExpiresIn: PASSWORD_RESET_SECONDS,
+      revokeSessionsOnPasswordReset: true,
+      sendResetPassword: async ({ user, token }) => {
+        if (user.email.toLowerCase() !== env.OWNER_EMAIL.toLowerCase()) return
+        try {
+          await env.AUTH_EMAIL.send(
+            passwordResetEmail(env.APP_URL, token, env.OWNER_EMAIL)
+          )
+        } catch {
+          // Do not log provider errors: they can contain recipient/message contents.
+          // Keep the public response identical for existing and unknown accounts.
+          console.error("Password reset email delivery failed")
+        }
+      },
     },
-    rateLimit: { enabled: true, storage: "database", window: 60, max: 30 },
+    rateLimit: {
+      enabled: true,
+      storage: "database",
+      window: 60,
+      max: 30,
+      customRules: {
+        "/request-password-reset": { window: 600, max: 3 },
+        "/reset-password": { window: 600, max: 10 },
+      },
+    },
     session: { expiresIn: 60 * 60 * 24 * 7, updateAge: 60 * 60 * 24 },
-    advanced: { useSecureCookies: env.APP_URL.startsWith("https://") },
+    advanced: {
+      useSecureCookies: env.APP_URL.startsWith("https://"),
+      ipAddress: {
+        ipAddressHeaders: env.APP_URL.startsWith("https://")
+          ? ["cf-connecting-ip"]
+          : ["x-forwarded-for"],
+      },
+      ...(backgroundTask
+        ? { backgroundTasks: { handler: backgroundTask } }
+        : {}),
+    },
     databaseHooks: {
       user: {
         create: {
