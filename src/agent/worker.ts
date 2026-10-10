@@ -22,7 +22,12 @@ import { sqliteMemoryLayer } from "../memory/adapters/sqlite"
 import { piSummaryLayer } from "../memory/adapters/pi"
 import { bucketLayer } from "../memory/adapters/bucket"
 import { webCryptoLayer } from "../memory/adapters/crypto"
-import { createAgentModels, DurableCredentials } from "./models"
+import {
+  createAgentModels,
+  DurableCredentials,
+  accountCredentials,
+  resolveAccountCredential,
+} from "./models"
 import { SYSTEM_PROMPT } from "./prompts"
 import { importHistory, ImportInput } from "../memory/import"
 import { pumpSummaries } from "../memory/compaction"
@@ -35,6 +40,16 @@ import {
   type ChatState,
   type ChatTurn,
 } from "../shared/contracts"
+
+import { AgentCatalog, AgentId, agentObjectName, homeAgentId } from "../agents"
+import { sqliteAgentCatalog } from "../agents/adapters/sqlite"
+import { BotConfigurationStore } from "../agents/adapters/configuration"
+import {
+  CreateAgent,
+  UpdateAgent,
+  ArchiveAgent,
+  type AgentProfile,
+} from "../agents/contracts"
 
 const toolText = (text: string) => ({
   content: [{ type: "text" as const, text }],
@@ -91,8 +106,11 @@ class MemoryRunner extends TurnRunner {
       })
     )
   }
-  dispose() {
-    return this.owner.memoryRuntime.dispose()
+  async dispose() {
+    await Promise.all([
+      this.owner.memoryRuntime.dispose(),
+      this.owner.catalogRuntime.dispose(),
+    ])
   }
 }
 class BackupRunner extends TurnRunner {
@@ -166,10 +184,18 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   get memory() {
     return this.memoryRuntime.runSync(MemoryRepository)
   }
-  readonly credentials = new DurableCredentials(
+  readonly localCredentials = new DurableCredentials(
     this.db,
     this.env.OPENAI_CREDENTIAL
   )
+  readonly credentials = accountCredentials(async (provider) => {
+    const owner = this.botConfiguration.read()?.owner
+    return owner
+      ? this.env.AGENT.getByName(owner).resolveModelCredential(provider)
+      : this.resolveModelCredential(provider)
+  })
+  readonly botConfiguration = new BotConfigurationStore(this.db)
+  readonly catalogRuntime = ManagedRuntime.make(sqliteAgentCatalog(this.db))
   readonly models = createAgentModels(this.credentials, {
     cacheKey: `pi-${this.ctx.id.toString()}`,
     onUsage: (usage: CacheUsage) =>
@@ -373,11 +399,97 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     return this.db.all<ChatTurn>("SELECT * FROM chat_turns WHERE id=?", id)[0]!
   }
 
+  resolveModelCredential(provider: string) {
+    const refreshed = resolveAccountCredential(this.localCredentials, provider)
+    // Persist rotated credentials even if the requesting bot disconnects.
+    this.ctx.waitUntil(
+      refreshed.then(
+        () => undefined,
+        () => undefined
+      )
+    )
+    return refreshed
+  }
+  async agentProfile(id: string) {
+    const agentId = Schema.decodeUnknownSync(AgentId)(id)
+    return this.catalogRuntime.runPromise(
+      Effect.flatMap(AgentCatalog, (c) => c.requireActive(agentId)).pipe(
+        Effect.catchTag("AgentNotFound", () => Effect.succeed(null))
+      )
+    )
+  }
+  async modelConnected(): Promise<boolean> {
+    const owner = this.botConfiguration.read()?.owner
+    return owner
+      ? this.env.AGENT.getByName(owner).modelConnected()
+      : !!(await this.localCredentials.read("openai"))
+  }
+  configureBot(owner: string, profile: AgentProfile) {
+    this.botConfiguration.configure(owner, profile)
+  }
+
   async fetch(request: Request): Promise<Response> {
     await this.lifecycle.start()
     const url = new URL(request.url),
       path = url.pathname.replace("/api/agent/", "")
     try {
+      if (path === "bots" && request.method === "GET")
+        return Response.json({
+          agents: await this.catalogRuntime.runPromise(
+            Effect.flatMap(AgentCatalog, (c) => c.list())
+          ),
+        })
+      if (path.startsWith("bots/") && request.method === "POST") {
+        const input = await limitedJson(request)
+        const operation: Effect.Effect<unknown, Error, AgentCatalog> =
+          path === "bots/create"
+            ? Effect.flatMap(AgentCatalog, (c) =>
+                c.create(Schema.decodeUnknownSync(CreateAgent)(input))
+              )
+            : path === "bots/update"
+              ? Effect.flatMap(AgentCatalog, (c) =>
+                  c.update(Schema.decodeUnknownSync(UpdateAgent)(input))
+                )
+              : path === "bots/archive"
+                ? Effect.flatMap(AgentCatalog, (c) => {
+                    const body = Schema.decodeUnknownSync(ArchiveAgent)(input)
+                    return c.archive(body.id, body.archived).pipe(
+                      Effect.flatMap((profile) =>
+                        Effect.tryPromise(async () => {
+                          const owner = request.headers.get("x-owner-id")!
+                          await this.env.AGENT.getByName(
+                            agentObjectName(owner, profile.id)
+                          ).configureBot(
+                            profile.id === homeAgentId ? "" : owner,
+                            profile
+                          )
+                          return profile
+                        })
+                      )
+                    )
+                  })
+                : Effect.fail(new Error("Unknown bot operation"))
+        return await this.catalogRuntime.runPromise(
+          operation.pipe(
+            Effect.map((value) => Response.json(value ?? { ok: true })),
+            Effect.catch((e) =>
+              Effect.succeed(
+                Response.json(
+                  {
+                    error:
+                      e instanceof Error &&
+                      "_tag" in e &&
+                      e._tag === "AgentConflict"
+                        ? e.message
+                        : "This bot could not be updated.",
+                  },
+                  { status: 409 }
+                )
+              )
+            )
+          )
+        )
+      }
       if (request.method === "GET" && path === "export")
         return await this.memoryRuntime.runPromise(
           exportResponse(url.searchParams.get("format") === "html"),
@@ -459,7 +571,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             { error: "Write a message first." },
             { status: 400 }
           )
-        if (!(await this.credentials.read("openai")))
+        if (!(await this.modelConnected()))
           return Response.json(
             { error: "Connect ChatGPT before sending a message." },
             { status: 503 }
@@ -485,6 +597,13 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           )
         // Arm before the synchronous write; a crash cannot strand an accepted turn without a wake.
         await this.runner.wake()
+        // Archive acknowledgement waits for this object's durable admission fence.
+        // No await may separate this check from the insert.
+        if (this.botConfiguration.read()?.status === "archived")
+          return Response.json(
+            { error: "Restore this agent before sending a message." },
+            { status: 409 }
+          )
         this.db.run(
           "INSERT OR IGNORE INTO chat_turns(id,text,status,created_at) VALUES (?,?,'queued',?)",
           body.operationId,
@@ -577,7 +696,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         ({ prompt: _prompt, session_id: _session, ...turn }) => turn
       ),
       model: this.env.MODEL_ID,
-      connected: !!(await this.credentials.read("openai")),
+      connected: await this.modelConnected(),
       memory: {
         messages: this.memoryRuntime.runSync(this.memory.total()),
         summaries: this.memoryRuntime.runSync(this.memory.nodeCount()),
@@ -707,7 +826,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           { type: "text", text: view },
           {
             type: "text",
-            text: `<private-notes>\n${notes}\n</private-notes>\n\nNew user message (archive ID ${entry.id}):\n${turn.text}`,
+            text: `<bot-instructions>\n${this.db.all<{ instructions: string }>("SELECT instructions FROM bot_configuration WHERE id=1")[0]?.instructions ?? ""}\n</bot-instructions>\n<private-notes>\n${notes}\n</private-notes>\n\nNew user message (archive ID ${entry.id}):\n${turn.text}`,
           },
         ])
         this.db.run(
@@ -790,26 +909,31 @@ async function limitedJson(
 }
 
 export default {
-  fetch(request: Request, env: AgentEnv) {
+  async fetch(request: Request, env: AgentEnv) {
     // This Worker has no public routes. The authenticated website is its only caller.
-    return Effect.runPromise(
-      Effect.gen(function* () {
-        const owner = request.headers.get("x-owner-id")
-        if (!owner) return new Response("Unauthorized", { status: 401 })
-        return yield* Effect.tryPromise({
-          try: () => env.AGENT.getByName(owner).fetch(request),
-          catch: () => new Error("Agent unavailable"),
-        }).pipe(
-          Effect.catch(() =>
-            Effect.succeed(
-              Response.json(
-                { error: "Agent unavailable. Please retry." },
-                { status: 503 }
-              )
-            )
-          )
-        )
-      })
+    const owner = request.headers.get("x-owner-id")
+    if (!owner) return new Response("Unauthorized", { status: 401 })
+    const url = new URL(request.url)
+    const root = env.AGENT.getByName(owner)
+    const path = url.pathname.replace("/api/agent/", "")
+    const decoded = Schema.decodeUnknownOption(AgentId)(
+      url.searchParams.get("agent") ?? homeAgentId
     )
+    if (decoded._tag === "None")
+      return new Response("Not found", { status: 404 })
+    try {
+      if (path === "bots" || path.startsWith("bots/"))
+        return await root.fetch(request)
+      const agent = await root.agentProfile(decoded.value)
+      if (!agent) return new Response("Not found", { status: 404 })
+      const target = env.AGENT.getByName(agentObjectName(owner, agent.id))
+      await target.configureBot(agent.id === homeAgentId ? "" : owner, agent)
+      return await target.fetch(request)
+    } catch {
+      return Response.json(
+        { error: "This bot is temporarily unavailable. Please retry." },
+        { status: 503 }
+      )
+    }
   },
 }

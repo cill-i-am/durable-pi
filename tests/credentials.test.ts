@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest"
-import { DurableCredentials } from "../src/agent/models"
+import {
+  DurableCredentials,
+  accountCredentials,
+  resolveAccountCredential,
+} from "../src/agent/models"
 import { database } from "./database"
 
 describe("private model credentials", () => {
@@ -41,5 +45,35 @@ describe("private model credentials", () => {
       type: "api_key",
       key: "test-replacement",
     })
+  })
+  it("coalesces concurrent bot refreshes at the account and never stores child tokens", async () => {
+    const store = new DurableCredentials(
+      database(),
+      JSON.stringify({ ...JSON.parse(seed), expires: Date.now() + 120_000 })
+    )
+    let refreshes = 0
+    const resolve = (provider: string) =>
+      resolveAccountCredential(store, provider, async (current) => {
+        refreshes++
+        await Promise.resolve()
+        return {
+          ...current,
+          access: "rotated-access",
+          refresh: "rotated-refresh",
+          expires: Date.now() + 600_000,
+        }
+      })
+    const bots = [accountCredentials(resolve), accountCredentials(resolve)]
+    const results = await Promise.all(bots.map((bot) => bot.read("openai")))
+    expect(refreshes).toBe(1)
+    expect(results).toEqual([
+      expect.objectContaining({ access: "rotated-access" }),
+      expect.objectContaining({ access: "rotated-access" }),
+    ])
+    await bots[0]!.modify("openai", async () => {
+      throw new Error("Child must not refresh")
+    })
+    expect(refreshes).toBe(1)
+    await expect(bots[0]!.delete("openai")).rejects.toThrow("owner account")
   })
 })
