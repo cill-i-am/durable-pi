@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react"
-import { ArrowUp, Check, Square, Sparkles, Copy, RefreshCw } from "lucide-react"
-import type { ChatState } from "@/shared/contracts"
+import { useMemo, useRef, useState } from "react"
+import { ArrowUp, Square, Sparkles, RefreshCw } from "lucide-react"
+import { useConversation } from "./use-conversation"
+import { TurnReply } from "./turn-reply"
 import type { AgentProfile } from "@/agents/contracts"
 import { agentApi } from "@/http/client"
 import { MemoryPanel } from "@/features/memory"
-import { Markdown } from "@/components/markdown"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -23,12 +23,7 @@ import {
   InputGroupButton,
   InputGroupText,
 } from "@/components/ui/input-group"
-import {
-  Message,
-  MessageContent,
-  MessageHeader,
-  MessageFooter,
-} from "@/components/ui/message"
+import { Message, MessageContent, MessageFooter } from "@/components/ui/message"
 import { Bubble, BubbleContent } from "@/components/ui/bubble"
 import {
   MessageScrollerProvider,
@@ -47,40 +42,11 @@ export function Conversation({
   agent: AgentProfile
 }) {
   const api = useMemo(() => agentApi(agent.id), [agent.id])
-  const [state, setState] = useState<ChatState | null>(null),
-    [error, setError] = useState(""),
-    [sending, setSending] = useState(false)
+  const [error, setError] = useState("")
+  const [sending, setSending] = useState(false)
   const pending = useRef<{ operationId: string; text: string } | null>(null)
   const [refresh, setRefresh] = useState(0)
-  useEffect(() => {
-    const controller = new AbortController()
-    let timer: ReturnType<typeof setTimeout>
-    const poll = async () => {
-      try {
-        const next = await api<ChatState>("state", undefined, controller.signal)
-        setState(next)
-        setError("")
-        timer = setTimeout(
-          poll,
-          next.turns.some((t) =>
-            ["queued", "preparing", "running"].includes(t.status)
-          )
-            ? 850
-            : 5000
-        )
-      } catch (e) {
-        if (!controller.signal.aborted) {
-          setError(e instanceof Error ? e.message : "Connection interrupted")
-          timer = setTimeout(poll, 5000)
-        }
-      }
-    }
-    void poll()
-    return () => {
-      controller.abort()
-      clearTimeout(timer)
-    }
-  }, [refresh, api])
+  const { state, error: connectionError } = useConversation(agent.id, refresh)
   const active = state?.turns.find((t) =>
     ["preparing", "running"].includes(t.status)
   )
@@ -196,48 +162,7 @@ export function Conversation({
                     key={`${turn.id}:assistant`}
                     messageId={`${turn.id}:assistant`}
                   >
-                    <Message align="start">
-                      <MessageContent>
-                        <MessageHeader>
-                          <span className="assistant-label">{agent.name}</span>
-                        </MessageHeader>
-                        <Bubble variant="ghost">
-                          <BubbleContent className="message-text">
-                            {turn.answer ? (
-                              <Markdown text={turn.answer} />
-                            ) : ["running", "preparing"].includes(
-                                turn.status
-                              ) ? (
-                              <span className="shimmer text-muted-foreground">
-                                {turn.status === "preparing"
-                                  ? "Finding the thread…"
-                                  : "Thinking…"}
-                              </span>
-                            ) : turn.status ===
-                              "queued" ? null : turn.status === "cancelled" ? (
-                              "Stopped. Your message is saved."
-                            ) : (
-                              turn.error
-                            )}
-                          </BubbleContent>
-                        </Bubble>
-                        {turn.answer && (
-                          <MessageFooter>
-                            <CopyReply text={turn.answer} />
-                            {turn.status === "cancelled"
-                              ? "Stopped"
-                              : turn.status === "failed"
-                                ? "Interrupted"
-                                : ""}
-                          </MessageFooter>
-                        )}
-                        {turn.error && turn.answer && (
-                          <Alert>
-                            <AlertDescription>{turn.error}</AlertDescription>
-                          </Alert>
-                        )}
-                      </MessageContent>
-                    </Message>
+                    <TurnReply turn={turn} agentName={agent.name} />
                   </MessageScrollerItem>,
                 ])
               )}
@@ -247,10 +172,10 @@ export function Conversation({
         </MessageScroller>
       </MessageScrollerProvider>
       <div className="composer-area">
-        {error && (
+        {(error || connectionError) && (
           <Alert>
             <AlertDescription className="flex items-center justify-between gap-3">
-              {error}
+              {error || connectionError}
               <Button
                 variant="ghost"
                 size="icon-sm"
@@ -370,20 +295,5 @@ function Composer({
         </InputGroupAddon>
       </InputGroup>
     </form>
-  )
-}
-function CopyReply({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false)
-  return (
-    <Button
-      variant="ghost"
-      size="icon-xs"
-      aria-label={copied ? "Copied" : "Copy response"}
-      onClick={() =>
-        void navigator.clipboard.writeText(text).then(() => setCopied(true))
-      }
-    >
-      {copied ? <Check /> : <Copy />}
-    </Button>
   )
 }

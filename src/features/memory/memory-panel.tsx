@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { BookOpen, Search } from "lucide-react"
 import { agentApi, agentUrl } from "@/http/client"
-import type { ChatState } from "@/shared/contracts"
+import type { ChatState } from "@/conversations/contracts"
 import { Markdown } from "@/components/markdown"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
