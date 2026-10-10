@@ -18,6 +18,7 @@ async function handle(request: Request) {
       {
         method: request.method,
         headers,
+        signal: request.signal,
         body: request.method === "GET" ? undefined : request.body,
       }
     )

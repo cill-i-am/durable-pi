@@ -28,6 +28,8 @@ import {
   accountCredentials,
   resolveAccountCredential,
 } from "./models"
+import { piTimeline } from "../conversations/adapters/pi-timeline"
+import { conversationEvents } from "../conversations/adapters/events"
 import { SYSTEM_PROMPT } from "./prompts"
 import { importHistory, ImportInput } from "../memory/import"
 import { pumpSummaries } from "../memory/compaction"
@@ -39,7 +41,7 @@ import {
   SendInput,
   type ChatState,
   type ChatTurn,
-} from "../shared/contracts"
+} from "../conversations/contracts"
 
 import { AgentCatalog, AgentId, agentObjectName, homeAgentId } from "../agents"
 import { sqliteAgentCatalog } from "../agents/adapters/sqlite"
@@ -84,7 +86,11 @@ class TurnRunner extends LifecycleCapability {
   }
   async onJob(): Promise<LifecycleJobOutcome> {
     // Lifecycle owns retries and alarms. A crash re-enters from durable turn state.
-    return this.owner.step()
+    try {
+      return await this.owner.step()
+    } finally {
+      this.owner.notifyConversation()
+    }
   }
 }
 
@@ -358,8 +364,16 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     .use(this.compactor)
     .use(this.backups)
 
+  private readonly conversationListeners = new Set<() => void>()
+  notifyConversation() {
+    for (const listener of this.conversationListeners) listener()
+  }
+
   constructor(ctx: DurableObjectState, env: AgentEnv) {
     super(ctx, env)
+    this.db.run(
+      "CREATE TABLE IF NOT EXISTS chat_activity (turn_id TEXT PRIMARY KEY,payload TEXT NOT NULL)"
+    )
     this.db.run(
       "CREATE TABLE IF NOT EXISTS model_usage (id TEXT PRIMARY KEY,model TEXT NOT NULL,input INTEGER NOT NULL,cached INTEGER NOT NULL,output INTEGER NOT NULL,date TEXT NOT NULL)"
     )
@@ -528,6 +542,21 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           }))
         )
       }
+      if (request.method === "GET" && path === "events")
+        return conversationEvents(
+          {
+            snapshot: () => this.snapshot(),
+            activeSession: () => this.active()?.session_id ?? undefined,
+            watch: (id) => this.harness.session(id).events(),
+            subscribe: (listener) => {
+              this.conversationListeners.add(listener)
+              return () => {
+                this.conversationListeners.delete(listener)
+              }
+            },
+          },
+          request.signal
+        )
       if (request.method === "GET" && path === "state")
         return Response.json(await this.snapshot())
       if (request.method === "GET" && path === "search")
@@ -610,6 +639,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           body.text,
           new Date().toISOString()
         )
+        this.notifyConversation()
         return Response.json(
           { accepted: !previous, operationId: body.operationId },
           { status: 202 }
@@ -657,6 +687,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           await this.compactor.wake()
           await this.backups.wake()
           await this.runner.wake()
+          this.notifyConversation()
         }
         return Response.json({ ok: true })
       }
@@ -673,17 +704,20 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   }
 
   async snapshot(): Promise<ChatState> {
-    const turns = this.db.all<ChatTurn>(
-      "SELECT * FROM (SELECT * FROM chat_turns ORDER BY rowid DESC LIMIT 100) ORDER BY created_at"
-    )
+    const turns = this.db
+      .all<ChatTurn>("SELECT * FROM chat_turns ORDER BY rowid DESC LIMIT 100")
+      .reverse()
+    const activity = new Map<string, ReturnType<typeof piTimeline>>()
     for (const turn of turns) {
       if (turn.session_id && turn.status === "running") {
         const stream = await this.harness.session(turn.session_id).events()
         try {
-          const entries = await this.harness.session(turn.session_id).messages()
-          turn.answer = this.answer(entries)
-          // Partial provider text is committed by Pi and safe to display, but never summarized.
+          // Entries and partial text belong to one atomic Pi snapshot; reading them separately
+          // can briefly duplicate a partial that committed between the two reads.
           const snapshot = stream.snapshot
+          const entries = snapshot.entries
+          turn.answer = this.answer(entries)
+          activity.set(turn.id, piTimeline(entries, snapshot))
           if (snapshot.generation?.message)
             turn.answer += textContent(snapshot.generation.message.content)
         } finally {
@@ -692,9 +726,18 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       }
     }
     return {
-      turns: turns.map(
-        ({ prompt: _prompt, session_id: _session, ...turn }) => turn
-      ),
+      turns: turns.map(({ prompt: _prompt, session_id: _session, ...turn }) => {
+        const saved = this.db.all<{ payload: string }>(
+          "SELECT payload FROM chat_activity WHERE turn_id=?",
+          turn.id
+        )[0]
+        return {
+          ...turn,
+          activity:
+            activity.get(turn.id) ??
+            (saved ? JSON.parse(saved.payload) : undefined),
+        }
+      }),
       model: this.env.MODEL_ID,
       connected: await this.modelConnected(),
       memory: {
@@ -725,6 +768,11 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       .join("\n\n")
   }
   archive(turn: ChatTurn, entries: readonly EntryRecord[]) {
+    this.db.run(
+      "INSERT INTO chat_activity VALUES (?,?) ON CONFLICT(turn_id) DO UPDATE SET payload=excluded.payload",
+      turn.id,
+      JSON.stringify(piTimeline(entries))
+    )
     for (const entry of entries)
       for (const [i, message] of (entry.model ?? []).entries()) {
         const source = `${turn.id}:${entry.id}:${i}`
