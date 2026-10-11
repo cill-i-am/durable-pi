@@ -97,6 +97,14 @@ import { appsRequest } from "../apps/http"
 import { WebApps } from "../apps/web"
 import { readOutput } from "../execution/adapters/dynamic-worker"
 import { appTools } from "../apps/tools"
+import { piWorkingObjects } from "../objects/adapters/pi"
+import {
+  objectTools,
+  objectContextHook,
+  recoverableObjectTools,
+} from "../objects/tools"
+import { objectsRequest } from "../objects/http"
+import { ObjectFailure } from "../objects/contracts"
 import { WebhookStore } from "../webhooks/adapters/sqlite"
 import { webhookIncoming, webhookOwnerRequest } from "../webhooks/http"
 import { bearer, digest } from "../webhooks/contracts"
@@ -403,7 +411,11 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     },
     () => this.notifyConversation()
   )
-  readonly protectTool = guardedTools(this.access, () => this.active()?.id)
+  readonly protectTool = guardedTools(
+    this.access,
+    () => this.active()?.id,
+    recoverableObjectTools
+  )
   readonly skills = new SkillStore(this.db)
   readonly botConfiguration = new BotConfigurationStore(this.db)
   readonly catalogRuntime = ManagedRuntime.make(sqliteAgentCatalog(this.db))
@@ -455,6 +467,22 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   readonly apps = new AppStore(
     this.db,
     () => this.botConfiguration.read()?.status !== "archived"
+  )
+  readonly objects = piWorkingObjects(
+    () => this.harness.pi(),
+    (source) => {
+      if (this.botConfiguration.read()?.status === "archived") return false
+      if (source.actor === "user") return true
+      const turn = source.turnId
+        ? this.conversations.get(source.turnId)
+        : undefined
+      return (
+        !!turn &&
+        this.active()?.id === turn.id &&
+        ["preparing", "running"].includes(turn.status) &&
+        this.routines.canRun(turn.id)
+      )
+    }
   )
   readonly executions = new Executions(
     new ExecutionStore(this.db),
@@ -514,10 +542,27 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       this.installRemoteTools()
       this.registry.install({
         name: "personal",
+        hooks: [objectContextHook(this.objects)],
         sections: [
           { key: "preamble", render: () => SYSTEM_PROMPT, tag: false },
         ],
         tools: [
+          ...objectTools(this.objects, (api) => {
+            const turnId = this.accessStore.get(String(api.taskId))?.turnId
+            const turn = turnId ? this.conversations.get(turnId) : undefined
+            if (!turn || turn.session_id !== String(api.conversationId))
+              throw new ObjectFailure({
+                code: "read_only",
+                message:
+                  "This tool no longer belongs to the active conversation.",
+              })
+            return {
+              actor: "agent",
+              surface: "tool",
+              turnId: turn.id,
+              toolCallId: api.callId,
+            }
+          }),
           ...appTools(this.apps),
           ...routineTools(this.routines, () => this.routineRunner.wake()),
           defineTool({
@@ -1195,6 +1240,20 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
               this.notifyConversation()
             }
           )
+        )
+      if (path === "objects" || path.startsWith("objects/"))
+        return Effect.runPromise(
+          objectsRequest(this.objects, request, path, (id) => {
+            const turn = this.conversations.get(id)
+            return turn
+              ? {
+                  id: turn.id,
+                  text: turn.text,
+                  answer: turn.answer,
+                  createdAt: turn.created_at,
+                }
+              : undefined
+          })
         )
       if (path === "apps" || path.startsWith("apps/"))
         return Effect.runPromise(

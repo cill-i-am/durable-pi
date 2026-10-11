@@ -1,6 +1,6 @@
 # Durable Pi — build tracker
 
-Started 2026-10-10. Delivery owner: Codex. Status: **slices 01–09b deployed; 03c video preprocessing verified locally**.
+Started 2026-10-10. Delivery owner: Codex. Status: **slices 01–09b and 03c deployed; 08c persistent working checklists in progress**.
 
 ## Outcome
 
@@ -22,6 +22,7 @@ Backend uses bounded contexts with pure domain values, Effect application workfl
 | Access | Tool grants, approvals, connection references and execution budgets | Permit/deny/approval decisions enforced before effects |
 | Execution | Browser sessions, terminal sessions, containers and bounded code execution | Durable operation receipts and session handles |
 | Apps | Generated application versions, publication and interaction events | Isolated application runtime and explicit sharing policy |
+| Working objects | Authoritative structured objects, targeted edits, revisions, history and change delivery | Native Pi session documents per bot; shared operations for owner UI and agent tools |
 | Routines | Scheduled work, webhooks, triggers, deduplication and pause | Authorized work admitted to Conversations |
 | Activity | User-visible operations and actionable recovery | Projections of committed domain events; no secrets |
 
@@ -54,6 +55,7 @@ The owner requested password recovery before continuing. Implemented Better Auth
 | 06 — Browser | Bot browses on Cloudflare; observe and take over in the workbench; authenticated Chromium sessions; Kitesurf for compatible short tasks; session expiry/reconnect and destination controls. | 06a and 06b deployed |
 | 07 — Execution and terminal | Isolated fast code execution plus on-demand Linux container; live terminal; files persist across container restarts; bounded time/output/network; cancel and recover. | 07a–07d deployed |
 | 08 — Generated apps and inline UI | Bot creates, previews, updates and runs an app; versioned private publication; isolated execution/storage; inline UI uses a bounded renderer; interactions return events to the owning bot. | 08a and 08b deployed |
+| 08c — Persistent working objects | Agent creates a project checklist; owner edits tasks inline or in Objects; agent reads current state; history, conflicts, retry receipts and archive/restore survive restart. | Implemented; local verification and independent review passed; deploying |
 | 09 — Routines and incoming events | Schedule/pause/delete routines; run with browser closed; authenticated webhook triggers; durable retry/deduplication; notify on meaningful outcomes; respect bot grants and budgets. | 09a and 09b deployed |
 | 10 — Delegation | Explicit parent/child tasks; separate child memory/tool grants; bounded concurrency; steer/stop children; deliver completed reports once after restart. | Planned |
 | 11 — Activity and recovery | Per-bot/global activity; inspect tool outcomes and approvals; recover interrupted work; expose actionable connection/backup failures; inspect/export memory and workspace. | Planned |
@@ -65,7 +67,7 @@ Each slice gets implementation and proof notes below. Add a slice rather than hi
 
 ### Queued priorities after the current video slice (2026-10-11)
 
-The owner asked to finish slice 03c first, then implement the following two requests in order, before continuing the remaining roadmap. These are saved requirements, not completed work. The full prompts are retained below.
+The owner asked to finish slice 03c first, then implement the following two requests in order. The subsequent persistent-working-objects request is now the active slice (08c); these two requests remain queued, in their original order, before the remaining roadmap. These are saved requirements, not completed work. The full prompts are retained below.
 
 #### 02c — Native working-context compaction
 
@@ -519,3 +521,39 @@ Proof (2026-10-11):
 - Read-only backend/frontend reviews found and corrected oversized aggregate vision context, timestamp/metadata confusion, Unicode truncation, and busy-container restart retries. Follow-up review passed.
 - No new cloud permission or resource; the media container shares the approved four-instance pool. Videos are limited to 8 MB, ten minutes and 4096 pixels per side. Audio speech transcription and image-subtitle OCR are not implemented.
 - The owner's complete compaction and automatic-planning prompts are saved above; implementation follows this slice as requested.
+
+03c shipped in PR #22, main `da15fb0`; production workflow `38119148560` passed, including hosted authentication checks.
+
+### 08c — Persistent working objects
+
+Working objects are structured durable information the owner and their agent maintain together, independently of the conversation that created them. First deliver one project checklist: stable object/task IDs, schema version, revision, task title/status/optional due date/notes, compact editable live chat card, full Objects workbench, readable actor/source history and a link to the originating conversation. Future itineraries, decision registers and research collections are extension points, not scope for a generic database builder.
+
+Design first: inspected the approved Paper desktop, inline-app, mobile and token/component states. Added focused Shared checklist / Next task / Review desk explorations and refined the Shared checklist into desktop, mobile, conflict, save recovery, history and archive states. Preserve the Quiet Workroom palette, Geist, semantic shadcn/Base UI primitives and the conversation/workbench relationship.
+
+Persistence decision: installed Pi Durable 1.0.4 exposes `defineDocFamily({ scope: "session" })`, `Session.commit`, typed snapshots and document watches. Cloudflare `PiHarness.pi()` returns one native Harness/Session for the bot; its UI-named sessions are individual Pi conversations. Session-scoped documents therefore outlive per-turn conversations and fit this domain. Use those native documents and atomic commits for the authoritative object, catalog, immutable events and idempotency receipts, with no second editable copy in Apps, chat or OptChat. The existing Apps renderer remains separate and unchanged for existing generated applications.
+
+Acceptance contract:
+- UI and typed agent tools call the same Effect application operations; owner/bot boundaries come from authenticated routing, never request-supplied identities.
+- Targeted edits use expected revisions; stale writes return explicit conflicts preserving drafts. Stable operation IDs replay the original receipt; cancellation fences uncertain writes.
+- Every successful change commits its actor/source event atomically with state. Native context hooks make changed object references available on model requests; checkbox clicks never enqueue a run. History and pending change state survive restart.
+- Archive/restore only, no permanent deletion. Task IDs are never reused. Archived objects and tasks remain inspectable.
+- Verify native Pi tool creation, user edits, later agent reads, cross-bot isolation, concurrent writes, lost-response retry, native SQLite reopen and local workerd recovery. Hosted deployment evidence remains distinct from owner/live-model acceptance.
+
+Delivered:
+- `src/objects` owns typed checklist contracts, targeted domain edits, Effect operations, native Pi persistence, HTTP routes and tools. `src/features/objects` owns the shared chat/workbench projection, editing, conflict comparison and recovery. No new Cloudflare resource or permission.
+- `create_checklist`, `read_object`, `update_checklist` and `list_objects` use authenticated bot scope. Field changes, current revision and retry receipt commit atomically. Each event preserves actor, source surface and originating tool/turn where applicable.
+- Current references are injected ephemerally on each native GenerationTask request, never appended as chat or OptChat originals. A durable sequence watermark records changes offered to successful model requests. User clicks start no model run.
+- Drafts use targeted patches, exact expected revisions and operation IDs retained before sending. Cross-view conflict recovery settles the original draft, including repeated conflicts. Lost outcomes require explicit retry or server-confirmed cancellation. Object and task archive/restore retain IDs and history.
+- Native document tools alone opt into interrupted dispatch recovery. The original grant must remain unexpired and at the same policy revision; cancellation and bot/run fences still apply. External actions retain their existing unknown-outcome interruption fence. Oversized reads use complete JSON task pages, measured after escaping, under 64,000 characters.
+- Paper boards 32–35 cover exploration, live workspace, conflicts/recovery/history and mobile. [Design file](https://app.paper.design/file/01M4GJ8G5KNDADJRVDDC3PQ6CT/p-1-0). Workbench and compact live card use existing shadcn/Base UI primitives and semantic tokens.
+
+Verification on 2026-10-11:
+- Full local `pnpm verify`: typecheck, 337 tests across 45 files, client/server build. Lint passed. New files are included in the pre-push tracked-file secret scan.
+- Native Pi + deterministic provider journey: agent tool creates the checklist, UI HTTP operation edits it, a later native conversation reads the current edited state, no approval or automatic run for the UI change, one ephemeral reference projection and no duplicate transcript entry.
+- Native SQLite reopen and in-flight tool recovery: interruption before/after commit; retry retains one object/event; revoked/expired grants and cancellation cannot start new work. CAS races, isolation, atomic batch rollback, archive/restore, paged history, pending change watermark, mutation cancellation and large escaped tool pages passed.
+- UI store against native persistence: response lost after commit, browser-state recovery without automatic replay, same-operation retry, repeated conflicts with shared original-draft settlement, explicit cancellation, stale response ordering and history preservation passed.
+- Actual local authenticated workerd gateway: create/edit, sibling-bot/anonymous/unowned rejection, two concurrent writers, retry, archive/restore and tool-ID impersonation rejection passed. Stopped and restarted the Alchemy Worker process; the checklist, five history events and original revision-one receipt remained intact (`scripts/check-objects.ts --after-restart`).
+- Browser: direct creation, task/date/note editing, completion, a competing editor's conflict and explicit reapply, history, archive/restore and reload passed. Mobile 390×844 has no horizontal overflow. No new browser errors after reload; earlier development-only hot-reload errors came from replacing the in-memory store shape mid-edit.
+- Independent read-only backend/frontend reviews passed after fixing recovery grant fences, oversized tool output and cross-view conflict draft loss. Hosted authentication probes include object read/mutate/cancel endpoints. Production deployment and live owner/model acceptance are reported separately; local native provider fixtures do not claim ChatGPT inference.
+
+Next: 02c native working-context compaction, then 11a automatic durable task planning. Their complete prompts remain above.

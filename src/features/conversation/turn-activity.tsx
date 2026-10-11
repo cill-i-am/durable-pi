@@ -8,6 +8,7 @@ import {
 } from "lucide-react"
 import { Fragment } from "react"
 import { InlineApp } from "@/features/apps"
+import { InlineObject } from "@/features/objects"
 import { FileAttachments } from "@/features/files"
 import type { FileInfo } from "@/workspace/files"
 import type { TimelineItem } from "../../conversations/contracts"
@@ -131,6 +132,12 @@ export function TurnActivity({
                 )}
               </CollapsibleContent>
             </Collapsible>
+            {agentId &&
+              ["create_checklist", "read_object", "update_checklist"].includes(
+                item.name
+              ) &&
+              item.status === "done" &&
+              item.output && <InlineObject output={item.output} />}
             {agentId &&
               item.name === "publish_app" &&
               item.status === "done" &&

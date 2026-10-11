@@ -1,5 +1,6 @@
 import { RoutinesWorkbench } from "@/features/routines"
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { ObjectsProvider, ObjectsWorkbench } from "@/features/objects"
 import {
   Globe,
   Code2,
@@ -7,6 +8,7 @@ import {
   PanelRight,
   Clock3,
   TerminalSquare,
+  ListTodo,
 } from "lucide-react"
 import { TerminalWorkbench } from "@/features/terminal"
 import { AppsWorkbench } from "@/features/apps"
@@ -159,93 +161,142 @@ function AgentWorkspace({
   onNavigationLockChange: (value: boolean) => void
 }) {
   const [workbench, setWorkbench] = useState<
-    "browser" | "code" | "apps" | "terminal" | "routines" | null
+    "browser" | "code" | "apps" | "terminal" | "routines" | "objects" | null
   >(null)
+  const [objectId, setObjectId] = useState<string | null>(null)
+  const [objectPending, setObjectPending] = useState(false)
+  const [objectEditing, setObjectEditing] = useState(false)
+  const [routinePending, setRoutinePending] = useState(false)
+  useEffect(() => {
+    onNavigationLockChange(objectPending || objectEditing || routinePending)
+  }, [objectPending, objectEditing, routinePending, onNavigationLockChange])
   const browserOpen = workbench === "browser"
   return (
-    <div className={`agent-columns ${workbench ? "workbench-visible" : ""}`}>
-      <Conversation
-        name={name}
-        agent={agent}
-        workbenchAction={
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              disabled={navigationLocked}
-              render={
-                <Button
-                  size="sm"
-                  variant={workbench ? "secondary" : "ghost"}
-                  disabled={navigationLocked}
-                  aria-label="Open workbench"
-                />
-              }
-            >
-              <PanelRight data-icon="inline-start" />
-              <span className="hidden sm:inline">Workbench</span>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuGroup>
-                <DropdownMenuItem onClick={() => setWorkbench("browser")}>
-                  <Globe /> Browser
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setWorkbench("code")}>
-                  <Code2 /> Code
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setWorkbench("apps")}>
-                  <PanelsTopLeft /> Apps
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setWorkbench("routines")}>
-                  <Clock3 /> Routines
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setWorkbench("terminal")}>
-                  <TerminalSquare /> Terminal
-                </DropdownMenuItem>
-                {workbench && (
-                  <DropdownMenuItem onClick={() => setWorkbench(null)}>
-                    Hide workbench
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
+    <ObjectsProvider
+      agentId={agent.id}
+      archived={agent.status === "archived"}
+      onPendingChange={setObjectPending}
+      onOpen={(id) => {
+        if (!objectEditing && !routinePending) {
+          setObjectId(id)
+          setWorkbench("objects")
         }
-      />
-      {workbench === "terminal" && (
-        <TerminalWorkbench
-          agentId={agent.id}
-          agentName={agent.name}
-          onClose={() => setWorkbench(null)}
+      }}
+    >
+      <div className={`agent-columns ${workbench ? "workbench-visible" : ""}`}>
+        <Conversation
+          name={name}
+          agent={agent}
+          workbenchAction={
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                disabled={objectEditing || routinePending}
+                render={
+                  <Button
+                    size="sm"
+                    variant={workbench ? "secondary" : "ghost"}
+                    disabled={objectEditing || routinePending}
+                    aria-label="Open workbench"
+                  />
+                }
+              >
+                <PanelRight data-icon="inline-start" />
+                <span className="hidden sm:inline">Workbench</span>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuGroup>
+                  <DropdownMenuItem onClick={() => setWorkbench("objects")}>
+                    <ListTodo /> Objects
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={navigationLocked}
+                    onClick={() => setWorkbench("browser")}
+                  >
+                    <Globe /> Browser
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={navigationLocked}
+                    onClick={() => setWorkbench("code")}
+                  >
+                    <Code2 /> Code
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={navigationLocked}
+                    onClick={() => setWorkbench("apps")}
+                  >
+                    <PanelsTopLeft /> Apps
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={navigationLocked}
+                    onClick={() => setWorkbench("routines")}
+                  >
+                    <Clock3 /> Routines
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={navigationLocked}
+                    onClick={() => setWorkbench("terminal")}
+                  >
+                    <TerminalSquare /> Terminal
+                  </DropdownMenuItem>
+                  {workbench && (
+                    <DropdownMenuItem
+                      disabled={navigationLocked}
+                      onClick={() => setWorkbench(null)}
+                    >
+                      Hide workbench
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          }
         />
-      )}
-      {workbench === "routines" && (
-        <RoutinesWorkbench
-          onPendingChange={onNavigationLockChange}
-          agentId={agent.id}
-          agentName={agent.name}
-          onClose={() => setWorkbench(null)}
-        />
-      )}
-      {workbench === "apps" && (
-        <AppsWorkbench
-          agentId={agent.id}
-          agentName={agent.name}
-          onClose={() => setWorkbench(null)}
-        />
-      )}
-      {workbench === "code" && (
-        <ExecutionWorkbench
-          agentId={agent.id}
-          agentName={agent.name}
-          onClose={() => setWorkbench(null)}
-        />
-      )}
-      {browserOpen && (
-        <BrowserWorkbench
-          agentId={agent.id}
-          agentName={agent.name}
-          onClose={() => setWorkbench(null)}
-        />
-      )}
-    </div>
+        {workbench === "terminal" && (
+          <TerminalWorkbench
+            agentId={agent.id}
+            agentName={agent.name}
+            onClose={() => setWorkbench(null)}
+          />
+        )}
+        {workbench === "routines" && (
+          <RoutinesWorkbench
+            onPendingChange={setRoutinePending}
+            agentId={agent.id}
+            agentName={agent.name}
+            onClose={() => setWorkbench(null)}
+          />
+        )}
+        {workbench === "objects" && (
+          <ObjectsWorkbench
+            selected={objectId}
+            onSelect={setObjectId}
+            agentName={agent.name}
+            onClose={() => setWorkbench(null)}
+            onEditing={setObjectEditing}
+          />
+        )}
+        {workbench === "apps" && (
+          <AppsWorkbench
+            agentId={agent.id}
+            agentName={agent.name}
+            onClose={() => setWorkbench(null)}
+          />
+        )}
+        {workbench === "code" && (
+          <ExecutionWorkbench
+            agentId={agent.id}
+            agentName={agent.name}
+            onClose={() => setWorkbench(null)}
+          />
+        )}
+        {browserOpen && (
+          <BrowserWorkbench
+            agentId={agent.id}
+            agentName={agent.name}
+            onClose={() => setWorkbench(null)}
+          />
+        )}
+      </div>
+    </ObjectsProvider>
   )
 }
