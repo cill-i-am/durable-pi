@@ -69,6 +69,31 @@ export const builtInTools = [
     mode: "ask",
   },
   {
+    name: "list_routines",
+    title: "List routines",
+    description: "Read this bot's scheduled work.",
+    mode: "allow",
+  },
+  {
+    name: "read_routine",
+    title: "Read routine",
+    description: "Read a routine and its instructions.",
+    mode: "allow",
+  },
+  {
+    name: "save_routine",
+    title: "Schedule routine",
+    description:
+      "Create or edit work that runs with the browser closed, under existing tool permissions.",
+    mode: "ask",
+  },
+  {
+    name: "set_routine_status",
+    title: "Change routine status",
+    description: "Pause, resume or archive scheduled work.",
+    mode: "ask",
+  },
+  {
     name: "list_apps",
     title: "List private apps",
     description: "List this bot's generated apps.",

@@ -96,6 +96,10 @@ import { appsRequest } from "../apps/http"
 import { WebApps } from "../apps/web"
 import { readOutput } from "../execution/adapters/dynamic-worker"
 import { appTools } from "../apps/tools"
+import { RoutineStore } from "../routines/adapters/sqlite"
+import { RoutinePump } from "../routines/pump"
+import { routinesRequest } from "../routines/http"
+import { routineTools } from "../routines/tools"
 import { SYSTEM_PROMPT } from "./prompts"
 import { importHistory, ImportInput } from "../memory/import"
 import { pumpSummaries } from "../memory/compaction"
@@ -190,6 +194,21 @@ class AppEventRunner extends TurnRunner {
     return owner.apps.pending().length
       ? { rescheduleAt: Date.now() + 100 }
       : undefined
+  }
+}
+
+class RoutineRunner extends TurnRunner {
+  constructor(owner: PersonalAgent) {
+    super(owner, "routines")
+  }
+  async onJob(): Promise<LifecycleJobOutcome> {
+    const next = await this.owner.routinePump.run()
+    return next === undefined ? undefined : { rescheduleAt: next }
+  }
+  onJobError(): LifecycleJobOutcome {
+    // Exhausted application retries otherwise remove the lifecycle job.
+    const next = this.owner.routinePump.retry()
+    return next === undefined ? undefined : { rescheduleAt: next }
   }
 }
 
@@ -362,6 +381,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       return (
         !!turn &&
         ["queued", "preparing", "running"].includes(turn.status) &&
+        this.routines.canRun(turnId) &&
         this.botConfiguration.read()?.status !== "archived"
       )
     },
@@ -380,6 +400,30 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       documentService(this.env.DOCUMENT_SERVICE)
     )
   )
+  readonly routines = new RoutineStore(
+    this.db,
+    () => this.botConfiguration.read()?.status !== "archived"
+  )
+  readonly routinePump = new RoutinePump(this.routines, {
+    getTurn: (id) => this.conversations.get(id),
+    modelConnected: () => this.modelConnected(),
+    wakeConversation: () => this.runner.wake(),
+    admit: (run) =>
+      this.conversations.admit(
+        {
+          operationId: run.turnId,
+          text: `Routine: ${run.title}\n${run.trigger === "manual" ? "Requested now" : "Scheduled for " + new Date(run.scheduledAt).toISOString()}\n\n${run.prompt}\n\nThis run has a ten-minute budget. Follow the bot's current tool permissions; wait for any required approval. Report the useful result or a concrete failure in this conversation.`,
+        },
+        undefined,
+        this.skills.selection().skills
+      ),
+    stop: (id) => {
+      this.conversations.requestStop(id)
+      this.accessStore.cancel(id)
+      this.access.notify()
+    },
+    notify: () => this.notifyConversation(),
+  })
   readonly apps = new AppStore(
     this.db,
     () => this.botConfiguration.read()?.status !== "archived"
@@ -447,6 +491,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         ],
         tools: [
           ...appTools(this.apps),
+          ...routineTools(this.routines, () => this.routineRunner.wake()),
           defineTool({
             name: "list_files",
             description:
@@ -757,6 +802,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     )
   )
   readonly appEvents = new AppEventRunner(this)
+  readonly routineRunner = new RoutineRunner(this)
   readonly lifecycle = Lifecycle.install(this)
     .use(this.mcp)
     .use(this.harness)
@@ -766,6 +812,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     .use(this.extraction)
     .use(this.browserCleanup)
     .use(this.appEvents)
+    .use(this.routineRunner)
 
   private readonly conversationListeners = new Set<() => void>()
   notifyConversation() {
@@ -786,6 +833,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   }
 
   async onStart() {
+    if (this.routines.nextWake() !== undefined) await this.routineRunner.wake()
     if (this.apps.pending().length) await this.appEvents.wake()
     this.executions.recover()
     this.browser.recover()
@@ -1005,7 +1053,11 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     if (!synchronized.ok) throw new Error("Terminal authority unavailable")
     if (this.botConfiguration.read()?.status === "archived")
       await this.browserCleanup.wake()
-    else if (this.apps.pending().length) await this.appEvents.wake()
+    else {
+      if (this.apps.pending().length) await this.appEvents.wake()
+      if (this.routines.nextWake() !== undefined)
+        await this.routineRunner.wake()
+    }
   }
 
   resolveSkillVersions(references: SelectSkills["skills"]): SkillResolution {
@@ -1080,6 +1132,26 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         if (result.ok && request.method !== "GET") await this.runner.wake()
         return result
       }
+      if (path === "routines" || path.startsWith("routines/"))
+        return Effect.runPromise(
+          routinesRequest(
+            this.routines,
+            request,
+            path,
+            () => this.routineRunner.wake(),
+            async (id) => {
+              await this.runner.wake()
+              await this.routineRunner.wake()
+              const run = this.routines.cancelPendingRun(id)
+              if (run?.status === "queued") {
+                this.conversations.requestStop(run.turnId)
+                this.accessStore.cancel(run.turnId)
+                this.access.notify()
+              }
+              this.notifyConversation()
+            }
+          )
+        )
       if (path === "apps" || path.startsWith("apps/"))
         return Effect.runPromise(
           appsRequest(
@@ -1520,6 +1592,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   async step(): Promise<LifecycleJobOutcome> {
     let turn = this.active()
     if (!turn) return undefined
+    if (!this.routines.canRun(turn.id)) {
+      this.conversations.requestStop(turn.id)
+      turn = this.current(turn.id)
+    }
     if (turn.status === "queued") this.conversations.prepare(turn.id)
     if (turn.status === "running" || turn.status === "stopping") {
       const before = JSON.stringify(
