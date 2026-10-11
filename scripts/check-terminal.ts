@@ -86,6 +86,13 @@ assert.equal(
   (await api(`terminal/${success.input.id}`, undefined, sibling)).status,
   404
 )
+// Each request tears down the native container and restores the same checkpoint.
+// Fast, unterminated UTF-8 output exposed the SDK default-session drain race.
+for (let attempt = 0; attempt < 3; attempt++) {
+  const tiny = await execute("cat /workspace/proof.txt; printf ' café 🧭'")
+  assert.equal(tiny.result.status, "succeeded")
+  assert.equal(tiny.result.output, "saved-file café 🧭")
+}
 const network = await execute(
   "curl --connect-timeout 2 --max-time 3 https://example.com"
 )

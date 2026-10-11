@@ -3,6 +3,13 @@ import { MAX_CHECKPOINT } from "../contracts"
 import type { TerminalRuntime } from "../terminal"
 import { sandboxTransfers } from "./transfer-files"
 
+// SDK 0.12.10's getSandbox({ enableDefaultSession: false }) sends this token.
+// We already own the Sandbox instance: use the same typed execution path without
+// self-RPC. Its sessionless pipes drain before completion; the default shell's
+// background labelers can lose fast command output. Revisit when upgrading 0.x.
+// https://github.com/cloudflare/sandbox-sdk/blob/e4877c7368f8b1620bd4400ff831e28fba152eff/packages/sandbox/src/sandbox.ts
+const SESSIONLESS = "__DISABLE_SESSION__"
+
 function live(signal: AbortSignal) {
   if (signal.aborted) throw new Error("Stopped")
 }
@@ -108,6 +115,7 @@ export function sandboxRuntime(sandbox: Sandbox): TerminalRuntime {
   ) => {
     live(signal)
     const stream = await sandbox.execStream(command, {
+      sessionId: SESSIONLESS,
       cwd: "/workspace",
       timeout: 30000,
       signal,

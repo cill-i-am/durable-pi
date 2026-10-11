@@ -254,7 +254,7 @@ describe("untrusted sandbox streams", () => {
   it("parses real SSE shape across chunks and returns a nonzero exit code", async () => {
     const append = vi.fn()
     const bytes = new TextEncoder().encode(
-      'data: {"type":"stdout","data":"hello"}\n\ndata: {"type":"complete","exitCode":7}\n\n'
+      'data: {"type":"stdout","data":"café 🧭"}\n\ndata: {"type":"stderr","data":"warning"}\n\ndata: {"type":"complete","exitCode":7}\n\n'
     )
     const body = new ReadableStream<Uint8Array>({
       start(c) {
@@ -265,7 +265,7 @@ describe("untrusted sandbox streams", () => {
     expect(await readCommand(body, append, new AbortController().signal)).toBe(
       7
     )
-    expect(append).toHaveBeenCalledWith("hello")
+    expect(append.mock.calls).toEqual([["café 🧭"], ["warning"]])
   })
   it("rejects missing completion and excessive protocol output", async () => {
     await expect(
@@ -305,6 +305,39 @@ describe("untrusted sandbox streams", () => {
     controller.abort()
     await expect(reading).rejects.toThrow("Stopped")
     expect(stopped).toHaveBeenCalledTimes(1)
+  })
+  it("cancels a command stream when output admission fails or Stop interrupts a read", async () => {
+    const cancel = vi.fn()
+    const body = new ReadableStream<Uint8Array>({
+      start(c) {
+        c.enqueue(
+          new TextEncoder().encode(
+            'data: {"type":"stdout","data":"output"}\n\n'
+          )
+        )
+      },
+      cancel,
+    })
+    await expect(
+      readCommand(
+        body,
+        () => {
+          throw new Error("Output limit")
+        },
+        new AbortController().signal
+      )
+    ).rejects.toThrow("Output limit")
+    expect(cancel).toHaveBeenCalledOnce()
+    const stopped = vi.fn(),
+      controller = new AbortController()
+    const reading = readCommand(
+      new ReadableStream({ cancel: stopped }),
+      () => {},
+      controller.signal
+    )
+    controller.abort()
+    await expect(reading).rejects.toThrow("Stopped")
+    expect(stopped).toHaveBeenCalledOnce()
   })
 })
 
