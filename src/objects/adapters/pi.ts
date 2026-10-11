@@ -4,6 +4,7 @@ import {
   defineDoc,
   defineDocFamily,
   type Session,
+  type Tx,
 } from "@earendil-works/pi-durable"
 import {
   Checklist,
@@ -67,6 +68,10 @@ const Operations = defineDocFamily({
     receipt: MutationReceipt | null
   } => ({ digest: "", cancelled: false, receipt: null }),
 })
+/** Read through the caller's native transaction; never nest Session.snapshot in a commit. */
+export async function checklistInTransaction(tx: Tx, id: string) {
+  return (await tx.doc(Objects, id, null)).value
+}
 const eventKey = (id: string, revision: number) => `${id}:${revision}`
 const invalid = () =>
   new ObjectFailure({

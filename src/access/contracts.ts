@@ -62,6 +62,19 @@ export class AccessConflict extends Schema.TaggedError<AccessConflict>()(
 
 export const builtInTools = [
   {
+    name: "update_plan",
+    title: "Maintain task plan",
+    description:
+      "Save this task's objective, steps and evidence. Grants no action permissions.",
+    mode: "allow",
+  },
+  {
+    name: "read_plan",
+    title: "Read task plan",
+    description: "Inspect this bot's saved task plans and revisions.",
+    mode: "allow",
+  },
+  {
     name: "list_objects",
     title: "List working objects",
     description: "List this bot's private persistent checklists.",

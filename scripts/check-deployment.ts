@@ -37,6 +37,8 @@ for (const path of [
   "export?format=html",
   "objects",
   "objects/00000000-0000-4000-8000-000000000001",
+  "plans",
+  "plans/00000000-0000-4000-8000-000000000001",
 ])
   assert.equal((await request(`/api/agent/${path}`)).status, 401)
 assert.equal((await request("/api/agent/import", {})).status, 401)

@@ -1,4 +1,5 @@
 import { RoutinesWorkbench } from "@/features/routines"
+import { ActivityWorkbench } from "@/features/activity"
 import { useEffect, useState } from "react"
 import { ObjectsProvider, ObjectsWorkbench } from "@/features/objects"
 import {
@@ -9,6 +10,7 @@ import {
   Clock3,
   TerminalSquare,
   ListTodo,
+  Activity,
 } from "lucide-react"
 import { TerminalWorkbench } from "@/features/terminal"
 import { AppsWorkbench } from "@/features/apps"
@@ -161,7 +163,14 @@ function AgentWorkspace({
   onNavigationLockChange: (value: boolean) => void
 }) {
   const [workbench, setWorkbench] = useState<
-    "browser" | "code" | "apps" | "terminal" | "routines" | "objects" | null
+    | "browser"
+    | "code"
+    | "apps"
+    | "terminal"
+    | "routines"
+    | "objects"
+    | "activity"
+    | null
   >(null)
   const [objectId, setObjectId] = useState<string | null>(null)
   const [objectPending, setObjectPending] = useState(false)
@@ -205,6 +214,12 @@ function AgentWorkspace({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuGroup>
+                  <DropdownMenuItem
+                    disabled={navigationLocked}
+                    onClick={() => setWorkbench("activity")}
+                  >
+                    <Activity /> Activity
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setWorkbench("objects")}>
                     <ListTodo /> Objects
                   </DropdownMenuItem>
@@ -251,6 +266,13 @@ function AgentWorkspace({
             </DropdownMenu>
           }
         />
+        {workbench === "activity" && (
+          <ActivityWorkbench
+            agentId={agent.id}
+            agentName={agent.name}
+            onClose={() => setWorkbench(null)}
+          />
+        )}
         {workbench === "terminal" && (
           <TerminalWorkbench
             agentId={agent.id}
