@@ -1,3 +1,5 @@
+import { ActivityTimeline } from "./activity-timeline"
+import type { ActivityAgent } from "@/activity/contracts"
 import { DelegatedWork } from "./delegated-work"
 import { InferenceRuns } from "./inference-runs"
 import { useEffect, useRef, useState } from "react"
@@ -42,19 +44,30 @@ import { usePlans } from "./use-plans"
 import { historyPage } from "./history"
 
 export function ActivityWorkbench({
-  agentId,
-  agentName,
+  agentId: initialId,
+  agentName: initialName,
+  agents,
+  onOpenBot,
+  onMemory,
   onClose,
 }: {
-  agentId: string
-  agentName: string
+  agentId: ActivityAgent["id"]
+  agentName: ActivityAgent["name"]
+  agents: readonly ActivityAgent[]
+  onOpenBot: (id: ActivityAgent["id"]) => void
+  onMemory: (id: ActivityAgent["id"]) => void
   onClose: () => void
 }) {
+  const [showTimeline, setShowTimeline] = useState(true)
+  const [{ id: agentId, name: agentName }, setInspectedAgent] = useState({
+    id: initialId,
+    name: initialName,
+  })
   const [wide, setWide] = useState(false),
     [selected, setSelected] = useState<string | null>(null),
     [offset, setOffset] = useState(0)
   const container = useRef<HTMLDivElement>(null)
-  const state = usePlans(agentId, selected, offset)
+  const state = usePlans(agentId, selected, offset, !showTimeline)
   useEffect(() => {
     const media = matchMedia("(min-width: 1280px)")
     const update = () => setWide(media.matches)
@@ -110,136 +123,174 @@ export function ActivityWorkbench({
           <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-[18px] overflow-y-auto p-4 wrap-anywhere sm:p-6">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-2xl font-semibold">Activity</h2>
-              <Badge variant="outline" className="max-w-[50%] min-w-0 shrink">
-                <span className="truncate">{agentName}</span>
-              </Badge>
+              {!showTimeline && (
+                <Badge variant="outline" className="max-w-[50%] min-w-0 shrink">
+                  <span className="truncate">{agentName}</span>
+                </Badge>
+              )}
             </div>
-            {!selected && <DelegatedWork key={agentId} agentId={agentId} />}
-            {!selected && (
-              <DelegatedWork
-                key={`${agentId}:background`}
-                agentId={agentId}
-                background
+            {showTimeline ? (
+              <ActivityTimeline
+                agent={
+                  agents.find((value) => value.id === initialId) ?? {
+                    id: initialId,
+                    name: initialName,
+                  }
+                }
+                agents={agents}
+                onOpenBot={onOpenBot}
+                onMemory={onMemory}
+                onDetails={(agent) => {
+                  setInspectedAgent(agent)
+                  setSelected(null)
+                  setOffset(0)
+                  setShowTimeline(false)
+                }}
               />
-            )}
-            {!selected && <InferenceRuns agentId={agentId} />}
-            {state.error && (
-              <Alert>
-                <AlertTitle>Updates interrupted</AlertTitle>
-                <AlertDescription>
-                  {state.error}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => void state.refresh()}
-                  >
-                    Reconnect
-                  </Button>
-                </AlertDescription>
-              </Alert>
-            )}
-            {!!state.approvals.length && (
-              <Alert>
-                <Clock3 />
-                <AlertTitle>Needs your approval</AlertTitle>
-                <AlertDescription>
-                  {state.approvals.length} tool{" "}
-                  {state.approvals.length === 1 ? "request is" : "requests are"}{" "}
-                  waiting. The plan grants no additional access.
-                  <Button variant="outline" size="sm" onClick={onClose}>
-                    Review in chat
-                  </Button>
-                </AlertDescription>
-              </Alert>
-            )}
-            {selected ? (
+            ) : (
               <>
                 <Button
                   variant="ghost"
                   size="sm"
                   className="self-start"
-                  onClick={() => setSelected(null)}
+                  onClick={() => setShowTimeline(true)}
                 >
-                  <ArrowLeft data-icon="inline-start" /> All tasks
+                  <ArrowLeft /> Activity timeline
                 </Button>
-                {state.detail ? (
-                  <PlanInspector
-                    key={selected}
+                {!selected && <DelegatedWork key={agentId} agentId={agentId} />}
+                {!selected && (
+                  <DelegatedWork
+                    key={`${agentId}:background`}
                     agentId={agentId}
-                    detail={state.detail}
+                    background
                   />
-                ) : state.loading ? (
-                  <Skeleton className="h-32 w-full" />
-                ) : null}
-              </>
-            ) : (
-              <>
-                <p className="text-sm text-muted-foreground">
-                  The work, the next step, and what needs your attention.
-                </p>
-                {state.loading && <Skeleton className="h-24 w-full" />}
-                {!state.loading && !state.list.plans.length && (
-                  <Empty>
-                    <EmptyHeader>
-                      <EmptyTitle>No task plans yet</EmptyTitle>
-                      <EmptyDescription>
-                        Ask your agent for help with a project. It will keep
-                        track of substantial work here. Simple chat stays
-                        simple.
-                      </EmptyDescription>
-                    </EmptyHeader>
-                  </Empty>
                 )}
-                {state.list.plans.map((plan) => (
-                  <div key={plan.id} className="flex flex-col gap-3">
+                {!selected && <InferenceRuns agentId={agentId} />}
+                {state.error && (
+                  <Alert>
+                    <AlertTitle>Updates interrupted</AlertTitle>
+                    <AlertDescription>
+                      {state.error}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void state.refresh()}
+                      >
+                        Reconnect
+                      </Button>
+                    </AlertDescription>
+                  </Alert>
+                )}
+                {!!state.approvals.length && (
+                  <Alert>
+                    <Clock3 />
+                    <AlertTitle>Needs your approval</AlertTitle>
+                    <AlertDescription>
+                      {state.approvals.length} tool{" "}
+                      {state.approvals.length === 1
+                        ? "request is"
+                        : "requests are"}{" "}
+                      waiting. The plan grants no additional access.
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onOpenBot(agentId)}
+                      >
+                        Review in chat
+                      </Button>
+                    </AlertDescription>
+                  </Alert>
+                )}
+                {selected ? (
+                  <>
                     <Button
                       variant="ghost"
-                      className="h-auto w-full justify-start py-3 text-left whitespace-normal"
-                      onClick={() => setSelected(plan.id)}
+                      size="sm"
+                      className="self-start"
+                      onClick={() => setSelected(null)}
                     >
-                      <span className="flex min-w-0 flex-1 flex-col gap-2">
-                        <span>{plan.objective}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {plan.completed} of {plan.total} steps ·{" "}
-                          {plan.state === "open"
-                            ? "Open task"
-                            : plan.state === "completed"
-                              ? "Reported complete"
-                              : "Cancelled"}
-                        </span>
-                      </span>
-                      <ArrowRight data-icon="inline-end" />
+                      <ArrowLeft data-icon="inline-start" /> All tasks
                     </Button>
-                    {plan.blocker && (
-                      <p className="px-3 text-sm text-muted-foreground">
-                        {plan.blocker}
-                      </p>
+                    {state.detail ? (
+                      <PlanInspector
+                        key={selected}
+                        agentId={agentId}
+                        detail={state.detail}
+                      />
+                    ) : state.loading ? (
+                      <Skeleton className="h-32 w-full" />
+                    ) : null}
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm text-muted-foreground">
+                      The work, the next step, and what needs your attention.
+                    </p>
+                    {state.loading && <Skeleton className="h-24 w-full" />}
+                    {!state.loading && !state.list.plans.length && (
+                      <Empty>
+                        <EmptyHeader>
+                          <EmptyTitle>No task plans yet</EmptyTitle>
+                          <EmptyDescription>
+                            Ask your agent for help with a project. It will keep
+                            track of substantial work here. Simple chat stays
+                            simple.
+                          </EmptyDescription>
+                        </EmptyHeader>
+                      </Empty>
                     )}
-                    <Separator />
-                  </div>
-                ))}
-                <div className="flex items-center justify-between">
-                  {offset > 0 ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setOffset(Math.max(0, offset - 20))}
-                    >
-                      Newer tasks
-                    </Button>
-                  ) : (
-                    <span />
-                  )}
-                  {state.list.nextOffset !== null && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setOffset(state.list.nextOffset!)}
-                    >
-                      Earlier tasks
-                    </Button>
-                  )}
-                </div>
+                    {state.list.plans.map((plan) => (
+                      <div key={plan.id} className="flex flex-col gap-3">
+                        <Button
+                          variant="ghost"
+                          className="h-auto w-full justify-start py-3 text-left whitespace-normal"
+                          onClick={() => setSelected(plan.id)}
+                        >
+                          <span className="flex min-w-0 flex-1 flex-col gap-2">
+                            <span>{plan.objective}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {plan.completed} of {plan.total} steps ·{" "}
+                              {plan.state === "open"
+                                ? "Open task"
+                                : plan.state === "completed"
+                                  ? "Reported complete"
+                                  : "Cancelled"}
+                            </span>
+                          </span>
+                          <ArrowRight data-icon="inline-end" />
+                        </Button>
+                        {plan.blocker && (
+                          <p className="px-3 text-sm text-muted-foreground">
+                            {plan.blocker}
+                          </p>
+                        )}
+                        <Separator />
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-between">
+                      {offset > 0 ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setOffset(Math.max(0, offset - 20))}
+                        >
+                          Newer tasks
+                        </Button>
+                      ) : (
+                        <span />
+                      )}
+                      {state.list.nextOffset !== null && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setOffset(state.list.nextOffset!)}
+                        >
+                          Earlier tasks
+                        </Button>
+                      )}
+                    </div>
+                  </>
+                )}
               </>
             )}
           </div>

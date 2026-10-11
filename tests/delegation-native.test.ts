@@ -454,6 +454,12 @@ it.each([
         )
       }
       if (scenario === "finish") {
+        clock = group.deadline + 1
+        expect(
+          (await Effect.runPromise(service.read(group.id))).children.every(
+            (child) => child.status === "completed"
+          )
+        ).toBe(true)
         const count = generation
         expect(await Effect.runPromise(service.run(brief, source!))).toContain(
           "Private findings"

@@ -1,6 +1,6 @@
 import { RoutinesWorkbench } from "@/features/routines"
 import { ActivityWorkbench } from "@/features/activity"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { ObjectsProvider, ObjectsWorkbench } from "@/features/objects"
 import {
   Globe,
@@ -57,6 +57,15 @@ export function ChatApp() {
 function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
   const catalog = useAgentCatalog(ownerId)
   const [navigationLocked, setNavigationLocked] = useState(false)
+  const [memoryNavigation, setMemoryNavigation] = useState<{
+    id: string
+    request: string
+  } | null>(null)
+  const onMemoryOpened = useCallback((request: string) => {
+    setMemoryNavigation((current) =>
+      current?.request === request ? null : current
+    )
+  }, [])
   const [editor, setEditor] = useState<{
     agent?: AgentProfile
     key: string
@@ -120,6 +129,24 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
               onNavigationLockChange={setNavigationLocked}
               name={name}
               agent={catalog.selected}
+              agents={catalog.agents.filter(
+                (value) => value.status === "active"
+              )}
+              memoryRequest={
+                memoryNavigation?.id === catalog.selected.id
+                  ? memoryNavigation.request
+                  : undefined
+              }
+              onMemoryOpened={onMemoryOpened}
+              onOpenBot={(id) => {
+                if (!navigationLocked) catalog.select(id)
+              }}
+              onMemory={(id) => {
+                if (!navigationLocked) {
+                  catalog.select(id)
+                  setMemoryNavigation({ id, request: crypto.randomUUID() })
+                }
+              }}
             />
           ) : (
             <div className="loading-view">
@@ -153,11 +180,21 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
 
 function AgentWorkspace({
   agent,
+  agents,
+  memoryRequest,
+  onMemoryOpened,
+  onOpenBot,
+  onMemory,
   name,
   navigationLocked,
   onNavigationLockChange,
 }: {
   agent: AgentProfile
+  agents: readonly AgentProfile[]
+  memoryRequest?: string
+  onMemoryOpened: (request: string) => void
+  onOpenBot: (id: AgentProfile["id"]) => void
+  onMemory: (id: AgentProfile["id"]) => void
   name: string
   navigationLocked: boolean
   onNavigationLockChange: (value: boolean) => void
@@ -196,6 +233,8 @@ function AgentWorkspace({
         <Conversation
           name={name}
           agent={agent}
+          memoryRequest={memoryRequest}
+          onMemoryOpened={onMemoryOpened}
           workbenchAction={
             <DropdownMenu>
               <DropdownMenuTrigger
@@ -268,6 +307,15 @@ function AgentWorkspace({
         />
         {workbench === "activity" && (
           <ActivityWorkbench
+            agents={agents}
+            onOpenBot={(id) => {
+              setWorkbench(null)
+              onOpenBot(id)
+            }}
+            onMemory={(id) => {
+              setWorkbench(null)
+              onMemory(id)
+            }}
             agentId={agent.id}
             agentName={agent.name}
             onClose={() => setWorkbench(null)}

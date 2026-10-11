@@ -1,3 +1,13 @@
+import { activityEntries } from "../activity/sqlite"
+import { activityFeed } from "../activity/feed"
+import {
+  activityQuery,
+  type ActivityAgent,
+  type ActivityQuery,
+  type ActivitySnapshot,
+  type ActivityIssue,
+  type ActivityConversation,
+} from "../activity/contracts"
 import type { BackgroundGroupRPC } from "../delegation/worker"
 import type { BackgroundHandoff } from "../delegation/background"
 import { BackgroundMailbox } from "../delegation/adapters/background-mailbox"
@@ -1622,6 +1632,63 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     )
     return refreshed
   }
+  activityConversation(id: string): ActivityConversation | null {
+    const turn = this.conversations.get(id)
+    if (!turn) return null
+    const activity = this.db.all<{ payload: string }>(
+      "SELECT payload FROM chat_activity WHERE turn_id=?",
+      id
+    )[0]
+    return {
+      id: turn.id,
+      source: turn.origin ? "background" : "user",
+      text: turn.text,
+      answer: turn.answer,
+      status: turn.status,
+      error: turn.error,
+      activity: activity ? JSON.parse(activity.payload) : [],
+    }
+  }
+  async activityAgents(): Promise<ActivityAgent[]> {
+    return this.catalogRuntime.runPromise(
+      Effect.flatMap(AgentCatalog, (catalog) => catalog.list()).pipe(
+        Effect.map((agents) =>
+          agents
+            .filter((agent) => agent.status === "active")
+            .map(({ id, name }) => ({ id, name }))
+        )
+      )
+    )
+  }
+  readActivity(agent: ActivityAgent, query: ActivityQuery): ActivitySnapshot {
+    const issues: ActivityIssue[] = []
+    if (!query.cursor && query.filter !== "running") {
+      const paused = this.memoryRuntime
+        .runSync(this.memory.issues())
+        .filter((issue) => issue.retryAt === null)
+      if (paused.length)
+        issues.push({
+          key: `${agent.id}:memory`,
+          agent,
+          title: "Memory summaries paused",
+          detail: `${paused.length} saved source ranges need a retry. Original messages remain available.`,
+          target: "memory",
+        })
+      const backup = this.db.all<{ error: string | null }>(
+        "SELECT error FROM memory_backup_status WHERE id=1"
+      )[0]
+      if (backup?.error && backup.error !== "Backup in progress")
+        issues.push({
+          key: `${agent.id}:backup`,
+          agent,
+          title: "Cloud backup pending",
+          detail:
+            "The last complete backup is retained. Open Memory to inspect its status or export a local copy.",
+          target: "memory",
+        })
+    }
+    return { entries: activityEntries(this.db, agent, query), issues }
+  }
   async agentProfile(id: string) {
     const agentId = Schema.decodeUnknownSync(AgentId)(id)
     return this.catalogRuntime.runPromise(
@@ -1634,7 +1701,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     const owner = this.botConfiguration.read()?.owner
     return owner
       ? this.env.AGENT.getByName(owner).modelConnected()
-      : !!(await this.localCredentials.read("openai"))
+      : (await this.localCredentials.read("openai"))?.type === "oauth"
   }
   async configureBot(owner: string, profile: AgentProfile) {
     this.botConfiguration.configure(owner, profile)
@@ -2611,6 +2678,70 @@ export default {
     if (decoded._tag === "None")
       return new Response("Not found", { status: 404 })
     try {
+      if (path.startsWith("activity/conversations/")) {
+        if (request.method !== "GET")
+          return new Response("Method not allowed", { status: 405 })
+        const agent = await root.agentProfile(decoded.value)
+        if (!agent) return new Response("Not found", { status: 404 })
+        const id = path.slice("activity/conversations/".length)
+        if (!/^[a-f0-9-]{36}$/i.test(id))
+          return new Response("Not found", { status: 404 })
+        const value = await env.AGENT.getByName(
+          agentObjectName(owner, agent.id)
+        ).activityConversation(id)
+        return value
+          ? Response.json(value)
+          : new Response("Not found", { status: 404 })
+      }
+      if (path === "activity") {
+        if (request.method !== "GET")
+          return new Response("Method not allowed", { status: 405 })
+        let query: ActivityQuery
+        try {
+          query = activityQuery(url)
+        } catch {
+          return new Response("Invalid activity query", { status: 400 })
+        }
+        const scope = url.searchParams.get("scope") ?? "bot"
+        if (scope !== "bot" && scope !== "all")
+          return new Response("Invalid activity scope", { status: 400 })
+        const selected =
+          scope === "bot" ? await root.agentProfile(decoded.value) : null
+        if (scope === "bot" && !selected)
+          return new Response("Not found", { status: 404 })
+        const agents = selected
+          ? [{ id: selected.id, name: selected.name }]
+          : await root.activityAgents()
+        const page = await Effect.runPromise(
+          activityFeed(agents, query, (agent, value) =>
+            env.AGENT.getByName(agentObjectName(owner, agent.id)).readActivity(
+              agent,
+              value
+            )
+          )
+        )
+        if (
+          !query.cursor &&
+          query.filter !== "running" &&
+          agents[0] &&
+          !(await root.modelConnected())
+        )
+          return Response.json({
+            ...page,
+            issues: [
+              {
+                key: "account:model",
+                agent: agents[0],
+                title: "ChatGPT connection unavailable",
+                detail:
+                  "Reconnect the existing subscription connection before sending new requests. Saved work is retained; no API-key fallback is used.",
+                target: "models",
+              },
+              ...page.issues,
+            ],
+          })
+        return Response.json(page)
+      }
       if (
         path === "bots" ||
         path.startsWith("bots/") ||

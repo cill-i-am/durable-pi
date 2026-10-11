@@ -8,7 +8,8 @@ import { poll } from "@/http/poll"
 export function usePlans(
   agentId: string,
   selected: string | null,
-  offset: number
+  offset: number,
+  enabled = true
 ) {
   const [list, setList] = useState<typeof PlanList.Type>({
     plans: [],
@@ -55,6 +56,9 @@ export function usePlans(
     }
   }, [agentId, selected, offset])
   useEffect(() => {
+    if (!enabled) return
+    setList({ plans: [], nextOffset: null })
+    setError("")
     setDetail(null)
     setApprovals([])
     setLoading(true)
@@ -74,6 +78,6 @@ export function usePlans(
       sequence.current++
       window.removeEventListener("online", reconnect)
     }
-  }, [refresh])
+  }, [refresh, enabled])
   return { list, detail, approvals, error, loading, refresh }
 }

@@ -33,10 +33,21 @@ import { SummaryRecovery } from "./summary-recovery"
 export function MemoryPanel({
   state,
   agentId,
+  openRequest,
+  onOpenRequestHandled,
 }: {
   state: ChatState | null
   agentId: string
+  openRequest?: string
+  onOpenRequestHandled?: (request: string) => void
 }) {
+  const [open, setOpen] = useState(false)
+  useEffect(() => {
+    if (openRequest) {
+      setOpen(true)
+      onOpenRequestHandled?.(openRequest)
+    }
+  }, [openRequest, onOpenRequestHandled])
   const api = agentApi(agentId)
   const [query, setQuery] = useState(""),
     [results, setResults] = useState<
@@ -53,7 +64,7 @@ export function MemoryPanel({
     }
   }
   return (
-    <Sheet>
+    <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger render={<Button variant="ghost" size="sm" />}>
         <BookOpen data-icon="inline-start" />
         Memory
