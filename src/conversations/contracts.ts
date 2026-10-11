@@ -34,6 +34,12 @@ export type ChatTurn = {
   session_id: string | null
   prompt: string | null
 }
+export const TurnOrigin = Schema.Struct({
+  kind: Schema.Literal("background"),
+  groupId: Schema.Number,
+  turnId: Schema.String,
+})
+export type TurnOrigin = typeof TurnOrigin.Type
 export const TimelineItem = Schema.Union([
   Schema.Struct({
     id: Schema.String,
@@ -68,6 +74,7 @@ export const TimelineItem = Schema.Union([
 ])
 export type TimelineItem = typeof TimelineItem.Type
 const VisibleTurn = Schema.Struct({
+  origin: Schema.optional(TurnOrigin),
   routing: Schema.optional(Schema.NullOr(ResolvedRoute)),
   skills: Schema.optional(Schema.Array(SkillReference)),
   id: Schema.String,

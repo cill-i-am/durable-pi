@@ -4,9 +4,10 @@ import type { Delegations } from "./delegations"
 
 /** The existing gateway authenticates ownership and checks write origin first. */
 export function delegationsRequest(
-  service: Delegations,
+  service: Pick<Delegations, "list" | "read" | "control" | "transcript">,
   request: Request,
-  path: string
+  path: string,
+  prefix = "delegations"
 ) {
   const invalid = () =>
     new DelegationFailure({
@@ -15,7 +16,7 @@ export function delegationsRequest(
     })
   return Effect.gen(function* () {
     const url = new URL(request.url)
-    if (path === "delegations" && request.method === "GET") {
+    if (path === prefix && request.method === "GET") {
       const offset = Number(url.searchParams.get("offset") ?? 0)
       if (!Number.isSafeInteger(offset) || offset < 0)
         return new Response("Invalid offset", { status: 400 })
@@ -25,7 +26,7 @@ export function delegationsRequest(
         nextOffset: groups.length === 20 ? offset + 20 : null,
       })
     }
-    if (path === "delegations/control" && request.method === "POST") {
+    if (path === `${prefix}/control` && request.method === "POST") {
       const text = yield* Effect.tryPromise({
         try: () => request.text(),
         catch: invalid,

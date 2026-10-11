@@ -115,6 +115,13 @@ export function ActivityWorkbench({
               </Badge>
             </div>
             {!selected && <DelegatedWork key={agentId} agentId={agentId} />}
+            {!selected && (
+              <DelegatedWork
+                key={`${agentId}:background`}
+                agentId={agentId}
+                background
+              />
+            )}
             {!selected && <InferenceRuns agentId={agentId} />}
             {state.error && (
               <Alert>

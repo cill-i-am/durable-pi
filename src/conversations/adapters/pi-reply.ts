@@ -120,7 +120,7 @@ export function archiveEntries(
 ) {
   const output: {
     source: string
-    kind: "user" | "talk" | "tool" | "echo"
+    kind: "user" | "talk" | "tool" | "echo" | "note"
     text: string
     date?: string
   }[] = []
@@ -131,8 +131,8 @@ export function archiveEntries(
         const user = users.get(entry.id)
         if (user)
           output.push({
-            source: `user:${user.id}`,
-            kind: "user",
+            source: `${user.origin ? "event" : "user"}:${user.id}`,
+            kind: user.origin ? "note" : "user",
             text: messageArchiveText(user.text, user.attachments),
             date: user.created_at,
           })

@@ -1,6 +1,6 @@
 import type { SkillReference } from "../skills/contracts"
 import { Schema } from "effect"
-import type { ChatTurn } from "./contracts"
+import type { ChatTurn, TurnOrigin } from "./contracts"
 import type { AttachmentContent, FileInfo } from "../workspace/files"
 
 import { ModelSettings, ThinkingLevel } from "../inference/selection"
@@ -16,6 +16,7 @@ export type SubmissionMode = "followUp" | "steer"
 export type Delivery =
   "queued" | "accepted" | "consumed" | "answered" | "unanswered"
 export type Turn = ChatTurn & {
+  origin?: TurnOrigin
   parent_id: string | null
   mode: SubmissionMode
   delivery: Delivery
@@ -30,6 +31,8 @@ export type Turn = ChatTurn & {
   input: readonly AttachmentContent[]
 }
 export type Submission = {
+  /** Host-only event identity; never accepted by the public SendInput schema. */
+  origin?: TurnOrigin
   operationId: string
   text: string
   mode?: SubmissionMode

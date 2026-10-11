@@ -210,11 +210,13 @@ export function Conversation({
                     messageId={`${turn.id}:user`}
                     scrollAnchor
                   >
-                    <Message align="end">
+                    <Message align={turn.origin ? "start" : "end"}>
                       <MessageContent>
                         <Bubble align="end" variant="secondary">
                           <BubbleContent className="message-text">
-                            {turn.text}
+                            {turn.origin
+                              ? `Background findings · group ${turn.origin.groupId}`
+                              : turn.text}
                             <FileAttachments
                               files={turn.attachments ?? []}
                               agentId={agent.id}

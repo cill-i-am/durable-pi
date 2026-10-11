@@ -8,6 +8,45 @@ import {
 import { Type } from "@earendil-works/pi-ai"
 import type { Delegations } from "./delegations"
 import { validateBrief, type DelegationSource } from "./delegation"
+import { backgroundBrief, type BackgroundInput } from "./background"
+import type { DelegationFailure } from "./contracts"
+
+export function backgroundTool(
+  run: (
+    input: BackgroundInput,
+    api: ToolExecutionApi
+  ) => Effect.Effect<string, DelegationFailure>
+) {
+  return defineTool({
+    name: "background_tasks",
+    description:
+      "Start one bounded group of up to three independent background drafting or analysis tasks when the user requested work that can continue after your reply. Uses supplied text references only, no tools or live retrieval. Inherits the current model and returns an acceptance receipt immediately; findings arrive later in this bot's chat. Put all constraints and completion criteria in each brief. Existing approvals apply. Do not create recursive background work from a child report.",
+    replay: "safe",
+    parameters: Type.Object({
+      objective: Type.String({ minLength: 1, maxLength: 500 }),
+      tasks: Type.Array(
+        Type.Object({
+          name: Type.String({ minLength: 1, maxLength: 80 }),
+          task: Type.String({ minLength: 1, maxLength: 8000 }),
+        }),
+        { minItems: 1, maxItems: 3 }
+      ),
+    }),
+    execute: async (input, api, context) => {
+      backgroundBrief(input)
+      return {
+        content: [
+          {
+            type: "text",
+            text: await Effect.runPromise(run(input, api), {
+              signal: context.abortSignal,
+            }),
+          },
+        ],
+      }
+    },
+  })
+}
 
 export const delegationInstructions = `For substantial requests with independent research or drafting branches, delegate_tasks can run one group of up to three child tasks. Use it when parallel help improves the result, not for ordinary questions. Each child inherits your pinned model and gets only explicitly selected read tools and this bot's reference context. Include relevant user constraints in every brief. You remain responsible for evaluating their findings and completing the request. Children cannot perform outside actions or spawn agents. Delegation uses existing tool permissions. Do not promise background work: this group belongs to the current request and Stop cancels it. One combined report returns when children finish. Do not redelegate completed tasks.`
 export function delegationTool(
