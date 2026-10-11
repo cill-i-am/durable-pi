@@ -33,6 +33,53 @@ Keep the existing PersonalAgent namespace, memory tables, AuthDatabase, MemoryBa
 
 Visual thesis: a quiet, warm workroom with compact navigation, readable conversation, and a contextual workbench. Composition: bot sidebar → conversation → optional workbench. Interactions: keyboard-first menus, restrained pane transitions, clear running/approval/recovery states; respect reduced motion. Semantic tokens own colors, type, spacing, and radii for later retheming.
 
+## Memory, run state, and model context review — 2026-10-11
+
+Status: caller and recovery trace, focused projection fixes and local verification complete. Final diff review is complete; PR checks and deployment are pending. The product overview, backend domains, frontend feature slices and six interaction diagrams are in [FEATURES.md](FEATURES.md).
+
+### Ownership and justified no-op decisions
+
+| Owner | Authoritative records and callers | Review decision |
+| --- | --- | --- |
+| Memory | OptChat original archive, immutable summary ranges, sourced notes and retrieval, supplied through the bot-local repository | Retain. A new turn saves one bounded memory prompt. [`readPiReply`](src/conversations/adapters/pi-reply.ts) retrieves original native entries through a captured tail, excludes `pi.compaction`, and maps actual consumed submissions before archival. Stable source IDs deduplicate archive writes. |
+| Conversations and native Pi | Root/steering identities, submission receipts, cancellation, transcript entries, generation/tool checkpoints and lifecycle wakeups | Retain. Pi compaction appends a summary and changes the active head; it does not delete earlier entries. The host archives originals and reads durable submission outcomes. Stop persists before native abort and fallible plan reconciliation. |
+| Planning | Native session documents for plans, revisions, root bindings and idempotent update receipts | Retain. Current run/input revision checks fence writes; cancellation is authoritative. Evidence validation checks bot-local sources and recorded outcomes. Access/execution receipt evidence must belong to a bound root; same-bot artifacts may deliberately support later tasks. “Reported complete” remains distinct from source validation and semantic verification. |
+| Access and execution domains | Grants, exact-input approvals, dispatch claims, saved outcomes, and tool-specific recovery records | Retain. [`guardedTools`](src/access/adapters/pi.ts) binds native task identity to the active root; [`AccessGate`](src/access/gate.ts) checks durable policy and run status. Unknown external dispatch outcomes become interrupted, not automatic redispatch. Recoverable domain operations have their own replay receipts. Summaries and plans cannot construct approvals. |
+| Model context | Native transcript projection plus request-only plan/object views | Bound the application views as described below. No new context database, scheduler, execution owner or access service is needed. |
+
+Bot identity comes from the authenticated gateway and stored owner catalog. Per-bot stores and server-derived run identity are used for retrieval and evidence. Temporary children and incoming named-bot tasks have explicit extension/tool configurations; they do not inherit the personal plan/object hooks or tool permissions. Rebuilding context, revalidating evidence or revising a plan does not dispatch external work.
+
+The installed Pi Durable 1.0.4 source is the lifecycle authority: `harness/generation.js` estimates context in `prepare`, runs `beforeRequest` later, and persists the original context rather than hook replacement messages. `harness/compaction.js` appends `pi.compaction` and updates the active head. This matches the [Cloudflare Pi harness ownership documentation](https://developers.cloudflare.com/agents/harnesses/pi/). The existing Lifecycle remains the only alarm/wake owner; no new recovery loop was introduced.
+
+### Concrete gap and correction
+
+A valid 20-step plan produced a **20,461-byte** request-only projection in the regression fixture. Pi's pre-request compaction estimate did not include it. Full plan notes/evidence and the object catalog could therefore refill a request immediately after compaction. Field-length limits alone did not bound the assembled view.
+
+- **Planning** now supplies the full view only when it fits; otherwise it omits notes/evidence detail, then falls back to a stable plan ID/revision/state and `read_plan`. Durable fields and revision history remain intact. New input takes precedence over stale plans. Steering that cannot fit is not presented as reconciled: the projection advertises `inputRevision=-1` and directs the agent to await native delivery.
+- **Objects** bounds its reference catalog and points to `list_objects`/`read_object` when it cannot fit. An omitted catalog must not advance the durable offered-event watermark. A native generation memo remembers omission across retries/restarts, including when the budget shrinks after a previous attempt. A later complete request can acknowledge the still-pending changes.
+- **The host** allocates each hook `min(8,192, floor(effectiveWindow / 32))` UTF-8 bytes. It resolves the effective window from the active model, durable route pin and any smaller shared runtime ceiling. At the existing 272,000-token route this is at most 16 KiB combined; at the deliberately small 8,192-token test window it is 512 bytes combined. Hooks fail explicitly if even the retrieval reference cannot fit.
+
+These are byte ceilings for application text, **not provider token counts or a guarantee that an arbitrary tool result fits**. They leave room within the existing extra headroom for incoming results and estimation error. No advertised API context maximum was substituted for the subscription route. The native compaction policy is unchanged: for a 272,000 context / 128,000 output budget, reserve 160,000 tokens, retain 20,000 recent tokens, and run blocking compaction with no background compaction. Pi owns active-run compaction; OptChat owns between-turn memory. No OpenAI server-side compaction policy was enabled.
+
+### Verification and remaining limits
+
+Local verification passed: **478 tests across 69 files**, typecheck, lint, the production build and the native workerd communication/recovery suite. Formatting and documentation links passed.
+
+Local regression coverage adds a large valid plan, a 256-byte plan reference followed by full retrieval, omitted steering at both normal and small budgets, model-pin budget changes, and native SQLite close/reopen while an object request is in flight. Both full-to-omitted and omitted-to-full recovery leave unseen events pending. Later requests see them; saved object events and original transcripts remain unchanged. These are native Pi runtime tests with a synthetic model provider, not evidence of hosted model reasoning quality or real provider token cost.
+
+Existing targeted coverage is retained and rerun:
+
+| Invariant | Coverage |
+| --- | --- |
+| Compaction preserves originals, steering, tool relationships, approvals, receipts and cancellation; restart during compaction recovers | [`pi-compaction.test.ts`](tests/pi-compaction.test.ts), [`pi-reply.test.ts`](tests/pi-reply.test.ts), [`pi-steering.test.ts`](tests/pi-steering.test.ts) |
+| Recovery cannot reconstruct permission or repeat uncertain external dispatch | [`pi-approvals.test.ts`](tests/pi-approvals.test.ts), [`access.test.ts`](tests/access.test.ts) |
+| Plan updates are revision-fenced, replayable and isolated; cancellation and evidence invalidation persist | [`planning.test.ts`](tests/planning.test.ts), [`planning-evidence.test.ts`](tests/planning-evidence.test.ts), [`planning-ui.test.tsx`](tests/planning-ui.test.tsx) |
+| Request views remain bounded, retrieve full state, avoid history copies and preserve pending object events | [`planning-compaction.test.ts`](tests/planning-compaction.test.ts), [`working-objects.test.ts`](tests/working-objects.test.ts), [`admission-wake.test.ts`](tests/admission-wake.test.ts) |
+
+A correction to the earlier routing entry: **native restart/replay preserves execution identity; the UI's explicit Retry starts a new turn** with the prior model route. Prior receipts remain saved, but a new logical request does not inherit the old native tool IDs. Exactly-once external effects across separately requested turns are not guaranteed. Unknown prior outcomes require reconciliation; a new request is not proof that the old action failed. This review does not change Retry semantics or claim a cross-turn external-action deduplicator.
+
+Other limits remain explicit. A model-generated summary can omit meaning; durable originals, current plans and retrieval remain available, but tests do not prove every provider preserves every constraint. Removing summary text cannot alter access decisions. Original archives preserve the application's admitted records; native/tool receipt size limits can already have truncated upstream output. The projection fix preserves the stable prompt prefix/cache configuration, but no production cache-hit improvement or hosted forced-eviction/long-compaction result is claimed.
+
 ## Bot communication — durable inbox and outbox (2026-10-11)
 
 Status: deployed and verified. [PR #43](https://github.com/cill-i-am/durable-pi/pull/43) adds the mailbox; [PR #44](https://github.com/cill-i-am/durable-pi/pull/44) preserves compatibility during mixed Worker/DO versions; [PR #45](https://github.com/cill-i-am/durable-pi/pull/45) corrects installed-adapter origin normalization. Main `4acad80` passed [production run 38142892085](https://github.com/cill-i-am/durable-pi/actions/runs/38142892085). The signed-in hosted A → B → A journey passed after disconnecting the app browser while waiting for the correlated result. Internal bot communication is a separate bounded context from temporary child delegation. Preserve PersonalAgent, its namespace and SQLite/Pi history. No external account connection or public RPC server is part of this work.
@@ -768,7 +815,7 @@ Eligibility preflight: OpenAI’s [overview](https://developers.openai.com/siwc/
 
 ### 02d first slice — Conversation routing
 
-Implemented per-agent conversation/implementation/planning/review defaults, one-message Auto/Fast/Balanced/Deep and advanced xhigh, account capability discovery, durable route/version/window pins and provider-request Activity. Steering retains its active run's model. Retrying an interrupted run retains its original route and native execution identity, including legacy turns. Account model access is intersected with the installed Pi Responses adapter, supported reasoning, image and tool capabilities. Unsupported choices fail explicitly; neither API credentials nor environment fallback can supply inference.
+Implemented per-agent conversation/implementation/planning/review defaults, one-message Auto/Fast/Balanced/Deep and advanced xhigh, account capability discovery, durable route/version/window pins and provider-request Activity. Steering retains its active run's model. Native restart recovery retains the original route and execution identity, including legacy turns. An explicit UI Retry retains the route but starts a new turn and native session; see the boundary review above. Account model access is intersected with the installed Pi Responses adapter, supported reasoning, image and tool capabilities. Unsupported choices fail explicitly; neither API credentials nor environment fallback can supply inference.
 
 Activity records each actual attempt, purpose, requested and reported model, effort, routing reason, duration, terminal outcome and provider-reported input/cached/output tokens. Cached input is a subset of input. Missing usage remains unknown. Partial responses are not completed jobs; interrupted observations do not schedule execution. The existing bounded native retry policy remains in charge; provider-level retries are disabled.
 

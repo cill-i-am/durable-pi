@@ -520,9 +520,16 @@ it("uses native tools in a multi-step run, injects one fresh context per request
   }
 }, 15000)
 
-it.each([false, true])(
-  "handles an oversized steering batch after native delivery=%s without a permanent plan blocker",
-  async (nativeDelivered) => {
+it.each([
+  { nativeDelivered: false, budget: 8192, repetitions: 1600 },
+  { nativeDelivered: true, budget: 8192, repetitions: 1600 },
+  { nativeDelivered: false, budget: 256, repetitions: 400 },
+  { nativeDelivered: true, budget: 256, repetitions: 400 },
+  { nativeDelivered: false, budget: 8192, repetitions: 800 },
+  { nativeDelivered: true, budget: 8192, repetitions: 800 },
+])(
+  "bounds steering at $budget bytes after native delivery=$nativeDelivered without a permanent plan blocker",
+  async ({ nativeDelivered, budget, repetitions }) => {
     const directory = await mkdtemp(join(tmpdir(), "pi-plan-delivery-")),
       models = createModels(),
       faux = fauxProvider({ tokensPerSecond: 1000000 })
@@ -532,7 +539,7 @@ it.each([false, true])(
       inputRevision: 2,
       steering: Array.from({ length: 2 }, (_, i) => ({
         id: crypto.randomUUID(),
-        text: `${i}:` + "constraint ".repeat(1600),
+        text: `${i}:` + "constraint ".repeat(repetitions),
         nativeDelivered,
       })),
     }
@@ -547,7 +554,13 @@ it.each([false, true])(
     const registry = createRegistry()
     registry.install({
       name: "planning",
-      hooks: [planContextHook(plans, () => origin)],
+      hooks: [
+        planContextHook(
+          plans,
+          () => origin,
+          () => budget
+        ),
+      ],
       tools: planTools(plans, () => origin),
     })
     const harness: Harness = await Harness.open(
@@ -563,7 +576,13 @@ it.each([false, true])(
     try {
       faux.setResponses([
         async (input) => {
-          projection = JSON.stringify(input.messages.at(-1))
+          const last = input.messages.at(-1)
+          if (last?.role !== "user" || typeof last.content === "string")
+            throw new Error("Missing projection")
+          projection = last.content
+            .filter((block) => block.type === "text")
+            .map((block) => block.text)
+            .join("")
           return fauxAssistantMessage("Constraints noted.")
         },
       ])
@@ -588,6 +607,9 @@ it.each([false, true])(
         )
       ).wait(ctx)
       await conversation.waitForIdle(ctx)
+      expect(
+        new TextEncoder().encode(projection).byteLength
+      ).toBeLessThanOrEqual(budget)
       expect(projection).toContain(`inputRevision=${nativeDelivered ? 2 : -1}`)
       expect(projection.includes("awaiting native delivery")).toBe(
         !nativeDelivered

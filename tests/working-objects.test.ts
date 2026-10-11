@@ -77,6 +77,130 @@ const edit = (id: string, revision: number, title: string): ObjectMutation => ({
   action: { type: "update", changes: [{ type: "edit", title }] },
 })
 
+it.each(["shrink", "grow"])(
+  "keeps omitted object events pending through native recovery when the request budget must %s",
+  async (direction) => {
+    const directory = await mkdtemp(join(tmpdir(), "object-context-")),
+      path = join(directory, "pi.sqlite"),
+      models = createModels(),
+      faux = fauxProvider({ tokensPerSecond: 1000000 })
+    models.setProvider(faux.provider)
+    let harness: Harness,
+      firstProcess = true,
+      budget = direction === "shrink" ? 8192 : 256
+    const projections: string[] = []
+    let entered!: () => void
+    const requested = new Promise<void>((resolve) => {
+      entered = resolve
+    })
+    const objects = piWorkingObjects(
+        async () => harness,
+        () => true
+      ),
+      registry = createRegistry()
+    registry.install({
+      name: "objects",
+      hooks: [objectContextHook(objects, () => budget)],
+    })
+    const options = {
+      models,
+      registry,
+      settings: { retry: { enabled: false }, compaction: { enabled: false } },
+    }
+    faux.setResponses(
+      Array.from({ length: 3 }, () => async (input, options) => {
+        const last = input.messages.at(-1)
+        if (last?.role !== "user" || typeof last.content === "string")
+          throw new Error("Missing projection")
+        projections.push(
+          last.content
+            .filter((block) => block.type === "text")
+            .map((block) => block.text)
+            .join("")
+        )
+        if (firstProcess) {
+          entered()
+          await new Promise<void>((_, reject) => {
+            const abort = () => reject(new Error("Synthetic eviction"))
+            if (options?.signal?.aborted) abort()
+            else
+              options?.signal?.addEventListener("abort", abort, { once: true })
+          })
+        }
+        return fauxAssistantMessage("Saved references inspected.")
+      })
+    )
+    harness = await Harness.open(
+      await openNodeSqliteStorage(path),
+      options,
+      ctx
+    )
+    try {
+      const seed = create()
+      if (seed.action.type !== "create") throw new Error("fixture")
+      const mutation = {
+        ...seed,
+        action: { ...seed.action, title: "界\u0000".repeat(40) },
+      }
+      await execute(objects.mutate(mutation, user))
+      let conversation = await harness.root(ctx, {
+        agent: { model: { provider: "faux", modelId: "faux-1" } },
+      })
+      const command = {
+        type: "input" as const,
+        requestId: crypto.randomUUID(),
+        content: [
+          { type: "text" as const, text: "Inspect the saved objects." },
+        ],
+      }
+      const submission = await conversation.submit(command, ctx)
+      await requested
+      expect((await execute(objects.context())).offeredThrough).toBe(0)
+      await harness.close(ctx)
+      firstProcess = false
+      budget = direction === "shrink" ? 256 : 8192
+      harness = await Harness.open(
+        await openNodeSqliteStorage(path),
+        options,
+        ctx
+      )
+      conversation = (await harness.conversation(conversation.id, ctx))!
+      const replay = await conversation.submit(command, ctx)
+      expect(replay.id).toBe(submission.id)
+      await replay.wait(ctx)
+      await conversation.waitForIdle(ctx)
+      expect(projections).toHaveLength(2)
+      const omitted = projections[direction === "shrink" ? 1 : 0]!
+      expect(omitted).toContain("references omitted")
+      expect(new TextEncoder().encode(omitted).byteLength).toBeLessThanOrEqual(
+        256
+      )
+      expect((await execute(objects.context())).offeredThrough).toBe(0)
+      expect((await execute(objects.read(mutation.id))).events).toHaveLength(1)
+      // A later complete request can acknowledge the retained events normally.
+      budget = 8192
+      await (
+        await conversation.submit(
+          { ...command, requestId: crypto.randomUUID() },
+          ctx
+        )
+      ).wait(ctx)
+      await conversation.waitForIdle(ctx)
+      expect(projections.at(-1)).toContain('"changed":true')
+      expect((await execute(objects.context())).offeredThrough).toBe(1)
+      const events = await watchEvents(harness, conversation.id, ctx)
+      expect(JSON.stringify(events.snapshot.entries)).not.toContain(
+        "Working objects:"
+      )
+      await events.stop()
+    } finally {
+      await harness.close(ctx)
+      await rm(directory, { recursive: true, force: true })
+    }
+  },
+  15000
+)
+
 it("atomically persists revisions, explicit conflicts, replay receipts, cancellation, isolation and paged history across native Pi restarts", async () => {
   const directory = await mkdtemp(join(tmpdir(), "working-objects-")),
     path = join(directory, "a.sqlite")

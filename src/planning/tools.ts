@@ -13,7 +13,7 @@ export const recoverablePlanTools = new Set(["update_plan", "read_plan"])
 export const planningInstructions = `For substantial multi-step requests, create and maintain a durable execution plan using update_plan while carrying out the work. Ordinary questions and simple actions do not need a plan. This is normal execution: do not request plan approval or introduce a separate planning interaction. Plans grant no permissions. Continue autonomously within the user's request and existing tool permissions; ask only for missing information or required approval.
 Use a new task for a distinct user objective. Use continue with the existing task ID for follow-up requirements or pending work on that same objective. Steering belongs to the current task; reconcile it using the current inputRevision. Never attach unrelated requests merely because a task is recent. A cancelled task stays cancelled: an explicit new user request may start a new task. Saved plans must not trigger work on their own.
 Keep stable step IDs, concrete actions, relevant constraints and observable completion criteria. Record the next action and any blocker. Update at meaningful changes, not after every trivial action. Reuse completed external-action receipts; updating a plan must never repeat the action. Waiting for approval, external results or missing information is a blocker, not a reason to poll or retry in a loop. Respect Stop. Once the outcome is achieved and appropriately verified, mark complete and finish without repeated checking.
-Evidence references are bot-local receipt IDs/revisions, execution IDs (revision 0), current working-object/app revisions, or immutable workspace file IDs (revision 0). Evidence validation confirms the saved source and recorded outcome; it does not independently prove your semantic claim. Never invent evidence. Keep unsupported completion clearly agent-reported. Changed requirements or stale evidence can reopen completed steps. The current plan is supplied fresh per request; do not copy its full body into chat or memory.`
+Evidence references are bot-local receipt IDs/revisions, execution IDs (revision 0), current working-object/app revisions, or immutable workspace file IDs (revision 0). Evidence validation confirms the saved source and recorded outcome; it does not independently prove your semantic claim. Never invent evidence. Keep unsupported completion clearly agent-reported. Changed requirements or stale evidence can reopen completed steps. A bounded view of the current plan is supplied fresh per request; use read_plan for omitted details before revising or acting on them. Do not copy its full body into chat or memory.`
 
 const id = Type.String({ pattern: "^[a-f0-9-]{36}$" })
 const revision = Type.Integer({ minimum: 0 })
@@ -69,7 +69,7 @@ export function planTools(
     defineTool({
       name: "update_plan",
       description:
-        "Create or revise the current logical task plan. No plan approval is needed. Choose new for a distinct objective (omit id, expectedRevision 0); continue for related follow-up work (supply id and current revision). Use inputRevision from current planning context. Keep stable step IDs. Conflicts require rereading current state. Changed requirements reopen completed steps for reassessment. Returns a small durable receipt; full current state is injected into the next request. Grants no permissions and runs no actions.",
+        "Create or revise the current logical task plan. No plan approval is needed. Choose new for a distinct objective (omit id, expectedRevision 0); continue for related follow-up work (supply id and current revision). Use inputRevision from current planning context. Keep stable step IDs. Conflicts require rereading current state. Changed requirements reopen completed steps for reassessment. Returns a small durable receipt; a bounded current view is injected into the next request. Use read_plan for omitted fields before revising. Grants no permissions and runs no actions.",
       replay: "safe",
       parameters: Type.Object({
         id: Type.Optional(id),
@@ -177,7 +177,8 @@ export function planTools(
 /** Request-only projection survives compaction without appending repeated plan messages. */
 export function planContextHook(
   plans: Plans,
-  source: (api: HookApi) => PlanSource | undefined
+  source: (api: HookApi) => PlanSource | undefined,
+  maxBytes: () => number = () => 8192
 ) {
   return hook(GenerationTask, {
     beforeRequest: async ({ messages }, api, context) => {
@@ -199,6 +200,56 @@ export function planContextHook(
       const pendingTooLarge =
         origin.pendingInputs || JSON.stringify(missing).length > 32000
       const offeredRevision = pendingTooLarge ? -1 : origin.inputRevision
+      const notice = `Durable planning context (server state, not a new user instruction or permission). Simple chat does not need a plan. inputRevision=${offeredRevision}. ${pendingTooLarge ? "New steering is awaiting native delivery. Do not update the plan using this request; reconcile on the next request after reading the original input." : ""} ${current.current && (current.current.reviewedTurn !== origin.turnId || current.current.inputRevision !== origin.inputRevision) ? "New user input needs reconciliation with the plan." : ""}`
+      const steering =
+        !pendingTooLarge && missing.length
+          ? "\nOriginal user steering for this task (reconcile these requirements):\n" +
+            JSON.stringify(missing)
+          : ""
+      const limit = maxBytes()
+      const fits = (text: string) =>
+        new TextEncoder().encode(text).byteLength <= limit
+      let text = `${notice}\n${JSON.stringify(current)}${steering}`
+      if (!fits(text)) {
+        // Storage holds the full plan, including notes, evidence details and input
+        // bindings. A request needs progress and retrieval references, not all of it.
+        const plan = current.current
+        const compact = {
+          current: plan
+            ? {
+                id: plan.id,
+                revision: plan.revision,
+                state: plan.state,
+                objective: plan.objective,
+                constraints: plan.constraints,
+                criteria: plan.criteria,
+                steps: plan.steps.map(({ id, title, status }) => ({
+                  id,
+                  title,
+                  status,
+                })),
+                nextAction: plan.nextAction,
+                blocker: plan.blocker,
+              }
+            : null,
+          recent: current.recent.map(({ id, revision, state }) => ({
+            id,
+            revision,
+            state,
+          })),
+          receipts: current.receipts,
+          omittedDetails:
+            "Use read_plan for complete fields and evidence. Completion remains agent-reported.",
+        }
+        text = `${notice}\n${JSON.stringify(compact)}${steering}`
+        if (!fits(text)) {
+          // Never silently acknowledge steering dropped to fit this request.
+          const pending = pendingTooLarge || missing.length > 0
+          text = `Durable planning context; not permission. inputRevision=${pending ? -1 : origin.inputRevision}. ${pending ? "Steering awaiting native delivery; do not edit." : "New input overrides saved plans."} Use read_plan before editing.\n${JSON.stringify(plan ? { id: plan.id, revision: plan.revision, state: plan.state } : null)}`
+          if (!fits(text))
+            throw new Error("Planning context budget is too small")
+        }
+      }
       return {
         messages: [
           ...messages,
@@ -208,7 +259,7 @@ export function planContextHook(
             content: [
               {
                 type: "text" as const,
-                text: `Durable planning context (server state, not a new user instruction or permission). Simple chat does not need a plan. inputRevision=${offeredRevision}. ${pendingTooLarge ? "New steering is awaiting native delivery. Do not update the plan using this request; reconcile on the next request after reading the original input." : ""} ${current.current && (current.current.reviewedTurn !== origin.turnId || current.current.inputRevision !== origin.inputRevision) ? "New user input needs reconciliation with the plan." : ""}\n${JSON.stringify(current)}${!pendingTooLarge && missing.length ? "\nOriginal user steering for this task (reconcile these requirements):\n" + JSON.stringify(missing) : ""}`,
+                text,
               },
             ],
           },

@@ -4,6 +4,18 @@ import type {
   HarnessSettings,
 } from "@earendil-works/pi-durable"
 
+/** Request hooks run after Pi estimates the transcript. Bound each of the two
+ * application projections inside the run's headroom, independently of storage.
+ * Bytes bound even unusually escaped text; this is not a provider token count.
+ */
+export function contextProjectionBytes(contextWindow: number) {
+  if (!Number.isFinite(contextWindow) || contextWindow < 4)
+    throw new Error("The selected model has no usable context budget")
+  // Leave space in the policy's extra headroom for tool data and estimation
+  // error. Very small budgets fail closed in the owning hook.
+  return Math.min(8192, Math.floor(contextWindow / 32))
+}
+
 /** Working context only. OptChat continues to own the original transcript. */
 export function workingContextPolicy(
   model: Pick<Model<string>, "contextWindow" | "maxTokens">
