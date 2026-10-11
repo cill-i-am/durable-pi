@@ -29,7 +29,10 @@ export function activityEntries(
       SELECT 'turn:'||t.id AS local_key, t.created_at AS at,
         CASE WHEN t.parent_id IS NOT NULL THEN 'steer' ELSE 'conversation' END AS kind,
         CASE WHEN t.origin IS NOT NULL THEN 'Background findings' ELSE substr(t.text,1,180) END AS title,
-        t.status,
+        CASE WHEN t.status IN ('stopping','cancelled') THEN t.status
+          WHEN json_extract(t.recovery,'$.view.phase')='blocked' THEN 'blocked'
+          WHEN t.status IN ('preparing','running') AND json_extract(t.recovery,'$.view.phase')='recovering' THEN 'recovering'
+          ELSE t.status END AS status,
         t.status='failed' AND NOT EXISTS (SELECT 1 FROM chat_turns r WHERE json_extract(r.creation,'$.retryOf')=t.id) AS attention,
         t.status IN ('queued','preparing','running','stopping') AS running,
         'conversation' AS target, coalesce(t.parent_id,t.id) AS reference

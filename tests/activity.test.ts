@@ -203,3 +203,33 @@ it.each([
     activityQuery(new URL(`https://local/activity${search}`))
   ).toThrow()
 })
+
+it("shows recovery and blocked states while cancellation remains authoritative", () => {
+  const { db, turns } = fixture()
+  const { turn } = turns.admit({
+    operationId: crypto.randomUUID(),
+    text: "Recover this task",
+  })
+  db.run(
+    "UPDATE chat_turns SET status='running',recovery=? WHERE id=?",
+    JSON.stringify({ view: { phase: "recovering" } }),
+    turn.id
+  )
+  expect(activityEntries(db, bot, query)[0]).toMatchObject({
+    status: "recovering",
+    running: true,
+  })
+  db.run(
+    "UPDATE chat_turns SET status='failed',recovery=? WHERE id=?",
+    JSON.stringify({ view: { phase: "blocked" } }),
+    turn.id
+  )
+  expect(
+    activityEntries(db, bot, { ...query, filter: "attention" })[0]
+  ).toMatchObject({ status: "blocked", attention: true, running: false })
+  db.run("UPDATE chat_turns SET status='cancelled' WHERE id=?", turn.id)
+  expect(activityEntries(db, bot, query)[0]).toMatchObject({
+    status: "cancelled",
+    attention: false,
+  })
+})

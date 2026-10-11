@@ -87,8 +87,8 @@ const config :Workerd.Config = (
     (name = "fixture", worker = (
       compatibilityDate = ${JSON.stringify(workerd.compatibilityDate)}, compatibilityFlags = ["nodejs_compat"],
       modules = [(name = "worker.mjs", esModule = embed "worker.mjs")],
-      bindings = [(name = "BOTS", durableObjectNamespace = (className = "MailboxBot"))],
-      durableObjectNamespaces = [(className = "MailboxBot", uniqueKey = "mailbox-local-test", enableSql = true)],
+      bindings = [(name = "BOTS", durableObjectNamespace = (className = "MailboxBot")), (name = "LOOPS", durableObjectNamespace = (className = "LoopBot"))],
+      durableObjectNamespaces = [(className = "MailboxBot", uniqueKey = "mailbox-local-test", enableSql = true), (className = "LoopBot", uniqueKey = "loops-local-test", enableSql = true)],
       durableObjectStorage = (localDisk = "storage")
     )),
     (name = "storage", disk = (path = "storage", writable = true))
@@ -270,6 +270,44 @@ const config :Workerd.Config = (
   assert.equal(
     result.events.filter((e) => e.value === "continuation").length,
     3
+  )
+  // Native tool-round checkpoint + run-owned detector survive an actual process kill.
+  await call("loops/start", a)
+  let loop
+  for (let n = 0; n < 100; n++) {
+    loop = await call("loops/inspect", a)
+    if (loop.state?.view?.phase === "recovering") break
+    await sleep(100)
+  }
+  assert.equal(
+    loop.state?.view?.failures,
+    3,
+    JSON.stringify(loop) + output.slice(-4000)
+  )
+  assert.equal(loop.requests, 3)
+  assert.equal(loop.receipts.length, 3)
+  await stop()
+  await start()
+  const loopRestored = await call("loops/inspect", a)
+  assert.equal(loopRestored.state.view.failures, 3)
+  await call("loops/release", a)
+  for (let n = 0; n < 200; n++) {
+    loop = await call("loops/inspect", a)
+    if (loop.state?.view?.phase === "blocked") break
+    await sleep(100)
+  }
+  assert.equal(loop.state?.view?.failures, 5)
+  assert.equal(loop.requests, 5)
+  assert.equal(loop.receipts.length, 5)
+  assert(loop.receipts.every((receipt) => receipt.status === "done"))
+  await stop()
+  await start()
+  const loopBlocked = await call("loops/inspect", a)
+  assert.equal(loopBlocked.state.view.phase, "blocked")
+  assert.equal(loopBlocked.requests, 5)
+  assert.equal(loopBlocked.receipts.length, 5)
+  console.log(
+    "PASS native loop recovery: SIGKILL at third failure, same committed round replayed once, fifth failure stops, blocked restart dispatches no new calls."
   )
   console.log(
     `PASS workerd ${workerd.version}: private Effect RPC, two SQLite DOs, sender restart before delivery, lost acknowledgment after acceptance, recipient/result-delivery restart, unique task admission, invalid/version/owner rejection native Pi interruption/recovery, single continuation and coexisting Pi/Lifecycle alarms.`

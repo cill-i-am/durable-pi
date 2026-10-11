@@ -1,3 +1,5 @@
+import { RunRecoveryStore } from "../conversations/adapters/sqlite-recovery"
+import { runRecoveryHook } from "../conversations/adapters/pi-recovery"
 import { communicationRequest } from "../communication/http"
 import { personalCommunication } from "../communication/adapters/personal-agent"
 import { isMailboxRequest } from "../communication/adapters/rpc"
@@ -475,6 +477,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     model: this.env.MODEL_ID,
     thinking: "medium",
   })
+  readonly recovery = new RunRecoveryStore(this.db)
   readonly localCredentials = new DurableCredentials(
     this.db,
     this.env.OPENAI_CREDENTIAL
@@ -511,6 +514,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       return (
         !!turn &&
         ["queued", "preparing", "running"].includes(turn.status) &&
+        this.recovery.get(turnId)?.view?.phase !== "blocked" &&
         this.routines.canRun(turnId) &&
         this.botConfiguration.read()?.status !== "archived"
       )
@@ -1064,6 +1068,37 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       this.registry.install({
         name: "personal",
         hooks: [
+          runRecoveryHook({
+            storage,
+            store: this.recovery,
+            access: this.accessStore,
+            source: (api) => {
+              const turn = this.active()
+              if (
+                !turn ||
+                turn.session_id !== String(api.conversationId) ||
+                !this.planSource(turn.id)
+              )
+                return undefined
+              const input = this.conversations.members(turn.id, false).at(-1)!
+              return {
+                turnId: turn.id,
+                steeringKey: JSON.stringify({
+                  text: input.text.trim().replace(/\s+/g, " "),
+                  files: input.attachments.map((file) => file.id),
+                }),
+              }
+            },
+            stop: async (api, callContext) => {
+              const pi = await this.harness.pi()
+              const conversation = await pi.conversation(
+                api.conversationId,
+                callContext
+              )
+              await conversation?.abort(callContext)
+            },
+            changed: () => this.notifyConversation(),
+          }),
           objectContextHook(this.objects, () => this.contextProjectionBytes()),
           planContextHook(
             this.plans,
@@ -1754,6 +1789,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       answer: turn.answer,
       status: turn.status,
       error: turn.error,
+      recovery: this.recovery.get(turn.parent_id ?? turn.id)?.view ?? null,
       activity: activity ? JSON.parse(activity.payload) : [],
     }
   }
@@ -2614,6 +2650,12 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         if (turn.session_id) await this.harness.session(turn.session_id).abort()
         await Effect.runPromise(this.plans.cancel(turn.id))
       }
+      if (
+        turn.status === "running" &&
+        this.recovery.get(turn.id)?.view?.phase === "blocked" &&
+        turn.session_id
+      )
+        await this.harness.session(turn.session_id).abort()
       if (turn.status === "running")
         await Effect.runPromise(this.delegations.reconcile(turn.id))
       const reply = turn.session_id
@@ -2673,12 +2715,15 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       const failed = outcomes.some(
         (outcome) => outcome.delivery === "unanswered"
       )
+      const recovery = this.recovery.get(turn.id)?.view
       const finished = this.conversations.finish(
         turn,
         outcomes,
         reply ? this.answer(reply.snapshot.entries) : "",
         failed
-          ? "The model could not finish. Check the connection and try again."
+          ? recovery?.phase === "blocked"
+            ? recovery.detail
+            : "The model could not finish. Check the connection and try again."
           : null
       )
       if (!finished) return { rescheduleAt: Date.now() + 10 }
