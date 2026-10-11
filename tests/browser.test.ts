@@ -4,6 +4,7 @@ import { BrowserWorkspace, type BrowserDriver } from "../src/browser/browser"
 import { BrowserStore } from "../src/browser/adapters/sqlite"
 import {
   BrowserPolicy,
+  BrowserInteraction,
   Hostname,
   allowedBrowserUrl,
   browserState,
@@ -41,6 +42,7 @@ function fixture() {
       return capture
     },
     capture: async () => capture,
+    interact: async () => capture,
     close: async (id) => {
       closed.push(id)
     },
@@ -351,6 +353,132 @@ describe("per-bot browser authority and lifetime", () => {
     f.archive()
     await run(f.browser.close(1))
     expect(f.browser.state().status).toBe("closed")
+  })
+  it("hands control to the owner, fences bot work, and keeps input out of the persisted record", async () => {
+    const f = fixture()
+    await run(f.browser.configure(policy))
+    await run(f.browser.inspect(1, "https://example.com"))
+    f.driver.capture = async () => ({
+      ...capture,
+      page: { ...capture.page, capturedAt: Date.now() },
+    })
+    await run(f.browser.control(1, "owner"))
+    const sessionId = f.repository.read().session!.id
+    expect(f.browser.state().controller).toBe("owner")
+    await expect(run(f.browser.inspect(2))).rejects.toThrow(
+      "owner has browser control"
+    )
+    let inputs = 0
+    f.driver.interact = async (_session, action) => {
+      inputs++
+      expect(action.kind).toBe("type")
+      return { ...capture, page: { ...capture.page, capturedAt: Date.now() } }
+    }
+    const input = {
+      generation: 2,
+      version: f.browser.state().version,
+      action: { kind: "type" as const, text: "synthetic-sensitive-input" },
+    }
+    await run(f.browser.interact(input, "owner"))
+    await expect(run(f.browser.interact(input, "owner"))).rejects.toThrow(
+      "view changed"
+    )
+    expect(inputs).toBe(1)
+    expect(JSON.stringify(f.repository.read())).not.toContain(input.action.text)
+    await run(f.browser.control(2, "agent"))
+    expect(f.repository.read().session!.id).toBe(sessionId)
+    expect(f.browser.state().controller).toBe("agent")
+    await expect(
+      run(
+        f.browser.interact(
+          { ...input, generation: 3, version: f.browser.state().version },
+          "owner"
+        )
+      )
+    ).rejects.toThrow("Take control")
+    await run(f.browser.inspect(3))
+  })
+  it("takes a fresh capture after in-flight agent work settles on takeover", async () => {
+    const f = fixture()
+    await run(f.browser.configure(policy))
+    await run(f.browser.inspect(1, "https://example.com"))
+    let start!: () => void, finish!: () => void
+    const started = new Promise<void>((resolve) => {
+      start = resolve
+    })
+    f.driver.navigate = async () => {
+      start()
+      await new Promise<void>((resolve) => {
+        finish = resolve
+      })
+      return capture
+    }
+    f.driver.capture = async () => ({
+      ...capture,
+      page: { ...capture.page, title: "After takeover" },
+    })
+    const navigation = run(
+      f.browser.inspect(1, "https://example.com/next")
+    ).catch(() => undefined)
+    await started
+    const takeover = run(f.browser.control(1, "owner"))
+    await Promise.resolve()
+    expect(f.browser.state().controller).toBe("owner")
+    expect(f.browser.state().page).toBeNull()
+    finish()
+    await Promise.all([navigation, takeover])
+    expect(f.browser.state().page?.title).toBe("After takeover")
+  })
+  it("never repeats an interrupted or uncertain interaction", async () => {
+    const f = fixture()
+    await run(f.browser.configure(policy))
+    f.driver.navigate = async () => ({
+      ...capture,
+      page: { ...capture.page, capturedAt: Date.now() },
+    })
+    await run(f.browser.inspect(1, "https://example.com"))
+    let calls = 0
+    f.driver.interact = async () => {
+      calls++
+      throw new Error("Unknown provider outcome")
+    }
+    const input = {
+      generation: 1,
+      version: f.browser.state().version,
+      action: { kind: "click" as const, x: 1, y: 1 },
+    }
+    await expect(run(f.browser.interact(input, "agent"))).rejects.toThrow(
+      "may have run"
+    )
+    const restored = new BrowserWorkspace(
+      new BrowserStore(f.db),
+      f.driver,
+      () => true,
+      async () => {}
+    )
+    restored.recover()
+    expect(restored.state().hasScreenshot).toBe(false)
+    await expect(
+      run(
+        restored.interact(
+          { ...input, version: restored.state().version },
+          "agent"
+        )
+      )
+    ).rejects.toThrow("view changed")
+    await expect(run(restored.interact(input, "agent"))).rejects.toThrow(
+      "view changed"
+    )
+    expect(calls).toBe(1)
+    for (const action of [
+      { kind: "click", x: 1024, y: 1 },
+      { kind: "type", text: "x".repeat(2001) },
+      { kind: "key", key: "F12" },
+      { kind: "evaluate", code: "alert(1)" },
+    ])
+      expect(() =>
+        Schema.decodeUnknownSync(BrowserInteraction)({ ...input, action })
+      ).toThrow()
   })
   it("redacts provider errors and validates public HTTP commands before dispatch", async () => {
     const f = fixture()

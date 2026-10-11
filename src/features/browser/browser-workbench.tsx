@@ -14,6 +14,7 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet"
 import { agentUrl } from "@/http/client"
+import { BrowserControls } from "./browser-controls"
 import { useBrowser } from "./use-browser"
 
 export function BrowserWorkbench({
@@ -187,7 +188,7 @@ export function BrowserWorkbench({
                   browser.busy || !state || !url || !state.policy.hosts.length
                 }
               >
-                {browser.busy ? "Opening…" : "Go"}
+                {browser.pending === "open" ? "Opening…" : "Go"}
               </Button>
             </form>
             {state && !state.policy.hosts.length && (
@@ -241,16 +242,34 @@ export function BrowserWorkbench({
                     <ArrowUpRight />
                   </Button>
                 </div>
-                {state.hasScreenshot && failedScreenshot !== state.version && (
-                  <img
-                    src={`${agentUrl(agentId, "browser/screenshot")}&version=${state.version}`}
-                    onError={() => {
-                      setFailedScreenshot(state.version)
-                      void browser.refresh()
-                    }}
-                    alt={`Last captured view of ${state.page.title || state.page.url}`}
-                    className="w-full rounded-md border bg-white"
+                {state.controller === "owner" ? (
+                  <BrowserControls
+                    key={state.policy.generation}
+                    agentId={agentId}
+                    state={state}
+                    busy={browser.busy}
+                    refresh={() => void browser.refresh()}
+                    act={(action) =>
+                      browser.command("interact", {
+                        generation: state.policy.generation,
+                        version: state.version,
+                        action,
+                      })
+                    }
                   />
+                ) : (
+                  state.hasScreenshot &&
+                  failedScreenshot !== state.version && (
+                    <img
+                      src={`${agentUrl(agentId, "browser/screenshot")}&version=${state.version}`}
+                      onError={() => {
+                        setFailedScreenshot(state.version)
+                        void browser.refresh()
+                      }}
+                      alt={`Last captured view of ${state.page.title || state.page.url}`}
+                      className="w-full rounded-md border bg-white"
+                    />
+                  )
                 )}
                 <p className="text-xs text-muted-foreground">
                   Captured{" "}
@@ -315,7 +334,28 @@ export function BrowserWorkbench({
                   </Button>
                   <Button
                     size="sm"
+                    variant="outline"
+                    disabled={
+                      browser.busy ||
+                      !state.expiresAt ||
+                      state.status === "expired"
+                    }
+                    onClick={() =>
+                      void browser.command("control", {
+                        generation: state.policy.generation,
+                        controller:
+                          state.controller === "owner" ? "agent" : "owner",
+                      })
+                    }
+                  >
+                    {state.controller === "owner"
+                      ? "Return control to bot"
+                      : "Take control"}
+                  </Button>
+                  <Button
+                    size="sm"
                     variant="ghost"
+                    disabled={browser.pending === "close"}
                     onClick={() =>
                       void browser.command(
                         "close",

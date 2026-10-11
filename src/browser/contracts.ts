@@ -37,6 +37,15 @@ export const BrowserPolicy = Schema.Struct({
 })
 export type BrowserPolicy = typeof BrowserPolicy.Type
 export const BrowserPage = Schema.Struct({
+  focus: Schema.optionalKey(
+    Schema.NullOr(
+      Schema.Struct({
+        label: Schema.String.check(Schema.isMaxLength(120)),
+        kind: Schema.String.check(Schema.isMaxLength(40)),
+        secret: Schema.Boolean,
+      })
+    )
+  ),
   url: Schema.String.check(Schema.isMaxLength(2048)),
   title: Schema.String.check(Schema.isMaxLength(200)),
   text: Schema.String.check(Schema.isMaxLength(24_000)),
@@ -50,6 +59,7 @@ export const BrowserPage = Schema.Struct({
 })
 export type BrowserPage = typeof BrowserPage.Type
 export const BrowserState = Schema.Struct({
+  controller: Schema.Literals(["agent", "owner"]),
   policy: BrowserPolicy,
   version: Schema.Number,
   status: Schema.Literals(["closed", "loading", "ready", "expired", "error"]),
@@ -102,6 +112,7 @@ export interface BrowserCapture {
   screenshot: string | null
 }
 export interface BrowserRecord {
+  controller: "agent" | "owner"
   generation: number
   hosts: readonly string[]
   version: number
@@ -115,6 +126,7 @@ export function browserState(
   now = Date.now()
 ): BrowserState {
   return {
+    controller: record.controller,
     policy: { generation: record.generation, hosts: record.hosts },
     version: record.version,
     status:
@@ -126,4 +138,57 @@ export function browserState(
     hasScreenshot: !!record.capture?.screenshot,
     error: record.error,
   }
+}
+
+export const BrowserController = Schema.Literals(["agent", "owner"])
+export type BrowserController = typeof BrowserController.Type
+export const BrowserControl = Schema.Struct({
+  generation: BrowserPolicy.fields.generation,
+  controller: BrowserController,
+})
+const integer = (maximum: number, minimum = 0) =>
+  Schema.Number.check(
+    Schema.isInt(),
+    Schema.isGreaterThanOrEqualTo(minimum),
+    Schema.isLessThanOrEqualTo(maximum)
+  )
+export const BrowserKey = Schema.Literals([
+  "Enter",
+  "Tab",
+  "Backspace",
+  "Escape",
+  "ArrowUp",
+  "ArrowDown",
+  "ArrowLeft",
+  "ArrowRight",
+  "Home",
+  "End",
+  "PageUp",
+  "PageDown",
+  "Delete",
+  "SelectAll",
+])
+export const BrowserAction = Schema.Union([
+  Schema.Struct({
+    kind: Schema.Literal("click"),
+    x: integer(1023),
+    y: integer(767),
+  }),
+  Schema.Struct({
+    kind: Schema.Literal("type"),
+    text: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(2000)),
+  }),
+  Schema.Struct({ kind: Schema.Literal("key"), key: BrowserKey }),
+  Schema.Struct({ kind: Schema.Literal("scroll"), deltaY: integer(768, -768) }),
+])
+export type BrowserAction = typeof BrowserAction.Type
+export const BrowserInteraction = Schema.Struct({
+  generation: BrowserPolicy.fields.generation,
+  version: BrowserPolicy.fields.generation,
+  action: BrowserAction,
+})
+export type BrowserInteraction = typeof BrowserInteraction.Type
+export type BrowserObservation = BrowserCapture & {
+  generation: number
+  version: number
 }

@@ -9,6 +9,9 @@ import {
   type BrowserSession,
   type BrowserCapture,
   type BrowserPolicy,
+  type BrowserController,
+  type BrowserAction,
+  type BrowserInteraction,
 } from "./contracts"
 
 export interface BrowserRepository {
@@ -20,6 +23,7 @@ export interface BrowserRepository {
     >
   ) => BrowserRecord
   reset: (generation: number, hosts: readonly string[]) => BrowserRecord
+  transfer: (generation: number, controller: BrowserController) => BrowserRecord
   retire: (id: string) => void
   retired: () => string[]
   forget: (id: string) => void
@@ -34,6 +38,13 @@ export interface BrowserDriver {
   capture: (
     session: BrowserSession,
     hosts: readonly string[]
+  ) => Promise<BrowserCapture>
+  interact: (
+    session: BrowserSession,
+    action: BrowserAction,
+    expectedUrl: string,
+    hosts: readonly string[],
+    actor: BrowserController
   ) => Promise<BrowserCapture>
   close: (id: string) => Promise<void>
 }
@@ -80,9 +91,82 @@ export class BrowserWorkspace {
       return this.state()
     })
   }
-  inspect(generation: number, url?: string, signal?: AbortSignal) {
+  control(generation: number, controller: BrowserController) {
+    return Effect.gen({ self: this }, function* () {
+      const record = yield* Effect.try(() => {
+        this.check(generation)
+        const current = this.repository.read()
+        if (!current.session || browserDeadline(current.session) <= Date.now())
+          throw new BrowserFailure({
+            message: "Open a page before taking control.",
+          })
+        return this.repository.transfer(generation, controller)
+      })
+      // Capture only after earlier tab operations have settled under the new authority.
+      yield* this.inspect(record.generation, undefined, undefined, "owner")
+      return this.state()
+    })
+  }
+  recover() {
+    const record = this.repository.read()
+    if (record.status === "loading")
+      this.repository.update(record.generation, {
+        status: "error",
+        capture: null,
+        error:
+          "The browser operation was interrupted and may have run. Inspect the page before trying again.",
+      })
+  }
+  inspect(
+    generation: number,
+    url?: string,
+    signal?: AbortSignal,
+    actor: BrowserController = "agent"
+  ) {
+    return this.perform(
+      generation,
+      url === undefined ? { kind: "inspect" } : { kind: "navigate", url },
+      actor,
+      signal
+    )
+  }
+  interact(
+    input: BrowserInteraction,
+    actor: BrowserController,
+    signal?: AbortSignal
+  ) {
+    return this.perform(
+      input.generation,
+      { kind: "interact", version: input.version, action: input.action },
+      actor,
+      signal
+    )
+  }
+  private perform(
+    generation: number,
+    operation:
+      | { kind: "inspect" }
+      | { kind: "navigate"; url: string }
+      | { kind: "interact"; version: number; action: BrowserAction },
+    actor: BrowserController,
+    signal?: AbortSignal
+  ) {
     const check = () => {
       this.check(generation)
+      const controller = this.repository.read().controller
+      if (actor === "agent" && controller === "owner")
+        throw new BrowserFailure({
+          message:
+            "The owner has browser control. Wait for them to return control before using browser tools.",
+        })
+      if (
+        operation.kind === "interact" &&
+        actor === "owner" &&
+        controller !== "owner"
+      )
+        throw new BrowserFailure({
+          message: "Take control before interacting with this page.",
+        })
       if (signal?.aborted)
         throw new BrowserFailure({
           message: "This browser action was stopped.",
@@ -97,9 +181,9 @@ export class BrowserWorkspace {
             check()
             let record = this.repository.read()
             const destination =
-              url === undefined
-                ? undefined
-                : allowedBrowserUrl(url, record.hosts)
+              operation.kind === "navigate"
+                ? allowedBrowserUrl(operation.url, record.hosts)
+                : undefined
             if (!record.hosts.length)
               throw new BrowserFailure({
                 message: "Add allowed sites in Browser before browsing.",
@@ -117,6 +201,18 @@ export class BrowserWorkspace {
                   "This browser session expired. Reopen the page to start a fresh session.",
               })
             }
+            if (
+              operation.kind === "interact" &&
+              (record.status !== "ready" ||
+                operation.version !== record.version ||
+                !record.capture ||
+                Date.now() - record.capture.page.capturedAt > 60_000)
+            )
+              throw new BrowserFailure({
+                message:
+                  "The page view changed or is older than one minute. Refresh it before interacting.",
+              })
+            // Version advances before dispatch: replaying the same interaction cannot repeat its effect.
             record = this.repository.update(generation, {
               status: "loading",
               error: null,
@@ -152,7 +248,15 @@ export class BrowserWorkspace {
                     destination,
                     record.hosts
                   )
-                : await this.driver.capture(record.session!, record.hosts)
+                : operation.kind === "interact"
+                  ? await this.driver.interact(
+                      record.session!,
+                      operation.action,
+                      record.capture!.page.url,
+                      record.hosts,
+                      actor
+                    )
+                  : await this.driver.capture(record.session!, record.hosts)
               check()
               this.repository.update(generation, {
                 status: "ready",
@@ -163,15 +267,20 @@ export class BrowserWorkspace {
                 capture,
                 error: null,
               })
-              return capture
+              return {
+                ...capture,
+                generation,
+                version: this.repository.read().version,
+              }
             } catch (cause) {
               if (this.repository.read().generation === generation)
                 this.repository.update(generation, {
                   status: "error",
+                  capture: null,
                   error:
                     cause instanceof BrowserFailure
                       ? cause.message
-                      : "The browser could not finish. It may have expired. Close it and open the page again.",
+                      : "The browser operation could not finish and may have run. Inspect the page before trying again, or close an expired session.",
                 })
               throw cause
             }
@@ -181,7 +290,7 @@ export class BrowserWorkspace {
               ? cause
               : new BrowserFailure({
                   message:
-                    "The browser could not finish. It may have expired. Close it and open the page again.",
+                    "The browser operation could not finish and may have run. Inspect the page before trying again, or close an expired session.",
                 }),
         })
       )

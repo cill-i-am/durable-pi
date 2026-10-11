@@ -75,6 +75,13 @@ export const builtInTools = [
     mode: "ask",
   },
   {
+    name: "browser_interact",
+    title: "Interact with browser",
+    description:
+      "Click, type, scroll or press keys on a browser page. Can change external sites.",
+    mode: "ask",
+  },
+  {
     name: "list_files",
     description: "List this bot's private files.",
     mode: "allow",

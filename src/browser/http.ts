@@ -4,6 +4,8 @@ import {
   BrowserPolicy,
   BrowserNavigate,
   BrowserGeneration,
+  BrowserControl,
+  BrowserInteraction,
 } from "./contracts"
 import type { BrowserWorkspace } from "./browser"
 import { boundedBytes } from "../workspace/http"
@@ -55,13 +57,34 @@ export function browserRequest(
       const command = yield* Effect.try(() =>
         Schema.decodeUnknownSync(BrowserNavigate)(input)
       )
-      yield* workspace.inspect(command.generation, command.url)
+      yield* workspace.inspect(
+        command.generation,
+        command.url,
+        undefined,
+        "owner"
+      )
+    } else if (path === "browser/control") {
+      const command = yield* Effect.try(() =>
+        Schema.decodeUnknownSync(BrowserControl)(input)
+      )
+      yield* workspace.control(command.generation, command.controller)
+    } else if (path === "browser/interact") {
+      const command = yield* Effect.try(() =>
+        Schema.decodeUnknownSync(BrowserInteraction)(input)
+      )
+      yield* workspace.interact(command, "owner")
     } else if (path === "browser/refresh" || path === "browser/close") {
       const command = yield* Effect.try(() =>
         Schema.decodeUnknownSync(BrowserGeneration)(input)
       )
       if (path.endsWith("/close")) yield* workspace.close(command.generation)
-      else yield* workspace.inspect(command.generation)
+      else
+        yield* workspace.inspect(
+          command.generation,
+          undefined,
+          undefined,
+          "owner"
+        )
     } else return new Response("Not found", { status: 404 })
     return Response.json(workspace.state())
   }).pipe(
