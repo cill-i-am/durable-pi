@@ -1,6 +1,6 @@
 # Durable Pi — build tracker
 
-Started 2026-10-10. Delivery owner: Codex. Status: **slices 01–09b, 03c and 08c deployed; 02c native working-context compaction in progress**.
+Started 2026-10-10. Delivery owner: Codex. Status: **slices 01–09b, 03c, 08c and 02c deployed; 11a durable task planning in progress**.
 
 ## Outcome
 
@@ -22,6 +22,7 @@ Backend uses bounded contexts with pure domain values, Effect application workfl
 | Access | Tool grants, approvals, connection references and execution budgets | Permit/deny/approval decisions enforced before effects |
 | Execution | Browser sessions, terminal sessions, containers and bounded code execution | Durable operation receipts and session handles |
 | Apps | Generated application versions, publication and interaction events | Isolated application runtime and explicit sharing policy |
+| Planning | Task objectives, constraints, steps, evidence references, revisions and conversation bindings | Native Pi documents and request-only projection; never grants permissions or schedules actions |
 | Working objects | Authoritative structured objects, targeted edits, revisions, history and change delivery | Native Pi session documents per bot; shared operations for owner UI and agent tools |
 | Routines | Scheduled work, webhooks, triggers, deduplication and pause | Authorized work admitted to Conversations |
 | Activity | User-visible operations and actionable recovery | Projections of committed domain events; no secrets |
@@ -58,6 +59,7 @@ The owner requested password recovery before continuing. Implemented Better Auth
 | 08c — Persistent working objects | Agent creates a project checklist; owner edits tasks inline or in Objects; agent reads current state; history, conflicts, retry receipts and archive/restore survive restart. | Deployed in PR #23; local journey/recovery verified; hosted authentication checks passed |
 | 09 — Routines and incoming events | Schedule/pause/delete routines; run with browser closed; authenticated webhook triggers; durable retry/deduplication; notify on meaningful outcomes; respect bot grants and budgets. | 09a and 09b deployed |
 | 10 — Delegation | Explicit parent/child tasks; separate child memory/tool grants; bounded concurrency; steer/stop children; deliver completed reports once after restart. | Planned |
+| 11a — Automatic durable task planning | Substantial requests maintain a bot-local plan; Activity exposes progress, blockers, evidence and history; compaction, restart, steering and cancellation preserve authority. | Implemented; final review and deployment pending |
 | 11 — Activity and recovery | Per-bot/global activity; inspect tool outcomes and approvals; recover interrupted work; expose actionable connection/backup failures; inspect/export memory and workspace. | Planned |
 | 12 — Complete product verification | Approved desktop/mobile states implemented; keyboard/accessibility checks; isolation/replay/permission tests; restore proof; secret scan; CI/deploy and hosted acceptance of all journeys. | Planned |
 
@@ -577,7 +579,30 @@ Verification on 2026-10-11:
 - Subscription payload test exercises the installed OpenAI adapter with a synthetic transport: no server-side `context_management`, unsupported output cap omitted, summary cache key absent, normal cache key/breakpoints and reasoning replay preserved. No network inference.
 - Independent read-only review found and fixed the long-run display cache row-size problem. A 100-tool Unicode regression verifies byte limits and retained original content; focused re-review passed. Hosted deployment checks are separate; no hosted long-running ChatGPT conversation or live summarization-quality check is claimed.
 
-Next: carry this slice through review/deployment, then 11a durable task planning. The follow-on Paper fidelity goal below starts after the current build goal is complete.
+Next: 11a durable task planning. The follow-on Paper fidelity goal below starts after the current build goal is complete.
+
+02c merged in [PR #24](https://github.com/cill-i-am/durable-pi/pull/24), main `9b88ca1`. Both checks passed on signed head `d93acd9`; [production workflow 38122209355](https://github.com/cill-i-am/durable-pi/actions/runs/38122209355) passed, including production Alchemy deployment and the hosted authentication-boundary checks. No live hosted model inference is claimed.
+
+### 11a — Durable task planning (in progress)
+
+The complete owner request remains in the acceptance section above. Plans belong to normal execution, with no separate mode, planner agent or plan approval gate. They describe work and evidence; Access and Conversations continue to own permission and cancellation.
+
+Implemented a Planning bounded context with native Pi session-scoped documents for tasks, revisions, root-turn bindings and idempotent update receipts. One atomic commit owns all four. `update_plan` explicitly selects new work or continuation of the same bot's logical task; steering inherits the root. Stable steps record observable criteria, constraints, next action, blockers and evidence references. Requirement changes and invalidated evidence reopen completed steps. Cancelled tasks remain cancelled, including after restart, and saved plans schedule no work.
+
+The native `GenerationTask.beforeRequest` hook supplies a fresh projection without appending it to original history. Updates return small durable receipts. `read_plan` pages complete JSON values below 40,000 UTF-8 bytes, under Pi's native 50 KiB tool-output limit. List and detail cursors preserve all content, including unusually escaped strings. Task storage is bounded to 200 tasks per bot, 1,000 ordinary revisions per task and 100 contributing root turns; cancellation and evidence invalidation can still be recorded after the ordinary revision limit.
+
+Evidence resolves through the owning bot's Access, Execution, Workspace, Apps and Working objects operations. IDs, current revisions, ownership and recorded outcomes are checked; labels distinguish that source validation from the agent's semantic completion claim. Failed legacy execution receipts cannot validate completion. Checklist evidence reads within the existing Pi transaction, avoiding a second snapshot transaction. Stop revokes/aborts execution before fallible plan reconciliation. Approval waits and external blockers never become automatic retries; existing completed action receipts remain authoritative on replay.
+
+Activity uses shadcn/Base UI and the approved Paper layout direction. The read-only inspector shows objectives, constraints, completion criteria, step progress, blockers, next action, evidence and durable revision history. Actual pending approvals link back to the existing chat controls. Polls and reconnects reject stale bot/task responses; history remains navigable when new revisions arrive. Full visual fidelity remains the separate follow-on goal.
+
+Verification:
+- Native SQLite/provider fixtures exercise ordinary multi-step tool execution, exactly-once action receipts, simple chat without a plan or approval, atomic concurrent/replayed updates, root-task continuation, steering revisions, cancellation before creation and after restart, bot isolation, invalidated evidence and revision history. A deliberately small 8,192-token model compacts during execution; the current plan remains available once per request, absent from original transcript copies, and survives reopen without starting work.
+- Native tool tests page maximum escaped summaries and detailed plans without invalid JSON or lost entries. Cold checklist evidence after native restart does not deadlock; a later owner edit reopens the completed step once. Failed code/command receipts remain invalid.
+- Real local workerd verified authenticated reads, an owner edit through the shared checklist operation, durable evidence invalidation (plan revision 12 → 13), cross-bot 404 and history pagination. Stopping and restarting the whole local process preserved that state. Initial plan data was seeded through native Pi application operations into a synthetic bot; this is not a live ChatGPT-generated journey.
+- Browser checked Activity at 1440×900 and 390×844, evidence disclosure, older revisions and refresh. No horizontal overflow at 390px or fresh browser errors. Screenshots are local artifacts, not hosted proof.
+- 355 tests, typecheck, lint, production build and tracked-file secret scan passed. Independent read-only backend/frontend reviews closed after correcting cold evidence reads, cancellation ordering, failed legacy receipts, native output pagination, steering delivery identity and live history pagination. Native delivery receipts distinguish consumed inputs from bounded fallback text, so quoted prior text cannot acknowledge a new steer and a large already-delivered batch cannot leave planning blocked. CI and production deployment are the remaining delivery steps. Hosted authenticated owner/model acceptance remains deferred; local faux-provider coverage does not establish model planning quality.
+
+Next: delegation (10), the remaining activity/recovery work (11), then complete-product verification (12).
 
 ### Follow-on goal — Match the approved Paper implementation
 

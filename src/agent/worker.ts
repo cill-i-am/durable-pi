@@ -101,7 +101,10 @@ import { appsRequest } from "../apps/http"
 import { WebApps } from "../apps/web"
 import { readOutput } from "../execution/adapters/dynamic-worker"
 import { appTools } from "../apps/tools"
-import { piWorkingObjects } from "../objects/adapters/pi"
+import {
+  piWorkingObjects,
+  checklistInTransaction,
+} from "../objects/adapters/pi"
 import {
   objectTools,
   objectContextHook,
@@ -109,6 +112,17 @@ import {
 } from "../objects/tools"
 import { objectsRequest } from "../objects/http"
 import { ObjectFailure } from "../objects/contracts"
+import { piPlans } from "../planning/adapters/pi"
+import { planEvidence } from "../planning/adapters/evidence"
+import {
+  planTools,
+  planContextHook,
+  planningInstructions,
+  recoverablePlanTools,
+} from "../planning/tools"
+import { plansRequest } from "../planning/http"
+import { PlanFailure } from "../planning/contracts"
+import type { PlanSource } from "../planning/plans"
 import { WebhookStore } from "../webhooks/adapters/sqlite"
 import { webhookIncoming, webhookOwnerRequest } from "../webhooks/http"
 import { bearer, digest } from "../webhooks/contracts"
@@ -418,7 +432,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   readonly protectTool = guardedTools(
     this.access,
     () => this.active()?.id,
-    recoverableObjectTools
+    new Set([...recoverableObjectTools, ...recoverablePlanTools])
   )
   readonly skills = new SkillStore(this.db)
   readonly botConfiguration = new BotConfigurationStore(this.db)
@@ -493,6 +507,90 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     codeService(this.env.EXECUTION_SERVICE),
     () => this.botConfiguration.read()?.status !== "archived"
   )
+  planSource(turnId: string): PlanSource | undefined {
+    const turn = this.conversations.get(turnId)
+    if (
+      !turn ||
+      turn.parent_id ||
+      this.active()?.id !== turn.id ||
+      !["preparing", "running"].includes(turn.status) ||
+      this.botConfiguration.read()?.status === "archived" ||
+      !this.routines.canRun(turn.id)
+    )
+      return undefined
+    const members = this.conversations.members(turnId, false)
+    return {
+      turnId,
+      inputRevision: turn.revision,
+      inputIds: members.map((member) => member.id),
+      pendingInputs: members.some(
+        (member) =>
+          member.parent_id &&
+          (member.delivery === "queued" ||
+            (member.attachments.length > 0 &&
+              member.delivery !== "consumed" &&
+              member.delivery !== "answered"))
+      ),
+      steering: members
+        .filter((member) => member.parent_id)
+        .map((member) => ({
+          id: member.id,
+          text: member.text || "Please inspect the attached files.",
+          hasAttachments: member.attachments.length > 0,
+          nativeDelivered: ["consumed", "answered"].includes(member.delivery),
+        })),
+    }
+  }
+  planningSource(conversationId: string) {
+    const turn = this.active()
+    return turn?.session_id === conversationId
+      ? this.planSource(turn.id)
+      : undefined
+  }
+  readonly plans = piPlans(
+    () => this.harness.pi(),
+    {
+      current: (id) => this.planSource(id),
+      cancelled: (id) =>
+        ["stopping", "cancelled"].includes(
+          this.conversations.get(id)?.status ?? ""
+        ),
+      evidence: planEvidence({
+        access: this.accessStore,
+        executions: this.executions.repository,
+        object: (id) =>
+          this.objects.read(id).pipe(Effect.map((detail) => detail.object)),
+        apps: this.apps,
+        files: () =>
+          this.workspaceRuntime.runPromise(
+            Effect.flatMap(Workspace, (workspace) => workspace.list())
+          ),
+      }),
+      receipts: (roots) =>
+        this.accessStore
+          .receipts(roots)
+          .map((ref) => ({ ...ref, kind: "receipt" as const })),
+    },
+    (tx) =>
+      planEvidence({
+        access: this.accessStore,
+        executions: this.executions.repository,
+        apps: this.apps,
+        object: (id) =>
+          Effect.tryPromise({
+            try: () => checklistInTransaction(tx, id),
+            catch: () =>
+              new ObjectFailure({
+                code: "unavailable",
+                message: "Checklist evidence unavailable.",
+              }),
+          }),
+        files: () =>
+          this.workspaceRuntime.runPromise(
+            Effect.flatMap(Workspace, (workspace) => workspace.list())
+          ),
+      })
+  )
   readonly browser = new BrowserWorkspace(
     new BrowserStore(this.db),
     new CloudflareBrowser(this.env.BROWSER),
@@ -546,11 +644,31 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       this.installRemoteTools()
       this.registry.install({
         name: "personal",
-        hooks: [objectContextHook(this.objects)],
+        hooks: [
+          objectContextHook(this.objects),
+          planContextHook(this.plans, (api) =>
+            this.planningSource(String(api.conversationId))
+          ),
+        ],
         sections: [
           { key: "preamble", render: () => SYSTEM_PROMPT, tag: false },
+          { key: "planning", render: () => planningInstructions, tag: false },
         ],
         tools: [
+          ...planTools(this.plans, (api) => {
+            const receipt = this.accessStore.get(String(api.taskId))
+            const source = receipt ? this.planSource(receipt.turnId) : undefined
+            if (
+              !source ||
+              this.conversations.get(source.turnId)?.session_id !==
+                String(api.conversationId)
+            )
+              throw new PlanFailure({
+                code: "cancelled",
+                message: "This tool no longer belongs to an active run.",
+              })
+            return source
+          }),
           ...objectTools(this.objects, (api) => {
             const turnId = this.accessStore.get(String(api.taskId))?.turnId
             const turn = turnId ? this.conversations.get(turnId) : undefined
@@ -694,7 +812,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
                 { ...args, id: `command:${String(api.taskId)}` },
                 execution.abortSignal
               )
-              return toolText(JSON.stringify(result))
+              return {
+                ...toolText(JSON.stringify(result)),
+                isError: result.status !== "succeeded",
+              }
             },
           }),
           defineTool({
@@ -716,6 +837,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
                 execution.abortSignal
               )
               return {
+                isError: run.status !== "succeeded",
                 content: [
                   {
                     type: "text" as const,
@@ -1247,6 +1369,8 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             }
           )
         )
+      if (path === "plans" || path.startsWith("plans/"))
+        return Effect.runPromise(plansRequest(this.plans, request, path))
       if (path === "objects" || path.startsWith("objects/"))
         return Effect.runPromise(
           objectsRequest(this.objects, request, path, (id) => {
@@ -1728,6 +1852,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         this.accessStore.cancel(turn.id)
         this.access.notify()
         if (turn.session_id) await this.harness.session(turn.session_id).abort()
+        await Effect.runPromise(this.plans.cancel(turn.id))
       }
       const reply = turn.session_id
         ? await readPiReply(this.harness, turn, members)

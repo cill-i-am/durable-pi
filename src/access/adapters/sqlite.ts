@@ -89,6 +89,14 @@ export class AccessStore {
       id
     )[0]
   }
+  /** Bounded references for a task's evidence; never exposes receipt inputs or grants access. */
+  receipts(turnIds: readonly string[]) {
+    if (!turnIds.length) return []
+    return this.db.all<{ id: string; revision: number }>(
+      `SELECT id,revision FROM tool_operations WHERE turnId IN (${turnIds.map(() => "?").join(",")}) AND status='done' AND tool NOT IN ('update_plan','read_plan') ORDER BY createdAt DESC LIMIT 20`,
+      ...turnIds
+    )
+  }
   expire() {
     this.db.run(
       "UPDATE tool_operations SET status='expired',revision=revision+1 WHERE expiresAt<=? AND status IN ('pending','approved')",
