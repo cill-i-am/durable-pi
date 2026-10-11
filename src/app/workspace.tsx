@@ -1,5 +1,6 @@
 import { useState } from "react"
-import { Globe } from "lucide-react"
+import { Globe, Code2 } from "lucide-react"
+import { ExecutionWorkbench } from "@/features/execution"
 import { BrowserWorkbench } from "@/features/browser"
 import { authClient } from "@/auth/client"
 import { Login, PiMark } from "@/features/auth"
@@ -125,29 +126,54 @@ function AgentWorkspace({
   agent: AgentProfile
   name: string
 }) {
-  const [browserOpen, setBrowserOpen] = useState(false)
+  const [workbench, setWorkbench] = useState<"browser" | "code" | null>(null)
+  const browserOpen = workbench === "browser"
   return (
-    <div className={`agent-columns ${browserOpen ? "workbench-visible" : ""}`}>
+    <div className={`agent-columns ${workbench ? "workbench-visible" : ""}`}>
       <Conversation
         name={name}
         agent={agent}
         workbenchAction={
-          <Button
-            size="sm"
-            variant={browserOpen ? "secondary" : "ghost"}
-            aria-label="Browser workbench"
-            onClick={() => setBrowserOpen((value) => !value)}
-          >
-            <Globe />
-            <span className="hidden sm:inline">Browser</span>
-          </Button>
+          <>
+            <Button
+              size="sm"
+              variant={browserOpen ? "secondary" : "ghost"}
+              aria-label="Browser workbench"
+              onClick={() =>
+                setWorkbench((value) =>
+                  value === "browser" ? null : "browser"
+                )
+              }
+            >
+              <Globe />
+              <span className="hidden sm:inline">Browser</span>
+            </Button>
+            <Button
+              size="sm"
+              variant={workbench === "code" ? "secondary" : "ghost"}
+              aria-label="Code workbench"
+              onClick={() =>
+                setWorkbench((value) => (value === "code" ? null : "code"))
+              }
+            >
+              <Code2 />
+              <span className="hidden sm:inline">Code</span>
+            </Button>
+          </>
         }
       />
+      {workbench === "code" && (
+        <ExecutionWorkbench
+          agentId={agent.id}
+          agentName={agent.name}
+          onClose={() => setWorkbench(null)}
+        />
+      )}
       {browserOpen && (
         <BrowserWorkbench
           agentId={agent.id}
           agentName={agent.name}
-          onClose={() => setBrowserOpen(false)}
+          onClose={() => setWorkbench(null)}
         />
       )}
     </div>

@@ -62,6 +62,13 @@ export class AccessConflict extends Schema.TaggedError<AccessConflict>()(
 
 export const builtInTools = [
   {
+    name: "run_code",
+    title: "Run isolated code",
+    description:
+      "Execute JavaScript with explicit JSON input, no network or app credentials, and bounded runtime/output.",
+    mode: "ask",
+  },
+  {
     name: "browser_open",
     title: "Open browser page",
     description:

@@ -23,6 +23,15 @@ export const DocumentWorker = Cloudflare.Worker("DocumentWorker", {
   compatibility: { date: "2026-09-25", flags: ["nodejs_compat"] },
   limits: { cpuMs: 5_000 },
 })
+export const ExecutionWorker = Cloudflare.Worker("ExecutionWorker", {
+  main: "./src/execution/worker.ts",
+  dev: { port: 1340, strictPort: true },
+  workersDev: { enabled: false, previewsEnabled: false },
+  compatibility: { date: "2026-09-25", flags: ["nodejs_compat"] },
+  limits: { cpuMs: 2000 },
+  env: { LOADER: Cloudflare.WorkerLoader() },
+})
+export type ExecutionEnv = Cloudflare.InferEnv<typeof ExecutionWorker>
 export const AgentWorker = Cloudflare.Worker("AgentWorker", {
   main: "./src/agent/worker.ts",
   dev: { port: 1338, strictPort: true },
@@ -33,6 +42,7 @@ export const AgentWorker = Cloudflare.Worker("AgentWorker", {
     MEMORY_BACKUPS: MemoryBackups,
     WORKSPACE_ASSETS: WorkspaceAssets,
     DOCUMENT_SERVICE: DocumentWorker,
+    EXECUTION_SERVICE: ExecutionWorker,
     // Local Chromium does not enforce Browser Run network guardrails.
     BROWSER: Cloudflare.Browser().pipe(Alchemy.remote()),
     OPENAI_CREDENTIAL: Config.Redacted("OPENAI_CREDENTIAL").pipe(

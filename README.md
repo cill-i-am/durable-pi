@@ -48,7 +48,7 @@ For the initial local-to-remote state migration, `scripts/migrate-production-sta
 - Better Auth sessions backed by D1. An authenticated server route forwards to a Worker with both public and preview URLs disabled. Bot objects are addressed from the authenticated owner ID and a validated catalog identity. The default bot retains its original object ID.
 - Server-side ChatGPT credentials with one account-level refresh owner and durable token rotation shared by all bots. API-key credentials are also supported through the same private configuration.
 
-The current slices include live reply updates, mid-run steering, images, video storage, private files, searchable PDF text, reusable skills, tool approvals, per-bot MCP tools, and a Cloudflare browser with owner takeover. Shell execution, video processing, generated apps, messaging channels, and scheduled autonomous tasks are still being built; see [BUILD.md](BUILD.md).
+The current slices include live reply updates, mid-run steering, images, video storage, private files, searchable PDF text, reusable skills, tool approvals, per-bot MCP tools, a Cloudflare browser with owner takeover, and isolated JavaScript execution. Shell execution, video processing, generated apps, messaging channels, and scheduled autonomous tasks are still being built; see [BUILD.md](BUILD.md).
 
 ## Memory design
 
@@ -120,6 +120,16 @@ Cloudflare session guardrails restrict HTTP/HTTPS connections to configured host
 Choose **Take control** to pause bot browser tools. Click the screenshot to focus a field, or use **Tab field**, then the private **Type** input. **Return control** keeps the same Chromium session and cookies. Close revokes it. Owner command inputs do not enter chat or tool receipts; captures mask editable field values and omit them from extracted text. Sites can independently display submitted text elsewhere on a page, which can appear in subsequent observations. Complete sign-in and navigate away from sensitive pages before returning control. Typing into embedded frames and closed custom controls is refused until those contexts can be masked safely; use a standard input on the site’s own sign-in page. Arbitrary scripts and browser warning bypasses are not supported. Captures are snapshots, not a live video stream.
 
 `node --env-file=.env --import tsx scripts/check-browser.ts` tests the local synthetic owner with real Cloudflare Chromium. It requires `OWNER_EMAIL=workspace-test@example.com` and the local test account; it never uses production owner credentials. `scripts/check-browser-control.ts` additionally verifies native interactions on Selenium’s public demonstration form, takeover/return, and a synthetic cookie across handoff.
+
+## Code workbench
+
+Open **Code** beside a bot, enter JavaScript and JSON input, then choose **Run code**. Use `input`, `console.log`, and `return`. The private Dynamic Worker receives only that explicit input: no network, filesystem, application bindings or model credentials. The bot's `run_code` tool uses the same execution context and asks for approval by default.
+
+Each bot retains code, input, output and status for up to 500 runs; the panel shows the latest 50. Repeating a request with its original ID reuses its result. Restarted incomplete runs become **interrupted**, without automatic re-execution. **Cancel run** commits cancellation and ignores late output. Inspect an uncertain result before starting another run.
+
+Limits: 16,384 code characters, 32,768 input/result characters, 16,000 log characters, one active run, one second of CPU, and ten seconds elapsed. Cloudflare's native isolation and CPU limits are configured at the Worker Loader boundary; the host also limits untrusted response bytes and rejects redirects. This JavaScript runtime is separate from the Linux terminal.
+
+`node --env-file=.env --import tsx scripts/check-execution.ts` checks the synthetic local owner against native workerd, including isolation, replay, cancellation, output limits and elapsed deadlines. Production CPU enforcement belongs to [Dynamic Workers resource limits](https://developers.cloudflare.com/dynamic-workers/usage/limits/); local tests do not claim a production CPU-exhaustion probe.
 
 ## Repository and data boundaries
 
