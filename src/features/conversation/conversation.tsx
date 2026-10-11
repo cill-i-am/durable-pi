@@ -1,9 +1,10 @@
+import type { Profile, JobType } from "@/inference/policy"
 import { useCallback, useMemo, useRef, useState, type ReactNode } from "react"
 import { ArrowUp, Square, Sparkles, RefreshCw } from "lucide-react"
 import { useConversation } from "./use-conversation"
 import { TurnReply } from "./turn-reply"
 import { ModelMenu } from "./model-menu"
-import { submissionAttempt } from "./commands"
+import { submissionAttempt, rejectedModelAttempt } from "./commands"
 import {
   ThinkingLevel,
   type Submission,
@@ -63,6 +64,8 @@ export function Conversation({
 }) {
   const files = useFiles(agent.id)
   const api = useMemo(() => agentApi(agent.id), [agent.id])
+  const [profile, setProfile] = useState<Profile>("auto")
+  const [job, setJob] = useState<JobType>("conversation")
   const [error, setError] = useState("")
   const [sending, setSending] = useState(false)
   const [retrying, setRetrying] = useState<string | null>(null)
@@ -81,16 +84,21 @@ export function Conversation({
       pending.current,
       text,
       mode,
-      files.selected.map((file) => file.id)
+      files.selected.map((file) => file.id),
+      profile,
+      job
     )
     try {
       const submittedFiles = pending.current.files ?? []
       await api("send", pending.current)
       files.clear(submittedFiles)
       pending.current = null
+      setProfile("auto")
+      setJob("conversation")
       setRefresh((n) => n + 1)
       return true
     } catch (e) {
+      if (rejectedModelAttempt(e)) pending.current = null
       setError(e instanceof Error ? e.message : "Could not send")
       return false
     } finally {
@@ -338,19 +346,31 @@ export function Conversation({
             />
           }
           enabled={!!state?.connected && files.attachmentsReady}
-          modelControl={
-            <ModelMenu
-              agentId={agent.id}
-              selection={{
-                model: state?.model ?? "",
-                thinking: Schema.is(ThinkingLevel)(state?.thinking)
-                  ? state.thinking
-                  : "medium",
-                settingsRevision: state?.settingsRevision ?? 0,
-              }}
-              onSaved={reload}
-              onError={setError}
-            />
+          modelControl={(delivery) =>
+            delivery === "steer" ? (
+              <span className="text-xs text-muted-foreground">
+                Steering · {active?.routing?.model ?? "active model"} ·{" "}
+                {active?.routing?.thinking ?? "pinned effort"}
+              </span>
+            ) : (
+              <ModelMenu
+                agentId={agent.id}
+                profile={profile}
+                onProfile={setProfile}
+                job={job}
+                onJob={setJob}
+                disabled={sending || !!pending.current}
+                selection={{
+                  model: state?.model ?? "",
+                  thinking: Schema.is(ThinkingLevel)(state?.thinking)
+                    ? state.thinking
+                    : "medium",
+                  settingsRevision: state?.settingsRevision ?? 0,
+                }}
+                onSaved={reload}
+                onError={setError}
+              />
+            )
           }
         />
         <div className="composer-footnote">
@@ -385,7 +405,7 @@ function Composer({
   stopping: boolean
   pending: boolean
   enabled: boolean
-  modelControl: React.ReactNode
+  modelControl: (delivery: SubmissionMode) => React.ReactNode
   attachments: React.ReactNode
   attachmentControl: React.ReactNode
   hasAttachments: boolean
@@ -428,7 +448,7 @@ function Composer({
         />
         <InputGroupAddon align="block-end" className="flex-wrap">
           {attachmentControl}
-          <div className="max-w-full min-w-0">{modelControl}</div>
+          <div className="max-w-full min-w-0">{modelControl(delivery)}</div>
           <div className="ml-auto flex gap-2">
             {active && (
               <InputGroupButton

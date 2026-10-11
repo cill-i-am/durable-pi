@@ -32,6 +32,8 @@ if (process.env.LEGACY_APP_URL) {
 }
 for (const path of [
   "state",
+  "models",
+  "inference",
   "tree",
   "export",
   "export?format=html",

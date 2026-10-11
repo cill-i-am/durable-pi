@@ -86,7 +86,9 @@ export type CacheUsage = {
 export function cacheUsage(event: unknown): CacheUsage | undefined {
   if (
     !isRecord(event) ||
-    event.type !== "response.completed" ||
+    !["response.completed", "response.incomplete", "response.failed"].includes(
+      String(event.type)
+    ) ||
     !isRecord(event.response)
   )
     return

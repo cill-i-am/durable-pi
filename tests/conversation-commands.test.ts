@@ -32,3 +32,25 @@ describe("conversation command acknowledgement", () => {
     expect(newestSelection(remote, saved)).toEqual(remote)
   })
 })
+
+it("unlocks a definitively rejected model choice but retains uncertain-send intent", async () => {
+  const { ApiError } = await import("../src/http/client")
+  const { rejectedModelAttempt } =
+    await import("../src/features/conversation/commands")
+  const attempt = submissionAttempt(null, "hello", "followUp", [], "deep")
+  expect(
+    rejectedModelAttempt(
+      new ApiError(409, "Model unavailable", "model_unavailable")
+    )
+  ).toBe(true)
+  expect(rejectedModelAttempt(new ApiError(409, "Operation conflict"))).toBe(
+    false
+  )
+  expect(rejectedModelAttempt(new TypeError("Network failed"))).toBe(false)
+  const replacement = submissionAttempt(null, "hello", "followUp", [], "fast")
+  expect(replacement.operationId).not.toBe(attempt.operationId)
+  expect(replacement.profile).toBe("fast")
+  expect(submissionAttempt(attempt, "hello", "followUp", [], "fast")).toEqual(
+    attempt
+  )
+})

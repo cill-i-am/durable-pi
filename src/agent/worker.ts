@@ -1,3 +1,15 @@
+import { openaiProvider } from "@earendil-works/pi-ai/providers/openai"
+import { discoverCatalog } from "../inference/catalog"
+import type { ModelCatalog } from "../inference/policy"
+import {
+  ModelUnavailable,
+  JobType,
+  jobTypes,
+  resolveRoute,
+  pinnedRoute,
+  validateRoute,
+} from "../inference/policy"
+import { InferenceUsage } from "../inference/usage"
 import { DurableObject } from "cloudflare:workers"
 import {
   Lifecycle,
@@ -54,7 +66,6 @@ import {
   ConversationConflict,
   ConversationFull,
   ModelSettings,
-  ThinkingLevel,
   type Submission,
   type Turn,
 } from "../conversations/turns"
@@ -598,7 +609,73 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     () => this.browserCleanup.wake()
   )
   readonly uploadLock = Semaphore.makeUnsafe(1)
+  readonly inferenceUsage = new InferenceUsage(this.db)
+  private catalogCache?: {
+    clientId: string
+    expires: number
+    value: ModelCatalog
+  }
+  async accountModelCatalog(): Promise<ModelCatalog> {
+    const owner = this.botConfiguration.read()?.owner
+    if (owner) return this.env.AGENT.getByName(owner).accountModelCatalog()
+    try {
+      const credential = await this.resolveModelCredential("openai")
+      const clientId =
+        credential?.type === "oauth" ? String(credential.clientId) : ""
+      if (
+        clientId &&
+        this.catalogCache?.clientId === clientId &&
+        this.catalogCache.expires > Date.now()
+      )
+        return this.catalogCache.value
+      const result = await Effect.runPromise(
+        discoverCatalog(credential, openaiProvider().getModels()).pipe(
+          Effect.catchTag("ModelUnavailable", (error) =>
+            Effect.succeed({
+              models: [],
+              checkedAt: null,
+              error: error.message,
+              usage: "ChatGPT plan usage" as const,
+            })
+          )
+        )
+      )
+      if (!result.error)
+        this.catalogCache = {
+          clientId,
+          expires: Date.now() + 60_000,
+          value: result,
+        }
+      return result
+    } catch {
+      return {
+        models: [],
+        checkedAt: null,
+        error: "Reconnect ChatGPT to verify model availability.",
+        usage: "ChatGPT plan usage",
+      }
+    }
+  }
   readonly models = createAgentModels(this.credentials, {
+    catalog: () => this.accountModelCatalog(),
+    contextWindow: (model) => {
+      const turn = this.active()
+      return turn?.model === model ? turn.routing?.contextWindow : undefined
+    },
+    onAttempt: (model, thinking, purpose) => {
+      const turn = purpose === "memory" ? undefined : this.active()
+      const route =
+        turn?.routing ??
+        resolveRoute(purpose === "memory" ? "memory" : "conversation", {
+          model,
+          thinking,
+        })
+      return this.inferenceUsage.start(
+        { ...route, model, thinking },
+        turn?.id ?? null,
+        purpose
+      )
+    },
     cacheKey: `pi-${this.ctx.id.toString()}`,
     onUsage: (usage: CacheUsage) =>
       this.db.run(
@@ -633,7 +710,12 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
               })),
             messages,
           },
-          { reasoning: "medium", signal, cacheRetention: "short" }
+          {
+            reasoning: "medium",
+            signal,
+            cacheRetention: "short",
+            sessionId: "memory",
+          }
         )
       })
     )
@@ -968,12 +1050,22 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         {
           models: this.models,
           registry: this.registry,
-          settings: agentSettings(() =>
-            this.models.getModel(
+          settings: agentSettings(() => {
+            const turn = this.active()
+            const model = this.models.getModel(
               "openai",
-              this.active()?.model ?? this.env.MODEL_ID
+              turn?.model ?? this.env.MODEL_ID
             )
-          ),
+            return model
+              ? {
+                  ...model,
+                  contextWindow: Math.min(
+                    model.contextWindow,
+                    turn?.routing?.contextWindow ?? model.contextWindow
+                  ),
+                }
+              : undefined
+          }),
           onReport: () => console.warn("Pi reported an operation failure"),
         },
         context
@@ -1122,24 +1214,6 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     return this.conversations.get(id)!
   }
 
-  modelChoices() {
-    const levels = Schema.decodeUnknownSync(Schema.Array(ThinkingLevel))([
-      "off",
-      "minimal",
-      "low",
-      "medium",
-      "high",
-      "xhigh",
-      "max",
-    ])
-    return this.models.getModels("openai").map((model) => ({
-      id: model.id,
-      name: model.name,
-      thinking: model.reasoning
-        ? levels.filter((level) => model.thinkingLevelMap?.[level] !== null)
-        : ["off" as const],
-    }))
-  }
   async acceptMessage(input: Submission) {
     if (!input.text.trim() && !input.files?.length)
       return Response.json({ error: "Write a message first." }, { status: 400 })
@@ -1178,22 +1252,57 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       )
     )
     const active = this.conversations.active()
-    const modelId =
+    const parent =
       input.mode === "steer" && active && active.status !== "stopping"
-        ? (active.model ?? this.env.MODEL_ID)
-        : this.conversations.settings().model
-    if (
-      prepared.content.some((block) => block.type === "image") &&
-      !this.models.getModel("openai", modelId)?.input.includes("image")
+        ? active
+        : undefined
+    const retry = input.retryOf
+      ? this.conversations.get(input.retryOf)
+      : undefined
+    const job = input.job ?? "conversation"
+    const route =
+      pinnedRoute(parent, this.conversations.settings()) ??
+      pinnedRoute(retry, this.conversations.settings()) ??
+      resolveRoute(job, this.conversations.jobSetting(job), input.profile)
+    const capability = validateRoute(
+      route,
+      await this.accountModelCatalog(),
+      prepared.content.some((block) => block.type === "image")
     )
+    if (
+      (parent?.id ?? null) !==
+      (input.mode === "steer" &&
+      this.conversations.active()?.status !== "stopping"
+        ? (this.conversations.active()?.id ?? null)
+        : null)
+    )
+      throw new ConversationConflict({
+        message:
+          "The active reply changed. Retry to send with the current run settings.",
+      })
+    const pinned = {
+      ...route,
+      contextWindow: Math.min(
+        route.contextWindow ?? capability.contextWindow,
+        capability.contextWindow
+      ),
+    }
+    // Catalog discovery may yield. These fences must share admission's synchronous turn.
+    if (this.botConfiguration.read()?.status === "archived")
       return Response.json(
-        { error: "Choose an image-capable model before attaching an image." },
-        { status: 400 }
+        { error: "Restore this agent before sending a message." },
+        { status: 409 }
       )
+    this.workspaceRuntime.runSync(
+      Effect.flatMap(Workspace, (workspace) =>
+        workspace.requireFiles(input.files ?? [])
+      )
+    )
     const receipt = this.conversations.admit(
       input,
       prepared,
-      this.skills.selection().skills
+      this.skills.selection().skills,
+      pinned
     )
     this.notifyConversation()
     return Response.json(
@@ -1632,24 +1741,29 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         await this.backups.wake()
         return Response.json({ added })
       }
+      if (request.method === "GET" && path === "inference")
+        return Response.json({ attempts: this.inferenceUsage.recent() })
       if (request.method === "GET" && path === "models")
         return Response.json({
-          models: this.modelChoices(),
+          ...(await this.accountModelCatalog()),
           selection: this.conversations.selection(),
+          assignments: Object.fromEntries(
+            jobTypes.map((job) => [
+              job,
+              resolveRoute(job, this.conversations.jobSetting(job)),
+            ])
+          ),
         })
       if (request.method === "POST" && path === "settings") {
-        const settings = Schema.decodeUnknownSync(ModelSettings)(
-          await limitedJson(request)
-        )
-        const model = this.modelChoices().find(
-          (candidate) => candidate.id === settings.model
-        )
-        if (!model || !model.thinking.includes(settings.thinking))
-          return Response.json(
-            { error: "Choose an available model and reasoning level." },
-            { status: 400 }
-          )
-        const selection = this.conversations.setSettings(settings)
+        const { job = "conversation", ...settings } = Schema.decodeUnknownSync(
+          Schema.Struct({
+            ...ModelSettings.fields,
+            job: Schema.optional(JobType),
+          })
+        )(await limitedJson(request))
+        validateRoute(settings, await this.accountModelCatalog())
+        this.conversations.setJobSetting(job, settings)
+        const selection = this.conversations.selection()
         this.notifyConversation()
         return Response.json(selection)
       }
@@ -1685,6 +1799,11 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       }
       return new Response("Not found", { status: 404 })
     } catch (cause) {
+      if (cause instanceof ModelUnavailable)
+        return Response.json(
+          { error: cause.message, code: "model_unavailable" },
+          { status: 409 }
+        )
       if (cause instanceof WorkspaceUnavailable)
         return Response.json(
           {
@@ -1760,6 +1879,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           created_at: turn.created_at,
           attachments: turn.attachments,
           skills: turn.skills,
+          routing: pinnedRoute(turn, this.conversations.settings()),
           activity:
             activity.get(turn.id) ??
             (saved ? JSON.parse(saved.payload) : undefined),

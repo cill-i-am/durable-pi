@@ -1,3 +1,4 @@
+import { InferenceRuns } from "./inference-runs"
 import { useEffect, useRef, useState } from "react"
 import {
   Activity,
@@ -112,6 +113,7 @@ export function ActivityWorkbench({
                 <span className="truncate">{agentName}</span>
               </Badge>
             </div>
+            {!selected && <InferenceRuns agentId={agentId} />}
             {state.error && (
               <Alert>
                 <AlertTitle>Updates interrupted</AlertTitle>
