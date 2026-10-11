@@ -20,6 +20,7 @@ import {
   UploadStatus,
   FileAttachments,
 } from "@/features/files"
+import { SkillsPanel } from "@/features/skills"
 import { MemoryPanel } from "@/features/memory"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
@@ -135,6 +136,7 @@ export function Conversation({
           </Badge>
         </div>
         <div className="flex shrink-0 items-center">
+          <SkillsPanel agentId={agent.id} agentName={agent.name} />
           <FilesPanel
             state={files}
             selectionDisabled={sending || files.uploading}

@@ -36,6 +36,14 @@ export function TurnReply({
         <MessageHeader>
           <span className="assistant-label">{agentName}</span>
         </MessageHeader>
+        {!!turn.skills?.length && (
+          <p className="text-xs text-muted-foreground">
+            Skills:{" "}
+            {turn.skills
+              .map((skill) => `${skill.name} v${skill.revision}`)
+              .join(" · ")}
+          </p>
+        )}
         <Bubble variant="ghost">
           <BubbleContent className="message-text">
             {turn.activity?.length ? (

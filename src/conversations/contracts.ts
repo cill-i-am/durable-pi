@@ -1,3 +1,4 @@
+import { SkillReference } from "../skills/contracts"
 import * as Schema from "effect/Schema"
 import { FileInfo, FileSelection } from "../workspace/files"
 
@@ -61,6 +62,7 @@ export const TimelineItem = Schema.Union([
 ])
 export type TimelineItem = typeof TimelineItem.Type
 const VisibleTurn = Schema.Struct({
+  skills: Schema.optional(Schema.Array(SkillReference)),
   id: Schema.String,
   text: Schema.String,
   status: Schema.Literals([
