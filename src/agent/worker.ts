@@ -96,6 +96,10 @@ import { appsRequest } from "../apps/http"
 import { WebApps } from "../apps/web"
 import { readOutput } from "../execution/adapters/dynamic-worker"
 import { appTools } from "../apps/tools"
+import { WebhookStore } from "../webhooks/adapters/sqlite"
+import { webhookIncoming, webhookOwnerRequest } from "../webhooks/http"
+import { bearer, digest } from "../webhooks/contracts"
+import { RoutineId } from "../routines/contracts"
 import { RoutineStore } from "../routines/adapters/sqlite"
 import { RoutinePump } from "../routines/pump"
 import { routinesRequest } from "../routines/http"
@@ -404,6 +408,17 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     this.db,
     () => this.botConfiguration.read()?.status !== "archived"
   )
+  readonly webhooks = new WebhookStore(
+    this.db,
+    this.routines,
+    () => this.botConfiguration.read()?.status !== "archived"
+  )
+  async webhookAuthorized(id: string, key: string) {
+    return (
+      Schema.is(RoutineId)(id) &&
+      this.webhooks.authorized(id, await digest(key))
+    )
+  }
   readonly routinePump = new RoutinePump(this.routines, {
     getTurn: (id) => this.conversations.get(id),
     modelConnected: () => this.modelConnected(),
@@ -412,7 +427,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       this.conversations.admit(
         {
           operationId: run.turnId,
-          text: `Routine: ${run.title}\n${run.trigger === "manual" ? "Requested now" : "Scheduled for " + new Date(run.scheduledAt).toISOString()}\n\n${run.prompt}\n\nThis run has a ten-minute budget. Follow the bot's current tool permissions; wait for any required approval. Report the useful result or a concrete failure in this conversation.`,
+          text: `Routine: ${run.title}\n${run.trigger === "manual" ? "Requested now" : run.trigger === "webhook" ? "Triggered by an external event" : "Scheduled for " + new Date(run.scheduledAt).toISOString()}\n\n${run.prompt}\n\nThis run has a ten-minute budget. Follow the bot's current tool permissions; wait for any required approval. Report the useful result or a concrete failure in this conversation.`,
         },
         undefined,
         this.skills.selection().skills
@@ -1132,6 +1147,16 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         if (result.ok && request.method !== "GET") await this.runner.wake()
         return result
       }
+      if (path === "webhooks/incoming" && request.method === "POST")
+        return Effect.runPromise(
+          webhookIncoming(this.webhooks, request, () =>
+            this.routineRunner.wake()
+          )
+        )
+      if (path === "webhooks" || path.startsWith("webhooks/"))
+        return Effect.runPromise(
+          webhookOwnerRequest(this.webhooks, request, path)
+        )
       if (path === "routines" || path.startsWith("routines/"))
         return Effect.runPromise(
           routinesRequest(
@@ -1824,6 +1849,18 @@ export default {
       const agent = await root.agentProfile(decoded.value)
       if (!agent) return new Response("Not found", { status: 404 })
       const target = env.AGENT.getByName(agentObjectName(owner, agent.id))
+      if (path === "webhooks/incoming") {
+        const key = bearer(request)
+        if (
+          agent.status !== "active" ||
+          !key ||
+          !(await target.webhookAuthorized(
+            url.searchParams.get("routine") ?? "",
+            key
+          ))
+        )
+          return new Response("Unauthorized", { status: 401 })
+      }
       await target.configureBot(agent.id === homeAgentId ? "" : owner, agent)
       return await target.fetch(request)
     } catch {

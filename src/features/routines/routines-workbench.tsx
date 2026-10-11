@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react"
 import { cn } from "cn"
 import { ArrowLeft, Clock3, Plus, X } from "lucide-react"
 import type { Routine, RoutineRun, SaveRoutine } from "@/routines/contracts"
+import { WebhookPanel } from "./webhook-panel"
 import { useRoutines } from "./use-routines"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -45,7 +46,9 @@ const time = (at: number) =>
 const schedule = (routine: Routine) =>
   routine.schedule.type === "once"
     ? "Once"
-    : `Every ${routine.schedule.minutes} minutes`
+    : routine.schedule.type === "webhook"
+      ? "On incoming events"
+      : `Every ${routine.schedule.minutes} minutes`
 export function RoutinesWorkbench({
   agentId,
   agentName,
@@ -64,7 +67,9 @@ export function RoutinesWorkbench({
   const actions = useRoutines(agentId, () => setEditor(null), onPendingChange)
   const [wide, setWide] = useState(false),
     portalContainer = useRef<HTMLDivElement>(null)
-  const locked = actions.busy || !!actions.attempt
+  const [hook, setHook] = useState<Routine | null>(null)
+  const [hookPending, setHookPending] = useState(false)
+  const locked = actions.busy || !!actions.attempt || hookPending
   useEffect(() => {
     const media = matchMedia("(min-width: 1280px)")
     const update = () => setWide(media.matches)
@@ -98,7 +103,7 @@ export function RoutinesWorkbench({
       </p>
       <p className="text-xs text-muted-foreground">
         {schedule(routine)}
-        {routine.status === "active"
+        {routine.status === "active" && routine.schedule.type !== "webhook"
           ? routine.nextAt !== null
             ? ` · Next ${time(routine.nextAt)}`
             : " · Schedule complete"
@@ -149,6 +154,14 @@ export function RoutinesWorkbench({
               }
             >
               Run now
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={locked}
+              onClick={() => setHook(routine)}
+            >
+              Webhook
             </Button>
             <Button
               size="sm"
@@ -250,7 +263,21 @@ export function RoutinesWorkbench({
                 </div>
               </div>
             )}
-            {editor ? (
+            {hook ? (
+              <WebhookPanel
+                key={hook.id}
+                agentId={agentId}
+                routine={hook}
+                onBack={() => {
+                  setHook(null)
+                  void actions.refresh()
+                }}
+                onPendingChange={(pending) => {
+                  setHookPending(pending)
+                  onPendingChange(pending)
+                }}
+              />
+            ) : editor ? (
               <>
                 <Button
                   className="self-start"
@@ -380,7 +407,11 @@ function RunRow({
       </div>
       <p className="text-xs text-muted-foreground">
         {time(run.scheduledAt)} ·{" "}
-        {run.trigger === "manual" ? "Run now" : "Scheduled"}
+        {run.trigger === "manual"
+          ? "Run now"
+          : run.trigger === "webhook"
+            ? "Incoming event"
+            : "Scheduled"}
       </p>
       {run.status === "pending" && (
         <p className="text-xs text-muted-foreground">
@@ -443,11 +474,15 @@ function RoutineEditor({
   const [id] = useState(() => routine?.id ?? crypto.randomUUID())
   const [title, setTitle] = useState(routine?.title ?? ""),
     [prompt, setPrompt] = useState(routine?.prompt ?? "")
-  const [type, setType] = useState<"once" | "interval">(
+  const [type, setType] = useState<"once" | "interval" | "webhook">(
     routine?.schedule.type ?? "once"
   )
   const [at, setAt] = useState(() =>
-    localTime(routine?.schedule.at ?? Date.now() + 3600000)
+    localTime(
+      routine && routine.schedule.type !== "webhook"
+        ? routine.schedule.at
+        : Date.now() + 3600000
+    )
   )
   const [minutes, setMinutes] = useState(
     routine?.schedule.type === "interval" ? routine.schedule.minutes : 60
@@ -467,7 +502,7 @@ function RoutineEditor({
         setError("")
         if (conflict) return
         const timestamp = new Date(at).getTime()
-        if (!Number.isFinite(timestamp)) {
+        if (type !== "webhook" && !Number.isFinite(timestamp)) {
           setError("Choose a valid first run.")
           return
         }
@@ -481,9 +516,11 @@ function RoutineEditor({
           schedule:
             !changedTime && savedSchedule
               ? savedSchedule
-              : type === "once"
-                ? { type, at: timestamp }
-                : { type, at: timestamp, minutes },
+              : type === "webhook"
+                ? { type }
+                : type === "once"
+                  ? { type, at: timestamp }
+                  : { type, at: timestamp, minutes },
         })
       }}
     >
@@ -506,7 +543,9 @@ function RoutineEditor({
               <p className="text-xs whitespace-pre-wrap">{latest.prompt}</p>
               <p className="text-xs">
                 {schedule(latest)} · {latest.status} · First run{" "}
-                {time(latest.schedule.at)}
+                {latest.schedule.type === "webhook"
+                  ? "on demand"
+                  : time(latest.schedule.at)}
               </p>
               {latest.status === "archived" ? (
                 <p>Return to all routines and restore it before editing.</p>
@@ -531,7 +570,13 @@ function RoutineEditor({
                       setTitle(latest.title)
                       setPrompt(latest.prompt)
                       setType(latest.schedule.type)
-                      setAt(localTime(latest.schedule.at))
+                      setAt(
+                        localTime(
+                          latest.schedule.type === "webhook"
+                            ? Date.now() + 3600000
+                            : latest.schedule.at
+                        )
+                      )
                       setMinutes(
                         latest.schedule.type === "interval"
                           ? latest.schedule.minutes
@@ -584,7 +629,11 @@ function RoutineEditor({
               aria-label="Routine schedule"
               value={[type]}
               onValueChange={(values) => {
-                if (values[0] === "once" || values[0] === "interval") {
+                if (
+                  values[0] === "once" ||
+                  values[0] === "interval" ||
+                  values[0] === "webhook"
+                ) {
                   setType(values[0])
                   setChangedTime(true)
                 }
@@ -594,28 +643,37 @@ function RoutineEditor({
             >
               <ToggleGroupItem value="once">Once</ToggleGroupItem>
               <ToggleGroupItem value="interval">Repeat</ToggleGroupItem>
+              <ToggleGroupItem value="webhook">Events</ToggleGroupItem>
             </ToggleGroup>
           </Field>
-          <Field>
-            <FieldLabel htmlFor="routine-time">
-              {type === "once" ? "Run at" : "First run"}
-            </FieldLabel>
-            <Input
-              className="min-w-0"
-              id="routine-time"
-              type="datetime-local"
-              required
-              value={at}
-              onChange={(e) => {
-                setAt(e.target.value)
-                setChangedTime(true)
-              }}
-            />
-            <FieldDescription>
-              Time in {Intl.DateTimeFormat().resolvedOptions().timeZone}.
-              Repeats use elapsed time, including across clock changes.
-            </FieldDescription>
-          </Field>
+          {type !== "webhook" && (
+            <Field>
+              <FieldLabel htmlFor="routine-time">
+                {type === "once" ? "Run at" : "First run"}
+              </FieldLabel>
+              <Input
+                className="min-w-0"
+                id="routine-time"
+                type="datetime-local"
+                required
+                value={at}
+                onChange={(e) => {
+                  setAt(e.target.value)
+                  setChangedTime(true)
+                }}
+              />
+              <FieldDescription>
+                Time in {Intl.DateTimeFormat().resolvedOptions().timeZone}.
+                Repeats use elapsed time, including across clock changes.
+              </FieldDescription>
+            </Field>
+          )}
+          {type === "webhook" && (
+            <p className="text-xs text-muted-foreground">
+              Save the routine, then open Webhook to create its private key. You
+              can also use Run now.
+            </p>
+          )}
           {type === "interval" && (
             <Field>
               <FieldLabel htmlFor="routine-interval">Repeat every</FieldLabel>

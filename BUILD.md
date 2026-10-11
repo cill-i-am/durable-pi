@@ -1,6 +1,6 @@
 # Durable Pi — build tracker
 
-Started 2026-10-10. Delivery owner: Codex. Status: **slices 01–08, including Linux/PTY/file transfer and generated apps, deployed; 09a scheduled routines verified locally**.
+Started 2026-10-10. Delivery owner: Codex. Status: **slices 01–09a deployed; 09b incoming webhook events verified locally**.
 
 ## Outcome
 
@@ -54,7 +54,7 @@ The owner requested password recovery before continuing. Implemented Better Auth
 | 06 — Browser | Bot browses on Cloudflare; observe and take over in the workbench; authenticated Chromium sessions; Kitesurf for compatible short tasks; session expiry/reconnect and destination controls. | 06a and 06b deployed |
 | 07 — Execution and terminal | Isolated fast code execution plus on-demand Linux container; live terminal; files persist across container restarts; bounded time/output/network; cancel and recover. | 07a–07d deployed |
 | 08 — Generated apps and inline UI | Bot creates, previews, updates and runs an app; versioned private publication; isolated execution/storage; inline UI uses a bounded renderer; interactions return events to the owning bot. | 08a and 08b deployed |
-| 09 — Routines and incoming events | Schedule/pause/delete routines; run with browser closed; authenticated webhook triggers; durable retry/deduplication; notify on meaningful outcomes; respect bot grants and budgets. | 09a once/interval routines verified locally; incoming events next |
+| 09 — Routines and incoming events | Schedule/pause/delete routines; run with browser closed; authenticated webhook triggers; durable retry/deduplication; notify on meaningful outcomes; respect bot grants and budgets. | 09a deployed; 09b incoming events verified locally |
 | 10 — Delegation | Explicit parent/child tasks; separate child memory/tool grants; bounded concurrency; steer/stop children; deliver completed reports once after restart. | Planned |
 | 11 — Activity and recovery | Per-bot/global activity; inspect tool outcomes and approvals; recover interrupted work; expose actionable connection/backup failures; inspect/export memory and workspace. | Planned |
 | 12 — Complete product verification | Approved desktop/mobile states implemented; keyboard/accessibility checks; isolation/replay/permission tests; restore proof; secret scan; CI/deploy and hosted acceptance of all journeys. | Planned |
@@ -397,3 +397,28 @@ Verification (2026-10-11):
 - Typecheck, lint and production build pass; repository test count is 299 with the native Pi regression. Existing build chunk-size advisory remains. Owner live-model acceptance remains deferred at the owner's request.
 
 References: [Agents scheduled tasks](https://developers.cloudflare.com/agents/runtime/execution/schedule-tasks/), installed `agents` 0.27.0 Lifecycle job/error contract, [Base UI Select](https://ui.shadcn.com/docs/components/base/select), [Toggle Group](https://ui.shadcn.com/docs/components/base/toggle-group). Incoming authenticated webhook triggers remain 09b; calendar schedules can be a later enhancement.
+
+
+### 09a deployment completed
+
+PR #20 merged as `3ca33c0`; production workflow `38116403026` succeeded, including hosted authentication checks. Owner/model acceptance remains deferred; native Pi approval/restart coverage and synthetic workerd alarm checks passed locally.
+
+### 09b — Authenticated incoming events
+
+Outcome: an owner can create an Events-only routine or add a webhook to an existing schedule. The Routines workbench provides an endpoint, generates a private key, supports key rotation/revocation, explains the request format and retry responses, and shows event-triggered runs alongside schedules. Keys appear only in the current editor, masked with explicit copy, and are never exposed to the agent or persisted in browser storage. The server stores only SHA-256 digests.
+
+Architecture: Webhooks owns inbound authority and delivery receipts in each bot's SQLite database; Routines owns run admission and budgets. The public Website route resolves the configured owner through D1, strips caller identity/cookies, bounds the body, and forwards through the private service binding. The Agent checks the key before bot synchronization and checks authority again atomically when accepting an event. Accepted payloads are labelled untrusted data in the normal conversation, with existing grants/Ask approvals and the ten-minute routine budget.
+
+Delivery contract: POST JSON object, `Authorization: Bearer YOUR_KEY`, `X-Event-Id` (1–100 letters/numbers/dot/colon/hyphen/underscore). Raw and normalized JSON are limited to 16 KB. 202 accepts one durable run; an exact repeat returns its receipt with 200, including after restart or key rotation. Changed data with the same ID returns 409. Busy returns 429 and Retry-After 60 without accepting a receipt. Unexpected storage/wake failures return safe 503 errors for same-ID retries. A bot retains up to 2,000 event receipts and 2,000 configuration receipts, then explicitly rejects further new entries instead of silently weakening deduplication. No unbounded incoming queue.
+
+Rotation/revocation cancels unadmitted webhook work. An admitted reply may finish; Stop cancels it. Pause/archive blocks new events. All changes use revisions, stable operation IDs and cancellation tombstones. The UI confirms current settings after a mutation/replay before showing a key, and retains recovery controls/navigation locks after uncertain responses. No external service is configured or granted a key automatically. This is a generic bearer-authenticated endpoint, not a vendor-specific signature verifier. Outbound push/email notifications remain outside this slice; results appear in the owning conversation.
+
+Verification:
+
+- 313 repository tests, typecheck and production build passed. Focused tests cover atomic receipt/run rollback, restart replay, key rotation, paused/archived/sibling isolation, limits, cancellation tombstones, unsafe headers, bounded JSON, provider failure/redacted errors, and replay after a lost acknowledgement.
+- Review found and fixed compact-number JSON expansion that could corrupt a run, transient database failures classified as 400, and stale key presentation after replay. Regression tests and independent backend/frontend rechecks passed with no remaining findings.
+- `scripts/check-webhooks.ts` passed against local workerd via the public route: unauthenticated and wrong-key rejection, configured-owner routing, sibling isolation, dedup/replay/conflicting event IDs, busy retry, normal pending run admission, rotation/revocation, and no key in server responses.
+- Browser check: Events routine creation has no date requirement; enable/key-copy/revoke feedback works; a 390×844 layout has no horizontal overflow. Synthetic key revoked after the check. Proof: `slice09b-mobile.jpg` in the task's local workspace-build visualization folder.
+- Hosted deployment adds an unauthenticated webhook boundary probe. No authenticated owner/model inference is claimed.
+
+References: [Workers Web Crypto](https://developers.cloudflare.com/workers/runtime-apis/web-crypto/), [Durable Object SQLite storage](https://developers.cloudflare.com/durable-objects/api/sqlite-storage-api/).

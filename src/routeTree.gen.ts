@@ -15,6 +15,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ApiSetupRouteImport } from './routes/api.setup'
 import { Route as ApiAgentSplatRouteImport } from './routes/api.agent.$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api.auth.$'
+import { Route as ApiHooksAgentRoutineRouteImport } from './routes/api.hooks.$agent.$routine'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -46,6 +47,11 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiHooksAgentRoutineRoute = ApiHooksAgentRoutineRouteImport.update({
+  id: '/api/hooks/$agent/$routine',
+  path: '/api/hooks/$agent/$routine',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -54,6 +60,7 @@ export interface FileRoutesByFullPath {
   '/api/setup': typeof ApiSetupRoute
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/hooks/$agent/$routine': typeof ApiHooksAgentRoutineRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -62,6 +69,7 @@ export interface FileRoutesByTo {
   '/api/setup': typeof ApiSetupRoute
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/hooks/$agent/$routine': typeof ApiHooksAgentRoutineRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -71,6 +79,7 @@ export interface FileRoutesById {
   '/api/setup': typeof ApiSetupRoute
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/hooks/$agent/$routine': typeof ApiHooksAgentRoutineRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -81,6 +90,7 @@ export interface FileRouteTypes {
     | '/api/setup'
     | '/api/agent/$'
     | '/api/auth/$'
+    | '/api/hooks/$agent/$routine'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -89,6 +99,7 @@ export interface FileRouteTypes {
     | '/api/setup'
     | '/api/agent/$'
     | '/api/auth/$'
+    | '/api/hooks/$agent/$routine'
   id:
     | '__root__'
     | '/'
@@ -97,6 +108,7 @@ export interface FileRouteTypes {
     | '/api/setup'
     | '/api/agent/$'
     | '/api/auth/$'
+    | '/api/hooks/$agent/$routine'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -106,6 +118,7 @@ export interface RootRouteChildren {
   ApiSetupRoute: typeof ApiSetupRoute
   ApiAgentSplatRoute: typeof ApiAgentSplatRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiHooksAgentRoutineRoute: typeof ApiHooksAgentRoutineRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -152,6 +165,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/hooks/$agent/$routine': {
+      id: '/api/hooks/$agent/$routine'
+      path: '/api/hooks/$agent/$routine'
+      fullPath: '/api/hooks/$agent/$routine'
+      preLoaderRoute: typeof ApiHooksAgentRoutineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -162,6 +182,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSetupRoute: ApiSetupRoute,
   ApiAgentSplatRoute: ApiAgentSplatRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiHooksAgentRoutineRoute: ApiHooksAgentRoutineRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
