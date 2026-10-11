@@ -79,6 +79,7 @@ import { SkillStore } from "../skills/adapters/sqlite"
 import { SelectSkills, SkillConflict } from "../skills/contracts"
 import { readSkillJson, skillResponse, skillsRequest } from "../skills/http"
 import { importSkillsRequest } from "../skills/import"
+import { runCommand } from "../terminal/adapters/service"
 import { Executions } from "../execution/execution"
 import { ExecutionStore } from "../execution/adapters/sqlite"
 import { codeService } from "../execution/adapters/service"
@@ -556,6 +557,24 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
               ),
           }),
           defineTool({
+            name: "run_command",
+            description:
+              "Run a Linux shell command in this bot's private Cloudflare container. Node and Python are available. No outbound network or application/model credentials. Only /workspace is restored between commands; excludes node_modules, .git and .cache. 30-second total deadline, 64,000 output characters and 8 MiB compressed checkpoint. All background processes end after the command. Stop or a failed checkpoint restores the previous saved workspace. Inspect Terminal for saved command/status; never repeat an interrupted command blindly.",
+            parameters: Type.Object({
+              command: Type.String({ minLength: 1, maxLength: 16000 }),
+            }),
+            replay: "safe",
+            execute: async (args, api, execution) => {
+              const result = await runCommand(
+                this.env.TERMINAL_SERVICE,
+                this.ctx.id.toString(),
+                { ...args, id: `command:${String(api.taskId)}` },
+                execution.abortSignal
+              )
+              return toolText(JSON.stringify(result))
+            },
+          }),
+          defineTool({
             name: "run_code",
             description:
               "Run bounded JavaScript for calculations or JSON transformations in an isolated Cloudflare Worker. Code is an async function body with input (parsed JSON) and console.log; return a JSON-serializable result. No network, files, application bindings, packages or credentials. Maximum 1 second CPU and 10 seconds elapsed; results/logs are bounded. Never include secrets. A saved run is visible in Code.",
@@ -964,10 +983,28 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   }
   async configureBot(owner: string, profile: AgentProfile) {
     this.botConfiguration.configure(owner, profile)
-    if (this.botConfiguration.read()?.status === "archived") {
-      this.webApps.invalidate()
+    const current = this.botConfiguration.read()!
+    if (current.status === "archived") this.webApps.invalidate()
+    const synchronized = await this.env.TERMINAL_SERVICE.fetch(
+      new Request(
+        `https://terminal.internal/${this.ctx.id.toString()}/authority`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            revision: current.revision,
+            active: current.status === "active",
+            // Preserve revocation even when a later restore overtakes this profile.
+            revokeThrough:
+              profile.status === "archived" ? profile.revision : undefined,
+          }),
+        }
+      )
+    )
+    if (!synchronized.ok) throw new Error("Terminal authority unavailable")
+    if (this.botConfiguration.read()?.status === "archived")
       await this.browserCleanup.wake()
-    } else if (this.apps.pending().length) await this.appEvents.wake()
+    else if (this.apps.pending().length) await this.appEvents.wake()
   }
 
   resolveSkillVersions(references: SelectSkills["skills"]): SkillResolution {
@@ -1056,6 +1093,13 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         return Effect.runPromise(
           executionRequest(this.executions, request, path, (task) =>
             this.ctx.waitUntil(task)
+          )
+        )
+      if (path === "terminal" || path.startsWith("terminal/"))
+        return this.env.TERMINAL_SERVICE.fetch(
+          new Request(
+            `https://terminal.internal/${this.ctx.id.toString()}/${path}`,
+            request
           )
         )
       if (path === "browser" || path.startsWith("browser/"))

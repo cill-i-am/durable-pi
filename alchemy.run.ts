@@ -5,6 +5,7 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import { PASSWORD_EMAIL_FROM } from "./src/auth/password-email"
 import type { PersonalAgent } from "./src/agent/worker"
+import type { LinuxSandbox } from "./src/terminal/worker"
 
 export const AuthDatabase = Cloudflare.D1.Database("AuthDatabase", {
   migrations: "./migrations/auth",
@@ -32,6 +33,26 @@ export const ExecutionWorker = Cloudflare.Worker("ExecutionWorker", {
   env: { LOADER: Cloudflare.WorkerLoader() },
 })
 export type ExecutionEnv = Cloudflare.InferEnv<typeof ExecutionWorker>
+export const TerminalWorker = Cloudflare.Worker("TerminalWorker", {
+  main: "./src/terminal/worker.ts",
+  dev: { port: 1341, strictPort: true },
+  workersDev: { enabled: false, previewsEnabled: false },
+  compatibility: { date: "2026-09-25", flags: ["nodejs_compat"] },
+  observability: { enabled: false },
+  env: {
+    SANDBOX: Cloudflare.Container<LinuxSandbox>("LinuxSandbox", {
+      className: "LinuxSandbox",
+      context: "./containers/terminal",
+      instanceType: "basic",
+      maxInstances: 4,
+      observability: { logs: { enabled: false } },
+    }),
+    BACKUPS: WorkspaceAssets,
+    SANDBOX_LOG_LEVEL: "error",
+    SANDBOX_TRANSPORT: "rpc",
+  },
+})
+export type TerminalEnv = Cloudflare.InferEnv<typeof TerminalWorker>
 export const AgentWorker = Cloudflare.Worker("AgentWorker", {
   main: "./src/agent/worker.ts",
   dev: { port: 1338, strictPort: true },
@@ -43,6 +64,7 @@ export const AgentWorker = Cloudflare.Worker("AgentWorker", {
     WORKSPACE_ASSETS: WorkspaceAssets,
     DOCUMENT_SERVICE: DocumentWorker,
     EXECUTION_SERVICE: ExecutionWorker,
+    TERMINAL_SERVICE: TerminalWorker,
     // Local Chromium does not enforce Browser Run network guardrails.
     BROWSER: Cloudflare.Browser().pipe(Alchemy.remote()),
     OPENAI_CREDENTIAL: Config.Redacted("OPENAI_CREDENTIAL").pipe(

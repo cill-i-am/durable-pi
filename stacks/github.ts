@@ -37,6 +37,8 @@ export default Alchemy.Stack(
           permissionGroups: [
             "Workers Scripts Read",
             "Workers Scripts Write",
+            "Workers Containers Read",
+            "Workers Containers Write",
             "D1 Read",
             "D1 Write",
             "Workers R2 Storage Read",
