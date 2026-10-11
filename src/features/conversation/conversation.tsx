@@ -21,6 +21,7 @@ import {
   FileAttachments,
 } from "@/features/files"
 import { SkillsPanel } from "@/features/skills"
+import { AccessPanel, ApprovalCard } from "@/features/access"
 import { MemoryPanel } from "@/features/memory"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
@@ -121,7 +122,7 @@ export function Conversation({
   return (
     <section className="chat-workspace">
       <header className="chat-header">
-        <div className="flex min-w-0 items-center gap-3">
+        <div className="chat-identity flex min-w-0 items-center gap-3">
           <SidebarTrigger />
           <span className="bot-avatar" aria-hidden="true">
             {agent.name.slice(0, 1)}
@@ -130,12 +131,22 @@ export function Conversation({
           <Badge variant="secondary">
             {active?.status === "stopping"
               ? "Stopping"
-              : active
-                ? "Working"
-                : "Ready"}
+              : state?.access?.approvals.some(
+                    (value) => value.status === "pending"
+                  )
+                ? "Needs approval"
+                : active
+                  ? "Working"
+                  : "Ready"}
           </Badge>
         </div>
-        <div className="flex shrink-0 items-center">
+        <div className="chat-actions flex shrink-0 items-center">
+          <AccessPanel
+            agentId={agent.id}
+            agentName={agent.name}
+            tools={state?.access?.tools}
+            onSaved={reload}
+          />
           <SkillsPanel agentId={agent.id} agentName={agent.name} />
           <FilesPanel
             state={files}
@@ -229,6 +240,22 @@ export function Conversation({
                       retrying={retrying}
                       canRetry={!!state.connected && !retrying}
                     />
+                    {state.access?.approvals
+                      .filter((value) => value.turnId === turn.id)
+                      .map((approval) => (
+                        <ApprovalCard
+                          key={approval.id}
+                          approval={approval}
+                          agentId={agent.id}
+                          onDecided={reload}
+                          disabled={
+                            turn.status === "stopping" ||
+                            !["queued", "preparing", "running"].includes(
+                              turn.status
+                            )
+                          }
+                        />
+                      ))}
                   </MessageScrollerItem>,
                 ])
               )}

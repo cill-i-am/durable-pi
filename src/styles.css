@@ -531,8 +531,19 @@ body {
 }
 @media (max-width: 640px) {
   .workspace-main .chat-header {
-    padding: 0 14px;
-    height: 60px;
+    padding: 8px 14px;
+    height: auto;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .chat-identity {
+    width: 100%;
+  }
+  .chat-identity h1 {
+    flex: 1;
+  }
+  .chat-actions {
+    margin-left: auto;
   }
   .workspace-main .conversation-content {
     padding-top: 20px;
