@@ -1,6 +1,6 @@
-import { Check, LockKeyhole } from "lucide-react"
+import { Check } from "lucide-react"
 import { AgentMark } from "@/components/agent-mark"
-import { Separator } from "@/components/ui/separator"
+import { InteractionSoundToggle } from "@/components/interaction-sound-toggle"
 
 export function PiMark() {
   return <AgentMark className="pi-mark" />
@@ -20,7 +20,7 @@ export function AuthFrame({
       <aside className="login-intro" aria-label="About Pi">
         <div className="login-brand">
           <PiMark />
-          <span>Pi</span>
+          <InteractionSoundToggle />
         </div>
         <div className="login-story">
           <AgentMark className="login-character" />
@@ -53,10 +53,6 @@ export function AuthFrame({
             ))}
           </figure>
         </div>
-        <p className="login-privacy">
-          <LockKeyhole aria-hidden="true" />
-          Private by default. Yours to direct.
-        </p>
       </aside>
       <div className="login-content">
         <section className="login-panel" aria-labelledby="auth-title">
@@ -65,10 +61,6 @@ export function AuthFrame({
             <p>{description}</p>
           </header>
           {children}
-          <Separator />
-          <p className="login-footer">
-            Your workspace login is separate from your ChatGPT connection.
-          </p>
         </section>
       </div>
     </main>

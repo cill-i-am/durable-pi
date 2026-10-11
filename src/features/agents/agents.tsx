@@ -24,6 +24,7 @@ import { api } from "@/http/client"
 import { catalogReducer, initialCatalog } from "./catalog-state"
 import { AgentMark, agentTone } from "@/components/agent-mark"
 import { authClient } from "@/auth/client"
+import { useInteractionSoundPreference } from "@/hooks/interaction-sound-preference"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -48,6 +49,7 @@ import {
   DropdownMenuGroup,
   DropdownMenuLabel,
   DropdownMenuItem,
+  DropdownMenuCheckboxItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import {
@@ -140,6 +142,7 @@ export function AgentSidebar({
 }) {
   const [query, setQuery] = useState("")
   const [archived, setArchived] = useState(false)
+  const sound = useInteractionSoundPreference()
   const { setOpenMobile, isMobile } = useSidebar()
   const shown = agents.filter(
     (a) =>
@@ -189,6 +192,12 @@ export function AgentSidebar({
                 <ShieldCheck />
                 Account security
               </DropdownMenuItem>
+              <DropdownMenuCheckboxItem
+                checked={sound.enabled}
+                onCheckedChange={sound.setEnabled}
+              >
+                Interaction sounds
+              </DropdownMenuCheckboxItem>
               <DropdownMenuItem onClick={() => void authClient.signOut()}>
                 <LogOut />
                 Sign out
@@ -370,6 +379,12 @@ export function AgentSidebar({
                   >
                     <ShieldCheck /> Account security
                   </DropdownMenuItem>
+                  <DropdownMenuCheckboxItem
+                    checked={sound.enabled}
+                    onCheckedChange={sound.setEnabled}
+                  >
+                    Interaction sounds
+                  </DropdownMenuCheckboxItem>
                   <DropdownMenuItem onClick={() => setArchived(!archived)}>
                     <Archive /> {archived ? "Active agents" : "Archived agents"}
                   </DropdownMenuItem>
