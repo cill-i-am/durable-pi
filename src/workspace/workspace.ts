@@ -18,6 +18,9 @@ export class Workspace extends Context.Service<
   Workspace,
   {
     list: () => Effect.Effect<FileInfo[], FileError>
+    extractionPending: () => Effect.Effect<boolean, FileError>
+    extractNext: () => Effect.Effect<boolean, FileError>
+    retryExtraction: (id: FileId) => Effect.Effect<FileInfo, FileError>
     readText: (
       id: FileId,
       offset: number,

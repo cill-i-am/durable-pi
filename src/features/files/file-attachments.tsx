@@ -1,4 +1,5 @@
 import { FileText, Film, X } from "lucide-react"
+import { fileDescription } from "./preparation"
 import type { FileInfo } from "@/workspace/files"
 import { agentUrl } from "@/http/client"
 import {
@@ -47,10 +48,7 @@ export function FileAttachments({
           <AttachmentContent>
             <AttachmentTitle>{file.name}</AttachmentTitle>
             <AttachmentDescription>
-              {fileSize(file.size)}
-              {file.kind === "video" || file.kind === "document"
-                ? " · stored only"
-                : ""}
+              {fileSize(file.size)}· {fileDescription(file)}
             </AttachmentDescription>
           </AttachmentContent>
           <AttachmentTrigger

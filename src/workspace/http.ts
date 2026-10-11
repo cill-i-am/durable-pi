@@ -7,7 +7,7 @@ const decode = <T>(schema: Schema.ConstraintDecoder<T>, value: unknown) =>
     try: () => Schema.decodeUnknownSync(schema)(value),
     catch: () => new FileRejected({ message: "Invalid file request." }),
   })
-async function boundedBytes(request: Request, maximum: number) {
+export async function boundedBytes(request: Request, maximum: number) {
   if (!request.body)
     throw new FileRejected({ message: "Choose a file to upload." })
   const reader = request.body.getReader(),
@@ -86,6 +86,10 @@ export function filesRequest(request: Request, path: string) {
     if (base !== "files" || !rawId)
       return new Response("Not found", { status: 404 })
     const id = yield* decode(FileId, rawId)
+    if (request.method === "POST" && action === "extract")
+      return Response.json(yield* workspace.retryExtraction(id), {
+        status: 202,
+      })
     if (request.method === "GET" && action === "text") {
       const url = new URL(request.url)
       return Response.json(

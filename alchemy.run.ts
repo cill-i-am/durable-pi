@@ -15,6 +15,13 @@ export const MemoryBackups = Cloudflare.R2.Bucket("MemoryBackups", {
 export const WorkspaceAssets = Cloudflare.R2.Bucket("WorkspaceAssets", {
   publicAccess: false,
 })
+// Parsing receives bytes only: no storage, credentials, or public route.
+export const DocumentWorker = Cloudflare.Worker("DocumentWorker", {
+  main: "./src/workspace/document-worker.ts",
+  workersDev: { enabled: false, previewsEnabled: false },
+  compatibility: { date: "2026-09-25", flags: ["nodejs_compat"] },
+  limits: { cpuMs: 5_000 },
+})
 export const AgentWorker = Cloudflare.Worker("AgentWorker", {
   main: "./src/agent/worker.ts",
   dev: { port: 1338, strictPort: true },
@@ -24,6 +31,7 @@ export const AgentWorker = Cloudflare.Worker("AgentWorker", {
     AGENT: Cloudflare.DurableObject<PersonalAgent>("PersonalAgent"),
     MEMORY_BACKUPS: MemoryBackups,
     WORKSPACE_ASSETS: WorkspaceAssets,
+    DOCUMENT_SERVICE: DocumentWorker,
     OPENAI_CREDENTIAL: Config.Redacted("OPENAI_CREDENTIAL").pipe(
       Config.withDefault("")
     ),

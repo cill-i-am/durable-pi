@@ -288,7 +288,7 @@ export function Conversation({
               disabled={sending || files.selected.length >= 4}
             />
           }
-          enabled={!!state?.connected}
+          enabled={!!state?.connected && files.attachmentsReady}
           modelControl={
             <ModelMenu
               agentId={agent.id}
