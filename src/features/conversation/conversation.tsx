@@ -1,9 +1,26 @@
 import { AgentMark, agentTone } from "@/components/agent-mark"
 import type { Profile, JobType } from "@/inference/policy"
-import { useCallback, useMemo, useRef, useState, type ReactNode } from "react"
-import { ArrowUp, Square, Sparkles, RefreshCw } from "lucide-react"
+import {
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from "react"
+import {
+  ArrowUp,
+  Square,
+  RefreshCw,
+  ListTodo,
+  Compass,
+  Image,
+  ArrowRight,
+  Upload,
+} from "lucide-react"
 import { useConversation } from "./use-conversation"
 import { TurnReply } from "./turn-reply"
+import { QueuedTurnAnchor } from "./queued-turn-anchor"
 import { ModelMenu } from "./model-menu"
 import { submissionAttempt, rejectedModelAttempt } from "./commands"
 import {
@@ -36,6 +53,7 @@ import {
   EmptyHeader,
   EmptyTitle,
   EmptyDescription,
+  EmptyContent,
 } from "@/components/ui/empty"
 import {
   InputGroup,
@@ -69,6 +87,10 @@ export function Conversation({
 }) {
   const files = useFiles(agent.id)
   const api = useMemo(() => agentApi(agent.id), [agent.id])
+  const [draft, setDraft] = useState("")
+  const composerInput = useRef<HTMLTextAreaElement>(null)
+  const [dragging, setDragging] = useState(false)
+  const dragDepth = useRef(0)
   const [profile, setProfile] = useState<Profile>("auto")
   const [job, setJob] = useState<JobType>("conversation")
   const [error, setError] = useState("")
@@ -136,7 +158,42 @@ export function Conversation({
     }
   }
   return (
-    <section className="chat-workspace">
+    <section
+      className="chat-workspace"
+      onDragEnter={(event) => {
+        if (!event.dataTransfer.types.includes("Files")) return
+        event.preventDefault()
+        dragDepth.current++
+        setDragging(true)
+      }}
+      onDragOver={(event) => {
+        if (event.dataTransfer.types.includes("Files")) event.preventDefault()
+      }}
+      onDragLeave={(event) => {
+        if (!event.dataTransfer.types.includes("Files")) return
+        dragDepth.current = Math.max(0, dragDepth.current - 1)
+        if (!dragDepth.current) setDragging(false)
+      }}
+      onDrop={(event) => {
+        if (!event.dataTransfer.types.includes("Files")) return
+        event.preventDefault()
+        dragDepth.current = 0
+        setDragging(false)
+        if (!sending && !files.uploading)
+          void files.upload(Array.from(event.dataTransfer.files), true)
+      }}
+    >
+      {dragging && (
+        <div className="conversation-drop" role="status">
+          <Upload />
+          <strong>
+            {sending || files.uploading
+              ? "Finish the current upload first"
+              : "Drop files into the conversation"}
+          </strong>
+          <span>Images, videos and documents · up to 8 MB each</span>
+        </div>
+      )}
       <header className="chat-header">
         <div className="chat-identity flex min-w-0 items-center gap-3">
           <SidebarTrigger />
@@ -195,20 +252,47 @@ export function Conversation({
                 <MessageScrollerItem messageId="empty">
                   <Empty className="conversation-empty">
                     <EmptyHeader>
-                      <div className="empty-symbol">
-                        <Sparkles />
-                      </div>
-                      <EmptyTitle>
-                        Where shall we start, {name.split(" ")[0]}?
-                      </EmptyTitle>
+                      <AgentMark tone={agentTone(agent.id)} />
+                      <EmptyTitle>Hello, {name.split(" ")[0]}.</EmptyTitle>
                       <EmptyDescription>
-                        Think something through, make a plan, or tell me
-                        something worth remembering.
+                        A little space to think.
+                        <br />
+                        What would you like to work on?
                       </EmptyDescription>
                     </EmptyHeader>
-                    <p className="empty-footnote">
-                      This bot has its own conversation and memory.
-                    </p>
+                    <EmptyContent className="conversation-starters">
+                      {[
+                        {
+                          icon: ListTodo,
+                          label: "Turn a project into a checklist",
+                          text: "Help me plan a project and create a checklist. ",
+                        },
+                        {
+                          icon: Compass,
+                          label: "Plan a slower weekend away",
+                          text: "Help me plan a slower weekend away. ",
+                        },
+                        {
+                          icon: Image,
+                          label: "Make something from a reference",
+                          text: "Help me make something from a reference. ",
+                        },
+                      ].map((suggestion) => (
+                        <Button
+                          key={suggestion.label}
+                          variant="ghost"
+                          disabled={sending || !!draft}
+                          onClick={() => {
+                            setDraft(suggestion.text)
+                            composerInput.current?.focus()
+                          }}
+                        >
+                          <suggestion.icon data-icon="inline-start" />
+                          <span>{suggestion.label}</span>
+                          <ArrowRight data-icon="inline-end" />
+                        </Button>
+                      ))}
+                    </EmptyContent>
                   </Empty>
                 </MessageScrollerItem>
               ) : (
@@ -216,11 +300,20 @@ export function Conversation({
                   <MessageScrollerItem
                     key={`${turn.id}:user`}
                     messageId={`${turn.id}:user`}
-                    scrollAnchor
+                    scrollAnchor={turn.status !== "queued"}
                   >
-                    <Message align={turn.origin ? "start" : "end"}>
+                    <Message
+                      align={turn.origin ? "start" : "end"}
+                      className={
+                        turn.origin ? "background-message" : "owner-message"
+                      }
+                      data-queued={turn.status === "queued"}
+                    >
                       <MessageContent>
-                        <Bubble align="end" variant="secondary">
+                        <Bubble
+                          align={turn.origin ? "start" : "end"}
+                          variant={turn.origin ? "muted" : "secondary"}
+                        >
                           <BubbleContent className="message-text">
                             {turn.origin
                               ? `Background findings · group ${turn.origin.groupId}`
@@ -229,78 +322,86 @@ export function Conversation({
                               files={turn.attachments ?? []}
                               agentId={agent.id}
                             />
+                            <MessageFooter>
+                              {turn.status === "queued"
+                                ? "Queued"
+                                : new Date(turn.created_at).toLocaleTimeString(
+                                    [],
+                                    {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    }
+                                  )}
+                              {turn.status === "queued" && (
+                                <Button
+                                  variant="ghost"
+                                  size="xs"
+                                  onClick={() =>
+                                    void api("cancel", { operationId: turn.id })
+                                      .then(() => setRefresh((n) => n + 1))
+                                      .catch(() =>
+                                        setError("Could not cancel.")
+                                      )
+                                  }
+                                >
+                                  Cancel
+                                </Button>
+                              )}
+                            </MessageFooter>
                           </BubbleContent>
                         </Bubble>
-                        <MessageFooter>
-                          {turn.status === "queued"
-                            ? "Queued"
-                            : new Date(turn.created_at).toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                          {turn.status === "queued" && (
-                            <Button
-                              variant="ghost"
-                              size="xs"
-                              onClick={() =>
-                                void api("cancel", { operationId: turn.id })
-                                  .then(() => setRefresh((n) => n + 1))
-                                  .catch(() => setError("Could not cancel."))
-                              }
-                            >
-                              Cancel
-                            </Button>
-                          )}
-                        </MessageFooter>
                       </MessageContent>
                     </Message>
                   </MessageScrollerItem>,
-                  <MessageScrollerItem
-                    key={`${turn.id}:assistant`}
-                    messageId={`${turn.id}:assistant`}
-                  >
-                    <TurnReply
-                      turn={turn}
-                      toolTitles={Object.fromEntries(
-                        (state.access?.tools ?? []).map((tool) => [
-                          tool.name,
-                          tool.title ?? tool.name,
-                        ])
-                      )}
-                      agentName={agent.name}
-                      agentId={agent.id}
-                      onRetry={(id) => void retry(id)}
-                      retrying={retrying}
-                      canRetry={!!state.connected && !retrying}
-                    />
-                    {state.access?.approvals
-                      .filter((value) => value.turnId === turn.id)
-                      .map((approval) => (
-                        <ApprovalCard
-                          key={approval.id}
-                          approval={approval}
-                          toolLabel={
-                            state.access?.tools.find(
-                              (tool) => tool.name === approval.tool
-                            )?.title
-                          }
-                          agentId={agent.id}
-                          onDecided={reload}
-                          disabled={
-                            turn.status === "stopping" ||
-                            !["queued", "preparing", "running"].includes(
-                              turn.status
-                            )
-                          }
-                        />
-                      ))}
-                  </MessageScrollerItem>,
+                  turn.status === "queued" ? null : (
+                    <MessageScrollerItem
+                      key={`${turn.id}:assistant`}
+                      messageId={`${turn.id}:assistant`}
+                    >
+                      <TurnReply
+                        turn={turn}
+                        toolTitles={Object.fromEntries(
+                          (state.access?.tools ?? []).map((tool) => [
+                            tool.name,
+                            tool.title ?? tool.name,
+                          ])
+                        )}
+                        agentName={agent.name}
+                        agentId={agent.id}
+                        onRetry={(id) => void retry(id)}
+                        retrying={retrying}
+                        canRetry={!!state.connected && !retrying}
+                      />
+                      {state.access?.approvals
+                        .filter((value) => value.turnId === turn.id)
+                        .map((approval) => (
+                          <ApprovalCard
+                            key={approval.id}
+                            approval={approval}
+                            toolLabel={
+                              state.access?.tools.find(
+                                (tool) => tool.name === approval.tool
+                              )?.title
+                            }
+                            agentId={agent.id}
+                            onDecided={reload}
+                            disabled={
+                              turn.status === "stopping" ||
+                              !["queued", "preparing", "running"].includes(
+                                turn.status
+                              )
+                            }
+                          />
+                        ))}
+                    </MessageScrollerItem>
+                  ),
                 ])
               )}
             </MessageScrollerContent>
           </MessageScrollerViewport>
           <MessageScrollerButton />
         </MessageScroller>
+        {state && <QueuedTurnAnchor turns={state.turns} />}
       </MessageScrollerProvider>
       <div className="composer-area">
         {(error || connectionError) && (
@@ -327,6 +428,9 @@ export function Conversation({
           </Alert>
         )}
         <Composer
+          draft={draft}
+          setDraft={setDraft}
+          inputRef={composerInput}
           name={agent.name}
           onSend={send}
           onStop={stop}
@@ -396,6 +500,9 @@ export function Conversation({
   )
 }
 function Composer({
+  draft,
+  setDraft,
+  inputRef,
   name,
   onSend,
   onStop,
@@ -408,6 +515,9 @@ function Composer({
   attachmentControl,
   hasAttachments,
 }: {
+  draft: string
+  setDraft: React.Dispatch<React.SetStateAction<string>>
+  inputRef: RefObject<HTMLTextAreaElement | null>
   name: string
   onSend: (text: string, mode: SubmissionMode) => Promise<boolean>
   onStop: () => void
@@ -420,7 +530,6 @@ function Composer({
   attachmentControl: React.ReactNode
   hasAttachments: boolean
 }) {
-  const [draft, setDraft] = useState("")
   const [mode, setMode] = useState<SubmissionMode>("steer")
   const delivery = active && !stopping ? mode : "followUp"
   async function send() {
@@ -439,11 +548,16 @@ function Composer({
       {attachments}
       <InputGroup className="chat-composer">
         <InputGroupTextarea
+          ref={inputRef}
           aria-label={`Message ${name}`}
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           maxLength={30_000}
-          placeholder={`Message ${name}…`}
+          placeholder={
+            active && !stopping
+              ? "Add a thought while I work…"
+              : `Message ${name}…`
+          }
           rows={2}
           onKeyDown={(event) => {
             if (
@@ -456,9 +570,9 @@ function Composer({
             }
           }}
         />
-        <InputGroupAddon align="block-end" className="flex-wrap">
+        <InputGroupAddon align="block-end" className="composer-controls">
           {attachmentControl}
-          <div className="max-w-full min-w-0">{modelControl(delivery)}</div>
+          <div className="composer-model">{modelControl(delivery)}</div>
           <div className="ml-auto flex gap-2">
             {active && (
               <InputGroupButton
@@ -474,7 +588,9 @@ function Composer({
             )}
             <InputGroupButton
               type="submit"
-              size="icon-sm"
+              variant="default"
+              size="sm"
+              className="composer-send"
               disabled={
                 (!draft.trim() && !hasAttachments) || pending || !enabled
               }
@@ -486,13 +602,16 @@ function Composer({
                   : "Send message"
               }
             >
-              <ArrowUp />
+              <ArrowUp data-icon="inline-start" />
+              <span>
+                {active ? (delivery === "steer" ? "Steer" : "Queue") : "Send"}
+              </span>
             </InputGroupButton>
           </div>
         </InputGroupAddon>
       </InputGroup>
       {active && (
-        <div className="flex flex-wrap items-center gap-2 pt-2">
+        <div className="composer-delivery">
           <ToggleGroup
             size="sm"
             variant="outline"

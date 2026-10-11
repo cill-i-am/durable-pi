@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import {
   Download,
   Files,
-  Paperclip,
+  Plus,
   Pencil,
   RotateCcw,
   Trash2,
@@ -64,7 +64,7 @@ export function FilePicker({
         onClick={() => input.current?.click()}
       >
         {attach ? (
-          <Paperclip />
+          <Plus />
         ) : (
           <>
             <Upload />
@@ -77,7 +77,7 @@ export function FilePicker({
 }
 export function UploadStatus({ state }: { state: FilesState }) {
   return (
-    <div aria-live="polite" className="space-y-2">
+    <div aria-live="polite" className="flex flex-col gap-2">
       {state.uploads.map((item) => (
         <div
           key={item.id}
@@ -379,7 +379,7 @@ function FileRow({
                       disabled={disabled}
                       onClick={onAttach}
                     >
-                      <Paperclip />
+                      <Plus />
                       Attach
                     </Button>
                     <Button

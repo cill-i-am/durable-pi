@@ -1,6 +1,6 @@
 # Durable Pi — build tracker
 
-Started 2026-10-10. Delivery owner: Codex. Status: **slices 01–09b, 03c, 08c and 02c deployed; 11a, 02d and 02e deployed; 10a, 10b, 11 and 12 deployed; functional build complete; Paper fidelity F1 deployed, F2 in review**.
+Started 2026-10-10. Delivery owner: Codex. Status: **slices 01–09b, 03c, 08c and 02c deployed; 11a, 02d and 02e deployed; 10a, 10b, 11 and 12 deployed; functional build complete; Paper fidelity F1–F2 deployed, F3 in review**.
 
 ## Outcome
 

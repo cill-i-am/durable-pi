@@ -1,5 +1,5 @@
 import { FileText, Film, X } from "lucide-react"
-import { fileDescription } from "./preparation"
+import { fileDescription, preparingFile } from "./preparation"
 import type { FileInfo } from "@/workspace/files"
 import { agentUrl } from "@/http/client"
 import {
@@ -29,9 +29,23 @@ export function FileAttachments({
 }) {
   if (!files.length) return null
   return (
-    <div className="flex min-w-0 flex-wrap gap-2 py-2">
+    <div className="conversation-attachments">
       {files.map((file) => (
-        <Attachment key={file.id} size="sm" className="max-w-full sm:max-w-64">
+        <Attachment
+          key={file.id}
+          size="sm"
+          className="conversation-attachment"
+          state={
+            file.status === "uploading"
+              ? "uploading"
+              : preparingFile(file)
+                ? "processing"
+                : file.video?.status === "failed" ||
+                    file.extraction?.status === "failed"
+                  ? "error"
+                  : "done"
+          }
+        >
           <AttachmentMedia variant={file.kind === "image" ? "image" : "icon"}>
             {file.kind === "image" ? (
               <img
@@ -48,7 +62,7 @@ export function FileAttachments({
           <AttachmentContent>
             <AttachmentTitle>{file.name}</AttachmentTitle>
             <AttachmentDescription>
-              {fileSize(file.size)}· {fileDescription(file)}
+              {fileSize(file.size)} · {fileDescription(file)}
             </AttachmentDescription>
           </AttachmentContent>
           <AttachmentTrigger
