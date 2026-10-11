@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { Effect, ManagedRuntime } from "effect"
+import { Effect, ManagedRuntime, Schema } from "effect"
 import { database } from "./database"
 import {
   workspaceLayer,
@@ -14,6 +14,7 @@ import {
   type Upload,
 } from "../src/workspace/files"
 import { skillContext } from "../src/skills/contracts"
+import { SkillSource } from "../src/skills/source"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 
 const textUpload = (name = "notes.md", text = "private notes"): Upload => ({
@@ -100,8 +101,21 @@ describe("private workspace files", () => {
       name: "Maximum skill",
       revision: 1,
       body: "界".repeat(16_000),
+      source: {
+        name: "maximum-skill",
+        description: "界".repeat(2000),
+        app: { id: "app_test", slug: "test", name: "Test" },
+        deployment: "dpl_test",
+        revision: "revision-test",
+        connectionId: `mcp-${"a".repeat(32)}`,
+        connectionName: "Test provider",
+        toolName: `mcp_${"b".repeat(40)}`,
+        files: Array.from({ length: 10 }, (_, i) => `${i}-${"界".repeat(237)}`),
+      },
       createdAt: new Date().toISOString(),
     }))
+    for (const skill of skills)
+      Schema.decodeUnknownSync(SkillSource)(skill.source)
     const root = store.admit(
       command,
       { files: [], content: blocks },

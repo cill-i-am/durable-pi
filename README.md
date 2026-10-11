@@ -48,7 +48,7 @@ For the initial local-to-remote state migration, `scripts/migrate-production-sta
 - Better Auth sessions backed by D1. An authenticated server route forwards to a Worker with both public and preview URLs disabled. Bot objects are addressed from the authenticated owner ID and a validated catalog identity. The default bot retains its original object ID.
 - Server-side ChatGPT credentials with one account-level refresh owner and durable token rotation shared by all bots. API-key credentials are also supported through the same private configuration.
 
-The current slices can remember, retrieve, reason, and draft. External apps, shell/browser execution, attachments, messaging channels, and scheduled autonomous tasks are not connected.
+The current slices include live reply updates, mid-run steering, images, video storage, private files, searchable PDF text, reusable skills, tool approvals, and per-bot MCP tools. Browser and shell execution, video processing, generated apps, messaging channels, and scheduled autonomous tasks are still being built; see [BUILD.md](BUILD.md).
 
 ## Memory design
 
@@ -102,6 +102,12 @@ Open **Connect** in a bot, add a trusted public HTTPS MCP endpoint, then choose 
 Select tools for each bot. New selections require approval of the exact inputs; **Tools** changes Allow/Ask/Deny per tool. Disconnect blocks new calls for every bot. Reconnecting invalidates old selections, which must be removed and selected again. Removing and re-adding a tool restores Ask. Actions already sent to a remote service can still finish; an interrupted result must be checked there before retrying.
 
 The integration follows the [Cloudflare MCP client API](https://developers.cloudflare.com/agents/model-context-protocol/apis/client-api/). The pinned SDK has a small pnpm patch for concurrent refresh-token rotation, verified by `tests/mcp-oauth.test.ts`; retain its regression tests when upgrading or removing the patch. No owner services are connected automatically.
+
+## Reusable skills
+
+**Skills → Import → From Executor** reads the `skills` tool from a ready connection. Choose an app, preview its pinned SKILL.md, then save a private local copy. The library keeps immutable revisions; each bot stays on the version you selected until you explicitly update it. Source details remain visible through edits and history restoration. Provider updates never silently replace saved instructions.
+
+Imports copy only the main SKILL.md, with a 16,000-character limit. Reference filenames and the provider's app, deployment, revision and profile are retained as bounded source metadata. To let a bot read those references, select that connection's `skills` tool in **Connect** and review its policy in **Tools**. Saving a skill never grants access. Imported copies remain usable after disconnecting; reading provider references requires an available connection. Source labels identify where a copy came from, not a signature that its text has remained unedited.
 
 ## Repository and data boundaries
 

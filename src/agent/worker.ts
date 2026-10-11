@@ -78,6 +78,7 @@ import { selectRemoteTools } from "../access/remote-selection"
 import { SkillStore } from "../skills/adapters/sqlite"
 import { SelectSkills, SkillConflict } from "../skills/contracts"
 import { readSkillJson, skillResponse, skillsRequest } from "../skills/http"
+import { importSkillsRequest } from "../skills/import"
 import { SYSTEM_PROMPT } from "./prompts"
 import { importHistory, ImportInput } from "../memory/import"
 import { pumpSummaries } from "../memory/compaction"
@@ -805,6 +806,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         if (result.ok && request.method !== "GET") await this.runner.wake()
         return result
       }
+      if (path.startsWith("skills/import/"))
+        return Effect.runPromise(
+          importSkillsRequest(this.connections, request, path)
+        )
       if (path === "skills" || path.startsWith("skills/"))
         return Effect.runPromise(skillsRequest(this.skills, request, path))
       if (path === "skill-selection") {

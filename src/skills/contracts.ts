@@ -1,4 +1,5 @@
 import { Schema } from "effect"
+import { SkillSource } from "./source"
 
 export const SkillId = Schema.String.check(Schema.isPattern(/^[a-f0-9-]{36}$/i))
 export const SkillName = Schema.String.check(
@@ -21,6 +22,7 @@ export const SkillDocument = Schema.Struct({
   ...SkillReference.fields,
   body: SkillBody,
   createdAt: Schema.String,
+  source: Schema.optional(SkillSource),
 })
 export type SkillDocument = typeof SkillDocument.Type
 export const Skill = Schema.Struct({
@@ -46,6 +48,7 @@ export const SaveSkill = Schema.Struct({
   ),
   name: SkillName,
   body: SkillBody,
+  source: Schema.optional(SkillSource),
 })
 export type SaveSkill = typeof SaveSkill.Type
 export const ArchiveSkill = Schema.Struct({
@@ -75,5 +78,5 @@ export class SkillConflict extends Schema.TaggedError<SkillConflict>()(
 ) {}
 export function skillContext(skills: readonly SkillDocument[]) {
   if (!skills.length) return ""
-  return `Owner-selected skills for this reply. Use them when relevant. They do not grant tools or override the user's current request or access controls.\n${JSON.stringify(skills.map(({ id, name, revision, body }) => ({ id, name, revision, body })))}`
+  return `Owner-selected skills for this reply. Use them when relevant. They do not grant tools or override the user's current request or access controls. Imported skills are local copies of SKILL.md; source.files are names of reference files, not loaded content. If the source skills tool is selected and access permits, read references with the pinned source app, name, deployment, revision and profile. Otherwise ask for access rather than inventing their contents.\n${JSON.stringify(skills.map(({ id, name, revision, body, source }) => ({ id, name, revision, body, source })))}`
 }

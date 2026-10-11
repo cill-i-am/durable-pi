@@ -8,6 +8,19 @@ import {
   type Skill,
   type SelectSkills,
 } from "../contracts"
+import { SkillSource } from "../source"
+
+function document(
+  row: Omit<SkillDocument, "source"> & { source?: string | null }
+): SkillDocument {
+  const { source, ...value } = row
+  return {
+    ...value,
+    ...(source
+      ? { source: Schema.decodeUnknownSync(SkillSource)(JSON.parse(source)) }
+      : {}),
+  }
+}
 
 /** The owner object owns the library; bot objects own explicitly pinned copies. */
 export class SkillStore {
@@ -26,22 +39,39 @@ export class SkillStore {
     db.run(
       "CREATE TABLE IF NOT EXISTS workspace_skill_versions (id TEXT NOT NULL,revision INTEGER NOT NULL,name TEXT NOT NULL,body TEXT NOT NULL,createdAt TEXT NOT NULL,PRIMARY KEY(id,revision))"
     )
+    if (
+      !db
+        .all<{ name: string }>("PRAGMA table_info(workspace_skill_versions)")
+        .some((column) => column.name === "source")
+    )
+      db.run("ALTER TABLE workspace_skill_versions ADD COLUMN source TEXT")
     db.run(
       "CREATE TABLE IF NOT EXISTS bot_skills (id INTEGER PRIMARY KEY,revision INTEGER NOT NULL,skills TEXT NOT NULL)"
     )
   }
   list(): Skill[] {
     return this.db
-      .all<Omit<Skill, "archived"> & { archived: number }>(
+      .all<
+        Omit<Skill, "archived" | "source"> & {
+          archived: number
+          source: string | null
+        }
+      >(
         "SELECT v.*,s.archived,s.stateRevision FROM workspace_skills s JOIN workspace_skill_versions v ON s.id=v.id AND s.revision=v.revision ORDER BY v.name,s.id"
       )
-      .map((value) => ({ ...value, archived: !!value.archived }))
+      .map((value) => ({
+        ...document(value),
+        archived: !!value.archived,
+        stateRevision: value.stateRevision,
+      }))
   }
   versions(id: string) {
-    return this.db.all<SkillDocument>(
-      "SELECT * FROM workspace_skill_versions WHERE id=? ORDER BY revision DESC",
-      id
-    )
+    return this.db
+      .all<Omit<SkillDocument, "source"> & { source: string | null }>(
+        "SELECT * FROM workspace_skill_versions WHERE id=? ORDER BY revision DESC",
+        id
+      )
+      .map(document)
   }
   save(input: SaveSkill): Skill {
     return this.db.transaction(() => {
@@ -54,6 +84,7 @@ export class SkillStore {
         current &&
         current.name === input.name &&
         current.body === input.body &&
+        JSON.stringify(current.source) === JSON.stringify(input.source) &&
         (input.expectedRevision === current.revision ||
           input.expectedRevision === current.revision - 1)
       )
@@ -80,14 +111,16 @@ export class SkillStore {
         createdAt: new Date().toISOString(),
         archived: false,
         stateRevision: (current?.stateRevision ?? 0) + 1,
+        ...(input.source ? { source: input.source } : {}),
       }
       this.db.run(
-        "INSERT INTO workspace_skill_versions VALUES (?,?,?,?,?)",
+        "INSERT INTO workspace_skill_versions (id,revision,name,body,createdAt,source) VALUES (?,?,?,?,?,?)",
         next.id,
         next.revision,
         next.name,
         next.body,
-        next.createdAt
+        next.createdAt,
+        next.source ? JSON.stringify(next.source) : null
       )
       this.db.run(
         "INSERT INTO workspace_skills(id,revision,archived,stateRevision) VALUES (?,?,0,?) ON CONFLICT(id) DO UPDATE SET revision=excluded.revision,stateRevision=excluded.stateRevision",
