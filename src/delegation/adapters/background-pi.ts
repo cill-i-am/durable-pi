@@ -120,7 +120,9 @@ export function piBackgroundGroup(
         )
         .join("\n")
       const stopped =
-        state.stopped || child.stopped || now() >= state.handoff.deadline
+        state.stopped ||
+        child.stopped ||
+        (!state.sealed && now() >= state.handoff.deadline)
       const pending = records.some(
         (r) =>
           r?.status === "queued" || r?.status === "placed" || (!r && !stopped)
@@ -274,6 +276,14 @@ export function piBackgroundGroup(
       backgroundEffect(async () => {
         const h = await open(),
           state = await load(h)
+        if (!state.sealed && now() >= state.handoff.deadline)
+          await edit(h, (current) => ({
+            state:
+              current.sealed || current.stopped
+                ? current
+                : { ...current, stopped: true, revision: current.revision + 1 },
+            result: undefined,
+          }))
         for (const [index, child] of state.children.entries()) {
           const latest = await load(h)
           if (latest.sealed) break
@@ -301,8 +311,13 @@ export function piBackgroundGroup(
         )
           await edit(h, (current) => ({
             state:
-              current.revision === latest.revision
-                ? { ...current, sealed: true }
+              !current.sealed && current.revision === latest.revision
+                ? {
+                    ...current,
+                    sealed: true,
+                    stopped:
+                      current.stopped || now() >= current.handoff.deadline,
+                  }
                 : current,
             result: undefined,
           }))
@@ -316,10 +331,21 @@ export function piBackgroundGroup(
     stop: () =>
       backgroundEffect(async () => {
         const h = await open()
-        const children = await edit(h, (state) => ({
-          state: { ...state, stopped: true, revision: state.revision + 1 },
-          result: state.children,
-        }))
+        const children = await edit(h, (state) =>
+          state.sealed
+            ? {
+                state,
+                result: [],
+              }
+            : {
+                state: {
+                  ...state,
+                  stopped: true,
+                  revision: state.revision + 1,
+                },
+                result: state.children,
+              }
+        )
         for (const child of children) await bridge.abort(child.id)
       }),
     control: (raw: Control) =>

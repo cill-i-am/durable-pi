@@ -183,6 +183,16 @@ it.each(["finish", "restart", "stop", "steer", "deadline"])(
       await Effect.runPromise(service.initialize(input))
       await Effect.runPromise(service.advance())
       expect(starts).toBe(previousStarts)
+      if (scenario === "finish") {
+        clock = input.deadline + 1
+        await Effect.runPromise(service.stop())
+        const inspected = await Effect.runPromise(service.read())
+        expect(inspected.status).toBe("completed")
+        expect(
+          inspected.children.every((child) => child.status === "completed")
+        ).toBe(true)
+        expect(starts).toBe(previousStarts)
+      }
       await expect(
         Effect.runPromise(
           service.initialize({ ...input, memory: "Changed reference" })
