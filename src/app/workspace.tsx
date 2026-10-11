@@ -33,7 +33,7 @@ import {
 import { ExecutionWorkbench } from "@/features/execution"
 import { BrowserWorkbench } from "@/features/browser"
 import { authClient } from "@/auth/client"
-import { Login, PiMark } from "@/features/auth"
+import { AccountSecurity, Login, PiMark } from "@/features/auth"
 import { Conversation, useConversation } from "@/features/conversation"
 import { AgentEditor, AgentSidebar, useAgentCatalog } from "@/features/agents"
 import type { AgentProfile } from "@/agents/contracts"
@@ -65,6 +65,7 @@ export function ChatApp() {
 }
 function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
   const catalog = useAgentCatalog(ownerId)
+  const [securityOpen, setSecurityOpen] = useState(false)
   const [navigationLocked, setNavigationLocked] = useState(false)
   const [workbench, setWorkbench] = useState<Workbench | null>(null)
   function selectAgent(id: AgentProfile["id"]) {
@@ -97,6 +98,7 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
       setEditor({ key: catalog.selected.id, agent: catalog.selected })
     else if (action === "archive" && catalog.selected)
       void archive(catalog.selected)
+    else if (action === "security") setSecurityOpen(true)
     else if (action === "sign-out") void authClient.signOut()
     else if (action === "hide-workbench") setWorkbench(null)
     else if (
@@ -137,6 +139,7 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
             selected={catalog.selected}
             name={name}
             onSelect={selectAgent}
+            onSecurity={() => act("security")}
             onActivity={() => act("activity")}
             onMemory={() => act("memory")}
             onCreate={() => {
@@ -200,6 +203,9 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
             )}
           </main>
         </div>
+        {securityOpen && (
+          <AccountSecurity onClose={() => setSecurityOpen(false)} />
+        )}
         {editor && (
           <AgentEditor
             key={editor.key}

@@ -8,6 +8,9 @@ export const user = sqliteTable("user", {
     .notNull()
     .default(false),
   image: text("image"),
+  twoFactorEnabled: integer("twoFactorEnabled", { mode: "boolean" })
+    .notNull()
+    .default(false),
   createdAt: integer("createdAt", { mode: "timestamp_ms" }).notNull(),
   updatedAt: integer("updatedAt", { mode: "timestamp_ms" }).notNull(),
 })
@@ -69,4 +72,17 @@ export const rateLimit = sqliteTable("rateLimit", {
   key: text("key").notNull().unique(),
   count: integer("count").notNull(),
   lastRequest: integer("lastRequest").notNull(),
+})
+
+export const twoFactor = sqliteTable("twoFactor", {
+  id: text("id").primaryKey(),
+  userId: text("userId")
+    .notNull()
+    .unique()
+    .references(() => user.id, { onDelete: "cascade" }),
+  secret: text("secret").notNull(),
+  backupCodes: text("backupCodes").notNull(),
+  verified: integer("verified", { mode: "boolean" }).default(true),
+  failedVerificationCount: integer("failedVerificationCount").default(0),
+  lockedUntil: integer("lockedUntil", { mode: "timestamp_ms" }),
 })

@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { authorizedOwner, sameOrigin } from "../auth/server"
 import { getEnv } from "../env"
+import { sessionSocketResponse } from "../auth/session-socket"
 
 async function handle(request: Request) {
   const env = getEnv()
@@ -31,7 +32,11 @@ async function handle(request: Request) {
       }
     )
   )
-  if (response.status === 101) return response
+  if (response.status === 101 && response.webSocket)
+    return sessionSocketResponse(
+      response.webSocket,
+      async () => (await authorizedOwner(request, env))?.id === user.id
+    )
   const out = new Response(response.body, response)
   out.headers.set("Cache-Control", "private, no-store")
   out.headers.set("X-Content-Type-Options", "nosniff")

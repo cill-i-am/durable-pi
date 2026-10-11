@@ -33,6 +33,22 @@ Keep the existing PersonalAgent namespace, memory tables, AuthDatabase, MemoryBa
 
 Visual thesis: a quiet, warm workroom with compact navigation, readable conversation, and a contextual workbench. Composition: bot sidebar → conversation → optional workbench. Interactions: keyboard-first menus, restrained pane transitions, clear running/approval/recovery states; respect reduced motion. Semantic tokens own colors, type, spacing, and radii for later retheming.
 
+## Account security — two-factor and browser sessions (2026-10-11)
+
+Status: built and reviewed locally; release pending. Identity owns factors and session revocation; agent grants, model connections and background work remain separate.
+
+- [x] Ground in existing Quiet Workroom patterns and design desktop overview, authenticator setup, recovery codes, sign-in/recovery/error states and mobile security in [Paper, boards 36–39](https://app.paper.design/file/01M4GJ8G5KNDADJRVDDC3PQ6CT/p-1-0).
+- [x] Better Auth native TOTP, encrypted recovery codes, verified enrollment, challenge sign-in and password-confirmed management. No remembered-device bypass; factor changes revoke other sessions.
+- [x] Owner session list with inferred browser/device labels, current browser, creation/expiry times, individual and other-browser revocation. Session tokens stay in transient client state.
+- [x] Revocation enforcement for HTTP, bounded SSE and live terminal sockets; expired browser returns to sign-in without restarting/cancelling agent work.
+- [x] Native integration and local browser journeys; independent backend and frontend reviews. Native Better Auth SQLite tests cover encrypted/verified enrollment, session rotation, no pre-factor session, password recovery retaining 2FA, recovery-code CAS/replay, expired/consumed challenges, failed-attempt limits, foreign origins, ownership isolation, individual/bulk revocation and stale management. A failed factor change during normal session refresh does not revoke other browsers.
+- [x] Session fetch coordination prevents poll/focus/reconnect/cross-tab reads from discarding recovery codes during cookie rotation. Delayed-response and failed-request regressions pass. No secret is stored in browser storage.
+- [x] Native local workerd/D1 and UI: existing owner/session data survives the additive migration; setup → verify → save codes → second-browser recovery sign-in → revoke that browser → automatic return to login; disable requires password. Native Worker WebSocket 101 and binary forwarding passed; a revoked authorization closed the socket in 4,999 ms. Failed/hung checks fail closed. HTTP rechecks immediately; terminal rechecks every 5 seconds with a 15-second deadline; existing SSE streams reconnect within 60 seconds; browser session polling is 30 seconds.
+- [x] Desktop and 390×844 Paper checks, mobile navigation entry, zero horizontal overflow, 44px mobile actions; scoped accessibility audit found no violations (one automated contrast check inconclusive, reviewed visually). Native unit/integration tests, typecheck, lint and production build passed; only Input OTP and local QR encoding dependencies were added, retaining the existing locked framework versions.
+- [ ] PR/main deployment and signed-in hosted inspection. Real-owner authenticator enrollment and real session revocation remain owner actions.
+
+References: [Better Auth two-factor](https://better-auth.com/docs/plugins/2fa), [session management](https://better-auth.com/docs/concepts/session-management), installed Better Auth 1.7.7 source. Frontend uses the shared shadcn/Base UI Dialog, Field and Input OTP primitives. QR encoding stays in the browser; setup secrets and recovery codes never enter browser storage, model context or telemetry.
+
 ## Password recovery priority (2026-10-10)
 
 The owner requested password recovery before continuing. Implemented Better Auth reset with Cloudflare Email, a 15-minute single-use token, session revocation, owner-only recipient/sender binding, strict same-origin requests, and database rate limits. The link uses a fragment so its token does not enter HTTP access logs or referrers. Forgot/reset forms use the same shadcn/Base UI primitives as login.

@@ -2110,6 +2110,17 @@ body {
     padding-bottom: 20px;
   }
 }
+@media (max-width: 639px) {
+  .account-security [data-slot="button"],
+  .account-security [data-slot="dialog-close"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .account-security input {
+    font-size: 16px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
