@@ -64,13 +64,15 @@ function Workbench({
   }, [state.saved, creating, onSelect])
   return (
     <>
-      <header className="workbench-heading-row">
-        <div className="flex items-center gap-2 text-sm font-medium">
-          <ListTodo className="size-4" /> Objects
-          <Badge variant="secondary">Private</Badge>
-        </div>
-      </header>
-      <div className="workbench-body">
+      {!selected && (
+        <header className="workbench-heading-row">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <ListTodo className="size-4" /> Objects
+            <Badge variant="secondary">Private</Badge>
+          </div>
+        </header>
+      )}
+      <div className="workbench-body objects-workbench-body">
         {state.error && (
           <Alert>
             <AlertDescription>

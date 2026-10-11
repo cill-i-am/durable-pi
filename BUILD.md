@@ -843,3 +843,5 @@ The functional build goal is complete. The owner-requested visual fidelity work 
 
 
 Paper fidelity progress: F1–F3 shipped in PRs #34–#36. F4 consolidates the workbench shell, files and memory presentation while preserving bot-scoped state and recovery access. Exact layout, browser evidence and intentional adaptations are tracked in [UI_FIDELITY.md](UI_FIDELITY.md); working-object fidelity and final mobile acceptance follow.
+
+F5 working-object presentation is locally verified: shared live card/workbench, mobile editing, real concurrent conflict/reapply, history and archive/restore. The final responsive/navigation and hosted delivery pass remains in UI_FIDELITY.md.

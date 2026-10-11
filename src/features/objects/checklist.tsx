@@ -89,7 +89,7 @@ export function SaveState({ store, id }: { store: ObjectStore; id: string }) {
     )
   if (problem)
     return (
-      <Alert>
+      <Alert className="checklist-save-problem" data-kind={problem.kind}>
         <AlertTitle>
           {problem.kind === "conflict"
             ? "A newer version may be saved"
@@ -101,7 +101,7 @@ export function SaveState({ store, id }: { store: ObjectStore; id: string }) {
           <p>{problem.message}</p>
           {problem.kind === "conflict" && (
             <>
-              <p>
+              <p className="checklist-draft-notice">
                 Your change was based on revision{" "}
                 {problem.input.expectedRevision}. Latest saved revision:{" "}
                 {current?.revision ?? "unavailable"}. Your draft is kept. Review
@@ -177,15 +177,9 @@ export function ChecklistRows({
   const instance = useId(),
     visible = object.tasks.filter((task) => !task.archived)
   return (
-    <div className="flex min-w-0 flex-col">
+    <div className="checklist-rows" data-compact={!!compact}>
       {(compact ? visible.slice(0, 4) : visible).map((task) => (
-        <div
-          key={task.id}
-          className={cn(
-            "flex min-h-12 items-center gap-3 border-b py-2 last:border-0",
-            task.status === "active" && "rounded-md bg-accent px-2"
-          )}
-        >
+        <div key={task.id} className="checklist-row" data-status={task.status}>
           <div className="flex size-6 shrink-0 items-center justify-center">
             <Checkbox
               id={`${instance}-${task.id}`}
@@ -212,14 +206,14 @@ export function ChecklistRows({
           <label
             htmlFor={`${instance}-${task.id}`}
             className={cn(
-              "min-w-0 flex-1 cursor-pointer text-sm break-words",
+              "checklist-task-label",
               task.status === "completed" &&
                 "text-muted-foreground line-through"
             )}
           >
             {task.title}
           </label>
-          <span className="flex w-20 shrink-0 flex-col gap-1 text-right text-xs text-muted-foreground">
+          <span className="checklist-task-meta">
             <span>{statusLabels[task.status]}</span>
             {task.dueDate && <span>{dateLabel(task.dueDate)}</span>}
           </span>
@@ -227,7 +221,7 @@ export function ChecklistRows({
             <Button
               variant="ghost"
               size="icon-sm"
-              className="min-h-10 min-w-10"
+              className="checklist-edit-task"
               aria-label={`Edit ${task.title}`}
               disabled={disabled || object.archived}
               onClick={() => onEdit?.(task)}
@@ -287,21 +281,13 @@ function InlineChecklist({
     void store.load(id)
   }, [store, id])
   return (
-    <section
-      aria-label="Live project checklist"
-      className="flex min-w-0 flex-col gap-3 rounded-lg border p-4"
-    >
+    <section aria-label="Live project checklist" className="inline-checklist">
       {object ? (
         <>
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="mb-1 text-xs text-muted-foreground">
-                Live checklist{object.archived ? " · Archived" : ""}
-              </p>
-              <h3 className="font-medium break-words">{object.title}</h3>
-            </div>
-            <Badge variant="secondary">
-              {objectSummary(object).completed}/{objectSummary(object).total}
+          <div className="inline-checklist-heading">
+            <h2>{object.title}</h2>
+            <Badge variant="secondary" className="checklist-live-badge">
+              {object.archived ? "Archived" : "Live checklist"}
             </Badge>
           </div>
           <ChecklistRows
@@ -320,10 +306,17 @@ function InlineChecklist({
           </p>
         </>
       )}
-      <Button variant="outline" size="sm" onClick={open}>
-        Open checklist
-        <ArrowUpRight data-icon="inline-end" />
-      </Button>
+      <footer className="inline-checklist-footer">
+        <Button variant="link" size="sm" onClick={open}>
+          Open checklist
+          <ArrowUpRight data-icon="inline-end" />
+        </Button>
+        {object && (
+          <span>
+            {objectSummary(object).completed} of {objectSummary(object).total}
+          </span>
+        )}
+      </footer>
     </section>
   )
 }
@@ -460,26 +453,22 @@ export function ChecklistView({
     void store.submit(input)
   }
   return (
-    <div className="flex min-w-0 flex-col gap-5">
-      <div className="flex items-start justify-between gap-3">
+    <div className="checklist-view">
+      <div className="checklist-heading">
         <div className="min-w-0">
-          <h2 className="text-xl font-semibold break-words">{object.title}</h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {summary.completed} of {summary.total} complete
-          </p>
+          <h2>{object.title}</h2>
         </div>
         <Badge variant="secondary">
           {object.archived ? "Archived" : "Only you"}
         </Badge>
       </div>
-      {object.notes && (
-        <p className="text-sm break-words whitespace-pre-wrap">
-          {object.notes}
-        </p>
-      )}
+      {object.notes && <p className="checklist-notes">{object.notes}</p>}
+      <p className="checklist-progress">
+        {summary.completed} of {summary.total} complete
+      </p>
       <SaveState store={store} id={id} />
       {object.archived && (
-        <Alert>
+        <Alert className="checklist-archived">
           <AlertTitle>Archived checklist</AlertTitle>
           <AlertDescription>
             Tasks and history are kept. Restore it to continue.
@@ -499,8 +488,8 @@ export function ChecklistView({
           </AlertDescription>
         </Alert>
       )}
-      <Tabs defaultValue="tasks">
-        <TabsList>
+      <Tabs defaultValue="tasks" className="checklist-tabs">
+        <TabsList variant="line">
           <TabsTrigger value="tasks">Tasks</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
         </TabsList>
@@ -622,9 +611,9 @@ export function ChecklistView({
           )}
         </TabsContent>
         <TabsContent value="history">
-          <div className="flex flex-col divide-y">
+          <div className="checklist-history">
             {detail.events.map((event) => (
-              <article key={event.id} className="flex flex-col gap-2 py-4">
+              <article key={event.id}>
                 <div className="flex flex-wrap justify-between gap-2 text-sm">
                   <strong>
                     {event.source.actor === "user" ? "You" : "Agent"}
@@ -768,7 +757,7 @@ function TaskEditor({
     task = !!draft.task || draft.newTask
   return (
     <form
-      className="flex flex-col gap-4 rounded-md border bg-sidebar p-4"
+      className="checklist-task-editor"
       onSubmit={(event) => {
         event.preventDefault()
         onSave()
@@ -776,9 +765,15 @@ function TaskEditor({
     >
       <div className="flex items-center justify-between gap-2">
         <h3 className="text-sm font-medium">
-          {draft.newTask ? "New task" : task ? "Edit task" : "Edit checklist"}
+          {draft.newTask
+            ? "New task"
+            : draft.task
+              ? `Edit task · ${draft.task.title}`
+              : "Edit checklist"}
         </h3>
-        <Badge variant="secondary">Unsaved</Badge>
+        <Badge variant="secondary" className="checklist-unsaved-badge">
+          Unsaved
+        </Badge>
       </div>
       <FieldGroup>
         <Field>
@@ -808,7 +803,7 @@ function TaskEditor({
           />
         </Field>
         {task && (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="checklist-task-fields">
             <Field>
               <FieldLabel htmlFor={`${id}-status`}>Status</FieldLabel>
               <Select
@@ -964,12 +959,20 @@ function ChangeComparison({
       }
     }
   return (
-    <div className="flex flex-col gap-3">
+    <div className="checklist-comparisons">
       {rows.map((row, index) => (
-        <div key={index} className="flex flex-col gap-1 text-sm break-words">
-          <p className="font-medium">{row.label}</p>
-          <p>Your draft: {displayValue(row.draft)}</p>
-          <p>Latest saved: {displayValue(row.saved)}</p>
+        <div key={index} className="checklist-comparison">
+          <h3>{row.label}</h3>
+          <dl>
+            <div>
+              <dt>Your draft</dt>
+              <dd>{displayValue(row.draft)}</dd>
+            </div>
+            <div>
+              <dt>Latest saved</dt>
+              <dd>{displayValue(row.saved)}</dd>
+            </div>
+          </dl>
         </div>
       ))}
     </div>
