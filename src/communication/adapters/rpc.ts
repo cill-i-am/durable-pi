@@ -15,6 +15,13 @@ import { agentObjectName } from "../../agents/domain"
 
 type FetchNamespace = { getByName: (name: string) => Fetcher }
 
+/** Only the private DO binding reaches this route; the website gateway rejects it.
+ * Alchemy's installed Fetcher adapter normalizes the synthetic origin to localhost.
+ * Origin is not authority: handlers validate owner/catalog and committed outbox proof.
+ */
+export const isMailboxRequest = (request: Request) =>
+  request.method === "POST" && new URL(request.url).pathname === "/"
+
 /** Alchemy's supported Effect RPC bridge, carried exclusively by private DO fetch. */
 export function privateMailboxClient(namespace: FetchNamespace) {
   return bindEffectRpc(

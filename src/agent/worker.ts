@@ -1,5 +1,6 @@
 import { communicationRequest } from "../communication/http"
 import { personalCommunication } from "../communication/adapters/personal-agent"
+import { isMailboxRequest } from "../communication/adapters/rpc"
 import { Communication } from "../communication/communication"
 import {
   communicationTools,
@@ -1873,12 +1874,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     await this.lifecycle.start()
     const url = new URL(request.url),
       path = url.pathname.replace("/api/agent/", "")
-    if (
-      url.origin === "http://alchemy-rpc" &&
-      url.pathname === "/" &&
-      request.method === "POST"
-    )
-      return this.communication.rpc(request)
+    if (isMailboxRequest(request)) return this.communication.rpc(request)
     try {
       if (path === "communication" || path.startsWith("communication/"))
         return this.communication.runtime.runPromise(

@@ -3,6 +3,7 @@ import service from "../src/agent/worker"
 import type { AgentEnv } from "../alchemy.run"
 import { agentObjectName, AgentId } from "../src/agents/domain"
 import { Schema } from "effect"
+import { isMailboxRequest } from "../src/communication/adapters/rpc"
 
 vi.mock("cloudflare:workers", () => ({
   DurableObject: class {},
@@ -14,6 +15,27 @@ vi.mock("agents/lifecycle", () => ({
   LifecycleCapability: class {},
 }))
 vi.mock("agents/harness/pi", () => ({ PiHarness: class {} }))
+
+it("routes private mailbox frames after adapter origin normalization and denies them at the website gateway", async () => {
+  const getByName = vi.fn()
+  const env = { AGENT: { getByName } } as unknown as AgentEnv
+  for (const origin of ["http://alchemy-rpc", "http://localhost"]) {
+    const request = new Request(`${origin}/`, {
+      method: "POST",
+      headers: { "x-owner-id": "owner-a" },
+      body: "synthetic frame",
+    })
+    expect(isMailboxRequest(request)).toBe(true)
+    expect((await service.fetch(request, env)).status).toBe(404)
+    expect(isMailboxRequest(new Request(`${origin}/`))).toBe(false)
+    expect(
+      isMailboxRequest(
+        new Request(`${origin}/api/agent/communication`, { method: "POST" })
+      )
+    ).toBe(false)
+  }
+  expect(getByName).not.toHaveBeenCalled()
+})
 
 const first = {
   id: Schema.decodeUnknownSync(AgentId)("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"),
