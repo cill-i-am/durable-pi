@@ -51,7 +51,7 @@ export function WorkbenchPanel({
   onChange,
   agentName,
   locked,
-  settingsOpen,
+  overlayOpen,
   mobileNavigation,
   recoveryAction,
   children,
@@ -60,7 +60,7 @@ export function WorkbenchPanel({
   onChange: (value: Workbench | null) => void
   agentName: string
   locked: boolean
-  settingsOpen: boolean
+  overlayOpen: boolean
   mobileNavigation: ReactNode
   recoveryAction?: ReactNode
   children: ReactNode
@@ -80,12 +80,12 @@ export function WorkbenchPanel({
     <div ref={container} className="workbench-host" data-wide={wide}>
       <Sheet
         open
-        modal={!wide && !settingsOpen}
+        modal={!wide && !overlayOpen}
         onOpenChange={(open, event) => {
           if (
             !open &&
             !locked &&
-            !settingsOpen &&
+            !overlayOpen &&
             (!wide || event.reason === "escape-key")
           )
             onChange(null)
@@ -93,7 +93,7 @@ export function WorkbenchPanel({
       >
         <SheetContent
           portalContainer={container}
-          showOverlay={!wide && !settingsOpen}
+          showOverlay={!wide && !overlayOpen}
           showCloseButton={false}
           className="workbench-sheet"
           data-wide={wide}

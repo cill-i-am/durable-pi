@@ -20,7 +20,12 @@ import { BrowserWorkbench } from "@/features/browser"
 import { authClient } from "@/auth/client"
 import { AccountSecurity, Login, PiMark } from "@/features/auth"
 import { Conversation, useConversation } from "@/features/conversation"
-import { AgentEditor, AgentSidebar, useAgentCatalog } from "@/features/agents"
+import {
+  AgentEditor,
+  AgentSidebar,
+  ArchiveAgentDialog,
+  useAgentCatalog,
+} from "@/features/agents"
 import type { AgentProfile } from "@/agents/contracts"
 import { api } from "@/http/client"
 import { SidebarProvider, useSidebar } from "@/components/ui/sidebar"
@@ -70,17 +75,27 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
     key: string
   } | null>(null)
   const [error, setError] = useState("")
+  const [archiveTarget, setArchiveTarget] = useState<AgentProfile | null>(null)
+  async function updateArchive(agent: AgentProfile, archived: boolean) {
+    await api("/api/agent/bots/archive", { id: agent.id, archived })
+    setError("")
+    // A failed list refresh must not present a confirmed mutation as a failed save.
+    await catalog.refresh().catch(() => {
+      setError(
+        "Agent updated, but the list could not refresh. Try refreshing it."
+      )
+    })
+  }
   async function archive(agent: AgentProfile) {
     if (navigationLocked) return
+    if (agent.status === "active") {
+      setArchiveTarget(agent)
+      return
+    }
     try {
-      await api("/api/agent/bots/archive", {
-        id: agent.id,
-        archived: agent.status === "active",
-      })
-      await catalog.refresh()
-      setError("")
+      await updateArchive(agent, false)
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not archive this agent.")
+      setError(e instanceof Error ? e.message : "Could not restore this agent.")
     }
   }
   function act(action: WorkspaceAction) {
@@ -167,6 +182,9 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
             {catalog.selected ? (
               <AgentWorkspace
                 key={catalog.selected.id}
+                overlayOpen={
+                  archiveTarget !== null || securityOpen || editor !== null
+                }
                 settings={settings}
                 setSettings={setSettings}
                 onSettingsPending={setSettingsPending}
@@ -203,6 +221,14 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
         {securityOpen && (
           <AccountSecurity onClose={() => setSecurityOpen(false)} />
         )}
+        {archiveTarget && (
+          <ArchiveAgentDialog
+            key={archiveTarget.id}
+            agent={archiveTarget}
+            onConfirm={() => updateArchive(archiveTarget, true)}
+            onClose={() => setArchiveTarget(null)}
+          />
+        )}
         {editor && (
           <AgentEditor
             key={editor.key}
@@ -223,6 +249,7 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
 }
 
 function AgentWorkspace({
+  overlayOpen,
   settings,
   setSettings,
   onSettingsPending,
@@ -237,6 +264,7 @@ function AgentWorkspace({
   name,
   onNavigationLockChange,
 }: {
+  overlayOpen: boolean
   settings: SettingsCategory | null
   setSettings: (value: SettingsCategory | null) => void
   onSettingsPending: (pending: boolean) => void
@@ -345,7 +373,7 @@ function AgentWorkspace({
             onChange={openWorkbench}
             agentName={agent.name}
             locked={locked}
-            settingsOpen={settings !== null}
+            overlayOpen={settings !== null || overlayOpen}
             recoveryAction={
               objectPending && !editingLocked && workbench !== "objects" ? (
                 <Button
