@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { BookOpen, Search } from "lucide-react"
+import { Search, ChevronDown } from "lucide-react"
 import { agentApi, agentUrl } from "@/http/client"
 import type { ChatState } from "@/conversations/contracts"
 import { Markdown } from "@/components/markdown"
@@ -19,35 +19,21 @@ import {
   EmptyTitle,
   EmptyDescription,
 } from "@/components/ui/empty"
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { SummaryRecovery } from "./summary-recovery"
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+} from "@/components/ui/collapsible"
 
-export function MemoryPanel({
+export function MemoryWorkbench({
   state,
   agentId,
-  openRequest,
-  onOpenRequestHandled,
 }: {
   state: ChatState | null
   agentId: string
-  openRequest?: string
-  onOpenRequestHandled?: (request: string) => void
 }) {
-  const [open, setOpen] = useState(false)
-  useEffect(() => {
-    if (openRequest) {
-      setOpen(true)
-      onOpenRequestHandled?.(openRequest)
-    }
-  }, [openRequest, onOpenRequestHandled])
   const api = agentApi(agentId)
   const [query, setQuery] = useState(""),
     [results, setResults] = useState<
@@ -64,103 +50,172 @@ export function MemoryPanel({
     }
   }
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger render={<Button variant="ghost" size="sm" />}>
-        <BookOpen data-icon="inline-start" />
-        <span className="chat-action-label">Memory</span>
-      </SheetTrigger>
-      <SheetContent className="memory-sheet">
-        <SheetHeader>
-          <SheetTitle>What stays with me</SheetTitle>
-          <SheetDescription>
-            {state?.memory.messages ?? 0} archived messages ·{" "}
-            {state?.memory.notes.length ?? 0} memory notes
-          </SheetDescription>
-        </SheetHeader>
-        <SummaryRecovery
-          agentId={agentId}
-          issues={state?.memory.issues ?? []}
-        />
-        <Tabs defaultValue="notes">
-          <TabsList>
-            <TabsTrigger value="notes">Notes</TabsTrigger>
-            <TabsTrigger value="history">History</TabsTrigger>
-            <TabsTrigger value="tree">Tree</TabsTrigger>
-            <TabsTrigger value="files">Files</TabsTrigger>
-          </TabsList>
-          <TabsContent value="notes">
-            <div className="memory-notes">
-              {state?.memory.notes.length ? (
-                state.memory.notes.map((note) => (
-                  <article key={note.path}>
-                    <h3>{note.path}</h3>
-                    <Markdown text={note.body} />
-                    <small>Source: message {note.source_id}</small>
-                  </article>
-                ))
-              ) : (
-                <Empty>
-                  <EmptyHeader>
-                    <EmptyTitle>Nothing saved yet</EmptyTitle>
-                    <EmptyDescription>
-                      Preferences and useful facts will appear here as your
-                      conversation grows.
-                    </EmptyDescription>
-                  </EmptyHeader>
-                </Empty>
-              )}
-            </div>
-          </TabsContent>
-          <TabsContent value="history">
-            <form onSubmit={search} className="memory-search">
-              <Field>
-                <FieldLabel htmlFor="memory-search">
-                  Search the archive
-                </FieldLabel>
-                <div className="flex gap-2">
-                  <Input
-                    id="memory-search"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="A name, decision, or phrase…"
-                  />
-                  <Button
-                    type="submit"
-                    variant="outline"
-                    size="icon"
-                    aria-label="Search memory"
-                    disabled={!query.trim()}
-                  >
-                    <Search />
-                  </Button>
-                </div>
-              </Field>
-            </form>
-            {error && (
-              <Alert>
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
+    <section className="workbench-body memory-workbench">
+      <header className="workbench-heading">
+        <h2>What stays with me</h2>
+        <p>
+          {state?.memory.messages ?? 0} archived messages ·{" "}
+          {state?.memory.notes.length ?? 0} memory notes
+        </p>
+      </header>
+      <SummaryRecovery agentId={agentId} issues={state?.memory.issues ?? []} />
+      <Tabs defaultValue="notes">
+        <TabsList>
+          <TabsTrigger value="notes">Notes</TabsTrigger>
+          <TabsTrigger value="history">History</TabsTrigger>
+          <TabsTrigger value="tree">Tree</TabsTrigger>
+          <TabsTrigger value="files">Files</TabsTrigger>
+        </TabsList>
+        <TabsContent value="notes">
+          <div className="memory-notes">
+            {state?.memory.notes.length ? (
+              state.memory.notes.map((note) => (
+                <MemoryNote key={note.path} note={note} agentId={agentId} />
+              ))
+            ) : (
+              <Empty>
+                <EmptyHeader>
+                  <EmptyTitle>Nothing saved yet</EmptyTitle>
+                  <EmptyDescription>
+                    Preferences and useful facts will appear here as your
+                    conversation grows.
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
             )}
-            <div className="memory-notes">
-              {results.map((result) => (
-                <article key={result.id}>
-                  <h3>
-                    {result.kind} · message {result.id}
-                  </h3>
-                  <p className="message-text">{result.text}</p>
-                </article>
-              ))}
-            </div>
-          </TabsContent>
-          <TabsContent value="tree">
-            <MemoryTree agentId={agentId} />
-          </TabsContent>
-          <TabsContent value="files">
-            <MemoryFiles memory={state?.memory} agentId={agentId} />
-          </TabsContent>
-        </Tabs>
-      </SheetContent>
-    </Sheet>
+          </div>
+        </TabsContent>
+        <TabsContent value="history">
+          <form onSubmit={search} className="memory-search">
+            <Field>
+              <FieldLabel htmlFor="memory-search">
+                Search the archive
+              </FieldLabel>
+              <div className="flex gap-2">
+                <Input
+                  id="memory-search"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="A name, decision, or phrase…"
+                />
+                <Button
+                  type="submit"
+                  variant="outline"
+                  size="icon"
+                  aria-label="Search memory"
+                  disabled={!query.trim()}
+                >
+                  <Search />
+                </Button>
+              </div>
+            </Field>
+          </form>
+          {error && (
+            <Alert>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          <div className="memory-notes">
+            {results.map((result) => (
+              <article key={result.id}>
+                <h3>
+                  {result.kind} · message {result.id}
+                </h3>
+                <p className="message-text">{result.text}</p>
+              </article>
+            ))}
+          </div>
+        </TabsContent>
+        <TabsContent value="tree">
+          <MemoryTree agentId={agentId} />
+        </TabsContent>
+        <TabsContent value="files">
+          <MemoryFiles memory={state?.memory} agentId={agentId} />
+        </TabsContent>
+      </Tabs>
+    </section>
+  )
+}
+
+function MemoryNote({
+  note,
+  agentId,
+}: {
+  note: ChatState["memory"]["notes"][number]
+  agentId: string
+}) {
+  const [open, setOpen] = useState(false)
+  return (
+    <article className="memory-note">
+      <h3>{note.path}</h3>
+      <Markdown text={note.body} />
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <CollapsibleTrigger render={<Button variant="ghost" size="sm" />}>
+          <ChevronDown data-icon="inline-start" />
+          Source · message {note.source_id}
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          {open && (
+            <NoteSource
+              key={note.source_id}
+              agentId={agentId}
+              source={note.source_id}
+            />
+          )}
+        </CollapsibleContent>
+      </Collapsible>
+    </article>
+  )
+}
+
+function NoteSource({ agentId, source }: { agentId: string; source: number }) {
+  const [original, setOriginal] = useState<TreeBranch["original"]>(null)
+  const [error, setError] = useState("")
+  const [retry, setRetry] = useState(0)
+  useEffect(() => {
+    const controller = new AbortController()
+    setError("")
+    void agentApi(agentId)<TreeBranch>(
+      `tree?id=${source}&n=1`,
+      undefined,
+      controller.signal
+    )
+      .then((value) => {
+        if (controller.signal.aborted) return
+        if (value.original) setOriginal(value.original)
+        else setError("This source message is unavailable.")
+      })
+      .catch(() => {
+        if (!controller.signal.aborted)
+          setError("Could not load the source message.")
+      })
+    return () => controller.abort()
+  }, [agentId, source, retry])
+  return (
+    <div className="memory-source">
+      {error ? (
+        <>
+          <p role="alert">{error}</p>
+          <Button
+            variant="outline"
+            size="xs"
+            onClick={() => setRetry((value) => value + 1)}
+          >
+            Retry source
+          </Button>
+        </>
+      ) : original ? (
+        <>
+          <p className="text-xs text-muted-foreground">
+            Original {original.kind} ·{" "}
+            {new Date(original.date).toLocaleString()}
+          </p>
+          <p className="message-text">{original.text}</p>
+        </>
+      ) : (
+        <p role="status">Loading source…</p>
+      )}
+    </div>
   )
 }
 

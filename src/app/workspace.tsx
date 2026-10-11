@@ -1,3 +1,6 @@
+import { WorkbenchPanel } from "./workbench"
+import { useFiles, FilesWorkbench } from "@/features/files"
+import { MemoryWorkbench } from "@/features/memory"
 import {
   WorkspaceNavigation,
   type Workbench,
@@ -5,7 +8,7 @@ import {
 } from "./workspace-navigation"
 import { RoutinesWorkbench } from "@/features/routines"
 import { ActivityWorkbench } from "@/features/activity"
-import { useCallback, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { ObjectsProvider, ObjectsWorkbench } from "@/features/objects"
 import {
   Globe,
@@ -30,7 +33,7 @@ import { ExecutionWorkbench } from "@/features/execution"
 import { BrowserWorkbench } from "@/features/browser"
 import { authClient } from "@/auth/client"
 import { Login, PiMark } from "@/features/auth"
-import { Conversation } from "@/features/conversation"
+import { Conversation, useConversation } from "@/features/conversation"
 import { AgentEditor, AgentSidebar, useAgentCatalog } from "@/features/agents"
 import type { AgentProfile } from "@/agents/contracts"
 import { api } from "@/http/client"
@@ -68,15 +71,6 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
     if (id !== catalog.selected?.id) setWorkbench(null)
     catalog.select(id)
   }
-  const [memoryNavigation, setMemoryNavigation] = useState<{
-    id: string
-    request: string
-  } | null>(null)
-  const onMemoryOpened = useCallback((request: string) => {
-    setMemoryNavigation((current) =>
-      current?.request === request ? null : current
-    )
-  }, [])
   const [editor, setEditor] = useState<{
     agent?: AgentProfile
     key: string
@@ -103,11 +97,6 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
     else if (action === "archive" && catalog.selected)
       void archive(catalog.selected)
     else if (action === "sign-out") void authClient.signOut()
-    else if (action === "memory" && catalog.selected)
-      setMemoryNavigation({
-        id: catalog.selected.id,
-        request: crypto.randomUUID(),
-      })
     else if (action === "hide-workbench") setWorkbench(null)
     else if (
       [
@@ -118,6 +107,8 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
         "routines",
         "objects",
         "activity",
+        "files",
+        "memory",
       ].includes(action) &&
       catalog.selected
     )
@@ -188,17 +179,11 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
                 agents={catalog.agents.filter(
                   (value) => value.status === "active"
                 )}
-                memoryRequest={
-                  memoryNavigation?.id === catalog.selected.id
-                    ? memoryNavigation.request
-                    : undefined
-                }
-                onMemoryOpened={onMemoryOpened}
                 onOpenBot={selectAgent}
                 onMemory={(id) => {
                   if (!navigationLocked) {
                     selectAgent(id)
-                    setMemoryNavigation({ id, request: crypto.randomUUID() })
+                    setWorkbench("memory")
                   }
                 }}
               />
@@ -238,8 +223,6 @@ function AgentWorkspace({
   setWorkbench,
   agent,
   agents,
-  memoryRequest,
-  onMemoryOpened,
   onOpenBot,
   onMemory,
   name,
@@ -250,29 +233,44 @@ function AgentWorkspace({
   setWorkbench: (value: Workbench | null) => void
   agent: AgentProfile
   agents: readonly AgentProfile[]
-  memoryRequest?: string
-  onMemoryOpened: (request: string) => void
   onOpenBot: (id: AgentProfile["id"]) => void
   onMemory: (id: AgentProfile["id"]) => void
   name: string
   navigationLocked: boolean
   onNavigationLockChange: (value: boolean) => void
 }) {
+  const conversation = useConversation(agent.id)
+  const files = useFiles(agent.id)
+  const [sending, setSending] = useState(false)
+  const [appPending, setAppPending] = useState(false)
   const [objectId, setObjectId] = useState<string | null>(null)
   const [objectPending, setObjectPending] = useState(false)
   const [objectEditing, setObjectEditing] = useState(false)
   const [routinePending, setRoutinePending] = useState(false)
   useEffect(() => {
-    onNavigationLockChange(objectPending || objectEditing || routinePending)
-  }, [objectPending, objectEditing, routinePending, onNavigationLockChange])
-  const browserOpen = workbench === "browser"
+    onNavigationLockChange(
+      objectPending || objectEditing || routinePending || appPending
+    )
+  }, [
+    objectPending,
+    objectEditing,
+    routinePending,
+    appPending,
+    onNavigationLockChange,
+  ])
+  const locked = objectPending || objectEditing || routinePending || appPending
+  const editingLocked = objectEditing || routinePending || appPending
+  function openWorkbench(value: Workbench | null) {
+    // Restored, unconfirmed object saves must remain reachable after a reload.
+    if (!locked || (value === "objects" && !editingLocked)) setWorkbench(value)
+  }
   return (
     <ObjectsProvider
       agentId={agent.id}
       archived={agent.status === "archived"}
       onPendingChange={setObjectPending}
       onOpen={(id) => {
-        if (!objectEditing && !routinePending) {
+        if (!objectEditing && !routinePending && !appPending) {
           setObjectId(id)
           setWorkbench("objects")
         }
@@ -282,17 +280,20 @@ function AgentWorkspace({
         <Conversation
           name={name}
           agent={agent}
-          memoryRequest={memoryRequest}
-          onMemoryOpened={onMemoryOpened}
+          files={files}
+          conversation={conversation}
+          sending={sending}
+          setSending={setSending}
+          onOpenWorkbench={openWorkbench}
           workbenchAction={
             <DropdownMenu>
               <DropdownMenuTrigger
-                disabled={objectEditing || routinePending}
+                disabled={editingLocked}
                 render={
                   <Button
                     size="sm"
                     variant={workbench ? "secondary" : "ghost"}
-                    disabled={objectEditing || routinePending}
+                    disabled={editingLocked}
                     aria-label="Open workbench"
                   />
                 }
@@ -306,47 +307,62 @@ function AgentWorkspace({
                 <DropdownMenuGroup>
                   <DropdownMenuItem
                     disabled={navigationLocked}
-                    onClick={() => setWorkbench("activity")}
+                    onClick={() => openWorkbench("activity")}
                   >
                     <Activity /> Activity
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setWorkbench("objects")}>
+                  <DropdownMenuItem
+                    disabled={editingLocked}
+                    onClick={() => openWorkbench("objects")}
+                  >
                     <ListTodo /> Objects
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     disabled={navigationLocked}
-                    onClick={() => setWorkbench("browser")}
+                    onClick={() => openWorkbench("browser")}
                   >
                     <Globe /> Browser
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     disabled={navigationLocked}
-                    onClick={() => setWorkbench("code")}
+                    onClick={() => openWorkbench("code")}
                   >
                     <Code2 /> Code
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     disabled={navigationLocked}
-                    onClick={() => setWorkbench("apps")}
+                    onClick={() => openWorkbench("apps")}
                   >
                     <PanelsTopLeft /> Apps
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     disabled={navigationLocked}
-                    onClick={() => setWorkbench("routines")}
+                    onClick={() => openWorkbench("routines")}
                   >
                     <Clock3 /> Routines
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     disabled={navigationLocked}
-                    onClick={() => setWorkbench("terminal")}
+                    onClick={() => openWorkbench("terminal")}
                   >
                     <TerminalSquare /> Terminal
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={locked}
+                    onClick={() => openWorkbench("files")}
+                  >
+                    Files
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={locked}
+                    onClick={() => openWorkbench("memory")}
+                  >
+                    Memory
                   </DropdownMenuItem>
                   {workbench && (
                     <DropdownMenuItem
                       disabled={navigationLocked}
-                      onClick={() => setWorkbench(null)}
+                      onClick={() => openWorkbench(null)}
                     >
                       Hide workbench
                     </DropdownMenuItem>
@@ -356,66 +372,70 @@ function AgentWorkspace({
             </DropdownMenu>
           }
         />
-        {workbench === "activity" && (
-          <ActivityWorkbench
-            agents={agents}
-            onOpenBot={(id) => {
-              setWorkbench(null)
-              onOpenBot(id)
-            }}
-            onMemory={(id) => {
-              setWorkbench(null)
-              onMemory(id)
-            }}
-            agentId={agent.id}
+        {workbench && (
+          <WorkbenchPanel
+            value={workbench}
+            onChange={openWorkbench}
             agentName={agent.name}
-            onClose={() => setWorkbench(null)}
-          />
-        )}
-        {workbench === "terminal" && (
-          <TerminalWorkbench
-            agentId={agent.id}
-            agentName={agent.name}
-            onClose={() => setWorkbench(null)}
-          />
-        )}
-        {workbench === "routines" && (
-          <RoutinesWorkbench
-            onPendingChange={setRoutinePending}
-            agentId={agent.id}
-            agentName={agent.name}
-            onClose={() => setWorkbench(null)}
-          />
-        )}
-        {workbench === "objects" && (
-          <ObjectsWorkbench
-            selected={objectId}
-            onSelect={setObjectId}
-            agentName={agent.name}
-            onClose={() => setWorkbench(null)}
-            onEditing={setObjectEditing}
-          />
-        )}
-        {workbench === "apps" && (
-          <AppsWorkbench
-            agentId={agent.id}
-            agentName={agent.name}
-            onClose={() => setWorkbench(null)}
-          />
-        )}
-        {workbench === "code" && (
-          <ExecutionWorkbench
-            agentId={agent.id}
-            agentName={agent.name}
-            onClose={() => setWorkbench(null)}
-          />
-        )}
-        {browserOpen && (
-          <BrowserWorkbench
-            agentId={agent.id}
-            agentName={agent.name}
-            onClose={() => setWorkbench(null)}
-          />
+            locked={locked}
+          >
+            {workbench === "activity" && (
+              <ActivityWorkbench
+                agents={agents}
+                onOpenBot={(id) => {
+                  setWorkbench(null)
+                  onOpenBot(id)
+                }}
+                onMemory={(id) => {
+                  setWorkbench(null)
+                  onMemory(id)
+                }}
+                agentId={agent.id}
+                agentName={agent.name}
+              />
+            )}
+            {workbench === "terminal" && (
+              <TerminalWorkbench agentId={agent.id} agentName={agent.name} />
+            )}
+            {workbench === "routines" && (
+              <RoutinesWorkbench
+                onPendingChange={setRoutinePending}
+                agentId={agent.id}
+                agentName={agent.name}
+              />
+            )}
+            {workbench === "objects" && (
+              <ObjectsWorkbench
+                selected={objectId}
+                onSelect={setObjectId}
+                agentName={agent.name}
+                onEditing={setObjectEditing}
+              />
+            )}
+            {workbench === "apps" && (
+              <AppsWorkbench
+                onPendingChange={setAppPending}
+                agentId={agent.id}
+                agentName={agent.name}
+              />
+            )}
+            {workbench === "code" && (
+              <ExecutionWorkbench agentId={agent.id} agentName={agent.name} />
+            )}
+            {workbench === "browser" && (
+              <BrowserWorkbench agentId={agent.id} agentName={agent.name} />
+            )}
+            {workbench === "files" && (
+              <FilesWorkbench
+                state={files}
+                selectionDisabled={sending || files.uploading}
+                onAttached={() => openWorkbench(null)}
+              />
+            )}
+            {workbench === "memory" && (
+              <MemoryWorkbench state={conversation.state} agentId={agent.id} />
+            )}
+          </WorkbenchPanel>
         )}
       </div>
     </ObjectsProvider>

@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { Schema } from "effect"
 import { ChatState, ConversationFrame } from "../../conversations/contracts"
 import { api, agentUrl } from "../../http/client"
 import { applyConversationFrame } from "./live-state"
 
-export function useConversation(agentId: string, refresh: number) {
+export function useConversation(agentId: string) {
+  const [refresh, setRefresh] = useState(0)
+  const reload = useCallback(() => setRefresh((value) => value + 1), [])
   const [state, setState] = useState<ChatState | null>(null)
   const [error, setError] = useState("")
   useEffect(() => {
@@ -69,5 +71,5 @@ export function useConversation(agentId: string, refresh: number) {
       clearTimeout(fallback)
     }
   }, [agentId, refresh])
-  return { state, error }
+  return { state, error, reload }
 }

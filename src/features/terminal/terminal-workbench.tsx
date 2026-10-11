@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react"
-import { TerminalSquare, Play, Square, X, RefreshCw } from "lucide-react"
+import { useState } from "react"
+import { TerminalSquare, Play, Square, RefreshCw } from "lucide-react"
 import { FileTransfers, ExportedFile } from "./file-transfers"
 import { InteractiveTerminal } from "./interactive-terminal"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
@@ -9,41 +9,24 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet"
 
 export function TerminalWorkbench({
   agentId,
   agentName,
-  onClose,
 }: {
   agentId: string
   agentName: string
-  onClose: () => void
 }) {
   const terminal = useTerminal(agentId)
   const [tab, setTab] = useState<string | number>("commands")
-  const [wide, setWide] = useState(false)
   const [command, setCommand] = useState(
     'printf "Hello from Linux\\n"\nls -la /workspace'
   )
-  useEffect(() => {
-    const media = window.matchMedia("(min-width: 1280px)")
-    const update = () => setWide(media.matches)
-    update()
-    media.addEventListener("change", update)
-    return () => media.removeEventListener("change", update)
-  }, [])
   const active = terminal.runs.find((run) => run.status === "running")
   const detail = terminal.detail
   const content = (
     <>
-      <header className="flex items-center justify-between gap-2 border-b px-4 py-3">
+      <header className="workbench-heading-row">
         <div className="flex items-center gap-2 text-sm font-medium">
           <TerminalSquare className="size-4" /> Terminal{" "}
           <Badge variant="secondary">Linux</Badge>
@@ -58,17 +41,9 @@ export function TerminalWorkbench({
           >
             <RefreshCw />
           </Button>
-          <Button
-            size="icon-sm"
-            variant="ghost"
-            aria-label="Hide terminal"
-            onClick={onClose}
-          >
-            <X />
-          </Button>
         </div>
       </header>
-      <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4">
+      <div className="workbench-body">
         {terminal.cleanupError && (
           <Alert>
             <AlertDescription>
@@ -245,7 +220,7 @@ export function TerminalWorkbench({
               )}
             <ExportedFile key={detail.id} agentId={agentId} run={detail} />
             {!detail.transfer && (
-              <pre className="max-h-80 overflow-auto rounded-md border bg-muted/30 p-3 font-mono text-xs break-words whitespace-pre-wrap">
+              <pre className="terminal-output">
                 {detail.output || "No output yet."}
               </pre>
             )}
@@ -310,32 +285,5 @@ export function TerminalWorkbench({
       </footer>
     </>
   )
-  return wide ? (
-    <aside
-      className="browser-workbench flex min-h-0 w-[480px] shrink-0 flex-col border-l bg-background"
-      aria-label={`${agentName} terminal`}
-    >
-      {content}
-    </aside>
-  ) : (
-    <Sheet
-      open
-      onOpenChange={(open) => {
-        if (!open) onClose()
-      }}
-    >
-      <SheetContent
-        className="gap-0 p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-xl"
-        showCloseButton={false}
-      >
-        <SheetHeader className="sr-only">
-          <SheetTitle>{agentName} terminal</SheetTitle>
-          <SheetDescription>
-            Run Linux commands and inspect this bot's saved workspace.
-          </SheetDescription>
-        </SheetHeader>
-        {content}
-      </SheetContent>
-    </Sheet>
-  )
+  return content
 }

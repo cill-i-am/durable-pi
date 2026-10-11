@@ -840,3 +840,6 @@ Local native workerd plus the matching Linux image passed exact unterminated UTF
 12 deployment acceptance: PR #32 merged as `f364576`; production run `38131680063` passed all checks, Alchemy deployment and hosted authentication probes. A fresh hosted synthetic bot wrote a file, streamed exact unterminated output, checkpointed, tore down its container, restored in a subsequent command and returned the same exact bytes. Both commands succeeded and saved their checkpoint; cleanup completed, the bots were archived and the temporary Worker deleted. This exercises the deployed direct-instance adapter.
 
 The functional build goal is complete. The owner-requested visual fidelity work follows in [UI_FIDELITY.md](UI_FIDELITY.md), using the existing approved Paper file. The app uses the ChatGPT subscription only, with no API-key fallback.
+
+
+Paper fidelity progress: F1–F3 shipped in PRs #34–#36. F4 consolidates the workbench shell, files and memory presentation while preserving bot-scoped state and recovery access. Exact layout, browser evidence and intentional adaptations are tracked in [UI_FIDELITY.md](UI_FIDELITY.md); working-object fidelity and final mobile acceptance follow.

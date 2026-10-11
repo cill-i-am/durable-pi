@@ -1,18 +1,11 @@
-import { useEffect, useState } from "react"
-import { ArrowUpRight, Globe, RefreshCw, Settings2, X } from "lucide-react"
+import { useState } from "react"
+import { ArrowUpRight, Globe, RefreshCw, Settings2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet"
 import { agentUrl } from "@/http/client"
 import { BrowserControls } from "./browser-controls"
 import { useBrowser } from "./use-browser"
@@ -20,31 +13,21 @@ import { useBrowser } from "./use-browser"
 export function BrowserWorkbench({
   agentId,
   agentName,
-  onClose,
 }: {
   agentId: string
   agentName: string
-  onClose: () => void
 }) {
   const browser = useBrowser(agentId)
-  const [wide, setWide] = useState(false)
   const [failedScreenshot, setFailedScreenshot] = useState<number | null>(null)
   const [url, setUrl] = useState("")
   const [settings, setSettings] = useState<{
     generation: number
     hosts: string
   } | null>(null)
-  useEffect(() => {
-    const media = window.matchMedia("(min-width: 1280px)")
-    const update = () => setWide(media.matches)
-    update()
-    media.addEventListener("change", update)
-    return () => media.removeEventListener("change", update)
-  }, [])
   const state = browser.state
   const content = (
     <>
-      <div className="flex items-center justify-between gap-2 border-b px-4 py-3">
+      <div className="workbench-heading-row">
         <div className="flex min-w-0 items-center gap-2">
           <Globe className="size-4" />
           <span className="text-sm font-medium">Browser</span>
@@ -65,17 +48,9 @@ export function BrowserWorkbench({
           >
             <Settings2 />
           </Button>
-          <Button
-            size="icon-sm"
-            variant="ghost"
-            aria-label="Hide browser"
-            onClick={onClose}
-          >
-            <X />
-          </Button>
         </div>
       </div>
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
+      <div className="workbench-body">
         {(browser.error || state?.error) && (
           <Alert>
             <AlertDescription>
@@ -378,32 +353,5 @@ export function BrowserWorkbench({
       </p>
     </>
   )
-  return wide ? (
-    <aside
-      className="browser-workbench flex min-h-0 w-[480px] shrink-0 flex-col border-l bg-background"
-      aria-label={`${agentName} browser`}
-    >
-      {content}
-    </aside>
-  ) : (
-    <Sheet
-      open
-      onOpenChange={(open) => {
-        if (!open) onClose()
-      }}
-    >
-      <SheetContent
-        showCloseButton={false}
-        className="gap-0 data-[side=right]:w-full data-[side=right]:sm:max-w-xl"
-      >
-        <SheetHeader className="sr-only">
-          <SheetTitle>{agentName} browser</SheetTitle>
-          <SheetDescription>
-            Inspect this bot’s Cloudflare browser and manage its allowed sites.
-          </SheetDescription>
-        </SheetHeader>
-        {content}
-      </SheetContent>
-    </Sheet>
-  )
+  return content
 }
