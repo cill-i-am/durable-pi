@@ -35,6 +35,7 @@ export function MemoryWorkbench({
   agentId: string
 }) {
   const api = agentApi(agentId)
+  const [tab, setTab] = useState("notes")
   const [query, setQuery] = useState(""),
     [results, setResults] = useState<
       { id: number; text: string; kind: string; date: string }[]
@@ -42,6 +43,7 @@ export function MemoryWorkbench({
     [error, setError] = useState("")
   async function search(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
+    setTab("history")
     try {
       setResults(await api(`search?q=${encodeURIComponent(query)}`))
       setError("")
@@ -59,7 +61,31 @@ export function MemoryWorkbench({
         </p>
       </header>
       <SummaryRecovery agentId={agentId} issues={state?.memory.issues ?? []} />
-      <Tabs defaultValue="notes">
+      <form onSubmit={search} className="memory-search">
+        <Field>
+          <FieldLabel htmlFor="memory-search" className="sr-only">
+            Search the archive
+          </FieldLabel>
+          <div className="flex gap-2">
+            <Input
+              id="memory-search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search conversation history…"
+            />
+            <Button
+              type="submit"
+              variant="outline"
+              size="icon"
+              aria-label="Search memory"
+              disabled={!query.trim()}
+            >
+              <Search />
+            </Button>
+          </div>
+        </Field>
+      </form>
+      <Tabs value={tab} onValueChange={setTab}>
         <TabsList variant="line">
           <TabsTrigger value="notes">Saved notes</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
@@ -86,30 +112,6 @@ export function MemoryWorkbench({
           </div>
         </TabsContent>
         <TabsContent value="history">
-          <form onSubmit={search} className="memory-search">
-            <Field>
-              <FieldLabel htmlFor="memory-search">
-                Search the archive
-              </FieldLabel>
-              <div className="flex gap-2">
-                <Input
-                  id="memory-search"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="A name, decision, or phrase…"
-                />
-                <Button
-                  type="submit"
-                  variant="outline"
-                  size="icon"
-                  aria-label="Search memory"
-                  disabled={!query.trim()}
-                >
-                  <Search />
-                </Button>
-              </div>
-            </Field>
-          </form>
           {error && (
             <Alert>
               <AlertDescription>{error}</AlertDescription>

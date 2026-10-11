@@ -89,6 +89,7 @@ export function ActivityTimeline({
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="workbench-title">Activity</h2>
         <Select
           value={scope}
           onValueChange={(value) => {
@@ -117,6 +118,23 @@ export function ActivityTimeline({
             </SelectGroup>
           </SelectContent>
         </Select>
+      </div>
+      <div className="activity-filters">
+        <ToggleGroup
+          value={[filter]}
+          onValueChange={(values) => {
+            if (values[0]) {
+              setFilter(values[0] as ActivityFilter)
+              setCursor(null)
+            }
+          }}
+          aria-label="Filter activity"
+          className="justify-start"
+        >
+          <ToggleGroupItem value="all">All</ToggleGroupItem>
+          <ToggleGroupItem value="attention">Needs you</ToggleGroupItem>
+          <ToggleGroupItem value="running">Running</ToggleGroupItem>
+        </ToggleGroup>
         <Button
           variant="ghost"
           size="sm"
@@ -127,21 +145,6 @@ export function ActivityTimeline({
           Task details <ArrowRight />
         </Button>
       </div>
-      <ToggleGroup
-        value={[filter]}
-        onValueChange={(values) => {
-          if (values[0]) {
-            setFilter(values[0] as ActivityFilter)
-            setCursor(null)
-          }
-        }}
-        aria-label="Filter activity"
-        className="justify-start"
-      >
-        <ToggleGroupItem value="all">All</ToggleGroupItem>
-        <ToggleGroupItem value="attention">Needs you</ToggleGroupItem>
-        <ToggleGroupItem value="running">Running</ToggleGroupItem>
-      </ToggleGroup>
       {error && (
         <Alert>
           <AlertTitle>Updates interrupted</AlertTitle>
@@ -222,6 +225,7 @@ export function ActivityTimeline({
                 {new Date(entry.at).toLocaleTimeString([], {
                   hour: "2-digit",
                   minute: "2-digit",
+                  hour12: false,
                 })}
               </time>
               <AgentMark

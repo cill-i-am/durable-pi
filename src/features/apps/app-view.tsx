@@ -12,18 +12,20 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"
-import { ChevronDown } from "lucide-react"
+import { ArrowLeft, ChevronDown, RefreshCw } from "lucide-react"
 
 export function AppView({
   agentId,
   id,
   initialVersion,
   compact = false,
+  onBack,
 }: {
   agentId: string
   id: string
   initialVersion?: number
   compact?: boolean
+  onBack?: () => void
 }) {
   const app = useApp(agentId, id)
   const [selected, setSelected] = useState<number | null>(
@@ -39,6 +41,17 @@ export function AppView({
   if (!app.detail)
     return (
       <div className="flex flex-col gap-3">
+        {onBack && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="self-start"
+            disabled={app.busy || !!app.attempt}
+            onClick={onBack}
+          >
+            <ArrowLeft /> All apps
+          </Button>
+        )}
         {app.error ? (
           <Alert>
             <AlertDescription>
@@ -69,7 +82,19 @@ export function AppView({
   const pending = events.filter((event) => event.delivery === "pending").length
   return (
     <section className="flex min-w-0 flex-col gap-4" aria-label="Private app">
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="app-view-toolbar">
+        {onBack && (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="All apps"
+            disabled={app.busy || !!app.attempt}
+            onClick={onBack}
+          >
+            <ArrowLeft />
+          </Button>
+        )}
+        <span className="app-view-name">{document.definition.title}</span>
         <Badge variant="secondary">
           {document.archived
             ? "Archived"
@@ -108,11 +133,12 @@ export function AppView({
         </DropdownMenu>
         <Button
           variant="ghost"
-          size="xs"
+          size="icon-xs"
+          aria-label="Refresh app"
           disabled={app.busy}
           onClick={() => void app.refresh()}
         >
-          Refresh app
+          <RefreshCw />
         </Button>
       </div>
       {app.error && (
@@ -191,7 +217,7 @@ export function AppView({
         {document.archived
           ? "Restore this app to use it."
           : published
-            ? "Changes are saved privately and send an update to this bot. Its tool approval settings still apply."
+            ? "Changes are saved privately and sent to this bot."
             : "Preview only. Publish this version to use its controls."}
       </p>
       {pending > 0 && (

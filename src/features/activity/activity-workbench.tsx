@@ -58,14 +58,14 @@ export function ActivityWorkbench({
   return (
     <>
       <div className="workbench-body">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="workbench-title">Activity</h2>
-          {!showTimeline && (
+        {!showTimeline && (
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="workbench-title">Activity</h2>
             <Badge variant="outline" className="max-w-[50%] min-w-0 shrink">
               <span className="truncate">{agentName}</span>
             </Badge>
-          )}
-        </div>
+          </div>
+        )}
         {showTimeline ? (
           <ActivityTimeline
             agent={

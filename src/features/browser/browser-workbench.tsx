@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { ArrowUpRight, Globe, RefreshCw, Settings2 } from "lucide-react"
+import { ArrowUpRight, Globe, RefreshCw, Settings2, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -36,14 +36,22 @@ export function BrowserWorkbench({
   const content = (
     <>
       <div className="workbench-heading-row">
-        <h2 className="browser-title">
-          {state?.controller === "owner"
-            ? "You’re in control"
-            : `${agentName}’s browser`}
+        <h2 className={settings ? "workbench-title" : "browser-title"}>
+          {settings ? (
+            "Browser internet access"
+          ) : (
+            <>
+              {state?.controller === "owner"
+                ? "You’re in control"
+                : `${agentName}’s browser`}
+            </>
+          )}
         </h2>
         <div className="flex shrink-0 items-center gap-2">
-          <Badge variant="secondary">{state?.status ?? "Loading"}</Badge>
-          {state?.expiresAt && state.status !== "expired" && (
+          {!settings && (
+            <Badge variant="secondary">{state?.status ?? "Loading"}</Badge>
+          )}
+          {!settings && state?.expiresAt && state.status !== "expired" && (
             <Button
               size="sm"
               variant="outline"
@@ -63,17 +71,23 @@ export function BrowserWorkbench({
           <Button
             size="icon-sm"
             variant="ghost"
-            aria-label="Browser internet settings"
+            aria-label={
+              settings ? "Close browser settings" : "Browser internet settings"
+            }
             disabled={!state || browser.busy}
             onClick={() =>
-              setSettings({
-                generation: state!.policy.generation,
-                hosts: state!.policy.hosts.join("\n"),
-                unrestricted: state!.policy.unrestricted ?? false,
-              })
+              setSettings(
+                settings
+                  ? null
+                  : {
+                      generation: state!.policy.generation,
+                      hosts: state!.policy.hosts.join("\n"),
+                      unrestricted: state!.policy.unrestricted ?? false,
+                    }
+              )
             }
           >
-            <Settings2 />
+            {settings ? <X /> : <Settings2 />}
           </Button>
         </div>
       </div>
@@ -197,7 +211,7 @@ export function BrowserWorkbench({
               <Input
                 aria-label="Browser URL"
                 type="url"
-                placeholder="https://example.com"
+                placeholder={state?.page?.url ?? "https://example.com"}
                 value={url}
                 maxLength={2048}
                 onChange={(event) => setUrl(event.target.value)}
@@ -252,9 +266,6 @@ export function BrowserWorkbench({
                     <h3 className="text-sm font-medium break-words">
                       {state.page.title || "Browser page"}
                     </h3>
-                    <p className="mt-1 truncate text-xs text-muted-foreground">
-                      {state.page.url}
-                    </p>
                   </div>
                   <Button
                     size="icon-sm"
@@ -307,9 +318,9 @@ export function BrowserWorkbench({
                     hour: "2-digit",
                     minute: "2-digit",
                   })}
-                  . This is a snapshot; refresh to inspect changes.
+                  · Snapshot
                 </p>
-                <details className="rounded-md border p-3">
+                <details className="browser-page-detail">
                   <summary className="cursor-pointer text-sm">
                     Page text · {state.page.text.length.toLocaleString()}{" "}
                     characters
@@ -319,7 +330,7 @@ export function BrowserWorkbench({
                   </pre>
                 </details>
                 {!!state.page.links.length && (
-                  <details className="rounded-md border p-3">
+                  <details className="browser-page-detail">
                     <summary className="cursor-pointer text-sm">
                       Page links · {state.page.links.length}
                     </summary>
