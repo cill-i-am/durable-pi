@@ -1,4 +1,5 @@
 import { WorkbenchPanel } from "./workbench"
+import { MobileNavigation } from "./mobile-navigation"
 import { useFiles, FilesWorkbench } from "@/features/files"
 import { MemoryWorkbench } from "@/features/memory"
 import {
@@ -37,7 +38,7 @@ import { Conversation, useConversation } from "@/features/conversation"
 import { AgentEditor, AgentSidebar, useAgentCatalog } from "@/features/agents"
 import type { AgentProfile } from "@/agents/contracts"
 import { api } from "@/http/client"
-import { SidebarProvider } from "@/components/ui/sidebar"
+import { SidebarProvider, useSidebar } from "@/components/ui/sidebar"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -239,6 +240,7 @@ function AgentWorkspace({
   navigationLocked: boolean
   onNavigationLockChange: (value: boolean) => void
 }) {
+  const { setOpenMobile } = useSidebar()
   const conversation = useConversation(agent.id)
   const files = useFiles(agent.id)
   const [sending, setSending] = useState(false)
@@ -264,6 +266,23 @@ function AgentWorkspace({
     // Restored, unconfirmed object saves must remain reachable after a reload.
     if (!locked || (value === "objects" && !editingLocked)) setWorkbench(value)
   }
+  function openAgents() {
+    if (locked) return
+    setWorkbench(null)
+    setOpenMobile(true)
+  }
+  const mobileNavigation = (inWorkbench: boolean) => (
+    <MobileNavigation
+      workspace={inWorkbench}
+      locked={locked}
+      workspaceDisabled={inWorkbench ? locked : editingLocked}
+      onAgents={openAgents}
+      onChat={() => openWorkbench(null)}
+      onWorkspace={() =>
+        openWorkbench(objectPending ? "objects" : (workbench ?? "files"))
+      }
+    />
+  )
   return (
     <ObjectsProvider
       agentId={agent.id}
@@ -378,6 +397,7 @@ function AgentWorkspace({
             onChange={openWorkbench}
             agentName={agent.name}
             locked={locked}
+            mobileNavigation={mobileNavigation(true)}
           >
             {workbench === "activity" && (
               <ActivityWorkbench
@@ -438,6 +458,7 @@ function AgentWorkspace({
           </WorkbenchPanel>
         )}
       </div>
+      {mobileNavigation(false)}
     </ObjectsProvider>
   )
 }
