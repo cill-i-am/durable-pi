@@ -15,6 +15,7 @@ import {
   type MemoryNode,
   type Part,
   type SummaryJob,
+  type SummaryIssue,
 } from "../domain"
 import {
   type ArchiveRecord,
@@ -41,6 +42,14 @@ class SqliteMemory {
     db.run(
       `CREATE TABLE IF NOT EXISTS memory_failures (start INTEGER NOT NULL, count INTEGER NOT NULL, retry_at INTEGER NOT NULL, PRIMARY KEY(start,count))`
     )
+    if (
+      !db
+        .all<{ name: string }>("PRAGMA table_info(memory_failures)")
+        .some((column) => column.name === "attempts")
+    )
+      db.run(
+        "ALTER TABLE memory_failures ADD COLUMN attempts INTEGER NOT NULL DEFAULT 1"
+      )
     db.run(
       `CREATE TABLE IF NOT EXISTS memory_notes (path TEXT PRIMARY KEY, body TEXT NOT NULL, source_id INTEGER NOT NULL, updated_at TEXT NOT NULL, FOREIGN KEY(source_id) REFERENCES memory_log(id))`
     )
@@ -247,7 +256,7 @@ class SqliteMemory {
       part.count
     ).length
     this.db.run(
-      "INSERT INTO memory_failures VALUES (?,?,?) ON CONFLICT(start,count) DO UPDATE SET retry_at=excluded.retry_at",
+      "INSERT INTO memory_failures(start,count,retry_at,attempts) VALUES (?,?,?,1) ON CONFLICT(start,count) DO UPDATE SET retry_at=excluded.retry_at,attempts=min(3,memory_failures.attempts+1)",
       part.start,
       part.count,
       retryAt
@@ -257,9 +266,32 @@ class SqliteMemory {
   retryAt() {
     return (
       this.db.all<{ time: number | null }>(
-        "SELECT min(retry_at) AS time FROM memory_failures"
+        "SELECT min(retry_at) AS time FROM memory_failures WHERE attempts<3"
       )[0]?.time ?? undefined
     )
+  }
+  issues() {
+    return this.db.all<SummaryIssue>(
+      "SELECT start,count,attempts,CASE WHEN attempts<3 THEN retry_at ELSE NULL END AS retryAt FROM memory_failures ORDER BY start,count LIMIT 100"
+    )
+  }
+  paused(part: Part) {
+    return (
+      this.db.all(
+        "SELECT 1 FROM memory_failures WHERE start=? AND count=? AND attempts>=3",
+        part.start,
+        part.count
+      ).length > 0
+    )
+  }
+  retrySummary(part: Part) {
+    if (!this.paused(part)) return false
+    this.db.run(
+      "DELETE FROM memory_failures WHERE start=? AND count=?",
+      part.start,
+      part.count
+    )
+    return true
   }
   /** Source-order barrier: the summarizer never sees raw or partial older messages. */
   next(busy: Set<string>, now: number): SummaryJob | undefined {
@@ -272,7 +304,7 @@ class SqliteMemory {
         )[0]?.start ?? this.total()
     const leaf = this.db
       .all<LogEntry>(
-        "SELECT l.* FROM memory_ready q JOIN memory_log l ON l.id=q.start LEFT JOIN memory_failures f ON f.start=q.start AND f.count=q.count WHERE q.count=1 AND q.start<=? AND (f.retry_at IS NULL OR f.retry_at<=?) ORDER BY q.start LIMIT 1",
+        "SELECT l.* FROM memory_ready q JOIN memory_log l ON l.id=q.start LEFT JOIN memory_failures f ON f.start=q.start AND f.count=q.count WHERE q.count=1 AND q.start<=? AND (f.start IS NULL OR (f.attempts<3 AND f.retry_at<=?)) ORDER BY q.start LIMIT 1",
         first,
         now
       )
@@ -281,7 +313,7 @@ class SqliteMemory {
       ? undefined
       : this.db
           .all<Part & { left_text: string; right_text: string }>(
-            `SELECT q.start,q.count,a.text AS left_text,b.text AS right_text FROM memory_ready q JOIN memory_nodes a ON a.start=q.start AND a.count=q.count/2 JOIN memory_nodes b ON b.start=q.start+q.count/2 AND b.count=q.count/2 LEFT JOIN memory_failures f ON f.start=q.start AND f.count=q.count WHERE q.count>1 AND q.start+q.count<=? AND (f.retry_at IS NULL OR f.retry_at<=?) ORDER BY q.count,q.start LIMIT ?`,
+            `SELECT q.start,q.count,a.text AS left_text,b.text AS right_text FROM memory_ready q JOIN memory_nodes a ON a.start=q.start AND a.count=q.count/2 JOIN memory_nodes b ON b.start=q.start+q.count/2 AND b.count=q.count/2 LEFT JOIN memory_failures f ON f.start=q.start AND f.count=q.count WHERE q.count>1 AND q.start+q.count<=? AND (f.start IS NULL OR (f.attempts<3 AND f.retry_at<=?)) ORDER BY q.count,q.start LIMIT ?`,
             first,
             now,
             busy.size + 1
@@ -302,6 +334,13 @@ class SqliteMemory {
         .map((p) => `${nodeKey(p)}|${p.text.replaceAll("\n", " ")}`)
         .join("\n"),
     }
+  }
+  blocked() {
+    return (
+      this.db.all(
+        "SELECT 1 FROM memory_view v JOIN memory_failures f ON f.start=v.start AND f.count=v.count LEFT JOIN memory_nodes n ON n.start=v.start AND n.count=v.count WHERE f.attempts>=3 AND n.start IS NULL LIMIT 1"
+      ).length > 0
+    )
   }
   settled() {
     return this.parts().length === this.viewNodes().length
@@ -561,12 +600,17 @@ export const makeSqliteMemory = Effect.fn("Memory.sqlite.open")(function* (
     failNode: (part, retryAt) =>
       read("failNode", () => storage.failNode(part, retryAt)),
     retryAt: () => read("retryAt", () => storage.retryAt()),
+    issues: () => read("issues", () => storage.issues()),
+    paused: (part) => read("paused", () => storage.paused(part)),
+    retrySummary: (part) =>
+      read("retrySummary", () => storage.retrySummary(part)),
     next: (busy = new Set(), now) =>
       Clock.currentTimeMillis.pipe(
         Effect.flatMap((current) =>
           read("next", () => storage.next(busy, now ?? current))
         )
       ),
+    blocked: () => read("blocked", () => storage.blocked()),
     settled: () => read("settled", () => storage.settled()),
     render: () => read("render", () => storage.render()),
     zoom: (start, count) => read("zoom", () => storage.zoom(start, count)),

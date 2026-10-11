@@ -26,6 +26,12 @@ export const MemoryNode = Schema.Struct({
 })
 export type MemoryNode = typeof MemoryNode.Type
 export type SummaryJob = Part & { source: string; context: string }
+export const SummaryIssue = Schema.Struct({
+  ...Part.fields,
+  attempts: NonNegativeInteger,
+  retryAt: Schema.NullOr(Schema.Number),
+})
+export type SummaryIssue = typeof SummaryIssue.Type
 export const byteLength = (text: string) =>
   new TextEncoder().encode(text).length
 export const nodeKey = ({ start, count }: Part) => `${start}+${count}`

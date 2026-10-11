@@ -1,6 +1,6 @@
 # Durable Pi — build tracker
 
-Started 2026-10-10. Delivery owner: Codex. Status: **slices 01–09b, 03c, 08c and 02c deployed; 11a deployed; 02d job model routing in progress**.
+Started 2026-10-10. Delivery owner: Codex. Status: **slices 01–09b, 03c, 08c and 02c deployed; 11a and 02d deployed; 02e independent background routing in progress**.
 
 ## Outcome
 
@@ -58,7 +58,8 @@ The owner requested password recovery before continuing. Implemented Better Auth
 | 08 — Generated apps and inline UI | Bot creates, previews, updates and runs an app; versioned private publication; isolated execution/storage; inline UI uses a bounded renderer; interactions return events to the owning bot. | 08a and 08b deployed |
 | 08c — Persistent working objects | Agent creates a project checklist; owner edits tasks inline or in Objects; agent reads current state; history, conflicts, retry receipts and archive/restore survive restart. | Deployed in PR #23; local journey/recovery verified; hosted authentication checks passed |
 | 09 — Routines and incoming events | Schedule/pause/delete routines; run with browser closed; authenticated webhook triggers; durable retry/deduplication; notify on meaningful outcomes; respect bot grants and budgets. | 09a and 09b deployed |
-| 02d — Different models for different jobs | Account-aware deterministic routing; per-agent job defaults and per-message profiles; durable selection, usage and explicit failure states. | In progress before delegation |
+| 02d — Different models for different jobs | Account-aware deterministic routing; per-agent job defaults and per-message profiles; durable selection, usage and explicit failure states. | Deployed; hosted routing verified |
+| 02e — Independent memory policy and remaining jobs | Pin OptChat summary routes, bound retries, expose explicit recovery, and evaluate labels/extraction/memory/planning choices. | In progress after 02d hosted verification |
 | 10 — Delegation | Explicit parent/child tasks; separate child memory/tool grants; bounded concurrency; steer/stop children; deliver completed reports once after restart. | Planned |
 | 11a — Automatic durable task planning | Substantial requests maintain a bot-local plan; Activity exposes progress, blockers, evidence and history; compaction, restart, steering and cancellation preserve authority. | Deployed in PR #25; local journey/recovery and hosted authentication checks passed |
 | 11 — Activity and recovery | Per-bot/global activity; inspect tool outcomes and approvals; recover interrupted work; expose actionable connection/backup failures; inspect/export memory and workspace. | Planned |
@@ -722,8 +723,33 @@ Verification on 2026-10-11:
 - Independent backend/frontend reviews closed after checking shared catalog isolation from active-run budgets, admission fences after async discovery, late settings acknowledgements, steering presentation and observation failure handling.
 - Read-only production subscription discovery reported 272,000-token windows for Luna, Sol and Astra and no server auto-compaction limit. Small direct subscription Responses probes completed on Luna/low, Sol/medium and Astra/high, each reporting 61 input and 20 output tokens. These prove transport/account access only, not comparative task quality or the full hosted app journey. Temporary diagnostic Workers were deleted.
 
-Deployed in PR #26 as `dfd7f1f`; production run `38125366175` passed checks, Alchemy deployment and hosted authentication probes. Hosted synthetic-bot admission and account discovery passed, but the first app journey exposed a wake/admission ordering race: the pump could finish empty while catalog discovery yielded, leaving the subsequent durable turn queued with no provider request. The test bots were archived and temporary diagnostic Workers deleted. The complete hosted inference journey remains unverified until the correction below ships.
+Deployed in PR #26 as `dfd7f1f`; production run `38125366175` passed checks, Alchemy deployment and hosted authentication probes. Hosted synthetic-bot admission and account discovery passed, but the first app journey exposed a wake/admission ordering race: the pump could finish empty while catalog discovery yielded, leaving the subsequent durable turn queued with no provider request. The test bots were archived and temporary diagnostic Workers deleted. PR #27 corrected this race and deployed as `c665f3f` in production run `38125981804`.
 
 Correction: arm the conversation wake after durable admission, and re-arm an idempotent submission replay if an earlier alarm acknowledgement failed. Three production-method regression tests exercise delayed discovery, failed wake/replay without duplicate admission, and bot archival during discovery. Platform constructors are stubbed; the conversation/workspace SQLite adapters are real. No provider call is needed for this regression.
 
+Hosted verification after the correction: a temporary bot completed Auto on Luna/low while its default was changed to Sol/medium, then completed an explicit Deep request on Astra/high. Activity reported the requested and actual models, completed outcomes and real tokens (Luna 5,402 input / 9 output; Astra 5,434 input / 10 output; cached input 0 for both). Replaying the original admission returned `accepted:false` and left exactly two provider attempts. Neither simple request created a plan or called tools. This exercised the deployed service gateway, bot admission, native Pi runtime and subscription; the authenticated owner browser was not used. The bot was archived and diagnostic Worker deleted. One earlier probe completed Luna but encountered a transient diagnostic Worker 404 before Deep; the final fresh probe passed fully.
+
 Next, 02e wires independent background assignments into the same policy and evaluates representative extraction, memory and planning tasks. Native active-run compaction continues to use Pi's pinned working model; OptChat summaries are separate memory jobs. Background model policy and quality comparisons are not delivered by this first slice.
+
+### 02e — Independent memory jobs (in progress)
+
+OptChat's immutable summary ranges own their source and result. A bot-local routing record pins model, effort, policy version and the first verified context budget for each range, separately from conversation settings. Explicit retry retains prior route revisions and creates a new revision using the current memory default; automatic recovery never substitutes a model. Pi's native active-run compaction retains the working model because its installed supported policy has no independent summarizer-model option; this preserves native checkpoint/recovery ownership.
+
+Summary work keeps the existing eight-slot concurrency bound and five-request byte-budget feedback. Three unsuccessful groups pause a range. A durable 15-dispatch ceiling per route revision also bounds repeated runtime interruption. A response that still exceeds 512 bytes is rejected; original messages and valid child summaries remain authoritative and readable. Memory exposes paused ranges and a deliberate retry with the current memory setting. A chat waiting for paused memory fails with an actionable recovery message rather than continually waking an unavailable summary.
+
+Titles/labels and structured extraction are explicit composer job types with Luna/low and Luna/medium defaults. File parsing, PDF extraction, video preparation, object edits and database reads remain deterministic. This does not introduce an automatic title rewrite, background classifier, OCR service or native audio/video inference. Hosted background-policy verification remains pending.
+
+Local verification: 378 tests, typecheck, lint, production build and staged-file secret scan pass. The installed Responses adapter receives the independent Luna/medium memory assignment even when conversation settings use Astra/high, and Activity records terminal usage. SQLite reopen tests cover route/window pins, dispatch ceilings, explicit revisions, replay identity, bot isolation and original retention. Production-method tests cover wake acknowledgement loss, cancelled catalog discovery, and stale concurrent retries; only missing authoritative-view summaries block chat. Independent backend/frontend reviews closed after these corrections. A 390×844 paused-summary fixture fits without horizontal overflow; simulated lost responses retain the same retry ID through sheet close/reopen. These are local tests, not hosted background inference.
+
+Small live comparison (2026-10-11): six direct subscription Responses calls from a temporary Cloudflare Worker, using synthetic inputs. Extraction requested project owner, corrected budget/date, unconfirmed due-date status and an unknown accessibility detail. Memory requested a ≤512-byte summary retaining numbered sources, corrected decisions, pending draft/venue confirmation, uncertainty and approval before payment. Planning requested a ≤220-word JSON→SQLite migration plan with stable IDs, no lost writes, ≤60-second write pause and rollback/acceptance evidence. These calls assess output quality separately from app integration. No tools executed; the Worker was deleted.
+
+| Task | Model / effort | Reported input / output tokens | Duration | Result |
+|---|---|---|---|---|
+| Extraction | Luna / medium | 111 / 46 | 2.69 s | Valid JSON; required facts and uncertainty retained |
+| Extraction | Sol / medium | 111 / 116 | 5.98 s | Valid JSON; required facts and uncertainty retained |
+| Memory | Luna / medium | 153 / 129 | 4.28 s | 270 bytes; corrected facts, source refs, approval and unfinished work retained |
+| Memory | Sol / medium | 153 / 75 | 5.12 s | 288 bytes; same required fidelity checks pass |
+| Planning | Astra / high | 100 / 622 | 26.39 s | Cutover, write journal, crash evidence, rollback and feasibility gaps covered; 222 words |
+| Planning | Sol / medium | 100 / 501 | 22.38 s | Same core acceptance coverage; 225 words |
+
+All six reached `response.completed`; cached input was zero. Aggregate usage was 728 input and 1,489 output tokens, including reported reasoning. Both plans slightly missed the requested 220-word cap. This one-case-per-task comparison does not establish a universal quality/latency ranking: keep the requested initial defaults and require explicit Deep selection. Native working-context compaction stays on the run’s pinned model as described above. No API-priced subscription estimates or API-key fallback.

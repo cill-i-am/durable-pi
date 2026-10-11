@@ -41,7 +41,7 @@ describe("Effect memory compaction", () => {
         )
       )
     ))
-  it("retries in one conversation and keeps the shortest of five", () =>
+  it("bounds feedback to five attempts and rejects an oversized replacement", () =>
     run(
       Effect.gen(function* () {
         const lengths = [800, 600, 700, 550, 650],
@@ -55,9 +55,10 @@ describe("Effect memory compaction", () => {
                 if (messages.length > 1) feedback.push(messages.at(-1)!.text)
                 return "x".repeat(lengths[requests.length - 1]!)
               }),
-          })
+          }),
+          Effect.flip
         )
-        expect(result).toHaveLength(550)
+        expect(result).toMatchObject({ reason: "invalid" })
         expect(requests).toEqual([1, 3, 5, 7, 9])
         expect(feedback[0]).toContain("800 bytes")
         expect(feedback.every((text) => text.includes("| ← LIMIT"))).toBe(true)

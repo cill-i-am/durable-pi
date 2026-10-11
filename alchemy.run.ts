@@ -71,9 +71,6 @@ export const AgentWorker = Cloudflare.Worker("AgentWorker", {
       Config.withDefault("")
     ),
     MODEL_ID: Config.String("MODEL_ID").pipe(Config.withDefault("gpt-6.1-sol")),
-    SUMMARY_MODEL_ID: Config.String("SUMMARY_MODEL_ID").pipe(
-      Config.withDefault("gpt-6-luna")
-    ),
   },
 })
 export const Website = Cloudflare.Website.Vite(

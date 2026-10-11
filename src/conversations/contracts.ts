@@ -4,6 +4,7 @@ import * as Schema from "effect/Schema"
 import { FileInfo, FileSelection } from "../workspace/files"
 
 import { Profile, JobType, ResolvedRoute } from "../inference/policy"
+import { SummaryIssue } from "../memory/domain"
 
 export const SendInput = Schema.Struct({
   operationId: Schema.String.check(Schema.isPattern(/^[a-f0-9-]{36}$/i)),
@@ -112,6 +113,7 @@ const Metadata = Schema.Struct({
     messages: Schema.Number,
     summaries: Schema.Number,
     ready: Schema.Boolean,
+    issues: Schema.optional(Schema.Array(SummaryIssue)),
     backup: Schema.optional(
       Schema.Struct({
         date: Schema.NullOr(Schema.String),

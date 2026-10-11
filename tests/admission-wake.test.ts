@@ -1,10 +1,16 @@
 import { expect, it, vi } from "vitest"
-import { ManagedRuntime } from "effect"
+import { Effect, ManagedRuntime } from "effect"
 import { PersonalAgent } from "../src/agent/worker"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import { workspaceLayer } from "../src/workspace/adapters/storage"
-import { catalog } from "./inference-fixture"
+import { catalog, credential, response } from "./inference-fixture"
+import { accountCredentials } from "../src/agent/models"
+import { InferenceUsage } from "../src/inference/usage"
+import { createRegistry } from "@earendil-works/pi-durable"
 import { database } from "./database"
+import { makeSqliteMemory } from "../src/memory/adapters/sqlite"
+import { SummaryRoutes } from "../src/memory/adapters/model-routes"
+import { resolveRoute } from "../src/inference/policy"
 
 vi.mock("cloudflare:workers", () => ({
   DurableObject: class {},
@@ -118,6 +124,210 @@ it("does not admit or wake new work when the bot is archived during catalog disc
     expect(conversations.recent()).toEqual([])
     expect(wakes).toEqual([])
   } finally {
+    await runtime.dispose()
+  }
+})
+
+it("repairs a failed summary retry wake on exact replay, without another route revision", async () => {
+  const { host, runtime } = fixture(),
+    db = database(),
+    memory = Effect.runSync(makeSqliteMemory(db)),
+    summaryRoutes = new SummaryRoutes(db),
+    part = { start: 0, count: 1 },
+    operationId = crypto.randomUUID()
+  Effect.runSync(memory.append("failed", "user", "Original source"))
+  summaryRoutes.pin(part, resolveRoute("memory"))
+  for (let attempt = 0; attempt < 3; attempt++)
+    Effect.runSync(memory.failNode(part, 10000))
+  let wakes = 0
+  Object.defineProperty(host, "memory", { value: memory })
+  Object.assign(host, {
+    db,
+    summaryRoutes,
+    memoryRuntime: { runSync: Effect.runSync },
+    lifecycle: { start: async () => {} },
+    compactor: {
+      wake: async () => {
+        if (++wakes === 1) throw new Error("Wake acknowledgement lost")
+      },
+    },
+  })
+  const request = () =>
+    new Request("https://internal/api/agent/memory/retry", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ...part, operationId }),
+    })
+  try {
+    expect((await host.fetch(request())).ok).toBe(false)
+    expect(Effect.runSync(memory.issues())).toEqual([])
+    expect(db.all("SELECT * FROM summary_routes")).toHaveLength(2)
+    expect(await (await host.fetch(request())).json()).toEqual({ ok: true })
+    expect(wakes).toBe(2)
+    expect(db.all("SELECT * FROM summary_routes")).toHaveLength(2)
+    expect(Effect.runSync(memory.entry(0))?.text).toBe("Original source")
+  } finally {
+    await runtime.dispose()
+  }
+})
+
+it("does not debit a replacement summary route when obsolete discovery returns after cancellation", async () => {
+  const { host, runtime } = fixture(),
+    db = database(),
+    routes = new SummaryRoutes(db),
+    job = { start: 0, count: 1, source: "Synthetic source", context: "" },
+    controller = new AbortController()
+  let release!: () => void
+  const waiting = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  Object.assign(host, { summaryRoutes: routes })
+  host.accountModelCatalog = async () => {
+    await waiting
+    return catalog
+  }
+  try {
+    const pending = host.completeMemorySummary([], controller.signal, job)
+    controller.abort()
+    routes.replace(
+      job,
+      crypto.randomUUID(),
+      resolveRoute("memory", { model: "gpt-6.1-sol", thinking: "medium" })
+    )
+    release()
+    await expect(pending).rejects.toMatchObject({ name: "AbortError" })
+    expect(
+      db
+        .all<{ requests: number }>("SELECT requests FROM summary_routes")
+        .map((row) => row.requests)
+    ).toEqual([0, 0])
+    expect(routes.current(job)?.contextWindow).toBeUndefined()
+    expect(routes.current(job)).toMatchObject({
+      model: "gpt-6.1-sol",
+    })
+  } finally {
+    await runtime.dispose()
+  }
+})
+
+it("rejects a delayed retry for an older summary revision after the newer retry also pauses", async () => {
+  const { host, runtime } = fixture(),
+    db = database(),
+    memory = Effect.runSync(makeSqliteMemory(db)),
+    summaryRoutes = new SummaryRoutes(db),
+    part = { start: 0, count: 1 }
+  Effect.runSync(memory.append("failed", "user", "Original source"))
+  summaryRoutes.pin(part, resolveRoute("memory"))
+  const pause = () => {
+    for (let n = 0; n < 3; n++) Effect.runSync(memory.failNode(part, 10000))
+  }
+  pause()
+  Object.defineProperty(host, "memory", { value: memory })
+  Object.assign(host, {
+    db,
+    summaryRoutes,
+    memoryRuntime: { runSync: Effect.runSync },
+    lifecycle: { start: async () => {} },
+    compactor: { wake: async () => {} },
+  })
+  let lookups = 0,
+    release!: () => void,
+    entered!: () => void
+  const waiting = new Promise<void>((resolve) => {
+      release = resolve
+    }),
+    started = new Promise<void>((resolve) => {
+      entered = resolve
+    })
+  host.accountModelCatalog = async () => {
+    if (++lookups === 2) {
+      entered()
+      await waiting
+    }
+    return catalog
+  }
+  const request = () =>
+    new Request("https://internal/api/agent/memory/retry", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ...part, operationId: crypto.randomUUID() }),
+    })
+  try {
+    const a = host.fetch(request()),
+      b = host.fetch(request())
+    await started
+    expect((await a).ok).toBe(true)
+    pause()
+    release()
+    expect((await b).ok).toBe(false)
+    expect(summaryRoutes.revision(part)).toBe(2)
+    expect(Effect.runSync(memory.paused(part))).toBe(true)
+  } finally {
+    await runtime.dispose()
+  }
+})
+
+it("sends the pinned independent memory model through the installed Responses adapter and records real-shaped usage", async () => {
+  const { host, runtime, conversations } = fixture(),
+    db = database(),
+    summaryRoutes = new SummaryRoutes(db),
+    job = { start: 0, count: 1, source: "Synthetic original", context: "" },
+    inferenceUsage = new InferenceUsage(db),
+    payloads: Record<string, unknown>[] = []
+  db.run(
+    "CREATE TABLE model_usage (id TEXT PRIMARY KEY, model TEXT, input INTEGER, cached INTEGER, output INTEGER, date TEXT)"
+  )
+  Object.assign(host, {
+    db,
+    summaryRoutes,
+    inferenceUsage,
+    ctx: { id: { toString: () => "synthetic-bot" } },
+    credentials: accountCredentials(async () => credential),
+    registry: createRegistry(),
+  })
+  vi.stubGlobal("fetch", async (_url: unknown, init: RequestInit) => {
+    const payload = JSON.parse(String(init.body))
+    payloads.push(payload)
+    expect(new Headers(init.headers).get("authorization")).toBe(
+      "Bearer synthetic-local-access"
+    )
+    return response(payload.model)
+  })
+  try {
+    conversations.setSettings({ model: "gpt-6-astra", thinking: "high" })
+    await host.completeMemorySummary(
+      [
+        {
+          role: "user",
+          content: "Compress the synthetic source.",
+          timestamp: 0,
+        },
+      ],
+      new AbortController().signal,
+      job
+    )
+    expect(payloads).toHaveLength(1)
+    expect(payloads[0]).toMatchObject({
+      model: "gpt-6-luna",
+      reasoning: { effort: "medium" },
+      store: false,
+    })
+    expect(new SummaryRoutes(db).current(job)).toMatchObject({
+      model: "gpt-6-luna",
+      thinking: "medium",
+      contextWindow: 272000,
+    })
+    expect(inferenceUsage.recent()[0]).toMatchObject({
+      purpose: "memory 0+1",
+      outcome: "completed",
+      reportedModel: "gpt-6-luna",
+      input: 123,
+      cached: 100,
+      output: 17,
+    })
+    expect(db.all("SELECT * FROM model_usage")).toHaveLength(1)
+  } finally {
+    vi.unstubAllGlobals()
     await runtime.dispose()
   }
 })

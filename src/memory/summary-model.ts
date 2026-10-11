@@ -1,11 +1,12 @@
 import { Context, Schema, type Effect } from "effect"
+import type { SummaryJob } from "./domain"
 
 /** Provider-neutral conversation for byte-budget feedback. No SDK messages enter memory. */
 export type SummaryMessage = { role: "user" | "assistant"; text: string }
 export class SummaryFailure extends Schema.TaggedError<SummaryFailure>()(
   "SummaryFailure",
   {
-    reason: Schema.Literals(["unavailable", "empty", "timeout"]),
+    reason: Schema.Literals(["unavailable", "empty", "timeout", "invalid"]),
   }
 ) {
   override get message() {
@@ -18,7 +19,8 @@ export class SummaryModel extends Context.Service<
   SummaryModel,
   {
     complete: (
-      messages: readonly SummaryMessage[]
+      messages: readonly SummaryMessage[],
+      job: SummaryJob
     ) => Effect.Effect<string, SummaryFailure>
   }
 >()("durable-pi/memory/SummaryModel") {}
