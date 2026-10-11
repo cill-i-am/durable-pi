@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { AgentMark, agentTone } from "@/components/agent-mark"
 import { Check, Copy } from "lucide-react"
 import type { ChatState } from "@/conversations/contracts"
 import { Markdown } from "@/components/markdown"
@@ -33,9 +34,10 @@ export function TurnReply({
   const stopped = turn.status === "cancelled"
   const failed = turn.status === "failed"
   return (
-    <Message align="start">
+    <Message align="start" className="assistant-message">
       <MessageContent>
-        <MessageHeader>
+        <MessageHeader className="gap-2">
+          <AgentMark tone={agentId ? agentTone(agentId) : "primary"} />
           <span className="assistant-label">{agentName}</span>
         </MessageHeader>
         {!!turn.skills?.length && (
@@ -57,7 +59,7 @@ export function TurnReply({
             ) : turn.answer ? (
               <Markdown text={turn.answer} />
             ) : ["running", "preparing", "stopping"].includes(turn.status) ? (
-              <span className="shimmer text-muted-foreground">
+              <span className="working-indicator" role="status">
                 {turn.status === "stopping"
                   ? "Stopping…"
                   : turn.status === "preparing"

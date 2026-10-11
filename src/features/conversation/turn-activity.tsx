@@ -36,7 +36,7 @@ export function TurnActivity({
   agentId?: string
 }) {
   return (
-    <div className="flex min-w-0 flex-col gap-3">
+    <div className="turn-timeline">
       {items.map((item) => {
         if (item.type === "steer")
           return (
@@ -52,20 +52,20 @@ export function TurnActivity({
           return <Markdown key={item.id} text={item.text} />
         if (item.type === "thinking")
           return (
-            <Collapsible key={item.id} className="group/thinking">
+            <Collapsible key={item.id} className="group/thinking thinking-step">
               <CollapsibleTrigger
                 render={
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-muted-foreground"
+                    className="thinking-trigger"
                   />
                 }
               >
                 <Brain /> Thinking{" "}
                 <ChevronRight className="ml-auto group-data-open/thinking:rotate-90" />
               </CollapsibleTrigger>
-              <CollapsibleContent className="border-l pl-4 text-sm text-muted-foreground">
+              <CollapsibleContent className="thinking-details">
                 <Markdown text={item.text} />
               </CollapsibleContent>
             </Collapsible>
@@ -78,20 +78,20 @@ export function TurnActivity({
               : LoaderCircle
         return (
           <Fragment key={item.id}>
-            <Collapsible className="group/tool rounded-lg border bg-muted/30">
+            <Collapsible
+              className="group/tool tool-step"
+              data-status={item.status}
+            >
               <CollapsibleTrigger
                 render={
-                  <Button
-                    variant="ghost"
-                    className="h-auto w-full justify-start px-3 py-2"
-                  />
+                  <Button variant="ghost" className="tool-step-trigger" />
                 }
               >
                 <Wrench className="shrink-0" />
-                <span className="truncate font-mono text-xs">
+                <span className="tool-step-title">
                   {toolTitles?.[item.name] ?? item.name}
                 </span>
-                <span className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
+                <span className="tool-step-status">
                   <StatusIcon
                     className={
                       item.status === "running"
@@ -111,7 +111,7 @@ export function TurnActivity({
                   <ChevronRight className="group-data-open/tool:rotate-90" />
                 </span>
               </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-3 border-t px-3 py-3">
+              <CollapsibleContent className="tool-step-details">
                 <div>
                   <p className="mb-1 text-xs font-medium text-muted-foreground">
                     Input
@@ -163,7 +163,7 @@ export function SteeringMessage({
   agentId?: string
 }) {
   return (
-    <Message align="end">
+    <Message align="end" className="owner-message steering-message">
       <MessageContent>
         <Bubble align="end" variant="secondary">
           <BubbleContent className="message-text">
@@ -171,9 +171,9 @@ export function SteeringMessage({
             {agentId && (
               <FileAttachments files={attachments ?? []} agentId={agentId} />
             )}
+            <MessageFooter>{label}</MessageFooter>
           </BubbleContent>
         </Bubble>
-        <MessageFooter>{label}</MessageFooter>
       </MessageContent>
     </Message>
   )

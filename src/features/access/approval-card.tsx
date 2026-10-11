@@ -24,7 +24,13 @@ export function ApprovalCard({
   const [error, setError] = useState("")
   const lock = useRef(false)
   async function decide(approve: boolean) {
-    if (lock.current || disabled || decided !== null) return
+    if (
+      lock.current ||
+      disabled ||
+      approval.status !== "pending" ||
+      decided !== null
+    )
+      return
     lock.current = true
     setBusy(true)
     setError("")
@@ -45,23 +51,36 @@ export function ApprovalCard({
       onDecided()
     }
   }
-  const approved = decided === true || approval.status === "approved"
+  const pending = approval.status === "pending" && decided === null
+  const heading =
+    approval.status === "pending"
+      ? decided === true
+        ? "Approved for this action"
+        : decided === false
+          ? "Denied"
+          : "Your approval is needed"
+      : {
+          approved: "Approved for this action",
+          running: "Approved · running",
+          done: "Action completed",
+          denied: "Denied",
+          cancelled: "Cancelled",
+          expired: "Approval expired",
+          interrupted: "Interrupted · check the outcome before retrying",
+        }[approval.status]
   return (
     <section
       aria-label={`Approval for ${toolLabel ?? approval.tool}`}
-      className="my-4 space-y-3 rounded-xl border border-primary/25 bg-muted/30 p-4"
+      className="approval-card"
+      data-pending={pending}
     >
-      <div className="flex items-center gap-2 text-sm font-medium">
+      <div className="approval-heading">
         <ShieldQuestion className="size-4" />
-        {approved
-          ? "Approved · resuming"
-          : decided === false
-            ? "Denied"
-            : "Your approval is needed"}
+        {heading}
       </div>
       <p className="text-sm">
-        Run <strong className="font-mono">{toolLabel ?? approval.tool}</strong>{" "}
-        with these inputs?
+        <strong>{toolLabel ?? approval.tool}</strong>
+        {pending ? " · Review these inputs" : " · Action inputs"}
       </p>
       <pre className="max-h-64 overflow-auto rounded-md bg-background p-3 font-mono text-xs break-all whitespace-pre-wrap">
         {formatInput(approval.input)}
@@ -79,8 +98,8 @@ export function ApprovalCard({
           {error}
         </p>
       )}
-      {!approved && decided === null && (
-        <div className="flex gap-2">
+      {pending && (
+        <div className="flex flex-wrap gap-2">
           <Button
             size="sm"
             disabled={busy || disabled}
