@@ -62,6 +62,13 @@ export class AccessConflict extends Schema.TaggedError<AccessConflict>()(
 
 export const builtInTools = [
   {
+    name: "delegate_tasks",
+    title: "Delegate research tasks",
+    description:
+      "Run up to three request-owned research or drafting children with selected read tools and bounded subscription usage.",
+    mode: "ask",
+  },
+  {
     name: "update_plan",
     title: "Maintain task plan",
     description:

@@ -39,10 +39,24 @@ for (const path of [
   "export?format=html",
   "objects",
   "objects/00000000-0000-4000-8000-000000000001",
+  "delegations",
+  "delegations/1",
+  "delegations/1/2",
   "plans",
   "plans/00000000-0000-4000-8000-000000000001",
 ])
   assert.equal((await request(`/api/agent/${path}`)).status, 401)
+assert.equal((await request("/api/agent/delegations/control", {})).status, 401)
+assert.equal(
+  (
+    await request(
+      "/api/agent/delegations/control",
+      {},
+      "https://attacker.invalid"
+    )
+  ).status,
+  403
+)
 assert.equal((await request("/api/agent/import", {})).status, 401)
 assert.equal((await request("/api/agent/objects/mutate", {})).status, 401)
 assert.equal((await request("/api/agent/objects/cancel", {})).status, 401)

@@ -190,6 +190,7 @@ export function createAgentModels(
     contextWindow?: (model: string) => number | undefined
     cacheKey?: string
     catalog?: () => Promise<ModelCatalog>
+    beforeRequest?: (sessionId: string, signal?: AbortSignal) => Promise<void>
     onAttempt?: (
       model: string,
       thinking: ThinkingLevel,
@@ -254,6 +255,10 @@ export function createAgentModels(
                 "The account context budget changed. Start a new request with the verified model budget."
               )
           }
+          request?.signal?.throwIfAborted()
+          if (request?.sessionId)
+            await options.beforeRequest?.(request.sessionId, request.signal)
+          request?.signal?.throwIfAborted()
           return memoryPayload(
             (await request?.onPayload?.(payload, selected)) ?? payload
           )

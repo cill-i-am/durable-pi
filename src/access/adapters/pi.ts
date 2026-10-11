@@ -2,6 +2,7 @@ import { Effect } from "effect"
 import type {
   ToolRegistration,
   ToolExecutionResult,
+  ToolExecutionApi,
 } from "@earendil-works/pi-durable"
 import type { AccessGate } from "../gate"
 import { toolReceipt } from "./receipt"
@@ -9,7 +10,9 @@ import { toolReceipt } from "./receipt"
 /** Native Pi owns task IDs; the access receipt makes waiting tools safe to reopen. */
 export function guardedTools(
   gate: AccessGate,
-  activeTurn: () => string | undefined,
+  activeTurn: (
+    api: ToolExecutionApi
+  ) => string | undefined | Promise<string | undefined>,
   recoverableTools: ReadonlySet<string> = new Set()
 ) {
   const running = new Map<
@@ -28,17 +31,26 @@ export function guardedTools(
           return Promise.reject(new Error("Tool identity conflict"))
         return existing.promise
       }
-      const previous = gate.store.get(id)
-      const turnId = previous?.turnId ?? activeTurn()
-      if (!turnId) return Promise.reject(new Error("The reply has ended."))
-      const promise = Effect.runPromise(
-        gate.run(
-          { id, turnId, tool: tool.name, input: JSON.stringify(args) },
-          async () => toolReceipt(await tool.execute(args, api, context)),
-          recoverableTools.has(tool.name)
-        ),
-        { signal: context.abortSignal }
-      )
+      // Publish the promise before resolving durable child ownership. Concurrent
+      // tool replays must join it even while that read is pending.
+      const promise = Promise.resolve().then(async () => {
+        const previous = gate.store.get(id)
+        const resolved = await activeTurn(api)
+        if (previous && resolved !== previous.turnId)
+          throw new Error(
+            "Tool ownership no longer matches its original request."
+          )
+        const turnId = previous?.turnId ?? resolved
+        if (!turnId) throw new Error("The reply has ended.")
+        return Effect.runPromise(
+          gate.run(
+            { id, turnId, tool: tool.name, input: JSON.stringify(args) },
+            async () => toolReceipt(await tool.execute(args, api, context)),
+            recoverableTools.has(tool.name)
+          ),
+          { signal: context.abortSignal }
+        )
+      })
       running.set(id, { input, promise })
       void promise
         .finally(() => {

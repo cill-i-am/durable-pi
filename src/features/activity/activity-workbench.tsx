@@ -1,3 +1,4 @@
+import { DelegatedWork } from "./delegated-work"
 import { InferenceRuns } from "./inference-runs"
 import { useEffect, useRef, useState } from "react"
 import {
@@ -113,6 +114,7 @@ export function ActivityWorkbench({
                 <span className="truncate">{agentName}</span>
               </Badge>
             </div>
+            {!selected && <DelegatedWork key={agentId} agentId={agentId} />}
             {!selected && <InferenceRuns agentId={agentId} />}
             {state.error && (
               <Alert>
