@@ -133,7 +133,6 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
             name={name}
             onSelect={selectAgent}
             onSettings={() => act("settings")}
-            onSecurity={() => act("security")}
             onActivity={() => act("activity")}
             onMemory={() => act("memory")}
             onCreate={() => {

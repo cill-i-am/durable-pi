@@ -203,13 +203,6 @@ export function WorkspaceNavigation({
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   disabled={locked}
-                  onClick={() => run("security")}
-                >
-                  <ShieldCheck />
-                  Account security
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  disabled={locked}
                   onClick={() => run("sign-out")}
                 >
                   <LogOut />

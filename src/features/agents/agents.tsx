@@ -10,7 +10,6 @@ import {
   LogOut,
   Plus,
   Search,
-  ShieldCheck,
   Settings2,
   Undo2,
 } from "lucide-react"
@@ -24,7 +23,6 @@ import { api } from "@/http/client"
 import { catalogReducer, initialCatalog } from "./catalog-state"
 import { AgentMark, agentTone } from "@/components/agent-mark"
 import { authClient } from "@/auth/client"
-import { useInteractionSoundPreference } from "@/hooks/interaction-sound-preference"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -49,7 +47,6 @@ import {
   DropdownMenuGroup,
   DropdownMenuLabel,
   DropdownMenuItem,
-  DropdownMenuCheckboxItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import {
@@ -126,7 +123,6 @@ export function AgentSidebar({
   onActivity,
   onMemory,
   onSettings,
-  onSecurity,
   name,
 }: {
   disabled?: boolean
@@ -139,12 +135,10 @@ export function AgentSidebar({
   onActivity: () => void
   onMemory: () => void
   onSettings: () => void
-  onSecurity: () => void
   name: string
 }) {
   const [query, setQuery] = useState("")
   const [archived, setArchived] = useState(false)
-  const sound = useInteractionSoundPreference()
   const { setOpenMobile, isMobile } = useSidebar()
   const shown = agents.filter(
     (a) =>
@@ -188,18 +182,12 @@ export function AgentSidebar({
               <DropdownMenuItem
                 onClick={() => {
                   setOpenMobile(false)
-                  onSecurity()
+                  onSettings()
                 }}
               >
-                <ShieldCheck />
-                Account security
+                <Settings2 />
+                Settings
               </DropdownMenuItem>
-              <DropdownMenuCheckboxItem
-                checked={sound.enabled}
-                onCheckedChange={sound.setEnabled}
-              >
-                Interaction sounds
-              </DropdownMenuCheckboxItem>
               <DropdownMenuItem onClick={() => void authClient.signOut()}>
                 <LogOut />
                 Sign out
@@ -381,20 +369,6 @@ export function AgentSidebar({
                   >
                     <Settings2 /> Settings
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setOpenMobile(false)
-                      onSecurity()
-                    }}
-                  >
-                    <ShieldCheck /> Account security
-                  </DropdownMenuItem>
-                  <DropdownMenuCheckboxItem
-                    checked={sound.enabled}
-                    onCheckedChange={sound.setEnabled}
-                  >
-                    Interaction sounds
-                  </DropdownMenuCheckboxItem>
                   <DropdownMenuItem onClick={() => setArchived(!archived)}>
                     <Archive /> {archived ? "Active agents" : "Archived agents"}
                   </DropdownMenuItem>

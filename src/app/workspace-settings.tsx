@@ -5,7 +5,6 @@ import {
   BookOpen,
   ChevronRight,
   Globe,
-  LockKeyhole,
   Plug,
   Play,
   Settings2,
@@ -39,7 +38,7 @@ const settingsSections = [
   {
     id: "general",
     title: "General",
-    description: "Your agent and workspace",
+    description: "Workspace, sounds and security",
     icon: Settings2,
   },
   {
@@ -65,12 +64,6 @@ const settingsSections = [
     title: "Memory & data",
     description: "Notes, original sources and files",
     icon: BookOpen,
-  },
-  {
-    id: "account",
-    title: "Account",
-    description: "Sign-in and sessions",
-    icon: LockKeyhole,
   },
 ] as const
 export type SettingsCategory =
@@ -277,6 +270,11 @@ export function WorkspaceSettings({
                     onCheckedChange={sound.setEnabled}
                   />
                 </div>
+                <SettingsLink
+                  title="Account security"
+                  detail="Two-factor authentication, recovery codes and signed-in devices."
+                  onClick={() => leave(onSecurity)}
+                />
               </div>
             </section>
             <div
@@ -377,22 +375,6 @@ export function WorkspaceSettings({
                   title="Checklists"
                   detail="Open working objects and their change history."
                   onClick={() => leave(() => onWorkbench("objects"))}
-                />
-              </div>
-            </section>
-            <section
-              hidden={category !== "account"}
-              className="settings-section"
-            >
-              <header className="settings-section-heading">
-                <h2>Account</h2>
-                <p>Manage access to your personal workspace.</p>
-              </header>
-              <div className="settings-section-body">
-                <SettingsLink
-                  title="Account security"
-                  detail="Two-factor authentication, recovery codes and signed-in devices."
-                  onClick={() => leave(onSecurity)}
                 />
               </div>
             </section>
