@@ -28,6 +28,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { SummaryRecovery } from "./summary-recovery"
 
 export function MemoryPanel({
   state,
@@ -65,6 +66,10 @@ export function MemoryPanel({
             {state?.memory.notes.length ?? 0} memory notes
           </SheetDescription>
         </SheetHeader>
+        <SummaryRecovery
+          agentId={agentId}
+          issues={state?.memory.issues ?? []}
+        />
         <Tabs defaultValue="notes">
           <TabsList>
             <TabsTrigger value="notes">Notes</TabsTrigger>

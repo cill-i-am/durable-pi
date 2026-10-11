@@ -1,18 +1,20 @@
 import { Effect, Layer } from "effect"
 import type { AssistantMessage, Message } from "@earendil-works/pi-ai"
 import { SummaryFailure, SummaryModel } from "../summary-model"
+import type { SummaryJob } from "../domain"
 
 /** Pi owns authentication and provider transport; interruption reaches its AbortSignal. */
 export const piSummaryLayer = (
   complete: (
     messages: Message[],
-    signal: AbortSignal
+    signal: AbortSignal,
+    job: SummaryJob
   ) => Promise<AssistantMessage>
 ) =>
   Layer.succeed(
     SummaryModel,
     SummaryModel.of({
-      complete: Effect.fn("Memory.Pi.complete")(function* (messages) {
+      complete: Effect.fn("Memory.Pi.complete")(function* (messages, job) {
         const reply = yield* Effect.tryPromise({
           try: (signal) =>
             complete(
@@ -47,7 +49,8 @@ export const piSummaryLayer = (
                       timestamp: 0,
                     }
               ),
-              signal
+              signal,
+              job
             ),
           // Provider errors may contain private prompts or credentials.
           catch: () => new SummaryFailure({ reason: "unavailable" }),

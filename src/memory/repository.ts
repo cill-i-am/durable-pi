@@ -7,6 +7,7 @@ import type {
   MemoryNote,
   Part,
   SummaryJob,
+  SummaryIssue,
 } from "./domain"
 import type { ArchiveRecord, Watermark } from "./records"
 
@@ -35,10 +36,14 @@ export class MemoryRepository extends Context.Service<
       retryAt: number
     ) => Effect.Effect<boolean, MemoryError>
     retryAt: () => Effect.Effect<number | undefined, MemoryError>
+    issues: () => Effect.Effect<SummaryIssue[], MemoryError>
+    paused: (part: Part) => Effect.Effect<boolean, MemoryError>
+    retrySummary: (part: Part) => Effect.Effect<boolean, MemoryError>
     next: (
       busy?: Set<string>,
       now?: number
     ) => Effect.Effect<SummaryJob | undefined, MemoryError>
+    blocked: () => Effect.Effect<boolean, MemoryError>
     settled: () => Effect.Effect<boolean, MemoryError>
     render: () => Effect.Effect<string, MemoryError>
     zoom: (start: number, count: number) => Effect.Effect<string, MemoryError>

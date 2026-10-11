@@ -57,7 +57,10 @@ const jobs = {
   implementation: "Implementation",
   planning: "Deep planning",
   review: "Critical review",
+  labels: "Titles and labels",
+  extraction: "Structured extraction",
 } as const
+const settingsJobs = { ...jobs, memory: "Memory summaries" } as const
 export function ModelMenu({
   agentId,
   selection,
@@ -312,7 +315,7 @@ export function ModelMenu({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.entries(jobs).map(([value, name]) => (
+                  {Object.entries(settingsJobs).map(([value, name]) => (
                     <SelectItem key={value} value={value}>
                       {name}
                     </SelectItem>

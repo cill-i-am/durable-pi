@@ -39,7 +39,7 @@ export const summarize = Effect.fn("Memory.summarize")(function* (
   ]
   let best: string | undefined
   for (let attempt = 0; attempt < TRIES; attempt++) {
-    const text = (yield* model.complete(messages).pipe(
+    const text = (yield* model.complete(messages, job).pipe(
       Effect.timeoutOrElse({
         duration: "60 seconds",
         orElse: () => new SummaryFailure({ reason: "timeout" }),
@@ -56,7 +56,9 @@ export const summarize = Effect.fn("Memory.summarize")(function* (
       }
     )
   }
-  return best!
+  if (!best || byteLength(best) > NODE_BYTES)
+    return yield* new SummaryFailure({ reason: "invalid" })
+  return best
 })
 
 /**

@@ -10,6 +10,7 @@ import {
   validateRoute,
 } from "../inference/policy"
 import { InferenceUsage } from "../inference/usage"
+import { SummaryRoutes } from "../memory/adapters/model-routes"
 import { DurableObject } from "cloudflare:workers"
 import {
   Lifecycle,
@@ -25,7 +26,7 @@ import {
   type EntryRecord,
   type ToolExecutionResult,
 } from "@earendil-works/pi-durable"
-import { Type } from "@earendil-works/pi-ai"
+import { Type, type Message } from "@earendil-works/pi-ai"
 import { agentSettings } from "./compaction"
 import * as Schema from "effect/Schema"
 import * as Effect from "effect/Effect"
@@ -145,6 +146,7 @@ import { routineTools } from "../routines/tools"
 import { SYSTEM_PROMPT } from "./prompts"
 import { importHistory, ImportInput } from "../memory/import"
 import { pumpSummaries } from "../memory/compaction"
+import { Part, InvalidMemory, type SummaryJob } from "../memory/domain"
 import { backupMemory } from "../memory/backup"
 import { exportResponse } from "../memory/archive"
 import type { CacheUsage } from "./cache"
@@ -265,6 +267,7 @@ class MemoryRunner extends TurnRunner {
         const memory = yield* MemoryRepository
         const before = JSON.stringify(yield* memory.watermark())
         const next = yield* pumpSummaries()
+        yield* Effect.sync(() => owner.notifyConversation())
         if (before !== JSON.stringify(yield* memory.watermark()))
           yield* Effect.promise(() => owner.backups.wake())
         if (owner.active()) yield* Effect.promise(() => owner.runner.wake())
@@ -375,9 +378,6 @@ class BrowserRunner extends TurnRunner {
 }
 
 export class PersonalAgent extends DurableObject<AgentEnv> {
-  get summaryModelId() {
-    return this.env.SUMMARY_MODEL_ID
-  }
   get backupBucket() {
     return this.env.MEMORY_BACKUPS
   }
@@ -610,6 +610,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   )
   readonly uploadLock = Semaphore.makeUnsafe(1)
   readonly inferenceUsage = new InferenceUsage(this.db)
+  readonly summaryRoutes = new SummaryRoutes(this.db)
   private catalogCache?: {
     clientId: string
     expires: number
@@ -688,36 +689,74 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         new Date().toISOString()
       ),
   })
+  async completeMemorySummary(
+    messages: Message[],
+    signal: AbortSignal,
+    job: SummaryJob
+  ) {
+    const candidate = this.summaryRoutes.pin(
+      job,
+      resolveRoute("memory", this.conversations.jobSetting("memory"))
+    )
+    const catalog = await this.accountModelCatalog()
+    signal.throwIfAborted()
+    const capability = validateRoute(candidate, catalog)
+    const route = this.summaryRoutes.budget(job, capability.contextWindow)
+    const models = createAgentModels(this.credentials, {
+      catalog: () => this.accountModelCatalog(),
+      contextWindow: () => route.contextWindow,
+      cacheKey: `pi-${this.ctx.id.toString()}`,
+      onAttempt: () =>
+        this.inferenceUsage.start(
+          route,
+          null,
+          `memory ${job.start}+${job.count}`
+        ),
+      onUsage: (usage) =>
+        this.db.run(
+          "INSERT OR IGNORE INTO model_usage VALUES (?,?,?,?,?,?)",
+          usage.id,
+          usage.model,
+          usage.input,
+          usage.cached,
+          usage.output,
+          new Date().toISOString()
+        ),
+    })
+    const model = models.getModel("openai", route.model)
+    if (!model) throw new Error("Unknown summary model")
+    if (!this.summaryRoutes.beginRequest(job))
+      throw new Error("Memory summary request budget exhausted")
+    return models.completeSimple(
+      model,
+      {
+        systemPrompt: SYSTEM_PROMPT,
+        tools: this.registry
+          .snapshot()
+          .tools()
+          .map(({ tool }) => ({
+            name: tool.name,
+            description: tool.description,
+            parameters: tool.parameters,
+          })),
+        messages,
+      },
+      {
+        reasoning: route.thinking === "off" ? undefined : route.thinking,
+        signal,
+        cacheRetention: "short",
+        sessionId: "memory",
+      }
+    )
+  }
   readonly memoryRuntime = ManagedRuntime.make(
     Layer.mergeAll(
       sqliteMemoryLayer(this.db),
       webCryptoLayer,
       bucketLayer(this.backupBucket),
-      piSummaryLayer((messages, signal) => {
-        const model = this.models.getModel("openai", this.summaryModelId)
-        if (!model) throw new Error("Unknown summary model")
-        return this.models.completeSimple(
-          model,
-          {
-            systemPrompt: SYSTEM_PROMPT,
-            tools: this.registry
-              .snapshot()
-              .tools()
-              .map(({ tool }) => ({
-                name: tool.name,
-                description: tool.description,
-                parameters: tool.parameters,
-              })),
-            messages,
-          },
-          {
-            reasoning: "medium",
-            signal,
-            cacheRetention: "short",
-            sessionId: "memory",
-          }
-        )
-      })
+      piSummaryLayer((messages, signal, job) =>
+        this.completeMemorySummary(messages, signal, job)
+      )
     )
   )
   readonly registry = createRegistry()
@@ -1712,6 +1751,53 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         )
       if (request.method === "GET" && path === "state")
         return Response.json(await this.snapshot())
+      if (request.method === "POST" && path === "memory/retry") {
+        const body = Schema.decodeUnknownSync(
+          Schema.Struct({
+            ...Part.fields,
+            operationId: CancelInput.fields.operationId,
+          })
+        )(await limitedJson(request))
+        if (this.summaryRoutes.applied(body.operationId, body)) {
+          await this.compactor.wake()
+          return Response.json({ ok: true })
+        }
+        const revision = this.summaryRoutes.revision(body)
+        if (!this.memoryRuntime.runSync(this.memory.paused(body)))
+          throw new InvalidMemory({
+            message: "This summary is not paused. Refresh its status.",
+          })
+        const candidate = resolveRoute(
+          "memory",
+          this.conversations.jobSetting("memory")
+        )
+        const capability = validateRoute(
+          candidate,
+          await this.accountModelCatalog()
+        )
+        this.db.transaction(() => {
+          if (this.botConfiguration.read()?.status === "archived")
+            throw new InvalidMemory({
+              message: "Restore this bot before retrying memory.",
+            })
+          if (this.summaryRoutes.applied(body.operationId, body)) return
+          if (this.summaryRoutes.revision(body) !== revision)
+            throw new InvalidMemory({
+              message: "This summary has a newer retry. Refresh its status.",
+            })
+          if (!this.memoryRuntime.runSync(this.memory.retrySummary(body)))
+            throw new InvalidMemory({
+              message: "This summary is not paused. Refresh its status.",
+            })
+          this.summaryRoutes.replace(body, body.operationId, {
+            ...candidate,
+            contextWindow: capability.contextWindow,
+          })
+        })
+        await this.compactor.wake()
+        this.notifyConversation()
+        return Response.json({ ok: true })
+      }
       if (request.method === "GET" && path === "search")
         return Response.json(
           this.memoryRuntime.runSync(
@@ -1904,6 +1990,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         summaries: this.memoryRuntime.runSync(this.memory.nodeCount()),
         ready: this.memoryRuntime.runSync(this.memory.settled()),
         notes: this.memoryRuntime.runSync(this.memory.notes()),
+        issues: this.memoryRuntime.runSync(this.memory.issues()),
         backup: this.db.all<{ date: string | null; error: string | null }>(
           "SELECT date,error FROM memory_backup_status WHERE id=1"
         )[0] ?? { date: null, error: null },
@@ -2052,6 +2139,18 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     if (this.current(turn.id).status === "stopping")
       return { rescheduleAt: Date.now() + 10 }
     if (!this.memoryRuntime.runSync(this.memory.settled())) {
+      if (this.memoryRuntime.runSync(this.memory.blocked())) {
+        this.conversations.finish(
+          turn,
+          this.conversations
+            .members(turn.id)
+            .map((member) => ({ id: member.id, delivery: "unanswered" })),
+          "",
+          "Memory summaries are paused. Open Memory to retry them, then retry this message."
+        )
+        this.notifyConversation()
+        return { rescheduleAt: Date.now() + 10 }
+      }
       await this.compactor.wake()
       return {
         rescheduleAt: Math.max(
