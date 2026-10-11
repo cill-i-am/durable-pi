@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react"
+import { useCallback, useMemo, useRef, useState, type ReactNode } from "react"
 import { ArrowUp, Square, Sparkles, RefreshCw } from "lucide-react"
 import { useConversation } from "./use-conversation"
 import { TurnReply } from "./turn-reply"
@@ -55,9 +55,11 @@ import {
 export function Conversation({
   name,
   agent,
+  workbenchAction,
 }: {
   name: string
   agent: AgentProfile
+  workbenchAction?: ReactNode
 }) {
   const files = useFiles(agent.id)
   const api = useMemo(() => agentApi(agent.id), [agent.id])
@@ -142,6 +144,7 @@ export function Conversation({
           </Badge>
         </div>
         <div className="chat-actions flex shrink-0 items-center">
+          {workbenchAction}
           <AccessPanel
             agentId={agent.id}
             agentName={agent.name}

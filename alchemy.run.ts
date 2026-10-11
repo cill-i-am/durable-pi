@@ -18,6 +18,7 @@ export const WorkspaceAssets = Cloudflare.R2.Bucket("WorkspaceAssets", {
 // Parsing receives bytes only: no storage, credentials, or public route.
 export const DocumentWorker = Cloudflare.Worker("DocumentWorker", {
   main: "./src/workspace/document-worker.ts",
+  dev: { port: 1339, strictPort: true },
   workersDev: { enabled: false, previewsEnabled: false },
   compatibility: { date: "2026-09-25", flags: ["nodejs_compat"] },
   limits: { cpuMs: 5_000 },
@@ -32,6 +33,8 @@ export const AgentWorker = Cloudflare.Worker("AgentWorker", {
     MEMORY_BACKUPS: MemoryBackups,
     WORKSPACE_ASSETS: WorkspaceAssets,
     DOCUMENT_SERVICE: DocumentWorker,
+    // Local Chromium does not enforce Browser Run network guardrails.
+    BROWSER: Cloudflare.Browser().pipe(Alchemy.remote()),
     OPENAI_CREDENTIAL: Config.Redacted("OPENAI_CREDENTIAL").pipe(
       Config.withDefault("")
     ),

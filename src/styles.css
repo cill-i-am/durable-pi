@@ -549,3 +549,12 @@ body {
     padding-top: 20px;
   }
 }
+
+.agent-columns { display: flex; flex: 1; min-width: 0; min-height: 0; overflow: hidden; }
+.agent-columns > .chat-workspace { flex: 1; min-width: 0; container-type: inline-size; container-name: conversation; }
+@container conversation (max-width: 820px) {
+  .workspace-main .chat-header { flex-wrap: wrap; height: auto; min-height: 68px; padding-block: 8px; gap: 4px; }
+  .chat-identity { width: 100%; }
+  .chat-identity h1 { flex: 1; }
+  .chat-actions { margin-left: auto; }
+}

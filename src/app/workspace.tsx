@@ -1,4 +1,6 @@
 import { useState } from "react"
+import { Globe } from "lucide-react"
+import { BrowserWorkbench } from "@/features/browser"
 import { authClient } from "@/auth/client"
 import { Login, PiMark } from "@/features/auth"
 import { Conversation } from "@/features/conversation"
@@ -81,7 +83,7 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
             </Alert>
           )}
           {catalog.selected ? (
-            <Conversation
+            <AgentWorkspace
               key={catalog.selected.id}
               name={name}
               agent={catalog.selected}
@@ -113,5 +115,41 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
         )}
       </SidebarProvider>
     </TooltipProvider>
+  )
+}
+
+function AgentWorkspace({
+  agent,
+  name,
+}: {
+  agent: AgentProfile
+  name: string
+}) {
+  const [browserOpen, setBrowserOpen] = useState(false)
+  return (
+    <div className={`agent-columns ${browserOpen ? "workbench-visible" : ""}`}>
+      <Conversation
+        name={name}
+        agent={agent}
+        workbenchAction={
+          <Button
+            size="sm"
+            variant={browserOpen ? "secondary" : "ghost"}
+            aria-label="Browser workbench"
+            onClick={() => setBrowserOpen((value) => !value)}
+          >
+            <Globe />
+            <span className="hidden sm:inline">Browser</span>
+          </Button>
+        }
+      />
+      {browserOpen && (
+        <BrowserWorkbench
+          agentId={agent.id}
+          agentName={agent.name}
+          onClose={() => setBrowserOpen(false)}
+        />
+      )}
+    </div>
   )
 }
