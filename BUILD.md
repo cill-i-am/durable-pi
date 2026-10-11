@@ -35,7 +35,7 @@ Visual thesis: a quiet, warm workroom with compact navigation, readable conversa
 
 ## Bot communication — durable inbox and outbox (2026-10-11)
 
-Status: implemented and locally verified on `codex/bot-communication`; review corrections complete, CI and hosted demonstration pending. Internal bot communication is a separate bounded context from temporary child delegation. Preserve PersonalAgent, its namespace and SQLite/Pi history. No external account connection or public RPC server is part of this work.
+Status: PR #43 merged as `f9e9575`; its CI and production run 38140818968 passed. Hosted signed-in verification found mixed Worker/DO versions during Cloudflare propagation; the agent Worker was temporarily rolled back without changing storage while an additive RPC compatibility correction is verified. Hosted demonstration remains pending. Internal bot communication is a separate bounded context from temporary child delegation. Preserve PersonalAgent, its namespace and SQLite/Pi history. No external account connection or public RPC server is part of this work.
 
 - [x] Slice C1: Effect schemas and RPC over the existing private Durable Object binding; SQLite inbox/outbox, committed acknowledgments, conflicting-ID rejection, bounded retry and restart recovery with a deterministic handler in real workerd.
 - [x] Slice C2: Existing named bots delegate a bounded task/question through Pi, commit a result/outbox atomically, and resume a correlated durable dependency without an open browser. Preserve model routing, cancellation and tool authority.
