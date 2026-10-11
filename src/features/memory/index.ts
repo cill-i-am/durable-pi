@@ -1,1 +1,1 @@
-export { MemoryPanel } from "./memory-panel"
+export { MemoryWorkbench } from "./memory-panel"

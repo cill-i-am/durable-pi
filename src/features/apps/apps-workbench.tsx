@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-import { cn } from "cn"
 import { Schema } from "effect"
 import { AppDefinition, AppDocument, AppList } from "@/apps/contracts"
 import { agentApi } from "@/http/client"
@@ -17,32 +16,27 @@ import {
   EmptyTitle,
   EmptyDescription,
 } from "@/components/ui/empty"
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet"
-import { PanelsTopLeft, Plus, X, ArrowLeft } from "lucide-react"
+import { PanelsTopLeft, Plus, ArrowLeft } from "lucide-react"
 
 export function AppsWorkbench({
   agentId,
   agentName,
-  onClose,
+  onPendingChange,
 }: {
   agentId: string
   agentName: string
-  onClose: () => void
+  onPendingChange: (pending: boolean) => void
 }) {
   const [apps, setApps] = useState<AppDocument[]>([]),
     [selected, setSelected] = useState<string | null>(null),
     [creating, setCreating] = useState(false),
     [error, setError] = useState("")
   const [creationPending, setCreationPending] = useState(false)
+  useEffect(() => {
+    onPendingChange(creationPending)
+    return () => onPendingChange(false)
+  }, [creationPending, onPendingChange])
   const creationGeneration = useRef(0)
-  const [wide, setWide] = useState(false)
-  const portalContainer = useRef<HTMLDivElement>(null)
   const sequence = useRef(0)
   const refresh = useCallback(async () => {
     const generation = ++sequence.current
@@ -74,31 +68,15 @@ export function AppsWorkbench({
       sequence.current++
     }
   }, [refresh])
-  useEffect(() => {
-    const media = matchMedia("(min-width: 1280px)")
-    const update = () => setWide(media.matches)
-    update()
-    media.addEventListener("change", update)
-    return () => media.removeEventListener("change", update)
-  }, [])
   const content = (
     <>
-      <header className="flex items-center justify-between gap-2 border-b px-4 py-3">
+      <header className="workbench-heading-row">
         <div className="flex items-center gap-2 text-sm font-medium">
           <PanelsTopLeft className="size-4" /> Apps{" "}
           <Badge variant="secondary">Private</Badge>
         </div>
-        <Button
-          size="icon-sm"
-          variant="ghost"
-          aria-label="Hide apps"
-          disabled={creationPending}
-          onClick={onClose}
-        >
-          <X />
-        </Button>
       </header>
-      <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4">
+      <div className="workbench-body">
         {error && (
           <Alert>
             <AlertDescription>
@@ -206,50 +184,9 @@ export function AppsWorkbench({
       </footer>
     </>
   )
-  // A stable portal container keeps form drafts and uncertain operation IDs alive
-  // when the panel changes between a desktop workbench and a mobile dialog.
-  return (
-    <div
-      ref={portalContainer}
-      className={cn(
-        wide && "relative min-h-0 w-[min(48vw,720px)] shrink-0 border-l"
-      )}
-    >
-      <Sheet
-        open
-        modal={!wide}
-        onOpenChange={(open, event) => {
-          if (
-            !open &&
-            !creationPending &&
-            (!wide || event.reason === "escape-key")
-          )
-            onClose()
-        }}
-      >
-        <SheetContent
-          portalContainer={portalContainer}
-          showOverlay={!wide}
-          side="right"
-          className={cn(
-            "flex w-full max-w-full flex-col gap-0 p-0 data-[side=right]:w-full sm:max-w-xl",
-            wide &&
-              "absolute shadow-none data-[side=right]:w-full data-[side=right]:border-l-0 data-[side=right]:sm:max-w-none"
-          )}
-          showCloseButton={false}
-        >
-          <SheetHeader className="sr-only">
-            <SheetTitle>{agentName} apps</SheetTitle>
-            <SheetDescription>
-              Create and use this bot's private apps.
-            </SheetDescription>
-          </SheetHeader>
-          {content}
-        </SheetContent>
-      </Sheet>
-    </div>
-  )
+  return content
 }
+
 function AppRow({ app, onSelect }: { app: AppDocument; onSelect: () => void }) {
   return (
     <Button

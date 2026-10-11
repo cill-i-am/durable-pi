@@ -1,7 +1,6 @@
 import { AgentMark, agentTone } from "@/components/agent-mark"
 import type { Profile, JobType } from "@/inference/policy"
 import {
-  useCallback,
   useMemo,
   useRef,
   useState,
@@ -17,8 +16,10 @@ import {
   Image,
   ArrowRight,
   Upload,
+  Files,
+  BookOpen,
 } from "lucide-react"
-import { useConversation } from "./use-conversation"
+import type { useConversation } from "./use-conversation"
 import { TurnReply } from "./turn-reply"
 import { QueuedTurnAnchor } from "./queued-turn-anchor"
 import { ModelMenu } from "./model-menu"
@@ -33,8 +34,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import type { AgentProfile } from "@/agents/contracts"
 import { agentApi } from "@/http/client"
 import {
-  useFiles,
-  FilesPanel,
+  type FilesState,
   FilePicker,
   UploadStatus,
   FileAttachments,
@@ -42,7 +42,6 @@ import {
 import { ConnectionsPanel } from "@/features/connections"
 import { SkillsPanel } from "@/features/skills"
 import { AccessPanel, ApprovalCard } from "@/features/access"
-import { MemoryPanel } from "@/features/memory"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -76,16 +75,21 @@ export function Conversation({
   name,
   agent,
   workbenchAction,
-  memoryRequest,
-  onMemoryOpened,
+  files,
+  conversation,
+  sending,
+  setSending,
+  onOpenWorkbench,
 }: {
   name: string
   agent: AgentProfile
   workbenchAction?: ReactNode
-  memoryRequest?: string
-  onMemoryOpened?: (request: string) => void
+  files: FilesState
+  conversation: ReturnType<typeof useConversation>
+  sending: boolean
+  setSending: (value: boolean) => void
+  onOpenWorkbench: (value: "files" | "memory") => void
 }) {
-  const files = useFiles(agent.id)
   const api = useMemo(() => agentApi(agent.id), [agent.id])
   const [draft, setDraft] = useState("")
   const composerInput = useRef<HTMLTextAreaElement>(null)
@@ -94,13 +98,10 @@ export function Conversation({
   const [profile, setProfile] = useState<Profile>("auto")
   const [job, setJob] = useState<JobType>("conversation")
   const [error, setError] = useState("")
-  const [sending, setSending] = useState(false)
   const [retrying, setRetrying] = useState<string | null>(null)
   const retryKeys = useRef(new Map<string, string>())
   const pending = useRef<Submission | null>(null)
-  const [refresh, setRefresh] = useState(0)
-  const reload = useCallback(() => setRefresh((n) => n + 1), [])
-  const { state, error: connectionError } = useConversation(agent.id, refresh)
+  const { state, error: connectionError, reload } = conversation
   const active = state?.turns.find((t) =>
     ["queued", "preparing", "running", "stopping"].includes(t.status)
   )
@@ -122,7 +123,7 @@ export function Conversation({
       pending.current = null
       setProfile("auto")
       setJob("conversation")
-      setRefresh((n) => n + 1)
+      reload()
       return true
     } catch (e) {
       if (rejectedModelAttempt(e)) pending.current = null
@@ -152,7 +153,7 @@ export function Conversation({
     if (!active) return
     try {
       await api("cancel", { operationId: active.id })
-      setRefresh((n) => n + 1)
+      reload()
     } catch {
       setError("Could not stop the turn. Try again.")
     }
@@ -225,16 +226,24 @@ export function Conversation({
             onSaved={reload}
           />
           <SkillsPanel agentId={agent.id} agentName={agent.name} />
-          <FilesPanel
-            state={files}
-            selectionDisabled={sending || files.uploading}
-          />
-          <MemoryPanel
-            state={state}
-            agentId={agent.id}
-            openRequest={memoryRequest}
-            onOpenRequestHandled={onMemoryOpened}
-          />
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-label="Files"
+            onClick={() => onOpenWorkbench("files")}
+          >
+            <Files />
+            <span className="chat-action-label hidden sm:inline">Files</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-label="Memory"
+            onClick={() => onOpenWorkbench("memory")}
+          >
+            <BookOpen />
+            <span className="chat-action-label">Memory</span>
+          </Button>
         </div>
       </header>
       <MessageScrollerProvider autoScroll>
@@ -338,7 +347,7 @@ export function Conversation({
                                   size="xs"
                                   onClick={() =>
                                     void api("cancel", { operationId: turn.id })
-                                      .then(() => setRefresh((n) => n + 1))
+                                      .then(() => reload())
                                       .catch(() =>
                                         setError("Could not cancel.")
                                       )
@@ -412,7 +421,7 @@ export function Conversation({
                 variant="ghost"
                 size="icon-sm"
                 aria-label="Reconnect"
-                onClick={() => setRefresh((n) => n + 1)}
+                onClick={() => reload()}
               >
                 <RefreshCw />
               </Button>

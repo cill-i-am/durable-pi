@@ -4,6 +4,9 @@ import { useEffect, useRef, useState } from "react"
 import {
   Download,
   Files,
+  FileText,
+  Image,
+  Video,
   Plus,
   Pencil,
   RotateCcw,
@@ -17,15 +20,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
-  Sheet,
-  SheetTrigger,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet"
+  Empty,
+  EmptyHeader,
+  EmptyTitle,
+  EmptyDescription,
+} from "@/components/ui/empty"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { attachmentReady, fileDescription, legacyPdf } from "./preparation"
 import { fileSize } from "./file-attachments"
 import type { FilesState } from "./use-files"
@@ -116,142 +117,157 @@ export function UploadStatus({ state }: { state: FilesState }) {
     </div>
   )
 }
-export function FilesPanel({
+export function FilesWorkbench({
   state,
   selectionDisabled = false,
+  onAttached,
 }: {
   state: FilesState
   selectionDisabled?: boolean
+  onAttached: () => void
 }) {
-  const [open, setOpen] = useState(false)
   const [tab, setTab] = useState("files")
-  const [preview, setPreview] = useState<FileInfo | null>(null)
+  const refresh = state.refresh
+  useEffect(() => {
+    void refresh()
+  }, [refresh])
+  const [previewId, setPreviewId] = useState<string | null>(null)
   const visible = state.files.filter(
     (file) => file.trashed === (tab === "trash")
   )
+  const preview = visible.find((file) => file.id === previewId) ?? visible[0]
+  const selectedId = preview?.id ?? null
+  useEffect(() => {
+    // Pin the initial selection so a completed upload cannot replace an open draft.
+    setPreviewId(selectedId)
+  }, [selectedId])
   return (
-    <Sheet
-      open={open}
-      onOpenChange={(value) => {
-        setOpen(value)
-        if (value) void state.refresh()
-      }}
-    >
-      <SheetTrigger
-        render={<Button variant="ghost" size="sm" aria-label="Files" />}
-      >
-        <Files />
-        <span className="chat-action-label hidden sm:inline">Files</span>
-      </SheetTrigger>
-      <SheetContent className="w-full gap-0 sm:max-w-lg">
-        <SheetHeader>
-          <SheetTitle>Bot files</SheetTitle>
-          <SheetDescription>
-            Private to this bot. Up to 8 MB per file.
-          </SheetDescription>
-        </SheetHeader>
-        <div className="flex items-center justify-between gap-2 border-y px-4 py-2">
-          <Tabs
-            value={tab}
-            onValueChange={(value) => {
-              setTab(String(value))
-              setPreview(null)
-            }}
-          >
-            <TabsList>
-              <TabsTrigger value="files">Files</TabsTrigger>
-              <TabsTrigger value="trash">Trash</TabsTrigger>
-            </TabsList>
-          </Tabs>
-          <FilePicker state={state} attach={false} />
-        </div>
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
-          {state.error && (
-            <Alert>
-              <AlertDescription>
-                {state.error}
-                <Button
-                  variant="link"
-                  size="xs"
-                  onClick={() => void state.refresh()}
-                >
-                  Reload
-                </Button>
-              </AlertDescription>
-            </Alert>
-          )}
-          <UploadStatus state={state} />
-          {state.loading && (
-            <p className="text-sm text-muted-foreground">Loading files…</p>
-          )}
-          {!state.loading && !visible.length && (
-            <div className="py-12 text-center">
-              <Files className="mx-auto mb-3 text-muted-foreground" />
-              <p className="font-medium">
+    <>
+      <header className="workbench-heading">
+        <h2>Bot files</h2>
+        <p>Private to this bot · up to 8 MB per file</p>
+      </header>
+      <div className="flex items-center justify-between gap-2 border-y px-4 py-2">
+        <Tabs
+          value={tab}
+          onValueChange={(value) => {
+            setTab(String(value))
+            setPreviewId(null)
+          }}
+        >
+          <TabsList>
+            <TabsTrigger value="files">Files</TabsTrigger>
+            <TabsTrigger value="trash">Trash</TabsTrigger>
+          </TabsList>
+        </Tabs>
+        <FilePicker state={state} attach={false} />
+      </div>
+      <div className="workbench-body">
+        {state.error && (
+          <Alert>
+            <AlertDescription>
+              {state.error}
+              <Button
+                variant="link"
+                size="xs"
+                onClick={() => void state.refresh()}
+              >
+                Reload
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+        <UploadStatus state={state} />
+        {state.loading && (
+          <p className="text-sm text-muted-foreground">Loading files…</p>
+        )}
+        {!state.loading && !visible.length && (
+          <Empty>
+            <EmptyHeader>
+              <EmptyTitle>
                 {tab === "trash" ? "Trash is empty" : "A place for the context"}
-              </p>
-              <p className="mt-2 text-sm text-muted-foreground">
+              </EmptyTitle>
+              <EmptyDescription>
                 {tab === "trash"
                   ? "Removed files can be restored here."
                   : "Upload images, notes, documents, or a video. Attach up to four files to a message."}
-              </p>
-            </div>
-          )}
-          <div className="divide-y">
-            {visible.map((file) => (
-              <FileRow
-                key={file.id}
-                file={file}
-                state={state}
-                onPreview={() =>
-                  setPreview((current) =>
-                    current?.id === file.id ? null : file
-                  )
-                }
-                onAttach={() => {
-                  state.select(file)
-                  setOpen(false)
-                }}
-                disabled={
-                  !attachmentReady(file) ||
-                  selectionDisabled ||
-                  state.selected.length >= 4 ||
-                  state.selected.some((item) => item.id === file.id)
-                }
-              />
-            ))}
-          </div>
-          {preview &&
-            state.files.some(
-              (file) => file.id === preview.id && !file.trashed
-            ) && (
-              <FilePreview
-                key={preview.id}
-                file={preview}
-                agentId={state.agentId}
-              />
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        )}
+        {!!visible.length && (
+          <div className="file-explorer">
+            <nav className="file-explorer-list" aria-label="Agent files">
+              {visible.map((file) => {
+                const Icon =
+                  file.kind === "image"
+                    ? Image
+                    : file.kind === "video"
+                      ? Video
+                      : FileText
+                return (
+                  <Button
+                    key={file.id}
+                    variant={preview?.id === file.id ? "secondary" : "ghost"}
+                    aria-pressed={preview?.id === file.id}
+                    onClick={() => setPreviewId(file.id)}
+                    title={file.name}
+                  >
+                    <Icon data-icon="inline-start" />
+                    <span className="truncate">{file.name}</span>
+                  </Button>
+                )
+              })}
+            </nav>
+            {preview && (
+              <section
+                className="file-explorer-detail"
+                aria-label={`Details for ${preview.name}`}
+              >
+                <FileDetails
+                  key={`details-${preview.id}`}
+                  file={preview}
+                  state={state}
+                  onAttach={() => {
+                    state.select(preview)
+                    onAttached()
+                  }}
+                  disabled={
+                    !attachmentReady(preview) ||
+                    selectionDisabled ||
+                    state.selected.length >= 4 ||
+                    state.selected.some((item) => item.id === preview.id)
+                  }
+                />
+                {!preview.trashed && preview.status === "ready" && (
+                  <FilePreview
+                    key={`preview-${preview.id}`}
+                    file={preview}
+                    agentId={state.agentId}
+                  />
+                )}
+              </section>
             )}
-        </div>
-        <div className="border-t p-4 text-xs text-muted-foreground">
-          Images, text, readable PDFs and prepared video frames can be used by
-          the bot. PDFs: up to 50 pages; no OCR. Videos: up to ten minutes, six
-          sampled frames and embedded text captions. Audio is not transcribed.
-        </div>
-      </SheetContent>
-    </Sheet>
+          </div>
+        )}
+      </div>
+      <div className="border-t p-4 text-xs text-muted-foreground">
+        Images, text, readable PDFs and prepared video frames can be used by the
+        bot. PDFs: up to 50 pages; no OCR. Videos: up to ten minutes, six
+        sampled frames and embedded text captions. Audio is not transcribed.
+      </div>
+    </>
   )
 }
-function FileRow({
+function FileDetails({
   file,
   state,
   onAttach,
-  onPreview,
   disabled,
 }: {
   file: FileInfo
   state: FilesState
   onAttach: () => void
-  onPreview: () => void
   disabled: boolean
 }) {
   const [editing, setEditing] = useState(false)
@@ -269,7 +285,7 @@ function FileRow({
     <div className="py-3">
       {editing ? (
         <form
-          className="space-y-2"
+          className="flex flex-col gap-2"
           onSubmit={(event) => {
             event.preventDefault()
             void mutate("rename")
@@ -303,24 +319,7 @@ function FileRow({
       ) : (
         <>
           <div className="flex min-w-0 items-center gap-3">
-            {file.kind === "image" &&
-            !file.trashed &&
-            file.status === "ready" ? (
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label={`Preview ${file.name}`}
-                onClick={onPreview}
-              >
-                <img
-                  className="size-9 rounded-md object-cover"
-                  src={agentUrl(state.agentId, `files/${file.id}/vision`)}
-                  alt=""
-                />
-              </Button>
-            ) : (
-              <Files className="size-5 shrink-0 text-muted-foreground" />
-            )}
+            <Files className="size-5 shrink-0 text-muted-foreground" />
             <div className="min-w-0 flex-1">
               <p className="truncate font-medium" title={file.name}>
                 {file.name}
@@ -364,13 +363,6 @@ function FileRow({
                           : legacyPdf(file)
                             ? "Extract text"
                             : "Retry extraction"}
-                      </Button>
-                    )}
-                    {(file.kind === "text" ||
-                      file.extraction?.status === "ready" ||
-                      file.video?.status === "ready") && (
-                      <Button size="xs" variant="ghost" onClick={onPreview}>
-                        Preview
                       </Button>
                     )}
                     <Button
@@ -434,6 +426,7 @@ function FileRow({
 function FilePreview({ file, agentId }: { file: FileInfo; agentId: string }) {
   const [text, setText] = useState("")
   const [error, setError] = useState("")
+  const [loaded, setLoaded] = useState(false)
   useEffect(() => {
     if (file.kind !== "text" && file.extraction?.status !== "ready") return
     const controller = new AbortController()
@@ -443,6 +436,8 @@ function FilePreview({ file, agentId }: { file: FileInfo; agentId: string }) {
       controller.signal
     )
       .then((result) => {
+        if (controller.signal.aborted) return
+        setLoaded(true)
         setText(
           result.text +
             (result.next === null
@@ -455,10 +450,20 @@ function FilePreview({ file, agentId }: { file: FileInfo; agentId: string }) {
       })
     return () => controller.abort()
   }, [agentId, file.id, file.kind, file.extraction?.status])
-  if (file.kind === "video")
+  if (file.kind === "video" && file.video?.status === "ready")
     return <VideoPreview file={file} agentId={agentId} />
+  if (
+    file.kind !== "image" &&
+    file.kind !== "text" &&
+    file.extraction?.status !== "ready"
+  )
+    return (
+      <p className="text-xs text-muted-foreground">
+        {fileDescription(file)}. Download the original to inspect it.
+      </p>
+    )
   return (
-    <figure className="rounded-lg border p-3">
+    <figure className="file-preview">
       <figcaption className="mb-2 truncate text-xs font-medium">
         {file.name}
       </figcaption>
@@ -470,7 +475,9 @@ function FilePreview({ file, agentId }: { file: FileInfo; agentId: string }) {
         />
       ) : (
         <pre className="max-h-80 overflow-auto text-xs break-all whitespace-pre-wrap">
-          {error || text || "Loading…"}
+          {error ||
+            text ||
+            (loaded ? "No readable text in this file." : "Loading…")}
         </pre>
       )}
     </figure>
@@ -500,7 +507,7 @@ function VideoPreview({ file, agentId }: { file: FileInfo; agentId: string }) {
     return () => controller.abort()
   }, [agentId, file.id])
   return (
-    <figure className="space-y-3 rounded-lg border p-3">
+    <figure className="flex flex-col gap-3">
       <figcaption className="text-sm font-medium break-words">
         {file.name}
       </figcaption>
@@ -516,7 +523,7 @@ function VideoPreview({ file, agentId }: { file: FileInfo; agentId: string }) {
         <>
           <div className="grid grid-cols-2 gap-2">
             {video.frames.map((frame, index) => (
-              <figure key={index} className="space-y-1">
+              <figure key={index} className="flex flex-col gap-1">
                 <img
                   loading="lazy"
                   className="aspect-video w-full rounded-md bg-muted object-contain"

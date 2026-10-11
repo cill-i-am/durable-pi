@@ -1,46 +1,29 @@
-import { useEffect, useState } from "react"
-import { Code2, Play, Square, X, RefreshCw } from "lucide-react"
+import { useState } from "react"
+import { Code2, Play, Square, RefreshCw } from "lucide-react"
 import { useExecution } from "./use-execution"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet"
 
 export function ExecutionWorkbench({
   agentId,
   agentName,
-  onClose,
 }: {
   agentId: string
   agentName: string
-  onClose: () => void
 }) {
   const execution = useExecution(agentId)
-  const [wide, setWide] = useState(false)
   const [code, setCode] = useState(
     "console.log('Items:', input.length)\nreturn input.reduce((sum, n) => sum + n, 0)"
   )
   const [data, setData] = useState("[1, 2, 3]")
-  useEffect(() => {
-    const media = window.matchMedia("(min-width: 1280px)")
-    const update = () => setWide(media.matches)
-    update()
-    media.addEventListener("change", update)
-    return () => media.removeEventListener("change", update)
-  }, [])
   const active = execution.runs.find((run) => run.status === "running")
   const run = execution.detail
   const content = (
     <>
-      <header className="flex items-center justify-between gap-2 border-b px-4 py-3">
+      <header className="workbench-heading-row">
         <div className="flex items-center gap-2 text-sm font-medium">
           <Code2 className="size-4" /> Code{" "}
           <Badge variant="secondary">JavaScript</Badge>
@@ -55,17 +38,9 @@ export function ExecutionWorkbench({
           >
             <RefreshCw />
           </Button>
-          <Button
-            size="icon-sm"
-            variant="ghost"
-            aria-label="Hide code"
-            onClick={onClose}
-          >
-            <X />
-          </Button>
         </div>
       </header>
-      <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4">
+      <div className="workbench-body">
         {execution.error && (
           <Alert>
             <AlertDescription>{execution.error}</AlertDescription>
@@ -237,32 +212,5 @@ export function ExecutionWorkbench({
       </footer>
     </>
   )
-  return wide ? (
-    <aside
-      className="browser-workbench flex min-h-0 w-[480px] shrink-0 flex-col border-l bg-background"
-      aria-label={`${agentName} code`}
-    >
-      {content}
-    </aside>
-  ) : (
-    <Sheet
-      open
-      onOpenChange={(open) => {
-        if (!open) onClose()
-      }}
-    >
-      <SheetContent
-        className="gap-0 p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-xl"
-        showCloseButton={false}
-      >
-        <SheetHeader className="sr-only">
-          <SheetTitle>{agentName} code</SheetTitle>
-          <SheetDescription>
-            Run JavaScript and inspect this bot’s saved results.
-          </SheetDescription>
-        </SheetHeader>
-        {content}
-      </SheetContent>
-    </Sheet>
-  )
+  return content
 }

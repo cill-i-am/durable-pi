@@ -7,6 +7,7 @@ import {
   Clock3,
   Code2,
   Globe,
+  Files,
   ListTodo,
   LockKeyhole,
   LogOut,
@@ -57,7 +58,15 @@ import {
 import { useSidebar } from "@/components/ui/sidebar"
 
 export type Workbench =
-  "browser" | "code" | "apps" | "terminal" | "routines" | "objects" | "activity"
+  | "browser"
+  | "code"
+  | "apps"
+  | "terminal"
+  | "routines"
+  | "objects"
+  | "activity"
+  | "files"
+  | "memory"
 export type WorkspaceAction =
   | Workbench
   | "create"
@@ -70,6 +79,7 @@ export type WorkspaceAction =
 const destinations = [
   { id: "activity", label: "Activity", icon: Activity },
   { id: "objects", label: "Checklists", icon: ListTodo },
+  { id: "files", label: "Files", icon: Files },
   { id: "apps", label: "Apps", icon: PanelsTopLeft },
   { id: "browser", label: "Browser", icon: Globe },
   { id: "terminal", label: "Terminal", icon: TerminalSquare },

@@ -123,6 +123,7 @@ function LiveTerminal({
           screenReaderMode: true,
           windowOptions: {},
           theme: { background: style.backgroundColor, foreground: style.color },
+          fontFamily: style.fontFamily,
         })
         const fit = new FitAddon()
         const addon = new SandboxAddon({
@@ -181,7 +182,7 @@ function LiveTerminal({
       </p>
       <div
         ref={host}
-        className="h-72 min-w-0 overflow-hidden rounded-md border bg-background p-2 text-foreground"
+        className="terminal-surface h-72 min-w-0 overflow-hidden rounded-md border p-2"
         aria-label="Live Linux terminal"
       />
     </>

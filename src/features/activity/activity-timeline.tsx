@@ -1,3 +1,4 @@
+import { AgentMark, agentTone } from "@/components/agent-mark"
 import { useEffect, useState } from "react"
 import { Schema } from "effect"
 import { ArrowRight, ChevronDown, Clock3, RefreshCw } from "lucide-react"
@@ -16,6 +17,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -105,12 +107,14 @@ export function ActivityTimeline({
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All agents</SelectItem>
-            {agents.map((item) => (
-              <SelectItem key={item.id} value={item.id}>
-                {item.name}
-              </SelectItem>
-            ))}
+            <SelectGroup>
+              <SelectItem value="all">All agents</SelectItem>
+              {agents.map((item) => (
+                <SelectItem key={item.id} value={item.id}>
+                  {item.name}
+                </SelectItem>
+              ))}
+            </SelectGroup>
           </SelectContent>
         </Select>
         <Button
@@ -203,7 +207,7 @@ export function ActivityTimeline({
           <button
             key={entry.key}
             type="button"
-            className="flex min-w-0 flex-col gap-2 py-4 text-left outline-none hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring"
+            className="activity-event"
             onClick={() =>
               entry.target === "background"
                 ? onDetails(entry.agent)
@@ -220,6 +224,10 @@ export function ActivityTimeline({
                   minute: "2-digit",
                 })}
               </time>
+              <AgentMark
+                tone={agentTone(entry.agent.id)}
+                className="size-6 shrink-0"
+              />
               <span className="min-w-0 flex-1">
                 <span className="block text-xs text-muted-foreground">
                   {entry.agent.name} · {new Date(entry.at).toLocaleDateString()}
@@ -230,7 +238,7 @@ export function ActivityTimeline({
               </span>
               <ArrowRight className="mt-1 size-4 shrink-0 text-muted-foreground" />
             </span>
-            <span className="ml-14 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+            <span className="activity-event-meta">
               <span>
                 {entry.kind === "steer"
                   ? "Steering"

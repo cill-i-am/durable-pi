@@ -1,6 +1,5 @@
-import { useEffect, useRef, useState } from "react"
-import { cn } from "cn"
-import { ArrowLeft, Clock3, Plus, X } from "lucide-react"
+import { useState } from "react"
+import { ArrowLeft, Clock3, Plus } from "lucide-react"
 import type { Routine, RoutineRun, SaveRoutine } from "@/routines/contracts"
 import { WebhookPanel } from "./webhook-panel"
 import { useRoutines } from "./use-routines"
@@ -30,13 +29,6 @@ import {
   EmptyTitle,
   EmptyDescription,
 } from "@/components/ui/empty"
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet"
 
 const time = (at: number) =>
   new Date(at).toLocaleString(undefined, {
@@ -52,12 +44,10 @@ const schedule = (routine: Routine) =>
 export function RoutinesWorkbench({
   agentId,
   agentName,
-  onClose,
   onPendingChange,
 }: {
   agentId: string
   agentName: string
-  onClose: () => void
   onPendingChange: (pending: boolean) => void
 }) {
   const [editor, setEditor] = useState<{
@@ -65,18 +55,9 @@ export function RoutinesWorkbench({
     routine?: Routine
   } | null>(null)
   const actions = useRoutines(agentId, () => setEditor(null), onPendingChange)
-  const [wide, setWide] = useState(false),
-    portalContainer = useRef<HTMLDivElement>(null)
   const [hook, setHook] = useState<Routine | null>(null)
   const [hookPending, setHookPending] = useState(false)
   const locked = actions.busy || !!actions.attempt || hookPending
-  useEffect(() => {
-    const media = matchMedia("(min-width: 1280px)")
-    const update = () => setWide(media.matches)
-    update()
-    media.addEventListener("change", update)
-    return () => media.removeEventListener("change", update)
-  }, [])
   const setStatus = (routine: Routine, status: Routine["status"]) =>
     void actions.send({
       path: "status",
@@ -186,199 +167,158 @@ export function RoutinesWorkbench({
     </div>
   )
   return (
-    <div
-      ref={portalContainer}
-      className={cn(
-        wide && "relative min-h-0 w-[min(42vw,600px)] shrink-0 border-l"
-      )}
-    >
-      <Sheet
-        open
-        modal={!wide}
-        onOpenChange={(open, event) => {
-          if (!open && !locked && (!wide || event.reason === "escape-key"))
-            onClose()
-        }}
-      >
-        <SheetContent
-          portalContainer={portalContainer}
-          showOverlay={!wide}
-          side="right"
-          showCloseButton={false}
-          className={cn(
-            "flex w-full max-w-full flex-col gap-0 p-0 data-[side=right]:w-full sm:max-w-xl",
-            wide &&
-              "absolute shadow-none data-[side=right]:w-full data-[side=right]:border-l-0 data-[side=right]:sm:max-w-none"
-          )}
-        >
-          <SheetHeader className="sr-only">
-            <SheetTitle>{agentName} routines</SheetTitle>
-            <SheetDescription>
-              Schedule this bot's work and inspect recent runs.
-            </SheetDescription>
-          </SheetHeader>
-          <header className="flex items-center justify-between border-b px-4 py-3">
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <Clock3 className="size-4" /> Routines
+    <>
+      <header className="workbench-heading-row">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <Clock3 className="size-4" /> Routines
+        </div>
+      </header>
+      <div className="workbench-body">
+        {actions.error && (
+          <Alert>
+            <AlertDescription>{actions.error}</AlertDescription>
+          </Alert>
+        )}
+        {actions.attempt && (
+          <div className="flex flex-col gap-2 rounded-lg border p-3">
+            <p className="text-xs text-muted-foreground">
+              {actions.busy
+                ? "Confirming your change…"
+                : "Keep this request until its result is confirmed."}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                disabled={actions.busy}
+                onClick={() => void actions.send(actions.attempt!)}
+              >
+                Retry same change
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={actions.busy}
+                onClick={() => void actions.resolve()}
+              >
+                Resolve and cancel
+              </Button>
             </div>
-            <Button
-              size="icon-sm"
-              variant="ghost"
-              aria-label="Hide routines"
-              disabled={locked}
-              onClick={onClose}
-            >
-              <X />
-            </Button>
-          </header>
-          <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4">
-            {actions.error && (
-              <Alert>
-                <AlertDescription>{actions.error}</AlertDescription>
-              </Alert>
-            )}
-            {actions.attempt && (
-              <div className="flex flex-col gap-2 rounded-lg border p-3">
-                <p className="text-xs text-muted-foreground">
-                  {actions.busy
-                    ? "Confirming your change…"
-                    : "Keep this request until its result is confirmed."}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    size="sm"
-                    disabled={actions.busy}
-                    onClick={() => void actions.send(actions.attempt!)}
-                  >
-                    Retry same change
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={actions.busy}
-                    onClick={() => void actions.resolve()}
-                  >
-                    Resolve and cancel
-                  </Button>
-                </div>
-              </div>
-            )}
-            {hook ? (
-              <WebhookPanel
-                key={hook.id}
-                agentId={agentId}
-                routine={hook}
-                onBack={() => {
-                  setHook(null)
-                  void actions.refresh()
-                }}
-                onPendingChange={(pending) => {
-                  setHookPending(pending)
-                  onPendingChange(pending)
-                }}
-              />
-            ) : editor ? (
-              <>
-                <Button
-                  className="self-start"
-                  size="sm"
-                  variant="ghost"
-                  disabled={locked}
-                  onClick={() => setEditor(null)}
-                >
-                  <ArrowLeft /> All routines
-                </Button>
-                <RoutineEditor
-                  key={editor.key}
-                  routine={editor.routine}
-                  latest={actions.data.routines.find(
-                    (r) => r.id === editor.routine?.id
-                  )}
-                  locked={locked}
-                  onSave={(body) => void actions.send({ path: "save", body })}
-                />
-              </>
-            ) : (
-              <>
-                <div className="flex items-center justify-between gap-3">
-                  <h2 className="text-sm font-medium">Work with {agentName}</h2>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={locked}
-                    onClick={() => setEditor({ key: crypto.randomUUID() })}
-                  >
-                    <Plus /> New routine
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Runs on Cloudflare with this browser closed. Results appear in
-                  this conversation. Your tool permissions and approvals still
-                  apply.
-                </p>
-                {actions.loading ? (
-                  <p className="text-sm text-muted-foreground" role="status">
-                    Loading routines…
-                  </p>
-                ) : actions.data.routines.length === 0 ? (
-                  <Empty>
-                    <EmptyHeader>
-                      <EmptyTitle>A little ahead of you</EmptyTitle>
-                      <EmptyDescription>
-                        Schedule a task review, prepare a brief or pick up a
-                        project at a chosen time.
-                      </EmptyDescription>
-                    </EmptyHeader>
-                  </Empty>
-                ) : null}
-                <div>
-                  {actions.data.routines
-                    .filter((r) => r.status !== "archived")
-                    .map(row)}
-                </div>
-                {actions.data.routines.some((r) => r.status === "archived") && (
-                  <details>
-                    <summary className="cursor-pointer text-xs font-medium">
-                      Archived routines
-                    </summary>
-                    {actions.data.routines
-                      .filter((r) => r.status === "archived")
-                      .map(row)}
-                  </details>
-                )}
-                <section
-                  aria-label="Recent routine runs"
-                  className="flex flex-col gap-3"
-                >
-                  <h2 className="text-sm font-medium">Recent runs</h2>
-                  {actions.data.runs.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">
-                      Completed work and interrupted runs appear here.
-                    </p>
-                  ) : (
-                    actions.data.runs
-                      .slice(0, 30)
-                      .map((run) => (
-                        <RunRow
-                          key={run.id}
-                          run={run}
-                          disabled={locked}
-                          onStop={() => void actions.stop(run.id)}
-                        />
-                      ))
-                  )}
-                </section>
-              </>
-            )}
           </div>
-          <footer className="border-t px-4 py-3 text-xs text-muted-foreground">
-            One routine runs at a time, with a ten-minute budget. Missed
-            intervals become one run. Pause stops future work; use Stop to end a
-            run already in progress.
-          </footer>
-        </SheetContent>
-      </Sheet>
-    </div>
+        )}
+        {hook ? (
+          <WebhookPanel
+            key={hook.id}
+            agentId={agentId}
+            routine={hook}
+            onBack={() => {
+              setHook(null)
+              void actions.refresh()
+            }}
+            onPendingChange={(pending) => {
+              setHookPending(pending)
+              onPendingChange(pending)
+            }}
+          />
+        ) : editor ? (
+          <>
+            <Button
+              className="self-start"
+              size="sm"
+              variant="ghost"
+              disabled={locked}
+              onClick={() => setEditor(null)}
+            >
+              <ArrowLeft /> All routines
+            </Button>
+            <RoutineEditor
+              key={editor.key}
+              routine={editor.routine}
+              latest={actions.data.routines.find(
+                (r) => r.id === editor.routine?.id
+              )}
+              locked={locked}
+              onSave={(body) => void actions.send({ path: "save", body })}
+            />
+          </>
+        ) : (
+          <>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-sm font-medium">Work with {agentName}</h2>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={locked}
+                onClick={() => setEditor({ key: crypto.randomUUID() })}
+              >
+                <Plus /> New routine
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Runs on Cloudflare with this browser closed. Results appear in
+              this conversation. Your tool permissions and approvals still
+              apply.
+            </p>
+            {actions.loading ? (
+              <p className="text-sm text-muted-foreground" role="status">
+                Loading routines…
+              </p>
+            ) : actions.data.routines.length === 0 ? (
+              <Empty>
+                <EmptyHeader>
+                  <EmptyTitle>A little ahead of you</EmptyTitle>
+                  <EmptyDescription>
+                    Schedule a task review, prepare a brief or pick up a project
+                    at a chosen time.
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            ) : null}
+            <div>
+              {actions.data.routines
+                .filter((r) => r.status !== "archived")
+                .map(row)}
+            </div>
+            {actions.data.routines.some((r) => r.status === "archived") && (
+              <details>
+                <summary className="cursor-pointer text-xs font-medium">
+                  Archived routines
+                </summary>
+                {actions.data.routines
+                  .filter((r) => r.status === "archived")
+                  .map(row)}
+              </details>
+            )}
+            <section
+              aria-label="Recent routine runs"
+              className="flex flex-col gap-3"
+            >
+              <h2 className="text-sm font-medium">Recent runs</h2>
+              {actions.data.runs.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  Completed work and interrupted runs appear here.
+                </p>
+              ) : (
+                actions.data.runs
+                  .slice(0, 30)
+                  .map((run) => (
+                    <RunRow
+                      key={run.id}
+                      run={run}
+                      disabled={locked}
+                      onStop={() => void actions.stop(run.id)}
+                    />
+                  ))
+              )}
+            </section>
+          </>
+        )}
+      </div>
+      <footer className="border-t px-4 py-3 text-xs text-muted-foreground">
+        One routine runs at a time, with a ten-minute budget. Missed intervals
+        become one run. Pause stops future work; use Stop to end a run already
+        in progress.
+      </footer>
+    </>
   )
 }
 function RunRow({
