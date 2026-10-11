@@ -30,6 +30,16 @@ export class TerminalStore {
         "ALTER TABLE terminal_authority ADD COLUMN revoked_through INTEGER NOT NULL DEFAULT -1"
       )
   }
+  exported(id: string): Checkpoint | null {
+    this.db.run(
+      "CREATE TABLE IF NOT EXISTS terminal_exports (id TEXT PRIMARY KEY,record TEXT NOT NULL)"
+    )
+    const row = this.db.all<{ record: string }>(
+      "SELECT record FROM terminal_exports WHERE id=?",
+      id
+    )[0]
+    return row ? (JSON.parse(row.record) as Checkpoint) : null
+  }
   cancel(id: string) {
     this.db.run(
       "INSERT OR IGNORE INTO terminal_cancellations (id) VALUES (?)",
@@ -99,13 +109,18 @@ export class TerminalStore {
     )
     return value
   }
-  admit(input: CommandInput, kind: "command" | "session" = "command") {
+  admit(
+    input: CommandInput,
+    kind: NonNullable<CommandRun["kind"]> = "command",
+    transfer?: CommandRun["transfer"]
+  ) {
     return this.db.transaction(() => {
       const previous = this.get(input.id)
       if (previous) {
         if (
           previous.command !== input.command ||
-          (previous.kind ?? "command") !== kind
+          (previous.kind ?? "command") !== kind ||
+          JSON.stringify(previous.transfer) !== JSON.stringify(transfer)
         )
           throw new TerminalFailure({
             message: "This command ID already has different input.",
@@ -131,6 +146,7 @@ export class TerminalStore {
         ...input,
         authorityRevision: authority.revision,
         kind,
+        ...(transfer ? { transfer } : {}),
         status: stopped ? "cancelled" : "running",
         output: "",
         exitCode: null,
@@ -150,13 +166,14 @@ export class TerminalStore {
   finish(
     id: string,
     result: Pick<CommandRun, "status" | "exitCode" | "error">,
-    checkpoint?: Checkpoint
+    checkpoint?: Checkpoint,
+    exported?: Checkpoint
   ) {
     return this.db.transaction(() => {
       const run = this.get(id)
       if (!run) throw new TerminalFailure({ message: "Command not found." })
       if (run.status !== "running") return run
-      if (checkpoint && !this.authorized(run))
+      if ((checkpoint || exported) && !this.authorized(run))
         return this.put({
           ...run,
           status: "cancelled",
@@ -166,6 +183,16 @@ export class TerminalStore {
           finishedAt: Date.now(),
           savedAt: null,
         })
+      if (exported) {
+        this.db.run(
+          "CREATE TABLE IF NOT EXISTS terminal_exports (id TEXT PRIMARY KEY,record TEXT NOT NULL)"
+        )
+        this.db.run(
+          "INSERT INTO terminal_exports VALUES (?,?)",
+          id,
+          JSON.stringify(exported)
+        )
+      }
       if (checkpoint)
         this.db.run(
           "INSERT INTO terminal_checkpoint VALUES (1,?) ON CONFLICT(id) DO UPDATE SET record=excluded.record",

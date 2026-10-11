@@ -1,6 +1,7 @@
 import type { Sandbox } from "@cloudflare/sandbox"
 import { MAX_CHECKPOINT } from "../contracts"
 import type { TerminalRuntime } from "../terminal"
+import { sandboxTransfers } from "./transfer-files"
 
 function live(signal: AbortSignal) {
   if (signal.aborted) throw new Error("Stopped")
@@ -122,6 +123,7 @@ export function sandboxRuntime(sandbox: Sandbox): TerminalRuntime {
     if (code !== 0) throw new Error("Workspace operation failed")
   }
   return {
+    ...sandboxTransfers(sandbox, internal),
     close: () => sandbox.destroy(),
     openInteractive: async (signal) => {
       const { proxyTerminal } = await import("@cloudflare/sandbox")
