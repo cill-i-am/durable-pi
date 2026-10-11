@@ -62,6 +62,25 @@ export class AccessConflict extends Schema.TaggedError<AccessConflict>()(
 
 export const builtInTools = [
   {
+    name: "discover_bots",
+    title: "Discover bots",
+    description: "List other active bots owned by this account.",
+    mode: "allow",
+  },
+  {
+    name: "delegate_bot",
+    title: "Contact another bot",
+    description:
+      "Send a bounded text-only question or drafting task to another owned bot. No file, object or action grants.",
+    mode: "ask",
+  },
+  {
+    name: "check_bot_task",
+    title: "Read bot task",
+    description: "Inspect this bot's durable task result.",
+    mode: "allow",
+  },
+  {
     name: "background_tasks",
     title: "Background drafting",
     description:

@@ -105,3 +105,55 @@ it("does not consume a child dispatch after cancelled account validation", async
   expect(guarded).toBe(0)
   expect(dispatched).toBe(0)
 })
+
+it("keeps a recovered bot job's smaller account window and native identity without inventing an output cap", async () => {
+  let floor: number | undefined = 65536
+  const attempts: (string | undefined)[] = []
+  const payloads: Record<string, unknown>[] = []
+  const models = createAgentModels(
+    accountCredentials(async () => credential),
+    {
+      contextWindow: () => 272000,
+      workingContextFloor: () => floor,
+      catalog: async () => catalog,
+      onAttempt: (_model, _thinking, _purpose, provider) => {
+        attempts.push(provider)
+        return { usage: () => {}, end: () => {} }
+      },
+    }
+  )
+  const provider = models.getProvider("openai")!
+  models.setProvider({
+    ...provider,
+    streamSimple: (model, context, options) =>
+      provider.streamSimple(model, context, {
+        ...options,
+        fetch: async (_url, init) => {
+          payloads.push(JSON.parse(String(init?.body)))
+          return response(model.id)
+        },
+      }),
+  })
+  const small = models.getModel("openai", "gpt-6-luna")!
+  expect(small.contextWindow).toBe(65536)
+  await models.completeSimple(
+    small,
+    {
+      messages: [
+        {
+          role: "user",
+          content: "Summarize the supplied draft.",
+          timestamp: Date.now(),
+        },
+      ],
+    },
+    { reasoning: "low", sessionId: "saved-bot-job-provider" }
+  )
+  expect(attempts).toEqual(["saved-bot-job-provider"])
+  expect(payloads).toHaveLength(1)
+  expect(payloads[0]!.max_output_tokens).toBeUndefined()
+  floor = undefined
+  const normal = models.getModel("openai", "gpt-6-luna")!
+  expect(normal.contextWindow).toBe(272000)
+  expect(small.maxTokens).toBe(normal.maxTokens)
+})
