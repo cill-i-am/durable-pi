@@ -183,3 +183,12 @@ To retrieve a generated file, enter its absolute `/workspace/...` path and choos
 An unconfirmed request retains its transfer ID. **Retry transfer** recovers that receipt even after the source is renamed or trashed. **Cancel transfer request** records cancellation before allowing a corrected request; delayed submissions of the canceled ID cannot execute. Failed imports keep the previous checkpoint, and exports never replace it.
 
 `node --env-file=.env --import tsx scripts/check-terminal-files.ts` exercises the native private-file boundary with the synthetic local owner, including fresh restore, exact bytes, replay, cancellation, isolation and special-file rejection.
+
+
+## Scheduled routines
+
+Open **Workbench → Routines** to schedule work for the current bot, or ask the bot to create a routine. Scheduling through the bot asks for approval by default. Choose a one-off time or an elapsed-time interval; repeats continue on Cloudflare while the browser is closed. The editor shows your local timezone. Repeats are not calendar rules, so they follow elapsed time across daylight-saving changes.
+
+Results appear in the bot's conversation under its current tool permissions. Only one routine waits or runs at once; missed intervals become one run, and each admitted run has a ten-minute budget. A disconnected model leaves the run waiting. **Pause** prevents future work; **Stop run** also stops a run already queued or running. **Archive** is recoverable through **Restore paused**. A completed one-off schedule can be run again with **Run now** or edited to a new future time.
+
+If another view changes the routine while you edit, choose **Keep my edits** or **Use saved values**. If a save is unconfirmed, retry the same change or resolve it before navigating away. The app does not send email/push notifications automatically. Incoming webhooks and calendar/timezone recurrence are separate follow-up work tracked in `BUILD.md`.

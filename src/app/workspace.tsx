@@ -1,9 +1,11 @@
+import { RoutinesWorkbench } from "@/features/routines"
 import { useState } from "react"
 import {
   Globe,
   Code2,
   PanelsTopLeft,
   PanelRight,
+  Clock3,
   TerminalSquare,
 } from "lucide-react"
 import { TerminalWorkbench } from "@/features/terminal"
@@ -50,12 +52,14 @@ export function ChatApp() {
 }
 function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
   const catalog = useAgentCatalog(ownerId)
+  const [navigationLocked, setNavigationLocked] = useState(false)
   const [editor, setEditor] = useState<{
     agent?: AgentProfile
     key: string
   } | null>(null)
   const [error, setError] = useState("")
   async function archive(agent: AgentProfile) {
+    if (navigationLocked) return
     try {
       await api("/api/agent/bots/archive", {
         id: agent.id,
@@ -71,12 +75,19 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
     <TooltipProvider>
       <SidebarProvider className="workspace-shell">
         <AgentSidebar
+          disabled={navigationLocked}
           agents={catalog.agents}
           selected={catalog.selected}
           name={name}
-          onSelect={catalog.select}
-          onCreate={() => setEditor({ key: crypto.randomUUID() })}
-          onEdit={(agent) => setEditor({ key: agent.id, agent })}
+          onSelect={(id) => {
+            if (!navigationLocked) catalog.select(id)
+          }}
+          onCreate={() => {
+            if (!navigationLocked) setEditor({ key: crypto.randomUUID() })
+          }}
+          onEdit={(agent) => {
+            if (!navigationLocked) setEditor({ key: agent.id, agent })
+          }}
           onArchive={(agent) => void archive(agent)}
         />
         <main className="workspace-main">
@@ -101,6 +112,8 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
           {catalog.selected ? (
             <AgentWorkspace
               key={catalog.selected.id}
+              navigationLocked={navigationLocked}
+              onNavigationLockChange={setNavigationLocked}
               name={name}
               agent={catalog.selected}
             />
@@ -137,12 +150,16 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
 function AgentWorkspace({
   agent,
   name,
+  navigationLocked,
+  onNavigationLockChange,
 }: {
   agent: AgentProfile
   name: string
+  navigationLocked: boolean
+  onNavigationLockChange: (value: boolean) => void
 }) {
   const [workbench, setWorkbench] = useState<
-    "browser" | "code" | "apps" | "terminal" | null
+    "browser" | "code" | "apps" | "terminal" | "routines" | null
   >(null)
   const browserOpen = workbench === "browser"
   return (
@@ -153,10 +170,12 @@ function AgentWorkspace({
         workbenchAction={
           <DropdownMenu>
             <DropdownMenuTrigger
+              disabled={navigationLocked}
               render={
                 <Button
                   size="sm"
                   variant={workbench ? "secondary" : "ghost"}
+                  disabled={navigationLocked}
                   aria-label="Open workbench"
                 />
               }
@@ -175,6 +194,9 @@ function AgentWorkspace({
                 <DropdownMenuItem onClick={() => setWorkbench("apps")}>
                   <PanelsTopLeft /> Apps
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setWorkbench("routines")}>
+                  <Clock3 /> Routines
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setWorkbench("terminal")}>
                   <TerminalSquare /> Terminal
                 </DropdownMenuItem>
@@ -190,6 +212,14 @@ function AgentWorkspace({
       />
       {workbench === "terminal" && (
         <TerminalWorkbench
+          agentId={agent.id}
+          agentName={agent.name}
+          onClose={() => setWorkbench(null)}
+        />
+      )}
+      {workbench === "routines" && (
+        <RoutinesWorkbench
+          onPendingChange={onNavigationLockChange}
           agentId={agent.id}
           agentName={agent.name}
           onClose={() => setWorkbench(null)}

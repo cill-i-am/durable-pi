@@ -108,6 +108,7 @@ export function useAgentCatalog(ownerId: string) {
 }
 
 export function AgentSidebar({
+  disabled = false,
   agents,
   selected,
   onSelect,
@@ -116,6 +117,7 @@ export function AgentSidebar({
   onArchive,
   name,
 }: {
+  disabled?: boolean
   agents: AgentProfile[]
   selected?: AgentProfile
   onSelect: (id: AgentId) => void
@@ -133,8 +135,12 @@ export function AgentSidebar({
       a.name.toLowerCase().includes(query.toLowerCase())
   )
   return (
-    <Sidebar className="workspace-sidebar" collapsible="offcanvas">
-      <SidebarHeader>
+    <Sidebar
+      inert={disabled}
+      className="workspace-sidebar"
+      collapsible="offcanvas"
+    >
+      <SidebarHeader inert={disabled}>
         <DropdownMenu>
           <DropdownMenuTrigger
             render={<Button variant="ghost" className="justify-start" />}
@@ -188,7 +194,7 @@ export function AgentSidebar({
           New agent
         </Button>
       </SidebarHeader>
-      <SidebarContent>
+      <SidebarContent inert={disabled}>
         <SidebarGroup>
           <SidebarGroupLabel>
             {archived ? "Archived agents" : "Your agents"}
@@ -264,7 +270,7 @@ export function AgentSidebar({
           )}
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter>
+      <SidebarFooter inert={disabled}>
         <Button
           variant="ghost"
           className="justify-start"

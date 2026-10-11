@@ -1,6 +1,6 @@
 # Durable Pi — build tracker
 
-Started 2026-10-10. Delivery owner: Codex. Status: **slices 01–07a deployed; Linux/PTY/file transfer verified in PRs #15–17 approved for deployment; 08a–08b generated apps deployed**.
+Started 2026-10-10. Delivery owner: Codex. Status: **slices 01–08, including Linux/PTY/file transfer and generated apps, deployed; 09a scheduled routines verified locally**.
 
 ## Outcome
 
@@ -52,9 +52,9 @@ The owner requested password recovery before continuing. Implemented Better Auth
 | 04 — Reusable skills | Create/edit/attach skills to bots; durable revisions; selected skills enter context; import through the intended Executor source; scoped access and recovery. | 04a and 04b deployed |
 | 05 — Tools and approvals | Connect Executor/MCP; assign tools per bot; Allow/Ask/Deny enforced server-side; approval persists across reload/restart; background work cannot bypass approval; revoke access. | 05a and 05b deployed |
 | 06 — Browser | Bot browses on Cloudflare; observe and take over in the workbench; authenticated Chromium sessions; Kitesurf for compatible short tasks; session expiry/reconnect and destination controls. | 06a and 06b deployed |
-| 07 — Execution and terminal | Isolated fast code execution plus on-demand Linux container; live terminal; files persist across container restarts; bounded time/output/network; cancel and recover. | 07a–07b deployed; 07c merged and deploying; 07d verified, deployment next |
+| 07 — Execution and terminal | Isolated fast code execution plus on-demand Linux container; live terminal; files persist across container restarts; bounded time/output/network; cancel and recover. | 07a–07d deployed |
 | 08 — Generated apps and inline UI | Bot creates, previews, updates and runs an app; versioned private publication; isolated execution/storage; inline UI uses a bounded renderer; interactions return events to the owning bot. | 08a and 08b deployed |
-| 09 — Routines and incoming events | Schedule/pause/delete routines; run with browser closed; authenticated webhook triggers; durable retry/deduplication; notify on meaningful outcomes; respect bot grants and budgets. | Planned |
+| 09 — Routines and incoming events | Schedule/pause/delete routines; run with browser closed; authenticated webhook triggers; durable retry/deduplication; notify on meaningful outcomes; respect bot grants and budgets. | 09a once/interval routines verified locally; incoming events next |
 | 10 — Delegation | Explicit parent/child tasks; separate child memory/tool grants; bounded concurrency; steer/stop children; deliver completed reports once after restart. | Planned |
 | 11 — Activity and recovery | Per-bot/global activity; inspect tool outcomes and approvals; recover interrupted work; expose actionable connection/backup failures; inspect/export memory and workspace. | Planned |
 | 12 — Complete product verification | Approved desktop/mobile states implemented; keyboard/accessibility checks; isolation/replay/permission tests; restore proof; secret scan; CI/deploy and hosted acceptance of all journeys. | Planned |
@@ -373,3 +373,27 @@ Implemented and verified locally on the pending terminal branches. **File transf
 - No additional infrastructure permission beyond pending 07b. This owner-operated transfer slice does not add automatic model file movement or video preprocessing; those follow as explicit capabilities.
 
 File-transfer integration against current main passes 284 tests, typecheck, lint, build and secret scan. The authority watermark fences export receipts as well as workspace checkpoints; a regression verifies revocation during an R2 export write cannot publish the result. Independent review passed. The download link uses Base UI anchor semantics.
+
+### 07b–07d deployment completed
+
+The owner approved Containers Read/Write and deployment. The existing CI token policy was updated without rewriting GitHub secrets. PR #15 deployed main `1a1785e` in run `38114750782`; PR #16 deployed main `149f627` in run `38114921975`; PR #17 deployed main `dd681fe` in run `38115206145`. Each production workflow and hosted authentication check passed. Native command/PTY/file-transfer behavior was proven locally with workerd, Docker and private R2; no authenticated owner/model production session was used for acceptance.
+
+### 09a — Durable scheduled routines
+
+Implemented and verified locally. A bot can run once at a chosen time or repeat every 15–10,080 elapsed minutes while the browser is closed. The workbench creates/edits, pauses/resumes, archives/restores, runs now and stops work; recent runs show waiting, progress and terminal results. Ask-by-default `save_routine` and `set_routine_status` tools use the same durable store. Read tools are allowed by default.
+
+- The bot's SQLite context owns routine intent, run history and stable mutation/cancellation receipts. Domain reconciliation runs through the existing Agents Lifecycle alarm owner. No separate physical alarm, new cloud resource or permission.
+- One pending/queued routine per bot; missed intervals coalesce rather than replaying a backlog. Admission and the normal conversation queue share one SQLite transaction. Model unavailability retains pending intent. Ordinary exhausted job errors return a durable retry time (at least one minute) instead of allowing the SDK to remove a live schedule.
+- Each admitted run has a fixed ten-minute budget, enforced at conversation and tool boundaries and by periodic stop reconciliation. Existing bot grants/Ask approvals remain in force. No automatic email or push is sent; useful results enter the owning conversation. Pause/archive cancel unadmitted work; already admitted work can finish within its budget unless stopped.
+- Limits: 50 saved routines, 2,000 mutation/cancellation receipts and 200 historical runs per bot; 12,000-character instructions. New/rescheduled first runs must be in the coming year. Interval schedules use elapsed minutes rather than calendar/DST rules; the editor labels the local timezone explicitly.
+- Drafts retain their captured revision and exact schedule across polling and screen-size changes. Concurrent edits require an explicit Keep my edits / Use saved values choice. Unconfirmed operations retain their identity and block navigation until retried/resolved. Confirmed mutation responses update controls before a refresh, and older reads cannot replace them.
+
+Verification (2026-10-11):
+
+- 14 domain/reconciliation tests cover validation, CAS/receipts/cancellation, missed ticks, atomic queue rollback/restart, pause/resume, bot isolation, duplicate titles, run-now, budgets and exhausted-error retry recovery.
+- Native Pi with its synthetic provider verifies owner approval survives harness restart, no routine is armed before approval, and replay creates only one saved routine.
+- `scripts/check-routines.ts` passed against local workerd: a due run predates the first subsequent HTTP request, proving an independent alarm; pending-model recovery, pause/resume, Stop, replay/cancellation, revision conflicts and auth/origin/sibling boundaries also pass. Test bots are archived afterward.
+- Desktop/mobile browser checks passed create, draft preservation at 390px, concurrent server edit reconciliation, Save, Run now and Stop. No horizontal overflow at 390px and no fresh console warnings/errors. Independent backend/frontend reviews passed after recovery, stale-read and mobile-navigation fixes.
+- Typecheck, lint and production build pass; repository test count is 299 with the native Pi regression. Existing build chunk-size advisory remains. Owner live-model acceptance remains deferred at the owner's request.
+
+References: [Agents scheduled tasks](https://developers.cloudflare.com/agents/runtime/execution/schedule-tasks/), installed `agents` 0.27.0 Lifecycle job/error contract, [Base UI Select](https://ui.shadcn.com/docs/components/base/select), [Toggle Group](https://ui.shadcn.com/docs/components/base/toggle-group). Incoming authenticated webhook triggers remain 09b; calendar schedules can be a later enhancement.
