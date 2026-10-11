@@ -62,6 +62,13 @@ export class AccessConflict extends Schema.TaggedError<AccessConflict>()(
 
 export const builtInTools = [
   {
+    name: "run_command",
+    title: "Run Linux command",
+    description:
+      "Execute shell commands in a private container with a saved workspace, no outbound networking, and bounded runtime/output.",
+    mode: "ask",
+  },
+  {
     name: "list_apps",
     title: "List private apps",
     description: "List this bot's generated apps.",

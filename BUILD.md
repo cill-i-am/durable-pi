@@ -1,6 +1,6 @@
 # Durable Pi — build tracker
 
-Started 2026-10-10. Delivery owner: Codex. Status: **slices 01–07a deployed; Linux/PTY/file transfer verified in PRs #15–17 pending container permissions; 08a generated apps deployed; 08b verified locally**.
+Started 2026-10-10. Delivery owner: Codex. Status: **slices 01–07a deployed; Linux/PTY/file transfer verified in PRs #15–17 approved for deployment; 08a–08b generated apps deployed**.
 
 ## Outcome
 
@@ -52,8 +52,8 @@ The owner requested password recovery before continuing. Implemented Better Auth
 | 04 — Reusable skills | Create/edit/attach skills to bots; durable revisions; selected skills enter context; import through the intended Executor source; scoped access and recovery. | 04a and 04b deployed |
 | 05 — Tools and approvals | Connect Executor/MCP; assign tools per bot; Allow/Ask/Deny enforced server-side; approval persists across reload/restart; background work cannot bypass approval; revoke access. | 05a and 05b deployed |
 | 06 — Browser | Bot browses on Cloudflare; observe and take over in the workbench; authenticated Chromium sessions; Kitesurf for compatible short tasks; session expiry/reconnect and destination controls. | 06a and 06b deployed |
-| 07 — Execution and terminal | Isolated fast code execution plus on-demand Linux container; live terminal; files persist across container restarts; bounded time/output/network; cancel and recover. | 07a deployed; 07b–07d verified in PRs #15–17, provisioning approval pending |
-| 08 — Generated apps and inline UI | Bot creates, previews, updates and runs an app; versioned private publication; isolated execution/storage; inline UI uses a bounded renderer; interactions return events to the owning bot. | 08a deployed; 08b verified locally |
+| 07 — Execution and terminal | Isolated fast code execution plus on-demand Linux container; live terminal; files persist across container restarts; bounded time/output/network; cancel and recover. | 07a deployed; 07b–07d verified in PRs #15–17, permissions approved; deployment in progress |
+| 08 — Generated apps and inline UI | Bot creates, previews, updates and runs an app; versioned private publication; isolated execution/storage; inline UI uses a bounded renderer; interactions return events to the owning bot. | 08a and 08b deployed |
 | 09 — Routines and incoming events | Schedule/pause/delete routines; run with browser closed; authenticated webhook triggers; durable retry/deduplication; notify on meaningful outcomes; respect bot grants and budgets. | Planned |
 | 10 — Delegation | Explicit parent/child tasks; separate child memory/tool grants; bounded concurrency; steer/stop children; deliver completed reports once after restart. | Planned |
 | 11 — Activity and recovery | Per-bot/global activity; inspect tool outcomes and approvals; recover interrupted work; expose actionable connection/backup failures; inspect/export memory and workspace. | Planned |
@@ -289,7 +289,7 @@ Verification for 07a:
 
 ### 07b–07d — Linux, interactive terminal and private file transfer
 
-Locally implemented and reviewed in [PR #15](https://github.com/cill-i-am/durable-pi/pull/15), [PR #16](https://github.com/cill-i-am/durable-pi/pull/16), and [PR #17](https://github.com/cill-i-am/durable-pi/pull/17). The stack includes bounded Linux commands, workspace checkpoints, a live PTY with save/discard, owner-only import/export, and reconnect/cancellation recovery. Native Docker/workerd/R2 checks and desktop/mobile journeys passed; detailed evidence lives on those branches. Cloudflare deployment waits on the pending request for Workers Containers Read/Write. No production terminal capability is claimed yet.
+Locally implemented and reviewed in [PR #15](https://github.com/cill-i-am/durable-pi/pull/15), [PR #16](https://github.com/cill-i-am/durable-pi/pull/16), and [PR #17](https://github.com/cill-i-am/durable-pi/pull/17). The stack includes bounded Linux commands, workspace checkpoints, a live PTY with save/discard, owner-only import/export, and reconnect/cancellation recovery. Native Docker/workerd/R2 checks and desktop/mobile journeys passed; detailed evidence lives on those branches. The owner approved Workers Containers Read/Write and deployment on 2026-10-11. The existing account-scoped CI token was updated through Alchemy (only DeployToken changed). No production terminal capability is claimed yet.
 
 ### 08a — Private generated apps and inline UI
 
@@ -308,16 +308,9 @@ Verification for 08a:
 - Typecheck, lint and production build passed. Existing chunk-size advisory remains. No new Cloudflare resources or permissions; Linux PRs remain separate and pending provisioning approval.
 
 
-### 08b — Generated web applications
-
-In progress. Custom HTML/CSS layouts use a generated JavaScript handler executed by the existing private Cloudflare Dynamic Worker. The handler receives only the app's JSON state and the current action; it returns bounded markup, CSS and the next state. Render requests cannot commit state. Owner actions validate the version/revision before and after computation, then atomically save state and an interaction event using the existing receipt/outbox. Computation is pure with no network, credentials or parent bindings; retries cannot repeat external effects.
-
-The browser gets sanitized semantic HTML and CSS in an opaque sandboxed frame. A single trusted bridge handles real form submissions and action buttons; generated browser scripts, URL attributes, foreign markup, nested frames and resource loads are excluded. App logic runs on Cloudflare, not inside the authenticated page. CSP permits only the trusted bridge nonce, inline styles, and no resource/network/form destinations. This reuses existing resources/permissions.
-
-Acceptance: native Worker render/action/state E2E; output/time/network bounds; cancellation before commit and archive/version changes during execution; HTML parser/security fixtures; real browser form actions, CSP enforcement, responsive layout, stale draft handling, reload recovery and inline previews.
-
-
 ### 08b — Custom apps running on Cloudflare
+
+Deployed in PR #19, main `60fdff6`; production run `38113900807` succeeded.
 
 Added a versioned web block whose JavaScript executes in the existing private Dynamic Worker. Its inputs are its own bounded JSON state and a validated owner action; its outputs are bounded semantic HTML, CSS, next state and an event summary. Rendering is pure. An action commits state and its bot event together only after the original revision, cancellation and bot authority remain valid. Duplicate requests replay the committed receipt without rerunning code.
 
@@ -329,3 +322,24 @@ Proof (2026-10-11):
 - Browser verified native form submission (including the formerly clobbering `dataset` field name), counter actions, invalid-action recovery, reopening, persistence, unsent fields across desktop/mobile resize, and no horizontal overflow at 390 px. A hostile-markup fixture retained only allowed text/form controls and did not navigate.
 - Read-only backend/frontend reviews found and corrected blocked native submissions, form property clobbering, reserved-name recovery, late archive/restore commit and stale archive configuration. Follow-up reviews passed. Development effect replay also exposed duplicate rendering; concurrent render loads now share their in-flight request.
 - Typecheck, lint and production build passed. Existing private ExecutionWorker is reused; no new cloud permissions or resources.
+
+
+### 07b — Linux execution, terminal and workspace recovery
+
+Implemented and verified locally; permissions were approved and applied on 2026-10-11. Deployment is in progress. One on-demand private Linux container per bot, owner command workbench and Ask-by-default model commands, durable intent/output with no implicit replay, hard Stop, recovery cleanup, and private R2 workspace checkpoints. App/model credentials remain outside the container. Outbound networking is disabled. Four concurrent instances cap this container application. Interactive PTY and explicit private file transfer are the next 07c slice.
+
+Decision: native `Container.exec` was present but stalled under both Alchemy beta.81's bundled runtime and a temporary current-workerd probe. That override was removed. A matching Sandbox SDK/container 0.12.10 RPC probe passed. Use its documented 0.x compatibility API behind the bounded adapter, with an immutable amd64 image digest. Alchemy's default scheduling policy supports the fixed image and `maxInstances`; the new `durable_object` policy has a different control-plane schema. No custom command bridge was invented.
+
+A command has 30 seconds for cold start, restore, execution and checkpoint. Only `/workspace` survives; `node_modules`, `.git` and `.cache` are excluded. Checkpoints have a host-enforced 8 MiB compressed cap and SHA-256 validation, scoped to the bot's object. Up to 500 immutable commands, latest 20 metadata summaries, 64,000 output characters. Nonzero exits can save files; failed/interrupted/cancelled checkpoint attempts preserve the prior head. All descendants are killed by container teardown; SDK timeout alone does not kill them. Interrupted commands are not replayed.
+
+Verification (2026-10-11):
+- 228 total tests passed; typecheck, lint and production build passed. Dedicated tests cover late startup, cancellation before admission, late checkpoint publication, restart with a surviving runtime, cleanup failure/retry, stale archive revisions, bounded hostile streams, and sequential model tools waiting for cleanup.
+- Real local workerd + Docker + R2 E2E passed: output, write/checkpoint/destroy/fresh restore, identical replay/conflict, sibling isolation, outbound-network denial, output bound, Stop/rollback, stop-before-dispatch, archive/restore, anonymous401 and foreign-origin403. The synthetic account has no real model credential. Native cloud container execution is not yet claimed.
+- Review identified surviving processes after a DO restart and completion reported before teardown. Recovery now holds a cleanup barrier; new commands fail closed when cleanup cannot be confirmed. Model results wait for idle. Both review findings are closed.
+- SDK startup can deliver a previous stop event while opening its next RPC channel. The adapter explicitly awaits native port readiness before restoring files, avoiding implicit retries of user commands. The fresh-restore E2E proves this path.
+- Desktop1280 test caught the growing toolbar approaching overflow. Browser/Code/Terminal now share a shadcn/Base UI workbench menu; actions occupy485px within544px. Terminal UI run saved a file and showed output/checkpoint; phone320×844 verified reopening the workbench and reading the saved file in a fresh container. Dialog and document were320px with no horizontal overflow; toolbar was271px. Temporary viewport overrides removed.
+- Deployment adds a private TerminalWorker, LinuxSandbox Durable Object/container application, and the existing WorkspaceAssets R2 binding. The manual CI setup diff adds only Workers Containers Read/Write on this Cloudflare account. Only the existing DeployToken permission policy was updated; no GitHub secret was rewritten.
+
+References: [SDK commands](https://developers.cloudflare.com/sandbox/sdk/api/commands/), [native Container API](https://developers.cloudflare.com/containers/api/durable-object-container/), [terminal guide](https://developers.cloudflare.com/sandbox/sdk/api/terminal/), [R2 directory backups](https://developers.cloudflare.com/sandbox/files/back-up-a-directory-to-r2/), [scheduling policies](https://developers.cloudflare.com/containers/configuration/scheduling-policy/), [local runtime requirements](https://developers.cloudflare.com/containers/guides/local-dev/).
+
+Deployment integration review found that restore could overtake archive delivery to the private terminal service. Commands now record their admission authority revision; a separate durable revocation watermark cancels older work even after a newer restore, while preserving work admitted after that restore. The host forwards the archival edge independently of its current status. Regression tests cover both reordered delivery and the final checkpoint fence.

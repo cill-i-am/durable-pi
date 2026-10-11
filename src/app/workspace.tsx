@@ -1,5 +1,12 @@
 import { useState } from "react"
-import { Globe, Code2, PanelsTopLeft, PanelRight } from "lucide-react"
+import {
+  Globe,
+  Code2,
+  PanelsTopLeft,
+  PanelRight,
+  TerminalSquare,
+} from "lucide-react"
+import { TerminalWorkbench } from "@/features/terminal"
 import { AppsWorkbench } from "@/features/apps"
 import {
   DropdownMenu,
@@ -135,7 +142,7 @@ function AgentWorkspace({
   name: string
 }) {
   const [workbench, setWorkbench] = useState<
-    "browser" | "code" | "apps" | null
+    "browser" | "code" | "apps" | "terminal" | null
   >(null)
   const browserOpen = workbench === "browser"
   return (
@@ -168,6 +175,9 @@ function AgentWorkspace({
                 <DropdownMenuItem onClick={() => setWorkbench("apps")}>
                   <PanelsTopLeft /> Apps
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setWorkbench("terminal")}>
+                  <TerminalSquare /> Terminal
+                </DropdownMenuItem>
                 {workbench && (
                   <DropdownMenuItem onClick={() => setWorkbench(null)}>
                     Hide workbench
@@ -178,6 +188,13 @@ function AgentWorkspace({
           </DropdownMenu>
         }
       />
+      {workbench === "terminal" && (
+        <TerminalWorkbench
+          agentId={agent.id}
+          agentName={agent.name}
+          onClose={() => setWorkbench(null)}
+        />
+      )}
       {workbench === "apps" && (
         <AppsWorkbench
           agentId={agent.id}
