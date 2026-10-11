@@ -12,6 +12,42 @@ export function terminalRequest(
   return Effect.gen(function* () {
     if (path === "terminal" && request.method === "GET")
       return Response.json(terminal.state())
+    if (path === "terminal/session" && request.method === "POST") {
+      const raw = yield* Effect.tryPromise(() =>
+        boundedBytes(request, 1024).then((bytes) =>
+          JSON.parse(new TextDecoder().decode(bytes))
+        )
+      )
+      const input = yield* Effect.try(() =>
+        Schema.decodeUnknownSync(Schema.Struct({ id: CommandInput.fields.id }))(
+          raw
+        )
+      )
+      const operation = yield* terminal.startSession(input.id)
+      keepAlive(operation.completion)
+      return Response.json(operation.run, { status: 202 })
+    }
+    const sessionParts = path.split("/")
+    if (sessionParts[1] === "session" && sessionParts.length === 4) {
+      const session = yield* Effect.try(() =>
+        terminal.session(decodeURIComponent(sessionParts[2]!))
+      )
+      const action = sessionParts[3]
+      if (action === "renew" && request.method === "POST") {
+        yield* Effect.try(() => session.renew())
+        return Response.json(session.state())
+      }
+      if (action === "save" && request.method === "POST") {
+        yield* Effect.try(() => session.save())
+        return Response.json({ ok: true })
+      }
+      if (
+        action === "socket" &&
+        request.method === "GET" &&
+        request.headers.get("upgrade") === "websocket"
+      )
+        return yield* Effect.tryPromise(() => session.connect(request))
+    }
     if (path === "terminal/cleanup" && request.method === "POST") {
       const completion = yield* Effect.try(() => terminal.recover())
       keepAlive(completion)

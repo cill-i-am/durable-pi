@@ -91,9 +91,12 @@ const network = await execute(
 )
 assert.equal(network.result.status, "failed")
 assert.notEqual(network.result.exitCode, 0)
-const oversized = await execute("python -c 'print(\"x\" * 64001)'")
+const oversized = await execute(
+  "node -e 'process.stdout.write(\"x\".repeat(64001))'"
+)
 assert.equal(oversized.result.status, "failed")
-assert.ok(oversized.result.output.length <= 64000)
+assert.equal(oversized.result.output.length, 64000)
+assert.equal(oversized.result.exitCode, null)
 const pending = {
   id: crypto.randomUUID(),
   command:

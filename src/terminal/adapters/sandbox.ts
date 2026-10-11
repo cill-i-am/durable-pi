@@ -123,6 +123,27 @@ export function sandboxRuntime(sandbox: Sandbox): TerminalRuntime {
   }
   return {
     close: () => sandbox.destroy(),
+    openInteractive: async (signal) => {
+      const { proxyTerminal } = await import("@cloudflare/sandbox")
+      live(signal)
+      await sandbox.createSession({
+        id: "owner",
+        cwd: "/workspace",
+        env: { HISTFILE: "/dev/null" },
+      })
+      live(signal)
+      return {
+        connect: (request) =>
+          proxyTerminal(sandbox, "owner", request, {
+            cols: 80,
+            rows: 24,
+            shell: "/usr/local/bin/pi-shell",
+          }),
+        close: async () => {
+          await sandbox.deleteSession("owner")
+        },
+      }
+    },
     restore: async (bytes, signal) => {
       live(signal)
       // Drain the previous native stop event before opening a new SDK RPC

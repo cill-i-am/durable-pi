@@ -99,11 +99,14 @@ export class TerminalStore {
     )
     return value
   }
-  admit(input: CommandInput) {
+  admit(input: CommandInput, kind: "command" | "session" = "command") {
     return this.db.transaction(() => {
       const previous = this.get(input.id)
       if (previous) {
-        if (previous.command !== input.command)
+        if (
+          previous.command !== input.command ||
+          (previous.kind ?? "command") !== kind
+        )
           throw new TerminalFailure({
             message: "This command ID already has different input.",
           })
@@ -127,6 +130,7 @@ export class TerminalStore {
       return this.put({
         ...input,
         authorityRevision: authority.revision,
+        kind,
         status: stopped ? "cancelled" : "running",
         output: "",
         exitCode: null,

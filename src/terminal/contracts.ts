@@ -25,6 +25,7 @@ export const CommandRun = Schema.Struct({
     "cancelled",
     "interrupted",
   ]),
+  kind: Schema.optional(Schema.Literals(["command", "session"])),
   output: Schema.String,
   exitCode: Schema.NullOr(Schema.Number),
   error: Schema.NullOr(Schema.String),
@@ -42,11 +43,18 @@ export const CommandSummary = Schema.Struct({
   label: Schema.String,
 })
 export type CommandSummary = typeof CommandSummary.Type
+export const InteractiveState = Schema.Struct({
+  id: CommandInput.fields.id,
+  phase: Schema.Literals(["starting", "ready", "saving"]),
+  expiresAt: Schema.Number,
+  maximumAt: Schema.Number,
+})
 export const TerminalState = Schema.Struct({
   runs: Schema.Array(CommandSummary),
   savedAt: Schema.NullOr(Schema.Number),
   busy: Schema.Boolean,
   cleanupError: Schema.NullOr(Schema.String),
+  session: Schema.NullOr(InteractiveState),
 })
 export class TerminalFailure extends Schema.TaggedError<TerminalFailure>()(
   "TerminalFailure",

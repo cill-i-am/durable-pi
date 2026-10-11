@@ -8,9 +8,11 @@ import {
   type Checkpoint,
   type CommandRun,
 } from "./contracts"
+import { InteractiveSession, type InteractiveRuntime } from "./session"
 import type { TerminalStore } from "./adapters/sqlite"
 
 export interface TerminalRuntime {
+  openInteractive?: (signal: AbortSignal) => Promise<InteractiveRuntime>
   restore: (bytes: Uint8Array | null, signal: AbortSignal) => Promise<void>
   execute: (
     command: string,
@@ -32,6 +34,7 @@ export class Terminal {
     id: string
     controller: AbortController
     completion: Promise<void>
+    session?: InteractiveSession
   } | null = null
   constructor(
     readonly repository: TerminalStore,
@@ -82,9 +85,19 @@ export class Terminal {
       savedAt: this.repository.checkpoint()?.savedAt ?? null,
       busy: !!this.active || !!this.recovery,
       cleanupError: this.cleanupError,
+      session: this.active?.session?.state() ?? null,
     }
   }
-  start(input: CommandInput) {
+  startSession(id: string) {
+    return this.start({ id, command: "Interactive terminal" }, "session")
+  }
+  session(id: string) {
+    const session = this.active?.session
+    if (!session || session.id !== id)
+      throw new TerminalFailure({ message: "This terminal session has ended." })
+    return session
+  }
+  start(input: CommandInput, kind: "command" | "session" = "command") {
     return Effect.try({
       try: () => {
         const decoded = Schema.decodeUnknownSync(CommandInput)(input)
@@ -93,7 +106,7 @@ export class Terminal {
           throw new TerminalFailure({
             message: "Wait for the active command and its cleanup to finish.",
           })
-        const run = this.repository.admit(decoded)
+        const run = this.repository.admit(decoded, kind)
         if (existing || run.status !== "running")
           return {
             run,
@@ -103,10 +116,16 @@ export class Terminal {
                 : Promise.resolve(),
           }
         const controller = new AbortController()
-        const completion = this.perform(run, controller).finally(() => {
-          this.active = null
-        })
-        this.active = { id: run.id, controller, completion }
+        const session =
+          kind === "session"
+            ? new InteractiveSession(run.id, controller)
+            : undefined
+        const completion = this.perform(run, controller, session).finally(
+          () => {
+            this.active = null
+          }
+        )
+        this.active = { id: run.id, controller, completion, session }
         return { run, completion }
       },
       catch: (cause) =>
@@ -129,7 +148,11 @@ export class Terminal {
           : new TerminalFailure({ message: "Could not cancel command." }),
     })
   }
-  private async perform(run: CommandRun, controller: AbortController) {
+  private async perform(
+    run: CommandRun,
+    controller: AbortController,
+    session?: InteractiveSession
+  ) {
     await Promise.resolve()
     let output = "",
       lastFlush = 0
@@ -144,7 +167,7 @@ export class Terminal {
       if (output.length >= MAX_OUTPUT) throw new Error("Output limit")
     }
     // Includes cold start, restore, execution and checkpoint; no phase may extend the deadline.
-    const timer = setTimeout(() => controller.abort(), COMMAND_TIMEOUT)
+    let timer = setTimeout(() => controller.abort(), COMMAND_TIMEOUT)
     let stop!: () => void
     const live = () => {
       if (controller.signal.aborted) throw new Error("Stopped")
@@ -168,11 +191,31 @@ export class Terminal {
         throw new Error("Checkpoint limit")
       await this.runtime.restore(bytes, controller.signal)
       live()
-      const exitCode = await this.runtime.execute(
-        run.command,
-        append,
-        controller.signal
-      )
+      let exitCode = 0
+      if (session) {
+        if (!this.runtime.openInteractive)
+          throw new Error("Interactive runtime unavailable")
+        session.ready(await this.runtime.openInteractive(controller.signal))
+        clearTimeout(timer)
+        timer = setTimeout(
+          () => controller.abort(),
+          Math.max(0, session.maximumAt - Date.now())
+        )
+        await session.completion
+        live()
+        clearTimeout(timer)
+        timer = setTimeout(() => controller.abort(), 10000)
+        await session.settleConnections()
+        live()
+        await session.closeRuntime()
+        live()
+      } else {
+        exitCode = await this.runtime.execute(
+          run.command,
+          append,
+          controller.signal
+        )
+      }
       live()
       const snapshot = await this.runtime.snapshot(controller.signal)
       live()
@@ -200,15 +243,18 @@ export class Terminal {
       this.repository.finish(run.id, {
         status: "failed",
         exitCode: null,
-        error:
-          "The command could not finish or save its workspace within the time/output limit. Inspect its output before starting another command. Recovery uses the last saved checkpoint.",
+        error: session
+          ? "The terminal session ended or could not save. Recovery uses the last saved checkpoint."
+          : "The command could not finish or save its workspace within the time/output limit. Inspect its output before starting another command. Recovery uses the last saved checkpoint.",
       })
     } finally {
       clearTimeout(timer)
+      session?.dispose()
       controller.signal.removeEventListener("abort", stop)
       // Retain admission ownership until a cancelled SDK call settles. A late cold
       // start must be torn down before another command can enter this container.
       await work.catch(() => {})
+      await session?.settleConnections()
       // A cancelled command can leave children behind. Only container teardown is a hard stop.
       try {
         await this.runtime.close()

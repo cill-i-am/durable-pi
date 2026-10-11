@@ -155,7 +155,7 @@ Limits are 50 apps per bot, 50 versions per app, 20 pending updates and 2,000 ap
 
 ## Linux command workbench
 
-Open **Workbench → Terminal**, enter a shell command, and choose **Run command**. Node and Python run in a private Cloudflare container with outbound networking disabled. The bot's `run_command` tool asks for approval by default. The app and model credentials remain outside the container. This slice runs bounded commands; an interactive PTY is tracked separately in `BUILD.md`.
+Open **Workbench → Terminal**, enter a shell command, and choose **Run command**. Node and Python run in a private Cloudflare container with outbound networking disabled. The bot's `run_command` tool asks for approval by default. The app and model credentials remain outside the container. The **Commands** tab runs bounded commands; **Interactive** opens a native shell with streaming input/output, resize, Ctrl+C and reconnect.
 
 Each command starts from the last private R2 checkpoint of `/workspace`, saves a new checkpoint, then destroys its container and all child processes. Files outside `/workspace`, `node_modules`, `.git` and `.cache` are not retained. Commands share files but not running processes or shell environment. A nonzero exit can still save changed files. Stop, timeout, a failed checkpoint or an interrupted runtime keeps the previous checkpoint. Commands are never automatically repeated after a restart. **Retry same request** reuses its saved ID; new commands need a new ID.
 
@@ -164,3 +164,11 @@ Limits: 30 seconds including startup and saving, 16,000 command characters, 64,0
 Local development requires Docker. The Sandbox SDK and image are pinned to matching 0.12.10; the image also has an immutable digest. The current native Container command API stalled in the tested local runtime, so this bounded adapter uses the documented 0.x API. Re-evaluate native migration when its local runtime works with the installed Alchemy version. Container logs and Worker observability are disabled to avoid recording command content.
 
 `node --env-file=.env --import tsx scripts/check-terminal.ts` exercises real local workerd/Docker and private local R2 using a synthetic account. Production requires adding **Workers Containers Read** and **Workers Containers Write** to the existing account-scoped CI token in `stacks/github.ts`. The owner approved these permissions and deployment on 2026-10-11; the public repository contains no credentials.
+
+### Interactive terminal
+
+Choose **Interactive → Open interactive terminal**. Only this session can use the bot's Linux workspace until it closes. **Save and close** retains `/workspace` in a private checkpoint; **Discard and stop** keeps the previous checkpoint. Check the visible result: a failed save does not retain changes. The terminal transcript is not added to conversation history.
+
+The workbench renews a thirty-second authenticated lease; switching its internal tabs or changing screen size preserves it. Closing the whole workbench, revoked sign-in or a sustained connection failure stops the session without saving. A session ends after ten minutes regardless of renewal. Only one viewer connects at a time. Input is bounded to 256,000 bytes and output/replay to 4 MiB; reconnect can replay the native 256 KiB terminal buffer. Clipboard and link addons are not installed.
+
+`node --env-file=.env --import tsx scripts/check-interactive-terminal.ts` checks the native shell and checkpoint lifecycle using the synthetic local owner, including resize, keyboard interruption, full-buffer reconnect and logout expiry. The image-local shell launcher establishes a controlling terminal for the pinned SDK's Bun PTY. Private file transfer is the next slice.

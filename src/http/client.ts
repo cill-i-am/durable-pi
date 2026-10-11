@@ -1,3 +1,11 @@
+export class ApiError extends Error {
+  constructor(
+    readonly status: number,
+    message: string
+  ) {
+    super(message)
+  }
+}
 export function errorMessage(value: unknown) {
   return typeof value === "object" &&
     value !== null &&
@@ -19,11 +27,11 @@ export async function api<T>(
   })
   if (!response.ok) {
     if (response.status === 401)
-      throw new Error("Your session has expired. Sign in again.")
+      throw new ApiError(401, "Your session has expired. Sign in again.")
     const error = await response
       .json()
       .catch(() => ({ error: "Connection interrupted. Please retry." }))
-    throw new Error(errorMessage(error))
+    throw new ApiError(response.status, errorMessage(error))
   }
   return response.json()
 }

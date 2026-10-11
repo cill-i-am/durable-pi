@@ -4,7 +4,11 @@ import { getEnv } from "../env"
 
 async function handle(request: Request) {
   const env = getEnv()
-  if (request.method !== "GET" && !sameOrigin(request, env.APP_URL))
+  if (
+    (request.method !== "GET" ||
+      request.headers.get("upgrade") === "websocket") &&
+    !sameOrigin(request, env.APP_URL)
+  )
     return new Response("Forbidden", { status: 403 })
   const user = await authorizedOwner(request, env)
   if (!user) return new Response("Unauthorized", { status: 401 })
@@ -13,6 +17,8 @@ async function handle(request: Request) {
     "x-owner-id": user.id,
     "x-app-origin": new URL(env.APP_URL).origin,
   })
+  if (request.headers.get("upgrade") === "websocket")
+    headers.set("upgrade", "websocket")
   const response = await env.AGENT_SERVICE.fetch(
     new Request(
       `https://agent.internal${new URL(request.url).pathname}${new URL(request.url).search}`,
@@ -25,6 +31,7 @@ async function handle(request: Request) {
       }
     )
   )
+  if (response.status === 101) return response
   const out = new Response(response.body, response)
   out.headers.set("Cache-Control", "private, no-store")
   out.headers.set("X-Content-Type-Options", "nosniff")
