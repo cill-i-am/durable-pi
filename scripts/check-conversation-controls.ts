@@ -31,45 +31,38 @@ cookie = login.headers
 const catalog = await (
   await request("/api/agent/models?agent=home")
 ).json<{
-  models: { id: string; thinking: string[] }[]
+  models: unknown[]
+  error: string | null
   selection: { model: string; thinking: string; settingsRevision: number }
 }>()
-assert.ok(catalog.models.length)
-const next = catalog.models.find((model) => model.id === "gpt-6-luna")!
-assert.ok(next)
+assert.ok(
+  catalog.error,
+  "The credential-free local stage cannot claim account model access"
+)
+assert.deepEqual(catalog.models, [])
+const before = catalog.selection
 assert.equal(
   (
     await request(
       "/api/agent/settings?agent=home",
-      { model: next.id, thinking: "medium" },
+      { model: "gpt-6-luna", thinking: "medium" },
       "https://untrusted.invalid"
     )
   ).status,
   403
 )
-assert.equal(
-  (
-    await request("/api/agent/settings?agent=home", {
-      model: "not-a-model",
-      thinking: "high",
-    })
-  ).status,
-  400
-)
-const before = catalog.selection
-const changed = await request("/api/agent/settings?agent=home", {
-  model: next.id,
-  thinking: "low",
-})
-assert.equal(changed.status, 200)
-const saved = await changed.json<typeof before>()
-assert.ok(saved.settingsRevision > before.settingsRevision)
-const state = await (
-  await request("/api/agent/state?agent=home")
-).json<typeof before>()
-assert.equal(state.model, next.id)
-assert.equal(state.thinking, "low")
-assert.equal(state.settingsRevision, saved.settingsRevision)
+for (const model of ["not-a-model", "gpt-6-luna"]) {
+  const rejected = await request("/api/agent/settings?agent=home", {
+    model,
+    thinking: "high",
+  })
+  assert.equal(rejected.status, 409)
+  assert.equal(
+    (await rejected.json<{ code: string }>()).code,
+    "model_unavailable"
+  )
+}
+assert.equal((await request("/api/agent/inference?agent=home")).status, 200)
 assert.equal(
   (await request("/api/agent/settings?agent=" + crypto.randomUUID(), before))
     .status,
@@ -103,12 +96,8 @@ assert.equal(
   ).status,
   202
 )
-assert.equal(
-  (await request("/api/agent/settings?agent=home", before)).status,
-  200
-)
 await request("/api/auth/sign-out", {})
 assert.equal((await request("/api/agent/models?agent=home")).status, 401)
 console.log(
-  "Local conversation controls passed: session/origin protection, model validation and persistence, missing bot/turn rejection, offline-model boundary and idempotent stop."
+  "Local conversation controls passed: session/origin protection, account-aware model rejection, missing bot/turn rejection, offline-model boundary and idempotent stop."
 )

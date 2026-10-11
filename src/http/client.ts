@@ -1,7 +1,8 @@
 export class ApiError extends Error {
   constructor(
     readonly status: number,
-    message: string
+    message: string,
+    readonly code?: string
   ) {
     super(message)
   }
@@ -31,7 +32,16 @@ export async function api<T>(
     const error = await response
       .json()
       .catch(() => ({ error: "Connection interrupted. Please retry." }))
-    throw new ApiError(response.status, errorMessage(error))
+    throw new ApiError(
+      response.status,
+      errorMessage(error),
+      typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        typeof error.code === "string"
+        ? error.code
+        : undefined
+    )
   }
   return response.json()
 }

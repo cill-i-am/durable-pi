@@ -1,4 +1,10 @@
 import {
+  resolveRoute,
+  pinnedRoute,
+  ResolvedRoute,
+  type JobType,
+} from "../../inference/policy"
+import {
   SkillReference,
   skillContext,
   type SkillDocument,
@@ -35,6 +41,7 @@ export class ConversationStore {
       mode: "TEXT NOT NULL DEFAULT 'followUp'",
       delivery: "TEXT NOT NULL DEFAULT 'queued'",
       model: "TEXT",
+      routing: "TEXT",
       thinking: "TEXT",
       revision: "INTEGER NOT NULL DEFAULT 0",
       creation: "TEXT",
@@ -50,6 +57,9 @@ export class ConversationStore {
       "CREATE INDEX IF NOT EXISTS chat_turns_parent ON chat_turns(parent_id)"
     )
     db.run(
+      "CREATE TABLE IF NOT EXISTS job_model_settings (job TEXT PRIMARY KEY,model TEXT NOT NULL,thinking TEXT NOT NULL)"
+    )
+    db.run(
       "CREATE TABLE IF NOT EXISTS chat_settings (id INTEGER PRIMARY KEY,model TEXT NOT NULL,thinking TEXT NOT NULL)"
     )
     if (
@@ -61,6 +71,29 @@ export class ConversationStore {
         "ALTER TABLE chat_settings ADD COLUMN revision INTEGER NOT NULL DEFAULT 0"
       )
   }
+  jobSetting(job: JobType): ModelSettings | undefined {
+    if (job === "conversation")
+      return this.db.all<ModelSettings>(
+        "SELECT model,thinking FROM chat_settings WHERE id=1"
+      )[0]
+    return this.db.all<ModelSettings>(
+      "SELECT model,thinking FROM job_model_settings WHERE job=?",
+      job
+    )[0]
+  }
+  setJobSetting(job: JobType, settings: ModelSettings) {
+    if (job === "conversation") return this.setSettings(settings)
+    this.db.transaction(() => {
+      this.setSettings(this.settings())
+      this.db.run(
+        "INSERT INTO job_model_settings VALUES (?,?,?) ON CONFLICT(job) DO UPDATE SET model=excluded.model,thinking=excluded.thinking",
+        job,
+        settings.model,
+        settings.thinking
+      )
+    })
+  }
+
   settings(): ModelSettings {
     return (
       this.db.all<ModelSettings>(
@@ -121,13 +154,20 @@ export class ConversationStore {
       files: readonly FileInfo[]
       content: readonly AttachmentContent[]
     },
-    skills: readonly SkillDocument[] = []
+    skills: readonly SkillDocument[] = [],
+    resolved?: ResolvedRoute
   ) {
     return this.db.transaction(() => {
       const creation = JSON.stringify({
         text: input.text,
         mode: input.mode ?? "followUp",
         retryOf: input.retryOf ?? null,
+        ...(input.profile && input.profile !== "auto"
+          ? { profile: input.profile }
+          : {}),
+        ...(input.job && input.job !== "conversation"
+          ? { job: input.job }
+          : {}),
         ...(input.files?.length ? { files: input.files } : {}),
       })
       const existing = this.get(input.operationId)
@@ -174,14 +214,28 @@ export class ConversationStore {
           message:
             "This reply already has its four-file allowance. Queue the files in a new message.",
         })
-      const settings = parent
+      if (parent && input.profile && input.profile !== "auto")
+        throw new ConversationConflict({
+          message:
+            "Steering keeps the active run's model. Queue a new message to use an override.",
+        })
+      const job = input.job ?? "conversation"
+      const source = input.retryOf ? this.get(input.retryOf) : undefined
+      const settings: ResolvedRoute = parent
         ? {
-            model: parent.model ?? this.defaults.model,
-            thinking: parent.thinking ?? this.defaults.thinking,
+            ...pinnedRoute(parent, this.defaults)!,
+            reason: "active run",
           }
-        : this.settings()
+        : (pinnedRoute(source, this.defaults) ??
+          resolved ??
+          resolveRoute(
+            job,
+            this.jobSetting(job) ??
+              (job === "conversation" ? this.defaults : undefined),
+            input.profile
+          ))
       this.db.run(
-        "INSERT INTO chat_turns(id,text,status,created_at,parent_id,mode,model,thinking,creation,attachments,input,skills,skill_context) VALUES (?,?,'queued',?,?,?,?,?,?,?,?,?,?)",
+        "INSERT INTO chat_turns(id,text,status,created_at,parent_id,mode,model,thinking,creation,attachments,input,skills,skill_context,routing) VALUES (?,?,'queued',?,?,?,?,?,?,?,?,?,?,?)",
         input.operationId,
         input.text,
         new Date().toISOString(),
@@ -196,7 +250,8 @@ export class ConversationStore {
           parent?.skills ??
             skills.map(({ id, name, revision }) => ({ id, name, revision }))
         ),
-        parent ? "" : skillContext(skills)
+        parent ? "" : skillContext(skills),
+        JSON.stringify(settings)
       )
       if (parent)
         this.db.run(
@@ -300,16 +355,20 @@ export class ConversationStore {
   }
 }
 
-type StoredTurn = Omit<Turn, "attachments" | "input" | "skills"> & {
+type StoredTurn = Omit<Turn, "attachments" | "input" | "skills" | "routing"> & {
+  routing: string | null
   attachments: string
   input: string
   skills: string
 }
 const visibleColumns =
-  "id,text,status,answer,error,created_at,session_id,NULL AS prompt,parent_id,mode,delivery,model,thinking,revision,creation,attachments,skills,'' AS skill_context,'[]' AS input"
+  "id,text,status,answer,error,created_at,session_id,NULL AS prompt,parent_id,mode,delivery,model,thinking,routing,revision,creation,attachments,skills,'' AS skill_context,'[]' AS input"
 function restore(row: StoredTurn): Turn {
   return {
     ...row,
+    routing: row.routing
+      ? Schema.decodeUnknownSync(ResolvedRoute)(JSON.parse(row.routing))
+      : null,
     skills: Schema.decodeUnknownSync(Schema.Array(SkillReference))(
       JSON.parse(row.skills)
     ),

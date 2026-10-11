@@ -3,21 +3,10 @@ import { Schema } from "effect"
 import type { ChatTurn } from "./contracts"
 import type { AttachmentContent, FileInfo } from "../workspace/files"
 
-export const ThinkingLevel = Schema.Literals([
-  "off",
-  "minimal",
-  "low",
-  "medium",
-  "high",
-  "xhigh",
-  "max",
-])
-export type ThinkingLevel = typeof ThinkingLevel.Type
-export const ModelSettings = Schema.Struct({
-  model: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(100)),
-  thinking: ThinkingLevel,
-})
-export type ModelSettings = typeof ModelSettings.Type
+import { ModelSettings, ThinkingLevel } from "../inference/selection"
+import type { ResolvedRoute, Profile, JobType } from "../inference/policy"
+
+export { ModelSettings, ThinkingLevel }
 export const ModelSelection = Schema.Struct({
   ...ModelSettings.fields,
   settingsRevision: Schema.Number,
@@ -32,6 +21,7 @@ export type Turn = ChatTurn & {
   delivery: Delivery
   model: string | null
   thinking: ThinkingLevel | null
+  routing?: ResolvedRoute | null
   revision: number
   creation: string | null
   attachments: readonly FileInfo[]
@@ -45,6 +35,8 @@ export type Submission = {
   mode?: SubmissionMode
   retryOf?: string
   files?: readonly string[]
+  profile?: Profile
+  job?: JobType
 }
 export class ConversationConflict extends Schema.TaggedError<ConversationConflict>()(
   "ConversationConflict",

@@ -1,6 +1,6 @@
 # Durable Pi — build tracker
 
-Started 2026-10-10. Delivery owner: Codex. Status: **slices 01–09b, 03c, 08c and 02c deployed; 11a durable task planning in progress**.
+Started 2026-10-10. Delivery owner: Codex. Status: **slices 01–09b, 03c, 08c and 02c deployed; 11a deployed; 02d job model routing in progress**.
 
 ## Outcome
 
@@ -58,8 +58,9 @@ The owner requested password recovery before continuing. Implemented Better Auth
 | 08 — Generated apps and inline UI | Bot creates, previews, updates and runs an app; versioned private publication; isolated execution/storage; inline UI uses a bounded renderer; interactions return events to the owning bot. | 08a and 08b deployed |
 | 08c — Persistent working objects | Agent creates a project checklist; owner edits tasks inline or in Objects; agent reads current state; history, conflicts, retry receipts and archive/restore survive restart. | Deployed in PR #23; local journey/recovery verified; hosted authentication checks passed |
 | 09 — Routines and incoming events | Schedule/pause/delete routines; run with browser closed; authenticated webhook triggers; durable retry/deduplication; notify on meaningful outcomes; respect bot grants and budgets. | 09a and 09b deployed |
+| 02d — Different models for different jobs | Account-aware deterministic routing; per-agent job defaults and per-message profiles; durable selection, usage and explicit failure states. | In progress before delegation |
 | 10 — Delegation | Explicit parent/child tasks; separate child memory/tool grants; bounded concurrency; steer/stop children; deliver completed reports once after restart. | Planned |
-| 11a — Automatic durable task planning | Substantial requests maintain a bot-local plan; Activity exposes progress, blockers, evidence and history; compaction, restart, steering and cancellation preserve authority. | Implemented; final review and deployment pending |
+| 11a — Automatic durable task planning | Substantial requests maintain a bot-local plan; Activity exposes progress, blockers, evidence and history; compaction, restart, steering and cancellation preserve authority. | Deployed in PR #25; local journey/recovery and hosted authentication checks passed |
 | 11 — Activity and recovery | Per-bot/global activity; inspect tool outcomes and approvals; recover interrupted work; expose actionable connection/backup failures; inspect/export memory and workspace. | Planned |
 | 12 — Complete product verification | Approved desktop/mobile states implemented; keyboard/accessibility checks; isolation/replay/permission tests; restore proof; secret scan; CI/deploy and hosted acceptance of all journeys. | Planned |
 
@@ -583,7 +584,7 @@ Next: 11a durable task planning. The follow-on Paper fidelity goal below starts 
 
 02c merged in [PR #24](https://github.com/cill-i-am/durable-pi/pull/24), main `9b88ca1`. Both checks passed on signed head `d93acd9`; [production workflow 38122209355](https://github.com/cill-i-am/durable-pi/actions/runs/38122209355) passed, including production Alchemy deployment and the hosted authentication-boundary checks. No live hosted model inference is claimed.
 
-### 11a — Durable task planning (in progress)
+### 11a — Durable task planning
 
 The complete owner request remains in the acceptance section above. Plans belong to normal execution, with no separate mode, planner agent or plan approval gate. They describe work and evidence; Access and Conversations continue to own permission and cancellation.
 
@@ -600,9 +601,19 @@ Verification:
 - Native tool tests page maximum escaped summaries and detailed plans without invalid JSON or lost entries. Cold checklist evidence after native restart does not deadlock; a later owner edit reopens the completed step once. Failed code/command receipts remain invalid.
 - Real local workerd verified authenticated reads, an owner edit through the shared checklist operation, durable evidence invalidation (plan revision 12 → 13), cross-bot 404 and history pagination. Stopping and restarting the whole local process preserved that state. Initial plan data was seeded through native Pi application operations into a synthetic bot; this is not a live ChatGPT-generated journey.
 - Browser checked Activity at 1440×900 and 390×844, evidence disclosure, older revisions and refresh. No horizontal overflow at 390px or fresh browser errors. Screenshots are local artifacts, not hosted proof.
-- 355 tests, typecheck, lint, production build and tracked-file secret scan passed. Independent read-only backend/frontend reviews closed after correcting cold evidence reads, cancellation ordering, failed legacy receipts, native output pagination, steering delivery identity and live history pagination. Native delivery receipts distinguish consumed inputs from bounded fallback text, so quoted prior text cannot acknowledge a new steer and a large already-delivered batch cannot leave planning blocked. CI and production deployment are the remaining delivery steps. Hosted authenticated owner/model acceptance remains deferred; local faux-provider coverage does not establish model planning quality.
+- 355 tests, typecheck, lint, production build and tracked-file secret scan passed. Independent read-only backend/frontend reviews closed after correcting cold evidence reads, cancellation ordering, failed legacy receipts, native output pagination, steering delivery identity and live history pagination. Native delivery receipts distinguish consumed inputs from bounded fallback text, so quoted prior text cannot acknowledge a new steer and a large already-delivered batch cannot leave planning blocked. PR #25 merged to main `c3067fe`; both exact-head checks passed. [Production run `38123979921`](https://github.com/cill-i-am/durable-pi/actions/runs/38123979921) passed checks, Alchemy deployment and hosted authentication probes, including plan routes. Hosted authenticated owner/model acceptance remains deferred; local faux-provider coverage does not establish model planning quality.
 
 Next: delegation (10), the remaining activity/recovery work (11), then complete-product verification (12).
+
+### 10a — Request-owned native delegation (preflight)
+
+Grounded in Paper’s “Agents / delegation & parallel work” artboard and the installed Pi Durable 1.0.4 ownership/commit APIs. Start with a complete request-owned journey: the owner asks for parallel help; the bot delegates up to three bounded research/drafting tasks; each child has its own durable native conversation and explicit read-tool set; Activity exposes work, results, steering and Stop; the parent receives the combined result once. Children cannot spawn children. Child transcripts and reasoning remain outside the parent's OptChat archive; only the combined report enters it through the parent tool result.
+
+Use native task ownership and stable submission IDs for reuse/recovery, rather than a second execution scheduler. The parent stays active while this first increment's children work, so existing permission, pinned-model context budgets and cancellation authority remain attached to that request. Stop must reach children; replay must reuse their committed outcome. Read-only child tools can query only the owning bot's explicitly supplied memory/files, subject to existing grants. Shared context and tool limits remain visible in Activity.
+
+10b will add background groups and recoverable report delivery when the parent is idle, using a durable mailbox integrated with normal turn admission. It must separately prove parent cancellation fences, bounded wakeups, loop prevention and exactly-once admission; native background ownership intentionally survives ordinary parent abort, so the example cannot be copied without those product rules. Cross-bot delegation or sharing must be explicit and preserve each bot's data and grants. These background/cross-bot capabilities are not delivered by 10a.
+
+References inspected: [Pi native ownership](https://github.com/earendil-works/pi/tree/main/packages/durable#abort-and-subagents), [background child/report example](https://github.com/earendil-works/pi/blob/main/packages/durable/test/examples/23-subagent-background.ts), and [Cloudflare Pi integration](https://developers.cloudflare.com/agents/harnesses/pi/). Implementation and verification remain outstanding.
 
 ### Follow-on goal — Match the approved Paper implementation
 
@@ -611,3 +622,104 @@ Requested by the owner on 2026-10-11: once the current build goal is complete, c
 Use Paper as the visual and interaction reference. Audit every implemented screen and state, then close differences in layout, spacing, typography, colors, borders, component composition, navigation and responsive behavior. Keep shadcn/Base UI primitives and the established frontend feature boundaries. Cover authentication, agent navigation and chat, composer/attachments/steering, tools and thinking, workbench panels, activity, approvals, recovery, working objects and mobile states.
 
 Acceptance: compare product screenshots with the corresponding Paper artboards at matching desktop and mobile sizes; record and resolve material differences, including loading, empty, error, conflict, archived and recovery states. Verify keyboard and touch interactions as well as visual fidelity. Preserve implemented behavior and accessibility. Track any deliberate departures and their reasons, carry changes through the established review/deployment workflow, and distinguish local screenshot verification from hosted verification.
+
+
+## 02d — Different models for different jobs
+
+Owner request (2026-10-11), retained verbatim:
+
+Implement “different models for different jobs” in Durable Pi as an end-to-end feature. Add it to the existing work tracker and deliver it in small, working slices.
+
+Keep the existing Cloudflare architecture, Effect backend, domain-driven design, and feature-sliced frontend using TanStack Start and shadcn/Base UI. Inspect the current implementation and installed Pi APIs before changing anything.
+
+Objective
+
+Each job should use an appropriate model and reasoning effort, with clear defaults, user overrides, durable execution, and visible usage. Use my existing ChatGPT subscription connection where supported.
+
+Initial model assignments
+
+| Job | Model ID | Reasoning effort |
+|---|---|---|
+| Conversation titles, labels, classification | gpt-6-luna | low |
+| Structured extraction from text or images | gpt-6-luna | medium |
+| Routine summaries and memory compaction | gpt-6-luna | medium |
+| Everyday conversation, research and tool use | gpt-6.1-sol | medium |
+| Complex implementation and multi-step troubleshooting | gpt-6.1-sol | high |
+| Deep planning, architecture and difficult synthesis | gpt-6-astra | high |
+| Requested critical review of complex work | gpt-6-astra | high |
+| Explicit “think harder” override | gpt-6-astra | xhigh |
+
+These are initial product defaults to evaluate, not claims that one model always performs best.
+
+Routing
+
+- Start with explicit job types and deterministic routing. Do not add a separate model call just to choose a model.
+- Resolve settings in this order: explicit job override, agent-specific job settings, application defaults.
+- Ordinary chat defaults to GPT-6.1 Sol at medium effort.
+- Select Astra when the user chooses Deep, or when a clearly defined deep-planning/review job is created. Do not silently upgrade every difficult-looking message.
+- Routine background jobs retain their own assignments independently of the conversation model.
+- Direct database queries, checklist edits and other deterministic operations should not require inference.
+- Do not introduce subagents solely to implement model routing.
+
+Account access and capabilities
+
+- Discover available models through the signed-in account’s supported model-list endpoint. Pi’s bundled catalog alone is not proof of access.
+- Validate model ID, reasoning effort, input modalities and tool support against account access and the installed provider implementation.
+- Use Pi’s supported Responses API integration and reasoning options.
+- Never silently clamp an unsupported effort, substitute another model, or switch to separately billed API credentials.
+- Show unavailable profiles clearly and let the user choose an available replacement.
+- Keep credentials server-side and preserve the existing refresh and account-isolation behavior.
+- Verify the subscription integration’s eligibility for this Cloudflare deployment before expanding its use. Report any unresolved restriction precisely.
+- Image input does not imply native audio/video support; retain existing media-processing boundaries.
+
+Durability and correctness
+
+- Persist the resolved model, effort and routing-policy version with each job.
+- Configuration changes affect new jobs; resumed jobs retain their original selection.
+- Preserve conversation context, working-object access, permissions and tool history across model changes.
+- Use existing durable execution and idempotency mechanisms so retries or model changes cannot repeat completed external actions.
+- Handle authentication failures, rate limits, interrupted streams and incomplete responses explicitly. Do not present partial output as a completed job.
+- Bound retries and background concurrency. Avoid automatic retry loops across models.
+- For memory compaction, preserve source references, decisions, unresolved tasks and uncertainty. Keep the previous valid memory until a replacement passes validation.
+
+User experience
+
+- Add Auto, Fast, Balanced and Deep choices to the composer:
+  - Auto: use the configured job policy.
+  - Fast: gpt-6-luna, low.
+  - Balanced: gpt-6.1-sol, medium.
+  - Deep: gpt-6-astra, high.
+- Offer the xhigh Astra override in advanced controls.
+- Show the actual model and effort alongside the selected profile.
+- Let agent settings override individual job assignments.
+- Show the model, routing reason, duration, reported token usage and outcome in Activity.
+- Identify when ChatGPT plan usage is active. Do not invent subscription-credit estimates from API dollar prices.
+- Keep controls unavailable when their required model is unavailable, with a useful explanation.
+
+Verification and delivery
+
+- Test routing precedence, capability validation, unavailable models, durable resume, account isolation and failure handling.
+- Verify the selection travels from the UI through durable job creation to the actual provider request.
+- Compare representative extraction, memory and planning tasks across the proposed defaults. Check factual fidelity and task completion, not just latency.
+- Use small live checks where authorized and distinguish those results from mocked tests.
+- Deliver one complete slice first: per-agent default plus per-message override, persisted model selection, real inference and Activity reporting.
+- Then wire background jobs and the remaining profiles into the same policy.
+- Update the work tracker with evidence, limitations and any justified changes to these defaults.
+
+Delivery sequence: first conversation defaults and one-message overrides with persisted routing and Activity; then independent background assignments and representative quality checks. Delegation remains queued behind this shared model policy.
+
+Eligibility preflight: OpenAI’s [overview](https://developers.openai.com/siwc/token-sharing-open-source) documents OSS/local apps and directs remotely hosted apps to a separate interest process. Its [VM guide](https://developers.openai.com/siwc/token-sharing-open-source/self-hosted-vms) permits protected same-user credential transfer with a stable host identity and one refresh owner. Neither establishes that Cloudflare Workers is an eligible self-hosted VM. Existing successful authentication is not eligibility evidence. The owner confirmed continuing with Pi subscription access and explicitly ruled out API fallback. Pi documents remote/headless OAuth and Cloudflare documents Pi Durable hosting; neither supplies deployment-specific registration eligibility for this Workers app. Record that remaining documentation ambiguity separately from account access and small authorized technical probes. No API-key fallback.
+
+### 02d first slice — Conversation routing
+
+Implemented per-agent conversation/implementation/planning/review defaults, one-message Auto/Fast/Balanced/Deep and advanced xhigh, account capability discovery, durable route/version/window pins and provider-request Activity. Steering retains its active run's model. Retrying an interrupted run retains its original route and native execution identity, including legacy turns. Account model access is intersected with the installed Pi Responses adapter, supported reasoning, image and tool capabilities. Unsupported choices fail explicitly; neither API credentials nor environment fallback can supply inference.
+
+Activity records each actual attempt, purpose, requested and reported model, effort, routing reason, duration, terminal outcome and provider-reported input/cached/output tokens. Cached input is a subset of input. Missing usage remains unknown. Partial responses are not completed jobs; interrupted observations do not schedule execution. The existing bounded native retry policy remains in charge; provider-level retries are disabled.
+
+Verification on 2026-10-11:
+- 368 tests, typecheck, production build and lint passed. Real installed Pi harness plus SQLite proves UI command → durable route → Responses payload, restart during inference, stable model after settings change, and no replay of an already completed tool action. Fixtures cover API-key refusal, unavailable effort/account access, truncated/incomplete/failed streams, partial usage, pre-provider auth errors, legacy pins, bot isolation and observation recovery.
+- Local workerd gateway verifies owner authentication, cross-origin rejection, scoped Activity and unavailable subscription behavior without any model credential. Browser controls were checked with an explicitly synthetic catalog; the real credential-free error state was also checked. The settings dialog fits 390×844 without horizontal overflow. This is UI evidence, not live model access.
+- Independent backend/frontend reviews closed after checking shared catalog isolation from active-run budgets, admission fences after async discovery, late settings acknowledgements, steering presentation and observation failure handling.
+- Read-only production subscription discovery reported 272,000-token windows for Luna, Sol and Astra and no server auto-compaction limit. Small direct subscription Responses probes completed on Luna/low, Sol/medium and Astra/high, each reporting 61 input and 20 output tokens. These prove transport/account access only, not comparative task quality or the full hosted app journey. Temporary diagnostic Workers were deleted.
+
+Deployment and hosted app routing verification follow this review. Next, 02e wires independent background assignments into the same policy and evaluates representative extraction, memory and planning tasks. Native active-run compaction continues to use Pi's pinned working model; OptChat summaries are separate memory jobs. Background model policy and quality comparisons are not delivered by this first slice.

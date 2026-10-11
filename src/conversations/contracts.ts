@@ -3,10 +3,14 @@ import { SkillReference } from "../skills/contracts"
 import * as Schema from "effect/Schema"
 import { FileInfo, FileSelection } from "../workspace/files"
 
+import { Profile, JobType, ResolvedRoute } from "../inference/policy"
+
 export const SendInput = Schema.Struct({
   operationId: Schema.String.check(Schema.isPattern(/^[a-f0-9-]{36}$/i)),
   text: Schema.String.check(Schema.isMaxLength(30_000)),
   files: Schema.optional(FileSelection),
+  profile: Schema.optional(Profile),
+  job: Schema.optional(JobType),
   mode: Schema.optional(Schema.Literals(["followUp", "steer"])),
 })
 export const CancelInput = Schema.Struct({
@@ -63,6 +67,7 @@ export const TimelineItem = Schema.Union([
 ])
 export type TimelineItem = typeof TimelineItem.Type
 const VisibleTurn = Schema.Struct({
+  routing: Schema.optional(Schema.NullOr(ResolvedRoute)),
   skills: Schema.optional(Schema.Array(SkillReference)),
   id: Schema.String,
   text: Schema.String,

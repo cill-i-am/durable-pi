@@ -1,4 +1,11 @@
-import { createModels } from "@earendil-works/pi-ai/models"
+import { createAssistantMessageEventStream } from "@earendil-works/pi-ai/utils/event-stream"
+import { validateRoute, type ModelCatalog } from "../inference/policy"
+import type { ThinkingLevel } from "../inference/selection"
+import type { InferenceUsage } from "../inference/usage"
+import {
+  createModels,
+  getSupportedThinkingLevels,
+} from "@earendil-works/pi-ai/models"
 import { openaiProvider } from "@earendil-works/pi-ai/providers/openai"
 import type {
   Credential,
@@ -179,33 +186,160 @@ export function accountCredentials(
 
 export function createAgentModels(
   credentials: CredentialStore,
-  options: { cacheKey?: string; onUsage?: (usage: CacheUsage) => void } = {}
+  options: {
+    contextWindow?: (model: string) => number | undefined
+    cacheKey?: string
+    catalog?: () => Promise<ModelCatalog>
+    onAttempt?: (
+      model: string,
+      thinking: ThinkingLevel,
+      purpose: "conversation" | "compaction" | "memory"
+    ) => ReturnType<InferenceUsage["start"]>
+    onUsage?: (usage: CacheUsage) => void
+  } = {}
 ) {
   const models = createModels({
-    credentials,
+    credentials: {
+      ...credentials,
+      read: async (provider) => {
+        const credential = await credentials.read(provider)
+        if (credential && credential.type !== "oauth")
+          throw new Error(
+            "ChatGPT subscription required. API-key fallback is disabled."
+          )
+        return credential
+      },
+      modify: (provider, fn) => credentials.modify(provider, fn),
+      list: () => credentials.list(),
+      delete: (provider) => credentials.delete(provider),
+    },
     authContext: { env: async () => undefined, fileExists: async () => false },
   })
   const provider = openaiProvider()
   const configured: typeof provider = {
     ...provider,
     auth: { ...provider.auth, oauth: workerChatGPTAuth },
+    getModels: () =>
+      provider.getModels().map((model) => ({
+        ...model,
+        contextWindow: Math.min(
+          model.contextWindow,
+          options.contextWindow?.(model.id) ?? model.contextWindow
+        ),
+      })),
     streamSimple(model, context, request) {
+      const thinking = request?.reasoning ?? "off"
       return provider.streamSimple(model, context, {
         ...request,
+        maxRetries: 0,
         sessionId: options.cacheKey ?? request?.sessionId,
         cacheRetention: request?.cacheRetention ?? "short",
-        onPayload: async (payload, selected) =>
-          memoryPayload(
+        onPayload: async (payload, selected) => {
+          if (!getSupportedThinkingLevels(model).includes(thinking))
+            throw new Error(
+              "Unsupported reasoning effort. Select an available effort; automatic clamping is disabled."
+            )
+          if (options.catalog) {
+            const capability = validateRoute(
+              { model: model.id, thinking },
+              await options.catalog(),
+              context.messages.some(
+                (m) =>
+                  Array.isArray(m.content) &&
+                  m.content.some((c) => c.type === "image")
+              )
+            )
+            if (model.contextWindow > capability.contextWindow)
+              throw new Error(
+                "The account context budget changed. Start a new request with the verified model budget."
+              )
+          }
+          return memoryPayload(
             (await request?.onPayload?.(payload, selected)) ?? payload
-          ),
-        onProviderStreamEvent: async (event, selected) => {
-          const usage = cacheUsage(event)
-          if (usage) options.onUsage?.(usage)
-          await request?.onProviderStreamEvent?.(event, selected)
+          )
         },
       })
     },
   }
   models.setProvider(configured)
+  const nativeStream = models.streamSimple.bind(models)
+  models.streamSimple = (model, context, request) => {
+    const observation = options.onAttempt?.(
+      model.id,
+      request?.reasoning ?? "off",
+      request?.sessionId === "memory"
+        ? "memory"
+        : request?.cacheRetention === "none"
+          ? "compaction"
+          : "conversation"
+    )
+    let incomplete = false
+    const native = nativeStream(model, context, {
+      ...request,
+      onProviderStreamEvent: async (event, selected) => {
+        const usage = cacheUsage(event)
+        if (usage) {
+          options.onUsage?.(usage)
+          observation?.usage(usage)
+        }
+        const type =
+          typeof event === "object" && event !== null && "type" in event
+            ? event.type
+            : null
+        if (type === "response.incomplete") {
+          incomplete = true
+          throw new Error(
+            "OpenAI response incomplete. Partial output is not a completed request."
+          )
+        }
+        await request?.onProviderStreamEvent?.(event, selected)
+      },
+    })
+    const observed = createAssistantMessageEventStream()
+    const record = (operation: () => void) => {
+      try {
+        operation()
+      } catch {
+        console.warn("Could not persist model activity outcome")
+      }
+    }
+    void (async () => {
+      for await (const event of native) {
+        if (event.type === "done") {
+          // Installed Pi rejects streams without a terminal event; incomplete is rejected above.
+          record(() => observation?.end("completed"))
+        } else if (event.type === "error") {
+          record(() =>
+            observation?.end(
+              incomplete
+                ? "incomplete"
+                : event.reason === "aborted"
+                  ? "cancelled"
+                  : "failed",
+              safeInferenceError(event.error.errorMessage ?? "")
+            )
+          )
+        }
+        observed.push(event)
+      }
+      observed.end()
+    })()
+    return observed
+  }
   return models
+}
+
+/** Provider errors can include request data. Only actionable categories enter Activity. */
+export function safeInferenceError(message: string) {
+  if (/401|403|authoriz|authentic|credential/i.test(message))
+    return "ChatGPT authorization failed. Reconnect the account."
+  if (/429|rate.limit|usage.limit|subscription_sharing_usage/i.test(message))
+    return "ChatGPT plan usage is currently limited. Wait for availability or check your plan usage."
+  if (/incomplete/i.test(message))
+    return "The provider returned an incomplete response."
+  if (/interrupt|without.*stop|without.*complet/i.test(message))
+    return "The provider stream ended before completion."
+  if (/unavailable|unsupported|catalog|reasoning|discover/i.test(message))
+    return "The selected model or effort could not be verified. Review model availability."
+  return "The model request failed. Saved work remains available."
 }
