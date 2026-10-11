@@ -1,7 +1,9 @@
-import { useCallback, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { Schema } from "effect"
 import { agentApi } from "@/http/client"
 import { FileInfo, FileList, MAX_ATTACHMENTS } from "@/workspace/files"
+import { pollFiles } from "./poll"
+import { attachmentReady, preparingFile } from "./preparation"
 import { uploadFile, type UploadAttempt } from "./uploads"
 
 export function useFiles(agentId: string) {
@@ -23,6 +25,11 @@ export function useFiles(agentId: string) {
       )
       if (expected === revision.current) {
         setFiles(result.files)
+        setSelected((current) =>
+          current.map(
+            (file) => result.files.find((saved) => saved.id === file.id) ?? file
+          )
+        )
         setError("")
       }
     } catch (cause) {
@@ -34,6 +41,11 @@ export function useFiles(agentId: string) {
       if (expected === revision.current) setLoading(false)
     }
   }, [agentId])
+  const extracting = files.some(preparingFile)
+  useEffect(() => {
+    if (!extracting) return
+    return pollFiles(refresh)
+  }, [extracting, refresh])
   function select(file: FileInfo) {
     setSelected((current) =>
       current.some((item) => item.id === file.id)
@@ -125,7 +137,7 @@ export function useFiles(agentId: string) {
   }
   async function mutate(
     id: string,
-    action: "trash" | "restore" | "rename",
+    action: "trash" | "restore" | "rename" | "extract",
     name?: string
   ) {
     try {
@@ -165,6 +177,7 @@ export function useFiles(agentId: string) {
     retry,
     mutate,
     uploading: processing,
+    attachmentsReady: selected.every(attachmentReady),
     remove: (id: string) =>
       setSelected((current) => current.filter((file) => file.id !== id)),
     clear: (ids: readonly string[]) =>

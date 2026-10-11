@@ -23,6 +23,15 @@ export const FileName = Schema.String.check(
     (name) => name === name.trim() && name !== "." && name !== ".."
   )
 )
+export const DocumentExtraction = Schema.Struct({
+  status: Schema.Literals(["pending", "running", "ready", "empty", "failed"]),
+  pages: Schema.Number,
+  readPages: Schema.Number,
+  characters: Schema.Number,
+  truncated: Schema.Boolean,
+  error: Schema.NullOr(Schema.String),
+})
+export type DocumentExtraction = typeof DocumentExtraction.Type
 export const FileInfo = Schema.Struct({
   id: FileId,
   name: FileName,
@@ -32,6 +41,7 @@ export const FileInfo = Schema.Struct({
   createdAt: Schema.String,
   status: Schema.Literals(["uploading", "ready"]),
   trashed: Schema.Boolean,
+  extraction: Schema.optional(DocumentExtraction),
 })
 export type FileInfo = typeof FileInfo.Type
 export const AttachmentContent = Schema.Union([
@@ -109,6 +119,13 @@ export function inspectFile(
     })
   if (!upload.bytes.length || upload.bytes.length > MAX_FILE_BYTES)
     throw new FileRejected({ message: "Choose a non-empty file up to 8 MB." })
+  if (ascii(upload.bytes, 0, 5) === "%PDF-")
+    return {
+      name: name.value,
+      kind: "document",
+      mime: "application/pdf",
+      size: upload.bytes.length,
+    }
   const image = imageMime(upload.bytes)
   if (image)
     return {

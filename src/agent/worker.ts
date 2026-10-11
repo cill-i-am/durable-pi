@@ -17,6 +17,7 @@ import * as Schema from "effect/Schema"
 import * as Effect from "effect/Effect"
 import type { AgentEnv } from "../../alchemy.run"
 import { Clock, Layer, ManagedRuntime, Semaphore } from "effect"
+import { documentService } from "../workspace/adapters/document-service"
 import { workspaceLayer } from "../workspace/adapters/storage"
 import { filesRequest } from "../workspace/http"
 import { Workspace } from "../workspace/workspace"
@@ -196,6 +197,21 @@ class BackupRunner extends TurnRunner {
   }
 }
 
+class ExtractionRunner extends TurnRunner {
+  constructor(owner: PersonalAgent) {
+    super(owner, "workspace-extraction")
+  }
+  onJob(): Promise<LifecycleJobOutcome> {
+    return this.owner.workspaceRuntime.runPromise(
+      Effect.flatMap(Workspace, (workspace) => workspace.extractNext()).pipe(
+        Effect.map((worked) =>
+          worked ? { rescheduleAt: Date.now() + 1000 } : undefined
+        )
+      )
+    )
+  }
+}
+
 export class PersonalAgent extends DurableObject<AgentEnv> {
   get summaryModelId() {
     return this.env.SUMMARY_MODEL_ID
@@ -237,7 +253,8 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       this.db,
       this.env.WORKSPACE_ASSETS,
       `files/${this.ctx.id.toString()}`,
-      () => this.botConfiguration.read()?.status !== "archived"
+      () => this.botConfiguration.read()?.status !== "archived",
+      documentService(this.env.DOCUMENT_SERVICE)
     )
   )
   readonly uploadLock = Semaphore.makeUnsafe(1)
@@ -441,11 +458,13 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   readonly runner = new TurnRunner(this)
   readonly compactor = new MemoryRunner(this)
   readonly backups = new BackupRunner(this)
+  readonly extraction = new ExtractionRunner(this)
   readonly lifecycle = Lifecycle.install(this)
     .use(this.harness)
     .use(this.runner)
     .use(this.compactor)
     .use(this.backups)
+    .use(this.extraction)
 
   private readonly conversationListeners = new Set<() => void>()
   notifyConversation() {
@@ -466,6 +485,12 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   }
 
   async onStart() {
+    if (
+      this.workspaceRuntime.runSync(
+        Effect.flatMap(Workspace, (workspace) => workspace.extractionPending())
+      )
+    )
+      await this.extraction.wake()
     if (this.active()) await this.runner.wake()
     if (
       this.memoryRuntime.runSync(this.memory.next()) ||
@@ -615,11 +640,17 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             { status: 409 }
           )
         const operation = filesRequest(request, path)
-        const response = this.workspaceRuntime.runPromise(
-          path === "files/upload"
-            ? this.uploadLock.withPermits(1)(operation)
-            : operation
-        )
+        const response = this.workspaceRuntime
+          .runPromise(
+            path === "files/upload"
+              ? this.uploadLock.withPermits(1)(operation)
+              : operation
+          )
+          .then(async (result) => {
+            if (result.ok && request.method === "POST")
+              await this.extraction.wake()
+            return result
+          })
         this.ctx.waitUntil(
           response.then(
             () => undefined,

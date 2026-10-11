@@ -24,6 +24,7 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet"
+import { attachmentReady, fileDescription, legacyPdf } from "./preparation"
 import { fileSize } from "./file-attachments"
 import type { FilesState } from "./use-files"
 
@@ -210,6 +211,7 @@ export function FilesPanel({
                   setOpen(false)
                 }}
                 disabled={
+                  !attachmentReady(file) ||
                   selectionDisabled ||
                   state.selected.length >= 4 ||
                   state.selected.some((item) => item.id === file.id)
@@ -229,8 +231,9 @@ export function FilesPanel({
             )}
         </div>
         <div className="border-t p-4 text-xs text-muted-foreground">
-          Images and UTF-8 text are readable by the bot. Videos and other
-          documents are stored for now; extraction is coming next.
+          Images, UTF-8 text and readable PDFs can be used by the bot. PDF
+          extraction reads up to 50 pages and 200,000 characters; scanned pages
+          need OCR. Videos and other documents are stored only.
         </div>
       </SheetContent>
     </Sheet>
@@ -252,7 +255,7 @@ function FileRow({
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(file.name)
   const [busy, setBusy] = useState(false)
-  async function mutate(action: "trash" | "restore" | "rename") {
+  async function mutate(action: "trash" | "restore" | "rename" | "extract") {
     setBusy(true)
     try {
       if (await state.mutate(file.id, action, name.trim())) setEditing(false)
@@ -324,9 +327,7 @@ function FileRow({
                 {fileSize(file.size)} ·{" "}
                 {file.status === "uploading"
                   ? "Upload incomplete · reselect the original file to retry"
-                  : file.kind === "video" || file.kind === "document"
-                    ? "Stored only"
-                    : file.kind}
+                  : fileDescription(file)}
               </p>
             </div>
           </div>
@@ -345,7 +346,20 @@ function FileRow({
               <>
                 {file.status === "ready" && (
                   <>
-                    {file.kind === "text" && (
+                    {(file.extraction?.status === "failed" ||
+                      file.extraction?.status === "empty" ||
+                      legacyPdf(file)) && (
+                      <Button
+                        size="xs"
+                        variant="outline"
+                        disabled={busy}
+                        onClick={() => void mutate("extract")}
+                      >
+                        {legacyPdf(file) ? "Extract text" : "Retry extraction"}
+                      </Button>
+                    )}
+                    {(file.kind === "text" ||
+                      file.extraction?.status === "ready") && (
                       <Button size="xs" variant="ghost" onClick={onPreview}>
                         Preview
                       </Button>
@@ -412,7 +426,7 @@ function FilePreview({ file, agentId }: { file: FileInfo; agentId: string }) {
   const [text, setText] = useState("")
   const [error, setError] = useState("")
   useEffect(() => {
-    if (file.kind !== "text") return
+    if (file.kind !== "text" && file.extraction?.status !== "ready") return
     const controller = new AbortController()
     void agentApi(agentId)<{ text: string; next: number | null }>(
       `files/${file.id}/text`,
@@ -431,7 +445,7 @@ function FilePreview({ file, agentId }: { file: FileInfo; agentId: string }) {
         if (!controller.signal.aborted) setError("Could not open this preview.")
       })
     return () => controller.abort()
-  }, [agentId, file.id, file.kind])
+  }, [agentId, file.id, file.kind, file.extraction?.status])
   return (
     <figure className="rounded-lg border p-3">
       <figcaption className="mb-2 truncate text-xs font-medium">

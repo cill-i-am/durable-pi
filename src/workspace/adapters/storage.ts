@@ -2,6 +2,7 @@ import { Effect, Layer, Schema } from "effect"
 import type { Sqlite } from "../../storage/sqlite"
 import {
   FileInfo,
+  DocumentExtraction,
   FileName,
   FileNotFound,
   FileRejected,
@@ -13,6 +14,7 @@ import {
   type Upload,
 } from "../files"
 import { Workspace, type AttachmentContent } from "../workspace"
+import type { ExtractDocument } from "../documents"
 
 export type AssetBucket = {
   put: (key: string, bytes: Uint8Array) => Promise<unknown>
@@ -43,12 +45,31 @@ export function workspaceLayer(
   db: Sqlite,
   bucket: AssetBucket,
   prefix: string,
-  canWrite: () => boolean = () => true
+  canWrite: () => boolean = () => true,
+  extractDocument: ExtractDocument = () =>
+    Effect.fail(new WorkspaceUnavailable())
 ) {
   return Layer.sync(Workspace, () => {
     db.run(`CREATE TABLE IF NOT EXISTS workspace_files (
       id TEXT PRIMARY KEY,name TEXT NOT NULL,mime TEXT NOT NULL,kind TEXT NOT NULL,size INTEGER NOT NULL,
       createdAt TEXT NOT NULL,status TEXT NOT NULL,trashed INTEGER NOT NULL DEFAULT 0,hash TEXT NOT NULL,visionHash TEXT)`)
+    db.run(
+      `CREATE TABLE IF NOT EXISTS workspace_extractions (id TEXT PRIMARY KEY,status TEXT NOT NULL DEFAULT 'pending',attempts INTEGER NOT NULL DEFAULT 0,pages INTEGER NOT NULL DEFAULT 0,readPages INTEGER NOT NULL DEFAULT 0,characters INTEGER NOT NULL DEFAULT 0,truncated INTEGER NOT NULL DEFAULT 0,error TEXT)`
+    )
+    const extraction = (id: string) => {
+      const stored = db.all<
+        Omit<DocumentExtraction, "truncated"> & { truncated: number }
+      >(
+        "SELECT status,pages,readPages,characters,truncated,error FROM workspace_extractions WHERE id=?",
+        id
+      )[0]
+      return stored
+        ? Schema.decodeUnknownSync(DocumentExtraction)({
+            ...stored,
+            truncated: !!stored.truncated,
+          })
+        : undefined
+    }
     const row = (id: string) => {
       const value = db.all<Row>(
         "SELECT * FROM workspace_files WHERE id=?",
@@ -58,7 +79,11 @@ export function workspaceLayer(
       return value
     }
     const info = (value: Row): FileInfo =>
-      Schema.decodeUnknownSync(FileInfo)({ ...value, trashed: !!value.trashed })
+      Schema.decodeUnknownSync(FileInfo)({
+        ...value,
+        trashed: !!value.trashed,
+        extraction: extraction(value.id),
+      })
     const active = (id: string) => {
       const value = row(id)
       if (value.trashed || value.status !== "ready") throw new FileNotFound()
@@ -92,7 +117,158 @@ export function workspaceLayer(
         if (!object) return yield* new WorkspaceUnavailable()
         return { value, object }
       })
+    const extractedKey = (value: Row) => `${key(value)}/pdf-text-v1`
+    const textContent = (id: string) =>
+      Effect.gen(function* () {
+        const value = yield* attempt(() => active(id))
+        if (value.kind === "text")
+          return {
+            value,
+            bytes: yield* transport(async () => {
+              const object = await bucket.get(key(value))
+              if (!object) throw new Error("Missing original")
+              return object.arrayBuffer()
+            }),
+          }
+        const state = extraction(id)
+        if (state?.status !== "ready")
+          return yield* new FileRejected({
+            message:
+              state?.status === "pending" || state?.status === "running"
+                ? "This PDF is still being prepared. Try again when extraction finishes."
+                : (state?.error ?? "This file has no extracted text."),
+          })
+        const object = yield* transport(() => bucket.get(extractedKey(value)))
+        if (!object) return yield* new WorkspaceUnavailable()
+        return { value, bytes: yield* transport(() => object.arrayBuffer()) }
+      })
+    const pendingExtraction = () =>
+      db.all<{ id: string; attempts: number }>(
+        `SELECT e.id,e.attempts FROM workspace_extractions e JOIN workspace_files f ON f.id=e.id WHERE e.status IN ('pending','running') AND f.status='ready' AND f.trashed=0 ORDER BY f.createdAt,e.id LIMIT 1`
+      )[0]
     return Workspace.of({
+      extractionPending: () => attempt(() => !!pendingExtraction()),
+      retryExtraction: (id) =>
+        Effect.gen(function* () {
+          const value = yield* attempt(() => {
+            assertWritable()
+            return active(id)
+          })
+          if (value.mime !== "application/pdf") {
+            if (
+              value.kind !== "document" ||
+              value.mime !== "application/octet-stream"
+            )
+              return yield* new FileRejected({
+                message: "Text extraction currently supports PDFs.",
+              })
+            const { object } = yield* read(id)
+            const bytes = new Uint8Array(
+              yield* transport(() => object.arrayBuffer())
+            )
+            if (new TextDecoder().decode(bytes.subarray(0, 5)) !== "%PDF-")
+              return yield* new FileRejected({
+                message: "This file is not a PDF.",
+              })
+          }
+          return yield* attempt(() =>
+            db.transaction(() => {
+              // Storage reads yield: recheck the archive and Trash fences at commit.
+              assertWritable()
+              active(id)
+              db.run(
+                "UPDATE workspace_files SET mime='application/pdf' WHERE id=?",
+                id
+              )
+              db.run(
+                "INSERT INTO workspace_extractions(id) VALUES (?) ON CONFLICT(id) DO UPDATE SET status='pending',attempts=0,error=NULL WHERE workspace_extractions.status IN ('failed','empty')",
+                id
+              )
+              return info(row(id))
+            })
+          )
+        }),
+      extractNext: () =>
+        Effect.gen(function* () {
+          const pending = yield* attempt(pendingExtraction)
+          if (!pending) return false
+          if (pending.attempts >= 3) {
+            yield* attempt(() =>
+              db.run(
+                "UPDATE workspace_extractions SET status='failed',error=? WHERE id=?",
+                "Extraction was interrupted. Retry from Files.",
+                pending.id
+              )
+            )
+            return true
+          }
+          const attemptNumber = pending.attempts + 1
+          yield* attempt(() =>
+            db.run(
+              "UPDATE workspace_extractions SET status='running',attempts=? WHERE id=?",
+              attemptNumber,
+              pending.id
+            )
+          )
+          const update = (status: string, error: string | null) =>
+            attempt(() =>
+              db.run(
+                "UPDATE workspace_extractions SET status=?,error=? WHERE id=? AND attempts=?",
+                status,
+                error,
+                pending.id,
+                attemptNumber
+              )
+            )
+          yield* Effect.gen(function* () {
+            const { value, object } = yield* read(pending.id)
+            const bytes = new Uint8Array(
+              yield* transport(() => object.arrayBuffer())
+            )
+            const result = yield* extractDocument(bytes)
+            if (result.text)
+              yield* transport(() =>
+                bucket.put(
+                  extractedKey(value),
+                  new TextEncoder().encode(result.text)
+                )
+              )
+            yield* attempt(() =>
+              db.run(
+                "UPDATE workspace_extractions SET status=?,pages=?,readPages=?,characters=?,truncated=?,error=? WHERE id=? AND attempts=?",
+                result.text ? "ready" : "empty",
+                result.pages,
+                result.readPages,
+                result.text.length,
+                result.truncated ? 1 : 0,
+                result.text
+                  ? null
+                  : "No readable text was found. This PDF may be scanned; OCR is not available yet.",
+                pending.id,
+                attemptNumber
+              )
+            )
+          }).pipe(
+            Effect.catchTags({
+              DocumentUnreadable: (cause) =>
+                update(
+                  "failed",
+                  cause.reason === "encrypted"
+                    ? "This PDF is password protected. Upload an unlocked copy."
+                    : "This PDF could not be read. Upload a different copy."
+                ),
+              WorkspaceUnavailable: () =>
+                update(
+                  attemptNumber < 3 ? "pending" : "failed",
+                  attemptNumber < 3
+                    ? null
+                    : "Extraction was unavailable or exceeded its resource limit. Retry from Files."
+                ),
+              FileNotFound: () => update("pending", null),
+            })
+          )
+          return true
+        }),
       readText: (id, offset, limit) =>
         Effect.gen(function* () {
           if (
@@ -106,15 +282,8 @@ export function workspaceLayer(
               message:
                 "Choose a non-negative offset and a limit from 1 to 20000 characters.",
             })
-          const { value, object } = yield* read(id)
-          if (value.kind !== "text")
-            return yield* new FileRejected({
-              message:
-                "This file has no extracted text. Images can be attached to a message.",
-            })
-          const text = new TextDecoder().decode(
-            yield* transport(() => object.arrayBuffer())
-          )
+          const { value, bytes } = yield* textContent(id)
+          const text = new TextDecoder().decode(bytes)
           const end = Math.min(offset + limit, text.length)
           return {
             file: info(value),
@@ -161,17 +330,32 @@ export function workspaceLayer(
                 input.id
               )[0]
               if (existing) {
+                const upgradePdf =
+                  existing.kind === "document" &&
+                  existing.mime === "application/octet-stream" &&
+                  metadata.mime === "application/pdf"
                 if (
                   existing.hash !== originalHash ||
                   existing.visionHash !== visionHash ||
                   existing.size !== metadata.size ||
                   existing.kind !== metadata.kind ||
-                  existing.mime !== metadata.mime
+                  (existing.mime !== metadata.mime && !upgradePdf)
                 )
                   throw new FileRejected({
                     message: "This upload ID belongs to another file.",
                   })
-                return existing
+                if (upgradePdf) {
+                  db.run(
+                    "UPDATE workspace_files SET mime='application/pdf' WHERE id=?",
+                    input.id
+                  )
+                  if (existing.status === "ready")
+                    db.run(
+                      "INSERT OR IGNORE INTO workspace_extractions(id) VALUES (?)",
+                      input.id
+                    )
+                }
+                return row(input.id)
               }
               assertWritable()
               const usage = db.all<{ bytes: number; count: number }>(
@@ -204,13 +388,20 @@ export function workspaceLayer(
             yield* transport(() =>
               bucket.put(key(reserved, true), input.vision!)
             )
-          return yield* attempt(() => {
-            db.run(
-              "UPDATE workspace_files SET status='ready' WHERE id=?",
-              input.id
-            )
-            return info(row(input.id))
-          })
+          return yield* attempt(() =>
+            db.transaction(() => {
+              db.run(
+                "UPDATE workspace_files SET status='ready' WHERE id=?",
+                input.id
+              )
+              if (metadata.mime === "application/pdf")
+                db.run(
+                  "INSERT OR IGNORE INTO workspace_extractions(id) VALUES (?)",
+                  input.id
+                )
+              return info(row(input.id))
+            })
+          )
         }).pipe(Effect.uninterruptible),
       content: (id, vision) =>
         read(id, vision).pipe(
@@ -272,10 +463,18 @@ export function workspaceLayer(
                 mimeType: "image/jpeg",
                 data: base64(bytes),
               })
-            } else if (value.kind === "text") {
-              const { object } = yield* read(id)
-              const bytes = yield* transport(() => object.arrayBuffer())
+            } else if (
+              value.kind === "text" ||
+              value.mime === "application/pdf"
+            ) {
+              const { bytes } = yield* textContent(id)
               const text = new TextDecoder().decode(bytes)
+              const extracted = extraction(id)
+              if (extracted)
+                content.push({
+                  type: "text",
+                  text: `PDF text extraction: ${extracted.readPages} of ${extracted.pages} pages inspected; ${extracted.truncated ? "extraction truncated" : "complete within extraction limits"}. Scanned images are not OCRed. Use page markers for citations. Layout and reading order may differ from the original.`,
+                })
               content.push({
                 type: "text",
                 text: `<file-content id="${id}">\n${text.slice(0, 20_000)}\n</file-content>${text.length > 20_000 ? "\nPreview truncated; use read_file to read another range." : ""}`,
