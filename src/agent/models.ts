@@ -193,7 +193,7 @@ export function createAgentModels(
       return provider.streamSimple(model, context, {
         ...request,
         sessionId: options.cacheKey ?? request?.sessionId,
-        cacheRetention: "short",
+        cacheRetention: request?.cacheRetention ?? "short",
         onPayload: async (payload, selected) =>
           memoryPayload(
             (await request?.onPayload?.(payload, selected)) ?? payload

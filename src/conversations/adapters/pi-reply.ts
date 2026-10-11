@@ -4,6 +4,8 @@ import type {
   EntryRecord,
   SubmissionRecord,
   SnapshotEvent,
+  Conversation,
+  Cursor,
 } from "@earendil-works/pi-durable"
 import type { Turn } from "../turns"
 import { messageArchiveText } from "../../workspace/files"
@@ -30,7 +32,43 @@ export async function readPiReply(
     )
     if (record) records.set(member.id, record)
   }
-  return { records, snapshot }
+  return {
+    records,
+    snapshot: {
+      ...snapshot,
+      entries: await originalTranscript(conversation, snapshot),
+    },
+  }
+}
+
+/** Native snapshots are working context, not history, once a head marker exists.
+ * Read immutable original entries only through the captured snapshot's tail, so a
+ * later output cannot make an earlier run/receipt snapshot look settled.
+ */
+export async function originalTranscript(
+  conversation: Pick<Conversation, "entries">,
+  snapshot: Pick<SnapshotEvent, "entries">
+): Promise<readonly EntryRecord[]> {
+  if (!snapshot.entries.some((entry) => entry.head !== undefined))
+    return snapshot.entries
+  const tail = snapshot.entries.reduce((latest, entry) =>
+    entry.id > latest.id ? entry : latest
+  ).id
+  const entries: EntryRecord[] = []
+  let cursor: Cursor | undefined
+  do {
+    const page = await conversation.entries(
+      { maxEntryId: tail },
+      256,
+      cursor,
+      BACKGROUND_CONTEXT
+    )
+    entries.push(
+      ...page.items.filter((entry) => entry.kind !== "pi.compaction")
+    )
+    cursor = page.next
+  } while (cursor !== undefined)
+  return entries.reverse()
 }
 
 export function placedInputs(
