@@ -33,6 +33,14 @@ Production uses the dedicated `durable-pi` Alchemy profile. Configure it with `p
 
 The compatibility date matches Alchemy beta.81's bundled local workerd (`2026-09-25`). Local development keeps infrastructure state under ignored `.alchemy/state`; deployments share the encrypted Cloudflare state service. Use a separate ChatGPT login for independently running deployments: OAuth refresh tokens rotate.
 
+## Account security
+
+Open **Personal → Account security → Set up two-factor**. Confirm your current password, scan the QR code with your authenticator, and enter its six-digit code. Protection turns on only after verification. Save the recovery codes somewhere private; each code works once if you lose access to your authenticator.
+
+The same panel lists your browser sessions and marks **This browser**. Sign out a specific session or all other browsers. Device names are inferred from the browser, so entries represent sessions rather than guaranteed physical machines. Revoked browsers lose access to new requests immediately; open connections close within one minute. Your agents and saved work keep running.
+
+**Manage** lets you replace recovery codes or turn off two-factor protection after confirming your password. Replacing codes invalidates the old set. Enabling or disabling protection signs out other browsers. Resetting your password also signs out existing sessions, but keeps two-factor protection enabled.
+
 ## Automatic deployments
 
 Following [Alchemy's CI guidance](https://alchemy.run/environments/ci/), `.github/workflows/check.yml` deploys production after verification passes on a push to `main`. Pull requests run checks without deployment credentials. The GitHub `production` environment is restricted to `main`; production deploys are serialized and never canceled halfway through. A post-deploy check verifies the homepage and anonymous access restrictions.
@@ -55,7 +63,7 @@ For the initial local-to-remote state migration, `scripts/migrate-production-sta
 - One fresh Pi conversation per user turn. Prior context is a bounded summary view, with `zoom` and `date` tools to recover original messages.
 - The reference compaction prompt, a 512-byte scale example, five byte-feedback attempts, eight concurrent compactions with a source-order barrier, and durable ten-second retries. Aligned binary merges preserve an incremental view that never splits.
 - Exact archive search, private Markdown notes with source message IDs and revision history, and a memory inspector.
-- Better Auth sessions backed by D1. An authenticated server route forwards to a Worker with both public and preview URLs disabled. Bot objects are addressed from the authenticated owner ID and a validated catalog identity. The default bot retains its original object ID.
+- Better Auth sessions and authenticator two-factor protection backed by D1, with encrypted recovery codes and individual/bulk browser-session revocation. An authenticated server route forwards to a Worker with both public and preview URLs disabled. Bot objects are addressed from the authenticated owner ID and a validated catalog identity. The default bot retains its original object ID.
 - Server-side ChatGPT credentials with one account-level refresh owner and durable token rotation shared by all bots. Model requests require the ChatGPT subscription credential; API-key fallback is disabled.
 
 The current slices include live reply updates, mid-run steering, image and video-frame attachments, private files, searchable PDF text, reusable skills, tool approvals, per-bot MCP tools, a Cloudflare browser with owner takeover, JavaScript and Linux execution, versioned private apps, scheduled/webhook routines, shared project checklists, native working-context compaction, and automatic durable task plans in Activity. Foreground/background delegation is also available; remaining activity/recovery work are tracked in [BUILD.md](BUILD.md).
