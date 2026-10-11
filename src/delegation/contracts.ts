@@ -51,6 +51,13 @@ export const Child = Schema.Struct({
 })
 export type Child = typeof Child.Type
 export const Group = Schema.Struct({
+  background: Schema.optional(
+    Schema.Struct({
+      delivery: Schema.String,
+      error: Schema.NullOr(Schema.String),
+      reportId: Schema.String,
+    })
+  ),
   id: NativeId,
   turnId: Schema.String,
   conversationId: NativeId,

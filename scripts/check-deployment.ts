@@ -39,6 +39,9 @@ for (const path of [
   "export?format=html",
   "objects",
   "objects/00000000-0000-4000-8000-000000000001",
+  "background",
+  "background/1",
+  "background/1/2",
   "delegations",
   "delegations/1",
   "delegations/1/2",
@@ -57,6 +60,22 @@ assert.equal(
   ).status,
   403
 )
+for (const action of ["control", "stop", "retry"]) {
+  assert.equal(
+    (await request(`/api/agent/background/${action}`, {})).status,
+    401
+  )
+  assert.equal(
+    (
+      await request(
+        `/api/agent/background/${action}`,
+        {},
+        "https://attacker.invalid"
+      )
+    ).status,
+    403
+  )
+}
 assert.equal((await request("/api/agent/import", {})).status, 401)
 assert.equal((await request("/api/agent/objects/mutate", {})).status, 401)
 assert.equal((await request("/api/agent/objects/cancel", {})).status, 401)

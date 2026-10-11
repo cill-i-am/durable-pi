@@ -12,6 +12,7 @@ import {
 import type { Sqlite } from "../../storage/sqlite"
 import { Schema } from "effect"
 import { AttachmentContent, FileInfo } from "../../workspace/files"
+import { TurnOrigin } from "../contracts"
 import {
   ConversationConflict,
   ConversationFull,
@@ -42,6 +43,7 @@ export class ConversationStore {
       delivery: "TEXT NOT NULL DEFAULT 'queued'",
       model: "TEXT",
       routing: "TEXT",
+      origin: "TEXT",
       thinking: "TEXT",
       revision: "INTEGER NOT NULL DEFAULT 0",
       creation: "TEXT",
@@ -158,7 +160,11 @@ export class ConversationStore {
     resolved?: ResolvedRoute
   ) {
     return this.db.transaction(() => {
+      const origin = input.retryOf
+        ? this.get(input.retryOf)?.origin
+        : input.origin
       const creation = JSON.stringify({
+        ...(origin ? { origin } : {}),
         text: input.text,
         mode: input.mode ?? "followUp",
         retryOf: input.retryOf ?? null,
@@ -235,7 +241,7 @@ export class ConversationStore {
             input.profile
           ))
       this.db.run(
-        "INSERT INTO chat_turns(id,text,status,created_at,parent_id,mode,model,thinking,creation,attachments,input,skills,skill_context,routing) VALUES (?,?,'queued',?,?,?,?,?,?,?,?,?,?,?)",
+        "INSERT INTO chat_turns(id,text,status,created_at,parent_id,mode,model,thinking,creation,attachments,input,skills,skill_context,routing,origin) VALUES (?,?,'queued',?,?,?,?,?,?,?,?,?,?,?,?)",
         input.operationId,
         input.text,
         new Date().toISOString(),
@@ -251,7 +257,8 @@ export class ConversationStore {
             skills.map(({ id, name, revision }) => ({ id, name, revision }))
         ),
         parent ? "" : skillContext(skills),
-        JSON.stringify(settings)
+        JSON.stringify(settings),
+        origin ? JSON.stringify(origin) : null
       )
       if (parent)
         this.db.run(
@@ -355,17 +362,24 @@ export class ConversationStore {
   }
 }
 
-type StoredTurn = Omit<Turn, "attachments" | "input" | "skills" | "routing"> & {
+type StoredTurn = Omit<
+  Turn,
+  "attachments" | "input" | "skills" | "routing" | "origin"
+> & {
+  origin: string | null
   routing: string | null
   attachments: string
   input: string
   skills: string
 }
 const visibleColumns =
-  "id,text,status,answer,error,created_at,session_id,NULL AS prompt,parent_id,mode,delivery,model,thinking,routing,revision,creation,attachments,skills,'' AS skill_context,'[]' AS input"
+  "id,text,status,answer,error,created_at,session_id,NULL AS prompt,parent_id,mode,delivery,model,thinking,routing,origin,revision,creation,attachments,skills,'' AS skill_context,'[]' AS input"
 function restore(row: StoredTurn): Turn {
   return {
     ...row,
+    origin: row.origin
+      ? Schema.decodeUnknownSync(TurnOrigin)(JSON.parse(row.origin))
+      : undefined,
     routing: row.routing
       ? Schema.decodeUnknownSync(ResolvedRoute)(JSON.parse(row.routing))
       : null,

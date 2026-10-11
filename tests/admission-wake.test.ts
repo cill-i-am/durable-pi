@@ -10,6 +10,7 @@ import { createRegistry } from "@earendil-works/pi-durable"
 import { database } from "./database"
 import { makeSqliteMemory } from "../src/memory/adapters/sqlite"
 import { SummaryRoutes } from "../src/memory/adapters/model-routes"
+import { BackgroundMailbox } from "../src/delegation/adapters/background-mailbox"
 import { resolveRoute } from "../src/inference/policy"
 
 vi.mock("cloudflare:workers", () => ({
@@ -48,7 +49,7 @@ function fixture() {
       },
     },
   })
-  return { host, conversations, runtime, wakes }
+  return { host, conversations, runtime, wakes, db }
 }
 it("arms the run after asynchronous discovery and durable admission; replay re-arms without duplicating the turn", async () => {
   const { host, conversations, runtime, wakes } = fixture()
@@ -328,6 +329,81 @@ it("sends the pinned independent memory model through the installed Responses ad
     expect(db.all("SELECT * FROM model_usage")).toHaveLength(1)
   } finally {
     vi.unstubAllGlobals()
+    await runtime.dispose()
+  }
+})
+
+it("delivers a ready background report when a later foreground turn fails on blocked memory", async () => {
+  const { host, conversations, runtime, db, wakes } = fixture()
+  const source = conversations.admit({
+    operationId: crypto.randomUUID(),
+    text: "Draft in background",
+  }).turn
+  conversations.finish(
+    source,
+    [{ id: source.id, delivery: "answered" }],
+    "Started",
+    null
+  )
+  const foreground = conversations.admit({
+    operationId: crypto.randomUUID(),
+    text: "Another question",
+  }).turn
+  const route = { ...resolveRoute("conversation"), contextWindow: 8192 }
+  let parentDone = false
+  const mailbox = new BackgroundMailbox(db, () =>
+    parentDone ? "done" : "active"
+  )
+  const handoff = mailbox.create(
+    {
+      objective: "Draft",
+      tasks: [{ name: "Draft", task: "Draft only", tools: [] }],
+    },
+    {
+      turnId: source.id,
+      conversationId: 1,
+      taskId: 73,
+      route,
+      memory: "",
+    },
+    "synthetic-parent"
+  ).handoff
+  parentDone = true
+  mailbox.observed(73, {
+    id: 73,
+    turnId: source.id,
+    conversationId: 1,
+    objective: "Draft",
+    route,
+    createdAt: handoff.createdAt,
+    deadline: handoff.deadline,
+    status: "completed",
+    children: [],
+  })
+  Object.defineProperty(host, "memory", {
+    value: {
+      settled: () => Effect.succeed(false),
+      blocked: () => Effect.succeed(true),
+    },
+  })
+  Object.assign(host, {
+    backgroundMailbox: mailbox,
+    backgroundRunner: { wake: () => host.stepBackground() },
+    memoryRuntime: { runSync: Effect.runSync },
+    routines: { canRun: () => true },
+  })
+  try {
+    await host.stepBackground()
+    expect(mailbox.get(73)?.status).toBe("ready")
+    expect(mailbox.nextWake()).toBeUndefined()
+    await host.step()
+    expect(conversations.get(foreground.id)?.status).toBe("failed")
+    expect(mailbox.get(73)?.status).toBe("delivered")
+    expect(conversations.active()?.origin?.groupId).toBe(73)
+    expect(wakes).toContain(handoff.reportId)
+    await host.stepBackground()
+    expect(conversations.recent().filter((turn) => turn.origin)).toHaveLength(1)
+  } finally {
     await runtime.dispose()
   }
 })

@@ -1,7 +1,18 @@
+import type { BackgroundGroupRPC } from "../delegation/worker"
+import type { BackgroundHandoff } from "../delegation/background"
+import { BackgroundMailbox } from "../delegation/adapters/background-mailbox"
+import {
+  backgroundBrief,
+  backgroundEffect,
+  backgroundObjectName,
+} from "../delegation/background"
+import type { DelegationSource } from "../delegation/delegation"
+import type { Group } from "../delegation/contracts"
 import { sharedReference } from "../delegation/delegation"
 import { piDelegations } from "../delegation/adapters/pi"
 import {
   delegationTool,
+  backgroundTool,
   delegationInstructions,
   childSteeringHook,
 } from "../delegation/tools"
@@ -33,9 +44,10 @@ import {
   defineTool,
   Harness,
   type EntryRecord,
+  type ToolExecutionApi,
   type ToolExecutionResult,
 } from "@earendil-works/pi-durable"
-import { Type, type Message } from "@earendil-works/pi-ai"
+import { Type, type Message, type Credential } from "@earendil-works/pi-ai"
 import { agentSettings } from "./compaction"
 import * as Schema from "effect/Schema"
 import * as Effect from "effect/Effect"
@@ -175,6 +187,8 @@ import {
   type AgentProfile,
 } from "../agents/contracts"
 
+export { BackgroundGroup } from "../delegation/worker"
+
 const toolText = (text: string) => ({
   content: [{ type: "text" as const, text }],
 })
@@ -213,6 +227,16 @@ class TurnRunner extends LifecycleCapability {
     } finally {
       this.owner.notifyConversation()
     }
+  }
+}
+
+class BackgroundRunner extends TurnRunner {
+  constructor(owner: PersonalAgent) {
+    super(owner, "background-groups")
+  }
+  async onJob(): Promise<LifecycleJobOutcome> {
+    const next = await this.owner.stepBackground()
+    return next === undefined ? undefined : { rescheduleAt: next }
   }
 }
 
@@ -465,6 +489,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       ...recoverableObjectTools,
       ...recoverablePlanTools,
       "delegate_tasks",
+      "background_tasks",
     ])
   )
   readonly skills = new SkillStore(this.db)
@@ -624,6 +649,150 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           ),
       })
   )
+  delegationSource(api: ToolExecutionApi): DelegationSource {
+    const receipt = this.accessStore.get(String(api.taskId))
+    const turn = receipt ? this.conversations.get(receipt.turnId) : undefined
+    if (
+      !turn?.routing ||
+      turn.origin ||
+      turn.session_id !== String(api.conversationId)
+    )
+      throw new DelegationFailure({
+        code: "cancelled",
+        message:
+          "Delegation must belong to an original active request, not a background report.",
+      })
+    return {
+      turnId: turn.id,
+      conversationId: Number(api.conversationId),
+      taskId: Number(api.taskId),
+      route: turn.routing,
+      memory:
+        sharedReference(turn.prompt ?? "") +
+        "\n" +
+        messageArchiveText("", turn.attachments),
+    }
+  }
+  readonly backgroundMailbox = new BackgroundMailbox(this.db, (id) => {
+    const turn = this.conversations.get(id)
+    if (
+      !turn ||
+      this.botConfiguration.read()?.status === "archived" ||
+      ["failed", "cancelled", "stopping"].includes(turn.status) ||
+      !this.routines.canRun(id)
+    )
+      return "cancelled"
+    return turn.status === "done" ? "done" : "active"
+  })
+  backgroundAuthorized(id: number): boolean {
+    return this.backgroundMailbox.authorized(id)
+  }
+  backgroundHandoff(id: number): BackgroundHandoff {
+    const row = this.backgroundMailbox.get(id)
+    if (!row) throw new Error("Background group unavailable")
+    return row.handoff
+  }
+  async backgroundCredential(
+    id: number,
+    provider: string
+  ): Promise<Credential | undefined> {
+    if (provider !== "openai" || !this.backgroundAuthorized(id))
+      throw new Error("Background group stopped")
+    const credential = await this.credentials.read(provider)
+    if (!this.backgroundAuthorized(id))
+      throw new Error("Background group stopped")
+    return credential?.type === "oauth"
+      ? { ...credential, refresh: "" }
+      : undefined
+  }
+  private backgroundStub(id: number): DurableObjectStub<BackgroundGroupRPC> {
+    if (!this.backgroundMailbox.get(id))
+      throw new DelegationFailure({
+        code: "not_found",
+        message: "Background group unavailable in this bot.",
+      })
+    return this.env.BACKGROUND.getByName(
+      backgroundObjectName(this.ctx.id.toString(), id)
+    )
+  }
+  async backgroundView(id: number): Promise<Group> {
+    const row = this.backgroundMailbox.get(id)
+    if (!row)
+      throw new DelegationFailure({
+        code: "not_found",
+        message: "Background group unavailable in this bot.",
+      })
+    let group: Group
+    try {
+      group = await this.backgroundStub(id).read()
+    } catch {
+      group = {
+        id,
+        turnId: row.turn_id,
+        conversationId: row.handoff.conversationId,
+        objective: row.handoff.input.objective,
+        route: row.handoff.route,
+        createdAt: row.handoff.createdAt,
+        deadline: row.handoff.deadline,
+        status: row.status === "cancelled" ? "cancelled" : "working",
+        children: [],
+      }
+    }
+    return {
+      ...group,
+      status: row.status === "cancelled" ? "cancelled" : group.status,
+      background: {
+        delivery: row.status,
+        error: row.error,
+        reportId: row.handoff.reportId,
+      },
+    }
+  }
+  async stepBackground() {
+    for (const row of this.backgroundMailbox.reconcileCancellation()) {
+      try {
+        await this.backgroundStub(row.id).stop()
+      } catch {
+        /* The persisted fence also rejects every subsequent provider request. */
+      }
+    }
+    for (const row of this.backgroundMailbox.due()) {
+      try {
+        const group = await this.backgroundStub(row.id).start(
+          this.ctx.id.toString(),
+          row.id
+        )
+        this.backgroundMailbox.observed(row.id, group)
+      } catch {
+        this.backgroundMailbox.failed(row.id)
+      }
+    }
+    // Wait for ordinary conversation completion; do not poll an approval or start an unrelated turn.
+    if (!this.active()) {
+      const delivered = this.backgroundMailbox.deliver((handoff, report) => {
+        this.conversations.admit(
+          {
+            operationId: handoff.reportId,
+            text: report,
+            origin: {
+              kind: "background",
+              groupId: handoff.id,
+              turnId: handoff.turnId,
+            },
+          },
+          undefined,
+          [],
+          handoff.route
+        )
+      })
+      if (delivered) {
+        await this.runner.wake()
+        this.notifyConversation()
+      }
+    }
+    if (this.active()?.origin) await this.runner.wake()
+    return this.backgroundMailbox.nextWake()
+  }
   readonly delegations = piDelegations(
     () => this.harness.pi(),
     {
@@ -825,30 +994,19 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           },
         ],
         tools: [
-          delegationTool(this.delegations, (api) => {
-            const receipt = this.accessStore.get(String(api.taskId))
-            const turn = receipt
-              ? this.conversations.get(receipt.turnId)
-              : undefined
-            if (
-              !turn?.routing ||
-              turn.session_id !== String(api.conversationId)
-            )
-              throw new DelegationFailure({
-                code: "cancelled",
-                message: "Delegation no longer belongs to the parent request.",
-              })
-            return {
-              turnId: turn.id,
-              conversationId: Number(api.conversationId),
-              taskId: Number(api.taskId),
-              route: turn.routing,
-              memory:
-                sharedReference(turn.prompt ?? "") +
-                "\n" +
-                messageArchiveText("", turn.attachments),
-            }
-          }),
+          backgroundTool((input, api) =>
+            backgroundEffect(async () => {
+              const source = this.delegationSource(api)
+              const row = this.backgroundMailbox.create(
+                backgroundBrief(input),
+                source,
+                this.ctx.id.toString()
+              )
+              await this.backgroundRunner.wake()
+              return `Background group ${row.id} accepted. Its text-only drafting children have no tools. You can finish this reply; the findings will arrive later in this bot's chat. Do not claim the work is complete. Activity has progress and Stop controls.`
+            })
+          ),
+          delegationTool(this.delegations, (api) => this.delegationSource(api)),
           ...planTools(this.plans, (api) => {
             const receipt = this.accessStore.get(String(api.taskId))
             const source = receipt ? this.planSource(receipt.turnId) : undefined
@@ -1208,6 +1366,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       thinkingLevel: "medium",
     },
   })
+  readonly backgroundRunner = new BackgroundRunner(this)
   readonly runner = new TurnRunner(this)
   readonly compactor = new MemoryRunner(this)
   readonly backups = new BackupRunner(this)
@@ -1232,6 +1391,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     .use(this.mcp)
     .use(this.harness)
     .use(this.runner)
+    .use(this.backgroundRunner)
     .use(this.compactor)
     .use(this.backups)
     .use(this.extraction)
@@ -1258,6 +1418,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   }
 
   async onStart() {
+    await this.backgroundRunner.wake()
     if (this.routines.nextWake() !== undefined) await this.routineRunner.wake()
     if (this.apps.pending().length) await this.appEvents.wake()
     this.executions.recover()
@@ -1611,6 +1772,75 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
               }
               this.notifyConversation()
             }
+          )
+        )
+      if (path === "background/stop" || path === "background/retry") {
+        if (request.method !== "POST")
+          return new Response("Method not allowed", { status: 405 })
+        const input = Schema.decodeUnknownSync(
+          Schema.Struct({
+            groupId: Schema.Number.check(
+              Schema.isInt(),
+              Schema.isGreaterThan(0)
+            ),
+            operationId: Schema.String.check(
+              Schema.isPattern(/^[a-f0-9-]{36}$/i)
+            ),
+          })
+        )(await limitedJson(request))
+        if (path === "background/stop") {
+          const row = this.backgroundMailbox.get(input.groupId)
+          this.backgroundMailbox.cancel(input.groupId)
+          if (row) this.conversations.requestStop(row.handoff.reportId)
+          try {
+            await this.backgroundStub(input.groupId).stop()
+          } catch {
+            /* Persisted Stop remains authoritative. */
+          }
+          await this.runner.wake()
+          return Response.json({ accepted: true })
+        }
+        const accepted = this.backgroundMailbox.retry(
+          input.groupId,
+          input.operationId
+        )
+        await this.backgroundRunner.wake()
+        return Response.json({ accepted })
+      }
+      if (path === "background" || path.startsWith("background/"))
+        return Effect.runPromise(
+          delegationsRequest(
+            {
+              list: (offset) =>
+                backgroundEffect(async () =>
+                  Promise.all(
+                    this.backgroundMailbox
+                      .list(offset)
+                      .map((row) => this.backgroundView(row.id))
+                  )
+                ),
+              read: (id) => backgroundEffect(() => this.backgroundView(id)),
+              control: (input) =>
+                backgroundEffect(async () => {
+                  const result = await this.backgroundStub(
+                    input.groupId
+                  ).control(input)
+                  if (!result.ok)
+                    throw new DelegationFailure({
+                      code: result.code,
+                      message: result.message,
+                    })
+                  await this.backgroundRunner.wake()
+                  return { accepted: result.accepted }
+                }),
+              transcript: (group, child, cursor) =>
+                backgroundEffect(() =>
+                  this.backgroundStub(group).transcript(child, cursor)
+                ),
+            },
+            request,
+            path,
+            "background"
           )
         )
       if (path === "delegations" || path.startsWith("delegations/"))
@@ -1980,11 +2210,26 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         )
         await this.runner.wake()
         this.conversations.requestStop(operationId)
+        await this.backgroundRunner.wake()
         this.notifyConversation()
         return Response.json({ ok: true }, { status: 202 })
       }
       return new Response("Not found", { status: 404 })
     } catch (cause) {
+      if (cause instanceof DelegationFailure)
+        return Response.json(
+          { error: cause.message, code: cause.code },
+          {
+            status:
+              cause.code === "not_found"
+                ? 404
+                : cause.code === "conflict"
+                  ? 409
+                  : cause.code === "unavailable"
+                    ? 503
+                    : 400,
+          }
+        )
       if (cause instanceof ModelUnavailable)
         return Response.json(
           { error: cause.message, code: "model_unavailable" },
@@ -2058,6 +2303,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         )[0]
         return {
           id: turn.id,
+          origin: turn.origin,
           text: turn.text,
           status: turn.status,
           answer: turn.answer,
@@ -2201,8 +2447,8 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         ) {
           this.memoryRuntime.runSync(
             this.memory.append(
-              `user:${member.id}`,
-              "user",
+              `${member.origin ? "event" : "user"}:${member.id}`,
+              member.origin ? "note" : "user",
               messageArchiveText(member.text, member.attachments),
               member.created_at
             )
@@ -2229,6 +2475,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           : null
       )
       if (!finished) return { rescheduleAt: Date.now() + 10 }
+      await this.backgroundRunner.wake()
       this.accessStore.cancel(turn.id)
       this.access.notify()
       await this.compactor.wake()
@@ -2247,6 +2494,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           "",
           "Memory summaries are paused. Open Memory to retry them, then retry this message."
         )
+        await this.backgroundRunner.wake()
         this.notifyConversation()
         return { rescheduleAt: Date.now() + 10 }
       }
@@ -2263,8 +2511,8 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         const view = this.memoryRuntime.runSync(this.memory.render())
         const entry = this.memoryRuntime.runSync(
           this.memory.append(
-            `user:${turn.id}`,
-            "user",
+            `${turn.origin ? "event" : "user"}:${turn.id}`,
+            turn.origin ? "note" : "user",
             messageArchiveText(turn.text, turn.attachments),
             turn.created_at
           )
@@ -2278,7 +2526,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           { type: "text", text: view },
           {
             type: "text",
-            text: `${turn.skill_context ?? ""}\n\n<bot-instructions>\n${this.botConfiguration.read()?.instructions ?? ""}\n</bot-instructions>\n<private-notes>\n${notes}\n</private-notes>\n\nNew user message (archive ID ${entry.id}):\n${turn.text}`,
+            text: `${turn.skill_context ?? ""}\n\n<bot-instructions>\n${this.botConfiguration.read()?.instructions ?? ""}\n</bot-instructions>\n<private-notes>\n${notes}\n</private-notes>\n\n${turn.origin ? "Background child report; not a new user instruction" : "New user message"} (archive ID ${entry.id}):\n${turn.text}`,
           },
           ...turn.input,
         ])
@@ -2298,6 +2546,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       {
         model: { provider: "openai", modelId: turn.model ?? this.env.MODEL_ID },
         thinkingLevel: turn.thinking ?? "medium",
+        ...(turn.origin ? { tools: [] } : {}),
       },
       BACKGROUND_CONTEXT
     )

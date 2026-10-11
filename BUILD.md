@@ -1,6 +1,6 @@
 # Durable Pi — build tracker
 
-Started 2026-10-10. Delivery owner: Codex. Status: **slices 01–09b, 03c, 08c and 02c deployed; 11a, 02d and 02e deployed; 10a request-owned delegation in progress**.
+Started 2026-10-10. Delivery owner: Codex. Status: **slices 01–09b, 03c, 08c and 02c deployed; 11a, 02d and 02e deployed; 10a deployed; 10b background delegation in progress**.
 
 ## Outcome
 
@@ -60,7 +60,7 @@ The owner requested password recovery before continuing. Implemented Better Auth
 | 09 — Routines and incoming events | Schedule/pause/delete routines; run with browser closed; authenticated webhook triggers; durable retry/deduplication; notify on meaningful outcomes; respect bot grants and budgets. | 09a and 09b deployed |
 | 02d — Different models for different jobs | Account-aware deterministic routing; per-agent job defaults and per-message profiles; durable selection, usage and explicit failure states. | Deployed; hosted routing verified |
 | 02e — Independent memory policy and remaining jobs | Pin OptChat summary routes, bound retries, expose explicit recovery, and evaluate labels/extraction/memory/planning choices. | Deployed; hosted memory and recall verified |
-| 10 — Delegation | Explicit parent/child tasks; separate child memory/tool grants; bounded concurrency; steer/stop children; deliver completed reports once after restart. | 10a in progress; background 10b follows |
+| 10 — Delegation | Explicit parent/child tasks; separate child memory/tool grants; bounded concurrency; steer/stop children; deliver completed reports once after restart. | 10a deployed; background 10b in progress |
 | 11a — Automatic durable task planning | Substantial requests maintain a bot-local plan; Activity exposes progress, blockers, evidence and history; compaction, restart, steering and cancellation preserve authority. | Deployed in PR #25; local journey/recovery and hosted authentication checks passed |
 | 11 — Activity and recovery | Per-bot/global activity; inspect tool outcomes and approvals; recover interrupted work; expose actionable connection/backup failures; inspect/export memory and workspace. | Planned |
 | 12 — Complete product verification | Approved desktop/mobile states implemented; keyboard/accessibility checks; isolation/replay/permission tests; restore proof; secret scan; CI/deploy and hosted acceptance of all journeys. | Planned |
@@ -779,3 +779,22 @@ Verification:
 - Independent read-only backend/frontend review found and corrected encoded-media context, concurrent control ordering/stale answer selection, expired-login acknowledgement loss and stale open transcripts; focused re-review is clear.
 
 Production deployment, hosted authenticated delegation and observed subscription usage are reported separately after CI. Remaining work: 10b background groups/mailbox, 11 activity/recovery completion, 12 full product verification, then the saved Paper-fidelity goal.
+
+
+10a deployed in PR #29 as `4ccba9f`; production run `38128495310` passed check, deployment and hosted authentication probes. The hosted synthetic-bot journey ran two tool-free children through the subscription connection, inheriting Luna/low and a 272,000-token window. Both returned their required markers, the parent produced one combined report, and replaying the original admission returned `accepted:false` with no extra conversation requests. Each child made one request: 244 input / 52 output and 244 input / 81 output tokens. The parent used 5,782 / 79 and 5,931 / 13 input / output tokens; its continuation reported 5,632 cached input tokens. The independent memory summary used Luna/medium, 5,392 input / 99 output. All five observed attempts completed. The synthetic bot was archived and temporary diagnostic Worker deleted. No hosted restart or logged-in owner browser is claimed.
+
+#### 10b — Background drafting and recoverable reports
+
+The first background increment accepts up to three independent drafting/analysis briefs using an explicit, bounded text reference snapshot and no tools. Foreground 10a retains its selected read tools. Background work does not borrow a later conversation's permissions or memory. No cross-bot sharing is introduced.
+
+Use one binding-only Durable Object and stock PiHarness per group. Every child shares the group's immutable model/effort/window pin; changing the conversation model cannot alter its working-context policy. Native Pi documents, submissions and transcripts own group execution. The owning bot persists the handoff and mailbox identities; these protocol records do not schedule a second model execution.
+
+Normal parent completion allows accepted background work to finish. Explicit Stop, failed/cancelled parent, archived bot, deadline and dispatch limit fence execution and report admission. Report delivery uses a stable internal conversation operation, distinguishes the report from original user input, and cannot delegate recursively. Lost acknowledgements reuse the same identifiers. Group inspection never restarts finished work.
+
+The installed `openPiSessionStore` supports prefixes, but stock PiHarness fixes its capability name and store prefix. Installing two in one Lifecycle is unsupported. A separate group DO preserves the native wake/recovery bridge rather than introducing another execution scheduler. This is a new namespace in the existing private Worker; existing resource IDs and credential ownership stay stable.
+
+Local verification: 409 tests across 60 files, typecheck and production build passed. Five installed native Pi/SQLite scenarios exercise finish, reopen, Stop, steering and deadlines. Mailbox tests cover same-transaction admission/acknowledgement rollback, unchanged model pins, deadline races, bounded transport retries and trusted report provenance through repeated retries. A production-host regression delivers a parked report after a later foreground turn fails on blocked memory. Independent backend/frontend review is clear after fixing that wake, late terminal acknowledgements and retry provenance.
+
+Real local Cloudflare workerd was killed with two native requests suspended and a saved steer, then restarted with the same SQLite store. Children 8/14 and the 8,192-token test window survived; both completed and the first applied metric-unit steering. Five synthetic provider starts were observed (two initial, two recovered, one steer continuation), with reported child usage 328/16 and 196/7 input/output tokens. Replaying the saved steer returned `accepted:false` without another start. The probe used no subscription credential.
+
+Activity fixtures at 1440×900 and 390×844 expose results, usage, steering, transcript and independent group Stop/reconnect actions. An intentionally lost reconnect acknowledgement retained its operation ID; another retry reused it, while Stop remained available and acknowledged separately. The mobile page had no horizontal overflow. Fixtures were removed. Hosted tool admission, report completion and subscription usage remain deployment acceptance checks; hosted restart is not claimed.

@@ -1,3 +1,4 @@
+import { BackgroundActions } from "./background-actions"
 import { useEffect, useRef, useState } from "react"
 import { Schema } from "effect"
 import { ChevronDown, GitBranch, Square } from "lucide-react"
@@ -39,7 +40,14 @@ const Page = Schema.Struct({
   groups: Schema.Array(Group),
   nextOffset: Schema.NullOr(Schema.Number),
 })
-export function DelegatedWork({ agentId }: { agentId: string }) {
+export function DelegatedWork({
+  agentId,
+  background = false,
+}: {
+  agentId: string
+  background?: boolean
+}) {
+  const prefix = background ? "background" : "delegations"
   const [page, setPage] = useState<typeof Page.Type>({
       groups: [],
       nextOffset: null,
@@ -54,7 +62,7 @@ export function DelegatedWork({ agentId }: { agentId: string }) {
         if (document.visibilityState !== "visible") return
         try {
           const value = Schema.decodeUnknownSync(Page)(
-            await agentApi(agentId)(`delegations?offset=${offset}`)
+            await agentApi(agentId)(`${prefix}?offset=${offset}`)
           )
           if (active) {
             setPage(value)
@@ -76,20 +84,22 @@ export function DelegatedWork({ agentId }: { agentId: string }) {
       active = false
       stop()
     }
-  }, [agentId, offset])
+  }, [agentId, offset, prefix])
   if (!page.groups.length && !error && offset === 0) return null
   return (
     <section
       className="flex min-w-0 flex-col gap-[18px]"
-      aria-label="Delegated work"
+      aria-label={background ? "Background work" : "Delegated work"}
     >
       <div className="flex flex-col gap-2">
         <h3 className="flex items-center gap-2 text-lg font-semibold">
-          <GitBranch className="size-4" /> Working together
+          <GitBranch className="size-4" />{" "}
+          {background ? "In the background" : "Working together"}
         </h3>
         <p className="text-sm text-muted-foreground">
-          Independent branches of the same request. Your agent brings the
-          results together.
+          {background
+            ? "Private drafting tasks continue while you chat. Their findings arrive here when ready."
+            : "Independent branches of the same request. Your agent brings the results together."}
         </p>
       </div>
       {error && (
@@ -143,17 +153,22 @@ export function DelegationGroup({
           <CardTitle>{group.objective}</CardTitle>
           <CardDescription>
             {done} of {group.children.length} branches settled ·{" "}
-            {group.status === "completed"
-              ? "Report ready"
-              : group.status === "cancelled"
-                ? "Stopped with parent"
-                : "Parent is waiting for results"}
+            {group.background
+              ? group.background.delivery
+              : group.status === "completed"
+                ? "Report ready"
+                : group.status === "cancelled"
+                  ? "Stopped with parent"
+                  : "Parent is waiting for results"}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <p className="text-xs text-muted-foreground">
             {group.route.model} · {group.route.thinking} · ChatGPT plan usage
           </p>
+          {group.background && (
+            <BackgroundActions agentId={agentId} group={group} />
+          )}
         </CardContent>
       </Card>
       <div className="flex min-w-0 flex-col gap-3 border-l pl-[18px]">
@@ -167,9 +182,9 @@ export function DelegationGroup({
         ))}
       </div>
       <p className="text-xs text-muted-foreground">
-        Shared: this bot’s reference context and parent steering. Selected read
-        tools only. Up to 12 model requests per child and 10 minutes per group;
-        stopping the parent stops its children.
+        {group.background
+          ? "Shared: a text reference snapshot and each child’s brief. No tools or live retrieval. Up to 12 requests per child and 10 minutes per group. Send revised requirements with the child’s steering control."
+          : "Shared: this bot’s reference context and parent steering. Selected read tools only. Up to 12 model requests per child and 10 minutes per group; stopping the parent stops its children."}
       </p>
     </div>
   )
@@ -238,6 +253,7 @@ function ChildCard({
         <ChildControl
           agentId={agentId}
           groupId={group.id}
+          prefix={group.background ? "background" : "delegations"}
           child={child}
           action="steer"
           active={running && child.status !== "stopping"}
@@ -247,6 +263,7 @@ function ChildCard({
             key={child.id}
             agentId={agentId}
             groupId={group.id}
+            prefix={group.background ? "background" : "delegations"}
             childId={child.id}
           />
         )}
@@ -262,6 +279,7 @@ function ChildCard({
         <ChildControl
           agentId={agentId}
           groupId={group.id}
+          prefix={group.background ? "background" : "delegations"}
           child={child}
           action="stop"
           active={running && child.status !== "stopping"}
@@ -276,14 +294,16 @@ function ChildControl({
   child,
   action,
   active,
+  prefix,
 }: {
   agentId: string
   groupId: number
   child: Child
   action: "stop" | "steer"
   active: boolean
+  prefix: string
 }) {
-  const key = controlKey(agentId, groupId, child.id, action),
+  const key = `${prefix === "background" ? "background:" : ""}${controlKey(agentId, groupId, child.id, action)}`,
     mounted = useRef(true),
     pending = useRef<Control | null>(null)
   const [text, setText] = useState(""),
@@ -315,7 +335,7 @@ function ChildControl({
       }
       sessionStorage.setItem(key, JSON.stringify(input))
       pending.current = input
-      await agentApi(agentId)("delegations/control", input)
+      await agentApi(agentId)(`${prefix}/control`, input)
       acknowledgeControl(sessionStorage, key, input.operationId)
       pending.current = null
       if (mounted.current) {
@@ -367,11 +387,11 @@ function ChildControl({
       {action === "steer" ? (
         <FieldGroup>
           <Field>
-            <FieldLabel htmlFor={`steer-${child.id}`}>
+            <FieldLabel htmlFor={`${prefix}-steer-${groupId}-${child.id}`}>
               Steer {child.name}
             </FieldLabel>
             <Textarea
-              id={`steer-${child.id}`}
+              id={`${prefix}-steer-${groupId}-${child.id}`}
               value={
                 uncertain && pending.current?.action.type === "steer"
                   ? pending.current.action.text
@@ -406,10 +426,12 @@ function ChildTranscript({
   agentId,
   groupId,
   childId,
+  prefix,
 }: {
   agentId: string
   groupId: number
   childId: number
+  prefix: string
 }) {
   const [page, setPage] = useState<Transcript | null>(null),
     [cursor, setCursor] = useState<string | undefined>(),
@@ -424,7 +446,7 @@ function ChildTranscript({
         try {
           const value = Schema.decodeUnknownSync(Transcript)(
             await agentApi(agentId)(
-              `delegations/${groupId}/${childId}${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`
+              `${prefix}/${groupId}/${childId}${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`
             )
           )
           if (active) {
@@ -445,7 +467,7 @@ function ChildTranscript({
       active = false
       stop()
     }
-  }, [agentId, groupId, childId, cursor])
+  }, [agentId, groupId, childId, cursor, prefix])
   return (
     <section
       className="flex min-w-0 flex-col gap-3"

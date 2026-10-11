@@ -62,6 +62,13 @@ export class AccessConflict extends Schema.TaggedError<AccessConflict>()(
 
 export const builtInTools = [
   {
+    name: "background_tasks",
+    title: "Background drafting",
+    description:
+      "Start bounded drafting tasks using supplied text only; no child tools or outside actions. Findings arrive later in this bot.",
+    mode: "ask",
+  },
+  {
     name: "delegate_tasks",
     title: "Delegate research tasks",
     description:

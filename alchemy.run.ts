@@ -5,6 +5,7 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import { PASSWORD_EMAIL_FROM } from "./src/auth/password-email"
 import type { PersonalAgent } from "./src/agent/worker"
+import type { BackgroundGroupRPC } from "./src/delegation/worker"
 import type { LinuxSandbox } from "./src/terminal/worker"
 
 export const AuthDatabase = Cloudflare.D1.Database("AuthDatabase", {
@@ -53,6 +54,8 @@ export const TerminalWorker = Cloudflare.Worker("TerminalWorker", {
   },
 })
 export type TerminalEnv = Cloudflare.InferEnv<typeof TerminalWorker>
+export const BackgroundGroups: Cloudflare.DurableObjectLike<BackgroundGroupRPC> =
+  Cloudflare.DurableObject<BackgroundGroupRPC>("BackgroundGroup")
 export const AgentWorker = Cloudflare.Worker("AgentWorker", {
   main: "./src/agent/worker.ts",
   dev: { port: 1338, strictPort: true },
@@ -60,6 +63,7 @@ export const AgentWorker = Cloudflare.Worker("AgentWorker", {
   compatibility: { date: "2026-09-25", flags: ["nodejs_compat"] },
   env: {
     AGENT: Cloudflare.DurableObject<PersonalAgent>("PersonalAgent"),
+    BACKGROUND: BackgroundGroups,
     MEMORY_BACKUPS: MemoryBackups,
     WORKSPACE_ASSETS: WorkspaceAssets,
     DOCUMENT_SERVICE: DocumentWorker,
