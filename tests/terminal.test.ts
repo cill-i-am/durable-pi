@@ -381,3 +381,162 @@ describe("Pi command service", () => {
     expect(f.runtime.execute).not.toHaveBeenCalled()
   })
 })
+
+describe("interactive workspace ownership", () => {
+  it("holds the workspace until Save closes the shell and checkpoints it", async () => {
+    const ready = deferred<void>(),
+      close = vi.fn(async () => {})
+    const f = fixture({
+      openInteractive: async () => {
+        ready.resolve()
+        return { connect: async () => new Response(), close }
+      },
+    })
+    const task = await run(f.terminal.startSession("interactive"))
+    await ready.promise
+    await vi.waitFor(() =>
+      expect(f.terminal.state().session?.phase).toBe("ready")
+    )
+    await expect(run(f.terminal.start(input))).rejects.toThrow("cleanup")
+    f.terminal.session("interactive").save()
+    await task.completion
+    expect(close).toHaveBeenCalledTimes(1)
+    expect(f.repository.get("interactive")).toMatchObject({
+      kind: "session",
+      status: "succeeded",
+      output: "",
+      savedAt: 42,
+    })
+    expect(f.runtime.execute).not.toHaveBeenCalled()
+    expect(f.terminal.state().session).toBeNull()
+  })
+  it("discards changes on Stop without checkpointing", async () => {
+    const f = fixture({
+      openInteractive: async () => ({
+        connect: async () => new Response(),
+        close: async () => {},
+      }),
+    })
+    const task = await run(f.terminal.startSession("interactive"))
+    await vi.waitFor(() =>
+      expect(f.terminal.state().session?.phase).toBe("ready")
+    )
+    await run(f.terminal.cancel("interactive"))
+    await task.completion
+    expect(f.backups.write).not.toHaveBeenCalled()
+    expect(f.repository.get("interactive")?.status).toBe("cancelled")
+  })
+  it("expires without authenticated renewals and does not publish changes", async () => {
+    vi.useFakeTimers()
+    try {
+      const f = fixture({
+        openInteractive: async () => ({
+          connect: async () => new Response(),
+          close: async () => {},
+        }),
+      })
+      const task = await run(f.terminal.startSession("interactive"))
+      await vi.advanceTimersByTimeAsync(1)
+      expect(f.terminal.state().session?.phase).toBe("ready")
+      await vi.advanceTimersByTimeAsync(30000)
+      await task.completion
+      expect(f.backups.write).not.toHaveBeenCalled()
+      expect(f.terminal.state().busy).toBe(false)
+      expect(f.repository.get("interactive")?.status).toBe("failed")
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+  it("cannot reopen an ended session by retrying its old operation ID", async () => {
+    const f = fixture({
+      openInteractive: async () => ({
+        connect: async () => new Response(),
+        close: async () => {},
+      }),
+    })
+    const first = await run(f.terminal.startSession("interactive"))
+    await run(f.terminal.cancel("interactive"))
+    await first.completion
+    const retry = await run(f.terminal.startSession("interactive"))
+    await retry.completion
+    expect(retry.run.status).toBe("cancelled")
+    expect(f.terminal.state().session).toBeNull()
+    await expect(
+      run(
+        f.terminal.start({ id: "interactive", command: "Interactive terminal" })
+      )
+    ).rejects.toThrow("different input")
+  })
+})
+
+it("revokes a pre-archive PTY after restore while preserving a newly admitted PTY", async () => {
+  const f = fixture({
+    openInteractive: async () => ({
+      connect: async () => new Response(),
+      close: async () => {},
+    }),
+  })
+  f.terminal.configure(1, true)
+  const old = await run(f.terminal.startSession("old-session"))
+  await vi.waitFor(() =>
+    expect(f.terminal.state().session?.phase).toBe("ready")
+  )
+  f.terminal.configure(3, true, 2)
+  await old.completion
+  expect(f.repository.get("old-session")?.status).toBe("cancelled")
+  expect(f.backups.write).not.toHaveBeenCalled()
+  const restored = await run(f.terminal.startSession("restored-session"))
+  await vi.waitFor(() =>
+    expect(f.terminal.state().session?.phase).toBe("ready")
+  )
+  f.terminal.configure(2, false)
+  expect(f.terminal.session("restored-session").live).toBe(true)
+  f.terminal.session("restored-session").save()
+  await restored.completion
+  expect(f.repository.get("restored-session")?.status).toBe("succeeded")
+  expect(f.backups.write).toHaveBeenCalledOnce()
+})
+
+it.each(["cancel", "save"] as const)(
+  "holds admission and destroys late PTY startup during %s",
+  async (action) => {
+    const gate = deferred<void>()
+    let alive = false
+    const socket = { accept: vi.fn(), close: vi.fn() }
+    const f = fixture({
+      close: async () => {
+        alive = false
+      },
+      openInteractive: async () => ({
+        connect: async () => {
+          await gate.promise
+          alive = true
+          return { webSocket: socket } as unknown as Response
+        },
+        close: vi.fn(async () => {}),
+      }),
+    })
+    const task = await run(f.terminal.startSession("interactive"))
+    await vi.waitFor(() =>
+      expect(f.terminal.state().session?.phase).toBe("ready")
+    )
+    const session = f.terminal.session("interactive")
+    const pending = session.connect(new Request("https://terminal.internal"))
+    const rejected = expect(pending).rejects.toThrow("ended")
+    if (action === "cancel") await run(f.terminal.cancel("interactive"))
+    else session.save()
+    await new Promise((resolve) => setTimeout(resolve, 5))
+    expect(f.terminal.state().busy).toBe(true)
+    expect(f.backups.write).not.toHaveBeenCalled()
+    await expect(run(f.terminal.start(input))).rejects.toThrow("cleanup")
+    gate.resolve()
+    await rejected
+    await task.completion
+    expect(alive).toBe(false)
+    expect(socket.close).toHaveBeenCalledOnce()
+    expect(f.terminal.state().busy).toBe(false)
+    expect(f.repository.get("interactive")?.status).toBe(
+      action === "save" ? "succeeded" : "cancelled"
+    )
+  }
+)

@@ -31,7 +31,17 @@ export class LinuxSandbox extends BaseSandbox<TerminalEnv> {
     super(ctx, env)
     this.ctx.waitUntil(this.terminal.recover())
   }
-  async commandRequest(request: Request) {
+  override async fetch(request: Request): Promise<Response> {
+    const path = new URL(request.url).pathname
+    if (
+      path !== "/authority" &&
+      path !== "/terminal" &&
+      !path.startsWith("/terminal/")
+    )
+      return super.fetch(request)
+    return this.commandRequest(request)
+  }
+  private async commandRequest(request: Request) {
     if (
       new URL(request.url).pathname === "/authority" &&
       request.method === "POST"
@@ -85,7 +95,7 @@ export default {
         },
       }
     )
-    return sandbox.commandRequest(
+    return sandbox.fetch(
       new Request(`https://terminal.internal/${rest.join("/")}`, request)
     )
   },

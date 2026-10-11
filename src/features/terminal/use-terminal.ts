@@ -5,11 +5,34 @@ import {
   CommandInput,
   TerminalState,
   type CommandSummary,
+  type InteractiveState,
 } from "@/terminal/contracts"
 import { agentApi } from "@/http/client"
 import { poll } from "@/http/poll"
+import { maintainSessionLease, type LeaseState } from "./session-lease"
 
 export function useTerminal(agentId: string) {
+  const [session, setSession] = useState<typeof InteractiveState.Type | null>(
+    null
+  )
+  const [lease, setLease] = useState<LeaseState>({ ended: false, error: "" })
+  const expiry = useRef(0)
+  expiry.current = session?.expiresAt ?? 0
+  useEffect(() => {
+    setLease({ ended: false, error: "" })
+    if (!session || session.phase !== "ready") return
+    return maintainSessionLease(
+      expiry.current,
+      (signal) =>
+        agentApi(agentId)(
+          `terminal/session/${encodeURIComponent(session.id)}/renew`,
+          {},
+          signal
+        ),
+      setLease
+    )
+  }, [agentId, session?.id, session?.phase])
+  const [sessionAttempt, setSessionAttempt] = useState<string | null>(null)
   const [runs, setRuns] = useState<CommandSummary[]>([])
   const [cleanupError, setCleanupError] = useState<string | null>(null)
   const [runtimeBusy, setRuntimeBusy] = useState(false)
@@ -38,6 +61,7 @@ export function useTerminal(agentId: string) {
         setRuntimeBusy(history.busy)
         setCleanupError(history.cleanupError)
         setSavedAt(history.savedAt)
+        setSession(history.session)
         setDetail(run)
       }
     } catch (cause) {
@@ -103,8 +127,42 @@ export function useTerminal(agentId: string) {
     setAttempt(input)
     if (await command("terminal/run", input)) setAttempt(null)
   }
+  async function openSession() {
+    const id = sessionAttempt ?? crypto.randomUUID()
+    setSessionAttempt(id)
+    if (await command("terminal/session", { id })) {
+      setSessionAttempt(null)
+      await refresh()
+    }
+  }
+  async function saveSession() {
+    if (!session || lock.current) return
+    lock.current = true
+    sequence.current++
+    setBusy(true)
+    setError("")
+    try {
+      await agentApi(agentId)(
+        `terminal/session/${encodeURIComponent(session.id)}/save`,
+        {}
+      )
+    } catch {
+      setError(
+        "Save could not be confirmed. Check the saved command status before starting again."
+      )
+    } finally {
+      lock.current = false
+      setBusy(false)
+      await refresh()
+    }
+  }
   return {
     runs,
+    session,
+    lease,
+    sessionAttempt,
+    openSession,
+    saveSession,
     runtimeBusy,
     cleanupError,
     cleanup: async () => {
