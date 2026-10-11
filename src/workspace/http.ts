@@ -90,6 +90,8 @@ export function filesRequest(request: Request, path: string) {
       return Response.json(yield* workspace.retryExtraction(id), {
         status: 202,
       })
+    if (request.method === "GET" && action === "video")
+      return Response.json(yield* workspace.video(id))
     if (request.method === "GET" && action === "text") {
       const url = new URL(request.url)
       return Response.json(

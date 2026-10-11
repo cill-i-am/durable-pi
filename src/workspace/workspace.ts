@@ -1,4 +1,5 @@
 import { Context, type Effect } from "effect"
+import type { VideoResult } from "./video"
 import type {
   AttachmentContent,
   FileError,
@@ -17,6 +18,7 @@ export type { AttachmentContent } from "./files"
 export class Workspace extends Context.Service<
   Workspace,
   {
+    video: (id: FileId) => Effect.Effect<VideoResult, FileError>
     list: () => Effect.Effect<FileInfo[], FileError>
     extractionPending: () => Effect.Effect<boolean, FileError>
     extractNext: () => Effect.Effect<boolean, FileError>

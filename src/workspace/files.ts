@@ -1,4 +1,5 @@
 import { Schema } from "effect"
+import { VideoPreparation } from "./video"
 
 export const MAX_FILE_BYTES = 8 * 1024 * 1024
 export const MAX_VISION_BYTES = 192 * 1024
@@ -42,6 +43,7 @@ export const FileInfo = Schema.Struct({
   status: Schema.Literals(["uploading", "ready"]),
   trashed: Schema.Boolean,
   extraction: Schema.optional(DocumentExtraction),
+  video: Schema.optional(VideoPreparation),
 })
 export type FileInfo = typeof FileInfo.Type
 export const AttachmentContent = Schema.Union([
