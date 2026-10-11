@@ -2,7 +2,7 @@ import { expect, it } from "vitest"
 import { mkdtemp, rm } from "node:fs/promises"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
-import { ManagedRuntime } from "effect"
+import { Effect, ManagedRuntime } from "effect"
 import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context"
 import {
   Harness,
@@ -18,6 +18,7 @@ import {
   fauxAssistantMessage,
   fauxToolCall,
   type AssistantMessage,
+  type Message,
   type FauxResponseFactory,
 } from "@earendil-works/pi-ai"
 import { agentSettings, workingContextPolicy } from "../src/agent/compaction"
@@ -36,7 +37,6 @@ import { MemoryRepository } from "../src/memory/repository"
 import { sqliteMemoryLayer } from "../src/memory/adapters/sqlite"
 import { piWorkingObjects } from "../src/objects/adapters/pi"
 import { objectContextHook } from "../src/objects/tools"
-import { Effect } from "effect"
 import { database } from "./database"
 
 function gate() {
@@ -129,9 +129,9 @@ it.each(["continue", "restart", "cancel"])(
         if (scenario !== "continue" && firstProcess) {
           await new Promise<void>((_, reject) => {
             const abort = () => reject(new Error("Synthetic native eviction"))
-            if (options?.signal?.aborted) abort()
+            if (options.signal?.aborted) abort()
             else
-              options?.signal?.addEventListener("abort", abort, { once: true })
+              options.signal?.addEventListener("abort", abort, { once: true })
           })
         }
         // This synthetic summarizer can only preserve instructions it was given.
@@ -437,8 +437,10 @@ it.each(["continue", "restart", "cancel"])(
         ).toHaveLength(1)
       }
       // Tool pairs remain intact in the actual provider requests after safe cut selection.
-      for (const request of requests.filter((request) => !request.summary)) {
-        const messages = JSON.parse(request.messages) as AssistantMessage[]
+      for (const request of requests.filter(
+        (candidate) => !candidate.summary
+      )) {
+        const messages = JSON.parse(request.messages) as Message[]
         const calls = new Set(
           messages.flatMap((message) =>
             message.role === "assistant"
@@ -448,7 +450,7 @@ it.each(["continue", "restart", "cancel"])(
               : []
           )
         )
-        for (const message of JSON.parse(request.messages))
+        for (const message of messages)
           if (message.role === "toolResult")
             expect(calls.has(message.toolCallId)).toBe(true)
       }
@@ -474,7 +476,8 @@ it.each(["continue", "restart", "cancel"])(
         afterSummary.some(
           (request) =>
             request.messages.length <
-            requests.find((request) => request.summary)!.messages.length + 10000
+            requests.find((candidate) => candidate.summary)!.messages.length +
+              10000
         )
       ).toBe(true)
       console.info("Compaction fixture usage", {

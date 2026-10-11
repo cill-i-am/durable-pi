@@ -70,7 +70,7 @@ describe("Pi snapshot and receipt consistency", () => {
           const offset = Number(cursor?.offset ?? 0)
           pages.push(offset)
           const eligible = history
-            .filter((entry) => entry.id <= query.maxEntryId!)
+            .filter((record) => record.id <= query.maxEntryId!)
             .reverse()
           return {
             items: eligible.slice(offset, offset + limit),
@@ -83,7 +83,7 @@ describe("Pi snapshot and receipt consistency", () => {
       captured
     )
     expect(pages).toEqual([0, 256])
-    expect(originals.map((entry) => entry.id)).toEqual(
+    expect(originals.map((record) => record.id)).toEqual(
       Array.from({ length: 299 }, (_, index) => index + 1)
     )
     const { root } = fixture()
