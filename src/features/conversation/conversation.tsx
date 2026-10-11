@@ -9,6 +9,7 @@ import {
 } from "react"
 import {
   ArrowUp,
+  ChevronDown,
   Square,
   RefreshCw,
   ListTodo,
@@ -33,7 +34,6 @@ import {
   type SubmissionMode,
 } from "@/conversations/turns"
 import { Schema } from "effect"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import type { AgentProfile } from "@/agents/contracts"
 import { agentApi } from "@/http/client"
 import {
@@ -42,9 +42,7 @@ import {
   UploadStatus,
   FileAttachments,
 } from "@/features/files"
-import { ConnectionsPanel } from "@/features/connections"
-import { SkillsPanel } from "@/features/skills"
-import { AccessPanel, ApprovalCard } from "@/features/access"
+import { ApprovalCard } from "@/features/access"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import {
   DropdownMenu,
@@ -54,6 +52,8 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -92,6 +92,7 @@ export function Conversation({
   sending,
   setSending,
   onOpenWorkbench,
+  onSettings,
 }: {
   name: string
   agent: AgentProfile
@@ -100,12 +101,10 @@ export function Conversation({
   conversation: ReturnType<typeof useConversation>
   sending: boolean
   setSending: (value: boolean) => void
+  onSettings: (category: "models" | "access" | "connections" | "skills") => void
   onOpenWorkbench: (value: "files" | "memory") => void
 }) {
   const api = useMemo(() => agentApi(agent.id), [agent.id])
-  const [settingsPanel, setSettingsPanel] = useState<
-    "access" | "connections" | "skills" | null
-  >(null)
   const [draft, setDraft] = useState("")
   const composerInput = useRef<HTMLTextAreaElement>(null)
   const [dragging, setDragging] = useState(false)
@@ -252,15 +251,13 @@ export function Conversation({
             <DropdownMenuContent align="end" className="min-w-56">
               <DropdownMenuGroup>
                 <DropdownMenuLabel>{agent.name}</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => setSettingsPanel("access")}>
+                <DropdownMenuItem onClick={() => onSettings("access")}>
                   <ShieldCheck /> Tool access
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => setSettingsPanel("connections")}
-                >
+                <DropdownMenuItem onClick={() => onSettings("connections")}>
                   <Plug /> Connections
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setSettingsPanel("skills")}>
+                <DropdownMenuItem onClick={() => onSettings("skills")}>
                   <BookOpen /> Skills
                 </DropdownMenuItem>
               </DropdownMenuGroup>
@@ -277,27 +274,6 @@ export function Conversation({
           </DropdownMenu>
         </div>
       </header>
-      <AccessPanel
-        agentId={agent.id}
-        agentName={agent.name}
-        tools={state?.access?.tools}
-        onSaved={reload}
-        open={settingsPanel === "access"}
-        onOpenChange={(open) => setSettingsPanel(open ? "access" : null)}
-      />
-      <ConnectionsPanel
-        agentId={agent.id}
-        agentName={agent.name}
-        onSaved={reload}
-        open={settingsPanel === "connections"}
-        onOpenChange={(open) => setSettingsPanel(open ? "connections" : null)}
-      />
-      <SkillsPanel
-        agentId={agent.id}
-        agentName={agent.name}
-        open={settingsPanel === "skills"}
-        onOpenChange={(open) => setSettingsPanel(open ? "skills" : null)}
-      />
       <MessageScrollerProvider autoScroll>
         <MessageScroller className="conversation-scroller">
           <MessageScrollerViewport>
@@ -385,7 +361,13 @@ export function Conversation({
                               files={turn.attachments ?? []}
                               agentId={agent.id}
                             />
-                            <MessageFooter>
+                            <MessageFooter
+                              className={
+                                turn.status === "queued"
+                                  ? undefined
+                                  : "message-timestamp"
+                              }
+                            >
                               {turn.status === "queued"
                                 ? "Queued"
                                 : new Date(turn.created_at).toLocaleTimeString(
@@ -525,12 +507,15 @@ export function Conversation({
           enabled={!!state?.connected && files.attachmentsReady}
           modelControl={(delivery) =>
             delivery === "steer" ? (
-              <span className="text-xs text-muted-foreground">
-                Steering · {active?.routing?.model ?? "active model"} ·{" "}
-                {active?.routing?.thinking ?? "pinned effort"}
+              <span
+                className="text-xs text-muted-foreground"
+                title={`${active?.routing?.model ?? "Active model"} · ${active?.routing?.thinking ?? "pinned effort"}`}
+              >
+                Active model
               </span>
             ) : (
               <ModelMenu
+                onOpenSettings={() => onSettings("models")}
                 agentId={agent.id}
                 profile={profile}
                 onProfile={setProfile}
@@ -544,7 +529,6 @@ export function Conversation({
                     : "medium",
                   settingsRevision: state?.settingsRevision ?? 0,
                 }}
-                onSaved={reload}
                 onError={setError}
               />
             )
@@ -636,7 +620,7 @@ function Composer({
         <InputGroupAddon align="block-end" className="composer-controls">
           {attachmentControl}
           <div className="composer-model">{modelControl(delivery)}</div>
-          <div className="ml-auto flex gap-2">
+          <div className="ml-auto flex items-center gap-2">
             {active && (
               <InputGroupButton
                 type="button"
@@ -649,46 +633,77 @@ function Composer({
                 <Square />
               </InputGroupButton>
             )}
-            <InputGroupButton
-              type="submit"
-              variant="default"
-              size="sm"
-              className="composer-send"
-              disabled={
-                (!draft.trim() && !hasAttachments) || pending || !enabled
-              }
-              aria-label={
-                active
-                  ? delivery === "steer"
-                    ? "Steer response"
-                    : "Queue message"
-                  : "Send message"
-              }
+            <div
+              className="composer-submit-group"
+              role="group"
+              aria-label="Send message and delivery"
             >
-              <ArrowUp data-icon="inline-start" />
-              <span>
-                {active ? (delivery === "steer" ? "Steer" : "Queue") : "Send"}
-              </span>
-            </InputGroupButton>
+              <InputGroupButton
+                type="submit"
+                variant="default"
+                size="sm"
+                className="composer-send"
+                disabled={
+                  (!draft.trim() && !hasAttachments) || pending || !enabled
+                }
+                aria-label={
+                  active
+                    ? delivery === "steer"
+                      ? "Steer response"
+                      : "Queue message"
+                    : "Send message"
+                }
+              >
+                <ArrowUp data-icon="inline-start" />
+                <span>
+                  {active ? (delivery === "steer" ? "Steer" : "Queue") : "Send"}
+                </span>
+              </InputGroupButton>
+              {active && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <InputGroupButton
+                        type="button"
+                        variant="default"
+                        size="icon-sm"
+                        className="composer-delivery-trigger"
+                        disabled={stopping || pending}
+                      />
+                    }
+                    aria-label="Message delivery"
+                  >
+                    <ChevronDown />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent side="top" align="end">
+                    <DropdownMenuGroup>
+                      <DropdownMenuLabel>
+                        While this reply runs
+                      </DropdownMenuLabel>
+                      <DropdownMenuRadioGroup
+                        value={delivery}
+                        onValueChange={(value) => {
+                          if (value === "steer" || value === "followUp")
+                            setMode(value)
+                        }}
+                      >
+                        <DropdownMenuRadioItem value="steer">
+                          Steer this reply
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="followUp">
+                          Queue next reply
+                        </DropdownMenuRadioItem>
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
           </div>
         </InputGroupAddon>
       </InputGroup>
       {active && (
         <div className="composer-delivery">
-          <ToggleGroup
-            size="sm"
-            variant="outline"
-            value={[delivery]}
-            disabled={stopping || pending}
-            onValueChange={(values) => {
-              const value = values[0]
-              if (value === "steer" || value === "followUp") setMode(value)
-            }}
-            aria-label="Message delivery"
-          >
-            <ToggleGroupItem value="steer">Steer</ToggleGroupItem>
-            <ToggleGroupItem value="followUp">Queue</ToggleGroupItem>
-          </ToggleGroup>
           <span className="text-xs text-muted-foreground">
             {stopping
               ? "Stopping. New messages will wait."

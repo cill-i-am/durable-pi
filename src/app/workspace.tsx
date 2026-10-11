@@ -1,3 +1,4 @@
+import { WorkspaceSettings, type SettingsCategory } from "./workspace-settings"
 import { WorkbenchPanel } from "./workbench"
 import { MobileNavigation } from "./mobile-navigation"
 import { useFiles, FilesWorkbench } from "@/features/files"
@@ -50,7 +51,10 @@ export function ChatApp() {
 function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
   const catalog = useAgentCatalog(ownerId)
   const [securityOpen, setSecurityOpen] = useState(false)
-  const [navigationLocked, setNavigationLocked] = useState(false)
+  const [workLocked, setNavigationLocked] = useState(false)
+  const [settingsPending, setSettingsPending] = useState(false)
+  const [settings, setSettings] = useState<SettingsCategory | null>(null)
+  const navigationLocked = workLocked || settingsPending
   const [workbench, setWorkbench] = useState<Workbench | null>(null)
   useEffect(() => {
     // Paper's desktop opens with the work beside the conversation. Phones start in chat.
@@ -86,6 +90,7 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
       setEditor({ key: catalog.selected.id, agent: catalog.selected })
     else if (action === "archive" && catalog.selected)
       void archive(catalog.selected)
+    else if (action === "settings") setSettings("general")
     else if (action === "security") setSecurityOpen(true)
     else if (action === "sign-out") void authClient.signOut()
     else if (action === "hide-workbench") setWorkbench(null)
@@ -127,6 +132,7 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
             selected={catalog.selected}
             name={name}
             onSelect={selectAgent}
+            onSettings={() => act("settings")}
             onSecurity={() => act("security")}
             onActivity={() => act("activity")}
             onMemory={() => act("memory")}
@@ -162,6 +168,11 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
             {catalog.selected ? (
               <AgentWorkspace
                 key={catalog.selected.id}
+                settings={settings}
+                setSettings={setSettings}
+                onSettingsPending={setSettingsPending}
+                onSecurity={() => act("security")}
+                onEdit={() => act("edit")}
                 workbench={workbench}
                 setWorkbench={setWorkbench}
                 onNavigationLockChange={setNavigationLocked}
@@ -213,6 +224,11 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
 }
 
 function AgentWorkspace({
+  settings,
+  setSettings,
+  onSettingsPending,
+  onSecurity,
+  onEdit,
   workbench,
   setWorkbench,
   agent,
@@ -222,6 +238,11 @@ function AgentWorkspace({
   name,
   onNavigationLockChange,
 }: {
+  settings: SettingsCategory | null
+  setSettings: (value: SettingsCategory | null) => void
+  onSettingsPending: (pending: boolean) => void
+  onSecurity: () => void
+  onEdit: () => void
   workbench: Workbench | null
   setWorkbench: (value: Workbench | null) => void
   agent: AgentProfile
@@ -297,6 +318,9 @@ function AgentWorkspace({
           sending={sending}
           setSending={setSending}
           onOpenWorkbench={openWorkbench}
+          onSettings={(category) => {
+            if (!locked) setSettings(category)
+          }}
           workbenchAction={
             (!workbench ||
               (objectPending && !editingLocked && workbench !== "objects")) && (
@@ -395,6 +419,16 @@ function AgentWorkspace({
           </WorkbenchPanel>
         )}
       </div>
+      <WorkspaceSettings
+        category={settings}
+        onCategoryChange={setSettings}
+        agent={agent}
+        conversation={conversation}
+        onPendingChange={onSettingsPending}
+        onEdit={onEdit}
+        onSecurity={onSecurity}
+        onWorkbench={openWorkbench}
+      />
       {mobileNavigation(false)}
     </ObjectsProvider>
   )

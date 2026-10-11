@@ -463,10 +463,12 @@ export function ChecklistView({
         </Badge>
       </div>
       {object.notes && <p className="checklist-notes">{object.notes}</p>}
-      <p className="checklist-progress">
-        {summary.completed} of {summary.total} complete
-      </p>
-      <SaveState store={store} id={id} />
+      <div className="checklist-summary">
+        <p className="checklist-progress">
+          {summary.completed} of {summary.total} complete
+        </p>
+        <SaveState store={store} id={id} />
+      </div>
       {object.archived && (
         <Alert className="checklist-archived">
           <AlertTitle>Archived checklist</AlertTitle>

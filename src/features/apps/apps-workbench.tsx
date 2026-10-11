@@ -73,21 +73,23 @@ export function AppsWorkbench({
   }, [refresh])
   const content = (
     <>
-      <header className="workbench-heading-row">
-        <div className="flex items-center gap-2 text-sm font-medium">
-          <PanelsTopLeft className="size-4" />
-          {!apps.length && !selected && !creating ? (
-            <span className="text-xs font-normal text-muted-foreground">
-              YOUR WORKBENCH
-            </span>
-          ) : (
-            <>
-              Apps <Badge variant="secondary">Private</Badge>
-            </>
-          )}
-        </div>
-      </header>
-      <div className="workbench-body">
+      {!selected && (
+        <header className="workbench-heading-row">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <PanelsTopLeft className="size-4" />
+            {!apps.length && !selected && !creating ? (
+              <span className="text-xs font-normal text-muted-foreground">
+                YOUR WORKBENCH
+              </span>
+            ) : (
+              <>
+                Apps <Badge variant="secondary">Private</Badge>
+              </>
+            )}
+          </div>
+        </header>
+      )}
+      <div className="workbench-body apps-workbench-body">
         {error && (
           <Alert>
             <AlertDescription>
@@ -102,7 +104,7 @@ export function AppsWorkbench({
             </AlertDescription>
           </Alert>
         )}
-        {selected || creating ? (
+        {creating ? (
           <Button
             variant="ghost"
             size="sm"
@@ -129,7 +131,12 @@ export function AppsWorkbench({
             })(creationGeneration.current)}
           />
         ) : selected ? (
-          <AppView key={selected} agentId={agentId} id={selected} />
+          <AppView
+            key={selected}
+            agentId={agentId}
+            id={selected}
+            onBack={() => setSelected(null)}
+          />
         ) : (
           <>
             {!!apps.length && (
@@ -242,8 +249,7 @@ export function AppsWorkbench({
         )}
       </div>
       <footer className="border-t px-4 py-3 text-xs text-muted-foreground">
-        Private to {agentName}. Published versions and saved responses survive
-        reconnects.
+        Private to {agentName}.
       </footer>
     </>
   )
@@ -252,11 +258,7 @@ export function AppsWorkbench({
 
 function AppRow({ app, onSelect }: { app: AppDocument; onSelect: () => void }) {
   return (
-    <Button
-      variant="outline"
-      className="h-auto w-full flex-col items-start gap-1 py-3 text-left"
-      onClick={onSelect}
-    >
+    <Button variant="ghost" className="app-list-row" onClick={onSelect}>
       <span className="max-w-full truncate font-medium">
         {app.definition.title}
       </span>

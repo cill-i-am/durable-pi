@@ -125,6 +125,7 @@ export function AgentSidebar({
   onArchive,
   onActivity,
   onMemory,
+  onSettings,
   onSecurity,
   name,
 }: {
@@ -137,6 +138,7 @@ export function AgentSidebar({
   onArchive: (agent: AgentProfile) => void
   onActivity: () => void
   onMemory: () => void
+  onSettings: () => void
   onSecurity: () => void
   name: string
 }) {
@@ -371,6 +373,14 @@ export function AgentSidebar({
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setOpenMobile(false)
+                      onSettings()
+                    }}
+                  >
+                    <Settings2 /> Settings
+                  </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => {
                       setOpenMobile(false)

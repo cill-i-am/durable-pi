@@ -4,7 +4,7 @@ Requested after the functional build. Reference: [Pi — Quiet Workroom · Produ
 
 ## Outcome
 
-Completed 2026-10-11. All six slices are deployed through PRs #34–#39. Verification limits and intentional adaptations are recorded below.
+The initial six slices shipped through PRs #34–#39. Fidelity remains under review: shipping a screen is not proof of matching Paper. F8 tracks the current comparison and correction pass.
 
 Bring the deployed product as close as possible to the Paper layouts and states while preserving its actual permissions, durable operations, recovery, model routing and owner data. Use shadcn/Base UI, existing feature boundaries and semantic tokens. Read exact styles/JSX from Paper; use screenshots for verification. Never display fictional live status or enable an unsupported action for visual parity.
 
@@ -185,3 +185,36 @@ The synthetic production-binding network check passed browser unrestricted/restr
 ### Login annotation follow-up
 
 The owner’s later browser annotations override the original login artboard copy: remove the privacy tagline, ChatGPT-connection footer/divider and Pi wordmark text. Keep the mascot and layout. The shared password eye now plays Meal Planner’s short activation click, with a remembered mute control in the auth header and account menu. Locally checked desktop, 390 px and 320 px layouts, keyboard access, native audio creation, muted playback, persistence and optional-audio/storage failure handling. Hosted release evidence belongs to the delivery PR.
+
+
+### F8 — Settings, interiors and conversation density
+
+Implementation and local comparison complete; release verification follows below. References use the original Paper page plus the explicitly requested updates, at 1440×900, 390×844 and a 320px stress viewport.
+
+Carry owner annotations into Paper: account dropdown, removed login wordmark and helper copy, remembered interaction sound, subscription-only models, and public-internet controls for Browser and Linux Terminal. These changes amend the reference; unsupported image-region pins, file folders and global content search remain explicit product gaps.
+
+Delivery evidence will distinguish local synthetic visual fixtures, deterministic/native checks and authenticated hosted checks. No backend authority, durable record, model connection or execution policy changes are intended.
+
+
+#### F8 screen comparison and behavior checks
+
+| Screen / Paper reference | Result of this pass |
+| --- | --- |
+| Settings · 10 | One settings workspace with category navigation and a 664px detail column at 1440px. Existing model, permission, connection and skill operations remain in their feature slices. Mobile switches between categories and detail. Model defaults remain job-aware; only the subscription connection is offered. |
+| Account menu · 03 | Settings, account security, remembered sound preference, archived agents and sign-out. The Paper menu now uses the owner avatar and these actions. |
+| Login / setup · 05–06 | Paper now reflects the previously shipped copy removals and sound control. Visible Pi wordmark, privacy tagline and ChatGPT-login footer are removed. Password-eye click and remembered mute are annotated. |
+| Browser / takeover · 20–21 | Smaller capture heading, one visible address, secondary page text/links and captured-snapshot status. Current URL remains visible in the address field. Existing control ownership and command versions remain unchanged. Paper's live multi-tab browser and region selection remain separate capability gaps. |
+| Terminal · 22 | Compact workspace/network row, smaller labels and collapsed checkpoint explanation. Network settings hide the main terminal presentation without unmounting it. Draft command survives opening/cancelling the form. Actual command/interactive modes remain; Paper's multiple named sessions are not simulated. |
+| Files · 23 | One Files/Trash title menu, outline Upload action, 156px explorer and compact preview/source controls. Mobile stacks the explorer. Preview, Source and narrow-screen overflow checked. |
+| Apps · 24 | One toolbar for back, title, publication state, version and refresh; bordered 14px app canvas and quieter app list. Loading/failure retains All apps. Generated content remains actual typed app content, not the illustrative itinerary. |
+| Activity · 25 | Heading and agent scope share a row; filters and task details share the next row. Flat timeline, single-line times, durable status/evidence unchanged. |
+| Memory · 26 | Search moves above the tabs and opens History results. Note cards retain their source disclosure. Original-message lookup checked. Manual note editing remains a capability gap rather than a fake control. |
+| Checklists · 33–35 | Progress and revision share a row; recovery/conflict alerts keep full width. Existing task editor, history, access isolation and pending-operation recovery retain their owners. Desktop/mobile presentation inspected; no persistence changes. |
+| Chat · 11–14, 28 | Tighter text rhythm, subdued timestamps, smaller thinking control and compact model profile. Steer/Queue moves into the send-action menu, matching Paper; stop remains directly available. Verified both delivery selections, expanded thinking/tool detail and 320px bounds. |
+| Browser / Terminal internet settings · new 40–41 | Paper now documents separate per-bot unrestricted settings, retained tool permissions and the terminal-session save/stop rule. Existing settings APIs and generation/revision checks are unchanged. |
+
+Behavior checks use the production React components with isolated synthetic fetch/EventSource fixtures. Confirmed model saves clear the draft warning; failed saves retain the draft and show the error. Category changes, close and Escape cannot discard model, connection or skill drafts. Cancel unlocks navigation. A chat draft survives settings; a terminal command draft survives opening/cancelling internet settings. Settings fields fit 320px. File Source and Memory source/history retrieval display fixture originals. Restored unconfirmed checklist saves remain reachable on mobile with unrelated navigation locked. An app-load failure retains its back action. These presentation fixtures are not evidence of new external actions or model runs.
+
+Visual evidence is local and ignored under `.research/interiors-evidence/`: `settings-desktop.png`, `files-mobile.png`, `chat-working-mobile.png`, and `recovery-mobile.png`. Each was compared with the corresponding Paper state; the design source and implementation evidence remain distinct. Paper account/menu/settings/login updates were checked for type, alignment, spacing, contrast and clipping. They do not erase the outstanding capability gaps in the earlier 40-screen inventory.
+
+Local verification: 518 tests / 72 files, TypeScript, native workerd loop/restart/replay recovery and production build pass. Lint has four existing warnings and no errors. Final UI-only changes are rechecked before signing; CI repeats the complete suite at the PR commit. No backend, permission, receipt, archive, planning or execution policy changes were made.

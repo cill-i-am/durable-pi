@@ -3,6 +3,7 @@ import { Schema } from "effect"
 import { VideoResult } from "@/workspace/video"
 import { useEffect, useRef, useState } from "react"
 import {
+  ChevronDown,
   Download,
   Ellipsis,
   Files,
@@ -66,7 +67,7 @@ export function FilePicker({
       />
       <Button
         type="button"
-        variant="ghost"
+        variant={attach ? "ghost" : "outline"}
         size={attach ? "icon-sm" : "sm"}
         disabled={disabled || state.uploading}
         aria-label={attach ? "Attach files" : "Upload files"}
@@ -152,27 +153,38 @@ export function FilesWorkbench({
   return (
     <>
       <header className="workbench-heading-row">
-        <h2 className="workbench-section-title">Files</h2>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={<Button variant="ghost" className="workbench-title-menu" />}
+            aria-label="File collection"
+          >
+            <h2 className="workbench-section-title">
+              {tab === "trash" ? "Trash" : "Files"}
+            </h2>
+            <ChevronDown />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem
+              onClick={() => {
+                setTab("files")
+                setPreviewId(null)
+              }}
+            >
+              <Files /> Files
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                setTab("trash")
+                setPreviewId(null)
+              }}
+            >
+              <Trash2 /> Trash
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <FilePicker state={state} attach={false} />
       </header>
-      <div className="workbench-filter-row">
-        <Tabs
-          value={tab}
-          onValueChange={(value) => {
-            setTab(String(value))
-            setPreviewId(null)
-          }}
-        >
-          <TabsList variant="line">
-            <TabsTrigger value="files">Files</TabsTrigger>
-            <TabsTrigger value="trash">Trash</TabsTrigger>
-          </TabsList>
-        </Tabs>
-        <span className="text-xs text-muted-foreground">
-          {visible.length} {visible.length === 1 ? "file" : "files"} · Private
-        </span>
-      </div>
-      <div className="workbench-body">
+      <div className="workbench-body files-workbench-body">
         {state.error && (
           <Alert>
             <AlertDescription>
@@ -208,6 +220,9 @@ export function FilesWorkbench({
         {!!visible.length && (
           <div className="file-explorer">
             <nav className="file-explorer-list" aria-label="Agent files">
+              <span className="file-list-caption">
+                {visible.length} {visible.length === 1 ? "file" : "files"}
+              </span>
               {visible.map((file) => {
                 const Icon =
                   file.kind === "image"

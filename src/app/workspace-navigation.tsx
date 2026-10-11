@@ -77,6 +77,7 @@ export type WorkspaceAction =
   | "hide-workbench"
   | "sign-out"
   | "security"
+  | "settings"
 
 const destinations = [
   { id: "activity", label: "Activity", icon: Activity },
@@ -146,7 +147,7 @@ export function WorkspaceNavigation({
   const commands = [
     { id: "security", label: "Account security", icon: ShieldCheck },
     { id: "create", label: "New agent", icon: Plus },
-    { id: "edit", label: "Agent settings", icon: Settings2 },
+    { id: "settings", label: "Settings", icon: Settings2 },
     { id: "memory", label: "Search this agent's memory", icon: BookOpen },
     ...destinations,
   ] as const
@@ -194,10 +195,10 @@ export function WorkspaceNavigation({
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   disabled={locked || !selected}
-                  onClick={() => run("edit")}
+                  onClick={() => run("settings")}
                 >
                   <Settings2 />
-                  Agent settings
+                  Settings
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
@@ -229,10 +230,10 @@ export function WorkspaceNavigation({
                 </MenubarItem>
                 <MenubarItem
                   disabled={locked || !selected}
-                  onClick={() => run("edit")}
+                  onClick={() => run("settings")}
                 >
                   <Settings2 />
-                  Agent settings
+                  Settings
                 </MenubarItem>
                 <MenubarItem
                   disabled={locked || !selected}

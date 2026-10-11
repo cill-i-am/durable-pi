@@ -1086,3 +1086,10 @@ Produce a compact comparison report with individual failures and supporting evid
 - [ ] Complete the established review and deployment workflow. Report local, isolated hosted, and production verification separately; isolated success does not establish production verification.
 
 No suite code, fixtures, real-model runs, or evaluation results are delivered by this tracker entry.
+
+
+### UI follow-up — Paper interiors (2026-10-11)
+
+Active: reconcile settings, workbench interiors and conversation density against the approved Paper page. Apply the owner’s account/login/sound/subscription/network decisions to Paper as well. See UI_FIDELITY.md F8 for per-screen comparisons and delivery evidence. Existing roadmap and the final harness evaluation slice remain queued after this correction.
+
+Paper interiors implementation is ready for release: unified responsive settings; compact Browser/Terminal/Files/Apps interiors; aligned Activity/Memory/Checklist layouts; compact chat model and steer/queue controls. UI_FIDELITY.md F8 records per-screen comparisons, explicit Paper updates, retained capability gaps and local-versus-hosted evidence. Model/connection/skill drafts, failed saves, terminal/chat draft retention and restored checklist recovery were checked using the actual frontend with isolated synthetic data. No domain authority or execution policy changed. Signed PR, main CI deployment and hosted smoke verification are the remaining release steps.
