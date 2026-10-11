@@ -17,6 +17,13 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Markdown } from "@/components/markdown"
 import type { SaveSkill, Skill, SkillDocument } from "@/skills/contracts"
 import { useSkills, type SkillsState } from "./use-skills"
+import { HostedSkillImport, SkillSourceLabel } from "./hosted-skill-import"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu"
 
 export function SkillsPanel({
   agentId,
@@ -38,6 +45,7 @@ export function SkillsPanel({
   const input = useRef<HTMLInputElement>(null)
   const historyRequest = useRef(0)
   const [importing, setImporting] = useState(false)
+  const [hostedImport, setHostedImport] = useState(false)
   const currentDraft = draft
     ? state.library.find((skill) => skill.id === draft.id)
     : undefined
@@ -46,11 +54,17 @@ export function SkillsPanel({
     !!currentDraft &&
     currentDraft.revision !== draft.expectedRevision
   const cannotReplace =
-    state.busy || !state.ready || state.loading || !!draft || importing
+    state.busy ||
+    !state.ready ||
+    state.loading ||
+    !!draft ||
+    importing ||
+    hostedImport
   function leaveView() {
     historyRequest.current++
     setHistoryBusy(false)
     setImporting(false)
+    setHostedImport(false)
   }
   function newSkill() {
     leaveView()
@@ -116,15 +130,31 @@ export function SkillsPanel({
             </TabsList>
           </Tabs>
           <div className="flex gap-1">
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled={cannotReplace}
-              onClick={() => input.current?.click()}
-            >
-              <Upload />
-              <span className="sr-only sm:not-sr-only">Import</span>
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button size="sm" variant="ghost" disabled={cannotReplace} />
+                }
+              >
+                <Upload />
+                <span className="sr-only sm:not-sr-only">Import</span>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => input.current?.click()}>
+                  Markdown file
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    leaveView()
+                    setHistory(null)
+                    setHostedImport(true)
+                    setLocalError("")
+                  }}
+                >
+                  From Executor
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button size="sm" disabled={cannotReplace} onClick={newSkill}>
               <Plus />
               New
@@ -261,7 +291,15 @@ export function SkillsPanel({
               )
             })}
           </section>
-          {draft ? (
+          {hostedImport ? (
+            <HostedSkillImport
+              onCancel={() => setHostedImport(false)}
+              onPreview={(value) => {
+                setDraft(value)
+                setHostedImport(false)
+              }}
+            />
+          ) : draft ? (
             <form
               className="space-y-4 rounded-lg border p-4"
               onSubmit={async (event) => {
@@ -277,6 +315,7 @@ export function SkillsPanel({
               <h3 className="font-medium">
                 {draft.expectedRevision ? "Edit skill" : "New skill"}
               </h3>
+              <SkillSourceLabel source={draft.source} />
               {conflict && (
                 <Alert>
                   <AlertDescription>
@@ -319,6 +358,7 @@ export function SkillsPanel({
                             expectedRevision: currentDraft.revision,
                             name: currentDraft.name,
                             body: currentDraft.body,
+                            source: currentDraft.source,
                           })
                         }
                       >
@@ -416,6 +456,7 @@ export function SkillsPanel({
                   <div className="prose prose-sm mt-3 max-w-none break-words">
                     <Markdown text={version.body} />
                   </div>
+                  <SkillSourceLabel source={version.source} />
                   {!history.skill.archived &&
                     version.revision !== history.skill.revision && (
                       <Button
@@ -429,6 +470,7 @@ export function SkillsPanel({
                             expectedRevision: history.skill.revision,
                             name: version.name,
                             body: version.body,
+                            source: version.source,
                           })
                           setHistory(null)
                         }}
@@ -456,6 +498,7 @@ export function SkillsPanel({
                         expectedRevision: skill.revision,
                         name: skill.name,
                         body: skill.body,
+                        source: skill.source,
                       })
                       setHistory(null)
                     }}
@@ -504,6 +547,7 @@ function SkillRow({
         <span className="text-xs text-muted-foreground">v{skill.revision}</span>
       </div>
       <p className="line-clamp-2 text-sm text-muted-foreground">{skill.body}</p>
+      <SkillSourceLabel source={skill.source} />
       <div className="flex flex-wrap justify-end gap-1">
         <Button
           size="xs"
