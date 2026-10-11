@@ -192,3 +192,12 @@ Open **Workbench → Routines** to schedule work for the current bot, or ask the
 Results appear in the bot's conversation under its current tool permissions. Only one routine waits or runs at once; missed intervals become one run, and each admitted run has a ten-minute budget. A disconnected model leaves the run waiting. **Pause** prevents future work; **Stop run** also stops a run already queued or running. **Archive** is recoverable through **Restore paused**. A completed one-off schedule can be run again with **Run now** or edited to a new future time.
 
 If another view changes the routine while you edit, choose **Keep my edits** or **Use saved values**. If a save is unconfirmed, retry the same change or resolve it before navigating away. The app does not send email/push notifications automatically. Incoming webhooks and calendar/timezone recurrence are separate follow-up work tracked in `BUILD.md`.
+
+
+### Incoming events
+
+Open a routine's **Webhook** settings to create a private key, or choose **Events** when creating a routine that should only run on demand. POST a JSON object to the displayed endpoint with `Authorization: Bearer YOUR_KEY`, a unique `X-Event-Id`, and `Content-Type: application/json`. Keys are shown only when created and stored only as hashes; rotate a lost key. Never put a key in a URL or chat.
+
+Both raw and normalized JSON must fit 16 KB. A 202 response accepts a durable run; repeating the same event ID and data returns 200 with the same run ID. A 429 response means the bot already has a routine waiting/running: retry after 60 seconds with the same ID. Retry 503 responses with the same ID. A 409 response requires attention (paused routine, reused ID with different data, or capacity reached). Receipts are capped at 2,000 per bot and never silently evicted. Vendor-specific signatures require a trusted adapter at the sender.
+
+Keys are opt-in; no external service receives one automatically. Rotating/disabling a key cancels waiting webhook work, while an admitted reply can finish unless stopped. Event data cannot grant tool permissions; normal bot approvals and the ten-minute budget apply. Results appear in the conversation.

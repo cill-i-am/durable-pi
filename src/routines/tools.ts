@@ -54,7 +54,7 @@ export function routineTools(store: RoutineStore, wake: () => Promise<void>) {
     defineTool({
       name: "save_routine",
       description:
-        "Create or edit a scheduled routine for this bot. Requires owner approval by default. schedule is JSON {type:'once',at:UnixMilliseconds} or {type:'interval',at:UnixMilliseconds,minutes:15..10080}. A new first run must be in the future. Intervals are elapsed minutes, not timezone calendar rules. Reuse id and current expectedRevision when editing; omit id and use revision 0 for new. status active or paused. Missed intervals coalesce; at most one routine runs per bot, with a ten-minute budget. Existing tool grants and Ask approvals remain enforced. Outputs appear in this bot's conversation. No email or push notifications are sent automatically.",
+        "Create or edit a scheduled routine for this bot. Requires owner approval by default. schedule is JSON {type:'once',at:UnixMilliseconds} or {type:'interval',at:UnixMilliseconds,minutes:15..10080} or {type:'webhook'} for incoming events only. Webhook keys must be enabled by the owner in the UI; never ask for or disclose them in chat. A new first run must be in the future. Intervals are elapsed minutes, not timezone calendar rules. Reuse id and current expectedRevision when editing; omit id and use revision 0 for new. status active or paused. Missed intervals coalesce; at most one routine runs per bot, with a ten-minute budget. Existing tool grants and Ask approvals remain enforced. Outputs appear in this bot's conversation. No email or push notifications are sent automatically.",
       parameters: Type.Object({
         id: Type.Optional(Type.String()),
         expectedRevision: Type.Integer({ minimum: 0 }),

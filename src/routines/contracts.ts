@@ -16,6 +16,7 @@ const time = Schema.Number.check(
   Schema.isBetween({ minimum: 0, maximum: 8640000000000000 })
 )
 export const RoutineSchedule = Schema.Union([
+  Schema.Struct({ type: Schema.Literal("webhook") }),
   Schema.Struct({ type: Schema.Literal("once"), at: time }),
   Schema.Struct({
     type: Schema.Literal("interval"),
@@ -45,9 +46,9 @@ export const RoutineRun = Schema.Struct({
   routineId: RoutineId,
   routineRevision: revision,
   title: text(80),
-  prompt: text(12000),
+  prompt: text(40000),
   turnId: RoutineId,
-  trigger: Schema.Literals(["scheduled", "manual"]),
+  trigger: Schema.Literals(["scheduled", "manual", "webhook"]),
   scheduledAt: time,
   createdAt: time,
   status: Schema.Literals(["pending", "queued", "done", "failed", "cancelled"]),
@@ -101,7 +102,7 @@ export function followingTime(
   due: number,
   now: number
 ): number | null {
-  if (schedule.type === "once") return null
+  if (schedule.type !== "interval") return null
   const interval = schedule.minutes * 60_000
   return due + (Math.floor(Math.max(0, now - due) / interval) + 1) * interval
 }
