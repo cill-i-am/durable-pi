@@ -14,7 +14,7 @@ Requires Node 24+ and pnpm 12.4.2. Install with `pnpm install --frozen-lockfile`
 
 1. Copy `.env.example` to `.env`. Set `OWNER_EMAIL`, and generate separate random values of at least 32 bytes for `BETTER_AUTH_SECRET` and `SETUP_TOKEN`. Keep `.env` private.
 2. Run `pnpm model:login`. Complete the official ChatGPT login in your browser. The script writes the credential to `.env` with mode `0600`; it never prints tokens.
-3. Run `pnpm dev`. Alchemy emulates the Workers, Durable Object, and D1 locally. The app URL appears in the output.
+3. Run `pnpm dev` with an authenticated Alchemy `default` profile, or `pnpm exec alchemy dev --stage dev --profile durable-pi` to use the configured project profile. Alchemy emulates Workers, Durable Objects, D1 and R2 locally; Browser uses the real Cloudflare Browser Run service because local Chromium does not enforce its network guardrails. Browser use incurs the account’s normal usage. The app URL appears in the output.
 4. Open the app, choose **First time? Set up your account**, and enter your private setup key and a password. Only the configured owner's email can be registered. Registration closes once that account exists.
 
 `pnpm verify` runs route generation, type checking, unit tests, and the browser/server build. `pnpm lint` checks source. Neither needs provider credentials. `pnpm run deploy` provisions the production stage through Alchemy using the explicitly configured profile. A Cloudflare account with Workers, D1, and R2 permissions is required; hosting charges are separate from ChatGPT model usage.
@@ -48,7 +48,7 @@ For the initial local-to-remote state migration, `scripts/migrate-production-sta
 - Better Auth sessions backed by D1. An authenticated server route forwards to a Worker with both public and preview URLs disabled. Bot objects are addressed from the authenticated owner ID and a validated catalog identity. The default bot retains its original object ID.
 - Server-side ChatGPT credentials with one account-level refresh owner and durable token rotation shared by all bots. API-key credentials are also supported through the same private configuration.
 
-The current slices include live reply updates, mid-run steering, images, video storage, private files, searchable PDF text, reusable skills, tool approvals, and per-bot MCP tools. Browser and shell execution, video processing, generated apps, messaging channels, and scheduled autonomous tasks are still being built; see [BUILD.md](BUILD.md).
+The current slices include live reply updates, mid-run steering, images, video storage, private files, searchable PDF text, reusable skills, tool approvals, and per-bot MCP tools, and a Cloudflare browser for navigation and inspection. Browser interaction/takeover and shell execution, video processing, generated apps, messaging channels, and scheduled autonomous tasks are still being built; see [BUILD.md](BUILD.md).
 
 ## Memory design
 
@@ -108,6 +108,16 @@ The integration follows the [Cloudflare MCP client API](https://developers.cloud
 **Skills → Import → From Executor** reads the `skills` tool from a ready connection. Choose an app, preview its pinned SKILL.md, then save a private local copy. The library keeps immutable revisions; each bot stays on the version you selected until you explicitly update it. Source details remain visible through edits and history restoration. Provider updates never silently replace saved instructions.
 
 Imports copy only the main SKILL.md, with a 16,000-character limit. Reference filenames and the provider's app, deployment, revision and profile are retained as bounded source metadata. To let a bot read those references, select that connection's `skills` tool in **Connect** and review its policy in **Tools**. Saving a skill never grants access. Imported copies remain usable after disconnecting; reading provider references requires an available connection. Source labels identify where a copy came from, not a signature that its text has remained unedited.
+
+## Browser workbench
+
+Open **Browser** beside a bot and choose its allowed sites (up to 20 exact hostnames). Its private Cloudflare Chromium session navigates HTTPS pages, returns bounded text/links and captures screenshots. The bot's `browser_open` and `browser_read` tools use the same session and ask for approval by default. Page content is untrusted data, never permission or instructions.
+
+Sessions expire after two idle minutes or ten minutes total. **Close session** revokes pending work and clears the preview; hiding the panel leaves the session until expiry. Changing destinations retires the previous session. Archiving also schedules cleanup. Session handles never enter browser JSON or model context. Screenshots require the authenticated owner and exact current capture version.
+
+Cloudflare session guardrails restrict HTTP/HTTPS connections to configured hosts plus its maintained `common-cdns` asset set. Startup verifies a blocked destination and fails closed if enforcement is unavailable. Top-frame redirects are additionally restricted to exact owner-listed HTTPS hosts. Text extraction runs in an isolated JavaScript world and is validated again in the Worker. Browser interaction and human takeover follow separately.
+
+`node --env-file=.env --import tsx scripts/check-browser.ts` tests the local synthetic owner with real Cloudflare Chromium. It requires `OWNER_EMAIL=workspace-test@example.com` and the local test account; it never uses production owner credentials.
 
 ## Repository and data boundaries
 

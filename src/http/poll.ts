@@ -1,5 +1,9 @@
 /** Schedule after completion so a slow response cannot be superseded forever. */
-export function pollFiles(refresh: () => Promise<void>, delay = 2000) {
+export function poll(
+  refresh: () => Promise<void>,
+  delay = 2000,
+  immediate = false
+) {
   let stopped = false
   let timer: ReturnType<typeof setTimeout>
   const next = () => {
@@ -11,7 +15,11 @@ export function pollFiles(refresh: () => Promise<void>, delay = 2000) {
       }
     }, delay)
   }
-  next()
+  if (immediate)
+    void refresh().finally(() => {
+      if (!stopped) next()
+    })
+  else next()
   return () => {
     stopped = true
     clearTimeout(timer)

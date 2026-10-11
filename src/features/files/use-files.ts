@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { Schema } from "effect"
 import { agentApi } from "@/http/client"
 import { FileInfo, FileList, MAX_ATTACHMENTS } from "@/workspace/files"
-import { pollFiles } from "./poll"
+import { poll } from "@/http/poll"
 import { attachmentReady, preparingFile } from "./preparation"
 import { uploadFile, type UploadAttempt } from "./uploads"
 
@@ -44,7 +44,7 @@ export function useFiles(agentId: string) {
   const extracting = files.some(preparingFile)
   useEffect(() => {
     if (!extracting) return
-    return pollFiles(refresh)
+    return poll(refresh)
   }, [extracting, refresh])
   function select(file: FileInfo) {
     setSelected((current) =>

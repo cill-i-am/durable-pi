@@ -62,6 +62,19 @@ export class AccessConflict extends Schema.TaggedError<AccessConflict>()(
 
 export const builtInTools = [
   {
+    name: "browser_open",
+    title: "Open browser page",
+    description:
+      "Navigate this bot's Cloudflare browser within its allowed sites.",
+    mode: "ask",
+  },
+  {
+    name: "browser_read",
+    title: "Read browser page",
+    description: "Read this bot's current browser page and screenshot.",
+    mode: "ask",
+  },
+  {
     name: "list_files",
     description: "List this bot's private files.",
     mode: "allow",
