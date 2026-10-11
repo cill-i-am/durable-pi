@@ -7,14 +7,17 @@ import {
   PublishApp,
   ArchiveApp,
   InteractApp,
+  RenderWebApp,
 } from "./contracts"
+import type { WebApps } from "./web"
 import type { AppStore } from "./adapters/sqlite"
 
 export function appsRequest(
   store: AppStore,
   request: Request,
   path: string,
-  wake: () => Promise<void>
+  wake: () => Promise<void>,
+  web?: WebApps
 ) {
   return Effect.gen(function* () {
     if (path === "apps" && request.method === "GET")
@@ -34,27 +37,43 @@ export function appsRequest(
           new TextDecoder().decode(await boundedBytes(request, 120000))
         ) as unknown
     )
+    if (path === "apps/render" && web) {
+      const input = yield* Effect.try(() =>
+        Schema.decodeUnknownSync(RenderWebApp)(raw)
+      )
+      return Response.json(yield* web.render(input, request.signal))
+    }
     // Schedule recovery before committing an interaction; the job reads durable state.
     if (path === "apps/interact") yield* Effect.tryPromise(wake)
-    const result = yield* Effect.try(() => {
-      switch (path) {
-        case "apps/cancel":
-          return store.cancelOperation(
-            Schema.decodeUnknownSync(Schema.Struct({ operationId: AppId }))(raw)
-              .operationId
-          )
-        case "apps/save":
-          return store.save(Schema.decodeUnknownSync(SaveApp)(raw))
-        case "apps/publish":
-          return store.publish(Schema.decodeUnknownSync(PublishApp)(raw))
-        case "apps/archive":
-          return store.archive(Schema.decodeUnknownSync(ArchiveApp)(raw))
-        case "apps/interact":
-          return store.interact(Schema.decodeUnknownSync(InteractApp)(raw))
-        default:
-          throw new AppConflict({ message: "Unknown app action." })
-      }
-    })
+    const interaction =
+      path === "apps/interact"
+        ? yield* Effect.try(() => Schema.decodeUnknownSync(InteractApp)(raw))
+        : null
+    const result =
+      interaction?.action.type === "web" && web
+        ? yield* web.interact(interaction, request.signal)
+        : yield* Effect.try(() => {
+            switch (path) {
+              case "apps/cancel":
+                return store.cancelOperation(
+                  Schema.decodeUnknownSync(
+                    Schema.Struct({ operationId: AppId })
+                  )(raw).operationId
+                )
+              case "apps/save":
+                return store.save(Schema.decodeUnknownSync(SaveApp)(raw))
+              case "apps/publish":
+                return store.publish(Schema.decodeUnknownSync(PublishApp)(raw))
+              case "apps/archive":
+                return store.archive(Schema.decodeUnknownSync(ArchiveApp)(raw))
+              case "apps/interact":
+                return store.interact(
+                  Schema.decodeUnknownSync(InteractApp)(raw)
+                )
+              default:
+                throw new AppConflict({ message: "Unknown app action." })
+            }
+          })
     if (path === "apps/interact") yield* Effect.tryPromise(wake)
     return Response.json(result)
   }).pipe(

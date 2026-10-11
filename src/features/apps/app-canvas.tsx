@@ -1,3 +1,4 @@
+import { WebCanvas } from "./web-canvas"
 import { useId, useState } from "react"
 import type {
   AppAction,
@@ -29,12 +30,18 @@ import { Separator } from "@/components/ui/separator"
 
 export function AppCanvas({
   definition,
+  agentId,
+  id,
+  version,
   state,
   revision,
   disabled,
   onAction,
 }: {
   definition: AppDefinition
+  agentId: string
+  id: string
+  version: number
   state: AppState
   revision: number
   disabled: boolean
@@ -58,6 +65,20 @@ export function AppCanvas({
       </header>
       <Separator />
       {definition.blocks.map((block) => {
+        if (block.type === "web")
+          return (
+            <WebCanvas
+              key={block.id}
+              agentId={agentId}
+              id={id}
+              version={version}
+              revision={revision}
+              blockId={block.id}
+              title={definition.title}
+              disabled={disabled}
+              onAction={onAction}
+            />
+          )
         if (block.type === "text")
           return (
             <p
