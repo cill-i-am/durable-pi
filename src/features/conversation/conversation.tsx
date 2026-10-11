@@ -1,3 +1,4 @@
+import { AgentMark, agentTone } from "@/components/agent-mark"
 import type { Profile, JobType } from "@/inference/policy"
 import { useCallback, useMemo, useRef, useState, type ReactNode } from "react"
 import { ArrowUp, Square, Sparkles, RefreshCw } from "lucide-react"
@@ -139,9 +140,7 @@ export function Conversation({
       <header className="chat-header">
         <div className="chat-identity flex min-w-0 items-center gap-3">
           <SidebarTrigger />
-          <span className="bot-avatar" aria-hidden="true">
-            {agent.name.slice(0, 1)}
-          </span>
+          <AgentMark tone={agentTone(agent.id)} />
           <h1 className="truncate text-sm font-semibold">{agent.name}</h1>
           <Badge variant="secondary">
             {active?.status === "stopping"

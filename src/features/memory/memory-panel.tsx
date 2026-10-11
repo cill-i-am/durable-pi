@@ -67,7 +67,7 @@ export function MemoryPanel({
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger render={<Button variant="ghost" size="sm" />}>
         <BookOpen data-icon="inline-start" />
-        Memory
+        <span className="chat-action-label">Memory</span>
       </SheetTrigger>
       <SheetContent className="memory-sheet">
         <SheetHeader>

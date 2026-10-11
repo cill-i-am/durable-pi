@@ -1,3 +1,8 @@
+import {
+  WorkspaceNavigation,
+  type Workbench,
+  type WorkspaceAction,
+} from "./workspace-navigation"
 import { RoutinesWorkbench } from "@/features/routines"
 import { ActivityWorkbench } from "@/features/activity"
 import { useCallback, useEffect, useState } from "react"
@@ -57,6 +62,12 @@ export function ChatApp() {
 function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
   const catalog = useAgentCatalog(ownerId)
   const [navigationLocked, setNavigationLocked] = useState(false)
+  const [workbench, setWorkbench] = useState<Workbench | null>(null)
+  function selectAgent(id: AgentProfile["id"]) {
+    if (navigationLocked) return
+    if (id !== catalog.selected?.id) setWorkbench(null)
+    catalog.select(id)
+  }
   const [memoryNavigation, setMemoryNavigation] = useState<{
     id: string
     request: string
@@ -84,81 +95,125 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
       setError(e instanceof Error ? e.message : "Could not archive this agent.")
     }
   }
+  function act(action: WorkspaceAction) {
+    if (navigationLocked) return
+    if (action === "create") setEditor({ key: crypto.randomUUID() })
+    else if (action === "edit" && catalog.selected)
+      setEditor({ key: catalog.selected.id, agent: catalog.selected })
+    else if (action === "archive" && catalog.selected)
+      void archive(catalog.selected)
+    else if (action === "sign-out") void authClient.signOut()
+    else if (action === "memory" && catalog.selected)
+      setMemoryNavigation({
+        id: catalog.selected.id,
+        request: crypto.randomUUID(),
+      })
+    else if (action === "hide-workbench") setWorkbench(null)
+    else if (
+      [
+        "browser",
+        "code",
+        "apps",
+        "terminal",
+        "routines",
+        "objects",
+        "activity",
+      ].includes(action) &&
+      catalog.selected
+    )
+      setWorkbench(action as Workbench)
+  }
   return (
     <TooltipProvider>
-      <SidebarProvider className="workspace-shell">
-        <AgentSidebar
-          disabled={navigationLocked}
+      <SidebarProvider
+        className="workspace-shell"
+        style={{ "--sidebar-width": "224px" } as React.CSSProperties}
+      >
+        <WorkspaceNavigation
+          name={name}
           agents={catalog.agents}
           selected={catalog.selected}
-          name={name}
-          onSelect={(id) => {
-            if (!navigationLocked) catalog.select(id)
-          }}
-          onCreate={() => {
-            if (!navigationLocked) setEditor({ key: crypto.randomUUID() })
-          }}
-          onEdit={(agent) => {
-            if (!navigationLocked) setEditor({ key: agent.id, agent })
-          }}
-          onArchive={(agent) => void archive(agent)}
+          locked={navigationLocked}
+          workbench={workbench}
+          onAction={act}
+          onSelect={selectAgent}
         />
-        <main className="workspace-main">
-          {(error || catalog.error) && (
-            <Alert>
-              <AlertDescription className="flex items-center justify-between">
-                {error || catalog.error}
-                <Button
-                  variant="ghost"
-                  onClick={() =>
-                    void catalog
-                      .refresh()
-                      .then(() => setError(""))
-                      .catch(() => setError("Could not reconnect. Try again."))
-                  }
-                >
-                  Retry
-                </Button>
-              </AlertDescription>
-            </Alert>
-          )}
-          {catalog.selected ? (
-            <AgentWorkspace
-              key={catalog.selected.id}
-              navigationLocked={navigationLocked}
-              onNavigationLockChange={setNavigationLocked}
-              name={name}
-              agent={catalog.selected}
-              agents={catalog.agents.filter(
-                (value) => value.status === "active"
-              )}
-              memoryRequest={
-                memoryNavigation?.id === catalog.selected.id
-                  ? memoryNavigation.request
-                  : undefined
-              }
-              onMemoryOpened={onMemoryOpened}
-              onOpenBot={(id) => {
-                if (!navigationLocked) catalog.select(id)
-              }}
-              onMemory={(id) => {
-                if (!navigationLocked) {
-                  catalog.select(id)
-                  setMemoryNavigation({ id, request: crypto.randomUUID() })
+        <div className="workspace-body">
+          <AgentSidebar
+            disabled={navigationLocked}
+            agents={catalog.agents}
+            selected={catalog.selected}
+            name={name}
+            onSelect={selectAgent}
+            onActivity={() => act("activity")}
+            onMemory={() => act("memory")}
+            onCreate={() => {
+              if (!navigationLocked) setEditor({ key: crypto.randomUUID() })
+            }}
+            onEdit={(agent) => {
+              if (!navigationLocked) setEditor({ key: agent.id, agent })
+            }}
+            onArchive={(agent) => void archive(agent)}
+          />
+          <main className="workspace-main">
+            {(error || catalog.error) && (
+              <Alert>
+                <AlertDescription className="flex items-center justify-between">
+                  {error || catalog.error}
+                  <Button
+                    variant="ghost"
+                    onClick={() =>
+                      void catalog
+                        .refresh()
+                        .then(() => setError(""))
+                        .catch(() =>
+                          setError("Could not reconnect. Try again.")
+                        )
+                    }
+                  >
+                    Retry
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            )}
+            {catalog.selected ? (
+              <AgentWorkspace
+                key={catalog.selected.id}
+                workbench={workbench}
+                setWorkbench={setWorkbench}
+                navigationLocked={navigationLocked}
+                onNavigationLockChange={setNavigationLocked}
+                name={name}
+                agent={catalog.selected}
+                agents={catalog.agents.filter(
+                  (value) => value.status === "active"
+                )}
+                memoryRequest={
+                  memoryNavigation?.id === catalog.selected.id
+                    ? memoryNavigation.request
+                    : undefined
                 }
-              }}
-            />
-          ) : (
-            <div className="loading-view">
-              <Skeleton className="h-6 w-44" />
-              <p className="text-sm text-muted-foreground">
-                {catalog.loading
-                  ? "Opening your workspace…"
-                  : "Your workspace is unavailable."}
-              </p>
-            </div>
-          )}
-        </main>
+                onMemoryOpened={onMemoryOpened}
+                onOpenBot={selectAgent}
+                onMemory={(id) => {
+                  if (!navigationLocked) {
+                    selectAgent(id)
+                    setMemoryNavigation({ id, request: crypto.randomUUID() })
+                  }
+                }}
+              />
+            ) : (
+              <div className="loading-view">
+                <Skeleton className="h-6 w-44" />
+                <p className="text-sm text-muted-foreground">
+                  {catalog.loading
+                    ? "Opening your workspace…"
+                    : "Your workspace is unavailable."}
+                </p>
+              </div>
+            )}
+          </main>
+        </div>
         {editor && (
           <AgentEditor
             key={editor.key}
@@ -169,7 +224,7 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
             }}
             onSaved={async (agent) => {
               await catalog.refresh()
-              catalog.select(agent.id)
+              selectAgent(agent.id)
             }}
           />
         )}
@@ -179,6 +234,8 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
 }
 
 function AgentWorkspace({
+  workbench,
+  setWorkbench,
   agent,
   agents,
   memoryRequest,
@@ -189,6 +246,8 @@ function AgentWorkspace({
   navigationLocked,
   onNavigationLockChange,
 }: {
+  workbench: Workbench | null
+  setWorkbench: (value: Workbench | null) => void
   agent: AgentProfile
   agents: readonly AgentProfile[]
   memoryRequest?: string
@@ -199,16 +258,6 @@ function AgentWorkspace({
   navigationLocked: boolean
   onNavigationLockChange: (value: boolean) => void
 }) {
-  const [workbench, setWorkbench] = useState<
-    | "browser"
-    | "code"
-    | "apps"
-    | "terminal"
-    | "routines"
-    | "objects"
-    | "activity"
-    | null
-  >(null)
   const [objectId, setObjectId] = useState<string | null>(null)
   const [objectPending, setObjectPending] = useState(false)
   const [objectEditing, setObjectEditing] = useState(false)
@@ -249,7 +298,9 @@ function AgentWorkspace({
                 }
               >
                 <PanelRight data-icon="inline-start" />
-                <span className="hidden sm:inline">Workbench</span>
+                <span className="chat-action-label hidden sm:inline">
+                  Workbench
+                </span>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuGroup>

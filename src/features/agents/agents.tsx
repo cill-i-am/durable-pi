@@ -2,6 +2,8 @@ import { useCallback, useEffect, useReducer, useRef, useState } from "react"
 import { Schema } from "effect"
 import {
   Archive,
+  Activity,
+  BookOpen,
   ChevronDown,
   Ellipsis,
   LogOut,
@@ -18,6 +20,7 @@ import {
 } from "@/agents/contracts"
 import { api } from "@/http/client"
 import { catalogReducer, initialCatalog } from "./catalog-state"
+import { AgentMark, agentTone } from "@/components/agent-mark"
 import { authClient } from "@/auth/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -115,6 +118,8 @@ export function AgentSidebar({
   onCreate,
   onEdit,
   onArchive,
+  onActivity,
+  onMemory,
   name,
 }: {
   disabled?: boolean
@@ -124,6 +129,8 @@ export function AgentSidebar({
   onCreate: () => void
   onEdit: (agent: AgentProfile) => void
   onArchive: (agent: AgentProfile) => void
+  onActivity: () => void
+  onMemory: () => void
   name: string
 }) {
   const [query, setQuery] = useState("")
@@ -145,11 +152,11 @@ export function AgentSidebar({
       <SidebarHeader inert={disabled}>
         <DropdownMenu>
           <DropdownMenuTrigger
-            render={<Button variant="ghost" className="justify-start" />}
+            render={
+              <Button variant="ghost" className="justify-start md:hidden" />
+            }
           >
-            <span className="workspace-mark" aria-hidden="true">
-              π
-            </span>{" "}
+            <AgentMark />
             Pi <span className="text-muted-foreground">/ Personal</span>
             <ChevronDown data-icon="inline-end" />
           </DropdownMenuTrigger>
@@ -187,6 +194,7 @@ export function AgentSidebar({
         </div>
         <Button
           variant="outline"
+          className="h-9.5 justify-start"
           onClick={() => {
             setOpenMobile(false)
             onCreate()
@@ -214,10 +222,8 @@ export function AgentSidebar({
                     } else onArchive(agent)
                   }}
                 >
-                  <span className="bot-avatar" aria-hidden="true">
-                    {agent.name.slice(0, 1)}
-                  </span>
-                  <span className="flex min-w-0 flex-col gap-1">
+                  <AgentMark tone={agentTone(agent.id)} />
+                  <span className="flex min-w-0 flex-col gap-0.5">
                     <span className="truncate">{agent.name}</span>
                     <span className="truncate text-xs text-muted-foreground">
                       {agent.status === "archived"
@@ -273,6 +279,28 @@ export function AgentSidebar({
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter inert={disabled}>
+        <Button
+          variant="ghost"
+          className="justify-start"
+          onClick={() => {
+            setOpenMobile(false)
+            onActivity()
+          }}
+        >
+          <Activity />
+          Activity
+        </Button>
+        <Button
+          variant="ghost"
+          className="justify-start"
+          onClick={() => {
+            setOpenMobile(false)
+            onMemory()
+          }}
+        >
+          <BookOpen />
+          Memory
+        </Button>
         <Button
           variant="ghost"
           className="justify-start"
@@ -346,9 +374,12 @@ export function AgentEditor({
         if (!pending) onOpenChange(value)
       }}
     >
-      <DialogContent>
+      <DialogContent className="agent-editor">
         <DialogHeader>
-          <DialogTitle>{agent ? "Edit agent" : "Create an agent"}</DialogTitle>
+          <AgentMark />
+          <DialogTitle>
+            {agent ? "Agent settings" : "Create an agent"}
+          </DialogTitle>
           <DialogDescription>
             Give it a name and a purpose. Its conversation and memory stay
             separate.

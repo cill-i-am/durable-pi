@@ -69,7 +69,7 @@ export function AccessPanel({
         render={<Button variant="ghost" size="sm" aria-label="Tool access" />}
       >
         <ShieldCheck />
-        <span className="hidden sm:inline">Tools</span>
+        <span className="chat-action-label hidden sm:inline">Tools</span>
       </SheetTrigger>
       <SheetContent className="gap-0 data-[side=right]:w-full data-[side=right]:sm:max-w-xl">
         <SheetHeader>
