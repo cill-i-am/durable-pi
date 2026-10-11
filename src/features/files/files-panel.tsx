@@ -141,7 +141,7 @@ export function FilesPanel({
         render={<Button variant="ghost" size="sm" aria-label="Files" />}
       >
         <Files />
-        <span className="hidden sm:inline">Files</span>
+        <span className="chat-action-label hidden sm:inline">Files</span>
       </SheetTrigger>
       <SheetContent className="w-full gap-0 sm:max-w-lg">
         <SheetHeader>

@@ -105,7 +105,7 @@ export function SkillsPanel({
         render={<Button variant="ghost" size="sm" aria-label="Skills" />}
       >
         <BookOpen />
-        <span className="hidden sm:inline">Skills</span>
+        <span className="chat-action-label hidden sm:inline">Skills</span>
       </SheetTrigger>
       <SheetContent className="gap-0 data-[side=right]:w-full data-[side=right]:sm:max-w-xl">
         <SheetHeader>

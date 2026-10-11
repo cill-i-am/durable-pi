@@ -24,3 +24,12 @@ export function AgentMark({
     </svg>
   )
 }
+
+/** Stable presentation only; a color never implies shared data or permissions. */
+export function agentTone(id: string) {
+  if (id === "home") return "primary" as const
+  const tones = ["primary", "peach", "lilac", "blue"] as const
+  let hash = 0
+  for (const character of id) hash = (hash * 31 + character.charCodeAt(0)) >>> 0
+  return tones[hash % tones.length]
+}
