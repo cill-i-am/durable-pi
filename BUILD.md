@@ -1,6 +1,6 @@
 # Durable Pi — build tracker
 
-Started 2026-10-10. Delivery owner: Codex. Status: **slices 01–09b, 03c, 08c and 02c deployed; 11a, 02d and 02e deployed; 10a deployed; 10b background delegation in progress**.
+Started 2026-10-10. Delivery owner: Codex. Status: **slices 01–09b, 03c, 08c and 02c deployed; 11a, 02d and 02e deployed; 10a deployed; 10b deployed; 11 activity/recovery in progress**.
 
 ## Outcome
 
@@ -60,9 +60,9 @@ The owner requested password recovery before continuing. Implemented Better Auth
 | 09 — Routines and incoming events | Schedule/pause/delete routines; run with browser closed; authenticated webhook triggers; durable retry/deduplication; notify on meaningful outcomes; respect bot grants and budgets. | 09a and 09b deployed |
 | 02d — Different models for different jobs | Account-aware deterministic routing; per-agent job defaults and per-message profiles; durable selection, usage and explicit failure states. | Deployed; hosted routing verified |
 | 02e — Independent memory policy and remaining jobs | Pin OptChat summary routes, bound retries, expose explicit recovery, and evaluate labels/extraction/memory/planning choices. | Deployed; hosted memory and recall verified |
-| 10 — Delegation | Explicit parent/child tasks; separate child memory/tool grants; bounded concurrency; steer/stop children; deliver completed reports once after restart. | 10a deployed; background 10b in progress |
+| 10 — Delegation | Explicit parent/child tasks; separate child memory/tool grants; bounded concurrency; steer/stop children; deliver completed reports once after restart. | 10a–10b deployed |
 | 11a — Automatic durable task planning | Substantial requests maintain a bot-local plan; Activity exposes progress, blockers, evidence and history; compaction, restart, steering and cancellation preserve authority. | Deployed in PR #25; local journey/recovery and hosted authentication checks passed |
-| 11 — Activity and recovery | Per-bot/global activity; inspect tool outcomes and approvals; recover interrupted work; expose actionable connection/backup failures; inspect/export memory and workspace. | Planned |
+| 11 — Activity and recovery | Per-bot/global activity; inspect tool outcomes and approvals; recover interrupted work; expose actionable connection/backup failures; inspect/export memory and workspace. | In progress |
 | 12 — Complete product verification | Approved desktop/mobile states implemented; keyboard/accessibility checks; isolation/replay/permission tests; restore proof; secret scan; CI/deploy and hosted acceptance of all journeys. | Planned |
 
 Each slice gets implementation and proof notes below. Add a slice rather than hiding missing behavior in “done.” `todo.md` remains the detailed OptChat steering/subagent reference; this tracker supersedes its deferral status.
@@ -798,3 +798,22 @@ Local verification: 409 tests across 60 files, typecheck and production build pa
 Real local Cloudflare workerd was killed with two native requests suspended and a saved steer, then restarted with the same SQLite store. Children 8/14 and the 8,192-token test window survived; both completed and the first applied metric-unit steering. Five synthetic provider starts were observed (two initial, two recovered, one steer continuation), with reported child usage 328/16 and 196/7 input/output tokens. Replaying the saved steer returned `accepted:false` without another start. The probe used no subscription credential.
 
 Activity fixtures at 1440×900 and 390×844 expose results, usage, steering, transcript and independent group Stop/reconnect actions. An intentionally lost reconnect acknowledgement retained its operation ID; another retry reused it, while Stop remained available and acknowledged separately. The mobile page had no horizontal overflow. Fixtures were removed. Hosted tool admission, report completion and subscription usage remain deployment acceptance checks; hosted restart is not claimed.
+
+
+10b merged in PR #30 as `eead3f2`. Exact-head CI passed after terminal-history regressions were added: deadline cancellation persists before abort/seal, while completed groups survive later deadlines and delayed Stop. Production run `38129899345` passed check, Alchemy deployment and hosted authentication probes.
+
+10b hosted acceptance: a synthetic bot started two tool-free children through `background_tasks`, immediately acknowledged them, then received exactly one internally identified report. Both children returned their required markers using Luna/low and a 272,000-token window, even after the bot's foreground default changed to Astra/high. Each child made one request and reported 248 input / 8 output tokens. The original root attempts reported 5,960/75 and 6,106/9 input/output; the second had 5,632 cached input. The report turn used the original Luna/low pin, no tools, and 2,341/13 input/output. Three observed independent memory requests used Luna/medium (5,323/96, 5,535/98 and 5,571/73); the latter two each reported 4,608 cached input. Exact replay returned `accepted:false`, retained one group/report and added no conversation attempt. The bot was archived and temporary Worker deleted. Hosted restart remains untested; the native workerd restart evidence above is local.
+
+#### 11 — Activity and recovery
+
+Re-read the approved Paper Activity cross-agent timeline and recovery screens before implementation. Add an owner-scoped read model over existing durable domain facts: per-bot/global recent activity, Needs you / Running filters, stable identities and links to the authoritative approval/recovery surfaces. Preserve plans, model usage and delegation inspectors. No extra scheduler, approval endpoint, editable activity database, or automatic retry-all action.
+
+Bound cross-bot reads to the owner's catalog, report partial failures explicitly and never infer permission from a timeline item. Reading Activity must not retry an external action. Show conversation/tool outcomes, steering, background delivery and actionable memory/backup connection issues. Recovery buttons lead to the existing domain operation. Verify ownership, reconnect/restart, paging, failed reads and mobile navigation. Audit historic foreground delegation outcomes so successful completed tasks do not become cancelled merely because their deadline has passed.
+
+The complete product verification and separate Paper-fidelity goal remain subsequent work.
+
+
+
+11 local verification: 421 tests across 62 files, typecheck, lint and production build passed. SQLite projection coverage exercises 85 same-timestamp entries, stable keyset paging across new arrivals, expiring approvals without mutating receipts, retried failures, owner-only fanout and partial failures. A shared five-second deadline stops admitting reads after four stalled RPCs; pending/unattempted bots remain explicitly unavailable. Gateway tests reject foreign bots/conversations and unauthenticated reads. Independent backend/frontend reviews are clear after correcting cross-bot recovery links, scoped plan state, one-shot Memory navigation and the RPC admission deadline.
+
+Activity reads do not start runners or retry actions; existing lazy store initialization and deployment-credential seeding can still write. Saved history includes original requests, steering, thinking and committed tool input/results, distinguished from background report turns. Foreground completed child history remains completed after its deadline (native Pi regression). Responsive fixture checks at 1440×900 and 390×844 cover the timeline, saved result dialog and cross-bot Memory navigation; these are UI fixtures, separate from live gateway proof.

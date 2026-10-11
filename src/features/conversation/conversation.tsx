@@ -57,10 +57,14 @@ export function Conversation({
   name,
   agent,
   workbenchAction,
+  memoryRequest,
+  onMemoryOpened,
 }: {
   name: string
   agent: AgentProfile
   workbenchAction?: ReactNode
+  memoryRequest?: string
+  onMemoryOpened?: (request: string) => void
 }) {
   const files = useFiles(agent.id)
   const api = useMemo(() => agentApi(agent.id), [agent.id])
@@ -169,7 +173,12 @@ export function Conversation({
             state={files}
             selectionDisabled={sending || files.uploading}
           />
-          <MemoryPanel state={state} agentId={agent.id} />
+          <MemoryPanel
+            state={state}
+            agentId={agent.id}
+            openRequest={memoryRequest}
+            onOpenRequestHandled={onMemoryOpened}
+          />
         </div>
       </header>
       <MessageScrollerProvider autoScroll>

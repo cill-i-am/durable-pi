@@ -32,6 +32,9 @@ if (process.env.LEGACY_APP_URL) {
 }
 for (const path of [
   "state",
+  "activity",
+  "activity?scope=all",
+  "activity/conversations/00000000-0000-4000-8000-000000000001",
   "models",
   "inference",
   "tree",

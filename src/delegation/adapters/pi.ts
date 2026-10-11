@@ -208,7 +208,7 @@ export function piDelegations(
       const stopped =
         child.stopped ||
         authority.cancelled(group.turnId) ||
-        now() >= group.deadline
+        (!group.closed && now() >= group.deadline)
       const pending = inputs.some(
         (input) =>
           (!input && !stopped) ||
@@ -479,6 +479,10 @@ export function piDelegations(
             doc.value = JSON.stringify({
               ...latest,
               closed: true,
+              children: latest.children.map((child) => ({
+                ...child,
+                stopped: child.stopped || now() >= latest.deadline,
+              })),
               revision: latest.revision + 1,
             })
             return true

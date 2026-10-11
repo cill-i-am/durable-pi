@@ -56,9 +56,9 @@ For the initial local-to-remote state migration, `scripts/migrate-production-sta
 - The reference compaction prompt, a 512-byte scale example, five byte-feedback attempts, eight concurrent compactions with a source-order barrier, and durable ten-second retries. Aligned binary merges preserve an incremental view that never splits.
 - Exact archive search, private Markdown notes with source message IDs and revision history, and a memory inspector.
 - Better Auth sessions backed by D1. An authenticated server route forwards to a Worker with both public and preview URLs disabled. Bot objects are addressed from the authenticated owner ID and a validated catalog identity. The default bot retains its original object ID.
-- Server-side ChatGPT credentials with one account-level refresh owner and durable token rotation shared by all bots. API-key credentials are also supported through the same private configuration.
+- Server-side ChatGPT credentials with one account-level refresh owner and durable token rotation shared by all bots. Model requests require the ChatGPT subscription credential; API-key fallback is disabled.
 
-The current slices include live reply updates, mid-run steering, image and video-frame attachments, private files, searchable PDF text, reusable skills, tool approvals, per-bot MCP tools, a Cloudflare browser with owner takeover, JavaScript and Linux execution, versioned private apps, scheduled/webhook routines, shared project checklists, native working-context compaction, and automatic durable task plans in Activity. Delegation, and remaining activity/recovery work are tracked in [BUILD.md](BUILD.md).
+The current slices include live reply updates, mid-run steering, image and video-frame attachments, private files, searchable PDF text, reusable skills, tool approvals, per-bot MCP tools, a Cloudflare browser with owner takeover, JavaScript and Linux execution, versioned private apps, scheduled/webhook routines, shared project checklists, native working-context compaction, and automatic durable task plans in Activity. Foreground/background delegation is also available; remaining activity/recovery work are tracked in [BUILD.md](BUILD.md).
 
 ## Memory design
 
