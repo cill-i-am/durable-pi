@@ -346,6 +346,7 @@ function AgentWorkspace({
             onChange={openWorkbench}
             agentName={agent.name}
             locked={locked}
+            settingsOpen={settings !== null}
             recoveryAction={
               objectPending && !editingLocked && workbench !== "objects" ? (
                 <Button

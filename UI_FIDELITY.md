@@ -189,7 +189,7 @@ The owner’s later browser annotations override the original login artboard cop
 
 ### F8 — Settings, interiors and conversation density
 
-Implementation and local comparison complete; release verification follows below. References use the original Paper page plus the explicitly requested updates, at 1440×900, 390×844 and a 320px stress viewport.
+Implementation and local comparison complete. [PR #52](https://github.com/cill-i-am/durable-pi/pull/52) records release and hosted verification. References use the original Paper page plus the explicitly requested updates, at 1440×900, 390×844 and a 320px stress viewport.
 
 Carry owner annotations into Paper: account dropdown, removed login wordmark and helper copy, remembered interaction sound, subscription-only models, and public-internet controls for Browser and Linux Terminal. These changes amend the reference; unsupported image-region pins, file folders and global content search remain explicit product gaps.
 
@@ -218,3 +218,5 @@ Behavior checks use the production React components with isolated synthetic fetc
 Visual evidence is local and ignored under `.research/interiors-evidence/`: `settings-desktop.png`, `files-mobile.png`, `chat-working-mobile.png`, and `recovery-mobile.png`. Each was compared with the corresponding Paper state; the design source and implementation evidence remain distinct. Paper account/menu/settings/login updates were checked for type, alignment, spacing, contrast and clipping. They do not erase the outstanding capability gaps in the earlier 40-screen inventory.
 
 Local verification: 518 tests / 72 files, TypeScript, native workerd loop/restart/replay recovery and production build pass. Lint has four existing warnings and no errors. Final UI-only changes are rechecked before signing; CI repeats the complete suite at the PR commit. No backend, permission, receipt, archive, planning or execution policy changes were made.
+
+Production-build regression check: the first deployment passed its pipeline and authentication probes, but authenticated visual inspection caught the settings panel shifted off-screen. CSS minification combined the custom `translate: none` into `transform`, leaving the primitive's independent translation utility active. Settings now uses the native `translate-none` class so class merging removes the centering utilities. A second finding involved resizing while settings covered a workbench: the mobile workbench became modal and hid Settings from assistive technology. The workbench now stays non-modal until Settings closes. Production-built CSS checks cover desktop bounds, mobile full-screen bounds, accessible Back/Close controls, return to the workbench and preservation of a command draft across resizing. These are presentation fixes; they do not alter tool permissions or execution.
