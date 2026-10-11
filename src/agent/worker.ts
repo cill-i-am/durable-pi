@@ -57,6 +57,10 @@ import {
 } from "../conversations/turns"
 import { piTimeline } from "../conversations/adapters/pi-timeline"
 import { conversationEvents } from "../conversations/adapters/events"
+import { selectBotSkills, type SkillResolution } from "../skills/selection"
+import { SkillStore } from "../skills/adapters/sqlite"
+import { SelectSkills, SkillConflict } from "../skills/contracts"
+import { readSkillJson, skillResponse, skillsRequest } from "../skills/http"
 import { SYSTEM_PROMPT } from "./prompts"
 import { importHistory, ImportInput } from "../memory/import"
 import { pumpSummaries } from "../memory/compaction"
@@ -246,6 +250,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       ? this.env.AGENT.getByName(owner).resolveModelCredential(provider)
       : this.resolveModelCredential(provider)
   })
+  readonly skills = new SkillStore(this.db)
   readonly botConfiguration = new BotConfigurationStore(this.db)
   readonly catalogRuntime = ManagedRuntime.make(sqliteAgentCatalog(this.db))
   readonly workspaceRuntime = ManagedRuntime.make(
@@ -584,7 +589,11 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         { error: "Choose an image-capable model before attaching an image." },
         { status: 400 }
       )
-    const receipt = this.conversations.admit(input, prepared)
+    const receipt = this.conversations.admit(
+      input,
+      prepared,
+      this.skills.selection().skills
+    )
     this.notifyConversation()
     return Response.json(
       {
@@ -625,11 +634,52 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     this.botConfiguration.configure(owner, profile)
   }
 
+  resolveSkillVersions(references: SelectSkills["skills"]): SkillResolution {
+    try {
+      return { skills: this.skills.resolve(references), error: null }
+    } catch (cause) {
+      return {
+        skills: [],
+        error:
+          cause instanceof SkillConflict
+            ? cause.message
+            : "Could not load these skills.",
+      }
+    }
+  }
   async fetch(request: Request): Promise<Response> {
     await this.lifecycle.start()
     const url = new URL(request.url),
       path = url.pathname.replace("/api/agent/", "")
     try {
+      if (path === "skills" || path.startsWith("skills/"))
+        return Effect.runPromise(skillsRequest(this.skills, request, path))
+      if (path === "skill-selection") {
+        if (request.method === "GET")
+          return Response.json(this.skills.selection())
+        return Effect.runPromise(
+          skillResponse(
+            Effect.gen({ self: this }, function* () {
+              const raw = yield* readSkillJson(request)
+              const input = yield* Effect.try(() =>
+                Schema.decodeUnknownSync(SelectSkills)(raw)
+              )
+              const owner = this.botConfiguration.read()?.owner
+              return yield* selectBotSkills(
+                this.skills,
+                input,
+                async (references) =>
+                  owner
+                    ? await this.env.AGENT.getByName(
+                        owner
+                      ).resolveSkillVersions(references)
+                    : this.resolveSkillVersions(references),
+                () => this.botConfiguration.read()?.status !== "archived"
+              )
+            })
+          )
+        )
+      }
       if (path === "files" || path.startsWith("files/")) {
         if (
           request.method !== "GET" &&
@@ -926,6 +976,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           error: turn.error,
           created_at: turn.created_at,
           attachments: turn.attachments,
+          skills: turn.skills,
           activity:
             activity.get(turn.id) ??
             (saved ? JSON.parse(saved.payload) : undefined),
@@ -1115,7 +1166,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           { type: "text", text: view },
           {
             type: "text",
-            text: `<bot-instructions>\n${this.botConfiguration.read()?.instructions ?? ""}\n</bot-instructions>\n<private-notes>\n${notes}\n</private-notes>\n\nNew user message (archive ID ${entry.id}):\n${turn.text}`,
+            text: `${turn.skill_context ?? ""}\n\n<bot-instructions>\n${this.botConfiguration.read()?.instructions ?? ""}\n</bot-instructions>\n<private-notes>\n${notes}\n</private-notes>\n\nNew user message (archive ID ${entry.id}):\n${turn.text}`,
           },
           ...turn.input,
         ])
@@ -1199,7 +1250,12 @@ export default {
     if (decoded._tag === "None")
       return new Response("Not found", { status: 404 })
     try {
-      if (path === "bots" || path.startsWith("bots/"))
+      if (
+        path === "bots" ||
+        path.startsWith("bots/") ||
+        path === "skills" ||
+        path.startsWith("skills/")
+      )
         return await root.fetch(request)
       const agent = await root.agentProfile(decoded.value)
       if (!agent) return new Response("Not found", { status: 404 })

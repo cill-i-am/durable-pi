@@ -1,3 +1,4 @@
+import type { SkillReference } from "../skills/contracts"
 import { Schema } from "effect"
 import type { ChatTurn } from "./contracts"
 import type { AttachmentContent, FileInfo } from "../workspace/files"
@@ -34,6 +35,8 @@ export type Turn = ChatTurn & {
   revision: number
   creation: string | null
   attachments: readonly FileInfo[]
+  skills?: readonly SkillReference[]
+  skill_context?: string
   input: readonly AttachmentContent[]
 }
 export type Submission = {

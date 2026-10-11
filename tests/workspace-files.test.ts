@@ -13,6 +13,7 @@ import {
   MAX_VISION_BYTES,
   type Upload,
 } from "../src/workspace/files"
+import { skillContext } from "../src/skills/contracts"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 
 const textUpload = (name = "notes.md", text = "private notes"): Upload => ({
@@ -86,7 +87,7 @@ describe("private workspace files", () => {
     const db = database()
     const store = new ConversationStore(db, { model: "test", thinking: "off" })
     db.run(
-      `CREATE TRIGGER row_budget BEFORE UPDATE ON chat_turns WHEN length(CAST(coalesce(NEW.prompt,'') || NEW.input || NEW.answer AS BLOB)) > 2000000 BEGIN SELECT RAISE(ABORT,'row too large'); END`
+      `CREATE TRIGGER row_budget BEFORE UPDATE ON chat_turns WHEN length(CAST(coalesce(NEW.prompt,'') || NEW.input || NEW.answer || NEW.skill_context AS BLOB)) > 2000000 BEGIN SELECT RAISE(ABORT,'row too large'); END`
     )
     const blocks = Array.from({ length: 4 }, () => ({
       type: "image" as const,
@@ -94,8 +95,22 @@ describe("private workspace files", () => {
       data: "A".repeat((MAX_VISION_BYTES * 4) / 3),
     }))
     const command = { operationId: crypto.randomUUID(), text: "Inspect these" }
-    const root = store.admit(command, { files: [], content: blocks }).turn
-    store.savePrompt(root.id, JSON.stringify(blocks))
+    const skills = Array.from({ length: 4 }, () => ({
+      id: crypto.randomUUID(),
+      name: "Maximum skill",
+      revision: 1,
+      body: "界".repeat(16_000),
+      createdAt: new Date().toISOString(),
+    }))
+    const root = store.admit(
+      command,
+      { files: [], content: blocks },
+      skills
+    ).turn
+    store.savePrompt(
+      root.id,
+      JSON.stringify([{ type: "text", text: skillContext(skills) }, ...blocks])
+    )
     expect(store.get(root.id)?.input).toEqual([])
     expect(
       store.finish(

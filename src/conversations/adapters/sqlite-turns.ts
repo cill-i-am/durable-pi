@@ -1,3 +1,8 @@
+import {
+  SkillReference,
+  skillContext,
+  type SkillDocument,
+} from "../../skills/contracts"
 import type { Sqlite } from "../../storage/sqlite"
 import { Schema } from "effect"
 import { AttachmentContent, FileInfo } from "../../workspace/files"
@@ -35,6 +40,8 @@ export class ConversationStore {
       creation: "TEXT",
       attachments: "TEXT NOT NULL DEFAULT '[]'",
       input: "TEXT NOT NULL DEFAULT '[]'",
+      skills: "TEXT NOT NULL DEFAULT '[]'",
+      skill_context: "TEXT NOT NULL DEFAULT ''",
     })) {
       if (!columns.has(name))
         db.run(`ALTER TABLE chat_turns ADD COLUMN ${name} ${definition}`)
@@ -113,7 +120,8 @@ export class ConversationStore {
     prepared?: {
       files: readonly FileInfo[]
       content: readonly AttachmentContent[]
-    }
+    },
+    skills: readonly SkillDocument[] = []
   ) {
     return this.db.transaction(() => {
       const creation = JSON.stringify({
@@ -173,7 +181,7 @@ export class ConversationStore {
           }
         : this.settings()
       this.db.run(
-        "INSERT INTO chat_turns(id,text,status,created_at,parent_id,mode,model,thinking,creation,attachments,input) VALUES (?,?,'queued',?,?,?,?,?,?,?,?)",
+        "INSERT INTO chat_turns(id,text,status,created_at,parent_id,mode,model,thinking,creation,attachments,input,skills,skill_context) VALUES (?,?,'queued',?,?,?,?,?,?,?,?,?,?)",
         input.operationId,
         input.text,
         new Date().toISOString(),
@@ -183,7 +191,12 @@ export class ConversationStore {
         settings.thinking,
         creation,
         JSON.stringify(prepared?.files ?? []),
-        JSON.stringify(prepared?.content ?? [])
+        JSON.stringify(prepared?.content ?? []),
+        JSON.stringify(
+          parent?.skills ??
+            skills.map(({ id, name, revision }) => ({ id, name, revision }))
+        ),
+        parent ? "" : skillContext(skills)
       )
       if (parent)
         this.db.run(
@@ -201,7 +214,7 @@ export class ConversationStore {
   }
   savePrompt(id: string, prompt: string) {
     this.db.run(
-      "UPDATE chat_turns SET prompt=?,input='[]' WHERE id=? AND prompt IS NULL",
+      "UPDATE chat_turns SET prompt=?,input='[]',skill_context='' WHERE id=? AND prompt IS NULL",
       prompt,
       id
     )
@@ -264,7 +277,7 @@ export class ConversationStore {
       const stopped = current.status === "stopping"
       for (const outcome of outcomes) {
         this.db.run(
-          "UPDATE chat_turns SET status=?,delivery=?,input='[]',prompt=NULL WHERE id=?",
+          "UPDATE chat_turns SET status=?,delivery=?,input='[]',prompt=NULL,skill_context='' WHERE id=?",
           outcome.id === root.id && stopped
             ? "cancelled"
             : outcome.delivery === "answered"
@@ -287,15 +300,19 @@ export class ConversationStore {
   }
 }
 
-type StoredTurn = Omit<Turn, "attachments" | "input"> & {
+type StoredTurn = Omit<Turn, "attachments" | "input" | "skills"> & {
   attachments: string
   input: string
+  skills: string
 }
 const visibleColumns =
-  "id,text,status,answer,error,created_at,session_id,NULL AS prompt,parent_id,mode,delivery,model,thinking,revision,creation,attachments,'[]' AS input"
+  "id,text,status,answer,error,created_at,session_id,NULL AS prompt,parent_id,mode,delivery,model,thinking,revision,creation,attachments,skills,'' AS skill_context,'[]' AS input"
 function restore(row: StoredTurn): Turn {
   return {
     ...row,
+    skills: Schema.decodeUnknownSync(Schema.Array(SkillReference))(
+      JSON.parse(row.skills)
+    ),
     attachments: Schema.decodeUnknownSync(Schema.Array(FileInfo))(
       JSON.parse(row.attachments)
     ),
