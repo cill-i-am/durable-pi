@@ -58,6 +58,11 @@ import {
 import { piTimeline } from "../conversations/adapters/pi-timeline"
 import { conversationEvents } from "../conversations/adapters/events"
 import { selectBotSkills, type SkillResolution } from "../skills/selection"
+import { AccessStore } from "../access/adapters/sqlite"
+import { AccessGate } from "../access/gate"
+import { builtInTools } from "../access/contracts"
+import { guardedTools } from "../access/adapters/pi"
+import { accessRequest } from "../access/http"
 import { SkillStore } from "../skills/adapters/sqlite"
 import { SelectSkills, SkillConflict } from "../skills/contracts"
 import { readSkillJson, skillResponse, skillsRequest } from "../skills/http"
@@ -250,6 +255,20 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       ? this.env.AGENT.getByName(owner).resolveModelCredential(provider)
       : this.resolveModelCredential(provider)
   })
+  readonly accessStore = new AccessStore(this.db, () => builtInTools)
+  readonly access = new AccessGate(
+    this.accessStore,
+    (turnId) => {
+      const turn = this.conversations.get(turnId)
+      return (
+        !!turn &&
+        ["queued", "preparing", "running"].includes(turn.status) &&
+        this.botConfiguration.read()?.status !== "archived"
+      )
+    },
+    () => this.notifyConversation()
+  )
+  readonly protectTool = guardedTools(this.access, () => this.active()?.id)
   readonly skills = new SkillStore(this.db)
   readonly botConfiguration = new BotConfigurationStore(this.db)
   readonly catalogRuntime = ManagedRuntime.make(sqliteAgentCatalog(this.db))
@@ -439,7 +458,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
               return toolText("Saved private memory note")
             },
           }),
-        ],
+        ].map(this.protectTool),
       })
       return Harness.open(
         storage,
@@ -652,6 +671,18 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     const url = new URL(request.url),
       path = url.pathname.replace("/api/agent/", "")
     try {
+      if (path === "access" || path.startsWith("access/")) {
+        const result = await Effect.runPromise(
+          accessRequest(
+            this.access,
+            request,
+            path,
+            () => this.botConfiguration.read()?.status !== "archived"
+          )
+        )
+        if (result.ok && request.method !== "GET") await this.runner.wake()
+        return result
+      }
       if (path === "skills" || path.startsWith("skills/"))
         return Effect.runPromise(skillsRequest(this.skills, request, path))
       if (path === "skill-selection") {
@@ -963,6 +994,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       }
     }
     return {
+      access: {
+        tools: this.accessStore.policies(),
+        approvals: this.accessStore.pending(),
+      },
       turns: turns.map((turn) => {
         const saved = this.db.all<{ payload: string }>(
           "SELECT payload FROM chat_activity WHERE turn_id=?",
@@ -1066,8 +1101,11 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       }
       turn = this.current(turn.id)
       const members = this.conversations.members(turn.id)
-      if (turn.status === "stopping" && turn.session_id)
-        await this.harness.session(turn.session_id).abort()
+      if (turn.status === "stopping") {
+        this.accessStore.cancel(turn.id)
+        this.access.notify()
+        if (turn.session_id) await this.harness.session(turn.session_id).abort()
+      }
       const reply = turn.session_id
         ? await readPiReply(this.harness, turn, members)
         : undefined
@@ -1085,7 +1123,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         await this.backups.wake()
       }
       if (reply && !replySettled(turn, members, reply))
-        return { rescheduleAt: Date.now() + 150 }
+        return {
+          rescheduleAt:
+            Date.now() + (this.accessStore.pending().length ? 30_000 : 150),
+        }
       // Admission/stop may have happened during a Pi read or a wake. Recheck before closing.
       if (this.current(turn.id).revision !== turn.revision)
         return { rescheduleAt: Date.now() + 10 }
@@ -1131,6 +1172,8 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           : null
       )
       if (!finished) return { rescheduleAt: Date.now() + 10 }
+      this.accessStore.cancel(turn.id)
+      this.access.notify()
       await this.compactor.wake()
       await this.backups.wake()
       return { rescheduleAt: Date.now() + 10 }

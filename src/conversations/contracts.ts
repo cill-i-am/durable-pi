@@ -1,3 +1,4 @@
+import { AccessState } from "../access/contracts"
 import { SkillReference } from "../skills/contracts"
 import * as Schema from "effect/Schema"
 import { FileInfo, FileSelection } from "../workspace/files"
@@ -97,6 +98,7 @@ const VisibleTurn = Schema.Struct({
   ),
 })
 const Metadata = Schema.Struct({
+  access: Schema.optional(AccessState),
   model: Schema.String,
   thinking: Schema.optional(Schema.String),
   settingsRevision: Schema.optional(Schema.Number),
