@@ -198,7 +198,7 @@ export function ActivityTimeline({
           </AlertDescription>
         </Alert>
       ))}
-      <div className="flex flex-col divide-y" aria-label="Recent activity">
+      <section className="flex flex-col divide-y" aria-label="Recent activity">
         {page?.entries.map((entry) => (
           <button
             key={entry.key}
@@ -246,7 +246,7 @@ export function ActivityTimeline({
             </span>
           </button>
         ))}
-      </div>
+      </section>
       {page &&
         !page.entries.length &&
         !page.issues.length &&

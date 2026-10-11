@@ -136,6 +136,8 @@ export function AgentSidebar({
   )
   return (
     <Sidebar
+      role="navigation"
+      aria-label="Agents and workspace"
       inert={disabled}
       className="workspace-sidebar"
       collapsible="offcanvas"
