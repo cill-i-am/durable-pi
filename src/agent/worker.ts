@@ -1220,6 +1220,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     const existing = this.conversations.get(input.operationId)
     if (existing) {
       const receipt = this.conversations.admit(input)
+      await this.runner.wake()
       return Response.json(
         {
           accepted: receipt.accepted,
@@ -1239,8 +1240,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         workspace.attach(input.files ?? [])
       )
     )
-    // Wake precedes admission. The archive fence and insertion share one synchronous turn.
-    await this.runner.wake()
+    // The archive fence and insertion share one synchronous turn.
     if (this.botConfiguration.read()?.status === "archived")
       return Response.json(
         { error: "Restore this agent before sending a message." },
@@ -1304,6 +1304,9 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       this.skills.selection().skills,
       pinned
     )
+    // Discovery can yield long enough for an earlier empty pump to finish.
+    // Persist work before arming its wake, including idempotent submission retries.
+    await this.runner.wake()
     this.notifyConversation()
     return Response.json(
       {
