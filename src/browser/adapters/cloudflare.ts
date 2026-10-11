@@ -9,6 +9,8 @@ import {
   allowedBrowserUrl,
   type BrowserSession,
   type BrowserCapture,
+  type BrowserAction,
+  type BrowserController,
 } from "../contracts"
 
 /** Browser Run owns Chromium, session networking, and idle expiry. Never exports a CDP capability. */
@@ -85,24 +87,27 @@ export class CloudflareBrowser implements BrowserDriver {
       await browser.disconnect()
     }
   }
+  private async restrictNavigation(page: Page, hosts: readonly string[]) {
+    await page.setRequestInterception(true)
+    page.on("request", (request) => {
+      if (request.isInterceptResolutionHandled()) return
+      if (
+        request.isNavigationRequest() &&
+        request.frame() === page.mainFrame()
+      ) {
+        try {
+          allowedBrowserUrl(request.url(), hosts)
+        } catch {
+          void request.abort("blockedbyclient").catch(() => {})
+          return
+        }
+      }
+      void request.continue().catch(() => {})
+    })
+  }
   navigate(session: BrowserSession, url: string, hosts: readonly string[]) {
     return this.withPage(session, async (page) => {
-      await page.setRequestInterception(true)
-      page.on("request", (request) => {
-        if (request.isInterceptResolutionHandled()) return
-        if (
-          request.isNavigationRequest() &&
-          request.frame() === page.mainFrame()
-        ) {
-          try {
-            allowedBrowserUrl(request.url(), hosts)
-          } catch {
-            void request.abort("blockedbyclient").catch(() => {})
-            return
-          }
-        }
-        void request.continue().catch(() => {})
-      })
+      await this.restrictNavigation(page, hosts)
       const response = await page.goto(allowedBrowserUrl(url, hosts), {
         waitUntil: "domcontentloaded",
       })
@@ -117,13 +122,65 @@ export class CloudflareBrowser implements BrowserDriver {
   capture(session: BrowserSession, hosts: readonly string[]) {
     return this.withPage(session, (page) => this.snapshot(page, hosts))
   }
-  private async snapshot(
-    page: Page,
-    hosts: readonly string[]
-  ): Promise<BrowserCapture> {
-    const url = allowedBrowserUrl(page.url(), hosts)
+  interact(
+    session: BrowserSession,
+    action: BrowserAction,
+    expectedUrl: string,
+    hosts: readonly string[],
+    actor: BrowserController
+  ) {
+    return this.withPage(session, async (page) => {
+      if (allowedBrowserUrl(page.url(), hosts) !== expectedUrl)
+        throw new BrowserFailure({
+          message: "The page navigated. Refresh its view before interacting.",
+        })
+      await this.restrictNavigation(page, hosts)
+      if (
+        actor === "owner" &&
+        action.kind === "type" &&
+        (await this.isolated(page, SUPPORTED_FOCUS)) !== true
+      )
+        throw new BrowserFailure({
+          message:
+            "This field cannot be typed into safely here. Use a standard input on the site's own sign-in page; embedded frames and closed custom controls are not supported.",
+        })
+      if (actor === "agent" && action.kind === "type") {
+        const sensitive = await this.isolated(page, SENSITIVE_FOCUS)
+        if (sensitive !== false)
+          throw new BrowserFailure({
+            message:
+              "This field requires owner control. Ask the owner to use Take control; do not request credentials in chat.",
+          })
+      }
+      const navigation =
+        action.kind === "click" ||
+        (action.kind === "key" && action.key === "Enter")
+          ? page
+              .waitForNavigation({
+                waitUntil: "domcontentloaded",
+                timeout: 2000,
+              })
+              .catch(() => null)
+          : undefined
+      if (action.kind === "click") await page.mouse.click(action.x, action.y)
+      else if (action.kind === "type")
+        await page.keyboard.sendCharacter(action.text)
+      else if (action.kind === "scroll")
+        await page.mouse.wheel({ deltaY: action.deltaY })
+      else if (action.key === "SelectAll") {
+        await page.keyboard.down("Control")
+        try {
+          await page.keyboard.press("A")
+        } finally {
+          await page.keyboard.up("Control")
+        }
+      } else await page.keyboard.press(action.key)
+      await navigation
+      return this.snapshot(page, hosts)
+    })
+  }
+  private async isolated(page: Page, expression: string): Promise<unknown> {
     const cdp = await page.createCDPSession()
-    let contents: BrowserPage
     try {
       const { frameTree } = await cdp.send("Page.getFrameTree", undefined, {
         timeout: 15_000,
@@ -141,7 +198,7 @@ export class CloudflareBrowser implements BrowserDriver {
         "Runtime.evaluate",
         {
           contextId: executionContextId,
-          expression: PAGE_OBSERVATION,
+          expression,
           returnByValue: true,
           timeout: 15_000,
         },
@@ -149,26 +206,39 @@ export class CloudflareBrowser implements BrowserDriver {
       )
       if (observation.exceptionDetails)
         throw new Error("Page observation failed")
-      contents = Schema.decodeUnknownSync(BrowserPage)({
-        ...observation.result.value,
-        url,
-        capturedAt: Date.now(),
-      })
+      return observation.result.value
     } finally {
       await cdp.detach()
     }
+  }
+  private async snapshot(
+    page: Page,
+    hosts: readonly string[]
+  ): Promise<BrowserCapture> {
+    const url = allowedBrowserUrl(page.url(), hosts)
+    const raw = await this.isolated(page, PAGE_OBSERVATION)
+    const contents = Schema.decodeUnknownSync(BrowserPage)({
+      ...(typeof raw === "object" && raw !== null ? raw : {}),
+      url,
+      capturedAt: Date.now(),
+    })
     // Page observations are untrusted data. No HTML, script, or cookie values reach the UI.
     let screenshot: string | null = null
-    for (const quality of [45, 20]) {
-      const image = await page.screenshot({
-        type: "jpeg",
-        quality,
-        fullPage: false,
-      })
-      if (image.byteLength <= 96 * 1024) {
-        screenshot = Buffer.from(image).toString("base64")
-        break
+    try {
+      await this.isolated(page, MASK_FIELDS)
+      for (const quality of [45, 20]) {
+        const image = await page.screenshot({
+          type: "jpeg",
+          quality,
+          fullPage: false,
+        })
+        if (image.byteLength <= 96 * 1024) {
+          screenshot = Buffer.from(image).toString("base64")
+          break
+        }
       }
+    } finally {
+      await this.isolated(page, UNMASK_FIELDS)
     }
     if (allowedBrowserUrl(page.url(), hosts) !== url)
       throw new BrowserFailure({
@@ -182,12 +252,69 @@ export class CloudflareBrowser implements BrowserDriver {
   }
 }
 
+// Native input properties normalize HTML case. Unknown/shadow focus fails closed.
+export const SUPPORTED_FOCUS = `(() => {
+  let element = document.activeElement;
+  for (let n = 0; n < 10 && element?.shadowRoot?.activeElement; n++) element = element.shadowRoot.activeElement;
+  return !!element && ['INPUT', 'TEXTAREA'].includes(element.tagName) && !element.disabled && !element.readOnly;
+})()`
+export const SENSITIVE_FOCUS = `(() => {
+  let element = document.activeElement;
+  for (let n = 0; n < 10 && element?.shadowRoot?.activeElement; n++) element = element.shadowRoot.activeElement;
+  return !element || !['INPUT', 'TEXTAREA'].includes(element.tagName) || element.disabled || element.readOnly || (element.type || '').toLowerCase() === 'password' || /password|one-time-code/.test((element.autocomplete || '').toLowerCase());
+})()`
+
+// Mask every editable value, including revealed passwords and open shadow controls.
+// This does not hide text a site independently renders elsewhere after submission.
+export const MASK_FIELDS = `(() => {
+  const masks = globalThis.__durablePiMasks = [];
+  const roots = [document];
+  let count = 0;
+  for (let i = 0; i < roots.length; i++) {
+    for (const element of roots[i].querySelectorAll('*')) {
+      if (++count > 20000) throw new Error('Page too large to mask');
+      if (element.shadowRoot) roots.push(element.shadowRoot);
+      if (element.matches('input, textarea, [contenteditable], [contenteditable] *')) {
+        const property = '-webkit-text-security';
+        masks.push([element, property, element.style.getPropertyValue(property), element.style.getPropertyPriority(property)]);
+        element.style.setProperty(property, 'disc', 'important');
+      }
+    }
+  }
+  return true;
+})()`
+export const UNMASK_FIELDS = `(() => {
+  for (const [element, property, value, priority] of globalThis.__durablePiMasks || []) {
+    if (value) element.style.setProperty(property, value, priority);
+    else element.style.removeProperty(property);
+  }
+  delete globalThis.__durablePiMasks;
+  return true;
+})()`
+
 // Trusted built-in observer, evaluated only in an isolated world. Never accepts page or model code.
 export const PAGE_OBSERVATION = `(() => ({
+      focus: (() => {
+        let el = document.activeElement;
+        for (let n = 0; n < 10 && el?.shadowRoot?.activeElement; n++) el = el.shadowRoot.activeElement;
+        if (!el || el.tagName === 'BODY' || el.tagName === 'HTML') return null;
+        return { label: (el.getAttribute('aria-label') || el.getAttribute('placeholder') || el.labels?.[0]?.innerText || el.tagName.toLowerCase()).slice(0, 120), kind: (el.type || el.tagName.toLowerCase()).slice(0, 40), secret: ${SENSITIVE_FOCUS} };
+      })(),
       title: document.title.slice(0, 200),
-      text: (document.querySelector("body")?.innerText ?? "").slice(0, 24_000),
+      text: (() => {
+        const body = document.querySelector('body');
+        if (!body) return '';
+        const walker = document.createTreeWalker(body, 4);
+        let text = '', node, count = 0;
+        while ((node = walker.nextNode()) && ++count <= 20000 && text.length < 24000) {
+          const parent = node.parentElement;
+          if (parent && !parent.closest('script, style, input, textarea, [contenteditable], [hidden], [aria-hidden="true"]') && parent.getClientRects().length) text += node.textContent.slice(0, 24000 - text.length) + '\\n';
+        }
+        return text.slice(0, 24000);
+      })(),
       links: Array.from(document.querySelectorAll("a[href]"))
         .slice(0, 100)
+        .filter((link) => !link.closest('[contenteditable]') && !link.querySelector('input, textarea, [contenteditable]'))
         .map((link) => ({
           text: (
             link.innerText ||

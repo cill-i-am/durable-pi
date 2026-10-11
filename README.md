@@ -48,7 +48,7 @@ For the initial local-to-remote state migration, `scripts/migrate-production-sta
 - Better Auth sessions backed by D1. An authenticated server route forwards to a Worker with both public and preview URLs disabled. Bot objects are addressed from the authenticated owner ID and a validated catalog identity. The default bot retains its original object ID.
 - Server-side ChatGPT credentials with one account-level refresh owner and durable token rotation shared by all bots. API-key credentials are also supported through the same private configuration.
 
-The current slices include live reply updates, mid-run steering, images, video storage, private files, searchable PDF text, reusable skills, tool approvals, and per-bot MCP tools, and a Cloudflare browser for navigation and inspection. Browser interaction/takeover and shell execution, video processing, generated apps, messaging channels, and scheduled autonomous tasks are still being built; see [BUILD.md](BUILD.md).
+The current slices include live reply updates, mid-run steering, images, video storage, private files, searchable PDF text, reusable skills, tool approvals, per-bot MCP tools, and a Cloudflare browser with owner takeover. Shell execution, video processing, generated apps, messaging channels, and scheduled autonomous tasks are still being built; see [BUILD.md](BUILD.md).
 
 ## Memory design
 
@@ -111,13 +111,15 @@ Imports copy only the main SKILL.md, with a 16,000-character limit. Reference fi
 
 ## Browser workbench
 
-Open **Browser** beside a bot and choose its allowed sites (up to 20 exact hostnames). Its private Cloudflare Chromium session navigates HTTPS pages, returns bounded text/links and captures screenshots. The bot's `browser_open` and `browser_read` tools use the same session and ask for approval by default. Page content is untrusted data, never permission or instructions.
+Open **Browser** beside a bot and choose its allowed sites (up to 20 exact hostnames). Its private Cloudflare Chromium session navigates HTTPS pages, returns bounded text/links and captures screenshots. The bot's `browser_open`, `browser_read` and `browser_interact` tools use the same session and ask for approval by default. Page content is untrusted data, never permission or instructions.
 
 Sessions expire after two idle minutes or ten minutes total. **Close session** revokes pending work and clears the preview; hiding the panel leaves the session until expiry. Changing destinations retires the previous session. Archiving also schedules cleanup. Session handles never enter browser JSON or model context. Screenshots require the authenticated owner and exact current capture version.
 
-Cloudflare session guardrails restrict HTTP/HTTPS connections to configured hosts plus its maintained `common-cdns` asset set. Startup verifies a blocked destination and fails closed if enforcement is unavailable. Top-frame redirects are additionally restricted to exact owner-listed HTTPS hosts. Text extraction runs in an isolated JavaScript world and is validated again in the Worker. Browser interaction and human takeover follow separately.
+Cloudflare session guardrails restrict HTTP/HTTPS connections to configured hosts plus its maintained `common-cdns` asset set. Startup verifies a blocked destination and fails closed if enforcement is unavailable. Top-frame redirects are additionally restricted to exact owner-listed HTTPS hosts. Text extraction runs in an isolated JavaScript world and is validated again in the Worker. The bot can click, type, press supported keys and scroll; each action uses a recent capture version, and uncertain outcomes require a fresh inspection before another action.
 
-`node --env-file=.env --import tsx scripts/check-browser.ts` tests the local synthetic owner with real Cloudflare Chromium. It requires `OWNER_EMAIL=workspace-test@example.com` and the local test account; it never uses production owner credentials.
+Choose **Take control** to pause bot browser tools. Click the screenshot to focus a field, or use **Tab field**, then the private **Type** input. **Return control** keeps the same Chromium session and cookies. Close revokes it. Owner command inputs do not enter chat or tool receipts; captures mask editable field values and omit them from extracted text. Sites can independently display submitted text elsewhere on a page, which can appear in subsequent observations. Complete sign-in and navigate away from sensitive pages before returning control. Typing into embedded frames and closed custom controls is refused until those contexts can be masked safely; use a standard input on the site’s own sign-in page. Arbitrary scripts and browser warning bypasses are not supported. Captures are snapshots, not a live video stream.
+
+`node --env-file=.env --import tsx scripts/check-browser.ts` tests the local synthetic owner with real Cloudflare Chromium. It requires `OWNER_EMAIL=workspace-test@example.com` and the local test account; it never uses production owner credentials. `scripts/check-browser-control.ts` additionally verifies native interactions on Selenium’s public demonstration form, takeover/return, and a synthetic cookie across handoff.
 
 ## Repository and data boundaries
 

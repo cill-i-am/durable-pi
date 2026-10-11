@@ -7,6 +7,7 @@ import { BrowserState } from "@/browser/contracts"
 export function useBrowser(agentId: string) {
   const [state, setState] = useState<BrowserState | null>(null)
   const [error, setError] = useState("")
+  const [pending, setPending] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const sequence = useRef(0),
     locked = useRef(0)
@@ -45,10 +46,21 @@ export function useBrowser(agentId: string) {
     const current = ++sequence.current
     locked.current = current
     setBusy(true)
+    setPending(path)
     setError("")
     try {
+      // A takeover changes generation before its capture returns. Close must revoke
+      // the current session even while that earlier response is still pending.
+      const input =
+        path === "close" && interrupt
+          ? {
+              generation: Schema.decodeUnknownSync(BrowserState)(
+                await agentApi(agentId)("browser")
+              ).policy.generation,
+            }
+          : body
       const value = Schema.decodeUnknownSync(BrowserState)(
-        await agentApi(agentId)(`browser/${path}`, body)
+        await agentApi(agentId)(`browser/${path}`, input)
       )
       if (current !== sequence.current) return false
       setState(value)
@@ -63,6 +75,7 @@ export function useBrowser(agentId: string) {
       if (locked.current === current) {
         locked.current = 0
         setBusy(false)
+        setPending(null)
         void refresh()
       }
     }
@@ -71,6 +84,7 @@ export function useBrowser(agentId: string) {
     state,
     error,
     busy,
+    pending,
     refresh: () => {
       setError("")
       return refresh()

@@ -1,6 +1,6 @@
 # Durable Pi — build tracker
 
-Started 2026-10-10. Delivery owner: Codex. Status: **slices 01–05b including hosted skills deployed; browser workbench in progress**.
+Started 2026-10-10. Delivery owner: Codex. Status: **slices 01–06a including hosted skills deployed; browser control in verification**.
 
 ## Outcome
 
@@ -51,7 +51,7 @@ The owner requested password recovery before continuing. Implemented Better Auth
 | 03 — Files and attachments | Upload images, videos and documents privately; validate size/type/path; preview/download/delete safely; reference assets in a turn; vision uses supported image blocks; video uses explicit frame/transcript extraction. | 03a–03b deployed; video preprocessing follows execution runtime |
 | 04 — Reusable skills | Create/edit/attach skills to bots; durable revisions; selected skills enter context; import through the intended Executor source; scoped access and recovery. | 04a and 04b deployed |
 | 05 — Tools and approvals | Connect Executor/MCP; assign tools per bot; Allow/Ask/Deny enforced server-side; approval persists across reload/restart; background work cannot bypass approval; revoke access. | 05a and 05b deployed |
-| 06 — Browser | Bot browses on Cloudflare; observe and take over in the workbench; authenticated Chromium sessions; Kitesurf for compatible short tasks; session expiry/reconnect and destination controls. | 06a verified; 06b follows |
+| 06 — Browser | Bot browses on Cloudflare; observe and take over in the workbench; authenticated Chromium sessions; Kitesurf for compatible short tasks; session expiry/reconnect and destination controls. | 06a deployed; 06b in progress |
 | 07 — Execution and terminal | Isolated fast code execution plus on-demand Linux container; live terminal; files persist across container restarts; bounded time/output/network; cancel and recover. | Planned |
 | 08 — Generated apps and inline UI | Bot creates, previews, updates and runs an app; versioned private publication; isolated execution/storage; inline UI uses a bounded renderer; interactions return events to the owning bot. | Planned |
 | 09 — Routines and incoming events | Schedule/pause/delete routines; run with browser closed; authenticated webhook triggers; durable retry/deduplication; notify on meaningful outcomes; respect bot grants and budgets. | Planned |
@@ -241,7 +241,7 @@ Verification for 04b:
 
 ### 06a — Guarded browser navigation and inspection
 
-Status: verified locally with real Cloudflare Chromium; awaiting CI/deployment. One private Chromium session per bot, persisted identity, an owner-edited exact hostname allowlist enforced by Cloudflare session guardrails, and two Ask-by-default Pi tools for navigation and inspection. Page text/links and bounded screenshots appear in a responsive workbench beside chat. No arbitrary script execution or credential inputs are accepted. Session cleanup has a durable retirement queue and a ten-minute deadline, with two-minute Browser Run idle expiry. Revoking settings/closing a session fences results already in flight. 06b adds interaction, human takeover and authenticated-session handoff; Kitesurf is deferred until a stateless path can preserve destination restrictions because its current service does not support session guardrails.
+Status: deployed in PR #12, main `6898bfe`; production run `38103740411` succeeded. One private Chromium session per bot, persisted identity, an owner-edited exact hostname allowlist enforced by Cloudflare session guardrails, and two Ask-by-default Pi tools for navigation and inspection. Page text/links and bounded screenshots appear in a responsive workbench beside chat. No arbitrary script execution or credential inputs are accepted. Session cleanup has a durable retirement queue and a ten-minute deadline, with two-minute Browser Run idle expiry. Revoking settings/closing a session fences results already in flight. 06b adds interaction, human takeover and authenticated-session handoff; Kitesurf is deferred until a stateless path can preserve destination restrictions because its current service does not support session guardrails.
 
 Reference: [Browser Run binding](https://developers.cloudflare.com/browser-run/reference/browser-binding-api/), [Puppeteer](https://developers.cloudflare.com/browser-run/puppeteer/), [guardrails](https://developers.cloudflare.com/browser-run/features/guardrails/), [session reuse](https://developers.cloudflare.com/browser-run/features/reuse-sessions/), [Live View](https://developers.cloudflare.com/browser-run/features/live-view/), [human handoff](https://developers.cloudflare.com/browser-run/features/human-in-the-loop/). Installed Alchemy Browser binding adds no backing resource; existing Workers deployment permissions apply. `@cloudflare/puppeteer` is pinned to 1.4.0.
 
@@ -252,3 +252,18 @@ Verification for 06a:
 - Browser checked initial launch → Close → fresh launch, real screenshot/text, wide pane, narrow sheet and 390×844 fit. At 900 px, review exposed a collapsed bot title; container-based header wrapping now preserves it. Slow polling is serialized; first launch is always closable; stale image versions cannot show another page under old metadata. Temporary viewport overrides were removed.
 - Independent backend/frontend reviews corrected cancellation ownership, page-realm tampering, archived cleanup, idle renewal, slow reads and capture races. No owner/model credential is used in local verification. Navigation and inspection are implemented; interactions, sign-in takeover and return-to-agent control are tracked in 06b.
 - Browser adds an Alchemy binding only; existing Workers permissions suffice. Dev uses an authenticated Cloudflare profile and consumes normal Browser Run usage. DocumentWorker now has explicit local port 1339 to avoid first-start collisions with the website on 1337.
+
+### 06b — Browser interaction and owner control
+
+Implemented, in verification: screenshot-based click, text, key and scroll actions, Ask-by-default model interaction, and an explicit owner-control mode for sign-in or sensitive fields. A durable generation change pauses bot browser actions during takeover; stale commands and observations fail. Returning control keeps the same private Chromium session and its cookies. Owner command inputs are ephemeral and excluded from chat/tool receipts. Captures mask editable field values and omit editable text. A site can independently reflect submitted text outside those fields; returning control makes the resulting page available to the bot.
+
+Use authenticated application commands with capture-version checks for this first control surface. Cloudflare Live View URLs are bearer credentials whose expiry does not terminate an established viewer; issuing them directly would need an additional revocation boundary. The app-owned control surface keeps revocation under the same bot authority. Live streaming can be added later without weakening that boundary. No browser warning bypass, arbitrary JavaScript execution, downloads or cross-bot cookie copying.
+
+
+Verification for 06b (in progress):
+
+- 201 tests passed, with typecheck, lint and production build. Coverage includes owner takeover fencing, session reuse, private command input, consumed action versions, interrupted execution/recovery, late operations, unknown focus, normalized password/OTP attributes, screenshot masking and restoration, and refresh-before-retry after an uncertain result.
+- `scripts/check-browser-control.ts` passed through local workerd and real Cloudflare Chromium: Selenium’s public synthetic form, native Tab/type/click/scroll, sensitive-field metadata, stale action rejection, owner control/return, and synthetic cookie continuity. No owner credentials or live model were used.
+- Read-only reviews identified uncertain action retries and sensitive focus/capture edges; fixes require a ready current observation, fail closed on unknown typing targets, and mask editable values in captures. Typed values in standard input/textarea fields and open shadow controls are masked; unsupported iframe/closed-shadow typing fails closed. Editable link text is excluded. Arbitrary script execution remains unavailable.
+- Browser verified takeover → remote Tab → private Type (local field clears) → masked capture → return, followed by takeover and Close on 390×844. No horizontal overflow; temporary viewport overrides removed. Backend/frontend follow-up reviews closed with no remaining actionable findings.
+- No new infrastructure/permissions. Secret scan passed for 227 tracked files. Whole-repository formatting check still reports four pre-existing files outside this slice; changed TypeScript files pass formatting. Production build retains the existing chunk-size advisory.

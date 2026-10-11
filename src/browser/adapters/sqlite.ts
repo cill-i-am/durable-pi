@@ -14,8 +14,9 @@ export class BrowserStore implements BrowserRepository {
       "SELECT record FROM bot_browser WHERE id=1"
     )[0]
     return row
-      ? (JSON.parse(row.record) as BrowserRecord)
+      ? ({ controller: "agent", ...JSON.parse(row.record) } as BrowserRecord)
       : {
+          controller: "agent",
           generation: 0,
           hosts: [],
           version: 0,
@@ -56,11 +57,30 @@ export class BrowserStore implements BrowserRepository {
         })
       if (value.session) this.retire(value.session.id)
       return this.put({
+        controller: "agent",
         generation: generation + 1,
         hosts,
         version: value.version + 1,
         status: "closed",
         session: null,
+        capture: null,
+        error: null,
+      })
+    })
+  }
+  transfer(generation: number, controller: "agent" | "owner") {
+    return this.db.transaction(() => {
+      const value = this.read()
+      if (value.generation !== generation)
+        throw new BrowserFailure({
+          message: "Browser control changed. Reload before continuing.",
+        })
+      return this.put({
+        ...value,
+        controller,
+        generation: generation + 1,
+        version: value.version + 1,
+        status: "loading",
         capture: null,
         error: null,
       })
