@@ -16,6 +16,7 @@ import {
   PanelsTopLeft,
   Plus,
   Search,
+  ShieldCheck,
   Settings2,
   TerminalSquare,
 } from "lucide-react"
@@ -75,6 +76,7 @@ export type WorkspaceAction =
   | "memory"
   | "hide-workbench"
   | "sign-out"
+  | "security"
 
 const destinations = [
   { id: "activity", label: "Activity", icon: Activity },
@@ -142,6 +144,7 @@ export function WorkspaceNavigation({
     } else onAction(action)
   }
   const commands = [
+    { id: "security", label: "Account security", icon: ShieldCheck },
     { id: "create", label: "New agent", icon: Plus },
     { id: "edit", label: "Agent settings", icon: Settings2 },
     { id: "memory", label: "Search this agent's memory", icon: BookOpen },
@@ -197,6 +200,13 @@ export function WorkspaceNavigation({
                   Agent settings
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  disabled={locked}
+                  onClick={() => run("security")}
+                >
+                  <ShieldCheck />
+                  Account security
+                </DropdownMenuItem>
                 <DropdownMenuItem
                   disabled={locked}
                   onClick={() => run("sign-out")}
@@ -394,7 +404,12 @@ export function WorkspaceNavigation({
                     key={item.id}
                     value={`command:${item.id}`}
                     keywords={[item.label]}
-                    disabled={locked || (!selected && item.id !== "create")}
+                    disabled={
+                      locked ||
+                      (!selected &&
+                        item.id !== "create" &&
+                        item.id !== "security")
+                    }
                     onSelect={() => run(item.id)}
                   >
                     <item.icon />

@@ -9,6 +9,7 @@ import {
   LogOut,
   Plus,
   Search,
+  ShieldCheck,
   Settings2,
   Undo2,
 } from "lucide-react"
@@ -120,6 +121,7 @@ export function AgentSidebar({
   onArchive,
   onActivity,
   onMemory,
+  onSecurity,
   name,
 }: {
   disabled?: boolean
@@ -131,6 +133,7 @@ export function AgentSidebar({
   onArchive: (agent: AgentProfile) => void
   onActivity: () => void
   onMemory: () => void
+  onSecurity: () => void
   name: string
 }) {
   const [query, setQuery] = useState("")
@@ -175,6 +178,15 @@ export function AgentSidebar({
                 {archived ? "Active agents" : "Archived agents"}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => {
+                  setOpenMobile(false)
+                  onSecurity()
+                }}
+              >
+                <ShieldCheck />
+                Account security
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => void authClient.signOut()}>
                 <LogOut />
                 Sign out
@@ -317,6 +329,17 @@ export function AgentSidebar({
               Personal workspace
             </span>
           </span>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Account security"
+            onClick={() => {
+              setOpenMobile(false)
+              onSecurity()
+            }}
+          >
+            <ShieldCheck />
+          </Button>
           <Button
             variant="ghost"
             size="icon"
