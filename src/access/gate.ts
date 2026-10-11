@@ -47,7 +47,8 @@ export class AccessGate {
   }
   run<T>(
     intent: ToolIntent,
-    work: () => Promise<T>
+    work: () => Promise<T>,
+    recoverable = false
   ): Effect.Effect<T, unknown> {
     return Effect.gen({ self: this }, function* () {
       const operation = yield* Effect.try({
@@ -69,7 +70,7 @@ export class AccessGate {
               throw new AccessDenied({
                 message: "This reply has stopped or its bot is archived.",
               })
-            return this.store.claim(intent.id)
+            return this.store.claim(intent.id, recoverable)
           },
           catch: (cause) => cause,
         })

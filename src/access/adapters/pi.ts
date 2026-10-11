@@ -9,7 +9,8 @@ import { toolReceipt } from "./receipt"
 /** Native Pi owns task IDs; the access receipt makes waiting tools safe to reopen. */
 export function guardedTools(
   gate: AccessGate,
-  activeTurn: () => string | undefined
+  activeTurn: () => string | undefined,
+  recoverableTools: ReadonlySet<string> = new Set()
 ) {
   const running = new Map<
     string,
@@ -33,7 +34,8 @@ export function guardedTools(
       const promise = Effect.runPromise(
         gate.run(
           { id, turnId, tool: tool.name, input: JSON.stringify(args) },
-          async () => toolReceipt(await tool.execute(args, api, context))
+          async () => toolReceipt(await tool.execute(args, api, context)),
+          recoverableTools.has(tool.name)
         ),
         { signal: context.abortSignal }
       )

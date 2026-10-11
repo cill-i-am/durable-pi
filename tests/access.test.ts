@@ -75,6 +75,35 @@ describe("durable tool authorization", () => {
     expect(() => store.claim(intent.id)).toThrow("outcome is unknown")
     expect(store.get(intent.id)?.status).toBe("interrupted")
   })
+  it.each(["expire", "revoke", "unchanged"])(
+    "fences recoverable dispatches after %s",
+    (scenario) => {
+      let now = 1
+      const store = new AccessStore(
+          database(),
+          () => [{ name: "test", description: "Test", mode: "allow" }],
+          () => now
+        ),
+        intent = input()
+      store.begin(intent)
+      expect(store.claim(intent.id, true)).toBe("execute")
+      if (scenario === "expire") now += 16 * 60_000
+      if (scenario === "revoke") {
+        store.update("test", 0, "deny")
+        store.update("test", 1, "allow")
+      }
+      if (scenario === "unchanged")
+        expect(store.claim(intent.id, true)).toBe("execute")
+      else {
+        expect(() => store.claim(intent.id, true)).toThrow(
+          scenario === "expire" ? "expired" : "changed"
+        )
+        expect(store.get(intent.id)?.status).toBe(
+          scenario === "expire" ? "expired" : "denied"
+        )
+      }
+    }
+  )
   it("persists waiting intent across cancellation of the process and resumes from a durable decision", async () => {
     const store = fixture(),
       intent = input(),

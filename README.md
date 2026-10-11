@@ -8,6 +8,16 @@ Pi owns model turns, tool execution, committed transcripts, and recovery. The ap
 
 Implementation progress, acceptance criteria and architecture are tracked in [BUILD.md](BUILD.md).
 
+## Persistent working objects
+
+A working object is structured information you and your bot maintain together beyond a conversation. The first type is a **project checklist**, with tasks, To do / In progress / Blocked / Done statuses, optional due dates, and supporting notes. Ask the bot to create one, or open **Workbench → Objects → New checklist**. A bot-created checklist appears as a live editable chat card and in the full workbench. Both surfaces read the same saved object. History identifies your edits and the agent's edits; the originating conversation remains available from the object.
+
+Checklists are private to their owning bot and authenticated owner. Saving a task does not start a model run. On its next request the bot receives current object references and change indicators, and can read live state using `read_object`. Chat, tool snapshots and OptChat memory may reference the object; the native Pi document is authoritative. Tools `list_objects`, `create_checklist` and `update_checklist` use the same Effect operations as UI edits. Checklist completion is a status, not evidence that an external action happened or permission to perform one.
+
+Edits target fields at a specific revision. A conflict preserves the submitted draft, shows the latest values, and requires an explicit choice before reapplying it. Unconfirmed saves retain their operation ID in browser session storage; **Retry same save** cannot duplicate the mutation, and **Cancel pending save** confirms whether it already applied. Archive and restore preserve tasks and history; there is no permanent-delete action. Objects currently allow 100 tasks each, 50 objects per bot including archives, and 20,000 mutation receipts per bot. Limits fail explicitly without discarding existing objects.
+
+Pi Durable session-scoped document families persist the catalog, checklist state, immutable change events and operation receipts in atomic commits inside the bot's Durable Object. No separate editable R2 or chat copy is created. Restart recovery replays document tools only under the original unexpired, unchanged access grant. Existing approval and interruption rules remain in force for external actions. Other object types are future product slices.
+
 ## Run it
 
 Requires Node 24+ and pnpm 12.4.2. Install with `pnpm install --frozen-lockfile`.

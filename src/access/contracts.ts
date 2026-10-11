@@ -62,6 +62,32 @@ export class AccessConflict extends Schema.TaggedError<AccessConflict>()(
 
 export const builtInTools = [
   {
+    name: "list_objects",
+    title: "List working objects",
+    description: "List this bot's private persistent checklists.",
+    mode: "allow",
+  },
+  {
+    name: "read_object",
+    title: "Read working object",
+    description: "Read current checklist state and recent change references.",
+    mode: "allow",
+  },
+  {
+    name: "create_checklist",
+    title: "Create checklist",
+    description:
+      "Create a private checklist that you and this bot can maintain.",
+    mode: "allow",
+  },
+  {
+    name: "update_checklist",
+    title: "Edit checklist",
+    description:
+      "Update, archive or restore this bot's checklist with revision checks.",
+    mode: "allow",
+  },
+  {
     name: "run_command",
     title: "Run Linux command",
     description:

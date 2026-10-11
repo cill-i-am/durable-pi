@@ -173,7 +173,10 @@ export class AccessStore {
       return this.get(id)!
     })
   }
-  claim(id: string): "pending" | "execute" | { result: string } {
+  claim(
+    id: string,
+    recoverable = false
+  ): "pending" | "execute" | { result: string } {
     this.expire()
     const decision = this.db.transaction<
       "pending" | "execute" | { result: string } | AccessDenied
@@ -188,7 +191,27 @@ export class AccessStore {
         throw new AccessDenied({ message: "Tool access has been revoked." })
       if (operation.status === "done" && operation.result !== null)
         return { result: operation.result }
-      if (operation.status === "running") {
+      // A native document receipt permits replay, never a new authorization.
+      // Fence old dispatches even if a revoked policy has since been reallowed.
+      if (
+        operation.status === "running" &&
+        recoverable &&
+        (operation.expiresAt <= this.now() ||
+          operation.grantRevision !== policy.revision)
+      ) {
+        const expired = operation.expiresAt <= this.now()
+        this.db.run(
+          "UPDATE tool_operations SET status=?,revision=revision+1 WHERE id=?",
+          expired ? "expired" : "denied",
+          id
+        )
+        return new AccessDenied({
+          message: expired
+            ? "This interrupted tool request has expired. Read current state before requesting a new change."
+            : "Tool access changed after dispatch. Read current state before requesting a new change.",
+        })
+      }
+      if (operation.status === "running" && !recoverable) {
         this.db.run(
           "UPDATE tool_operations SET status='interrupted',revision=revision+1 WHERE id=?",
           id
@@ -198,13 +221,17 @@ export class AccessStore {
             "This tool was interrupted after it started. Its outcome is unknown; check before retrying.",
         })
       }
-      if (!["pending", "approved"].includes(operation.status))
+      if (
+        !["pending", "approved"].includes(operation.status) &&
+        !(recoverable && operation.status === "running")
+      )
         throw new AccessDenied({
           message: `This tool request is ${operation.status}.`,
         })
       if (
         policy.mode === "ask" &&
-        (operation.status !== "approved" ||
+        ((operation.status !== "approved" &&
+          !(recoverable && operation.status === "running")) ||
           operation.grantRevision !== policy.revision)
       ) {
         if (

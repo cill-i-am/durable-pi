@@ -30,9 +30,18 @@ if (process.env.LEGACY_APP_URL) {
   assert.equal(legacy.status, 302)
   assert.equal(legacy.headers.get("location"), new URL("/", base).href)
 }
-for (const path of ["state", "tree", "export", "export?format=html"])
+for (const path of [
+  "state",
+  "tree",
+  "export",
+  "export?format=html",
+  "objects",
+  "objects/00000000-0000-4000-8000-000000000001",
+])
   assert.equal((await request(`/api/agent/${path}`)).status, 401)
 assert.equal((await request("/api/agent/import", {})).status, 401)
+assert.equal((await request("/api/agent/objects/mutate", {})).status, 401)
+assert.equal((await request("/api/agent/objects/cancel", {})).status, 401)
 assert.equal(
   (await request("/api/hooks/home/00000000-0000-4000-8000-000000000001", {}))
     .status,
