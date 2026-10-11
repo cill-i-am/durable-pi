@@ -33,9 +33,45 @@ Keep the existing PersonalAgent namespace, memory tables, AuthDatabase, MemoryBa
 
 Visual thesis: a quiet, warm workroom with compact navigation, readable conversation, and a contextual workbench. Composition: bot sidebar → conversation → optional workbench. Interactions: keyboard-first menus, restrained pane transitions, clear running/approval/recovery states; respect reduced motion. Semantic tokens own colors, type, spacing, and radii for later retheming.
 
+## Deterministic tool-loop recovery — 2026-10-11
+
+Status: implementation, final diff review, native Pi/SQLite/workerd checks and local UI verification complete; PR checks and deployment pending.
+
+A normal agent run now recognizes repeated failed tool calls, receives bounded corrective feedback, and stops with saved progress if recovery fails. Ordinary questions and successful tool calls do not acquire another approval or planning interaction.
+
+### Ownership and policy
+
+The observed gap was an absent failure-loop policy: native Pi could keep issuing distinct calls with the same failing input until another run limit intervened. Pi already owns tool invocation identity, committed results, generation checkpoints and cancellation. Access already owns dispatch receipts and approval decisions. Those guarantees remain in place.
+
+- **Conversations** owns a bounded `chat_turns.recovery` projection, with a schema version, steering fingerprint, native result cursor, up to 32 failure fingerprints, counts and a current recovery/blocker view. It contains no copied arguments or output. Native transcripts and Access receipts remain the original evidence.
+- **The native adapter** uses `GenerationTask.afterTools` and the public conversation-scoped `Storage.entry` API. It pairs each assistant call with its committed result and `byTaskId` Access receipt; mismatched receipt ownership is rejected. Stable recursively sorted JSON arguments, tool identity and a failure category produce a SHA-256 fingerprint. Categories distinguish invalid arguments, unavailable tools and other error outcomes. This is deterministic error detection, not semantic diagnosis of arbitrary tool text.
+- **Model context** receives one short request-only recovery notice while recovery is active. It does not append another original user message, change the archive, grant permission or schedule work. Native compaction can change the transcript view without resetting the durable detector.
+- **Access** still makes every dispatch decision. A blocked run fails its existing `canRun` fence. Denial/expiry and a receipt with an uncertain running/interrupted outcome stop with specific instructions to review access or reconcile the original action. No corrective notice recommends another route around a denial. Successful calls are never automatically redispatched by this policy.
+- **Activity** projects recovering/blocked states, the saved result/receipt reference and what is needed next. The inspector refreshes active runs and stops fetching settled runs; cancellation hides obsolete recovery instructions. The existing Base UI/shadcn dialog and alert wrap on small screens. Inspection starts no model work.
+
+Initial tunable product choices live in [`recoveryPolicy`](src/conversations/recovery.ts): **warn at three matching failed invocations; allow three further non-polling tool attempts; stop at the fifth matching failure or when the recovery allowance is spent without a successful call**. These values are starting decisions, not experimentally proven constants. A successful non-polling call marks execution progress, not verified task completion. Prior failure fingerprints are retained, so success does not erase the run's history.
+
+Pi executes a tool round in parallel by default. Detection occurs after the round commits. Already admitted calls can finish; a first large batch still receives a warning before its next recovery round. The thresholds therefore bound subsequent recovery opportunities, not the number of concurrent external effects already dispatched. Existing cancellation, routine limits, child budgets and permission fences remain authoritative.
+
+Only completed logical invocations count. A durable result-entry cursor and per-round invocation deduplication prevent native replay from spending the allowance twice. Legitimate `check_bot_task` polling does not spend it or claim recovery; pending tools and approval waits have no terminal failure to count. Other tools returning successful text such as “not found” are outside this first policy. Deliberately successful but unproductive loops are also outside scope.
+
+A changed latest user input (normalized text or attachment IDs) resets the failure-recovery epoch. Identical steering does not. An in-flight round from the previous epoch cannot exhaust the new allowance; access denials and uncertain effects remain authoritative. A new queued request gets its own run state. Stopped/settled runs reject updates and never resume because their Activity or recovery state is read. Incoming named-bot/background tasks have no tools; temporary read-only children retain their existing independent execution budgets rather than sharing a root's result cursor.
+
+### Native stop and recovery evidence
+
+Pi Durable 1.0.4 **reports ordinary hook exceptions and continues**. The first integration probe demonstrated why a thrown hook error is insufficient. After persisting the blocker, the adapter calls the supported conversation abort API with the current invocation context. Native cancellation releases that hook and settles the submission. The host also checks a saved blocker before its usual reconciliation, covering a restart between the blocker write and abort admission. This does not use private Pi tables or install another alarm/retry loop.
+
+Targeted local coverage includes repeated errors, argument-key canonicalization, corrected-input recovery, changed unsuccessful approaches, large parallel rounds, legitimate polling, approval wait across restart, denial, unknown dispatch outcomes, steering epochs, cancellation, task/session/bot isolation, native result replay, request-only context, bounded storage and Activity semantics. Native Pi tests retain all committed results and confirm five model/tool rounds, not merely a configured counter. A corrected-input journey returns to ordinary requests without carrying stale recovery notices.
+
+The local workerd fixture uses real PiHarness, Lifecycle and Durable Object SQLite. It kills the process at the third committed failure, reopens the same tool-round checkpoint, verifies the count remains three, reaches five with exactly five saved receipts, and confirms a further blocked restart issues no new model/tool calls. Synthetic tools have no external effects or credentials.
+
+Local verification: 508 tests across 72 files, typecheck, lint (four pre-existing warnings), production build and the full native workerd suite pass. The actual RecoveryNotice component was inspected with production CSS at desktop width and 390px; all three states wrap without horizontal overflow. That fixture verifies rendering, not a live model failure.
+
+Hosted checks will be reported separately. Local fault injection does not prove hosted model behavior, provider cost, production forced eviction or exactly-once effects across separately requested retries. The feature adds no new Cloudflare resources or permissions.
+
 ## Memory, run state, and model context review — 2026-10-11
 
-Status: caller and recovery trace, focused projection fixes and local verification complete. Final diff review is complete; PR checks and deployment are pending. The product overview, backend domains, frontend feature slices and six interaction diagrams are in [FEATURES.md](FEATURES.md).
+Status: caller and recovery trace, focused projection fixes and local verification complete. [PR #47](https://github.com/cill-i-am/durable-pi/pull/47) merged as `d934a66`; [main checks, deployment and hosted authentication checks](https://github.com/cill-i-am/durable-pi/actions/runs/38145812360) passed. The product overview, backend domains, frontend feature slices and six interaction diagrams are in [FEATURES.md](FEATURES.md).
 
 ### Ownership and justified no-op decisions
 

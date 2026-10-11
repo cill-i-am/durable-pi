@@ -480,9 +480,11 @@ Sources: [Communication context](src/communication), [mailbox UI](src/features/a
 - Saved requests, answers, steering, thinking and committed tool input/results, with internal report origins identified separately.
 - Automatic plans/evidence, model attempts/usage, temporary child groups and named-bot tasks in dedicated inspectors.
 - Links to existing approval, memory-summary, backup, connection and execution recovery controls rather than a generic retry-all action.
+- Deterministic recovery for repeated failed tool calls: warning after three matching failures, then at most three further non-polling recovery attempts; a fifth matching failure or spent allowance stops the run. Activity shows progress, blockers and saved receipt references.
+- Native replay does not count twice. Denials and uncertain actions stop without bypass advice; polling and approval waits remain normal. A successful recovery call is execution progress, not proof of completed user goals.
 - Inspection does not restart finished work, retry external effects or infer new permissions from historical events.
 
-Sources: [Activity context](src/activity), [Activity UI](src/features/activity).
+Sources: [Activity context](src/activity), [Activity UI](src/features/activity), [run recovery policy](src/conversations/recovery.ts), [native tool-round adapter](src/conversations/adapters/pi-recovery.ts).
 
 ### 20. Cloudflare foundation and delivery
 

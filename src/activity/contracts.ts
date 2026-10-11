@@ -1,3 +1,4 @@
+import { RecoveryView } from "../conversations/recovery"
 import { Schema } from "effect"
 import { AgentId, AgentName } from "../agents/domain"
 import { TimelineItem } from "../conversations/contracts"
@@ -63,6 +64,7 @@ export const ActivityConversation = Schema.Struct({
   answer: Schema.String,
   status: Schema.String,
   error: Schema.NullOr(Schema.String),
+  recovery: Schema.optional(Schema.NullOr(RecoveryView)),
   activity: Schema.Array(TimelineItem),
 })
 export type ActivityConversation = typeof ActivityConversation.Type

@@ -1,10 +1,12 @@
+import type { RecoveryView } from "@/conversations/recovery"
 import { useEffect, useState } from "react"
 import { Schema } from "effect"
 import { ActivityConversation, type ActivityEntry } from "@/activity/contracts"
 import { agentApi } from "@/http/client"
 import { Markdown } from "@/components/markdown"
 import { Button } from "@/components/ui/button"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { poll } from "@/http/poll"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Dialog,
@@ -31,26 +33,38 @@ export function ActivityRecord({
     setError("")
     let current = true
     const controller = new AbortController()
-    void agentApi(entry.agent.id)(
-      `activity/conversations/${encodeURIComponent(entry.reference)}`,
-      undefined,
-      controller.signal
-    )
-      .then((value) => {
-        if (current)
-          setRecord(Schema.decodeUnknownSync(ActivityConversation)(value))
-      })
-      .catch((cause) => {
-        if (current)
-          setError(
-            cause instanceof Error
-              ? cause.message
-              : "This conversation is unavailable."
+    let settled = false
+    const stop = poll(
+      async () => {
+        if (settled || document.visibilityState !== "visible") return
+        try {
+          const value = await agentApi(entry.agent.id)(
+            `activity/conversations/${encodeURIComponent(entry.reference)}`,
+            undefined,
+            controller.signal
           )
-      })
+          if (current) {
+            const next = Schema.decodeUnknownSync(ActivityConversation)(value)
+            setRecord(next)
+            setError("")
+            settled = ["done", "failed", "cancelled"].includes(next.status)
+          }
+        } catch (cause) {
+          if (current)
+            setError(
+              cause instanceof Error
+                ? cause.message
+                : "This conversation is unavailable."
+            )
+        }
+      },
+      3000,
+      true
+    )
     return () => {
       current = false
       controller.abort()
+      stop()
     }
   }, [entry.agent.id, entry.reference])
   return (
@@ -85,7 +99,8 @@ export function ActivityRecord({
               </p>
               <Markdown text={record.text} />
             </div>
-            {record.error && (
+            <RecoveryNotice recovery={record.recovery} status={record.status} />
+            {record.error && record.error !== record.recovery?.detail && (
               <Alert>
                 <AlertDescription>{record.error}</AlertDescription>
               </Alert>
@@ -141,5 +156,50 @@ export function ActivityRecord({
         </Button>
       </DialogContent>
     </Dialog>
+  )
+}
+
+/** Execution progress and blockers, never a claim that the user's goal is complete. */
+export function RecoveryNotice({
+  recovery,
+  status,
+}: {
+  recovery?: RecoveryView | null
+  status: string
+}) {
+  if (!recovery || ["stopping", "cancelled"].includes(status)) return null
+  const ended =
+    ["done", "failed"].includes(status) && recovery.phase === "recovering"
+  return (
+    <Alert className="min-w-0 wrap-anywhere">
+      <AlertTitle>
+        {ended
+          ? "Reply ended with tool failures"
+          : recovery.phase === "blocked"
+            ? "Work needs attention"
+            : recovery.phase === "recovered"
+              ? "Tool recovery made progress"
+              : "Trying to recover"}
+      </AlertTitle>
+      <AlertDescription className="flex flex-col gap-2">
+        <p>
+          {ended
+            ? "The reply ended before a successful tool recovery was recorded. See the saved answer and results."
+            : recovery.detail}
+        </p>
+        <p className="text-xs">
+          {recovery.tool}
+          {recovery.reason === "repetition" &&
+            ` · ${recovery.failures} matching failures`}
+          {recovery.phase === "recovering" &&
+            !ended &&
+            ` · ${recovery.remaining} recovery attempts left`}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Saved result {recovery.resultId}
+          {recovery.receiptId && ` · Receipt ${recovery.receiptId}`}
+        </p>
+      </AlertDescription>
+    </Alert>
   )
 }

@@ -39,6 +39,7 @@ export class ConversationStore {
     )
     for (const [name, definition] of Object.entries({
       parent_id: "TEXT",
+      recovery: "TEXT",
       mode: "TEXT NOT NULL DEFAULT 'followUp'",
       delivery: "TEXT NOT NULL DEFAULT 'queued'",
       model: "TEXT",
