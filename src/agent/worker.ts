@@ -1,3 +1,12 @@
+import { sharedReference } from "../delegation/delegation"
+import { piDelegations } from "../delegation/adapters/pi"
+import {
+  delegationTool,
+  delegationInstructions,
+  childSteeringHook,
+} from "../delegation/tools"
+import { delegationsRequest } from "../delegation/http"
+import { DelegationFailure, ReadTool } from "../delegation/contracts"
 import { openaiProvider } from "@earendil-works/pi-ai/providers/openai"
 import { discoverCatalog } from "../inference/catalog"
 import type { ModelCatalog } from "../inference/policy"
@@ -442,8 +451,21 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   )
   readonly protectTool = guardedTools(
     this.access,
-    () => this.active()?.id,
-    new Set([...recoverableObjectTools, ...recoverablePlanTools])
+    async (api) => {
+      const root = await Effect.runPromise(
+        this.delegations.root(Number(api.conversationId))
+      )
+      if (root) return root
+      const turn = this.active()
+      return turn?.session_id === String(api.conversationId)
+        ? turn.id
+        : undefined
+    },
+    new Set([
+      ...recoverableObjectTools,
+      ...recoverablePlanTools,
+      "delegate_tasks",
+    ])
   )
   readonly skills = new SkillStore(this.db)
   readonly botConfiguration = new BotConfigurationStore(this.db)
@@ -602,6 +624,26 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           ),
       })
   )
+  readonly delegations = piDelegations(
+    () => this.harness.pi(),
+    {
+      current: (id, conversationId) => {
+        const turn = this.conversations.get(id)
+        return (
+          turn?.status === "running" &&
+          turn.session_id === String(conversationId) &&
+          this.routines.canRun(id) &&
+          this.botConfiguration.read()?.status !== "archived"
+        )
+      },
+      cancelled: (id) =>
+        ["stopping", "cancelled", "failed"].includes(
+          this.conversations.get(id)?.status ?? "cancelled"
+        ) || this.botConfiguration.read()?.status === "archived",
+    },
+    () => this.registry.snapshot().extension("delegated-reader")!,
+    () => this.registry.snapshot().extension("delegated-reader")?.tools ?? []
+  )
   readonly browser = new BrowserWorkspace(
     new BrowserStore(this.db),
     new CloudflareBrowser(this.env.BROWSER),
@@ -658,6 +700,8 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     }
   }
   readonly models = createAgentModels(this.credentials, {
+    beforeRequest: (id, signal) =>
+      Effect.runPromise(this.delegations.request(id), { signal }),
     catalog: () => this.accountModelCatalog(),
     contextWindow: (model) => {
       const turn = this.active()
@@ -774,8 +818,37 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         sections: [
           { key: "preamble", render: () => SYSTEM_PROMPT, tag: false },
           { key: "planning", render: () => planningInstructions, tag: false },
+          {
+            key: "delegation",
+            render: () => delegationInstructions,
+            tag: false,
+          },
         ],
         tools: [
+          delegationTool(this.delegations, (api) => {
+            const receipt = this.accessStore.get(String(api.taskId))
+            const turn = receipt
+              ? this.conversations.get(receipt.turnId)
+              : undefined
+            if (
+              !turn?.routing ||
+              turn.session_id !== String(api.conversationId)
+            )
+              throw new DelegationFailure({
+                code: "cancelled",
+                message: "Delegation no longer belongs to the parent request.",
+              })
+            return {
+              turnId: turn.id,
+              conversationId: Number(api.conversationId),
+              taskId: Number(api.taskId),
+              route: turn.routing,
+              memory:
+                sharedReference(turn.prompt ?? "") +
+                "\n" +
+                messageArchiveText("", turn.attachments),
+            }
+          }),
           ...planTools(this.plans, (api) => {
             const receipt = this.accessStore.get(String(api.taskId))
             const source = receipt ? this.planSource(receipt.turnId) : undefined
@@ -1083,6 +1156,26 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             },
           }),
         ].map(this.protectTool),
+      })
+      this.registry.install({
+        name: "delegated-reader",
+        hooks: [
+          childSteeringHook(this.delegations, (id) =>
+            this.conversations
+              .members(id)
+              .filter((member) => member.parent_id)
+              .map((member) => ({
+                id: member.id,
+                text:
+                  member.text ||
+                  "New attachments were supplied to the parent. Do not infer their contents; the parent must reconcile them.",
+              }))
+          ),
+        ],
+        tools: this.registry
+          .snapshot()
+          .extension("personal")!
+          .tools!.filter((tool) => Schema.is(ReadTool)(tool.name)),
       })
       return Harness.open(
         storage,
@@ -1519,6 +1612,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
               this.notifyConversation()
             }
           )
+        )
+      if (path === "delegations" || path.startsWith("delegations/"))
+        return Effect.runPromise(
+          delegationsRequest(this.delegations, request, path)
         )
       if (path === "plans" || path.startsWith("plans/"))
         return Effect.runPromise(plansRequest(this.plans, request, path))
@@ -2064,6 +2161,8 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         if (turn.session_id) await this.harness.session(turn.session_id).abort()
         await Effect.runPromise(this.plans.cancel(turn.id))
       }
+      if (turn.status === "running")
+        await Effect.runPromise(this.delegations.reconcile(turn.id))
       const reply = turn.session_id
         ? await readPiReply(this.harness, turn, members)
         : undefined

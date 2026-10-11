@@ -1,6 +1,6 @@
 # Durable Pi — build tracker
 
-Started 2026-10-10. Delivery owner: Codex. Status: **slices 01–09b, 03c, 08c and 02c deployed; 11a and 02d deployed; 02e independent background routing in progress**.
+Started 2026-10-10. Delivery owner: Codex. Status: **slices 01–09b, 03c, 08c and 02c deployed; 11a, 02d and 02e deployed; 10a request-owned delegation in progress**.
 
 ## Outcome
 
@@ -59,8 +59,8 @@ The owner requested password recovery before continuing. Implemented Better Auth
 | 08c — Persistent working objects | Agent creates a project checklist; owner edits tasks inline or in Objects; agent reads current state; history, conflicts, retry receipts and archive/restore survive restart. | Deployed in PR #23; local journey/recovery verified; hosted authentication checks passed |
 | 09 — Routines and incoming events | Schedule/pause/delete routines; run with browser closed; authenticated webhook triggers; durable retry/deduplication; notify on meaningful outcomes; respect bot grants and budgets. | 09a and 09b deployed |
 | 02d — Different models for different jobs | Account-aware deterministic routing; per-agent job defaults and per-message profiles; durable selection, usage and explicit failure states. | Deployed; hosted routing verified |
-| 02e — Independent memory policy and remaining jobs | Pin OptChat summary routes, bound retries, expose explicit recovery, and evaluate labels/extraction/memory/planning choices. | In progress after 02d hosted verification |
-| 10 — Delegation | Explicit parent/child tasks; separate child memory/tool grants; bounded concurrency; steer/stop children; deliver completed reports once after restart. | Planned |
+| 02e — Independent memory policy and remaining jobs | Pin OptChat summary routes, bound retries, expose explicit recovery, and evaluate labels/extraction/memory/planning choices. | Deployed; hosted memory and recall verified |
+| 10 — Delegation | Explicit parent/child tasks; separate child memory/tool grants; bounded concurrency; steer/stop children; deliver completed reports once after restart. | 10a in progress; background 10b follows |
 | 11a — Automatic durable task planning | Substantial requests maintain a bot-local plan; Activity exposes progress, blockers, evidence and history; compaction, restart, steering and cancellation preserve authority. | Deployed in PR #25; local journey/recovery and hosted authentication checks passed |
 | 11 — Activity and recovery | Per-bot/global activity; inspect tool outcomes and approvals; recover interrupted work; expose actionable connection/backup failures; inspect/export memory and workspace. | Planned |
 | 12 — Complete product verification | Approved desktop/mobile states implemented; keyboard/accessibility checks; isolation/replay/permission tests; restore proof; secret scan; CI/deploy and hosted acceptance of all journeys. | Planned |
@@ -606,7 +606,7 @@ Verification:
 
 Next: delegation (10), the remaining activity/recovery work (11), then complete-product verification (12).
 
-### 10a — Request-owned native delegation (preflight)
+### 10a — Request-owned native delegation (implemented; deployment pending)
 
 Grounded in Paper’s “Agents / delegation & parallel work” artboard and the installed Pi Durable 1.0.4 ownership/commit APIs. Start with a complete request-owned journey: the owner asks for parallel help; the bot delegates up to three bounded research/drafting tasks; each child has its own durable native conversation and explicit read-tool set; Activity exposes work, results, steering and Stop; the parent receives the combined result once. Children cannot spawn children. Child transcripts and reasoning remain outside the parent's OptChat archive; only the combined report enters it through the parent tool result.
 
@@ -614,7 +614,7 @@ Use native task ownership and stable submission IDs for reuse/recovery, rather t
 
 10b will add background groups and recoverable report delivery when the parent is idle, using a durable mailbox integrated with normal turn admission. It must separately prove parent cancellation fences, bounded wakeups, loop prevention and exactly-once admission; native background ownership intentionally survives ordinary parent abort, so the example cannot be copied without those product rules. Cross-bot delegation or sharing must be explicit and preserve each bot's data and grants. These background/cross-bot capabilities are not delivered by 10a.
 
-References inspected: [Pi native ownership](https://github.com/earendil-works/pi/tree/main/packages/durable#abort-and-subagents), [background child/report example](https://github.com/earendil-works/pi/blob/main/packages/durable/test/examples/23-subagent-background.ts), and [Cloudflare Pi integration](https://developers.cloudflare.com/agents/harnesses/pi/). Implementation and verification remain outstanding.
+References inspected: [Pi native ownership](https://github.com/earendil-works/pi/tree/main/packages/durable#abort-and-subagents), [background child/report example](https://github.com/earendil-works/pi/blob/main/packages/durable/test/examples/23-subagent-background.ts), and [Cloudflare Pi integration](https://developers.cloudflare.com/agents/harnesses/pi/). Local implementation and verification are recorded below; production acceptance remains pending.
 
 ### Follow-on goal — Match the approved Paper implementation
 
@@ -731,13 +731,13 @@ Hosted verification after the correction: a temporary bot completed Auto on Luna
 
 Next, 02e wires independent background assignments into the same policy and evaluates representative extraction, memory and planning tasks. Native active-run compaction continues to use Pi's pinned working model; OptChat summaries are separate memory jobs. Background model policy and quality comparisons are not delivered by this first slice.
 
-### 02e — Independent memory jobs (in progress)
+### 02e — Independent memory jobs
 
 OptChat's immutable summary ranges own their source and result. A bot-local routing record pins model, effort, policy version and the first verified context budget for each range, separately from conversation settings. Explicit retry retains prior route revisions and creates a new revision using the current memory default; automatic recovery never substitutes a model. Pi's native active-run compaction retains the working model because its installed supported policy has no independent summarizer-model option; this preserves native checkpoint/recovery ownership.
 
 Summary work keeps the existing eight-slot concurrency bound and five-request byte-budget feedback. Three unsuccessful groups pause a range. A durable 15-dispatch ceiling per route revision also bounds repeated runtime interruption. A response that still exceeds 512 bytes is rejected; original messages and valid child summaries remain authoritative and readable. Memory exposes paused ranges and a deliberate retry with the current memory setting. A chat waiting for paused memory fails with an actionable recovery message rather than continually waking an unavailable summary.
 
-Titles/labels and structured extraction are explicit composer job types with Luna/low and Luna/medium defaults. File parsing, PDF extraction, video preparation, object edits and database reads remain deterministic. This does not introduce an automatic title rewrite, background classifier, OCR service or native audio/video inference. Hosted background-policy verification remains pending.
+Titles/labels and structured extraction are explicit composer job types with Luna/low and Luna/medium defaults. File parsing, PDF extraction, video preparation, object edits and database reads remain deterministic. This does not introduce an automatic title rewrite, background classifier, OCR service or native audio/video inference. Deployed in PR #28 as `2902fc8`; production run `38126710401` passed checks, Alchemy deployment and authentication probes. Hosted verification completed below.
 
 Local verification: 378 tests, typecheck, lint, production build and staged-file secret scan pass. The installed Responses adapter receives the independent Luna/medium memory assignment even when conversation settings use Astra/high, and Activity records terminal usage. SQLite reopen tests cover route/window pins, dispatch ceilings, explicit revisions, replay identity, bot isolation and original retention. Production-method tests cover wake acknowledgement loss, cancelled catalog discovery, and stale concurrent retries; only missing authoritative-view summaries block chat. Independent backend/frontend reviews closed after these corrections. A 390×844 paused-summary fixture fits without horizontal overflow; simulated lost responses retain the same retry ID through sheet close/reopen. These are local tests, not hosted background inference.
 
@@ -753,3 +753,29 @@ Small live comparison (2026-10-11): six direct subscription Responses calls from
 | Planning | Sol / medium | 100 / 501 | 22.38 s | Same core acceptance coverage; 225 words |
 
 All six reached `response.completed`; cached input was zero. Aggregate usage was 728 input and 1,489 output tokens, including reported reasoning. Both plans slightly missed the requested 220-word cap. This one-case-per-task comparison does not establish a universal quality/latency ranking: keep the requested initial defaults and require explicit Deep selection. Native working-context compaction stays on the run’s pinned model as described above. No API-priced subscription estimates or API-key fallback.
+
+
+Hosted 02e acceptance: a temporary bot completed a longer corrected-facts request on Sol/medium while its independent memory job used Luna/medium. The summary completed in 4.05 seconds with 5,046 reported input / 105 output tokens (cached input 0). Memory reached a settled view before the follow-up; Sol then correctly returned the owner, corrected EUR 2,400 budget, tentative 2026-10-20 target, unconfirmed ramp, deposit-approval requirement and unsent draft. The two conversation attempts reported 5,549 / 58 and 5,544 / 48 input / output tokens. Replaying the first admission returned `accepted:false` and kept one provider attempt for that conversation. No tools or plan were created for the simple checks. The bot was archived and Worker deleted. A preceding diagnostic route returned a transient non-JSON 404 before bot creation; a read verified no orphan bot existed. Hosted runtime restart and failure-retry injection were not performed; those remain local deterministic/native tests.
+
+10a implementation is now active. The approved Paper delegation workbench was re-read with unchanged design tokens. Foreground children inherit the parent request's pinned model, effort and context budget: installed Pi's compaction policy is harness-wide, so heterogeneous concurrent child budgets cannot safely borrow a mutable global policy. Use native child ownership and commits, at most three research/drafting children, explicit read tools, no recursive spawn, existing approval receipts, inspectable native child transcripts, and parent-authoritative Stop. Background delivery and cross-bot sharing remain 10b. The full Paper-fidelity goal remains after the complete product build.
+
+
+#### 10a implementation and local verification — 2026-10-11
+
+Native Pi task ownership, conversations, submissions and session-scoped documents now own foreground delegation. `delegate_tasks` uses the existing Ask/Allow/Deny gate. One group per parent request, at most three children, no recursive spawn, explicit read-tool subsets, inherited pinned model/effort/window, a durable 12-dispatch-intent limit per child, a ten-minute group deadline and eight owner steering inputs per child. Children cannot write objects, modify plans, run browser/terminal actions, or call external services. Full native transcripts stay inspectable; only the combined report enters the parent tool result and OptChat archive. This does not add background or cross-bot sharing.
+
+The existing provider payload hook enforces child ownership and budgets immediately before dispatch, including native compaction and resumed requests. It uses the native provider session identity even when downstream prompt caching uses the bot cache key. Native usage counters appear in Activity; failed/unknown usage is not estimated as billable API spend. Text-only shared references exclude image/video bytes and retain file identifiers. Parent steering is offered fresh on normal child requests without adding repeated copies to native history. A reference view exceeding 64 KiB is replaced by an explicit retrieval/parent-reconciliation instruction; children must not infer missing visual content.
+
+Controls commit their identity and intent before delivery. Concurrent callers drain the same saved per-child prefix, native request IDs deduplicate admission, and the latest native answer entry determines the report. Stop and deadlines remain authoritative. Runtime interruption cancels waiters, not persisted child ownership. A finished group does not resume model work on inspection or exact replay.
+
+Activity follows the Paper delegation hierarchy using shadcn/Base UI: parent objective, child status/brief/tools/usage, results, steer/Stop, steering history and paged native transcripts. Unknown acknowledgements retain their original payload/ID through close/reload; authentication failures do not discard them. Latest transcripts poll while visible; older pages keep their position.
+
+Verification:
+- Ten installed-native-Pi/SQLite scenarios cover completion, reopen, child/parent Stop, steering and steering across restart, distinct out-of-order delivery, deadlines, dispatch ceilings and deliberately small-window compaction. Native root history contains one combined result; child history remains separate. Exact completed replay does not dispatch again.
+- Installed Responses adapter tests verify original-session guard identity with a shared cache key, blocked compaction dispatch, and cancellation during account validation. Schema/HTTP/recovery tests cover tool escalation, duplicate briefs, bot-local lookup, media exclusion, uncertain controls and late acknowledgements.
+- Real local Cloudflare workerd + PiHarness: stopped/restarted the runtime with two model requests suspended and a saved steer. Group 12 retained children 15/23, both completed, the first incorporated the steer, and the parent recorded exactly one tool result. Five synthetic provider attempts were observed (initial two, recovered two, one steering continuation); no owner credential or live model was used.
+- Browser fixture at 1440×900 and 390×844: inspected hierarchy, lost response → close/reopen → exact retry → acknowledgement cleanup, live transcript updates and Stop availability while a steer is uncertain. Mobile viewport/page were 390 px and the sheet was 389 px with no horizontal overflow. Temporary request fixtures were removed and the viewport restored. This UI fixture does not claim hosted inference.
+- 394 tests across 58 files, typecheck, lint and production build passed.
+- Independent read-only backend/frontend review found and corrected encoded-media context, concurrent control ordering/stale answer selection, expired-login acknowledgement loss and stale open transcripts; focused re-review is clear.
+
+Production deployment, hosted authenticated delegation and observed subscription usage are reported separately after CI. Remaining work: 10b background groups/mailbox, 11 activity/recovery completion, 12 full product verification, then the saved Paper-fidelity goal.
