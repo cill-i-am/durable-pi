@@ -1,5 +1,11 @@
 import { expect, it, vi } from "vitest"
 import { ManagedRuntime } from "effect"
+import { PersonalAgent } from "../src/agent/worker"
+import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
+import { workspaceLayer } from "../src/workspace/adapters/storage"
+import { catalog } from "./inference-fixture"
+import { database } from "./database"
+
 vi.mock("cloudflare:workers", () => ({
   DurableObject: class {},
   WorkerEntrypoint: class {},
@@ -10,11 +16,6 @@ vi.mock("agents/lifecycle", () => ({
   LifecycleCapability: class {},
 }))
 vi.mock("agents/harness/pi", () => ({ PiHarness: class {} }))
-import { PersonalAgent } from "../src/agent/worker"
-import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
-import { workspaceLayer } from "../src/workspace/adapters/storage"
-import { catalog } from "./inference-fixture"
-import { database } from "./database"
 
 function fixture() {
   const db = database(),
