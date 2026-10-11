@@ -1,6 +1,6 @@
 # Durable Pi — build tracker
 
-Started 2026-10-10. Delivery owner: Codex. Status: **slices 01–09b, 03c, 08c and 02c deployed; 11a, 02d and 02e deployed; 10a, 10b and 11 deployed; 12 full-product verification in progress**.
+Started 2026-10-10. Delivery owner: Codex. Status: **slices 01–09b, 03c, 08c and 02c deployed; 11a, 02d and 02e deployed; 10a, 10b, 11 and 12 deployed; functional build complete; Paper fidelity next**.
 
 ## Outcome
 
@@ -63,7 +63,7 @@ The owner requested password recovery before continuing. Implemented Better Auth
 | 10 — Delegation | Explicit parent/child tasks; separate child memory/tool grants; bounded concurrency; steer/stop children; deliver completed reports once after restart. | 10a–10b deployed |
 | 11a — Automatic durable task planning | Substantial requests maintain a bot-local plan; Activity exposes progress, blockers, evidence and history; compaction, restart, steering and cancellation preserve authority. | Deployed in PR #25; local journey/recovery and hosted authentication checks passed |
 | 11 — Activity and recovery | Per-bot/global activity; inspect tool outcomes and approvals; recover interrupted work; expose actionable connection/backup failures; inspect/export memory and workspace. | Deployed in PR #31; hosted isolation, saved history, replay and read-only acceptance passed |
-| 12 — Complete product verification | Approved desktop/mobile states implemented; keyboard/accessibility checks; isolation/replay/permission tests; restore proof; secret scan; CI/deploy and hosted acceptance of all journeys. | In progress |
+| 12 — Complete product verification | Approved desktop/mobile states implemented; keyboard/accessibility checks; isolation/replay/permission tests; restore proof; secret scan; CI/deploy and hosted acceptance of all journeys. | Deployed in PR #32; hosted checkpoint/output recovery passed; functional build complete |
 
 Each slice gets implementation and proof notes below. Add a slice rather than hiding missing behavior in “done.” `todo.md` remains the detailed OptChat steering/subagent reference; this tracker supersedes its deferral status.
 
@@ -835,3 +835,8 @@ Hosted acceptance on the subscription connection:
 Terminal acceptance exposed an upstream Sandbox 0.12.10 default-session race: its completion monitor can signal before background output labelers finish. A successful `cat` after checkpoint restore returned empty output. The [pinned source](https://github.com/cloudflare/sandbox-sdk/blob/e4877c7368f8b1620bd4400ff831e28fba152eff/packages/sandbox-container/src/session.ts#L1227) and a deterministic Bash wait-order probe explain the timing defect. Keep the pinned release and use its sessionless execution path, documented through [`enableDefaultSession:false`](https://developers.cloudflare.com/sandbox/sdk/configuration/sandbox-options/#enabledefaultsession). The existing direct-instance adapter supplies the exact installed session token; it does not add self-RPC or replay commands. Interactive PTY sessions remain explicit. Preserve bounded streaming, hard cancellation and container teardown.
 
 Local native workerd plus the matching Linux image passed exact unterminated UTF-8 output across three additional teardown/restore cycles, durable checkpoint restore, replay/conflict/isolation, network denial, output bound, Stop, rollback, timeout and archive revocation. Parser coverage also exercises split UTF-8, stderr, nonzero exit, missing completion, cancellation and failing output admission. Full local suite: 422 tests across 62 files; typecheck, lint and production build passed. Hosted verification of the changed adapter follows its reviewed deployment. Synthetic cloud bots were archived and temporary diagnostic Workers deleted; no production refresh token was copied and no owner conversation was used.
+
+
+12 deployment acceptance: PR #32 merged as `f364576`; production run `38131680063` passed all checks, Alchemy deployment and hosted authentication probes. A fresh hosted synthetic bot wrote a file, streamed exact unterminated output, checkpointed, tore down its container, restored in a subsequent command and returned the same exact bytes. Both commands succeeded and saved their checkpoint; cleanup completed, the bots were archived and the temporary Worker deleted. This exercises the deployed direct-instance adapter.
+
+The functional build goal is complete. The owner-requested visual fidelity work follows in [UI_FIDELITY.md](UI_FIDELITY.md), using the existing approved Paper file. The app uses the ChatGPT subscription only, with no API-key fallback.
