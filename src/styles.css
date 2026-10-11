@@ -210,10 +210,7 @@ body {
 .login-brand {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 22px;
-  line-height: 31px;
-  font-weight: 600;
+  justify-content: space-between;
 }
 .login-story {
   display: flex;
@@ -290,20 +287,6 @@ body {
   color: var(--primary);
   flex-shrink: 0;
 }
-.login-privacy {
-  margin-top: auto;
-  padding-top: 16px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--muted-foreground);
-  font-size: 12px;
-  line-height: 17px;
-}
-.login-privacy svg {
-  width: 14px;
-  height: 14px;
-}
 .login-content {
   display: flex;
   align-items: center;
@@ -367,12 +350,6 @@ body {
 .login-panel > [data-slot="button"] {
   align-self: center;
 }
-.login-footer {
-  text-align: center;
-  color: var(--muted-foreground);
-  font-size: 12px;
-  line-height: 19px;
-}
 @media (max-width: 1023px) {
   .login-page {
     display: flex;
@@ -382,8 +359,7 @@ body {
     background: var(--background);
     padding: 24px;
   }
-  .login-story,
-  .login-privacy {
+  .login-story {
     display: none;
   }
   .login-content {
