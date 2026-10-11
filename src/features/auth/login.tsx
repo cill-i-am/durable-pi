@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { Link } from "@tanstack/react-router"
 import { AuthFrame } from "./auth-frame"
-import { ArrowUp } from "lucide-react"
+import { PasswordInput } from "./password-input"
 import { authClient } from "@/auth/client"
 import { errorMessage } from "@/http/client"
 import { Button } from "@/components/ui/button"
@@ -20,6 +20,7 @@ export function Login({ sessionError }: { sessionError?: string }) {
     [pending, setPending] = useState(false)
   async function submit(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (pending) return
     setError("")
     setPending(true)
     const data = new FormData(event.currentTarget)
@@ -59,7 +60,7 @@ export function Login({ sessionError }: { sessionError?: string }) {
       description={
         setup
           ? "Create the single owner account using your private setup key."
-          : "Sign in to your private, continuous chat."
+          : "Sign in to your personal workspace."
       }
     >
       <form onSubmit={submit}>
@@ -74,6 +75,7 @@ export function Login({ sessionError }: { sessionError?: string }) {
                   autoComplete="name"
                   required
                   maxLength={100}
+                  disabled={pending}
                 />
               </Field>
               <Field>
@@ -84,6 +86,7 @@ export function Login({ sessionError }: { sessionError?: string }) {
                   type="password"
                   autoComplete="off"
                   required
+                  disabled={pending}
                 />
                 <FieldDescription>
                   From your private deployment configuration.
@@ -100,49 +103,43 @@ export function Login({ sessionError }: { sessionError?: string }) {
                 autoComplete="username"
                 placeholder="you@example.com"
                 required
+                disabled={pending}
               />
             </Field>
           )}
           <Field>
-            <FieldLabel htmlFor="password">Password</FieldLabel>
-            <Input
+            <div className="login-password-label">
+              <FieldLabel htmlFor="password">Password</FieldLabel>
+              {!setup && <Link to="/forgot-password">Forgot password?</Link>}
+            </div>
+            <PasswordInput
               id="password"
               name="password"
-              type="password"
               autoComplete={setup ? "new-password" : "current-password"}
               minLength={12}
               maxLength={128}
               required
+              disabled={pending}
             />
           </Field>
           {error && (
-            <Alert>
+            <Alert role="alert">
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
-          <Button type="submit" disabled={pending}>
+          <Button type="submit" size="lg" disabled={pending}>
             {pending
               ? "Please wait…"
               : setup
                 ? "Create owner account"
                 : "Sign in"}
-            <ArrowUp data-icon="inline-end" />
           </Button>
         </FieldGroup>
       </form>
-      {!setup && (
-        <Button
-          variant="link"
-          size="sm"
-          render={<Link to="/forgot-password" />}
-          nativeButton={false}
-        >
-          Forgot password?
-        </Button>
-      )}
       <Button
         variant="link"
         size="sm"
+        disabled={pending}
         onClick={() => {
           setSetup(!setup)
           setError("")
