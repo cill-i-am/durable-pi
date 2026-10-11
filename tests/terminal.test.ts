@@ -1,8 +1,13 @@
 import { Effect } from "effect"
+import type { Sandbox } from "@cloudflare/sandbox"
 import { describe, expect, it, vi } from "vitest"
 import { Terminal, type TerminalRuntime } from "../src/terminal/terminal"
 import { TerminalStore } from "../src/terminal/adapters/sqlite"
-import { readBounded, readCommand } from "../src/terminal/adapters/sandbox"
+import {
+  readBounded,
+  readCommand,
+  sandboxRuntime,
+} from "../src/terminal/adapters/sandbox"
 import { MAX_OUTPUT } from "../src/terminal/contracts"
 import { database } from "./database"
 
@@ -10,7 +15,8 @@ const input = { id: "command", command: "printf hello" }
 const run = Effect.runPromise
 const checkpoint = { key: "private/file", sha256: "test", size: 1, savedAt: 42 }
 function fixture(overrides: Partial<TerminalRuntime> = {}) {
-  const repository = new TerminalStore(database())
+  const db = database()
+  const repository = new TerminalStore(db)
   const runtime: TerminalRuntime = {
     close: vi.fn(async () => {}),
     restore: vi.fn(async () => {}),
@@ -27,7 +33,7 @@ function fixture(overrides: Partial<TerminalRuntime> = {}) {
   }
   const terminal = new Terminal(repository, runtime, backups)
   terminal.configure(0, true)
-  return { terminal, repository, runtime, backups }
+  return { db, terminal, repository, runtime, backups }
 }
 function deferred<T>() {
   let resolve!: (value: T) => void
@@ -106,7 +112,8 @@ describe("Linux commands", () => {
     expect(f.backups.read).toHaveBeenCalledWith(checkpoint)
     expect(f.runtime.restore).toHaveBeenLastCalledWith(
       new Uint8Array([1]),
-      expect.any(AbortSignal)
+      expect.any(AbortSignal),
+      false
     )
     expect(f.repository.list()[0]).not.toHaveProperty("output")
   })
@@ -573,3 +580,107 @@ it.each(["cancel", "save"] as const)(
     )
   }
 )
+
+describe("owner-controlled terminal internet access", () => {
+  it("defaults to disabled, survives store reconstruction, rejects stale updates, and isolates bots", () => {
+    const f = fixture()
+    expect(f.terminal.state().networkPolicy).toEqual({
+      revision: 0,
+      unrestricted: false,
+    })
+    f.terminal.configureNetwork({ revision: 0, unrestricted: true })
+    expect(new TerminalStore(f.db).networkPolicy()).toEqual({
+      revision: 1,
+      unrestricted: true,
+    })
+    expect(() =>
+      f.terminal.configureNetwork({ revision: 0, unrestricted: false })
+    ).toThrow("changed")
+    expect(fixture().terminal.state().networkPolicy.unrestricted).toBe(false)
+    f.terminal.configure(1, false)
+    expect(() =>
+      f.terminal.configureNetwork({ revision: 1, unrestricted: false })
+    ).toThrow("Restore this bot")
+  })
+  it("pins network access to the command receipt and never replays after a setting change", async () => {
+    const f = fixture()
+    f.terminal.configureNetwork({ revision: 0, unrestricted: true })
+    await (
+      await run(f.terminal.start(input))
+    ).completion
+    expect(f.repository.get(input.id)?.networkUnrestricted).toBe(true)
+    expect(f.runtime.restore).toHaveBeenLastCalledWith(
+      null,
+      expect.any(AbortSignal),
+      true
+    )
+    f.terminal.configureNetwork({ revision: 1, unrestricted: false })
+    await (
+      await run(f.terminal.start(input))
+    ).completion
+    expect(f.runtime.execute).toHaveBeenCalledTimes(1)
+    await (
+      await run(f.terminal.start({ ...input, id: "offline" }))
+    ).completion
+    expect(f.runtime.restore).toHaveBeenLastCalledWith(
+      new Uint8Array([1]),
+      expect.any(AbortSignal),
+      false
+    )
+    expect(f.repository.get("offline")?.networkUnrestricted).toBe(false)
+  })
+  it("rejects network changes during commands, interactive sessions, and recovery", async () => {
+    const started = deferred<void>(),
+      done = deferred<number>()
+    const f = fixture({
+      execute: async () => {
+        started.resolve()
+        return done.promise
+      },
+    })
+    const command = await run(f.terminal.start(input))
+    await started.promise
+    expect(() =>
+      f.terminal.configureNetwork({ revision: 0, unrestricted: true })
+    ).toThrow("Stop or save")
+    done.resolve(0)
+    await command.completion
+    const close = deferred<void>()
+    f.runtime.close = () => close.promise
+    const recovery = f.terminal.recover()
+    expect(() =>
+      f.terminal.configureNetwork({ revision: 0, unrestricted: true })
+    ).toThrow("cleanup")
+    close.resolve()
+    await recovery
+    const session = await run(f.terminal.startSession("interactive"))
+    expect(() =>
+      f.terminal.configureNetwork({ revision: 0, unrestricted: true })
+    ).toThrow("Stop or save")
+    await session.completion
+    expect(f.terminal.state().networkPolicy.unrestricted).toBe(false)
+  })
+})
+
+it("applies network access to the native Sandbox instance before each cold start", async () => {
+  const starts: boolean[] = []
+  const sandbox = {
+    enableInternet: false,
+    destroy: vi.fn(async () => {}),
+    startAndWaitForPorts: vi.fn(async () => {
+      starts.push(sandbox.enableInternet)
+    }),
+    mkdir: vi.fn(async () => {}),
+  }
+  const runtime = sandboxRuntime(sandbox as unknown as Sandbox)
+  const signal = new AbortController().signal
+  await runtime.close()
+  await runtime.restore(null, signal, true)
+  await runtime.close()
+  await runtime.restore(null, signal, false)
+  expect(starts).toEqual([true, false])
+  await expect(
+    runtime.restore(null, AbortSignal.abort(), true)
+  ).rejects.toThrow("Stopped")
+  expect(sandbox.enableInternet).toBe(false)
+})

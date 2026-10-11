@@ -137,7 +137,7 @@ export const builtInTools = [
     name: "run_command",
     title: "Run Linux command",
     description:
-      "Execute shell commands in a private container with a saved workspace, no outbound networking, and bounded runtime/output.",
+      "Execute shell commands in a private container with a saved workspace, owner-controlled internet access, and bounded runtime/output.",
     mode: "ask",
   },
   {
@@ -201,7 +201,7 @@ export const builtInTools = [
     name: "browser_open",
     title: "Open browser page",
     description:
-      "Navigate this bot's Cloudflare browser within its allowed sites.",
+      "Navigate this bot's Cloudflare browser using its saved internet settings.",
     mode: "ask",
   },
   {

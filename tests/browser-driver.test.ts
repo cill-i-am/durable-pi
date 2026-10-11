@@ -280,3 +280,32 @@ it("refuses owner text in iframe or closed-shadow focus before native input", as
   ).rejects.toThrow("embedded frames")
   expect(f.page.keyboard.sendCharacter).not.toHaveBeenCalled()
 })
+
+it("omits provider allowlists and the restriction probe only for unrestricted sessions", async () => {
+  const goto = vi.fn(async () => null)
+  const browser = {
+    newPage: async () => ({
+      goto,
+      setViewport: vi.fn(),
+      createCDPSession: async () => ({
+        send: async () => ({ targetInfo: { targetId: "target" } }),
+        detach: vi.fn(),
+      }),
+    }),
+    sessionId: () => "unrestricted-session",
+    close: vi.fn(),
+    disconnect: vi.fn(),
+  }
+  provider.launch.mockResolvedValue(browser)
+  expect((await driver.open([], true)).id).toBe("unrestricted-session")
+  expect(provider.launch.mock.calls[0]![1]).not.toHaveProperty("guardrails")
+  expect(goto).toHaveBeenCalledExactlyOnceWith("about:blank")
+})
+
+it("still uses isolated observation in unrestricted sessions", async () => {
+  const f = fixture()
+  await expect(driver.capture(session, [], true)).resolves.toMatchObject({
+    page: { text: "Page text" },
+  })
+  expect(f.page.evaluate).not.toHaveBeenCalled()
+})

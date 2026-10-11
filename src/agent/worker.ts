@@ -1286,7 +1286,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           defineTool({
             name: "run_command",
             description:
-              "Run a Linux shell command in this bot's private Cloudflare container. Node and Python are available. No outbound network or application/model credentials. Only /workspace is restored between commands; excludes node_modules, .git and .cache. 30-second total deadline, 64,000 output characters and 8 MiB compressed checkpoint. All background processes end after the command. Stop or a failed checkpoint restores the previous saved workspace. Inspect Terminal for saved command/status; never repeat an interrupted command blindly.",
+              "Run a Linux shell command in this bot's private Cloudflare container. Node and Python are available. Outbound internet follows the owner-controlled Terminal settings; application/model credentials are never provided. Only /workspace is restored between commands; excludes node_modules, .git and .cache. 30-second total deadline, 64,000 output characters and 8 MiB compressed checkpoint. All background processes end after the command. Stop or a failed checkpoint restores the previous saved workspace. Inspect Terminal for saved command/status; never repeat an interrupted command blindly.",
             parameters: Type.Object({
               command: Type.String({ minLength: 1, maxLength: 16000 }),
             }),

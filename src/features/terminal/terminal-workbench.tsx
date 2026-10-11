@@ -1,5 +1,13 @@
 import { useState } from "react"
-import { TerminalSquare, Play, Square, RefreshCw } from "lucide-react"
+import {
+  TerminalSquare,
+  Play,
+  Square,
+  RefreshCw,
+  Settings2,
+} from "lucide-react"
+import type { TerminalNetworkPolicy } from "@/terminal/contracts"
+import { Switch } from "@/components/ui/switch"
 import { FileTransfers, ExportedFile } from "./file-transfers"
 import { InteractiveTerminal } from "./interactive-terminal"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
@@ -7,7 +15,13 @@ import { useTerminal } from "./use-terminal"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
+import {
+  Field,
+  FieldGroup,
+  FieldLabel,
+  FieldContent,
+  FieldDescription,
+} from "@/components/ui/field"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export function TerminalWorkbench({
@@ -18,6 +32,8 @@ export function TerminalWorkbench({
   agentName: string
 }) {
   const terminal = useTerminal(agentId)
+  const [networkSettings, setNetworkSettings] =
+    useState<TerminalNetworkPolicy | null>(null)
   const [tab, setTab] = useState<string | number>("commands")
   const [command, setCommand] = useState(
     'printf "Hello from Linux\\n"\nls -la /workspace'
@@ -32,6 +48,15 @@ export function TerminalWorkbench({
           <Badge variant="secondary">Linux</Badge>
         </div>
         <div className="flex gap-1">
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            aria-label="Terminal internet settings"
+            disabled={terminal.busy || !terminal.networkPolicy}
+            onClick={() => setNetworkSettings(terminal.networkPolicy)}
+          >
+            <Settings2 />
+          </Button>
           <Button
             size="icon-sm"
             variant="ghost"
@@ -66,8 +91,84 @@ export function TerminalWorkbench({
         )}
         <p className="text-xs text-muted-foreground">
           A private Linux workspace for this bot. Run shell commands with Node,
-          Python and local files. Outbound networking is disabled.
+          Python and local files.{" "}
+          {terminal.networkPolicy?.unrestricted
+            ? "Unrestricted internet access is enabled."
+            : "Outbound networking is disabled."}
         </p>
+        {networkSettings && (
+          <form
+            onSubmit={async (event) => {
+              event.preventDefault()
+              if (await terminal.configureNetwork(networkSettings))
+                setNetworkSettings(null)
+            }}
+          >
+            <FieldGroup>
+              <Field
+                orientation="horizontal"
+                data-disabled={terminal.busy || terminal.runtimeBusy}
+              >
+                <FieldContent>
+                  <FieldLabel htmlFor="terminal-internet">
+                    Unrestricted internet access
+                  </FieldLabel>
+                  <FieldDescription>
+                    Allow shell commands and the interactive terminal to reach
+                    the internet, including downloads and package installs. Tool
+                    permissions still apply; application and model credentials
+                    are not shared.
+                  </FieldDescription>
+                </FieldContent>
+                <Switch
+                  id="terminal-internet"
+                  checked={networkSettings.unrestricted}
+                  disabled={terminal.busy || terminal.runtimeBusy}
+                  onCheckedChange={(unrestricted) =>
+                    setNetworkSettings({ ...networkSettings, unrestricted })
+                  }
+                />
+              </Field>
+              {terminal.runtimeBusy && (
+                <p className="text-sm text-muted-foreground">
+                  Stop or save the active session and wait for cleanup before
+                  changing internet access.
+                </p>
+              )}
+              {networkSettings.revision !==
+                terminal.networkPolicy?.revision && (
+                <p className="text-sm text-destructive">
+                  Settings changed elsewhere. Cancel and reopen settings to
+                  review them.
+                </p>
+              )}
+              <div className="flex gap-2">
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={
+                    terminal.busy ||
+                    terminal.runtimeBusy ||
+                    !!terminal.cleanupError ||
+                    networkSettings.revision !==
+                      terminal.networkPolicy?.revision
+                  }
+                >
+                  Save internet settings
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  disabled={terminal.busy}
+                  onClick={() => setNetworkSettings(null)}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </FieldGroup>
+          </form>
+        )}
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList>
             <TabsTrigger value="commands">Commands</TabsTrigger>

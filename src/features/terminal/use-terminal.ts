@@ -4,6 +4,7 @@ import {
   CommandRun,
   CommandInput,
   TerminalState,
+  type TerminalNetworkPolicy,
   type CommandSummary,
   type InteractiveState,
 } from "@/terminal/contracts"
@@ -12,6 +13,8 @@ import { poll } from "@/http/poll"
 import { maintainSessionLease, type LeaseState } from "./session-lease"
 
 export function useTerminal(agentId: string) {
+  const [networkPolicy, setNetworkPolicy] =
+    useState<TerminalNetworkPolicy | null>(null)
   const [session, setSession] = useState<typeof InteractiveState.Type | null>(
     null
   )
@@ -67,6 +70,7 @@ export function useTerminal(agentId: string) {
         setCleanupError(history.cleanupError)
         setSavedAt(history.savedAt)
         setSession(history.session)
+        setNetworkPolicy(history.networkPolicy ?? null)
         setDetail(run)
       }
     } catch (cause) {
@@ -195,6 +199,32 @@ export function useTerminal(agentId: string) {
     }
   }
   return {
+    networkPolicy,
+    configureNetwork: async (input: TerminalNetworkPolicy) => {
+      if (lock.current) return false
+      lock.current = true
+      sequence.current++
+      setBusy(true)
+      setError("")
+      try {
+        const state = Schema.decodeUnknownSync(TerminalState)(
+          await agentApi(agentId)("terminal/network", input)
+        )
+        setNetworkPolicy(state.networkPolicy ?? null)
+        return true
+      } catch (cause) {
+        setError(
+          cause instanceof Error
+            ? cause.message
+            : "Could not save internet settings. Reload and try again."
+        )
+        return false
+      } finally {
+        lock.current = false
+        setBusy(false)
+        await refresh()
+      }
+    },
     runs,
     transferAttempt,
     importFile: (fileId: string) =>

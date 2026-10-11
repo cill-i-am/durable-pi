@@ -14,11 +14,16 @@ export class BrowserStore implements BrowserRepository {
       "SELECT record FROM bot_browser WHERE id=1"
     )[0]
     return row
-      ? ({ controller: "agent", ...JSON.parse(row.record) } as BrowserRecord)
+      ? ({
+          controller: "agent",
+          unrestricted: false,
+          ...JSON.parse(row.record),
+        } as BrowserRecord)
       : {
           controller: "agent",
           generation: 0,
           hosts: [],
+          unrestricted: false,
           version: 0,
           status: "closed",
           session: null,
@@ -48,7 +53,7 @@ export class BrowserStore implements BrowserRepository {
       return this.put({ ...value, ...patch, version: value.version + 1 })
     })
   }
-  reset(generation: number, hosts: readonly string[]) {
+  reset(generation: number, hosts: readonly string[], unrestricted = false) {
     return this.db.transaction(() => {
       const value = this.read()
       if (value.generation !== generation)
@@ -60,6 +65,7 @@ export class BrowserStore implements BrowserRepository {
         controller: "agent",
         generation: generation + 1,
         hosts,
+        unrestricted,
         version: value.version + 1,
         status: "closed",
         session: null,
