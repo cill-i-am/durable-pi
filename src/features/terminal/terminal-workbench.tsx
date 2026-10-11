@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { TerminalSquare, Play, Square, X, RefreshCw } from "lucide-react"
+import { FileTransfers, ExportedFile } from "./file-transfers"
 import { InteractiveTerminal } from "./interactive-terminal"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { useTerminal } from "./use-terminal"
@@ -96,7 +97,23 @@ export function TerminalWorkbench({
           <TabsList>
             <TabsTrigger value="commands">Commands</TabsTrigger>
             <TabsTrigger value="interactive">Interactive</TabsTrigger>
+            <TabsTrigger value="files">File transfer</TabsTrigger>
           </TabsList>
+          <TabsContent value="files">
+            <FileTransfers
+              agentId={agentId}
+              busy={
+                terminal.busy ||
+                (!terminal.transferAttempt &&
+                  (terminal.runtimeBusy || !!terminal.cleanupError))
+              }
+              attempt={!!terminal.transferAttempt}
+              onImport={(id) => void terminal.importFile(id)}
+              onExport={(path) => void terminal.exportFile(path)}
+              onRetry={() => void terminal.retryTransfer()}
+              onCancel={() => void terminal.cancelTransfer()}
+            />
+          </TabsContent>
           <TabsContent value="interactive">
             <InteractiveTerminal
               agentId={agentId}
@@ -217,9 +234,21 @@ export function TerminalWorkbench({
                 <AlertDescription>{detail.error}</AlertDescription>
               </Alert>
             )}
-            <pre className="max-h-80 overflow-auto rounded-md border bg-muted/30 p-3 font-mono text-xs break-words whitespace-pre-wrap">
-              {detail.output || "No output yet."}
-            </pre>
+            {detail.transfer && (
+              <p className="text-xs break-all">{detail.transfer.path}</p>
+            )}
+            {detail.transfer?.kind === "import" &&
+              detail.status === "succeeded" && (
+                <p className="text-xs text-muted-foreground">
+                  File copied and workspace saved.
+                </p>
+              )}
+            <ExportedFile key={detail.id} agentId={agentId} run={detail} />
+            {!detail.transfer && (
+              <pre className="max-h-80 overflow-auto rounded-md border bg-muted/30 p-3 font-mono text-xs break-words whitespace-pre-wrap">
+                {detail.output || "No output yet."}
+              </pre>
+            )}
             <details>
               <summary className="cursor-pointer text-xs font-medium">
                 Executed command

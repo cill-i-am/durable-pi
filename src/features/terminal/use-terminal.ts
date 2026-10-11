@@ -32,6 +32,11 @@ export function useTerminal(agentId: string) {
       setLease
     )
   }, [agentId, session?.id, session?.phase])
+  const [transferAttempt, setTransferAttempt] = useState<
+    | { kind: "import"; input: { id: string; fileId: string } }
+    | { kind: "export"; input: { id: string; path: string } }
+    | null
+  >(null)
   const [sessionAttempt, setSessionAttempt] = useState<string | null>(null)
   const [runs, setRuns] = useState<CommandSummary[]>([])
   const [cleanupError, setCleanupError] = useState<string | null>(null)
@@ -127,11 +132,44 @@ export function useTerminal(agentId: string) {
     setAttempt(input)
     if (await command("terminal/run", input)) setAttempt(null)
   }
+  async function transfer(next: NonNullable<typeof transferAttempt>) {
+    const pending = transferAttempt ?? next
+    setTransferAttempt(pending)
+    const result = await command(
+      pending.kind === "import" ? "terminal/files/import" : "terminal/export",
+      pending.input
+    )
+    if (result) setTransferAttempt(null)
+  }
   async function openSession() {
     const id = sessionAttempt ?? crypto.randomUUID()
     setSessionAttempt(id)
     if (await command("terminal/session", { id })) {
       setSessionAttempt(null)
+      await refresh()
+    }
+  }
+  async function cancelTransfer() {
+    if (!transferAttempt || lock.current) return
+    lock.current = true
+    sequence.current++
+    setBusy(true)
+    try {
+      // Persist cancellation even if admission is still in flight. A late request
+      // with this ID cannot execute after the owner corrects the next transfer.
+      await agentApi(agentId)(
+        `terminal/${encodeURIComponent(transferAttempt.input.id)}/cancel`,
+        {}
+      )
+      setTransferAttempt(null)
+      setError("")
+    } catch {
+      setError(
+        "Cancellation is unconfirmed. Retry cancellation or the same transfer."
+      )
+    } finally {
+      lock.current = false
+      setBusy(false)
       await refresh()
     }
   }
@@ -158,6 +196,14 @@ export function useTerminal(agentId: string) {
   }
   return {
     runs,
+    transferAttempt,
+    importFile: (fileId: string) =>
+      transfer({ kind: "import", input: { id: crypto.randomUUID(), fileId } }),
+    exportFile: (path: string) =>
+      transfer({ kind: "export", input: { id: crypto.randomUUID(), path } }),
+    retryTransfer: () =>
+      transferAttempt ? transfer(transferAttempt) : Promise.resolve(),
+    cancelTransfer,
     session,
     lease,
     sessionAttempt,

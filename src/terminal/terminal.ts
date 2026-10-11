@@ -9,9 +9,16 @@ import {
   type CommandRun,
 } from "./contracts"
 import { InteractiveSession, type InteractiveRuntime } from "./session"
+import { TransferPlan, MAX_TRANSFER_BYTES, fileDigest } from "./transfers"
 import type { TerminalStore } from "./adapters/sqlite"
 
 export interface TerminalRuntime {
+  importFile?: (
+    path: string,
+    bytes: Uint8Array,
+    signal: AbortSignal
+  ) => Promise<void>
+  exportFile?: (path: string, signal: AbortSignal) => Promise<Uint8Array>
   openInteractive?: (signal: AbortSignal) => Promise<InteractiveRuntime>
   restore: (bytes: Uint8Array | null, signal: AbortSignal) => Promise<void>
   execute: (
@@ -39,7 +46,8 @@ export class Terminal {
   constructor(
     readonly repository: TerminalStore,
     private readonly runtime: TerminalRuntime,
-    private readonly backups: CheckpointStorage
+    private readonly backups: CheckpointStorage,
+    private readonly exports?: CheckpointStorage
   ) {}
   configure(
     revision: number,
@@ -88,6 +96,41 @@ export class Terminal {
       session: this.active?.session?.state() ?? null,
     }
   }
+  startTransfer(id: string, transfer: TransferPlan, bytes?: Uint8Array) {
+    return Effect.gen({ self: this }, function* () {
+      const plan = yield* Effect.try(() =>
+        Schema.decodeUnknownSync(TransferPlan)(transfer)
+      )
+      if (plan.kind === "import") {
+        if (
+          !bytes?.length ||
+          bytes.length > MAX_TRANSFER_BYTES ||
+          (yield* Effect.promise(() => fileDigest(bytes))) !== plan.sha256
+        )
+          return yield* new TerminalFailure({
+            message: "The file bytes do not match this transfer.",
+          })
+      }
+      return yield* this.start(
+        {
+          id,
+          command: `${plan.kind === "import" ? "Import" : "Export"} ${plan.path}`,
+        },
+        plan.kind,
+        { plan, bytes }
+      )
+    })
+  }
+  async exportedFile(id: string) {
+    const record = this.repository.exported(id)
+    if (
+      !record ||
+      !this.exports ||
+      this.repository.get(id)?.status !== "succeeded"
+    )
+      throw new TerminalFailure({ message: "The exported file is not ready." })
+    return this.exports.read(record)
+  }
   startSession(id: string) {
     return this.start({ id, command: "Interactive terminal" }, "session")
   }
@@ -97,7 +140,11 @@ export class Terminal {
       throw new TerminalFailure({ message: "This terminal session has ended." })
     return session
   }
-  start(input: CommandInput, kind: "command" | "session" = "command") {
+  start(
+    input: CommandInput,
+    kind: NonNullable<CommandRun["kind"]> = "command",
+    transfer?: { plan: TransferPlan; bytes?: Uint8Array }
+  ) {
     return Effect.try({
       try: () => {
         const decoded = Schema.decodeUnknownSync(CommandInput)(input)
@@ -106,7 +153,7 @@ export class Terminal {
           throw new TerminalFailure({
             message: "Wait for the active command and its cleanup to finish.",
           })
-        const run = this.repository.admit(decoded, kind)
+        const run = this.repository.admit(decoded, kind, transfer?.plan)
         if (existing || run.status !== "running")
           return {
             run,
@@ -120,11 +167,14 @@ export class Terminal {
           kind === "session"
             ? new InteractiveSession(run.id, controller)
             : undefined
-        const completion = this.perform(run, controller, session).finally(
-          () => {
-            this.active = null
-          }
-        )
+        const completion = this.perform(
+          run,
+          controller,
+          session,
+          transfer?.bytes
+        ).finally(() => {
+          this.active = null
+        })
         this.active = { id: run.id, controller, completion, session }
         return { run, completion }
       },
@@ -151,7 +201,8 @@ export class Terminal {
   private async perform(
     run: CommandRun,
     controller: AbortController,
-    session?: InteractiveSession
+    session?: InteractiveSession,
+    inputBytes?: Uint8Array
   ) {
     await Promise.resolve()
     let output = "",
@@ -192,7 +243,28 @@ export class Terminal {
       await this.runtime.restore(bytes, controller.signal)
       live()
       let exitCode = 0
-      if (session) {
+      if (run.transfer?.kind === "import") {
+        if (!this.runtime.importFile || !inputBytes)
+          throw new Error("Import unavailable")
+        await this.runtime.importFile(
+          run.transfer.path,
+          inputBytes,
+          controller.signal
+        )
+      } else if (run.transfer?.kind === "export") {
+        if (!this.runtime.exportFile || !this.exports)
+          throw new Error("Export unavailable")
+        const fileBytes = await this.runtime.exportFile(
+          run.transfer.path,
+          controller.signal
+        )
+        live()
+        if (!fileBytes.length || fileBytes.length > MAX_TRANSFER_BYTES)
+          throw new Error("File size")
+        const exported = await this.exports.write(fileBytes)
+        live()
+        return { exitCode: 0, saved: undefined, exported }
+      } else if (session) {
         if (!this.runtime.openInteractive)
           throw new Error("Interactive runtime unavailable")
         session.ready(await this.runtime.openInteractive(controller.signal))
@@ -222,7 +294,7 @@ export class Terminal {
       if (snapshot.length > MAX_CHECKPOINT) throw new Error("Checkpoint limit")
       const saved = await this.backups.write(snapshot)
       live()
-      return { exitCode, saved }
+      return { exitCode, saved, exported: undefined }
     })()
     try {
       const checkpoint = await Promise.race([work, stopped])
@@ -235,7 +307,8 @@ export class Terminal {
             exitCode: checkpoint.exitCode,
             error: null,
           },
-          checkpoint.saved
+          checkpoint.saved,
+          checkpoint.exported
         )
     } catch {
       controller.abort()
@@ -243,9 +316,11 @@ export class Terminal {
       this.repository.finish(run.id, {
         status: "failed",
         exitCode: null,
-        error: session
-          ? "The terminal session ended or could not save. Recovery uses the last saved checkpoint."
-          : "The command could not finish or save its workspace within the time/output limit. Inspect its output before starting another command. Recovery uses the last saved checkpoint.",
+        error: run.transfer
+          ? "The file transfer could not finish. Use a regular file inside /workspace, up to 8 MB. The previous checkpoint is unchanged."
+          : session
+            ? "The terminal session ended or could not save. Recovery uses the last saved checkpoint."
+            : "The command could not finish or save its workspace within the time/output limit. Inspect its output before starting another command. Recovery uses the last saved checkpoint.",
       })
     } finally {
       clearTimeout(timer)

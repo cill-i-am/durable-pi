@@ -171,4 +171,15 @@ Choose **Interactive → Open interactive terminal**. Only this session can use 
 
 The workbench renews a thirty-second authenticated lease; switching its internal tabs or changing screen size preserves it. Closing the whole workbench, revoked sign-in or a sustained connection failure stops the session without saving. A session ends after ten minutes regardless of renewal. Only one viewer connects at a time. Input is bounded to 256,000 bytes and output/replay to 4 MiB; reconnect can replay the native 256 KiB terminal buffer. Clipboard and link addons are not installed.
 
-`node --env-file=.env --import tsx scripts/check-interactive-terminal.ts` checks the native shell and checkpoint lifecycle using the synthetic local owner, including resize, keyboard interruption, full-buffer reconnect and logout expiry. The image-local shell launcher establishes a controlling terminal for the pinned SDK's Bun PTY. Private file transfer is the next slice.
+`node --env-file=.env --import tsx scripts/check-interactive-terminal.ts` checks the native shell and checkpoint lifecycle using the synthetic local owner, including resize, keyboard interruption, full-buffer reconnect and logout expiry. The image-local shell launcher establishes a controlling terminal for the pinned SDK's Bun PTY.
+
+
+### Private file transfer
+
+In **Terminal → File transfer**, choose **Copy from Files** to place a selected private asset in a new `/workspace/imports/<transfer-id>/` folder. Its completed path is shown in the result. The next command restores that checkpoint. Transfers never overwrite a file, follow symlinks, or read outside `/workspace`.
+
+To retrieve a generated file, enter its absolute `/workspace/...` path and choose **Prepare export**. Save an interactive shell first: exports read the saved checkpoint. Download the completed export directly, or choose **Add exported file to Files** to prepare previews and attach it to chat. Files must be regular, non-empty and at most 8 MiB. The library's supported-format and quota rules still apply; the direct download preserves the original bytes.
+
+An unconfirmed request retains its transfer ID. **Retry transfer** recovers that receipt even after the source is renamed or trashed. **Cancel transfer request** records cancellation before allowing a corrected request; delayed submissions of the canceled ID cannot execute. Failed imports keep the previous checkpoint, and exports never replace it.
+
+`node --env-file=.env --import tsx scripts/check-terminal-files.ts` exercises the native private-file boundary with the synthetic local owner, including fresh restore, exact bytes, replay, cancellation, isolation and special-file rejection.

@@ -1,4 +1,5 @@
 import { Schema } from "effect"
+import { TransferPlan } from "./transfers"
 
 export const CommandInput = Schema.Struct({
   id: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(200)),
@@ -25,7 +26,10 @@ export const CommandRun = Schema.Struct({
     "cancelled",
     "interrupted",
   ]),
-  kind: Schema.optional(Schema.Literals(["command", "session"])),
+  kind: Schema.optional(
+    Schema.Literals(["command", "session", "import", "export"])
+  ),
+  transfer: Schema.optional(TransferPlan),
   output: Schema.String,
   exitCode: Schema.NullOr(Schema.Number),
   error: Schema.NullOr(Schema.String),

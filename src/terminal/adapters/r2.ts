@@ -10,9 +10,10 @@ const digest = async (bytes: Uint8Array) =>
     .join("")
 export function checkpointStorage(
   bucket: R2Bucket,
-  namespace: string
+  namespace: string,
+  kind: "checkpoint" | "file" = "checkpoint"
 ): CheckpointStorage {
-  const prefix = `terminal/${namespace}/`
+  const prefix = `terminal/${namespace}/${kind === "file" ? "exports/" : ""}`
   return {
     read: async (checkpoint) => {
       if (!checkpoint.key.startsWith(prefix))
@@ -35,9 +36,12 @@ export function checkpointStorage(
     write: async (bytes) => {
       if (bytes.length > MAX_CHECKPOINT) throw new Error("Checkpoint limit")
       const sha256 = await digest(bytes),
-        key = prefix + sha256 + ".tar.gz"
+        key = prefix + sha256 + (kind === "file" ? ".bin" : ".tar.gz")
       await bucket.put(key, bytes, {
-        httpMetadata: { contentType: "application/gzip" },
+        httpMetadata: {
+          contentType:
+            kind === "file" ? "application/octet-stream" : "application/gzip",
+        },
       })
       return { key, sha256, size: bytes.length, savedAt: Date.now() }
     },

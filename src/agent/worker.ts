@@ -80,6 +80,7 @@ import { SelectSkills, SkillConflict } from "../skills/contracts"
 import { readSkillJson, skillResponse, skillsRequest } from "../skills/http"
 import { importSkillsRequest } from "../skills/import"
 import { runCommand } from "../terminal/adapters/service"
+import { importWorkspaceFile } from "../terminal/file-import"
 import { Executions } from "../execution/execution"
 import { ExecutionStore } from "../execution/adapters/sqlite"
 import { codeService } from "../execution/adapters/service"
@@ -1095,6 +1096,23 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             this.ctx.waitUntil(task)
           )
         )
+      if (path === "terminal/files/import" && request.method === "POST") {
+        const response = this.workspaceRuntime.runPromise(
+          importWorkspaceFile(
+            request,
+            this.env.TERMINAL_SERVICE,
+            this.ctx.id.toString(),
+            () => this.botConfiguration.read()?.status !== "archived"
+          )
+        )
+        this.ctx.waitUntil(
+          response.then(
+            () => {},
+            () => {}
+          )
+        )
+        return response
+      }
       if (path === "terminal" || path.startsWith("terminal/"))
         return this.env.TERMINAL_SERVICE.fetch(
           new Request(

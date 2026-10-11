@@ -22,7 +22,8 @@ export class LinuxSandbox extends BaseSandbox<TerminalEnv> {
   private readonly terminal = new Terminal(
     new TerminalStore(this.db),
     sandboxRuntime(this),
-    checkpointStorage(this.env.BACKUPS, this.ctx.id.toString())
+    checkpointStorage(this.env.BACKUPS, this.ctx.id.toString()),
+    checkpointStorage(this.env.BACKUPS, this.ctx.id.toString(), "file")
   )
   constructor(
     ctx: ConstructorParameters<typeof BaseSandbox<TerminalEnv>>[0],
