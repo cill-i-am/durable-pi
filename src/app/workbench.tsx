@@ -49,12 +49,14 @@ export function WorkbenchPanel({
   onChange,
   agentName,
   locked,
+  mobileNavigation,
   children,
 }: {
   value: Workbench
   onChange: (value: Workbench | null) => void
   agentName: string
   locked: boolean
+  mobileNavigation: ReactNode
   children: ReactNode
 }) {
   const container = useRef<HTMLDivElement>(null)
@@ -99,6 +101,10 @@ export function WorkbenchPanel({
             className="workbench-tabs"
           >
             <div className="workbench-tabbar">
+              <div className="mobile-workbench-heading">
+                <strong>Workspace</strong>
+                <span>{agentName}</span>
+              </div>
               <div className="workbench-tab-scroll">
                 <TabsList variant="line" aria-label="Workbench tools">
                   {tabs.map((tab) => (
@@ -150,6 +156,7 @@ export function WorkbenchPanel({
               {children}
             </TabsContent>
           </Tabs>
+          {mobileNavigation}
         </SheetContent>
       </Sheet>
     </div>

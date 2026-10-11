@@ -1918,3 +1918,204 @@ body {
 .checklist-row [data-slot="checkbox"]:not([data-checked]) {
   border-color: var(--muted-foreground);
 }
+
+/* Paper 28–30: mobile chat and workbench keep the same feature instances. */
+.mobile-navigation,
+.mobile-chat-options,
+.mobile-workbench-heading {
+  display: none;
+}
+.chat-actions[hidden] {
+  display: none;
+}
+@media (max-width: 767px) {
+  .workspace-shell {
+    height: 100dvh;
+    padding-top: env(safe-area-inset-top);
+  }
+  .workspace-main .chat-header {
+    min-height: 64px;
+    height: auto;
+    padding: 10px 12px;
+    gap: 0;
+    flex-wrap: wrap;
+  }
+  .chat-identity {
+    width: auto;
+    flex: 1;
+    gap: 8px;
+    min-width: 0;
+  }
+  .chat-identity h1 {
+    font-size: 16px;
+    line-height: 23px;
+  }
+  .chat-identity .agent-mark {
+    width: 28px;
+    height: 28px;
+  }
+  .chat-identity [data-slot="badge"] {
+    max-width: 88px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 11px;
+  }
+  .mobile-chat-options {
+    display: inline-flex;
+    width: 44px;
+    height: 44px;
+  }
+  .chat-identity [data-slot="sidebar-trigger"] {
+    width: 36px;
+    height: 44px;
+  }
+  .chat-actions {
+    width: 100%;
+    margin: 8px 0 0;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+    justify-content: space-between;
+    gap: 4px;
+  }
+  .chat-actions > button {
+    min-width: 44px;
+    min-height: 44px;
+    padding-inline: 10px;
+  }
+  .chat-actions .chat-action-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+  .workspace-main .conversation-content {
+    padding: 20px 16px 24px;
+  }
+  .workspace-main .composer-area {
+    padding: 8px 16px 10px;
+    gap: 6px;
+  }
+  .composer-model > button {
+    min-height: 44px;
+  }
+  .composer-send {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .mobile-navigation {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: space-around;
+    gap: 4px;
+    min-height: 54px;
+    padding: 0 16px env(safe-area-inset-bottom);
+    border-top: 1px solid var(--border);
+    background: var(--background);
+  }
+  .mobile-navigation button {
+    flex: 1;
+    min-width: 0;
+    height: 54px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 4px 8px;
+    color: var(--muted-foreground);
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 15px;
+    border-radius: 0;
+  }
+  .mobile-navigation button svg {
+    width: 19px;
+    height: 19px;
+  }
+  .mobile-navigation button[aria-current="page"] {
+    color: var(--primary-hover);
+  }
+  .workbench-sheet[data-slot="sheet-content"] {
+    height: 100dvh;
+    padding-top: env(safe-area-inset-top);
+  }
+  .workbench-tabs {
+    flex: 1;
+    height: auto;
+  }
+  .workbench-tabbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 44px 44px;
+    grid-template-rows: 56px 48px;
+    height: 104px;
+    gap: 0;
+    padding-inline: 12px;
+  }
+  .mobile-workbench-heading {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 1px;
+    grid-row: 1;
+    grid-column: 1;
+  }
+  .mobile-workbench-heading strong {
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 23px;
+  }
+  .mobile-workbench-heading span {
+    font-size: 11px;
+    line-height: 15px;
+    color: var(--muted-foreground);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .workbench-tabbar > button {
+    grid-row: 1;
+    width: 44px;
+    height: 44px;
+  }
+  .workbench-tabbar > button:last-child {
+    grid-column: 3;
+  }
+  .workbench-tab-scroll {
+    grid-row: 2;
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+  .workbench-tabbar [data-slot="tabs-list"] {
+    width: 100%;
+    gap: 0;
+  }
+  .workbench-tabbar [data-slot="tabs-trigger"] {
+    min-width: 0;
+    flex: 1;
+    flex-direction: column;
+    gap: 2px;
+    padding: 4px 2px;
+    font-size: 11px;
+    line-height: 14px;
+  }
+  .workbench-tabbar [data-slot="tabs-trigger"] svg {
+    width: 16px;
+    height: 16px;
+  }
+  .workbench-sheet .mobile-navigation {
+    width: 100%;
+  }
+  .workbench-sheet .workbench-body {
+    padding-bottom: 20px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

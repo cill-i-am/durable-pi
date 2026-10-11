@@ -18,6 +18,7 @@ import {
   Upload,
   Files,
   BookOpen,
+  Ellipsis,
 } from "lucide-react"
 import type { useConversation } from "./use-conversation"
 import { TurnReply } from "./turn-reply"
@@ -43,6 +44,12 @@ import { ConnectionsPanel } from "@/features/connections"
 import { SkillsPanel } from "@/features/skills"
 import { AccessPanel, ApprovalCard } from "@/features/access"
 import { SidebarTrigger } from "@/components/ui/sidebar"
+import { useIsMobile } from "@/hooks/use-mobile"
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+} from "@/components/ui/collapsible"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -91,6 +98,8 @@ export function Conversation({
   onOpenWorkbench: (value: "files" | "memory") => void
 }) {
   const api = useMemo(() => agentApi(agent.id), [agent.id])
+  const isMobile = useIsMobile()
+  const [actionsOpen, setActionsOpen] = useState(false)
   const [draft, setDraft] = useState("")
   const composerInput = useRef<HTMLTextAreaElement>(null)
   const [dragging, setDragging] = useState(false)
@@ -195,7 +204,12 @@ export function Conversation({
           <span>Images, videos and documents · up to 8 MB each</span>
         </div>
       )}
-      <header className="chat-header">
+      <Collapsible
+        render={<header />}
+        className="chat-header"
+        open={!isMobile || actionsOpen}
+        onOpenChange={(open) => setActionsOpen(open)}
+      >
         <div className="chat-identity flex min-w-0 items-center gap-3">
           <SidebarTrigger />
           <AgentMark tone={agentTone(agent.id)} />
@@ -212,7 +226,18 @@ export function Conversation({
                   : "Ready"}
           </Badge>
         </div>
-        <div className="chat-actions flex max-w-full shrink-0 flex-wrap items-center justify-end">
+        <CollapsibleTrigger
+          className="mobile-chat-options"
+          render={
+            <Button variant="ghost" size="icon" aria-label="Agent tools" />
+          }
+        >
+          <Ellipsis />
+        </CollapsibleTrigger>
+        <CollapsibleContent
+          keepMounted
+          className="chat-actions flex max-w-full shrink-0 flex-wrap items-center justify-end"
+        >
           {workbenchAction}
           <AccessPanel
             agentId={agent.id}
@@ -244,8 +269,8 @@ export function Conversation({
             <BookOpen />
             <span className="chat-action-label">Memory</span>
           </Button>
-        </div>
-      </header>
+        </CollapsibleContent>
+      </Collapsible>
       <MessageScrollerProvider autoScroll>
         <MessageScroller className="conversation-scroller">
           <MessageScrollerViewport>
