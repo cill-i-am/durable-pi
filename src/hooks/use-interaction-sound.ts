@@ -10,7 +10,7 @@ const closeAudio = async (audio: AudioContext) => {
   }
 }
 
-/** The short password-toggle click used in Meal Planner. */
+/** The short interaction click used in Meal Planner. */
 export const useInteractionSound = () => {
   const context = useRef<AudioContext | null>(null)
 

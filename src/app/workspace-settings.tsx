@@ -248,8 +248,8 @@ export function WorkspaceSettings({
                   <div>
                     <h3>Interaction sounds</h3>
                     <p>
-                      A short click when you reveal or hide a password.
-                      Remembered on this device.
+                      A short click when you copy a response or reveal or hide a
+                      password. Remembered on this device.
                     </p>
                     <Button
                       type="button"
