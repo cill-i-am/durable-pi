@@ -1812,7 +1812,15 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     await this.configureBot(id === homeAgentId ? "" : owner, profile)
     this.bindCommunicationIdentity(owner, id)
   }
-  async configureBot(owner: string, profile: AgentProfile) {
+  async configureBot(
+    owner: string,
+    profile: AgentProfile,
+    communicationOwner?: string
+  ) {
+    // Older DO versions safely ignore this additive argument during rollout.
+    // Never require a newly introduced RPC method on every existing chat request.
+    if (communicationOwner)
+      this.bindCommunicationIdentity(communicationOwner, profile.id)
     this.botConfiguration.configure(owner, profile)
     const current = this.botConfiguration.read()!
     if (current.status === "archived") this.webApps.invalidate()
@@ -2890,8 +2898,11 @@ export default {
         )
           return new Response("Unauthorized", { status: 401 })
       }
-      await target.configureBot(agent.id === homeAgentId ? "" : owner, agent)
-      await target.bindCommunicationIdentity(owner, agent.id)
+      await target.configureBot(
+        agent.id === homeAgentId ? "" : owner,
+        agent,
+        owner
+      )
       return await target.fetch(request)
     } catch {
       return Response.json(

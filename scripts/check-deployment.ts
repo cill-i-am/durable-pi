@@ -32,6 +32,8 @@ if (process.env.LEGACY_APP_URL) {
 }
 for (const path of [
   "state",
+  "communication",
+  "communication/synthetic-task",
   "activity",
   "activity?scope=all",
   "activity/conversations/00000000-0000-4000-8000-000000000001",
@@ -79,6 +81,20 @@ for (const action of ["control", "stop", "retry"]) {
     403
   )
 }
+assert.equal(
+  (await request("/api/agent/communication/control", {})).status,
+  401
+)
+assert.equal(
+  (
+    await request(
+      "/api/agent/communication/control",
+      {},
+      "https://attacker.invalid"
+    )
+  ).status,
+  403
+)
 assert.equal((await request("/api/agent/import", {})).status, 401)
 assert.equal((await request("/api/agent/objects/mutate", {})).status, 401)
 assert.equal((await request("/api/agent/objects/cancel", {})).status, 401)

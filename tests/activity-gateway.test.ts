@@ -105,3 +105,31 @@ it("requires authentication and read methods, and reports unknown conversation I
   ).toBe(404)
   expect(f.read).not.toHaveBeenCalled()
 })
+
+it("keeps ordinary chat available when a new gateway reaches a previous-version Durable Object", async () => {
+  const configureBot = vi.fn(
+    async (_owner: string, _profile: typeof first) => {}
+  )
+  const fetch = vi.fn(async () => Response.json({ turns: [] }))
+  const previousVersion = { configureBot, fetch }
+  const env = {
+    AGENT: {
+      getByName: (name: string) =>
+        name === "owner-a"
+          ? { agentProfile: async () => first }
+          : previousVersion,
+    },
+  } as unknown as AgentEnv
+  const result = await service.fetch(
+    new Request(`https://internal/api/agent/state?agent=${first.id}`, {
+      headers: { "x-owner-id": "owner-a" },
+    }),
+    env
+  )
+  expect(result.status).toBe(200)
+  expect(fetch).toHaveBeenCalledOnce()
+  // The previous version ignores the additive third argument. The current
+  // version validates it against the actual DO ID before persisting identity.
+  expect(configureBot.mock.calls[0]).toEqual(["owner-a", first, "owner-a"])
+  expect("bindCommunicationIdentity" in previousVersion).toBe(false)
+})
