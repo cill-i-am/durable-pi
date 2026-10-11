@@ -5,6 +5,7 @@ import type { ChatState } from "@/conversations/contracts"
 import { Markdown } from "@/components/markdown"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useInteractionSound } from "@/hooks/use-interaction-sound"
 import {
   Message,
   MessageContent,
@@ -137,6 +138,7 @@ export function TurnReply({
 }
 function CopyReply({ text }: { text: string }) {
   const [status, setStatus] = useState<"ready" | "copied" | "failed">("ready")
+  const playInteractionSound = useInteractionSound()
   return (
     <Button
       variant="ghost"
@@ -148,12 +150,13 @@ function CopyReply({ text }: { text: string }) {
             ? "Copy failed. Try again"
             : "Copy response"
       }
-      onClick={() =>
+      onClick={() => {
+        void playInteractionSound()
         void navigator.clipboard.writeText(text).then(
           () => setStatus("copied"),
           () => setStatus("failed")
         )
-      }
+      }}
     >
       {status === "copied" ? <Check /> : <Copy />}
     </Button>
