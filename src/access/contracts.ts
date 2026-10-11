@@ -62,6 +62,31 @@ export class AccessConflict extends Schema.TaggedError<AccessConflict>()(
 
 export const builtInTools = [
   {
+    name: "list_apps",
+    title: "List private apps",
+    description: "List this bot's generated apps.",
+    mode: "allow",
+  },
+  {
+    name: "read_app",
+    title: "Read private app",
+    description: "Read an app definition, saved state and interactions.",
+    mode: "allow",
+  },
+  {
+    name: "save_app",
+    title: "Save app draft",
+    description: "Create a versioned private app using bounded UI components.",
+    mode: "allow",
+  },
+  {
+    name: "publish_app",
+    title: "Publish private app",
+    description:
+      "Make a saved app version interactive for the owner; it remains private.",
+    mode: "ask",
+  },
+  {
     name: "run_code",
     title: "Run isolated code",
     description:

@@ -48,7 +48,7 @@ For the initial local-to-remote state migration, `scripts/migrate-production-sta
 - Better Auth sessions backed by D1. An authenticated server route forwards to a Worker with both public and preview URLs disabled. Bot objects are addressed from the authenticated owner ID and a validated catalog identity. The default bot retains its original object ID.
 - Server-side ChatGPT credentials with one account-level refresh owner and durable token rotation shared by all bots. API-key credentials are also supported through the same private configuration.
 
-The current slices include live reply updates, mid-run steering, images, video storage, private files, searchable PDF text, reusable skills, tool approvals, per-bot MCP tools, a Cloudflare browser with owner takeover, and isolated JavaScript execution. Shell execution, video processing, generated apps, messaging channels, and scheduled autonomous tasks are still being built; see [BUILD.md](BUILD.md).
+The current slices include live reply updates, mid-run steering, images, video storage, private files, searchable PDF text, reusable skills, tool approvals, per-bot MCP tools, a Cloudflare browser with owner takeover, isolated JavaScript execution, and versioned private apps. Shell execution, video processing, arbitrary generated web code, messaging channels, and scheduled autonomous tasks are still being built; see [BUILD.md](BUILD.md).
 
 ## Memory design
 
@@ -111,7 +111,7 @@ Imports copy only the main SKILL.md, with a 16,000-character limit. Reference fi
 
 ## Browser workbench
 
-Open **Browser** beside a bot and choose its allowed sites (up to 20 exact hostnames). Its private Cloudflare Chromium session navigates HTTPS pages, returns bounded text/links and captures screenshots. The bot's `browser_open`, `browser_read` and `browser_interact` tools use the same session and ask for approval by default. Page content is untrusted data, never permission or instructions.
+Open **Workbench → Browser** beside a bot and choose its allowed sites (up to 20 exact hostnames). Its private Cloudflare Chromium session navigates HTTPS pages, returns bounded text/links and captures screenshots. The bot's `browser_open`, `browser_read` and `browser_interact` tools use the same session and ask for approval by default. Page content is untrusted data, never permission or instructions.
 
 Sessions expire after two idle minutes or ten minutes total. **Close session** revokes pending work and clears the preview; hiding the panel leaves the session until expiry. Changing destinations retires the previous session. Archiving also schedules cleanup. Session handles never enter browser JSON or model context. Screenshots require the authenticated owner and exact current capture version.
 
@@ -123,7 +123,7 @@ Choose **Take control** to pause bot browser tools. Click the screenshot to focu
 
 ## Code workbench
 
-Open **Code** beside a bot, enter JavaScript and JSON input, then choose **Run code**. Use `input`, `console.log`, and `return`. The private Dynamic Worker receives only that explicit input: no network, filesystem, application bindings or model credentials. The bot's `run_code` tool uses the same execution context and asks for approval by default.
+Open **Workbench → Code** beside a bot, enter JavaScript and JSON input, then choose **Run code**. Use `input`, `console.log`, and `return`. The private Dynamic Worker receives only that explicit input: no network, filesystem, application bindings or model credentials. The bot's `run_code` tool uses the same execution context and asks for approval by default.
 
 Each bot retains code, input, output and status for up to 500 runs; the panel shows the latest 50. Repeating a request with its original ID reuses its result. Restarted incomplete runs become **interrupted**, without automatic re-execution. **Cancel run** commits cancellation and ignores late output. Inspect an uncertain result before starting another run.
 
@@ -136,3 +136,14 @@ Limits: 16,384 code characters, 32,768 input/result characters, 16,000 log chara
 This repository contains code and placeholder configuration. `.env*`, `.alchemy`, `.research`, local login identity, credentials, and databases are ignored. Run `node --env-file=.env --import tsx scripts/check-secrets.ts` before publishing: it checks tracked paths, common credential formats, and exact private configuration values without printing those values. It is a guardrail, not a substitute for reviewing the diff.
 
 The public browser bundle contains no model credentials. Chat history, memory, authentication records, and refreshed credentials are private Cloudflare runtime data. Local test accounts are disposable and separate from production. The initial UI shows the latest 100 turns; older messages remain searchable and available through `zoom`.
+
+
+## Private generated apps
+
+Open **Workbench → Apps** for a bot's private apps. Ask the bot to make a plan, checklist, table or form, or choose **New checklist**. Saving creates an immutable draft; publishing a saved version makes its controls usable. The bot asks before publishing by default. Completed publication tool calls also expose the app inline in the conversation. Everything remains behind owner authentication; no public app links are created.
+
+Checklists and forms save their state and queue an update to the owning bot. Updates wait while its model connection is unavailable and enter the normal conversation queue with the same tool approvals. Versions retain state only for matching component/item IDs. The version menu can preview or republish older definitions; it does not restore historical form answers. Archive disables interaction, and Restore makes the app usable again.
+
+Unsaved form edits stay on the version you opened. If app state changes in another view, choose **Use saved values** or **Keep my edits** before submitting. An unconfirmed request can be retried with the same identity, or resolved before a different change.
+
+This first renderer supports text, metrics, tables, checklists and forms, with no generated HTML/scripts or external resources. Limits are 50 apps per bot, 50 versions per app, 20 pending updates and 2,000 app mutation/cancellation receipts per bot. Free-form generated web applications are tracked separately in slice 08b.

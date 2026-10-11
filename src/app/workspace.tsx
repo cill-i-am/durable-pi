@@ -1,5 +1,13 @@
 import { useState } from "react"
-import { Globe, Code2 } from "lucide-react"
+import { Globe, Code2, PanelsTopLeft, PanelRight } from "lucide-react"
+import { AppsWorkbench } from "@/features/apps"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu"
 import { ExecutionWorkbench } from "@/features/execution"
 import { BrowserWorkbench } from "@/features/browser"
 import { authClient } from "@/auth/client"
@@ -126,7 +134,9 @@ function AgentWorkspace({
   agent: AgentProfile
   name: string
 }) {
-  const [workbench, setWorkbench] = useState<"browser" | "code" | null>(null)
+  const [workbench, setWorkbench] = useState<
+    "browser" | "code" | "apps" | null
+  >(null)
   const browserOpen = workbench === "browser"
   return (
     <div className={`agent-columns ${workbench ? "workbench-visible" : ""}`}>
@@ -134,34 +144,47 @@ function AgentWorkspace({
         name={name}
         agent={agent}
         workbenchAction={
-          <>
-            <Button
-              size="sm"
-              variant={browserOpen ? "secondary" : "ghost"}
-              aria-label="Browser workbench"
-              onClick={() =>
-                setWorkbench((value) =>
-                  value === "browser" ? null : "browser"
-                )
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  size="sm"
+                  variant={workbench ? "secondary" : "ghost"}
+                  aria-label="Open workbench"
+                />
               }
             >
-              <Globe />
-              <span className="hidden sm:inline">Browser</span>
-            </Button>
-            <Button
-              size="sm"
-              variant={workbench === "code" ? "secondary" : "ghost"}
-              aria-label="Code workbench"
-              onClick={() =>
-                setWorkbench((value) => (value === "code" ? null : "code"))
-              }
-            >
-              <Code2 />
-              <span className="hidden sm:inline">Code</span>
-            </Button>
-          </>
+              <PanelRight data-icon="inline-start" />
+              <span className="hidden sm:inline">Workbench</span>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuGroup>
+                <DropdownMenuItem onClick={() => setWorkbench("browser")}>
+                  <Globe /> Browser
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setWorkbench("code")}>
+                  <Code2 /> Code
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setWorkbench("apps")}>
+                  <PanelsTopLeft /> Apps
+                </DropdownMenuItem>
+                {workbench && (
+                  <DropdownMenuItem onClick={() => setWorkbench(null)}>
+                    Hide workbench
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
         }
       />
+      {workbench === "apps" && (
+        <AppsWorkbench
+          agentId={agent.id}
+          agentName={agent.name}
+          onClose={() => setWorkbench(null)}
+        />
+      )}
       {workbench === "code" && (
         <ExecutionWorkbench
           agentId={agent.id}

@@ -1,6 +1,6 @@
 # Durable Pi — build tracker
 
-Started 2026-10-10. Delivery owner: Codex. Status: **slices 01–06b including hosted skills deployed; isolated code execution in progress**.
+Started 2026-10-10. Delivery owner: Codex. Status: **slices 01–07a deployed; Linux/PTY/file transfer verified in PRs #15–17 pending container permissions; generated apps in progress**.
 
 ## Outcome
 
@@ -52,8 +52,8 @@ The owner requested password recovery before continuing. Implemented Better Auth
 | 04 — Reusable skills | Create/edit/attach skills to bots; durable revisions; selected skills enter context; import through the intended Executor source; scoped access and recovery. | 04a and 04b deployed |
 | 05 — Tools and approvals | Connect Executor/MCP; assign tools per bot; Allow/Ask/Deny enforced server-side; approval persists across reload/restart; background work cannot bypass approval; revoke access. | 05a and 05b deployed |
 | 06 — Browser | Bot browses on Cloudflare; observe and take over in the workbench; authenticated Chromium sessions; Kitesurf for compatible short tasks; session expiry/reconnect and destination controls. | 06a and 06b deployed |
-| 07 — Execution and terminal | Isolated fast code execution plus on-demand Linux container; live terminal; files persist across container restarts; bounded time/output/network; cancel and recover. | 07a verified locally; CI/deploy next. Linux/PTY follows in 07b |
-| 08 — Generated apps and inline UI | Bot creates, previews, updates and runs an app; versioned private publication; isolated execution/storage; inline UI uses a bounded renderer; interactions return events to the owning bot. | Planned |
+| 07 — Execution and terminal | Isolated fast code execution plus on-demand Linux container; live terminal; files persist across container restarts; bounded time/output/network; cancel and recover. | 07a deployed; 07b–07d verified in PRs #15–17, provisioning approval pending |
+| 08 — Generated apps and inline UI | Bot creates, previews, updates and runs an app; versioned private publication; isolated execution/storage; inline UI uses a bounded renderer; interactions return events to the owning bot. | 08a verified locally; CI/deployment next |
 | 09 — Routines and incoming events | Schedule/pause/delete routines; run with browser closed; authenticated webhook triggers; durable retry/deduplication; notify on meaningful outcomes; respect bot grants and budgets. | Planned |
 | 10 — Delegation | Explicit parent/child tasks; separate child memory/tool grants; bounded concurrency; steer/stop children; deliver completed reports once after restart. | Planned |
 | 11 — Activity and recovery | Per-bot/global activity; inspect tool outcomes and approvals; recover interrupted work; expose actionable connection/backup failures; inspect/export memory and workspace. | Planned |
@@ -271,7 +271,7 @@ Verification for 06b:
 
 ### 07a — Isolated JavaScript execution
 
-Implemented and verified locally; CI/deployment next. A bot/owner can run bounded JavaScript against explicit JSON input, see code/result/log history, cancel, and recover interrupted runs without implicit re-execution. Ask-by-default Pi tool and authenticated Code workbench share one bot-local execution context. Persist admission before dispatch and retain 500 immutable run records (latest 50 in the list). New work cannot access sibling bots or inherit storage, credentials or network. Private ExecutionWorker with Worker Loader owns isolation and platform CPU limits. Runtime receives only the provided input. Full Linux/PTY, persistent files and media preprocessing follow in 07b/03c.
+Deployed in PR #14, main `989e6d4`; production run `38106140200` succeeded. A bot/owner can run bounded JavaScript against explicit JSON input, see code/result/log history, cancel, and recover interrupted runs without implicit re-execution. Ask-by-default Pi tool and authenticated Code workbench share one bot-local execution context. Persist admission before dispatch and retain 500 immutable run records (latest 50 in the list). New work cannot access sibling bots or inherit storage, credentials or network. Private ExecutionWorker with Worker Loader owns isolation and platform CPU limits. Runtime receives only the provided input. Full Linux/PTY, persistent files and media preprocessing follow in 07b/03c.
 
 Limits: one active run per bot, 16,384 code characters, 32,768 JSON input/result characters, 16,000 log characters, 1 second CPU and 10 seconds elapsed. Host independently bounds untrusted output. No automatic retry after a restart or uncertain response. An explicit new run receives a new ID.
 
@@ -285,3 +285,24 @@ Verification for 07a:
 - Independent backend review reproduced implicit reruns through generated 307 redirects and an immediate-Stop race. Manual redirect rejection and synchronous abort binding fix both; follow-up native/unit checks pass. Frontend review corrected desktop containment and mobile sheet width; both reviews closed.
 - Browser verified run → result 6 → console output → stored code/input. Phone 390×844 verified a running command and Cancel with a full-width sheet and no horizontal overflow; temporary viewport override removed.
 - A private ExecutionWorker and Worker Loader binding use existing Workers deployment permissions. Existing infrastructure identities stay unchanged. Changed-file formatting passes; pre-existing formatting warnings and build chunk-size advisory remain outside this slice.
+
+
+### 07b–07d — Linux, interactive terminal and private file transfer
+
+Locally implemented and reviewed in [PR #15](https://github.com/cill-i-am/durable-pi/pull/15), [PR #16](https://github.com/cill-i-am/durable-pi/pull/16), and [PR #17](https://github.com/cill-i-am/durable-pi/pull/17). The stack includes bounded Linux commands, workspace checkpoints, a live PTY with save/discard, owner-only import/export, and reconnect/cancellation recovery. Native Docker/workerd/R2 checks and desktop/mobile journeys passed; detailed evidence lives on those branches. Cloudflare deployment waits on the pending request for Workers Containers Read/Write. No production terminal capability is claimed yet.
+
+### 08a — Private generated apps and inline UI
+
+Implementation and verification in progress. Bot-local immutable app definitions support plain text, metrics, tables, checklists and forms. Saving creates a draft; publication chooses a saved version privately. A bounded React renderer uses shadcn/Base UI and executes no generated scripts, HTML, resource URLs or network requests. Owner interactions commit app state and an event outbox together; a durable lifecycle runner admits each event once to the owning bot's normal conversation queue. Existing tool policies apply, and `publish_app` defaults to Ask. Offline model connections retain events.
+
+Limits: 50 apps per bot, 50 saved versions per app, 20 blocks/24,000 definition characters, 64,000 saved-state characters, 20 pending bot updates, 2,000 mutation/cancellation receipts per bot. Model reads use bounded JSON-text pages with snapshot hashes. The workbench and inline publication result both read the same private version/state. Draft edits stay private until publication. No new infrastructure or permission.
+
+Acceptance: owner authentication and per-bot isolation; draft/publish/rollback/archive; state retained only for declared stable component keys; exact request replay and cancellation tombstones; transactional event admission/restart; oversized/invalid data fails without poisoning state; dirty forms keep their baseline through polling and desktop/mobile layout changes. Arbitrary generated web code and its isolated runtime remain 08b.
+
+Verification for 08a:
+
+- 229 tests pass, including native Pi draft creation, Ask-before-publication, harness restart, approval replay and the actual committed result rendering as an inline app reference. Synthetic model only; no owner credential or live inference.
+- `scripts/check-apps.ts` passes through authenticated local workerd: draft/publish/version history, checklist/form persistence, replay/conflict, cancellation tombstones, isolated bot catalogs, archived-bot rejection, anonymous 401 and foreign-origin 403. Offline events remain durable and pending. Unit tests prove transactional conversation admission/rollback and restart without duplicate turns.
+- Backend review corrected escaped oversized event admission, repeated form labels, and large tool-result truncation. Model reads now page bounded text with a snapshot checksum. Frontend review corrected late creation completion, stale form overwrites, background version switching and premature mutation unlock. Focused re-reviews closed.
+- Browser verified create → preview → publish → interact, persistence after reload, form save at 390×844, dirty draft preservation across desktop/mobile transitions, concurrent form-update conflict, and background publication without replacing the open version or unsent text. Mobile panel and document both measure 390 px; desktop toolbar wraps without clipping. Temporary viewport overrides removed.
+- Typecheck, lint and production build passed. Existing chunk-size advisory remains. No new Cloudflare resources or permissions; Linux PRs remain separate and pending provisioning approval.

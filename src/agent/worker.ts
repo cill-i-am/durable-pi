@@ -89,6 +89,9 @@ import { CloudflareBrowser } from "../browser/adapters/cloudflare"
 import { BrowserInteraction } from "../browser/contracts"
 import { browserResult } from "../browser/adapters/pi"
 import { browserRequest } from "../browser/http"
+import { AppStore } from "../apps/adapters/sqlite"
+import { appsRequest } from "../apps/http"
+import { appTools } from "../apps/tools"
 import { SYSTEM_PROMPT } from "./prompts"
 import { importHistory, ImportInput } from "../memory/import"
 import { pumpSummaries } from "../memory/compaction"
@@ -149,6 +152,40 @@ class TurnRunner extends LifecycleCapability {
     } finally {
       this.owner.notifyConversation()
     }
+  }
+}
+
+class AppEventRunner extends TurnRunner {
+  constructor(owner: PersonalAgent) {
+    super(owner, "app-events")
+  }
+  async onJob(): Promise<LifecycleJobOutcome> {
+    const owner = this.owner
+    if (
+      owner.botConfiguration.read()?.status === "archived" ||
+      !owner.apps.pending().length
+    )
+      return
+    if (!(await owner.modelConnected()))
+      return { rescheduleAt: Date.now() + 60_000 }
+    await owner.runner.wake()
+    try {
+      owner.apps.deliverNext((event) =>
+        owner.conversations.admit(
+          { operationId: event.turnId, text: event.text },
+          undefined,
+          owner.skills.selection().skills
+        )
+      )
+    } catch (cause) {
+      if (cause instanceof ConversationFull)
+        return { rescheduleAt: Date.now() + 10_000 }
+      throw cause
+    }
+    owner.notifyConversation()
+    return owner.apps.pending().length
+      ? { rescheduleAt: Date.now() + 100 }
+      : undefined
   }
 }
 
@@ -339,6 +376,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       documentService(this.env.DOCUMENT_SERVICE)
     )
   )
+  readonly apps = new AppStore(
+    this.db,
+    () => this.botConfiguration.read()?.status !== "archived"
+  )
   readonly executions = new Executions(
     new ExecutionStore(this.db),
     codeService(this.env.EXECUTION_SERVICE),
@@ -401,6 +442,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           { key: "preamble", render: () => SYSTEM_PROMPT, tag: false },
         ],
         tools: [
+          ...appTools(this.apps),
           defineTool({
             name: "list_files",
             description:
@@ -679,6 +721,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   readonly backups = new BackupRunner(this)
   readonly extraction = new ExtractionRunner(this)
   readonly browserCleanup = new BrowserRunner(this)
+  readonly appEvents = new AppEventRunner(this)
   readonly lifecycle = Lifecycle.install(this)
     .use(this.mcp)
     .use(this.harness)
@@ -687,6 +730,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     .use(this.backups)
     .use(this.extraction)
     .use(this.browserCleanup)
+    .use(this.appEvents)
 
   private readonly conversationListeners = new Set<() => void>()
   notifyConversation() {
@@ -707,6 +751,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   }
 
   async onStart() {
+    if (this.apps.pending().length) await this.appEvents.wake()
     this.executions.recover()
     this.browser.recover()
     if (
@@ -905,6 +950,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   async configureBot(owner: string, profile: AgentProfile) {
     this.botConfiguration.configure(owner, profile)
     if (profile.status === "archived") await this.browserCleanup.wake()
+    else if (this.apps.pending().length) await this.appEvents.wake()
   }
 
   resolveSkillVersions(references: SelectSkills["skills"]): SkillResolution {
@@ -979,6 +1025,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         if (result.ok && request.method !== "GET") await this.runner.wake()
         return result
       }
+      if (path === "apps" || path.startsWith("apps/"))
+        return Effect.runPromise(
+          appsRequest(this.apps, request, path, () => this.appEvents.wake())
+        )
       if (path === "execution" || path.startsWith("execution/"))
         return Effect.runPromise(
           executionRequest(this.executions, request, path, (task) =>
