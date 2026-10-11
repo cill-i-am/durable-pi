@@ -143,7 +143,7 @@ export function Conversation({
                   : "Ready"}
           </Badge>
         </div>
-        <div className="chat-actions flex shrink-0 items-center">
+        <div className="chat-actions flex max-w-full shrink-0 flex-wrap items-center justify-end">
           {workbenchAction}
           <AccessPanel
             agentId={agent.id}
