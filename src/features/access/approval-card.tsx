@@ -10,11 +10,13 @@ export function ApprovalCard({
   agentId,
   onDecided,
   disabled,
+  toolLabel,
 }: {
   approval: Approval
   agentId: string
   onDecided: () => void
   disabled: boolean
+  toolLabel?: string
 }) {
   const [busy, setBusy] = useState(false)
   const [confirmed, setConfirmed] = useState<ConfirmedDecision | null>(null)
@@ -46,7 +48,7 @@ export function ApprovalCard({
   const approved = decided === true || approval.status === "approved"
   return (
     <section
-      aria-label={`Approval for ${approval.tool}`}
+      aria-label={`Approval for ${toolLabel ?? approval.tool}`}
       className="my-4 space-y-3 rounded-xl border border-primary/25 bg-muted/30 p-4"
     >
       <div className="flex items-center gap-2 text-sm font-medium">
@@ -58,8 +60,8 @@ export function ApprovalCard({
             : "Your approval is needed"}
       </div>
       <p className="text-sm">
-        Run <strong className="font-mono">{approval.tool}</strong> with these
-        inputs?
+        Run <strong className="font-mono">{toolLabel ?? approval.tool}</strong>{" "}
+        with these inputs?
       </p>
       <pre className="max-h-64 overflow-auto rounded-md bg-background p-3 font-mono text-xs break-all whitespace-pre-wrap">
         {formatInput(approval.input)}

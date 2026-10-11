@@ -20,6 +20,7 @@ import {
   UploadStatus,
   FileAttachments,
 } from "@/features/files"
+import { ConnectionsPanel } from "@/features/connections"
 import { SkillsPanel } from "@/features/skills"
 import { AccessPanel, ApprovalCard } from "@/features/access"
 import { MemoryPanel } from "@/features/memory"
@@ -147,6 +148,11 @@ export function Conversation({
             tools={state?.access?.tools}
             onSaved={reload}
           />
+          <ConnectionsPanel
+            agentId={agent.id}
+            agentName={agent.name}
+            onSaved={reload}
+          />
           <SkillsPanel agentId={agent.id} agentName={agent.name} />
           <FilesPanel
             state={files}
@@ -234,6 +240,12 @@ export function Conversation({
                   >
                     <TurnReply
                       turn={turn}
+                      toolTitles={Object.fromEntries(
+                        (state.access?.tools ?? []).map((tool) => [
+                          tool.name,
+                          tool.title ?? tool.name,
+                        ])
+                      )}
                       agentName={agent.name}
                       agentId={agent.id}
                       onRetry={(id) => void retry(id)}
@@ -246,6 +258,11 @@ export function Conversation({
                         <ApprovalCard
                           key={approval.id}
                           approval={approval}
+                          toolLabel={
+                            state.access?.tools.find(
+                              (tool) => tool.name === approval.tool
+                            )?.title
+                          }
                           agentId={agent.id}
                           onDecided={reload}
                           disabled={

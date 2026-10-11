@@ -244,4 +244,14 @@ export class AccessStore {
       turnId
     )
   }
+  revoke(name: string) {
+    this.db.run(
+      "UPDATE tool_grants SET mode='ask',revision=revision+1 WHERE name=?",
+      name
+    )
+    this.db.run(
+      "UPDATE tool_operations SET status='denied',revision=revision+1 WHERE tool=? AND status IN ('pending','approved')",
+      name
+    )
+  }
 }

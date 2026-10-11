@@ -11,12 +11,14 @@ async function handle(request: Request) {
   const headers = new Headers({
     "content-type": request.headers.get("content-type") ?? "application/json",
     "x-owner-id": user.id,
+    "x-app-origin": new URL(env.APP_URL).origin,
   })
   const response = await env.AGENT_SERVICE.fetch(
     new Request(
       `https://agent.internal${new URL(request.url).pathname}${new URL(request.url).search}`,
       {
         method: request.method,
+        redirect: "manual",
         headers,
         signal: request.signal,
         body: request.method === "GET" ? undefined : request.body,

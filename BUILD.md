@@ -1,6 +1,6 @@
 # Durable Pi — build tracker
 
-Started 2026-10-10. Delivery owner: Codex. Status: **slices 01–04a deployed; tool permissions and durable approvals verified locally**.
+Started 2026-10-10. Delivery owner: Codex. Status: **slices 01–05a deployed; external MCP connections verified locally**.
 
 ## Outcome
 
@@ -50,7 +50,7 @@ The owner requested password recovery before continuing. Implemented Better Auth
 | 02 — Live conversation control | Text/thinking/tool events stream with reconnect; steer at tool boundaries or queue a follow-up; stop/retry without duplicate turns; archive preserves delivery order; model/reasoning selection. | Deployed |
 | 03 — Files and attachments | Upload images, videos and documents privately; validate size/type/path; preview/download/delete safely; reference assets in a turn; vision uses supported image blocks; video uses explicit frame/transcript extraction. | 03a–03b deployed; video preprocessing follows execution runtime |
 | 04 — Reusable skills | Create/edit/attach skills to bots; durable revisions; selected skills enter context; import through the intended Executor source; scoped access and recovery. | 04a deployed; Executor import follows the connection slice |
-| 05 — Tools and approvals | Connect Executor/MCP; assign tools per bot; Allow/Ask/Deny enforced server-side; approval persists across reload/restart; background work cannot bypass approval; revoke access. | 05a verified locally; external connections are 05b |
+| 05 — Tools and approvals | Connect Executor/MCP; assign tools per bot; Allow/Ask/Deny enforced server-side; approval persists across reload/restart; background work cannot bypass approval; revoke access. | 05a deployed; 05b verified locally |
 | 06 — Browser | Bot browses on Cloudflare; observe and take over in the workbench; authenticated Chromium sessions; Kitesurf for compatible short tasks; session expiry/reconnect and destination controls. | Planned |
 | 07 — Execution and terminal | Isolated fast code execution plus on-demand Linux container; live terminal; files persist across container restarts; bounded time/output/network; cancel and recover. | Planned |
 | 08 — Generated apps and inline UI | Bot creates, previews, updates and runs an app; versioned private publication; isolated execution/storage; inline UI uses a bounded renderer; interactions return events to the owning bot. | Planned |
@@ -204,4 +204,21 @@ Proof (2026-10-11):
 - Independent reviews caught and corrected large raw-result failure and a stuck approval card after a new policy round. Focused re-reviews passed.
 - Receipt capture currently covers explicit tool results, which all seven built-in tools return. Future streaming execution tools must include their output/diagnostic side channels in durable receipts. Executor/MCP connections and hosted skill import follow in 05b/04b.
 - Browser verified changing write_note to Ask and persistence across reload. A synthetic pending approval rendered its exact inputs and actions; native Pi tests, rather than that fixture, prove execution. At 390×844 the corrected header retained the bot name and had no horizontal overflow; the viewport was reset.
-- Typecheck, lint and production build passed. No new infrastructure or cloud permission. Secret scan and deployment pending.
+- Typecheck, lint, production build and secret scan passed. No new infrastructure or cloud permission. Delivered in PR #9, main `aa0358e`; production run `38099292561` succeeded.
+
+
+### 05b — External MCP connections
+
+The owner connects public HTTPS Streamable HTTP servers in **Connect**, completes provider OAuth if needed, and chooses up to 16 tools per bot. The account object owns native MCP transport/OAuth state; child bots keep pinned tool definitions. New and re-added tools default to Ask, and the existing durable approval gate owns their execution receipts. Connection generation and definition hashes invalidate stale selections after reconnect or schema changes. Removing a tool revokes waiting operations and resets any automatic grant.
+
+Native `MCPClientManager` persists discovery/credentials and handles issuer-bound OAuth, state and PKCE. The app accepts no endpoint credentials, query strings, custom ports, or private literal addresses; native SDK protections remain enabled. Tool errors omit provider internals. Model-visible text/images and structured-only JSON results pass through bounded receipts. Unsupported resource formats get an explicit placeholder. OAuth elicitation and scope expansion are not silently accepted. Already-dispatched remote work can finish after Stop/disconnect; interrupted outcomes must be checked at the remote service before retrying.
+
+Proof (2026-10-11):
+- 136 tests passed, including real Pi/SQLite restart with a remote JSON Schema, per-bot selection, stale updates, archival during resolution, revocation, grant reset and bounded result projection.
+- Local workerd connected to Cloudflare's public documentation MCP server, discovered real tools, selected a tool for one bot, verified default Ask and isolation, disconnected/reconnected with changed tool identity, rejected stale selection, archived-bot writes, forged callbacks, unauthenticated requests and foreign origins. The script is `scripts/check-connections.ts` and uses only the synthetic local account.
+- A separate native MCP manager/adapter probe executed the public documentation search and received usable model content. It used an in-memory SQLite fixture; this is not a hosted owner-model or owner-Executor connection claim.
+- Actual SDK OAuth tests simulate rotating tokens, differing concurrent flows, failed-flow cleanup, provider isolation, one-use state/PKCE, and disconnect during an in-flight token exchange. No real OAuth credentials are used.
+- Security review reproduced an upstream concurrent-refresh bug that can delete the winning refreshed credential. A narrow, pinned pnpm patch serializes SDK `auth()` per provider and shares identical in-flight requests; original issuer/PKCE validation remains intact. Re-evaluate/remove the patch when upgrading the SDK. A generation-bound native provider storage adapter also prevents stale SDK work from recreating or deleting credentials after disconnect/reconnect.
+- Native workerd rejects `redirect: error`; transport requests now use manual redirects. Website-to-agent forwarding preserves callback redirects for the browser. Independent focused reviews passed after fixes.
+- Browser verified a real discovered tool's selection, persistence after reload, and Ask state. At 390×844 the header and Connections sheet fit with no horizontal overflow; viewport reset. One transient unavailable selection during development reload recovered by reloading connections.
+- Typecheck, lint and production build passed. No new infrastructure or Cloudflare permission. Owner OAuth connections remain optional user setup, not a blocker for later slices. Secret scan passed for all 208 tracked files; deployment pending. Fresh-page browser logs contained no errors.
