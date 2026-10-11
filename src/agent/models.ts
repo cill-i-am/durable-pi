@@ -188,13 +188,15 @@ export function createAgentModels(
   credentials: CredentialStore,
   options: {
     contextWindow?: (model: string) => number | undefined
+    workingContextFloor?: () => number | undefined
     cacheKey?: string
     catalog?: () => Promise<ModelCatalog>
     beforeRequest?: (sessionId: string, signal?: AbortSignal) => Promise<void>
     onAttempt?: (
       model: string,
       thinking: ThinkingLevel,
-      purpose: "conversation" | "compaction" | "memory"
+      purpose: "conversation" | "compaction" | "memory",
+      sessionId?: string
     ) => ReturnType<InferenceUsage["start"]>
     onUsage?: (usage: CacheUsage) => void
   } = {}
@@ -221,13 +223,21 @@ export function createAgentModels(
     ...provider,
     auth: { ...provider.auth, oauth: workerChatGPTAuth },
     getModels: () =>
-      provider.getModels().map((model) => ({
-        ...model,
-        contextWindow: Math.min(
+      provider.getModels().map((model) => {
+        const floor = options.workingContextFloor?.()
+        const contextWindow = Math.min(
           model.contextWindow,
-          options.contextWindow?.(model.id) ?? model.contextWindow
-        ),
-      })),
+          options.contextWindow?.(model.id) ?? model.contextWindow,
+          floor ?? model.contextWindow
+        )
+        return {
+          ...model,
+          contextWindow,
+          // Preserve the actual output allowance for reasoning/output reserves.
+          // ChatGPT sign-in rejects max_output_tokens; metadata is not an output cap.
+          maxTokens: model.maxTokens,
+        }
+      }),
     streamSimple(model, context, request) {
       const thinking = request?.reasoning ?? "off"
       return provider.streamSimple(model, context, {
@@ -276,7 +286,8 @@ export function createAgentModels(
         ? "memory"
         : request?.cacheRetention === "none"
           ? "compaction"
-          : "conversation"
+          : "conversation",
+      request?.sessionId
     )
     let incomplete = false
     const native = nativeStream(model, context, {

@@ -13,8 +13,9 @@
     "typecheck": "tsc --noEmit",
     "deploy": "alchemy deploy --stage production --profile durable-pi",
     "test": "vitest run",
-    "verify": "pnpm generate-routes && pnpm typecheck && pnpm test && pnpm build",
-    "model:login": "tsx scripts/model-login.ts"
+    "verify": "pnpm generate-routes && pnpm typecheck && pnpm test && pnpm test:communication-runtime && pnpm build",
+    "model:login": "tsx scripts/model-login.ts",
+    "test:communication-runtime": "node scripts/test-communication-runtime.mjs"
   },
   "dependencies": {
     "@alchemy.run/frontend-frameworks": "2.0.0-beta.81",

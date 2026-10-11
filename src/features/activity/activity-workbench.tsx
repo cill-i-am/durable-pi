@@ -1,3 +1,4 @@
+import { BotTasks } from "./bot-tasks"
 import { ActivityTimeline } from "./activity-timeline"
 import type { ActivityAgent } from "@/activity/contracts"
 import { DelegatedWork } from "./delegated-work"
@@ -93,6 +94,14 @@ export function ActivityWorkbench({
             >
               <ArrowLeft /> Activity timeline
             </Button>
+            {!selected && (
+              <BotTasks
+                onOpenBot={onOpenBot}
+                key={`${agentId}:communication`}
+                agentId={agentId}
+                agents={agents}
+              />
+            )}
             {!selected && <DelegatedWork key={agentId} agentId={agentId} />}
             {!selected && (
               <DelegatedWork

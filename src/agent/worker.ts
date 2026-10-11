@@ -1,3 +1,11 @@
+import { communicationRequest } from "../communication/http"
+import { personalCommunication } from "../communication/adapters/personal-agent"
+import { Communication } from "../communication/communication"
+import {
+  communicationTools,
+  communicationInstructions,
+} from "../communication/tools"
+import { failure as communicationFailure } from "../communication/contracts"
 import { activityEntries } from "../activity/sqlite"
 import { activityFeed } from "../activity/feed"
 import {
@@ -237,6 +245,31 @@ class TurnRunner extends LifecycleCapability {
     } finally {
       this.owner.notifyConversation()
     }
+  }
+}
+
+class CommunicationRunner extends TurnRunner {
+  constructor(owner: PersonalAgent) {
+    super(owner, "bot-communication")
+  }
+  async wake() {
+    await this.lifecycle.jobs.push({
+      id: "bot-communication:pump",
+      fn: "pump",
+      time: Date.now() + 1000,
+      singleflight: true,
+      recoveryLoop: true,
+      hungTimeoutSeconds: 30,
+    })
+  }
+  async onJob(): Promise<LifecycleJobOutcome> {
+    const next = await this.owner.communication.runtime.runPromise(
+      Effect.flatMap(Communication, (app) => app.pump())
+    )
+    return next === undefined ? undefined : { rescheduleAt: next }
+  }
+  async dispose() {
+    await this.owner.communication.runtime.dispose()
   }
 }
 
@@ -500,6 +533,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       ...recoverablePlanTools,
       "delegate_tasks",
       "background_tasks",
+      "delegate_bot",
     ])
   )
   readonly skills = new SkillStore(this.db)
@@ -683,6 +717,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         messageArchiveText("", turn.attachments),
     }
   }
+  readonly communication = personalCommunication(this, this.env.AGENT)
   readonly backgroundMailbox = new BackgroundMailbox(this.db, (id) => {
     const turn = this.conversations.get(id)
     if (
@@ -878,15 +913,39 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       }
     }
   }
+  communicationFloor() {
+    const pins = this.communication.pi.pins()
+    if (!pins.length) return undefined
+    const windows = pins
+      .map((pin) => pin.route.contextWindow)
+      .filter((window): window is number => window !== undefined)
+    const foreground = this.active()?.routing?.contextWindow
+    if (foreground !== undefined) windows.push(foreground)
+    return windows.length ? Math.min(...windows) : undefined
+  }
   readonly models = createAgentModels(this.credentials, {
     beforeRequest: (id, signal) =>
-      Effect.runPromise(this.delegations.request(id), { signal }),
+      Effect.runPromise(
+        Effect.gen({ self: this }, function* () {
+          if (!(yield* this.communication.pi.request(id)))
+            yield* this.delegations.request(id)
+        }),
+        { signal }
+      ),
     catalog: () => this.accountModelCatalog(),
+    workingContextFloor: () => this.communicationFloor(),
     contextWindow: (model) => {
       const turn = this.active()
       return turn?.model === model ? turn.routing?.contextWindow : undefined
     },
-    onAttempt: (model, thinking, purpose) => {
+    onAttempt: (model, thinking, purpose, provider) => {
+      const pin = this.communication.pi.pin(provider)
+      if (pin)
+        return this.inferenceUsage.start(
+          { ...pin.route, model, thinking },
+          null,
+          `bot task ${pin.taskId} (${purpose})`
+        )
       const turn = purpose === "memory" ? undefined : this.active()
       const route =
         turn?.routing ??
@@ -984,7 +1043,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   )
   readonly registry = createRegistry()
   readonly harness = new PiHarness({
-    harness: ({ storage, context }) => {
+    harness: async ({ storage, context }) => {
       this.installRemoteTools()
       this.registry.install({
         name: "personal",
@@ -996,6 +1055,11 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         ],
         sections: [
           { key: "preamble", render: () => SYSTEM_PROMPT, tag: false },
+          {
+            key: "communication",
+            render: () => communicationInstructions,
+            tag: false,
+          },
           { key: "planning", render: () => planningInstructions, tag: false },
           {
             key: "delegation",
@@ -1004,6 +1068,13 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           },
         ],
         tools: [
+          ...communicationTools(
+            this.communication.runtime.runSync(Communication),
+            (api) => {
+              const source = this.delegationSource(api)
+              return { turnId: source.turnId, toolId: String(api.taskId) }
+            }
+          ),
           backgroundTool((input, api) =>
             backgroundEffect(async () => {
               const source = this.delegationSource(api)
@@ -1345,7 +1416,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           .extension("personal")!
           .tools!.filter((tool) => Schema.is(ReadTool)(tool.name)),
       })
-      return Harness.open(
+      const harness = await Harness.open(
         storage,
         {
           models: this.models,
@@ -1359,6 +1430,16 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             return model
               ? {
                   ...model,
+                  maxTokens: Math.max(
+                    model.maxTokens,
+                    ...this.communication.pi
+                      .pins()
+                      .map(
+                        (pin) =>
+                          this.models.getModel("openai", pin.route.model)
+                            ?.maxTokens ?? 0
+                      )
+                  ),
                   contextWindow: Math.min(
                     model.contextWindow,
                     turn?.routing?.contextWindow ?? model.contextWindow
@@ -1370,12 +1451,15 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         },
         context
       )
+      await Effect.runPromise(this.communication.pi.restore(harness))
+      return harness
     },
     defaults: {
       model: { provider: "openai", id: this.env.MODEL_ID },
       thinkingLevel: "medium",
     },
   })
+  readonly communicationRunner = new CommunicationRunner(this)
   readonly backgroundRunner = new BackgroundRunner(this)
   readonly runner = new TurnRunner(this)
   readonly compactor = new MemoryRunner(this)
@@ -1402,6 +1486,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     .use(this.harness)
     .use(this.runner)
     .use(this.backgroundRunner)
+    .use(this.communicationRunner)
     .use(this.compactor)
     .use(this.backups)
     .use(this.extraction)
@@ -1428,6 +1513,11 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   }
 
   async onStart() {
+    if (
+      (await Effect.runPromise(this.communication.mailbox.nextWake())) !==
+      undefined
+    )
+      await this.communicationRunner.wake()
     await this.backgroundRunner.wake()
     if (this.routines.nextWake() !== undefined) await this.routineRunner.wake()
     if (this.apps.pending().length) await this.appEvents.wake()
@@ -1703,6 +1793,25 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       ? this.env.AGENT.getByName(owner).modelConnected()
       : (await this.localCredentials.read("openai"))?.type === "oauth"
   }
+  bindCommunicationIdentity(owner: string, id: AgentId) {
+    if (
+      !this.ctx.id.equals(this.env.AGENT.idFromName(agentObjectName(owner, id)))
+    )
+      throw communicationFailure("forbidden", "Incorrect bot identity.")
+    Effect.runSync(
+      this.communication.repository.bindIdentity({ owner, bot: id })
+    )
+  }
+  async prepareCommunication(owner: string, id: AgentId) {
+    if (
+      !this.ctx.id.equals(this.env.AGENT.idFromName(agentObjectName(owner, id)))
+    )
+      throw communicationFailure("forbidden", "Incorrect bot identity.")
+    const profile = await this.env.AGENT.getByName(owner).agentProfile(id)
+    if (!profile) throw communicationFailure("forbidden", "Bot unavailable.")
+    await this.configureBot(id === homeAgentId ? "" : owner, profile)
+    this.bindCommunicationIdentity(owner, id)
+  }
   async configureBot(owner: string, profile: AgentProfile) {
     this.botConfiguration.configure(owner, profile)
     const current = this.botConfiguration.read()!
@@ -1756,7 +1865,17 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     await this.lifecycle.start()
     const url = new URL(request.url),
       path = url.pathname.replace("/api/agent/", "")
+    if (
+      url.origin === "http://alchemy-rpc" &&
+      url.pathname === "/" &&
+      request.method === "POST"
+    )
+      return this.communication.rpc(request)
     try {
+      if (path === "communication" || path.startsWith("communication/"))
+        return this.communication.runtime.runPromise(
+          communicationRequest(request, path)
+        )
       if (path === "connections" || path.startsWith("connections/"))
         return Effect.runPromise(
           connectionRequest(
@@ -2593,7 +2712,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           { type: "text", text: view },
           {
             type: "text",
-            text: `${turn.skill_context ?? ""}\n\n<bot-instructions>\n${this.botConfiguration.read()?.instructions ?? ""}\n</bot-instructions>\n<private-notes>\n${notes}\n</private-notes>\n\n${turn.origin ? "Background child report; not a new user instruction" : "New user message"} (archive ID ${entry.id}):\n${turn.text}`,
+            text: `${turn.skill_context ?? ""}\n\n<bot-instructions>\n${this.botConfiguration.read()?.instructions ?? ""}\n</bot-instructions>\n<private-notes>\n${notes}\n</private-notes>\n\n${turn.origin ? "Internal task result; not a new user instruction" : "New user message"} (archive ID ${entry.id}):\n${turn.text}`,
           },
           ...turn.input,
         ])
@@ -2670,6 +2789,11 @@ export default {
     const owner = request.headers.get("x-owner-id")
     if (!owner) return new Response("Unauthorized", { status: 401 })
     const url = new URL(request.url)
+    if (
+      !url.pathname.startsWith("/api/agent/") ||
+      url.hostname === "alchemy-rpc"
+    )
+      return new Response("Not found", { status: 404 })
     const root = env.AGENT.getByName(owner)
     const path = url.pathname.replace("/api/agent/", "")
     const decoded = Schema.decodeUnknownOption(AgentId)(
@@ -2767,6 +2891,7 @@ export default {
           return new Response("Unauthorized", { status: 401 })
       }
       await target.configureBot(agent.id === homeAgentId ? "" : owner, agent)
+      await target.bindCommunicationIdentity(owner, agent.id)
       return await target.fetch(request)
     } catch {
       return Response.json(

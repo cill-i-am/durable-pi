@@ -399,7 +399,10 @@ it("delivers a ready background report when a later foreground turn fails on blo
     await host.step()
     expect(conversations.get(foreground.id)?.status).toBe("failed")
     expect(mailbox.get(73)?.status).toBe("delivered")
-    expect(conversations.active()?.origin?.groupId).toBe(73)
+    expect(conversations.active()?.origin).toMatchObject({
+      kind: "background",
+      groupId: 73,
+    })
     expect(wakes).toContain(handoff.reportId)
     await host.stepBackground()
     expect(conversations.recent().filter((turn) => turn.origin)).toHaveLength(1)

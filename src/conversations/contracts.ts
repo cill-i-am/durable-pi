@@ -34,11 +34,18 @@ export type ChatTurn = {
   session_id: string | null
   prompt: string | null
 }
-export const TurnOrigin = Schema.Struct({
-  kind: Schema.Literal("background"),
-  groupId: Schema.Number,
-  turnId: Schema.String,
-})
+export const TurnOrigin = Schema.Union([
+  Schema.Struct({
+    kind: Schema.Literal("background"),
+    groupId: Schema.Number,
+    turnId: Schema.String,
+  }),
+  Schema.Struct({
+    kind: Schema.Literal("communication"),
+    taskId: Schema.String,
+    turnId: Schema.String,
+  }),
+])
 export type TurnOrigin = typeof TurnOrigin.Type
 export const TimelineItem = Schema.Union([
   Schema.Struct({
