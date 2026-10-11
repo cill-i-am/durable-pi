@@ -1,3 +1,5 @@
+import { Schema } from "effect"
+import { VideoResult } from "@/workspace/video"
 import { useEffect, useRef, useState } from "react"
 import {
   Download,
@@ -231,9 +233,9 @@ export function FilesPanel({
             )}
         </div>
         <div className="border-t p-4 text-xs text-muted-foreground">
-          Images, UTF-8 text and readable PDFs can be used by the bot. PDF
-          extraction reads up to 50 pages and 200,000 characters; scanned pages
-          need OCR. Videos and other documents are stored only.
+          Images, text, readable PDFs and prepared video frames can be used by
+          the bot. PDFs: up to 50 pages; no OCR. Videos: up to ten minutes, six
+          sampled frames and embedded text captions. Audio is not transcribed.
         </div>
       </SheetContent>
     </Sheet>
@@ -348,18 +350,25 @@ function FileRow({
                   <>
                     {(file.extraction?.status === "failed" ||
                       file.extraction?.status === "empty" ||
-                      legacyPdf(file)) && (
+                      legacyPdf(file) ||
+                      (file.kind === "video" &&
+                        (!file.video || file.video.status === "failed"))) && (
                       <Button
                         size="xs"
                         variant="outline"
                         disabled={busy}
                         onClick={() => void mutate("extract")}
                       >
-                        {legacyPdf(file) ? "Extract text" : "Retry extraction"}
+                        {file.kind === "video"
+                          ? "Prepare frames"
+                          : legacyPdf(file)
+                            ? "Extract text"
+                            : "Retry extraction"}
                       </Button>
                     )}
                     {(file.kind === "text" ||
-                      file.extraction?.status === "ready") && (
+                      file.extraction?.status === "ready" ||
+                      file.video?.status === "ready") && (
                       <Button size="xs" variant="ghost" onClick={onPreview}>
                         Preview
                       </Button>
@@ -446,6 +455,8 @@ function FilePreview({ file, agentId }: { file: FileInfo; agentId: string }) {
       })
     return () => controller.abort()
   }, [agentId, file.id, file.kind, file.extraction?.status])
+  if (file.kind === "video")
+    return <VideoPreview file={file} agentId={agentId} />
   return (
     <figure className="rounded-lg border p-3">
       <figcaption className="mb-2 truncate text-xs font-medium">
@@ -461,6 +472,78 @@ function FilePreview({ file, agentId }: { file: FileInfo; agentId: string }) {
         <pre className="max-h-80 overflow-auto text-xs break-all whitespace-pre-wrap">
           {error || text || "Loading…"}
         </pre>
+      )}
+    </figure>
+  )
+}
+
+function VideoPreview({ file, agentId }: { file: FileInfo; agentId: string }) {
+  const [video, setVideo] = useState<VideoResult | null>(null),
+    [error, setError] = useState("")
+  useEffect(() => {
+    const controller = new AbortController()
+    void agentApi(agentId)(
+      `files/${file.id}/video`,
+      undefined,
+      controller.signal
+    )
+      .then((value) => {
+        if (!controller.signal.aborted)
+          setVideo(Schema.decodeUnknownSync(VideoResult)(value))
+      })
+      .catch(() => {
+        if (!controller.signal.aborted)
+          setError(
+            "Could not load these frames. Close the preview and try again."
+          )
+      })
+    return () => controller.abort()
+  }, [agentId, file.id])
+  return (
+    <figure className="space-y-3 rounded-lg border p-3">
+      <figcaption className="text-sm font-medium break-words">
+        {file.name}
+      </figcaption>
+      <p className="text-xs text-muted-foreground">
+        Sampled frames omit movement and events between them. Audio has not been
+        transcribed.
+      </p>
+      {!video ? (
+        <p className="text-xs" role="status">
+          {error || "Loading frames…"}
+        </p>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-2">
+            {video.frames.map((frame, index) => (
+              <figure key={index} className="space-y-1">
+                <img
+                  loading="lazy"
+                  className="aspect-video w-full rounded-md bg-muted object-contain"
+                  src={`data:image/jpeg;base64,${frame.jpeg}`}
+                  alt={`Frame at ${frame.at.toFixed(2)} seconds`}
+                />
+                <figcaption className="text-xs text-muted-foreground">
+                  {frame.at.toFixed(2)}s
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+          {video.captions ? (
+            <details>
+              <summary className="cursor-pointer text-xs font-medium">
+                Embedded captions{video.captionsTruncated ? " · truncated" : ""}
+              </summary>
+              <pre className="mt-2 max-h-64 overflow-auto text-xs break-words whitespace-pre-wrap">
+                {video.captions}
+              </pre>
+            </details>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              No embedded text captions were available.
+            </p>
+          )}
+        </>
       )}
     </figure>
   )

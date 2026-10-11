@@ -48,7 +48,7 @@ For the initial local-to-remote state migration, `scripts/migrate-production-sta
 - Better Auth sessions backed by D1. An authenticated server route forwards to a Worker with both public and preview URLs disabled. Bot objects are addressed from the authenticated owner ID and a validated catalog identity. The default bot retains its original object ID.
 - Server-side ChatGPT credentials with one account-level refresh owner and durable token rotation shared by all bots. API-key credentials are also supported through the same private configuration.
 
-The current slices include live reply updates, mid-run steering, images, video storage, private files, searchable PDF text, reusable skills, tool approvals, per-bot MCP tools, a Cloudflare browser with owner takeover, isolated JavaScript execution, and versioned private apps. Shell execution, video processing, messaging channels, and scheduled autonomous tasks are still being built; see [BUILD.md](BUILD.md).
+The current slices include live reply updates, mid-run steering, image and video-frame attachments, private files, searchable PDF text, reusable skills, tool approvals, per-bot MCP tools, a Cloudflare browser with owner takeover, JavaScript and Linux execution, versioned private apps, and scheduled/webhook routines. Native working-context compaction, durable task planning, delegation, and remaining activity/recovery work are tracked in [BUILD.md](BUILD.md).
 
 ## Memory design
 
@@ -201,3 +201,11 @@ Open a routine's **Webhook** settings to create a private key, or choose **Event
 Both raw and normalized JSON must fit 16 KB. A 202 response accepts a durable run; repeating the same event ID and data returns 200 with the same run ID. A 429 response means the bot already has a routine waiting/running: retry after 60 seconds with the same ID. Retry 503 responses with the same ID. A 409 response requires attention (paused routine, reused ID with different data, or capacity reached). Receipts are capped at 2,000 per bot and never silently evicted. Vendor-specific signatures require a trusted adapter at the sender.
 
 Keys are opt-in; no external service receives one automatically. Rotating/disabling a key cancels waiting webhook work, while an admitted reply can finish unless stopped. Event data cannot grant tool permissions; normal bot approvals and the ten-minute budget apply. Results appear in the conversation.
+
+## Video attachments
+
+Upload an MP4 or WebM in **Files** or the composer. Preparation runs in an isolated Cloudflare container and stores up to six timestamped JPEG frames plus any supported embedded text captions in private R2 storage. **Preview** shows exactly what can enter the model context; **Attach** becomes available when preparation succeeds. Older uploads can use **Prepare frames**, and failed preparation can be retried.
+
+Limits: 8 MB, ten minutes, 4096 pixels per side, six frames of at most 24 KB each, and 8,000 UTF-16 units of captions. Sampled frames omit movement and events between them. Audio is not transcribed; image-based subtitles are not read with OCR. Complex or damaged clips may exceed the decoding limit. Originals remain available for download.
+
+Video preparation uses a separate container identity from the interactive terminal, with no outbound network or model credentials. Preparation and terminal sessions share the existing four-container capacity. A temporary capacity failure retries up to three times with a persisted delay. Trash/archive pauses preparation and prevents publishing or attaching its results until restored.

@@ -1,6 +1,6 @@
 # Durable Pi — build tracker
 
-Started 2026-10-10. Delivery owner: Codex. Status: **slices 01–09a deployed; 09b incoming webhook events verified locally**.
+Started 2026-10-10. Delivery owner: Codex. Status: **slices 01–09b deployed; 03c video preprocessing verified locally**.
 
 ## Outcome
 
@@ -48,13 +48,13 @@ The owner requested password recovery before continuing. Implemented Better Auth
 | --- | --- | --- |
 | 01 — Private multi-agent workspace | Sign in/out; create, rename, select and archive bots; existing history stays in the default bot; per-bot chat/memory isolation; refresh retains selection; usable sidebar on desktop/mobile; one credential refresh owner. | Deployed; owner model acceptance deferred |
 | 02 — Live conversation control | Text/thinking/tool events stream with reconnect; steer at tool boundaries or queue a follow-up; stop/retry without duplicate turns; archive preserves delivery order; model/reasoning selection. | Deployed |
-| 03 — Files and attachments | Upload images, videos and documents privately; validate size/type/path; preview/download/delete safely; reference assets in a turn; vision uses supported image blocks; video uses explicit frame/transcript extraction. | 03a–03b deployed; video preprocessing follows execution runtime |
+| 03 — Files and attachments | Upload images, videos and documents privately; validate size/type/path; preview/download/delete safely; reference assets in a turn; vision uses supported image blocks; video uses explicit frame/transcript extraction. | 03a–03b deployed; 03c verified locally |
 | 04 — Reusable skills | Create/edit/attach skills to bots; durable revisions; selected skills enter context; import through the intended Executor source; scoped access and recovery. | 04a and 04b deployed |
 | 05 — Tools and approvals | Connect Executor/MCP; assign tools per bot; Allow/Ask/Deny enforced server-side; approval persists across reload/restart; background work cannot bypass approval; revoke access. | 05a and 05b deployed |
 | 06 — Browser | Bot browses on Cloudflare; observe and take over in the workbench; authenticated Chromium sessions; Kitesurf for compatible short tasks; session expiry/reconnect and destination controls. | 06a and 06b deployed |
 | 07 — Execution and terminal | Isolated fast code execution plus on-demand Linux container; live terminal; files persist across container restarts; bounded time/output/network; cancel and recover. | 07a–07d deployed |
 | 08 — Generated apps and inline UI | Bot creates, previews, updates and runs an app; versioned private publication; isolated execution/storage; inline UI uses a bounded renderer; interactions return events to the owning bot. | 08a and 08b deployed |
-| 09 — Routines and incoming events | Schedule/pause/delete routines; run with browser closed; authenticated webhook triggers; durable retry/deduplication; notify on meaningful outcomes; respect bot grants and budgets. | 09a deployed; 09b incoming events verified locally |
+| 09 — Routines and incoming events | Schedule/pause/delete routines; run with browser closed; authenticated webhook triggers; durable retry/deduplication; notify on meaningful outcomes; respect bot grants and budgets. | 09a and 09b deployed |
 | 10 — Delegation | Explicit parent/child tasks; separate child memory/tool grants; bounded concurrency; steer/stop children; deliver completed reports once after restart. | Planned |
 | 11 — Activity and recovery | Per-bot/global activity; inspect tool outcomes and approvals; recover interrupted work; expose actionable connection/backup failures; inspect/export memory and workspace. | Planned |
 | 12 — Complete product verification | Approved desktop/mobile states implemented; keyboard/accessibility checks; isolation/replay/permission tests; restore proof; secret scan; CI/deploy and hosted acceptance of all journeys. | Planned |
@@ -62,6 +62,90 @@ The owner requested password recovery before continuing. Implemented Better Auth
 Each slice gets implementation and proof notes below. Add a slice rather than hiding missing behavior in “done.” `todo.md` remains the detailed OptChat steering/subagent reference; this tracker supersedes its deferral status.
 
 ## Acceptance journeys
+
+### Queued priorities after the current video slice (2026-10-11)
+
+The owner asked to finish slice 03c first, then implement the following two requests in order, before continuing the remaining roadmap. These are saved requirements, not completed work. The full prompts are retained below.
+
+#### 02c — Native working-context compaction
+
+Enable Pi Durable’s built-in automatic compaction for long-running sessions in durable-pi.
+
+Currently, each new user turn starts a fresh Pi session with an OptChat memory view, but Pi’s automatic compaction is explicitly disabled. A long individual run can therefore accumulate browser output, terminal results, tool calls, and steering messages until it exceeds the available context window.
+
+Keep the responsibilities clear:
+- OptChat owns long-term memory, original-message archival, summaries, notes, and retrieval between turns.
+- Pi’s native compaction manages working context within an active run.
+
+Inspect the installed Pi Durable implementation and use its supported configuration and hooks. Keep this a focused integration.
+
+Before choosing thresholds:
+- Verify the effective context window for our selected model and ChatGPT subscription connection.
+- Reconcile Pi’s model catalog with current official provider documentation. Establish whether any difference is intentional, connection-specific, or outdated metadata.
+- Do not assume 300k is a universal OpenAI default or increase the configured window solely because the public API advertises a larger maximum.
+- Make thresholds model-aware and reserve sufficient capacity for reasoning, output, incoming tool results, and estimation error.
+- Distinguish Pi’s harness compaction from OpenAI’s server-side compaction. Establish which mechanism owns active-run compaction and avoid accidentally enabling competing policies.
+
+Verify that:
+- Long runs compact and continue successfully.
+- Recent steering, user constraints, and pending work survive compaction.
+- Original messages and tool results remain available through the existing archive and retrieval mechanisms.
+- Compaction summaries do not masquerade as original user messages or create duplicate archive entries.
+- Tool-call/result relationships, approval receipts, and execution replay guarantees remain correct.
+- A Durable Object restart during compaction recovers safely.
+- Existing OptChat memory and prompt-cache behavior remain compatible.
+- Switching models cannot leave the run using an inappropriate context budget.
+
+Add meaningful integration coverage using a deliberately small context budget to exercise compaction without an expensive long run. Include native runtime recovery verification where practical. Inspect actual token usage and compaction overhead rather than treating a configured threshold as proof of correct behavior.
+
+Track the work in the existing build tracker, follow our backend domain boundaries, and carry it through the established review and deployment workflow. Report the chosen thresholds and their rationale, plus what was verified locally versus against the hosted app. Then continue the existing roadmap.
+
+Investigation already completed before the ordering correction (no implementation):
+- Installed Pi Durable/Pi AI version 1.0.4; app default `gpt-6.1-sol`. Pi's catalog reports 272,000 context tokens and 128,000 maximum output tokens.
+- A read-only request through the production account's single credential-refresh owner to `https://api.openai.com/v1/models` returned `context_window: 272000` and `auto_compact_token_limit: null` for the selected model and the other visible GPT-6/GPT-5.6 choices on 2026-10-11. This confirms a connection-specific difference from the public API model page's 1,050,000 maximum. No inference or private conversation was sent. The temporary authenticated diagnostic Worker was deleted after the check; credentials stayed in Cloudflare.
+- [Subscription model discovery](https://developers.openai.com/siwc/token-sharing-open-source/models-and-inference), [subscription limitations](https://developers.openai.com/siwc/token-sharing-open-source/preview-limitations), [GPT-6.1 Sol API model](https://developers.openai.com/api/docs/models/gpt-6.1-sol), and [provider compaction](https://developers.openai.com/api/docs/guides/compaction) were inspected. The subscription route rejects `max_output_tokens`; do not mistake Pi's configured output budget for an enforced provider cap.
+- Supported Pi settings: `enabled`, `reserveTokens`, `keepRecentTokens`, `backgroundTokens`. `beforeCompact` can decline or supply a summary; native `pi.compaction` persists its selection/request and records summarization usage. Preserve native task recovery instead of writing another compactor.
+- Critical integration point: Pi event snapshots contain the **active** context after a head marker, while original entries remain in storage. Existing `readPiReply` uses snapshot entries for archive/finalization/display. Recover the committed original transcript through the captured snapshot boundary before enabling compaction, or older entries/receipts can disappear from that projection after a restart.
+- Settings are harness-wide with supported getters; active turns already pin their model and reasoning selection. Ensure budgets follow that pinned run, not the newest UI selection. No thresholds have been chosen yet.
+
+#### 11a — Automatic durable task planning
+
+Add automatic, durable task planning to durable-pi’s normal agent execution.
+
+The existing agent should create and maintain a plan while carrying out substantial, multi-step requests. It should proceed autonomously within the user’s request and existing permissions.
+
+This is not a separate Plan Mode. Do not introduce a planner agent, plan-approval gate, or mandatory planning interaction. Ordinary questions and simple actions should remain free of mandatory planning.
+
+Inspect the existing conversation/run lifecycle and installed Pi Durable APIs first. Use Pi’s supported extension, tool, and durable-state mechanisms where they fit. Follow domain-driven design on the backend and feature-sliced design on the frontend.
+
+The plan should contain:
+- The user’s objective and relevant constraints.
+- Observable criteria for completing the request.
+- Concrete steps with pending, active, blocked, or completed status.
+- References to completion evidence, such as execution receipts, saved artifacts, or verification results.
+- The next action and any blocker.
+
+Expose an update_plan tool so the agent can create and revise its plan during execution. Associate it with the correct bot and logical task, including steering inputs belonging to that task. Establish when a later user message continues an existing task versus starts a new one.
+
+Supply the current plan to subsequent model requests without accumulating repeated full-plan copies in conversation history. Preserve revisions for recovery and inspection. Plans must survive compaction and Durable Object restarts.
+
+Maintain these boundaries:
+- Plans never grant permissions or override existing approval requirements.
+- Ask the user only when necessary information is missing or an action requires approval.
+- Agent-reported completion is distinct from verified evidence. Validate evidence references and ownership.
+- Changed requirements or invalidated evidence can reopen completed steps.
+- Cancellation remains authoritative; persisted plans must not restart cancelled work.
+- Waiting for approval or external results must not become an automatic retry loop.
+- Plan updates must not replay completed external actions.
+- Once the requested outcome is achieved and appropriately verified, finish without unnecessary repeated checking.
+
+Display the objective, progress, blockers, and evidence in the existing Activity interface using shadcn/Base UI. Keep it synchronized with durable state and usable on mobile. Users can inspect progress without having to manage the plan.
+
+Add meaningful coverage for persistence, restart recovery, steering revisions, cancellation, concurrent or replayed updates, bot isolation, context injection, and completion evidence. Verify a representative multi-step journey and confirm that simple chat requires no plan or approval interaction.
+
+Keep this focused within the existing architecture. Track it in the build tracker and carry it through the established review and deployment workflow. Report local versus hosted verification, then continue the existing roadmap.
+
+### Existing product journeys
 
 1. Existing owner signs in, sees the original chat, creates another bot, and verifies neither chat nor memory crosses between them.
 2. Give a bot an image/document, steer it during a tool run, approve a scoped action, and reopen the browser without losing progress.
@@ -422,3 +506,16 @@ Verification:
 - Hosted deployment adds an unauthenticated webhook boundary probe. No authenticated owner/model inference is claimed.
 
 References: [Workers Web Crypto](https://developers.cloudflare.com/workers/runtime-apis/web-crypto/), [Durable Object SQLite storage](https://developers.cloudflare.com/durable-objects/api/sqlite-storage-api/).
+
+
+### 03c — Private video frame and caption preparation
+
+MP4/WebM uploads enqueue durable preparation in Workspace. The existing private TerminalWorker runs FFmpeg in a separate media container identity with no outbound network or model credentials. Up to six JPEG frames carry their decoded presentation timestamps; supported embedded text captions are retained within an 8,000 UTF-16-unit budget. Originals and derivatives remain private in R2. Files exposes pending/ready/failed states, explicit legacy preparation/retry, timestamped previews and attachment readiness. Pi receives image/text blocks, with explicit sampling and audio limitations.
+
+Proof (2026-10-11):
+- 323 tests, typecheck, lint and production build passed. Focused tests cover persistence/reopen, three-attempt retry/backoff, archive/Trash publication fences, legacy upgrades, malformed results, sibling namespaces and maximum four-video attachment/steering budgets. Four six-frame videos fit within the existing image input budget; JPEGs are capped at 24 KB.
+- The Linux/amd64 container build runs real FFmpeg regression checks: MP4 embedded captions, long Unicode captions, hostile metadata, sparse and variable-frame-rate timestamps, short WebM, frame byte bounds, invalid media and the ten-minute limit. Python/decoder subprocesses have memory, CPU, file-size and elapsed-time limits.
+- Local workerd E2E passed through the actual private service binding, Sandbox Linux runtime, durable extraction and R2: authenticated upload, four correct JPEG frames, original preservation, private preview, sibling/anonymous rejection, Trash fence and restore. Browser verified upload, preview, attachment selection/removal and mobile 390×844 without overflow; no fresh browser errors. No live model or owner conversation used.
+- Read-only backend/frontend reviews found and corrected oversized aggregate vision context, timestamp/metadata confusion, Unicode truncation, and busy-container restart retries. Follow-up review passed.
+- No new cloud permission or resource; the media container shares the approved four-instance pool. Videos are limited to 8 MB, ten minutes and 4096 pixels per side. Audio speech transcription and image-subtitle OCR are not implemented.
+- The owner's complete compaction and automatic-planning prompts are saved above; implementation follows this slice as requested.

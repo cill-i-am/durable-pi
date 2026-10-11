@@ -6,6 +6,7 @@ import { Terminal } from "./terminal"
 import { TerminalStore } from "./adapters/sqlite"
 import { sandboxRuntime } from "./adapters/sandbox"
 import { checkpointStorage } from "./adapters/r2"
+import { extractVideoRequest } from "./video"
 import { terminalRequest } from "./http"
 
 export class LinuxSandbox extends BaseSandbox<TerminalEnv> {
@@ -32,8 +33,18 @@ export class LinuxSandbox extends BaseSandbox<TerminalEnv> {
     super(ctx, env)
     this.ctx.waitUntil(this.terminal.recover())
   }
+  private videoBusy = false
   override async fetch(request: Request): Promise<Response> {
     const path = new URL(request.url).pathname
+    if (path === "/video" && request.method === "POST") {
+      if (this.videoBusy) return new Response("Busy", { status: 503 })
+      this.videoBusy = true
+      try {
+        return await extractVideoRequest(this, request)
+      } finally {
+        this.videoBusy = false
+      }
+    }
     if (
       path !== "/authority" &&
       path !== "/terminal" &&
@@ -81,12 +92,12 @@ export default {
     if (
       !identity ||
       !/^[a-f0-9]{64}$/.test(identity) ||
-      !["terminal", "authority"].includes(rest[0] ?? "")
+      !["terminal", "authority", "video"].includes(rest[0] ?? "")
     )
       return new Response("Not found", { status: 404 })
     const sandbox = getSandbox(
       env.SANDBOX,
-      `pi-${BigInt(`0x${identity}`).toString(36)}`,
+      `${rest[0] === "video" ? "video" : "pi"}-${BigInt(`0x${identity}`).toString(36)}`,
       {
         transport: "rpc",
         sleepAfter: "60s",

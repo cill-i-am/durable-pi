@@ -18,6 +18,7 @@ import * as Schema from "effect/Schema"
 import * as Effect from "effect/Effect"
 import type { AgentEnv } from "../../alchemy.run"
 import { Clock, Layer, ManagedRuntime, Semaphore } from "effect"
+import { videoService } from "../workspace/adapters/video-service"
 import { documentService } from "../workspace/adapters/document-service"
 import { workspaceLayer } from "../workspace/adapters/storage"
 import { filesRequest } from "../workspace/http"
@@ -300,11 +301,22 @@ class ExtractionRunner extends TurnRunner {
   onJob(): Promise<LifecycleJobOutcome> {
     return this.owner.workspaceRuntime.runPromise(
       Effect.flatMap(Workspace, (workspace) => workspace.extractNext()).pipe(
-        Effect.map((worked) =>
-          worked ? { rescheduleAt: Date.now() + 1000 } : undefined
+        Effect.flatMap((worked) =>
+          Effect.flatMap(Workspace, (workspace) =>
+            workspace.extractionPending()
+          ).pipe(
+            Effect.map((pending) =>
+              pending
+                ? { rescheduleAt: Date.now() + (worked ? 1000 : 30000) }
+                : undefined
+            )
+          )
         )
       )
     )
+  }
+  async onJobError(): Promise<LifecycleJobOutcome> {
+    return { rescheduleAt: Date.now() + 60000 }
   }
 }
 
@@ -401,7 +413,8 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       this.env.WORKSPACE_ASSETS,
       `files/${this.ctx.id.toString()}`,
       () => this.botConfiguration.read()?.status !== "archived",
-      documentService(this.env.DOCUMENT_SERVICE)
+      documentService(this.env.DOCUMENT_SERVICE),
+      videoService(this.env.TERMINAL_SERVICE, this.ctx.id.toString())
     )
   )
   readonly routines = new RoutineStore(
@@ -1069,6 +1082,12 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     if (this.botConfiguration.read()?.status === "archived")
       await this.browserCleanup.wake()
     else {
+      if (
+        await this.workspaceRuntime.runPromise(
+          Effect.flatMap(Workspace, (w) => w.extractionPending())
+        )
+      )
+        await this.extraction.wake()
       if (this.apps.pending().length) await this.appEvents.wake()
       if (this.routines.nextWake() !== undefined)
         await this.routineRunner.wake()
