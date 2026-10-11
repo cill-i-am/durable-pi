@@ -11,20 +11,23 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
-  Empty,
-  EmptyHeader,
-  EmptyTitle,
-  EmptyDescription,
-} from "@/components/ui/empty"
-import { PanelsTopLeft, Plus, ArrowLeft } from "lucide-react"
+  PanelsTopLeft,
+  Plus,
+  ArrowLeft,
+  Globe,
+  TerminalSquare,
+  Files,
+} from "lucide-react"
 
 export function AppsWorkbench({
   agentId,
   agentName,
   onPendingChange,
+  onOpenWorkbench,
 }: {
   agentId: string
   agentName: string
+  onOpenWorkbench: (value: "browser" | "terminal" | "files") => void
   onPendingChange: (pending: boolean) => void
 }) {
   const [apps, setApps] = useState<AppDocument[]>([]),
@@ -72,8 +75,16 @@ export function AppsWorkbench({
     <>
       <header className="workbench-heading-row">
         <div className="flex items-center gap-2 text-sm font-medium">
-          <PanelsTopLeft className="size-4" /> Apps{" "}
-          <Badge variant="secondary">Private</Badge>
+          <PanelsTopLeft className="size-4" />
+          {!apps.length && !selected && !creating ? (
+            <span className="text-xs font-normal text-muted-foreground">
+              YOUR WORKBENCH
+            </span>
+          ) : (
+            <>
+              Apps <Badge variant="secondary">Private</Badge>
+            </>
+          )}
         </div>
       </header>
       <div className="workbench-body">
@@ -121,32 +132,84 @@ export function AppsWorkbench({
           <AppView key={selected} agentId={agentId} id={selected} />
         ) : (
           <>
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-sm font-medium">Made with {agentName}</h2>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  creationGeneration.current++
-                  setCreating(true)
-                }}
-              >
-                <Plus data-icon="inline-start" /> New checklist
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Ask this bot to build an app, or start with a checklist. Published
-              checklists and forms send their updates back to the bot.
-            </p>
-            {!apps.length && (
-              <Empty>
-                <EmptyHeader>
-                  <EmptyTitle>No apps yet</EmptyTitle>
-                  <EmptyDescription>
-                    Trip plans, project trackers and small forms live here.
-                  </EmptyDescription>
-                </EmptyHeader>
-              </Empty>
+            {!!apps.length && (
+              <>
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-sm font-medium">Made with {agentName}</h2>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      creationGeneration.current++
+                      setCreating(true)
+                    }}
+                  >
+                    <Plus data-icon="inline-start" /> New checklist
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Ask this bot to build an app, or start with a checklist.
+                  Published checklists and forms send their updates back to the
+                  bot.
+                </p>
+              </>
+            )}
+            {!apps.length && !error && (
+              <section className="workbench-welcome">
+                <h2>Room for the work.</h2>
+                <p>
+                  The things you open, make and explore appear beside your
+                  conversation.
+                </p>
+                <div>
+                  {[
+                    {
+                      id: "browser",
+                      title: "Browser",
+                      detail: "Explore a page together.",
+                      icon: Globe,
+                    },
+                    {
+                      id: "terminal",
+                      title: "Terminal",
+                      detail: "See the commands behind the work.",
+                      icon: TerminalSquare,
+                    },
+                    {
+                      id: "files",
+                      title: "Files & context",
+                      detail: "Keep useful things close at hand.",
+                      icon: Files,
+                    },
+                  ].map((item) => (
+                    <Button
+                      key={item.id}
+                      variant="ghost"
+                      onClick={() =>
+                        onOpenWorkbench(
+                          item.id as "browser" | "terminal" | "files"
+                        )
+                      }
+                    >
+                      <item.icon />
+                      <span>
+                        <strong>{item.title}</strong>
+                        <span>{item.detail}</span>
+                      </span>
+                    </Button>
+                  ))}
+                </div>
+                <Button
+                  variant="outline"
+                  className="workbench-create"
+                  onClick={() => {
+                    creationGeneration.current++
+                    setCreating(true)
+                  }}
+                >
+                  <Plus /> New checklist app
+                </Button>
+              </section>
             )}
             {apps
               .filter((app) => !app.archived)

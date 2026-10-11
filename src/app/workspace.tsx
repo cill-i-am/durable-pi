@@ -11,25 +11,9 @@ import { RoutinesWorkbench } from "@/features/routines"
 import { ActivityWorkbench } from "@/features/activity"
 import { useEffect, useState } from "react"
 import { ObjectsProvider, ObjectsWorkbench } from "@/features/objects"
-import {
-  Globe,
-  Code2,
-  PanelsTopLeft,
-  PanelRight,
-  Clock3,
-  TerminalSquare,
-  ListTodo,
-  Activity,
-} from "lucide-react"
+import { PanelRight } from "lucide-react"
 import { TerminalWorkbench } from "@/features/terminal"
 import { AppsWorkbench } from "@/features/apps"
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-} from "@/components/ui/dropdown-menu"
 import { ExecutionWorkbench } from "@/features/execution"
 import { BrowserWorkbench } from "@/features/browser"
 import { authClient } from "@/auth/client"
@@ -68,6 +52,10 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
   const [securityOpen, setSecurityOpen] = useState(false)
   const [navigationLocked, setNavigationLocked] = useState(false)
   const [workbench, setWorkbench] = useState<Workbench | null>(null)
+  useEffect(() => {
+    // Paper's desktop opens with the work beside the conversation. Phones start in chat.
+    if (window.matchMedia("(min-width: 1024px)").matches) setWorkbench("apps")
+  }, [])
   function selectAgent(id: AgentProfile["id"]) {
     if (navigationLocked) return
     if (id !== catalog.selected?.id) setWorkbench(null)
@@ -176,7 +164,6 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
                 key={catalog.selected.id}
                 workbench={workbench}
                 setWorkbench={setWorkbench}
-                navigationLocked={navigationLocked}
                 onNavigationLockChange={setNavigationLocked}
                 name={name}
                 agent={catalog.selected}
@@ -233,7 +220,6 @@ function AgentWorkspace({
   onOpenBot,
   onMemory,
   name,
-  navigationLocked,
   onNavigationLockChange,
 }: {
   workbench: Workbench | null
@@ -243,7 +229,6 @@ function AgentWorkspace({
   onOpenBot: (id: AgentProfile["id"]) => void
   onMemory: (id: AgentProfile["id"]) => void
   name: string
-  navigationLocked: boolean
   onNavigationLockChange: (value: boolean) => void
 }) {
   const { setOpenMobile } = useSidebar()
@@ -281,7 +266,9 @@ function AgentWorkspace({
     <MobileNavigation
       workspace={inWorkbench}
       locked={locked}
-      workspaceDisabled={inWorkbench ? locked : editingLocked}
+      workspaceDisabled={
+        inWorkbench && workbench === "objects" ? locked : editingLocked
+      }
       onAgents={openAgents}
       onChat={() => openWorkbench(null)}
       onWorkspace={() =>
@@ -311,90 +298,22 @@ function AgentWorkspace({
           setSending={setSending}
           onOpenWorkbench={openWorkbench}
           workbenchAction={
-            <DropdownMenu>
-              <DropdownMenuTrigger
+            (!workbench ||
+              (objectPending && !editingLocked && workbench !== "objects")) && (
+              <Button
+                size="icon-sm"
+                variant="ghost"
                 disabled={editingLocked}
-                render={
-                  <Button
-                    size="sm"
-                    variant={workbench ? "secondary" : "ghost"}
-                    disabled={editingLocked}
-                    aria-label="Open workbench"
-                  />
+                aria-label={
+                  objectPending ? "Recover checklist save" : "Open workbench"
+                }
+                onClick={() =>
+                  openWorkbench(objectPending ? "objects" : "files")
                 }
               >
-                <PanelRight data-icon="inline-start" />
-                <span className="chat-action-label hidden sm:inline">
-                  Workbench
-                </span>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuGroup>
-                  <DropdownMenuItem
-                    disabled={navigationLocked}
-                    onClick={() => openWorkbench("activity")}
-                  >
-                    <Activity /> Activity
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    disabled={editingLocked}
-                    onClick={() => openWorkbench("objects")}
-                  >
-                    <ListTodo /> Objects
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    disabled={navigationLocked}
-                    onClick={() => openWorkbench("browser")}
-                  >
-                    <Globe /> Browser
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    disabled={navigationLocked}
-                    onClick={() => openWorkbench("code")}
-                  >
-                    <Code2 /> Code
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    disabled={navigationLocked}
-                    onClick={() => openWorkbench("apps")}
-                  >
-                    <PanelsTopLeft /> Apps
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    disabled={navigationLocked}
-                    onClick={() => openWorkbench("routines")}
-                  >
-                    <Clock3 /> Routines
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    disabled={navigationLocked}
-                    onClick={() => openWorkbench("terminal")}
-                  >
-                    <TerminalSquare /> Terminal
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    disabled={locked}
-                    onClick={() => openWorkbench("files")}
-                  >
-                    Files
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    disabled={locked}
-                    onClick={() => openWorkbench("memory")}
-                  >
-                    Memory
-                  </DropdownMenuItem>
-                  {workbench && (
-                    <DropdownMenuItem
-                      disabled={navigationLocked}
-                      onClick={() => openWorkbench(null)}
-                    >
-                      Hide workbench
-                    </DropdownMenuItem>
-                  )}
-                </DropdownMenuGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                <PanelRight />
+              </Button>
+            )
           }
         />
         {workbench && (
@@ -403,6 +322,17 @@ function AgentWorkspace({
             onChange={openWorkbench}
             agentName={agent.name}
             locked={locked}
+            recoveryAction={
+              objectPending && !editingLocked && workbench !== "objects" ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => openWorkbench("objects")}
+                >
+                  Recover checklist save
+                </Button>
+              ) : undefined
+            }
             mobileNavigation={mobileNavigation(true)}
           >
             {workbench === "activity" && (
@@ -440,6 +370,7 @@ function AgentWorkspace({
             )}
             {workbench === "apps" && (
               <AppsWorkbench
+                onOpenWorkbench={openWorkbench}
                 onPendingChange={setAppPending}
                 agentId={agent.id}
                 agentName={agent.name}

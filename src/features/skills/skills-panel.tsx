@@ -1,9 +1,8 @@
-import { useRef, useState } from "react"
-import { BookOpen, Plus, Upload, X, ArrowUpRight } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+import { Plus, Upload, X, ArrowUpRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Sheet,
-  SheetTrigger,
   SheetContent,
   SheetHeader,
   SheetTitle,
@@ -28,12 +27,18 @@ import {
 export function SkillsPanel({
   agentId,
   agentName,
+  open,
+  onOpenChange: setOpen,
 }: {
   agentId: string
   agentName: string
+  open: boolean
+  onOpenChange: (open: boolean) => void
 }) {
   const state = useSkills(agentId)
-  const [open, setOpen] = useState(false)
+  useEffect(() => {
+    if (open) void state.refresh()
+  }, [open, state.refresh])
   const [tab, setTab] = useState("library")
   const [draft, setDraft] = useState<SaveSkill | null>(null)
   const [history, setHistory] = useState<{
@@ -97,16 +102,9 @@ export function SkillsPanel({
       open={open}
       onOpenChange={(value) => {
         setOpen(value)
-        if (value) void state.refresh()
-        else leaveView()
+        if (!value) leaveView()
       }}
     >
-      <SheetTrigger
-        render={<Button variant="ghost" size="sm" aria-label="Skills" />}
-      >
-        <BookOpen />
-        <span className="chat-action-label hidden sm:inline">Skills</span>
-      </SheetTrigger>
       <SheetContent className="gap-0 data-[side=right]:w-full data-[side=right]:sm:max-w-xl">
         <SheetHeader>
           <SheetTitle>Skills</SheetTitle>

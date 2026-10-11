@@ -7,7 +7,6 @@ import {
   SheetDescription,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
 } from "@/components/ui/sheet"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
@@ -36,14 +35,20 @@ const statusLabel = {
 export function ConnectionsPanel({
   agentId,
   agentName,
+  open,
+  onOpenChange: setOpen,
   onSaved,
 }: {
   agentId: string
   agentName: string
+  open: boolean
+  onOpenChange: (open: boolean) => void
   onSaved: () => void
 }) {
   const state = useConnections(agentId, onSaved)
-  const [open, setOpen] = useState(false)
+  useEffect(() => {
+    if (open) void state.refresh()
+  }, [open, state.refresh])
   const [draft, setDraft] = useState<ReturnType<typeof newDraft> | null>(null)
   const [callback, setCallback] = useState("")
   const disabled = state.busy || state.loading || !state.ready
@@ -66,15 +71,8 @@ export function ConnectionsPanel({
       open={open}
       onOpenChange={(value) => {
         setOpen(value)
-        if (value) void state.refresh()
       }}
     >
-      <SheetTrigger
-        render={<Button variant="ghost" size="sm" aria-label="Connections" />}
-      >
-        <Plug data-icon="inline-start" />
-        <span className="chat-action-label hidden sm:inline">Connect</span>
-      </SheetTrigger>
       <SheetContent className="gap-0 data-[side=right]:w-full data-[side=right]:sm:max-w-xl">
         <SheetHeader>
           <SheetTitle>Connections</SheetTitle>

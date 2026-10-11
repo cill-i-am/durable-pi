@@ -10,6 +10,10 @@ Bring the deployed product as close as possible to the Paper layouts and states 
 
 Visual thesis: a light, compact workroom with white working surfaces, a soft green-gray sidebar, forest-green actions and friendly agent marks. The workspace is the content: navigation, conversation and contextual workbench. Menus, drawers and selection transitions remain brief and respect reduced motion.
 
+## Current audit
+
+The 2026-10-11 browser review reopened fidelity after the original F1–F6 delivery. The current Paper page contains 40 artboards. The earlier completion entries are delivery history, not proof that the current UI matches every designed interaction. See F7 below.
+
 ## Slices
 
 | Slice | Paper references | Acceptance | Status |
@@ -111,3 +115,67 @@ Representative ignored screenshots: `screenshot-1791717674249.png` and `screensh
 
 
 F6 delivery and goal completion: PR #39 merged as `4f4fc66`; [production run 38135689129](https://github.com/cill-i-am/durable-pi/actions/runs/38135689129) passed checks, Alchemy deployment and the hosted authentication-boundary probes. A fresh unauthenticated mobile load at bot.cill-i-am.com served the new viewport configuration and stylesheet assets, fit the 390px viewport and passed the settled access-screen axe audit with zero violations and zero incomplete checks. An audit taken during the entrance fade reported transient contrast failures; the settled rerun passed. `screenshot-1791718295592.png` is the hosted access evidence. Authenticated hosted UI and physical iOS keyboard/safe-area testing remain unclaimed. F1–F6 are complete; subscription-only model connections and domain/runtime behavior remain intact.
+
+
+### F7 — Correct navigation drift and audit the complete page
+
+Reference: [complete Paper page](https://app.paper.design/file/01M4GJ8G5KNDADJRVDDC3PQ6CT/p-1-0/1-0), 40 artboards, token hash `30a00488`. All 40 JSX exports were retrieved into ignored local reference files. The shared frame, typography and component values come from those exports. The account menu uses the current Base UI [dashboard-01](https://ui.shadcn.com/blocks) composition.
+
+Changes:
+
+- The entire account row opens a menu with account security, archived agents and sign out. Desktop opens beside the row; mobile opens above it. The two separate footer icon buttons are removed.
+- A 68px agent header contains identity, status, a short purpose and an overflow menu. Tool access, connections and skills remain mounted outside the menu; opening them refreshes their current state. Files and memory remain reachable there and through the workbench.
+- Desktop starts with the Apps workbench. At 1440px its width is 664px; at 1024–1439px it contracts to leave a usable conversation column. Below 1024px it remains the same feature instance inside a modal sheet. Phones start in chat. The mobile heading uses a back action, Workspace label and agent identity.
+- The empty workbench, Browser heading/address frame/handoff, Terminal command surface, Files toolbar/explorer/Markdown preview and source, Memory heading and creation sheet use the Paper composition. Recovery, tool permissions, receipts and actual model metadata remain authoritative.
+- An unconfirmed checklist save remains reachable from the header even when other navigation is locked. The file explorer cannot shrink its list into a clipped row on smaller screens.
+
+Complete page map (numbers are the artboard names in Paper):
+
+| Screen | Implementation / disposition |
+| --- | --- |
+| 00 Design map | Reference, not an application route. |
+| 01 Image treatment | Reference; implementation uses editable artboard exports. |
+| 02 Complete agent window | `app/workspace`, `app/workbench`, `features/conversation`; shared frame corrected in F7. |
+| 03 Workspace menu | `app/workspace-navigation`; account dropdown added in F7. |
+| 04 Command palette | `app/workspace-navigation`; searches agents and supported commands. |
+| 05 Sign in | `features/auth/login`, `auth-frame`; existing visual composition retained. |
+| 06 First-time setup | Same auth frame and owner setup operation; error/pending state retained. |
+| 07 Sign out / expired session | Better Auth returns to the sign-in screen. No unsupported claim that a composer draft survives sign-out. |
+| 08 Create agent | `features/agents/agents`; right-hand creation sheet, purpose, identity preview and separate-memory explanation. |
+| 09 Delegation | `features/activity/delegated-work`, `bot-tasks`; actual task status and results retained. |
+| 10 Models and connections | Composer model defaults plus agent-menu connections/access; subscription-only controls and real capabilities retained. |
+| 11 Fresh conversation | `features/conversation`, Apps welcome; shared split layout and empty-workbench direction. |
+| 12 Working / thinking | `turn-reply`, `turn-activity`; actual streaming text, thinking and tool states. |
+| 13 Steer / queue | Conversation composer and steering timeline; delivery states remain durable. |
+| 14 Tool details | Expandable input/result rows and Activity records; original receipts unchanged. |
+| 15 Image attachment | File picker, drag/drop, attachment cards and Files preview. |
+| 16 Video preparation | Existing durable video status, frames and captions. Unsupported audio transcription is not advertised. |
+| 17 Anchored asset steering | Whole-file context and app-element steering remain available; image-region pins are a product gap, not a styling claim. |
+| 18 Approval | `features/access/approval-card`; only actual pending approvals expose decisions. |
+| 19 Stop / retry | Existing cancellation and retry controls; completed effects are not presented as safe to repeat. |
+| 20 Browser | Browser workbench: contextual title, framed address/captured page, internet settings and actual session state. |
+| 21 Browser takeover | Handoff action moved beside the title. Owner controls remain fenced by screenshot version and authority generation. |
+| 22 Terminal | Dark command/output surfaces, existing interactive session and transfer controls, network settings and recovery. |
+| 23 Files | Compact toolbar, explorer, Markdown Preview/Source, context attachment, download and overflow actions. |
+| 24 Apps | Existing inline/full app views, definition versions and durable responses; Apps remains a primary tab. |
+| 25 Activity | Cross-agent timeline and task detail views retain real status, blocker and evidence records. |
+| 26 Memory | Saved notes, archive search, tree and source view; private bot ownership retained. |
+| 27 Connection / limits | Existing reconnect, unavailable-model, summary-recovery and run-recovery states. No invented reset time or auto-resume promise. |
+| 28 Mobile conversation | Compact identity/header, readable chat and persistent bottom navigation. |
+| 29 Mobile steering / attachments | Existing composer modes and attachment state in the mobile conversation. |
+| 30 Mobile workbench | Back action, agent identity, five primary tabs, independently scrolling content and bottom navigation. |
+| 31 Primitives / keyboard | shadcn/Base UI, Geist, semantic Paper tokens; design-system reference rather than route. |
+| 32 Object exploration | Reference alternatives; selected design is 33. |
+| 33 Live checklist | Existing inline object and Objects workbench; one authoritative object state. |
+| 34 Conflict / recovery / history | Existing revision conflict, unconfirmed save, archive/restore and history. Recovery entry preserved in F7. |
+| 35 Mobile checklist | Existing responsive task editor and history, with mobile workbench frame. |
+| 36 Account security | Existing 720px security dialog, now reached from the account menu. |
+| 37 Authenticator setup | Existing password, QR verification and recovery-code flow; sensitive data handling unchanged. |
+| 38 Challenge / recovery / revoke | Existing challenge forms and session-revocation confirmation; auth behavior unchanged. |
+| 39 Mobile account security | Existing full-height mobile security layout reached through the sidebar dropdown. |
+
+Still intentional or functional differences: global search covers agents/commands rather than all file and conversation content; files are a flat collection; image-region annotations, manual memory-note editing and selectable agent appearances are not implemented. Model settings remain job-aware and subscription-only rather than reproducing the API-key provider controls in the mockup. The browser displays captured snapshots, not a live video stream. Existing app/data interactions, scope and recovery semantics take precedence over illustrative content. These are explicit product gaps/adaptations; this pass must not be reported as complete behavioral parity with all 40 mockups.
+
+Local verification: 518 tests across 72 files, typecheck, lint (four pre-existing warnings, no errors), production build and the native workerd restart/replay suite pass. Browser checks at 1440×900, 1050×853, 390×844 and 320×568 cover the account menu, archived-agent filter, settings-sheet focus return, Tool access/Connections/Skills entry, Files Preview/Source, no horizontal page overflow, visible primary tabs at 1050px, and retained chat/terminal drafts across desktop/mobile transitions. A restored unconfirmed checklist save remains reachable from chat and from the workbench after resizing; unrelated workbench content is inert until recovery. Existing save/cancel semantics are unchanged.
+
+Ignored screenshots: `/tmp/durable-pi-paper-desktop.jpg`, `/tmp/durable-pi-paper-account.jpg`, `/tmp/durable-pi-paper-mobile.jpg`. Visual fixtures use production React components with synthetic API responses and blocked mutations. They establish UI behavior, not provider execution. Existing deterministic tests cover unchanged auth, working-object and run lifecycles. This pass does not claim freshly executed hosted journeys for every artboard. Signed commit, CI and deployment are pending.

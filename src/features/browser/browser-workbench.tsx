@@ -36,12 +36,30 @@ export function BrowserWorkbench({
   const content = (
     <>
       <div className="workbench-heading-row">
-        <div className="flex min-w-0 items-center gap-2">
-          <Globe className="size-4" />
-          <span className="text-sm font-medium">Browser</span>
+        <h2 className="browser-title">
+          {state?.controller === "owner"
+            ? "You’re in control"
+            : `${agentName}’s browser`}
+        </h2>
+        <div className="flex shrink-0 items-center gap-2">
           <Badge variant="secondary">{state?.status ?? "Loading"}</Badge>
-        </div>
-        <div className="flex gap-1">
+          {state?.expiresAt && state.status !== "expired" && (
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={browser.busy}
+              onClick={() =>
+                void browser.command("control", {
+                  generation: state.policy.generation,
+                  controller: state.controller === "owner" ? "agent" : "owner",
+                })
+              }
+            >
+              {state.controller === "owner"
+                ? `Hand back to ${agentName}`
+                : "Take control"}
+            </Button>
+          )}
           <Button
             size="icon-sm"
             variant="ghost"
@@ -165,7 +183,7 @@ export function BrowserWorkbench({
         ) : (
           <>
             <form
-              className="flex gap-2"
+              className="browser-address-bar"
               onSubmit={(event) => {
                 event.preventDefault()
                 if (state)
@@ -175,6 +193,7 @@ export function BrowserWorkbench({
                   })
               }}
             >
+              <Globe className="size-4 shrink-0 text-muted-foreground" />
               <Input
                 aria-label="Browser URL"
                 type="url"
@@ -227,8 +246,8 @@ export function BrowserWorkbench({
                 </div>
               )}
             {state?.page && (
-              <>
-                <div className="flex items-start justify-between gap-2">
+              <section className="browser-preview">
+                <div className="browser-preview-heading">
                   <div className="min-w-0">
                     <h3 className="text-sm font-medium break-words">
                       {state.page.title || "Browser page"}
@@ -319,7 +338,7 @@ export function BrowserWorkbench({
                     </ul>
                   </details>
                 )}
-              </>
+              </section>
             )}
             {state &&
               (state.expiresAt ||
@@ -342,26 +361,6 @@ export function BrowserWorkbench({
                   >
                     <RefreshCw />
                     Refresh view
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={
-                      browser.busy ||
-                      !state.expiresAt ||
-                      state.status === "expired"
-                    }
-                    onClick={() =>
-                      void browser.command("control", {
-                        generation: state.policy.generation,
-                        controller:
-                          state.controller === "owner" ? "agent" : "owner",
-                      })
-                    }
-                  >
-                    {state.controller === "owner"
-                      ? "Return control to bot"
-                      : "Take control"}
                   </Button>
                   <Button
                     size="sm"

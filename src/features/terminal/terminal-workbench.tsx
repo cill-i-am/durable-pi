@@ -1,11 +1,5 @@
 import { useState } from "react"
-import {
-  TerminalSquare,
-  Play,
-  Square,
-  RefreshCw,
-  Settings2,
-} from "lucide-react"
+import { Play, Square, RefreshCw, Settings2 } from "lucide-react"
 import type { TerminalNetworkPolicy } from "@/terminal/contracts"
 import { Switch } from "@/components/ui/switch"
 import { FileTransfers, ExportedFile } from "./file-transfers"
@@ -43,10 +37,7 @@ export function TerminalWorkbench({
   const content = (
     <>
       <header className="workbench-heading-row">
-        <div className="flex items-center gap-2 text-sm font-medium">
-          <TerminalSquare className="size-4" /> Terminal{" "}
-          <Badge variant="secondary">Linux</Badge>
-        </div>
+        <h2 className="workbench-section-title">Terminal</h2>
         <div className="flex gap-1">
           <Button
             size="icon-sm"
@@ -170,7 +161,7 @@ export function TerminalWorkbench({
           </form>
         )}
         <Tabs value={tab} onValueChange={setTab}>
-          <TabsList>
+          <TabsList variant="line">
             <TabsTrigger value="commands">Commands</TabsTrigger>
             <TabsTrigger value="interactive">Interactive</TabsTrigger>
             <TabsTrigger value="files">File transfer</TabsTrigger>
@@ -222,7 +213,7 @@ export function TerminalWorkbench({
                   </FieldLabel>
                   <Textarea
                     id="terminal-command"
-                    className="min-h-32 font-mono text-xs"
+                    className="terminal-command min-h-32 font-mono text-xs"
                     spellCheck={false}
                     maxLength={16000}
                     value={terminal.attempt?.command ?? command}

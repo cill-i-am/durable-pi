@@ -1,8 +1,10 @@
+import { Markdown } from "@/components/markdown"
 import { Schema } from "effect"
 import { VideoResult } from "@/workspace/video"
 import { useEffect, useRef, useState } from "react"
 import {
   Download,
+  Ellipsis,
   Files,
   FileText,
   Image,
@@ -16,6 +18,12 @@ import {
 } from "lucide-react"
 import { agentApi, agentUrl } from "@/http/client"
 import type { FileInfo } from "@/workspace/files"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Field, FieldLabel } from "@/components/ui/field"
@@ -26,7 +34,7 @@ import {
   EmptyTitle,
   EmptyDescription,
 } from "@/components/ui/empty"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { attachmentReady, fileDescription, legacyPdf } from "./preparation"
 import { fileSize } from "./file-attachments"
 import type { FilesState } from "./use-files"
@@ -143,11 +151,11 @@ export function FilesWorkbench({
   }, [selectedId])
   return (
     <>
-      <header className="workbench-heading">
-        <h2>Bot files</h2>
-        <p>Private to this bot · up to 8 MB per file</p>
+      <header className="workbench-heading-row">
+        <h2 className="workbench-section-title">Files</h2>
+        <FilePicker state={state} attach={false} />
       </header>
-      <div className="flex items-center justify-between gap-2 border-y px-4 py-2">
+      <div className="workbench-filter-row">
         <Tabs
           value={tab}
           onValueChange={(value) => {
@@ -155,12 +163,14 @@ export function FilesWorkbench({
             setPreviewId(null)
           }}
         >
-          <TabsList>
+          <TabsList variant="line">
             <TabsTrigger value="files">Files</TabsTrigger>
             <TabsTrigger value="trash">Trash</TabsTrigger>
           </TabsList>
         </Tabs>
-        <FilePicker state={state} attach={false} />
+        <span className="text-xs text-muted-foreground">
+          {visible.length} {visible.length === 1 ? "file" : "files"} · Private
+        </span>
       </div>
       <div className="workbench-body">
         {state.error && (
@@ -177,7 +187,7 @@ export function FilesWorkbench({
             </AlertDescription>
           </Alert>
         )}
-        <UploadStatus state={state} />
+        {!!state.uploads.length && <UploadStatus state={state} />}
         {state.loading && (
           <p className="text-sm text-muted-foreground">Loading files…</p>
         )}
@@ -251,11 +261,18 @@ export function FilesWorkbench({
           </div>
         )}
       </div>
-      <div className="border-t p-4 text-xs text-muted-foreground">
-        Images, text, readable PDFs and prepared video frames can be used by the
-        bot. PDFs: up to 50 pages; no OCR. Videos: up to ten minutes, six
-        sampled frames and embedded text captions. Audio is not transcribed.
-      </div>
+      <footer className="text-xs text-muted-foreground">
+        <details>
+          <summary className="cursor-pointer">
+            Private files · Supported formats and limits
+          </summary>
+          <p className="mt-2">
+            Up to 8 MB per file. Images, text, readable PDFs (50 pages; no OCR),
+            and video frames with embedded text captions. Videos: up to ten
+            minutes and six sampled frames. Audio is not transcribed.
+          </p>
+        </details>
+      </footer>
     </>
   )
 }
@@ -317,8 +334,8 @@ function FileDetails({
           </div>
         </form>
       ) : (
-        <>
-          <div className="flex min-w-0 items-center gap-3">
+        <div className="file-detail-heading">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
             <Files className="size-5 shrink-0 text-muted-foreground" />
             <div className="min-w-0 flex-1">
               <p className="truncate font-medium" title={file.name}>
@@ -332,7 +349,7 @@ function FileDetails({
               </p>
             </div>
           </div>
-          <div className="mt-2 flex flex-wrap justify-end gap-1">
+          <div className="flex shrink-0 items-center justify-end gap-1">
             {file.trashed ? (
               <Button
                 size="xs"
@@ -392,32 +409,41 @@ function FileDetails({
                     >
                       <Download />
                     </Button>
-                    <Button
-                      size="icon-xs"
-                      variant="ghost"
-                      aria-label={`Rename ${file.name}`}
-                      onClick={() => {
-                        setName(file.name)
-                        setEditing(true)
-                      }}
-                    >
-                      <Pencil />
-                    </Button>
                   </>
                 )}
-                <Button
-                  size="icon-xs"
-                  variant="ghost"
-                  disabled={busy}
-                  aria-label={`Move ${file.name} to Trash`}
-                  onClick={() => void mutate("trash")}
-                >
-                  <Trash2 />
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    disabled={busy}
+                    render={
+                      <Button
+                        size="icon-xs"
+                        variant="ghost"
+                        aria-label={`Options for ${file.name}`}
+                      />
+                    }
+                  >
+                    <Ellipsis />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="min-w-40">
+                    {file.status === "ready" && (
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setName(file.name)
+                          setEditing(true)
+                        }}
+                      >
+                        <Pencil /> Rename
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem onClick={() => void mutate("trash")}>
+                      <Trash2 /> Move to Trash
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </>
             )}
           </div>
-        </>
+        </div>
       )}
     </div>
   )
@@ -464,17 +490,30 @@ function FilePreview({ file, agentId }: { file: FileInfo; agentId: string }) {
     )
   return (
     <figure className="file-preview">
-      <figcaption className="mb-2 truncate text-xs font-medium">
-        {file.name}
-      </figcaption>
+      <figcaption className="sr-only">Preview of {file.name}</figcaption>
       {file.kind === "image" ? (
         <img
           className="max-h-80 w-full rounded-md object-contain"
           src={agentUrl(agentId, `files/${file.id}/content`)}
           alt={file.name}
         />
+      ) : /\.md(?:own)?$/i.test(file.name) && loaded && !error ? (
+        <Tabs defaultValue="preview" className="file-text-preview">
+          <TabsList variant="line" aria-label="File view">
+            <TabsTrigger value="preview">Preview</TabsTrigger>
+            <TabsTrigger value="source">Source</TabsTrigger>
+          </TabsList>
+          <TabsContent value="preview">
+            <Markdown text={text} />
+          </TabsContent>
+          <TabsContent value="source">
+            <pre className="text-xs break-words whitespace-pre-wrap">
+              {text}
+            </pre>
+          </TabsContent>
+        </Tabs>
       ) : (
-        <pre className="max-h-80 overflow-auto text-xs break-all whitespace-pre-wrap">
+        <pre className="max-h-80 overflow-auto text-xs break-words whitespace-pre-wrap">
           {error ||
             text ||
             (loaded ? "No readable text in this file." : "Loading…")}

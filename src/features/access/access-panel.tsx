@@ -1,5 +1,5 @@
 import { useRef, useState } from "react"
-import { ShieldCheck, RefreshCw } from "lucide-react"
+import { RefreshCw } from "lucide-react"
 import { Schema } from "effect"
 import {
   AccessState,
@@ -12,7 +12,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import {
   Sheet,
-  SheetTrigger,
   SheetContent,
   SheetHeader,
   SheetTitle,
@@ -22,11 +21,15 @@ import {
 export function AccessPanel({
   agentId,
   agentName,
+  open,
+  onOpenChange: setOpen,
   tools,
   onSaved,
 }: {
   agentId: string
   agentName: string
+  open: boolean
+  onOpenChange: (open: boolean) => void
   tools: readonly ToolPolicy[] | undefined
   onSaved: () => void
 }) {
@@ -64,13 +67,7 @@ export function AccessPanel({
     }
   }
   return (
-    <Sheet>
-      <SheetTrigger
-        render={<Button variant="ghost" size="sm" aria-label="Tool access" />}
-      >
-        <ShieldCheck />
-        <span className="chat-action-label hidden sm:inline">Tools</span>
-      </SheetTrigger>
+    <Sheet open={open} onOpenChange={setOpen}>
       <SheetContent className="gap-0 data-[side=right]:w-full data-[side=right]:sm:max-w-xl">
         <SheetHeader>
           <SheetTitle>Tool access</SheetTitle>

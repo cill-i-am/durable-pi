@@ -11,7 +11,9 @@ import {
   Clock3,
   Ellipsis,
   X,
+  ArrowLeft,
 } from "lucide-react"
+import { AgentMark } from "@/components/agent-mark"
 import type { Workbench } from "./workspace-navigation"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
@@ -50,6 +52,7 @@ export function WorkbenchPanel({
   agentName,
   locked,
   mobileNavigation,
+  recoveryAction,
   children,
 }: {
   value: Workbench
@@ -57,12 +60,13 @@ export function WorkbenchPanel({
   agentName: string
   locked: boolean
   mobileNavigation: ReactNode
+  recoveryAction?: ReactNode
   children: ReactNode
 }) {
   const container = useRef<HTMLDivElement>(null)
   const [wide, setWide] = useState(false)
   useEffect(() => {
-    const media = matchMedia("(min-width: 1280px)")
+    const media = matchMedia("(min-width: 1024px)")
     const update = () => setWide(media.matches)
     update()
     media.addEventListener("change", update)
@@ -103,7 +107,10 @@ export function WorkbenchPanel({
             <div className="workbench-tabbar">
               <div className="mobile-workbench-heading">
                 <strong>Workspace</strong>
-                <span>{agentName}</span>
+                <span>
+                  <AgentMark />
+                  {agentName}
+                </span>
               </div>
               <div className="workbench-tab-scroll">
                 <TabsList variant="line" aria-label="Workbench tools">
@@ -149,11 +156,23 @@ export function WorkbenchPanel({
                 disabled={locked}
                 onClick={() => onChange(null)}
               >
-                <X />
+                <X className="workbench-close-icon" />
+                <ArrowLeft className="workbench-back-icon" />
               </Button>
             </div>
             <TabsContent value={value} className="workbench-panel">
-              {children}
+              {recoveryAction && (
+                <div
+                  role="status"
+                  className="flex flex-wrap items-center gap-3 border-b p-4 text-sm"
+                >
+                  <span>An earlier checklist save needs recovery.</span>
+                  {recoveryAction}
+                </div>
+              )}
+              <div className="contents" inert={Boolean(recoveryAction)}>
+                {children}
+              </div>
             </TabsContent>
           </Tabs>
           {mobileNavigation}
