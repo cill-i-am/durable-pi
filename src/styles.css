@@ -2,6 +2,7 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -33,54 +34,86 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
   --color-foreground: var(--foreground);
   --color-background: var(--background);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --font-mono: "Geist Mono Variable", monospace;
+  --text-xs: 12px;
+  --text-xs--line-height: 16px;
+  --text-sm: 13px;
+  --text-sm--line-height: 20px;
+  --text-base: 14px;
+  --text-base--line-height: 22px;
+  --text-md: 16px;
+  --text-md--line-height: 24px;
+  --text-lg: 20px;
+  --text-xl: 24px;
+  --color-canvas: var(--canvas);
+  --color-warning: var(--warning);
+  --color-warning-bg: var(--warning-bg);
+  --color-destructive-bg: var(--destructive-bg);
+  --color-peach: var(--peach);
+  --color-lilac: var(--lilac);
+  --color-blue: var(--blue);
+  --color-terminal: var(--terminal);
+  --color-terminal-foreground: var(--terminal-foreground);
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius-3xl: 28px;
+  --radius-4xl: 32px;
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* Paper: Quiet Workroom, tokens 30a00488. Keep all light surfaces here. */
+  --background: #ffffff;
+  --canvas: #f5f6f3;
+  --foreground: #24312c;
+  --card: var(--background);
+  --card-foreground: var(--foreground);
+  --popover: var(--background);
+  --popover-foreground: var(--foreground);
+  --primary: #187f6b;
+  --primary-hover: #126b5a;
+  --primary-foreground: #ffffff;
+  --secondary: #f0f3ef;
+  --secondary-foreground: var(--foreground);
+  --muted: #f0f3ef;
+  --muted-foreground: #63716a;
+  --accent: #e7f1eb;
+  --accent-foreground: var(--foreground);
+  --destructive: #b24d48;
+  --destructive-bg: #fcf0ee;
+  --warning: #966316;
+  --warning-bg: #fff6e6;
+  --peach: #eacfc1;
+  --lilac: #d8d0e8;
+  --blue: #cddfe9;
+  --terminal: #1c2621;
+  --terminal-foreground: #d9e7df;
+  --border: #e2e7e1;
+  --input: var(--border);
+  --ring: var(--primary);
+  --chart-1: var(--primary);
+  --chart-2: var(--blue);
+  --chart-3: var(--lilac);
+  --chart-4: var(--peach);
+  --chart-5: var(--muted-foreground);
+  --radius: 14px;
+  --sidebar: #f6f7f5;
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
 }
 
 .dark {
@@ -91,6 +124,7 @@
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
   --primary: oklch(0.922 0 0);
+  --primary-hover: oklch(0.85 0 0);
   --primary-foreground: oklch(0.205 0 0);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
@@ -128,34 +162,30 @@
     @apply font-sans;
   }
 }
-/* A quiet paper workspace, one muted green accent. */
-:root {
-  --background: oklch(0.985 0.004 85);
-  --foreground: oklch(0.24 0.014 150);
-  --primary: oklch(0.4 0.045 156);
-  --primary-foreground: oklch(0.99 0.004 85);
-  --secondary: oklch(0.95 0.009 85);
-  --secondary-foreground: oklch(0.28 0.018 150);
-  --muted: oklch(0.95 0.006 85);
-  --muted-foreground: oklch(0.49 0.014 145);
-  --border: oklch(0.89 0.008 85);
-  --ring: oklch(0.55 0.055 155);
-}
 body {
   margin: 0;
+  font-size: 14px;
+  line-height: 22px;
+}
+.agent-mark {
+  display: block;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  color: var(--primary);
+}
+.agent-mark[data-tone="peach"] {
+  color: var(--peach);
+}
+.agent-mark[data-tone="lilac"] {
+  color: var(--lilac);
+}
+.agent-mark[data-tone="blue"] {
+  color: var(--blue);
 }
 .pi-mark {
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  font-family: Georgia, serif;
-  font-size: 29px;
-  line-height: 1;
-  background: var(--background);
-  color: var(--primary);
+  width: 32px;
+  height: 32px;
 }
 .loading-view {
   min-height: 100svh;
@@ -167,50 +197,215 @@ body {
 }
 .login-page {
   min-height: 100svh;
+  display: grid;
+  grid-template-columns: minmax(400px, 43.0556%) 1fr;
+}
+.login-intro {
+  background: var(--canvas);
+  padding: 48px clamp(32px, 4.444vw, 64px);
   display: flex;
   flex-direction: column;
-  padding: 32px 48px;
+  gap: 26px;
 }
 .login-brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   font-size: 22px;
+  line-height: 31px;
   font-weight: 600;
 }
-.login-caption {
-  font-size: 13px;
-  font-weight: 400;
-  color: var(--muted-foreground);
-  margin-left: 20px;
-}
-.login-panel {
-  width: min(100%, 360px);
-  margin: auto;
+.login-story {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  padding: 48px 0;
+  align-items: flex-start;
+  gap: 26px;
+  margin-top: 100px;
 }
-.login-panel h1 {
-  font-size: 30px;
-  line-height: 1.2;
-  letter-spacing: -1px;
-  margin-bottom: -14px;
+.login-character {
+  width: 90px;
+  height: 90px;
 }
-.login-panel > p {
-  font-size: 14px;
-  line-height: 1.7;
+.login-display {
+  font-size: 48px;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 52px;
 }
-.login-lock {
-  width: 22px;
-  height: 22px;
+.login-description {
+  color: var(--muted-foreground);
+  font-size: 17px;
+  line-height: 26px;
+  max-width: 370px;
+}
+.login-preview {
+  position: relative;
+  width: min(100%, 436px);
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--background);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.login-preview figcaption {
+  position: absolute;
+  inset-block-start: -22px;
+  inset-inline-start: 0;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--muted-foreground);
+}
+.login-preview-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+}
+.login-preview-row .agent-mark {
+  width: 28px;
+  height: 28px;
+}
+.login-preview-row > div {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.login-preview-row strong {
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 500;
+}
+.login-preview-row span {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 17px;
+}
+.login-preview-row > svg:last-child {
+  width: 14px;
+  height: 14px;
   color: var(--primary);
+  flex-shrink: 0;
+}
+.login-privacy {
+  margin-top: auto;
+  padding-top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 17px;
+}
+.login-privacy svg {
+  width: 14px;
+  height: 14px;
+}
+.login-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 32px;
+}
+.login-panel {
+  width: min(100%, 380px);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.login-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.login-heading h1 {
+  font-size: 30px;
+  line-height: 36px;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+}
+.login-heading p {
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--muted-foreground);
+}
+.login-panel [data-slot="field-group"] {
+  gap: 20px;
+}
+.login-panel [data-slot="field"] {
+  gap: 7px;
+}
+.login-panel [data-slot="input"],
+.login-panel [data-slot="input-group"] {
+  min-height: 44px;
+  border-radius: var(--radius-sm);
+}
+.login-panel [data-slot="input-group"] input {
+  min-height: 42px;
+}
+.login-panel [data-slot="field-label"] {
+  font-size: 13px;
+  line-height: 18px;
+}
+.login-password-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.login-password-label a {
+  color: var(--primary);
+  font-size: 12px;
+  line-height: 18px;
+}
+.login-password-label a:hover {
+  text-decoration: underline;
+}
+.login-panel > [data-slot="button"] {
+  align-self: center;
 }
 .login-footer {
   text-align: center;
   color: var(--muted-foreground);
   font-size: 12px;
+  line-height: 19px;
+}
+@media (max-width: 1023px) {
+  .login-page {
+    display: flex;
+    flex-direction: column;
+  }
+  .login-intro {
+    background: var(--background);
+    padding: 24px;
+  }
+  .login-story,
+  .login-privacy {
+    display: none;
+  }
+  .login-content {
+    flex: 1;
+    padding: 24px 24px 48px;
+  }
+  .login-panel input {
+    font-size: 16px;
+  }
+}
+@media (min-width: 1024px) and (max-height: 820px) {
+  .login-intro {
+    padding-block: 32px;
+  }
+  .login-story {
+    margin-top: 16px;
+    gap: 20px;
+  }
+  .login-character {
+    width: 64px;
+    height: 64px;
+  }
 }
 .chat-app {
   height: 100svh;
@@ -324,6 +519,11 @@ body {
   resize: none;
   font-size: 15px;
 }
+@media (max-width: 767px) {
+  .chat-composer textarea {
+    font-size: 16px;
+  }
+}
 .composer-footnote {
   display: flex;
   justify-content: space-between;
@@ -376,15 +576,6 @@ body {
   }
   .composer-footnote span:last-child {
     display: none;
-  }
-  .login-page {
-    padding: 24px;
-  }
-  .login-caption {
-    display: none;
-  }
-  .login-panel {
-    padding: 32px 0;
   }
 }
 @media (prefers-reduced-motion: no-preference) {
@@ -460,15 +651,7 @@ body {
   padding: 8px 12px;
 }
 
-/* Workspace layout follows the approved Paper composition. All colors are semantic. */
-:root {
-  --sidebar: oklch(0.975 0.004 130);
-  --sidebar-foreground: var(--foreground);
-  --sidebar-accent: oklch(0.935 0.019 155);
-  --sidebar-accent-foreground: var(--foreground);
-  --sidebar-primary: var(--primary);
-  --sidebar-border: var(--border);
-}
+/* Workspace layout follows the approved Paper composition. */
 .workspace-shell {
   height: 100svh;
   min-height: 0;
@@ -550,11 +733,34 @@ body {
   }
 }
 
-.agent-columns { display: flex; flex: 1; min-width: 0; min-height: 0; overflow: hidden; }
-.agent-columns > .chat-workspace { flex: 1; min-width: 0; container-type: inline-size; container-name: conversation; }
+.agent-columns {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.agent-columns > .chat-workspace {
+  flex: 1;
+  min-width: 0;
+  container-type: inline-size;
+  container-name: conversation;
+}
 @container conversation (max-width: 820px) {
-  .workspace-main .chat-header { flex-wrap: wrap; height: auto; min-height: 68px; padding-block: 8px; gap: 4px; }
-  .chat-identity { width: 100%; }
-  .chat-identity h1 { flex: 1; }
-  .chat-actions { margin-left: auto; }
+  .workspace-main .chat-header {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: 68px;
+    padding-block: 8px;
+    gap: 4px;
+  }
+  .chat-identity {
+    width: 100%;
+  }
+  .chat-identity h1 {
+    flex: 1;
+  }
+  .chat-actions {
+    margin-left: auto;
+  }
 }

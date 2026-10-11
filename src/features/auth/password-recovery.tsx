@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { AuthFrame } from "./auth-frame"
+import { PasswordInput } from "./password-input"
 
 function BackToSignIn() {
   return (
@@ -55,7 +56,7 @@ export function ForgotPassword() {
       }
     >
       {sent ? (
-        <div role="status" className="space-y-4">
+        <div role="status" className="flex flex-col gap-4">
           <p className="text-sm text-muted-foreground">
             Check your spam folder too. If nothing arrives, wait a few minutes
             before trying again.
@@ -85,7 +86,7 @@ export function ForgotPassword() {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-            <Button type="submit" disabled={pending}>
+            <Button type="submit" size="lg" disabled={pending}>
               {pending ? "Sending…" : "Send reset link"}
             </Button>
           </FieldGroup>
@@ -196,10 +197,9 @@ export function ResetPassword() {
           <FieldGroup>
             <Field>
               <FieldLabel htmlFor="new-password">New password</FieldLabel>
-              <Input
+              <PasswordInput
                 id="new-password"
                 name="password"
-                type="password"
                 autoComplete="new-password"
                 minLength={12}
                 maxLength={128}
@@ -212,10 +212,9 @@ export function ResetPassword() {
               <FieldLabel htmlFor="confirm-password">
                 Confirm password
               </FieldLabel>
-              <Input
+              <PasswordInput
                 id="confirm-password"
                 name="confirm"
-                type="password"
                 autoComplete="new-password"
                 minLength={12}
                 maxLength={128}
@@ -228,7 +227,7 @@ export function ResetPassword() {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-            <Button type="submit" disabled={pending}>
+            <Button type="submit" size="lg" disabled={pending}>
               {pending ? "Saving…" : "Reset password"}
             </Button>
           </FieldGroup>
