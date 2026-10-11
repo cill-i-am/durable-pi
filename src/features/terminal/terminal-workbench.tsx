@@ -44,7 +44,10 @@ export function TerminalWorkbench({
             variant="ghost"
             aria-label="Terminal internet settings"
             disabled={terminal.busy || !terminal.networkPolicy}
-            onClick={() => setNetworkSettings(terminal.networkPolicy)}
+            onClick={() => {
+              if (terminal.networkPolicy)
+                setNetworkSettings(terminal.networkPolicy)
+            }}
           >
             <Settings2 />
           </Button>
@@ -60,6 +63,12 @@ export function TerminalWorkbench({
         </div>
       </header>
       <div className="workbench-body">
+        {terminal.networkPolicy === null && (
+          <p role="status" className="text-xs text-muted-foreground">
+            This terminal service hasn’t provided its internet settings yet.
+            Refresh to check again.
+          </p>
+        )}
         {terminal.cleanupError && (
           <Alert>
             <AlertDescription>
