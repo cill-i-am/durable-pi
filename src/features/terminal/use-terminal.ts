@@ -13,8 +13,9 @@ import { poll } from "@/http/poll"
 import { maintainSessionLease, type LeaseState } from "./session-lease"
 
 export function useTerminal(agentId: string) {
-  const [networkPolicy, setNetworkPolicy] =
-    useState<TerminalNetworkPolicy | null>(null)
+  const [networkPolicy, setNetworkPolicy] = useState<
+    TerminalNetworkPolicy | null | undefined
+  >(undefined)
   const [session, setSession] = useState<typeof InteractiveState.Type | null>(
     null
   )
