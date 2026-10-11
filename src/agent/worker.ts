@@ -67,7 +67,7 @@ import {
   type ToolExecutionResult,
 } from "@earendil-works/pi-durable"
 import { Type, type Message, type Credential } from "@earendil-works/pi-ai"
-import { agentSettings } from "./compaction"
+import { agentSettings, contextProjectionBytes } from "./compaction"
 import * as Schema from "effect/Schema"
 import * as Effect from "effect/Effect"
 import type { AgentEnv } from "../../alchemy.run"
@@ -924,6 +924,21 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     if (foreground !== undefined) windows.push(foreground)
     return windows.length ? Math.min(...windows) : undefined
   }
+  contextProjectionBytes() {
+    const turn = this.active()
+    const model = this.models.getModel(
+      "openai",
+      turn?.model ?? this.env.MODEL_ID
+    )
+    if (!model) throw new Error("The selected model is unavailable")
+    return contextProjectionBytes(
+      Math.min(
+        model.contextWindow,
+        turn?.routing?.contextWindow ?? model.contextWindow,
+        this.communicationFloor() ?? model.contextWindow
+      )
+    )
+  }
   readonly models = createAgentModels(this.credentials, {
     beforeRequest: (id, signal) =>
       Effect.runPromise(
@@ -1049,9 +1064,11 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       this.registry.install({
         name: "personal",
         hooks: [
-          objectContextHook(this.objects),
-          planContextHook(this.plans, (api) =>
-            this.planningSource(String(api.conversationId))
+          objectContextHook(this.objects, () => this.contextProjectionBytes()),
+          planContextHook(
+            this.plans,
+            (api) => this.planningSource(String(api.conversationId)),
+            () => this.contextProjectionBytes()
           ),
         ],
         sections: [

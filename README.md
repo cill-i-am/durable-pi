@@ -6,7 +6,7 @@ Production: [bot.cill-i-am.com](https://bot.cill-i-am.com). Alchemy attaches thi
 
 Pi owns model turns, tool execution, committed transcripts, and recovery. The application adds an owner-only login, a durable submission queue, a lossless message archive, a binary summary tree, and sourced Markdown memory notes. ChatGPT subscription access uses Pi's current OpenAI sign-in flow.
 
-Implementation progress, acceptance criteria and architecture are tracked in [BUILD.md](BUILD.md).
+Browse the current product in the [feature map](FEATURES.md). Implementation progress, acceptance criteria and architecture are tracked in [BUILD.md](BUILD.md).
 
 ## Persistent working objects
 

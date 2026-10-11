@@ -51,6 +51,28 @@ function fixture() {
   })
   return { host, conversations, runtime, wakes, db }
 }
+
+it("bounds request projections by the active model and durable routing pin, including a smaller concurrent runtime budget", () => {
+  const host: PersonalAgent = Object.create(PersonalAgent.prototype)
+  let pin = 272000,
+    window = 272000,
+    floor: number | undefined
+  Object.assign(host, {
+    active: () => ({ model: "selected", routing: { contextWindow: pin } }),
+    models: { getModel: () => ({ contextWindow: window }) },
+    communicationFloor: () => floor,
+  })
+  expect(host.contextProjectionBytes()).toBe(8192)
+  // Later catalog growth cannot enlarge the saved run's budget.
+  window = 1050000
+  pin = 32000
+  expect(host.contextProjectionBytes()).toBe(1000)
+  floor = 8192
+  expect(host.contextProjectionBytes()).toBe(256)
+  floor = undefined
+  window = 16000
+  expect(host.contextProjectionBytes()).toBe(500)
+})
 it("arms the run after asynchronous discovery and durable admission; replay re-arms without duplicating the turn", async () => {
   const { host, conversations, runtime, wakes } = fixture()
   let started!: () => void, release!: () => void
