@@ -11,3 +11,5 @@ allowBuilds:
   protobufjs: false
 minimumReleaseAgeExclude:
   - agents@0.27.0
+patchedDependencies:
+  '@modelcontextprotocol/client@2.0.0': patches/@modelcontextprotocol__client@2.0.0.patch

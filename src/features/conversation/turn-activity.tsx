@@ -25,8 +25,10 @@ import {
 
 export function TurnActivity({
   items,
+  toolTitles,
   agentId,
 }: {
+  toolTitles?: Record<string, string>
   items: readonly TimelineItem[]
   agentId?: string
 }) {
@@ -85,7 +87,9 @@ export function TurnActivity({
               }
             >
               <Wrench className="shrink-0" />
-              <span className="truncate font-mono text-xs">{item.name}</span>
+              <span className="truncate font-mono text-xs">
+                {toolTitles?.[item.name] ?? item.name}
+              </span>
               <span className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
                 <StatusIcon
                   className={

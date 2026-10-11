@@ -4,6 +4,7 @@ export const AccessMode = Schema.Literals(["allow", "ask", "deny"])
 export type AccessMode = typeof AccessMode.Type
 export const ToolPolicy = Schema.Struct({
   name: Schema.String,
+  title: Schema.optional(Schema.String),
   description: Schema.String,
   mode: AccessMode,
   revision: Schema.Number,

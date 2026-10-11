@@ -11,6 +11,7 @@ import {
   defineTool,
   Harness,
   type EntryRecord,
+  type ToolExecutionResult,
 } from "@earendil-works/pi-durable"
 import { Type } from "@earendil-works/pi-ai"
 import * as Schema from "effect/Schema"
@@ -63,6 +64,17 @@ import { AccessGate } from "../access/gate"
 import { builtInTools } from "../access/contracts"
 import { guardedTools } from "../access/adapters/pi"
 import { accessRequest } from "../access/http"
+import { MCPClientManager } from "agents/mcp/client"
+import { ConnectionStore } from "../access/adapters/connections"
+import { ConnectionOAuthProvider } from "../access/adapters/oauth"
+import { RemoteConnections } from "../access/adapters/mcp"
+import {
+  connectionRequest,
+  connectionResponse,
+  connectionJson,
+} from "../access/connection-http"
+import { SelectRemoteTools } from "../access/connections"
+import { selectRemoteTools } from "../access/remote-selection"
 import { SkillStore } from "../skills/adapters/sqlite"
 import { SelectSkills, SkillConflict } from "../skills/contracts"
 import { readSkillJson, skillResponse, skillsRequest } from "../skills/http"
@@ -255,7 +267,25 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       ? this.env.AGENT.getByName(owner).resolveModelCredential(provider)
       : this.resolveModelCredential(provider)
   })
-  readonly accessStore = new AccessStore(this.db, () => builtInTools)
+  readonly connectionStore = new ConnectionStore(this.db)
+  readonly mcp = new MCPClientManager("durable-pi", "1.0.0", {
+    createAuthProvider: (callbackUrl) =>
+      new ConnectionOAuthProvider(
+        this.ctx.storage,
+        this.connectionStore,
+        callbackUrl
+      ),
+  })
+  readonly connections = new RemoteConnections(this.connectionStore, this.mcp)
+  readonly accessStore = new AccessStore(this.db, () => [
+    ...builtInTools,
+    ...this.connectionStore.selection().tools.map((tool) => ({
+      name: tool.name,
+      title: `${tool.connectionName} / ${tool.remoteName}`,
+      description: tool.description,
+      mode: "ask" as const,
+    })),
+  ])
   readonly access = new AccessGate(
     this.accessStore,
     (turnId) => {
@@ -325,6 +355,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   readonly registry = createRegistry()
   readonly harness = new PiHarness({
     harness: ({ storage, context }) => {
+      this.installRemoteTools()
       this.registry.install({
         name: "personal",
         sections: [
@@ -484,6 +515,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   readonly backups = new BackupRunner(this)
   readonly extraction = new ExtractionRunner(this)
   readonly lifecycle = Lifecycle.install(this)
+    .use(this.mcp)
     .use(this.harness)
     .use(this.runner)
     .use(this.compactor)
@@ -535,6 +567,54 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   }
   active() {
     return this.conversations.active()
+  }
+  installRemoteTools() {
+    this.registry.install({
+      name: "connections",
+      tools: this.connectionStore.selection().tools.map((tool) =>
+        this.protectTool(
+          defineTool({
+            name: tool.name,
+            description: `${tool.connectionName} / ${tool.remoteName}: ${tool.description}`,
+            parameters: tool.parameters,
+            replay: "unsafe",
+            execute: async (args) => {
+              if (
+                !this.connectionStore
+                  .selection()
+                  .tools.some((value) => value.name === tool.name)
+              )
+                throw new Error(
+                  "This tool was removed from the bot. Do not retry it."
+                )
+              const owner = this.botConfiguration.read()?.owner
+              if (!owner)
+                return this.connections.call(
+                  tool.name,
+                  args as Record<string, unknown>
+                )
+              const result = await this.env.AGENT.getByName(
+                owner
+              ).callRemoteTool(tool.name, JSON.stringify(args))
+              return JSON.parse(result) as ToolExecutionResult
+            },
+          })
+        )
+      ),
+    })
+  }
+  async resolveRemoteTools(names: readonly string[]) {
+    await this.lifecycle.start()
+    return this.connections.resolve(names)
+  }
+  async callRemoteTool(name: string, argumentsJson: string) {
+    await this.lifecycle.start()
+    return JSON.stringify(
+      await this.connections.call(
+        name,
+        JSON.parse(argumentsJson) as Record<string, unknown>
+      )
+    )
   }
   current(id: string) {
     return this.conversations.get(id)!
@@ -671,6 +751,48 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     const url = new URL(request.url),
       path = url.pathname.replace("/api/agent/", "")
     try {
+      if (path === "connections" || path.startsWith("connections/"))
+        return Effect.runPromise(
+          connectionRequest(
+            this.connections,
+            request,
+            path,
+            request.headers.get("x-app-origin")!
+          )
+        )
+      if (path === "remote-tools") {
+        if (request.method === "GET")
+          return Response.json(this.connectionStore.selection())
+        if (request.method !== "POST")
+          return new Response(null, { status: 405 })
+        return Effect.runPromise(
+          connectionResponse(
+            Effect.gen({ self: this }, function* () {
+              const input = yield* connectionJson(request)
+              const selection = yield* Effect.try(() =>
+                Schema.decodeUnknownSync(SelectRemoteTools)(input)
+              )
+              const previous = this.connectionStore.selection()
+              const owner = this.botConfiguration.read()?.owner
+              const saved = yield* selectRemoteTools(
+                this.connectionStore,
+                selection,
+                (names) =>
+                  owner
+                    ? this.env.AGENT.getByName(owner).resolveRemoteTools(names)
+                    : this.resolveRemoteTools(names),
+                () => this.botConfiguration.read()?.status !== "archived"
+              )
+              for (const tool of previous.tools)
+                if (!saved.tools.some((value) => value.name === tool.name))
+                  this.accessStore.revoke(tool.name)
+              this.installRemoteTools()
+              this.access.notify()
+              return saved
+            })
+          )
+        )
+      }
       if (path === "access" || path.startsWith("access/")) {
         const result = await Effect.runPromise(
           accessRequest(
@@ -1297,7 +1419,9 @@ export default {
         path === "bots" ||
         path.startsWith("bots/") ||
         path === "skills" ||
-        path.startsWith("skills/")
+        path.startsWith("skills/") ||
+        path === "connections" ||
+        path.startsWith("connections/")
       )
         return await root.fetch(request)
       const agent = await root.agentProfile(decoded.value)

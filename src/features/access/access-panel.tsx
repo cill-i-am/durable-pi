@@ -108,10 +108,12 @@ export function AccessPanel({
               <section
                 key={tool.name}
                 className="space-y-3 py-4"
-                aria-label={tool.name}
+                aria-label={tool.title ?? tool.name}
               >
                 <div>
-                  <h3 className="font-mono text-sm font-medium">{tool.name}</h3>
+                  <h3 className="font-mono text-sm font-medium">
+                    {tool.title ?? tool.name}
+                  </h3>
                   <p className="mt-1 text-sm text-muted-foreground">
                     {tool.description}
                   </p>
@@ -121,7 +123,7 @@ export function AccessPanel({
                   size="sm"
                   value={[tool.mode]}
                   disabled={!!busy}
-                  aria-label={`Access for ${tool.name}`}
+                  aria-label={`Access for ${tool.title ?? tool.name}`}
                   onValueChange={(values) => {
                     const value = values[0]
                     if (

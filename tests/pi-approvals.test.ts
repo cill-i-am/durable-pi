@@ -29,6 +29,7 @@ describe("native Pi tool approvals", () => {
     "revoke",
     "dispatch-interrupted",
     "large-result",
+    "remote-schema",
   ])(
     "survives a harness restart: %s",
     async (scenario) => {
@@ -81,7 +82,14 @@ describe("native Pi tool approvals", () => {
               defineTool({
                 name: "record",
                 description: "Synthetic effect",
-                parameters: Type.Object({ value: Type.String() }),
+                parameters:
+                  scenario === "remote-schema"
+                    ? {
+                        type: "object",
+                        properties: { value: { type: "string" } },
+                        required: ["value"],
+                      }
+                    : Type.Object({ value: Type.String() }),
                 replay: "safe",
                 execute: async (_args, _api, context) => {
                   calls++
@@ -153,7 +161,11 @@ describe("native Pi tool approvals", () => {
           store.cancel(turnId)
         }
         if (scenario === "revoke") store.update("record", 0, "deny")
-        if (scenario === "approve" || scenario === "large-result")
+        if (
+          scenario === "approve" ||
+          scenario === "large-result" ||
+          scenario === "remote-schema"
+        )
           store.decide(id, true, store.get(id)!.revision)
         harness = await Harness.open(
           await openNodeSqliteStorage(path),
@@ -168,6 +180,7 @@ describe("native Pi tool approvals", () => {
         expect(calls).toBe(
           scenario === "approve" ||
             scenario === "large-result" ||
+            scenario === "remote-schema" ||
             scenario === "dispatch-interrupted"
             ? 1
             : 0
@@ -176,6 +189,7 @@ describe("native Pi tool approvals", () => {
           {
             approve: "done",
             "large-result": "done",
+            "remote-schema": "done",
             stop: "cancelled",
             revoke: "denied",
             "dispatch-interrupted": "interrupted",
@@ -195,6 +209,7 @@ describe("native Pi tool approvals", () => {
         expect(calls).toBe(
           scenario === "approve" ||
             scenario === "large-result" ||
+            scenario === "remote-schema" ||
             scenario === "dispatch-interrupted"
             ? 1
             : 0

@@ -65,7 +65,7 @@ The memory bounded context lives in `src/memory`: domain values and merge policy
 
 The Agents context owns the owner catalog. Its SQLite adapter and versioned child admission policy live under `src/agents/adapters`. Archive acknowledgement waits for the child to reject new messages; work admitted before archival may finish. Frontend capabilities live under `src/features`, composed by `src/app/workspace.tsx`.
 
-Incoming messages during a running response remain durably queued for a fresh turn; mid-tool steering is not implemented. Optional OptChat subagents are not connected. These are explicit differences from the reference, rather than hidden memory omissions.
+During a reply, choose steering at the next tool boundary or queue a fresh turn. Stop preserves the message and cancels waiting tool approvals; a tool already dispatched may finish. Optional OptChat subagents are not connected yet.
 
 ### R2 backup and recovery
 
@@ -94,6 +94,14 @@ The restore command checks batch hashes, missing records, source references, tre
 [Cognition's Agent Memory Repo](https://cognition.com/agent-memory-repo) informs the linked, sourced Markdown notes. Here those notes and their revisions stay in private SQLite. They are never pushed to the public source repository. Automatic scheduled “dreaming” is not enabled.
 
 [Sawyer Hood's Pi Durable demo](https://x.com/sawyerhood/status/2107872386339287239) informed the standalone hosted-chat direction. [Whirl](https://github.com/whirlchat/whirl) informed the compact composer interaction; its Convex-dependent composer is not embedded. The UI uses native shadcn Base UI source components.
+
+## External tools
+
+Open **Connect** in a bot, add a trusted public HTTPS MCP endpoint, then choose **Sign in** if the provider requires OAuth. Use **Reload** after authorization. This supports Streamable HTTP servers with anonymous access or public OAuth registration; bearer-token URLs and custom headers are not accepted. Connection credentials stay in the owner's private Durable Object.
+
+Select tools for each bot. New selections require approval of the exact inputs; **Tools** changes Allow/Ask/Deny per tool. Disconnect blocks new calls for every bot. Reconnecting invalidates old selections, which must be removed and selected again. Removing and re-adding a tool restores Ask. Actions already sent to a remote service can still finish; an interrupted result must be checked there before retrying.
+
+The integration follows the [Cloudflare MCP client API](https://developers.cloudflare.com/agents/model-context-protocol/apis/client-api/). The pinned SDK has a small pnpm patch for concurrent refresh-token rotation, verified by `tests/mcp-oauth.test.ts`; retain its regression tests when upgrading or removing the patch. No owner services are connected automatically.
 
 ## Repository and data boundaries
 
