@@ -21,6 +21,7 @@ import { sqliteMailbox } from "../../src/communication/adapters/sqlite"
 import {
   mailboxHandler,
   mailboxTransport,
+  isMailboxRequest,
 } from "../../src/communication/adapters/rpc"
 import { deliverNext } from "../../src/communication/delivery"
 import { Envelope, Identity, failure } from "../../src/communication/contracts"
@@ -278,6 +279,8 @@ export class MailboxBot extends DurableObject<Env> {
   }
   async fetch(request: Request) {
     await this.lifecycle.start()
+    if (!isMailboxRequest(request))
+      return new Response("Not found", { status: 404 })
     const isDelivery = (await request.clone().text()).includes(
       '"tag":"deliver"'
     )
