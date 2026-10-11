@@ -9,6 +9,7 @@ import {
   readPiReply,
   replySettled,
   placedInputs,
+  originalTranscript,
 } from "../src/conversations/adapters/pi-reply"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import { database } from "./database"
@@ -45,6 +46,56 @@ function fixture() {
   return { store, root: store.get(root.id)! }
 }
 describe("Pi snapshot and receipt consistency", () => {
+  it("pages original history through the captured tail without including later writes or summary projections", async () => {
+    const marker: EntryRecord = {
+      ...entry(300),
+      kind: "pi.compaction",
+      head: entry(280).id,
+    }
+    const history = [
+      ...Array.from({ length: 299 }, (_, index) => entry(index + 1)),
+      marker,
+      entry(301),
+    ]
+    const captured = {
+      ...snapshot([280, 299]),
+      entries: [marker, entry(280), entry(299)],
+    }
+    const pages: number[] = []
+    const originals = await originalTranscript(
+      {
+        entries: async (query, limit, cursor) => {
+          expect(query.maxEntryId).toBe(300)
+          expect(limit).toBe(256)
+          const offset = Number(cursor?.offset ?? 0)
+          pages.push(offset)
+          const eligible = history
+            .filter((record) => record.id <= query.maxEntryId!)
+            .reverse()
+          return {
+            items: eligible.slice(offset, offset + limit),
+            ...(offset + limit < eligible.length
+              ? { next: { offset: offset + limit } }
+              : {}),
+          }
+        },
+      },
+      captured
+    )
+    expect(pages).toEqual([0, 256])
+    expect(originals.map((record) => record.id)).toEqual(
+      Array.from({ length: 299 }, (_, index) => index + 1)
+    )
+    const { root } = fixture()
+    expect(
+      replySettled(root, [root], {
+        records: new Map([
+          [root.id, { ...done, answer: entry(301).id } as SubmissionRecord],
+        ]),
+        snapshot: { ...captured, entries: originals },
+      })
+    ).toBe(false)
+  })
   it("reads committed input mappings after capturing the transcript", async () => {
     const { root } = fixture()
     let captured = false

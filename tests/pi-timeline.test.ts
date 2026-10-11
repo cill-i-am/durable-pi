@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest"
 import type { EntryRecord, SnapshotEvent } from "@earendil-works/pi-durable"
 import type { AssistantMessage } from "@earendil-works/pi-ai"
-import { piTimeline } from "../src/conversations/adapters/pi-timeline"
+import {
+  piTimeline,
+  displayAnswer,
+} from "../src/conversations/adapters/pi-timeline"
 
 const assistant: AssistantMessage = {
   role: "assistant",
@@ -115,5 +118,60 @@ describe("Pi display projection", () => {
     const before = piTimeline([], live)
     const after = piTimeline([entry(22, [assistant])])
     expect(before.map((item) => item.id)).toEqual(after.map((item) => item.id))
+  })
+})
+
+it("bounds long-run display caches in bytes while retaining recent complete tool pairs and untouched originals", () => {
+  const entries = Array.from({ length: 100 }, (_, index) => [
+    entry(index * 2 + 1, [
+      {
+        ...assistant,
+        content: [
+          { type: "text", text: `Progress ${index}: ` + "🧪".repeat(20000) },
+          {
+            type: "toolCall",
+            id: `call-${index}`,
+            name: "read_file",
+            arguments: {},
+          },
+        ],
+      },
+    ]),
+    entry(index * 2 + 2, [
+      {
+        role: "toolResult",
+        toolCallId: `call-${index}`,
+        toolName: "read_file",
+        isError: false,
+        timestamp: index,
+        content: [{ type: "text", text: "🧪".repeat(16000) }],
+      },
+    ]),
+  ]).flat()
+  const timeline = piTimeline(entries)
+  expect(
+    new TextEncoder().encode(JSON.stringify(timeline)).length
+  ).toBeLessThan(512000)
+  expect(timeline[0]).toMatchObject({ id: "earlier-activity", type: "text" })
+  expect(timeline.at(-1)).toMatchObject({
+    id: "call-99",
+    type: "tool",
+    status: "done",
+  })
+  expect(
+    timeline
+      .filter((item) => item.type === "tool")
+      .every((item) => item.output.length > 0)
+  ).toBe(true)
+  const answer = displayAnswer(entries)
+  expect(new TextEncoder().encode(answer).length).toBeLessThan(512000)
+  expect(answer).toContain("Progress 99")
+  expect(answer).toContain("Earlier messages")
+  expect(entries).toHaveLength(200)
+  expect(entries[0]!.model![0]).toMatchObject({
+    content: [
+      expect.objectContaining({ text: expect.stringContaining("Progress 0") }),
+      expect.anything(),
+    ],
   })
 })

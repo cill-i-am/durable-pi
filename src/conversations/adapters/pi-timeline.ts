@@ -87,5 +87,65 @@ export function piTimeline(
       tool.output = slot.output?.slice(-32_000) ?? tool.output
     }
   }
-  return items
+  return boundedActivity(items)
+}
+
+const earlierActivity =
+  "Earlier messages and tool results are available through memory search and retrieval."
+const shortened =
+  "\n[Display shortened; the full original is available through memory retrieval.]"
+
+/** A display cache must not grow past the Durable Object SQLite row limit.
+ * Native entries and OptChat originals remain complete and authoritative.
+ */
+function boundedActivity(items: readonly TimelineItem[]): TimelineItem[] {
+  const encoder = new TextEncoder(),
+    kept: TimelineItem[] = []
+  let bytes = 2
+  for (let index = items.length - 1; index >= 0; index--) {
+    let item = items[index]!
+    if ("text" in item && item.text.length > 32_000)
+      item = {
+        ...item,
+        text:
+          item.text.slice(0, 32_000) +
+          (item.type === "thinking"
+            ? "\n[Reasoning display shortened.]"
+            : shortened),
+      }
+    const size = encoder.encode(JSON.stringify(item)).length + 1
+    if (bytes + size > 511_000) {
+      kept.push({ id: "earlier-activity", type: "text", text: earlierActivity })
+      break
+    }
+    bytes += size
+    kept.push(item)
+  }
+  return kept.reverse()
+}
+
+/** Bounded fallback for clients without the activity projection. */
+export function displayAnswer(entries: readonly EntryRecord[]) {
+  const parts: string[] = []
+  let remaining = 120_000
+  for (let index = entries.length - 1; index >= 0; index--) {
+    const messages = entries[index]!.model ?? []
+    for (let position = messages.length - 1; position >= 0; position--) {
+      const message = messages[position]!
+      if (message.role !== "assistant") continue
+      const value = message.content
+        .filter((block) => block.type === "text")
+        .map((block) => block.text)
+        .join("\n")
+      if (!value) continue
+      if (value.length > remaining) {
+        if (remaining) parts.push(value.slice(-remaining))
+        parts.push(earlierActivity)
+        return parts.reverse().join("\n\n")
+      }
+      parts.push(value)
+      remaining = Math.max(0, remaining - value.length - 2)
+    }
+  }
+  return parts.reverse().join("\n\n")
 }

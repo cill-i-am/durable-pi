@@ -84,3 +84,64 @@ it("captures numerical cache usage without retaining provider content", () => {
     cacheUsage({ type: "response.output_text.delta", delta: "private" })
   ).toBeUndefined()
 })
+
+it("keeps native summary requests uncached and ordinary OptChat prompts cacheable on the subscription transport", async () => {
+  const { createAgentModels, accountCredentials } =
+    await import("../src/agent/models")
+  const models = createAgentModels(
+    accountCredentials(async () => ({
+      type: "oauth",
+      access: "synthetic-local-access",
+      refresh: "synthetic-local-refresh",
+      clientId: "local-fixture",
+      expires: Date.now() + 3600000,
+    })),
+    { cacheKey: "stable-bot-key" }
+  )
+  const model = models.getModel("openai", "gpt-6.1-sol")!
+  expect(model.contextWindow).toBe(272000)
+  expect(model.maxTokens).toBe(128000)
+  const payloads: Record<string, unknown>[] = []
+  const fetch = async (_url: RequestInfo | URL, init?: RequestInit) => {
+    payloads.push(JSON.parse(String(init?.body)))
+    return new Response(
+      JSON.stringify({
+        error: { message: "Synthetic transport; no network request made" },
+      }),
+      { status: 400, headers: { "content-type": "application/json" } }
+    )
+  }
+  for (const cacheRetention of [undefined, "none"] as const) {
+    const result = await models.completeSimple(
+      model,
+      {
+        messages: [
+          {
+            role: "user",
+            timestamp: 1,
+            content: `<chat>\n${"old entry\n".repeat(6000)}</chat>\nCurrent request`,
+          },
+        ],
+      },
+      {
+        fetch,
+        cacheRetention,
+        maxRetries: 0,
+        reasoning: "medium",
+        maxTokens: 1600,
+      }
+    )
+    expect(result.stopReason).toBe("error")
+  }
+  expect(payloads).toHaveLength(2)
+  expect(payloads[0]!.prompt_cache_key).toBe("stable-bot-key")
+  expect(payloads[1]!.prompt_cache_key).toBeUndefined()
+  for (const payload of payloads) {
+    expect(payload.store).toBe(false)
+    expect(payload.context_management).toBeUndefined()
+    // Native maxTokens is budget metadata: this subscription route cannot enforce it.
+    expect(payload.max_output_tokens).toBeUndefined()
+    expect(JSON.stringify(payload)).toContain('"mode":"explicit"')
+    expect(payload.reasoning).toMatchObject({ context: "all_turns" })
+  }
+})

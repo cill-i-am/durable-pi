@@ -14,6 +14,7 @@ import {
   type ToolExecutionResult,
 } from "@earendil-works/pi-durable"
 import { Type } from "@earendil-works/pi-ai"
+import { agentSettings } from "./compaction"
 import * as Schema from "effect/Schema"
 import * as Effect from "effect/Effect"
 import type { AgentEnv } from "../../alchemy.run"
@@ -57,7 +58,10 @@ import {
   type Submission,
   type Turn,
 } from "../conversations/turns"
-import { piTimeline } from "../conversations/adapters/pi-timeline"
+import {
+  piTimeline,
+  displayAnswer,
+} from "../conversations/adapters/pi-timeline"
 import { conversationEvents } from "../conversations/adapters/events"
 import { selectBotSkills, type SkillResolution } from "../skills/selection"
 import { AccessStore } from "../access/adapters/sqlite"
@@ -842,10 +846,12 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         {
           models: this.models,
           registry: this.registry,
-          settings: {
-            compaction: { enabled: false },
-            retry: { enabled: true, maxRetries: 3, baseDelayMs: 1000 },
-          },
+          settings: agentSettings(() =>
+            this.models.getModel(
+              "openai",
+              this.active()?.model ?? this.env.MODEL_ID
+            )
+          ),
           onReport: () => console.warn("Pi reported an operation failure"),
         },
         context
@@ -1666,12 +1672,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     }
   }
   answer(entries: readonly EntryRecord[]) {
-    return entries
-      .flatMap((entry) => entry.model ?? [])
-      .filter((m) => m.role === "assistant")
-      .map((m) => textContent(m.content))
-      .filter(Boolean)
-      .join("\n\n")
+    return displayAnswer(entries)
   }
   archive(
     turn: Turn,
