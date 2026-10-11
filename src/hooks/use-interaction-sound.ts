@@ -25,8 +25,11 @@ export const useInteractionSound = () => {
     []
   )
 
-  return async () => {
-    if (!isInteractionSoundEnabled() || !("AudioContext" in window)) {
+  return async ({ preview = false }: { preview?: boolean } = {}) => {
+    if (
+      (!preview && !isInteractionSoundEnabled()) ||
+      !("AudioContext" in window)
+    ) {
       return
     }
     try {
@@ -38,7 +41,7 @@ export const useInteractionSound = () => {
       if (
         context.current !== audio ||
         audio.state !== "running" ||
-        !isInteractionSoundEnabled()
+        (!preview && !isInteractionSoundEnabled())
       ) {
         return
       }

@@ -7,6 +7,7 @@ import {
   Globe,
   LockKeyhole,
   Plug,
+  Play,
   Settings2,
   ShieldCheck,
   Volume2,
@@ -31,6 +32,7 @@ import {
 import { useSidebar } from "@/components/ui/sidebar"
 import { Switch } from "@/components/ui/switch"
 import { useInteractionSoundPreference } from "@/hooks/interaction-sound-preference"
+import { useInteractionSound } from "@/hooks/use-interaction-sound"
 import type { Workbench } from "./workspace-navigation"
 
 const settingsSections = [
@@ -99,6 +101,7 @@ export function WorkspaceSettings({
   const [skillsPending, setSkillsPending] = useState(false)
   const [mobileDetail, setMobileDetail] = useState(true)
   const sound = useInteractionSoundPreference()
+  const playInteractionSound = useInteractionSound()
   const { state: sidebarState } = useSidebar()
   const locked =
     modelsPending || accessPending || connectionsPending || skillsPending
@@ -255,6 +258,18 @@ export function WorkspaceSettings({
                       A short click when you reveal or hide a password.
                       Remembered on this device.
                     </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="mt-3"
+                      onClick={() =>
+                        void playInteractionSound({ preview: true })
+                      }
+                    >
+                      <Play data-icon="inline-start" />
+                      Test sound
+                    </Button>
                   </div>
                   <Switch
                     aria-label="Interaction sounds"
