@@ -5,10 +5,14 @@ import {
   type CommandRun,
   type Checkpoint,
   type CommandSummary,
+  type TerminalNetworkPolicy,
 } from "../contracts"
 
 export class TerminalStore {
   constructor(private readonly db: Sqlite) {
+    db.run(
+      "CREATE TABLE IF NOT EXISTS terminal_network (id INTEGER PRIMARY KEY CHECK(id=1),revision INTEGER NOT NULL,unrestricted INTEGER NOT NULL)"
+    )
     db.run(
       "CREATE TABLE IF NOT EXISTS terminal_runs (id TEXT PRIMARY KEY,created INTEGER NOT NULL,record TEXT NOT NULL)"
     )
@@ -29,6 +33,33 @@ export class TerminalStore {
       db.run(
         "ALTER TABLE terminal_authority ADD COLUMN revoked_through INTEGER NOT NULL DEFAULT -1"
       )
+  }
+  networkPolicy(): TerminalNetworkPolicy {
+    const row = this.db.all<{ revision: number; unrestricted: number }>(
+      "SELECT revision,unrestricted FROM terminal_network WHERE id=1"
+    )[0]
+    return row
+      ? { revision: row.revision, unrestricted: row.unrestricted === 1 }
+      : { revision: 0, unrestricted: false }
+  }
+  configureNetwork(input: TerminalNetworkPolicy) {
+    return this.db.transaction(() => {
+      if (!this.authority()?.active)
+        throw new TerminalFailure({
+          message: "Restore this bot before changing its network settings.",
+        })
+      const current = this.networkPolicy()
+      if (current.revision !== input.revision)
+        throw new TerminalFailure({
+          message: "Network settings changed. Reload before saving again.",
+        })
+      this.db.run(
+        "INSERT INTO terminal_network VALUES (1,?,?) ON CONFLICT(id) DO UPDATE SET revision=excluded.revision,unrestricted=excluded.unrestricted",
+        current.revision + 1,
+        input.unrestricted ? 1 : 0
+      )
+      return this.networkPolicy()
+    })
   }
   exported(id: string): Checkpoint | null {
     this.db.run(
@@ -145,6 +176,7 @@ export class TerminalStore {
       return this.put({
         ...input,
         authorityRevision: authority.revision,
+        networkUnrestricted: this.networkPolicy().unrestricted,
         kind,
         ...(transfer ? { transfer } : {}),
         status: stopped ? "cancelled" : "running",

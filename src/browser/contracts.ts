@@ -34,6 +34,7 @@ export const BrowserPolicy = Schema.Struct({
     Schema.isGreaterThanOrEqualTo(0)
   ),
   hosts: Schema.Array(Hostname).check(Schema.isMaxLength(20)),
+  unrestricted: Schema.optional(Schema.Boolean),
 })
 export type BrowserPolicy = typeof BrowserPolicy.Type
 export const BrowserPage = Schema.Struct({
@@ -76,23 +77,29 @@ export const BrowserNavigate = Schema.Struct({
 export const BrowserGeneration = Schema.Struct({
   generation: BrowserPolicy.fields.generation,
 })
-export function allowedBrowserUrl(value: string, hosts: readonly string[]) {
+export function allowedBrowserUrl(
+  value: string,
+  hosts: readonly string[],
+  unrestricted = false
+) {
   try {
     const url = new URL(value)
     Schema.decodeUnknownSync(Hostname)(url.hostname)
     if (
-      url.protocol !== "https:" ||
+      (unrestricted
+        ? !["http:", "https:"].includes(url.protocol)
+        : url.protocol !== "https:") ||
       url.username ||
       url.password ||
-      url.port ||
-      !hosts.includes(url.hostname)
+      (!unrestricted && (url.port || !hosts.includes(url.hostname)))
     )
       throw new Error("Destination")
     return url.href
   } catch {
     throw new BrowserFailure({
-      message:
-        "Choose an HTTPS URL on this bot's allowed sites, without credentials or a custom port.",
+      message: unrestricted
+        ? "Choose an HTTP or HTTPS URL with a public hostname and no embedded credentials."
+        : "Choose an HTTPS URL on this bot's allowed sites, without credentials or a custom port.",
     })
   }
 }
@@ -115,6 +122,7 @@ export interface BrowserRecord {
   controller: "agent" | "owner"
   generation: number
   hosts: readonly string[]
+  unrestricted: boolean
   version: number
   status: BrowserState["status"]
   session: BrowserSession | null
@@ -127,7 +135,11 @@ export function browserState(
 ): BrowserState {
   return {
     controller: record.controller,
-    policy: { generation: record.generation, hosts: record.hosts },
+    policy: {
+      generation: record.generation,
+      hosts: record.hosts,
+      unrestricted: record.unrestricted,
+    },
     version: record.version,
     status:
       record.session && browserDeadline(record.session) <= now

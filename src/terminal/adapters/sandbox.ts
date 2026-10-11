@@ -154,8 +154,11 @@ export function sandboxRuntime(sandbox: Sandbox): TerminalRuntime {
         },
       }
     },
-    restore: async (bytes, signal) => {
+    restore: async (bytes, signal, unrestricted = false) => {
       live(signal)
+      // Terminal closes the previous container first. Apply the saved admission
+      // policy at cold start; never broaden an already-running command's access.
+      sandbox.enableInternet = unrestricted
       // Drain the previous native stop event before opening a new SDK RPC
       // connection; otherwise that event can interrupt the first restore call.
       await sandbox.startAndWaitForPorts({

@@ -36,7 +36,7 @@ export function TurnReply({
   return (
     <Message align="start" className="assistant-message">
       <MessageContent>
-        <MessageHeader className="gap-2">
+        <MessageHeader className="sr-only">
           <AgentMark tone={agentId ? agentTone(agentId) : "primary"} />
           <span className="assistant-label">{agentName}</span>
         </MessageHeader>

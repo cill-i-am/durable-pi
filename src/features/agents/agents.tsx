@@ -5,6 +5,7 @@ import {
   Activity,
   BookOpen,
   ChevronDown,
+  ChevronsUpDown,
   Ellipsis,
   LogOut,
   Plus,
@@ -34,17 +35,18 @@ import {
 } from "@/components/ui/field"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog"
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
   DropdownMenuGroup,
+  DropdownMenuLabel,
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
@@ -138,7 +140,7 @@ export function AgentSidebar({
 }) {
   const [query, setQuery] = useState("")
   const [archived, setArchived] = useState(false)
-  const { setOpenMobile } = useSidebar()
+  const { setOpenMobile, isMobile } = useSidebar()
   const shown = agents.filter(
     (a) =>
       (a.status === "archived") === archived &&
@@ -313,42 +315,73 @@ export function AgentSidebar({
           <BookOpen />
           Memory
         </Button>
-        <Button
-          variant="ghost"
-          className="justify-start"
-          onClick={() => setArchived(!archived)}
-        >
-          <Archive data-icon="inline-start" />
-          {archived ? "Back to agents" : "Archived agents"}
-        </Button>
-        <div className="flex items-center gap-3 border-t pt-3">
-          <span className="bot-avatar">{name.slice(0, 1)}</span>
-          <span className="flex-1 text-sm">
-            {name}
-            <span className="block text-xs text-muted-foreground">
-              Personal workspace
-            </span>
-          </span>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Account security"
-            onClick={() => {
-              setOpenMobile(false)
-              onSecurity()
-            }}
-          >
-            <ShieldCheck />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Sign out"
-            onClick={() => void authClient.signOut()}
-          >
-            <LogOut />
-          </Button>
-        </div>
+        <SidebarMenu className="account-menu border-t pt-2">
+          <SidebarMenuItem>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <SidebarMenuButton
+                    size="lg"
+                    className="account-menu-trigger aria-expanded:bg-muted"
+                  />
+                }
+                aria-label={`Settings for ${name}`}
+              >
+                <span className="account-avatar" aria-hidden="true">
+                  {name
+                    .split(/\s+/)
+                    .slice(0, 2)
+                    .map((part) => part[0])
+                    .join("")}
+                </span>
+                <span className="min-w-0 flex-1 text-left">
+                  <span className="block truncate text-sm font-medium">
+                    {name}
+                  </span>
+                  <span className="block truncate text-xs text-muted-foreground">
+                    Personal workspace
+                  </span>
+                </span>
+                <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                className="min-w-56"
+                side={isMobile ? "top" : "right"}
+                align="end"
+                sideOffset={8}
+              >
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel className="px-2 py-2">
+                    <span className="block truncate text-sm font-medium text-foreground">
+                      {name}
+                    </span>
+                    <span className="block font-normal">
+                      Personal workspace
+                    </span>
+                  </DropdownMenuLabel>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setOpenMobile(false)
+                      onSecurity()
+                    }}
+                  >
+                    <ShieldCheck /> Account security
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setArchived(!archived)}>
+                    <Archive /> {archived ? "Active agents" : "Archived agents"}
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => void authClient.signOut()}>
+                  <LogOut /> Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
   )
@@ -391,24 +424,27 @@ export function AgentEditor({
     }
   }
   return (
-    <Dialog
+    <Sheet
       open={open}
       onOpenChange={(value) => {
         if (!pending) onOpenChange(value)
       }}
     >
-      <DialogContent className="agent-editor">
-        <DialogHeader>
-          <AgentMark />
-          <DialogTitle>
+      <SheetContent className="agent-editor agent-editor-sheet">
+        <SheetHeader>
+          <SheetTitle>
             {agent ? "Agent settings" : "Create an agent"}
-          </DialogTitle>
-          <DialogDescription>
+          </SheetTitle>
+          <SheetDescription>
             Give it a name and a purpose. Its conversation and memory stay
             separate.
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
         <form onSubmit={save}>
+          <div className="agent-editor-preview">
+            <AgentMark tone={agentTone(id.current)} />
+            <span>{name || "A new point of view"}</span>
+          </div>
           <FieldGroup>
             <Field>
               <FieldLabel htmlFor="agent-name">Name</FieldLabel>
@@ -423,7 +459,7 @@ export function AgentEditor({
               />
             </Field>
             <Field>
-              <FieldLabel htmlFor="agent-instructions">Instructions</FieldLabel>
+              <FieldLabel htmlFor="agent-instructions">Purpose</FieldLabel>
               <Textarea
                 id="agent-instructions"
                 value={instructions}
@@ -441,12 +477,26 @@ export function AgentEditor({
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-            <Button type="submit" disabled={pending || !name.trim()}>
-              {pending ? "Saving…" : agent ? "Save changes" : "Create agent"}
-            </Button>
+            <p className="text-xs text-muted-foreground">
+              Own conversation and memory. Tools and model defaults can be
+              configured after creation.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={pending}
+                onClick={() => onOpenChange(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={pending || !name.trim()}>
+                {pending ? "Saving…" : agent ? "Save changes" : "Create agent"}
+              </Button>
+            </div>
           </FieldGroup>
         </form>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   )
 }

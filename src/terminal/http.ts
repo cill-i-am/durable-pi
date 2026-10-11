@@ -1,6 +1,10 @@
 import { Effect, Schema } from "effect"
 import { boundedBytes } from "../workspace/http"
-import { CommandInput, TerminalFailure } from "./contracts"
+import {
+  CommandInput,
+  TerminalFailure,
+  TerminalNetworkPolicy,
+} from "./contracts"
 import {
   ImportFile,
   ExportFile,
@@ -20,6 +24,18 @@ export function terminalRequest(
   return Effect.gen(function* () {
     if (path === "terminal" && request.method === "GET")
       return Response.json(terminal.state())
+    if (path === "terminal/network" && request.method === "POST") {
+      const input = yield* Effect.tryPromise(async () =>
+        Schema.decodeUnknownSync(TerminalNetworkPolicy)(
+          JSON.parse(
+            new TextDecoder().decode(await boundedBytes(request, 4096))
+          )
+        )
+      )
+      return Response.json(
+        yield* Effect.try(() => terminal.configureNetwork(input))
+      )
+    }
     if (path === "terminal/import" && request.method === "POST") {
       const form = yield* Effect.tryPromise(async () =>
         new Response(await boundedBytes(request, MAX_TRANSFER_BYTES + 16384), {

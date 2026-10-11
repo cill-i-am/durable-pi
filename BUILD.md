@@ -2,6 +2,8 @@
 
 Started 2026-10-10. Delivery owner: Codex. Status: **functional build and Paper fidelity F1–F6 deployed; account security deployed and inspected in the signed-in hosted app**. Per-slice verification limits are recorded below and in [UI_FIDELITY.md](UI_FIDELITY.md).
 
+Final queued work item: [13 — Harness evaluation suite](#13--harness-evaluation-suite). Implement it after the existing product roadmap and agreed harness improvements. Recording this brief does not start implementation or authorize real-model runs. Tool profiles remain deferred.
+
 ## Outcome
 
 A private workspace at `bot.cill-i-am.com` where each bot has durable conversations, memory, files, reusable skills, scoped tools, a browser, execution environments, generated apps, and routines that continue when the web app is closed. The approved Paper design is the visual reference. The whole application and execution infrastructure runs on Cloudflare. Model requests continue using the owner's existing OpenAI connection; that inference remains external to Cloudflare.
@@ -33,9 +35,23 @@ Keep the existing PersonalAgent namespace, memory tables, AuthDatabase, MemoryBa
 
 Visual thesis: a quiet, warm workroom with compact navigation, readable conversation, and a contextual workbench. Composition: bot sidebar → conversation → optional workbench. Interactions: keyboard-first menus, restrained pane transitions, clear running/approval/recovery states; respect reduced motion. Semantic tokens own colors, type, spacing, and radii for later retheming.
 
+## Browser and terminal internet settings — 2026-10-11
+
+Status: implementation, local verification, and diff review complete; signed commit, CI, and deployment pending. This product change precedes the final queued harness evaluation suite. Tool profiles remain deferred.
+
+The owner requested an unrestricted-internet option for both the browser and Linux terminal. Each bot retains its existing restricted defaults until the owner changes the setting. Separate settings in the Browser and Terminal workbenches use shadcn/Base UI switches and explicit Save controls. Existing tool permissions and approval receipts remain authoritative; model tools cannot change network settings.
+
+- Browser owns its policy in the existing per-bot record. Unrestricted mode omits the Browser Run hostname allowlist and accepts public-hostname HTTP(S) URLs. Embedded credentials, local/IP-literal hostnames, and non-web schemes remain rejected. Restricted mode retains the exact-hostname guardrails and runtime enforcement probe. Policy changes advance the generation, retire the session, and fence stale results; closing or expiring a session retains the chosen mode.
+- Terminal owns a revisioned network policy in its existing SQLite store. Changes require an active bot and an idle terminal with successful cleanup. Every command/session receipt records its admitted network policy. The production Sandbox adapter applies that policy before cold start, after closing the previous container. Replaying a completed command returns its saved receipt without changing or repeating its effect. Video preparation retains its separate, offline container identity.
+- No account-wide permission changes, application/model credentials in containers, or new infrastructure resources. Code execution in Dynamic Workers and generated apps retain their existing network restrictions.
+
+Local evidence: 518 tests passed across 72 files, including ten added network-policy cases. They cover legacy defaults, store reconstruction, bot isolation, stale revisions, URL validation, unrestricted provider launch, in-flight browser revocation, command-policy pinning, completed-command replay, busy/recovery fences, and Sandbox start configuration. Desktop and 390-pixel mobile UI fixtures verify save/reopen and no horizontal overflow. These fixtures use simulated API responses; they are not hosted networking proof. Typecheck, production build, and the existing native workerd restart suite passed. Lint has four pre-existing warnings; no new errors. A real Cloudflare outbound-network check remains pending deployment. Signed commit `2a42264` contains the internet settings. Review, CI and deployment will include the subsequent Paper navigation corrections on `codex/internet-settings`.
+
+Provider references: [Browser Run guardrails](https://developers.cloudflare.com/browser-run/features/guardrails/) and [Sandbox SDK 0.x outbound traffic](https://developers.cloudflare.com/sandbox/sdk/guides/outbound-traffic/). The installed Sandbox remains 0.12.10; this does not migrate to the preview SDK.
+
 ## Deterministic tool-loop recovery — 2026-10-11
 
-Status: implementation, final diff review, native Pi/SQLite/workerd checks and local UI verification complete; PR checks and deployment pending.
+Status: implementation, final diff review, native Pi/SQLite/workerd checks and local UI verification complete. [PR #48](https://github.com/cill-i-am/durable-pi/pull/48) records delivery status, CI and hosted verification; local evidence is detailed below.
 
 A normal agent run now recognizes repeated failed tool calls, receives bounded corrective feedback, and stops with saved progress if recovery fails. Ordinary questions and successful tool calls do not acquire another approval or planning interaction.
 
@@ -202,6 +218,7 @@ The owner requested password recovery before continuing. Implemented Better Auth
 | 11a — Automatic durable task planning | Substantial requests maintain a bot-local plan; Activity exposes progress, blockers, evidence and history; compaction, restart, steering and cancellation preserve authority. | Deployed in PR #25; local journey/recovery and hosted authentication checks passed |
 | 11 — Activity and recovery | Per-bot/global activity; inspect tool outcomes and approvals; recover interrupted work; expose actionable connection/backup failures; inspect/export memory and workspace. | Deployed in PR #31; hosted isolation, saved history, replay and read-only acceptance passed |
 | 12 — Complete product verification | Approved desktop/mobile states implemented; keyboard/accessibility checks; isolation/replay/permission tests; restore proof; secret scan; CI/deploy and hosted acceptance of all journeys. | Deployed in PR #32; hosted checkpoint/output recovery passed; functional build complete |
+| 13 — Harness evaluation suite | Measure representative tasks through the production harness with deterministic checks, explicit budgeted real-model runs, and sanitized regressions; compare outcomes and evidence under matched conditions. | Queued last, after the existing product roadmap and agreed harness improvements; brief recorded, implementation not started; tool profiles deferred |
 
 Each slice gets implementation and proof notes below. Add a slice rather than hiding missing behavior in “done.” `todo.md` remains the detailed OptChat steering/subagent reference; this tracker supersedes its deferral status.
 
@@ -989,3 +1006,77 @@ Paper fidelity source acceptance: F1–F5 merged in PRs #34–#38; F6 completes 
 
 
 Paper fidelity goal complete — 2026-10-11: F1–F6 deployed in PRs #34–#39. Final source `4f4fc66` passed production run `38135689129`, including the owner authentication boundary. Fresh hosted mobile access also passed the settled accessibility/overflow check. The full evidence and remaining verification limits are in [UI_FIDELITY.md](UI_FIDELITY.md). The functional product and approved visual-fidelity roadmap are complete; no API-key fallback was added.
+
+## 12a — Paper fidelity corrections after browser review
+
+User reported the sidebar account row and workbench navigation had drifted. Reopened the complete 40-artboard audit in [UI_FIDELITY.md](UI_FIDELITY.md#f7--correct-navigation-drift-and-audit-the-complete-page). All artboard JSX exports were captured locally. Implemented the dashboard-style account dropdown, compact agent header, responsive shared workbench, contextual panel corrections, Markdown file preview and mobile back navigation using existing shadcn/Base UI operations. Preserve the pending browser/terminal internet-settings slice and all recovery/navigation fences.
+
+Status: local verification and source review complete; signed UI commit, CI and deployment pending. The full suite passes 518 tests plus native workerd recovery, typecheck and build. Browser checks cover desktop/1050px/mobile layouts, navigation, Markdown preview, draft preservation and restored checklist recovery; evidence and limits are in the fidelity tracker. Functional differences from illustrative Paper controls are explicitly listed in the fidelity tracker. The harness evaluation suite remains the final work item, after product corrections and agreed harness improvements. Tool profiles remain deferred.
+
+## 13 — Harness evaluation suite
+
+Requested 2026-10-11. **Status: queued as the final work item; requirements recorded only.** Implement this small, practical suite after the existing product roadmap and agreed harness improvements, including native compaction, durable planning, boundary enforcement, and tool-loop recovery. Check their delivery evidence before starting. Tool profiles remain deferred; this request does not authorize them.
+
+Measure whether the actual model and production harness complete representative user tasks correctly. Extend existing tests and verification scripts instead of implementing another agent. Follow the existing domain boundaries, review process, and Cloudflare delivery conventions.
+
+### Evaluation layers and isolation
+
+Maintain three complementary layers:
+
+1. Deterministic tests for persistence, permissions, cancellation, and recovery. Keep these in normal CI and reuse existing coverage where it already proves the behavior.
+2. Explicitly triggered real-model evaluations with bounded model-request counts and execution time. Do not run them automatically on ordinary pushes initially.
+3. Sanitized regression scenarios derived from failures observed during normal usage. Reconstruct the failure with synthetic data instead of publishing private transcripts or traces.
+
+Use isolated synthetic bots, fixtures, and data through the production harness code. Control external-service responses where reproducibility requires it, and confine effects to the evaluation environment. Use the supported subscription model connection through its existing credential owner. Do not copy refresh credentials into fixtures, reports, or local test environments, and do not introduce an API-key fallback.
+
+Keep state with its existing owner: memory retains original records and sources; conversations and planning retain task progress and cancellation; access enforces permissions and approvals; execution retains receipts. The suite observes and exercises these operations. It must not create another authority for execution or permissions.
+
+### Initial scenario groups
+
+Start with these eight groups, with concrete fixtures and observable expected outcomes:
+
+| Group | Required outcome |
+| --- | --- |
+| 1. Simple requests | Answer correctly without unnecessary tools, plans, or questions. |
+| 2. Multi-step work with attachments | Produce a saved artifact whose contents match known input data. |
+| 3. Memory corrections | Use updated facts on later turns and retrieve their original sources. |
+| 4. Mid-run steering | Apply changed requirements to the actual result. |
+| 5. Compaction | Finish under deliberate context pressure while preserving constraints and access to original records. Label reduced-context stress cases separately from normal-budget evaluations. |
+| 6. Restart and replay | Resume without losing accepted input or duplicating external effects. |
+| 7. Permissions and cancellation | Respect denied actions and cancellation. Retrieved content cannot authorize actions. |
+| 8. Tool failure recovery | Correct the approach or report a concrete blocker within the allocated budget. |
+
+### Grading and measurements
+
+Grade actual durable state, artifacts, and execution receipts wherever possible. An agent's claim of success is not completion evidence. Report correctness, permission violations, duplicate effects, and efficiency separately; an efficient run with an unauthorized effect must remain visibly unsafe.
+
+Start subjective assessment with a concise human-review rubric. Add a model grader only if a demonstrated need justifies it. It must never replace deterministic checks of execution or permissions.
+
+Record the following for each attempt:
+
+- Task completion status and specific failure reasons.
+- Elapsed time, model-request count, and tool-call count.
+- Cached and uncached input usage, output usage, and summarization usage, with missing measurements shown explicitly.
+- Compaction and recovery events.
+- Unnecessary clarification and approval requests.
+- Duplicate and unauthorized effects, supported by state or receipt evidence.
+
+### Comparable runs and reports
+
+Compare a baseline and candidate using identical fixture versions, starting state, model settings, and budgets. Repeat cases: three attempts per case is a reasonable initial smoke test, not strong statistical evidence. Record the commit, model identifier, relevant configuration, and fixture version for each run. Keep deliberate reduced-context stress results separate from normal-budget results.
+
+Real-model runs require an explicit trigger and enforced request/time limits. Missing credentials, skipped cases, and infrastructure failures must appear in the report and must not count as passes. Keep evaluation effects inside the isolated environment even when the harness is hosted.
+
+Produce a compact comparison report with individual failures and supporting evidence. Keep private transcripts, credentials, and sensitive traces out of public source and logs. Publish only sanitized fixtures and evidence; retain any necessary private diagnostic material outside public reports.
+
+### Implementation and delivery checklist
+
+- [ ] Inspect existing production harness entrypoints, deterministic tests, and verification scripts; reuse them without adding a separate agent implementation.
+- [ ] Add versioned synthetic fixtures and deterministic outcome checks for all eight groups, retaining the existing persistence, access, cancellation, and recovery tests in CI.
+- [ ] Add an explicitly triggered, budgeted real-model runner using the supported model connection and isolated bots, data, and effects.
+- [ ] Capture usage and lifecycle measurements, traceable run metadata, and separate correctness, permission, duplication, and efficiency results.
+- [ ] Add the initial human-review rubric and compact baseline/candidate report, preserving skips and infrastructure failures as non-passing outcomes.
+- [ ] Document how to run the suite, interpret results, and add a sanitized regression case.
+- [ ] Complete the established review and deployment workflow. Report local, isolated hosted, and production verification separately; isolated success does not establish production verification.
+
+No suite code, fixtures, real-model runs, or evaluation results are delivered by this tracker entry.

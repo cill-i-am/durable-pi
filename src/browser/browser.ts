@@ -22,29 +22,39 @@ export interface BrowserRepository {
       Pick<BrowserRecord, "status" | "session" | "capture" | "error">
     >
   ) => BrowserRecord
-  reset: (generation: number, hosts: readonly string[]) => BrowserRecord
+  reset: (
+    generation: number,
+    hosts: readonly string[],
+    unrestricted?: boolean
+  ) => BrowserRecord
   transfer: (generation: number, controller: BrowserController) => BrowserRecord
   retire: (id: string) => void
   retired: () => string[]
   forget: (id: string) => void
 }
 export interface BrowserDriver {
-  open: (hosts: readonly string[]) => Promise<BrowserSession>
+  open: (
+    hosts: readonly string[],
+    unrestricted?: boolean
+  ) => Promise<BrowserSession>
   navigate: (
     session: BrowserSession,
     url: string,
-    hosts: readonly string[]
+    hosts: readonly string[],
+    unrestricted?: boolean
   ) => Promise<BrowserCapture>
   capture: (
     session: BrowserSession,
-    hosts: readonly string[]
+    hosts: readonly string[],
+    unrestricted?: boolean
   ) => Promise<BrowserCapture>
   interact: (
     session: BrowserSession,
     action: BrowserAction,
     expectedUrl: string,
     hosts: readonly string[],
-    actor: BrowserController
+    actor: BrowserController,
+    unrestricted?: boolean
   ) => Promise<BrowserCapture>
   close: (id: string) => Promise<void>
 }
@@ -74,7 +84,11 @@ export class BrowserWorkspace {
       yield* Effect.try({
         try: () => {
           this.check(policy.generation)
-          this.repository.reset(policy.generation, [...new Set(policy.hosts)])
+          this.repository.reset(
+            policy.generation,
+            [...new Set(policy.hosts)],
+            policy.unrestricted ?? false
+          )
         },
         catch: (cause) => cause,
       })
@@ -85,7 +99,11 @@ export class BrowserWorkspace {
   close(generation: number) {
     return Effect.gen({ self: this }, function* () {
       yield* Effect.try(() =>
-        this.repository.reset(generation, this.repository.read().hosts)
+        this.repository.reset(
+          generation,
+          this.repository.read().hosts,
+          this.repository.read().unrestricted
+        )
       )
       yield* Effect.promise(this.wake)
       return this.state()
@@ -182,11 +200,16 @@ export class BrowserWorkspace {
             let record = this.repository.read()
             const destination =
               operation.kind === "navigate"
-                ? allowedBrowserUrl(operation.url, record.hosts)
+                ? allowedBrowserUrl(
+                    operation.url,
+                    record.hosts,
+                    record.unrestricted
+                  )
                 : undefined
-            if (!record.hosts.length)
+            if (!record.unrestricted && !record.hosts.length)
               throw new BrowserFailure({
-                message: "Add allowed sites in Browser before browsing.",
+                message:
+                  "Add allowed sites or enable unrestricted internet in Browser settings before browsing.",
               })
             if (!destination && !record.session)
               throw new BrowserFailure({ message: "Open a page first." })
@@ -194,7 +217,11 @@ export class BrowserWorkspace {
               record.session &&
               browserDeadline(record.session) <= Date.now()
             ) {
-              this.repository.reset(generation, record.hosts)
+              this.repository.reset(
+                generation,
+                record.hosts,
+                record.unrestricted
+              )
               await this.wake()
               throw new BrowserFailure({
                 message:
@@ -225,7 +252,10 @@ export class BrowserWorkspace {
             })
             try {
               if (!record.session) {
-                const session = await this.driver.open(record.hosts)
+                const session = await this.driver.open(
+                  record.hosts,
+                  record.unrestricted
+                )
                 try {
                   check()
                   record = this.repository.update(generation, {
@@ -246,7 +276,8 @@ export class BrowserWorkspace {
                 ? await this.driver.navigate(
                     record.session!,
                     destination,
-                    record.hosts
+                    record.hosts,
+                    record.unrestricted
                   )
                 : operation.kind === "interact"
                   ? await this.driver.interact(
@@ -254,9 +285,14 @@ export class BrowserWorkspace {
                       operation.action,
                       record.capture!.page.url,
                       record.hosts,
-                      actor
+                      actor,
+                      record.unrestricted
                     )
-                  : await this.driver.capture(record.session!, record.hosts)
+                  : await this.driver.capture(
+                      record.session!,
+                      record.hosts,
+                      record.unrestricted
+                    )
               check()
               this.repository.update(generation, {
                 status: "ready",
@@ -303,7 +339,11 @@ export class BrowserWorkspace {
         current.session &&
         (browserDeadline(current.session) <= Date.now() || !this.writable())
       )
-        this.repository.reset(current.generation, current.hosts)
+        this.repository.reset(
+          current.generation,
+          current.hosts,
+          current.unrestricted
+        )
       let retry = false
       for (const id of this.repository.retired()) {
         try {

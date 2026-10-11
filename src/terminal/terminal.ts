@@ -5,6 +5,7 @@ import {
   MAX_CHECKPOINT,
   MAX_OUTPUT,
   TerminalFailure,
+  TerminalNetworkPolicy,
   type Checkpoint,
   type CommandRun,
 } from "./contracts"
@@ -20,7 +21,11 @@ export interface TerminalRuntime {
   ) => Promise<void>
   exportFile?: (path: string, signal: AbortSignal) => Promise<Uint8Array>
   openInteractive?: (signal: AbortSignal) => Promise<InteractiveRuntime>
-  restore: (bytes: Uint8Array | null, signal: AbortSignal) => Promise<void>
+  restore: (
+    bytes: Uint8Array | null,
+    signal: AbortSignal,
+    unrestricted?: boolean
+  ) => Promise<void>
   execute: (
     command: string,
     output: (text: string) => void,
@@ -89,12 +94,24 @@ export class Terminal {
   }
   state() {
     return {
+      networkPolicy: this.repository.networkPolicy(),
       runs: this.repository.list(),
       savedAt: this.repository.checkpoint()?.savedAt ?? null,
       busy: !!this.active || !!this.recovery,
       cleanupError: this.cleanupError,
       session: this.active?.session?.state() ?? null,
     }
+  }
+  configureNetwork(input: TerminalNetworkPolicy) {
+    if (this.active || this.recovery || this.cleanupError)
+      throw new TerminalFailure({
+        message:
+          "Stop or save the active terminal session and wait for cleanup before changing internet access.",
+      })
+    this.repository.configureNetwork(
+      Schema.decodeUnknownSync(TerminalNetworkPolicy)(input)
+    )
+    return this.state()
   }
   startTransfer(id: string, transfer: TransferPlan, bytes?: Uint8Array) {
     return Effect.gen({ self: this }, function* () {
@@ -240,7 +257,11 @@ export class Terminal {
       live()
       if (bytes && bytes.length > MAX_CHECKPOINT)
         throw new Error("Checkpoint limit")
-      await this.runtime.restore(bytes, controller.signal)
+      await this.runtime.restore(
+        bytes,
+        controller.signal,
+        run.networkUnrestricted ?? false
+      )
       live()
       let exitCode = 0
       if (run.transfer?.kind === "import") {

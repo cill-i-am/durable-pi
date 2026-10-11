@@ -19,6 +19,8 @@ import {
   Files,
   BookOpen,
   Ellipsis,
+  ShieldCheck,
+  Plug,
 } from "lucide-react"
 import type { useConversation } from "./use-conversation"
 import { TurnReply } from "./turn-reply"
@@ -44,12 +46,15 @@ import { ConnectionsPanel } from "@/features/connections"
 import { SkillsPanel } from "@/features/skills"
 import { AccessPanel, ApprovalCard } from "@/features/access"
 import { SidebarTrigger } from "@/components/ui/sidebar"
-import { useIsMobile } from "@/hooks/use-mobile"
 import {
-  Collapsible,
-  CollapsibleTrigger,
-  CollapsibleContent,
-} from "@/components/ui/collapsible"
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -98,8 +103,9 @@ export function Conversation({
   onOpenWorkbench: (value: "files" | "memory") => void
 }) {
   const api = useMemo(() => agentApi(agent.id), [agent.id])
-  const isMobile = useIsMobile()
-  const [actionsOpen, setActionsOpen] = useState(false)
+  const [settingsPanel, setSettingsPanel] = useState<
+    "access" | "connections" | "skills" | null
+  >(null)
   const [draft, setDraft] = useState("")
   const composerInput = useRef<HTMLTextAreaElement>(null)
   const [dragging, setDragging] = useState(false)
@@ -204,73 +210,94 @@ export function Conversation({
           <span>Images, videos and documents · up to 8 MB each</span>
         </div>
       )}
-      <Collapsible
-        render={<header />}
-        className="chat-header"
-        open={!isMobile || actionsOpen}
-        onOpenChange={(open) => setActionsOpen(open)}
-      >
-        <div className="chat-identity flex min-w-0 items-center gap-3">
+      <header className="chat-header">
+        <div className="chat-identity">
           <SidebarTrigger />
           <AgentMark tone={agentTone(agent.id)} />
-          <h1 className="truncate text-sm font-semibold">{agent.name}</h1>
-          <Badge variant="secondary">
-            {active?.status === "stopping"
-              ? "Stopping"
-              : state?.access?.approvals.some(
-                    (value) => value.status === "pending"
-                  )
-                ? "Needs approval"
-                : active
-                  ? "Working"
-                  : "Ready"}
-          </Badge>
+          <div className="chat-identity-copy">
+            <div className="chat-identity-title">
+              <h1>{agent.name}</h1>
+              <Badge variant="secondary">
+                {active?.status === "stopping"
+                  ? "Stopping"
+                  : state?.access?.approvals.some(
+                        (value) => value.status === "pending"
+                      )
+                    ? "Needs approval"
+                    : active
+                      ? "Working"
+                      : "Ready"}
+              </Badge>
+            </div>
+            <p>
+              {agent.instructions.split("\n")[0] ||
+                "Your personal thinking partner"}
+            </p>
+          </div>
         </div>
-        <CollapsibleTrigger
-          className="mobile-chat-options"
-          render={
-            <Button variant="ghost" size="icon" aria-label="Agent tools" />
-          }
-        >
-          <Ellipsis />
-        </CollapsibleTrigger>
-        <CollapsibleContent
-          keepMounted
-          className="chat-actions flex max-w-full shrink-0 flex-wrap items-center justify-end"
-        >
+        <div className="chat-header-actions">
           {workbenchAction}
-          <AccessPanel
-            agentId={agent.id}
-            agentName={agent.name}
-            tools={state?.access?.tools}
-            onSaved={reload}
-          />
-          <ConnectionsPanel
-            agentId={agent.id}
-            agentName={agent.name}
-            onSaved={reload}
-          />
-          <SkillsPanel agentId={agent.id} agentName={agent.name} />
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-label="Files"
-            onClick={() => onOpenWorkbench("files")}
-          >
-            <Files />
-            <span className="chat-action-label hidden sm:inline">Files</span>
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-label="Memory"
-            onClick={() => onOpenWorkbench("memory")}
-          >
-            <BookOpen />
-            <span className="chat-action-label">Memory</span>
-          </Button>
-        </CollapsibleContent>
-      </Collapsible>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Agent settings and tools"
+                />
+              }
+            >
+              <Ellipsis />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-56">
+              <DropdownMenuGroup>
+                <DropdownMenuLabel>{agent.name}</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => setSettingsPanel("access")}>
+                  <ShieldCheck /> Tool access
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setSettingsPanel("connections")}
+                >
+                  <Plug /> Connections
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSettingsPanel("skills")}>
+                  <BookOpen /> Skills
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
+                <DropdownMenuItem onClick={() => onOpenWorkbench("files")}>
+                  <Files /> Files
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onOpenWorkbench("memory")}>
+                  <BookOpen /> Memory
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </header>
+      <AccessPanel
+        agentId={agent.id}
+        agentName={agent.name}
+        tools={state?.access?.tools}
+        onSaved={reload}
+        open={settingsPanel === "access"}
+        onOpenChange={(open) => setSettingsPanel(open ? "access" : null)}
+      />
+      <ConnectionsPanel
+        agentId={agent.id}
+        agentName={agent.name}
+        onSaved={reload}
+        open={settingsPanel === "connections"}
+        onOpenChange={(open) => setSettingsPanel(open ? "connections" : null)}
+      />
+      <SkillsPanel
+        agentId={agent.id}
+        agentName={agent.name}
+        open={settingsPanel === "skills"}
+        onOpenChange={(open) => setSettingsPanel(open ? "skills" : null)}
+      />
       <MessageScrollerProvider autoScroll>
         <MessageScroller className="conversation-scroller">
           <MessageScrollerViewport>

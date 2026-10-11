@@ -394,12 +394,12 @@ Sources: [Access context and tool inventory](src/access), [connection UI](src/fe
 **Where:** **Browser** and `browser_open` / `browser_read` / `browser_interact`.
 
 - Private per-bot Chromium sessions on Cloudflare Browser Rendering, with bounded page text, links and screenshots.
-- Owner-managed exact-hostname destinations, runtime network guardrails and top-frame redirect checks.
+- Owner-managed exact-hostname destinations with runtime network guardrails, or an explicit unrestricted-internet setting for public HTTP(S) sites. Changing the policy closes the old session and fences its results.
 - Bot click/type/key/scroll actions tied to a recent capture; normal tool approvals remain in force.
 - Human takeover pauses bot browser tools; private owner input and return-control preserve the same session and cookies.
 - Session expiry, close/revoke, cleanup recovery and fencing of stale in-flight results.
 
-**Boundary:** this is screenshot-based interaction, not a live video browser. Sessions have two-minute idle and ten-minute total limits. No arbitrary scripts, warning bypasses or unrestricted browsing. Sensitive/custom embedded inputs have restrictions. Kitesurf remains deferred.
+**Boundary:** this is screenshot-based interaction, not a live video browser. Sessions have two-minute idle and ten-minute total limits. Unrestricted access removes the site allowlist; it does not permit arbitrary scripts, warning bypasses, embedded URL credentials, or non-web URL schemes. Sensitive/custom embedded inputs have restrictions. Kitesurf remains deferred.
 
 Sources: [Browser context](src/browser), [Browser UI](src/features/browser).
 
@@ -426,7 +426,7 @@ Sources: [Execution context](src/execution), [Code UI](src/features/execution).
 - Copy private assets into an isolated import folder, prepare exact-byte exports, download them or add supported exports back to Files.
 - Replay-safe transfers, cancellation receipts and checks against path escape, symlinks and special files.
 
-**Boundary:** outbound networking is disabled. Commands share checkpointed files, not persistent processes or shell environment. Interactive sessions are leased and limited to ten minutes; lost authorization/lease stops them without saving. Files outside the retained workspace and excluded directories are not checkpointed.
+**Boundary:** outbound networking is disabled by default. The owner can enable unrestricted internet in this bot’s Terminal settings, including for interactive sessions. Changes require an idle, cleaned-up terminal; each command retains its admitted network policy. Tool permissions still apply. Commands share checkpointed files, not persistent processes or shell environment. Interactive sessions are leased and limited to ten minutes; lost authorization/lease stops them without saving. Files outside the retained workspace and excluded directories are not checkpointed.
 
 Sources: [Terminal context](src/terminal), [Terminal UI](src/features/terminal), [checkpoint and transfer behavior](README.md#linux-command-workbench).
 
@@ -544,7 +544,7 @@ Detailed evidence: [BUILD.md](BUILD.md) and [UI_FIDELITY.md](UI_FIDELITY.md). Th
 - Additional working-object types such as itineraries, decision registers or research collections.
 - Point/region annotations for asset steering; native audio/video understanding, speech transcription and OCR.
 - Public app sharing, multi-user collaboration and implicit cross-bot data sharing.
-- Arbitrary client JavaScript/frameworks in generated apps, unrestricted browser access, or network-enabled Linux execution.
+- Arbitrary client JavaScript/frameworks in generated apps.
 - Richer named-bot tasks with tool grants, shared object/file capabilities, recursive delegation or open-ended agent swarms.
 - Calendar/timezone recurrence, automatic external push/email outcome notifications and vendor-specific webhook signature adapters.
 - Kitesurf integration, automatic memory dreaming and direct UI editing of memory notes.

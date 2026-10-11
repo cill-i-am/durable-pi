@@ -16,30 +16,39 @@ import {
 /** Browser Run owns Chromium, session networking, and idle expiry. Never exports a CDP capability. */
 export class CloudflareBrowser implements BrowserDriver {
   constructor(private readonly binding: BrowserRun) {}
-  async open(hosts: readonly string[]): Promise<BrowserSession> {
+  async open(
+    hosts: readonly string[],
+    unrestricted = false
+  ): Promise<BrowserSession> {
     const browser = await puppeteer.launch(this.binding, {
       keep_alive: BROWSER_IDLE_MS,
-      guardrails: {
-        allowedDomains: [...hosts],
-        allowedDomainSets: ["common-cdns"],
-      },
+      ...(unrestricted
+        ? {}
+        : {
+            guardrails: {
+              allowedDomains: [...hosts],
+              allowedDomainSets: ["common-cdns"],
+            },
+          }),
     })
     try {
       const page = await browser.newPage()
-      // Fail closed when a runtime accepts, but does not enforce, guardrails.
-      const blocked = await page.goto(
-        "https://durable-pi-policy-probe.invalid",
-        { waitUntil: "domcontentloaded", timeout: 10_000 }
-      )
-      if (
-        blocked?.status() !== 403 ||
-        blocked.headers()["cf-mitigated"] !== "guardrails" ||
-        blocked.headers()["cf-brapi-guardrails-reason"] !== "not-in-allowlist"
-      )
-        throw new BrowserFailure({
-          message:
-            "The browser service did not confirm destination restrictions. No browsing session was opened.",
-        })
+      if (!unrestricted) {
+        // Fail closed when a runtime accepts, but does not enforce, guardrails.
+        const blocked = await page.goto(
+          "https://durable-pi-policy-probe.invalid",
+          { waitUntil: "domcontentloaded", timeout: 10_000 }
+        )
+        if (
+          blocked?.status() !== 403 ||
+          blocked.headers()["cf-mitigated"] !== "guardrails" ||
+          blocked.headers()["cf-brapi-guardrails-reason"] !== "not-in-allowlist"
+        )
+          throw new BrowserFailure({
+            message:
+              "The browser service did not confirm destination restrictions. No browsing session was opened.",
+          })
+      }
       await page.goto("about:blank")
       await page.setViewport({ width: 1024, height: 768, deviceScaleFactor: 1 })
       const cdp = await page.createCDPSession()
@@ -87,7 +96,11 @@ export class CloudflareBrowser implements BrowserDriver {
       await browser.disconnect()
     }
   }
-  private async restrictNavigation(page: Page, hosts: readonly string[]) {
+  private async restrictNavigation(
+    page: Page,
+    hosts: readonly string[],
+    unrestricted: boolean
+  ) {
     await page.setRequestInterception(true)
     page.on("request", (request) => {
       if (request.isInterceptResolutionHandled()) return
@@ -96,7 +109,7 @@ export class CloudflareBrowser implements BrowserDriver {
         request.frame() === page.mainFrame()
       ) {
         try {
-          allowedBrowserUrl(request.url(), hosts)
+          allowedBrowserUrl(request.url(), hosts, unrestricted)
         } catch {
           void request.abort("blockedbyclient").catch(() => {})
           return
@@ -105,36 +118,51 @@ export class CloudflareBrowser implements BrowserDriver {
       void request.continue().catch(() => {})
     })
   }
-  navigate(session: BrowserSession, url: string, hosts: readonly string[]) {
+  navigate(
+    session: BrowserSession,
+    url: string,
+    hosts: readonly string[],
+    unrestricted = false
+  ) {
     return this.withPage(session, async (page) => {
-      await this.restrictNavigation(page, hosts)
-      const response = await page.goto(allowedBrowserUrl(url, hosts), {
-        waitUntil: "domcontentloaded",
-      })
+      await this.restrictNavigation(page, hosts, unrestricted)
+      const response = await page.goto(
+        allowedBrowserUrl(url, hosts, unrestricted),
+        {
+          waitUntil: "domcontentloaded",
+        }
+      )
       if (response?.headers()["cf-mitigated"] === "guardrails")
         throw new BrowserFailure({
           message:
             "The site requested a destination outside this bot's allowed sites. Update the allowed sites if it is needed.",
         })
-      return this.snapshot(page, hosts)
+      return this.snapshot(page, hosts, unrestricted)
     })
   }
-  capture(session: BrowserSession, hosts: readonly string[]) {
-    return this.withPage(session, (page) => this.snapshot(page, hosts))
+  capture(
+    session: BrowserSession,
+    hosts: readonly string[],
+    unrestricted = false
+  ) {
+    return this.withPage(session, (page) =>
+      this.snapshot(page, hosts, unrestricted)
+    )
   }
   interact(
     session: BrowserSession,
     action: BrowserAction,
     expectedUrl: string,
     hosts: readonly string[],
-    actor: BrowserController
+    actor: BrowserController,
+    unrestricted = false
   ) {
     return this.withPage(session, async (page) => {
-      if (allowedBrowserUrl(page.url(), hosts) !== expectedUrl)
+      if (allowedBrowserUrl(page.url(), hosts, unrestricted) !== expectedUrl)
         throw new BrowserFailure({
           message: "The page navigated. Refresh its view before interacting.",
         })
-      await this.restrictNavigation(page, hosts)
+      await this.restrictNavigation(page, hosts, unrestricted)
       if (
         actor === "owner" &&
         action.kind === "type" &&
@@ -176,7 +204,7 @@ export class CloudflareBrowser implements BrowserDriver {
         }
       } else await page.keyboard.press(action.key)
       await navigation
-      return this.snapshot(page, hosts)
+      return this.snapshot(page, hosts, unrestricted)
     })
   }
   private async isolated(page: Page, expression: string): Promise<unknown> {
@@ -213,9 +241,10 @@ export class CloudflareBrowser implements BrowserDriver {
   }
   private async snapshot(
     page: Page,
-    hosts: readonly string[]
+    hosts: readonly string[],
+    unrestricted: boolean
   ): Promise<BrowserCapture> {
-    const url = allowedBrowserUrl(page.url(), hosts)
+    const url = allowedBrowserUrl(page.url(), hosts, unrestricted)
     const raw = await this.isolated(page, PAGE_OBSERVATION)
     const contents = Schema.decodeUnknownSync(BrowserPage)({
       ...(typeof raw === "object" && raw !== null ? raw : {}),
@@ -240,7 +269,7 @@ export class CloudflareBrowser implements BrowserDriver {
     } finally {
       await this.isolated(page, UNMASK_FIELDS)
     }
-    if (allowedBrowserUrl(page.url(), hosts) !== url)
+    if (allowedBrowserUrl(page.url(), hosts, unrestricted) !== url)
       throw new BrowserFailure({
         message: "The page navigated while being captured. Refresh the view.",
       })
@@ -323,6 +352,6 @@ export const PAGE_OBSERVATION = `(() => ({
           ).slice(0, 120),
           url: link.href.slice(0, 2048),
         }))
-        .filter((link) => link.url.startsWith("https://"))
+        .filter((link) => /^https?:/.test(link.url))
         .slice(0, 20),
     }))()`

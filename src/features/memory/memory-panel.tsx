@@ -52,7 +52,7 @@ export function MemoryWorkbench({
   return (
     <section className="workbench-body memory-workbench">
       <header className="workbench-heading">
-        <h2>What stays with me</h2>
+        <h2 className="workbench-title">Memory</h2>
         <p>
           {state?.memory.messages ?? 0} archived messages ·{" "}
           {state?.memory.notes.length ?? 0} memory notes
@@ -60,8 +60,8 @@ export function MemoryWorkbench({
       </header>
       <SummaryRecovery agentId={agentId} issues={state?.memory.issues ?? []} />
       <Tabs defaultValue="notes">
-        <TabsList>
-          <TabsTrigger value="notes">Notes</TabsTrigger>
+        <TabsList variant="line">
+          <TabsTrigger value="notes">Saved notes</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
           <TabsTrigger value="tree">Tree</TabsTrigger>
           <TabsTrigger value="files">Files</TabsTrigger>

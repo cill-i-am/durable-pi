@@ -512,3 +512,97 @@ describe("per-bot browser authority and lifetime", () => {
     expect(invalid.status).toBe(409)
   })
 })
+
+describe("unrestricted browser internet settings", () => {
+  it("migrates saved policies as restricted and isolates bots", () => {
+    const f = fixture()
+    f.db.run(
+      "INSERT INTO bot_browser VALUES (1,?)",
+      JSON.stringify({ ...f.repository.read(), unrestricted: undefined })
+    )
+    expect(new BrowserStore(f.db).read().unrestricted).toBe(false)
+    f.repository.reset(0, [], true)
+    expect(new BrowserStore(f.db).read().unrestricted).toBe(true)
+    expect(fixture().browser.state().policy.unrestricted).toBe(false)
+  })
+  it("allows public HTTP(S) destinations without widening URL scheme or credential access", () => {
+    expect(allowedBrowserUrl("http://example.org:8080/path", [], true)).toBe(
+      "http://example.org:8080/path"
+    )
+    expect(allowedBrowserUrl("https://example.org", [], true)).toBe(
+      "https://example.org/"
+    )
+    for (const url of [
+      "file:///etc/passwd",
+      "javascript:alert(1)",
+      "https://user:pass@example.org",
+      "http://localhost",
+      "http://127.0.0.1",
+      "https://metadata.internal",
+    ]) {
+      expect(() => allowedBrowserUrl(url, [], true)).toThrow()
+    }
+    expect(() => allowedBrowserUrl("https://example.org", [])).toThrow()
+  })
+  it("opens without a site list, preserves the choice on close, and revokes on restriction", async () => {
+    const f = fixture()
+    f.driver.open = vi.fn(f.driver.open)
+    await run(
+      f.browser.configure({
+        generation: 0,
+        hosts: ["example.com"],
+        unrestricted: true,
+      })
+    )
+    await run(f.browser.inspect(1, "https://example.org"))
+    expect(f.driver.open).toHaveBeenCalledWith(["example.com"], true)
+    const session = f.repository.read().session!
+    await run(f.browser.close(1))
+    expect(f.browser.state().policy.unrestricted).toBe(true)
+    await run(
+      f.browser.configure({
+        generation: 2,
+        hosts: ["example.com"],
+        unrestricted: false,
+      })
+    )
+    await run(f.browser.cleanup())
+    expect(f.closed).toContain(session.id)
+    await expect(
+      run(f.browser.inspect(3, "https://example.org"))
+    ).rejects.toThrow("allowed sites")
+    await expect(
+      run(f.browser.configure({ generation: 2, hosts: [], unrestricted: true }))
+    ).rejects.toThrow("changed")
+    expect(f.browser.state().policy.unrestricted).toBe(false)
+  })
+  it("discards in-flight unrestricted output after policy revocation", async () => {
+    const f = fixture()
+    let finish!: (value: BrowserCapture) => void
+    let started!: () => void
+    const admitted = new Promise<void>((resolve) => {
+      started = resolve
+    })
+    f.driver.navigate = async () => {
+      started()
+      return new Promise((resolve) => {
+        finish = resolve
+      })
+    }
+    await run(
+      f.browser.configure({ generation: 0, hosts: [], unrestricted: true })
+    )
+    const pending = run(f.browser.inspect(1, "https://example.org"))
+    await admitted
+    await run(
+      f.browser.configure({ generation: 1, hosts: [], unrestricted: false })
+    )
+    finish(capture)
+    await expect(pending).rejects.toThrow("changed")
+    expect(f.browser.state()).toMatchObject({
+      policy: { unrestricted: false },
+      page: null,
+      status: "closed",
+    })
+  })
+})

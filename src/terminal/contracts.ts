@@ -1,6 +1,15 @@
 import { Schema } from "effect"
 import { TransferPlan } from "./transfers"
 
+export const TerminalNetworkPolicy = Schema.Struct({
+  revision: Schema.Number.check(
+    Schema.isInt(),
+    Schema.isGreaterThanOrEqualTo(0)
+  ),
+  unrestricted: Schema.Boolean,
+})
+export type TerminalNetworkPolicy = typeof TerminalNetworkPolicy.Type
+
 export const CommandInput = Schema.Struct({
   id: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(200)),
   command: Schema.String.check(
@@ -19,6 +28,7 @@ export type Checkpoint = typeof Checkpoint.Type
 export const CommandRun = Schema.Struct({
   ...CommandInput.fields,
   authorityRevision: Schema.optional(Schema.Number),
+  networkUnrestricted: Schema.optional(Schema.Boolean),
   status: Schema.Literals([
     "running",
     "succeeded",
@@ -54,6 +64,7 @@ export const InteractiveState = Schema.Struct({
   maximumAt: Schema.Number,
 })
 export const TerminalState = Schema.Struct({
+  networkPolicy: Schema.optional(TerminalNetworkPolicy),
   runs: Schema.Array(CommandSummary),
   savedAt: Schema.NullOr(Schema.Number),
   busy: Schema.Boolean,

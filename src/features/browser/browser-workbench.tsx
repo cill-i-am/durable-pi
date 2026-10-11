@@ -3,7 +3,14 @@ import { ArrowUpRight, Globe, RefreshCw, Settings2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Switch } from "@/components/ui/switch"
+import {
+  Field,
+  FieldGroup,
+  FieldLabel,
+  FieldDescription,
+  FieldContent,
+} from "@/components/ui/field"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { agentUrl } from "@/http/client"
@@ -23,26 +30,46 @@ export function BrowserWorkbench({
   const [settings, setSettings] = useState<{
     generation: number
     hosts: string
+    unrestricted: boolean
   } | null>(null)
   const state = browser.state
   const content = (
     <>
       <div className="workbench-heading-row">
-        <div className="flex min-w-0 items-center gap-2">
-          <Globe className="size-4" />
-          <span className="text-sm font-medium">Browser</span>
+        <h2 className="browser-title">
+          {state?.controller === "owner"
+            ? "You’re in control"
+            : `${agentName}’s browser`}
+        </h2>
+        <div className="flex shrink-0 items-center gap-2">
           <Badge variant="secondary">{state?.status ?? "Loading"}</Badge>
-        </div>
-        <div className="flex gap-1">
+          {state?.expiresAt && state.status !== "expired" && (
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={browser.busy}
+              onClick={() =>
+                void browser.command("control", {
+                  generation: state.policy.generation,
+                  controller: state.controller === "owner" ? "agent" : "owner",
+                })
+              }
+            >
+              {state.controller === "owner"
+                ? `Hand back to ${agentName}`
+                : "Take control"}
+            </Button>
+          )}
           <Button
             size="icon-sm"
             variant="ghost"
-            aria-label="Allowed browser sites"
+            aria-label="Browser internet settings"
             disabled={!state || browser.busy}
             onClick={() =>
               setSettings({
                 generation: state!.policy.generation,
                 hosts: state!.policy.hosts.join("\n"),
+                unrestricted: state!.policy.unrestricted ?? false,
               })
             }
           >
@@ -78,12 +105,32 @@ export function BrowserWorkbench({
                 await browser.command("policy", {
                   generation: settings.generation,
                   hosts,
+                  unrestricted: settings.unrestricted,
                 })
               )
                 setSettings(null)
             }}
           >
             <FieldGroup>
+              <Field orientation="horizontal" data-disabled={browser.busy}>
+                <FieldContent>
+                  <FieldLabel htmlFor="browser-internet">
+                    Unrestricted internet access
+                  </FieldLabel>
+                  <FieldDescription>
+                    Visit public HTTP and HTTPS sites without an allowed-site
+                    list. Browser tool permissions still apply.
+                  </FieldDescription>
+                </FieldContent>
+                <Switch
+                  id="browser-internet"
+                  checked={settings.unrestricted}
+                  disabled={browser.busy}
+                  onCheckedChange={(unrestricted) =>
+                    setSettings({ ...settings, unrestricted })
+                  }
+                />
+              </Field>
               <Field>
                 <FieldLabel htmlFor="browser-sites">
                   Allowed sites for {agentName}
@@ -96,14 +143,14 @@ export function BrowserWorkbench({
                   onChange={(event) =>
                     setSettings({ ...settings, hosts: event.target.value })
                   }
-                  disabled={browser.busy}
+                  disabled={browser.busy || settings.unrestricted}
                 />
               </Field>
               <p className="text-xs text-muted-foreground">
                 Up to 20 exact hostnames, one per line. Subdomains must be
                 listed separately. Cloudflare’s common CDN set is allowed for
-                page assets. Changing sites closes this session and clears its
-                preview.
+                page assets. This list applies when unrestricted access is off.
+                Changing settings closes this session and clears its preview.
               </p>
               {state && settings.generation !== state.policy.generation && (
                 <p className="text-sm text-destructive">
@@ -120,7 +167,7 @@ export function BrowserWorkbench({
                     settings.generation !== state?.policy.generation
                   }
                 >
-                  Save allowed sites
+                  Save internet settings
                 </Button>
                 <Button
                   size="sm"
@@ -136,7 +183,7 @@ export function BrowserWorkbench({
         ) : (
           <>
             <form
-              className="flex gap-2"
+              className="browser-address-bar"
               onSubmit={(event) => {
                 event.preventDefault()
                 if (state)
@@ -146,6 +193,7 @@ export function BrowserWorkbench({
                   })
               }}
             >
+              <Globe className="size-4 shrink-0 text-muted-foreground" />
               <Input
                 aria-label="Browser URL"
                 type="url"
@@ -160,39 +208,46 @@ export function BrowserWorkbench({
                 type="submit"
                 size="sm"
                 disabled={
-                  browser.busy || !state || !url || !state.policy.hosts.length
+                  browser.busy ||
+                  !state ||
+                  !url ||
+                  (!state.policy.unrestricted && !state.policy.hosts.length)
                 }
               >
                 {browser.pending === "open" ? "Opening…" : "Go"}
               </Button>
             </form>
-            {state && !state.policy.hosts.length && (
-              <div className="flex flex-col items-start gap-3 rounded-lg border p-5">
-                <Globe className="size-6 text-muted-foreground" />
-                <h3 className="font-medium">
-                  Give this bot somewhere to browse
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  Choose the sites it may visit. Browser tools ask for your
-                  approval unless you change their tool permissions.
-                </p>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() =>
-                    setSettings({
-                      generation: state.policy.generation,
-                      hosts: "",
-                    })
-                  }
-                >
-                  Choose allowed sites
-                </Button>
-              </div>
-            )}
+            {state &&
+              !state.policy.unrestricted &&
+              !state.policy.hosts.length && (
+                <div className="flex flex-col items-start gap-3 rounded-lg border p-5">
+                  <Globe className="size-6 text-muted-foreground" />
+                  <h3 className="font-medium">
+                    Give this bot somewhere to browse
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Choose allowed sites or enable unrestricted internet access.
+                    Browser tools ask for your approval unless you change their
+                    tool permissions.
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      setSettings({
+                        generation: state.policy.generation,
+                        hosts: "",
+                        unrestricted: false,
+                      })
+                    }
+                  >
+                    Set internet access
+                  </Button>
+                </div>
+              )}
             {state?.page && (
-              <>
-                <div className="flex items-start justify-between gap-2">
+              <section className="browser-preview">
+                <div className="browser-preview-heading">
                   <div className="min-w-0">
                     <h3 className="text-sm font-medium break-words">
                       {state.page.title || "Browser page"}
@@ -283,7 +338,7 @@ export function BrowserWorkbench({
                     </ul>
                   </details>
                 )}
-              </>
+              </section>
             )}
             {state &&
               (state.expiresAt ||
@@ -306,26 +361,6 @@ export function BrowserWorkbench({
                   >
                     <RefreshCw />
                     Refresh view
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={
-                      browser.busy ||
-                      !state.expiresAt ||
-                      state.status === "expired"
-                    }
-                    onClick={() =>
-                      void browser.command("control", {
-                        generation: state.policy.generation,
-                        controller:
-                          state.controller === "owner" ? "agent" : "owner",
-                      })
-                    }
-                  >
-                    {state.controller === "owner"
-                      ? "Return control to bot"
-                      : "Take control"}
                   </Button>
                   <Button
                     size="sm"
