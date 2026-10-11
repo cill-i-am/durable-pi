@@ -140,7 +140,7 @@ export function WorkspaceSettings({
     >
       <DialogContent
         showCloseButton={false}
-        className="workspace-settings"
+        className="workspace-settings translate-none"
         overlayClassName="settings-backdrop"
         data-detail={mobileDetail}
         data-sidebar={sidebarState}
