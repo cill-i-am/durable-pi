@@ -48,7 +48,7 @@ For the initial local-to-remote state migration, `scripts/migrate-production-sta
 - Better Auth sessions backed by D1. An authenticated server route forwards to a Worker with both public and preview URLs disabled. Bot objects are addressed from the authenticated owner ID and a validated catalog identity. The default bot retains its original object ID.
 - Server-side ChatGPT credentials with one account-level refresh owner and durable token rotation shared by all bots. API-key credentials are also supported through the same private configuration.
 
-The current slices include live reply updates, mid-run steering, images, video storage, private files, searchable PDF text, reusable skills, tool approvals, per-bot MCP tools, a Cloudflare browser with owner takeover, isolated JavaScript execution, and versioned private apps. Shell execution, video processing, arbitrary generated web code, messaging channels, and scheduled autonomous tasks are still being built; see [BUILD.md](BUILD.md).
+The current slices include live reply updates, mid-run steering, images, video storage, private files, searchable PDF text, reusable skills, tool approvals, per-bot MCP tools, a Cloudflare browser with owner takeover, isolated JavaScript execution, and versioned private apps. Shell execution, video processing, messaging channels, and scheduled autonomous tasks are still being built; see [BUILD.md](BUILD.md).
 
 ## Memory design
 
@@ -146,4 +146,8 @@ Checklists and forms save their state and queue an update to the owning bot. Upd
 
 Unsaved form edits stay on the version you opened. If app state changes in another view, choose **Use saved values** or **Keep my edits** before submitting. An unconfirmed request can be retried with the same identity, or resolved before a different change.
 
-This first renderer supports text, metrics, tables, checklists and forms, with no generated HTML/scripts or external resources. Limits are 50 apps per bot, 50 versions per app, 20 pending updates and 2,000 app mutation/cancellation receipts per bot. Free-form generated web applications are tracked separately in slice 08b.
+Apps support text, metrics, tables, checklists and forms, or one custom web block. A custom app runs its JavaScript on the private Cloudflare execution Worker with only its own JSON state and the submitted action. It returns HTML, CSS and next state. Previewing never saves returned state; a published owner interaction atomically saves state and queues an update to the bot.
+
+Custom HTML is parsed into a closed set of semantic elements and controls. It renders in an opaque sandboxed frame with a trusted form/button bridge; generated JavaScript never runs in the browser. Scripts, external resources, embedded frames, navigation, credentials and parent bindings are unavailable. Apps can build custom layouts and stateful forms; client frameworks, CDN dependencies and arbitrary browser JavaScript are outside this runtime.
+
+Limits are 50 apps per bot, 50 versions per app, 20 pending updates and 2,000 app mutation/cancellation receipts per bot. Custom apps have 16,000-character code, 8,000-character JSON state, 12,000-character HTML and 4,000-character CSS limits. Each render/action has a one-second CPU and ten-second elapsed budget; one runs per bot at a time. External changes require an explicit reload so unsent fields are not silently overwritten. Archival, cancellation or a concurrent revision change prevents a late computation from saving.

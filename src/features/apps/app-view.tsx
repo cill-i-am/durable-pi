@@ -158,6 +158,9 @@ export function AppView({
       <AppCanvas
         key={`${id}-${version.version}`}
         definition={version.definition}
+        agentId={agentId}
+        id={id}
+        version={version.version}
         revision={document.revision}
         state={published ? document.state : { checks: {}, forms: {} }}
         disabled={!editable}

@@ -11,6 +11,7 @@ import {
   ArchiveApp,
   InteractApp,
   type AppDetail,
+  WebResult,
 } from "../contracts"
 
 /** One bot owns this catalog, immutable versions, action receipts and event outbox. */
@@ -211,7 +212,36 @@ export class AppStore {
       }
     )
   }
-  interact(raw: InteractApp) {
+  interactionReceipt(raw: InteractApp) {
+    const input = Schema.decodeUnknownSync(InteractApp)(raw)
+    if (!this.active())
+      throw new AppConflict({
+        message: "Restore this bot before changing its apps.",
+      })
+    const previous = this.db.all<{ input: string; result: string }>(
+      "SELECT input,result FROM generated_app_operations WHERE id=?",
+      input.operationId
+    )[0]
+    if (!previous) return undefined
+    if (previous.input !== JSON.stringify({ type: "interact", ...input }))
+      throw new AppConflict({
+        message: "This operation ID belongs to another change.",
+      })
+    return Schema.decodeUnknownSync(AppDocument)(JSON.parse(previous.result))
+  }
+  interactionSnapshot(input: InteractApp) {
+    if (!this.active())
+      throw new AppConflict({
+        message: "Restore this bot before changing its apps.",
+      })
+    const current = this.current(input.id, input.expectedRevision)
+    if (current.publishedVersion !== input.version)
+      throw new AppConflict({
+        message: "The published app changed. Reload before interacting.",
+      })
+    return current
+  }
+  interact(raw: InteractApp, webResult?: WebResult) {
     const input = Schema.decodeUnknownSync(InteractApp)(raw)
     return this.operation(
       input.operationId,
@@ -230,7 +260,8 @@ export class AppStore {
         const { state, text } = applyAction(
           this.version(input.id, input.version).definition,
           current.state,
-          input.action
+          input.action,
+          webResult ? Schema.decodeUnknownSync(WebResult)(webResult) : undefined
         )
         const event: AppEvent = {
           id: input.operationId,

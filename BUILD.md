@@ -1,6 +1,6 @@
 # Durable Pi — build tracker
 
-Started 2026-10-10. Delivery owner: Codex. Status: **slices 01–07a deployed; Linux/PTY/file transfer verified in PRs #15–17 pending container permissions; generated apps in progress**.
+Started 2026-10-10. Delivery owner: Codex. Status: **slices 01–07a deployed; Linux/PTY/file transfer verified in PRs #15–17 pending container permissions; 08a generated apps deployed; 08b verified locally**.
 
 ## Outcome
 
@@ -53,7 +53,7 @@ The owner requested password recovery before continuing. Implemented Better Auth
 | 05 — Tools and approvals | Connect Executor/MCP; assign tools per bot; Allow/Ask/Deny enforced server-side; approval persists across reload/restart; background work cannot bypass approval; revoke access. | 05a and 05b deployed |
 | 06 — Browser | Bot browses on Cloudflare; observe and take over in the workbench; authenticated Chromium sessions; Kitesurf for compatible short tasks; session expiry/reconnect and destination controls. | 06a and 06b deployed |
 | 07 — Execution and terminal | Isolated fast code execution plus on-demand Linux container; live terminal; files persist across container restarts; bounded time/output/network; cancel and recover. | 07a deployed; 07b–07d verified in PRs #15–17, provisioning approval pending |
-| 08 — Generated apps and inline UI | Bot creates, previews, updates and runs an app; versioned private publication; isolated execution/storage; inline UI uses a bounded renderer; interactions return events to the owning bot. | 08a verified locally; CI/deployment next |
+| 08 — Generated apps and inline UI | Bot creates, previews, updates and runs an app; versioned private publication; isolated execution/storage; inline UI uses a bounded renderer; interactions return events to the owning bot. | 08a deployed; 08b verified locally |
 | 09 — Routines and incoming events | Schedule/pause/delete routines; run with browser closed; authenticated webhook triggers; durable retry/deduplication; notify on meaningful outcomes; respect bot grants and budgets. | Planned |
 | 10 — Delegation | Explicit parent/child tasks; separate child memory/tool grants; bounded concurrency; steer/stop children; deliver completed reports once after restart. | Planned |
 | 11 — Activity and recovery | Per-bot/global activity; inspect tool outcomes and approvals; recover interrupted work; expose actionable connection/backup failures; inspect/export memory and workspace. | Planned |
@@ -293,7 +293,7 @@ Locally implemented and reviewed in [PR #15](https://github.com/cill-i-am/durabl
 
 ### 08a — Private generated apps and inline UI
 
-Implementation and verification in progress. Bot-local immutable app definitions support plain text, metrics, tables, checklists and forms. Saving creates a draft; publication chooses a saved version privately. A bounded React renderer uses shadcn/Base UI and executes no generated scripts, HTML, resource URLs or network requests. Owner interactions commit app state and an event outbox together; a durable lifecycle runner admits each event once to the owning bot's normal conversation queue. Existing tool policies apply, and `publish_app` defaults to Ask. Offline model connections retain events.
+Deployed in PR #18, main `38a47bf`; production run `38112475178` succeeded. Bot-local immutable app definitions support plain text, metrics, tables, checklists and forms. Saving creates a draft; publication chooses a saved version privately. A bounded React renderer uses shadcn/Base UI and executes no generated scripts, HTML, resource URLs or network requests. Owner interactions commit app state and an event outbox together; a durable lifecycle runner admits each event once to the owning bot's normal conversation queue. Existing tool policies apply, and `publish_app` defaults to Ask. Offline model connections retain events.
 
 Limits: 50 apps per bot, 50 saved versions per app, 20 blocks/24,000 definition characters, 64,000 saved-state characters, 20 pending bot updates, 2,000 mutation/cancellation receipts per bot. Model reads use bounded JSON-text pages with snapshot hashes. The workbench and inline publication result both read the same private version/state. Draft edits stay private until publication. No new infrastructure or permission.
 
@@ -306,3 +306,26 @@ Verification for 08a:
 - Backend review corrected escaped oversized event admission, repeated form labels, and large tool-result truncation. Model reads now page bounded text with a snapshot checksum. Frontend review corrected late creation completion, stale form overwrites, background version switching and premature mutation unlock. Focused re-reviews closed.
 - Browser verified create → preview → publish → interact, persistence after reload, form save at 390×844, dirty draft preservation across desktop/mobile transitions, concurrent form-update conflict, and background publication without replacing the open version or unsent text. Mobile panel and document both measure 390 px; desktop toolbar wraps without clipping. Temporary viewport overrides removed.
 - Typecheck, lint and production build passed. Existing chunk-size advisory remains. No new Cloudflare resources or permissions; Linux PRs remain separate and pending provisioning approval.
+
+
+### 08b — Generated web applications
+
+In progress. Custom HTML/CSS layouts use a generated JavaScript handler executed by the existing private Cloudflare Dynamic Worker. The handler receives only the app's JSON state and the current action; it returns bounded markup, CSS and the next state. Render requests cannot commit state. Owner actions validate the version/revision before and after computation, then atomically save state and an interaction event using the existing receipt/outbox. Computation is pure with no network, credentials or parent bindings; retries cannot repeat external effects.
+
+The browser gets sanitized semantic HTML and CSS in an opaque sandboxed frame. A single trusted bridge handles real form submissions and action buttons; generated browser scripts, URL attributes, foreign markup, nested frames and resource loads are excluded. App logic runs on Cloudflare, not inside the authenticated page. CSP permits only the trusted bridge nonce, inline styles, and no resource/network/form destinations. This reuses existing resources/permissions.
+
+Acceptance: native Worker render/action/state E2E; output/time/network bounds; cancellation before commit and archive/version changes during execution; HTML parser/security fixtures; real browser form actions, CSP enforcement, responsive layout, stale draft handling, reload recovery and inline previews.
+
+
+### 08b — Custom apps running on Cloudflare
+
+Added a versioned web block whose JavaScript executes in the existing private Dynamic Worker. Its inputs are its own bounded JSON state and a validated owner action; its outputs are bounded semantic HTML, CSS, next state and an event summary. Rendering is pure. An action commits state and its bot event together only after the original revision, cancellation and bot authority remain valid. Duplicate requests replay the committed receipt without rerunning code.
+
+The browser receives parsed allowlisted HTML in an opaque frame with restrictive CSP and one trusted nonce-protected control bridge. Generated JavaScript stays on Cloudflare. There are no external resources, arbitrary client frameworks, public sharing or parent capabilities. Native forms and buttons dispatch authenticated actions; a changed saved revision requires explicit reload.
+
+Proof (2026-10-11):
+- 246 tests passed, including malformed/complex markup, state bounds, replay, pure previews, cancellation, archive/restore across both execution and Promise continuation boundaries, and unchanged state after failed execution.
+- Native workerd E2E passed through the real ExecutionWorker binding: render, saved form action, replay, conflict, cancelled admission, denied outbound fetch, timeout and invalid output. No model credential used.
+- Browser verified native form submission (including the formerly clobbering `dataset` field name), counter actions, invalid-action recovery, reopening, persistence, unsent fields across desktop/mobile resize, and no horizontal overflow at 390 px. A hostile-markup fixture retained only allowed text/form controls and did not navigate.
+- Read-only backend/frontend reviews found and corrected blocked native submissions, form property clobbering, reserved-name recovery, late archive/restore commit and stale archive configuration. Follow-up reviews passed. Development effect replay also exposed duplicate rendering; concurrent render loads now share their in-flight request.
+- Typecheck, lint and production build passed. Existing private ExecutionWorker is reused; no new cloud permissions or resources.

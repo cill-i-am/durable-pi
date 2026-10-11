@@ -91,6 +91,8 @@ import { browserResult } from "../browser/adapters/pi"
 import { browserRequest } from "../browser/http"
 import { AppStore } from "../apps/adapters/sqlite"
 import { appsRequest } from "../apps/http"
+import { WebApps } from "../apps/web"
+import { readOutput } from "../execution/adapters/dynamic-worker"
 import { appTools } from "../apps/tools"
 import { SYSTEM_PROMPT } from "./prompts"
 import { importHistory, ImportInput } from "../memory/import"
@@ -721,6 +723,19 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   readonly backups = new BackupRunner(this)
   readonly extraction = new ExtractionRunner(this)
   readonly browserCleanup = new BrowserRunner(this)
+  readonly webApps = new WebApps(this.apps, async (input, signal) =>
+    readOutput(
+      await this.env.EXECUTION_SERVICE.fetch(
+        new Request("https://execution.internal/run", {
+          method: "POST",
+          redirect: "manual",
+          body: JSON.stringify(input),
+          signal,
+        })
+      ),
+      signal
+    )
+  )
   readonly appEvents = new AppEventRunner(this)
   readonly lifecycle = Lifecycle.install(this)
     .use(this.mcp)
@@ -949,8 +964,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   }
   async configureBot(owner: string, profile: AgentProfile) {
     this.botConfiguration.configure(owner, profile)
-    if (profile.status === "archived") await this.browserCleanup.wake()
-    else if (this.apps.pending().length) await this.appEvents.wake()
+    if (this.botConfiguration.read()?.status === "archived") {
+      this.webApps.invalidate()
+      await this.browserCleanup.wake()
+    } else if (this.apps.pending().length) await this.appEvents.wake()
   }
 
   resolveSkillVersions(references: SelectSkills["skills"]): SkillResolution {
@@ -1027,7 +1044,13 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       }
       if (path === "apps" || path.startsWith("apps/"))
         return Effect.runPromise(
-          appsRequest(this.apps, request, path, () => this.appEvents.wake())
+          appsRequest(
+            this.apps,
+            request,
+            path,
+            () => this.appEvents.wake(),
+            this.webApps
+          )
         )
       if (path === "execution" || path.startsWith("execution/"))
         return Effect.runPromise(

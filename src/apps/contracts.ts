@@ -17,7 +17,30 @@ export const Revision = Schema.Number.check(
   Schema.isInt(),
   Schema.isGreaterThanOrEqualTo(0)
 )
+export const WebState = text(8000).check(
+  Schema.makeFilter((value) => {
+    try {
+      JSON.parse(value)
+      return true
+    } catch {
+      return false
+    }
+  })
+)
+export const WebResult = Schema.Struct({
+  html: text(12000),
+  css: text(4000),
+  state: WebState,
+  summary: text(1000),
+})
+export type WebResult = typeof WebResult.Type
 export const AppBlock = Schema.Union([
+  Schema.Struct({
+    id: ComponentId,
+    type: Schema.Literal("web"),
+    code: text(16000).check(Schema.isMinLength(1)),
+    initialState: WebState,
+  }),
   Schema.Struct({
     id: ComponentId,
     type: Schema.Literal("text"),
@@ -77,6 +100,11 @@ export const AppDefinition = Schema.Struct({
   Schema.makeFilter((definition) => {
     if (JSON.stringify(definition).length > 24000) return false
     if (
+      definition.blocks.some((block) => block.type === "web") &&
+      definition.blocks.length !== 1
+    )
+      return false
+    if (
       new Set(definition.blocks.map((block) => block.id)).size !==
       definition.blocks.length
     )
@@ -98,6 +126,7 @@ export type AppDefinition = typeof AppDefinition.Type
 export const AppState = Schema.Struct({
   checks: Schema.Record(Schema.String, Schema.Boolean),
   forms: Schema.Record(ComponentId, Schema.Record(ComponentId, text(1000))),
+  web: Schema.optionalKey(Schema.Record(ComponentId, WebState)),
 })
 export type AppState = typeof AppState.Type
 export const AppVersion = Schema.Struct({
@@ -139,6 +168,14 @@ export const ArchiveApp = Schema.Struct({
 export type ArchiveApp = typeof ArchiveApp.Type
 export const AppAction = Schema.Union([
   Schema.Struct({
+    type: Schema.Literal("web"),
+    blockId: ComponentId,
+    name: ComponentId,
+    values: Schema.Record(ComponentId, text(1000)).check(
+      Schema.makeFilter((values) => Object.keys(values).length <= 8)
+    ),
+  }),
+  Schema.Struct({
     type: Schema.Literal("check"),
     blockId: ComponentId,
     itemId: ComponentId,
@@ -179,3 +216,13 @@ export class AppConflict extends Schema.TaggedError<AppConflict>()(
   "AppConflict",
   { message: Schema.String }
 ) {}
+
+export const RenderWebApp = Schema.Struct({ id: AppId, version: Revision })
+export const WebPreview = Schema.Struct({
+  id: AppId,
+  version: Revision,
+  revision: Revision,
+  html: text(64000),
+  css: text(4000),
+})
+export type WebPreview = typeof WebPreview.Type

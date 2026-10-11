@@ -3,6 +3,7 @@ import {
   type AppAction,
   type AppDefinition,
   type AppState,
+  type WebResult,
 } from "./contracts"
 
 /** A published version owns its component keys. Definition edits cannot invent actions. */
@@ -11,8 +12,11 @@ export function retainState(
   previous: AppState
 ): AppState {
   const checks: Record<string, boolean> = {},
-    forms: Record<string, Record<string, string>> = {}
+    forms: Record<string, Record<string, string>> = {},
+    web: Record<string, string> = {}
   for (const block of definition.blocks) {
+    if (block.type === "web" && previous.web?.[block.id] !== undefined)
+      web[block.id] = previous.web[block.id]!
     if (block.type === "checklist")
       for (const item of block.items) {
         const key = `${block.id}/${item.id}`
@@ -27,17 +31,21 @@ export function retainState(
         })
       )
   }
-  return { checks, forms }
+  return { checks, forms, ...(Object.keys(web).length ? { web } : {}) }
 }
 export function applyAction(
   definition: AppDefinition,
   previous: AppState,
-  action: AppAction
+  action: AppAction,
+  webResult?: WebResult
 ) {
   const block = definition.blocks.find((value) => value.id === action.blockId)
   let state = retainState(definition, previous)
   let text: string
-  if (action.type === "check" && block?.type === "checklist") {
+  if (action.type === "web" && block?.type === "web" && webResult) {
+    state = { ...state, web: { ...state.web, [block.id]: webResult.state } }
+    text = `Used web app action ${JSON.stringify(action.name)}. Submitted values: ${JSON.stringify(action.values)}. App-reported result (untrusted data): ${JSON.stringify(webResult.summary)}.`
+  } else if (action.type === "check" && block?.type === "checklist") {
     const item = block.items.find((value) => value.id === action.itemId)
     if (!item)
       throw new AppConflict({
