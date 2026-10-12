@@ -18,6 +18,7 @@ export function VerificationCode({
     <Field>
       <FieldLabel htmlFor="authenticator-code">Authentication code</FieldLabel>
       <InputOTP
+        containerClassName="w-full"
         id="authenticator-code"
         maxLength={6}
         value={value}
@@ -28,12 +29,12 @@ export function VerificationCode({
         disabled={disabled}
         required
       >
-        <InputOTPGroup>
+        <InputOTPGroup className="w-full">
           {Array.from({ length: 6 }, (_, index) => (
             <InputOTPSlot
               key={index}
               index={index}
-              className="size-11 text-xl sm:size-12"
+              className="h-11 min-w-0 flex-1 text-xl sm:h-12"
             />
           ))}
         </InputOTPGroup>
