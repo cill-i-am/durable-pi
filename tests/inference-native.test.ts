@@ -48,6 +48,8 @@ it("carries a composer override into native Pi Responses and preserves selection
     {
       waitUntil: (work) => {
         telemetry.push(work)
+        if (telemetry.length === 1)
+          throw new Error("Synthetic host lifetime ended")
       },
       catalog: async () => catalog,
       onAttempt: () => usage.start(route, turn.id, "conversation"),

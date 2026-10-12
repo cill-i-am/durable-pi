@@ -341,7 +341,11 @@ export function createAgentModels(
     ).catch(() => {
       /* Native stream owns propagation of provider failures. */
     })
-    options.waitUntil?.(telemetry)
+    try {
+      options.waitUntil?.(telemetry)
+    } catch {
+      /* Losing a telemetry lifetime must not fail a dispatched model request. */
+    }
     const observed = createAssistantMessageEventStream()
     const record = (operation: () => void) => {
       try {
