@@ -38,6 +38,9 @@ export class InferenceUsage {
     db.run(
       "CREATE TABLE IF NOT EXISTS inference_attempts (id TEXT PRIMARY KEY,payload TEXT NOT NULL)"
     )
+    db.run(
+      "CREATE INDEX IF NOT EXISTS inference_attempts_run ON inference_attempts(json_extract(payload,'$.turnId'))"
+    )
     // Only constructor recovery can end orphaned observations; it schedules nothing.
     for (const row of db.all<{ id: string; payload: string }>(
       "SELECT id,payload FROM inference_attempts WHERE json_extract(payload,'$.outcome')='running'"
@@ -76,6 +79,8 @@ export class InferenceUsage {
     }
     this.save(value)
     return {
+      id: value.id,
+      turnId: value.turnId,
       usage: (usage: CacheUsage) => {
         Object.assign(value, {
           reportedModel: usage.model,

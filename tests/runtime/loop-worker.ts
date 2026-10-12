@@ -1,4 +1,6 @@
 /** Synthetic local workerd fixture. No cloud credentials, production routes or external effects. */
+import { runActivity } from "../../src/activity/run"
+import { InferenceUsage } from "../../src/inference/usage"
 import { DurableObject } from "cloudflare:workers"
 import { PiHarness } from "agents/harness/pi"
 import { Lifecycle } from "agents/lifecycle"
@@ -39,6 +41,7 @@ export class LoopBot extends DurableObject<Record<string, never>> {
     model: "faux-1",
     thinking: "off",
   })
+  readonly usage = new InferenceUsage(this.db)
   readonly recovery = new RunRecoveryStore(this.db)
   readonly access = new AccessStore(this.db, () => [
     { name: "check", description: "Synthetic failure", mode: "allow" },
@@ -163,6 +166,12 @@ export class LoopBot extends DurableObject<Record<string, never>> {
     return Response.json({
       ...this.info(),
 
+      activity: runActivity(
+        this.db,
+        this.ctx.id.toString(),
+        "loop-run",
+        this.usage
+      ),
       state: this.recovery.get("loop-run"),
       receipts: this.db.all<{ id: string; status: string }>(
         "SELECT id,status FROM tool_operations"

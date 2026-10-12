@@ -39,6 +39,9 @@ export class ConversationStore {
     )
     for (const [name, definition] of Object.entries({
       parent_id: "TEXT",
+      started_at: "TEXT",
+      finished_at: "TEXT",
+      stopped_at: "TEXT",
       recovery: "TEXT",
       mode: "TEXT NOT NULL DEFAULT 'followUp'",
       delivery: "TEXT NOT NULL DEFAULT 'queued'",
@@ -296,7 +299,7 @@ export class ConversationStore {
   }
   submitted(id: string, session: string) {
     this.db.run(
-      "UPDATE chat_turns SET session_id=?,status='running',delivery=CASE WHEN delivery='queued' THEN 'accepted' ELSE delivery END WHERE id=? AND status IN ('queued','preparing','running')",
+      "UPDATE chat_turns SET session_id=?,status='running',started_at=coalesce(started_at,strftime('%Y-%m-%dT%H:%M:%fZ','now')),delivery=CASE WHEN delivery='queued' THEN 'accepted' ELSE delivery END WHERE id=? AND status IN ('queued','preparing','running')",
       session,
       id
     )
@@ -314,7 +317,7 @@ export class ConversationStore {
       const root = this.get(turn.parent_id ?? turn.id)!
       if (isPending(root))
         this.db.run(
-          "UPDATE chat_turns SET status='stopping',revision=revision+1 WHERE id=?",
+          "UPDATE chat_turns SET status='stopping',stopped_at=coalesce(stopped_at,strftime('%Y-%m-%dT%H:%M:%fZ','now')),revision=revision+1 WHERE id=?",
           root.id
         )
       return root.id
@@ -345,7 +348,7 @@ export class ConversationStore {
       const stopped = current.status === "stopping"
       for (const outcome of outcomes) {
         this.db.run(
-          "UPDATE chat_turns SET status=?,delivery=?,input='[]',prompt=NULL,skill_context='' WHERE id=?",
+          "UPDATE chat_turns SET status=?,finished_at=strftime('%Y-%m-%dT%H:%M:%fZ','now'),delivery=?,input='[]',prompt=NULL,skill_context='' WHERE id=?",
           outcome.id === root.id && stopped
             ? "cancelled"
             : outcome.delivery === "answered"

@@ -202,6 +202,7 @@ export function createAgentModels(
       sessionId?: string
     ) => ReturnType<InferenceUsage["start"]>
     onUsage?: (usage: CacheUsage) => void
+    botId?: () => string
     waitUntil?: (work: Promise<unknown>) => void
   } = {}
 ) {
@@ -315,8 +316,8 @@ export function createAgentModels(
         await request?.onProviderStreamEvent?.(event, selected)
       },
     })
-    // Native result joins the existing stream; it never issues another request.
-    // Cloudflare links this duration span and provider fetch to the invocation.
+    // This marks dispatch only. Detached work can outlive the native invocation;
+    // duration and usage belong to the durable attempt, never this short span.
     const telemetry = runObserved(
       Effect.annotateCurrentSpan({
         "inference.model": model.id,
@@ -327,24 +328,17 @@ export function createAgentModels(
               ? "compaction"
               : "conversation",
         "inference.context_window": model.contextWindow,
-      }).pipe(
-        Effect.andThen(Effect.promise(() => native.result())),
-        Effect.tap((result) =>
-          Effect.annotateCurrentSpan({
-            "inference.outcome": result.stopReason,
-            "inference.input_tokens": result.usage.input,
-            "inference.output_tokens": result.usage.output,
-          })
-        ),
-        Effect.withSpan("Inference.request")
-      )
+        "inference.attempt_id": observation?.id ?? "unrecorded",
+        "run.id": observation?.turnId ?? "",
+        "bot.id": options.botId?.() ?? "",
+      }).pipe(Effect.withSpan("Inference.dispatch"))
     ).catch(() => {
-      /* Native stream owns propagation of provider failures. */
+      /* Telemetry cannot fail a dispatched request. */
     })
     try {
       options.waitUntil?.(telemetry)
     } catch {
-      /* Losing a telemetry lifetime must not fail a dispatched model request. */
+      /* Host lifetime already ended. */
     }
     const observed = createAssistantMessageEventStream()
     const record = (operation: () => void) => {

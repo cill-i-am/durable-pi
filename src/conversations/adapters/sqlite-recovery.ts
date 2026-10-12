@@ -23,6 +23,12 @@ export class RunRecoveryStore {
       policy.recoveryAttempts < 1
     )
       throw new Error("Invalid tool recovery policy")
+    db.run(`CREATE TABLE IF NOT EXISTS chat_recovery_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, turn_id TEXT NOT NULL,
+      at TEXT NOT NULL, view TEXT NOT NULL)`)
+    db.run(
+      "CREATE INDEX IF NOT EXISTS chat_recovery_run ON chat_recovery_history(turn_id,id)"
+    )
   }
   get(turnId: string): RecoveryState | undefined {
     const row = this.db.all<{ recovery: string | null }>(
@@ -49,8 +55,9 @@ export class RunRecoveryStore {
         !["preparing", "running"].includes(turn.status)
       )
         return undefined
+      const previous = this.get(turnId)
       const state = observeRound(
-        this.get(turnId) ?? initialRecovery(epoch),
+        previous ?? initialRecovery(epoch),
         epoch,
         requestEpoch,
         observations,
@@ -61,6 +68,16 @@ export class RunRecoveryStore {
         JSON.stringify(state),
         turnId
       )
+      if (
+        state.view &&
+        JSON.stringify(previous?.view) !== JSON.stringify(state.view)
+      )
+        this.db.run(
+          "INSERT INTO chat_recovery_history(turn_id,at,view) VALUES (?,?,?)",
+          turnId,
+          new Date().toISOString(),
+          JSON.stringify(state.view)
+        )
       return state
     })
   }

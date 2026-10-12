@@ -118,7 +118,7 @@ it("keeps a recovered bot job's smaller account window and native identity witho
       catalog: async () => catalog,
       onAttempt: (_model, _thinking, _purpose, provider) => {
         attempts.push(provider)
-        return { usage: () => {}, end: () => {} }
+        return { id: "synthetic", turnId: null, usage: () => {}, end: () => {} }
       },
     }
   )

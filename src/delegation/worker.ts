@@ -49,7 +49,9 @@ export class BackgroundGroup
     },
     transaction: (body) => this.ctx.storage.transactionSync(body),
   }
-  readonly usage = new InferenceUsage(this.db, reportInference)
+  readonly usage = new InferenceUsage(this.db, (attempt) =>
+    reportInference(attempt, this.pin?.parentObject ?? this.ctx.id.toString())
+  )
   private parent(): DurableObjectStub<PersonalAgent> {
     if (!this.pin) throw new Error("Background group has no handoff")
     return this.env.AGENT.get(
@@ -62,6 +64,7 @@ export class BackgroundGroup
       return this.parent().backgroundCredential(this.pin.id, provider)
     }),
     {
+      botId: () => this.pin?.parentObject ?? this.ctx.id.toString(),
       waitUntil: (work) => this.ctx.waitUntil(work),
       catalog: () => this.parent().accountModelCatalog(),
       contextWindow: (model) =>

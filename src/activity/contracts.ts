@@ -1,3 +1,4 @@
+import { RunActivity } from "./run"
 import { RecoveryView } from "../conversations/recovery"
 import { Schema } from "effect"
 import { AgentId, AgentName } from "../agents/domain"
@@ -66,6 +67,7 @@ export const ActivityConversation = Schema.Struct({
   error: Schema.NullOr(Schema.String),
   recovery: Schema.optional(Schema.NullOr(RecoveryView)),
   activity: Schema.Array(TimelineItem),
+  run: Schema.optional(RunActivity),
 })
 export type ActivityConversation = typeof ActivityConversation.Type
 export const ACTIVITY_PAGE_SIZE = 40

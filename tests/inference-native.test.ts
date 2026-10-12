@@ -243,6 +243,8 @@ it("records an auth failure before provider dispatch and never hangs on a failed
     accountCredentials(async () => credential),
     {
       onAttempt: () => ({
+        id: "synthetic",
+        turnId: null,
         usage: () => {},
         end: () => {
           throw new Error("Synthetic SQLite failure")
