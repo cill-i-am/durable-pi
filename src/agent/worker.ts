@@ -2317,7 +2317,8 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
               }
             },
           },
-          request.signal
+          request.signal,
+          new URL(request.url).searchParams.get("protocol") === "tanstack"
         )
       if (request.method === "GET" && path === "state")
         return Response.json(await this.snapshot())

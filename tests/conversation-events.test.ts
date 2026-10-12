@@ -1,7 +1,6 @@
 import type { AgentEventStream } from "@earendil-works/pi-durable"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { conversationEvents } from "../src/conversations/adapters/events"
-import { applyConversationFrame } from "../src/features/conversation/live-state"
 import type {
   ChatState,
   ConversationFrame,
@@ -72,13 +71,14 @@ describe("conversation stream", () => {
     await vi.advanceTimersByTimeAsync(80)
     const update = await frame(f.reader)
     expect(update).toEqual({ type: "update", turns: [turn], ids: [turn.id] })
-    const added = applyConversationFrame(initial, update)!
-    expect(added.turns).toEqual([turn])
     f.change({ ...initial, turns: [], connected: false })
     await vi.advanceTimersByTimeAsync(80)
-    const removed = applyConversationFrame(added, await frame(f.reader))!
-    expect(removed.turns).toEqual([])
-    expect(removed.connected).toBe(false)
+    expect(await frame(f.reader)).toMatchObject({
+      type: "update",
+      turns: [],
+      ids: [],
+      meta: { connected: false },
+    })
     await f.reader.cancel()
     expect(f.unsubscribe).toHaveBeenCalledOnce()
   })
@@ -108,23 +108,6 @@ describe("conversation stream", () => {
     expect(f.unsubscribe).toHaveBeenCalledOnce()
     expect(vi.getTimerCount()).toBe(0)
     await f.reader.cancel()
-  })
-  it("replaces an old connection with a full snapshot without duplicate turns", () => {
-    const previous = { ...initial, turns: [turn] }
-    const state = {
-      ...initial,
-      turns: [{ ...turn, status: "done" as const, answer: "finished" }],
-    }
-    expect(
-      applyConversationFrame(previous, { type: "snapshot", state })
-    ).toEqual(state)
-    expect(
-      applyConversationFrame(null, {
-        type: "update",
-        turns: [turn],
-        ids: [turn.id],
-      })
-    ).toBeNull()
   })
   it("releases a Pi watch that attaches after the HTTP client leaves", async () => {
     let attach!: (watch: AgentEventStream) => void

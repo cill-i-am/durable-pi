@@ -1,5 +1,7 @@
 import type { AgentEventStream } from "@earendil-works/pi-durable"
 import type { ChatState, ConversationFrame } from "../contracts"
+import type { StreamChunk } from "@tanstack/ai/client"
+import { chatMessages, messageEvents, type ChatMessage } from "../chat-messages"
 
 type Source = {
   snapshot: () => Promise<ChatState>
@@ -11,7 +13,8 @@ type Source = {
 /** Each connection starts from committed state. Slow readers reconnect instead of accumulating history. */
 export function conversationEvents(
   source: Source,
-  signal: AbortSignal
+  signal: AbortSignal,
+  tanstack = false
 ): Response {
   const encoder = new TextEncoder()
   let close = async (_cancelled = false) => {}
@@ -25,7 +28,8 @@ export function conversationEvents(
         let watch: AgentEventStream | undefined, session: string | undefined
         let timer: ReturnType<typeof setTimeout> | undefined
         let last: ChatState | undefined
-        const send = (frame: ConversationFrame) => {
+        let messages: ChatMessage[] | undefined
+        const send = (frame: ConversationFrame | StreamChunk) => {
           if (isClosed()) return
           if ((controller.desiredSize ?? 0) <= 0) {
             void close()
@@ -56,7 +60,19 @@ export function conversationEvents(
               watch?.start(async () => schedule())
             }
             const state = await source.snapshot()
-            if (!last) send({ type: "snapshot", state })
+            if (tanstack) {
+              const next = chatMessages(state.turns)
+              for (const event of messageEvents(messages, next)) send(event)
+              const { turns: _turns, ...meta } = state
+              const { turns: _previous, ...oldMeta } = last ?? {}
+              if (!last || JSON.stringify(meta) !== JSON.stringify(oldMeta))
+                send({
+                  type: "CUSTOM",
+                  name: "durable-pi.metadata",
+                  value: meta,
+                })
+              messages = next
+            } else if (!last) send({ type: "snapshot", state })
             else {
               const before = new Map(
                 last.turns.map((turn) => [turn.id, JSON.stringify(turn)])

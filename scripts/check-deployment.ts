@@ -32,6 +32,7 @@ if (process.env.LEGACY_APP_URL) {
 }
 for (const path of [
   "state",
+  "events?protocol=tanstack",
   "communication",
   "communication/synthetic-task",
   "activity",

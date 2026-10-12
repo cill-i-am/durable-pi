@@ -1,10 +1,12 @@
 # Durable Pi
 
-A private, durable agent workspace built with **Pi Durable**, Cloudflare Durable Objects, **TanStack Start**, **shadcn/ui on Base UI**, Better Auth, and **Alchemy Effect**.
+A private, durable agent workspace built with **Pi Durable**, Cloudflare Durable Objects, **TanStack Start and AI**, **shadcn/ui on Base UI**, Better Auth, and **Alchemy Effect**.
 
 Production: [bot.cill-i-am.com](https://bot.cill-i-am.com). Alchemy attaches this hostname to the existing website Worker and manages its DNS and TLS certificate. The production zone is pinned in `alchemy.run.ts`; development keeps its local URL. `Worker.URL` supplies the canonical origin to authentication. The previous `workers.dev` address redirects page requests to this address; mutations require the canonical origin. Sign in again on the new hostname using the existing account.
 
 Pi owns model turns, tool execution, committed transcripts, and recovery. The application adds an owner-only login, a durable submission queue, a lossless message archive, a binary summary tree, and sourced Markdown memory notes. ChatGPT subscription access uses Pi's current OpenAI sign-in flow.
+
+TanStack AI's React client owns the browser's conversation messages and processes the authenticated SSE stream. A Pi adapter translates committed turns, reasoning, steering and tool results into TanStack message parts. Reconnecting reads a fresh snapshot; it does not repeat a model request or tool. Pi still owns durable send/steer admission, cancellation, approvals and recovery. The shadcn/Base UI components render that client state.
 
 Browse the current product in the [feature map](FEATURES.md). Implementation progress, acceptance criteria and architecture are tracked in [BUILD.md](BUILD.md).
 
