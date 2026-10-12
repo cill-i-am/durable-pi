@@ -1,3 +1,5 @@
+import { RunTimeline } from "./run-timeline"
+import { Separator } from "@/components/ui/separator"
 import type { RecoveryView } from "@/conversations/recovery"
 import { useEffect, useState } from "react"
 import { Schema } from "effect"
@@ -90,6 +92,16 @@ export function ActivityRecord({
         {!record && !error && <Skeleton className="h-32 w-full" />}
         {record && (
           <div className="flex min-w-0 flex-col gap-4 wrap-anywhere">
+            {record.run && (
+              <>
+                <RunTimeline
+                  key={record.run.runId}
+                  run={record.run}
+                  agentId={entry.agent.id}
+                />
+                <Separator />
+              </>
+            )}
             <p className="text-xs text-muted-foreground">{record.status}</p>
             <div className="rounded-lg bg-muted p-3">
               <p className="mb-2 text-xs text-muted-foreground">

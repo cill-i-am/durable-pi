@@ -45,6 +45,23 @@ export class AccessStore {
         .some((column) => column.name === "decision")
     )
       db.run("ALTER TABLE tool_operations ADD COLUMN decision TEXT")
+    // An audit of this receipt's transitions, committed atomically by SQLite.
+    // It never drives authorization or dispatch; replaying the same status adds nothing.
+    db.run(`CREATE TABLE IF NOT EXISTS tool_operation_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, operationId TEXT NOT NULL, revision INTEGER NOT NULL,
+      status TEXT NOT NULL, at INTEGER NOT NULL)`)
+    db.run(`CREATE TRIGGER IF NOT EXISTS tool_operation_insert AFTER INSERT ON tool_operations
+      BEGIN INSERT INTO tool_operation_history(operationId,revision,status,at) VALUES (new.id,new.revision,new.status,new.createdAt); END`)
+    db.run(`CREATE TRIGGER IF NOT EXISTS tool_operation_status AFTER UPDATE OF status ON tool_operations
+      WHEN old.status != new.status
+      BEGIN INSERT INTO tool_operation_history(operationId,revision,status,at) VALUES (new.id,new.revision,new.status,
+        max(new.createdAt,cast((julianday('now')-2440587.5)*86400000 AS INTEGER))); END`)
+    db.run(
+      "CREATE INDEX IF NOT EXISTS tool_operation_history_operation ON tool_operation_history(operationId,id)"
+    )
+    db.run(
+      "CREATE INDEX IF NOT EXISTS tool_operations_run ON tool_operations(turnId,createdAt,id)"
+    )
   }
   policies(): ToolPolicy[] {
     const saved = new Map(

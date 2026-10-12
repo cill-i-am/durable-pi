@@ -1,4 +1,4 @@
-import { Effect } from "effect"
+import { Cause, Effect } from "effect"
 import type { AccessStore, ToolIntent } from "./adapters/sqlite"
 import { AccessDenied } from "./contracts"
 
@@ -9,7 +9,8 @@ export class AccessGate {
   constructor(
     readonly store: AccessStore,
     private readonly canRun: (turnId: string) => boolean,
-    private readonly onChange: () => void = () => {}
+    private readonly onChange: () => void = () => {},
+    private readonly botId: () => string | null = () => null
   ) {}
   notify() {
     this.version++
@@ -51,11 +52,31 @@ export class AccessGate {
     recoverable = false
   ): Effect.Effect<T, unknown> {
     return Effect.gen({ self: this }, function* () {
-      yield* Effect.annotateCurrentSpan({
-        "tool.name": intent.tool,
-        "tool.operation_id": intent.id,
-        "run.id": intent.turnId,
-      })
+      const fields = {
+        botId: this.botId(),
+        runId: intent.turnId,
+        operationId: intent.id,
+        tool: intent.tool,
+      }
+      const observe = (event: string) =>
+        Effect.annotateCurrentSpan({
+          "bot.id": fields.botId ?? "",
+          "run.id": intent.turnId,
+          "tool.operation_id": intent.id,
+          "tool.name": intent.tool,
+        }).pipe(
+          Effect.andThen(
+            Effect.logInfo(event).pipe(
+              Effect.annotateLogs({ ...fields, event })
+            )
+          ),
+          Effect.withSpan(event),
+          Effect.catchCauseIf(
+            (cause) => !Cause.hasInterrupts(cause),
+            () => Effect.void
+          )
+        )
+      let waiting = false
       const operation = yield* Effect.try({
         try: () => {
           if (!this.canRun(intent.turnId))
@@ -80,26 +101,29 @@ export class AccessGate {
           catch: (cause) => cause,
         })
         if (decision === "pending") {
+          if (!waiting) yield* observe("tool.waiting")
+          waiting = true
           yield* this.wait(version, operation.expiresAt)
           continue
         }
         if (typeof decision === "object") {
-          yield* Effect.annotateCurrentSpan("tool.replayed", true)
+          yield* observe("tool.replayed")
           return yield* Effect.try(() => JSON.parse(decision.result) as T)
         }
         // claim synchronously records intent before invoking an effect that may not be replayable.
         try {
-          yield* Effect.annotateCurrentSpan("tool.dispatched", true)
+          yield* observe("tool.dispatched")
           const result = yield* Effect.tryPromise(work)
           yield* Effect.try({
             try: () => this.store.finish(intent.id, JSON.stringify(result)),
             catch: (cause) => cause,
           })
+          yield* observe("tool.finished")
           return result
         } finally {
           this.notify()
         }
       }
-    }).pipe(Effect.withSpan("Access.tool"))
+    })
   }
 }

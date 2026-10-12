@@ -156,3 +156,17 @@ it("keeps ordinary chat available when a new gateway reaches a previous-version 
   expect(configureBot.mock.calls[0]).toEqual(["owner-a", first, "owner-a"])
   expect("bindCommunicationIdentity" in previousVersion).toBe(false)
 })
+
+it("rejects invalid run cursors without reaching the owning object", async () => {
+  const f = fixture()
+  for (const cursor of ["not-json", JSON.stringify({ at: 1, key: "x" })])
+    expect(
+      (
+        await f.request(
+          `activity/conversations/${crypto.randomUUID()}?agent=${first.id}&cursor=${encodeURIComponent(cursor)}`,
+          "owner-a"
+        )
+      ).status
+    ).toBe(400)
+  expect(f.names).toEqual(["owner-a", "owner-a"])
+})

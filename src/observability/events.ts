@@ -5,9 +5,11 @@ import type { RecoveryView } from "../conversations/recovery"
 import type { Attempt } from "../inference/usage"
 
 /** Observations only. Durable domain records remain the source of truth. */
-export function inferenceFields(attempt: Attempt) {
+export function inferenceFields(attempt: Attempt, botId?: string) {
   return {
     event: "inference.finished",
+    botId: botId ?? null,
+    runId: attempt.turnId,
     attemptId: attempt.id,
     turnId: attempt.turnId,
     model: attempt.route.model,
@@ -15,9 +17,10 @@ export function inferenceFields(attempt: Attempt) {
     job: attempt.route.job,
     purpose: attempt.purpose,
     outcome: attempt.outcome,
-    elapsedMs: attempt.finishedAt
-      ? Date.parse(attempt.finishedAt) - Date.parse(attempt.startedAt)
-      : null,
+    elapsedMs:
+      attempt.finishedAt && attempt.outcome !== "interrupted"
+        ? Date.parse(attempt.finishedAt) - Date.parse(attempt.startedAt)
+        : null,
     inputTokens: attempt.input,
     cachedInputTokens: attempt.cached,
     uncachedInputTokens:
@@ -29,13 +32,13 @@ export function inferenceFields(attempt: Attempt) {
 }
 
 // Native Pi callbacks are synchronous. Logging has no network/exporter lifetime.
-export function reportInference(attempt: Attempt) {
+export function reportInference(attempt: Attempt, botId?: string) {
   Effect.runSync(
     (attempt.outcome === "failed" || attempt.outcome === "incomplete"
       ? Effect.logError("Inference.requestFailed")
       : Effect.logInfo("Inference.requestFinished")
     ).pipe(
-      Effect.annotateLogs(inferenceFields(attempt)),
+      Effect.annotateLogs(inferenceFields(attempt, botId)),
       Effect.provide(OperationalLogger)
     )
   )
@@ -71,11 +74,16 @@ export function reportTerminal(run: CommandRun) {
   )
 }
 
-export function reportRecovery(runId: string, view: RecoveryView) {
+export function reportRecovery(
+  runId: string,
+  view: RecoveryView,
+  botId?: string
+) {
   Effect.runSync(
     Effect.logInfo("Conversation.recoveryChanged").pipe(
       Effect.annotateLogs({
         event: "conversation.recovery",
+        botId: botId ?? null,
         runId,
         phase: view.phase,
         tool: view.tool,

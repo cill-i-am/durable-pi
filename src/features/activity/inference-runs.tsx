@@ -74,12 +74,13 @@ export function InferenceRuns({ agentId }: { agentId: string }) {
   )
 }
 export function InferenceRun({ attempt }: { attempt: Attempt }) {
-  const duration = attempt.finishedAt
-    ? Math.max(
-        0,
-        Date.parse(attempt.finishedAt) - Date.parse(attempt.startedAt)
-      )
-    : null
+  const duration =
+    attempt.finishedAt && attempt.outcome !== "interrupted"
+      ? Math.max(
+          0,
+          Date.parse(attempt.finishedAt) - Date.parse(attempt.startedAt)
+        )
+      : null
   return (
     <div className="flex flex-col gap-2 border-b pb-3 text-sm">
       <div className="flex flex-wrap items-center gap-2">
@@ -94,7 +95,11 @@ export function InferenceRun({ attempt }: { attempt: Attempt }) {
       </div>
       <p className="text-xs text-muted-foreground">
         {attempt.purpose} · {attempt.route.job} · {attempt.route.reason} ·{" "}
-        {duration === null ? "In progress" : `${(duration / 1000).toFixed(1)}s`}
+        {attempt.outcome === "interrupted"
+          ? "Duration unknown after restart"
+          : duration === null
+            ? "In progress"
+            : `${(duration / 1000).toFixed(1)}s`}
       </p>
       <p className="text-xs text-muted-foreground">
         {attempt.input === null

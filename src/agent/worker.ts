@@ -17,6 +17,7 @@ import {
   communicationInstructions,
 } from "../communication/tools"
 import { failure as communicationFailure } from "../communication/contracts"
+import { runActivity, RunCursor } from "../activity/run"
 import { activityEntries } from "../activity/sqlite"
 import { activityFeed } from "../activity/feed"
 import {
@@ -527,7 +528,8 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         this.botConfiguration.read()?.status !== "archived"
       )
     },
-    () => this.notifyConversation()
+    () => this.notifyConversation(),
+    () => this.ctx.id.toString()
   )
   readonly protectTool = guardedTools(
     this.access,
@@ -879,7 +881,9 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     () => this.browserCleanup.wake()
   )
   readonly uploadLock = Semaphore.makeUnsafe(1)
-  readonly inferenceUsage = new InferenceUsage(this.db, reportInference)
+  readonly inferenceUsage = new InferenceUsage(this.db, (attempt) =>
+    reportInference(attempt, this.ctx.id.toString())
+  )
   readonly summaryRoutes = new SummaryRoutes(this.db)
   private catalogCache?: {
     clientId: string
@@ -953,6 +957,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     )
   }
   readonly models = createAgentModels(this.credentials, {
+    botId: () => this.ctx.id.toString(),
     waitUntil: (work) => this.ctx.waitUntil(work),
     beforeRequest: (id, signal) =>
       runObserved(
@@ -1015,6 +1020,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     const capability = validateRoute(candidate, catalog)
     const route = this.summaryRoutes.budget(job, capability.contextWindow)
     const models = createAgentModels(this.credentials, {
+      botId: () => this.ctx.id.toString(),
       waitUntil: (work) => this.ctx.waitUntil(work),
       catalog: () => this.accountModelCatalog(),
       contextWindow: () => route.contextWindow,
@@ -1108,7 +1114,8 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
               )
               await conversation?.abort(callContext)
             },
-            observed: reportRecovery,
+            observed: (runId, view) =>
+              reportRecovery(runId, view, this.ctx.id.toString()),
             changed: () => this.notifyConversation(),
           }),
           objectContextHook(this.objects, () => this.contextProjectionBytes()),
@@ -1786,7 +1793,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     )
     return refreshed
   }
-  activityConversation(id: string): ActivityConversation | null {
+  activityConversation(
+    id: string,
+    cursor: RunCursor | null = null
+  ): ActivityConversation | null {
     const turn = this.conversations.get(id)
     if (!turn) return null
     const activity = this.db.all<{ payload: string }>(
@@ -1802,6 +1812,14 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       error: turn.error,
       recovery: this.recovery.get(turn.parent_id ?? turn.id)?.view ?? null,
       activity: activity ? JSON.parse(activity.payload) : [],
+      run:
+        runActivity(
+          this.db,
+          this.ctx.id.toString(),
+          turn.parent_id ?? turn.id,
+          this.inferenceUsage,
+          cursor
+        ) ?? undefined,
     }
   }
   async activityAgents(): Promise<ActivityAgent[]> {
@@ -2743,6 +2761,8 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             ).pipe(
               Effect.annotateLogs({
                 event: "conversation.finished",
+                botId: this.ctx.id.toString(),
+                sessionId: finishedTurn.session_id,
                 runId: finishedTurn.id,
                 ...totals,
                 outcome:
@@ -2908,9 +2928,16 @@ export default {
         const id = path.slice("activity/conversations/".length)
         if (!/^[a-f0-9-]{36}$/i.test(id))
           return new Response("Not found", { status: 404 })
+        let cursor: RunCursor | null = null
+        try {
+          const raw = url.searchParams.get("cursor")
+          if (raw) cursor = Schema.decodeUnknownSync(RunCursor)(JSON.parse(raw))
+        } catch {
+          return new Response("Invalid run cursor", { status: 400 })
+        }
         const value = await env.AGENT.getByName(
           agentObjectName(owner, agent.id)
-        ).activityConversation(id)
+        ).activityConversation(id, cursor)
         return value
           ? Response.json(value)
           : new Response("Not found", { status: 404 })

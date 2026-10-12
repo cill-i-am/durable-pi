@@ -159,3 +159,62 @@ it("observes the native slow-dispatch signal but excludes normal waits and cance
     "None"
   )
 })
+
+it("ends the dispatch span while the actual provider request is still pending, retaining durable correlation", async () => {
+  const { createAgentModels, accountCredentials } =
+    await import("../src/agent/models")
+  const { InferenceUsage } = await import("../src/inference/usage")
+  const { database } = await import("./database")
+  const { credential, response } = await import("./inference-fixture")
+  const usage = new InferenceUsage(database())
+  let release!: () => void
+  const held = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  const models = createAgentModels(
+    accountCredentials(async () => credential),
+    {
+      botId: () => "synthetic-bot",
+      onAttempt: () =>
+        usage.start(
+          resolveRoute("conversation"),
+          "synthetic-run",
+          "conversation"
+        ),
+    }
+  )
+  const model = models.getModel("openai", "gpt-6.1-sol")!
+  const result = models.completeSimple(
+    model,
+    { messages: [{ role: "user", content: "hello", timestamp: 0 }] },
+    {
+      reasoning: "medium",
+      fetch: async () => {
+        await held
+        return response(model.id)
+      },
+    }
+  )
+  await vi.waitFor(() =>
+    expect(
+      native.spans.find((s) => s.name === "Inference.dispatch")?.ended
+    ).toBe(true)
+  )
+  const attempt = usage.recent()[0]!
+  expect(attempt.outcome).toBe("running")
+  expect(
+    native.spans.find((s) => s.name === "Inference.dispatch")?.attributes
+  ).toMatchObject({
+    "run.id": "synthetic-run",
+    "bot.id": "synthetic-bot",
+    "inference.attempt_id": attempt.id,
+  })
+  release()
+  await result
+  expect(usage.recent()[0]?.outcome).toBe("completed")
+  expect(inferenceFields(usage.recent()[0]!, "synthetic-bot")).toMatchObject({
+    botId: "synthetic-bot",
+    runId: "synthetic-run",
+    attemptId: attempt.id,
+  })
+})

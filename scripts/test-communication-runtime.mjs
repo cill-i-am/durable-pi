@@ -299,6 +299,12 @@ const config :Workerd.Config = (
   await start()
   const loopRestored = await call("loops/inspect", a)
   assert.equal(loopRestored.state.view.failures, 3)
+  assert.deepEqual(loopRestored.activity, loop.activity)
+  assert.equal(
+    loopRestored.activity.events.filter((event) => event.kind === "tool")
+      .length,
+    3
+  )
   await call("loops/release", a)
   for (let n = 0; n < 200; n++) {
     loop = await call("loops/inspect", a)
@@ -315,6 +321,25 @@ const config :Workerd.Config = (
   assert.equal(loopBlocked.state.view.phase, "blocked")
   assert.equal(loopBlocked.requests, 5)
   assert.equal(loopBlocked.receipts.length, 5)
+  assert.deepEqual(loopBlocked.activity, loop.activity)
+  assert.equal(
+    loopBlocked.activity.events.filter((event) => event.kind === "tool").length,
+    5
+  )
+  assert(
+    loopBlocked.activity.events
+      .filter((event) => event.kind === "tool")
+      .every(
+        (event) =>
+          event.transitions.map((t) => t.status).join(",") ===
+          "approved,running,done"
+      )
+  )
+  assert(
+    loopBlocked.activity.events.some(
+      (event) => event.kind === "recovery" && event.status === "blocked"
+    )
+  )
   console.log(
     "PASS native loop recovery: SIGKILL at third failure, same committed round replayed once, fifth failure stops, blocked restart dispatches no new calls."
   )
