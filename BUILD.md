@@ -35,6 +35,21 @@ Keep the existing PersonalAgent namespace, memory tables, AuthDatabase, MemoryBa
 
 Visual thesis: a quiet, warm workroom with compact navigation, readable conversation, and a contextual workbench. Composition: bot sidebar → conversation → optional workbench. Interactions: keyboard-first menus, restrained pane transitions, clear running/approval/recovery states; respect reduced motion. Semantic tokens own colors, type, spacing, and radii for later retheming.
 
+## Observability improvements — 2026-10-12
+
+In progress. The production audit found disabled distributed traces, no terminal Worker logs, two session-lookup exceptions followed by invalid HTTP status errors, 45 session-read throttles in 24 hours, many cancelled HTTP 200 reads, generic harness warnings, and no application alerts. The owner approved tracing and improvements, with Alchemy telemetry and Effect types as the first choice. Additional query redaction is out of scope.
+
+- [x] Enable native Cloudflare tracing and logs through Alchemy, with invocation-scoped Effect tracing at host boundaries.
+- [x] Identity: typed, fail-closed session-lookup errors; coordinate read bursts and respect rate-limit backoff without weakening login, 2FA or revocation.
+- [x] Record model usage/outcomes, tool dispatch/replay, compaction/recovery and terminal outcomes using existing identities. Telemetry never owns execution or recovery.
+- [ ] Correlate cancelled reads with browser delivery and traces before changing polling; enable usable server source maps.
+- [ ] Configure native application alerts and investigation queries; distinguish errors/stalled work from expected cancellation and approval waits.
+- [ ] Verify local lifecycle/error coverage, review, deploy, and inspect actual hosted traces and logs. Record limitations separately.
+
+Implementation and investigation procedure: [observability runbook](docs/observability.md). Alchemy owns Worker sampling/export. Its existing tracer is exposed through an export-only package patch for native Pi/Sandbox host callbacks. An Effect Schema-validated post-deploy operation covers the newer native Issues field absent from Alchemy's provider schema. Initial sampling is 100%; native issue notifications start after three occurrences of an issue. These are tunable operating choices. Observers cannot undo committed receipts or prevent a recovery decision.
+
+Local checks: 562 tests across 79 files, concurrent native workerd tracing/restart checks, TypeScript and production build pass. Lint has only four existing warnings. Tests cover session lookup failures, read coalescing, independent aborts, authentication mutation ordering, 429 backoff, trace parent isolation, error/interruption outcomes, token accounting and terminal recovery observations. A pre-deploy browser reload reproduced a session-read 429 with a fully delivered response. Production ingestion and post-deploy behavior remain to be checked.
+
 ## Configurable message delivery — 2026-10-12
 
 General settings now exposes **Default message delivery**, remembered on this device using the existing browser-local preference pattern. New installations default to **Steer the active reply**. **Queue a new reply** remains an explicit preference or a one-message composer override; a successful send or a finished reply clears that override. Idle conversations still start an ordinary reply, and changing the preference does not modify accepted messages or their retry identities.

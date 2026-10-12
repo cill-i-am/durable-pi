@@ -1,3 +1,4 @@
+import { ownerSession } from "./owner-session"
 import { betterAuth, type BetterAuthOptions } from "better-auth"
 import { APIError, createAuthMiddleware } from "better-auth/api"
 import { twoFactor } from "better-auth/plugins"
@@ -98,6 +99,8 @@ export function authOptions(
       window: 60,
       max: 30,
       customRules: {
+        // Polls/focus across tabs are read-only; login/factor limits stay at 30/min.
+        "/get-session": { window: 60, max: 120 },
         "/request-password-reset": { window: 600, max: 3 },
         "/reset-password": { window: 600, max: 10 },
       },
@@ -137,15 +140,15 @@ export function authOptions(
   } satisfies BetterAuthOptions
 }
 
-export async function authorizedOwner(request: Request, env: WebsiteEnv) {
-  const session = await createAuth(env).api.getSession({
-    headers: request.headers,
-    query: { disableCookieCache: true, disableRefresh: true },
-  })
-  return session &&
-    session.user.email.toLowerCase() === env.OWNER_EMAIL.toLowerCase()
-    ? session.user
-    : null
+export function authorizedOwner(request: Request, env: WebsiteEnv) {
+  return ownerSession(
+    () =>
+      createAuth(env).api.getSession({
+        headers: request.headers,
+        query: { disableCookieCache: true, disableRefresh: true },
+      }),
+    env.OWNER_EMAIL
+  )
 }
 export function sameOrigin(request: Request, appUrl: string) {
   return request.headers.get("origin") === new URL(appUrl).origin

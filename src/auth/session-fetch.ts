@@ -1,35 +1,77 @@
-/** Coordinate native session reads with cookie rotation, without storing credentials. */
+/** Coordinate native session reads with cookie rotation, without caching sessions. */
 export function sessionFetch(fetcher: typeof fetch): typeof fetch {
   let rotation: Promise<void> | undefined
-  const reads = new Set<Promise<Response>>()
+  const reads = new Map<string, Promise<Response>>()
+  let limitedUntil = 0
+
   return async (input, init) => {
-    const path = new URL(
+    const url = new URL(
       input instanceof Request ? input.url : String(input),
       "http://local"
-    ).pathname
-    if (path === "/api/auth/get-session") {
-      // Include polls, focus, reconnect and cross-tab notifications from Better Auth.
-      while (rotation) await rotation
-      const read = fetcher(input, {
-        ...init,
-        signal: init?.signal
-          ? AbortSignal.any([init.signal, AbortSignal.timeout(15_000)])
-          : AbortSignal.timeout(15_000),
-      })
-      reads.add(read)
-      try {
-        return await read
-      } finally {
-        reads.delete(read)
+    )
+    const method = (
+      init?.method ?? (input instanceof Request ? input.method : "GET")
+    ).toUpperCase()
+    const callerSignal =
+      init?.signal ?? (input instanceof Request ? input.signal : undefined)
+    if (url.pathname === "/api/auth/get-session" && method === "GET") {
+      while (rotation) await abortable(rotation, callerSignal)
+      callerSignal?.throwIfAborted()
+      if (limitedUntil > Date.now())
+        return Response.json(
+          {
+            code: "TOO_MANY_REQUESTS",
+            message: "Please wait before checking your session again.",
+          },
+          {
+            status: 429,
+            headers: {
+              "Retry-After": String(
+                Math.ceil((limitedUntil - Date.now()) / 1000)
+              ),
+            },
+          }
+        )
+      // Different native query options/headers must not share an authorization read.
+      const headers = new Headers(
+        init?.headers ?? (input instanceof Request ? input.headers : undefined)
+      )
+      const key = JSON.stringify([
+        url.href,
+        [...headers.entries()].sort(),
+        init?.credentials ??
+          (input instanceof Request ? input.credentials : "same-origin"),
+      ])
+      let read = reads.get(key)
+      if (!read) {
+        // A single caller's cancellation must not cancel another component's read.
+        // The shared network operation is bounded and cookie rotations still join it.
+        read = fetcher(input, { ...init, signal: AbortSignal.timeout(15_000) })
+          .then((response) => {
+            if (response.status === 429) {
+              const retry = response.headers.get("Retry-After")
+              const seconds =
+                retry && /^\d+$/.test(retry)
+                  ? Number(retry)
+                  : retry
+                    ? (Date.parse(retry) - Date.now()) / 1000
+                    : 60
+              limitedUntil =
+                Date.now() +
+                Math.max(1, Number.isFinite(seconds) ? seconds : 60) * 1000
+            }
+            return response
+          })
+          .finally(() => {
+            if (reads.get(key) === read) reads.delete(key)
+          })
+        reads.set(key, read)
       }
+      return (await abortable(read, callerSignal)).clone()
     }
-    if (
-      [
-        "/api/auth/two-factor/enable",
-        "/api/auth/two-factor/verify-totp",
-        "/api/auth/two-factor/disable",
-      ].includes(path)
-    ) {
+    if (url.pathname.startsWith("/api/auth/") && method !== "GET") {
+      // Includes sign-out, password changes and factor rotation. Old reads cannot
+      // overwrite cookies after an authentication mutation has completed.
       const previous = rotation
       let release!: () => void
       const current = new Promise<void>((resolve) => {
@@ -38,14 +80,15 @@ export function sessionFetch(fetcher: typeof fetch): typeof fetch {
       rotation = current
       try {
         if (previous) await previous
-        await Promise.allSettled([...reads])
-        // Resolving fetch means the browser has installed the response's Set-Cookie.
-        return await fetcher(input, {
+        await Promise.allSettled([...reads.values()])
+        const response = await fetcher(input, {
           ...init,
-          signal: init?.signal
-            ? AbortSignal.any([init.signal, AbortSignal.timeout(30_000)])
+          signal: callerSignal
+            ? AbortSignal.any([callerSignal, AbortSignal.timeout(30_000)])
             : AbortSignal.timeout(30_000),
         })
+        limitedUntil = 0
+        return response
       } finally {
         if (rotation === current) rotation = undefined
         release()
@@ -53,4 +96,22 @@ export function sessionFetch(fetcher: typeof fetch): typeof fetch {
     }
     return fetcher(input, init)
   }
+}
+
+function abortable<T>(
+  promise: Promise<T>,
+  signal?: AbortSignal | null
+): Promise<T> {
+  if (!signal) return promise
+  signal.throwIfAborted()
+  return new Promise((resolve, reject) => {
+    const abort = () => {
+      signal.removeEventListener("abort", abort)
+      reject(signal.reason)
+    }
+    signal.addEventListener("abort", abort, { once: true })
+    void promise
+      .then(resolve, reject)
+      .finally(() => signal.removeEventListener("abort", abort))
+  })
 }

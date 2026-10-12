@@ -7,7 +7,12 @@ import {
   type Storage,
 } from "@earendil-works/pi-durable"
 import type { AccessStore } from "../../access/adapters/sqlite"
-import { recoveryFingerprint, RunBlocked, type Observation } from "../recovery"
+import {
+  recoveryFingerprint,
+  RunBlocked,
+  type Observation,
+  type RecoveryView,
+} from "../recovery"
 import type { RunRecoveryStore } from "./sqlite-recovery"
 
 export type RecoverySource = { turnId: string; steeringKey: string }
@@ -18,6 +23,7 @@ export function runRecoveryHook(options: {
   access: AccessStore
   source: (api: HookApi) => RecoverySource | undefined
   stop: (api: HookApi, context: Context) => Promise<void>
+  observed?: (turnId: string, view: RecoveryView) => void
   changed?: () => void
 }) {
   const { storage, store, access, source } = options
@@ -164,6 +170,7 @@ export function runRecoveryHook(options: {
       // Late steering may discard obsolete failures, but never an access denial
       // or an uncertain dispatch discovered in that round.
       const changedDuringRead = current.steeringKey !== origin.steeringKey
+      const previousPhase = store.get(origin.turnId)?.view?.phase
       const state = store.observe(
         origin.turnId,
         String(api.conversationId),
@@ -171,6 +178,13 @@ export function runRecoveryHook(options: {
         changedDuringRead ? "stale-request" : (requestEpoch ?? epoch),
         observations
       )
+      if (state?.view && state.view.phase !== previousPhase) {
+        try {
+          options.observed?.(origin.turnId, state.view)
+        } catch {
+          /* An observer cannot prevent the durable recovery decision. */
+        }
+      }
       options.changed?.()
       if (state?.view?.phase === "blocked") {
         // Pi reports ordinary hook errors and continues. Admit native cancellation

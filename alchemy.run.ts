@@ -8,6 +8,20 @@ import type { PersonalAgent } from "./src/agent/worker"
 import type { BackgroundGroupRPC } from "./src/delegation/worker"
 import type { LinuxSandbox } from "./src/terminal/worker"
 
+// Personal-workspace baseline: retain all invocations while establishing traces.
+// These are Alchemy's typed native Cloudflare settings, not an OTLP sidecar.
+const observability = {
+  enabled: true,
+  headSamplingRate: 1,
+  logs: {
+    enabled: true,
+    invocationLogs: true,
+    headSamplingRate: 1,
+    persist: true,
+  },
+  traces: { enabled: true, headSamplingRate: 1, persist: true },
+} satisfies Cloudflare.WorkerObservability
+
 export const AuthDatabase = Cloudflare.D1.Database("AuthDatabase", {
   migrations: "./migrations/auth",
 })
@@ -23,6 +37,7 @@ export const DocumentWorker = Cloudflare.Worker("DocumentWorker", {
   dev: { port: 1339, strictPort: true },
   workersDev: { enabled: false, previewsEnabled: false },
   compatibility: { date: "2026-09-25", flags: ["nodejs_compat"] },
+  observability,
   limits: { cpuMs: 5_000 },
 })
 export const ExecutionWorker = Cloudflare.Worker("ExecutionWorker", {
@@ -30,6 +45,7 @@ export const ExecutionWorker = Cloudflare.Worker("ExecutionWorker", {
   dev: { port: 1340, strictPort: true },
   workersDev: { enabled: false, previewsEnabled: false },
   compatibility: { date: "2026-09-25", flags: ["nodejs_compat"] },
+  observability,
   limits: { cpuMs: 2000 },
   env: { LOADER: Cloudflare.WorkerLoader() },
 })
@@ -39,7 +55,7 @@ export const TerminalWorker = Cloudflare.Worker("TerminalWorker", {
   dev: { port: 1341, strictPort: true },
   workersDev: { enabled: false, previewsEnabled: false },
   compatibility: { date: "2026-09-25", flags: ["nodejs_compat"] },
-  observability: { enabled: false },
+  observability,
   env: {
     SANDBOX: Cloudflare.Container<LinuxSandbox>("LinuxSandbox", {
       className: "LinuxSandbox",
@@ -57,6 +73,7 @@ export type TerminalEnv = Cloudflare.InferEnv<typeof TerminalWorker>
 export const BackgroundGroups: Cloudflare.DurableObjectLike<BackgroundGroupRPC> =
   Cloudflare.DurableObject<BackgroundGroupRPC>("BackgroundGroup")
 export const AgentWorker = Cloudflare.Worker("AgentWorker", {
+  observability,
   main: "./src/agent/worker.ts",
   dev: { port: 1338, strictPort: true },
   workersDev: { enabled: false, previewsEnabled: false },
@@ -83,6 +100,7 @@ export const Website = Cloudflare.Website.Vite(
     const stage = yield* Alchemy.Stage
     const owner = yield* Config.String("OWNER_EMAIL").pipe(Effect.orDie)
     return {
+      observability,
       dev: { port: 1337, strictPort: true },
       domain:
         stage === "production"

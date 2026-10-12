@@ -13,7 +13,8 @@ export function guardedTools(
   activeTurn: (
     api: ToolExecutionApi
   ) => string | undefined | Promise<string | undefined>,
-  recoverableTools: ReadonlySet<string> = new Set()
+  recoverableTools: ReadonlySet<string> = new Set(),
+  run: typeof Effect.runPromise = Effect.runPromise
 ) {
   const running = new Map<
     string,
@@ -42,7 +43,7 @@ export function guardedTools(
           )
         const turnId = previous?.turnId ?? resolved
         if (!turnId) throw new Error("The reply has ended.")
-        return Effect.runPromise(
+        return run(
           gate.run(
             { id, turnId, tool: tool.name, input: JSON.stringify(args) },
             async () => toolReceipt(await tool.execute(args, api, context)),

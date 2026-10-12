@@ -9,6 +9,7 @@ vi.mock("cloudflare:workers", () => ({
   DurableObject: class {},
   WorkerEntrypoint: class {},
   env: {},
+  tracing: undefined,
 }))
 vi.mock("agents/lifecycle", () => ({
   Lifecycle: class {},

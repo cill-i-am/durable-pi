@@ -78,10 +78,13 @@ export class AccessGate {
           yield* this.wait(version, operation.expiresAt)
           continue
         }
-        if (typeof decision === "object")
+        if (typeof decision === "object") {
+          yield* Effect.annotateCurrentSpan("tool.replayed", true)
           return yield* Effect.try(() => JSON.parse(decision.result) as T)
+        }
         // claim synchronously records intent before invoking an effect that may not be replayable.
         try {
+          yield* Effect.annotateCurrentSpan("tool.dispatched", true)
           const result = yield* Effect.tryPromise(work)
           yield* Effect.try({
             try: () => this.store.finish(intent.id, JSON.stringify(result)),
@@ -92,6 +95,14 @@ export class AccessGate {
           this.notify()
         }
       }
-    })
+    }).pipe(
+      Effect.withSpan("Access.tool", {
+        attributes: {
+          "tool.name": intent.tool,
+          "tool.operation_id": intent.id,
+          "run.id": intent.turnId,
+        },
+      })
+    )
   }
 }
