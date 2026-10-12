@@ -97,6 +97,15 @@ const config :Workerd.Config = (
 );`
   )
   await start()
+  const traces = await Promise.all(
+    [1, 2].map(() => fetch(`${origin}/telemetry`).then((r) => r.json()))
+  )
+  assert.notEqual(traces[0].id, traces[1].id)
+  for (const trace of traces) {
+    assert.equal(trace.name, "fixture.request")
+    assert.equal(trace.child.name, "fixture.child")
+    assert.equal(trace.child.parent, trace.id)
+  }
   const a = { owner: "synthetic-owner", bot: "home" }
   const b = {
     owner: "synthetic-owner",

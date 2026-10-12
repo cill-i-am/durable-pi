@@ -1,3 +1,4 @@
+import { runObserved } from "../observability/worker"
 import { Effect } from "effect"
 import { MAX_FILE_BYTES } from "./files"
 import { boundedBytes } from "./http"
@@ -14,7 +15,7 @@ export default {
     } catch {
       return Response.json({ reason: "invalid" }, { status: 422 })
     }
-    return Effect.runPromise(
+    return runObserved(
       extractPdf(bytes).pipe(
         Effect.map((result) => Response.json(result)),
         Effect.catchTag("DocumentUnreadable", (cause) =>

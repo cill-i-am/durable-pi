@@ -1,3 +1,11 @@
+import "../observability/lifecycle"
+import {
+  reportInference,
+  reportHarness,
+  reportRecovery,
+  reportService,
+} from "../observability/events"
+import { runObserved, WorkerTelemetry } from "../observability/worker"
 import { RunRecoveryStore } from "../conversations/adapters/sqlite-recovery"
 import { runRecoveryHook } from "../conversations/adapters/pi-recovery"
 import { communicationRequest } from "../communication/http"
@@ -351,7 +359,7 @@ class MemoryRunner extends TurnRunner {
           yield* Effect.promise(() => owner.backups.wake())
         if (owner.active()) yield* Effect.promise(() => owner.runner.wake())
         return next === undefined ? undefined : { rescheduleAt: next }
-      })
+      }).pipe(Effect.provide(WorkerTelemetry))
     )
   }
   async dispose() {
@@ -408,7 +416,7 @@ class BackupRunner extends TurnRunner {
             })
           )
         )
-      })
+      }).pipe(Effect.provide(WorkerTelemetry))
     )
   }
 }
@@ -444,7 +452,7 @@ class BrowserRunner extends TurnRunner {
     super(owner, "browser-cleanup")
   }
   onJob(): Promise<LifecycleJobOutcome> {
-    return Effect.runPromise(
+    return runObserved(
       this.owner.browser
         .cleanup()
         .pipe(
@@ -524,7 +532,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   readonly protectTool = guardedTools(
     this.access,
     async (api) => {
-      const root = await Effect.runPromise(
+      const root = await runObserved(
         this.delegations.root(Number(api.conversationId))
       )
       if (root) return root
@@ -539,7 +547,8 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       "delegate_tasks",
       "background_tasks",
       "delegate_bot",
-    ])
+    ]),
+    runObserved
   )
   readonly skills = new SkillStore(this.db)
   readonly botConfiguration = new BotConfigurationStore(this.db)
@@ -870,7 +879,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     () => this.browserCleanup.wake()
   )
   readonly uploadLock = Semaphore.makeUnsafe(1)
-  readonly inferenceUsage = new InferenceUsage(this.db)
+  readonly inferenceUsage = new InferenceUsage(this.db, reportInference)
   readonly summaryRoutes = new SummaryRoutes(this.db)
   private catalogCache?: {
     clientId: string
@@ -890,7 +899,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         this.catalogCache.expires > Date.now()
       )
         return this.catalogCache.value
-      const result = await Effect.runPromise(
+      const result = await runObserved(
         discoverCatalog(credential, openaiProvider().getModels()).pipe(
           Effect.catchTag("ModelUnavailable", (error) =>
             Effect.succeed({
@@ -945,7 +954,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   }
   readonly models = createAgentModels(this.credentials, {
     beforeRequest: (id, signal) =>
-      Effect.runPromise(
+      runObserved(
         Effect.gen({ self: this }, function* () {
           if (!(yield* this.communication.pi.request(id)))
             yield* this.delegations.request(id)
@@ -1097,6 +1106,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
               )
               await conversation?.abort(callContext)
             },
+            observed: reportRecovery,
             changed: () => this.notifyConversation(),
           }),
           objectContextHook(this.objects, () => this.contextProjectionBytes()),
@@ -1344,7 +1354,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             parameters: Type.Object({ url: Type.String({ maxLength: 2048 }) }),
             replay: "safe",
             execute: async (args, _api, execution) => {
-              const result = await Effect.runPromise(
+              const result = await runObserved(
                 this.browser.inspect(
                   this.browser.state().policy.generation,
                   args.url,
@@ -1362,7 +1372,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             parameters: Type.Object({}),
             replay: "safe",
             execute: async (_args, _api, execution) => {
-              const result = await Effect.runPromise(
+              const result = await runObserved(
                 this.browser.inspect(
                   this.browser.state().policy.generation,
                   undefined,
@@ -1420,7 +1430,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             replay: "safe",
             execute: async (args, _api, execution) =>
               browserResult(
-                await Effect.runPromise(
+                await runObserved(
                   this.browser.interact(
                     Schema.decodeUnknownSync(BrowserInteraction)(args),
                     "agent",
@@ -1500,11 +1510,11 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
                 }
               : undefined
           }),
-          onReport: () => console.warn("Pi reported an operation failure"),
+          onReport: (error) => reportHarness(error, "personal"),
         },
         context
       )
-      await Effect.runPromise(this.communication.pi.restore(harness))
+      await runObserved(this.communication.pi.restore(harness))
       return harness
     },
     defaults: {
@@ -1567,8 +1577,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
 
   async onStart() {
     if (
-      (await Effect.runPromise(this.communication.mailbox.nextWake())) !==
-      undefined
+      (await runObserved(this.communication.mailbox.nextWake())) !== undefined
     )
       await this.communicationRunner.wake()
     await this.backgroundRunner.wake()
@@ -1934,7 +1943,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           communicationRequest(request, path)
         )
       if (path === "connections" || path.startsWith("connections/"))
-        return Effect.runPromise(
+        return runObserved(
           connectionRequest(
             this.connections,
             request,
@@ -1947,7 +1956,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           return Response.json(this.connectionStore.selection())
         if (request.method !== "POST")
           return new Response(null, { status: 405 })
-        return Effect.runPromise(
+        return runObserved(
           connectionResponse(
             Effect.gen({ self: this }, function* () {
               const input = yield* connectionJson(request)
@@ -1976,7 +1985,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         )
       }
       if (path === "access" || path.startsWith("access/")) {
-        const result = await Effect.runPromise(
+        const result = await runObserved(
           accessRequest(
             this.access,
             request,
@@ -1988,17 +1997,15 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         return result
       }
       if (path === "webhooks/incoming" && request.method === "POST")
-        return Effect.runPromise(
+        return runObserved(
           webhookIncoming(this.webhooks, request, () =>
             this.routineRunner.wake()
           )
         )
       if (path === "webhooks" || path.startsWith("webhooks/"))
-        return Effect.runPromise(
-          webhookOwnerRequest(this.webhooks, request, path)
-        )
+        return runObserved(webhookOwnerRequest(this.webhooks, request, path))
       if (path === "routines" || path.startsWith("routines/"))
-        return Effect.runPromise(
+        return runObserved(
           routinesRequest(
             this.routines,
             request,
@@ -2051,7 +2058,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         return Response.json({ accepted })
       }
       if (path === "background" || path.startsWith("background/"))
-        return Effect.runPromise(
+        return runObserved(
           delegationsRequest(
             {
               list: (offset) =>
@@ -2087,13 +2094,11 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           )
         )
       if (path === "delegations" || path.startsWith("delegations/"))
-        return Effect.runPromise(
-          delegationsRequest(this.delegations, request, path)
-        )
+        return runObserved(delegationsRequest(this.delegations, request, path))
       if (path === "plans" || path.startsWith("plans/"))
-        return Effect.runPromise(plansRequest(this.plans, request, path))
+        return runObserved(plansRequest(this.plans, request, path))
       if (path === "objects" || path.startsWith("objects/"))
-        return Effect.runPromise(
+        return runObserved(
           objectsRequest(this.objects, request, path, (id) => {
             const turn = this.conversations.get(id)
             return turn
@@ -2107,7 +2112,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           })
         )
       if (path === "apps" || path.startsWith("apps/"))
-        return Effect.runPromise(
+        return runObserved(
           appsRequest(
             this.apps,
             request,
@@ -2117,7 +2122,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           )
         )
       if (path === "execution" || path.startsWith("execution/"))
-        return Effect.runPromise(
+        return runObserved(
           executionRequest(this.executions, request, path, (task) =>
             this.ctx.waitUntil(task)
           )
@@ -2147,17 +2152,15 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           )
         )
       if (path === "browser" || path.startsWith("browser/"))
-        return Effect.runPromise(browserRequest(this.browser, request, path))
+        return runObserved(browserRequest(this.browser, request, path))
       if (path.startsWith("skills/import/"))
-        return Effect.runPromise(
-          importSkillsRequest(this.connections, request, path)
-        )
+        return runObserved(importSkillsRequest(this.connections, request, path))
       if (path === "skills" || path.startsWith("skills/"))
-        return Effect.runPromise(skillsRequest(this.skills, request, path))
+        return runObserved(skillsRequest(this.skills, request, path))
       if (path === "skill-selection") {
         if (request.method === "GET")
           return Response.json(this.skills.selection())
-        return Effect.runPromise(
+        return runObserved(
           skillResponse(
             Effect.gen({ self: this }, function* () {
               const raw = yield* readSkillJson(request)
@@ -2649,7 +2652,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         this.accessStore.cancel(turn.id)
         this.access.notify()
         if (turn.session_id) await this.harness.session(turn.session_id).abort()
-        await Effect.runPromise(this.plans.cancel(turn.id))
+        await runObserved(this.plans.cancel(turn.id))
       }
       if (
         turn.status === "running" &&
@@ -2658,7 +2661,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       )
         await this.harness.session(turn.session_id).abort()
       if (turn.status === "running")
-        await Effect.runPromise(this.delegations.reconcile(turn.id))
+        await runObserved(this.delegations.reconcile(turn.id))
       const reply = turn.session_id
         ? await readPiReply(this.harness, turn, members)
         : undefined
@@ -2728,6 +2731,24 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           : null
       )
       if (!finished) return { rescheduleAt: Date.now() + 10 }
+      await runObserved(
+        (failed && turn.status !== "stopping"
+          ? Effect.logError("Conversation.runFailed")
+          : Effect.logInfo("Conversation.runFinished")
+        ).pipe(
+          Effect.annotateLogs({
+            event: "conversation.finished",
+            runId: turn.id,
+            outcome:
+              turn.status === "stopping"
+                ? "cancelled"
+                : failed
+                  ? "failed"
+                  : "completed",
+            recovery: recovery?.phase ?? "none",
+          })
+        )
+      )
       await this.backgroundRunner.wake()
       this.accessStore.cancel(turn.id)
       this.access.notify()
@@ -2903,7 +2924,7 @@ export default {
         const agents = selected
           ? [{ id: selected.id, name: selected.name }]
           : await root.activityAgents()
-        const page = await Effect.runPromise(
+        const page = await runObserved(
           activityFeed(agents, query, (agent, value) =>
             env.AGENT.getByName(agentObjectName(owner, agent.id)).readActivity(
               agent,
@@ -2963,7 +2984,8 @@ export default {
         owner
       )
       return await target.fetch(request)
-    } catch {
+    } catch (error) {
+      reportService(error, "agent")
       return Response.json(
         { error: "This bot is temporarily unavailable. Please retry." },
         { status: 503 }

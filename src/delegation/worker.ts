@@ -1,3 +1,5 @@
+import "../observability/lifecycle"
+import { reportInference, reportHarness } from "../observability/events"
 import { DurableObject } from "cloudflare:workers"
 import { Lifecycle } from "agents/lifecycle"
 import { PiHarness } from "agents/harness/pi"
@@ -47,7 +49,7 @@ export class BackgroundGroup
     },
     transaction: (body) => this.ctx.storage.transactionSync(body),
   }
-  readonly usage = new InferenceUsage(this.db)
+  readonly usage = new InferenceUsage(this.db, reportInference)
   private parent(): DurableObjectStub<PersonalAgent> {
     if (!this.pin) throw new Error("Background group has no handoff")
     return this.env.AGENT.get(
@@ -95,7 +97,7 @@ export class BackgroundGroup
             if (!this.pin) return undefined
             return this.models.getModel("openai", this.pin.route.model)
           }),
-          onReport: () => console.warn("Background Pi operation failed"),
+          onReport: (error) => reportHarness(error, "background"),
         },
         context
       )

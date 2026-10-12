@@ -1,3 +1,6 @@
+import { Effect } from "effect"
+import { runObserved } from "../observability/worker"
+import { OperationalLogger } from "../observability/logger"
 import { createAssistantMessageEventStream } from "@earendil-works/pi-ai/utils/event-stream"
 import { validateRoute, type ModelCatalog } from "../inference/policy"
 import type { ThinkingLevel } from "../inference/selection"
@@ -311,12 +314,47 @@ export function createAgentModels(
         await request?.onProviderStreamEvent?.(event, selected)
       },
     })
+    // Native result joins the existing stream; it never issues another request.
+    // Cloudflare links this duration span and provider fetch to the invocation.
+    void runObserved(
+      Effect.promise(() => native.result()).pipe(
+        Effect.tap((result) =>
+          Effect.annotateCurrentSpan({
+            "inference.outcome": result.stopReason,
+            "inference.input_tokens": result.usage.input,
+            "inference.output_tokens": result.usage.output,
+          })
+        ),
+        Effect.withSpan("Inference.request", {
+          attributes: {
+            "inference.model": model.id,
+            "inference.purpose":
+              request?.sessionId === "memory"
+                ? "memory"
+                : request?.cacheRetention === "none"
+                  ? "compaction"
+                  : "conversation",
+            "inference.context_window": model.contextWindow,
+          },
+        })
+      )
+    ).catch(() => {
+      /* Native stream owns propagation of provider failures. */
+    })
     const observed = createAssistantMessageEventStream()
     const record = (operation: () => void) => {
       try {
         operation()
       } catch {
-        console.warn("Could not persist model activity outcome")
+        Effect.runSync(
+          Effect.logError("Inference.activityPersistenceFailed").pipe(
+            Effect.annotateLogs({
+              event: "inference.persistence_failed",
+              model: model.id,
+            }),
+            Effect.provide(OperationalLogger)
+          )
+        )
       }
     }
     void (async () => {

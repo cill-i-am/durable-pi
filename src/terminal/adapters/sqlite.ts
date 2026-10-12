@@ -9,7 +9,10 @@ import {
 } from "../contracts"
 
 export class TerminalStore {
-  constructor(private readonly db: Sqlite) {
+  constructor(
+    private readonly db: Sqlite,
+    private readonly onFinished?: (run: CommandRun) => void
+  ) {
     db.run(
       "CREATE TABLE IF NOT EXISTS terminal_network (id INTEGER PRIMARY KEY CHECK(id=1),revision INTEGER NOT NULL,unrestricted INTEGER NOT NULL)"
     )
@@ -201,7 +204,8 @@ export class TerminalStore {
     checkpoint?: Checkpoint,
     exported?: Checkpoint
   ) {
-    return this.db.transaction(() => {
+    const changed = this.get(id)?.status === "running"
+    const finished = this.db.transaction(() => {
       const run = this.get(id)
       if (!run) throw new TerminalFailure({ message: "Command not found." })
       if (run.status !== "running") return run
@@ -237,11 +241,24 @@ export class TerminalStore {
         savedAt: checkpoint?.savedAt ?? null,
       })
     })
+    if (changed) this.observe(finished)
+    return finished
+  }
+  private observe(run: CommandRun) {
+    try {
+      this.onFinished?.(run)
+    } catch {
+      /* Telemetry cannot undo a committed receipt. */
+    }
   }
   recover() {
+    const interrupted = this.db.all<{ id: string }>(
+      "SELECT id FROM terminal_runs WHERE json_extract(record,'$.status')='running'"
+    )
     this.db.run(
       "UPDATE terminal_runs SET record=json_set(record,'$.status','interrupted','$.finishedAt',?,'$.error','The runtime restarted. This command was not repeated. Workspace recovery uses the last saved checkpoint.') WHERE json_extract(record,'$.status')='running'",
       Date.now()
     )
+    for (const { id } of interrupted) this.observe(this.get(id)!)
   }
 }

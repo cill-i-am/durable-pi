@@ -6,7 +6,10 @@ import tailwindcss from "@tailwindcss/vite"
 const config = defineConfig({
   resolve: { tsconfigPaths: true },
   ssr: { external: ["cloudflare:workers"] },
-  build: { rolldownOptions: { external: ["cloudflare:workers"] } },
+  build: {
+    sourcemap: "hidden",
+    rolldownOptions: { external: ["cloudflare:workers"] },
+  },
   plugins: [tailwindcss(), tanstackStart(), viteReact()],
 })
 

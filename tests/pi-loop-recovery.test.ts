@@ -140,6 +140,10 @@ it.each([
         store,
         access,
         source: () => (active ? { turnId, steeringKey: epoch } : undefined),
+        observed: () => {
+          if (scenario === "repeat")
+            throw new Error("Synthetic observer failure")
+        },
         stop: async (api, context) => {
           if (scenario === "restart-blocked" && !paused) {
             paused = true

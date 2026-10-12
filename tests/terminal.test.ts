@@ -684,3 +684,41 @@ it("applies network access to the native Sandbox instance before each cold start
   ).rejects.toThrow("Stopped")
   expect(sandbox.enableInternet).toBe(false)
 })
+
+it("reports only newly committed terminal outcomes and restart interruptions", () => {
+  const db = database(),
+    observed = vi.fn()
+  const store = new TerminalStore(db, observed)
+  store.configure(0, true)
+  store.admit(input)
+  store.finish(input.id, { status: "succeeded", exitCode: 0, error: null })
+  store.finish(input.id, {
+    status: "failed",
+    exitCode: 1,
+    error: "late replay",
+  })
+  expect(observed).toHaveBeenCalledTimes(1)
+  expect(observed.mock.calls[0]?.[0]).toMatchObject({
+    id: input.id,
+    status: "succeeded",
+  })
+  store.admit({ ...input, id: "interrupted" })
+  new TerminalStore(db, observed).recover()
+  new TerminalStore(db, observed).recover()
+  expect(observed).toHaveBeenCalledTimes(2)
+  expect(observed.mock.calls[1]?.[0]).toMatchObject({
+    id: "interrupted",
+    status: "interrupted",
+  })
+})
+it("does not let failed telemetry change a committed command result", () => {
+  const store = new TerminalStore(database(), () => {
+    throw new Error("telemetry failed")
+  })
+  store.configure(0, true)
+  store.admit(input)
+  expect(
+    store.finish(input.id, { status: "succeeded", exitCode: 0, error: null })
+      .status
+  ).toBe("succeeded")
+})

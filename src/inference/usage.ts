@@ -31,7 +31,10 @@ export const InferenceActivity = Schema.Struct({
 
 /** Bot-local observations of provider requests, never an execution scheduler. */
 export class InferenceUsage {
-  constructor(private readonly db: Sqlite) {
+  constructor(
+    private readonly db: Sqlite,
+    private readonly onFinished?: (attempt: Attempt) => void
+  ) {
     db.run(
       "CREATE TABLE IF NOT EXISTS inference_attempts (id TEXT PRIMARY KEY,payload TEXT NOT NULL)"
     )
@@ -83,12 +86,18 @@ export class InferenceUsage {
         this.save(value)
       },
       end: (outcome: Attempt["outcome"], error: string | null = null) => {
-        this.save({
+        const finished = {
           ...value,
           outcome,
           error,
           finishedAt: new Date().toISOString(),
-        })
+        }
+        this.save(finished)
+        try {
+          this.onFinished?.(finished)
+        } catch {
+          /* Telemetry cannot undo recorded usage. */
+        }
       },
     }
   }

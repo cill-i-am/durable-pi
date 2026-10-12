@@ -1,5 +1,7 @@
+import { reportTerminal } from "../observability/events"
+import { runObserved } from "../observability/worker"
 import { Sandbox as BaseSandbox, getSandbox } from "@cloudflare/sandbox"
-import { Effect, Schema } from "effect"
+import { Schema } from "effect"
 import type { TerminalEnv } from "../../alchemy.run"
 import type { Sqlite } from "../storage/sqlite"
 import { Terminal } from "./terminal"
@@ -21,7 +23,7 @@ export class LinuxSandbox extends BaseSandbox<TerminalEnv> {
     transaction: (body) => this.ctx.storage.transactionSync(body),
   }
   private readonly terminal = new Terminal(
-    new TerminalStore(this.db),
+    new TerminalStore(this.db, reportTerminal),
     sandboxRuntime(this),
     checkpointStorage(this.env.BACKUPS, this.ctx.id.toString()),
     checkpointStorage(this.env.BACKUPS, this.ctx.id.toString(), "file")
@@ -76,7 +78,7 @@ export class LinuxSandbox extends BaseSandbox<TerminalEnv> {
       this.terminal.configure(input.revision, input.active, input.revokeThrough)
       return Response.json({ ok: true })
     }
-    return Effect.runPromise(
+    return runObserved(
       terminalRequest(
         this.terminal,
         request,

@@ -1,3 +1,4 @@
+import { runObserved } from "../../src/observability/worker"
 import { LoopBot } from "./loop-worker"
 import { PiHarness } from "agents/harness/pi"
 import { Harness, createRegistry } from "@earendil-works/pi-durable"
@@ -306,6 +307,23 @@ export default {
     if (url.pathname.startsWith("/loops/"))
       return env.LOOPS.getByName("loop-test").fetch(request)
     if (url.pathname === "/health") return new Response("local fixture")
+    if (url.pathname === "/telemetry")
+      return runObserved(
+        Effect.gen(function* () {
+          const parent = yield* Effect.currentSpan
+          const child = yield* Effect.gen(function* () {
+            yield* Effect.sleep("1 millis")
+            const span = yield* Effect.currentSpan
+            return {
+              name: span.name,
+              id: span.spanId,
+              parent:
+                span.parent._tag === "Some" ? span.parent.value.spanId : null,
+            }
+          }).pipe(Effect.withSpan("fixture.child"))
+          return Response.json({ id: parent.spanId, name: parent.name, child })
+        }).pipe(Effect.withSpan("fixture.request"))
+      )
     if (request.method !== "POST")
       return new Response("Not found", { status: 404 })
     const input = await request.json<{
