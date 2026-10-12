@@ -3090,9 +3090,9 @@ body {
 .responsive-overlay[data-overlay-mobile="true"] :is(input, textarea, select) {
   font-size: max(16px, 1em);
 }
-/* Base UI owns nesting and reports the frontmost height and open descendants. */
+/* Keep each parent's own layout height while descendants are open. Nested
+   content is portaled; a short child must not resize the parent panel. */
 .responsive-overlay[data-overlay-mobile="true"][data-nested-drawer-open] {
-  height: var(--drawer-frontmost-height, var(--drawer-height));
   transform-origin: top center;
   transform: translateY(calc(-12px * var(--nested-drawers)))
     scale(max(0.84, calc(1 - 0.04 * var(--nested-drawers))));

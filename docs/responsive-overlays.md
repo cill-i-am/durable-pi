@@ -43,3 +43,5 @@ Check at 320px, 390px and desktop width. Verify opening, the handle gesture, Esc
 Native touchscreen and software-keyboard behavior should also be checked on a physical phone. Desktop browser gesture simulation does not prove those device-specific interactions.
 
 References: [Base UI Drawer](https://base-ui.com/react/components/drawer), [shadcn Drawer](https://ui.shadcn.com/docs/components/base/drawer).
+
+Parent sizing: retain the parent’s own layout (`height: 100%` for panels, content height for menus) while a nested drawer is open. Do not assign a measured drawer height or `--drawer-frontmost-height` to the parent: a short menu would collapse a full-height Settings or navigation drawer. Verify parent geometry and retained scroll position before, during and after opening shorter children, not just the visible child and focus return.
