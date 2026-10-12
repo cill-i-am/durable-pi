@@ -117,7 +117,7 @@ const VisibleTurn = Schema.Struct({
     )
   ),
 })
-const Metadata = Schema.Struct({
+export const ConversationMetadata = Schema.Struct({
   access: Schema.optional(AccessState),
   model: Schema.String,
   thinking: Schema.optional(Schema.String),
@@ -153,7 +153,7 @@ const Metadata = Schema.Struct({
   }),
 })
 export const ChatState = Schema.Struct({
-  ...Metadata.fields,
+  ...ConversationMetadata.fields,
   turns: Schema.Array(VisibleTurn),
 })
 export type ChatState = typeof ChatState.Type
@@ -163,7 +163,7 @@ export const ConversationFrame = Schema.Union([
     type: Schema.Literal("update"),
     turns: Schema.Array(VisibleTurn),
     ids: Schema.Array(Schema.String),
-    meta: Schema.optional(Metadata),
+    meta: Schema.optional(ConversationMetadata),
   }),
 ])
 export type ConversationFrame = typeof ConversationFrame.Type

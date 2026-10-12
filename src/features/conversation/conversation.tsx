@@ -132,7 +132,7 @@ export function Conversation({
     )
     try {
       const submittedFiles = pending.current.files ?? []
-      await api("send", pending.current)
+      await conversation.submit(pending.current)
       files.clear(submittedFiles)
       pending.current = null
       setProfile("auto")
