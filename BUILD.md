@@ -37,7 +37,7 @@ Visual thesis: a quiet, warm workroom with compact navigation, readable conversa
 
 ## TanStack AI conversation client — 2026-10-12
 
-Status: implemented and locally verified; review, CI and deployment pending. This replaces the handwritten browser conversation reducer, EventSource listener and fallback polling with TanStack AI's `useChat`, `ChatClient`, stream processor and SSE parser. Packages are pinned to `@tanstack/ai` 0.68.0, `@tanstack/ai-client` 0.39.2 and `@tanstack/ai-react` 0.30.3. Existing router and Start versions are retained.
+Status: implementation, local verification and final diff review complete. [PR #58](https://github.com/cill-i-am/durable-pi/pull/58) tracks CI, deployment and hosted verification. This replaces the handwritten browser conversation reducer, EventSource listener and fallback polling with TanStack AI's `useChat`, `ChatClient`, stream processor and SSE parser. Packages are pinned to `@tanstack/ai` 0.68.0, `@tanstack/ai-client` 0.39.2 and `@tanstack/ai-react` 0.30.3. Existing router and Start versions are retained.
 
 The Conversations context translates Pi's bounded display records into TanStack message snapshots and incremental assistant text. Reasoning, steering, tool-call/result associations, file references, status, routing and the separately bounded copyable answer retain their existing meaning. Access and memory remain validated metadata. The conversation feature derives its existing render view from TanStack's message store; it does not maintain another mutable transcript. The existing shadcn/Base UI and Paper layout remain in place.
 
@@ -47,7 +47,7 @@ Connections rejoin using a fresh snapshot rather than an invented delivery curso
 
 Local evidence: 526 tests across 73 files passed, including nine new cases exercising the real TanStack processor/client and production SSE adapter. Coverage includes disconnect/rejoin, saved cancellation, reasoning and tool relationships, steering, bot switching, copy-answer fidelity, approval metadata, session revocation, bounded reconnects, rejected empty SDK submissions and stable retry IDs. Existing native Pi/SQLite and workerd restart, compaction, permissions and replay checks passed. Typecheck and production build passed; lint retains four pre-existing warnings. An isolated browser fixture using the real React hook and stream adapter passed desktop and 390-pixel mobile checks for hydration, streaming, steering, stop, bot switching and returning to saved state. Its model responses are synthetic; no hosted inference or production restart claim follows from it.
 
-References: [TanStack AI connection adapters](https://tanstack.com/ai/latest/docs/guides/connection-adapters), [Cloudflare Pi harness ownership](https://developers.cloudflare.com/agents/harnesses/pi/). Installed package source and integration tests resolve version-specific behavior, including TanStack's reasoning fan-out and wrapped fetch errors.
+References: [TanStack AI connection adapters](https://tanstack.com/ai/latest/docs/transports/custom), [Cloudflare Pi harness ownership](https://developers.cloudflare.com/agents/harnesses/pi/). Installed package source and integration tests resolve version-specific behavior, including TanStack's reasoning fan-out and wrapped fetch errors.
 
 ## Browser and terminal internet settings — 2026-10-11
 
