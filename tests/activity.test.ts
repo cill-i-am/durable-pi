@@ -82,7 +82,7 @@ it("projects receipt state without arguments, results or execution side effects"
   const { db } = fixture()
   const now = Date.now()
   db.run(
-    "INSERT INTO tool_operations VALUES ('tool-1','turn-1','browser_interact','PRIVATE INPUT',?,?, 'pending',0,'PRIVATE OUTPUT',0)",
+    "INSERT INTO tool_operations (id,turnId,tool,input,createdAt,expiresAt,status,grantRevision,result,revision) VALUES ('tool-1','turn-1','browser_interact','PRIVATE INPUT',?,?, 'pending',0,'PRIVATE OUTPUT',0)",
     now,
     now + 60000
   )
@@ -115,7 +115,7 @@ it("projects receipt state without arguments, results or execution side effects"
 it("shows expiry without mutating approval receipts and excludes obsolete failures after retry", () => {
   const { db, turns } = fixture()
   db.run(
-    "INSERT INTO tool_operations VALUES ('expired','turn-1','browser_open','PRIVATE',0,1,'pending',0,NULL,0)"
+    "INSERT INTO tool_operations (id,turnId,tool,input,createdAt,expiresAt,status,grantRevision,result,revision) VALUES ('expired','turn-1','browser_open','PRIVATE',0,1,'pending',0,NULL,0)"
   )
   expect(activityEntries(db, bot, query)[0]?.status).toBe("expired")
   expect(activityEntries(db, bot, { ...query, filter: "attention" })).toEqual(

@@ -423,6 +423,10 @@ export function Conversation({
                           <ApprovalCard
                             key={approval.id}
                             approval={approval}
+                            agentName={agent.name}
+                            toolPolicy={state.access?.tools.find(
+                              (tool) => tool.name === approval.tool
+                            )}
                             toolLabel={
                               state.access?.tools.find(
                                 (tool) => tool.name === approval.tool

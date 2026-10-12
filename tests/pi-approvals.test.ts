@@ -25,6 +25,7 @@ import { database } from "./database"
 describe("native Pi tool approvals", () => {
   it.each([
     "approve",
+    "always",
     "stop",
     "revoke",
     "dispatch-interrupted",
@@ -62,6 +63,18 @@ describe("native Pi tool approvals", () => {
           fauxToolCall("record", { value: "synthetic" }, { id: "record-1" }),
           { stopReason: "toolUse" }
         ),
+        ...(scenario === "always"
+          ? [
+              fauxAssistantMessage(
+                fauxToolCall(
+                  "record",
+                  { value: "different inputs" },
+                  { id: "record-2" }
+                ),
+                { stopReason: "toolUse" }
+              ),
+            ]
+          : []),
         fauxAssistantMessage("Finished checking the tool outcome."),
       ])
       let access: AccessGate
@@ -162,11 +175,17 @@ describe("native Pi tool approvals", () => {
         }
         if (scenario === "revoke") store.update("record", 0, "deny")
         if (
+          scenario === "always" ||
           scenario === "approve" ||
           scenario === "large-result" ||
           scenario === "remote-schema"
         )
-          store.decide(id, true, store.get(id)!.revision)
+          store.decide(
+            id,
+            true,
+            store.get(id)!.revision,
+            scenario === "always" ? { expectedPolicyRevision: 0 } : undefined
+          )
         harness = await Harness.open(
           await openNodeSqliteStorage(path),
           options(),
@@ -178,16 +197,19 @@ describe("native Pi tool approvals", () => {
         await replay.wait(ctx)
         await conversation.waitForIdle(ctx)
         expect(calls).toBe(
-          scenario === "approve" ||
-            scenario === "large-result" ||
-            scenario === "remote-schema" ||
-            scenario === "dispatch-interrupted"
-            ? 1
-            : 0
+          scenario === "always"
+            ? 2
+            : scenario === "approve" ||
+                scenario === "large-result" ||
+                scenario === "remote-schema" ||
+                scenario === "dispatch-interrupted"
+              ? 1
+              : 0
         )
         expect(store.get(id)?.status).toBe(
           {
             approve: "done",
+            always: "done",
             "large-result": "done",
             "remote-schema": "done",
             stop: "cancelled",
@@ -195,6 +217,16 @@ describe("native Pi tool approvals", () => {
             "dispatch-interrupted": "interrupted",
           }[scenario]
         )
+        if (scenario === "always") {
+          expect(store.policy("record")).toMatchObject({
+            mode: "allow",
+            revision: 1,
+          })
+          expect(store.pending()).toHaveLength(0)
+          expect(
+            store.decide(id, true, 0, { expectedPolicyRevision: 0 }).status
+          ).toBe("done")
+        }
         const events = await watchEvents(harness, conversation.id, ctx)
         if (scenario === "dispatch-interrupted")
           expect(JSON.stringify(events.snapshot.entries)).toContain(
@@ -207,12 +239,14 @@ describe("native Pi tool approvals", () => {
         await events.stop()
         expect((await conversation.submit(command, ctx)).id).toBe(first.id)
         expect(calls).toBe(
-          scenario === "approve" ||
-            scenario === "large-result" ||
-            scenario === "remote-schema" ||
-            scenario === "dispatch-interrupted"
-            ? 1
-            : 0
+          scenario === "always"
+            ? 2
+            : scenario === "approve" ||
+                scenario === "large-result" ||
+                scenario === "remote-schema" ||
+                scenario === "dispatch-interrupted"
+              ? 1
+              : 0
         )
       } finally {
         await harness.close(ctx)

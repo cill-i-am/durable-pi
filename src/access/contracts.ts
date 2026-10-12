@@ -50,6 +50,14 @@ export const DecideApproval = Schema.Struct({
     Schema.isInt(),
     Schema.isGreaterThanOrEqualTo(0)
   ),
+  remember: Schema.optional(
+    Schema.Struct({
+      expectedPolicyRevision: Schema.Number.check(
+        Schema.isInt(),
+        Schema.isGreaterThanOrEqualTo(0)
+      ),
+    })
+  ),
 })
 export class AccessDenied extends Schema.TaggedError<AccessDenied>()(
   "AccessDenied",

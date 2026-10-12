@@ -1,6 +1,7 @@
-import { useRef, useState } from "react"
+import { useId, useRef, useState } from "react"
 import { ShieldQuestion } from "lucide-react"
-import type { Approval } from "@/access/contracts"
+import { Schema } from "effect"
+import { AccessState, type Approval, type ToolPolicy } from "@/access/contracts"
 import { agentApi } from "@/http/client"
 import { Button } from "@/components/ui/button"
 import { approvalDecision, type ConfirmedDecision } from "./decision"
@@ -11,19 +12,24 @@ export function ApprovalCard({
   onDecided,
   disabled,
   toolLabel,
+  toolPolicy,
+  agentName = "this agent",
 }: {
   approval: Approval
   agentId: string
   onDecided: () => void
   disabled: boolean
   toolLabel?: string
+  toolPolicy?: ToolPolicy
+  agentName?: string
 }) {
+  const scopeId = useId()
   const [busy, setBusy] = useState(false)
   const [confirmed, setConfirmed] = useState<ConfirmedDecision | null>(null)
   const decided = approvalDecision(approval, confirmed)
   const [error, setError] = useState("")
   const lock = useRef(false)
-  async function decide(approve: boolean) {
+  async function decide(approve: boolean, remember = false) {
     if (
       lock.current ||
       disabled ||
@@ -31,16 +37,30 @@ export function ApprovalCard({
       decided !== null
     )
       return
+    if (remember && (!toolPolicy || toolPolicy.name !== approval.tool)) return
     lock.current = true
     setBusy(true)
     setError("")
     try {
-      await agentApi(agentId)("access/decide", {
-        id: approval.id,
-        approve,
-        expectedRevision: approval.revision,
-      })
-      setConfirmed({ revision: approval.revision, approve })
+      const state = Schema.decodeUnknownSync(AccessState)(
+        await agentApi(agentId)("access/decide", {
+          id: approval.id,
+          approve,
+          expectedRevision: approval.revision,
+          ...(remember && toolPolicy
+            ? { remember: { expectedPolicyRevision: toolPolicy.revision } }
+            : {}),
+        })
+      )
+      if (
+        remember &&
+        state.tools.find((tool) => tool.name === approval.tool)?.mode !==
+          "allow"
+      )
+        throw new Error(
+          "Tool access changed. Refresh before allowing future calls."
+        )
+      setConfirmed({ revision: approval.revision, approve, remember })
     } catch (cause) {
       setError(
         cause instanceof Error ? cause.message : "Could not save your decision."
@@ -55,12 +75,14 @@ export function ApprovalCard({
   const heading =
     approval.status === "pending"
       ? decided === true
-        ? "Approved for this action"
+        ? confirmed?.remember
+          ? "Tool allowed for this agent"
+          : "Approved for this action"
         : decided === false
           ? "Denied"
           : "Your approval is needed"
       : {
-          approved: "Approved for this action",
+          approved: "Approved",
           running: "Approved · running",
           done: "Action completed",
           denied: "Denied",
@@ -86,13 +108,21 @@ export function ApprovalCard({
         {formatInput(approval.input)}
       </pre>
       <p className="text-xs text-muted-foreground">
-        Applies to this action once. Expires at{" "}
+        This action request expires at{" "}
         {new Date(approval.expiresAt).toLocaleTimeString([], {
           hour: "2-digit",
           minute: "2-digit",
         })}
         .
       </p>
+      {pending && (
+        <p id={scopeId} className="text-xs text-muted-foreground">
+          Always allow lets <strong>{agentName}</strong> use{" "}
+          <strong>{toolLabel ?? approval.tool}</strong> with any inputs until
+          you change it in Settings → Tool access. Other tools and internet
+          settings stay separate.
+        </p>
+      )}
       {error && (
         <p role="alert" className="text-sm text-destructive">
           {error}
@@ -102,6 +132,7 @@ export function ApprovalCard({
         <div className="flex flex-wrap gap-2">
           <Button
             size="sm"
+            className="min-h-11 sm:min-h-0"
             disabled={busy || disabled}
             onClick={() => void decide(true)}
           >
@@ -109,6 +140,23 @@ export function ApprovalCard({
           </Button>
           <Button
             size="sm"
+            className="min-h-11 sm:min-h-0"
+            variant="outline"
+            aria-describedby={scopeId}
+            disabled={
+              busy ||
+              disabled ||
+              !toolPolicy ||
+              toolPolicy.name !== approval.tool ||
+              toolPolicy.mode === "deny"
+            }
+            onClick={() => void decide(true, true)}
+          >
+            Always allow
+          </Button>
+          <Button
+            size="sm"
+            className="min-h-11 sm:min-h-0"
             variant="outline"
             disabled={busy || disabled}
             onClick={() => void decide(false)}

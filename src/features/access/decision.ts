@@ -1,6 +1,10 @@
 import type { Approval } from "@/access/contracts"
 
-export type ConfirmedDecision = { revision: number; approve: boolean }
+export type ConfirmedDecision = {
+  revision: number
+  approve: boolean
+  remember?: boolean
+}
 /** Old snapshots may lag a confirmed decision; a newer approval round takes precedence. */
 export function approvalDecision(
   approval: Approval,
