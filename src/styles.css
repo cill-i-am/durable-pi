@@ -694,6 +694,14 @@ body {
 .markdown code {
   font-size: 0.9em;
 }
+.markdown :not(pre) > code {
+  padding: 0.12em 0.35em;
+  border-radius: 0.35em;
+  background: var(--secondary);
+  overflow-wrap: anywhere;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
 .markdown a {
   color: var(--primary);
   text-decoration: underline;
