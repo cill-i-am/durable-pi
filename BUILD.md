@@ -56,7 +56,7 @@ The hosted synthetic date journey completed with one tool call and two durable m
 
 ## Composer copy cleanup — 2026-10-12
 
-Removed both routine memory-status messages beneath the composer: “Memory up to date” and “Memory catches up in the background.” The desktop keyboard hint stays aligned right; mobile has no empty footer row. Memory processing and its workbench remain unchanged. Local checks and hosted verification are recorded in the delivery PR.
+Removed routine text beneath the composer: memory status, steer/queue explanations, stopping explanations and the keyboard hint. No helper row remains in idle, working or stopping states on desktop or mobile. Existing delivery controls, stopping status, draft retention, keyboard shortcuts, errors and memory processing are unchanged. Local checks and hosted verification are recorded in the delivery PRs.
 
 ## Configurable message delivery — 2026-10-12
 

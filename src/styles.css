@@ -555,14 +555,6 @@ body {
     font-size: 16px;
   }
 }
-.composer-footnote {
-  display: flex;
-  justify-content: flex-end;
-  color: var(--muted-foreground);
-  font-size: 11px;
-  line-height: 15px;
-  padding: 0;
-}
 .memory-notes {
   display: flex;
   flex-direction: column;
@@ -600,9 +592,6 @@ body {
   }
   .composer-area {
     padding: 8px 14px 18px;
-  }
-  .composer-footnote {
-    display: none;
   }
 }
 @media (prefers-reduced-motion: no-preference) {
@@ -1163,17 +1152,6 @@ body {
 }
 .composer-delivery-trigger {
   height: 36px;
-}
-.composer-delivery {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  padding-top: 8px;
-}
-.composer-delivery > span {
-  font-size: 11px;
-  line-height: 15px;
 }
 .conversation-attachments {
   display: flex;
