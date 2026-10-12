@@ -5,7 +5,9 @@ export class BrowserFailure extends Schema.TaggedError<BrowserFailure>()(
   {
     message: Schema.String,
     // Assigned by the operation owner, never inferred by the access gate.
-    outcome: Schema.optionalKey(Schema.Literals(["rejected", "uncertain"])),
+    outcome: Schema.optionalKey(
+      Schema.Literals(["rejected", "failed", "uncertain"])
+    ),
   }
 ) {}
 export const Hostname = Schema.String.check(

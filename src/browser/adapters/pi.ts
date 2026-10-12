@@ -26,8 +26,8 @@ export function browserResult(result: BrowserObservation) {
   }
 }
 
-/** A confirmed rejection is a native error result and therefore a replayable
- * receipt. Unknown dispatch outcomes still throw and keep Access's replay fence.
+/** Confirmed rejections and failed loads are native error results and therefore
+ * replayable receipts. Unknown outcomes still throw and keep Access's replay fence.
  */
 export function browserToolResult(
   operation: Effect.Effect<BrowserObservation, BrowserFailure>
@@ -35,14 +35,17 @@ export function browserToolResult(
   return operation.pipe(
     Effect.map(browserResult),
     Effect.catchTag("BrowserFailure", (error) =>
-      error.outcome === "rejected"
+      error.outcome === "rejected" || error.outcome === "failed"
         ? Effect.succeed({
             isError: true,
             content: [{ type: "text" as const, text: error.message }],
             diagnostics: [
               {
                 severity: "error" as const,
-                code: "browser_rejected",
+                code:
+                  error.outcome === "failed"
+                    ? "browser_load_failed"
+                    : "browser_rejected",
                 message: error.message,
               },
             ],

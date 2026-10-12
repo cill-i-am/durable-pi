@@ -30,7 +30,7 @@ import { RunRecoveryStore } from "../src/conversations/adapters/sqlite-recovery"
 import { runRecoveryHook } from "../src/conversations/adapters/pi-recovery"
 import { database } from "./database"
 
-it.each(["restricted", "launch", "read", "uncertain"] as const)(
+it.each(["restricted", "launch", "read", "failed", "uncertain"] as const)(
   "native browser tool receipts, continuation and restart: %s",
   async (scenario) => {
     const directory = await mkdtemp(join(tmpdir(), "pi-browser-"))
@@ -56,6 +56,11 @@ it.each(["restricted", "launch", "read", "uncertain"] as const)(
       },
       navigate: async () => {
         navigations++
+        if (scenario === "failed")
+          throw new BrowserFailure({
+            outcome: "failed",
+            message: "Chromium could not load the page.",
+          })
         throw new Error("Synthetic unknown navigation outcome")
       },
       capture: async () => {
@@ -199,7 +204,9 @@ it.each(["restricted", "launch", "read", "uncertain"] as const)(
             ? "enable unrestricted internet"
             : scenario === "launch"
               ? "could not open a session"
-              : "could not be read"
+              : scenario === "failed"
+                ? "could not load the page"
+                : "could not be read"
         )
         expect(JSON.parse(receipts[0]!.result!).isError).toBe(true)
       }
@@ -244,7 +251,9 @@ it.each(["restricted", "launch", "read", "uncertain"] as const)(
       }
       expect({ opens, navigations }).toEqual(before)
       expect(opens).toBe(scenario === "restricted" ? 0 : 1)
-      expect(navigations).toBe(scenario === "uncertain" ? 1 : 0)
+      expect(navigations).toBe(
+        scenario === "uncertain" || scenario === "failed" ? 1 : 0
+      )
     } finally {
       await harness.close(ctx)
       await rm(directory, { recursive: true, force: true })
@@ -253,7 +262,7 @@ it.each(["restricted", "launch", "read", "uncertain"] as const)(
   15000
 )
 
-it("only explicitly rejected browser errors become finished results", async () => {
+it("unspecified browser outcomes do not become finished results", async () => {
   const unspecified = new BrowserFailure({ message: "Unknown outcome" })
   await expect(
     Effect.runPromise(browserToolResult(Effect.fail(unspecified)))
