@@ -540,9 +540,6 @@ export function Conversation({
             )
           }
         />
-        <div className="composer-footnote">
-          <span>Shift + Enter for a new line</span>
-        </div>
       </div>
     </section>
   )
@@ -722,19 +719,6 @@ function Composer({
           </div>
         </InputGroupAddon>
       </InputGroup>
-      {active && (
-        <div className="composer-delivery">
-          <span className="text-xs text-muted-foreground">
-            {stopping
-              ? waitingForStop
-                ? "Stopping. Your draft is kept; send it when the reply stops."
-                : "Stopping. New messages will wait."
-              : delivery === "steer"
-                ? "Joins this reply at the next tool boundary."
-                : "Starts a new reply after this one finishes."}
-          </span>
-        </div>
-      )}
     </form>
   )
 }
