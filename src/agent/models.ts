@@ -202,6 +202,7 @@ export function createAgentModels(
       sessionId?: string
     ) => ReturnType<InferenceUsage["start"]>
     onUsage?: (usage: CacheUsage) => void
+    waitUntil?: (work: Promise<unknown>) => void
   } = {}
 ) {
   const models = createModels({
@@ -316,8 +317,18 @@ export function createAgentModels(
     })
     // Native result joins the existing stream; it never issues another request.
     // Cloudflare links this duration span and provider fetch to the invocation.
-    void runObserved(
-      Effect.promise(() => native.result()).pipe(
+    const telemetry = runObserved(
+      Effect.annotateCurrentSpan({
+        "inference.model": model.id,
+        "inference.purpose":
+          request?.sessionId === "memory"
+            ? "memory"
+            : request?.cacheRetention === "none"
+              ? "compaction"
+              : "conversation",
+        "inference.context_window": model.contextWindow,
+      }).pipe(
+        Effect.andThen(Effect.promise(() => native.result())),
         Effect.tap((result) =>
           Effect.annotateCurrentSpan({
             "inference.outcome": result.stopReason,
@@ -325,22 +336,16 @@ export function createAgentModels(
             "inference.output_tokens": result.usage.output,
           })
         ),
-        Effect.withSpan("Inference.request", {
-          attributes: {
-            "inference.model": model.id,
-            "inference.purpose":
-              request?.sessionId === "memory"
-                ? "memory"
-                : request?.cacheRetention === "none"
-                  ? "compaction"
-                  : "conversation",
-            "inference.context_window": model.contextWindow,
-          },
-        })
+        Effect.withSpan("Inference.request")
       )
     ).catch(() => {
       /* Native stream owns propagation of provider failures. */
     })
+    try {
+      options.waitUntil?.(telemetry)
+    } catch {
+      /* Losing a telemetry lifetime must not fail a dispatched model request. */
+    }
     const observed = createAssistantMessageEventStream()
     const record = (operation: () => void) => {
       try {

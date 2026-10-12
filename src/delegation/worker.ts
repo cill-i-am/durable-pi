@@ -62,6 +62,7 @@ export class BackgroundGroup
       return this.parent().backgroundCredential(this.pin.id, provider)
     }),
     {
+      waitUntil: (work) => this.ctx.waitUntil(work),
       catalog: () => this.parent().accountModelCatalog(),
       contextWindow: (model) =>
         this.pin?.route.model === model

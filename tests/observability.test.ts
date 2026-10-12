@@ -49,7 +49,8 @@ it("uses Alchemy's tracer with separate invocation parents and nested Effect spa
     ["request-a", "request-b"].map((id) =>
       native.context!.run(id, () =>
         runObserved(
-          Effect.sleep("1 millis").pipe(
+          Effect.annotateCurrentSpan("request.key", id).pipe(
+            Effect.andThen(Effect.sleep("1 millis")),
             Effect.andThen(
               Effect.sync(() => {
                 expect(native.context!.getStore()).toBe(`child-${id}`)
@@ -63,6 +64,11 @@ it("uses Alchemy's tracer with separate invocation parents and nested Effect spa
   )
   for (const id of ["request-a", "request-b"]) {
     expect(native.spans.find((s) => s.name === `root-${id}`)?.parent).toBe(id)
+    expect(
+      native.spans.find((s) => s.name === `root-${id}`)?.attributes[
+        "request.key"
+      ]
+    ).toBe(id)
     expect(native.spans.find((s) => s.name === `child-${id}`)?.parent).toBe(
       `root-${id}`
     )

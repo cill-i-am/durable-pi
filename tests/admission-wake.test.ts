@@ -304,7 +304,7 @@ it("sends the pinned independent memory model through the installed Responses ad
     db,
     summaryRoutes,
     inferenceUsage,
-    ctx: { id: { toString: () => "synthetic-bot" } },
+    ctx: { id: { toString: () => "synthetic-bot" }, waitUntil: vi.fn() },
     credentials: accountCredentials(async () => credential),
     registry: createRegistry(),
   })
