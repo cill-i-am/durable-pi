@@ -36,6 +36,7 @@ it("carries a composer override into native Pi Responses and preserves selection
   }
   const turn = store.admit(command, undefined, [], route).turn
   const payloads: Record<string, unknown>[] = []
+  const telemetry: Promise<unknown>[] = []
   let toolCalls = 0,
     recovering = false
   let ready!: () => void
@@ -45,6 +46,9 @@ it("carries a composer override into native Pi Responses and preserves selection
   const models = createAgentModels(
     accountCredentials(async () => credential),
     {
+      waitUntil: (work) => {
+        telemetry.push(work)
+      },
       catalog: async () => catalog,
       onAttempt: () => usage.start(route, turn.id, "conversation"),
     }
@@ -137,6 +141,8 @@ it("carries a composer override into native Pi Responses and preserves selection
     expect((await replay.wait(ctx)).status).toBe("done")
     expect(toolCalls).toBe(1)
     expect(payloads.length).toBeGreaterThanOrEqual(3)
+    expect(telemetry).toHaveLength(payloads.length)
+    await Promise.all(telemetry)
     expect(
       new ConversationStore(db, { model: "gpt-6-luna", thinking: "low" }).get(
         turn.id

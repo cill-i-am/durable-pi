@@ -51,6 +51,11 @@ export class AccessGate {
     recoverable = false
   ): Effect.Effect<T, unknown> {
     return Effect.gen({ self: this }, function* () {
+      yield* Effect.annotateCurrentSpan({
+        "tool.name": intent.tool,
+        "tool.operation_id": intent.id,
+        "run.id": intent.turnId,
+      })
       const operation = yield* Effect.try({
         try: () => {
           if (!this.canRun(intent.turnId))
@@ -95,14 +100,6 @@ export class AccessGate {
           this.notify()
         }
       }
-    }).pipe(
-      Effect.withSpan("Access.tool", {
-        attributes: {
-          "tool.name": intent.tool,
-          "tool.operation_id": intent.id,
-          "run.id": intent.turnId,
-        },
-      })
-    )
+    }).pipe(Effect.withSpan("Access.tool"))
   }
 }

@@ -230,6 +230,37 @@ describe("job model routing", () => {
     expect(recovered.recent()[0]?.input).toBeNull()
     expect(new InferenceUsage(database()).recent()).toEqual([])
   })
+  it("totals the owning run beyond the recent-page limit and exposes unreported usage", () => {
+    const db = database(),
+      usage = new InferenceUsage(db)
+    for (let i = 0; i < 121; i++) {
+      const attempt = usage.start(
+        resolveRoute("conversation"),
+        "run",
+        "conversation"
+      )
+      attempt.usage({
+        id: String(i),
+        model: "gpt-6.1-sol",
+        input: 100,
+        cached: 80,
+        output: 3,
+      })
+      attempt.end("completed")
+    }
+    usage.start(resolveRoute("conversation"), "run", "compaction").end("failed")
+    usage
+      .start(resolveRoute("conversation"), "another-run", "conversation")
+      .end("completed")
+    expect(new InferenceUsage(db).totals("run")).toEqual({
+      modelRequests: 122,
+      usageReportedRequests: 121,
+      knownInputTokens: 12100,
+      knownCachedInputTokens: 9680,
+      knownOutputTokens: 363,
+    })
+    expect(new InferenceUsage(database()).totals("run").modelRequests).toBe(0)
+  })
 })
 
 it("keeps legacy model pins and versions every job setting update", () => {

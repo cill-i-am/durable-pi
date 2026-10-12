@@ -108,4 +108,27 @@ export class InferenceUsage {
       )
       .map((row) => Schema.decodeUnknownSync(Attempt)(JSON.parse(row.payload)))
   }
+
+  /** Committed totals are not limited to the Activity page's latest 100 rows.
+   * Partial usage is explicit: known totals never imply every request reported.
+   */
+  totals(turnId: string) {
+    return this.db.all<{
+      modelRequests: number
+      usageReportedRequests: number
+      knownInputTokens: number
+      knownCachedInputTokens: number
+      knownOutputTokens: number
+    }>(
+      `SELECT count(*) AS modelRequests,
+        count(CASE WHEN json_extract(payload,'$.input') IS NOT NULL
+          AND json_extract(payload,'$.cached') IS NOT NULL
+          AND json_extract(payload,'$.output') IS NOT NULL THEN 1 END) AS usageReportedRequests,
+        coalesce(sum(json_extract(payload,'$.input')),0) AS knownInputTokens,
+        coalesce(sum(json_extract(payload,'$.cached')),0) AS knownCachedInputTokens,
+        coalesce(sum(json_extract(payload,'$.output')),0) AS knownOutputTokens
+       FROM inference_attempts WHERE json_extract(payload,'$.turnId')=?`,
+      turnId
+    )[0]!
+  }
 }

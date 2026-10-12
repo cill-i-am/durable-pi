@@ -18,6 +18,8 @@ Alchemy 2.0.0-beta.81 supplies `Cloudflare.Telemetry()` and the native Effect tr
 
 Alchemy's native tracer forwards scalar attributes and `effect.exit` (`success`, `failure`, `interrupted`). Native Cloudflare trace IDs and Effect IDs differ. Use the Cloudflare trace association and durable run/operation IDs for correlation, not an assumed equality between their trace IDs. A model duration span joins Pi's existing response stream; it does not send a second request. Native provider-fetch spans may be siblings under the invocation.
 
+The native hosts retain that telemetry promise with `ctx.waitUntil`. Model/tool attributes are annotated inside the active Effect span; the installed tracer does not forward attributes supplied only at span construction. A long task spans multiple invocations and therefore multiple traces. Native spans and logs remain diagnostic: in the first hosted smoke test, Activity held two completed model records, but the query returned only one inference log and a prematurely ended model span. The completion event now reads totals from the durable records, including request count, usage-reported count and known token totals. This does not make log delivery an accounting ledger. Incomplete records remain distinguishable from zero usage.
+
 The installed Alchemy provider schema predates `observability.issues`. After each main deployment, `scripts/configure-observability.ts` resolves the five production Workers, reads their settings, changes only the observability section to enable Issues, then reads it back. Existing log/trace settings are retained; bindings are not included in the patch. Cloudflare resets Issues when subsequent deployments omit it, so this reconciliation stays in CI until Alchemy supports the field. The script uses the existing encrypted CI token and fails closed on ambiguous names or unexpected responses.
 
 ## Signals
@@ -29,7 +31,7 @@ The installed Alchemy provider schema predates `observability.issues`. After eac
 | `Access.tool` | Tool identity, run and operation IDs; dispatch versus replay |
 | `Inference.request` | Model, purpose, context budget, outcome and request duration |
 | `inference.finished` | Persisted request outcome, model, purpose, elapsed time, cached/uncached input and output usage |
-| `conversation.finished` | Committed run completion, failure or cancellation |
+| `conversation.finished` | Committed run completion, failure or cancellation, plus totals from the run's durable model records |
 | `conversation.recovery` | A transition in the existing bounded-recovery policy |
 | `terminal.finished` | A committed terminal outcome, exit code, checkpoint and network-policy status |
 | `auth.session_lookup_failed` | A failed session lookup, returned as a fail-closed HTTP 503 |
@@ -53,12 +55,16 @@ The native **Durable Pi operational issues** notification policy uses the existi
 
 ## Cancelled HTTP requests
 
-Cloudflare's `canceled` outcome means the client disconnected before the full response was sent. It is not equivalent to a cancelled agent run. The initial sample included 20 cancelled HTTP 200 reads lasting 67–158 ms, mostly workbench polling. Streaming connections also rotate normally and can close on navigation. Compare browser `Network.loadingFinished` or `loadingFailed` with the matching `cf-ray` and server trace before changing polling. Do not suppress real exceptions or count all cancelled reads as task failures.
+Cloudflare's `canceled` outcome describes a cancelled invocation, often associated with a client disconnect. It is not equivalent to a cancelled agent run. The initial sample included 20 cancelled HTTP 200 reads lasting 67–158 ms, mostly workbench polling. A matched live objects request was `canceled` on Cloudflare but HTTP 200 with `Network.loadingFinished` in the browser. Polling is unchanged because this evidence does not establish lost responses or work. It does not explain all historical cancellations. Streaming connections also rotate normally and can close on navigation. Compare browser `Network.loadingFinished` or `loadingFailed` with the matching `cf-ray` and server trace before changing polling.
 
 ## Verification and limits
 
 Run `pnpm verify` and `pnpm lint`. The suite covers independent invocation trace parents, nested spans, failure/interruption, usage fields, native error severity, Issues configuration preservation, session coordination/backoff, and terminal commit/restart observer behavior. Existing Pi loop-recovery scenarios also prove an observer failure cannot block the recovery decision. The native workerd check makes concurrent requests and verifies distinct parent spans without mocking the tracer.
 
 Vite emits hidden server source maps; Alchemy's Worker bundler already generates maps. A successful build establishes map generation, not that a production exception was symbolicated. Hosted ingestion, native trace relationships, saved queries and notification configuration must be checked after deployment. Do not deliberately fail a personal task merely to test alert delivery.
+
+Production verification on 12 October 2026: PR #63 deployed successfully. Readback confirmed logs, traces and Issues enabled for all five Workers. An inspected live trace joined `Website.agentRequest` → `Identity.ownerSession` → D1, and website forwarding → agent Worker → Durable Object/terminal calls. Browser session reads returned 200, 38 observed workbench/inference reads completed, and none of the observed API responses was an HTTP error. A synthetic bot used `date` once and answered correctly. Activity recorded two model requests (12,495 input tokens, including 6,016 cached, and 30 output tokens). The discrepancy between durable records and individual telemetry events prompted the invocation-lifetime/completion-total follow-up above.
+
+Three saved account queries are available: **Durable Pi — request outcomes and latency**, **Durable Pi — model usage and outcomes**, and **Durable Pi — operational failures**. The notification policy and all five three-occurrence automations were read back enabled. Email receipt, production exception symbolication, live compaction and induced production restart/failure remain untested; those lifecycle/error cases have local coverage.
 
 References: [Alchemy telemetry source](https://github.com/alchemy-run/alchemy/blob/main/alchemy/src/Cloudflare/Workers/Telemetry.ts), [Cloudflare traces](https://developers.cloudflare.com/workers/observability/traces/), [custom spans](https://developers.cloudflare.com/workers/observability/traces/custom-spans/), [Issues](https://developers.cloudflare.com/workers/observability/issues/), [issue automations](https://developers.cloudflare.com/workers/observability/issues/automations/), [errors and outcomes](https://developers.cloudflare.com/workers/observability/errors/), [source maps](https://developers.cloudflare.com/workers/observability/source-maps/).

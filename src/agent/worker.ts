@@ -953,6 +953,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     )
   }
   readonly models = createAgentModels(this.credentials, {
+    waitUntil: (work) => this.ctx.waitUntil(work),
     beforeRequest: (id, signal) =>
       runObserved(
         Effect.gen({ self: this }, function* () {
@@ -1014,6 +1015,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     const capability = validateRoute(candidate, catalog)
     const route = this.summaryRoutes.budget(job, capability.contextWindow)
     const models = createAgentModels(this.credentials, {
+      waitUntil: (work) => this.ctx.waitUntil(work),
       catalog: () => this.accountModelCatalog(),
       contextWindow: () => route.contextWindow,
       cacheKey: `pi-${this.ctx.id.toString()}`,
@@ -2731,22 +2733,30 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           : null
       )
       if (!finished) return { rescheduleAt: Date.now() + 10 }
+      const finishedTurn = turn
       await runObserved(
-        (failed && turn.status !== "stopping"
-          ? Effect.logError("Conversation.runFailed")
-          : Effect.logInfo("Conversation.runFinished")
-        ).pipe(
-          Effect.annotateLogs({
-            event: "conversation.finished",
-            runId: turn.id,
-            outcome:
-              turn.status === "stopping"
-                ? "cancelled"
-                : failed
-                  ? "failed"
-                  : "completed",
-            recovery: recovery?.phase ?? "none",
-          })
+        Effect.try(() => this.inferenceUsage.totals(finishedTurn.id)).pipe(
+          Effect.flatMap((totals) =>
+            (failed && finishedTurn.status !== "stopping"
+              ? Effect.logError("Conversation.runFailed")
+              : Effect.logInfo("Conversation.runFinished")
+            ).pipe(
+              Effect.annotateLogs({
+                event: "conversation.finished",
+                runId: finishedTurn.id,
+                ...totals,
+                outcome:
+                  finishedTurn.status === "stopping"
+                    ? "cancelled"
+                    : failed
+                      ? "failed"
+                      : "completed",
+                recovery: recovery?.phase ?? "none",
+              })
+            )
+          ),
+          // Observability cannot prevent cleanup after the durable finish.
+          Effect.catch(() => Effect.void)
         )
       )
       await this.backgroundRunner.wake()
