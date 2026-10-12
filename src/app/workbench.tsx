@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react"
+import { useRef, type ReactNode } from "react"
 import {
   Globe,
   TerminalSquare,
@@ -66,37 +66,26 @@ export function WorkbenchPanel({
   children: ReactNode
 }) {
   const container = useRef<HTMLDivElement>(null)
-  const [wide, setWide] = useState(false)
-  useEffect(() => {
-    const media = matchMedia("(min-width: 1024px)")
-    const update = () => setWide(media.matches)
-    update()
-    media.addEventListener("change", update)
-    return () => media.removeEventListener("change", update)
-  }, [])
   const extra = more.find((tab) => tab.id === value)
   const tabs = extra ? [...primary, extra] : primary
   return (
-    <div ref={container} className="workbench-host" data-wide={wide}>
+    <div ref={container} className="workbench-host">
       <Sheet
         open
-        modal={!wide && !overlayOpen}
-        onOpenChange={(open, event) => {
-          if (
-            !open &&
-            !locked &&
-            !overlayOpen &&
-            (!wide || event.reason === "escape-key")
-          )
-            onChange(null)
+        desktop="panel"
+        breakpoint="lg"
+        dismissible={!locked && !overlayOpen}
+        modal={!overlayOpen}
+        onOpenChange={(open) => {
+          if (!open) onChange(null)
         }}
       >
         <SheetContent
           portalContainer={container}
-          showOverlay={!wide && !overlayOpen}
+          showOverlay={!overlayOpen}
+          mobileLayout="panel"
           showCloseButton={false}
           className="workbench-sheet"
-          data-wide={wide}
         >
           <SheetHeader className="sr-only">
             <SheetTitle>{agentName} workbench</SheetTitle>

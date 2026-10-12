@@ -47,6 +47,7 @@ export function ArchiveAgentDialog({
   return (
     <AlertDialog
       open
+      dismissible={!pending}
       onOpenChange={(open) => {
         if (!open && !submitting.current) onClose()
       }}
