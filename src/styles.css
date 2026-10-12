@@ -71,34 +71,35 @@
 }
 
 :root {
-  /* Paper: Quiet Workroom, tokens 30a00488. Keep all light surfaces here. */
+  /* Linear-inspired daylight. Keep the palette in shadcn semantic roles. */
   --background: #ffffff;
-  --canvas: #f5f6f3;
-  --foreground: #24312c;
-  --agent-mark-ink: #24312c;
+  --canvas: #fafafa;
+  --foreground: #28282c;
+  --agent-mark-ink: #28282c;
   --card: var(--background);
   --card-foreground: var(--foreground);
   --popover: var(--background);
+  --overlay: #00000040;
   --popover-foreground: var(--foreground);
-  --primary: #187f6b;
-  --primary-hover: #126b5a;
+  --primary: #535fc6;
+  --primary-hover: #505dc5;
   --primary-foreground: #ffffff;
-  --secondary: #f0f3ef;
+  --secondary: #f1f1f3;
   --secondary-foreground: var(--foreground);
-  --muted: #f0f3ef;
-  --muted-foreground: #63716a;
-  --accent: #e7f1eb;
+  --muted: #f1f1f3;
+  --muted-foreground: #67676f;
+  --accent: #ebebef;
   --accent-foreground: var(--foreground);
-  --destructive: #b24d48;
-  --destructive-bg: #fcf0ee;
-  --warning: #966316;
-  --warning-bg: #fff6e6;
-  --peach: #eacfc1;
-  --lilac: #d8d0e8;
-  --blue: #cddfe9;
-  --terminal: #1c2621;
-  --terminal-foreground: #d9e7df;
-  --border: #e2e7e1;
+  --destructive: #b5444d;
+  --destructive-bg: #fceff0;
+  --warning: #8c641c;
+  --warning-bg: #fcf6e8;
+  --peach: #e9cebd;
+  --lilac: #d8d4ef;
+  --blue: #cad9ed;
+  --terminal: #18181b;
+  --terminal-foreground: #e4e4e7;
+  --border: #e4e4e7;
   --input: var(--border);
   --ring: var(--primary);
   --chart-1: var(--primary);
@@ -107,7 +108,7 @@
   --chart-4: var(--peach);
   --chart-5: var(--muted-foreground);
   --radius: 14px;
-  --sidebar: #f6f7f5;
+  --sidebar: #f5f5f5;
   --sidebar-foreground: var(--foreground);
   --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: var(--primary-foreground);
@@ -118,28 +119,29 @@
 }
 
 .dark {
-  /* Paper: Mineral night, page p-2-0. Semantic roles keep every feature in sync. */
-  --background: #171c1a;
-  --canvas: #141916;
-  --foreground: #e4ebe6;
-  --card: #202723;
-  --popover: #202723;
-  --primary: #79c7aa;
-  --primary-hover: #98d5bd;
-  --primary-foreground: #14291f;
-  --secondary: #252e28;
-  --muted: #303b33;
-  --muted-foreground: #a3b0a8;
-  --accent: #283d33;
-  --destructive: #f09b93;
-  --destructive-bg: #382421;
-  --warning: #dfbd7c;
+  /* Linear-inspired graphite. Navigation recedes; raised surfaces stay neutral. */
+  --background: #1c1c1f;
+  --canvas: #161618;
+  --foreground: #ededef;
+  --card: #242427;
+  --popover: #242427;
+  --overlay: #00000066;
+  --primary: #a2a6ff;
+  --primary-hover: #b5b8ff;
+  --primary-foreground: #1c1c1f;
+  --secondary: #27272b;
+  --muted: #303035;
+  --muted-foreground: #a0a0aa;
+  --accent: #303035;
+  --destructive: #ee969d;
+  --destructive-bg: #382326;
+  --warning: #dbb97c;
   --warning-bg: #332c20;
-  --peach: #dcb6a3;
-  --lilac: #bcb0d3;
-  --blue: #a9c7d7;
-  --border: #354139;
-  --sidebar: #1b211d;
+  --peach: #dcbba6;
+  --lilac: #bdb6dc;
+  --blue: #adc3df;
+  --border: #34343a;
+  --sidebar: #18181b;
 }
 
 @layer base {
@@ -2995,7 +2997,7 @@ body {
   display: none;
 }
 .responsive-overlay-backdrop[data-overlay-mobile="true"] {
-  background: color-mix(in oklch, var(--foreground) 25%, transparent);
+  background: var(--overlay);
   opacity: calc(1 - var(--drawer-swipe-progress, 0));
   animation: none;
   transition: opacity 250ms ease;

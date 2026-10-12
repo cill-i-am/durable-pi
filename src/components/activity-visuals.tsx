@@ -40,7 +40,7 @@ export function ActivityBorder({
     <BorderBeam
       className="activity-border"
       size="line"
-      colorVariant="forest"
+      colorVariant="ocean"
       theme={resolvedTheme === "dark" ? "dark" : "light"}
       active={active && animate}
       duration={7}
