@@ -16,6 +16,7 @@ import { Schema } from "effect"
 import { ThinkingLevel } from "@/inference/selection"
 import type { AgentProfile } from "@/agents/contracts"
 import type { useConversation } from "@/features/conversation"
+import { MessageDeliverySettings } from "@/features/conversation"
 import { AccessPanel } from "@/features/access"
 import { ConnectionsPanel } from "@/features/connections"
 import { SkillsPanel } from "@/features/skills"
@@ -38,7 +39,7 @@ const settingsSections = [
   {
     id: "general",
     title: "General",
-    description: "Workspace, sounds and security",
+    description: "Messages, sounds and security",
     icon: Settings2,
   },
   {
@@ -243,6 +244,7 @@ export function WorkspaceSettings({
                     Edit agent
                   </Button>
                 </div>
+                <MessageDeliverySettings />
                 <div className="settings-preference">
                   <Volume2 />
                   <div>

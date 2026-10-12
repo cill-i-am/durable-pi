@@ -35,6 +35,14 @@ Keep the existing PersonalAgent namespace, memory tables, AuthDatabase, MemoryBa
 
 Visual thesis: a quiet, warm workroom with compact navigation, readable conversation, and a contextual workbench. Composition: bot sidebar → conversation → optional workbench. Interactions: keyboard-first menus, restrained pane transitions, clear running/approval/recovery states; respect reduced motion. Semantic tokens own colors, type, spacing, and radii for later retheming.
 
+## Configurable message delivery — 2026-10-12
+
+General settings now exposes **Default message delivery**, remembered on this device using the existing browser-local preference pattern. New installations default to **Steer the active reply**. **Queue a new reply** remains an explicit preference or a one-message composer override; a successful send or a finished reply clears that override. Idle conversations still start an ordinary reply, and changing the preference does not modify accepted messages or their retry identities.
+
+The conversation feature owns the preference and settings control. The Conversations domain still owns admission and durable receipts. When stopping wins the race against a new steer, admission returns a conflict instead of silently queueing work; retries of an already accepted steer still return its original receipt. The composer retains the draft and disables steering while stopping. Explicit follow-ups remain supported. Pi's safe-boundary steering, attachment limits, active model selection and access checks are unchanged.
+
+Local verification: 547 tests, native workerd recovery, TypeScript, production build, lint (four existing warnings) and secret scanning pass. New tests cover preference persistence, invalid values, unavailable storage, server rendering, stop/steer races, restart and accepted-message replay. Browser verification uses the real settings, composer and TanStack transport with synthetic responses; release and hosted checks are recorded in the delivery PR.
+
 ## Persistent tool approval and npm connectivity — 2026-10-12
 
 The owner reported `npx` failing in the hosted terminal and requested lasting tool approvals. Live inspection found the selected agent's saved terminal internet policy was off. With the owner's approval, enabled it through the existing **Terminal → internet settings → Unrestricted internet access** control. A harmless `npx --yes cowsay@latest` check then downloaded and ran successfully with exit code 0. This was a saved configuration issue, not a missing npm runtime. Internet remains independently configurable per bot for the terminal and browser; this change does not alter other bots' saved network policies or run a business workflow.
