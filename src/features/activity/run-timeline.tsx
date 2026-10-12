@@ -158,6 +158,7 @@ export function RunTimeline({
           <Button
             variant="ghost"
             size="sm"
+            disabled={busy}
             onClick={() => {
               setOlder(null)
               setError("")
