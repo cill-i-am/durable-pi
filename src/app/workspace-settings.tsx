@@ -23,6 +23,8 @@ import { SkillsPanel } from "@/features/skills"
 import { ModelDefaults } from "@/features/conversation/model-defaults"
 import { AgentMark, agentTone } from "@/components/agent-mark"
 import { Button } from "@/components/ui/button"
+import { AccountSecurity } from "@/features/auth"
+import { AgentEditor } from "@/features/agents"
 import {
   Dialog,
   DialogContent,
@@ -76,8 +78,9 @@ export function WorkspaceSettings({
   agent,
   conversation,
   onPendingChange,
-  onEdit,
-  onSecurity,
+  onAgentSaved,
+  securityOpen,
+  onSecurityOpenChange,
   onWorkbench,
 }: {
   category: SettingsCategory | null
@@ -85,10 +88,12 @@ export function WorkspaceSettings({
   agent: AgentProfile
   conversation: ReturnType<typeof useConversation>
   onPendingChange: (pending: boolean) => void
-  onEdit: () => void
-  onSecurity: () => void
+  onAgentSaved: (agent: AgentProfile) => Promise<void>
+  securityOpen: boolean
+  onSecurityOpenChange: (open: boolean) => void
   onWorkbench: (workbench: Workbench) => void
 }) {
+  const [editing, setEditing] = useState(false)
   const [modelsPending, setModelsPending] = useState(false)
   const [accessPending, setAccessPending] = useState(false)
   const [connectionsPending, setConnectionsPending] = useState(false)
@@ -241,7 +246,7 @@ export function WorkspaceSettings({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => leave(onEdit)}
+                    onClick={() => setEditing(true)}
                   >
                     Edit agent
                   </Button>
@@ -277,7 +282,7 @@ export function WorkspaceSettings({
                 <SettingsLink
                   title="Account security"
                   detail="Two-factor authentication, recovery codes and signed-in devices."
-                  onClick={() => leave(onSecurity)}
+                  onClick={() => onSecurityOpenChange(true)}
                 />
               </div>
             </section>
@@ -401,6 +406,17 @@ export function WorkspaceSettings({
           </Button>
         )}
       </DialogContent>
+      {securityOpen && (
+        <AccountSecurity onClose={() => onSecurityOpenChange(false)} />
+      )}
+      {editing && (
+        <AgentEditor
+          open
+          agent={agent}
+          onOpenChange={setEditing}
+          onSaved={onAgentSaved}
+        />
+      )}
     </Dialog>
   )
 }

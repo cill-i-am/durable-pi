@@ -18,7 +18,7 @@ import { AppsWorkbench } from "@/features/apps"
 import { ExecutionWorkbench } from "@/features/execution"
 import { BrowserWorkbench } from "@/features/browser"
 import { authClient } from "@/auth/client"
-import { AccountSecurity, Login, PiMark } from "@/features/auth"
+import { Login, PiMark } from "@/features/auth"
 import { Conversation, useConversation } from "@/features/conversation"
 import {
   AgentEditor,
@@ -106,8 +106,10 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
     else if (action === "archive" && catalog.selected)
       void archive(catalog.selected)
     else if (action === "settings") setSettings("general")
-    else if (action === "security") setSecurityOpen(true)
-    else if (action === "sign-out") void authClient.signOut()
+    else if (action === "security") {
+      setSettings("general")
+      setSecurityOpen(true)
+    } else if (action === "sign-out") void authClient.signOut()
     else if (action === "hide-workbench") setWorkbench(null)
     else if (
       [
@@ -182,14 +184,16 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
             {catalog.selected ? (
               <AgentWorkspace
                 key={catalog.selected.id}
-                overlayOpen={
-                  archiveTarget !== null || securityOpen || editor !== null
-                }
+                overlayOpen={archiveTarget !== null || editor !== null}
                 settings={settings}
                 setSettings={setSettings}
                 onSettingsPending={setSettingsPending}
-                onSecurity={() => act("security")}
-                onEdit={() => act("edit")}
+                securityOpen={securityOpen}
+                onSecurityOpenChange={setSecurityOpen}
+                onAgentSaved={async (agent) => {
+                  await catalog.refresh()
+                  selectAgent(agent.id)
+                }}
                 workbench={workbench}
                 setWorkbench={setWorkbench}
                 onNavigationLockChange={setNavigationLocked}
@@ -218,9 +222,6 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
             )}
           </main>
         </div>
-        {securityOpen && (
-          <AccountSecurity onClose={() => setSecurityOpen(false)} />
-        )}
         {archiveTarget && (
           <ArchiveAgentDialog
             key={archiveTarget.id}
@@ -253,8 +254,9 @@ function AgentWorkspace({
   settings,
   setSettings,
   onSettingsPending,
-  onSecurity,
-  onEdit,
+  securityOpen,
+  onSecurityOpenChange,
+  onAgentSaved,
   workbench,
   setWorkbench,
   agent,
@@ -268,8 +270,9 @@ function AgentWorkspace({
   settings: SettingsCategory | null
   setSettings: (value: SettingsCategory | null) => void
   onSettingsPending: (pending: boolean) => void
-  onSecurity: () => void
-  onEdit: () => void
+  securityOpen: boolean
+  onSecurityOpenChange: (open: boolean) => void
+  onAgentSaved: (agent: AgentProfile) => Promise<void>
   workbench: Workbench | null
   setWorkbench: (value: Workbench | null) => void
   agent: AgentProfile
@@ -318,10 +321,27 @@ function AgentWorkspace({
         inWorkbench && workbench === "objects" ? locked : editingLocked
       }
       onAgents={openAgents}
-      onChat={() => openWorkbench(null)}
+      onChat={() => {
+        if (locked) return
+        setOpenMobile(false)
+        openWorkbench(null)
+      }}
       onWorkspace={() =>
         openWorkbench(objectPending ? "objects" : (workbench ?? "files"))
       }
+    />
+  )
+  const settingsPanel = (
+    <WorkspaceSettings
+      category={settings}
+      onCategoryChange={setSettings}
+      agent={agent}
+      conversation={conversation}
+      onPendingChange={onSettingsPending}
+      onAgentSaved={onAgentSaved}
+      securityOpen={securityOpen}
+      onSecurityOpenChange={onSecurityOpenChange}
+      onWorkbench={openWorkbench}
     />
   )
   return (
@@ -373,7 +393,8 @@ function AgentWorkspace({
             onChange={openWorkbench}
             agentName={agent.name}
             locked={locked}
-            overlayOpen={settings !== null || overlayOpen}
+            overlayOpen={overlayOpen}
+            overlays={settingsPanel}
             recoveryAction={
               objectPending && !editingLocked && workbench !== "objects" ? (
                 <Button
@@ -447,16 +468,7 @@ function AgentWorkspace({
           </WorkbenchPanel>
         )}
       </div>
-      <WorkspaceSettings
-        category={settings}
-        onCategoryChange={setSettings}
-        agent={agent}
-        conversation={conversation}
-        onPendingChange={onSettingsPending}
-        onEdit={onEdit}
-        onSecurity={onSecurity}
-        onWorkbench={openWorkbench}
-      />
+      {!workbench && settingsPanel}
       {mobileNavigation(false)}
     </ObjectsProvider>
   )

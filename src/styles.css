@@ -3017,7 +3017,7 @@ body {
   display: flex;
   align-items: flex-end;
   pointer-events: none;
-  padding-top: max(16px, env(safe-area-inset-top));
+  padding-top: max(48px, env(safe-area-inset-top));
   padding-bottom: var(--drawer-keyboard-inset, 0px);
 }
 .responsive-overlay[data-overlay-mobile="true"] {
@@ -3076,6 +3076,9 @@ body {
 .responsive-overlay[data-overlay-mobile="true"][data-mobile-layout="panel"] {
   height: 100%;
 }
+.responsive-overlay[data-overlay-mobile="true"][data-sidebar="sidebar"] .account-menu {
+  padding-bottom: env(safe-area-inset-bottom);
+}
 .responsive-overlay[data-overlay-mobile="true"][data-mobile-layout="panel"] > .responsive-overlay-body {
   padding: 0;
   gap: 0;
@@ -3087,49 +3090,19 @@ body {
 .responsive-overlay[data-overlay-mobile="true"] :is(input, textarea, select) {
   font-size: max(16px, 1em);
 }
-.responsive-overlay-viewport[data-overlay-mobile="true"][data-mobile-side="left"],
-.responsive-overlay-viewport[data-overlay-mobile="true"][data-mobile-side="right"] {
-  align-items: stretch;
-  padding: 0;
+/* Base UI owns nesting and reports the frontmost height and open descendants. */
+.responsive-overlay[data-overlay-mobile="true"][data-nested-drawer-open] {
+  height: var(--drawer-frontmost-height, var(--drawer-height));
+  transform-origin: top center;
+  transform: translateY(calc(-12px * var(--nested-drawers)))
+    scale(max(0.84, calc(1 - 0.04 * var(--nested-drawers))));
+  pointer-events: none;
 }
-.responsive-overlay-viewport[data-overlay-mobile="true"][data-mobile-side="right"] {
-  justify-content: flex-end;
+.responsive-overlay[data-overlay-mobile="true"][data-nested-drawer-open] > .responsive-overlay-body {
+  opacity: 0.4;
 }
-.responsive-overlay[data-overlay-mobile="true"][data-mobile-side="left"],
-.responsive-overlay[data-overlay-mobile="true"][data-mobile-side="right"] {
-  width: min(320px, calc(100% - 32px));
-  height: 100%;
-  padding-block: env(safe-area-inset-top) env(safe-area-inset-bottom);
-  border-radius: 0 20px 20px 0;
-  transform: translateX(var(--drawer-swipe-movement-x, 0px));
-}
-.responsive-overlay[data-overlay-mobile="true"][data-mobile-side="right"] {
-  border-radius: 20px 0 0 20px;
-}
-.responsive-overlay[data-overlay-mobile="true"][data-mobile-side="left"]:is([data-starting-style], [data-ending-style]) {
-  transform: translateX(-100%);
-}
-.responsive-overlay[data-overlay-mobile="true"][data-mobile-side="right"]:is([data-starting-style], [data-ending-style]) {
-  transform: translateX(100%);
-}
-.responsive-overlay[data-overlay-mobile="true"][data-mobile-side="left"] > .responsive-overlay-handle,
-.responsive-overlay[data-overlay-mobile="true"][data-mobile-side="right"] > .responsive-overlay-handle {
-  position: absolute;
-  top: 50%;
-  right: 0;
-  display: flex;
-  width: 16px;
-  height: 48px;
-  transform: translateY(-50%);
-}
-.responsive-overlay[data-overlay-mobile="true"][data-mobile-side="left"] > .responsive-overlay-handle > span,
-.responsive-overlay[data-overlay-mobile="true"][data-mobile-side="right"] > .responsive-overlay-handle > span {
-  width: 4px;
-  height: 28px;
-}
-.responsive-overlay[data-overlay-mobile="true"][data-mobile-side="right"] > .responsive-overlay-handle {
-  right: auto;
-  left: 0;
+.responsive-overlay[data-overlay-mobile="true"][data-nested-drawer-open][data-nested-drawer-swiping] {
+  transition: none;
 }
 @media (min-width: 1024px) {
   .workbench-host {
@@ -3152,4 +3125,36 @@ body {
     transition-duration: 0ms !important;
     animation-duration: 0ms !important;
   }
+}
+
+/* Native menu/select semantics inside the shared mobile drawer surface. */
+.responsive-popup .responsive-popup-positioner {
+  display: block !important;
+  position: relative !important;
+  inset: auto !important;
+  transform: none !important;
+  width: 100% !important;
+}
+.responsive-popup .responsive-popup-content {
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  min-width: 0;
+  overflow: visible;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  animation: none;
+  outline: none;
+}
+.responsive-popup :is([role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"], [role="option"]) {
+  min-height: 48px;
+  padding: 12px;
+  gap: 12px;
+  font-size: 16px;
+}
+.responsive-popup :is([data-slot="dropdown-menu-label"], [data-slot="select-label"]) {
+  padding: 8px 12px;
 }
