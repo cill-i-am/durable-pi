@@ -58,6 +58,8 @@ The hosted synthetic date journey completed with one tool call and two durable m
 
 Removed routine text beneath the composer: memory status, steer/queue explanations, stopping explanations and the keyboard hint. No helper row remains in idle, working or stopping states on desktop or mobile. Existing delivery controls, stopping status, draft retention, keyboard shortcuts, errors and memory processing are unchanged. Local checks and hosted verification are recorded in the delivery PRs.
 
+Inline code uses the shared Markdown renderer with a subtle background, rounded corners and padding. Long inline commands wrap on small screens; fenced code retains its separate block and copy control. This is presentation only: no rewriting of messages or detection of unmarked prose. Verification is recorded in the delivery PR.
+
 ## Configurable message delivery — 2026-10-12
 
 General settings now exposes **Default message delivery**, remembered on this device using the existing browser-local preference pattern. New installations default to **Steer the active reply**. **Queue a new reply** remains an explicit preference or a one-message composer override; a successful send or a finished reply clears that override. Idle conversations still start an ordinary reply, and changing the preference does not modify accepted messages or their retry identities.
