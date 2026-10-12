@@ -1,5 +1,6 @@
 import { AgentMark, agentTone } from "@/components/agent-mark"
 import { CopyButton } from "@/components/copy-button"
+import { ActivityOrb } from "@/components/activity-visuals"
 import type { ChatState } from "@/conversations/contracts"
 import { Markdown } from "@/components/markdown"
 import { Button } from "@/components/ui/button"
@@ -59,6 +60,12 @@ export function TurnReply({
               <Markdown text={turn.answer} />
             ) : ["running", "preparing", "stopping"].includes(turn.status) ? (
               <span className="working-indicator" role="status">
+                <ActivityOrb
+                  state={
+                    turn.status === "preparing" ? "searching" : "breathing"
+                  }
+                  active={turn.status !== "stopping"}
+                />
                 {turn.status === "stopping"
                   ? "Stopping…"
                   : turn.status === "preparing"

@@ -1,4 +1,5 @@
 import { AgentMark, agentTone } from "@/components/agent-mark"
+import { ActivityBorder } from "@/components/activity-visuals"
 import type { Profile, JobType } from "@/inference/policy"
 import {
   useEffect,
@@ -486,6 +487,13 @@ export function Conversation({
           onSend={send}
           onStop={stop}
           active={!!active}
+          working={
+            !!active &&
+            ["preparing", "running"].includes(active.status) &&
+            !state?.access?.approvals.some(
+              (approval) => approval.status === "pending"
+            )
+          }
           stopping={active?.status === "stopping"}
           pending={sending || files.uploading}
           hasAttachments={files.selected.length > 0}
@@ -552,6 +560,7 @@ function Composer({
   onSend,
   onStop,
   active,
+  working,
   stopping,
   pending,
   enabled,
@@ -567,6 +576,7 @@ function Composer({
   onSend: (text: string, mode: SubmissionMode) => Promise<boolean>
   onStop: () => void
   active: boolean
+  working: boolean
   stopping: boolean
   pending: boolean
   enabled: boolean
@@ -600,125 +610,127 @@ function Composer({
       }}
     >
       {attachments}
-      <InputGroup className="chat-composer">
-        <InputGroupTextarea
-          ref={inputRef}
-          aria-label={`Message ${name}`}
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          maxLength={30_000}
-          placeholder={
-            active && !stopping
-              ? "Add a thought while I work…"
-              : `Message ${name}…`
-          }
-          rows={2}
-          onKeyDown={(event) => {
-            if (
-              event.key === "Enter" &&
-              !event.shiftKey &&
-              !event.nativeEvent.isComposing
-            ) {
-              event.preventDefault()
-              void send()
+      <ActivityBorder active={working}>
+        <InputGroup className="chat-composer">
+          <InputGroupTextarea
+            ref={inputRef}
+            aria-label={`Message ${name}`}
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            maxLength={30_000}
+            placeholder={
+              active && !stopping
+                ? "Add a thought while I work…"
+                : `Message ${name}…`
             }
-          }}
-        />
-        <InputGroupAddon align="block-end" className="composer-controls">
-          {attachmentControl}
-          <div className="composer-model">{modelControl(delivery)}</div>
-          <div
-            className="composer-actions"
-            role="group"
-            aria-label="Send message and delivery"
-          >
-            {active && (
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <InputGroupButton
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="composer-delivery-trigger rounded-full"
-                      disabled={stopping || pending}
-                    />
-                  }
-                  aria-label={`Message delivery: ${delivery === "steer" ? "steer this reply" : "queue next reply"}`}
+            rows={2}
+            onKeyDown={(event) => {
+              if (
+                event.key === "Enter" &&
+                !event.shiftKey &&
+                !event.nativeEvent.isComposing
+              ) {
+                event.preventDefault()
+                void send()
+              }
+            }}
+          />
+          <InputGroupAddon align="block-end" className="composer-controls">
+            {attachmentControl}
+            <div className="composer-model">{modelControl(delivery)}</div>
+            <div
+              className="composer-actions"
+              role="group"
+              aria-label="Send message and delivery"
+            >
+              {active && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <InputGroupButton
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="composer-delivery-trigger rounded-full"
+                        disabled={stopping || pending}
+                      />
+                    }
+                    aria-label={`Message delivery: ${delivery === "steer" ? "steer this reply" : "queue next reply"}`}
+                  >
+                    {delivery === "steer" ? "Steer" : "Queue"}
+                    <ChevronDown data-icon="inline-end" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    side="top"
+                    align="end"
+                    className="min-w-52"
+                  >
+                    <DropdownMenuGroup>
+                      <DropdownMenuLabel>For this message</DropdownMenuLabel>
+                      <DropdownMenuRadioGroup
+                        value={delivery}
+                        onValueChange={(value) => {
+                          if (value === "steer" || value === "followUp")
+                            setOverride(value)
+                        }}
+                      >
+                        <DropdownMenuRadioItem value="steer">
+                          Steer this reply
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="followUp">
+                          Queue next reply
+                        </DropdownMenuRadioItem>
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+              {active && (
+                <InputGroupButton
+                  type="button"
+                  variant="secondary"
+                  size="icon-sm"
+                  className="composer-action rounded-full"
+                  onClick={onStop}
+                  disabled={stopping}
+                  aria-label="Stop response"
+                  title="Stop response"
                 >
-                  {delivery === "steer" ? "Steer" : "Queue"}
-                  <ChevronDown data-icon="inline-end" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  side="top"
-                  align="end"
-                  className="min-w-52"
-                >
-                  <DropdownMenuGroup>
-                    <DropdownMenuLabel>For this message</DropdownMenuLabel>
-                    <DropdownMenuRadioGroup
-                      value={delivery}
-                      onValueChange={(value) => {
-                        if (value === "steer" || value === "followUp")
-                          setOverride(value)
-                      }}
-                    >
-                      <DropdownMenuRadioItem value="steer">
-                        Steer this reply
-                      </DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value="followUp">
-                        Queue next reply
-                      </DropdownMenuRadioItem>
-                    </DropdownMenuRadioGroup>
-                  </DropdownMenuGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-            {active && (
+                  <Square />
+                </InputGroupButton>
+              )}
               <InputGroupButton
-                type="button"
-                variant="secondary"
+                type="submit"
+                variant="default"
                 size="icon-sm"
                 className="composer-action rounded-full"
-                onClick={onStop}
-                disabled={stopping}
-                aria-label="Stop response"
-                title="Stop response"
+                disabled={
+                  (!draft.trim() && !hasAttachments) ||
+                  pending ||
+                  !enabled ||
+                  waitingForStop
+                }
+                aria-label={
+                  active
+                    ? delivery === "steer"
+                      ? "Steer response"
+                      : "Queue message"
+                    : "Send message"
+                }
+                title={
+                  active
+                    ? delivery === "steer"
+                      ? "Steer response"
+                      : "Queue message"
+                    : "Send message"
+                }
               >
-                <Square />
+                <ArrowUp />
               </InputGroupButton>
-            )}
-            <InputGroupButton
-              type="submit"
-              variant="default"
-              size="icon-sm"
-              className="composer-action rounded-full"
-              disabled={
-                (!draft.trim() && !hasAttachments) ||
-                pending ||
-                !enabled ||
-                waitingForStop
-              }
-              aria-label={
-                active
-                  ? delivery === "steer"
-                    ? "Steer response"
-                    : "Queue message"
-                  : "Send message"
-              }
-              title={
-                active
-                  ? delivery === "steer"
-                    ? "Steer response"
-                    : "Queue message"
-                  : "Send message"
-              }
-            >
-              <ArrowUp />
-            </InputGroupButton>
-          </div>
-        </InputGroupAddon>
-      </InputGroup>
+            </div>
+          </InputGroupAddon>
+        </InputGroup>
+      </ActivityBorder>
     </form>
   )
 }

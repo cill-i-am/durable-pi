@@ -1,6 +1,7 @@
 import { Check } from "lucide-react"
 import { AgentMark } from "@/components/agent-mark"
 import { InteractionSoundToggle } from "@/components/interaction-sound-toggle"
+import { ThemeMenu } from "@/features/appearance/appearance-settings"
 
 export function PiMark() {
   return <AgentMark className="pi-mark" />
@@ -20,7 +21,10 @@ export function AuthFrame({
       <aside className="login-intro" aria-label="About Pi">
         <div className="login-brand">
           <PiMark />
-          <InteractionSoundToggle />
+          <div className="flex items-center gap-1">
+            <ThemeMenu />
+            <InteractionSoundToggle />
+          </div>
         </div>
         <div className="login-story">
           <AgentMark className="login-character" />
