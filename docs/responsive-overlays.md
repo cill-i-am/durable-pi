@@ -30,7 +30,7 @@ Do not add viewport checks in features or duplicate a form inside separate dialo
 
 ## Nested navigation and actions
 
-Base UI 1.9 owns the drawer stack. Child roots must be React descendants of their parent root; portal location alone does not establish nesting. The sidebar root wraps the workspace, Settings owns Security and its agent editor, and the workbench provides an `overlays` slot for Settings. A child drawer dims and scales its parent, blocks interaction behind it, and returns to the parent on dismissal. Do not close the parent before opening a child.
+Base UI 1.9 owns the drawer stack. A controlled parent yields modal focus ownership while its child Settings or Security panel is open; it stays mounted. This also applies when resizing an open desktop workbench to mobile. Child roots must be React descendants of their parent root; portal location alone does not establish nesting. The sidebar root wraps the workspace, Settings owns Security and its agent editor, and the workbench provides an `overlays` slot for Settings. A child drawer dims and scales its parent, blocks interaction behind it, and returns to the parent on dismissal. Do not close the parent before opening a child.
 
 Mobile menu items that close the menu run their action after the exit animation. This sequences menu-to-dialog navigation and avoids overlapping sibling focus/stack updates. Submenus share the outer menu's pending action so selection runs once even when both menus close. Items with `closeOnClick={false}` run immediately. Keep event cancellation out of deferred actions; choose `closeOnClick={false}` when an action must retain the menu. Desktop actions remain immediate.
 

@@ -1,3 +1,8 @@
+import { Link } from "@tanstack/react-router"
+import {
+  workspaceDestination,
+  type WorkspaceSearch,
+} from "@/navigation/workspace"
 import { useCallback, useEffect, useReducer, useRef, useState } from "react"
 import { Schema } from "effect"
 import {
@@ -64,7 +69,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 
-export function useAgentCatalog(ownerId: string) {
+export function useAgentCatalog(ownerId: string, selectedId?: AgentId) {
   const [state, dispatch] = useReducer(catalogReducer, initialCatalog)
   const [selected, setSelected] = useState<string>(homeAgentId)
   const requestId = useRef(0)
@@ -94,6 +99,20 @@ export function useAgentCatalog(ownerId: string) {
     })
     return () => controller.abort()
   }, [ownerId, refresh])
+  useEffect(() => {
+    if (
+      !selectedId ||
+      !state.agents.some(
+        (agent) => agent.id === selectedId && agent.status === "active"
+      )
+    )
+      return
+    try {
+      localStorage.setItem(`pi:selected:${ownerId}`, selectedId)
+    } catch {
+      /* Optional preference only. */
+    }
+  }, [selectedId, ownerId, state.agents])
   const select = (id: AgentId) => {
     setSelected(id)
     try {
@@ -106,9 +125,10 @@ export function useAgentCatalog(ownerId: string) {
     ...state,
     refresh,
     select,
-    selected:
-      state.agents.find((a) => a.id === selected && a.status === "active") ??
-      state.agents.find((a) => a.id === homeAgentId),
+    selected: selectedId
+      ? state.agents.find((a) => a.id === selectedId)
+      : (state.agents.find((a) => a.id === selected && a.status === "active") ??
+        state.agents.find((a) => a.id === homeAgentId)),
   }
 }
 
@@ -116,7 +136,10 @@ export function AgentSidebar({
   disabled = false,
   agents,
   selected,
-  onSelect,
+  query,
+  onQuery,
+  archived,
+  view,
   onCreate,
   onEdit,
   onArchive,
@@ -128,7 +151,10 @@ export function AgentSidebar({
   disabled?: boolean
   agents: AgentProfile[]
   selected?: AgentProfile
-  onSelect: (id: AgentId) => void
+  query: string
+  onQuery: (query: string) => void
+  archived: boolean
+  view: WorkspaceSearch
   onCreate: () => void
   onEdit: (agent: AgentProfile) => void
   onArchive: (agent: AgentProfile) => void
@@ -137,8 +163,6 @@ export function AgentSidebar({
   onSettings: () => void
   name: string
 }) {
-  const [query, setQuery] = useState("")
-  const [archived, setArchived] = useState(false)
   const { setOpenMobile, isMobile } = useSidebar()
   const shown = agents.filter(
     (a) =>
@@ -173,7 +197,10 @@ export function AgentSidebar({
               >
                 <Plus /> New agent
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setArchived(!archived)}>
+              <DropdownMenuItem
+                render={<Link to={archived ? "/agents" : "/agents/archived"} />}
+                onClick={() => setOpenMobile(false)}
+              >
                 <Archive />
                 {archived ? "Active agents" : "Archived agents"}
               </DropdownMenuItem>
@@ -199,8 +226,9 @@ export function AgentSidebar({
             className="pl-8"
             aria-label="Search agents"
             placeholder="Search agents…"
+            maxLength={200}
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => onQuery(e.target.value)}
           />
         </div>
         <Button
@@ -225,19 +253,20 @@ export function AgentSidebar({
                 <SidebarMenuButton
                   size="lg"
                   isActive={selected?.id === agent.id}
-                  onClick={() => {
-                    if (agent.status === "active") {
-                      onSelect(agent.id)
-                      setOpenMobile(false)
-                    } else onArchive(agent)
-                  }}
+                  render={
+                    <Link
+                      to="/agents/$agentId"
+                      params={{ agentId: agent.id }}
+                    />
+                  }
+                  onClick={() => setOpenMobile(false)}
                 >
                   <AgentMark tone={agentTone(agent.id)} />
                   <span className="flex min-w-0 flex-col gap-0.5">
                     <span className="truncate">{agent.name}</span>
                     <span className="truncate text-xs text-muted-foreground">
                       {agent.status === "archived"
-                        ? "Restore agent"
+                        ? "Archived"
                         : agent.instructions || "Your personal assistant"}
                     </span>
                   </span>
@@ -356,13 +385,30 @@ export function AgentSidebar({
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
                   <DropdownMenuItem
+                    render={
+                      selected ? (
+                        <Link
+                          {...workspaceDestination(selected.id, {
+                            ...view,
+                            settings: "general",
+                            security: undefined,
+                            connections: undefined,
+                          })}
+                        />
+                      ) : undefined
+                    }
                     onClick={() => {
-                      onSettings()
+                      if (!selected) onSettings()
                     }}
                   >
                     <Settings2 /> Settings
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setArchived(!archived)}>
+                  <DropdownMenuItem
+                    render={
+                      <Link to={archived ? "/agents" : "/agents/archived"} />
+                    }
+                    onClick={() => setOpenMobile(false)}
+                  >
                     <Archive /> {archived ? "Active agents" : "Archived agents"}
                   </DropdownMenuItem>
                 </DropdownMenuGroup>

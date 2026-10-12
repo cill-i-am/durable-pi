@@ -1,3 +1,5 @@
+import { Link } from "@tanstack/react-router"
+import { parseAgentId, workspaceDestination } from "@/navigation/workspace"
 import { Markdown } from "@/components/markdown"
 import { Schema } from "effect"
 import { VideoResult } from "@/workspace/video"
@@ -130,32 +132,44 @@ export function FilesWorkbench({
   state,
   selectionDisabled = false,
   onAttached,
+  selected: previewId,
+  collection: tab,
+  previewView,
+  onPreviewViewChange,
+  onCollectionChange,
+  onPendingChange,
 }: {
+  selected: string | null
+  onSelect: (id: string | null) => void
+  onPendingChange: (pending: boolean) => void
+  previewView: "preview" | "source"
+  onPreviewViewChange: (view: "preview" | "source") => void
+  collection: "files" | "trash"
+  onCollectionChange: (collection: "files" | "trash") => void
   state: FilesState
   selectionDisabled?: boolean
   onAttached: () => void
 }) {
-  const [tab, setTab] = useState("files")
+  const [detailLocked, setDetailLocked] = useState(false)
+  useEffect(() => {
+    onPendingChange(detailLocked || state.uploading)
+    return () => onPendingChange(false)
+  }, [detailLocked, state.uploading, onPendingChange])
   const refresh = state.refresh
   useEffect(() => {
     void refresh()
   }, [refresh])
-  const [previewId, setPreviewId] = useState<string | null>(null)
   const visible = state.files.filter(
     (file) => file.trashed === (tab === "trash")
   )
-  const preview = visible.find((file) => file.id === previewId) ?? visible[0]
-  const selectedId = preview?.id ?? null
-  useEffect(() => {
-    // Pin the initial selection so a completed upload cannot replace an open draft.
-    setPreviewId(selectedId)
-  }, [selectedId])
+  const preview = visible.find((file) => file.id === previewId)
   return (
     <>
       <header className="workbench-heading-row">
         <DropdownMenu>
           <DropdownMenuTrigger
             render={<Button variant="ghost" className="workbench-title-menu" />}
+            disabled={detailLocked}
             aria-label="File collection"
           >
             <h2 className="workbench-section-title">
@@ -166,16 +180,14 @@ export function FilesWorkbench({
           <DropdownMenuContent align="start">
             <DropdownMenuItem
               onClick={() => {
-                setTab("files")
-                setPreviewId(null)
+                onCollectionChange("files")
               }}
             >
               <Files /> Files
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => {
-                setTab("trash")
-                setPreviewId(null)
+                onCollectionChange("trash")
               }}
             >
               <Trash2 /> Trash
@@ -200,6 +212,13 @@ export function FilesWorkbench({
           </Alert>
         )}
         {!!state.uploads.length && <UploadStatus state={state} />}
+        {!state.loading && previewId && !preview && (
+          <Alert>
+            <AlertDescription>
+              This file is unavailable in this collection.
+            </AlertDescription>
+          </Alert>
+        )}
         {state.loading && (
           <p className="text-sm text-muted-foreground">Loading files…</p>
         )}
@@ -235,7 +254,17 @@ export function FilesWorkbench({
                     key={file.id}
                     variant={preview?.id === file.id ? "secondary" : "ghost"}
                     aria-pressed={preview?.id === file.id}
-                    onClick={() => setPreviewId(file.id)}
+                    disabled={detailLocked}
+                    nativeButton={false}
+                    render={
+                      <Link
+                        {...workspaceDestination(parseAgentId(state.agentId), {
+                          panel: "files",
+                          item: file.id,
+                          tab,
+                        })}
+                      />
+                    }
                     title={file.name}
                   >
                     <Icon data-icon="inline-start" />
@@ -252,6 +281,7 @@ export function FilesWorkbench({
                 <FileDetails
                   key={`details-${preview.id}`}
                   file={preview}
+                  onPendingChange={setDetailLocked}
                   state={state}
                   onAttach={() => {
                     state.select(preview)
@@ -269,6 +299,8 @@ export function FilesWorkbench({
                     key={`preview-${preview.id}`}
                     file={preview}
                     agentId={state.agentId}
+                    view={previewView}
+                    onViewChange={onPreviewViewChange}
                   />
                 )}
               </section>
@@ -292,11 +324,13 @@ export function FilesWorkbench({
   )
 }
 function FileDetails({
+  onPendingChange,
   file,
   state,
   onAttach,
   disabled,
 }: {
+  onPendingChange: (pending: boolean) => void
   file: FileInfo
   state: FilesState
   onAttach: () => void
@@ -305,6 +339,10 @@ function FileDetails({
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(file.name)
   const [busy, setBusy] = useState(false)
+  useEffect(() => {
+    onPendingChange(editing || busy)
+    return () => onPendingChange(false)
+  }, [editing, busy, onPendingChange])
   async function mutate(action: "trash" | "restore" | "rename" | "extract") {
     setBusy(true)
     try {
@@ -464,7 +502,17 @@ function FileDetails({
   )
 }
 
-function FilePreview({ file, agentId }: { file: FileInfo; agentId: string }) {
+function FilePreview({
+  file,
+  agentId,
+  view,
+  onViewChange,
+}: {
+  file: FileInfo
+  agentId: string
+  view: "preview" | "source"
+  onViewChange: (view: "preview" | "source") => void
+}) {
   const [text, setText] = useState("")
   const [error, setError] = useState("")
   const [loaded, setLoaded] = useState(false)
@@ -513,7 +561,13 @@ function FilePreview({ file, agentId }: { file: FileInfo; agentId: string }) {
           alt={file.name}
         />
       ) : /\.md(?:own)?$/i.test(file.name) && loaded && !error ? (
-        <Tabs defaultValue="preview" className="file-text-preview">
+        <Tabs
+          value={view}
+          onValueChange={(value) => {
+            if (value === "preview" || value === "source") onViewChange(value)
+          }}
+          className="file-text-preview"
+        >
           <TabsList variant="line" aria-label="File view">
             <TabsTrigger value="preview">Preview</TabsTrigger>
             <TabsTrigger value="source">Source</TabsTrigger>

@@ -1,9 +1,10 @@
+import type { WorkspaceQuery } from "@/navigation/workspace"
+import { useState } from "react"
 import { BotTasks } from "./bot-tasks"
 import { ActivityTimeline } from "./activity-timeline"
 import type { ActivityAgent } from "@/activity/contracts"
 import { DelegatedWork } from "./delegated-work"
 import { InferenceRuns } from "./inference-runs"
-import { useState } from "react"
 import {
   ArrowLeft,
   ArrowRight,
@@ -40,21 +41,53 @@ export function ActivityWorkbench({
   agents,
   onOpenBot,
   onMemory,
+  view,
+  inspectedAgentId,
+  selected,
+  onSelectionChange,
+  filters,
+  onFiltersChange,
+  offset,
+  onOffsetChange: setOffset,
 }: {
+  filters: Pick<WorkspaceQuery, "scope" | "filter" | "cursor">
+  onFiltersChange: (
+    value: Pick<WorkspaceQuery, "scope" | "filter" | "cursor">
+  ) => void
+  offset: number
+  onOffsetChange: (value: number) => void
+  view: "timeline" | "tasks"
+  inspectedAgentId: ActivityAgent["id"]
+  selected: string | null
+  onSelectionChange: (
+    view: "timeline" | "tasks",
+    agentId: ActivityAgent["id"],
+    selected: string | null
+  ) => void
   agentId: ActivityAgent["id"]
   agentName: ActivityAgent["name"]
   agents: readonly ActivityAgent[]
   onOpenBot: (id: ActivityAgent["id"]) => void
   onMemory: (id: ActivityAgent["id"]) => void
 }) {
-  const [showTimeline, setShowTimeline] = useState(true)
-  const [{ id: agentId, name: agentName }, setInspectedAgent] = useState({
-    id: initialId,
-    name: initialName,
-  })
-  const [selected, setSelected] = useState<string | null>(null),
-    [offset, setOffset] = useState(0)
-  const state = usePlans(agentId, selected, offset, !showTimeline)
+  const showTimeline = view === "timeline"
+  const inspected = agents.find((value) => value.id === inspectedAgentId)
+  const agentId = inspectedAgentId
+  const agentName = inspected?.name ?? "Unavailable agent"
+  const setSelected = (id: string | null) =>
+    onSelectionChange("tasks", agentId, id)
+  const state = usePlans(
+    agentId,
+    selected,
+    offset,
+    !showTimeline && !!inspected
+  )
+  if (!inspected)
+    return (
+      <Alert>
+        <AlertDescription>This agent is unavailable.</AlertDescription>
+      </Alert>
+    )
   return (
     <>
       <div className="workbench-body">
@@ -68,6 +101,8 @@ export function ActivityWorkbench({
         )}
         {showTimeline ? (
           <ActivityTimeline
+            filters={filters}
+            onFiltersChange={onFiltersChange}
             agent={
               agents.find((value) => value.id === initialId) ?? {
                 id: initialId,
@@ -77,11 +112,16 @@ export function ActivityWorkbench({
             agents={agents}
             onOpenBot={onOpenBot}
             onMemory={onMemory}
+            record={selected ? { agent: inspected, reference: selected } : null}
+            onRecordChange={(record) =>
+              onSelectionChange(
+                "timeline",
+                record?.agent.id ?? agentId,
+                record?.reference ?? null
+              )
+            }
             onDetails={(agent) => {
-              setInspectedAgent(agent)
-              setSelected(null)
-              setOffset(0)
-              setShowTimeline(false)
+              onSelectionChange("tasks", agent.id, null)
             }}
           />
         ) : (
@@ -90,7 +130,7 @@ export function ActivityWorkbench({
               variant="ghost"
               size="sm"
               className="self-start"
-              onClick={() => setShowTimeline(true)}
+              onClick={() => onSelectionChange("timeline", initialId, null)}
             >
               <ArrowLeft /> Activity timeline
             </Button>

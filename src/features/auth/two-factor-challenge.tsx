@@ -1,5 +1,9 @@
+import {
+  workspaceReturnPath,
+  workspaceReturnLink,
+} from "@/navigation/workspace"
 import { useState } from "react"
-import { Link } from "@tanstack/react-router"
+import { Link, useSearch } from "@tanstack/react-router"
 import { authClient } from "@/auth/client"
 import { AuthFrame } from "./auth-frame"
 import { VerificationCode } from "./verification-code"
@@ -10,6 +14,7 @@ import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export function TwoFactorChallenge() {
+  const { returnTo } = useSearch({ strict: false })
   const [recovery, setRecovery] = useState(false)
   const [code, setCode] = useState("")
   const [pending, setPending] = useState(false)
@@ -27,7 +32,12 @@ export function TwoFactorChallenge() {
           })
         : await authClient.twoFactor.verifyTotp({ code, trustDevice: false })
       if (result.error) setError(securityError(result.error))
-      else window.location.assign("/")
+      else
+        window.location.assign(
+          workspaceReturnPath(
+            new URLSearchParams(window.location.search).get("returnTo") ?? "/"
+          )
+        )
     } catch {
       setError("Could not connect. Check your connection and try again.")
     } finally {
@@ -97,7 +107,7 @@ export function TwoFactorChallenge() {
         {recovery ? "Use your authenticator" : "Use a recovery code"}
       </Button>
       <Link
-        to="/"
+        {...workspaceReturnLink(returnTo ?? "/")}
         className="text-center text-sm text-muted-foreground underline underline-offset-4"
       >
         Back to sign in

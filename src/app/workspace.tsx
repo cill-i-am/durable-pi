@@ -1,3 +1,7 @@
+import { AgentCollection } from "@/features/agents/agent-collection"
+import { useWorkspaceLocation } from "./use-workspace-location"
+import { useBlocker } from "@tanstack/react-router"
+import { homeAgentId } from "@/agents/contracts"
 import { WorkspaceSettings, type SettingsCategory } from "./workspace-settings"
 import { WorkbenchPanel } from "./workbench"
 import { MobileNavigation } from "./mobile-navigation"
@@ -10,7 +14,7 @@ import {
 } from "./workspace-navigation"
 import { RoutinesWorkbench } from "@/features/routines"
 import { ActivityWorkbench } from "@/features/activity"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState, useRef } from "react"
 import { ObjectsProvider, ObjectsWorkbench } from "@/features/objects"
 import { PanelRight } from "lucide-react"
 import { TerminalWorkbench } from "@/features/terminal"
@@ -54,28 +58,79 @@ export function ChatApp() {
   )
 }
 function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
-  const catalog = useAgentCatalog(ownerId)
-  const [securityOpen, setSecurityOpen] = useState(false)
+  const location = useWorkspaceLocation()
+  const catalog = useAgentCatalog(ownerId, location.agentId)
+  const securityOpen = location.search.security ?? false
+  const setSecurityOpen = location.setSecurity
   const [workLocked, setNavigationLocked] = useState(false)
   const [settingsPending, setSettingsPending] = useState(false)
-  const [settings, setSettings] = useState<SettingsCategory | null>(null)
+  const settings =
+    location.search.settings ??
+    (location.search.connections ? "connections" : null)
+  const setSettings = location.setSettings
   const navigationLocked = workLocked || settingsPending
-  const [workbench, setWorkbench] = useState<Workbench | null>(null)
+  const workbench = location.search.panel ?? null
+  const setWorkbench = location.setPanel
   useEffect(() => {
-    // Paper's desktop opens with the work beside the conversation. Phones start in chat.
-    if (window.matchMedia("(min-width: 1024px)").matches) setWorkbench("apps")
-  }, [])
-  function selectAgent(id: AgentProfile["id"]) {
+    if (location.pathname === "/" && !catalog.loading && catalog.selected) {
+      location.openAgent(
+        catalog.selected.id,
+        {
+          ...(location.search.connections
+            ? {
+                settings: "connections",
+                connections: location.search.connections,
+              }
+            : {}),
+          panel:
+            location.search.panel ??
+            (window.matchMedia("(min-width: 1024px)").matches
+              ? "apps"
+              : undefined),
+        },
+        true
+      )
+    }
+  }, [
+    location.pathname,
+    location.openAgent,
+    location.search,
+    catalog.loading,
+    catalog.selected,
+  ])
+  function selectAgent(id: AgentProfile["id"], panel?: Workbench) {
     if (navigationLocked) return
-    if (id !== catalog.selected?.id) setWorkbench(null)
     catalog.select(id)
+    if (id !== location.agentId || panel) location.openAgent(id, { panel })
   }
-  const [editor, setEditor] = useState<{
-    agent?: AgentProfile
-    key: string
-  } | null>(null)
+  const editor =
+    location.pathname === "/agents/new"
+      ? { key: "new", agent: undefined }
+      : location.pathname.endsWith("/edit") && catalog.selected
+        ? { key: catalog.selected.id, agent: catalog.selected }
+        : null
+  const savedEditor = useRef<AgentProfile["id"] | null>(null)
+  function setEditor(value: { agent?: AgentProfile; key: string } | null) {
+    savedEditor.current = null
+    if (value) location.openEditor(value.agent?.id)
+    else location.closeEditor()
+  }
   const [error, setError] = useState("")
   const [archiveTarget, setArchiveTarget] = useState<AgentProfile | null>(null)
+  const [navigationBlocked, setNavigationBlocked] = useState(false)
+  useBlocker({
+    shouldBlockFn: () => {
+      const blocked =
+        navigationLocked || editor !== null || archiveTarget !== null
+      if (blocked) setNavigationBlocked(true)
+      return blocked
+    },
+    enableBeforeUnload: navigationLocked || editor !== null,
+  })
+  useEffect(() => {
+    if (!navigationLocked && !editor && !archiveTarget)
+      setNavigationBlocked(false)
+  }, [navigationLocked, editor, archiveTarget])
   async function updateArchive(agent: AgentProfile, archived: boolean) {
     await api("/api/agent/bots/archive", { id: agent.id, archived })
     setError("")
@@ -107,7 +162,6 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
       void archive(catalog.selected)
     else if (action === "settings") setSettings("general")
     else if (action === "security") {
-      setSettings("general")
       setSecurityOpen(true)
     } else if (action === "sign-out") void authClient.signOut()
     else if (action === "hide-workbench") setWorkbench(null)
@@ -144,11 +198,17 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
         />
         <div className="workspace-body">
           <AgentSidebar
+            view={location.search}
+            query={location.search.q ?? ""}
+            onQuery={location.setQuery}
+            archived={
+              location.pathname === "/agents/archived" ||
+              catalog.selected?.status === "archived"
+            }
             disabled={navigationLocked}
             agents={catalog.agents}
             selected={catalog.selected}
             name={name}
-            onSelect={selectAgent}
             onSettings={() => act("settings")}
             onActivity={() => act("activity")}
             onMemory={() => act("memory")}
@@ -161,6 +221,13 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
             onArchive={(agent) => void archive(agent)}
           />
           <main className="workspace-main">
+            {navigationBlocked && (
+              <Alert>
+                <AlertDescription>
+                  Finish or cancel the open edit before leaving this view.
+                </AlertDescription>
+              </Alert>
+            )}
             {(error || catalog.error) && (
               <Alert>
                 <AlertDescription className="flex items-center justify-between">
@@ -181,19 +248,26 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
                 </AlertDescription>
               </Alert>
             )}
-            {catalog.selected ? (
+            {location.pathname === "/agents" ||
+            location.pathname === "/agents/archived" ? (
+              <AgentCollection
+                agents={catalog.agents}
+                archived={location.pathname === "/agents/archived"}
+                query={location.search.q ?? ""}
+                onQuery={location.setQuery}
+                onCreate={() => act("create")}
+                onRestore={(agent) => void archive(agent)}
+              />
+            ) : catalog.selected ? (
               <AgentWorkspace
                 key={catalog.selected.id}
+                location={location}
                 overlayOpen={archiveTarget !== null || editor !== null}
                 settings={settings}
                 setSettings={setSettings}
                 onSettingsPending={setSettingsPending}
                 securityOpen={securityOpen}
                 onSecurityOpenChange={setSecurityOpen}
-                onAgentSaved={async (agent) => {
-                  await catalog.refresh()
-                  selectAgent(agent.id)
-                }}
                 workbench={workbench}
                 setWorkbench={setWorkbench}
                 onNavigationLockChange={setNavigationLocked}
@@ -205,8 +279,7 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
                 onOpenBot={selectAgent}
                 onMemory={(id) => {
                   if (!navigationLocked) {
-                    selectAgent(id)
-                    setWorkbench("memory")
+                    selectAgent(id, "memory")
                   }
                 }}
               />
@@ -218,6 +291,14 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
                     ? "Opening your workspace…"
                     : "Your workspace is unavailable."}
                 </p>
+                {!catalog.loading && (
+                  <Button
+                    variant="outline"
+                    onClick={() => selectAgent(homeAgentId)}
+                  >
+                    Open home agent
+                  </Button>
+                )}
               </div>
             )}
           </main>
@@ -236,11 +317,15 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
             open
             agent={editor.agent}
             onOpenChange={(open) => {
-              if (!open) setEditor(null)
+              if (!open) {
+                if (savedEditor.current) location.openAgent(savedEditor.current)
+                else location.closeEditor()
+                savedEditor.current = null
+              }
             }}
             onSaved={async (agent) => {
               await catalog.refresh()
-              selectAgent(agent.id)
+              savedEditor.current = agent.id
             }}
           />
         )}
@@ -250,13 +335,13 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
 }
 
 function AgentWorkspace({
+  location,
   overlayOpen,
   settings,
   setSettings,
   onSettingsPending,
   securityOpen,
   onSecurityOpenChange,
-  onAgentSaved,
   workbench,
   setWorkbench,
   agent,
@@ -266,13 +351,13 @@ function AgentWorkspace({
   name,
   onNavigationLockChange,
 }: {
+  location: ReturnType<typeof useWorkspaceLocation>
   overlayOpen: boolean
   settings: SettingsCategory | null
   setSettings: (value: SettingsCategory | null) => void
   onSettingsPending: (pending: boolean) => void
   securityOpen: boolean
   onSecurityOpenChange: (open: boolean) => void
-  onAgentSaved: (agent: AgentProfile) => Promise<void>
   workbench: Workbench | null
   setWorkbench: (value: Workbench | null) => void
   agent: AgentProfile
@@ -286,24 +371,37 @@ function AgentWorkspace({
   const conversation = useConversation(agent.id)
   const files = useFiles(agent.id)
   const [sending, setSending] = useState(false)
+  const [filePending, setFilePending] = useState(false)
   const [appPending, setAppPending] = useState(false)
-  const [objectId, setObjectId] = useState<string | null>(null)
+  const objectId = location.search.item ?? null
+  const setObjectId = location.setItem
   const [objectPending, setObjectPending] = useState(false)
   const [objectEditing, setObjectEditing] = useState(false)
   const [routinePending, setRoutinePending] = useState(false)
   useEffect(() => {
     onNavigationLockChange(
-      objectPending || objectEditing || routinePending || appPending
+      objectPending ||
+        objectEditing ||
+        routinePending ||
+        appPending ||
+        filePending
     )
   }, [
+    filePending,
     objectPending,
     objectEditing,
     routinePending,
     appPending,
     onNavigationLockChange,
   ])
-  const locked = objectPending || objectEditing || routinePending || appPending
-  const editingLocked = objectEditing || routinePending || appPending
+  const locked =
+    objectPending ||
+    objectEditing ||
+    routinePending ||
+    appPending ||
+    filePending
+  const editingLocked =
+    objectEditing || routinePending || appPending || filePending
   function openWorkbench(value: Workbench | null) {
     // Restored, unconfirmed object saves must remain reachable after a reload.
     if (!locked || (value === "objects" && !editingLocked)) setWorkbench(value)
@@ -331,14 +429,23 @@ function AgentWorkspace({
       }
     />
   )
+  const consumeConnectionCallback = useCallback(
+    () =>
+      location.update(
+        { connections: undefined, settings: "connections" },
+        true
+      ),
+    [location.update]
+  )
   const settingsPanel = (
     <WorkspaceSettings
       category={settings}
+      connectionResult={location.search.connections}
+      onConnectionResultConsumed={consumeConnectionCallback}
       onCategoryChange={setSettings}
       agent={agent}
       conversation={conversation}
       onPendingChange={onSettingsPending}
-      onAgentSaved={onAgentSaved}
       securityOpen={securityOpen}
       onSecurityOpenChange={onSecurityOpenChange}
       onWorkbench={openWorkbench}
@@ -350,9 +457,8 @@ function AgentWorkspace({
       archived={agent.status === "archived"}
       onPendingChange={setObjectPending}
       onOpen={(id) => {
-        if (!objectEditing && !routinePending && !appPending) {
-          setObjectId(id)
-          setWorkbench("objects")
+        if (!objectEditing && !routinePending && !appPending && !filePending) {
+          location.update({ panel: "objects", item: id, tab: undefined })
         }
       }}
     >
@@ -393,7 +499,7 @@ function AgentWorkspace({
             onChange={openWorkbench}
             agentName={agent.name}
             locked={locked}
-            overlayOpen={overlayOpen}
+            overlayOpen={overlayOpen || settings !== null}
             overlays={settingsPanel}
             recoveryAction={
               objectPending && !editingLocked && workbench !== "objects" ? (
@@ -410,13 +516,37 @@ function AgentWorkspace({
           >
             {workbench === "activity" && (
               <ActivityWorkbench
+                filters={{
+                  scope: location.search.scope,
+                  filter: location.search.filter,
+                  cursor: location.search.cursor,
+                }}
+                onFiltersChange={(value) => location.update(value)}
+                offset={location.search.offset ?? 0}
+                onOffsetChange={(offset) =>
+                  location.update({ offset: offset || undefined })
+                }
+                view={location.search.tab === "tasks" ? "tasks" : "timeline"}
+                inspectedAgentId={location.search.activityAgent ?? agent.id}
+                selected={location.search.item ?? null}
+                onSelectionChange={(tab, activityAgent, item) =>
+                  location.update({
+                    tab,
+                    activityAgent,
+                    item: item ?? undefined,
+                    offset:
+                      tab !== (location.search.tab ?? "timeline") ||
+                      activityAgent !==
+                        (location.search.activityAgent ?? agent.id)
+                        ? undefined
+                        : location.search.offset,
+                  })
+                }
                 agents={agents}
                 onOpenBot={(id) => {
-                  setWorkbench(null)
                   onOpenBot(id)
                 }}
                 onMemory={(id) => {
-                  setWorkbench(null)
                   onMemory(id)
                 }}
                 agentId={agent.id}
@@ -424,10 +554,30 @@ function AgentWorkspace({
               />
             )}
             {workbench === "terminal" && (
-              <TerminalWorkbench agentId={agent.id} agentName={agent.name} />
+              <TerminalWorkbench
+                agentId={agent.id}
+                agentName={agent.name}
+                selected={location.search.item ?? null}
+                onSelect={location.setItem}
+                tab={
+                  location.search.tab === "interactive" ||
+                  location.search.tab === "transfers"
+                    ? location.search.tab
+                    : "commands"
+                }
+                onTabChange={location.setTab}
+              />
             )}
             {workbench === "routines" && (
               <RoutinesWorkbench
+                selected={location.search.item ?? null}
+                webhook={location.search.tab === "webhook"}
+                onSelect={(item, webhook) =>
+                  location.update({
+                    item: item ?? undefined,
+                    tab: webhook ? "webhook" : undefined,
+                  })
+                }
                 onPendingChange={setRoutinePending}
                 agentId={agent.id}
                 agentName={agent.name}
@@ -443,6 +593,8 @@ function AgentWorkspace({
             )}
             {workbench === "apps" && (
               <AppsWorkbench
+                selected={location.search.item ?? null}
+                onSelect={location.setItem}
                 onOpenWorkbench={openWorkbench}
                 onPendingChange={setAppPending}
                 agentId={agent.id}
@@ -450,20 +602,47 @@ function AgentWorkspace({
               />
             )}
             {workbench === "code" && (
-              <ExecutionWorkbench agentId={agent.id} agentName={agent.name} />
+              <ExecutionWorkbench
+                agentId={agent.id}
+                agentName={agent.name}
+                selected={location.search.item ?? null}
+                onSelect={location.setItem}
+              />
             )}
             {workbench === "browser" && (
               <BrowserWorkbench agentId={agent.id} agentName={agent.name} />
             )}
             {workbench === "files" && (
               <FilesWorkbench
+                previewView={location.search.preview ?? "preview"}
+                onPreviewViewChange={(preview) => location.update({ preview })}
+                onPendingChange={setFilePending}
+                selected={location.search.item ?? null}
+                onSelect={location.setItem}
+                collection={location.search.tab === "trash" ? "trash" : "files"}
+                onCollectionChange={location.setTab}
                 state={files}
                 selectionDisabled={sending || files.uploading}
                 onAttached={() => openWorkbench(null)}
               />
             )}
             {workbench === "memory" && (
-              <MemoryWorkbench state={conversation.state} agentId={agent.id} />
+              <MemoryWorkbench
+                query={location.search.query ?? ""}
+                onQueryChange={(query) =>
+                  location.update({ query: query || undefined }, true)
+                }
+                state={conversation.state}
+                agentId={agent.id}
+                tab={
+                  location.search.tab === "history" ||
+                  location.search.tab === "tree" ||
+                  location.search.tab === "files"
+                    ? location.search.tab
+                    : "notes"
+                }
+                onTabChange={location.setTab}
+              />
             )}
           </WorkbenchPanel>
         )}

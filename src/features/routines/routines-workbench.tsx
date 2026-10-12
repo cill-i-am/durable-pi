@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { ArrowLeft, Clock3, Plus } from "lucide-react"
 import type { Routine, RoutineRun, SaveRoutine } from "@/routines/contracts"
 import { WebhookPanel } from "./webhook-panel"
@@ -45,19 +45,56 @@ export function RoutinesWorkbench({
   agentId,
   agentName,
   onPendingChange,
+  selected,
+  webhook,
+  onSelect,
 }: {
+  selected: string | null
+  webhook: boolean
+  onSelect: (id: string | null, webhook?: boolean) => void
   agentId: string
   agentName: string
   onPendingChange: (pending: boolean) => void
 }) {
-  const [editor, setEditor] = useState<{
+  const [newEditor, setNewEditor] = useState<{
     key: string
     routine?: Routine
   } | null>(null)
-  const actions = useRoutines(agentId, () => setEditor(null), onPendingChange)
-  const [hook, setHook] = useState<Routine | null>(null)
+  const [mutationPending, setMutationPending] = useState(false)
+  const actions = useRoutines(
+    agentId,
+    () => {
+      setNewEditor(null)
+      onSelect(null)
+    },
+    setMutationPending
+  )
+  const selectedRoutine = actions.data.routines.find(
+    (value) => value.id === selected
+  )
+  const editor =
+    newEditor ??
+    (selectedRoutine && !webhook
+      ? { key: selectedRoutine.id, routine: selectedRoutine }
+      : null)
+  const hook = webhook ? selectedRoutine : undefined
+  function setEditor(value: { key: string; routine?: Routine } | null) {
+    if (value?.routine) {
+      setNewEditor(null)
+      onSelect(value.routine.id)
+    } else {
+      setNewEditor(value)
+      if (selected) onSelect(null)
+    }
+  }
+  const setHook = (value: Routine | null) =>
+    onSelect(value?.id ?? null, !!value)
   const [hookPending, setHookPending] = useState(false)
   const locked = actions.busy || !!actions.attempt || hookPending
+  useEffect(() => {
+    onPendingChange(mutationPending || locked || editor !== null)
+    return () => onPendingChange(false)
+  }, [mutationPending, locked, editor !== null, onPendingChange])
   const setStatus = (routine: Routine, status: Routine["status"]) =>
     void actions.send({
       path: "status",
@@ -205,7 +242,18 @@ export function RoutinesWorkbench({
             </div>
           </div>
         )}
-        {hook ? (
+        {selected && !selectedRoutine ? (
+          <Alert>
+            <AlertDescription>
+              {actions.loading
+                ? "Loading routine…"
+                : "This routine is unavailable."}
+              <Button variant="link" onClick={() => onSelect(null)}>
+                All routines
+              </Button>
+            </AlertDescription>
+          </Alert>
+        ) : hook ? (
           <WebhookPanel
             key={hook.id}
             agentId={agentId}
@@ -216,7 +264,6 @@ export function RoutinesWorkbench({
             }}
             onPendingChange={(pending) => {
               setHookPending(pending)
-              onPendingChange(pending)
             }}
           />
         ) : editor ? (

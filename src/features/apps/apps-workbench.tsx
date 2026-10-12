@@ -24,14 +24,17 @@ export function AppsWorkbench({
   agentName,
   onPendingChange,
   onOpenWorkbench,
+  selected,
+  onSelect: setSelected,
 }: {
+  selected: string | null
+  onSelect: (id: string | null) => void
   agentId: string
   agentName: string
   onOpenWorkbench: (value: "browser" | "terminal" | "files") => void
   onPendingChange: (pending: boolean) => void
 }) {
   const [apps, setApps] = useState<AppDocument[]>([]),
-    [selected, setSelected] = useState<string | null>(null),
     [creating, setCreating] = useState(false),
     [error, setError] = useState("")
   const [creationPending, setCreationPending] = useState(false)

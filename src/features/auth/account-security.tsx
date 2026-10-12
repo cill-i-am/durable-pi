@@ -17,7 +17,13 @@ type BrowserSession = typeof authClient.$Infer.Session.session
 type Confirmation =
   { kind: "others" } | { kind: "one"; session: BrowserSession }
 
-export function AccountSecurity({ onClose }: { onClose: () => void }) {
+export function AccountSecurity({
+  onClose,
+  onPendingChange,
+}: {
+  onClose: () => void
+  onPendingChange?: (pending: boolean) => void
+}) {
   const { data: current } = authClient.useSession()
   const [sessions, setSessions] = useState<BrowserSession[]>([])
   const [loading, setLoading] = useState(true)
@@ -85,6 +91,10 @@ export function AccountSecurity({ onClose }: { onClose: () => void }) {
       setPending(false)
     }
   }
+  useEffect(() => {
+    onPendingChange?.(pending || factorLocked)
+    return () => onPendingChange?.(false)
+  }, [pending, factorLocked, onPendingChange])
   const others = sessions.filter(
     (session) => session.id !== current?.session.id
   )

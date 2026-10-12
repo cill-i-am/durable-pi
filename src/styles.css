@@ -1307,8 +1307,16 @@ body {
   font-weight: 500;
 }
 .workbench-tabbar [data-slot="tabs-trigger"]::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  height: 2px;
+  opacity: 0;
   bottom: 0;
   background: var(--primary);
+}
+.workbench-tabbar [data-slot="tabs-trigger"][data-active]::after {
+  opacity: 1;
 }
 .workbench-tabbar [data-slot="tabs-trigger"] svg {
   width: 15px;

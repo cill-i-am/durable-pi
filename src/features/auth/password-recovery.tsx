@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react"
-import { Link } from "@tanstack/react-router"
+import { workspaceReturnLink } from "@/navigation/workspace"
+import { Link, useSearch } from "@tanstack/react-router"
 import { authClient } from "@/auth/client"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -14,8 +15,13 @@ import { AuthFrame } from "./auth-frame"
 import { PasswordInput } from "./password-input"
 
 function BackToSignIn() {
+  const { returnTo } = useSearch({ strict: false })
   return (
-    <Button variant="link" render={<Link to="/" />} nativeButton={false}>
+    <Button
+      variant="link"
+      render={<Link {...workspaceReturnLink(returnTo ?? "/")} />}
+      nativeButton={false}
+    >
       Back to sign in
     </Button>
   )

@@ -1,4 +1,4 @@
-import type { Effect} from "effect";
+import type { Effect } from "effect"
 import { Schema } from "effect"
 import type { WorkspaceUnavailable } from "./files"
 

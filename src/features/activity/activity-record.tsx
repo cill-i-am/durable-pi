@@ -24,7 +24,7 @@ export function ActivityRecord({
   onClose,
   onOpenBot,
 }: {
-  entry: ActivityEntry
+  entry: Pick<ActivityEntry, "agent" | "reference">
   onClose: () => void
   onOpenBot: () => void
 }) {

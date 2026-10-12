@@ -10,9 +10,12 @@ import {
 import { agentApi } from "@/http/client"
 import { poll } from "@/http/poll"
 
-export function useExecution(agentId: string) {
+export function useExecution(
+  agentId: string,
+  selected: string | null,
+  setSelected: (id: string | null) => void
+) {
   const [runs, setRuns] = useState<RunSummary[]>([])
-  const [selected, setSelected] = useState<string | null>(null)
   const [detail, setDetail] = useState<CodeRun | null>(null)
   const [error, setError] = useState("")
   const [busy, setBusy] = useState(false)
@@ -43,6 +46,8 @@ export function useExecution(agentId: string) {
     }
   }, [agentId, selected])
   useEffect(() => {
+    setDetail(null)
+    setError("")
     const stop = poll(
       async () => {
         if (document.visibilityState === "visible") await refresh()
@@ -100,7 +105,7 @@ export function useExecution(agentId: string) {
   }
   return {
     runs,
-    detail,
+    detail: detail?.id === selected ? detail : null,
     selected,
     busy,
     error,

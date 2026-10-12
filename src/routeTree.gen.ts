@@ -9,18 +9,27 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as WorkspaceRouteImport } from './routes/_workspace'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as TwoFactorRouteImport } from './routes/two-factor'
+import { Route as WorkspaceIndexRouteImport } from './routes/_workspace.index'
 import { Route as ApiSetupRouteImport } from './routes/api.setup'
+import { Route as WorkspaceAgentsIndexRouteImport } from './routes/_workspace.agents.index'
+import { Route as WorkspaceAgentsArchivedRouteImport } from './routes/_workspace.agents.archived'
+import { Route as WorkspaceAgentsNewRouteImport } from './routes/_workspace.agents.new'
 import { Route as ApiAgentSplatRouteImport } from './routes/api.agent.$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api.auth.$'
+import { Route as WorkspaceAgentsAgentIdIndexRouteImport } from './routes/_workspace.agents.$agentId.index'
+import { Route as WorkspaceAgentsAgentIdEditRouteImport } from './routes/_workspace.agents.$agentId.edit'
 import { Route as ApiHooksAgentRoutineRouteImport } from './routes/api.hooks.$agent.$routine'
+import { Route as WorkspaceAgentsAgentIdPanelIndexRouteImport } from './routes/_workspace.agents.$agentId.$panel.index'
+import { Route as WorkspaceAgentsAgentIdPanelItemIdRouteImport } from './routes/_workspace.agents.$agentId.$panel.$itemId'
+import { Route as WorkspaceAgentsAgentIdSettingsIndexRouteImport } from './routes/_workspace.agents.$agentId.settings.index'
+import { Route as WorkspaceAgentsAgentIdSettingsSectionRouteImport } from './routes/_workspace.agents.$agentId.settings.$section'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const WorkspaceRoute = WorkspaceRouteImport.update({
+  id: '/_workspace',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
@@ -38,10 +47,30 @@ const TwoFactorRoute = TwoFactorRouteImport.update({
   path: '/two-factor',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WorkspaceIndexRoute = WorkspaceIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => WorkspaceRoute,
+} as any)
 const ApiSetupRoute = ApiSetupRouteImport.update({
   id: '/api/setup',
   path: '/api/setup',
   getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspaceAgentsIndexRoute = WorkspaceAgentsIndexRouteImport.update({
+  id: '/agents/',
+  path: '/agents/',
+  getParentRoute: () => WorkspaceRoute,
+} as any)
+const WorkspaceAgentsArchivedRoute = WorkspaceAgentsArchivedRouteImport.update({
+  id: '/agents/archived',
+  path: '/agents/archived',
+  getParentRoute: () => WorkspaceRoute,
+} as any)
+const WorkspaceAgentsNewRoute = WorkspaceAgentsNewRouteImport.update({
+  id: '/agents/new',
+  path: '/agents/new',
+  getParentRoute: () => WorkspaceRoute,
 } as any)
 const ApiAgentSplatRoute = ApiAgentSplatRouteImport.update({
   id: '/api/agent/$',
@@ -53,42 +82,106 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WorkspaceAgentsAgentIdIndexRoute =
+  WorkspaceAgentsAgentIdIndexRouteImport.update({
+    id: '/agents/$agentId/',
+    path: '/agents/$agentId/',
+    getParentRoute: () => WorkspaceRoute,
+  } as any)
+const WorkspaceAgentsAgentIdEditRoute =
+  WorkspaceAgentsAgentIdEditRouteImport.update({
+    id: '/agents/$agentId/edit',
+    path: '/agents/$agentId/edit',
+    getParentRoute: () => WorkspaceRoute,
+  } as any)
 const ApiHooksAgentRoutineRoute = ApiHooksAgentRoutineRouteImport.update({
   id: '/api/hooks/$agent/$routine',
   path: '/api/hooks/$agent/$routine',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WorkspaceAgentsAgentIdPanelIndexRoute =
+  WorkspaceAgentsAgentIdPanelIndexRouteImport.update({
+    id: '/agents/$agentId/$panel/',
+    path: '/agents/$agentId/$panel/',
+    getParentRoute: () => WorkspaceRoute,
+  } as any)
+const WorkspaceAgentsAgentIdPanelItemIdRoute =
+  WorkspaceAgentsAgentIdPanelItemIdRouteImport.update({
+    id: '/agents/$agentId/$panel/$itemId',
+    path: '/agents/$agentId/$panel/$itemId',
+    getParentRoute: () => WorkspaceRoute,
+  } as any)
+const WorkspaceAgentsAgentIdSettingsIndexRoute =
+  WorkspaceAgentsAgentIdSettingsIndexRouteImport.update({
+    id: '/agents/$agentId/settings/',
+    path: '/agents/$agentId/settings/',
+    getParentRoute: () => WorkspaceRoute,
+  } as any)
+const WorkspaceAgentsAgentIdSettingsSectionRoute =
+  WorkspaceAgentsAgentIdSettingsSectionRouteImport.update({
+    id: '/agents/$agentId/settings/$section',
+    path: '/agents/$agentId/settings/$section',
+    getParentRoute: () => WorkspaceRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/': typeof WorkspaceIndexRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/two-factor': typeof TwoFactorRoute
   '/api/setup': typeof ApiSetupRoute
+  '/agents/archived': typeof WorkspaceAgentsArchivedRoute
+  '/agents/new': typeof WorkspaceAgentsNewRoute
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/agents/': typeof WorkspaceAgentsIndexRoute
+  '/agents/$agentId/edit': typeof WorkspaceAgentsAgentIdEditRoute
   '/api/hooks/$agent/$routine': typeof ApiHooksAgentRoutineRoute
+  '/agents/$agentId/': typeof WorkspaceAgentsAgentIdIndexRoute
+  '/agents/$agentId/$panel/$itemId': typeof WorkspaceAgentsAgentIdPanelItemIdRoute
+  '/agents/$agentId/settings/$section': typeof WorkspaceAgentsAgentIdSettingsSectionRoute
+  '/agents/$agentId/$panel/': typeof WorkspaceAgentsAgentIdPanelIndexRoute
+  '/agents/$agentId/settings/': typeof WorkspaceAgentsAgentIdSettingsIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/two-factor': typeof TwoFactorRoute
   '/api/setup': typeof ApiSetupRoute
+  '/': typeof WorkspaceIndexRoute
+  '/agents/archived': typeof WorkspaceAgentsArchivedRoute
+  '/agents/new': typeof WorkspaceAgentsNewRoute
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/agents': typeof WorkspaceAgentsIndexRoute
+  '/agents/$agentId/edit': typeof WorkspaceAgentsAgentIdEditRoute
   '/api/hooks/$agent/$routine': typeof ApiHooksAgentRoutineRoute
+  '/agents/$agentId': typeof WorkspaceAgentsAgentIdIndexRoute
+  '/agents/$agentId/$panel/$itemId': typeof WorkspaceAgentsAgentIdPanelItemIdRoute
+  '/agents/$agentId/settings/$section': typeof WorkspaceAgentsAgentIdSettingsSectionRoute
+  '/agents/$agentId/$panel': typeof WorkspaceAgentsAgentIdPanelIndexRoute
+  '/agents/$agentId/settings': typeof WorkspaceAgentsAgentIdSettingsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
+  '/_workspace': typeof WorkspaceRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/two-factor': typeof TwoFactorRoute
   '/api/setup': typeof ApiSetupRoute
+  '/_workspace/': typeof WorkspaceIndexRoute
+  '/_workspace/agents/archived': typeof WorkspaceAgentsArchivedRoute
+  '/_workspace/agents/new': typeof WorkspaceAgentsNewRoute
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/_workspace/agents/': typeof WorkspaceAgentsIndexRoute
+  '/_workspace/agents/$agentId/edit': typeof WorkspaceAgentsAgentIdEditRoute
   '/api/hooks/$agent/$routine': typeof ApiHooksAgentRoutineRoute
+  '/_workspace/agents/$agentId/': typeof WorkspaceAgentsAgentIdIndexRoute
+  '/_workspace/agents/$agentId/$panel/$itemId': typeof WorkspaceAgentsAgentIdPanelItemIdRoute
+  '/_workspace/agents/$agentId/settings/$section': typeof WorkspaceAgentsAgentIdSettingsSectionRoute
+  '/_workspace/agents/$agentId/$panel/': typeof WorkspaceAgentsAgentIdPanelIndexRoute
+  '/_workspace/agents/$agentId/settings/': typeof WorkspaceAgentsAgentIdSettingsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -98,33 +191,61 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/two-factor'
     | '/api/setup'
+    | '/agents/archived'
+    | '/agents/new'
     | '/api/agent/$'
     | '/api/auth/$'
+    | '/agents/'
+    | '/agents/$agentId/edit'
     | '/api/hooks/$agent/$routine'
+    | '/agents/$agentId/'
+    | '/agents/$agentId/$panel/$itemId'
+    | '/agents/$agentId/settings/$section'
+    | '/agents/$agentId/$panel/'
+    | '/agents/$agentId/settings/'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
     | '/forgot-password'
     | '/reset-password'
     | '/two-factor'
     | '/api/setup'
+    | '/'
+    | '/agents/archived'
+    | '/agents/new'
     | '/api/agent/$'
     | '/api/auth/$'
+    | '/agents'
+    | '/agents/$agentId/edit'
     | '/api/hooks/$agent/$routine'
+    | '/agents/$agentId'
+    | '/agents/$agentId/$panel/$itemId'
+    | '/agents/$agentId/settings/$section'
+    | '/agents/$agentId/$panel'
+    | '/agents/$agentId/settings'
   id:
     | '__root__'
-    | '/'
+    | '/_workspace'
     | '/forgot-password'
     | '/reset-password'
     | '/two-factor'
     | '/api/setup'
+    | '/_workspace/'
+    | '/_workspace/agents/archived'
+    | '/_workspace/agents/new'
     | '/api/agent/$'
     | '/api/auth/$'
+    | '/_workspace/agents/'
+    | '/_workspace/agents/$agentId/edit'
     | '/api/hooks/$agent/$routine'
+    | '/_workspace/agents/$agentId/'
+    | '/_workspace/agents/$agentId/$panel/$itemId'
+    | '/_workspace/agents/$agentId/settings/$section'
+    | '/_workspace/agents/$agentId/$panel/'
+    | '/_workspace/agents/$agentId/settings/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
+  WorkspaceRoute: typeof WorkspaceRouteWithChildren
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   TwoFactorRoute: typeof TwoFactorRoute
@@ -136,11 +257,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
+    '/_workspace': {
+      id: '/_workspace'
+      path: ''
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+      preLoaderRoute: typeof WorkspaceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/forgot-password': {
@@ -164,12 +285,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TwoFactorRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_workspace/': {
+      id: '/_workspace/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof WorkspaceIndexRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
     '/api/setup': {
       id: '/api/setup'
       path: '/api/setup'
       fullPath: '/api/setup'
       preLoaderRoute: typeof ApiSetupRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_workspace/agents/': {
+      id: '/_workspace/agents/'
+      path: '/agents'
+      fullPath: '/agents/'
+      preLoaderRoute: typeof WorkspaceAgentsIndexRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
+    '/_workspace/agents/archived': {
+      id: '/_workspace/agents/archived'
+      path: '/agents/archived'
+      fullPath: '/agents/archived'
+      preLoaderRoute: typeof WorkspaceAgentsArchivedRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
+    '/_workspace/agents/new': {
+      id: '/_workspace/agents/new'
+      path: '/agents/new'
+      fullPath: '/agents/new'
+      preLoaderRoute: typeof WorkspaceAgentsNewRouteImport
+      parentRoute: typeof WorkspaceRoute
     }
     '/api/agent/$': {
       id: '/api/agent/$'
@@ -185,6 +334,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_workspace/agents/$agentId/': {
+      id: '/_workspace/agents/$agentId/'
+      path: '/agents/$agentId'
+      fullPath: '/agents/$agentId/'
+      preLoaderRoute: typeof WorkspaceAgentsAgentIdIndexRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
+    '/_workspace/agents/$agentId/edit': {
+      id: '/_workspace/agents/$agentId/edit'
+      path: '/agents/$agentId/edit'
+      fullPath: '/agents/$agentId/edit'
+      preLoaderRoute: typeof WorkspaceAgentsAgentIdEditRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
     '/api/hooks/$agent/$routine': {
       id: '/api/hooks/$agent/$routine'
       path: '/api/hooks/$agent/$routine'
@@ -192,11 +355,72 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiHooksAgentRoutineRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_workspace/agents/$agentId/$panel/': {
+      id: '/_workspace/agents/$agentId/$panel/'
+      path: '/agents/$agentId/$panel'
+      fullPath: '/agents/$agentId/$panel/'
+      preLoaderRoute: typeof WorkspaceAgentsAgentIdPanelIndexRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
+    '/_workspace/agents/$agentId/$panel/$itemId': {
+      id: '/_workspace/agents/$agentId/$panel/$itemId'
+      path: '/agents/$agentId/$panel/$itemId'
+      fullPath: '/agents/$agentId/$panel/$itemId'
+      preLoaderRoute: typeof WorkspaceAgentsAgentIdPanelItemIdRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
+    '/_workspace/agents/$agentId/settings/': {
+      id: '/_workspace/agents/$agentId/settings/'
+      path: '/agents/$agentId/settings'
+      fullPath: '/agents/$agentId/settings/'
+      preLoaderRoute: typeof WorkspaceAgentsAgentIdSettingsIndexRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
+    '/_workspace/agents/$agentId/settings/$section': {
+      id: '/_workspace/agents/$agentId/settings/$section'
+      path: '/agents/$agentId/settings/$section'
+      fullPath: '/agents/$agentId/settings/$section'
+      preLoaderRoute: typeof WorkspaceAgentsAgentIdSettingsSectionRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
   }
 }
 
+interface WorkspaceRouteChildren {
+  WorkspaceIndexRoute: typeof WorkspaceIndexRoute
+  WorkspaceAgentsArchivedRoute: typeof WorkspaceAgentsArchivedRoute
+  WorkspaceAgentsNewRoute: typeof WorkspaceAgentsNewRoute
+  WorkspaceAgentsIndexRoute: typeof WorkspaceAgentsIndexRoute
+  WorkspaceAgentsAgentIdEditRoute: typeof WorkspaceAgentsAgentIdEditRoute
+  WorkspaceAgentsAgentIdIndexRoute: typeof WorkspaceAgentsAgentIdIndexRoute
+  WorkspaceAgentsAgentIdPanelItemIdRoute: typeof WorkspaceAgentsAgentIdPanelItemIdRoute
+  WorkspaceAgentsAgentIdSettingsSectionRoute: typeof WorkspaceAgentsAgentIdSettingsSectionRoute
+  WorkspaceAgentsAgentIdPanelIndexRoute: typeof WorkspaceAgentsAgentIdPanelIndexRoute
+  WorkspaceAgentsAgentIdSettingsIndexRoute: typeof WorkspaceAgentsAgentIdSettingsIndexRoute
+}
+
+const WorkspaceRouteChildren: WorkspaceRouteChildren = {
+  WorkspaceIndexRoute: WorkspaceIndexRoute,
+  WorkspaceAgentsArchivedRoute: WorkspaceAgentsArchivedRoute,
+  WorkspaceAgentsNewRoute: WorkspaceAgentsNewRoute,
+  WorkspaceAgentsIndexRoute: WorkspaceAgentsIndexRoute,
+  WorkspaceAgentsAgentIdEditRoute: WorkspaceAgentsAgentIdEditRoute,
+  WorkspaceAgentsAgentIdIndexRoute: WorkspaceAgentsAgentIdIndexRoute,
+  WorkspaceAgentsAgentIdPanelItemIdRoute:
+    WorkspaceAgentsAgentIdPanelItemIdRoute,
+  WorkspaceAgentsAgentIdSettingsSectionRoute:
+    WorkspaceAgentsAgentIdSettingsSectionRoute,
+  WorkspaceAgentsAgentIdPanelIndexRoute: WorkspaceAgentsAgentIdPanelIndexRoute,
+  WorkspaceAgentsAgentIdSettingsIndexRoute:
+    WorkspaceAgentsAgentIdSettingsIndexRoute,
+}
+
+const WorkspaceRouteWithChildren = WorkspaceRoute._addFileChildren(
+  WorkspaceRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
+  WorkspaceRoute: WorkspaceRouteWithChildren,
   ForgotPasswordRoute: ForgotPasswordRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   TwoFactorRoute: TwoFactorRoute,

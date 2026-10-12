@@ -1,13 +1,15 @@
+import type { WorkspaceQuery } from "@/navigation/workspace"
+import { parseAgentId } from "@/navigation/workspace"
 import { AgentMark, agentTone } from "@/components/agent-mark"
 import { useEffect, useState } from "react"
 import { Schema } from "effect"
 import { ArrowRight, ChevronDown, Clock3, RefreshCw } from "lucide-react"
 import {
+  ActivityFilter as importedFilter,
   ActivityPage,
-  type ActivityAgent,
   type ActivityCursor,
+  type ActivityAgent,
   type ActivityEntry,
-  type ActivityFilter,
 } from "@/activity/contracts"
 import { agentApi } from "@/http/client"
 import { poll } from "@/http/poll"
@@ -32,20 +34,33 @@ export function ActivityTimeline({
   onDetails,
   onOpenBot,
   onMemory,
+  record,
+  onRecordChange: setRecord,
+  filters,
+  onFiltersChange,
 }: {
+  filters: Pick<WorkspaceQuery, "scope" | "filter" | "cursor">
+  onFiltersChange: (
+    value: Pick<WorkspaceQuery, "scope" | "filter" | "cursor">
+  ) => void
+  record: Pick<ActivityEntry, "agent" | "reference"> | null
+  onRecordChange: (
+    record: Pick<ActivityEntry, "agent" | "reference"> | null
+  ) => void
   agent: ActivityAgent
   agents: readonly ActivityAgent[]
   onDetails: (agent: ActivityAgent) => void
   onOpenBot: (id: ActivityAgent["id"]) => void
   onMemory: (id: ActivityAgent["id"]) => void
 }) {
-  const [scope, setScope] = useState<string>(agent.id)
-  const [filter, setFilter] = useState<ActivityFilter>("all")
-  const [cursor, setCursor] = useState<ActivityCursor | null>(null)
+  const scope = filters.scope ?? agent.id
+  const filter = filters.filter ?? "all"
+  const cursor = filters.cursor ?? null
+  const setCursor = (value: ActivityCursor | null) =>
+    onFiltersChange({ ...filters, cursor: value ?? undefined })
   const [page, setPage] = useState<ActivityPage | null>(null)
   const [error, setError] = useState("")
   const [retry, setRetry] = useState(0)
-  const [record, setRecord] = useState<ActivityEntry | null>(null)
   useEffect(() => {
     let current = true
     const controller = new AbortController()
@@ -90,12 +105,15 @@ export function ActivityTimeline({
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="workbench-title">Activity</h2>
-        <Select
+        <Select<string>
           value={scope}
           onValueChange={(value) => {
             if (value) {
-              setScope(value)
-              setCursor(null)
+              onFiltersChange({
+                ...filters,
+                scope: value === "all" ? "all" : parseAgentId(value),
+                cursor: undefined,
+              })
             }
           }}
         >
@@ -124,8 +142,11 @@ export function ActivityTimeline({
           value={[filter]}
           onValueChange={(values) => {
             if (values[0]) {
-              setFilter(values[0] as ActivityFilter)
-              setCursor(null)
+              onFiltersChange({
+                ...filters,
+                filter: Schema.decodeUnknownSync(importedFilter)(values[0]),
+                cursor: undefined,
+              })
             }
           }}
           aria-label="Filter activity"
@@ -290,7 +311,7 @@ export function ActivityTimeline({
       </div>
       {record && (
         <ActivityRecord
-          key={record.key}
+          key={`${record.agent.id}:${record.reference}`}
           entry={record}
           onClose={() => setRecord(null)}
           onOpenBot={() => onOpenBot(record.agent.id)}

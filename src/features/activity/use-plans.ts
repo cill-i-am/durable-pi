@@ -79,5 +79,12 @@ export function usePlans(
       window.removeEventListener("online", reconnect)
     }
   }, [refresh, enabled])
-  return { list, detail, approvals, error, loading, refresh }
+  return {
+    list,
+    detail: detail?.plan.id === selected ? detail : null,
+    approvals,
+    error,
+    loading,
+    refresh,
+  }
 }

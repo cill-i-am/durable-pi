@@ -12,7 +12,11 @@ import { agentApi } from "@/http/client"
 import { poll } from "@/http/poll"
 import { maintainSessionLease, type LeaseState } from "./session-lease"
 
-export function useTerminal(agentId: string) {
+export function useTerminal(
+  agentId: string,
+  selected: string | null,
+  setSelected: (id: string | null) => void
+) {
   const [networkPolicy, setNetworkPolicy] = useState<
     TerminalNetworkPolicy | null | undefined
   >(undefined)
@@ -46,7 +50,6 @@ export function useTerminal(agentId: string) {
   const [cleanupError, setCleanupError] = useState<string | null>(null)
   const [runtimeBusy, setRuntimeBusy] = useState(false)
   const [savedAt, setSavedAt] = useState<number | null>(null)
-  const [selected, setSelected] = useState<string | null>(null)
   const [detail, setDetail] = useState<CommandRun | null>(null)
   const [error, setError] = useState("")
   const [busy, setBusy] = useState(false)
@@ -82,6 +85,8 @@ export function useTerminal(agentId: string) {
     }
   }, [agentId, selected])
   useEffect(() => {
+    setDetail(null)
+    setError("")
     const stop = poll(
       async () => {
         if (document.visibilityState === "visible") await refresh()
@@ -251,7 +256,7 @@ export function useTerminal(agentId: string) {
       }
     },
     savedAt,
-    detail,
+    detail: detail?.id === selected ? detail : null,
     selected,
     busy,
     error,

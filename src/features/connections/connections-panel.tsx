@@ -27,6 +27,8 @@ const statusLabel = {
   unavailable: "Unavailable",
 }
 export function ConnectionsPanel({
+  callbackResult,
+  onCallbackConsumed,
   embedded = false,
   onPendingChange,
   agentId,
@@ -35,6 +37,8 @@ export function ConnectionsPanel({
   onOpenChange: setOpen,
   onSaved,
 }: {
+  callbackResult?: "connected" | "failed"
+  onCallbackConsumed: () => void
   embedded?: boolean
   onPendingChange?: (pending: boolean) => void
   agentId: string
@@ -51,8 +55,7 @@ export function ConnectionsPanel({
   const [callback, setCallback] = useState("")
   const disabled = state.busy || state.loading || !state.ready
   useEffect(() => {
-    const url = new URL(window.location.href),
-      result = url.searchParams.get("connections")
+    const result = callbackResult
     if (!result) return
     setCallback(
       result === "connected"
@@ -61,9 +64,8 @@ export function ConnectionsPanel({
     )
     setOpen(true)
     void state.refresh()
-    url.searchParams.delete("connections")
-    window.history.replaceState(window.history.state, "", url)
-  }, [state.refresh])
+    onCallbackConsumed()
+  }, [callbackResult, onCallbackConsumed, state.refresh])
   useEffect(() => {
     onPendingChange?.(state.busy || !!draft)
   }, [state.busy, !!draft, onPendingChange])

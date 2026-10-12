@@ -10,11 +10,15 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 export function ExecutionWorkbench({
   agentId,
   agentName,
+  selected,
+  onSelect,
 }: {
+  selected: string | null
+  onSelect: (id: string | null) => void
   agentId: string
   agentName: string
 }) {
-  const execution = useExecution(agentId)
+  const execution = useExecution(agentId, selected, onSelect)
   const [code, setCode] = useState(
     "console.log('Items:', input.length)\nreturn input.reduce((sum, n) => sum + n, 0)"
   )
