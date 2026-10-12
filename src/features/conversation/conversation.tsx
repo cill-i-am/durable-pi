@@ -508,7 +508,7 @@ export function Conversation({
           modelControl={(delivery) =>
             delivery === "steer" ? (
               <span
-                className="text-xs text-muted-foreground"
+                className="block truncate text-xs text-muted-foreground"
                 title={`${active?.routing?.model ?? "Active model"} · ${active?.routing?.thinking ?? "pinned effort"}`}
               >
                 Active model
@@ -620,85 +620,92 @@ function Composer({
         <InputGroupAddon align="block-end" className="composer-controls">
           {attachmentControl}
           <div className="composer-model">{modelControl(delivery)}</div>
-          <div className="ml-auto flex items-center gap-2">
+          <div
+            className="composer-actions"
+            role="group"
+            aria-label="Send message and delivery"
+          >
+            {active && (
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <InputGroupButton
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="composer-delivery-trigger rounded-full"
+                      disabled={stopping || pending}
+                    />
+                  }
+                  aria-label={`Message delivery: ${delivery === "steer" ? "steer this reply" : "queue next reply"}`}
+                >
+                  {delivery === "steer" ? "Steer" : "Queue"}
+                  <ChevronDown data-icon="inline-end" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  side="top"
+                  align="end"
+                  className="min-w-52"
+                >
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel>While this reply runs</DropdownMenuLabel>
+                    <DropdownMenuRadioGroup
+                      value={delivery}
+                      onValueChange={(value) => {
+                        if (value === "steer" || value === "followUp")
+                          setMode(value)
+                      }}
+                    >
+                      <DropdownMenuRadioItem value="steer">
+                        Steer this reply
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="followUp">
+                        Queue next reply
+                      </DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
             {active && (
               <InputGroupButton
                 type="button"
-                variant="outline"
+                variant="secondary"
                 size="icon-sm"
+                className="composer-action rounded-full"
                 onClick={onStop}
                 disabled={stopping}
                 aria-label="Stop response"
+                title="Stop response"
               >
                 <Square />
               </InputGroupButton>
             )}
-            <div
-              className="composer-submit-group"
-              role="group"
-              aria-label="Send message and delivery"
+            <InputGroupButton
+              type="submit"
+              variant="default"
+              size="icon-sm"
+              className="composer-action rounded-full"
+              disabled={
+                (!draft.trim() && !hasAttachments) || pending || !enabled
+              }
+              aria-label={
+                active
+                  ? delivery === "steer"
+                    ? "Steer response"
+                    : "Queue message"
+                  : "Send message"
+              }
+              title={
+                active
+                  ? delivery === "steer"
+                    ? "Steer response"
+                    : "Queue message"
+                  : "Send message"
+              }
             >
-              <InputGroupButton
-                type="submit"
-                variant="default"
-                size="sm"
-                className="composer-send"
-                disabled={
-                  (!draft.trim() && !hasAttachments) || pending || !enabled
-                }
-                aria-label={
-                  active
-                    ? delivery === "steer"
-                      ? "Steer response"
-                      : "Queue message"
-                    : "Send message"
-                }
-              >
-                <ArrowUp data-icon="inline-start" />
-                <span>
-                  {active ? (delivery === "steer" ? "Steer" : "Queue") : "Send"}
-                </span>
-              </InputGroupButton>
-              {active && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    render={
-                      <InputGroupButton
-                        type="button"
-                        variant="default"
-                        size="icon-sm"
-                        className="composer-delivery-trigger"
-                        disabled={stopping || pending}
-                      />
-                    }
-                    aria-label="Message delivery"
-                  >
-                    <ChevronDown />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent side="top" align="end">
-                    <DropdownMenuGroup>
-                      <DropdownMenuLabel>
-                        While this reply runs
-                      </DropdownMenuLabel>
-                      <DropdownMenuRadioGroup
-                        value={delivery}
-                        onValueChange={(value) => {
-                          if (value === "steer" || value === "followUp")
-                            setMode(value)
-                        }}
-                      >
-                        <DropdownMenuRadioItem value="steer">
-                          Steer this reply
-                        </DropdownMenuRadioItem>
-                        <DropdownMenuRadioItem value="followUp">
-                          Queue next reply
-                        </DropdownMenuRadioItem>
-                      </DropdownMenuRadioGroup>
-                    </DropdownMenuGroup>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-            </div>
+              <ArrowUp />
+            </InputGroupButton>
           </div>
         </InputGroupAddon>
       </InputGroup>
