@@ -1169,7 +1169,7 @@ Local verification: production CSS checked in the actual chat and at 320px; code
 
 ### Durable run observability — 12 October 2026
 
-Status: implemented and locally verified; deployment verification pending. Follow-up to native tracing verification: Pi can outlive an invocation, which force-closes a long custom span. Keep Alchemy's native Effect tracer for invocation diagnostics; use durable records for the complete run view.
+Status: implemented and locally verified; [PR #68](https://github.com/cill-i-am/durable-pi/pull/68) tracks deployment and hosted verification. Follow-up to native tracing verification: Pi can outlive an invocation, which force-closes a long custom span. Keep Alchemy's native Effect tracer for invocation diagnostics; use durable records for the complete run view.
 
 - Activity owns a read-only, paginated projection by bot/run. It joins existing conversation, inference, access and recovery records. It does not dispatch, authorize, reconcile or retry work.
 - Conversation owns accepted/start/stop/finish timestamps. Access owns an atomic SQLite status-transition journal attached to its existing receipt IDs. Repeated status writes/replays add no transition. Run recovery owns its view-change history; replayed observations add no change.

@@ -46,7 +46,7 @@ Session reads coalesce only while an identical request is pending. There is no s
 
 1. Open the affected Worker under **Workers & Pages → Observability** and choose the incident's time range.
 2. Find its issue or filter structured logs by `annotations.event`. Narrow by `runId`, `turnId`, `attemptId` or `operationId` where present.
-3. Open its native trace. Compare website/session time, service-binding calls, Durable Object RPC, storage calls, model duration and tool spans.
+3. Open its native trace. Compare website/session time, service-binding calls, Durable Object RPC, storage calls and dispatch markers. Read complete model and tool-operation timings in Activity; detached work may span several invocations.
 4. Check Activity and the durable execution receipt before considering another attempt. HTTP 200 means a response was served; it does not establish model or tool success. Missing logs do not establish that an action never happened.
 5. For session lookup errors, inspect the logged cause and D1 spans. The initial incident showed a lookup failure; its underlying D1 cause was not established. Do not treat it as a confirmed D1 outage.
 6. For stalled work, inspect native Lifecycle attention events and the current run state. Waiting for approval, external results or user input is legitimate; observability does not restart it.
