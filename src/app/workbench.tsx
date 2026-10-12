@@ -1,3 +1,6 @@
+import { Link } from "@tanstack/react-router"
+import { useWorkspaceLocation } from "./use-workspace-location"
+import { workspaceDestination } from "@/navigation/workspace"
 import { useRef, type ReactNode } from "react"
 import {
   Globe,
@@ -16,7 +19,7 @@ import {
 import { AgentMark } from "@/components/agent-mark"
 import type { Workbench } from "./workspace-navigation"
 import { Button } from "@/components/ui/button"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { Tabs, TabsContent } from "@/components/ui/tabs"
 import {
   Sheet,
   SheetContent,
@@ -67,6 +70,7 @@ export function WorkbenchPanel({
   children: ReactNode
   overlays?: ReactNode
 }) {
+  const location = useWorkspaceLocation()
   const container = useRef<HTMLDivElement>(null)
   const extra = more.find((tab) => tab.id === value)
   const tabs = extra ? [...primary, extra] : primary
@@ -95,13 +99,7 @@ export function WorkbenchPanel({
               Private tools, files, activity and saved work for this agent.
             </SheetDescription>
           </SheetHeader>
-          <Tabs
-            value={value}
-            onValueChange={(next) => {
-              if (!locked) onChange(next as Workbench)
-            }}
-            className="workbench-tabs"
-          >
+          <Tabs value={value} className="workbench-tabs">
             <div className="workbench-tabbar">
               <div className="mobile-workbench-heading">
                 <strong>Workspace</strong>
@@ -111,14 +109,32 @@ export function WorkbenchPanel({
                 </span>
               </div>
               <div className="workbench-tab-scroll">
-                <TabsList variant="line" aria-label="Workbench tools">
+                <nav
+                  data-slot="tabs-list"
+                  className="group/tabs-list flex h-8 gap-1"
+                  data-variant="line"
+                  aria-label="Workbench tools"
+                >
                   {tabs.map((tab) => (
-                    <TabsTrigger key={tab.id} value={tab.id} disabled={locked}>
+                    <Link
+                      key={tab.id}
+                      {...workspaceDestination(location.agentId!, {
+                        panel: tab.id,
+                      })}
+                      data-slot="tabs-trigger"
+                      data-active={value === tab.id ? "" : undefined}
+                      aria-current={value === tab.id ? "page" : undefined}
+                      aria-disabled={locked || undefined}
+                      onClick={(event) => {
+                        if (locked) event.preventDefault()
+                      }}
+                      className="relative inline-flex items-center justify-center gap-1.5 px-1.5 py-0.5 text-sm font-medium whitespace-nowrap text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring aria-disabled:pointer-events-none [&_svg]:size-4"
+                    >
                       <tab.icon />
                       {tab.label}
-                    </TabsTrigger>
+                    </Link>
                   ))}
-                </TabsList>
+                </nav>
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger
@@ -138,7 +154,13 @@ export function WorkbenchPanel({
                     {more.map((tab) => (
                       <DropdownMenuItem
                         key={tab.id}
-                        onClick={() => onChange(tab.id)}
+                        render={
+                          <Link
+                            {...workspaceDestination(location.agentId!, {
+                              panel: tab.id,
+                            })}
+                          />
+                        }
                       >
                         <tab.icon />
                         {tab.label}

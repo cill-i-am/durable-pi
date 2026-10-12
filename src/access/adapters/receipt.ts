@@ -30,13 +30,11 @@ export function toolReceipt(result: ToolExecutionResult): ToolExecutionResult {
         ? result.usage
         : undefined,
     diagnostics: [
-      ...(result.diagnostics ?? [])
-        .slice(0, 16)
-        .map((value) => ({
-          ...value,
-          message: value.message.slice(0, 512),
-          code: value.code?.slice(0, 80),
-        })),
+      ...(result.diagnostics ?? []).slice(0, 16).map((value) => ({
+        ...value,
+        message: value.message.slice(0, 512),
+        code: value.code?.slice(0, 80),
+      })),
       {
         severity: "warn",
         code: "durable_output_truncated",

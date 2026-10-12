@@ -30,27 +30,48 @@ import {
 export function MemoryWorkbench({
   state,
   agentId,
+  tab,
+  onTabChange: setTab,
+  query,
+  onQueryChange: setQuery,
 }: {
+  query: string
+  onQueryChange: (query: string) => void
+  tab: "notes" | "history" | "tree" | "files"
+  onTabChange: (tab: "notes" | "history" | "tree" | "files") => void
   state: ChatState | null
   agentId: string
 }) {
-  const api = agentApi(agentId)
-  const [tab, setTab] = useState("notes")
-  const [query, setQuery] = useState(""),
-    [results, setResults] = useState<
+  const api = useMemo(() => agentApi(agentId), [agentId])
+  const [results, setResults] = useState<
       { id: number; text: string; kind: string; date: string }[]
     >([]),
     [error, setError] = useState("")
   async function search(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
     setTab("history")
-    try {
-      setResults(await api(`search?q=${encodeURIComponent(query)}`))
-      setError("")
-    } catch {
-      setError("Could not search memory.")
-    }
   }
+  useEffect(() => {
+    if (tab !== "history" || !query.trim()) {
+      setResults([])
+      return
+    }
+    const controller = new AbortController()
+    setResults([])
+    setError("")
+    void api<{ id: number; text: string; kind: string; date: string }[]>(
+      `search?q=${encodeURIComponent(query)}`,
+      undefined,
+      controller.signal
+    )
+      .then((value) => {
+        if (!controller.signal.aborted) setResults(value)
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setError("Could not search memory.")
+      })
+    return () => controller.abort()
+  }, [api, tab, query])
   return (
     <section className="workbench-body memory-workbench">
       <header className="workbench-heading">
@@ -72,6 +93,7 @@ export function MemoryWorkbench({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search conversation history…"
+              maxLength={500}
             />
             <Button
               type="submit"
@@ -85,7 +107,18 @@ export function MemoryWorkbench({
           </div>
         </Field>
       </form>
-      <Tabs value={tab} onValueChange={setTab}>
+      <Tabs
+        value={tab}
+        onValueChange={(value) => {
+          if (
+            value === "notes" ||
+            value === "history" ||
+            value === "tree" ||
+            value === "files"
+          )
+            setTab(value)
+        }}
+      >
         <TabsList variant="line">
           <TabsTrigger value="notes">Saved notes</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>

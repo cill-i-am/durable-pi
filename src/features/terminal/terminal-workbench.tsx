@@ -21,14 +21,21 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 export function TerminalWorkbench({
   agentId,
   agentName,
+  selected,
+  onSelect,
+  tab,
+  onTabChange,
 }: {
+  tab: "commands" | "interactive" | "transfers"
+  onTabChange: (tab: "commands" | "interactive" | "transfers") => void
+  selected: string | null
+  onSelect: (id: string | null) => void
   agentId: string
   agentName: string
 }) {
-  const terminal = useTerminal(agentId)
+  const terminal = useTerminal(agentId, selected, onSelect)
   const [networkSettings, setNetworkSettings] =
     useState<TerminalNetworkPolicy | null>(null)
-  const [tab, setTab] = useState<string | number>("commands")
   const [command, setCommand] = useState(
     'printf "Hello from Linux\\n"\nls -la /workspace'
   )
@@ -187,13 +194,23 @@ export function TerminalWorkbench({
                   : "Checking internet access…"}
             </span>
           </div>
-          <Tabs value={tab} onValueChange={setTab}>
+          <Tabs
+            value={tab}
+            onValueChange={(value) => {
+              if (
+                value === "commands" ||
+                value === "interactive" ||
+                value === "transfers"
+              )
+                onTabChange(value)
+            }}
+          >
             <TabsList variant="line">
               <TabsTrigger value="commands">Commands</TabsTrigger>
               <TabsTrigger value="interactive">Interactive</TabsTrigger>
-              <TabsTrigger value="files">File transfer</TabsTrigger>
+              <TabsTrigger value="transfers">File transfer</TabsTrigger>
             </TabsList>
-            <TabsContent value="files">
+            <TabsContent value="transfers">
               <FileTransfers
                 agentId={agentId}
                 busy={

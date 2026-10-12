@@ -22,6 +22,28 @@ for (;;) {
     await setTimeout(5000)
   }
 }
+// These are native pages, not API actions or client-only root selections.
+for (const path of [
+  "/agents",
+  "/agents/archived?q=synthetic",
+  "/agents/new",
+  "/agents/home",
+  "/agents/home/edit",
+  "/agents/home/settings/general",
+  "/agents/home/settings/security",
+  "/agents/home/files/synthetic_file?preview=source",
+  "/agents/home/activity?scope=all&filter=attention",
+  "/agents/home/memory?tab=history&query=synthetic",
+]) {
+  const response = await request(path)
+  assert.equal(response.status, 200, `Page failed: ${path}`)
+  assert.match(response.headers.get("content-type") ?? "", /text\/html/)
+  assert.ok(
+    !(await response.text()).includes("This workspace link is invalid.")
+  )
+}
+assert.equal((await request("/api/agent/bots")).status, 401)
+assert.equal((await request("/api/agent/state?agent=home")).status, 401)
 if (process.env.LEGACY_APP_URL) {
   const legacy = await fetch(process.env.LEGACY_APP_URL + "/", {
     redirect: "manual",

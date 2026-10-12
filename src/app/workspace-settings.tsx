@@ -1,3 +1,6 @@
+import { Link } from "@tanstack/react-router"
+import { useWorkspaceLocation } from "./use-workspace-location"
+import { workspaceDestination } from "@/navigation/workspace"
 import { useEffect, useState } from "react"
 import {
   ArrowLeft,
@@ -25,7 +28,6 @@ import { ModelDefaults } from "@/features/conversation/model-defaults"
 import { AgentMark, agentTone } from "@/components/agent-mark"
 import { Button } from "@/components/ui/button"
 import { AccountSecurity } from "@/features/auth"
-import { AgentEditor } from "@/features/agents"
 import {
   Dialog,
   DialogContent,
@@ -37,6 +39,7 @@ import { Switch } from "@/components/ui/switch"
 import { useInteractionSoundPreference } from "@/hooks/interaction-sound-preference"
 import { useInteractionSound } from "@/hooks/use-interaction-sound"
 import type { Workbench } from "./workspace-navigation"
+import type { SettingsCategory } from "@/navigation/workspace"
 
 const settingsSections = [
   {
@@ -70,58 +73,55 @@ const settingsSections = [
     icon: BookOpen,
   },
 ] as const
-export type SettingsCategory =
-  (typeof settingsSections)[number]["id"] | "connections"
+export type { SettingsCategory } from "@/navigation/workspace"
 
 export function WorkspaceSettings({
   category,
+  connectionResult,
+  onConnectionResultConsumed,
   onCategoryChange,
   agent,
   conversation,
   onPendingChange,
-  onAgentSaved,
   securityOpen,
   onSecurityOpenChange,
   onWorkbench,
 }: {
+  connectionResult?: "connected" | "failed"
+  onConnectionResultConsumed: () => void
   category: SettingsCategory | null
   onCategoryChange: (category: SettingsCategory | null) => void
   agent: AgentProfile
   conversation: ReturnType<typeof useConversation>
   onPendingChange: (pending: boolean) => void
-  onAgentSaved: (agent: AgentProfile) => Promise<void>
   securityOpen: boolean
   onSecurityOpenChange: (open: boolean) => void
   onWorkbench: (workbench: Workbench) => void
 }) {
-  const [editing, setEditing] = useState(false)
+  const location = useWorkspaceLocation()
+  const [securityPending, setSecurityPending] = useState(false)
   const [modelsPending, setModelsPending] = useState(false)
   const [accessPending, setAccessPending] = useState(false)
   const [connectionsPending, setConnectionsPending] = useState(false)
   const [skillsPending, setSkillsPending] = useState(false)
-  const [mobileDetail, setMobileDetail] = useState(true)
+  const mobileDetail = location.search.settingsView !== "sections"
+  const setMobileDetail = (detail: boolean) =>
+    location.update({ settingsView: detail ? undefined : "sections" })
   const sound = useInteractionSoundPreference()
   const playInteractionSound = useInteractionSound()
   const { state: sidebarState } = useSidebar()
   const locked =
-    modelsPending || accessPending || connectionsPending || skillsPending
+    modelsPending ||
+    accessPending ||
+    connectionsPending ||
+    skillsPending ||
+    securityPending
   useEffect(() => {
     onPendingChange(locked)
   }, [locked, onPendingChange])
-  useEffect(() => {
-    if (new URL(window.location.href).searchParams.has("connections"))
-      onCategoryChange("connections")
-  }, [onCategoryChange])
   function close() {
     if (!locked) {
       onCategoryChange(null)
-      setMobileDetail(true)
-    }
-  }
-  function navigate(value: SettingsCategory) {
-    if (!locked) {
-      onCategoryChange(value)
-      setMobileDetail(true)
     }
   }
   function leave(action: () => void) {
@@ -137,6 +137,7 @@ export function WorkspaceSettings({
   return (
     <Dialog
       open={category !== null}
+      modal={!securityOpen}
       dismissible={!locked}
       onOpenChange={(open) => {
         if (!open) close()
@@ -168,7 +169,18 @@ export function WorkspaceSettings({
                   className="settings-nav-item"
                   aria-current={section?.id === item.id ? "page" : undefined}
                   disabled={locked}
-                  onClick={() => navigate(item.id)}
+                  nativeButton={false}
+                  render={
+                    <Link
+                      {...workspaceDestination(agent.id, {
+                        ...location.search,
+                        settings: item.id,
+                        security: undefined,
+                        settingsView: undefined,
+                        connections: undefined,
+                      })}
+                    />
+                  }
                 >
                   <item.icon />
                   <span>
@@ -202,7 +214,18 @@ export function WorkspaceSettings({
                   size="sm"
                   variant={category === "models" ? "secondary" : "ghost"}
                   disabled={locked}
-                  onClick={() => navigate("models")}
+                  nativeButton={false}
+                  render={
+                    <Link
+                      {...workspaceDestination(agent.id, {
+                        ...location.search,
+                        settings: "models",
+                        security: undefined,
+                        settingsView: undefined,
+                        connections: undefined,
+                      })}
+                    />
+                  }
                 >
                   Models
                 </Button>
@@ -210,7 +233,18 @@ export function WorkspaceSettings({
                   size="sm"
                   variant={category === "connections" ? "secondary" : "ghost"}
                   disabled={locked}
-                  onClick={() => navigate("connections")}
+                  nativeButton={false}
+                  render={
+                    <Link
+                      {...workspaceDestination(agent.id, {
+                        ...location.search,
+                        settings: "connections",
+                        security: undefined,
+                        settingsView: undefined,
+                        connections: undefined,
+                      })}
+                    />
+                  }
                 >
                   Connected tools
                 </Button>
@@ -247,7 +281,7 @@ export function WorkspaceSettings({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setEditing(true)}
+                    onClick={() => location.openEditor(agent.id)}
                   >
                     Edit agent
                   </Button>
@@ -312,12 +346,14 @@ export function WorkspaceSettings({
               </div>
             </div>
             <ConnectionsPanel
+              callbackResult={connectionResult}
+              onCallbackConsumed={onConnectionResultConsumed}
               embedded
               agentId={agent.id}
               agentName={agent.name}
               open={category === "connections"}
               onOpenChange={(open) => {
-                if (open) navigate("connections")
+                if (open) onCategoryChange("connections")
               }}
               onSaved={reload}
               onPendingChange={setConnectionsPending}
@@ -409,14 +445,9 @@ export function WorkspaceSettings({
         )}
       </DialogContent>
       {securityOpen && (
-        <AccountSecurity onClose={() => onSecurityOpenChange(false)} />
-      )}
-      {editing && (
-        <AgentEditor
-          open
-          agent={agent}
-          onOpenChange={setEditing}
-          onSaved={onAgentSaved}
+        <AccountSecurity
+          onClose={() => onSecurityOpenChange(false)}
+          onPendingChange={setSecurityPending}
         />
       )}
     </Dialog>

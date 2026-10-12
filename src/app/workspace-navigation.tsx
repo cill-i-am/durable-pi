@@ -58,16 +58,9 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useSidebar } from "@/components/ui/sidebar"
 
-export type Workbench =
-  | "browser"
-  | "code"
-  | "apps"
-  | "terminal"
-  | "routines"
-  | "objects"
-  | "activity"
-  | "files"
-  | "memory"
+import type { Workbench } from "@/navigation/workspace"
+
+export type { Workbench } from "@/navigation/workspace"
 export type WorkspaceAction =
   | Workbench
   | "create"

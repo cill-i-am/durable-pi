@@ -107,6 +107,7 @@ export function Conversation({
   onSettings: (category: "models" | "access" | "connections" | "skills") => void
   onOpenWorkbench: (value: "files" | "memory") => void
 }) {
+  const archived = agent.status === "archived"
   const api = useMemo(() => agentApi(agent.id), [agent.id])
   const [draft, setDraft] = useState("")
   const composerInput = useRef<HTMLTextAreaElement>(null)
@@ -123,6 +124,7 @@ export function Conversation({
     ["queued", "preparing", "running", "stopping"].includes(t.status)
   )
   async function send(text: string, mode: SubmissionMode) {
+    if (archived) return false
     setSending(true)
     setError("")
     pending.current = submissionAttempt(
@@ -151,7 +153,7 @@ export function Conversation({
     }
   }
   async function retry(id: string) {
-    if (retrying) return
+    if (archived || retrying) return
     setRetrying(id)
     setError("")
     const operationId = retryKeys.current.get(id) ?? crypto.randomUUID()
@@ -179,7 +181,7 @@ export function Conversation({
     <section
       className="chat-workspace"
       onDragEnter={(event) => {
-        if (!event.dataTransfer.types.includes("Files")) return
+        if (archived || !event.dataTransfer.types.includes("Files")) return
         event.preventDefault()
         dragDepth.current++
         setDragging(true)
@@ -197,7 +199,7 @@ export function Conversation({
         event.preventDefault()
         dragDepth.current = 0
         setDragging(false)
-        if (!sending && !files.uploading)
+        if (!archived && !sending && !files.uploading)
           void files.upload(Array.from(event.dataTransfer.files), true)
       }}
     >
@@ -220,15 +222,17 @@ export function Conversation({
             <div className="chat-identity-title">
               <h1>{agent.name}</h1>
               <Badge variant="secondary">
-                {active?.status === "stopping"
-                  ? "Stopping"
-                  : state?.access?.approvals.some(
-                        (value) => value.status === "pending"
-                      )
-                    ? "Needs approval"
-                    : active
-                      ? "Working"
-                      : "Ready"}
+                {archived
+                  ? "Archived"
+                  : active?.status === "stopping"
+                    ? "Stopping"
+                    : state?.access?.approvals.some(
+                          (value) => value.status === "pending"
+                        )
+                      ? "Needs approval"
+                      : active
+                        ? "Working"
+                        : "Ready"}
               </Badge>
             </div>
             <p>
@@ -321,7 +325,7 @@ export function Conversation({
                         <Button
                           key={suggestion.label}
                           variant="ghost"
-                          disabled={sending || !!draft}
+                          disabled={archived || sending || !!draft}
                           onClick={() => {
                             setDraft(suggestion.text)
                             composerInput.current?.focus()
@@ -418,7 +422,7 @@ export function Conversation({
                         agentId={agent.id}
                         onRetry={(id) => void retry(id)}
                         retrying={retrying}
-                        canRetry={!!state.connected && !retrying}
+                        canRetry={!archived && !!state.connected && !retrying}
                       />
                       {state.access?.approvals
                         .filter((value) => value.turnId === turn.id)
@@ -438,6 +442,7 @@ export function Conversation({
                             agentId={agent.id}
                             onDecided={reload}
                             disabled={
+                              archived ||
                               turn.status === "stopping" ||
                               !["queued", "preparing", "running"].includes(
                                 turn.status
@@ -471,7 +476,7 @@ export function Conversation({
             </AlertDescription>
           </Alert>
         )}
-        {state && !state.connected && (
+        {state && !state.connected && !archived && (
           <Alert>
             <AlertDescription>
               Your model connection is unavailable. Reconnect it before sending
@@ -479,75 +484,81 @@ export function Conversation({
             </AlertDescription>
           </Alert>
         )}
-        <Composer
-          draft={draft}
-          setDraft={setDraft}
-          inputRef={composerInput}
-          name={agent.name}
-          onSend={send}
-          onStop={stop}
-          active={!!active}
-          working={
-            !!active &&
-            ["preparing", "running"].includes(active.status) &&
-            !state?.access?.approvals.some(
-              (approval) => approval.status === "pending"
-            )
-          }
-          stopping={active?.status === "stopping"}
-          pending={sending || files.uploading}
-          hasAttachments={files.selected.length > 0}
-          attachments={
-            <>
-              <FileAttachments
-                files={files.selected}
-                agentId={agent.id}
-                onRemove={sending ? undefined : files.remove}
+        {archived ? (
+          <p className="py-3 text-sm text-muted-foreground">
+            Archived agent. Restore it from the agent menu to continue.
+          </p>
+        ) : (
+          <Composer
+            draft={draft}
+            setDraft={setDraft}
+            inputRef={composerInput}
+            name={agent.name}
+            onSend={send}
+            onStop={stop}
+            active={!!active}
+            working={
+              !!active &&
+              ["preparing", "running"].includes(active.status) &&
+              !state?.access?.approvals.some(
+                (approval) => approval.status === "pending"
+              )
+            }
+            stopping={active?.status === "stopping"}
+            pending={sending || files.uploading}
+            hasAttachments={files.selected.length > 0}
+            attachments={
+              <>
+                <FileAttachments
+                  files={files.selected}
+                  agentId={agent.id}
+                  onRemove={sending ? undefined : files.remove}
+                />
+                <UploadStatus state={files} />
+                {files.error && (
+                  <p role="alert" className="py-2 text-sm text-destructive">
+                    {files.error}
+                  </p>
+                )}
+              </>
+            }
+            attachmentControl={
+              <FilePicker
+                state={files}
+                disabled={sending || files.selected.length >= 4}
               />
-              <UploadStatus state={files} />
-              {files.error && (
-                <p role="alert" className="py-2 text-sm text-destructive">
-                  {files.error}
-                </p>
-              )}
-            </>
-          }
-          attachmentControl={
-            <FilePicker
-              state={files}
-              disabled={sending || files.selected.length >= 4}
-            />
-          }
-          enabled={!!state?.connected && files.attachmentsReady}
-          modelControl={(delivery) =>
-            delivery === "steer" ? (
-              <span
-                className="block truncate text-xs text-muted-foreground"
-                title={`${active?.routing?.model ?? "Active model"} · ${active?.routing?.thinking ?? "pinned effort"}`}
-              >
-                Active model
-              </span>
-            ) : (
-              <ModelMenu
-                onOpenSettings={() => onSettings("models")}
-                agentId={agent.id}
-                profile={profile}
-                onProfile={setProfile}
-                job={job}
-                onJob={setJob}
-                disabled={sending || !!pending.current}
-                selection={{
-                  model: state?.model ?? "",
-                  thinking: Schema.is(ThinkingLevel)(state?.thinking)
-                    ? state.thinking
-                    : "medium",
-                  settingsRevision: state?.settingsRevision ?? 0,
-                }}
-                onError={setError}
-              />
-            )
-          }
-        />
+            }
+            enabled={!!state?.connected && files.attachmentsReady}
+            modelControl={(delivery) =>
+              delivery === "steer" ? (
+                <span
+                  className="block truncate text-xs text-muted-foreground"
+                  title={`${active?.routing?.model ?? "Active model"} · ${active?.routing?.thinking ?? "pinned effort"}`}
+                >
+                  Active model
+                </span>
+              ) : (
+                <ModelMenu
+                  onOpenSettings={() => onSettings("models")}
+                  agentId={agent.id}
+                  profile={profile}
+                  onProfile={setProfile}
+                  job={job}
+                  onJob={setJob}
+                  disabled={sending || !!pending.current}
+                  selection={{
+                    model: state?.model ?? "",
+                    thinking: Schema.is(ThinkingLevel)(state?.thinking)
+                      ? state.thinking
+                      : "medium",
+                    settingsRevision: state?.settingsRevision ?? 0,
+                  }}
+                  onError={setError}
+                />
+              )
+            }
+          />
+        )}
       </div>
     </section>
   )

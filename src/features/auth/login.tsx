@@ -1,5 +1,6 @@
 import { useState } from "react"
-import { Link } from "@tanstack/react-router"
+import { workspaceReturnPath } from "@/navigation/workspace"
+import { Link, useLocation } from "@tanstack/react-router"
 import { AuthFrame } from "./auth-frame"
 import { PasswordInput } from "./password-input"
 import { authClient } from "@/auth/client"
@@ -15,6 +16,9 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export function Login({ sessionError }: { sessionError?: string }) {
+  const returnTo = useLocation({
+    select: (location) => workspaceReturnPath(location.href),
+  })
   const [setup, setSetup] = useState(false),
     [error, setError] = useState(sessionError ?? ""),
     [pending, setPending] = useState(false)
@@ -110,7 +114,11 @@ export function Login({ sessionError }: { sessionError?: string }) {
           <Field>
             <div className="login-password-label">
               <FieldLabel htmlFor="password">Password</FieldLabel>
-              {!setup && <Link to="/forgot-password">Forgot password?</Link>}
+              {!setup && (
+                <Link to="/forgot-password" search={{ returnTo }}>
+                  Forgot password?
+                </Link>
+              )}
             </div>
             <PasswordInput
               id="password"

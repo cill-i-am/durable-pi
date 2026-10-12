@@ -257,15 +257,7 @@ export function BotTasks({
       {origin && (
         <ActivityRecord
           entry={{
-            key: origin.id,
-            at: new Date(origin.request.createdAt).toISOString(),
             agent: { id: origin.request.from, name: name(origin.request.from) },
-            kind: "conversation",
-            title: "Original request",
-            status: origin.status,
-            attention: false,
-            running: false,
-            target: "conversation",
             reference: origin.request.correlationId,
           }}
           onClose={() => setOrigin(null)}
