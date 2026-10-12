@@ -54,6 +54,10 @@ PR #63 deployed successfully. Native configuration readback covers all five Work
 
 The hosted synthetic date journey completed with one tool call and two durable model records: 12,495 input tokens (6,016 cached) and 30 output tokens. Individual telemetry events undercounted that first run. The follow-up retains the model telemetry promise through the native host's `waitUntil`, explicitly annotates active spans, and emits run totals from persisted inference rows at committed completion. Totals cover more than the Activity page's latest 100 records, preserve run/bot isolation, and distinguish partial reporting. They schedule no work. Follow-up local checks pass 563 tests, native workerd recovery, TypeScript, build, lint and secret scanning. Delivery and final hosted evidence are tracked in [PR #64](https://github.com/cill-i-am/durable-pi/pull/64). Email receipt, production stack symbolication, and induced live compaction/restart/failure are not claimed.
 
+## Composer copy cleanup — 2026-10-12
+
+Removed both routine memory-status messages beneath the composer: “Memory up to date” and “Memory catches up in the background.” The desktop keyboard hint stays aligned right; mobile has no empty footer row. Memory processing and its workbench remain unchanged. Local checks and hosted verification are recorded in the delivery PR.
+
 ## Configurable message delivery — 2026-10-12
 
 General settings now exposes **Default message delivery**, remembered on this device using the existing browser-local preference pattern. New installations default to **Steer the active reply**. **Queue a new reply** remains an explicit preference or a one-message composer override; a successful send or a finished reply clears that override. Idle conversations still start an ordinary reply, and changing the preference does not modify accepted messages or their retry identities.

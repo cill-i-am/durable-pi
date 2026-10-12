@@ -541,11 +541,6 @@ export function Conversation({
           }
         />
         <div className="composer-footnote">
-          <span>
-            {state?.memory.ready
-              ? "Memory up to date"
-              : "Memory catches up in the background"}
-          </span>
           <span>Shift + Enter for a new line</span>
         </div>
       </div>
