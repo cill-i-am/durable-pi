@@ -309,3 +309,35 @@ it("still uses isolated observation in unrestricted sessions", async () => {
   })
   expect(f.page.evaluate).not.toHaveBeenCalled()
 })
+
+it.each(["429", "403"])(
+  "reports launch HTTP %s without exposing the provider body",
+  async (status) => {
+    provider.launch.mockRejectedValue(
+      new Error(
+        `Unable to create new browser: code: ${status}: message: synthetic-private-body`
+      )
+    )
+    await expect(driver.open([], true)).rejects.toMatchObject({
+      outcome: "rejected",
+      message: expect.stringContaining(
+        status === "429" ? "limit" : "permissions"
+      ),
+    })
+    await expect(driver.open([], true)).rejects.not.toThrow(
+      "synthetic-private-body"
+    )
+    expect(provider.connect).not.toHaveBeenCalled()
+  }
+)
+it("a lost session reconnect is a confirmed rejection before page dispatch", async () => {
+  provider.connect.mockRejectedValue(
+    new Error("Unable to connect to existing session private-handle")
+  )
+  await expect(
+    driver.navigate(session, "https://example.com", [], true)
+  ).rejects.toMatchObject({
+    outcome: "rejected",
+    message: expect.stringContaining("no longer available"),
+  })
+})

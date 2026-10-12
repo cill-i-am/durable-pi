@@ -87,8 +87,8 @@ const config :Workerd.Config = (
     (name = "fixture", worker = (
       compatibilityDate = ${JSON.stringify(workerd.compatibilityDate)}, compatibilityFlags = ["nodejs_compat"],
       modules = [(name = "worker.mjs", esModule = embed "worker.mjs")],
-      bindings = [(name = "BOTS", durableObjectNamespace = (className = "MailboxBot")), (name = "LOOPS", durableObjectNamespace = (className = "LoopBot"))],
-      durableObjectNamespaces = [(className = "MailboxBot", uniqueKey = "mailbox-local-test", enableSql = true), (className = "LoopBot", uniqueKey = "loops-local-test", enableSql = true)],
+      bindings = [(name = "BROWSERS", durableObjectNamespace = (className = "BrowserRecoveryBot")), (name = "BOTS", durableObjectNamespace = (className = "MailboxBot")), (name = "LOOPS", durableObjectNamespace = (className = "LoopBot"))],
+      durableObjectNamespaces = [(className = "BrowserRecoveryBot", uniqueKey = "browser-local-test", enableSql = true), (className = "MailboxBot", uniqueKey = "mailbox-local-test", enableSql = true), (className = "LoopBot", uniqueKey = "loops-local-test", enableSql = true)],
       durableObjectStorage = (localDisk = "storage")
     )),
     (name = "storage", disk = (path = "storage", writable = true))
@@ -280,6 +280,25 @@ const config :Workerd.Config = (
     result.events.filter((e) => e.value === "continuation").length,
     3
   )
+  const browserRejected = await call("browser/rejected", a)
+  assert.equal(browserRejected.receipt, "done")
+  assert.equal(browserRejected.result.isError, true)
+  assert.match(
+    browserRejected.result.content[0].text,
+    /enable unrestricted internet/
+  )
+  assert.equal(browserRejected.actions, 0)
+  const browserUncertain = await call("browser/uncertain", a)
+  assert.equal(browserUncertain.receipt, "running")
+  assert.match(browserUncertain.error, /may have run/)
+  assert.equal(browserUncertain.actions, 1)
+  await stop()
+  await start()
+  assert.deepEqual(await call("browser/rejected", a), browserRejected)
+  const browserRestored = await call("browser/uncertain", a)
+  assert.equal(browserRestored.receipt, "interrupted")
+  assert.equal(browserRestored.actions, 1)
+  assert.match(browserRestored.error, /outcome is unknown/)
   // Native tool-round checkpoint + run-owned detector survive an actual process kill.
   await call("loops/start", a)
   let loop

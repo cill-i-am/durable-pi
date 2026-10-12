@@ -20,17 +20,21 @@ export class CloudflareBrowser implements BrowserDriver {
     hosts: readonly string[],
     unrestricted = false
   ): Promise<BrowserSession> {
-    const browser = await puppeteer.launch(this.binding, {
-      keep_alive: BROWSER_IDLE_MS,
-      ...(unrestricted
-        ? {}
-        : {
-            guardrails: {
-              allowedDomains: [...hosts],
-              allowedDomainSets: ["common-cdns"],
-            },
-          }),
-    })
+    const browser = await puppeteer
+      .launch(this.binding, {
+        keep_alive: BROWSER_IDLE_MS,
+        ...(unrestricted
+          ? {}
+          : {
+              guardrails: {
+                allowedDomains: [...hosts],
+                allowedDomainSets: ["common-cdns"],
+              },
+            }),
+      })
+      .catch((cause: unknown) => {
+        throw sessionFailure(cause, "open")
+      })
     try {
       const page = await browser.newPage()
       if (!unrestricted) {
@@ -70,7 +74,11 @@ export class CloudflareBrowser implements BrowserDriver {
     session: BrowserSession,
     run: (page: Page) => Promise<T>
   ) {
-    const browser: Browser = await puppeteer.connect(this.binding, session.id)
+    const browser: Browser = await puppeteer
+      .connect(this.binding, session.id)
+      .catch((cause: unknown) => {
+        throw sessionFailure(cause, "connect")
+      })
     // Bound a hung CDP operation; disconnect rejects outstanding commands before releasing the tab.
     const deadline = setTimeout(() => {
       void browser.disconnect().catch(() => {})
@@ -88,6 +96,7 @@ export class CloudflareBrowser implements BrowserDriver {
         }
       }
       throw new BrowserFailure({
+        outcome: "rejected",
         message:
           "This browser tab has closed. Close the session and open a page again.",
       })
@@ -160,6 +169,7 @@ export class CloudflareBrowser implements BrowserDriver {
     return this.withPage(session, async (page) => {
       if (allowedBrowserUrl(page.url(), hosts, unrestricted) !== expectedUrl)
         throw new BrowserFailure({
+          outcome: "rejected",
           message: "The page navigated. Refresh its view before interacting.",
         })
       await this.restrictNavigation(page, hosts, unrestricted)
@@ -169,6 +179,7 @@ export class CloudflareBrowser implements BrowserDriver {
         (await this.isolated(page, SUPPORTED_FOCUS)) !== true
       )
         throw new BrowserFailure({
+          outcome: "rejected",
           message:
             "This field cannot be typed into safely here. Use a standard input on the site's own sign-in page; embedded frames and closed custom controls are not supported.",
         })
@@ -176,6 +187,7 @@ export class CloudflareBrowser implements BrowserDriver {
         const sensitive = await this.isolated(page, SENSITIVE_FOCUS)
         if (sensitive !== false)
           throw new BrowserFailure({
+            outcome: "rejected",
             message:
               "This field requires owner control. Ask the owner to use Take control; do not request credentials in chat.",
           })
@@ -279,6 +291,28 @@ export class CloudflareBrowser implements BrowserDriver {
     // Closing an already-expired session is complete; errors still retry through the cleanup job.
     if (await this.binding.getSession(id)) await this.binding.closeSession(id)
   }
+}
+
+/** Puppeteer 1.4 reports launch HTTP status inside Error.message. Extract only
+ * its fixed status marker; provider bodies and session handles stay private.
+ * Neither launch nor reconnect has dispatched the requested page action.
+ */
+function sessionFailure(cause: unknown, operation: "open" | "connect") {
+  const status =
+    cause instanceof Error
+      ? /\bcode: (\d{3}): message:/.exec(cause.message)?.[1]
+      : undefined
+  return new BrowserFailure({
+    outcome: "rejected",
+    message:
+      status === "429"
+        ? "Cloudflare Browser Run has reached its browser or session limit. Wait before opening another session."
+        : status === "401" || status === "403"
+          ? "Cloudflare Browser Run denied session access. Check the browser binding and account permissions."
+          : operation === "connect"
+            ? "This browser session is no longer available or is busy. Close it and open a page again."
+            : "Cloudflare Browser Run could not open a session. Try again later; if this persists, check the browser service.",
+  })
 }
 
 // Native input properties normalize HTML case. Unknown/shadow focus fails closed.

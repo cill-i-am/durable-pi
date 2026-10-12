@@ -129,8 +129,11 @@ describe("per-bot browser authority and lifetime", () => {
       policy: { generation: 0, hosts: [] },
       status: "closed",
     })
+    await run(
+      b.browser.configure({ generation: 0, hosts: [], unrestricted: false })
+    )
     await expect(
-      run(b.browser.inspect(0, "https://example.com"))
+      run(b.browser.inspect(1, "https://example.com"))
     ).rejects.toThrow("allowed")
     expect(b.visits).toEqual([])
     expect(new BrowserStore(a.db).read().session?.id).toBe(id)
@@ -523,7 +526,7 @@ describe("unrestricted browser internet settings", () => {
     expect(new BrowserStore(f.db).read().unrestricted).toBe(false)
     f.repository.reset(0, [], true)
     expect(new BrowserStore(f.db).read().unrestricted).toBe(true)
-    expect(fixture().browser.state().policy.unrestricted).toBe(false)
+    expect(fixture().browser.state().policy.unrestricted).toBe(true)
   })
   it("allows public HTTP(S) destinations without widening URL scheme or credential access", () => {
     expect(allowedBrowserUrl("http://example.org:8080/path", [], true)).toBe(

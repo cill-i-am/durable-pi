@@ -169,6 +169,24 @@ export class BrowserWorkspace {
     actor: BrowserController,
     signal?: AbortSignal
   ) {
+    let dispatched = false
+    const failure = (cause: unknown) =>
+      new BrowserFailure({
+        message:
+          cause instanceof BrowserFailure
+            ? cause.message
+            : dispatched && operation.kind === "inspect"
+              ? "The browser page could not be read. Refresh its view; if the session expired, close it and open a page again."
+              : dispatched
+                ? "The browser operation could not finish and may have run. Inspect the page before trying again, or close an expired session."
+                : "The browser service could not open a session. Try opening a page again; if this persists, check Cloudflare Browser Run.",
+        outcome:
+          cause instanceof BrowserFailure && cause.outcome
+            ? cause.outcome
+            : !dispatched || operation.kind === "inspect"
+              ? "rejected"
+              : "uncertain",
+      })
     const check = () => {
       this.check(generation)
       const controller = this.repository.read().controller
@@ -190,14 +208,20 @@ export class BrowserWorkspace {
           message: "This browser action was stopped.",
         })
     }
-    return this.operations.withPermit(
+    const action = this.operations.withPermit(
       // Cancellation cannot release tab ownership while Chromium still runs.
       // The explicit signal fences dispatch/publication; driver calls have bounded timeouts.
       Effect.uninterruptible(
         Effect.tryPromise({
           try: async () => {
+            dispatched = false
             check()
             let record = this.repository.read()
+            if (!record.unrestricted && !record.hosts.length)
+              throw new BrowserFailure({
+                message:
+                  "Add allowed sites or enable unrestricted internet in Browser settings before browsing.",
+              })
             const destination =
               operation.kind === "navigate"
                 ? allowedBrowserUrl(
@@ -206,11 +230,6 @@ export class BrowserWorkspace {
                     record.unrestricted
                   )
                 : undefined
-            if (!record.unrestricted && !record.hosts.length)
-              throw new BrowserFailure({
-                message:
-                  "Add allowed sites or enable unrestricted internet in Browser settings before browsing.",
-              })
             if (!destination && !record.session)
               throw new BrowserFailure({ message: "Open a page first." })
             if (
@@ -272,6 +291,7 @@ export class BrowserWorkspace {
                 await this.wake()
               }
               check()
+              dispatched = true
               const capture = destination
                 ? await this.driver.navigate(
                     record.session!,
@@ -309,27 +329,33 @@ export class BrowserWorkspace {
                 version: this.repository.read().version,
               }
             } catch (cause) {
+              const error = failure(cause)
               if (this.repository.read().generation === generation)
                 this.repository.update(generation, {
                   status: "error",
                   capture: null,
-                  error:
-                    cause instanceof BrowserFailure
-                      ? cause.message
-                      : "The browser operation could not finish and may have run. Inspect the page before trying again, or close an expired session.",
+                  error: error.message,
                 })
-              throw cause
+              throw error
             }
           },
-          catch: (cause) =>
-            cause instanceof BrowserFailure
-              ? cause
-              : new BrowserFailure({
-                  message:
-                    "The browser operation could not finish and may have run. Inspect the page before trying again, or close an expired session.",
-                }),
+          catch: failure,
         })
       )
+    )
+    return action.pipe(
+      Effect.tapError((error) =>
+        Effect.logWarning("Browser.operationFailed").pipe(
+          Effect.annotateLogs({
+            operation: operation.kind,
+            outcome: error.outcome,
+            message: error.message,
+          })
+        )
+      ),
+      Effect.withSpan("Browser.perform", {
+        attributes: { "browser.operation": operation.kind },
+      })
     )
   }
   cleanup() {

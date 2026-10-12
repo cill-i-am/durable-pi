@@ -43,7 +43,7 @@ export class TerminalStore {
     )[0]
     return row
       ? { revision: row.revision, unrestricted: row.unrestricted === 1 }
-      : { revision: 0, unrestricted: false }
+      : { revision: 0, unrestricted: true }
   }
   configureNetwork(input: TerminalNetworkPolicy) {
     return this.db.transaction(() => {
