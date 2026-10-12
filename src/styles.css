@@ -1262,14 +1262,6 @@ body {
 }
 
 /* Paper workbench: one persistent frame, including across viewport changes. */
-.workbench-host[data-wide="true"] {
-  position: relative;
-  width: min(664px, 55%);
-  min-width: 0;
-  min-height: 0;
-  flex-shrink: 0;
-  border-left: 1px solid var(--border);
-}
 .workbench-sheet[data-slot="sheet-content"] {
   container-type: inline-size;
   container-name: workbench-frame;
@@ -1277,11 +1269,6 @@ body {
   max-width: 664px;
   padding: 0;
   gap: 0;
-}
-.workbench-sheet[data-wide="true"] {
-  position: absolute;
-  border-left: 0;
-  box-shadow: none;
 }
 .workbench-tabs {
   height: 100%;
@@ -1934,10 +1921,6 @@ body {
   }
   .mobile-navigation button[aria-current="page"] {
     color: var(--primary-hover);
-  }
-  .workbench-sheet[data-slot="sheet-content"] {
-    height: 100dvh;
-    padding-top: env(safe-area-inset-top);
   }
   .workbench-tabs {
     flex: 1;
@@ -3008,4 +2991,165 @@ body {
 }
 .checklist-summary > [role="alert"] {
   flex-basis: 100%;
+}
+
+/* All modal surfaces share the same Base UI drawer lifecycle on mobile. */
+.responsive-overlay-viewport,
+.responsive-overlay-body {
+  display: contents;
+}
+.responsive-overlay-handle {
+  display: none;
+}
+.responsive-overlay-backdrop[data-overlay-mobile="true"] {
+  background: color-mix(in oklch, var(--foreground) 25%, transparent);
+  opacity: calc(1 - var(--drawer-swipe-progress, 0));
+  animation: none;
+  transition: opacity 250ms ease;
+}
+.responsive-overlay-backdrop[data-overlay-mobile="true"]:is([data-starting-style], [data-ending-style]) {
+  opacity: 0;
+}
+.responsive-overlay-viewport[data-overlay-mobile="true"] {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: flex-end;
+  pointer-events: none;
+  padding-top: max(16px, env(safe-area-inset-top));
+  padding-bottom: var(--drawer-keyboard-inset, 0px);
+}
+.responsive-overlay[data-overlay-mobile="true"] {
+  position: relative;
+  inset: auto;
+  translate: none;
+  display: flex;
+  flex-direction: column;
+  flex: 0 1 auto;
+  width: 100%;
+  max-width: none;
+  height: auto;
+  max-height: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  gap: 0;
+  border: 0;
+  border-radius: 20px 20px 0 0;
+  overflow: hidden;
+  pointer-events: auto;
+  animation: none;
+  transform: translateY(var(--drawer-swipe-movement-y, 0px));
+  transition: transform calc(300ms * var(--drawer-swipe-strength, 1)) cubic-bezier(0.32, 0.72, 0, 1);
+}
+.responsive-overlay[data-overlay-mobile="true"]:is([data-starting-style], [data-ending-style]) {
+  transform: translateY(100%);
+}
+.responsive-overlay[data-overlay-mobile="true"][data-swiping] {
+  transition: none;
+  user-select: none;
+}
+.responsive-overlay[data-overlay-mobile="true"] > .responsive-overlay-handle {
+  display: flex;
+  flex: 0 0 28px;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+}
+.responsive-overlay-handle > span {
+  width: 36px;
+  height: 4px;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--muted-foreground) 35%, transparent);
+}
+.responsive-overlay[data-overlay-mobile="true"] > .responsive-overlay-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  gap: 16px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 16px max(16px, env(safe-area-inset-bottom));
+}
+.responsive-overlay[data-overlay-mobile="true"][data-mobile-layout="panel"] {
+  height: 100%;
+}
+.responsive-overlay[data-overlay-mobile="true"][data-mobile-layout="panel"] > .responsive-overlay-body {
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+}
+.responsive-overlay[data-overlay-mobile="true"] :is([data-slot="button"], [data-slot="alert-dialog-action"], [data-slot="alert-dialog-cancel"]) {
+  min-height: 44px;
+}
+.responsive-overlay[data-overlay-mobile="true"] :is(input, textarea, select) {
+  font-size: max(16px, 1em);
+}
+.responsive-overlay-viewport[data-overlay-mobile="true"][data-mobile-side="left"],
+.responsive-overlay-viewport[data-overlay-mobile="true"][data-mobile-side="right"] {
+  align-items: stretch;
+  padding: 0;
+}
+.responsive-overlay-viewport[data-overlay-mobile="true"][data-mobile-side="right"] {
+  justify-content: flex-end;
+}
+.responsive-overlay[data-overlay-mobile="true"][data-mobile-side="left"],
+.responsive-overlay[data-overlay-mobile="true"][data-mobile-side="right"] {
+  width: min(320px, calc(100% - 32px));
+  height: 100%;
+  padding-block: env(safe-area-inset-top) env(safe-area-inset-bottom);
+  border-radius: 0 20px 20px 0;
+  transform: translateX(var(--drawer-swipe-movement-x, 0px));
+}
+.responsive-overlay[data-overlay-mobile="true"][data-mobile-side="right"] {
+  border-radius: 20px 0 0 20px;
+}
+.responsive-overlay[data-overlay-mobile="true"][data-mobile-side="left"]:is([data-starting-style], [data-ending-style]) {
+  transform: translateX(-100%);
+}
+.responsive-overlay[data-overlay-mobile="true"][data-mobile-side="right"]:is([data-starting-style], [data-ending-style]) {
+  transform: translateX(100%);
+}
+.responsive-overlay[data-overlay-mobile="true"][data-mobile-side="left"] > .responsive-overlay-handle,
+.responsive-overlay[data-overlay-mobile="true"][data-mobile-side="right"] > .responsive-overlay-handle {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  display: flex;
+  width: 16px;
+  height: 48px;
+  transform: translateY(-50%);
+}
+.responsive-overlay[data-overlay-mobile="true"][data-mobile-side="left"] > .responsive-overlay-handle > span,
+.responsive-overlay[data-overlay-mobile="true"][data-mobile-side="right"] > .responsive-overlay-handle > span {
+  width: 4px;
+  height: 28px;
+}
+.responsive-overlay[data-overlay-mobile="true"][data-mobile-side="right"] > .responsive-overlay-handle {
+  right: auto;
+  left: 0;
+}
+@media (min-width: 1024px) {
+  .workbench-host {
+    position: relative;
+    width: min(664px, 55%);
+    min-width: 0;
+    min-height: 0;
+    flex-shrink: 0;
+    border-left: 1px solid var(--border);
+  }
+  .workbench-sheet[data-desktop="panel"] {
+    position: absolute;
+    border-left: 0;
+    box-shadow: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .responsive-overlay,
+  .responsive-overlay-backdrop {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+  }
 }

@@ -34,6 +34,7 @@ export function BrowserControls({
       {state.hasScreenshot && failed !== state.version && (
         <button
           type="button"
+          data-base-ui-swipe-ignore=""
           disabled={blocked}
           className="block w-full overflow-hidden rounded-md border bg-white text-left focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-wait"
           aria-label="Remote browser: click a point, or activate with the keyboard to focus the next field"

@@ -91,6 +91,7 @@ export function AccountSecurity({ onClose }: { onClose: () => void }) {
   return (
     <Dialog
       open
+      dismissible={!pending && !factorLocked}
       onOpenChange={(open) => {
         if (!open && !pending && !factorLocked) onClose()
       }}

@@ -425,6 +425,7 @@ export function AgentEditor({
   return (
     <Sheet
       open={open}
+      dismissible={!pending}
       onOpenChange={(value) => {
         if (!pending) onOpenChange(value)
       }}

@@ -131,12 +131,14 @@ export function WorkspaceSettings({
   return (
     <Dialog
       open={category !== null}
+      dismissible={!locked}
       onOpenChange={(open) => {
         if (!open) close()
       }}
     >
       <DialogContent
         showCloseButton={false}
+        mobileLayout="panel"
         className="workspace-settings translate-none"
         overlayClassName="settings-backdrop"
         data-detail={mobileDetail}

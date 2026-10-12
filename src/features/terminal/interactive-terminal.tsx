@@ -182,6 +182,7 @@ function LiveTerminal({
       </p>
       <div
         ref={host}
+        data-base-ui-swipe-ignore=""
         className="terminal-surface h-72 min-w-0 overflow-hidden rounded-md border p-2"
         aria-label="Live Linux terminal"
       />
