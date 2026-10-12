@@ -557,8 +557,7 @@ body {
 }
 .composer-footnote {
   display: flex;
-  justify-content: space-between;
-  gap: 10px;
+  justify-content: flex-end;
   color: var(--muted-foreground);
   font-size: 11px;
   line-height: 15px;
@@ -602,7 +601,7 @@ body {
   .composer-area {
     padding: 8px 14px 18px;
   }
-  .composer-footnote span:last-child {
+  .composer-footnote {
     display: none;
   }
 }
