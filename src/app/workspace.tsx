@@ -318,7 +318,8 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
             agent={editor.agent}
             onOpenChange={(open) => {
               if (!open) {
-                if (savedEditor.current) location.openAgent(savedEditor.current)
+                if (savedEditor.current && !editor.agent)
+                  location.openAgent(savedEditor.current)
                 else location.closeEditor()
                 savedEditor.current = null
               }
