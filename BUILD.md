@@ -35,6 +35,12 @@ Keep the existing PersonalAgent namespace, memory tables, AuthDatabase, MemoryBa
 
 Visual thesis: a quiet, warm workroom with compact navigation, readable conversation, and a contextual workbench. Composition: bot sidebar → conversation → optional workbench. Interactions: keyboard-first menus, restrained pane transitions, clear running/approval/recovery states; respect reduced motion. Semantic tokens own colors, type, spacing, and radii for later retheming.
 
+## Composer controls — 2026-10-12
+
+The owner flagged the running composer’s split Steer button. Its disabled send half and active dropdown half had different color and sizing rules. The conversation feature now separates the labeled Steer/Queue menu from equal circular Stop and Send controls, using existing shadcn/Base UI primitives. Delivery, admission, steering, cancellation and attachment behavior retain their existing owners. Icon actions have accessible names and hover labels; mobile controls are 44px. The desktop steering state in Paper reflects the revision.
+
+Local verification: TypeScript, focused lint, production build and 13 existing conversation/TanStack tests passed. The actual React composer with synthetic transport was checked at desktop/workbench and 320px mobile widths, including empty and populated drafts, Steer/Queue selection, Enter-to-steer and Stop. Production CSS is checked separately from Vite development styles. CI, deployment and hosted verification are recorded in the delivery PR.
+
 ## TanStack AI conversation client — 2026-10-12
 
 Status: implementation, local verification and final diff review complete. [PR #58](https://github.com/cill-i-am/durable-pi/pull/58) tracks CI, deployment and hosted verification. This replaces the handwritten browser conversation reducer, EventSource listener and fallback polling with TanStack AI's `useChat`, `ChatClient`, stream processor and SSE parser. Packages are pinned to `@tanstack/ai` 0.68.0, `@tanstack/ai-client` 0.39.2 and `@tanstack/ai-react` 0.30.3. Existing router and Start versions are retained.

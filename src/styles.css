@@ -1103,11 +1103,19 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.composer-send {
-  min-height: 34px;
-  padding: 6px 12px;
-  border-radius: var(--radius-sm);
-  font-size: 13px;
+.composer-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+.composer-action {
+  width: 36px;
+  height: 36px;
+}
+.composer-delivery-trigger {
+  height: 36px;
 }
 .composer-delivery {
   display: flex;
@@ -1217,9 +1225,6 @@ body {
   }
   .composer-model > button {
     font-size: 11px;
-  }
-  .composer-send {
-    padding-inline: 10px;
   }
 }
 
@@ -1858,9 +1863,12 @@ body {
   .composer-model > button {
     min-height: 44px;
   }
-  .composer-send {
-    min-height: 44px;
-    min-width: 44px;
+  .composer-action {
+    width: 44px;
+    height: 44px;
+  }
+  .composer-delivery-trigger {
+    height: 44px;
   }
   .mobile-navigation {
     display: flex;
@@ -2967,27 +2975,4 @@ body {
 }
 .checklist-summary > [role="alert"] {
   flex-basis: 100%;
-}
-
-.composer-submit-group {
-  display: flex;
-  gap: 0;
-}
-.composer-submit-group:has(.composer-delivery-trigger) .composer-send {
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
-}
-.composer-delivery-trigger {
-  height: 36px;
-  width: 28px;
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
-  border-left: 1px solid
-    color-mix(in srgb, var(--primary-foreground) 25%, transparent);
-}
-@media (max-width: 600px) {
-  .composer-delivery-trigger {
-    height: 44px;
-    width: 32px;
-  }
 }
