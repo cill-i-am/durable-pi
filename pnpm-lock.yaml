@@ -12583,3 +12583,5 @@ snapshots:
   '@tanstack/ai-utils@0.4.1': {}
 
   '@tanstack/devtools-event-client@0.4.4': {}
+
+  fast-json-patch@3.1.1: {}
