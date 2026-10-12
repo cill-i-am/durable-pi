@@ -57,6 +57,7 @@ function fixture(
     setRequestInterception: vi.fn(async () => {}),
     on: vi.fn(),
     waitForNavigation: vi.fn(async () => null),
+    goto: vi.fn(async () => null),
     mouse: { click: vi.fn(async () => {}), wheel: vi.fn(async () => {}) },
     keyboard: {
       sendCharacter: vi.fn(async () => {}),
@@ -340,4 +341,40 @@ it("a lost session reconnect is a confirmed rejection before page dispatch", asy
     outcome: "rejected",
     message: expect.stringContaining("no longer available"),
   })
+})
+
+it("records Chromium's native navigation error document as a confirmed failed load", async () => {
+  const f = fixture()
+  f.page.goto.mockImplementation(async () => {
+    f.page.url = () => "chrome-error://chromewebdata/"
+    return null
+  })
+  await expect(
+    driver.navigate(session, "https://x.com", [], true)
+  ).rejects.toMatchObject({
+    outcome: "failed",
+    message: expect.stringContaining("could not load the page"),
+  })
+  expect(f.page.goto).toHaveBeenCalledOnce()
+  expect(f.page.screenshot).not.toHaveBeenCalled()
+  expect(f.browser.disconnect).toHaveBeenCalled()
+})
+
+it("does not settle a click from a subsequent error document", async () => {
+  const f = fixture()
+  f.page.mouse.click.mockImplementation(async () => {
+    f.page.url = () => "chrome-error://chromewebdata/"
+  })
+  const action = driver.interact(
+    session,
+    { kind: "click", x: 1, y: 1 },
+    "https://example.com/",
+    [],
+    "agent",
+    true
+  )
+  await expect(action).rejects.toMatchObject({ _tag: "BrowserFailure" })
+  await expect(action).rejects.not.toHaveProperty("outcome")
+  expect(f.page.mouse.click).toHaveBeenCalledOnce()
+  expect(f.browser.disconnect).toHaveBeenCalled()
 })

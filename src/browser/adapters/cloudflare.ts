@@ -141,6 +141,15 @@ export class CloudflareBrowser implements BrowserDriver {
           waitUntil: "domcontentloaded",
         }
       )
+      // Chromium completed this navigation with its own error document. This is
+      // an observed failed load, not an unknown click/typing outcome. Keep it out
+      // of snapshot() so an interaction reaching this document remains uncertain.
+      if (page.url() === "chrome-error://chromewebdata/")
+        throw new BrowserFailure({
+          outcome: "failed",
+          message:
+            "Cloudflare Browser Run could not load the page. Chromium returned a network error page instead of site content.",
+        })
       if (response?.headers()["cf-mitigated"] === "guardrails")
         throw new BrowserFailure({
           message:
