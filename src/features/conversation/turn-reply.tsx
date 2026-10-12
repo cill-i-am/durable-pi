@@ -1,11 +1,9 @@
-import { useState } from "react"
 import { AgentMark, agentTone } from "@/components/agent-mark"
-import { Check, Copy } from "lucide-react"
+import { CopyButton } from "@/components/copy-button"
 import type { ChatState } from "@/conversations/contracts"
 import { Markdown } from "@/components/markdown"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { useInteractionSound } from "@/hooks/use-interaction-sound"
 import {
   Message,
   MessageContent,
@@ -109,7 +107,9 @@ export function TurnReply({
           )}
         {(turn.answer || stopped || failed) && (
           <MessageFooter>
-            {turn.answer && <CopyReply text={turn.answer} />}
+            {turn.answer && (
+              <CopyButton text={turn.answer} label="Copy response" />
+            )}
             {stopped
               ? "Stopped. Your message is saved."
               : failed
@@ -134,31 +134,5 @@ export function TurnReply({
         )}
       </MessageContent>
     </Message>
-  )
-}
-function CopyReply({ text }: { text: string }) {
-  const [status, setStatus] = useState<"ready" | "copied" | "failed">("ready")
-  const playInteractionSound = useInteractionSound()
-  return (
-    <Button
-      variant="ghost"
-      size="icon-xs"
-      aria-label={
-        status === "copied"
-          ? "Copied"
-          : status === "failed"
-            ? "Copy failed. Try again"
-            : "Copy response"
-      }
-      onClick={() => {
-        void playInteractionSound()
-        void navigator.clipboard.writeText(text).then(
-          () => setStatus("copied"),
-          () => setStatus("failed")
-        )
-      }}
-    >
-      {status === "copied" ? <Check /> : <Copy />}
-    </Button>
   )
 }
