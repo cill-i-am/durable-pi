@@ -55,6 +55,7 @@ export function WorkbenchPanel({
   mobileNavigation,
   recoveryAction,
   children,
+  overlays,
 }: {
   value: Workbench
   onChange: (value: Workbench | null) => void
@@ -64,6 +65,7 @@ export function WorkbenchPanel({
   mobileNavigation: ReactNode
   recoveryAction?: ReactNode
   children: ReactNode
+  overlays?: ReactNode
 }) {
   const container = useRef<HTMLDivElement>(null)
   const extra = more.find((tab) => tab.id === value)
@@ -173,6 +175,7 @@ export function WorkbenchPanel({
           </Tabs>
           {mobileNavigation}
         </SheetContent>
+        {overlays}
       </Sheet>
     </div>
   )

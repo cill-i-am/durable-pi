@@ -36,7 +36,7 @@ function Menubar({ className, ...props }: MenubarPrimitive.Props) {
 }
 
 function MenubarMenu({ ...props }: React.ComponentProps<typeof DropdownMenu>) {
-  return <DropdownMenu data-slot="menubar-menu" {...props} />
+  return <DropdownMenu data-slot="menubar-menu" withinMenubar {...props} />
 }
 
 function MenubarGroup({

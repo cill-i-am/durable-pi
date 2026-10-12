@@ -18,7 +18,7 @@ The example is a centered dialog on desktop and a bottom drawer below 768px. Kee
 
 ## Presentation options
 
-- `mobileSide="bottom"` is the default. The sidebar sets `mobileSide="left"` so its opening edge and dismissal gesture agree.
+- Mobile overlays always open from the bottom, including navigation, menus, submenus and selects. There is no per-feature edge setting.
 - `desktop="panel" breakpoint="lg"` keeps the workbench docked and non-modal at 1024px and wider. On smaller screens it becomes a modal drawer. Its portal container stays the same across breakpoints.
 - `mobileLayout="panel"` on content gives workbench/settings interiors the available height and lets their existing scroll areas own scrolling. Ordinary forms use the default content-sized, scrollable body.
 - `dismissible={false}` blocks closing by gesture, Escape, outside press or a close control while a save or other protected operation is pending. Continue to keep operation-specific guards in the feature.
@@ -26,7 +26,15 @@ The example is a centered dialog on desktop and a bottom drawer below 768px. Kee
 
 The responsive policy lives in `responsive-overlay.tsx`; mobile geometry, safe areas, drag offsets, motion and the shared handle live in `styles.css`. Base UI owns pointer/scroll arbitration, focus containment/return, dismissal, and virtual-keyboard handling. The same mounted primitive tree is used at every width, preserving local drafts and mounted workbench content during resizing. Desktop gestures are disabled. Reduced-motion preferences remove transitions.
 
-Do not add viewport checks in features or duplicate a form inside separate dialog/drawer branches. Menus, comboboxes and popovers remain anchored controls; they are not modal surfaces. For touch-interactive content such as a canvas or terminal, use Base UI's `data-base-ui-swipe-ignore` on that region when its gestures must not dismiss a drawer.
+Do not add viewport checks in features or duplicate a form inside separate dialog/drawer branches. The shared `DropdownMenu` and `Select` components keep their native state and keyboard semantics, and use `ResponsivePopup` to present their content in a mobile drawer. Desktop menus and selects remain anchored. For touch-interactive content such as a canvas or terminal, use Base UI's `data-base-ui-swipe-ignore` on that region when its gestures must not dismiss a drawer.
+
+## Nested navigation and actions
+
+Base UI 1.9 owns the drawer stack. Child roots must be React descendants of their parent root; portal location alone does not establish nesting. The sidebar root wraps the workspace, Settings owns Security and its agent editor, and the workbench provides an `overlays` slot for Settings. A child drawer dims and scales its parent, blocks interaction behind it, and returns to the parent on dismissal. Do not close the parent before opening a child.
+
+Mobile menu items that close the menu run their action after the exit animation. This sequences menu-to-dialog navigation and avoids overlapping sibling focus/stack updates. Submenus share the outer menu's pending action so selection runs once even when both menus close. Items with `closeOnClick={false}` run immediately. Keep event cancellation out of deferred actions; choose `closeOnClick={false}` when an action must retain the menu. Desktop actions remain immediate.
+
+`mobileTitle` gives a menu or select drawer an accessible title when its default title is insufficient. Supply native Select `items` when values need labels before the popup has mounted. No feature needs a mobile-only picker implementation.
 
 ## Verify a change
 

@@ -168,7 +168,6 @@ export function AgentSidebar({
             <DropdownMenuGroup>
               <DropdownMenuItem
                 onClick={() => {
-                  setOpenMobile(false)
                   onCreate()
                 }}
               >
@@ -181,7 +180,6 @@ export function AgentSidebar({
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => {
-                  setOpenMobile(false)
                   onSettings()
                 }}
               >
@@ -209,7 +207,6 @@ export function AgentSidebar({
           variant="outline"
           className="h-9.5 justify-start"
           onClick={() => {
-            setOpenMobile(false)
             onCreate()
           }}
         >
@@ -260,7 +257,6 @@ export function AgentSidebar({
                     <DropdownMenuGroup>
                       <DropdownMenuItem
                         onClick={() => {
-                          setOpenMobile(false)
                           onEdit(agent)
                         }}
                       >
@@ -296,7 +292,6 @@ export function AgentSidebar({
           variant="ghost"
           className="justify-start"
           onClick={() => {
-            setOpenMobile(false)
             onActivity()
           }}
         >
@@ -307,7 +302,6 @@ export function AgentSidebar({
           variant="ghost"
           className="justify-start"
           onClick={() => {
-            setOpenMobile(false)
             onMemory()
           }}
         >
@@ -363,7 +357,6 @@ export function AgentSidebar({
                 <DropdownMenuGroup>
                   <DropdownMenuItem
                     onClick={() => {
-                      setOpenMobile(false)
                       onSettings()
                     }}
                   >
