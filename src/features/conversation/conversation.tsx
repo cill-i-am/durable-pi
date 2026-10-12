@@ -1,6 +1,7 @@
 import { AgentMark, agentTone } from "@/components/agent-mark"
 import type { Profile, JobType } from "@/inference/policy"
 import {
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -28,6 +29,7 @@ import { TurnReply } from "./turn-reply"
 import { QueuedTurnAnchor } from "./queued-turn-anchor"
 import { ModelMenu } from "./model-menu"
 import { submissionAttempt, rejectedModelAttempt } from "./commands"
+import { useMessageDeliveryDefault } from "./delivery-preference"
 import {
   ThinkingLevel,
   type Submission,
@@ -581,13 +583,22 @@ function Composer({
   attachmentControl: React.ReactNode
   hasAttachments: boolean
 }) {
-  const [mode, setMode] = useState<SubmissionMode>("steer")
-  const delivery = active && !stopping ? mode : "followUp"
+  const defaultMode = useMessageDeliveryDefault()
+  const [override, setOverride] = useState<SubmissionMode | null>(null)
+  const mode = override ?? defaultMode
+  const delivery = active ? mode : "followUp"
+  const waitingForStop = stopping && mode === "steer"
+  useEffect(() => {
+    setOverride(null)
+  }, [active, defaultMode])
   async function send() {
     const text = draft.trim()
-    if ((!text && !hasAttachments) || pending || !enabled) return
-    if (await onSend(text, delivery))
+    if ((!text && !hasAttachments) || pending || !enabled || waitingForStop)
+      return
+    if (await onSend(text, delivery)) {
       setDraft((current) => (current.trim() === text ? "" : current))
+      setOverride(null)
+    }
   }
   return (
     <form
@@ -652,12 +663,12 @@ function Composer({
                   className="min-w-52"
                 >
                   <DropdownMenuGroup>
-                    <DropdownMenuLabel>While this reply runs</DropdownMenuLabel>
+                    <DropdownMenuLabel>For this message</DropdownMenuLabel>
                     <DropdownMenuRadioGroup
                       value={delivery}
                       onValueChange={(value) => {
                         if (value === "steer" || value === "followUp")
-                          setMode(value)
+                          setOverride(value)
                       }}
                     >
                       <DropdownMenuRadioItem value="steer">
@@ -691,7 +702,10 @@ function Composer({
               size="icon-sm"
               className="composer-action rounded-full"
               disabled={
-                (!draft.trim() && !hasAttachments) || pending || !enabled
+                (!draft.trim() && !hasAttachments) ||
+                pending ||
+                !enabled ||
+                waitingForStop
               }
               aria-label={
                 active
@@ -717,7 +731,9 @@ function Composer({
         <div className="composer-delivery">
           <span className="text-xs text-muted-foreground">
             {stopping
-              ? "Stopping. New messages will wait."
+              ? waitingForStop
+                ? "Stopping. Your draft is kept; send it when the reply stops."
+                : "Stopping. New messages will wait."
               : delivery === "steer"
                 ? "Joins this reply at the next tool boundary."
                 : "Starts a new reply after this one finishes."}

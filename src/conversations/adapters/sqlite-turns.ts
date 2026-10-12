@@ -204,6 +204,11 @@ export class ConversationStore {
           })
       }
       const active = this.active()
+      if (input.mode === "steer" && active?.status === "stopping")
+        throw new ConversationConflict({
+          message:
+            "This reply is stopping. Send your message again after it stops.",
+        })
       const parent =
         input.mode === "steer" && active?.status !== "stopping"
           ? active

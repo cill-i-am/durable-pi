@@ -117,4 +117,32 @@ describe("durable reply admission", () => {
     for (let i = 0; i < 9; i++) store.admit(input(String(i), "steer"))
     expect(() => store.admit(input())).toThrow(ConversationFull)
   })
+  it("never silently queues steering when stop wins admission, including after restart", () => {
+    const db = database()
+    const store = new ConversationStore(db, defaults)
+    const root = store.admit(input()).turn
+    const acceptedInput = input("earlier correction", "steer")
+    const accepted = store.admit(acceptedInput).turn
+    store.requestStop(root.id)
+    const restored = new ConversationStore(db, defaults)
+    // A lost response for an already accepted steer still returns its receipt.
+    expect(restored.admit(acceptedInput)).toMatchObject({ accepted: false })
+    const next = input("new correction", "steer")
+    expect(() => restored.admit(next)).toThrow("This reply is stopping")
+    expect(restored.get(next.operationId)).toBeUndefined()
+    // Queueing remains available only when explicitly requested.
+    const queued = restored.admit(input("next task", "followUp")).turn
+    expect(queued.parent_id).toBeNull()
+    restored.finish(
+      restored.get(root.id)!,
+      [
+        { id: root.id, delivery: "unanswered" },
+        { id: accepted.id, delivery: "unanswered" },
+      ],
+      "partial",
+      null
+    )
+    // Once stopping settles, the same rejected intent can be accepted safely.
+    expect(restored.admit(next).turn.parent_id).toBe(queued.id)
+  })
 })
