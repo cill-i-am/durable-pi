@@ -113,7 +113,10 @@ export class AccessGate {
         // claim synchronously records intent before invoking an effect that may not be replayable.
         try {
           yield* observe("tool.dispatched")
-          const result = yield* Effect.tryPromise(work)
+          const result = yield* Effect.tryPromise({
+            try: work,
+            catch: (cause) => cause,
+          })
           yield* Effect.try({
             try: () => this.store.finish(intent.id, JSON.stringify(result)),
             catch: (cause) => cause,

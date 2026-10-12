@@ -2,7 +2,11 @@ import { Schema } from "effect"
 
 export class BrowserFailure extends Schema.TaggedError<BrowserFailure>()(
   "BrowserFailure",
-  { message: Schema.String }
+  {
+    message: Schema.String,
+    // Assigned by the operation owner, never inferred by the access gate.
+    outcome: Schema.optionalKey(Schema.Literals(["rejected", "uncertain"])),
+  }
 ) {}
 export const Hostname = Schema.String.check(
   Schema.makeFilter((value) => {

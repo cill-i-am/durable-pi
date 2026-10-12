@@ -23,7 +23,7 @@ export class BrowserStore implements BrowserRepository {
           controller: "agent",
           generation: 0,
           hosts: [],
-          unrestricted: false,
+          unrestricted: true,
           version: 0,
           status: "closed",
           session: null,

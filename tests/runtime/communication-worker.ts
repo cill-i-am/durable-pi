@@ -1,4 +1,5 @@
 import { runObserved } from "../../src/observability/worker"
+import { BrowserRecoveryBot } from "./browser-worker"
 import { LoopBot } from "./loop-worker"
 import { PiHarness } from "agents/harness/pi"
 import { Harness, createRegistry } from "@earendil-works/pi-durable"
@@ -30,9 +31,10 @@ import { Envelope, Identity, failure } from "../../src/communication/contracts"
 import { agentObjectName } from "../../src/agents/domain"
 import type { Sqlite } from "../../src/storage/sqlite"
 
-export { LoopBot }
+export { LoopBot, BrowserRecoveryBot }
 
 interface Env {
+  BROWSERS: DurableObjectNamespace<BrowserRecoveryBot>
   LOOPS: DurableObjectNamespace<LoopBot>
   BOTS: DurableObjectNamespace<MailboxBot>
 }
@@ -304,6 +306,8 @@ export class MailboxBot extends DurableObject<Env> {
 export default {
   async fetch(request: Request, env: Env) {
     const url = new URL(request.url)
+    if (url.pathname.startsWith("/browser/"))
+      return env.BROWSERS.getByName(url.pathname).fetch(request)
     if (url.pathname.startsWith("/loops/"))
       return env.LOOPS.getByName("loop-test").fetch(request)
     if (url.pathname === "/health") return new Response("local fixture")

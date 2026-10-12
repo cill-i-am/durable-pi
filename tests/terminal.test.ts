@@ -113,7 +113,7 @@ describe("Linux commands", () => {
     expect(f.runtime.restore).toHaveBeenLastCalledWith(
       new Uint8Array([1]),
       expect.any(AbortSignal),
-      false
+      true
     )
     expect(f.repository.list()[0]).not.toHaveProperty("output")
   })
@@ -582,11 +582,11 @@ it.each(["cancel", "save"] as const)(
 )
 
 describe("owner-controlled terminal internet access", () => {
-  it("defaults to disabled, survives store reconstruction, rejects stale updates, and isolates bots", () => {
+  it("defaults to enabled, preserves saved restrictions, rejects stale updates, and isolates bots", () => {
     const f = fixture()
     expect(f.terminal.state().networkPolicy).toEqual({
       revision: 0,
-      unrestricted: false,
+      unrestricted: true,
     })
     f.terminal.configureNetwork({ revision: 0, unrestricted: true })
     expect(new TerminalStore(f.db).networkPolicy()).toEqual({
@@ -596,10 +596,12 @@ describe("owner-controlled terminal internet access", () => {
     expect(() =>
       f.terminal.configureNetwork({ revision: 0, unrestricted: false })
     ).toThrow("changed")
-    expect(fixture().terminal.state().networkPolicy.unrestricted).toBe(false)
+    expect(fixture().terminal.state().networkPolicy.unrestricted).toBe(true)
+    f.terminal.configureNetwork({ revision: 1, unrestricted: false })
+    expect(new TerminalStore(f.db).networkPolicy().unrestricted).toBe(false)
     f.terminal.configure(1, false)
     expect(() =>
-      f.terminal.configureNetwork({ revision: 1, unrestricted: false })
+      f.terminal.configureNetwork({ revision: 2, unrestricted: false })
     ).toThrow("Restore this bot")
   })
   it("pins network access to the command receipt and never replays after a setting change", async () => {
@@ -658,7 +660,7 @@ describe("owner-controlled terminal internet access", () => {
       f.terminal.configureNetwork({ revision: 0, unrestricted: true })
     ).toThrow("Stop or save")
     await session.completion
-    expect(f.terminal.state().networkPolicy.unrestricted).toBe(false)
+    expect(f.terminal.state().networkPolicy.unrestricted).toBe(true)
   })
 })
 
