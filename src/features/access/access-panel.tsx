@@ -143,14 +143,14 @@ export function AccessPanel({
       </div>
       <div className="flex flex-col gap-2 border-t p-4 text-xs text-muted-foreground">
         <p>
-          <strong>Allow</strong> runs automatically. <strong>Ask</strong> pauses
-          for your approval of the exact inputs. <strong>Deny</strong> blocks
-          the tool.
+          <strong>Allow</strong> runs automatically with any inputs and stays
+          saved until you change it. <strong>Ask</strong> pauses for your
+          approval of the exact inputs. <strong>Deny</strong> blocks the tool.
         </p>
         <p>
           Changes apply before an action starts. An action already running may
-          finish. Approvals expire after 15 minutes and are cancelled when you
-          stop the reply.
+          finish. Individual action requests expire after 15 minutes and are
+          cancelled when you stop the reply.
         </p>
       </div>
     </SettingsSection>

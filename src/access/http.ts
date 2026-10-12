@@ -32,7 +32,12 @@ export function accessRequest(
         gate.store.update(body.name, body.expectedRevision, body.mode)
       } else if (path === "access/decide") {
         const body = Schema.decodeUnknownSync(DecideApproval)(input)
-        gate.store.decide(body.id, body.approve, body.expectedRevision)
+        gate.store.decide(
+          body.id,
+          body.approve,
+          body.expectedRevision,
+          body.remember
+        )
       } else throw new AccessConflict({ message: "Unknown access request." })
       gate.notify()
       return { tools: gate.store.policies(), approvals: gate.store.pending() }

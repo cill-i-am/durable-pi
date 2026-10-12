@@ -13,7 +13,11 @@ export type ToolIntent = {
   tool: string
   input: string
 }
-type Operation = Approval & { grantRevision: number; result: string | null }
+type Operation = Approval & {
+  grantRevision: number
+  result: string | null
+  decision: string | null
+}
 /** Durable approval and execution receipts belong to the bot that owns the tool call. */
 export class AccessStore {
   constructor(
@@ -35,6 +39,12 @@ export class AccessStore {
       db.run(
         "ALTER TABLE tool_operations ADD COLUMN revision INTEGER NOT NULL DEFAULT 0"
       )
+    if (
+      !db
+        .all<{ name: string }>("PRAGMA table_info(tool_operations)")
+        .some((column) => column.name === "decision")
+    )
+      db.run("ALTER TABLE tool_operations ADD COLUMN decision TEXT")
   }
   policies(): ToolPolicy[] {
     const saved = new Map(
@@ -114,7 +124,11 @@ export class AccessStore {
       this.expire()
       const existing = this.get(input.id)
       if (existing) {
-        if (existing.tool !== input.tool || existing.input !== input.input)
+        if (
+          existing.turnId !== input.turnId ||
+          existing.tool !== input.tool ||
+          existing.input !== input.input
+        )
           throw new AccessConflict({
             message: "Tool operation identity does not match.",
           })
@@ -149,13 +163,33 @@ export class AccessStore {
       return this.get(input.id)!
     })
   }
-  decide(id: string, approve: boolean, expectedRevision: number) {
+  decide(
+    id: string,
+    approve: boolean,
+    expectedRevision: number,
+    remember?: { expectedPolicyRevision: number }
+  ) {
+    if (remember && !approve)
+      throw new AccessConflict({
+        message: "Only an approval can allow future calls.",
+      })
+    const decision = JSON.stringify({
+      approve,
+      expectedRevision,
+      policyRevision: remember?.expectedPolicyRevision ?? null,
+    })
     this.expire()
     return this.db.transaction(() => {
       const operation = this.get(id)
       if (!operation)
         throw new AccessConflict({ message: "This approval no longer exists." })
+      // A retried decision reads its receipt; it must never recreate a grant
+      // after revocation or repeat an action that has already started.
+      if (operation.decision === decision && operation.status !== "pending")
+        return operation
       if (
+        !remember &&
+        !operation.decision &&
         operation.status === (approve ? "approved" : "denied") &&
         operation.revision === expectedRevision + 1
       )
@@ -172,10 +206,26 @@ export class AccessStore {
         throw new AccessDenied({
           message: "This tool has been denied. Update its access policy first.",
         })
+      if (remember && policy.revision !== remember.expectedPolicyRevision)
+        throw new AccessConflict({
+          message: "Tool access changed. Reload before allowing future calls.",
+        })
+      const grantRevision =
+        policy.revision + (remember && policy.mode !== "allow" ? 1 : 0)
+      // The bot-local policy and this decision commit together. Do not make a
+      // separate policy request from the UI: cancellation or a stale tab could race it.
+      if (remember && policy.mode !== "allow")
+        this.db.run(
+          "INSERT INTO tool_grants VALUES (?,?,?) ON CONFLICT(name) DO UPDATE SET mode=excluded.mode,revision=excluded.revision",
+          operation.tool,
+          "allow",
+          grantRevision
+        )
       this.db.run(
-        "UPDATE tool_operations SET status=?,grantRevision=?,revision=revision+1 WHERE id=?",
+        "UPDATE tool_operations SET status=?,grantRevision=?,decision=?,revision=revision+1 WHERE id=?",
         approve ? "approved" : "denied",
-        policy.revision,
+        grantRevision,
+        decision,
         id
       )
       return this.get(id)!
@@ -254,7 +304,8 @@ export class AccessStore {
         return "pending"
       }
       this.db.run(
-        "UPDATE tool_operations SET status='running',revision=revision+1 WHERE id=?",
+        "UPDATE tool_operations SET status='running',grantRevision=?,revision=revision+1 WHERE id=?",
+        policy.revision,
         id
       )
       return "execute"
