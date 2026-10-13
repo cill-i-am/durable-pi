@@ -1,5 +1,5 @@
 import { Option, Schema } from "effect"
-import { BrowserPage } from "@/browser/contracts"
+import { BrowserPage, Hostname } from "@/browser/contracts"
 import { CommandRun } from "@/terminal/contracts"
 import { RunSummary } from "@/execution/contracts"
 import { FileInfo } from "@/workspace/files"
@@ -87,6 +87,12 @@ export function activitySource(url: string, title = "") {
       href: parsed.href,
       label: title.trim() || parsed.hostname,
       host: parsed.hostname,
+      favicon:
+        parsed.protocol === "https:" &&
+        !parsed.port &&
+        Schema.is(Hostname)(parsed.hostname)
+          ? new URL("/favicon.ico", parsed.origin).href
+          : null,
     }
   } catch {
     return null

@@ -1,5 +1,13 @@
 # Durable Pi — build tracker
 
+## Source-link favicons — 13 October 2026
+
+Activity source chips now show the site's standard favicon beside its recorded title, including existing saved browser results and the additional page links in expanded tool details. A missing or failed image falls back to a globe in the same fixed-width slot. The text remains the accessible link name; icons are decorative.
+
+This is a frontend projection, not another browser action or persisted source of truth. Reuse the existing Effect public-hostname schema and request only `/favicon.ico` on a public HTTPS origin without a custom port. Paths, query strings, fragments and app referrers are not sent with the icon request. No external favicon service, generic fetch proxy, migration or model request is introduced. Sites that publish icons only at custom paths retain the fallback.
+
+Local verification passed 681 tests, type checking, route generation, the production build and native workerd recovery. Lint has zero errors and the four existing shadowing warnings. The actual component with compiled production CSS was checked in both themes and at an emulated 320px width: Met Éireann's icon loaded, an unavailable icon fell back, private hostnames made no icon request, and the document had no horizontal overflow. Hosted release verification is recorded in the delivery PR.
+
 ## Live visual refinement — five passes, 13 October 2026
 
 Use all six better-* domain skills against the deployed app, preserve the existing Paper/Linear direction and shadcn/Base UI primitives, and implement evidence-backed recommendations. This is a new review of the live interface after the earlier correctness audit. Findings, screen coverage, before/after evidence and verification limits belong in [VISUAL_REVIEW.md](VISUAL_REVIEW.md).

@@ -116,6 +116,38 @@ describe("recorded activity presentation", () => {
     expect(activitySource(url)).toBeNull()
   )
 
+  it("requests only the public HTTPS origin's favicon, without page paths or query data", () => {
+    expect(
+      activitySource(
+        "https://www.met.ie/forecasts/munster?query=private#detail"
+      )?.favicon
+    ).toBe("https://www.met.ie/favicon.ico")
+    for (const url of [
+      "http://www.met.ie/",
+      "https://www.met.ie:8443/",
+      "https://localhost/",
+      "https://127.0.0.1/",
+      "https://[::1]/",
+      "https://weather.internal/",
+    ])
+      expect(activitySource(url)?.favicon).toBeNull()
+  })
+
+  it("keeps source names accessible and favicon images decorative with no referrer", () => {
+    const html = renderToStaticMarkup(
+      <TurnActivity
+        status="running"
+        items={[tool("browser_read", JSON.stringify(page))]}
+      />
+    )
+    expect(html).toContain('src="https://example.com/favicon.ico"')
+    expect(html).toContain('alt=""')
+    expect(html).toContain('referrerPolicy="no-referrer"')
+    expect(html).toContain('loading="lazy"')
+    expect(html).toContain("Visitor guide")
+    expect(html).not.toContain("favicon.ico?query")
+  })
+
   it("links namespaced saved receipts through the owning bot's canonical route, including failed execution", () => {
     for (const [name, id, panel] of [
       ["run_command", "command:task-one", "terminal"],
