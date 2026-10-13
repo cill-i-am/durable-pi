@@ -1,4 +1,6 @@
-import { useState } from "react"
+import { Link } from "@tanstack/react-router"
+import { parseAgentId, workspaceDestination } from "@/navigation/workspace"
+import { useEffect, useState } from "react"
 import { Play, Square, RefreshCw, Settings2, X } from "lucide-react"
 import type { TerminalNetworkPolicy } from "@/terminal/contracts"
 import { Switch } from "@/components/ui/switch"
@@ -6,7 +8,7 @@ import { FileTransfers, ExportedFile } from "./file-transfers"
 import { InteractiveTerminal } from "./interactive-terminal"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { useTerminal } from "./use-terminal"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -19,8 +21,8 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export function TerminalWorkbench({
+  onPendingChange,
   agentId,
-  agentName,
   selected,
   onSelect,
   tab,
@@ -31,11 +33,20 @@ export function TerminalWorkbench({
   selected: string | null
   onSelect: (id: string | null) => void
   agentId: string
-  agentName: string
+  onPendingChange: (pending: boolean) => void
 }) {
   const terminal = useTerminal(agentId, selected, onSelect)
   const [networkSettings, setNetworkSettings] =
     useState<TerminalNetworkPolicy | null>(null)
+  const pending =
+    terminal.busy ||
+    !!terminal.attempt ||
+    !!terminal.sessionAttempt ||
+    !!terminal.transferAttempt
+  useEffect(() => {
+    onPendingChange(pending || !!networkSettings)
+    return () => onPendingChange(false)
+  }, [pending, networkSettings, onPendingChange])
   const [command, setCommand] = useState(
     'printf "Hello from Linux\\n"\nls -la /workspace'
   )
@@ -60,7 +71,7 @@ export function TerminalWorkbench({
                 ? "Close terminal settings"
                 : "Terminal internet settings"
             }
-            disabled={terminal.busy || !terminal.networkPolicy}
+            disabled={pending || !terminal.networkPolicy}
             onClick={() => {
               if (terminal.networkPolicy)
                 setNetworkSettings(
@@ -110,6 +121,18 @@ export function TerminalWorkbench({
             <AlertDescription>{terminal.error}</AlertDescription>
           </Alert>
         )}
+        {!terminal.busy &&
+          (terminal.attempt ||
+            terminal.sessionAttempt ||
+            terminal.transferAttempt) && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void terminal.cancelPending()}
+            >
+              Cancel unconfirmed request
+            </Button>
+          )}
         {networkSettings && (
           <form
             onSubmit={async (event) => {
@@ -206,9 +229,15 @@ export function TerminalWorkbench({
             }}
           >
             <TabsList variant="line">
-              <TabsTrigger value="commands">Commands</TabsTrigger>
-              <TabsTrigger value="interactive">Interactive</TabsTrigger>
-              <TabsTrigger value="transfers">File transfer</TabsTrigger>
+              <TabsTrigger disabled={pending} value="commands">
+                Commands
+              </TabsTrigger>
+              <TabsTrigger disabled={pending} value="interactive">
+                Interactive
+              </TabsTrigger>
+              <TabsTrigger disabled={pending} value="transfers">
+                File transfer
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="transfers">
               <FileTransfers
@@ -403,13 +432,24 @@ export function TerminalWorkbench({
               </p>
             )}
             {terminal.runs.map((item) => (
-              <Button
+              <Link
                 key={item.id}
-                className="h-auto w-full justify-between gap-3 py-2 text-left"
-                size="sm"
-                variant={terminal.selected === item.id ? "secondary" : "ghost"}
-                disabled={terminal.busy}
-                onClick={() => terminal.select(item.id)}
+                {...workspaceDestination(parseAgentId(agentId), {
+                  panel: "terminal",
+                  item: item.id,
+                })}
+                aria-current={
+                  terminal.selected === item.id ? "page" : undefined
+                }
+                title={item.label}
+                className={buttonVariants({
+                  size: "sm",
+                  variant:
+                    terminal.selected === item.id ? "secondary" : "ghost",
+                  className:
+                    "h-auto w-full justify-between gap-3 py-2 text-left",
+                })}
+                disabled={pending}
               >
                 <span className="min-w-0 truncate font-mono text-xs">
                   {item.label}
@@ -417,14 +457,14 @@ export function TerminalWorkbench({
                 <span className="shrink-0 text-xs text-muted-foreground">
                   {item.status}
                 </span>
-              </Button>
+              </Link>
             ))}
           </section>
         </div>
       </div>
       <footer className="border-t px-4 py-3 text-xs text-muted-foreground">
-        Private to {agentName}. 30 seconds per command, 64,000 output
-        characters, 8 MiB compressed checkpoint. Latest 20 commands shown.
+        30 seconds per command, 64,000 output characters, 8 MiB compressed
+        checkpoint. Latest 20 commands shown.
       </footer>
     </>
   )

@@ -6,5 +6,6 @@ export const Route = createFileRoute("/_workspace/agents/archived")({
   beforeLoad: ({ search }) => {
     workspaceView({}, search)
   },
+  head: () => ({ meta: [{ title: "Archived agents — Pi" }] }),
   component: () => null,
 })

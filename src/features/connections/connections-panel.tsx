@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { ArrowUpRight, Plug, RefreshCw, X } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { SettingsSection } from "@/components/settings-section"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
@@ -167,21 +167,23 @@ export function ConnectionsPanel({
               </p>
               <div className="flex flex-wrap gap-2">
                 {connection.authorizeUrl && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    nativeButton={false}
-                    render={
-                      <a
-                        href={connection.authorizeUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      />
-                    }
-                    disabled={disabled}
+                  <a
+                    href={connection.authorizeUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    data-slot="button"
+                    className={buttonVariants({
+                      variant: "outline",
+                      size: "sm",
+                    })}
+                    aria-disabled={disabled || undefined}
+                    tabIndex={disabled ? -1 : undefined}
+                    onClick={(event) => {
+                      if (disabled) event.preventDefault()
+                    }}
                   >
                     Sign in <ArrowUpRight data-icon="inline-end" />
-                  </Button>
+                  </a>
                 )}
                 {connection.active && (
                   <Button
@@ -301,6 +303,7 @@ export function ConnectionsPanel({
                 </FieldLabel>
                 <Input
                   id="connection-name"
+                  autoFocus
                   required
                   maxLength={80}
                   value={draft.name}
@@ -331,11 +334,7 @@ export function ConnectionsPanel({
                 Supports Streamable HTTP and public OAuth registration.
               </p>
               <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  disabled={disabled || !draft.name.trim() || !draft.url.trim()}
-                  type="submit"
-                >
+                <Button size="sm" disabled={disabled} type="submit">
                   {state.busy ? "Connecting…" : "Connect server"}
                 </Button>
                 <Button

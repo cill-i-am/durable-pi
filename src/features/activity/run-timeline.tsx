@@ -5,7 +5,7 @@ import { ActivityConversation } from "@/activity/contracts"
 import type { RunActivity, RunEvent } from "@/activity/run"
 import { agentApi } from "@/http/client"
 import { CopyButton } from "@/components/copy-button"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
@@ -128,14 +128,15 @@ export function RunTimeline({
               </>
             )}
           </dl>
-          <Button
-            variant="outline"
-            size="sm"
-            nativeButton={false}
-            render={<a href={tracesUrl} target="_blank" rel="noreferrer" />}
+          <a
+            href={tracesUrl}
+            target="_blank"
+            rel="noreferrer"
+            data-slot="button"
+            className={buttonVariants({ variant: "outline", size: "sm" })}
           >
             <ArrowUpRight /> Open Cloudflare traces
-          </Button>
+          </a>
         </CollapsibleContent>
       </Collapsible>
       <ol

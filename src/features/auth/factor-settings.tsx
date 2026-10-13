@@ -4,6 +4,7 @@ import { authClient } from "@/auth/client"
 import { PasswordInput } from "./password-input"
 import { VerificationCode } from "./verification-code"
 import { securityError } from "./security-errors"
+import { CopyButton } from "@/components/copy-button"
 import { Button } from "@/components/ui/button"
 import {
   Field,
@@ -37,7 +38,6 @@ export function FactorSettings({
   const [showKey, setShowKey] = useState(false)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState("")
-  const [notice, setNotice] = useState("")
   useEffect(() => {
     onBusyChange(pending || view.kind === "codes")
   }, [pending, view.kind, onBusyChange])
@@ -154,21 +154,14 @@ export function FactorSettings({
             ))}
           </ul>
           <div className="flex flex-wrap gap-2">
-            <Button
+            <CopyButton
+              text={view.codes.join("\n")}
+              label="Copy recovery codes"
               variant="outline"
-              onClick={() => {
-                void navigator.clipboard
-                  .writeText(view.codes.join("\n"))
-                  .then(() => setNotice("Codes copied."))
-                  .catch(() =>
-                    setError(
-                      "Could not copy. Download the codes or select and save them manually."
-                    )
-                  )
-              }}
+              size="default"
             >
               Copy codes
-            </Button>
+            </CopyButton>
             <Button
               variant="outline"
               onClick={() => {
@@ -191,11 +184,6 @@ export function FactorSettings({
               Download
             </Button>
           </div>
-          {notice && (
-            <p role="status" className="text-sm text-primary">
-              {notice}
-            </p>
-          )}
           <Button onClick={onDone}>I’ve saved my codes</Button>
         </>
       ) : (
@@ -281,7 +269,9 @@ export function FactorSettings({
               }
             >
               {pending
-                ? "Please wait…"
+                ? view.kind === "verify"
+                  ? "Verifying…"
+                  : "Saving…"
                 : view.kind === "verify"
                   ? "Verify and turn on"
                   : view.action === "enable"

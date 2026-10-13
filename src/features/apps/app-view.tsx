@@ -20,14 +20,20 @@ export function AppView({
   initialVersion,
   compact = false,
   onBack,
+  onPendingChange,
 }: {
   agentId: string
   id: string
   initialVersion?: number
   compact?: boolean
   onBack?: () => void
+  onPendingChange?: (pending: boolean) => void
 }) {
   const app = useApp(agentId, id)
+  useEffect(() => {
+    onPendingChange?.(app.busy || !!app.attempt)
+    return () => onPendingChange?.(false)
+  }, [app.busy, app.attempt, onPendingChange])
   const [selected, setSelected] = useState<number | null>(
     initialVersion ?? null
   )
@@ -94,12 +100,11 @@ export function AppView({
             <ArrowLeft />
           </Button>
         )}
-        <span className="app-view-name">{document.definition.title}</span>
         <Badge variant="secondary">
           {document.archived
             ? "Archived"
             : published
-              ? "Published privately"
+              ? "Published"
               : "Version preview"}
         </Badge>
         <DropdownMenu>
@@ -210,16 +215,16 @@ export function AppView({
             })
           }
         >
-          Publish version {version.version} privately
+          Publish version {version.version}
         </Button>
       )}
-      <p className="text-xs text-muted-foreground">
-        {document.archived
-          ? "Restore this app to use it."
-          : published
-            ? "Changes are saved privately and sent to this bot."
+      {(document.archived || !published) && (
+        <p className="text-xs text-muted-foreground">
+          {document.archived
+            ? "Restore this app to use it."
             : "Preview only. Publish this version to use its controls."}
-      </p>
+        </p>
+      )}
       {pending > 0 && (
         <p className="text-xs text-muted-foreground" role="status">
           {pending} {pending === 1 ? "update is" : "updates are"} waiting for

@@ -13,7 +13,7 @@ import {
 } from "@/activity/contracts"
 import { agentApi } from "@/http/client"
 import { poll } from "@/http/poll"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
@@ -208,20 +208,15 @@ export function ActivityTimeline({
                 Open Memory
               </Button>
             ) : (
-              <Button
-                variant="outline"
-                size="sm"
-                nativeButton={false}
-                render={
-                  <a
-                    href="https://github.com/cill-i-am/durable-pi#run-it"
-                    target="_blank"
-                    rel="noreferrer"
-                  />
-                }
+              <a
+                href="https://github.com/cill-i-am/durable-pi#run-it"
+                target="_blank"
+                rel="noreferrer"
+                data-slot="button"
+                className={buttonVariants({ variant: "outline", size: "sm" })}
               >
                 Connection setup
-              </Button>
+              </a>
             )}
           </AlertDescription>
         </Alert>

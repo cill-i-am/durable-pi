@@ -22,6 +22,7 @@ export function TurnReply({
   onRetry,
   retrying,
   canRetry,
+  onAppPendingChange,
 }: {
   turn: ChatState["turns"][number]
   toolTitles?: Record<string, string>
@@ -30,6 +31,7 @@ export function TurnReply({
   onRetry?: (id: string) => void
   retrying?: string | null
   canRetry?: boolean
+  onAppPendingChange?: (key: string, pending: boolean) => void
 }) {
   const stopped = turn.status === "cancelled"
   const failed = turn.status === "failed"
@@ -52,6 +54,7 @@ export function TurnReply({
           <BubbleContent className="message-text">
             {turn.activity?.length ? (
               <TurnActivity
+                onAppPendingChange={onAppPendingChange}
                 items={turn.activity}
                 agentId={agentId}
                 toolTitles={toolTitles}

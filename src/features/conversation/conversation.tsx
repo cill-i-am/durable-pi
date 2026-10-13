@@ -96,6 +96,7 @@ export function Conversation({
   setSending,
   onOpenWorkbench,
   onSettings,
+  onAppPendingChange,
 }: {
   name: string
   agent: AgentProfile
@@ -106,6 +107,7 @@ export function Conversation({
   setSending: (value: boolean) => void
   onSettings: (category: "models" | "access" | "connections" | "skills") => void
   onOpenWorkbench: (value: "files" | "memory") => void
+  onAppPendingChange?: (key: string, pending: boolean) => void
 }) {
   const archived = agent.status === "archived"
   const api = useMemo(() => agentApi(agent.id), [agent.id])
@@ -299,8 +301,6 @@ export function Conversation({
                       <AgentMark tone={agentTone(agent.id)} />
                       <EmptyTitle>Hello, {name.split(" ")[0]}.</EmptyTitle>
                       <EmptyDescription>
-                        A little space to think.
-                        <br />
                         What would you like to work on?
                       </EmptyDescription>
                     </EmptyHeader>
@@ -411,6 +411,7 @@ export function Conversation({
                       messageId={`${turn.id}:assistant`}
                     >
                       <TurnReply
+                        onAppPendingChange={onAppPendingChange}
                         turn={turn}
                         toolTitles={Object.fromEntries(
                           (state.access?.tools ?? []).map((tool) => [

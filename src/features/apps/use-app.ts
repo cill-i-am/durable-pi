@@ -6,7 +6,12 @@ import { poll } from "@/http/poll"
 
 export function useApp(agentId: string, id: string) {
   const [detail, setDetail] = useState<AppDetail | null>(null)
-  const [error, setError] = useState("")
+  const [failure, setFailure] = useState<{
+    kind: "load" | "mutation"
+    message: string
+  } | null>(null)
+  const setError = (message: string) =>
+    setFailure(message ? { kind: "mutation", message } : null)
   const [busy, setBusy] = useState(false)
   const [attempt, setAttempt] = useState<{
     path: string
@@ -22,12 +27,23 @@ export function useApp(agentId: string, id: string) {
         const value = Schema.decodeUnknownSync(AppDetail)(
           await agentApi(agentId)(`apps/${id}`)
         )
-        if (generation === sequence.current) setDetail(value)
+        if (generation === sequence.current) {
+          setDetail(value)
+          setFailure((current) => (current?.kind === "load" ? null : current))
+        }
         return true
       } catch (cause) {
         if (generation === sequence.current)
-          setError(
-            cause instanceof Error ? cause.message : "Could not load the app."
+          setFailure((current) =>
+            current?.kind === "mutation"
+              ? current
+              : {
+                  kind: "load",
+                  message:
+                    cause instanceof Error
+                      ? cause.message
+                      : "Could not load the app.",
+                }
           )
       }
     },
@@ -109,7 +125,7 @@ export function useApp(agentId: string, id: string) {
   }
   return {
     detail,
-    error,
+    error: failure?.message ?? "",
     busy,
     attempt,
     refresh,

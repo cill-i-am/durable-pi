@@ -4,7 +4,7 @@ import { useFiles, uploadFile } from "@/features/files"
 import { agentUrl, errorMessage } from "@/http/client"
 import type { CommandRun } from "@/terminal/contracts"
 import { exportPlan, MAX_TRANSFER_BYTES } from "@/terminal/transfers"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -206,22 +206,14 @@ export function ExportedFile({
   }
   return (
     <div className="flex flex-col gap-2">
-      <Button
-        size="sm"
-        variant="outline"
-        nativeButton={false}
-        render={
-          <a
-            href={agentUrl(
-              agentId,
-              `terminal/${encodeURIComponent(run.id)}/file`
-            )}
-            download={filename}
-          />
-        }
+      <a
+        href={agentUrl(agentId, `terminal/${encodeURIComponent(run.id)}/file`)}
+        download={filename}
+        data-slot="button"
+        className={buttonVariants({ variant: "outline", size: "sm" })}
       >
         Download exported file
-      </Button>
+      </a>
       <Button
         size="sm"
         variant="outline"

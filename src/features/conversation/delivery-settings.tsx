@@ -26,9 +26,8 @@ export function MessageDeliverySettings() {
       <Field>
         <FieldLabel htmlFor={id}>Default message delivery</FieldLabel>
         <FieldDescription id={`${id}-description`}>
-          While an agent is working, steer its active reply or queue a new one.
-          You can override this for one message in the composer. Remembered on
-          this device.
+          Choose what a message does during a reply. You can change this in the
+          composer.
         </FieldDescription>
         <Select
           items={items}

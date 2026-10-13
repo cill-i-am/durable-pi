@@ -167,5 +167,20 @@ export function useRoutines(
       onPendingChange(false)
     }
   }
-  return { data, loading, error, busy, attempt, refresh, send, resolve, stop }
+  return {
+    data,
+    loading,
+    error,
+    busy,
+    attempt,
+    refresh,
+    send,
+    resolve,
+    stop,
+    retryLoad: () => {
+      if (lock.current || attempt) return Promise.resolve(false)
+      setError("")
+      return refresh()
+    },
+  }
 }

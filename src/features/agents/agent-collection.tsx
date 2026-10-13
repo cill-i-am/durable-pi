@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router"
 import { Archive, Plus, Undo2 } from "lucide-react"
 import type { AgentProfile } from "@/agents/contracts"
 import { AgentMark, agentTone } from "@/components/agent-mark"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
 export function AgentCollection({
@@ -35,13 +35,13 @@ export function AgentCollection({
           {archived ? "Archived agents" : "Your agents"}
         </h1>
         {archived ? (
-          <Button
-            variant="outline"
-            nativeButton={false}
-            render={<Link to="/agents" />}
+          <Link
+            to="/agents"
+            data-slot="button"
+            className={buttonVariants({ variant: "outline" })}
           >
             Active agents
-          </Button>
+          </Link>
         ) : (
           <Button onClick={onCreate}>
             <Plus />

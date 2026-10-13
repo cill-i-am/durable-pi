@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react"
 import { Schema } from "effect"
-import { ArrowLeft, Copy, KeyRound } from "lucide-react"
+import { ArrowLeft, KeyRound } from "lucide-react"
 import type { Routine } from "@/routines/contracts"
 import { type ConfigureWebhook, WebhookInfo } from "@/webhooks/contracts"
 import { agentApi, agentUrl, api } from "@/http/client"
+import { CopyButton } from "@/components/copy-button"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Field, FieldLabel } from "@/components/ui/field"
@@ -148,14 +149,7 @@ export function WebhookPanel({
       onPendingChange(!confirmed)
     }
   }
-  async function copy(value: string, label: string) {
-    try {
-      await navigator.clipboard.writeText(value)
-      setMessage(`${label} copied.`)
-    } catch {
-      setError("Clipboard access failed. Select and copy the field instead.")
-    }
-  }
+
   const locked = busy || !!attempt
   return (
     <section className="flex min-w-0 flex-col gap-5">
@@ -221,14 +215,12 @@ export function WebhookPanel({
                 readOnly
                 className="min-w-0 font-mono text-xs"
               />
-              <Button
-                size="icon"
+              <CopyButton
+                text={endpoint}
+                label="Copy webhook endpoint"
                 variant="outline"
-                aria-label="Copy webhook endpoint"
-                onClick={() => void copy(endpoint, "Endpoint")}
-              >
-                <Copy />
-              </Button>
+                size="icon"
+              />
             </div>
           </Field>
           {key && info.revision === key.revision && (
@@ -245,14 +237,12 @@ export function WebhookPanel({
                   value={key.value}
                   className="min-w-0 font-mono text-xs"
                 />
-                <Button
-                  size="icon"
+                <CopyButton
+                  text={key.value}
+                  label="Copy webhook key"
                   variant="outline"
-                  aria-label="Copy webhook key"
-                  onClick={() => void copy(key.value, "Key")}
-                >
-                  <Copy />
-                </Button>
+                  size="icon"
+                />
               </div>
             </Field>
           )}

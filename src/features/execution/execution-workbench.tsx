@@ -1,24 +1,31 @@
-import { useState } from "react"
+import { Link } from "@tanstack/react-router"
+import { parseAgentId, workspaceDestination } from "@/navigation/workspace"
+import { useEffect, useState } from "react"
 import { Code2, Play, Square, RefreshCw } from "lucide-react"
 import { useExecution } from "./use-execution"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export function ExecutionWorkbench({
+  onPendingChange,
   agentId,
-  agentName,
   selected,
   onSelect,
 }: {
   selected: string | null
   onSelect: (id: string | null) => void
   agentId: string
-  agentName: string
+  onPendingChange: (pending: boolean) => void
 }) {
   const execution = useExecution(agentId, selected, onSelect)
+  const pending = execution.busy || !!execution.attempt
+  useEffect(() => {
+    onPendingChange(pending)
+    return () => onPendingChange(false)
+  }, [pending, onPendingChange])
   const [code, setCode] = useState(
     "console.log('Items:', input.length)\nreturn input.reduce((sum, n) => sum + n, 0)"
   )
@@ -102,15 +109,17 @@ export function ExecutionWorkbench({
               <Play />
               {execution.attempt ? "Retry same request" : "Run code"}
             </Button>
-            {active && (
+            {(active || execution.attempt) && (
               <Button
                 type="button"
                 size="sm"
                 variant="outline"
                 disabled={execution.busy}
-                onClick={() => void execution.cancel(active.id)}
+                onClick={() =>
+                  void execution.cancel(execution.attempt?.id ?? active!.id)
+                }
               >
-                <Square /> Cancel run
+                <Square /> {execution.attempt ? "Cancel request" : "Cancel run"}
               </Button>
             )}
           </div>
@@ -192,13 +201,20 @@ export function ExecutionWorkbench({
             </p>
           )}
           {execution.runs.map((item) => (
-            <Button
+            <Link
               key={item.id}
-              className="h-auto w-full justify-between gap-3 py-2 text-left"
-              size="sm"
-              variant={execution.selected === item.id ? "secondary" : "ghost"}
-              disabled={execution.busy}
-              onClick={() => execution.select(item.id)}
+              {...workspaceDestination(parseAgentId(agentId), {
+                panel: "code",
+                item: item.id,
+              })}
+              aria-current={execution.selected === item.id ? "page" : undefined}
+              title={item.label}
+              className={buttonVariants({
+                size: "sm",
+                variant: execution.selected === item.id ? "secondary" : "ghost",
+                className: "h-auto w-full justify-between gap-3 py-2 text-left",
+              })}
+              disabled={pending}
             >
               <span className="min-w-0 truncate font-mono text-xs">
                 {item.label}
@@ -206,13 +222,12 @@ export function ExecutionWorkbench({
               <span className="shrink-0 text-xs text-muted-foreground">
                 {item.status}
               </span>
-            </Button>
+            </Link>
           ))}
         </section>
       </div>
       <footer className="border-t px-4 py-3 text-xs text-muted-foreground">
-        Private to {agentName}. Code, input and results are saved. Latest 50
-        runs shown.
+        Code, input and results are saved. Latest 50 runs shown.
       </footer>
     </>
   )

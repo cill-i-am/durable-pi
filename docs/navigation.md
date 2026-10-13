@@ -14,7 +14,7 @@ TanStack Start’s file routes own page and resource identity. `src/navigation/w
 | Settings section | `/agents/$agentId/settings/$section` |
 | Account security | `/agents/$agentId/settings/security` |
 
-Panels are Browser, Terminal, Files, Apps, Activity, Objects, Memory, Code and Routines. A selected app, file, checklist, command, execution result, routine, plan or activity record belongs in the resource path. Browser and Memory currently have no independent saved-detail screen. Source disclosure and tree expansion inside Memory remain local interactions.
+Panels are Browser, Terminal, Files, Apps, Activity, Checklists, Memory, Code and Routines. A selected app, file, checklist, command, execution result, routine, plan or activity record belongs in the resource path. Browser and Memory currently have no independent saved-detail screen. Source disclosure and tree expansion inside Memory remain local interactions.
 
 `/` is a bootstrap location that replaces itself with the last owned active agent. `/agents/$agentId/settings` redirects to General. A valid unknown bot or missing resource remains unavailable at its requested location; it does not substitute another bot. Opening an archived agent reads its history. Restore is a separate operation.
 

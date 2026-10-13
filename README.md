@@ -12,7 +12,7 @@ Browse the current product in the [feature map](FEATURES.md). Implementation pro
 
 ## Persistent working objects
 
-A working object is structured information you and your bot maintain together beyond a conversation. The first type is a **project checklist**, with tasks, To do / In progress / Blocked / Done statuses, optional due dates, and supporting notes. Ask the bot to create one, or open **Workbench → More workbench tools (⋯) → Objects → New checklist**. A bot-created checklist appears as a live editable chat card and in the full workbench. Both surfaces read the same saved object. History identifies your edits and the agent's edits; the originating conversation remains available from the object.
+A working object is structured information you and your bot maintain together beyond a conversation. The first type is a **project checklist**, with tasks, To do / In progress / Blocked / Done statuses, optional due dates, and supporting notes. Ask the bot to create one, or open **Workbench → More workbench tools (⋯) → Checklists → New checklist**. A bot-created checklist appears as a live editable chat card and in the full workbench. Both surfaces read the same saved object. History identifies your edits and the agent's edits; the originating conversation remains available from the object.
 
 Checklists are private to their owning bot and authenticated owner. Saving a task does not start a model run. On its next request the bot receives current object references and change indicators, and can read live state using `read_object`. Chat, tool snapshots and OptChat memory may reference the object; the native Pi document is authoritative. Tools `list_objects`, `create_checklist` and `update_checklist` use the same Effect operations as UI edits. Checklist completion is a status, not evidence that an external action happened or permission to perform one.
 
@@ -162,7 +162,7 @@ The public browser bundle contains no model credentials. Chat history, memory, a
 
 ## Private generated apps
 
-Open **Workbench → Apps** for a bot's private apps. Ask the bot to make a plan, checklist, table or form, or choose **New checklist app**. Saving creates an immutable draft; publishing a saved version makes its controls usable. The bot asks before publishing by default. Completed publication tool calls also expose the app inline in the conversation. Everything remains behind owner authentication; no public app links are created.
+Open **Workbench → Apps** for a bot's private apps. Ask the bot to make a table, form or custom app. For a project checklist, use **Checklists → New checklist**; it uses the same durable object operations as the agent's checklist tools. Saving creates an immutable draft; publishing a saved version makes its controls usable. The bot asks before publishing by default. Completed publication tool calls also expose the app inline in the conversation. Everything remains behind owner authentication; no public app links are created.
 
 Checklists and forms save their state and queue an update to the owning bot. Updates wait while its model connection is unavailable and enter the normal conversation queue with the same tool approvals. Versions retain state only for matching component/item IDs. The version menu can preview or republish older definitions; it does not restore historical form answers. Archive disables interaction, and Restore makes the app usable again.
 

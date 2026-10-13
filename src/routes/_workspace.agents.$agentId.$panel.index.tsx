@@ -17,5 +17,12 @@ export const Route = createFileRoute("/_workspace/agents/$agentId/$panel/")({
   beforeLoad: ({ params, search }) => {
     workspaceView(params, search)
   },
+  head: ({ params }) => ({
+    meta: [
+      {
+        title: `${params.panel.charAt(0).toUpperCase() + params.panel.slice(1)} — Pi`,
+      },
+    ],
+  }),
   component: () => null,
 })

@@ -443,6 +443,7 @@ export function AgentEditor({
   const id = useRef(agent?.id ?? crypto.randomUUID())
   async function save(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (pending) return
     setPending(true)
     setError("")
     try {
@@ -474,10 +475,7 @@ export function AgentEditor({
           <SheetTitle>
             {agent ? "Agent settings" : "Create an agent"}
           </SheetTitle>
-          <SheetDescription>
-            Give it a name and a purpose. Its conversation and memory stay
-            separate.
-          </SheetDescription>
+          <SheetDescription>Give it a name and a purpose.</SheetDescription>
         </SheetHeader>
         <form onSubmit={save}>
           <div className="agent-editor-preview">
@@ -494,6 +492,7 @@ export function AgentEditor({
                 placeholder="Research, Studio, Home…"
                 maxLength={80}
                 required
+                pattern=".*\S.*"
                 autoFocus
               />
             </Field>
@@ -516,10 +515,6 @@ export function AgentEditor({
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-            <p className="text-xs text-muted-foreground">
-              Own conversation and memory. Tools and model defaults can be
-              configured after creation.
-            </p>
             <div className="flex justify-end gap-2">
               <Button
                 type="button"
@@ -529,7 +524,7 @@ export function AgentEditor({
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={pending || !name.trim()}>
+              <Button type="submit" disabled={pending}>
                 {pending ? "Saving…" : agent ? "Save changes" : "Create agent"}
               </Button>
             </div>
