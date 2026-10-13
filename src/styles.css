@@ -3108,21 +3108,55 @@ body {
   transition: none;
 }
 @media (min-width: 1024px) {
+  .agent-columns {
+    container-type: inline-size;
+  }
   .workbench-host {
+    --workbench-width: min(664px, 55cqw);
     position: relative;
-    width: min(664px, 55%);
+    width: var(--workbench-width);
     min-width: 0;
     min-height: 0;
     flex-shrink: 0;
     border-left: 1px solid var(--border);
+    animation: workbench-dock-in 200ms linear;
+  }
+  .workbench-host > [data-base-ui-portal] > .responsive-overlay-viewport {
+    display: block;
+    position: absolute;
+    inset: 0;
+    overflow: clip;
   }
   .workbench-sheet[data-desktop="panel"] {
     position: absolute;
+    width: var(--workbench-width);
     border-left: 0;
     box-shadow: none;
+    opacity: 1;
+    translate: none;
+    animation: workbench-slide-in 200ms linear;
+  }
+}
+/* Animate route insertion together with the chat's available width, keeping
+   the workbench interior at its final width throughout the slide. */
+@keyframes workbench-dock-in {
+  from {
+    width: 0;
+  }
+  to {
+    width: var(--workbench-width);
+  }
+}
+@keyframes workbench-slide-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  .workbench-host,
   .responsive-overlay,
   .responsive-overlay-backdrop {
     transition-duration: 0ms !important;

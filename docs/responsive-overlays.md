@@ -26,6 +26,8 @@ The example is a centered dialog on desktop and a bottom drawer below 768px. Kee
 
 The responsive policy lives in `responsive-overlay.tsx`; mobile geometry, safe areas, drag offsets, motion and the shared handle live in `styles.css`. Base UI owns pointer/scroll arbitration, focus containment/return, dismissal, and virtual-keyboard handling. The same mounted primitive tree is used at every width, preserving local drafts and mounted workbench content during resizing. Desktop gestures are disabled. Reduced-motion preferences remove transitions.
 
+The route-mounted workbench waits for its actual dock element before opening or creating its portal. An explicit `null` container prevents Base UI from falling back to the document body. Desktop entry slides from the right while the dock grows over 200ms, matching the sidebar's timing; its interior keeps its final width so text does not reflow during the slide. Only the dock viewport clips the animation, allowing portaled menus to extend beyond it. Mobile entry uses Base UI's existing 300ms bottom-drawer transition. Opening animation does not change the URL, run tools or remount content on a tab change. Closing still removes the workbench with its route; this correction covers entry motion.
+
 Do not add viewport checks in features or duplicate a form inside separate dialog/drawer branches. The shared `DropdownMenu` and `Select` components keep their native state and keyboard semantics, and use `ResponsivePopup` to present their content in a mobile drawer. Desktop menus and selects remain anchored. For touch-interactive content such as a canvas or terminal, use Base UI's `data-base-ui-swipe-ignore` on that region when its gestures must not dismiss a drawer.
 
 ## Nested navigation and actions
