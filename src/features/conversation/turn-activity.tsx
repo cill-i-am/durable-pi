@@ -214,6 +214,8 @@ function SourceLink({
 }: {
   source: ReturnType<typeof toolPresentation>["sources"][number]
 }) {
+  const [unavailableIcon, setUnavailableIcon] = useState<string | null>(null)
+  const favicon = source.favicon
   return (
     <Badge
       variant="outline"
@@ -227,6 +229,26 @@ function SourceLink({
         />
       }
     >
+      <span
+        className="activity-source-icon"
+        data-icon="inline-start"
+        aria-hidden="true"
+      >
+        {favicon && unavailableIcon !== favicon ? (
+          <img
+            src={favicon}
+            alt=""
+            width={14}
+            height={14}
+            loading="lazy"
+            decoding="async"
+            referrerPolicy="no-referrer"
+            onError={() => setUnavailableIcon(favicon)}
+          />
+        ) : (
+          <Globe />
+        )}
+      </span>
       <span className="truncate">{source.label}</span>
       <ArrowUpRight aria-hidden="true" data-icon="inline-end" />
     </Badge>
