@@ -24,7 +24,7 @@ export const Route = createFileRoute(
   head: ({ params }) => ({
     meta: [
       {
-        title: `${params.panel.charAt(0).toUpperCase() + params.panel.slice(1)} — Pi`,
+        title: `${params.panel === "objects" ? "Checklists" : params.panel.charAt(0).toUpperCase() + params.panel.slice(1)} — Pi`,
       },
     ],
   }),

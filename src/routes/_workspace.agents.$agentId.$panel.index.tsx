@@ -20,7 +20,7 @@ export const Route = createFileRoute("/_workspace/agents/$agentId/$panel/")({
   head: ({ params }) => ({
     meta: [
       {
-        title: `${params.panel.charAt(0).toUpperCase() + params.panel.slice(1)} — Pi`,
+        title: `${params.panel === "objects" ? "Checklists" : params.panel.charAt(0).toUpperCase() + params.panel.slice(1)} — Pi`,
       },
     ],
   }),
