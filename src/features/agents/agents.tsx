@@ -27,6 +27,8 @@ import {
 import { api } from "@/http/client"
 import { catalogReducer, initialCatalog } from "./catalog-state"
 import { AgentMark, agentTone } from "@/components/agent-mark"
+import { AgentStatus } from "@/components/agent-status"
+import type { RuntimeStatus } from "@/conversations/status"
 import { authClient } from "@/auth/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -135,6 +137,7 @@ export function useAgentCatalog(ownerId: string, selectedId?: AgentId) {
 export function AgentSidebar({
   disabled = false,
   agents,
+  statuses,
   selected,
   query,
   onQuery,
@@ -150,6 +153,7 @@ export function AgentSidebar({
 }: {
   disabled?: boolean
   agents: AgentProfile[]
+  statuses: Readonly<Record<string, RuntimeStatus>>
   selected?: AgentProfile
   query: string
   onQuery: (query: string) => void
@@ -264,11 +268,7 @@ export function AgentSidebar({
                   <AgentMark tone={agentTone(agent.id)} />
                   <span className="flex min-w-0 flex-col gap-0.5">
                     <span className="truncate">{agent.name}</span>
-                    <span className="truncate text-xs text-muted-foreground">
-                      {agent.status === "archived"
-                        ? "Archived"
-                        : agent.instructions || "Your personal assistant"}
-                    </span>
+                    <AgentStatus compact status={statuses[agent.id]?.state} />
                   </span>
                 </SidebarMenuButton>
                 <DropdownMenu>

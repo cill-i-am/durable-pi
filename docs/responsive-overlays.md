@@ -19,7 +19,7 @@ The example is a centered dialog on desktop and a bottom drawer below 768px. Kee
 ## Presentation options
 
 - Mobile overlays always open from the bottom, including navigation, menus, submenus and selects. There is no per-feature edge setting.
-- `desktop="panel" breakpoint="lg"` keeps the workbench docked and non-modal at 1024px and wider. On smaller screens it becomes a modal drawer. Its portal container stays the same across breakpoints.
+- `desktop="panel" breakpoint="md"` keeps the workbench docked and non-modal at 768px and wider. Below 768px it becomes a modal bottom drawer. Its portal container stays the same across breakpoints.
 - `mobileLayout="panel"` on content gives workbench/settings interiors the available height and lets their existing scroll areas own scrolling. Ordinary forms use the default content-sized, scrollable body.
 - `dismissible={false}` blocks closing by gesture, Escape, outside press or a close control while a save or other protected operation is pending. Continue to keep operation-specific guards in the feature.
 - Pass `initialFocus` or `finalFocus` for a specific focus target. Desktop defaults to the first focusable element; mobile defaults to the popup to avoid opening the keyboard unexpectedly. An explicit input `autoFocus` still takes precedence.
@@ -47,3 +47,10 @@ Native touchscreen and software-keyboard behavior should also be checked on a ph
 References: [Base UI Drawer](https://base-ui.com/react/components/drawer), [shadcn Drawer](https://ui.shadcn.com/docs/components/base/drawer).
 
 Parent sizing: retain the parent’s own layout (`height: 100%` for panels, content height for menus) while a nested drawer is open. Do not assign a measured drawer height or `--drawer-frontmost-height` to the parent: a short menu would collapse a full-height Settings or navigation drawer. Verify parent geometry and retained scroll position before, during and after opening shorter children, not just the visible child and focus return.
+
+
+### Workbench navigation correction — 13 October 2026
+
+The workbench now uses a second shadcn Sidebar on desktop, with a compact icon rail and an explicit expand control. Browser, Terminal, Files, Apps, Activity, Checklists, Memory, Code and Routines are native links with an active-page indicator. The rail replaces the five tabs and separate overflow menu. At widths from 768px, the workbench remains beside the conversation; it no longer unexpectedly becomes a full-screen modal at a narrow desktop width.
+
+On mobile, one labelled tool Select replaces the compressed tab strip. Its existing Base UI popup opens as a nested bottom drawer above the workbench. The content, route selection, operation guards, retained exit animation and focus return still use their existing owners. No new viewport branch is required in a feature.

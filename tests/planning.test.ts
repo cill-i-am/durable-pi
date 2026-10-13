@@ -1,4 +1,4 @@
-import { expect, it } from "vitest"
+import { expect, it, vi } from "vitest"
 import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -7,6 +7,7 @@ import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context"
 import {
   Harness,
   createRegistry,
+  createSession,
   watchEvents,
   defineTool,
 } from "@earendil-works/pi-durable"
@@ -18,7 +19,7 @@ import {
   fauxToolCall,
   Type,
 } from "@earendil-works/pi-ai"
-import { piPlans } from "../src/planning/adapters/pi"
+import { piPlans, savedPlanBlocked } from "../src/planning/adapters/pi"
 import {
   planTools,
   planContextHook,
@@ -621,3 +622,75 @@ it.each([
   },
   15000
 )
+
+it("inspects the bound blocker after native restart without revalidating evidence or writing plan revisions", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "pi-plan-status-"))
+  const path = join(directory, "pi.sqlite")
+  const options = { models: createModels(), registry: createRegistry() }
+  let harness = await Harness.open(
+    await openNodeSqliteStorage(path),
+    options,
+    ctx
+  )
+  const origin = source()
+  let authorityReads = 0
+  const authority: PlanAuthority = {
+    current: () => origin,
+    cancelled: () => {
+      authorityReads++
+      return false
+    },
+    evidence: (ref) => {
+      authorityReads++
+      return Effect.succeed({ ...ref, state: "valid", detail: "Saved" })
+    },
+    receipts: () => [],
+  }
+  let plans = piPlans(async () => harness, authority)
+  const initial = update(1, origin)
+  const input: PlanUpdate = {
+    ...initial,
+    draft: {
+      ...initial.draft,
+      steps: [
+        { ...initial.draft.steps[0]!, status: "blocked" },
+        ...initial.draft.steps.slice(1),
+      ],
+      blocker: "Waiting for supplied project details",
+    },
+  }
+  try {
+    const receipt = await run(plans.update(input, origin))
+    authorityReads = 0
+    expect(await run(savedPlanBlocked(harness, origin.turnId))).toBe(true)
+    expect(await run(savedPlanBlocked(harness, crypto.randomUUID()))).toBe(
+      false
+    )
+    expect(authorityReads).toBe(0)
+    await harness.close(ctx)
+    const readerStorage = await openNodeSqliteStorage(path)
+    const commit = vi.spyOn(readerStorage, "commit")
+    const reader = createSession(readerStorage)
+    try {
+      expect(await run(savedPlanBlocked(reader, origin.turnId))).toBe(true)
+      expect(authorityReads).toBe(0)
+      expect(commit).not.toHaveBeenCalled()
+    } finally {
+      await reader.close(ctx)
+    }
+    harness = await Harness.open(
+      await openNodeSqliteStorage(path),
+      options,
+      ctx
+    )
+    plans = piPlans(async () => harness, authority)
+    const detail = await run(plans.read(input.id))
+    expect(detail.plan.revision).toBe(receipt.revision)
+    expect(detail.history).toHaveLength(1)
+    await run(plans.cancel(origin.turnId))
+    expect(await run(savedPlanBlocked(harness, origin.turnId))).toBe(false)
+  } finally {
+    await harness.close(ctx)
+    await rm(directory, { recursive: true, force: true })
+  }
+})

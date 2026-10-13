@@ -1,4 +1,6 @@
 import { AgentCollection } from "@/features/agents/agent-collection"
+import { useAgentStatuses } from "@/features/agents/use-agent-statuses"
+import type { RuntimeStatus } from "@/conversations/status"
 import { useWorkspaceLocation } from "./use-workspace-location"
 import { useBlocker } from "@tanstack/react-router"
 import { homeAgentId } from "@/agents/contracts"
@@ -60,6 +62,7 @@ export function ChatApp() {
 function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
   const location = useWorkspaceLocation()
   const catalog = useAgentCatalog(ownerId, location.agentId)
+  const runtime = useAgentStatuses(catalog.agents, ownerId, location.agentId)
   const securityOpen = location.search.security ?? false
   const setSecurityOpen = location.setSecurity
   const [workLocked, setNavigationLocked] = useState(false)
@@ -207,6 +210,7 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
             }
             disabled={navigationLocked}
             agents={catalog.agents}
+            statuses={runtime.statuses}
             selected={catalog.selected}
             name={name}
             onSettings={() => act("settings")}
@@ -273,6 +277,7 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
                 onNavigationLockChange={setNavigationLocked}
                 name={name}
                 agent={catalog.selected}
+                onStatus={runtime.setLive}
                 agents={catalog.agents.filter(
                   (value) => value.status === "active"
                 )}
@@ -351,6 +356,7 @@ function AgentWorkspace({
   onMemory,
   name,
   onNavigationLockChange,
+  onStatus,
 }: {
   location: ReturnType<typeof useWorkspaceLocation>
   overlayOpen: boolean
@@ -367,9 +373,20 @@ function AgentWorkspace({
   onMemory: (id: AgentProfile["id"]) => void
   name: string
   onNavigationLockChange: (value: boolean) => void
+  onStatus: (value: { agentId: string; status: RuntimeStatus }) => void
 }) {
   const { setOpenMobile } = useSidebar()
   const conversation = useConversation(agent.id)
+  const runState = conversation.error
+    ? "unavailable"
+    : (conversation.state?.runtime?.state ?? "unavailable")
+  const runTurnId = conversation.state?.runtime?.turnId ?? null
+  useEffect(() => {
+    onStatus({
+      agentId: agent.id,
+      status: { state: runState, turnId: runTurnId },
+    })
+  }, [agent.id, runState, runTurnId, onStatus])
   const files = useFiles(agent.id)
   // Keep only the last rendered route view while Base UI completes its exit.
   // The URL remains authoritative; this snapshot cannot admit another action.

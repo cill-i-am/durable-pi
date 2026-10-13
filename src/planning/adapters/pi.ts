@@ -97,6 +97,25 @@ const fingerprint = async (input: unknown) =>
     (n) => n.toString(16).padStart(2, "0")
   ).join("")
 
+/** Native document snapshots only: no harness opening, resume or evidence reconciliation. */
+export function savedPlanBlocked(
+  session: Pick<Session, "snapshot">,
+  turnId: string
+) {
+  return attempt(async () => {
+    const binding = await session.snapshot(Bindings, turnId, context)
+    if (!binding?.planId || binding.cancelled) return false
+    const document = await session.snapshot(Documents, binding.planId, context)
+    if (!document?.value) return false
+    const plan = parse(document.value)
+    return (
+      plan.rootTurns.includes(turnId) &&
+      plan.state === "open" &&
+      !!plan.blocker.trim()
+    )
+  })
+}
+
 /** Native atomic documents own plan state, history, turn bindings and retry receipts together. */
 export function piPlans(
   open: () => Promise<Session>,

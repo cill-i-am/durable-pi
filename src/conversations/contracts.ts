@@ -5,6 +5,7 @@ import { FileInfo, FileSelection } from "../workspace/files"
 
 import { Profile, JobType, ResolvedRoute } from "../inference/policy"
 import { SummaryIssue } from "../memory/domain"
+import { RuntimeStatus } from "./status"
 
 export const SendInput = Schema.Struct({
   operationId: Schema.String.check(Schema.isPattern(/^[a-f0-9-]{36}$/i)),
@@ -118,6 +119,7 @@ const VisibleTurn = Schema.Struct({
   ),
 })
 export const ConversationMetadata = Schema.Struct({
+  runtime: Schema.optional(RuntimeStatus),
   access: Schema.optional(AccessState),
   model: Schema.String,
   thinking: Schema.optional(Schema.String),
