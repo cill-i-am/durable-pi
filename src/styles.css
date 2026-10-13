@@ -1499,7 +1499,7 @@ body {
   background: var(--sidebar);
   border-right: 1px solid var(--border);
 }
-.file-explorer-list button {
+.file-explorer-list [data-slot="button"] {
   width: 100%;
   min-width: 0;
   height: 34px;
@@ -1513,7 +1513,7 @@ body {
   gap: 14px;
   padding: 18px;
 }
-.file-explorer-detail > div:first-child {
+.file-explorer-detail:not([data-slot="empty"]) > div:first-child {
   border-bottom: 1px solid var(--border);
   padding-top: 0;
   padding-bottom: 14px;
@@ -2252,7 +2252,7 @@ body {
 .terminal-command {
   background: var(--terminal);
   color: var(--terminal-foreground);
-  border-color: var(--terminal);
+  border-color: var(--input);
   padding: 18px;
   border-radius: 10px;
   line-height: 20px;
@@ -2297,10 +2297,6 @@ body {
 
 .file-text-preview {
   gap: 16px;
-}
-.file-text-preview .markdown {
-  font-size: 13px;
-  line-height: 19px;
 }
 .file-text-preview .markdown h1 {
   font-size: 24px;
@@ -2369,7 +2365,7 @@ body {
   .file-explorer {
     min-height: 0;
   }
-  .file-explorer-list button {
+  .file-explorer-list [data-slot="button"] {
     flex-shrink: 0;
   }
 }
@@ -2796,7 +2792,7 @@ body {
 .file-explorer-list {
   padding: 10px 6px;
 }
-.file-explorer-list button {
+.file-explorer-list [data-slot="button"] {
   font-size: 12px;
   font-weight: 400;
 }
@@ -2817,8 +2813,8 @@ body {
   padding: 0 8px;
 }
 .file-text-preview .markdown {
-  font-size: 13px;
-  line-height: 20px;
+  font-size: 1rem;
+  line-height: 1.6;
 }
 .file-text-preview .markdown h1 {
   font-size: 22px;
@@ -2880,7 +2876,12 @@ body {
   margin-top: 6px;
 }
 .assistant-message .markdown {
-  line-height: 20px;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+.assistant-message .markdown :is(p, ul, ol, blockquote) {
+  max-width: 72ch;
+  text-wrap: pretty;
 }
 .assistant-message .markdown p + p {
   margin-top: 14px;

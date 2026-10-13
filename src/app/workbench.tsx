@@ -74,7 +74,10 @@ export function WorkbenchPanel({
   // and never falls back to portaling the panel into document.body.
   const [container, setContainer] = useState<HTMLDivElement | null>(null)
   const extra = more.find((tab) => tab.id === value)
-  const tabs = extra ? [...primary, extra] : primary
+  const tabs = extra ? [...primary.slice(0, -1), extra] : primary
+  const overflow = extra
+    ? [primary[4], ...more.filter((tab) => tab.id !== extra.id)]
+    : more
   return (
     <div ref={setContainer} className="workbench-host">
       <Sheet
@@ -125,14 +128,16 @@ export function WorkbenchPanel({
                       data-slot="tabs-trigger"
                       data-active={value === tab.id ? "" : undefined}
                       aria-current={value === tab.id ? "page" : undefined}
+                      aria-label={tab.label}
+                      title={tab.label}
                       aria-disabled={locked || undefined}
                       onClick={(event) => {
                         if (locked) event.preventDefault()
                       }}
                       className="relative inline-flex items-center justify-center gap-1.5 px-1.5 py-0.5 text-sm font-medium whitespace-nowrap text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring aria-disabled:pointer-events-none [&_svg]:size-4"
                     >
-                      <tab.icon />
-                      {tab.label}
+                      <tab.icon aria-hidden="true" />
+                      <span>{tab.label}</span>
                     </Link>
                   ))}
                 </nav>
@@ -152,7 +157,7 @@ export function WorkbenchPanel({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuGroup>
-                    {more.map((tab) => (
+                    {overflow.map((tab) => (
                       <DropdownMenuItem
                         key={tab.id}
                         render={

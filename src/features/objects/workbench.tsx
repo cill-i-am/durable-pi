@@ -65,6 +65,17 @@ function Workbench({
           <h2 className="workbench-section-title flex items-center gap-2">
             <ListTodo className="size-4" /> Checklists
           </h2>
+          {!creating && (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={archived || locked}
+              onClick={() => setCreating(crypto.randomUUID())}
+            >
+              <Plus data-icon="inline-start" />
+              New checklist
+            </Button>
+          )}
         </header>
       )}
       <div className="workbench-body objects-workbench-body">
@@ -154,17 +165,6 @@ function Workbench({
           </form>
         ) : (
           <>
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={archived || locked}
-                onClick={() => setCreating(crypto.randomUUID())}
-              >
-                <Plus data-icon="inline-start" />
-                New checklist
-              </Button>
-            </div>
             {Object.values(state.pending)
               .filter(
                 (input) => !state.list.some((item) => item.id === input.id)

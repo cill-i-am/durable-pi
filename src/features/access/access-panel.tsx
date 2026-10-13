@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { RefreshCw } from "lucide-react"
+import { Check, RefreshCw } from "lucide-react"
 import { Schema } from "effect"
 import {
   AccessState,
@@ -128,9 +128,20 @@ export function AccessPanel({
                     void update(tool, value)
                 }}
               >
-                <ToggleGroupItem value="allow">Allow</ToggleGroupItem>
-                <ToggleGroupItem value="ask">Ask</ToggleGroupItem>
-                <ToggleGroupItem value="deny">Deny</ToggleGroupItem>
+                {(["allow", "ask", "deny"] as const).map((mode) => (
+                  <ToggleGroupItem key={mode} value={mode}>
+                    <Check
+                      aria-hidden="true"
+                      className={tool.mode === mode ? "" : "invisible"}
+                      data-icon="inline-start"
+                    />
+                    {mode === "allow"
+                      ? "Allow"
+                      : mode === "ask"
+                        ? "Ask"
+                        : "Deny"}
+                  </ToggleGroupItem>
+                ))}
               </ToggleGroup>
               {busy === tool.name && (
                 <p role="status" className="text-xs text-muted-foreground">

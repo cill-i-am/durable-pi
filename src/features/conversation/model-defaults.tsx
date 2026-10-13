@@ -111,7 +111,6 @@ export function ModelDefaults({
     <section className="settings-section" aria-label="Models">
       <header className="settings-section-heading">
         <h2>Models & connections</h2>
-        <p>Your ChatGPT subscription and the right model for each job.</p>
       </header>
       <div className="settings-section-body">
         <h3 className="settings-eyebrow">Model connection</h3>
