@@ -629,7 +629,11 @@ function AgentWorkspace({
               />
             )}
             {workbench === "browser" && (
-              <BrowserWorkbench agentId={agent.id} agentName={agent.name} />
+              <BrowserWorkbench
+                agentId={agent.id}
+                agentName={agent.name}
+                onPendingChange={setExecutionPending}
+              />
             )}
             {workbench === "files" && (
               <FilesWorkbench

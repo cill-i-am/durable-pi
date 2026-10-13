@@ -21,7 +21,7 @@ Each pass revisits the complete inventory below in all six review domains. The f
 | 2 | Complete task journeys, pending/error states, destructive actions and duplicates | Complete | Synthetic checklist edits, code execution, routine creation, app/terminal uncertainty and cancellation; source review of security, permissions and recovery. |
 | 3 | Copy, typography, semantic colours and control hierarchy | Complete | Removed repeated copy and the competing checklist builder. Checked light/dark tokens and rendered control backgrounds; shared copy feedback. |
 | 4 | Mobile, nested overlays, narrow widths, zoom and reduced motion | Complete | 320, 390 and 640 CSS-pixel checks, nested menus, keyboard containment and reduced-motion emulation. Native browser zoom and real-device checks remain unverified. |
-| 5 | Post-fix regression walk, checks, review and hosted release | Local review complete; release pending | Rechecked error/retry, inline and workbench app guards, terminal cancellation, palette keyboard navigation, archive confirmation and file focus. Release evidence follows below. |
+| 5 | Post-fix regression walk, checks, review and hosted release | Complete | Rechecked error/retry, inline and workbench app guards, terminal cancellation, palette keyboard navigation, archive confirmation and file focus. PR #81 checks, deployment and read-only hosted acceptance passed; final policy-editor guard/focus corrections tested locally. |
 
 ## Screen and interaction inventory
 
@@ -65,10 +65,10 @@ Locations name the owning source. All listed changes are implemented; severity d
 | Severity | Domain | Location | Before | After | Why |
 | --- | --- | --- | --- | --- | --- |
 | HIGH | Accessibility | `src/app/workspace-settings.tsx`, resource rows, exports and auth links | Base UI buttons rendered links with button semantics; workbench used a tab panel without corresponding tabs | Native TanStack links/anchors with `buttonVariants`; labelled workbench section and URL navigation | Navigation keeps link behavior and accessible roles; no orphaned tab relationship |
-| HIGH | Accessibility | `src/routes/__root.tsx:60`, `src/features/files/files-panel.tsx:338`, feature forms | No skip link; rename exit lost its useful focus target; newly opened editors did not consistently focus a field | Skip-to-content target; rename autofocus and return to Options; first-field autofocus in explicit editors | Keyboard users can reach content and continue after editing |
+| HIGH | Accessibility | `src/routes/__root.tsx:60`, `src/features/files/files-panel.tsx:338`, feature forms | No skip link; rename exit lost its useful focus target; newly opened editors did not consistently focus a field | Skip-to-content target; rename autofocus and return to Options; Browser/Terminal policy-editor return focus; first-field autofocus in explicit editors | Keyboard users can reach content and continue after editing |
 | HIGH | Colors | `src/styles.css:103`, `src/components/ui/input.tsx`, InputGroup/Select/Checkbox | Pale input boundary failed 3:1; dark controls reused the stroke color as a translucent surface | Separate input stroke tokens, card surfaces and muted hover; test text/stroke/status contrast | Fields remain identifiable without making every structural separator heavy |
 | HIGH | Layout | `src/features/memory/memory-panel.tsx:131` | Export tab extended past the 320px viewport | Wrapping tab row with mobile target height | All memory views stay reachable on narrow screens |
-| HIGH | UI | `src/features/terminal/terminal-workbench.tsx:43`, `src/features/execution/execution-workbench.tsx:24`, `src/features/apps/inline-app.tsx:22` | Leaving a workbench or hiding an inline app could discard an unconfirmed operation's retry controls | Feed pending state into the existing navigation guard; keep same-ID retry; expose native cancellation/resolution; aggregate inline instances | The UI must not lose the handle for an uncertain action or encourage a duplicate attempt |
+| HIGH | UI | `src/features/terminal/terminal-workbench.tsx:43`, `src/features/execution/execution-workbench.tsx:24`, `src/features/apps/inline-app.tsx:22` | Leaving a workbench or hiding an inline app could discard an unconfirmed operation's retry controls | Feed pending state and browser policy drafts into the existing navigation guard; keep same-ID retry; expose native cancellation/resolution; aggregate inline instances | The UI must not lose the handle for an uncertain action or encourage a duplicate attempt |
 | HIGH | UI | `src/features/memory/memory-panel.tsx:167`, `src/features/routines/routines-workbench.tsx:215`, `src/features/apps/use-app.ts:30` | Search errors had no retry; initial loading could look empty; polling could blur load versus mutation failures | Search loading/no-match/retry, routine reload, Apps skeleton; preserve mutation failure until resolution | Errors have a recovery path and polling cannot dismiss uncertainty |
 | MEDIUM | UI | `src/features/apps/apps-workbench.tsx:74` | Two New checklist flows produced different authoritative states | Apps links to Checklists; removed legacy manual builder, state and dead styles; existing generated apps still render | Users have one durable checklist creation/editing journey |
 | MEDIUM | Writing | Settings, Apps, Checklists, Browser, Terminal, Code, Routines and conversation empty state | Repeated privacy, owner, title, welcome and explanatory filler | Removed duplication and shortened copy; kept limits, permission consequences, draft/archived states and blockers | Visible text should help make a decision or understand current work |
@@ -93,6 +93,7 @@ Locations name the owning source. All listed changes are implemented; severity d
 - Memory provenance and tree entries; delayed search status; no-match/Clear; first-query outage -> Retry -> sourced original result. Export/import tabs are reachable at 320px.
 - Activity timeline, task details (communication, model usage, plans), saved-conversation detail and close/focus return. The saved view retains original text and committed tool output; no approval or retry was issued from history.
 - Mobile checks at 320/390/640 CSS pixels: nested workbench/menu/settings drawers, field/control dimensions, Memory reflow, checklist editor and file Options/Rename return focus. Keyboard tab sequence stays inside Settings. Reduced-motion emulation reports zero dialog animation/transition duration. Temporary viewport/media overrides reset afterwards.
+- Final pass: Browser policy editing and in-flight owner commands now use the same navigation guard as Terminal. Browser/Terminal policy cancellation returns focus to the settings opener; verified by actual focus and restored navigation, without saving a policy.
 - Paper: removed the duplicated settings tagline from the existing Models/settings artboard (`6T-0`); inspected the result and finished the editing session.
 
 ### Not verified
@@ -104,8 +105,18 @@ Locations name the owning source. All listed changes are implemented; severity d
 
 ## Release evidence
 
-Pending PR checks, merge, automatic deployment and a read-only hosted route/settings/mobile check.
+[PR #81](https://github.com/cill-i-am/durable-pi/pull/81) merged as `d343c43`. Both branch checks passed on final head `d28bc0b`; main checks, Alchemy deployment and hosted authentication probes passed in [production run 38333644684](https://github.com/cill-i-am/durable-pi/actions/runs/38333644684).
+
+Read-only hosted acceptance after that deployment confirmed:
+
+- Apps title `Apps — Pi`, native Checklists link and no legacy New checklist app control.
+- Checklists title `Checklists — Pi`, `/agents/home/objects` path and one New checklist entry.
+- General settings has its own `/agents/home/settings/general` path, native section links, no old tagline and the expected dark input/card styles. Test sound control exercised; no appearance or sound preference changed.
+- Settings Memory & data opens the actual Memory workbench. At 320px all four tabs, including Export & import, fit within the viewport; document scroll width is 320px. The export view is `/agents/home/memory?tab=files`, title `Memory — Pi`, with native HTML/JSONL download links. Nothing was exported or imported.
+- Restored the viewport after testing. Saved a private, ignored screenshot of the General settings dialog; no transcripts or credentials are included in public source.
+
+The final source comparison also found an inconsistent Browser policy draft guard and missing focus return after Browser/Terminal policy cancellation. The focused follow-up uses existing workspace guards, has local browser proof, and changes no backend operations or policies. Its CI/deployment outcome is recorded in the follow-up pull request.
 
 ## Verdict
 
-Approve for the six inspected domains and the verified local scope: the observed HIGH findings are fixed. Unverified environments and consequential actions above are not claimed as passing. Release completion still requires the established CI/deployment workflow.
+Approve for the six inspected domains and the verified local scope: the observed HIGH findings are fixed. Unverified environments and consequential actions above are not claimed as passing. The final policy-editor follow-up follows the same CI/deployment workflow; its local proof does not substitute for hosted acceptance.
