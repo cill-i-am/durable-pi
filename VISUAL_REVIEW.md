@@ -12,7 +12,7 @@ Baseline: production main `163ec93`. Reuse docs/navigation.md and docs/responsiv
 | 2 | Live conversation and all nine workbench interiors | Complete |
 | 3 | Light/dark comparison, 320/390px layouts, reading measure and rendered colour pairs | Complete |
 | 4 | Implement recommendations and verify actual components with synthetic data | Complete |
-| 5 | Whole-diff review, CI, release and hosted acceptance | Pending |
+| 5 | Whole-diff review, CI, release and hosted acceptance | PR #88 released; exit/padding follow-up in progress |
 
 These are complementary passes, not a claim that every possible state was exercised five times. Hosted inspection used the signed-in owner session. Consequential account changes, permission changes, external execution and private exports were excluded. Authentication, editable objects and failures are exercised locally with synthetic data through the real frontend, routes and TanStack stream projection.
 
@@ -40,6 +40,8 @@ Severity applies to the observed baseline. All findings below are consolidated r
 | Low | Layout/UI | src/features/execution/execution-workbench.tsx:38; src/features/routines/routines-workbench.tsx:207; src/features/objects/workbench.tsx:65 | Code/Routines titles were smaller non-headings; creation actions occupied an extra body row. | Reuse the workbench heading style; place one New checklist/routine action beside its heading. Recent routine runs becomes h3. | Consistent hierarchy and a single creation entry; original disabled/pending behaviour is retained. |
 | Low | Writing/UI | src/app/workspace-settings.tsx:232; src/features/memory/memory-panel.tsx:157; src/features/skills/skills-panel.tsx:511; src/features/conversation/model-defaults.tsx:112; src/features/files/files-panel.tsx:305 | Repeated section/provider copy, vague skills prompt, notes that promised to appear automatically, and an unexplained blank file preview. | Delete redundant copy, provide specific empty-state guidance, and distinguish saved notes from the message archive. | Users can tell what exists and what action to take without duplicate actions or promotional filler. |
 | Low | UI | src/components/ui/toggle.tsx:6 | `transition-all` also animated layout changes. | Transition colour, background, border and shadow only. | Avoid incidental movement when a control's content or size changes. |
+| Medium | UI/Accessibility | src/app/workspace.tsx:374; src/app/workbench.tsx:87; src/styles.css:3130 | Closing the route unmounted the panel immediately, cutting off its exit animation. | Retain only the last panel/selection until Base UI completes closing; mark the closing dock inert. Animate dock width and native popup transform; return focus to the open control. | The URL changes immediately. Native lifecycle handles rapid reopen and reduced motion without a timer or another action authority. |
+| Low | Layout/UI | src/styles.css:1071; src/styles.css:1120 | Tool disclosure hover surfaces put icons and chevrons against the edges. A later Thinking rule also removed its row padding. | Use 8px vertical and 12px horizontal padding on the group and all activity rows; align expanded details and connectors with the labels. Remove the conflicting Thinking layout override. | Match the padded surface across completed, failed and thinking disclosures without adding another card. |
 
 ## Colour measurements
 
@@ -68,6 +70,10 @@ No palette replacement was warranted by these measurements. Borders separating d
 
 Screen-reader output, native browser zoom, translated/RTL content and physical-device swipe gestures remain unverified. Existing bottom-drawer behaviour is preserved; a device-metrics check is not a claim of physical iPhone testing. No production restart or external action is needed for this visual change.
 
+The exit follow-up was checked through the actual component lifecycle with a synthetic fixture that slows only its CSS transition to 2 seconds for inspection. During closing, the URL had already returned to chat, the selected file remained visible, the dock was inert, its width was shrinking, and the popup carried Base UI’s ending state and a positive horizontal transform. Keyboard reopening before completion restored a single live panel. At 390px, Escape produced a positive downward transform and native cleanup; reduced-motion transitions were 0s and returned focus to Open workbench. Compiled production CSS uses 200ms desktop and 300ms mobile transitions; at 320px the document remains 320px wide. Temporary emulation and slow-motion styling are test-only and are not shipped.
+
+PR #88 merged as `0f7cba4`. Its [production workflow](https://github.com/cill-i-am/durable-pi/actions/runs/38371233918) passed both checks and deployment. The follow-up release and final hosted acceptance remain pending.
+
 ## Verdict
 
-Approve for the reviewed domains: all nine confirmed findings are fixed and no HIGH finding remains in this scope. CI/release and final hosted acceptance are pending. This does not certify the unverified checks listed above.
+Approve for the reviewed domains: all eleven confirmed findings are fixed and no HIGH finding remains in this scope. CI/release and final hosted acceptance are pending. This does not certify the unverified checks listed above.

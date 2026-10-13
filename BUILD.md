@@ -8,7 +8,7 @@ Use all six better-* domain skills against the deployed app, preserve the existi
 - [x] Pass 2: inspect conversation and every workbench interior, including saved, empty and recovery states.
 - [x] Pass 3: compare both themes and narrow layouts; measure typography, contrast and controls, and consolidate findings.
 - [x] Pass 4: implement the recommendations and verify the actual components locally, including interaction and pending-state regressions.
-- [ ] Pass 5: review the complete result, pass CI, merge/deploy and repeat representative hosted journeys.
+- [ ] Pass 5: review the complete result, pass CI, merge/deploy and repeat representative hosted journeys. PR #88 is deployed (`0f7cba4`, production run 38371233918). Follow-up: retain workbench content until native exit completion, including selection and focus return; add consistent padding to tool/thinking disclosures. Local lifecycle checks pass; follow-up release and hosted acceptance are pending.
 
 ## Compact recorded activity — 13 October 2026
 

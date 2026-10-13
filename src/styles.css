@@ -1073,7 +1073,7 @@ body {
   height: auto;
   min-height: 44px;
   justify-content: flex-start;
-  padding: 4px 0;
+  padding: 8px 12px;
   gap: 10px;
   white-space: normal;
 }
@@ -1113,7 +1113,7 @@ body {
   content: "";
   position: absolute;
   inset-block: 36px -12px;
-  inset-inline-start: 10px;
+  inset-inline-start: 22px;
   border-inline-start: 1px solid var(--border);
   pointer-events: none;
 }
@@ -1122,13 +1122,13 @@ body {
   height: auto;
   min-height: 44px;
   justify-content: flex-start;
-  padding: 4px 0;
+  padding: 8px 12px;
   gap: 12px;
   white-space: normal;
 }
 .thinking-trigger { color: var(--muted-foreground); font-weight: 400; }
 .thinking-details {
-  margin-inline-start: 32px;
+  margin-inline-start: 44px;
   padding: 8px 0 12px;
   color: var(--muted-foreground);
 }
@@ -1164,7 +1164,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  margin-inline-start: 32px;
+  margin-inline-start: 44px;
   padding: 8px 0 12px;
   white-space: normal;
 }
@@ -1183,7 +1183,7 @@ body {
   min-width: 0;
   flex-wrap: wrap;
   gap: 8px;
-  margin-inline-start: 32px;
+  margin-inline-start: 44px;
 }
 .activity-sources:not(:empty) { padding-bottom: 12px; }
 .activity-source {
@@ -2887,9 +2887,6 @@ body {
   margin-top: 14px;
 }
 .thinking-trigger {
-  height: 28px;
-  padding: 0;
-  gap: 8px;
   font-size: 12px;
 }
 .thinking-trigger > svg {
@@ -3135,7 +3132,16 @@ body {
     min-height: 0;
     flex-shrink: 0;
     border-left: 1px solid var(--border);
-    animation: workbench-dock-in 200ms linear;
+    transition: width 200ms linear;
+  }
+  .workbench-host[data-open="false"] {
+    width: 0;
+    border-left: 0;
+  }
+  @starting-style {
+    .workbench-host[data-open="true"] {
+      width: 0;
+    }
   }
   .workbench-host > [data-base-ui-portal] > .responsive-overlay-viewport {
     display: block;
@@ -3150,25 +3156,14 @@ body {
     box-shadow: none;
     opacity: 1;
     translate: none;
-    animation: workbench-slide-in 200ms linear;
-  }
-}
-/* Animate route insertion together with the chat's available width, keeping
-   the workbench interior at its final width throughout the slide. */
-@keyframes workbench-dock-in {
-  from {
-    width: 0;
-  }
-  to {
-    width: var(--workbench-width);
-  }
-}
-@keyframes workbench-slide-in {
-  from {
-    transform: translateX(100%);
-  }
-  to {
     transform: translateX(0);
+    transition: transform 200ms linear;
+  }
+  .workbench-sheet[data-desktop="panel"]:is(
+    [data-starting-style],
+    [data-ending-style]
+  ) {
+    transform: translateX(100%);
   }
 }
 @media (prefers-reduced-motion: reduce) {
