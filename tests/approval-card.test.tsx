@@ -14,7 +14,6 @@ function render(status: Approval["status"], disabled = false) {
         mode: "ask",
         revision: 0,
       }}
-      onDecided={() => {}}
       disabled={disabled}
       approval={{
         id: "approval",

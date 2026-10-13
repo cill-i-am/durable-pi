@@ -144,7 +144,8 @@ export function Conversation({
       pending.current = null
       setProfile("auto")
       setJob("conversation")
-      reload()
+      // The existing live stream publishes committed mutations. Recreating
+      // its TanStack client here would clear the transcript during hydration.
       return true
     } catch (e) {
       if (rejectedModelAttempt(e)) pending.current = null
@@ -163,7 +164,6 @@ export function Conversation({
     try {
       await api("retry", { turnId: id, operationId })
       retryKeys.current.delete(id)
-      reload()
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not retry.")
     } finally {
@@ -174,7 +174,6 @@ export function Conversation({
     if (!active) return
     try {
       await api("cancel", { operationId: active.id })
-      reload()
     } catch {
       setError("Could not stop the turn. Try again.")
     }
@@ -389,11 +388,11 @@ export function Conversation({
                                   variant="ghost"
                                   size="xs"
                                   onClick={() =>
-                                    void api("cancel", { operationId: turn.id })
-                                      .then(() => reload())
-                                      .catch(() =>
-                                        setError("Could not cancel.")
-                                      )
+                                    void api("cancel", {
+                                      operationId: turn.id,
+                                    }).catch(() =>
+                                      setError("Could not cancel.")
+                                    )
                                   }
                                 >
                                   Cancel
@@ -446,7 +445,6 @@ export function Conversation({
                               )?.title
                             }
                             agentId={agent.id}
-                            onDecided={reload}
                             disabled={
                               archived ||
                               turn.status === "stopping" ||

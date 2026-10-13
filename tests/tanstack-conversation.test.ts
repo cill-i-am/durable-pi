@@ -245,6 +245,67 @@ describe("Pi records through the real TanStack processor", () => {
 })
 
 describe("TanStack live connection against the production SSE adapter", () => {
+  it("keeps the transcript on one subscription through approval and cancellation updates", async () => {
+    vi.useFakeTimers()
+    const current = { ...base, activity: [] }
+    const saved = {
+      ...current,
+      id: "saved",
+      status: "done" as const,
+      answer: "Earlier answer",
+    }
+    const approval = {
+      id: "approval",
+      turnId: base.id,
+      tool: "run_code",
+      input: "{}",
+      createdAt: 1,
+      expiresAt: 100000,
+      status: "pending" as const,
+      revision: 0,
+    }
+    const waiting: ChatState = {
+      ...metadata,
+      turns: [saved, current],
+      access: { tools: [], approvals: [approval] },
+    }
+    const f = fixture(waiting)
+    const live = f.client()
+    await flush()
+    const originalIds = live.client.getMessages().map((message) => message.id)
+    expect(live.view()?.turns).toEqual([saved, current])
+    f.change({
+      ...waiting,
+      access: {
+        tools: [],
+        approvals: [{ ...approval, status: "running", revision: 1 }],
+      },
+    })
+    // A metadata-only notification retains all native messages while delivered.
+    expect(live.client.getMessages().map((message) => message.id)).toEqual(
+      originalIds
+    )
+    await flush()
+    expect(live.view()?.access?.approvals[0]?.status).toBe("running")
+    expect(live.view()?.turns).toEqual([saved, current])
+    f.change({
+      ...waiting,
+      turns: [saved, { ...current, status: "cancelled" }],
+      access: {
+        tools: [],
+        approvals: [{ ...approval, status: "cancelled", revision: 2 }],
+      },
+    })
+    await flush()
+    expect(live.view()?.turns).toEqual([
+      saved,
+      { ...current, status: "cancelled" },
+    ])
+    expect(live.view()?.access?.approvals[0]?.status).toBe("cancelled")
+    expect(f.requests).toHaveLength(1)
+    expect(f.requests[0]?.method).toBe("GET")
+    expect(f.listeners.size).toBe(1)
+  })
   it("rejoins saved work after disconnect, observes cancellation, and never resends a prompt", async () => {
     vi.useFakeTimers()
     const f = fixture({
