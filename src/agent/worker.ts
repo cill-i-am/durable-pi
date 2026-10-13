@@ -71,10 +71,10 @@ import { PiHarness, openPiSessionStore } from "agents/harness/pi"
 import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context"
 import {
   createRegistry,
-  createSession,
   defineTool,
   Harness,
   type EntryRecord,
+  type Storage,
   type ToolExecutionApi,
   type ToolExecutionResult,
 } from "@earendil-works/pi-durable"
@@ -178,7 +178,7 @@ import {
 } from "../objects/tools"
 import { objectsRequest } from "../objects/http"
 import { ObjectFailure } from "../objects/contracts"
-import { piPlans, savedPlanBlocked } from "../planning/adapters/pi"
+import { piPlans, planBlockerStatus } from "../planning/adapters/pi"
 import { planEvidence } from "../planning/adapters/evidence"
 import {
   planTools,
@@ -1082,8 +1082,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     )
   )
   readonly registry = createRegistry()
+  private piStorage?: Storage
   readonly harness = new PiHarness({
     harness: async ({ storage, context }) => {
+      this.piStorage = storage
       this.installRemoteTools()
       this.registry.install({
         name: "personal",
@@ -2552,13 +2554,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     const planBlocked =
       !before.active && before.latest?.status === "done"
         ? await runObserved(
-            Effect.acquireUseRelease(
-              Effect.tryPromise(async () =>
-                createSession(await openPiSessionStore(this.ctx.storage))
-              ),
-              (session) => savedPlanBlocked(session, before.latest!.id),
-              (session) =>
-                Effect.promise(() => session.close(BACKGROUND_CONTEXT))
+            planBlockerStatus(
+              () => this.piStorage,
+              () => openPiSessionStore(this.ctx.storage),
+              before.latest.id
             ).pipe(
               Effect.match({
                 onSuccess: (blocked) => blocked,

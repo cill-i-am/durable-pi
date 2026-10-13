@@ -7,7 +7,6 @@ import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context"
 import {
   Harness,
   createRegistry,
-  createSession,
   watchEvents,
   defineTool,
 } from "@earendil-works/pi-durable"
@@ -19,7 +18,11 @@ import {
   fauxToolCall,
   Type,
 } from "@earendil-works/pi-ai"
-import { piPlans, savedPlanBlocked } from "../src/planning/adapters/pi"
+import {
+  piPlans,
+  savedPlanBlocked,
+  planBlockerStatus,
+} from "../src/planning/adapters/pi"
 import {
   planTools,
   planContextHook,
@@ -627,11 +630,8 @@ it("inspects the bound blocker after native restart without revalidating evidenc
   const directory = await mkdtemp(join(tmpdir(), "pi-plan-status-"))
   const path = join(directory, "pi.sqlite")
   const options = { models: createModels(), registry: createRegistry() }
-  let harness = await Harness.open(
-    await openNodeSqliteStorage(path),
-    options,
-    ctx
-  )
+  let storage = await openNodeSqliteStorage(path)
+  let harness = await Harness.open(storage, options, ctx)
   const origin = source()
   let authorityReads = 0
   const authority: PlanAuthority = {
@@ -662,6 +662,15 @@ it("inspects the bound blocker after native restart without revalidating evidenc
   try {
     const receipt = await run(plans.update(input, origin))
     authorityReads = 0
+    const warmClose = vi.spyOn(storage, "close")
+    const unopened = vi.fn(async () => {
+      throw new Error("must not open a second warm facade")
+    })
+    expect(
+      await run(planBlockerStatus(() => storage, unopened, origin.turnId))
+    ).toBe(true)
+    expect(unopened).not.toHaveBeenCalled()
+    expect(warmClose).not.toHaveBeenCalled()
     expect(await run(savedPlanBlocked(harness, origin.turnId))).toBe(true)
     expect(await run(savedPlanBlocked(harness, crypto.randomUUID()))).toBe(
       false
@@ -670,19 +679,64 @@ it("inspects the bound blocker after native restart without revalidating evidenc
     await harness.close(ctx)
     const readerStorage = await openNodeSqliteStorage(path)
     const commit = vi.spyOn(readerStorage, "commit")
-    const reader = createSession(readerStorage)
-    try {
-      expect(await run(savedPlanBlocked(reader, origin.turnId))).toBe(true)
-      expect(authorityReads).toBe(0)
-      expect(commit).not.toHaveBeenCalled()
-    } finally {
-      await reader.close(ctx)
-    }
-    harness = await Harness.open(
-      await openNodeSqliteStorage(path),
-      options,
-      ctx
+    const coldClose = vi.spyOn(readerStorage, "close")
+    expect(
+      await run(
+        planBlockerStatus(
+          () => undefined,
+          async () => readerStorage,
+          origin.turnId
+        )
+      )
+    ).toBe(true)
+    expect(authorityReads).toBe(0)
+    expect(commit).not.toHaveBeenCalled()
+    expect(coldClose).toHaveBeenCalledOnce()
+    storage = await openNodeSqliteStorage(path)
+    harness = await Harness.open(storage, options, ctx)
+
+    // Startup during acquisition adopts the shared queue and releases the unused cold facade.
+    let live: typeof storage | undefined
+    const unusedCold = await openNodeSqliteStorage(path)
+    const unusedClose = vi.spyOn(unusedCold, "close")
+    expect(
+      await run(
+        planBlockerStatus(
+          () => live,
+          async () => {
+            live = storage
+            return unusedCold
+          },
+          origin.turnId
+        )
+      )
+    ).toBe(true)
+    expect(unusedClose).toHaveBeenCalledOnce()
+
+    // Startup after snapshots begin invalidates that view rather than publishing it.
+    live = undefined
+    const replacedCold = await openNodeSqliteStorage(path)
+    const find = replacedCold.findDocument.bind(replacedCold)
+    vi.spyOn(replacedCold, "findDocument").mockImplementation(
+      async (...args) => {
+        live = storage
+        return find(...args)
+      }
     )
+    const replacedClose = vi.spyOn(replacedCold, "close")
+    expect(
+      await run(
+        planBlockerStatus(
+          () => live,
+          async () => replacedCold,
+          origin.turnId
+        )
+      )
+    ).toBeUndefined()
+    expect(replacedClose).toHaveBeenCalledOnce()
+    expect(
+      await run(planBlockerStatus(() => storage, unopened, origin.turnId))
+    ).toBe(true)
     plans = piPlans(async () => harness, authority)
     const detail = await run(plans.read(input.id))
     expect(detail.plan.revision).toBe(receipt.revision)

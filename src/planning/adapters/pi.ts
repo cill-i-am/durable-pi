@@ -4,6 +4,8 @@ import {
   defineDoc,
   defineDocFamily,
   type Session,
+  type Storage,
+  createSession,
   type Tx,
 } from "@earendil-works/pi-durable"
 import {
@@ -114,6 +116,32 @@ export function savedPlanBlocked(
       !!plan.blocker.trim()
     )
   })
+}
+
+/** The bridge owns warm storage. A cold status read owns only its disposable facade. */
+export function planBlockerStatus(
+  current: () => Storage | undefined,
+  openReadonly: () => Promise<Storage>,
+  turnId: string
+) {
+  return Effect.acquireUseRelease(
+    attempt(async () => {
+      const shared = current()
+      return { storage: shared ?? (await openReadonly()), owned: !shared }
+    }),
+    ({ storage }) => {
+      const shared = current() ?? storage
+      return savedPlanBlocked(createSession(shared), turnId).pipe(
+        // A native startup can replace a cold reader's facade while it awaits.
+        // Discard that view; the next status read uses the bridge's commit queue.
+        Effect.map((blocked) =>
+          current() && current() !== shared ? undefined : blocked
+        )
+      )
+    },
+    ({ storage, owned }) =>
+      owned ? Effect.promise(() => storage.close(context)) : Effect.void
+  )
 }
 
 /** Native atomic documents own plan state, history, turn bindings and retry receipts together. */
