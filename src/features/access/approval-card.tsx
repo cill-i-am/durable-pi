@@ -9,7 +9,6 @@ import { approvalDecision, type ConfirmedDecision } from "./decision"
 export function ApprovalCard({
   approval,
   agentId,
-  onDecided,
   disabled,
   toolLabel,
   toolPolicy,
@@ -17,7 +16,6 @@ export function ApprovalCard({
 }: {
   approval: Approval
   agentId: string
-  onDecided: () => void
   disabled: boolean
   toolLabel?: string
   toolPolicy?: ToolPolicy
@@ -68,7 +66,6 @@ export function ApprovalCard({
     } finally {
       setBusy(false)
       lock.current = false
-      onDecided()
     }
   }
   const pending = approval.status === "pending" && decided === null

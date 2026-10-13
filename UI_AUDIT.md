@@ -135,3 +135,7 @@ Final route-correction validation: 666 tests in 83 files, TypeScript, native wor
 ## Verdict
 
 Approve for the six inspected domains and the verified local/hosted scope. The reproducible HIGH findings are fixed, all five passes are complete, and the final receipt-route correction passed CI, deployment and hosted acceptance. The specific unverified environments, consequential actions and isolated observation above remain explicit limits of this audit.
+
+## Activity acceptance follow-up
+
+Subsequent hosted acceptance of the compact activity trail reproduced a transcript flash after two one-time approvals. The mutation callback recreated the TanStack client even though the existing Pi stream publishes committed access and run changes. Removing these redundant refreshes from approval, send, retry and cancellation keeps the current transcript mounted. Manual reconnection remains separate. Local coverage verifies one native subscription through approval/cancellation updates, and actual-component browser verification retains the transcript immediately after approving. Release and hosted evidence for this correction are tracked in BUILD.md; this is an additional finding after the five completed audit passes.
