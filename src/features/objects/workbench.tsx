@@ -1,6 +1,8 @@
 import { useEffect, useId, useState } from "react"
 import { ArrowLeft, ListTodo, Plus } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Link } from "@tanstack/react-router"
+import { parseAgentId, workspaceDestination } from "@/navigation/workspace"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
@@ -17,30 +19,24 @@ import { useObjects, useObjectState } from "./context"
 export function ObjectsWorkbench({
   selected,
   onSelect,
-  agentName,
   onEditing,
 }: {
   selected: string | null
   onSelect: (id: string | null) => void
-  agentName: string
   onEditing: (editing: boolean) => void
 }) {
   const context = useObjects()
   if (!context) return null
-  return (
-    <Workbench {...{ selected, onSelect, agentName, onEditing, context }} />
-  )
+  return <Workbench {...{ selected, onSelect, onEditing, context }} />
 }
 function Workbench({
   selected,
   onSelect,
-  agentName,
   onEditing,
   context,
 }: {
   selected: string | null
   onSelect: (id: string | null) => void
-  agentName: string
   onEditing: (editing: boolean) => void
   context: NonNullable<ReturnType<typeof useObjects>>
 }) {
@@ -66,10 +62,9 @@ function Workbench({
     <>
       {!selected && (
         <header className="workbench-heading-row">
-          <div className="flex items-center gap-2 text-sm font-medium">
-            <ListTodo className="size-4" /> Objects
-            <Badge variant="secondary">Private</Badge>
-          </div>
+          <h2 className="workbench-section-title flex items-center gap-2">
+            <ListTodo className="size-4" /> Checklists
+          </h2>
         </header>
       )}
       <div className="workbench-body objects-workbench-body">
@@ -96,7 +91,7 @@ function Workbench({
             onClick={() => onSelect(null)}
           >
             <ArrowLeft data-icon="inline-start" />
-            All objects
+            All checklists
           </Button>
         )}
         {selected ? (
@@ -127,6 +122,7 @@ function Workbench({
                 <FieldLabel htmlFor={inputId}>Project title</FieldLabel>
                 <Input
                   id={inputId}
+                  autoFocus
                   required
                   maxLength={120}
                   value={title}
@@ -139,10 +135,7 @@ function Workbench({
               <SaveState store={store} id={creating} />
             )}
             <div className="flex gap-2">
-              <Button
-                type="submit"
-                disabled={!!state.pending[creating] || !title.trim()}
-              >
+              <Button type="submit" disabled={!!state.pending[creating]}>
                 Create checklist
               </Button>
               <Button
@@ -162,7 +155,6 @@ function Workbench({
         ) : (
           <>
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="font-medium">Made with {agentName}</h2>
               <Button
                 variant="outline"
                 size="sm"
@@ -188,11 +180,9 @@ function Workbench({
             {!state.list.length && (
               <Empty>
                 <EmptyHeader>
-                  <EmptyTitle>Keep the work here</EmptyTitle>
+                  <EmptyTitle>No checklists yet</EmptyTitle>
                   <EmptyDescription>
-                    Ask {agentName} to plan a project, or start a checklist.
-                    Tasks, notes and history stay available beyond the
-                    conversation.
+                    Create a checklist or ask your agent to plan a project.
                   </EmptyDescription>
                 </EmptyHeader>
               </Empty>
@@ -200,12 +190,18 @@ function Workbench({
             {state.list
               .filter((object) => !object.archived)
               .map((object) => (
-                <Button
+                <Link
                   key={object.id}
-                  variant="ghost"
-                  className="h-auto min-h-16 w-full justify-start gap-3 border-b px-0 py-3"
+                  className={buttonVariants({
+                    variant: "ghost",
+                    className:
+                      "h-auto min-h-16 w-full justify-start gap-3 border-b px-0 py-3",
+                  })}
                   disabled={editing}
-                  onClick={() => onSelect(object.id)}
+                  {...workspaceDestination(parseAgentId(agentId), {
+                    panel: "objects",
+                    item: object.id,
+                  })}
                 >
                   <ListTodo data-icon="inline-start" />
                   <span className="min-w-0 flex-1 text-left">
@@ -215,7 +211,7 @@ function Workbench({
                     </span>
                   </span>
                   <Badge variant="secondary">r{object.revision}</Badge>
-                </Button>
+                </Link>
               ))}
             {state.list.some((object) => object.archived) && (
               <details>
@@ -225,23 +221,25 @@ function Workbench({
                 {state.list
                   .filter((object) => object.archived)
                   .map((object) => (
-                    <Button
+                    <Link
                       key={object.id}
-                      variant="ghost"
-                      className="mt-2 h-auto w-full justify-start py-3"
-                      onClick={() => onSelect(object.id)}
+                      className={buttonVariants({
+                        variant: "ghost",
+                        className: "mt-2 h-auto w-full justify-start py-3",
+                      })}
+                      {...workspaceDestination(parseAgentId(agentId), {
+                        panel: "objects",
+                        item: object.id,
+                      })}
                     >
                       {object.title}
-                    </Button>
+                    </Link>
                   ))}
               </details>
             )}
           </>
         )}
       </div>
-      <footer className="border-t px-4 py-3 text-xs text-muted-foreground">
-        Private to {agentName}. Saved tasks and history survive reconnects.
-      </footer>
     </>
   )
 }

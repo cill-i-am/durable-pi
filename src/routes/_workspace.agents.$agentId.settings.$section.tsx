@@ -19,5 +19,12 @@ export const Route = createFileRoute(
   beforeLoad: ({ params, search }) => {
     workspaceView(params, search)
   },
+  head: ({ params }) => ({
+    meta: [
+      {
+        title: `${params.section.charAt(0).toUpperCase() + params.section.slice(1)} — Pi`,
+      },
+    ],
+  }),
   component: () => null,
 })

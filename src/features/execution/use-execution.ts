@@ -114,14 +114,14 @@ export function useExecution(
       setError("")
       return refresh()
     },
-    select: (id: string | null) => {
-      sequence.current++
-      setSelected(id)
-      setDetail(null)
-      setError("")
-    },
     start,
-    cancel: (id: string) =>
-      command(`execution/${encodeURIComponent(id)}/cancel`, {}),
+    cancel: async (id: string) => {
+      const result = await command(
+        `execution/${encodeURIComponent(id)}/cancel`,
+        {}
+      )
+      if (result) setAttempt((current) => (current?.id === id ? null : current))
+      return result
+    },
   }
 }

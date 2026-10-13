@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { ArrowUpRight, Globe, RefreshCw, Settings2, X } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
@@ -267,21 +267,19 @@ export function BrowserWorkbench({
                       {state.page.title || "Browser page"}
                     </h3>
                   </div>
-                  <Button
-                    size="icon-sm"
-                    variant="ghost"
-                    nativeButton={false}
-                    render={
-                      <a
-                        href={state.page.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      />
-                    }
+                  <a
+                    href={state.page.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    data-slot="button"
+                    className={buttonVariants({
+                      variant: "ghost",
+                      size: "icon-sm",
+                    })}
                     aria-label="Open page in your browser"
                   >
                     <ArrowUpRight />
-                  </Button>
+                  </a>
                 </div>
                 {state.controller === "owner" ? (
                   <BrowserControls
@@ -393,9 +391,8 @@ export function BrowserWorkbench({
         )}
       </div>
       <p className="border-t p-4 text-xs text-muted-foreground">
-        Private to {agentName}. Sessions expire after two idle minutes or ten
-        minutes total. Hiding this panel leaves the session running until it
-        expires.
+        Sessions expire after two idle minutes or ten minutes total. Hiding this
+        panel leaves the session running until it expires.
       </p>
     </>
   )

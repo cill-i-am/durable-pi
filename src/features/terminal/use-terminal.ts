@@ -205,6 +205,29 @@ export function useTerminal(
     }
   }
   return {
+    cancelPending: async () => {
+      const id = attempt?.id ?? sessionAttempt ?? transferAttempt?.input.id
+      if (!id || lock.current) return
+      lock.current = true
+      sequence.current++
+      setBusy(true)
+      try {
+        // Native cancellation persists a tombstone even before admission.
+        await agentApi(agentId)(`terminal/${encodeURIComponent(id)}/cancel`, {})
+        setAttempt((current) => (current?.id === id ? null : current))
+        setSessionAttempt((current) => (current === id ? null : current))
+        setTransferAttempt((current) =>
+          current?.input.id === id ? null : current
+        )
+        setError("")
+      } catch {
+        setError("Cancellation is unconfirmed. Retry cancelling this request.")
+      } finally {
+        lock.current = false
+        setBusy(false)
+        await refresh()
+      }
+    },
     networkPolicy,
     configureNetwork: async (input: TerminalNetworkPolicy) => {
       if (lock.current) return false
@@ -264,12 +287,6 @@ export function useTerminal(
     refresh: () => {
       setError("")
       return refresh()
-    },
-    select: (id: string | null) => {
-      sequence.current++
-      setSelected(id)
-      setDetail(null)
-      setError("")
     },
     start,
     cancel: (id: string) =>

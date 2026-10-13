@@ -19,7 +19,6 @@ import {
 import { AgentMark } from "@/components/agent-mark"
 import type { Workbench } from "./workspace-navigation"
 import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent } from "@/components/ui/tabs"
 import {
   Sheet,
   SheetContent,
@@ -43,7 +42,7 @@ const primary = [
   { id: "activity", label: "Activity", icon: Activity },
 ] as const
 const more = [
-  { id: "objects", label: "Objects", icon: ListTodo },
+  { id: "objects", label: "Checklists", icon: ListTodo },
   { id: "memory", label: "Memory", icon: BookOpen },
   { id: "code", label: "Code", icon: Code2 },
   { id: "routines", label: "Routines", icon: Clock3 },
@@ -101,7 +100,7 @@ export function WorkbenchPanel({
               Private tools, files, activity and saved work for this agent.
             </SheetDescription>
           </SheetHeader>
-          <Tabs value={value} className="workbench-tabs">
+          <div className="workbench-tabs">
             <div className="workbench-tabbar">
               <div className="mobile-workbench-heading">
                 <strong>Workspace</strong>
@@ -182,7 +181,10 @@ export function WorkbenchPanel({
                 <ArrowLeft className="workbench-back-icon" />
               </Button>
             </div>
-            <TabsContent value={value} className="workbench-panel">
+            <section
+              aria-label={`${tabs.find((tab) => tab.id === value)?.label ?? value} workbench`}
+              className="workbench-panel"
+            >
               {recoveryAction && (
                 <div
                   role="status"
@@ -195,8 +197,8 @@ export function WorkbenchPanel({
               <div className="contents" inert={Boolean(recoveryAction)}>
                 {children}
               </div>
-            </TabsContent>
-          </Tabs>
+            </section>
+          </div>
           {mobileNavigation}
         </SheetContent>
         {overlays}

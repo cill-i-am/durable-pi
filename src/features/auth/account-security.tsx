@@ -214,6 +214,7 @@ export function AccountSecurity({
                           <Button
                             variant="outline"
                             disabled={pending}
+                            aria-label={`Sign out ${sessionLabel(session.userAgent)}`}
                             onClick={() => {
                               setError("")
                               setConfirm({ kind: "one", session })

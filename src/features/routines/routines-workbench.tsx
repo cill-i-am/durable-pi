@@ -43,7 +43,6 @@ const schedule = (routine: Routine) =>
       : `Every ${routine.schedule.minutes} minutes`
 export function RoutinesWorkbench({
   agentId,
-  agentName,
   onPendingChange,
   selected,
   webhook,
@@ -53,7 +52,6 @@ export function RoutinesWorkbench({
   webhook: boolean
   onSelect: (id: string | null, webhook?: boolean) => void
   agentId: string
-  agentName: string
   onPendingChange: (pending: boolean) => void
 }) {
   const [newEditor, setNewEditor] = useState<{
@@ -213,7 +211,19 @@ export function RoutinesWorkbench({
       <div className="workbench-body">
         {actions.error && (
           <Alert>
-            <AlertDescription>{actions.error}</AlertDescription>
+            <AlertDescription>
+              {actions.error}
+              {!actions.attempt && (
+                <Button
+                  variant="link"
+                  size="sm"
+                  disabled={actions.busy}
+                  onClick={() => void actions.retryLoad()}
+                >
+                  Retry routines
+                </Button>
+              )}
+            </AlertDescription>
           </Alert>
         )}
         {actions.attempt && (
@@ -289,8 +299,7 @@ export function RoutinesWorkbench({
           </>
         ) : (
           <>
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-sm font-medium">Work with {agentName}</h2>
+            <div className="flex items-center gap-3">
               <Button
                 size="sm"
                 variant="outline"
@@ -301,8 +310,7 @@ export function RoutinesWorkbench({
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Runs on Cloudflare with this browser closed. Results appear in
-              this conversation. Your tool permissions and approvals still
+              Routines continue when you close the app. Tool approvals still
               apply.
             </p>
             {actions.loading ? (
@@ -312,7 +320,7 @@ export function RoutinesWorkbench({
             ) : actions.data.routines.length === 0 ? (
               <Empty>
                 <EmptyHeader>
-                  <EmptyTitle>A little ahead of you</EmptyTitle>
+                  <EmptyTitle>No routines yet</EmptyTitle>
                   <EmptyDescription>
                     Schedule a task review, prepare a brief or pick up a project
                     at a chosen time.
@@ -588,7 +596,9 @@ function RoutineEditor({
             <FieldLabel htmlFor="routine-title">Name</FieldLabel>
             <Input
               id="routine-title"
+              autoFocus
               required
+              pattern=".*\S.*"
               maxLength={80}
               value={title}
               onChange={(e) => setTitle(e.target.value)}

@@ -458,9 +458,7 @@ export function ChecklistView({
         <div className="min-w-0">
           <h2>{object.title}</h2>
         </div>
-        <Badge variant="secondary">
-          {object.archived ? "Archived" : "Only you"}
-        </Badge>
+        {object.archived && <Badge variant="secondary">Archived</Badge>}
       </div>
       {object.notes && <p className="checklist-notes">{object.notes}</p>}
       <div className="checklist-summary">
@@ -669,7 +667,7 @@ export function ChecklistView({
         </TabsContent>
       </Tabs>
       <p className="text-xs text-muted-foreground">
-        Changes are available on your next message. Saving does not start a run.
+        Your agent sees edits on your next message.
       </p>
       {object.origin.turnId ? (
         <Button
@@ -782,6 +780,7 @@ function TaskEditor({
           <FieldLabel htmlFor={`${id}-title`}>Title</FieldLabel>
           <Input
             id={`${id}-title`}
+            autoFocus
             className="min-h-11"
             required
             maxLength={120}

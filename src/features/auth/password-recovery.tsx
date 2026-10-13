@@ -3,7 +3,7 @@ import { workspaceReturnLink } from "@/navigation/workspace"
 import { Link, useSearch } from "@tanstack/react-router"
 import { authClient } from "@/auth/client"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import {
   Field,
   FieldDescription,
@@ -17,13 +17,13 @@ import { PasswordInput } from "./password-input"
 function BackToSignIn() {
   const { returnTo } = useSearch({ strict: false })
   return (
-    <Button
-      variant="link"
-      render={<Link {...workspaceReturnLink(returnTo ?? "/")} />}
-      nativeButton={false}
+    <Link
+      {...workspaceReturnLink(returnTo ?? "/")}
+      data-slot="button"
+      className={buttonVariants({ variant: "link" })}
     >
       Back to sign in
-    </Button>
+    </Link>
   )
 }
 
@@ -195,9 +195,13 @@ export function ResetPassword() {
       ) : token === null ? (
         <p role="status">Opening your reset link…</p>
       ) : unavailable ? (
-        <Button render={<Link to="/forgot-password" />} nativeButton={false}>
+        <Link
+          to="/forgot-password"
+          data-slot="button"
+          className={buttonVariants({})}
+        >
           Request a new link
-        </Button>
+        </Link>
       ) : (
         <form onSubmit={submit}>
           <FieldGroup>

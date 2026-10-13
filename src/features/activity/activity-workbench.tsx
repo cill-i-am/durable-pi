@@ -206,9 +206,6 @@ export function ActivityWorkbench({
               </>
             ) : (
               <>
-                <p className="text-sm text-muted-foreground">
-                  The work, the next step, and what needs your attention.
-                </p>
                 {state.loading && <Skeleton className="h-24 w-full" />}
                 {!state.loading && !state.list.plans.length && (
                   <Empty>
@@ -216,8 +213,7 @@ export function ActivityWorkbench({
                       <EmptyTitle>No task plans yet</EmptyTitle>
                       <EmptyDescription>
                         Ask your agent for help with a project. It will keep
-                        track of substantial work here. Simple chat stays
-                        simple.
+                        track of substantial work here.
                       </EmptyDescription>
                     </EmptyHeader>
                   </Empty>

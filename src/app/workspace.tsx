@@ -42,7 +42,7 @@ export function ChatApp() {
   const { data: session, isPending, error } = authClient.useSession()
   if (isPending)
     return (
-      <main className="loading-view">
+      <main id="main-content" tabIndex={-1} className="loading-view">
         <PiMark />
         <Skeleton className="h-4 w-40" />
         <span className="sr-only">Loading your session</span>
@@ -220,7 +220,7 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
             }}
             onArchive={(agent) => void archive(agent)}
           />
-          <main className="workspace-main">
+          <main id="main-content" tabIndex={-1} className="workspace-main">
             {navigationBlocked && (
               <Alert>
                 <AlertDescription>
@@ -373,7 +373,21 @@ function AgentWorkspace({
   const files = useFiles(agent.id)
   const [sending, setSending] = useState(false)
   const [filePending, setFilePending] = useState(false)
-  const [appPending, setAppPending] = useState(false)
+  const [workbenchAppPending, setAppPending] = useState(false)
+  const [inlineAppRequests, setInlineAppRequests] = useState<
+    ReadonlySet<string>
+  >(new Set())
+  const onAppPendingChange = useCallback((key: string, pending: boolean) => {
+    setInlineAppRequests((current) => {
+      if (current.has(key) === pending) return current
+      const next = new Set(current)
+      if (pending) next.add(key)
+      else next.delete(key)
+      return next
+    })
+  }, [])
+  const appPending = workbenchAppPending || inlineAppRequests.size > 0
+  const [executionPending, setExecutionPending] = useState(false)
   const objectId = location.search.item ?? null
   const setObjectId = location.setItem
   const [objectPending, setObjectPending] = useState(false)
@@ -385,6 +399,7 @@ function AgentWorkspace({
         objectEditing ||
         routinePending ||
         appPending ||
+        executionPending ||
         filePending
     )
   }, [
@@ -393,6 +408,7 @@ function AgentWorkspace({
     objectEditing,
     routinePending,
     appPending,
+    executionPending,
     onNavigationLockChange,
   ])
   const locked =
@@ -400,9 +416,14 @@ function AgentWorkspace({
     objectEditing ||
     routinePending ||
     appPending ||
+    executionPending ||
     filePending
   const editingLocked =
-    objectEditing || routinePending || appPending || filePending
+    objectEditing ||
+    routinePending ||
+    appPending ||
+    executionPending ||
+    filePending
   function openWorkbench(value: Workbench | null) {
     // Restored, unconfirmed object saves must remain reachable after a reload.
     if (!locked || (value === "objects" && !editingLocked)) setWorkbench(value)
@@ -465,6 +486,7 @@ function AgentWorkspace({
     >
       <div className={`agent-columns ${workbench ? "workbench-visible" : ""}`}>
         <Conversation
+          onAppPendingChange={onAppPendingChange}
           name={name}
           agent={agent}
           files={files}
@@ -556,8 +578,8 @@ function AgentWorkspace({
             )}
             {workbench === "terminal" && (
               <TerminalWorkbench
+                onPendingChange={setExecutionPending}
                 agentId={agent.id}
-                agentName={agent.name}
                 selected={location.search.item ?? null}
                 onSelect={location.setItem}
                 tab={
@@ -581,14 +603,12 @@ function AgentWorkspace({
                 }
                 onPendingChange={setRoutinePending}
                 agentId={agent.id}
-                agentName={agent.name}
               />
             )}
             {workbench === "objects" && (
               <ObjectsWorkbench
                 selected={objectId}
                 onSelect={setObjectId}
-                agentName={agent.name}
                 onEditing={setObjectEditing}
               />
             )}
@@ -596,16 +616,14 @@ function AgentWorkspace({
               <AppsWorkbench
                 selected={location.search.item ?? null}
                 onSelect={location.setItem}
-                onOpenWorkbench={openWorkbench}
                 onPendingChange={setAppPending}
                 agentId={agent.id}
-                agentName={agent.name}
               />
             )}
             {workbench === "code" && (
               <ExecutionWorkbench
+                onPendingChange={setExecutionPending}
                 agentId={agent.id}
-                agentName={agent.name}
                 selected={location.search.item ?? null}
                 onSelect={location.setItem}
               />

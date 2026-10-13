@@ -1,4 +1,10 @@
-import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router"
+import {
+  HeadContent,
+  Link,
+  Scripts,
+  createRootRoute,
+} from "@tanstack/react-router"
+import { buttonVariants } from "@/components/ui/button"
 import { ThemeProvider } from "next-themes"
 
 import appCss from "../styles.css?url"
@@ -29,9 +35,16 @@ export const Route = createRootRoute({
     ],
   }),
   notFoundComponent: () => (
-    <main className="container mx-auto p-4 pt-16">
-      <h1>404</h1>
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="container mx-auto flex flex-col items-start gap-4 p-4 pt-16"
+    >
+      <h1 className="text-xl font-semibold">Page not found</h1>
       <p>The requested page could not be found.</p>
+      <Link to="/" className={buttonVariants()}>
+        Open workspace
+      </Link>
     </main>
   ),
   shellComponent: RootDocument,
@@ -44,6 +57,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
+        <a className="skip-link" href="#main-content">
+          Skip to content
+        </a>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

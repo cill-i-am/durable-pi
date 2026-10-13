@@ -30,10 +30,12 @@ export function TurnActivity({
   items,
   toolTitles,
   agentId,
+  onAppPendingChange,
 }: {
   toolTitles?: Record<string, string>
   items: readonly TimelineItem[]
   agentId?: string
+  onAppPendingChange?: (key: string, pending: boolean) => void
 }) {
   return (
     <div className="turn-timeline">
@@ -142,7 +144,11 @@ export function TurnActivity({
               item.name === "publish_app" &&
               item.status === "done" &&
               item.output && (
-                <InlineApp agentId={agentId} output={item.output} />
+                <InlineApp
+                  agentId={agentId}
+                  output={item.output}
+                  onPendingChange={onAppPendingChange}
+                />
               )}
           </Fragment>
         )

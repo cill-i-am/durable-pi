@@ -21,11 +21,13 @@ export function Login({ sessionError }: { sessionError?: string }) {
   })
   const [setup, setSetup] = useState(false),
     [error, setError] = useState(sessionError ?? ""),
+    [notice, setNotice] = useState(""),
     [pending, setPending] = useState(false)
   async function submit(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
     if (pending) return
     setError("")
+    setNotice("")
     setPending(true)
     const data = new FormData(event.currentTarget)
     try {
@@ -43,7 +45,9 @@ export function Login({ sessionError }: { sessionError?: string }) {
         })
         if (!response.ok) throw new Error(errorMessage(await response.json()))
         setSetup(false)
-        setError("Account created. Sign in with your owner email and password.")
+        setNotice(
+          "Account created. Sign in with your owner email and password."
+        )
       } else {
         const result = await authClient.signIn.email({
           email: String(data.get("email")),
@@ -135,9 +139,18 @@ export function Login({ sessionError }: { sessionError?: string }) {
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
+          <p
+            role="status"
+            className="text-sm text-muted-foreground"
+            hidden={!notice}
+          >
+            {notice}
+          </p>
           <Button type="submit" size="lg" disabled={pending}>
             {pending
-              ? "Please wait…"
+              ? setup
+                ? "Creating account…"
+                : "Signing in…"
               : setup
                 ? "Create owner account"
                 : "Sign in"}
@@ -151,6 +164,7 @@ export function Login({ sessionError }: { sessionError?: string }) {
         onClick={() => {
           setSetup(!setup)
           setError("")
+          setNotice("")
         }}
       >
         {setup ? "Back to sign in" : "First time? Set up your account"}

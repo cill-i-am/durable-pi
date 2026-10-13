@@ -27,7 +27,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -58,7 +58,7 @@ export function FilePicker({
         ref={input}
         type="file"
         multiple
-        className="sr-only"
+        hidden
         tabIndex={-1}
         aria-label="Choose files"
         onChange={(event) => {
@@ -250,26 +250,24 @@ export function FilesWorkbench({
                       ? Video
                       : FileText
                 return (
-                  <Button
+                  <Link
+                    {...workspaceDestination(parseAgentId(state.agentId), {
+                      panel: "files",
+                      item: file.id,
+                      tab,
+                    })}
+                    data-slot="button"
+                    className={buttonVariants({
+                      variant: preview?.id === file.id ? "secondary" : "ghost",
+                    })}
                     key={file.id}
-                    variant={preview?.id === file.id ? "secondary" : "ghost"}
-                    aria-pressed={preview?.id === file.id}
-                    disabled={detailLocked}
-                    nativeButton={false}
-                    render={
-                      <Link
-                        {...workspaceDestination(parseAgentId(state.agentId), {
-                          panel: "files",
-                          item: file.id,
-                          tab,
-                        })}
-                      />
-                    }
                     title={file.name}
+                    aria-current={preview?.id === file.id ? "page" : undefined}
+                    disabled={detailLocked}
                   >
                     <Icon data-icon="inline-start" />
                     <span className="truncate">{file.name}</span>
-                  </Button>
+                  </Link>
                 )
               })}
             </nav>
@@ -311,7 +309,7 @@ export function FilesWorkbench({
       <footer className="text-xs text-muted-foreground">
         <details>
           <summary className="cursor-pointer">
-            Private files · Supported formats and limits
+            Supported formats and limits
           </summary>
           <p className="mt-2">
             Up to 8 MB per file. Images, text, readable PDFs (50 pages; no OCR),
@@ -337,6 +335,12 @@ function FileDetails({
   disabled: boolean
 }) {
   const [editing, setEditing] = useState(false)
+  const optionsTrigger = useRef<HTMLButtonElement>(null)
+  const wasEditing = useRef(false)
+  useEffect(() => {
+    if (wasEditing.current && !editing) optionsTrigger.current?.focus()
+    wasEditing.current = editing
+  }, [editing])
   const [name, setName] = useState(file.name)
   const [busy, setBusy] = useState(false)
   useEffect(() => {
@@ -365,6 +369,7 @@ function FileDetails({
             <FieldLabel htmlFor={`name-${file.id}`}>File name</FieldLabel>
             <Input
               id={`name-${file.id}`}
+              autoFocus
               value={name}
               onChange={(event) => setName(event.target.value)}
               maxLength={180}
@@ -444,24 +449,20 @@ function FileDetails({
                       <Plus />
                       Attach
                     </Button>
-                    <Button
-                      size="icon-xs"
-                      variant="ghost"
-                      aria-label={`Download ${file.name}`}
-                      render={
-                        <a
-                          href={
-                            agentUrl(
-                              state.agentId,
-                              `files/${file.id}/content`
-                            ) + "&download=1"
-                          }
-                          download
-                        />
+                    <a
+                      href={
+                        agentUrl(state.agentId, `files/${file.id}/content`) +
+                        "&download=1"
                       }
+                      download
+                      aria-label={`Download ${file.name}`}
+                      className={buttonVariants({
+                        size: "icon-xs",
+                        variant: "ghost",
+                      })}
                     >
                       <Download />
-                    </Button>
+                    </a>
                   </>
                 )}
                 <DropdownMenu>
@@ -471,6 +472,7 @@ function FileDetails({
                       <Button
                         size="icon-xs"
                         variant="ghost"
+                        ref={optionsTrigger}
                         aria-label={`Options for ${file.name}`}
                       />
                     }

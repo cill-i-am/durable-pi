@@ -26,14 +26,9 @@ import { ConnectionsPanel } from "@/features/connections"
 import { SkillsPanel } from "@/features/skills"
 import { ModelDefaults } from "@/features/conversation/model-defaults"
 import { AgentMark, agentTone } from "@/components/agent-mark"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { AccountSecurity } from "@/features/auth"
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { useSidebar } from "@/components/ui/sidebar"
 import { Switch } from "@/components/ui/switch"
 import { useInteractionSoundPreference } from "@/hooks/interaction-sound-preference"
@@ -158,29 +153,24 @@ export function WorkspaceSettings({
           </div>
           <div className="settings-nav-content">
             <DialogTitle className="settings-title">Settings</DialogTitle>
-            <DialogDescription className="settings-description">
-              Make this workspace your own.
-            </DialogDescription>
             <nav aria-label="Settings sections">
               {settingsSections.map((item) => (
-                <Button
+                <Link
+                  {...workspaceDestination(agent.id, {
+                    ...location.search,
+                    settings: item.id,
+                    security: undefined,
+                    settingsView: undefined,
+                    connections: undefined,
+                  })}
+                  data-slot="button"
+                  className={buttonVariants({
+                    variant: "ghost",
+                    className: "settings-nav-item",
+                  })}
                   key={item.id}
-                  variant="ghost"
-                  className="settings-nav-item"
                   aria-current={section?.id === item.id ? "page" : undefined}
                   disabled={locked}
-                  nativeButton={false}
-                  render={
-                    <Link
-                      {...workspaceDestination(agent.id, {
-                        ...location.search,
-                        settings: item.id,
-                        security: undefined,
-                        settingsView: undefined,
-                        connections: undefined,
-                      })}
-                    />
-                  }
                 >
                   <item.icon />
                   <span>
@@ -188,7 +178,7 @@ export function WorkspaceSettings({
                     <small>{item.description}</small>
                   </span>
                   <ChevronRight />
-                </Button>
+                </Link>
               ))}
             </nav>
           </div>
@@ -210,44 +200,40 @@ export function WorkspaceSettings({
                 className="settings-subnav"
                 aria-label="Models and connections"
               >
-                <Button
-                  size="sm"
-                  variant={category === "models" ? "secondary" : "ghost"}
+                <Link
+                  {...workspaceDestination(agent.id, {
+                    ...location.search,
+                    settings: "models",
+                    security: undefined,
+                    settingsView: undefined,
+                    connections: undefined,
+                  })}
+                  data-slot="button"
+                  className={buttonVariants({
+                    variant: category === "models" ? "secondary" : "ghost",
+                    size: "sm",
+                  })}
                   disabled={locked}
-                  nativeButton={false}
-                  render={
-                    <Link
-                      {...workspaceDestination(agent.id, {
-                        ...location.search,
-                        settings: "models",
-                        security: undefined,
-                        settingsView: undefined,
-                        connections: undefined,
-                      })}
-                    />
-                  }
                 >
                   Models
-                </Button>
-                <Button
-                  size="sm"
-                  variant={category === "connections" ? "secondary" : "ghost"}
+                </Link>
+                <Link
+                  {...workspaceDestination(agent.id, {
+                    ...location.search,
+                    settings: "connections",
+                    security: undefined,
+                    settingsView: undefined,
+                    connections: undefined,
+                  })}
+                  data-slot="button"
+                  className={buttonVariants({
+                    variant: category === "connections" ? "secondary" : "ghost",
+                    size: "sm",
+                  })}
                   disabled={locked}
-                  nativeButton={false}
-                  render={
-                    <Link
-                      {...workspaceDestination(agent.id, {
-                        ...location.search,
-                        settings: "connections",
-                        security: undefined,
-                        settingsView: undefined,
-                        connections: undefined,
-                      })}
-                    />
-                  }
                 >
                   Connected tools
-                </Button>
+                </Link>
               </div>
             ) : (
               <span>{section?.title ?? "Settings"}</span>
@@ -270,7 +256,6 @@ export function WorkspaceSettings({
             >
               <header className="settings-section-heading">
                 <h2>General</h2>
-                <p>A few things that make this workspace yours.</p>
               </header>
               <div className="settings-section-body">
                 <div className="settings-preference">
@@ -292,10 +277,7 @@ export function WorkspaceSettings({
                   <Volume2 />
                   <div>
                     <h3>Interaction sounds</h3>
-                    <p>
-                      A short click when you copy a response or reveal or hide a
-                      password. Remembered on this device.
-                    </p>
+                    <p>Play a click when copying or showing passwords.</p>
                     <Button
                       type="button"
                       variant="outline"

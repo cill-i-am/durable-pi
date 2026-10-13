@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState } from "react"
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+} from "react"
 import { Check, CircleAlert, Copy } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -12,10 +18,16 @@ export function CopyButton({
   text,
   label,
   className,
+  children,
+  variant = "ghost",
+  size = "icon-xs",
 }: {
   text: string
   label: string
   className?: string
+  children?: ReactNode
+  variant?: ComponentProps<typeof Button>["variant"]
+  size?: ComponentProps<typeof Button>["size"]
 }) {
   const [feedback, setFeedback] = useState<{
     text: string
@@ -58,8 +70,8 @@ export function CopyButton({
         <TooltipTrigger
           render={
             <Button
-              variant="ghost"
-              size="icon-xs"
+              variant={variant}
+              size={size}
               className={className}
               aria-label={description}
               onClick={() => void copy()}
@@ -73,6 +85,7 @@ export function CopyButton({
           ) : (
             <Copy />
           )}
+          {children}
         </TooltipTrigger>
         <TooltipContent>{description}</TooltipContent>
       </Tooltip>

@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useCallback, useId, useState } from "react"
 import { Schema } from "effect"
 import { AppId, Revision } from "@/apps/contracts"
 import { Button } from "@/components/ui/button"
@@ -12,11 +12,22 @@ const Reference = Schema.Struct({
 export function InlineApp({
   agentId,
   output,
+  onPendingChange,
 }: {
   agentId: string
   output: string
+  onPendingChange?: (key: string, pending: boolean) => void
 }) {
   const [open, setOpen] = useState(false)
+  const [pending, setPending] = useState(false)
+  const key = useId()
+  const reportPending = useCallback(
+    (value: boolean) => {
+      setPending(value)
+      onPendingChange?.(key, value)
+    },
+    [key, onPendingChange]
+  )
   let reference: typeof Reference.Type
   try {
     reference = Schema.decodeUnknownSync(Reference)(JSON.parse(output))
@@ -31,6 +42,7 @@ export function InlineApp({
       <Button
         variant="outline"
         size="sm"
+        disabled={pending}
         onClick={() => setOpen((value) => !value)}
       >
         {open ? "Hide app" : `Open ${reference.title}`}
@@ -42,6 +54,7 @@ export function InlineApp({
           id={reference.appId}
           initialVersion={reference.publishedVersion}
           compact
+          onPendingChange={reportPending}
         />
       )}
     </section>

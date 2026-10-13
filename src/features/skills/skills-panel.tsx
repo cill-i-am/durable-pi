@@ -121,8 +121,12 @@ export function SkillsPanel({
           }}
         >
           <TabsList>
-            <TabsTrigger value="library">Library</TabsTrigger>
-            <TabsTrigger value="archived">Archived</TabsTrigger>
+            <TabsTrigger value="library" disabled={cannotReplace}>
+              Library
+            </TabsTrigger>
+            <TabsTrigger value="archived" disabled={cannotReplace}>
+              Archived
+            </TabsTrigger>
           </TabsList>
         </Tabs>
         <div className="flex gap-1">
@@ -160,7 +164,7 @@ export function SkillsPanel({
           ref={input}
           type="file"
           accept=".md,.txt,text/plain,text/markdown"
-          className="sr-only"
+          hidden
           tabIndex={-1}
           aria-label="Import skill Markdown"
           onChange={async (event) => {
@@ -374,6 +378,7 @@ export function SkillsPanel({
               <FieldLabel htmlFor="skill-name">Name</FieldLabel>
               <Input
                 id="skill-name"
+                autoFocus
                 value={draft.name}
                 maxLength={80}
                 required
@@ -410,9 +415,7 @@ export function SkillsPanel({
                   state.busy ||
                   !state.ready ||
                   conflict ||
-                  currentDraft?.archived ||
-                  !draft.name.trim() ||
-                  !draft.body.trim()
+                  currentDraft?.archived
                 }
               >
                 {state.busy ? "Saving…" : "Save skill"}

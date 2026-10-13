@@ -17,7 +17,7 @@ export function AuthFrame({
   children: React.ReactNode
 }) {
   return (
-    <main className="login-page">
+    <main id="main-content" tabIndex={-1} className="login-page">
       <aside className="login-intro" aria-label="About Pi">
         <div className="login-brand">
           <PiMark />

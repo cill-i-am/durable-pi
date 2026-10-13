@@ -9,7 +9,6 @@ import {
   Globe,
   Files,
   ListTodo,
-  LockKeyhole,
   LogOut,
   PanelLeft,
   PanelRight,
@@ -300,10 +299,6 @@ export function WorkspaceNavigation({
           <span>Search agents and commands</span>
           <kbd>⌘ K</kbd>
         </Button>
-        <span className="workspace-privacy">
-          <LockKeyhole />
-          Private workspace
-        </span>
         <Button
           variant="ghost"
           size="icon"

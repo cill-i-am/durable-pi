@@ -3,7 +3,7 @@ import { Search, ChevronDown } from "lucide-react"
 import { agentApi, agentUrl } from "@/http/client"
 import type { ChatState } from "@/conversations/contracts"
 import { Markdown } from "@/components/markdown"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
   Field,
@@ -46,7 +46,9 @@ export function MemoryWorkbench({
   const [results, setResults] = useState<
       { id: number; text: string; kind: string; date: string }[]
     >([]),
-    [error, setError] = useState("")
+    [error, setError] = useState(""),
+    [loading, setLoading] = useState(false),
+    [searchRevision, setSearchRevision] = useState(0)
   async function search(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
     setTab("history")
@@ -54,11 +56,14 @@ export function MemoryWorkbench({
   useEffect(() => {
     if (tab !== "history" || !query.trim()) {
       setResults([])
+      setLoading(false)
+      setError("")
       return
     }
     const controller = new AbortController()
     setResults([])
     setError("")
+    setLoading(true)
     void api<{ id: number; text: string; kind: string; date: string }[]>(
       `search?q=${encodeURIComponent(query)}`,
       undefined,
@@ -68,10 +73,14 @@ export function MemoryWorkbench({
         if (!controller.signal.aborted) setResults(value)
       })
       .catch(() => {
-        if (!controller.signal.aborted) setError("Could not search memory.")
+        if (!controller.signal.aborted)
+          setError("Could not search memory. Try again.")
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false)
       })
     return () => controller.abort()
-  }, [api, tab, query])
+  }, [api, tab, query, searchRevision])
   return (
     <section className="workbench-body memory-workbench">
       <header className="workbench-heading">
@@ -119,11 +128,22 @@ export function MemoryWorkbench({
             setTab(value)
         }}
       >
-        <TabsList variant="line">
-          <TabsTrigger value="notes">Saved notes</TabsTrigger>
-          <TabsTrigger value="history">History</TabsTrigger>
-          <TabsTrigger value="tree">Tree</TabsTrigger>
-          <TabsTrigger value="files">Files</TabsTrigger>
+        <TabsList
+          variant="line"
+          className="h-auto max-w-full flex-wrap justify-start group-data-horizontal/tabs:h-auto"
+        >
+          <TabsTrigger value="notes" className="min-h-11 md:min-h-0">
+            Saved notes
+          </TabsTrigger>
+          <TabsTrigger value="history" className="min-h-11 md:min-h-0">
+            History
+          </TabsTrigger>
+          <TabsTrigger value="tree" className="min-h-11 md:min-h-0">
+            Summaries
+          </TabsTrigger>
+          <TabsTrigger value="files" className="min-h-11 md:min-h-0">
+            Export & import
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="notes">
           <div className="memory-notes">
@@ -147,10 +167,33 @@ export function MemoryWorkbench({
         <TabsContent value="history">
           {error && (
             <Alert>
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription>
+                {error}
+                <Button
+                  variant="link"
+                  size="sm"
+                  onClick={() => setSearchRevision((value) => value + 1)}
+                >
+                  Retry search
+                </Button>
+              </AlertDescription>
             </Alert>
           )}
           <div className="memory-notes">
+            <p role="status" className="text-sm text-muted-foreground">
+              {loading
+                ? "Searching…"
+                : !query.trim()
+                  ? "Search for a message or phrase."
+                  : !error && !results.length
+                    ? "No matching messages."
+                    : ""}
+            </p>
+            {!loading && !error && query.trim() && !results.length && (
+              <Button variant="outline" size="sm" onClick={() => setQuery("")}>
+                Clear search
+              </Button>
+            )}
             {results.map((result) => (
               <article key={result.id}>
                 <h3>
@@ -411,24 +454,22 @@ function MemoryFiles({
           downloaded files private.
         </p>
         <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            nativeButton={false}
-            render={
-              <a href={agentUrl(agentId, "export?format=html")} download />
-            }
+          <a
+            href={agentUrl(agentId, "export?format=html")}
+            download
+            data-slot="button"
+            className={buttonVariants({ variant: "outline", size: "sm" })}
           >
             Readable HTML
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            nativeButton={false}
-            render={<a href={agentUrl(agentId, "export")} download />}
+          </a>
+          <a
+            href={agentUrl(agentId, "export")}
+            download
+            data-slot="button"
+            className={buttonVariants({ variant: "outline", size: "sm" })}
           >
             Archive JSONL
-          </Button>
+          </a>
         </div>
       </article>
       <article>

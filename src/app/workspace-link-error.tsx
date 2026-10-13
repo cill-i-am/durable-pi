@@ -1,16 +1,21 @@
 import { Link } from "@tanstack/react-router"
-import { Button } from "@/components/ui/button"
+import { buttonVariants } from "@/components/ui/button"
 
 export function WorkspaceLinkError() {
   return (
-    <main className="loading-view">
+    <main id="main-content" tabIndex={-1} className="loading-view">
       <h1 className="text-lg font-semibold">This workspace link is invalid.</h1>
       <p className="text-sm text-muted-foreground">
         Open your workspace to choose an agent and view.
       </p>
-      <Button nativeButton={false} render={<Link to="/" search={{}} />}>
+      <Link
+        to="/"
+        search={{}}
+        data-slot="button"
+        className={buttonVariants({})}
+      >
         Open workspace
-      </Button>
+      </Link>
     </main>
   )
 }

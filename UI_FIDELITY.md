@@ -1,5 +1,8 @@
 # Paper fidelity
 
+The subsequent five-pass audit is recorded in [UI_AUDIT.md](UI_AUDIT.md). It removes repeated copy and duplicate checklist creation, and corrects navigation semantics, input contrast, pending-action guards and mobile reflow. Earlier slice evidence below is historical; it does not describe the current labels in every case.
+
+
 Requested after the functional build. Reference: [Pi — Quiet Workroom · Product design](https://app.paper.design/file/01M4GJ8G5KNDADJRVDDC3PQ6CT/p-1-0), page “Quiet Workroom · Complete product states”. Re-read 2026-10-11: 36 artboards; tokens hash `30a00488`. This is implementation of the approved design, not a new visual direction.
 
 ## Outcome

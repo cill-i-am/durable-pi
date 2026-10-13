@@ -1,5 +1,9 @@
 # Durable Pi — build tracker
 
+## Five-pass UI audit — 13 October 2026
+
+Active goal: audit and improve every implemented screen and interaction five times using [Jakub Krehel's interface skills](https://github.com/jakubkrehel/skills). The complete inventory, pass status, findings and verification live in [UI_AUDIT.md](UI_AUDIT.md). Skills are installed in Codex, not copied into the public product repository. Existing backend ownership and approval guarantees remain authoritative.
+
 Started 2026-10-10. Delivery owner: Codex. Status: **functional build and Paper fidelity F1–F6 deployed; account security deployed and inspected in the signed-in hosted app**. Per-slice verification limits are recorded below and in [UI_FIDELITY.md](UI_FIDELITY.md).
 
 Final queued work item: [13 — Harness evaluation suite](#13--harness-evaluation-suite). Implement it after the existing product roadmap and agreed harness improvements. Recording this brief does not start implementation or authorize real-model runs. Tool profiles remain deferred.
