@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { ArrowUpRight, Globe, RefreshCw, Settings2, X } from "lucide-react"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,9 +20,11 @@ import { useBrowser } from "./use-browser"
 export function BrowserWorkbench({
   agentId,
   agentName,
+  onPendingChange,
 }: {
   agentId: string
   agentName: string
+  onPendingChange: (pending: boolean) => void
 }) {
   const browser = useBrowser(agentId)
   const [failedScreenshot, setFailedScreenshot] = useState<number | null>(null)
@@ -32,6 +34,16 @@ export function BrowserWorkbench({
     hosts: string
     unrestricted: boolean
   } | null>(null)
+  const settingsTrigger = useRef<HTMLButtonElement>(null)
+  const wasEditing = useRef(false)
+  useEffect(() => {
+    if (wasEditing.current && !settings) settingsTrigger.current?.focus()
+    wasEditing.current = !!settings
+  }, [settings])
+  useEffect(() => {
+    onPendingChange(browser.busy || !!settings)
+    return () => onPendingChange(false)
+  }, [browser.busy, settings, onPendingChange])
   const state = browser.state
   const content = (
     <>
@@ -71,6 +83,7 @@ export function BrowserWorkbench({
           <Button
             size="icon-sm"
             variant="ghost"
+            ref={settingsTrigger}
             aria-label={
               settings ? "Close browser settings" : "Browser internet settings"
             }

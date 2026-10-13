@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router"
 import { parseAgentId, workspaceDestination } from "@/navigation/workspace"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Play, Square, RefreshCw, Settings2, X } from "lucide-react"
 import type { TerminalNetworkPolicy } from "@/terminal/contracts"
 import { Switch } from "@/components/ui/switch"
@@ -38,6 +38,12 @@ export function TerminalWorkbench({
   const terminal = useTerminal(agentId, selected, onSelect)
   const [networkSettings, setNetworkSettings] =
     useState<TerminalNetworkPolicy | null>(null)
+  const settingsTrigger = useRef<HTMLButtonElement>(null)
+  const wasEditing = useRef(false)
+  useEffect(() => {
+    if (wasEditing.current && !networkSettings) settingsTrigger.current?.focus()
+    wasEditing.current = !!networkSettings
+  }, [networkSettings])
   const pending =
     terminal.busy ||
     !!terminal.attempt ||
@@ -66,6 +72,7 @@ export function TerminalWorkbench({
           <Button
             size="icon-sm"
             variant="ghost"
+            ref={settingsTrigger}
             aria-label={
               networkSettings
                 ? "Close terminal settings"
