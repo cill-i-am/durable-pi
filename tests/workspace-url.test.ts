@@ -133,6 +133,55 @@ describe("canonical workspace locations", () => {
     expect(() => parseResourceId("../secret")).toThrow()
     expect(() => workspaceView({ panel: "files" }, { panel: "apps" })).toThrow()
   })
+  it.each(["terminal", "code"] as const)(
+    "keeps the native %s execution identity in saved-run links",
+    (panel) => {
+      const item = `${panel === "terminal" ? "command" : "code"}:task_123`
+      expect(workspaceDestination(id, { panel, item }).params).toEqual({
+        agentId: id,
+        panel,
+        itemId: item,
+      })
+      expect(
+        workspaceReturnLink(`/agents/home/${panel}/${encodeURIComponent(item)}`)
+      ).toMatchObject({ params: { agentId: id, panel, itemId: item } })
+      expect(
+        workspaceReturnPath(
+          `/agents/home/settings/general?panel=${panel}&item=${encodeURIComponent(item)}`
+        )
+      ).not.toBe("/")
+    }
+  )
+  it.each([
+    "",
+    "../secret",
+    "a/b",
+    "a\\b",
+    "a?b",
+    "a#b",
+    "a%b",
+    "a b",
+    "x".repeat(201),
+  ])("rejects unsafe or oversized resource identity %s", (item) =>
+    expect(() => parseResourceId(item)).toThrow()
+  )
+  it.each([
+    "a%2Fb",
+    "a%5Cb",
+    "a%252Fb",
+    "a%00b",
+    "a%3Fb",
+    "a%23b",
+    "a%20b",
+    "a%ZZb",
+  ])(
+    "rejects encoded path separators and malformed resource identity %s",
+    (item) => {
+      const path = `/agents/home/terminal/${item}`
+      expect(workspaceReturnPath(path)).toBe("/")
+      expect(workspaceReturnLink(path)).toEqual({ to: "/", search: {} })
+    }
+  )
   it("accepts a valid unknown bot without substituting home; catalog and server own authorization", () => {
     const bot = "11111111-1111-4111-8111-111111111111"
     expect(
@@ -241,6 +290,47 @@ function routerAt(initialPath: string) {
   })
 }
 describe("native TanStack routing", () => {
+  it.each(["terminal", "code"] as const)(
+    "round-trips a Pi %s receipt through resource, Settings and history navigation",
+    async (panel) => {
+      const item = `${panel === "terminal" ? "command" : "code"}:task_123`
+      const router = routerAt(`/agents/home/${panel}`)
+      await router.load()
+      router.history.push(
+        router.buildLocation(workspaceDestination(id, { panel, item })).href
+      )
+      await router.load()
+      expect(router.state.matches.at(-1)?.status).toBe("success")
+      expect(router.state.matches.at(-1)?.params).toMatchObject({
+        itemId: item,
+      })
+      const resourceUrl = router.state.location.href
+      expect(workspaceReturnPath(resourceUrl)).toBe(resourceUrl)
+      router.history.push(
+        router.buildLocation(
+          workspaceDestination(id, { panel, item, settings: "general" })
+        ).href
+      )
+      await router.load()
+      expect(router.state.matches.at(-1)?.search).toMatchObject({ item })
+      router.history.back()
+      await router.load()
+      expect(router.state.matches.at(-1)?.params).toMatchObject({
+        itemId: item,
+      })
+      router.history.forward()
+      await router.load()
+      expect(router.state.matches.at(-1)?.search).toMatchObject({ item })
+      router.history.push(
+        router.buildLocation(workspaceDestination(id, { panel: "browser" }))
+          .href
+      )
+      await router.load()
+      expect(router.state.matches.at(-1)?.status).toBe("success")
+      expect(router.state.matches.at(-1)?.params).not.toHaveProperty("itemId")
+      expect(router.state.matches.at(-1)?.search).not.toHaveProperty("item")
+    }
+  )
   it("matches a direct resource link, then preserves state through Settings, Back and Forward", async () => {
     const router = routerAt("/agents/home/files/file_1?tab=trash")
     await router.load()

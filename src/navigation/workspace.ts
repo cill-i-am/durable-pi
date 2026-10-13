@@ -36,8 +36,10 @@ export const SettingsSection = Schema.Literals([
   "connections",
   "security",
 ])
+// Execution owns the receipt identity (e.g. command:<Pi task ID> or code:<Pi task ID>).
+// Routing preserves it as one encoded segment; it never renames the durable record.
 export const ResourceId = Schema.String.check(
-  Schema.isPattern(/^[a-zA-Z0-9_-]{1,150}$/)
+  Schema.isPattern(/^[a-zA-Z0-9_:-]{1,200}$/)
 )
 const Tab = Schema.Literals([
   "files",
@@ -179,7 +181,10 @@ export function workspaceReturnPath(value: string, depth = 0): string {
     if (depth > 3) return "/"
     const url = new URL(value, "https://workspace.invalid")
     if (url.origin !== "https://workspace.invalid" || url.hash) return "/"
-    const parts = url.pathname.split("/").filter(Boolean)
+    const parts = url.pathname
+      .split("/")
+      .filter(Boolean)
+      .map(decodeURIComponent)
     const query = validateWorkspaceSearch(defaultParseSearch(url.search))
     if (!parts.length) return "/"
     if (parts[0] !== "agents") return "/"
@@ -230,7 +235,7 @@ export function validateAuthSearch(input: unknown): { returnTo?: string } {
 }
 export function workspaceReturnLink(value: string) {
   const url = new URL(workspaceReturnPath(value), "https://workspace.invalid")
-  const parts = url.pathname.split("/").filter(Boolean)
+  const parts = url.pathname.split("/").filter(Boolean).map(decodeURIComponent)
   const search = validateWorkspaceSearch(defaultParseSearch(url.search))
   if (!parts.length) return { to: "/" as const, search: {} }
   if (parts.length === 1)
