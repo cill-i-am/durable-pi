@@ -27,7 +27,7 @@ import {
 import { api } from "@/http/client"
 import { catalogReducer, initialCatalog } from "./catalog-state"
 import { AgentMark, agentTone } from "@/components/agent-mark"
-import { AgentStatus } from "@/components/agent-status"
+import { AgentStatusMarker, agentStatusLabel } from "@/components/agent-status"
 import type { RuntimeStatus } from "@/conversations/status"
 import { authClient } from "@/auth/client"
 import { Button } from "@/components/ui/button"
@@ -252,58 +252,76 @@ export function AgentSidebar({
             {archived ? "Archived agents" : "Your agents"}
           </SidebarGroupLabel>
           <SidebarMenu>
-            {shown.map((agent) => (
-              <SidebarMenuItem key={agent.id}>
-                <SidebarMenuButton
-                  size="lg"
-                  isActive={selected?.id === agent.id}
-                  render={
-                    <Link
-                      to="/agents/$agentId"
-                      params={{ agentId: agent.id }}
-                    />
-                  }
-                  onClick={() => setOpenMobile(false)}
-                >
-                  <AgentMark tone={agentTone(agent.id)} />
-                  <span className="flex min-w-0 flex-col gap-0.5">
-                    <span className="truncate">{agent.name}</span>
-                    <AgentStatus compact status={statuses[agent.id]?.state} />
-                  </span>
-                </SidebarMenuButton>
-                <DropdownMenu>
-                  <DropdownMenuTrigger
+            {shown.map((agent) => {
+              const state =
+                agent.status === "archived"
+                  ? "archived"
+                  : statuses[agent.id]?.state
+              const label = `${agent.name}: ${agentStatusLabel(state)}`
+              return (
+                <SidebarMenuItem key={agent.id}>
+                  <SidebarMenuButton
+                    size="lg"
+                    isActive={selected?.id === agent.id}
+                    aria-label={label}
+                    tooltip={{ children: label, hidden: isMobile }}
                     render={
-                      <SidebarMenuAction
-                        showOnHover
-                        aria-label={`Options for ${agent.name}`}
+                      <Link
+                        to="/agents/$agentId"
+                        params={{ agentId: agent.id }}
                       />
                     }
+                    onClick={() => setOpenMobile(false)}
                   >
-                    <Ellipsis />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuGroup>
-                      <DropdownMenuItem
-                        onClick={() => {
-                          onEdit(agent)
-                        }}
-                      >
-                        <Settings2 />
-                        Edit agent
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        disabled={agent.id === homeAgentId}
-                        onClick={() => onArchive(agent)}
-                      >
-                        {agent.status === "archived" ? <Undo2 /> : <Archive />}
-                        {agent.status === "archived" ? "Restore" : "Archive"}
-                      </DropdownMenuItem>
-                    </DropdownMenuGroup>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </SidebarMenuItem>
-            ))}
+                    <span className="agent-avatar">
+                      <AgentMark tone={agentTone(agent.id)} />
+                      <AgentStatusMarker status={state} />
+                    </span>
+                    <span className="agent-sidebar-copy flex min-w-0 flex-col gap-0.5">
+                      <span className="truncate">{agent.name}</span>
+                      <span className="truncate font-normal text-muted-foreground">
+                        {agent.instructions || "Your personal assistant"}
+                      </span>
+                    </span>
+                  </SidebarMenuButton>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      render={
+                        <SidebarMenuAction
+                          showOnHover
+                          aria-label={`Options for ${agent.name}`}
+                        />
+                      }
+                    >
+                      <Ellipsis />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuGroup>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            onEdit(agent)
+                          }}
+                        >
+                          <Settings2 />
+                          Edit agent
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          disabled={agent.id === homeAgentId}
+                          onClick={() => onArchive(agent)}
+                        >
+                          {agent.status === "archived" ? (
+                            <Undo2 />
+                          ) : (
+                            <Archive />
+                          )}
+                          {agent.status === "archived" ? "Restore" : "Archive"}
+                        </DropdownMenuItem>
+                      </DropdownMenuGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </SidebarMenuItem>
+              )
+            })}
           </SidebarMenu>
           {!shown.length && (
             <p className="p-2 text-xs text-muted-foreground">

@@ -6,7 +6,11 @@ import {
   RuntimeStatus,
   type StatusTurn,
 } from "../src/conversations/status"
-import { AgentStatus } from "../src/components/agent-status"
+import {
+  AgentStatus,
+  AgentStatusMarker,
+  agentStatusLabel,
+} from "../src/components/agent-status"
 import { agentStatuses } from "../src/agents/statuses"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import { AccessStore } from "../src/access/adapters/sqlite"
@@ -179,7 +183,7 @@ describe("agent runtime status", () => {
     ])
     expect(JSON.stringify(result)).not.toContain("private")
   })
-  it("shows a readable label and redundant icon for every header and sidebar state", () => {
+  it("keeps every state readable while ready avatars remain quiet", () => {
     for (const state of [
       "ready",
       "working",
@@ -190,24 +194,32 @@ describe("agent runtime status", () => {
       "archived",
       "unavailable",
     ] as const) {
-      for (const compact of [false, true]) {
-        const html = renderToStaticMarkup(
-          <AgentStatus
-            status={
-              Schema.decodeUnknownSync(RuntimeStatus)({ state, turnId: null })
-                .state
-            }
-            compact={compact}
-          />
-        )
-        expect(html).toContain(`data-agent-status="${state}"`)
-        expect(html).toContain('aria-hidden="true"')
-        expect(html).toContain(
-          state === "needs-approval"
-            ? "Needs approval"
-            : state[0]!.toUpperCase() + state.slice(1)
-        )
+      const html = renderToStaticMarkup(
+        <AgentStatus
+          status={
+            Schema.decodeUnknownSync(RuntimeStatus)({ state, turnId: null })
+              .state
+          }
+        />
+      )
+      expect(html).toContain(`data-agent-status="${state}"`)
+      expect(html).toContain('aria-hidden="true"')
+      expect(html).toContain(
+        state === "needs-approval"
+          ? "Needs approval"
+          : state[0]!.toUpperCase() + state.slice(1)
+      )
+      expect(html).toContain(agentStatusLabel(state))
+      const marker = renderToStaticMarkup(<AgentStatusMarker status={state} />)
+      if (state === "ready") expect(marker).toBe("")
+      else {
+        expect(marker).toContain(`data-agent-status="${state}"`)
+        expect(marker).toContain('aria-hidden="true"')
       }
     }
+    expect(agentStatusLabel(undefined)).toBe("Unavailable")
+    expect(
+      renderToStaticMarkup(<AgentStatusMarker status={undefined} />)
+    ).toContain('data-agent-status="unavailable"')
   })
 })

@@ -49,8 +49,8 @@ References: [Base UI Drawer](https://base-ui.com/react/components/drawer), [shad
 Parent sizing: retain the parent’s own layout (`height: 100%` for panels, content height for menus) while a nested drawer is open. Do not assign a measured drawer height or `--drawer-frontmost-height` to the parent: a short menu would collapse a full-height Settings or navigation drawer. Verify parent geometry and retained scroll position before, during and after opening shorter children, not just the visible child and focus return.
 
 
-### Workbench navigation correction — 13 October 2026
+### Selected workbench treatment — 13 October 2026
 
-The workbench now uses a second shadcn Sidebar on desktop, with a compact icon rail and an explicit expand control. Browser, Terminal, Files, Apps, Activity, Checklists, Memory, Code and Routines are native links with an active-page indicator. The rail replaces the five tabs and separate overflow menu. At widths from 768px, the workbench remains beside the conversation; it no longer unexpectedly becomes a full-screen modal at a narrow desktop width.
+The selected design uses a document toolbar rather than a second navigation sidebar. One labelled Select names the current tool and exposes all nine destinations. Desktop Browser, Terminal, Files, Apps and Activity shortcuts are native resource links, with an active state and Base UI tooltips on hover or keyboard focus. On a narrow desktop panel, the last two shortcuts yield to the Select instead of crowding the toolbar. The tool picker remains available at every width.
 
-On mobile, one labelled tool Select replaces the compressed tab strip. Its existing Base UI popup opens as a nested bottom drawer above the workbench. The content, route selection, operation guards, retained exit animation and focus return still use their existing owners. No new viewport branch is required in a feature.
+On mobile, the same Select opens its existing nested bottom drawer; the icon shortcut group is hidden. The workbench itself stays a working surface, docked beside chat from 768px and a bottom drawer below that width. Its content, route selection, operation guards, retained exit animation and focus return retain their existing owners. No new feature-level viewport branch is required.

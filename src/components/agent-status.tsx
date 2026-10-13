@@ -1,10 +1,10 @@
 import {
   CircleCheck,
-  LoaderCircle,
+  CircleDashed,
   ShieldQuestionMark,
   Square,
-  CircleAlert,
-  OctagonAlert,
+  CircleX,
+  Pause,
   Archive,
   CircleHelp,
 } from "lucide-react"
@@ -13,11 +13,11 @@ import { Badge } from "@/components/ui/badge"
 
 const states = {
   ready: { label: "Ready", icon: CircleCheck },
-  working: { label: "Working", icon: LoaderCircle },
+  working: { label: "Working", icon: CircleDashed },
   "needs-approval": { label: "Needs approval", icon: ShieldQuestionMark },
   stopping: { label: "Stopping", icon: Square },
-  blocked: { label: "Blocked", icon: OctagonAlert },
-  failed: { label: "Failed", icon: CircleAlert },
+  blocked: { label: "Blocked", icon: Pause },
+  failed: { label: "Failed", icon: CircleX },
   archived: { label: "Archived", icon: Archive },
   unavailable: { label: "Unavailable", icon: CircleHelp },
 } satisfies Record<
@@ -25,29 +25,46 @@ const states = {
   { label: string; icon: typeof CircleCheck }
 >
 
+export function agentStatusLabel(status: RuntimeStatus["state"] | undefined) {
+  return states[status ?? "unavailable"].label
+}
+
 export function AgentStatus({
   status,
-  compact = false,
 }: {
   status: RuntimeStatus["state"] | undefined
-  compact?: boolean
 }) {
   const state = status ?? "unavailable"
   const { label, icon: Icon } = states[state]
   return (
     <Badge
       variant={
-        state === "failed" || state === "blocked"
-          ? "destructive"
-          : compact
-            ? "ghost"
-            : "secondary"
+        state === "failed" || state === "blocked" ? "destructive" : "secondary"
       }
       data-agent-status={state}
-      className={compact ? "agent-status-compact" : undefined}
     >
       <Icon data-icon="inline-start" aria-hidden="true" />
       {label}
     </Badge>
+  )
+}
+
+/** Decorative only: the owning agent link supplies the accessible status. */
+export function AgentStatusMarker({
+  status,
+}: {
+  status: RuntimeStatus["state"] | undefined
+}) {
+  const state = status ?? "unavailable"
+  if (state === "ready") return null
+  const Icon = states[state].icon
+  return (
+    <span
+      className="agent-status-marker"
+      data-agent-status={state}
+      aria-hidden="true"
+    >
+      <Icon />
+    </span>
   )
 }
