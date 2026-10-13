@@ -1,5 +1,6 @@
 import { Schema } from "effect"
 import { AgentId, AgentInstructions, AgentName, AgentProfile } from "./domain"
+import { RuntimeStatus } from "../conversations/status"
 
 export const CreateAgent = Schema.Struct({
   id: AgentId,
@@ -16,4 +17,9 @@ export const ArchiveAgent = Schema.Struct({
   archived: Schema.Boolean,
 })
 export const AgentList = Schema.Struct({ agents: Schema.Array(AgentProfile) })
+export const AgentStatuses = Schema.Struct({
+  statuses: Schema.Array(
+    Schema.Struct({ agentId: AgentId, ...RuntimeStatus.fields })
+  ),
+})
 export { AgentProfile, AgentId, homeAgentId } from "./domain"

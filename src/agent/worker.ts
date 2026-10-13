@@ -67,10 +67,11 @@ import {
   LifecycleCapability,
   type LifecycleJobOutcome,
 } from "agents/lifecycle"
-import { PiHarness } from "agents/harness/pi"
+import { PiHarness, openPiSessionStore } from "agents/harness/pi"
 import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context"
 import {
   createRegistry,
+  createSession,
   defineTool,
   Harness,
   type EntryRecord,
@@ -108,6 +109,8 @@ import {
   resolveAccountCredential,
 } from "./models"
 import { ConversationStore } from "../conversations/adapters/sqlite-turns"
+import { runtimeStatus } from "../conversations/status"
+import { agentStatuses } from "../agents/statuses"
 import {
   readPiReply,
   placedInputs,
@@ -175,7 +178,7 @@ import {
 } from "../objects/tools"
 import { objectsRequest } from "../objects/http"
 import { ObjectFailure } from "../objects/contracts"
-import { piPlans } from "../planning/adapters/pi"
+import { piPlans, savedPlanBlocked } from "../planning/adapters/pi"
 import { planEvidence } from "../planning/adapters/evidence"
 import {
   planTools,
@@ -1835,6 +1838,11 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       )
     )
   }
+  agentProfiles() {
+    return this.catalogRuntime.runPromise(
+      Effect.flatMap(AgentCatalog, (catalog) => catalog.list())
+    )
+  }
   readActivity(agent: ActivityAgent, query: ActivityQuery): ActivitySnapshot {
     const issues: ActivityIssue[] = []
     if (!query.cursor && query.filter !== "running") {
@@ -2539,6 +2547,43 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     }
   }
 
+  async runtimeStatus() {
+    const before = this.conversations.statusTurns()
+    const planBlocked =
+      !before.active && before.latest?.status === "done"
+        ? await runObserved(
+            Effect.acquireUseRelease(
+              Effect.tryPromise(async () =>
+                createSession(await openPiSessionStore(this.ctx.storage))
+              ),
+              (session) => savedPlanBlocked(session, before.latest!.id),
+              (session) =>
+                Effect.promise(() => session.close(BACKGROUND_CONTEXT))
+            ).pipe(
+              Effect.match({
+                onSuccess: (blocked) => blocked,
+                onFailure: () => undefined,
+              })
+            )
+          )
+        : false
+    // Native document reads can yield. Never apply an old task blocker to a newer run.
+    const facts = this.conversations.statusTurns()
+    if (
+      before.latest?.id === facts.latest?.id &&
+      !facts.active &&
+      planBlocked === undefined
+    )
+      return { state: "unavailable" as const, turnId: facts.latest?.id ?? null }
+    return runtimeStatus({
+      ...facts,
+      archived: this.botConfiguration.read()?.status === "archived",
+      needsApproval:
+        !!facts.active && this.accessStore.awaitingApproval(facts.active.id),
+      planBlocked:
+        before.latest?.id === facts.latest?.id && planBlocked === true,
+    })
+  }
   async snapshot(): Promise<ChatState> {
     const turns = this.conversations.recent()
     const activity = new Map<string, ReturnType<typeof piTimeline>>()
@@ -2561,6 +2606,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       }
     }
     return {
+      runtime: await this.runtimeStatus(),
       access: {
         tools: this.accessStore.policies(),
         approvals: this.accessStore.pending(),
@@ -2922,6 +2968,20 @@ export default {
     if (decoded._tag === "None")
       return new Response("Not found", { status: 404 })
     try {
+      if (path === "bots/statuses") {
+        if (request.method !== "GET")
+          return new Response("Method not allowed", { status: 405 })
+        const profiles = await root.agentProfiles()
+        return Response.json(
+          await runObserved(
+            agentStatuses(profiles, (agent) =>
+              env.AGENT.getByName(
+                agentObjectName(owner, agent.id)
+              ).runtimeStatus()
+            )
+          )
+        )
+      }
       if (path.startsWith("activity/conversations/")) {
         if (request.method !== "GET")
           return new Response("Method not allowed", { status: 405 })

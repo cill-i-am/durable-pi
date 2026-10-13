@@ -1,4 +1,5 @@
 import { AgentMark, agentTone } from "@/components/agent-mark"
+import { AgentStatus } from "@/components/agent-status"
 import { ActivityBorder } from "@/components/activity-visuals"
 import type { Profile, JobType } from "@/inference/policy"
 import {
@@ -60,7 +61,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Empty,
@@ -222,19 +222,15 @@ export function Conversation({
           <div className="chat-identity-copy">
             <div className="chat-identity-title">
               <h1>{agent.name}</h1>
-              <Badge variant="secondary">
-                {archived
-                  ? "Archived"
-                  : active?.status === "stopping"
-                    ? "Stopping"
-                    : state?.access?.approvals.some(
-                          (value) => value.status === "pending"
-                        )
-                      ? "Needs approval"
-                      : active
-                        ? "Working"
-                        : "Ready"}
-              </Badge>
+              <AgentStatus
+                status={
+                  archived
+                    ? "archived"
+                    : connectionError
+                      ? "unavailable"
+                      : state?.runtime?.state
+                }
+              />
             </div>
             <p>
               {agent.instructions.split("\n")[0] ||

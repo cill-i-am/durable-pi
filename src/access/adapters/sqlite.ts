@@ -136,6 +136,14 @@ export class AccessStore {
       "SELECT id,turnId,tool,input,createdAt,expiresAt,status,revision FROM tool_operations WHERE status IN ('pending','approved') ORDER BY createdAt,id"
     )
   }
+  /** Status reads neither expire receipts nor expose tool arguments. */
+  awaitingApproval(turnId: string) {
+    return !!this.db.all<{ id: string }>(
+      "SELECT id FROM tool_operations WHERE turnId=? AND status='pending' AND expiresAt>? LIMIT 1",
+      turnId,
+      this.now()
+    )[0]
+  }
   begin(input: ToolIntent) {
     return this.db.transaction(() => {
       this.expire()

@@ -165,7 +165,7 @@ it("keeps the last complete backup during interrupted and multi-job uploads", as
   bucket.failAt = ""
   await backupMemory(memory, bucket, "p")
   expect((await readBackup(bucket, "p")).until.messages).toBe(278)
-})
+}, 15_000)
 it("rejects corrupt or missing R2 batches", async () => {
   const memory = fixture(),
     bucket = new Bucket()

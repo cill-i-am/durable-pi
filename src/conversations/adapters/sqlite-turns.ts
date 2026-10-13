@@ -13,6 +13,7 @@ import type { Sqlite } from "../../storage/sqlite"
 import { Schema } from "effect"
 import { AttachmentContent, FileInfo } from "../../workspace/files"
 import { TurnOrigin } from "../contracts"
+import type { StatusTurn } from "../status"
 import {
   ConversationConflict,
   ConversationFull,
@@ -144,6 +145,31 @@ export class ConversationStore {
       )
       .reverse()
       .map(restore)
+  }
+  statusTurns() {
+    type Row = Pick<StatusTurn, "id" | "status"> & {
+      phase: "recovering" | "recovered" | "blocked" | null
+    }
+    const read = (filter: string, order: string): StatusTurn | undefined => {
+      const row = this.db.all<Row>(
+        `SELECT id,status,json_extract(recovery,'$.view.phase') AS phase FROM chat_turns
+         WHERE parent_id IS NULL ${filter} ORDER BY rowid ${order} LIMIT 1`
+      )[0]
+      return row
+        ? {
+            id: row.id,
+            status: row.status,
+            recovery: row.phase ? { phase: row.phase } : null,
+          }
+        : undefined
+    }
+    return {
+      active: read(
+        "AND status IN ('queued','preparing','running','stopping')",
+        "ASC"
+      ),
+      latest: read("", "DESC"),
+    }
   }
   members(rootId: string, includeInput = true) {
     return this.db
