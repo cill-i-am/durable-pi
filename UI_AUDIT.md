@@ -2,7 +2,7 @@
 
 ## Goal
 
-Audit every implemented screen, entry point and interaction in Durable Pi five times. Apply concrete findings, remove redundant copy and actions, preserve durable execution and access guarantees, and deliver through review, CI and production verification. This work is part of the active UI goal; the remaining live research/activity treatment stays on the roadmap.
+Audit every implemented screen, entry point and interaction in Durable Pi five times. Apply concrete findings, remove redundant copy and actions, preserve durable execution and access guarantees, and deliver through review, CI and production verification. All five passes and the subsequent recorded-activity treatment are delivered; release evidence and verification limits are recorded below and in BUILD.md.
 
 ## Sources and boundaries
 
@@ -138,4 +138,6 @@ Approve for the six inspected domains and the verified local/hosted scope. The r
 
 ## Activity acceptance follow-up
 
-Subsequent hosted acceptance of the compact activity trail reproduced a transcript flash after two one-time approvals. The mutation callback recreated the TanStack client even though the existing Pi stream publishes committed access and run changes. Removing these redundant refreshes from approval, send, retry and cancellation keeps the current transcript mounted. Manual reconnection remains separate. Local coverage verifies one native subscription through approval/cancellation updates, and actual-component browser verification retains the transcript immediately after approving. Release and hosted evidence for this correction are tracked in BUILD.md; this is an additional finding after the five completed audit passes.
+Subsequent hosted acceptance of the compact activity trail reproduced a transcript flash after two one-time approvals. The mutation callback recreated the TanStack client even though the existing Pi stream publishes committed access and run changes. Removing these redundant refreshes from approval, send, retry and cancellation keeps the current transcript mounted. Manual reconnection remains separate. Local coverage verifies one native subscription through approval/cancellation updates, and actual-component browser verification retains the transcript immediately after approving. This is an additional finding after the five completed audit passes.
+
+[PR #85](https://github.com/cill-i-am/durable-pi/pull/85) and [PR #86](https://github.com/cill-i-am/durable-pi/pull/86) passed checks, merged and deployed. Hosted acceptance used an isolated synthetic bot and the existing ChatGPT connection. The compact trail retained original results after reload, opened the owning bot's Memory, Browser and Code routes, and preserved the transcript through send and one-time approval without opening another conversation stream. Two separately requested code calls produced two distinct native receipts; a saved result route survived reload without repeating execution. A 390px hosted viewport had no horizontal overflow; both themes were inspected. The test bot was archived through the confirmation dialog. Exact release evidence is in BUILD.md. Physical-phone gestures, screen readers and forced production restart remain outside this verification; native restart/replay coverage passed locally.
