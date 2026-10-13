@@ -413,6 +413,11 @@ export function Conversation({
                       <TurnReply
                         onAppPendingChange={onAppPendingChange}
                         turn={turn}
+                        waitingForApproval={state.access?.approvals.some(
+                          (approval) =>
+                            approval.turnId === turn.id &&
+                            approval.status === "pending"
+                        )}
                         toolTitles={Object.fromEntries(
                           (state.access?.tools ?? []).map((tool) => [
                             tool.name,

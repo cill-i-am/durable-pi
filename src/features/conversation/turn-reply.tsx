@@ -23,6 +23,7 @@ export function TurnReply({
   retrying,
   canRetry,
   onAppPendingChange,
+  waitingForApproval,
 }: {
   turn: ChatState["turns"][number]
   toolTitles?: Record<string, string>
@@ -32,6 +33,7 @@ export function TurnReply({
   retrying?: string | null
   canRetry?: boolean
   onAppPendingChange?: (key: string, pending: boolean) => void
+  waitingForApproval?: boolean
 }) {
   const stopped = turn.status === "cancelled"
   const failed = turn.status === "failed"
@@ -58,6 +60,8 @@ export function TurnReply({
                 items={turn.activity}
                 agentId={agentId}
                 toolTitles={toolTitles}
+                status={turn.status}
+                waitingForApproval={waitingForApproval}
               />
             ) : turn.answer ? (
               <Markdown text={turn.answer} />
