@@ -13,11 +13,9 @@ import {
   Code2,
   Clock3,
   X,
-  PanelRightOpen,
-  PanelRightClose,
 } from "lucide-react"
 import type { Workbench } from "./workspace-navigation"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import {
   Sheet,
   SheetContent,
@@ -26,13 +24,10 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet"
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-} from "@/components/ui/sidebar"
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip"
 import {
   Select,
   SelectTrigger,
@@ -86,7 +81,6 @@ export function WorkbenchPanel({
   // Wait for the dock before opening: Base UI then owns the entry transition
   // and never falls back to portaling the panel into document.body.
   const [container, setContainer] = useState<HTMLDivElement | null>(null)
-  const [expanded, setExpanded] = useState(false)
   const selected = tools.find((tool) => tool.id === value)!
   return (
     <div
@@ -125,10 +119,7 @@ export function WorkbenchPanel({
           <div className="workbench-frame">
             <div className="workbench-main">
               <header className="workbench-header">
-                <span className="workbench-identity">
-                  Workbench <span>{agentName}</span>
-                </span>
-                <div className="workbench-mobile-picker">
+                <div className="workbench-tool-picker">
                   <Select<Workbench>
                     items={tools.map((tool) => ({
                       value: tool.id,
@@ -140,7 +131,8 @@ export function WorkbenchPanel({
                       if (next && !locked) onChange(next)
                     }}
                   >
-                    <SelectTrigger aria-label="Workbench tool">
+                    <SelectTrigger variant="ghost" aria-label="Workbench tool">
+                      <selected.icon aria-hidden="true" />
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent mobileTitle="Workbench tools">
@@ -155,15 +147,59 @@ export function WorkbenchPanel({
                     </SelectContent>
                   </Select>
                 </div>
-                <Button
-                  size="icon-sm"
-                  variant="ghost"
-                  aria-label="Hide workbench"
-                  disabled={locked}
-                  onClick={() => onChange(null)}
+                <nav
+                  className="workbench-shortcuts"
+                  aria-label="Workbench shortcuts"
                 >
-                  <X />
-                </Button>
+                  {tools.slice(0, 5).map((tool) => (
+                    <Tooltip key={tool.id}>
+                      <TooltipTrigger
+                        render={
+                          <Link
+                            {...workspaceDestination(location.agentId!, {
+                              panel: tool.id,
+                            })}
+                            className={buttonVariants({
+                              variant:
+                                value === tool.id ? "secondary" : "ghost",
+                              size: "icon-sm",
+                            })}
+                            aria-label={tool.label}
+                            aria-current={
+                              value === tool.id ? "page" : undefined
+                            }
+                            aria-disabled={locked || undefined}
+                            data-shortcut={tool.id}
+                            onClick={(event) => {
+                              if (locked) event.preventDefault()
+                            }}
+                          />
+                        }
+                      >
+                        <tool.icon aria-hidden="true" />
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        {tool.label}
+                      </TooltipContent>
+                    </Tooltip>
+                  ))}
+                </nav>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        size="icon-sm"
+                        variant="ghost"
+                        aria-label="Hide workbench"
+                        disabled={locked}
+                        onClick={() => onChange(null)}
+                      />
+                    }
+                  >
+                    <X />
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">Hide workbench</TooltipContent>
+                </Tooltip>
               </header>
               <section
                 aria-label={`${selected.label} workbench`}
@@ -183,68 +219,6 @@ export function WorkbenchPanel({
                 </div>
               </section>
             </div>
-            <Sidebar
-              collapsible="none"
-              className="workbench-navigation"
-              data-expanded={expanded}
-              style={
-                {
-                  "--sidebar-width": expanded ? "164px" : "52px",
-                } as React.CSSProperties
-              }
-            >
-              <SidebarHeader>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={
-                    expanded
-                      ? "Collapse workbench navigation"
-                      : "Expand workbench navigation"
-                  }
-                  title={
-                    expanded
-                      ? "Collapse workbench navigation"
-                      : "Expand workbench navigation"
-                  }
-                  onClick={() => setExpanded((current) => !current)}
-                >
-                  {expanded ? <PanelRightClose /> : <PanelRightOpen />}
-                </Button>
-              </SidebarHeader>
-              <SidebarContent>
-                <nav aria-label="Workbench tools">
-                  <SidebarMenu>
-                    {tools.map((tool) => (
-                      <SidebarMenuItem key={tool.id}>
-                        <SidebarMenuButton
-                          isActive={value === tool.id}
-                          render={
-                            <Link
-                              {...workspaceDestination(location.agentId!, {
-                                panel: tool.id,
-                              })}
-                            />
-                          }
-                          aria-label={tool.label}
-                          title={tool.label}
-                          aria-current={value === tool.id ? "page" : undefined}
-                          aria-disabled={locked || undefined}
-                          onClick={(event) => {
-                            if (locked) event.preventDefault()
-                          }}
-                        >
-                          <tool.icon aria-hidden="true" />
-                          <span className="workbench-tool-label">
-                            {tool.label}
-                          </span>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    ))}
-                  </SidebarMenu>
-                </nav>
-              </SidebarContent>
-            </Sidebar>
           </div>
           {mobileNavigation}
         </SheetContent>

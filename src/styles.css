@@ -895,11 +895,11 @@ body {
   width: 30px;
   height: 30px;
 }
-.workspace-sidebar [data-slot="sidebar-menu-button"] > span {
+.workspace-sidebar [data-slot="sidebar-menu-button"] > .agent-sidebar-copy {
   flex: 1;
   gap: 2px;
 }
-.workspace-sidebar [data-slot="sidebar-menu-button"] > span > span:last-child {
+.workspace-sidebar [data-slot="sidebar-menu-button"] > .agent-sidebar-copy > span:last-child {
   font-size: 11px;
   line-height: 15px;
 }
@@ -1366,64 +1366,75 @@ body {
   flex-shrink: 0;
   align-items: center;
   height: 48px;
-  gap: 12px;
-  padding-inline: 16px;
-  border-bottom: 1px solid var(--border);
-}
-.workbench-identity {
-  display: flex;
-  min-width: 0;
-  flex: 1;
-  align-items: baseline;
   gap: 8px;
-  font-size: 12px;
-  font-weight: 500;
-}
-.workbench-identity > span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--muted-foreground);
-  font-weight: 400;
-}
-.workbench-mobile-picker {
-  display: none;
-}
-.workbench-navigation[data-slot="sidebar"] {
-  height: auto;
-  align-self: stretch;
-  flex-shrink: 0;
-  border-left: 1px solid var(--border);
-}
-.workbench-navigation [data-slot="sidebar-header"] {
-  justify-content: center;
-  align-items: center;
-  height: 48px;
-  padding: 6px;
+  padding-inline: 12px;
   border-bottom: 1px solid var(--border);
 }
-.workbench-navigation [data-slot="sidebar-content"] {
-  padding: 8px;
+/* The toolbar owns navigation; the rest of the panel is the working surface. */
+.workbench-tool-picker {
+  flex: 1;
+  min-width: 0;
 }
-.workbench-navigation [data-slot="sidebar-menu-button"] {
-  height: 36px;
-  padding: 8px;
+.workbench-tool-picker [data-slot="select-trigger"] {
+  max-width: 100%;
 }
-.workbench-navigation[data-expanded="false"] .workbench-tool-label {
-  display: none;
+.workbench-shortcuts {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 2px;
+  padding-inline-start: 8px;
+  border-inline-start: 1px solid var(--border);
 }
-.workbench-navigation[data-expanded="false"] [data-slot="sidebar-menu-button"] {
+@container workbench-frame (max-width: 400px) {
+  .workbench-shortcuts [data-shortcut="apps"],
+  .workbench-shortcuts [data-shortcut="activity"] {
+    display: none;
+  }
+}
+.agent-avatar {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  width: 30px;
+  height: 30px;
+}
+.agent-status-marker {
+  position: absolute;
+  inset-inline-end: -2px;
+  bottom: -1px;
+  display: flex;
+  align-items: center;
   justify-content: center;
-}
-.workbench-navigation [aria-disabled="true"] {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--agent-avatar-surface, var(--sidebar));
+  box-shadow: 0 0 0 2px var(--agent-avatar-surface, var(--sidebar));
+  color: var(--muted-foreground);
   pointer-events: none;
 }
-.agent-status-compact[data-slot="badge"] {
-  justify-content: flex-start;
-  height: 18px;
-  padding: 0;
-  background: transparent;
-  font-weight: 400;
+.workspace-sidebar [data-slot="sidebar-menu-button"] .agent-status-marker > svg {
+  width: 10px;
+  height: 10px;
+  stroke-width: 1.7;
+}
+.agent-status-marker[data-agent-status="working"] {
+  color: var(--primary);
+}
+.agent-status-marker:is([data-agent-status="blocked"], [data-agent-status="needs-approval"]) {
+  color: var(--warning);
+}
+.agent-status-marker[data-agent-status="failed"] {
+  color: var(--destructive);
+}
+.workspace-sidebar [data-slot="sidebar-menu-button"][data-active] {
+  --agent-avatar-surface: var(--sidebar-accent);
+}
+@media (hover: hover) {
+  .workspace-sidebar [data-slot="sidebar-menu-button"]:hover {
+    --agent-avatar-surface: var(--sidebar-accent);
+  }
 }
 .workbench-panel {
   container-type: inline-size;
@@ -2024,7 +2035,7 @@ body {
   .mobile-navigation button[aria-current="page"] {
     color: var(--primary-hover);
   }
-  .workbench-navigation[data-slot="sidebar"] {
+  .workbench-shortcuts {
     display: none;
   }
   .workbench-header {
@@ -2032,15 +2043,7 @@ body {
     padding-inline: 12px;
     gap: 8px;
   }
-  .workbench-identity {
-    display: none;
-  }
-  .workbench-mobile-picker {
-    display: block;
-    flex: 1;
-    min-width: 0;
-  }
-  .workbench-mobile-picker [data-slot="select-trigger"] {
+  .workbench-tool-picker [data-slot="select-trigger"] {
     width: 100%;
     min-height: 44px;
   }
