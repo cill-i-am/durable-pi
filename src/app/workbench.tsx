@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router"
 import { useWorkspaceLocation } from "./use-workspace-location"
 import { workspaceDestination } from "@/navigation/workspace"
-import { useRef, type ReactNode } from "react"
+import { useState, type ReactNode } from "react"
 import {
   Globe,
   TerminalSquare,
@@ -71,13 +71,15 @@ export function WorkbenchPanel({
   overlays?: ReactNode
 }) {
   const location = useWorkspaceLocation()
-  const container = useRef<HTMLDivElement>(null)
+  // Wait for the dock before opening: Base UI then owns the entry transition
+  // and never falls back to portaling the panel into document.body.
+  const [container, setContainer] = useState<HTMLDivElement | null>(null)
   const extra = more.find((tab) => tab.id === value)
   const tabs = extra ? [...primary, extra] : primary
   return (
-    <div ref={container} className="workbench-host">
+    <div ref={setContainer} className="workbench-host">
       <Sheet
-        open
+        open={container !== null}
         desktop="panel"
         breakpoint="lg"
         dismissible={!locked && !overlayOpen}
