@@ -371,6 +371,22 @@ function AgentWorkspace({
   const { setOpenMobile } = useSidebar()
   const conversation = useConversation(agent.id)
   const files = useFiles(agent.id)
+  // Keep only the last rendered route view while Base UI completes its exit.
+  // The URL remains authoritative; this snapshot cannot admit another action.
+  const [workbenchView, setWorkbenchView] = useState({
+    panel: workbench,
+    search: location.search,
+  })
+  if (
+    workbench &&
+    (workbench !== workbenchView.panel ||
+      location.search !== workbenchView.search)
+  ) {
+    setWorkbenchView({ panel: workbench, search: location.search })
+  }
+  const renderedWorkbench = workbench ?? workbenchView.panel
+  const renderedSearch = workbench ? location.search : workbenchView.search
+  const workbenchTrigger = useRef<HTMLButtonElement>(null)
   const [sending, setSending] = useState(false)
   const [filePending, setFilePending] = useState(false)
   const [workbenchAppPending, setAppPending] = useState(false)
@@ -388,7 +404,6 @@ function AgentWorkspace({
   }, [])
   const appPending = workbenchAppPending || inlineAppRequests.size > 0
   const [executionPending, setExecutionPending] = useState(false)
-  const objectId = location.search.item ?? null
   const setObjectId = location.setItem
   const [objectPending, setObjectPending] = useState(false)
   const [objectEditing, setObjectEditing] = useState(false)
@@ -501,6 +516,7 @@ function AgentWorkspace({
             (!workbench ||
               (objectPending && !editingLocked && workbench !== "objects")) && (
               <Button
+                ref={workbenchTrigger}
                 size="icon-sm"
                 variant="ghost"
                 disabled={editingLocked}
@@ -516,10 +532,16 @@ function AgentWorkspace({
             )
           }
         />
-        {workbench && (
+        {renderedWorkbench && (
           <WorkbenchPanel
-            value={workbench}
+            open={workbench !== null}
+            value={renderedWorkbench}
             onChange={openWorkbench}
+            onClosed={() => {
+              if (workbench === null)
+                setWorkbenchView({ panel: null, search: location.search })
+            }}
+            returnFocus={workbenchTrigger}
             agentName={agent.name}
             locked={locked}
             overlayOpen={overlayOpen || settings !== null}
@@ -537,32 +559,32 @@ function AgentWorkspace({
             }
             mobileNavigation={mobileNavigation(true)}
           >
-            {workbench === "activity" && (
+            {renderedWorkbench === "activity" && (
               <ActivityWorkbench
                 filters={{
-                  scope: location.search.scope,
-                  filter: location.search.filter,
-                  cursor: location.search.cursor,
+                  scope: renderedSearch.scope,
+                  filter: renderedSearch.filter,
+                  cursor: renderedSearch.cursor,
                 }}
                 onFiltersChange={(value) => location.update(value)}
-                offset={location.search.offset ?? 0}
+                offset={renderedSearch.offset ?? 0}
                 onOffsetChange={(offset) =>
                   location.update({ offset: offset || undefined })
                 }
-                view={location.search.tab === "tasks" ? "tasks" : "timeline"}
-                inspectedAgentId={location.search.activityAgent ?? agent.id}
-                selected={location.search.item ?? null}
+                view={renderedSearch.tab === "tasks" ? "tasks" : "timeline"}
+                inspectedAgentId={renderedSearch.activityAgent ?? agent.id}
+                selected={renderedSearch.item ?? null}
                 onSelectionChange={(tab, activityAgent, item) =>
                   location.update({
                     tab,
                     activityAgent,
                     item: item ?? undefined,
                     offset:
-                      tab !== (location.search.tab ?? "timeline") ||
+                      tab !== (renderedSearch.tab ?? "timeline") ||
                       activityAgent !==
-                        (location.search.activityAgent ?? agent.id)
+                        (renderedSearch.activityAgent ?? agent.id)
                         ? undefined
-                        : location.search.offset,
+                        : renderedSearch.offset,
                   })
                 }
                 agents={agents}
@@ -576,25 +598,25 @@ function AgentWorkspace({
                 agentName={agent.name}
               />
             )}
-            {workbench === "terminal" && (
+            {renderedWorkbench === "terminal" && (
               <TerminalWorkbench
                 onPendingChange={setExecutionPending}
                 agentId={agent.id}
-                selected={location.search.item ?? null}
+                selected={renderedSearch.item ?? null}
                 onSelect={location.setItem}
                 tab={
-                  location.search.tab === "interactive" ||
-                  location.search.tab === "transfers"
-                    ? location.search.tab
+                  renderedSearch.tab === "interactive" ||
+                  renderedSearch.tab === "transfers"
+                    ? renderedSearch.tab
                     : "commands"
                 }
                 onTabChange={location.setTab}
               />
             )}
-            {workbench === "routines" && (
+            {renderedWorkbench === "routines" && (
               <RoutinesWorkbench
-                selected={location.search.item ?? null}
-                webhook={location.search.tab === "webhook"}
+                selected={renderedSearch.item ?? null}
+                webhook={renderedSearch.tab === "webhook"}
                 onSelect={(item, webhook) =>
                   location.update({
                     item: item ?? undefined,
@@ -605,63 +627,63 @@ function AgentWorkspace({
                 agentId={agent.id}
               />
             )}
-            {workbench === "objects" && (
+            {renderedWorkbench === "objects" && (
               <ObjectsWorkbench
-                selected={objectId}
+                selected={renderedSearch.item ?? null}
                 onSelect={setObjectId}
                 onEditing={setObjectEditing}
               />
             )}
-            {workbench === "apps" && (
+            {renderedWorkbench === "apps" && (
               <AppsWorkbench
-                selected={location.search.item ?? null}
+                selected={renderedSearch.item ?? null}
                 onSelect={location.setItem}
                 onPendingChange={setAppPending}
                 agentId={agent.id}
               />
             )}
-            {workbench === "code" && (
+            {renderedWorkbench === "code" && (
               <ExecutionWorkbench
                 onPendingChange={setExecutionPending}
                 agentId={agent.id}
-                selected={location.search.item ?? null}
+                selected={renderedSearch.item ?? null}
                 onSelect={location.setItem}
               />
             )}
-            {workbench === "browser" && (
+            {renderedWorkbench === "browser" && (
               <BrowserWorkbench
                 agentId={agent.id}
                 agentName={agent.name}
                 onPendingChange={setExecutionPending}
               />
             )}
-            {workbench === "files" && (
+            {renderedWorkbench === "files" && (
               <FilesWorkbench
-                previewView={location.search.preview ?? "preview"}
+                previewView={renderedSearch.preview ?? "preview"}
                 onPreviewViewChange={(preview) => location.update({ preview })}
                 onPendingChange={setFilePending}
-                selected={location.search.item ?? null}
+                selected={renderedSearch.item ?? null}
                 onSelect={location.setItem}
-                collection={location.search.tab === "trash" ? "trash" : "files"}
+                collection={renderedSearch.tab === "trash" ? "trash" : "files"}
                 onCollectionChange={location.setTab}
                 state={files}
                 selectionDisabled={sending || files.uploading}
                 onAttached={() => openWorkbench(null)}
               />
             )}
-            {workbench === "memory" && (
+            {renderedWorkbench === "memory" && (
               <MemoryWorkbench
-                query={location.search.query ?? ""}
+                query={renderedSearch.query ?? ""}
                 onQueryChange={(query) =>
                   location.update({ query: query || undefined }, true)
                 }
                 state={conversation.state}
                 agentId={agent.id}
                 tab={
-                  location.search.tab === "history" ||
-                  location.search.tab === "tree" ||
-                  location.search.tab === "files"
-                    ? location.search.tab
+                  renderedSearch.tab === "history" ||
+                  renderedSearch.tab === "tree" ||
+                  renderedSearch.tab === "files"
+                    ? renderedSearch.tab
                     : "notes"
                 }
                 onTabChange={location.setTab}
@@ -670,7 +692,7 @@ function AgentWorkspace({
           </WorkbenchPanel>
         )}
       </div>
-      {!workbench && settingsPanel}
+      {!renderedWorkbench && settingsPanel}
       {mobileNavigation(false)}
     </ObjectsProvider>
   )

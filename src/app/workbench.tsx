@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router"
 import { useWorkspaceLocation } from "./use-workspace-location"
 import { workspaceDestination } from "@/navigation/workspace"
-import { useState, type ReactNode } from "react"
+import { useState, type ReactNode, type RefObject } from "react"
 import {
   Globe,
   TerminalSquare,
@@ -49,8 +49,11 @@ const more = [
 ] as const
 
 export function WorkbenchPanel({
+  open,
   value,
   onChange,
+  onClosed,
+  returnFocus,
   agentName,
   locked,
   overlayOpen,
@@ -59,8 +62,11 @@ export function WorkbenchPanel({
   children,
   overlays,
 }: {
+  open: boolean
   value: Workbench
   onChange: (value: Workbench | null) => void
+  onClosed: () => void
+  returnFocus: RefObject<HTMLElement | null>
   agentName: string
   locked: boolean
   overlayOpen: boolean
@@ -79,15 +85,23 @@ export function WorkbenchPanel({
     ? [primary[4], ...more.filter((tab) => tab.id !== extra.id)]
     : more
   return (
-    <div ref={setContainer} className="workbench-host">
+    <div
+      ref={setContainer}
+      className="workbench-host"
+      data-open={open}
+      inert={!open}
+    >
       <Sheet
-        open={container !== null}
+        open={open && container !== null}
         desktop="panel"
         breakpoint="lg"
         dismissible={!locked && !overlayOpen}
         modal={!overlayOpen}
-        onOpenChange={(open) => {
-          if (!open) onChange(null)
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) onChange(null)
+        }}
+        onOpenChangeComplete={(nextOpen) => {
+          if (!nextOpen && !open) onClosed()
         }}
       >
         <SheetContent
@@ -96,6 +110,7 @@ export function WorkbenchPanel({
           mobileLayout="panel"
           showCloseButton={false}
           className="workbench-sheet"
+          finalFocus={returnFocus}
         >
           <SheetHeader className="sr-only">
             <SheetTitle>{agentName} workbench</SheetTitle>
