@@ -12,7 +12,7 @@ Baseline: production main `163ec93`. Reuse docs/navigation.md and docs/responsiv
 | 2 | Live conversation and all nine workbench interiors | Complete |
 | 3 | Light/dark comparison, 320/390px layouts, reading measure and rendered colour pairs | Complete |
 | 4 | Implement recommendations and verify actual components with synthetic data | Complete |
-| 5 | Whole-diff review, CI, release and hosted acceptance | PR #88 released; exit/padding follow-up in progress |
+| 5 | Whole-diff review, CI, release and hosted acceptance | Complete |
 
 These are complementary passes, not a claim that every possible state was exercised five times. Hosted inspection used the signed-in owner session. Consequential account changes, permission changes, external execution and private exports were excluded. Authentication, editable objects and failures are exercised locally with synthetic data through the real frontend, routes and TanStack stream projection.
 
@@ -72,8 +72,21 @@ Screen-reader output, native browser zoom, translated/RTL content and physical-d
 
 The exit follow-up was checked through the actual component lifecycle with a synthetic fixture that slows only its CSS transition to 2 seconds for inspection. During closing, the URL had already returned to chat, the selected file remained visible, the dock was inert, its width was shrinking, and the popup carried Base UI’s ending state and a positive horizontal transform. Keyboard reopening before completion restored a single live panel. At 390px, Escape produced a positive downward transform and native cleanup; reduced-motion transitions were 0s and returned focus to Open workbench. Compiled production CSS uses 200ms desktop and 300ms mobile transitions; at 320px the document remains 320px wide. Temporary emulation and slow-motion styling are test-only and are not shipped.
 
-PR #88 merged as `0f7cba4`. Its [production workflow](https://github.com/cill-i-am/durable-pi/actions/runs/38371233918) passed both checks and deployment. The follow-up release and final hosted acceptance remain pending.
+## Release and hosted acceptance
+
+[PR #88](https://github.com/cill-i-am/durable-pi/pull/88) merged as `0f7cba4`; its [production workflow](https://github.com/cill-i-am/durable-pi/actions/runs/38371233918) passed checks and deployment. [PR #89](https://github.com/cill-i-am/durable-pi/pull/89) merged the exit/padding follow-up as `6a25d3b`; both PR checks and its [production workflow](https://github.com/cill-i-am/durable-pi/actions/runs/38375058742) passed. The production run includes 679 tests, native recovery, lint, build and a scan of 499 tracked files with no credential matches.
+
+Hosted acceptance used the signed-in owner session at https://bot.cill-i-am.com:
+
+- The served stylesheet is `styles-DNdJmqaK.css`, matching the verified follow-up build. Assistant prose is 16px/25.6px with a 72ch maximum; terminal history computes to `space-between`, and its editor uses the input border token.
+- General settings has one content heading. Light and Dark render correctly; the original Dark preference was restored. Confirmed access choices have visible checks; no permission was changed. Skills, saved notes and the unselected file preview show the revised guidance.
+- Code, Routines and Checklists have the corrected headings and one creation entry. Selecting an extra tool keeps five toolbar links, moves Activity into More and omits the active extra from More. Native resource URLs remain intact.
+- Tool-call and Thinking rows compute to `8px 12px` padding. The expanded completed group and its rows were inspected on the live app; screenshot proof stays in the ignored research folder.
+- Closing a selected file changes the URL to chat immediately. Two observed native ending frames retained that file, marked the dock inert and showed increasing horizontal translation. The dock width shrank in parallel. Completion removed the host and returned focus to Open workbench; reopening produced one panel.
+- At an emulated 390px width, the More menu stacked above the workbench. Escape closed only that menu and returned focus to its trigger. Chat then produced a positive downward translation in Base UI’s ending phase, followed by cleanup. Device-metrics overrides were cleared.
+
+Hosted checks were UI/read-only resource checks. They did not run a model, submit an external action, edit owner objects, alter security or force a production restart. Early reopen under deliberately slowed motion, reduced-motion cleanup, pending-edit protection and a Markdown file preview were verified locally; physical phone gestures, screen-reader output, native zoom and translation/RTL remain unverified.
 
 ## Verdict
 
-Approve for the reviewed domains: all eleven confirmed findings are fixed and no HIGH finding remains in this scope. CI/release and final hosted acceptance are pending. This does not certify the unverified checks listed above.
+Approve for the reviewed domains: all eleven confirmed findings are fixed and no HIGH finding remains in this scope. CI, deployment and representative hosted acceptance passed. This does not certify the unverified checks listed above.
