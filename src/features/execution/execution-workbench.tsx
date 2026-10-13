@@ -35,10 +35,10 @@ export function ExecutionWorkbench({
   const content = (
     <>
       <header className="workbench-heading-row">
-        <div className="flex items-center gap-2 text-sm font-medium">
+        <h2 className="workbench-section-title flex items-center gap-2">
           <Code2 className="size-4" /> Code{" "}
           <Badge variant="secondary">JavaScript</Badge>
-        </div>
+        </h2>
         <div className="flex gap-1">
           <Button
             size="icon-sm"

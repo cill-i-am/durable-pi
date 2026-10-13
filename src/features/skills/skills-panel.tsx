@@ -508,7 +508,7 @@ export function SkillsPanel({
                 <p className="py-6 text-center text-sm text-muted-foreground">
                   {tab === "archived"
                     ? "No archived skills."
-                    : "Teach a repeatable way of working."}
+                    : "No skills yet. Create a skill or import instructions."}
                 </p>
               )}
           </div>

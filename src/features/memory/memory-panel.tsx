@@ -154,10 +154,9 @@ export function MemoryWorkbench({
             ) : (
               <Empty>
                 <EmptyHeader>
-                  <EmptyTitle>Nothing saved yet</EmptyTitle>
+                  <EmptyTitle>No saved notes</EmptyTitle>
                   <EmptyDescription>
-                    Preferences and useful facts will appear here as your
-                    conversation grows.
+                    Ask your agent to save a preference or useful fact.
                   </EmptyDescription>
                 </EmptyHeader>
               </Empty>

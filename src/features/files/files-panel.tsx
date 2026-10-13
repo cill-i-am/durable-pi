@@ -271,7 +271,7 @@ export function FilesWorkbench({
                 )
               })}
             </nav>
-            {preview && (
+            {preview ? (
               <section
                 className="file-explorer-detail"
                 aria-label={`Details for ${preview.name}`}
@@ -302,6 +302,15 @@ export function FilesWorkbench({
                   />
                 )}
               </section>
+            ) : (
+              <Empty className="file-explorer-detail">
+                <EmptyHeader>
+                  <EmptyTitle>Select a file</EmptyTitle>
+                  <EmptyDescription>
+                    Choose a file to preview it or attach it to your message.
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
             )}
           </div>
         )}

@@ -235,9 +235,7 @@ export function WorkspaceSettings({
                   Connected tools
                 </Link>
               </div>
-            ) : (
-              <span>{section?.title ?? "Settings"}</span>
-            )}
+            ) : null}
             <Button
               variant="ghost"
               size="icon-sm"

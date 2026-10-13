@@ -204,9 +204,19 @@ export function RoutinesWorkbench({
   return (
     <>
       <header className="workbench-heading-row">
-        <div className="flex items-center gap-2 text-sm font-medium">
+        <h2 className="workbench-section-title flex items-center gap-2">
           <Clock3 className="size-4" /> Routines
-        </div>
+        </h2>
+        {!editor && (
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={locked}
+            onClick={() => setEditor({ key: crypto.randomUUID() })}
+          >
+            <Plus data-icon="inline-start" /> New routine
+          </Button>
+        )}
       </header>
       <div className="workbench-body">
         {actions.error && (
@@ -299,16 +309,6 @@ export function RoutinesWorkbench({
           </>
         ) : (
           <>
-            <div className="flex items-center gap-3">
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={locked}
-                onClick={() => setEditor({ key: crypto.randomUUID() })}
-              >
-                <Plus /> New routine
-              </Button>
-            </div>
             <p className="text-xs text-muted-foreground">
               Routines continue when you close the app. Tool approvals still
               apply.
@@ -347,7 +347,7 @@ export function RoutinesWorkbench({
               aria-label="Recent routine runs"
               className="flex flex-col gap-3"
             >
-              <h2 className="text-sm font-medium">Recent runs</h2>
+              <h3 className="text-sm font-medium">Recent runs</h3>
               {actions.data.runs.length === 0 ? (
                 <p className="text-xs text-muted-foreground">
                   Completed work and interrupted runs appear here.

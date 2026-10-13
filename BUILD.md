@@ -1,5 +1,15 @@
 # Durable Pi — build tracker
 
+## Live visual refinement — five passes, 13 October 2026
+
+Use all six better-* domain skills against the deployed app, preserve the existing Paper/Linear direction and shadcn/Base UI primitives, and implement evidence-backed recommendations. This is a new review of the live interface after the earlier correctness audit. Findings, screen coverage, before/after evidence and verification limits belong in [VISUAL_REVIEW.md](VISUAL_REVIEW.md).
+
+- [x] Pass 1: inspect live navigation, settings, authentication entry points and visual hierarchy in all six domains.
+- [x] Pass 2: inspect conversation and every workbench interior, including saved, empty and recovery states.
+- [x] Pass 3: compare both themes and narrow layouts; measure typography, contrast and controls, and consolidate findings.
+- [x] Pass 4: implement the recommendations and verify the actual components locally, including interaction and pending-state regressions.
+- [ ] Pass 5: review the complete result, pass CI, merge/deploy and repeat representative hosted journeys.
+
 ## Compact recorded activity — 13 October 2026
 
 - [x] Inspect the [Pitus reference video](https://x.com/pitus_/status/2109282877506777206) in the signed-in browser. The 16-second clip shows a compact thinking header, sequential tool progress, source chips, a failed approach, nested test progress and a finished state. It does not demonstrate live browser video or a search-provider integration.
