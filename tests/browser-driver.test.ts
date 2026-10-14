@@ -1,5 +1,6 @@
 import { runInNewContext } from "node:vm"
 import { beforeEach, expect, it, vi } from "vitest"
+import { TimeoutError } from "@cloudflare/puppeteer"
 import {
   CloudflareBrowser,
   PAGE_OBSERVATION,
@@ -10,7 +11,10 @@ import {
 } from "../src/browser/adapters/cloudflare"
 
 const provider = vi.hoisted(() => ({ launch: vi.fn(), connect: vi.fn() }))
-vi.mock("@cloudflare/puppeteer", () => ({ default: provider }))
+vi.mock("@cloudflare/puppeteer", async (importOriginal) => {
+  const actual = await importOriginal<{ TimeoutError: typeof TimeoutError }>()
+  return { default: provider, TimeoutError: actual.TimeoutError }
+})
 const session = {
   id: "synthetic-session",
   targetId: "target",
@@ -33,6 +37,7 @@ function fixture(
         return { frameTree: { frame: { id: "frame" } } }
       if (method === "Page.createIsolatedWorld")
         return { executionContextId: 42 }
+      if (method === "Page.stopLoading") return {}
       if (method === "Runtime.evaluate") {
         expect(params?.contextId).toBe(42)
         return {
@@ -357,6 +362,70 @@ it("records Chromium's native navigation error document as a confirmed failed lo
   expect(f.page.goto).toHaveBeenCalledOnce()
   expect(f.page.screenshot).not.toHaveBeenCalled()
   expect(f.browser.disconnect).toHaveBeenCalled()
+})
+
+it.each([
+  "ERR_NAME_NOT_RESOLVED",
+  "ERR_CONNECTION_CLOSED",
+  "ERR_CONNECTION_TIMED_OUT",
+])(
+  "settles a native navigation %s as a failed load without exposing its URL",
+  async (code) => {
+    const f = fixture()
+    f.page.goto.mockRejectedValue(
+      new Error(`net::${code} at https://example.com/?private=synthetic-secret`)
+    )
+    await expect(
+      driver.navigate(session, "https://example.com", [], true)
+    ).rejects.toMatchObject({
+      outcome: "failed",
+      message: expect.stringContaining(code),
+    })
+    await expect(
+      driver.navigate(session, "https://example.com", [], true)
+    ).rejects.not.toThrow("synthetic-secret")
+    expect(f.page.screenshot).not.toHaveBeenCalled()
+    expect(f.browser.disconnect).toHaveBeenCalled()
+  }
+)
+
+it("keeps an unknown navigation failure uncertain", async () => {
+  const f = fixture()
+  f.page.goto.mockRejectedValue(new Error("Connection closed during dispatch"))
+  await expect(
+    driver.navigate(session, "https://example.com", [], true)
+  ).rejects.not.toHaveProperty("outcome")
+})
+
+it("stops a timed-out navigation before settling its failed load", async () => {
+  const f = fixture()
+  f.page.goto.mockRejectedValue(new TimeoutError("Navigation timeout exceeded"))
+  await expect(
+    driver.navigate(session, "https://example.com", [], true)
+  ).rejects.toMatchObject({
+    outcome: "failed",
+    message: expect.stringContaining("Loading was stopped"),
+  })
+  expect(f.send).toHaveBeenCalledWith("Page.stopLoading", undefined, {
+    timeout: 5000,
+  })
+  expect(f.page.goto).toHaveBeenCalledOnce()
+  expect(f.page.screenshot).not.toHaveBeenCalled()
+})
+
+it("keeps a navigation uncertain when stopping its load is unconfirmed", async () => {
+  const f = fixture()
+  f.page.goto.mockRejectedValue(new TimeoutError("Navigation timeout exceeded"))
+  const send = f.send.getMockImplementation()!
+  f.send.mockImplementation(async (method, params) => {
+    if (method === "Page.stopLoading")
+      throw new Error("Connection closed before stop was confirmed")
+    return send(method, params)
+  })
+  await expect(
+    driver.navigate(session, "https://example.com", [], true)
+  ).rejects.not.toHaveProperty("outcome")
+  expect(f.page.goto).toHaveBeenCalledOnce()
 })
 
 it("does not settle a click from a subsequent error document", async () => {

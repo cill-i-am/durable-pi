@@ -1,4 +1,8 @@
-import puppeteer, { type Browser, type Page } from "@cloudflare/puppeteer"
+import puppeteer, {
+  TimeoutError,
+  type Browser,
+  type Page,
+} from "@cloudflare/puppeteer"
 import { Schema } from "effect"
 import type { BrowserDriver } from "../browser"
 import {
@@ -132,12 +136,35 @@ export class CloudflareBrowser implements BrowserDriver {
   ) {
     return this.withPage(session, async (page) => {
       await this.restrictNavigation(page, hosts, unrestricted)
-      const response = await page.goto(
-        allowedBrowserUrl(url, hosts, unrestricted),
-        {
+      const response = await page
+        .goto(allowedBrowserUrl(url, hosts, unrestricted), {
           waitUntil: "domcontentloaded",
-        }
-      )
+        })
+        .catch(async (cause: unknown) => {
+          if (cause instanceof TimeoutError) {
+            const cdp = await page.createCDPSession()
+            try {
+              await cdp.send("Page.stopLoading", undefined, { timeout: 5000 })
+            } finally {
+              await cdp.detach()
+            }
+            throw new BrowserFailure({
+              outcome: "failed",
+              message:
+                "The page did not finish loading within 15 seconds. Loading was stopped. Inspect the current page before trying again or use another source.",
+            })
+          }
+          const code =
+            cause instanceof Error
+              ? /^net::(ERR_[A-Z_]+)(?: at |$)/.exec(cause.message)?.[1]
+              : undefined
+          if (code)
+            throw new BrowserFailure({
+              outcome: "failed",
+              message: `Cloudflare Browser Run could not load the page (${code}). Check the address or use another source.`,
+            })
+          throw cause
+        })
       if (page.url() === "chrome-error://chromewebdata/")
         throw new BrowserFailure({
           outcome: "failed",
