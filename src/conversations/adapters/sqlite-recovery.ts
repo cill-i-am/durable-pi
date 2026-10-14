@@ -8,7 +8,6 @@ import {
   type RecoveryState,
 } from "../recovery"
 
-/** Run-owned bounded projection; originals and dispatch receipts keep their owners. */
 export class RunRecoveryStore {
   constructor(
     private readonly db: Sqlite,

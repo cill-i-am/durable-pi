@@ -38,7 +38,6 @@ export interface CheckpointStorage {
   read: (checkpoint: Checkpoint) => Promise<Uint8Array>
   write: (bytes: Uint8Array) => Promise<Checkpoint>
 }
-/** Owns command admission and durable results. Runtime teardown includes every descendant process. */
 export class Terminal {
   private recovery: Promise<void> | null = null
   private cleanupError: string | null = null
@@ -234,7 +233,6 @@ export class Terminal {
       if (Date.now() - lastFlush > 250) flush()
       if (output.length >= MAX_OUTPUT) throw new Error("Output limit")
     }
-    // Includes cold start, restore, execution and checkpoint; no phase may extend the deadline.
     let timer = setTimeout(() => controller.abort(), COMMAND_TIMEOUT)
     let stop!: () => void
     const live = () => {
@@ -347,11 +345,8 @@ export class Terminal {
       clearTimeout(timer)
       session?.dispose()
       controller.signal.removeEventListener("abort", stop)
-      // Retain admission ownership until a cancelled SDK call settles. A late cold
-      // start must be torn down before another command can enter this container.
       await work.catch(() => {})
       await session?.settleConnections()
-      // A cancelled command can leave children behind. Only container teardown is a hard stop.
       try {
         await this.runtime.close()
       } catch {

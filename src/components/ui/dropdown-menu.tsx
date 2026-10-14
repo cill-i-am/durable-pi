@@ -21,8 +21,6 @@ function useMenuPresentation({
     next,
     details
   ) => {
-    // A bottom sheet moves away from its trigger on press. Anchored-menu
-    // focus/outside/cancel-open handlers must not undo the drawer opening.
     if (
       mobile &&
       ["focus-out", "outside-press", "cancel-open"].includes(details.reason)

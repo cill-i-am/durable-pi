@@ -1,8 +1,4 @@
 import { pathToFileURL } from "node:url"
-/** Native Issues is newer than Alchemy beta.81's provider schema. Keep this
- * narrow post-deploy reconciliation until the provider can express the field.
- * Alchemy remains the owner of Workers, logs, traces and their sampling.
- */
 import { Config, Data, Effect, Redacted, Schema } from "effect"
 
 class ObservabilitySetupFailed extends Data.TaggedError(

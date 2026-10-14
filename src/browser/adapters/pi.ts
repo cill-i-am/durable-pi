@@ -26,9 +26,6 @@ export function browserResult(result: BrowserObservation) {
   }
 }
 
-/** Confirmed rejections and failed loads are native error results and therefore
- * replayable receipts. Unknown outcomes still throw and keep Access's replay fence.
- */
 export function browserToolResult(
   operation: Effect.Effect<BrowserObservation, BrowserFailure>
 ) {

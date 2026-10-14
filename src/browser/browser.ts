@@ -59,7 +59,6 @@ export interface BrowserDriver {
   close: (id: string) => Promise<void>
 }
 
-/** The bot owns session identity, revocation, and recovery; the driver owns Chromium. */
 export class BrowserWorkspace {
   private readonly operations = Semaphore.makeUnsafe(1)
   constructor(
@@ -120,7 +119,6 @@ export class BrowserWorkspace {
           })
         return this.repository.transfer(generation, controller)
       })
-      // Capture only after earlier tab operations have settled under the new authority.
       yield* this.inspect(record.generation, undefined, undefined, "owner")
       return this.state()
     })
@@ -209,8 +207,6 @@ export class BrowserWorkspace {
         })
     }
     const action = this.operations.withPermit(
-      // Cancellation cannot release tab ownership while Chromium still runs.
-      // The explicit signal fences dispatch/publication; driver calls have bounded timeouts.
       Effect.uninterruptible(
         Effect.tryPromise({
           try: async () => {
@@ -258,7 +254,6 @@ export class BrowserWorkspace {
                 message:
                   "The page view changed or is older than one minute. Refresh it before interacting.",
               })
-            // Version advances before dispatch: replaying the same interaction cannot repeat its effect.
             record = this.repository.update(generation, {
               status: "loading",
               error: null,

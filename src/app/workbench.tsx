@@ -78,8 +78,6 @@ export function WorkbenchPanel({
   overlays?: ReactNode
 }) {
   const location = useWorkspaceLocation()
-  // Wait for the dock before opening: Base UI then owns the entry transition
-  // and never falls back to portaling the panel into document.body.
   const [container, setContainer] = useState<HTMLDivElement | null>(null)
   const selected = tools.find((tool) => tool.id === value)!
   return (

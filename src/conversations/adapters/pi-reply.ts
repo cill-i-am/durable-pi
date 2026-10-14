@@ -18,8 +18,6 @@ export async function readPiReply(
   const sessionId = root.session_id!
   const storage = await harness.storage()
   const conversation = await harness.conversation(sessionId)
-  // Snapshot first: subsequent submission reads can only add immutable entry mappings.
-  // Reading records first can miss a steer placed just before the snapshot.
   const stream = await harness.session(sessionId).events()
   const snapshot = stream.snapshot
   await stream.stop()
@@ -41,10 +39,6 @@ export async function readPiReply(
   }
 }
 
-/** Native snapshots are working context, not history, once a head marker exists.
- * Read immutable original entries only through the captured snapshot's tail, so a
- * later output cannot make an earlier run/receipt snapshot look settled.
- */
 export async function originalTranscript(
   conversation: Pick<Conversation, "entries">,
   snapshot: Pick<SnapshotEvent, "entries">
@@ -83,7 +77,6 @@ export function placedInputs(
   return users
 }
 
-/** A receipt may advance after the snapshot; only finish once its output is visible. */
 export function replySettled(
   root: Turn,
   members: readonly Turn[],
@@ -112,7 +105,6 @@ const textContent = (content: readonly { type: string; text?: string }[]) =>
     .map((block) => block.text ?? "")
     .join("\n")
 
-/** Archive only consumed user input, in the same order as Pi's committed transcript. */
 export function archiveEntries(
   root: Turn,
   entries: readonly EntryRecord[],

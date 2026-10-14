@@ -2,7 +2,6 @@ import type { EntryRecord, SnapshotEvent } from "@earendil-works/pi-durable"
 import type { TimelineItem } from "../contracts"
 import type { FileInfo } from "../../workspace/files"
 
-/** Deliberately project display fields: never serialize provider tokens/signatures. */
 export function piTimeline(
   entries: readonly EntryRecord[],
   live?: SnapshotEvent,
@@ -41,8 +40,6 @@ export function piTimeline(
         })
     }
     if (message.role === "assistant") {
-      // Sessions are append-only. The in-flight assistant occupies the same ordinal
-      // as its eventual entry, keeping expanded disclosures and keyboard focus stable.
       const id = `assistant:${assistantIndex++}`
       message.content.forEach((block, index) => {
         if (block.type === "text" && block.text)
@@ -95,9 +92,6 @@ const earlierActivity =
 const shortened =
   "\n[Display shortened; the full original is available through memory retrieval.]"
 
-/** A display cache must not grow past the Durable Object SQLite row limit.
- * Native entries and OptChat originals remain complete and authoritative.
- */
 function boundedActivity(items: readonly TimelineItem[]): TimelineItem[] {
   const encoder = new TextEncoder(),
     kept: TimelineItem[] = []
@@ -124,7 +118,6 @@ function boundedActivity(items: readonly TimelineItem[]): TimelineItem[] {
   return kept.reverse()
 }
 
-/** Bounded fallback for clients without the activity projection. */
 export function displayAnswer(entries: readonly EntryRecord[]) {
   const parts: string[] = []
   let remaining = 120_000

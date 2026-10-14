@@ -27,12 +27,9 @@ export type Delegations = {
     childId: number,
     cursor?: string
   ) => Effect.Effect<Transcript, DelegationFailure>
-  /** Resolve a native child to its original root; never use the latest unrelated turn. */
   root: (
     conversationId: number
   ) => Effect.Effect<string | undefined, DelegationFailure>
-  /** Called by the existing provider payload hook immediately before each request. */
   request: (providerSessionId: string) => Effect.Effect<void, DelegationFailure>
-  /** Enforce saved Stop/deadline intents while the root runner is active. */
   reconcile: (turnId: string) => Effect.Effect<void, DelegationFailure>
 }

@@ -147,7 +147,6 @@ it("repeated report retries preserve trusted provenance and archive as events", 
       groupId: 19,
       turnId: f.source.turnId,
     })
-    // Use an actual native user-entry shape; the origin is host provenance, not model text.
     const archived = archiveEntries(
       turn,
       [

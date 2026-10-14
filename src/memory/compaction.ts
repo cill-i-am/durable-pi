@@ -61,11 +61,6 @@ export const summarize = Effect.fn("Memory.summarize")(function* (
   return best
 })
 
-/**
- * One scoped job owns the dynamic work set. A completion queue refills slots
- * without Promise.race (which cannot cancel siblings or propagate defects).
- * Cooldowns are persisted; Lifecycle, not an in-memory sleep, owns the wake.
- */
 export const pumpSummaries = Effect.fn("Memory.compact")(function* (
   options: {
     maxBuilds?: number
@@ -92,8 +87,6 @@ export const pumpSummaries = Effect.fn("Memory.compact")(function* (
       busy.add(key)
       started++
       yield* summarize(job).pipe(
-        // Only provider failures become retryable nodes. A storage failure,
-        // defect or interruption must never be mistaken for model downtime.
         Effect.matchEffect({
           onSuccess: (text) => memory.saveNode(job, text),
           onFailure: (error) =>

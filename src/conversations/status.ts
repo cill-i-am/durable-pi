@@ -20,7 +20,6 @@ export type StatusTurn = Pick<ChatTurn, "id" | "status"> & {
   recovery?: Pick<RecoveryView, "phase"> | null
 }
 
-/** A read-only view of durable run facts, never permission or execution authority. */
 export function runtimeStatus(facts: {
   archived: boolean
   active?: StatusTurn

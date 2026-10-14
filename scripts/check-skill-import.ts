@@ -5,7 +5,6 @@ import { importSkillsRequest } from "../src/skills/import"
 import { Skill, SaveSkill, SkillSelection } from "../src/skills/contracts"
 import { remoteTool } from "../src/access/connections"
 
-// Synthetic provider response only. Production credentials and owner skills are never used.
 const origin = "http://localhost:1337"
 assert.equal(process.env.OWNER_EMAIL, "workspace-test@example.com")
 const login = await fetch(origin + "/api/auth/sign-in/email", {

@@ -10,7 +10,6 @@ import type {
   PlanUpdate,
 } from "./contracts"
 
-/** Conversation identity and input revision come from the host, never tool arguments. */
 export type PlanSource = {
   turnId: string
   inputRevision: number

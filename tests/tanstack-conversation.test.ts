@@ -281,7 +281,6 @@ describe("TanStack live connection against the production SSE adapter", () => {
         approvals: [{ ...approval, status: "running", revision: 1 }],
       },
     })
-    // A metadata-only notification retains all native messages while delivered.
     expect(live.client.getMessages().map((message) => message.id)).toEqual(
       originalIds
     )
@@ -371,7 +370,6 @@ describe("TanStack live connection against the production SSE adapter", () => {
     expect(bad.client.getError()?.message).toBe(
       "Could not reconnect. Reconnect to try again."
     )
-    // Mock rejection occurs before the fixture records a request.
     expect(f.requests.length).toBe(start)
     const calls = f.fetcher.mock.calls.length
     await flush(20_000)

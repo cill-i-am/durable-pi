@@ -55,7 +55,6 @@ const trim = (value: string, limit = 12000) => {
         "\n[Shortened; full answer is in the native transcript.]"
 }
 
-/** One native store per group. The stock Cloudflare bridge owns every child wake. */
 export function piBackgroundGroup(
   open: () => Promise<Harness>,
   bridge: {

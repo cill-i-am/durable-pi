@@ -24,7 +24,6 @@ import {
   type Turn,
 } from "../turns"
 
-/** A reply owns its steering inputs. The host queue owns fresh, settled-memory follow-ups. */
 export class ConversationStore {
   constructor(
     private readonly db: Sqlite,
@@ -349,7 +348,6 @@ export class ConversationStore {
       return root.id
     })
   }
-  /** A newly accepted steer or stop invalidates a finalization prepared before that admission. */
   finish(
     root: Turn,
     outcomes: readonly {

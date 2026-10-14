@@ -240,8 +240,6 @@ class TurnRunner extends LifecycleCapability {
   }
   async wake() {
     await this.lifecycle.jobs.push({
-      // Lifecycle job IDs share a queue across capabilities. Keep the original
-      // chat ID for upgrades; compaction and backup own distinct IDs.
       id:
         this.capability === "personal-chat"
           ? "pump"
@@ -254,7 +252,6 @@ class TurnRunner extends LifecycleCapability {
     })
   }
   async onJob(): Promise<LifecycleJobOutcome> {
-    // Lifecycle owns retries and alarms. A crash re-enters from durable turn state.
     try {
       return await this.owner.step()
     } finally {
@@ -341,7 +338,6 @@ class RoutineRunner extends TurnRunner {
     return next === undefined ? undefined : { rescheduleAt: next }
   }
   onJobError(): LifecycleJobOutcome {
-    // Exhausted application retries otherwise remove the lifecycle job.
     const next = this.owner.routinePump.retry()
     return next === undefined ? undefined : { rescheduleAt: next }
   }
@@ -480,8 +476,6 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     },
     transaction: (body) => this.ctx.storage.transactionSync(body),
   }
-  // Only host edges use runSync; in particular, Cloudflare transactionSync
-  // cannot suspend while capturing a view and durably admitting a turn.
   get memory() {
     return this.memoryRuntime.runSync(MemoryRepository)
   }
@@ -816,9 +810,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     for (const row of this.backgroundMailbox.reconcileCancellation()) {
       try {
         await this.backgroundStub(row.id).stop()
-      } catch {
-        /* The persisted fence also rejects every subsequent provider request. */
-      }
+      } catch {}
     }
     for (const row of this.backgroundMailbox.due()) {
       try {
@@ -831,7 +823,6 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         this.backgroundMailbox.failed(row.id)
       }
     }
-    // Wait for ordinary conversation completion; do not poll an approval or start an unrelated turn.
     if (!this.active()) {
       const delivered = this.backgroundMailbox.deliver((handoff, report) => {
         this.conversations.admit(
@@ -1711,7 +1702,6 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         workspace.attach(input.files ?? [])
       )
     )
-    // The archive fence and insertion share one synchronous turn.
     if (this.botConfiguration.read()?.status === "archived")
       return Response.json(
         { error: "Restore this agent before sending a message." },
@@ -1758,7 +1748,6 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         capability.contextWindow
       ),
     }
-    // Catalog discovery may yield. These fences must share admission's synchronous turn.
     if (this.botConfiguration.read()?.status === "archived")
       return Response.json(
         { error: "Restore this agent before sending a message." },
@@ -1775,8 +1764,6 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       this.skills.selection().skills,
       pinned
     )
-    // Discovery can yield long enough for an earlier empty pump to finish.
-    // Persist work before arming its wake, including idempotent submission retries.
     await this.runner.wake()
     this.notifyConversation()
     return Response.json(
@@ -1791,7 +1778,6 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
 
   resolveModelCredential(provider: string) {
     const refreshed = resolveAccountCredential(this.localCredentials, provider)
-    // Persist rotated credentials even if the requesting bot disconnects.
     this.ctx.waitUntil(
       refreshed.then(
         () => undefined,
@@ -1912,8 +1898,6 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     profile: AgentProfile,
     communicationOwner?: string
   ) {
-    // Older DO versions safely ignore this additive argument during rollout.
-    // Never require a newly introduced RPC method on every existing chat request.
     if (communicationOwner)
       this.bindCommunicationIdentity(communicationOwner, profile.id)
     this.botConfiguration.configure(owner, profile)
@@ -1928,7 +1912,6 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           body: JSON.stringify({
             revision: current.revision,
             active: current.status === "active",
-            // Preserve revocation even when a later restore overtakes this profile.
             revokeThrough:
               profile.status === "archived" ? profile.revision : undefined,
           }),
@@ -2076,9 +2059,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           if (row) this.conversations.requestStop(row.handoff.reportId)
           try {
             await this.backgroundStub(input.groupId).stop()
-          } catch {
-            /* Persisted Stop remains authoritative. */
-          }
+          } catch {}
           await this.runner.wake()
           return Response.json({ accepted: true })
         }
@@ -2566,7 +2547,6 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             )
           )
         : false
-    // Native document reads can yield. Never apply an old task blocker to a newer run.
     const facts = this.conversations.statusTurns()
     if (
       before.latest?.id === facts.latest?.id &&
@@ -2750,7 +2730,6 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           rescheduleAt:
             Date.now() + (this.accessStore.pending().length ? 30_000 : 150),
         }
-      // Admission/stop may have happened during a Pi read or a wake. Recheck before closing.
       if (this.current(turn.id).revision !== turn.revision)
         return { rescheduleAt: Date.now() + 10 }
       const outcomes = members.map((member) => ({
@@ -2822,7 +2801,6 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
               })
             )
           ),
-          // Observability cannot prevent cleanup after the durable finish.
           Effect.catch(() => Effect.void)
         )
       )
@@ -2950,7 +2928,6 @@ async function limitedJson(
 
 export default {
   async fetch(request: Request, env: AgentEnv) {
-    // This Worker has no public routes. The authenticated website is its only caller.
     const owner = request.headers.get("x-owner-id")
     if (!owner) return new Response("Unauthorized", { status: 401 })
     const url = new URL(request.url)

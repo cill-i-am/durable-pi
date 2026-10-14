@@ -30,8 +30,6 @@ export function useWorkspaceLocation() {
       void navigate({
         ...workspaceDestination(agentId, { ...search, ...change }),
         replace,
-        // Feature callers guard unsaved work; confirmed saves can select their new resource.
-        // Native links and history still use the workspace blocker.
         ignoreBlocker: true,
       })
     },

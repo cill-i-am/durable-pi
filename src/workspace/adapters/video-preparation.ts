@@ -23,7 +23,6 @@ type Source = {
   status: string
   trashed: number
 }
-/** Durable derivative preparation. Original assets and read fences remain owned by Workspace. */
 export class VideoPreparations {
   constructor(
     private readonly db: Sqlite,

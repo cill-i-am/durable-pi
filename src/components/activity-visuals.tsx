@@ -4,7 +4,6 @@ import { BorderBeam } from "border-beam"
 import { useAppTheme } from "@/hooks/use-app-theme"
 import { useActivityMotion } from "@/hooks/activity-motion"
 
-/** Decorative only: callers keep the activity label and execution state. */
 export function ActivityOrb({
   state = "working",
   active = true,
@@ -26,7 +25,6 @@ export function ActivityOrb({
   )
 }
 
-/** Keep mounted when idle so changing run state never remounts a draft. */
 export function ActivityBorder({
   active,
   children,

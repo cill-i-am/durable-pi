@@ -2,12 +2,7 @@ diff --git a/dist/index.cjs b/dist/index.cjs
 index 635f1c0134274c89e7efbcae2adf3d9ecba575ee..50d8c0547485130dd543638de83f172e9a8a2c27 100644
 --- a/dist/index.cjs
 +++ b/dist/index.cjs
-@@ -610,7 +610,27 @@ async function parseErrorResponse(input) {
- * This can be used as a single entry point for all authorization functionality,
- * instead of linking together the other lower-level functions in this module.
- */
-+// durable-pi: serialize OAuth flows per durable provider. A losing refresh of a
-+// rotating token must not invalidate the credentials saved by another request.
+@@ -613,4 +613,22 @@ async function parseErrorResponse(input) {
 +const durablePiAuthFlows = new WeakMap();
  async function auth(provider, options) {
 +	const key = JSON.stringify([String(options.serverUrl), options.authorizationCode, options.iss, options.scope, String(options.resourceMetadataUrl ?? ""), options.skipIssuerMetadataValidation, options.forceReauthorization]);
@@ -34,12 +29,7 @@ diff --git a/dist/index.mjs b/dist/index.mjs
 index f02ce3ca394e826fc27c9848dbe9a214bf6ba7a9..1a76a5561e4e2fcb30aef23433cbd04b9fbcb5b0 100644
 --- a/dist/index.mjs
 +++ b/dist/index.mjs
-@@ -607,7 +607,27 @@ async function parseErrorResponse(input) {
- * This can be used as a single entry point for all authorization functionality,
- * instead of linking together the other lower-level functions in this module.
- */
-+// durable-pi: serialize OAuth flows per durable provider. A losing refresh of a
-+// rotating token must not invalidate the credentials saved by another request.
+@@ -610,4 +610,22 @@ async function parseErrorResponse(input) {
 +const durablePiAuthFlows = new WeakMap();
  async function auth(provider, options) {
 +	const key = JSON.stringify([String(options.serverUrl), options.authorizationCode, options.iss, options.scope, String(options.resourceMetadataUrl ?? ""), options.skipIssuerMetadataValidation, options.forceReauthorization]);

@@ -1,7 +1,6 @@
 import { ApiError } from "@/http/client"
 
 export type LeaseState = { ended: boolean; error: string }
-/** The workbench owns renewal independently of the selected tab or screen size. */
 export function maintainSessionLease(
   initialExpiry: number,
   renew: (signal: AbortSignal) => Promise<{ expiresAt: number }>,

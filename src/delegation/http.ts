@@ -2,7 +2,6 @@ import { Effect, Schema } from "effect"
 import { Control, DelegationFailure, NativeId } from "./contracts"
 import type { Delegations } from "./delegations"
 
-/** The existing gateway authenticates ownership and checks write origin first. */
 export function delegationsRequest(
   service: Pick<Delegations, "list" | "read" | "control" | "transcript">,
   request: Request,

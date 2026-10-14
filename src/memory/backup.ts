@@ -47,7 +47,6 @@ const decodeBatch = (text: string) =>
 const same = (a: Watermark, b: Watermark) =>
   a.messages === b.messages && a.nodes === b.nodes && a.notes === b.notes
 
-/** Immutable, content-addressed batches followed by an atomic head update. Never export credentials. */
 export const backupMemory = Effect.fn("Memory.backup")(function* (
   prefix: string
 ) {
@@ -78,7 +77,6 @@ export const backupMemory = Effect.fn("Memory.backup")(function* (
     after = advance(after, records)
   }
   const complete = same(after, until)
-  // The view only becomes restorable when all its messages/nodes have reached R2.
   const manifest: Manifest = {
     version: 1,
     head,
@@ -99,7 +97,6 @@ export const backupMemory = Effect.fn("Memory.backup")(function* (
   return { pending: !complete, date: manifest.date }
 })
 
-/** Reads only authenticated R2 data. Rejects broken links, cycles and modified batches. */
 export const readBackup = Effect.fn("Memory.readBackup")(function* (
   prefix: string
 ) {

@@ -11,7 +11,6 @@ export type SavedConnection = NewConnection & {
   revision: number
   active: boolean
 }
-/** Owns connection identity/revocation; native MCP owns its transport and OAuth records. */
 export class ConnectionStore {
   constructor(private readonly db: Sqlite) {
     db.run(

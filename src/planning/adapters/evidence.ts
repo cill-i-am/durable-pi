@@ -6,7 +6,6 @@ import type { AppStore } from "../../apps/adapters/sqlite"
 import type { FileInfo } from "../../workspace/files"
 import { PlanFailure, type Evidence, type EvidenceRef } from "../contracts"
 
-/** All supplied repositories already belong to the authenticated bot. No owner or bot IDs come from the model. */
 export function planEvidence(sources: {
   access: AccessStore
   executions: ExecutionRepository

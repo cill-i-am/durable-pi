@@ -5,7 +5,6 @@ import { RoutineId } from "../routines/contracts"
 import { bearer, EventId, MAX_EVENT_BYTES } from "./contracts"
 import { boundedBytes } from "../workspace/http"
 
-/** This public route forwards only webhook authority, never browser cookies or caller owner IDs. */
 export async function receiveWebhook(
   request: Request,
   agent: string,

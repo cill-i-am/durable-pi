@@ -11,11 +11,6 @@ import type {
 } from "./domain"
 import type { ArchiveRecord, Watermark } from "./records"
 
-/**
- * Memory owns immutable history, its summary tree, view and sourced notes.
- * Conversation/session state, model SDKs, SQL and backup transports are not
- * part of this contract. Each mutation is atomic, including restore/import.
- */
 export class MemoryRepository extends Context.Service<
   MemoryRepository,
   {

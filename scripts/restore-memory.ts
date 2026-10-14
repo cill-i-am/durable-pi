@@ -10,7 +10,6 @@ import { webCryptoLayer } from "../src/memory/adapters/crypto"
 import { parseArchive, restoreArchive } from "../src/memory/archive"
 import { readBackup } from "../src/memory/backup"
 
-// Offline only: creates a fresh private database, never contacts or overwrites production.
 async function main() {
   const [source, destination, prefix] = process.argv.slice(2)
   if (!source || !destination)
@@ -82,7 +81,6 @@ async function main() {
   sql.close()
 }
 main().catch(() => {
-  // Inputs contain private history. Do not echo parse failures or raw records.
   console.error(
     "Restore failed. Check the archive format, completeness, and that the destination does not already exist."
   )

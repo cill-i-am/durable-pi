@@ -18,8 +18,6 @@ type MessageDetails = {
   copyAnswer?: string
 }
 
-// TanStack accepts UIMessage snapshots as well as AG-UI wire messages. Carry
-// content too so the envelope is a valid AG-UI user/assistant message.
 export type ChatMessage = UIMessage & {
   role: "user" | "assistant"
   content: string
@@ -44,8 +42,6 @@ export function chatMessages(turns: readonly Turn[]): ChatMessage[] {
       make("request", "user", [{ type: "text", content: text }], {
         kind: "request",
         turn,
-        // Pi bounds its timeline and copyable answer separately. Preserve that
-        // distinction only when they differ, without duplicating normal text.
         ...(activity?.length &&
         answer !==
           activity
@@ -102,9 +98,7 @@ export function chatMessages(turns: readonly Turn[]): ChatMessage[] {
             item.id,
             item.type === "steer" ? "user" : "assistant",
             item.type === "thinking"
-              ? // Keep an assistant anchor for separately ordered Pi reasoning.
-                // TanStack merges reasoning-only fan-out rows into the next message.
-                [
+              ? [
                   { type: "thinking", content: item.text, stepId: item.id },
                   { type: "text", content: "" },
                 ]
@@ -123,7 +117,6 @@ export function chatMessages(turns: readonly Turn[]): ChatMessage[] {
   })
 }
 
-/** Read-only UI projection. TanStack owns messages; domain metadata never authorizes actions. */
 export function conversationView(
   messages: readonly UIMessage[],
   metadata: Omit<ChatState, "turns">
@@ -207,7 +200,6 @@ export function conversationView(
   })
 }
 
-/** Full snapshots repair reconnects and structural changes; token growth sends only deltas. */
 export function messageEvents(
   previous: readonly ChatMessage[] | undefined,
   next: ChatMessage[]

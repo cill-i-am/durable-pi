@@ -35,7 +35,6 @@ export function AccessPanel({
   const [busy, setBusy] = useState("")
   const [error, setError] = useState("")
   const lock = useRef(false)
-  // A successful mutation must not be rolled back by an older stream snapshot.
   const policies = tools?.map((tool) => {
     const saved = confirmed.find((value) => value.name === tool.name)
     return saved && saved.revision > tool.revision ? saved : tool

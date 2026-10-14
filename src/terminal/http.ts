@@ -136,8 +136,6 @@ export function terminalRequest(
         return new Response("Not found", { status: 404 })
       const bytes = yield* Effect.tryPromise(() => terminal.exportedFile(id))
       const name = run.transfer.name
-      // Downloads preserve arbitrary regular-file bytes. The Files library applies
-      // its stricter text/image validation when the owner adds the export there.
       let mime = "application/octet-stream"
       try {
         mime = inspectFile({

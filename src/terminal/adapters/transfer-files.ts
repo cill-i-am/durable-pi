@@ -2,8 +2,6 @@ import type { Sandbox } from "@cloudflare/sandbox"
 import { MAX_TRANSFER_BYTES } from "../transfers"
 import { readBounded } from "./sandbox"
 
-// Walk directory descriptors without following links; reject devices, sockets,
-// FIFOs and symlinks even if a prior command placed them in the checkpoint.
 const transfer = `import os,sys,stat
 mode,path=sys.argv[1:]
 parts=path.split('/')

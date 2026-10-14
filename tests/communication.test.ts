@@ -375,8 +375,6 @@ it("reserves result capacity beyond retained request deliveries", async () => {
   const { recipient } = pair()
   await run(recipient.service.accept(request(), 1001))
   const claimed = (await run(recipient.service.claimTask(1010)))!
-  // Historical outbox volume at the former shared 10k cap must not strand
-  // an already accepted task. Terminal messages have reserved capacity.
   recipient.db
     .run(`WITH RECURSIVE retained(n) AS (SELECT 1 UNION ALL SELECT n+1 FROM retained WHERE n<10000)
     INSERT INTO communication_outbox(id,body,status,next_at) SELECT 'old-'||n,'{}','accepted',0 FROM retained`)

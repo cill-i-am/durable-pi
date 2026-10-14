@@ -51,7 +51,6 @@ export const ReadHostedSkill = Schema.Struct({
   skill: HostedSkill,
 })
 
-/** Pins every identity field supplied by Executor, including profile when present. */
 export function hostedSkillQuery(skill: HostedSkill) {
   return {
     app: skill.app.id,

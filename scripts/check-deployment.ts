@@ -11,7 +11,6 @@ const request = (path: string, body?: unknown, origin = base) =>
     body: body ? JSON.stringify(body) : undefined,
     signal: AbortSignal.timeout(30_000),
   })
-// A first custom-domain deploy can finish before DNS and TLS are ready.
 const readyBy = Date.now() + 180_000
 for (;;) {
   try {
@@ -22,7 +21,6 @@ for (;;) {
     await setTimeout(5000)
   }
 }
-// These are native pages, not API actions or client-only root selections.
 for (const path of [
   "/agents",
   "/agents/archived?q=synthetic",

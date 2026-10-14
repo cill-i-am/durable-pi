@@ -27,9 +27,6 @@ const ReceiptJson = Schema.fromJsonString(Receipt)
 const EnvelopeJson = Schema.fromJsonString(Envelope)
 const IdentityJson = Schema.fromJsonString(Identity)
 
-/** Synchronous DO SQLite driver is the only foreign boundary in this repository.
- * Transactions cannot contain an await or an independently run Effect.
- */
 export function sqliteMailbox(db: Sqlite) {
   const atomic = <T>(body: () => T) =>
     Effect.try({
@@ -510,7 +507,6 @@ export function sqliteMailbox(db: Sqlite) {
               "Stopped or finished requests cannot be retried."
             )
         }
-        // T manual retry replays only delivery, never creates a new task identity.
         saveDelivery({
           ...d,
           status: "pending",

@@ -34,8 +34,6 @@ export function RunTimeline({
   run: RunActivity
   agentId: string
 }) {
-  // Keep one page at a time. The live head continues polling without merging stale
-  // snapshots into it; later pages use a stable (timestamp,key) cursor.
   const [older, setOlder] = useState<RunActivity | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")

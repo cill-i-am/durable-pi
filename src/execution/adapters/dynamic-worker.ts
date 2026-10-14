@@ -6,7 +6,6 @@ import {
   type CodeInput,
 } from "../contracts"
 
-// Generated modules may replace this wrapper, so the host independently bounds every response.
 export const RUNNER_MODULE = `export default { async fetch(request) {
   let logs = '';
   const format = value => typeof value === 'string' ? value : JSON.stringify(value);

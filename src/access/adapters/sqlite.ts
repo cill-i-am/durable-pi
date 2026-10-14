@@ -18,7 +18,6 @@ type Operation = Approval & {
   result: string | null
   decision: string | null
 }
-/** Durable approval and execution receipts belong to the bot that owns the tool call. */
 export class AccessStore {
   constructor(
     private readonly db: Sqlite,
@@ -45,8 +44,6 @@ export class AccessStore {
         .some((column) => column.name === "decision")
     )
       db.run("ALTER TABLE tool_operations ADD COLUMN decision TEXT")
-    // An audit of this receipt's transitions, committed atomically by SQLite.
-    // It never drives authorization or dispatch; replaying the same status adds nothing.
     db.run(`CREATE TABLE IF NOT EXISTS tool_operation_history (
       id INTEGER PRIMARY KEY AUTOINCREMENT, operationId TEXT NOT NULL, revision INTEGER NOT NULL,
       status TEXT NOT NULL, at INTEGER NOT NULL)`)
@@ -101,7 +98,6 @@ export class AccessStore {
         mode,
         current.revision + 1
       )
-      // Revocation is sticky for existing calls, even if the tool is allowed again later.
       if (mode === "deny")
         this.db.run(
           "UPDATE tool_operations SET status='denied',revision=revision+1 WHERE tool=? AND status IN ('pending','approved')",
@@ -116,7 +112,6 @@ export class AccessStore {
       id
     )[0]
   }
-  /** Bounded references for a task's evidence; never exposes receipt inputs or grants access. */
   receipts(turnIds: readonly string[]) {
     if (!turnIds.length) return []
     return this.db.all<{ id: string; revision: number }>(
@@ -136,7 +131,6 @@ export class AccessStore {
       "SELECT id,turnId,tool,input,createdAt,expiresAt,status,revision FROM tool_operations WHERE status IN ('pending','approved') ORDER BY createdAt,id"
     )
   }
-  /** Status reads neither expire receipts nor expose tool arguments. */
   awaitingApproval(turnId: string) {
     return !!this.db.all<{ id: string }>(
       "SELECT id FROM tool_operations WHERE turnId=? AND status='pending' AND expiresAt>? LIMIT 1",
@@ -208,8 +202,6 @@ export class AccessStore {
       const operation = this.get(id)
       if (!operation)
         throw new AccessConflict({ message: "This approval no longer exists." })
-      // A retried decision reads its receipt; it must never recreate a grant
-      // after revocation or repeat an action that has already started.
       if (operation.decision === decision && operation.status !== "pending")
         return operation
       if (
@@ -237,8 +229,6 @@ export class AccessStore {
         })
       const grantRevision =
         policy.revision + (remember && policy.mode !== "allow" ? 1 : 0)
-      // The bot-local policy and this decision commit together. Do not make a
-      // separate policy request from the UI: cancellation or a stale tab could race it.
       if (remember && policy.mode !== "allow")
         this.db.run(
           "INSERT INTO tool_grants VALUES (?,?,?) ON CONFLICT(name) DO UPDATE SET mode=excluded.mode,revision=excluded.revision",
@@ -274,8 +264,6 @@ export class AccessStore {
         throw new AccessDenied({ message: "Tool access has been revoked." })
       if (operation.status === "done" && operation.result !== null)
         return { result: operation.result }
-      // A native document receipt permits replay, never a new authorization.
-      // Fence old dispatches even if a revoked policy has since been reallowed.
       if (
         operation.status === "running" &&
         recoverable &&

@@ -40,9 +40,7 @@ export function ObjectsProvider({
   useEffect(() => {
     try {
       store.connect(sessionStorage)
-    } catch {
-      /* The first attempted save explains unavailable storage. */
-    }
+    } catch {}
   }, [store])
   useEffect(() => {
     onPendingChange(Object.keys(state.pending).length > 0)

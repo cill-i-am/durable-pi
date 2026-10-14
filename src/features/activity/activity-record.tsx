@@ -18,7 +18,6 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog"
 
-/** Read-only history. Inline object renderers stay in the owning bot's live workspace. */
 export function ActivityRecord({
   entry,
   onClose,
@@ -171,7 +170,6 @@ export function ActivityRecord({
   )
 }
 
-/** Execution progress and blockers, never a claim that the user's goal is complete. */
 export function RecoveryNotice({
   recovery,
   status,

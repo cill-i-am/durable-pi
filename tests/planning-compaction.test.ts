@@ -211,7 +211,7 @@ it.each([8192, contextProjectionBytes(8192)])(
       expect(context.current?.steps[19]?.note).toBe(
         "Source detail. ".repeat(66)
       )
-      expect(requests).toBe(8) // Reopening a saved plan schedules no model work.
+      expect(requests).toBe(8)
     } finally {
       await harness.close(ctx)
       await rm(directory, { recursive: true, force: true })

@@ -145,7 +145,6 @@ describe("native Pi steering with SQLite persistence", () => {
         }
         let receipt = await conversation.submit(command, ctx)
         expect((await receipt.status(ctx)).status).toBe("queued")
-        // Host crash after admission but before its own submitted flag: same durable key is replayed.
         expect((await conversation.submit(command, ctx)).id).toBe(receipt.id)
         if (scenario === "stop") {
           await conversation.abort(ctx)

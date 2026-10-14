@@ -20,7 +20,6 @@ export const selectBotSkills = (
     )
       return yield* new SkillConflict({ message: "Select each skill once." })
     const current = yield* Effect.try(() => store.selection())
-    // Keep already pinned copies, including archived library skills, until explicitly removed.
     const retained = (ref: { id: string; revision: number }) =>
       current.skills.find(
         (skill) => skill.id === ref.id && skill.revision === ref.revision

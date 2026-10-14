@@ -5,7 +5,6 @@ import { boundedBytes } from "../workspace/http"
 import { ImportFile, MAX_TRANSFER_BYTES } from "./transfers"
 import { CommandRun, TerminalFailure } from "./contracts"
 
-/** Resolve asset authority at the owning bot, then send only explicit file bytes. */
 export function importWorkspaceFile(
   request: Request,
   service: Fetcher,
@@ -67,8 +66,6 @@ export function importWorkspaceFile(
         })
       )
     )
-    // A concurrent identical request may have admitted while the source was
-    // renamed or read. Recover that receipt instead of changing its first plan.
     if (response.status === 409) {
       const admitted = yield* Effect.tryPromise(existing)
       if (admitted) return admitted

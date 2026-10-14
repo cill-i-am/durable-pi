@@ -10,7 +10,6 @@ export function controlKey(
 ) {
   return `delegation-control:${bot}:${group}:${child}:${action}`
 }
-/** Keep uncertain controls through sheet close and tab reload, without changing identity or payload. */
 export function pendingControl(
   storage: Pick<Storage, "getItem">,
   key: string

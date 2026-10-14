@@ -177,7 +177,6 @@ it.each(["shrink", "grow"])(
       )
       expect((await execute(objects.context())).offeredThrough).toBe(0)
       expect((await execute(objects.read(mutation.id))).events).toHaveLength(1)
-      // A later complete request can acknowledge the retained events normally.
       budget = 8192
       await (
         await conversation.submit(
@@ -485,7 +484,7 @@ it("runs typed native tools, uses the same UI operations, sees live user edits n
       ).status
     ).toBe(200)
     expect((await execute(objects.read(objectId))).events).toHaveLength(2)
-    expect(requests).toHaveLength(2) // UI edits and retries start no model request.
+    expect(requests).toHaveLength(2)
     expect((await execute(objects.context())).offeredThrough).toBe(1)
     await harness.close(ctx)
     harness = await Harness.open(

@@ -30,7 +30,6 @@ it("defaults to steering, ignores invalid saved values and restores an explicit 
   const restored =
     await import("../src/features/conversation/delivery-preference")
   expect(restored.messageDeliveryDefault()).toBe("followUp")
-  // Reads changes made by another tab; clearing the preference returns to Steer.
   saved.set(key, "steer")
   expect(restored.messageDeliveryDefault()).toBe("steer")
   saved.delete(key)

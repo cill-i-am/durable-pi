@@ -1,6 +1,5 @@
 import assert from "node:assert/strict"
 
-// This script creates disposable data only in the local Alchemy stage.
 const origin = "http://localhost:1337"
 if (process.env.OWNER_EMAIL !== "workspace-test@example.com")
   throw new Error("This check requires the isolated workspace-test owner")

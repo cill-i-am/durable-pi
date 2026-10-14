@@ -64,7 +64,6 @@ export function WebhookPanel({
     return () => {
       mounted = false
     }
-    // One editor owns this routine until it is closed.
   }, [agentId, routine.id])
   async function send(change: ConfigureWebhook) {
     if (lock.current) return

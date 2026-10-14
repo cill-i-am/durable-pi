@@ -6,7 +6,6 @@ import type {
   SubmissionMode,
 } from "@/conversations/turns"
 
-/** Retries keep the admitted intent even when live updates change the composer mode. */
 export function submissionAttempt(
   previous: Submission | null,
   text: string,
@@ -28,7 +27,6 @@ export function submissionAttempt(
       }
 }
 
-/** A confirmed command response stays authoritative until the stream catches up. */
 export function newestSelection(
   stream: ModelSelection,
   confirmed: ModelSelection | null

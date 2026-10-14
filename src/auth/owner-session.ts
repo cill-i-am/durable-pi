@@ -6,7 +6,6 @@ export class OwnerSessionUnavailable extends Data.TaggedError(
   readonly cause: unknown
 }> {}
 
-/** A lookup failure is not an anonymous session, and never authorizes a request. */
 export const ownerSession = Effect.fn("Identity.ownerSession")(function* <
   TUser extends { readonly id: string; readonly email: string },
 >(read: () => Promise<{ readonly user: TUser } | null>, ownerEmail: string) {

@@ -110,7 +110,6 @@ it("recovers a lost UI response after browser restart, explicitly reconciles con
       "Newer user edit"
     )
     expect(recovered.getSnapshot().pending[input.id]).toBeUndefined()
-    // Another writer can win again while the conflict comparison is open.
     await Effect.runPromise(
       objects.mutate(
         {
@@ -127,9 +126,7 @@ it("recovers a lost UI response after browser restart, explicitly reconciles con
     )
     expect(await recovered.reapply(input.id)).toBe(false)
     expect(recovered.getSnapshot().settled[edit.operationId]).toBeUndefined()
-    // Explicit user reapply is a new operation at the newly observed revision.
     expect(await recovered.reapply(input.id)).toBe(true)
-    // Every view can observe resolution of its original submitted operation.
     expect(recovered.getSnapshot().settled[edit.operationId]).toBe(true)
     offline = true
     const abandoned = {
@@ -245,7 +242,6 @@ it("ignores stale reads, refreshes after a receipt, and retains paged history ac
   await saving
   expect(store.getSnapshot().details[id]?.object.revision).toBe(26)
   expect(store.getSnapshot().details[id]?.events).toHaveLength(26)
-  // A newer catalog revision never causes older snapshots to replace this live view.
   serverRevision = 23
   await store.load(id)
   expect(store.getSnapshot().details[id]?.object.revision).toBe(26)

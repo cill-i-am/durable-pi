@@ -2,7 +2,6 @@ import { AsyncLocalStorage } from "node:async_hooks"
 import { DurableObjectOAuthClientProvider } from "agents/mcp/do-oauth-client-provider"
 import type { ConnectionStore } from "./connections"
 
-/** Fence SDK work admitted before disconnect from restoring or deleting newer credentials. */
 export class ConnectionOAuthProvider extends DurableObjectOAuthClientProvider {
   private generation: number | undefined
   private readonly cleanup: AsyncLocalStorage<boolean>
@@ -44,7 +43,6 @@ export class ConnectionOAuthProvider extends DurableObjectOAuthClientProvider {
     return super.serverId
   }
   override clearServerStorage() {
-    // Only the manager's explicit removeServer path owns credential cleanup.
     return this.cleanup.run(true, () => super.clearServerStorage())
   }
 }

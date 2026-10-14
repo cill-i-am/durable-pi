@@ -1,4 +1,3 @@
-/** Schedule after completion so a slow response cannot be superseded forever. */
 export function poll(
   refresh: () => Promise<void>,
   delay = 2000,

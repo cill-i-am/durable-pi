@@ -28,7 +28,6 @@ it("supports synchronous host transactions and disposes active model requests", 
     )
   )
   try {
-    // This is the same cold, synchronous Layer acquisition used by the host.
     const memory = runtime.runSync(MemoryRepository)
     expect(() =>
       db.transaction(() => {

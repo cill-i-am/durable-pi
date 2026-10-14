@@ -1,6 +1,6 @@
 import { Schema } from "effect"
 import { CommandRun, TerminalState, type CommandInput } from "../contracts"
-/** Keep operation identity stable through Pi recovery and uncertain delivery. */
+
 export async function runCommand(
   service: Fetcher,
   identity: string,
@@ -32,8 +32,6 @@ export async function runCommand(
     cancellation = request(`${id}/cancel`, {}).catch(() => {})
   }
   signal.addEventListener("abort", stop, { once: true })
-  // The listener is installed before the first asynchronous dispatch. The server
-  // persists cancellation even if it arrives before the corresponding start.
   try {
     let result = Schema.decodeUnknownSync(CommandRun)(
       await request("run", input)

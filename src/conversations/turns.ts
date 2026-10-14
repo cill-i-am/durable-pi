@@ -31,7 +31,6 @@ export type Turn = ChatTurn & {
   input: readonly AttachmentContent[]
 }
 export type Submission = {
-  /** Host-only event identity; never accepted by the public SendInput schema. */
   origin?: TurnOrigin
   operationId: string
   text: string

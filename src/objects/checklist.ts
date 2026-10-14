@@ -8,7 +8,6 @@ import {
   type ChecklistTask,
 } from "./contracts"
 
-/** All edits target named fields or stable task IDs. No whole-document replacement. */
 export function changeChecklist(
   current: Checklist | undefined,
   input: ObjectMutation,

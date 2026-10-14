@@ -1,6 +1,5 @@
 import type { ToolExecutionResult } from "@earendil-works/pi-durable"
 
-/** Persist the same bounded value returned to Pi, so replay cannot repeat an effect to recover oversized output. */
 export function toolReceipt(result: ToolExecutionResult): ToolExecutionResult {
   if (JSON.stringify(result).length <= 250_000) return result
   let remaining = 24_000

@@ -11,7 +11,6 @@ import type { ConnectionStore } from "./connections"
 import { toolReceipt } from "./receipt"
 import type { ToolExecutionResult } from "@earendil-works/pi-durable"
 
-/** Native MCP owns OAuth/transport recovery. This adapter owns the app's revocation and projection boundary. */
 export class RemoteConnections {
   private readonly mutations = Semaphore.makeUnsafe(1)
   constructor(
@@ -162,7 +161,6 @@ export class RemoteConnections {
       const resolved = await this.resolve([name])
       if (resolved.error || !resolved.tools[0]) throw new Error("Unavailable")
       const reference = resolved.tools[0]
-      // No await separates the final revocation check from dispatch.
       const current = this.store.get(reference.connectionId)
       if (!current?.active || current.revision !== reference.connectionRevision)
         throw new Error("Revoked")
@@ -183,7 +181,6 @@ export class RemoteConnections {
           resetTimeoutOnProgress: false,
         }
       )
-      // Only model-visible content crosses to the bot; never the transport, tokens or arbitrary metadata.
       const content: NonNullable<ToolExecutionResult["content"]>[number][] = []
       for (const block of result.content) {
         if (block.type === "text")

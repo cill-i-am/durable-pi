@@ -192,7 +192,6 @@ it("imports old dates and Unicode atomically, deduplicates retry, and validates 
   expect(Effect.runSync(memory.total())).toBe(2)
 })
 
-// Foreign test boundaries execute the same port used by the application.
 type Memory = MemoryRepository["Service"]
 const archive = (memory: Memory) =>
   Effect.runSync(
@@ -273,7 +272,7 @@ it("propagates Web Stream cancellation to the Effect producer", async () => {
     )
   )
   const reader = response.body!.getReader()
-  await reader.read() // header
+  await reader.read()
   const pending = reader.read()
   await Effect.runPromise(Deferred.await(started))
   await reader.cancel()

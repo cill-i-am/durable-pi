@@ -8,8 +8,6 @@ import type { PersonalAgent } from "./src/agent/worker"
 import type { BackgroundGroupRPC } from "./src/delegation/worker"
 import type { LinuxSandbox } from "./src/terminal/worker"
 
-// Personal-workspace baseline: retain all invocations while establishing traces.
-// These are Alchemy's typed native Cloudflare settings, not an OTLP sidecar.
 const observability = {
   enabled: true,
   headSamplingRate: 1,
@@ -31,7 +29,6 @@ export const MemoryBackups = Cloudflare.R2.Bucket("MemoryBackups", {
 export const WorkspaceAssets = Cloudflare.R2.Bucket("WorkspaceAssets", {
   publicAccess: false,
 })
-// Parsing receives bytes only: no storage, credentials, or public route.
 export const DocumentWorker = Cloudflare.Worker("DocumentWorker", {
   main: "./src/workspace/document-worker.ts",
   dev: { port: 1339, strictPort: true },
@@ -86,7 +83,6 @@ export const AgentWorker = Cloudflare.Worker("AgentWorker", {
     DOCUMENT_SERVICE: DocumentWorker,
     EXECUTION_SERVICE: ExecutionWorker,
     TERMINAL_SERVICE: TerminalWorker,
-    // Local Chromium does not enforce Browser Run network guardrails.
     BROWSER: Cloudflare.Browser().pipe(Alchemy.remote()),
     OPENAI_CREDENTIAL: Config.Redacted("OPENAI_CREDENTIAL").pipe(
       Config.withDefault("")
@@ -106,7 +102,6 @@ export const Website = Cloudflare.Website.Vite(
         stage === "production"
           ? {
               name: "bot.cill-i-am.com",
-              // Pin the existing zone so CI needs no account-wide zone discovery.
               zoneId: "37e485d6619dee244939e66e1ee90d3f",
             }
           : undefined,

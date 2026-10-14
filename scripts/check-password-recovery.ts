@@ -2,7 +2,6 @@ import assert from "node:assert/strict"
 import { chmod, readdir, readFile } from "node:fs/promises"
 import { DatabaseSync } from "node:sqlite"
 
-// Destructive only to the disposable, credential-free LOCAL owner. Never accepts a remote URL.
 const origin = "http://localhost:1337"
 const owner = "workspace-test@example.com"
 if (process.env.OWNER_EMAIL !== owner)
@@ -129,7 +128,6 @@ assert.equal(
   ).status,
   400
 )
-// Race the same link: exactly one submission may change the password.
 const raced = await Promise.all(
   [1, 2].map(() =>
     post("/api/auth/reset-password", {

@@ -22,7 +22,6 @@ function document(
   }
 }
 
-/** The owner object owns the library; bot objects own explicitly pinned copies. */
 export class SkillStore {
   constructor(private readonly db: Sqlite) {
     db.run(

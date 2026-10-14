@@ -92,9 +92,7 @@ describe("conversation stream", () => {
     const second = fixture()
     await frame(second.reader)
     await vi.advanceTimersByTimeAsync(60_000)
-    while (!(await second.reader.read()).done) {
-      /* drain buffered heartbeat */
-    }
+    while (!(await second.reader.read()).done) {}
     expect(second.unsubscribe).toHaveBeenCalledOnce()
     expect(vi.getTimerCount()).toBe(0)
   })
@@ -127,7 +125,6 @@ describe("conversation stream", () => {
       controller.signal
     )
     const reader = response.body!.getReader()
-    // Let attachment begin, then cancel while its asynchronous acquisition is suspended.
     await Promise.resolve()
     controller.abort()
     attach({

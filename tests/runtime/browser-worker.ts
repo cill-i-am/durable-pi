@@ -1,4 +1,3 @@
-/** Native SQLite receipt/restart probe. No production bindings or external effects. */
 import { DurableObject } from "cloudflare:workers"
 import { Effect } from "effect"
 import { BrowserWorkspace } from "../../src/browser/browser"

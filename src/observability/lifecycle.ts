@@ -21,11 +21,6 @@ const Incident = Schema.Struct({
 export function lifecycleIncident(input: unknown) {
   return Schema.decodeUnknownOption(Incident)(input)
 }
-/** One subscriber per Worker isolate. Native Lifecycle owns thresholds/recovery;
- * normal request cancellation and approval waits produce no incident here.
- * The installed SDK's event union predates these events, so decode its public
- * diagnostics channel rather than asserting a wider type.
- */
 channels.lifecycle.subscribe((input: unknown) => {
   const incident = lifecycleIncident(input)
   if (incident._tag === "None") return

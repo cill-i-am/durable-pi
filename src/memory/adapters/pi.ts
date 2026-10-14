@@ -3,7 +3,6 @@ import type { AssistantMessage, Message } from "@earendil-works/pi-ai"
 import { SummaryFailure, SummaryModel } from "../summary-model"
 import type { SummaryJob } from "../domain"
 
-/** Pi owns authentication and provider transport; interruption reaches its AbortSignal. */
 export const piSummaryLayer = (
   complete: (
     messages: Message[],
@@ -52,7 +51,6 @@ export const piSummaryLayer = (
               signal,
               job
             ),
-          // Provider errors may contain private prompts or credentials.
           catch: () => new SummaryFailure({ reason: "unavailable" }),
         })
         if (

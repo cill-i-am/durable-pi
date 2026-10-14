@@ -5,12 +5,9 @@ import { isInteractionSoundEnabled } from "./interaction-sound-preference"
 const closeAudio = async (audio: AudioContext) => {
   try {
     await audio.close()
-  } catch {
-    // Closing optional audio needs no recovery if the context is already gone.
-  }
+  } catch {}
 }
 
-/** The short interaction click used in Meal Planner. */
 export const useInteractionSound = () => {
   const context = useRef<AudioContext | null>(null)
 
@@ -67,8 +64,6 @@ export const useInteractionSound = () => {
       )
       oscillator.start(start)
       oscillator.stop(end)
-    } catch {
-      // Unsupported or blocked audio must not interrupt the user's action.
-    }
+    } catch {}
   }
 }

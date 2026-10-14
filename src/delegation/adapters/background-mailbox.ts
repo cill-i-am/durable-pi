@@ -24,7 +24,6 @@ const restore = (row: Row): Handoff => ({
 const failure = (code: DelegationFailure["code"], message: string) =>
   new DelegationFailure({ code, message })
 
-/** Conversation-side outbox/mailbox only. Native child transcripts own execution. */
 export class BackgroundMailbox {
   constructor(
     private readonly db: Sqlite,
@@ -103,7 +102,6 @@ export class BackgroundMailbox {
         createdAt: this.now(),
         deadline: this.now() + DURATION_MS,
       }
-      // Decode strips the local tool-task field; serialized identity is stable across RPC.
       const saved = Schema.decodeUnknownSync(BackgroundHandoff)(handoff)
       this.db.run(
         "INSERT INTO background_handoffs (id,turn_id,handoff,status,next_at) VALUES (?,?,?,'pending',?)",
@@ -254,7 +252,6 @@ export class BackgroundMailbox {
       return true
     })
   }
-  /** Same synchronous conversation transaction: report admission and mailbox ack cannot split. */
   deliver(admit: (handoff: BackgroundHandoff, report: string) => void) {
     return this.db.transaction(() => {
       const row = this.db.all<Row>(

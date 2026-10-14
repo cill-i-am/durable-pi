@@ -1,4 +1,3 @@
-// No cloud bindings or credentials. Real workerd processes reuse only a disposable SQLite directory.
 import { createRequire } from "node:module"
 import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises"
 import { dirname, join, resolve } from "node:path"
@@ -43,9 +42,7 @@ async function start() {
       throw new Error(`Local workerd exited: ${output.slice(-5000)}`)
     try {
       if ((await fetch(`${origin}/health`)).ok) return
-    } catch {
-      /* startup only */
-    }
+    } catch {}
     await sleep(100)
   }
   throw new Error(`Local workerd did not start: ${output.slice(-5000)}`)
@@ -159,8 +156,6 @@ const config :Workerd.Config = (
   const recovered = await call("inspect", a)
   assert.equal(recovered.tasks.length, 1)
   assert.equal(recovered.tasks[0].outcome.text, "Deterministic result: 4")
-  // Recipient commits acceptance, loses its acknowledgment, then its result waits
-  // in SQLite while both isolates/processes are killed. Recovery needs no browser.
   await call("fault", b, { name: "drop-ack", value: 1 })
   await call("fault", b, { name: "result-delay", value: 4000 })
   const next = {
@@ -208,7 +203,6 @@ const config :Workerd.Config = (
     recoveredRecipient.events.filter((e) => e.value === "execution").length,
     2
   )
-  // Raw HTTP framing reaches the real schema decoder and authorization handlers.
   for (const invalid of [
     { ...next, version: 2 },
     { ...next, owner: "other-owner" },
@@ -226,8 +220,6 @@ const config :Workerd.Config = (
     )
   }
   assert.equal((await call("inspect", b)).tasks.length, 2)
-  // Actual PiHarness and its native alarm capability coexist with the mailbox.
-  // Kill during a provider attempt, recover the same native submission and result.
   await call("fault", b, { name: "drop-ack", value: 0 })
   await call("fault", b, { name: "result-delay", value: 0 })
   await call("fault", b, { name: "native-pi", value: 1 })
@@ -299,7 +291,6 @@ const config :Workerd.Config = (
   assert.equal(browserRestored.receipt, "interrupted")
   assert.equal(browserRestored.actions, 1)
   assert.match(browserRestored.error, /outcome is unknown/)
-  // Native tool-round checkpoint + run-owned detector survive an actual process kill.
   await call("loops/start", a)
   let loop
   for (let n = 0; n < 100; n++) {

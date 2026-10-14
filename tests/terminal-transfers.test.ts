@@ -190,7 +190,6 @@ describe("private terminal file transfer", () => {
       )
     )
     await vi.waitFor(() => expect(f.exports.write).toHaveBeenCalledOnce())
-    // Exercise the repository's final authority fence independently of abort delivery.
     f.repository.configure(3, true, 2)
     resolve(checkpoint)
     await task.completion

@@ -43,7 +43,6 @@ export function appsRequest(
       )
       return Response.json(yield* web.render(input, request.signal))
     }
-    // Schedule recovery before committing an interaction; the job reads durable state.
     if (path === "apps/interact") yield* Effect.tryPromise(wake)
     const interaction =
       path === "apps/interact"

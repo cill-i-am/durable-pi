@@ -101,7 +101,6 @@ export const makeCommunication = (
             "The originating request stopped during preparation."
           )
         )
-      // There must be no foreign await between the durable wake and local admission.
       const delivery = yield* mailbox.enqueue(envelope, now)
       yield* Effect.sync(host.notify)
       return {
@@ -143,8 +142,6 @@ export const makeCommunication = (
             )
         }
         if (terminal(yield* mailbox.task(task.id))) yield* pi.settled(task.id)
-        // Transient native failures retain the leased execution. Deadline and request
-        // budgets bound recovery; we never resubmit a different Pi operation identity.
       }
       const remaining = yield* mailbox.pending()
       for (const t of remaining) {
@@ -162,8 +159,6 @@ export const makeCommunication = (
       }
       yield* Effect.sync(host.notify)
       const next = yield* mailbox.nextWake()
-      // Never hold a model call open. Waiting results, approvals or active user turns
-      // cause no extra model attempts. Lifecycle owns this persisted wake.
       return next === undefined
         ? undefined
         : Math.max((yield* Clock.currentTimeMillis) + 1000, next)
@@ -197,7 +192,6 @@ export const makeCommunication = (
     }
   })
 
-/** Stable UUID means a crash cannot create a second continuation turn. */
 export const continuationId = (id: string) =>
   Effect.tryPromise({
     try: async () => {

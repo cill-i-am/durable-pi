@@ -6,7 +6,6 @@ import {
   type WebResult,
 } from "./contracts"
 
-/** A published version owns its component keys. Definition edits cannot invent actions. */
 export function retainState(
   definition: AppDefinition,
   previous: AppState

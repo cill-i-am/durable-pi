@@ -2,7 +2,6 @@ import assert from "node:assert/strict"
 import { Schema } from "effect"
 import { BrowserState } from "../src/browser/contracts"
 
-// Local synthetic owner; Chromium itself runs in the configured Cloudflare account.
 const origin = "http://localhost:1337"
 assert.equal(process.env.OWNER_EMAIL, "workspace-test@example.com")
 const login = await fetch(origin + "/api/auth/sign-in/email", {

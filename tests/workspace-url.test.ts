@@ -255,7 +255,6 @@ describe("validated view state and auth return", () => {
   })
 })
 
-// Use native route matching/history, rather than proving only the destination builder.
 function routerAt(initialPath: string) {
   const root = createRootRoute()
   const route = (path: string) =>

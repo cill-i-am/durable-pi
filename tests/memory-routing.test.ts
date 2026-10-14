@@ -74,7 +74,6 @@ it("stops retries after three failures across restart, keeps valid memory and re
   )
   expect(run(reopened.zoom(1, 1))).toContain("Original evidence")
   expect(run(reopened.node(job))).toBeUndefined()
-  // A route revision and requeue commit together; a failed change cannot consume the retry.
   expect(() =>
     db.transaction(() => {
       run(reopened.retrySummary(job))

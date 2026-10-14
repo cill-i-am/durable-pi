@@ -6,8 +6,6 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Redacted from "effect/Redacted"
 
-// Run this setup stack manually with an administrator profile. CI only receives
-// the scoped deploy token, never the administrator credential.
 export default Alchemy.Stack(
   "durable-pi-github",
   {
@@ -45,8 +43,6 @@ export default Alchemy.Stack(
             "Workers R2 Storage Write",
             "Account Settings Read",
             "Secrets Store Read",
-            // Cloudflare requires Edit even for the temporary binding used to
-            // retrieve Alchemy's state token; Read only exposes secret metadata.
             "Secrets Store Write",
           ],
           resources: { [`com.cloudflare.api.account.${accountId}`]: "*" },

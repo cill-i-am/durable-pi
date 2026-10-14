@@ -96,7 +96,6 @@ export class RoutineConflict extends Schema.TaggedError<RoutineConflict>()(
 ) {}
 export const ROUTINE_BUDGET_MS = 10 * 60_000
 
-/** Coalesce missed intervals instead of replaying an unbounded backlog. */
 export function followingTime(
   schedule: RoutineSchedule,
   due: number,

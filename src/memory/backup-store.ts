@@ -14,7 +14,6 @@ export class BackupFailure extends Schema.TaggedError<BackupFailure>()(
   }
 ) {}
 
-/** Object storage semantics, independent of R2 and its SDK body handles. */
 export class BackupStore extends Context.Service<
   BackupStore,
   {

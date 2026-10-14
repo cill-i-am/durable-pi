@@ -66,7 +66,6 @@ function fixture(
       up: vi.fn(async () => {}),
     },
     screenshot: vi.fn(async () => new Uint8Array([255, 216, 255, 217])),
-    // Production must never execute observation in the site's realm.
     evaluate: vi.fn(() => {
       throw new Error("Unsafe page realm")
     }),

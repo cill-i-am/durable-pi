@@ -70,8 +70,6 @@ class SqliteMemory {
     db.run(
       "CREATE TABLE IF NOT EXISTS memory_migrations (name TEXT PRIMARY KEY)"
     )
-    // The only historical scan is this atomic, one-time upgrade. Reopening an
-    // actor preserves its exact views and ready queue instead of refitting them.
     db.transaction(() => {
       if (
         db.all("SELECT 1 FROM memory_migrations WHERE name='effect-memory-v1'")
@@ -173,7 +171,6 @@ class SqliteMemory {
       stateId
     )[0]?.compacting
     if (!compacting && bytes <= budget) return false
-    // Load only the bounded view and its ancestors, never the whole historical tree.
     for (const part of parts)
       for (let count = part.count; count <= total; count *= 2) {
         const start = Math.floor(part.start / count) * count,
@@ -293,7 +290,6 @@ class SqliteMemory {
     )
     return true
   }
-  /** Source-order barrier: the summarizer never sees raw or partial older messages. */
   next(busy: Set<string>, now: number): SummaryJob | undefined {
     const view = this.db.all<MemoryNode>(
         "SELECT n.* FROM memory_compaction_view v JOIN memory_nodes n ON n.start=v.start AND n.count=v.count ORDER BY v.start"
@@ -563,7 +559,6 @@ class SqliteMemory {
   }
 }
 
-/** The adapter owns atomic SQL operations. No synchronous driver escapes this port. */
 export const makeSqliteMemory = Effect.fn("Memory.sqlite.open")(function* (
   db: Sqlite,
   budget = VIEW_BYTES

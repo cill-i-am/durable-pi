@@ -7,7 +7,6 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet"
 
-/** The same feature operation can live in Settings or its standalone sheet. */
 export function SettingsSection({
   embedded = false,
   open,

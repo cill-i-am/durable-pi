@@ -23,7 +23,6 @@ export interface CodeExecutor {
   run: (input: CodeInput, signal: AbortSignal) => Promise<CodeOutput>
 }
 
-/** Each bot owns durable intent/results. Generated code receives only its explicit JSON input. */
 export class Executions {
   private readonly active = new Map<
     string,
@@ -77,7 +76,6 @@ export class Executions {
   }
   private async perform(run: CodeRun, signal: AbortSignal): Promise<CodeRun> {
     const stopped = () => signal.aborted
-    // Admission is synchronous and durable before the asynchronous dispatch.
     await Promise.resolve()
     if (stopped() || !this.writable())
       return this.repository.finish(run.id, "cancelled", null)

@@ -11,8 +11,6 @@ import * as schema from "../src/auth/schema"
 const origin = "http://localhost:1337"
 const password = "Only a disposable integration password 2026!"
 const email = "security-test@example.com"
-// An independent RFC 6238 authenticator: the URI carries base32, while Pi's
-// native generateTOTP helper takes the pre-encoding string and is not an app endpoint.
 export function authenticatorCode(secret: string) {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
   const bits = [...secret.replace(/=+$/, "").toUpperCase()]
@@ -185,7 +183,6 @@ describe("native Better Auth account security", () => {
     const f = fixture(),
       owner = await f.owner()
     await f.enroll(owner)
-    // Insert a second real session through the native adapter, as a prior successful sign-in.
     const current = (await owner.session()).data.session
     const context = await f.auth.$context
     const user = await context.internalAdapter.findSession(current.token)
@@ -261,7 +258,7 @@ describe("native Better Auth account security", () => {
       (await challenge.request("/two-factor/verify-totp", { code })).status
     ).toBe(200)
     expect((await challenge.session()).data.user.twoFactorEnabled).toBe(true)
-    expect((await owner.session()).data).not.toBeNull() // A normal 2FA sign-in does not revoke others.
+    expect((await owner.session()).data).not.toBeNull()
     expect(
       (await challenge.request("/two-factor/disable", { password: "wrong" }))
         .status

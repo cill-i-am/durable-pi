@@ -1,4 +1,3 @@
-/** Password recovery is an identity capability, separate from agent/model access. */
 export const PASSWORD_EMAIL_FROM = "no-reply@notify.cill-i-am.com"
 export const PASSWORD_RESET_SECONDS = 15 * 60
 
@@ -7,8 +6,6 @@ export function passwordResetEmail(
   token: string,
   owner: string
 ) {
-  // The configured origin owns the link, never a caller-supplied redirect/Host header.
-  // A fragment keeps the bearer token out of HTTP access logs and Referer headers.
   const url = new URL("/reset-password", appUrl)
   url.hash = new URLSearchParams({ token }).toString()
   const link = url.href

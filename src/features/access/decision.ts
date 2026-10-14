@@ -5,7 +5,6 @@ export type ConfirmedDecision = {
   approve: boolean
   remember?: boolean
 }
-/** Old snapshots may lag a confirmed decision; a newer approval round takes precedence. */
 export function approvalDecision(
   approval: Approval,
   confirmed: ConfirmedDecision | null

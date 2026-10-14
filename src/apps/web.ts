@@ -14,7 +14,6 @@ export type WebExecutor = (
   input: CodeInput,
   signal: AbortSignal
 ) => Promise<CodeOutput>
-/** App state owns the commit. Pure rendering executes in the existing isolated Worker. */
 export class WebApps {
   private running = false
   private generation = 0
@@ -142,7 +141,6 @@ export class WebApps {
         input.action,
         signal
       )
-      // Reject malformed render output before changing durable state or emitting an event.
       yield* Effect.try(() => appHtml(result.html))
       return yield* Effect.try(() => {
         signal.throwIfAborted()

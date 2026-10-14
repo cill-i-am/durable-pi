@@ -2,7 +2,6 @@ import { Cause, Effect } from "effect"
 import type { AccessStore, ToolIntent } from "./adapters/sqlite"
 import { AccessDenied } from "./contracts"
 
-/** Owns the wait and final authorization fence; the host supplies the actual effect. */
 export class AccessGate {
   private version = 0
   private listeners = new Set<() => void>()
@@ -110,7 +109,6 @@ export class AccessGate {
           yield* observe("tool.replayed")
           return yield* Effect.try(() => JSON.parse(decision.result) as T)
         }
-        // claim synchronously records intent before invoking an effect that may not be replayable.
         try {
           yield* observe("tool.dispatched")
           const result = yield* Effect.tryPromise({

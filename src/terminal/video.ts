@@ -25,12 +25,10 @@ function base64(bytes: Uint8Array) {
     binary += String.fromCharCode(...bytes.subarray(i, i + 8192))
   return btoa(binary)
 }
-/** Only used in a media-specific container identity, never the interactive terminal. */
 export async function extractVideoRequest(sandbox: Sandbox, request: Request) {
   const signal = AbortSignal.timeout(60000)
   try {
     const bytes = await boundedBytes(request, MAX_FILE_BYTES)
-    // Start from an empty container even after an interrupted earlier extraction.
     await sandbox.destroy()
     await sandbox.startAndWaitForPorts({
       ports: 3000,

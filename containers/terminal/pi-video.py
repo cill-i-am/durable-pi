@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-"""Bounded local-file video sampling. No model, network, user shell or credentials."""
 import json
 import math
 import os
@@ -55,8 +54,6 @@ def extract():
     info = ROOT / 'frame-info.log'
     output = str(ROOT / 'frame-%d.jpg')
     remaining = DEADLINE - time.monotonic()
-    # Select decoded frames and retain their presentation time. Seeking to requested
-    # offsets mislabels sparse/VFR footage and can seek past the last actual frame.
     with info.open('wb') as log:
         subprocess.run(['ffmpeg', '-nostdin', '-hide_banner', '-v', 'info', '-threads', '1',
                         *input_args(), '-copyts', '-start_at_zero', '-i', SOURCE,
@@ -68,8 +65,6 @@ def extract():
                        env={'PATH': '/usr/bin:/bin'})
     if info.stat().st_size > 128000:
         raise ValueError('metadata limit')
-    # Metadata is untrusted and is also echoed to stderr. Only accept complete,
-    # anchored frame records with a contiguous sequence; injected records fail closed.
     records = re.findall(r'^\[Parsed_showinfo_\d+ @ (?:0x)?[0-9a-fA-F]+\]\s+n:\s*(\d+)\s+pts:\s*-?\d+\s+pts_time:([0-9.eE+-]+)\s', info.read_text(errors='replace'), re.MULTILINE)
     times = []
     for index, (number, value) in enumerate(records):
@@ -98,7 +93,6 @@ def extract():
     captions = ''
     truncated = False
     subtitles = [s for s in metadata.get('streams', []) if s.get('codec_type') == 'subtitle']
-    # Image subtitles need OCR. Speech is intentionally not described as transcribed.
     if subtitles and subtitles[0].get('codec_name') in ['mov_text', 'subrip', 'webvtt', 'ass', 'ssa', 'text']:
         target = ROOT / 'captions.vtt'
         try:
@@ -106,7 +100,6 @@ def extract():
                  '-i', SOURCE, '-map', '0:s:0', '-t', '600', '-c:s', 'webvtt', '-y', str(target)])
             with target.open('r', encoding='utf-8', errors='replace') as file:
                 captions = file.read(8001)
-            # TypeScript limits strings in UTF-16 units, not Python codepoints.
             encoded = captions.encode('utf-16-le')
             truncated = len(encoded) > 16000
             captions = encoded[:16000].decode('utf-16-le', errors='ignore')
@@ -120,5 +113,4 @@ if __name__ == '__main__':
     try:
         extract()
     except Exception:
-        # Never print parser diagnostics or input metadata.
         raise SystemExit(2)

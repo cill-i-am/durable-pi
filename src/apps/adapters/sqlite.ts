@@ -14,7 +14,6 @@ import {
   WebResult,
 } from "../contracts"
 
-/** One bot owns this catalog, immutable versions, action receipts and event outbox. */
 export class AppStore {
   constructor(
     private readonly db: Sqlite,
@@ -318,7 +317,6 @@ export class AppStore {
       return { applied: false }
     })
   }
-  /** Conversation admission is synchronous and shares this SQLite transaction. */
   deliverNext(admit: (event: AppEvent) => void) {
     return this.db.transaction(() => {
       if (!this.active()) return false

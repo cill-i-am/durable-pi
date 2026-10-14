@@ -12,7 +12,6 @@ import { agentSettings } from "../../src/agent/compaction"
 import { piMailbox } from "../../src/communication/adapters/pi"
 import { resolveRoute } from "../../src/inference/policy"
 import { MailboxTransport, Mailbox } from "../../src/communication/mailbox"
-/** Local workerd fixture only. Never imported by alchemy.run.ts or production. */
 import { DurableObject } from "cloudflare:workers"
 import {
   Lifecycle,

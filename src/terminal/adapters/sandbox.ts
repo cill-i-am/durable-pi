@@ -3,11 +3,6 @@ import { MAX_CHECKPOINT } from "../contracts"
 import type { TerminalRuntime } from "../terminal"
 import { sandboxTransfers } from "./transfer-files"
 
-// SDK 0.12.10's getSandbox({ enableDefaultSession: false }) sends this token.
-// We already own the Sandbox instance: use the same typed execution path without
-// self-RPC. Its sessionless pipes drain before completion; the default shell's
-// background labelers can lose fast command output. Revisit when upgrading 0.x.
-// https://github.com/cloudflare/sandbox-sdk/blob/e4877c7368f8b1620bd4400ff831e28fba152eff/packages/sandbox/src/sandbox.ts
 const SESSIONLESS = "__DISABLE_SESSION__"
 
 function live(signal: AbortSignal) {
@@ -106,7 +101,6 @@ export async function readCommand(
     reader.releaseLock()
   }
 }
-/** SDK 0.x RPC compatibility adapter; untrusted streams are bounded outside the SDK. */
 export function sandboxRuntime(sandbox: Sandbox): TerminalRuntime {
   const execute = async (
     command: string,
@@ -156,11 +150,7 @@ export function sandboxRuntime(sandbox: Sandbox): TerminalRuntime {
     },
     restore: async (bytes, signal, unrestricted = false) => {
       live(signal)
-      // Terminal closes the previous container first. Apply the saved admission
-      // policy at cold start; never broaden an already-running command's access.
       sandbox.enableInternet = unrestricted
-      // Drain the previous native stop event before opening a new SDK RPC
-      // connection; otherwise that event can interrupt the first restore call.
       await sandbox.startAndWaitForPorts({
         ports: 3000,
         cancellationOptions: {

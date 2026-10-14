@@ -197,7 +197,6 @@ it("upgrades the ready queue once without rewriting a persisted view", () => {
     Effect.runSync(memory.saveNode({ start: i, count: 1 }, "leaf"))
   }
   const before = Effect.runSync(memory.parts())
-  // Simulate a database from before the Effect adapter and its queue existed.
   for (const table of [
     "memory_ready",
     "memory_migrations",

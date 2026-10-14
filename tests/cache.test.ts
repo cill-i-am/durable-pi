@@ -139,7 +139,6 @@ it("keeps native summary requests uncached and ordinary OptChat prompts cacheabl
   for (const payload of payloads) {
     expect(payload.store).toBe(false)
     expect(payload.context_management).toBeUndefined()
-    // Native maxTokens is budget metadata: this subscription route cannot enforce it.
     expect(payload.max_output_tokens).toBeUndefined()
     expect(JSON.stringify(payload)).toContain('"mode":"explicit"')
     expect(payload.reasoning).toMatchObject({ context: "all_turns" })
