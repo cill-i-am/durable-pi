@@ -1,6 +1,38 @@
 import { renderToStaticMarkup } from "react-dom/server"
 import { describe, expect, it } from "vitest"
+import {
+  parseFragment,
+  defaultTreeAdapter,
+  type DefaultTreeAdapterTypes,
+} from "parse5"
 import { Markdown } from "../src/components/markdown"
+
+function codeBlocks(html: string) {
+  const blocks: string[] = []
+  const text = (node: DefaultTreeAdapterTypes.ChildNode): string =>
+    defaultTreeAdapter.isTextNode(node)
+      ? node.value
+      : "childNodes" in node
+        ? node.childNodes.map(text).join("")
+        : ""
+  const visit = (node: DefaultTreeAdapterTypes.ChildNode) => {
+    if (
+      defaultTreeAdapter.isElementNode(node) &&
+      node.tagName === "code" &&
+      node.attrs.some(
+        (attr) => attr.name === "data-slot" && attr.value === "code-block-code"
+      )
+    ) {
+      blocks.push(
+        node.childNodes
+          .map((line) => (text(line) === "\n" ? "" : text(line)))
+          .join("\n")
+      )
+    } else if ("childNodes" in node) node.childNodes.forEach(visit)
+  }
+  parseFragment(html).childNodes.forEach(visit)
+  return blocks
+}
 
 describe("shared Markdown rendering", () => {
   it("gives fenced and indented code their own copy control, while leaving inline code inline", () => {
@@ -15,9 +47,8 @@ describe("shared Markdown rendering", () => {
     expect(html).toContain("<span>Bash</span>")
     expect(html).toContain("<span>Code</span>")
     expect(html).toContain("<p>Use <code>npm</code> first.</p>")
-    expect(html).toContain(
-      '<pre><code class="language-bash">printf &quot;hello&quot;\n</code></pre>'
-    )
+    expect(codeBlocks(html)).toEqual(['printf "hello"', "exit 0"])
+    expect(html).toContain('dir="ltr" tabindex="0"')
     expect(html).not.toMatch(/<pre>\s*<(?:div|figure)/)
   })
 
@@ -30,7 +61,7 @@ describe("shared Markdown rendering", () => {
       />
     )
     expect(html).not.toContain("bad()")
-    expect(html).toContain("&lt;div&gt;\n\t  café &amp; tea\n\n&lt;/div&gt;\n")
+    expect(codeBlocks(html)).toEqual(["<div>\n\t  café & tea\n\n</div>"])
     expect(html).not.toContain("<div>\n\t")
   })
 
@@ -45,7 +76,14 @@ describe("shared Markdown rendering", () => {
     expect(html.match(/aria-label="Copy code"/g)).toHaveLength(2)
     expect(html).toContain("<span>Shell</span>")
     expect(html).toContain("<span>custom</span>")
-    expect(html).toContain("echo pending\n</code>")
+    expect(codeBlocks(html)).toEqual(["echo ready", "echo pending"])
+  })
+
+  it("keeps a deliberate trailing blank line when the fence closes", () => {
+    const html = renderToStaticMarkup(
+      <Markdown text={"```text\nfirst\n\n```"} />
+    )
+    expect(codeBlocks(html)).toEqual(["first\n"])
   })
 
   it("renders arbitrary language labels as text without consulting object prototypes", () => {

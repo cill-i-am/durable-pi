@@ -3,6 +3,15 @@ import { CodeXml } from "lucide-react"
 import ReactMarkdown, { type ExtraProps } from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { CopyButton } from "@/components/copy-button"
+import { useHighlightedCode } from "@/hooks/use-highlighted-code"
+import {
+  CodeBlock,
+  CodeBlockActions,
+  CodeBlockContent,
+  CodeBlockHeader,
+  CodeBlockLine,
+  CodeBlockTitle,
+} from "@/components/ui/code-block"
 
 const languageNames: Record<string, string> = {
   bash: "Bash",
@@ -25,7 +34,10 @@ const languageNames: Record<string, string> = {
   text: "Text",
 }
 
-function CodeBlock({ node, children }: ComponentProps<"pre"> & ExtraProps) {
+function MarkdownCodeBlock({
+  node,
+  children,
+}: ComponentProps<"pre"> & ExtraProps) {
   const code = node?.children.find(
     (child) => child.type === "element" && child.tagName === "code"
   )
@@ -33,7 +45,6 @@ function CodeBlock({ node, children }: ComponentProps<"pre"> & ExtraProps) {
   const text = code.children
     .map((child) => (child.type === "text" ? child.value : ""))
     .join("")
-    .replace(/\n$/, "")
   const classes = code.properties.className
   const language = Array.isArray(classes)
     ? classes
@@ -45,25 +56,42 @@ function CodeBlock({ node, children }: ComponentProps<"pre"> & ExtraProps) {
     : undefined
   const label = language
     ? Object.hasOwn(languageNames, language.toLowerCase())
-      ? languageNames[language.toLowerCase()]
+      ? languageNames[language.toLowerCase()]!
       : language
     : "Code"
 
   return (
-    <figure className="markdown-code-block">
-      <figcaption className="markdown-code-header">
-        <span className="markdown-code-language">
+    <HighlightedBlock text={text} language={language ?? "text"} label={label} />
+  )
+}
+
+function HighlightedBlock({
+  text,
+  language,
+  label,
+}: {
+  text: string
+  language: string
+  label: string
+}) {
+  const lines = useHighlightedCode(text, language)
+  return (
+    <CodeBlock className="my-4 first:mt-0 last:mb-0">
+      <CodeBlockHeader>
+        <CodeBlockTitle>
           <CodeXml aria-hidden="true" />
           <span>{label}</span>
-        </span>
-        <CopyButton
-          text={text}
-          label="Copy code"
-          className="size-11 sm:size-8"
-        />
-      </figcaption>
-      <pre>{children}</pre>
-    </figure>
+        </CodeBlockTitle>
+        <CodeBlockActions>
+          <CopyButton text={text.replace(/\n$/, "")} label="Copy code" />
+        </CodeBlockActions>
+      </CodeBlockHeader>
+      <CodeBlockContent>
+        {lines.map((line, index) => (
+          <CodeBlockLine key={index}>{line}</CodeBlockLine>
+        ))}
+      </CodeBlockContent>
+    </CodeBlock>
   )
 }
 
@@ -74,7 +102,7 @@ export function Markdown({ text }: { text: string }) {
         remarkPlugins={[remarkGfm]}
         skipHtml
         components={{
-          pre: CodeBlock,
+          pre: MarkdownCodeBlock,
           img: ({ alt }) => <span>[Image: {alt}]</span>,
           a: ({ href, children }) => (
             <a href={href} target="_blank" rel="noreferrer noopener">

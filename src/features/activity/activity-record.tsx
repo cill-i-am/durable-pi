@@ -8,6 +8,25 @@ import { agentApi } from "@/http/client"
 import { Markdown } from "@/components/markdown"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import {
+  Trace,
+  TraceLine,
+  TraceIcon,
+  TraceTitle,
+  TraceDescription,
+  TraceCollapsible,
+  TraceCollapsibleTrigger,
+  TraceCollapsibleContent,
+} from "@/components/ui/trace"
+import {
+  CodeBlock,
+  CodeBlockHeader,
+  CodeBlockTitle,
+  CodeBlockActions,
+  CodeBlockContent,
+} from "@/components/ui/code-block"
+import { CopyButton } from "@/components/copy-button"
+import { Brain, Wrench } from "lucide-react"
 import { poll } from "@/http/poll"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
@@ -116,49 +135,95 @@ export function ActivityRecord({
                 <AlertDescription>{record.error}</AlertDescription>
               </Alert>
             )}
-            {record.activity
-              .filter((item) => item.type !== "text")
-              .map((item) =>
-                item.type === "steer" ? (
-                  <div key={item.id} className="rounded-lg bg-muted p-3">
-                    <p className="mb-2 text-xs text-muted-foreground">
-                      Steering
-                    </p>
-                    <Markdown text={item.text} />
-                    {item.attachments?.map((file) => (
-                      <p
-                        key={file.id}
-                        className="text-xs text-muted-foreground"
-                      >
-                        Attachment: {file.name}
+            <Trace role="group" aria-label="Saved agent activity">
+              {record.activity
+                .filter((item) => item.type !== "text")
+                .map((item) =>
+                  item.type === "steer" ? (
+                    <div key={item.id} className="rounded-lg bg-muted p-3">
+                      <p className="mb-2 text-xs text-muted-foreground">
+                        Steering
                       </p>
-                    ))}
-                  </div>
-                ) : item.type === "thinking" ? (
-                  <details key={item.id} className="rounded-lg border p-3">
-                    <summary className="cursor-pointer text-sm font-medium">
-                      Thinking
-                    </summary>
-                    <Markdown text={item.text} />
-                  </details>
-                ) : (
-                  <details key={item.id} className="rounded-lg border p-3">
-                    <summary className="cursor-pointer text-sm font-medium">
-                      {item.name} · {item.status}
-                    </summary>
-                    <div className="mt-3 flex flex-col gap-3 text-xs">
-                      <p>Input</p>
-                      <pre className="max-h-48 overflow-auto whitespace-pre-wrap">
-                        {item.input}
-                      </pre>
-                      <p>Saved result</p>
-                      <pre className="max-h-72 overflow-auto whitespace-pre-wrap">
-                        {item.output || "No terminal result has been saved."}
-                      </pre>
+                      <Markdown text={item.text} />
+                      {item.attachments?.map((file) => (
+                        <p
+                          key={file.id}
+                          className="text-xs text-muted-foreground"
+                        >
+                          Attachment: {file.name}
+                        </p>
+                      ))}
                     </div>
-                  </details>
-                )
-              )}
+                  ) : item.type === "thinking" ? (
+                    <TraceCollapsible key={item.id}>
+                      <TraceCollapsibleTrigger>
+                        <TraceLine>
+                          <TraceIcon>
+                            <Brain />
+                          </TraceIcon>
+                          <TraceTitle>Thought</TraceTitle>
+                        </TraceLine>
+                      </TraceCollapsibleTrigger>
+                      <TraceCollapsibleContent keepMounted>
+                        <Markdown text={item.text} />
+                      </TraceCollapsibleContent>
+                    </TraceCollapsible>
+                  ) : (
+                    <TraceCollapsible key={item.id}>
+                      <TraceCollapsibleTrigger>
+                        <TraceLine
+                          status={
+                            item.status === "error" ||
+                            item.status === "interrupted"
+                              ? "error"
+                              : undefined
+                          }
+                        >
+                          <TraceIcon>
+                            <Wrench />
+                          </TraceIcon>
+                          <TraceTitle>{item.name}</TraceTitle>
+                          <TraceDescription>{item.status}</TraceDescription>
+                        </TraceLine>
+                      </TraceCollapsibleTrigger>
+                      <TraceCollapsibleContent
+                        keepMounted
+                        className="flex flex-col gap-3"
+                      >
+                        <CodeBlock size="sm">
+                          <CodeBlockHeader>
+                            <CodeBlockTitle>Input</CodeBlockTitle>
+                            <CodeBlockActions>
+                              <CopyButton
+                                text={item.input}
+                                label="Copy saved tool input"
+                              />
+                            </CodeBlockActions>
+                          </CodeBlockHeader>
+                          <CodeBlockContent wrap className="max-h-48">
+                            {item.input}
+                          </CodeBlockContent>
+                        </CodeBlock>
+                        <CodeBlock size="sm">
+                          <CodeBlockHeader>
+                            <CodeBlockTitle>Saved result</CodeBlockTitle>
+                            <CodeBlockActions>
+                              <CopyButton
+                                text={item.output}
+                                label="Copy saved tool result"
+                              />
+                            </CodeBlockActions>
+                          </CodeBlockHeader>
+                          <CodeBlockContent wrap className="max-h-72">
+                            {item.output ||
+                              "No terminal result has been saved."}
+                          </CodeBlockContent>
+                        </CodeBlock>
+                      </TraceCollapsibleContent>
+                    </TraceCollapsible>
+                  )
+                )}
+            </Trace>
             {!!record.answer && <Markdown text={record.answer} />}
           </div>
         )}
