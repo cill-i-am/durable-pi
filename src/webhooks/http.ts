@@ -136,7 +136,6 @@ export function webhookIncoming(
       return canonical
     }, 400)
     const hash = yield* asyncGuard(() => digest(payload))
-    // Establish durable wake intent before accepting a receipt, then recheck authority atomically.
     yield* asyncGuard(wake)
     const result = yield* guard(
       () => store.accept(id, keyHash, eventId, payload, hash),

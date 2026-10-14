@@ -8,7 +8,6 @@ export const REQUEST_LIMIT = 12
 export const DURATION_MS = 10 * 60_000
 export const REPORT_BYTES = 36_000
 
-/** The host derives ownership and the pinned selection; model arguments grant neither. */
 export type DelegationSource = {
   turnId: string
   conversationId: number
@@ -50,7 +49,6 @@ export function validateBrief(input: unknown): DelegateInput {
   return brief
 }
 
-/** Keep binary attachments out of textual child instructions. Retrieval remains bot-local. */
 export function sharedReference(prompt: string): string {
   const contents = prompt.startsWith("[")
     ? Schema.decodeUnknownSync(Schema.Array(AttachmentContent))(

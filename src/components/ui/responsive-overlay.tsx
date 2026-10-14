@@ -132,8 +132,6 @@ function Popup({
   )
 }
 
-// A single primitive tree keeps local form and terminal state across breakpoints.
-// Dialog/Sheet/AlertDialog add the shadcn presentation and use this shared lifecycle.
 export const ResponsiveOverlay = {
   Root,
   Popup,

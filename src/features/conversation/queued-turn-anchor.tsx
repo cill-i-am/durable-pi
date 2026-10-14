@@ -5,7 +5,6 @@ import {
   useMessageScrollerScrollable,
 } from "@/components/ui/message-scroller"
 
-/** Native append detection cannot see an existing queued row becoming an anchor. */
 export function QueuedTurnAnchor({ turns }: { turns: ChatState["turns"] }) {
   const { scrollToMessage } = useMessageScroller()
   const { end } = useMessageScrollerScrollable()
@@ -27,7 +26,6 @@ export function QueuedTurnAnchor({ turns }: { turns: ChatState["turns"] }) {
     )
     if (!started || !before.atEnd) return
     if (frame.current !== null) cancelAnimationFrame(frame.current)
-    // Wait for native item registration; leave readers above the live edge alone.
     frame.current = requestAnimationFrame(() => {
       frame.current = null
       scrollToMessage(`${started.id}:user`, {

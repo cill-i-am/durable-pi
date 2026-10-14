@@ -21,7 +21,6 @@ export type RecoveryPolicy = {
   stopAfter: number
   recoveryAttempts: number
 }
-/** Product defaults, not empirically established safety constants. */
 export const recoveryPolicy: RecoveryPolicy = {
   warnAfter: 3,
   stopAfter: 5,
@@ -62,7 +61,6 @@ export function recoveryDetail(view: Omit<RecoveryView, "detail">): string {
   return "The same tool and inputs repeatedly failed. Inspect the saved error, correct the inputs or use another permitted approach. Do not repeat an external action whose outcome is uncertain."
 }
 
-/** Pure per-round reduction. Native entry IDs are monotonic within a conversation. */
 export function observeRound(
   saved: RecoveryState,
   epoch: string,
@@ -86,8 +84,6 @@ export function observeRound(
       return true
     })
   state.cursor = Math.max(state.cursor, ...observations.map((o) => o.resultId))
-  // Inspect the whole parallel round before spending its failure allowance.
-  // An uncertain effect outranks an ordinary repetition blocker, regardless of order.
   const authority =
     fresh.find((o) => o.outcome === "uncertain") ??
     fresh.find((o) => o.outcome === "denied")
@@ -107,8 +103,6 @@ export function observeRound(
   const wasRecovering = state.view?.phase === "recovering"
   let recovered = false
   for (const o of fresh) {
-    // A round started before new steering cannot exhaust the new task's budget.
-    // Access and uncertain outcomes above remain authoritative across steering.
     if (
       requestEpoch !== epoch ||
       o.outcome === "ignored" ||
@@ -141,7 +135,6 @@ export function observeRound(
         receiptId: o.receiptId,
       }
       state.view = { ...view, detail: recoveryDetail(view) }
-      // The first warning must be offered before its recovery allowance is spent.
       if (wasRecovering && bucket.count >= policy.stopAfter) {
         state.view.phase = "blocked"
         break
@@ -156,7 +149,6 @@ export function observeRound(
   return state
 }
 
-/** Stable JSON comparison; raw inputs and outputs never enter detector state. */
 export async function recoveryFingerprint(value: unknown): Promise<string> {
   const canonical = (v: unknown): unknown =>
     Array.isArray(v)

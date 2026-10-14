@@ -1,6 +1,5 @@
 import { cn } from "cn"
 
-/** The agent mark from the approved Paper workroom. Labels live beside the mark. */
 export function AgentMark({
   className,
   tone = "primary",
@@ -25,7 +24,6 @@ export function AgentMark({
   )
 }
 
-/** Stable presentation only; a color never implies shared data or permissions. */
 export function agentTone(id: string) {
   if (id === "home") return "primary" as const
   const tones = ["primary", "peach", "lilac", "blue"] as const

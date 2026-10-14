@@ -35,7 +35,6 @@ export interface BackgroundGroupRPC extends Rpc.DurableObjectBranded {
   transcript: (child: number, cursor?: string) => Promise<Transcript>
 }
 
-/** Binding-only group runtime. No HTTP route, shared storage or independent refresh owner. */
 export class BackgroundGroup
   extends DurableObject<AgentEnv>
   implements BackgroundGroupRPC
@@ -105,7 +104,6 @@ export class BackgroundGroup
         },
         context
       )
-      // The stock bridge resumes only after this factory returns.
       this.pin = await readBackgroundHandoff(h)
       return h
     },

@@ -34,7 +34,6 @@ export function routinesRequest(
       yield* Effect.tryPromise(() => stop(id))
       return Response.json({ ok: true })
     }
-    // A wake exists before mutation; retries and startup rediscover durable intent.
     yield* Effect.tryPromise(wake)
     const value = yield* Effect.try(() => {
       switch (path) {

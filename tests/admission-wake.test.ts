@@ -63,7 +63,6 @@ it("bounds request projections by the active model and durable routing pin, incl
     communicationFloor: () => floor,
   })
   expect(host.contextProjectionBytes()).toBe(8192)
-  // Later catalog growth cannot enlarge the saved run's budget.
   window = 1050000
   pin = 32000
   expect(host.contextProjectionBytes()).toBe(1000)

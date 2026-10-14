@@ -46,9 +46,6 @@ export const RunActivity = Schema.Struct({
 export type RunActivity = typeof RunActivity.Type
 export const RUN_PAGE_SIZE = 50
 
-/** Authenticated bot-local, read-only projection. No telemetry or scheduler calls.
- * Stable keyset pages include all records, not just the latest model-activity page.
- */
 export function runActivity(
   db: Sqlite,
   botId: string,

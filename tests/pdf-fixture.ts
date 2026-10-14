@@ -1,4 +1,3 @@
-/** Small synthetic PDFs owned by this test suite, with no external fixtures. */
 export function pdfFixture(pages: readonly string[], fontSize = 12) {
   const objects = [
     "<< /Type /Catalog /Pages 2 0 R >>",

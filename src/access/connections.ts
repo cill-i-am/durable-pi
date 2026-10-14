@@ -65,7 +65,6 @@ export class ConnectionError extends Schema.TaggedError<ConnectionError>()(
   { message: Schema.String }
 ) {}
 
-/** Only public HTTPS endpoints. OAuth owns credentials; endpoint URLs may not contain them. */
 export function connectionUrl(value: string) {
   const url = new URL(value)
   if (

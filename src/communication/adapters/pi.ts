@@ -54,9 +54,6 @@ const native = <T>(call: (signal: AbortSignal) => Promise<T>) =>
         : failure("storage", "Pi task state is temporarily unavailable."),
   })
 
-/** Pi owns submissions and execution recovery. SQLite owns mailbox state and results.
- * Each commit is a narrow native transaction boundary, never an RPC/model transaction.
- */
 export function piMailbox(
   open: () => Promise<Harness>,
   bridge: {
@@ -70,8 +67,6 @@ export function piMailbox(
     CommunicationError
   >
 ) {
-  // Derived only from native execution documents. Rebuilt before the harness
-  // resumes; it is a synchronous projection for Pi's model/settings interfaces.
   const pins = new Map<string, typeof Execution.Type & { taskId: string }>()
   const authorized = (task: Task) =>
     Effect.gen(function* () {
@@ -160,11 +155,10 @@ export function piMailbox(
       )
     }
     pins.set(execution.provider, { ...execution, taskId: task.id })
-    // Recheck after any suspension before submission. Replays use the same native request ID.
     const current = yield* mailbox.task(task.id)
     if (!(yield* authorized(current))) {
       yield* native(() => bridge.abort(execution.conversation))
-      return undefined // The next fenced claim reconciles cancellation/deadline.
+      return undefined
     }
     const payload = task.request.payload
     if (payload.kind !== "task" && payload.kind !== "question")
@@ -243,7 +237,6 @@ export function piMailbox(
           if (saved) pins.set(saved.provider, { ...saved, taskId: task.id })
         }
       }),
-    /** Invoked by the shared provider adapter before every model attempt, including recovery. */
     request: Effect.fn("communication.authorizeModel")(function* (
       provider: string
     ) {

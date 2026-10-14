@@ -7,7 +7,6 @@ import type {
 import type { AccessGate } from "../gate"
 import { toolReceipt } from "./receipt"
 
-/** Native Pi owns task IDs; the access receipt makes waiting tools safe to reopen. */
 export function guardedTools(
   gate: AccessGate,
   activeTurn: (
@@ -32,8 +31,6 @@ export function guardedTools(
           return Promise.reject(new Error("Tool identity conflict"))
         return existing.promise
       }
-      // Publish the promise before resolving durable child ownership. Concurrent
-      // tool replays must join it even while that read is pending.
       const promise = Promise.resolve().then(async () => {
         const previous = gate.store.get(id)
         const resolved = await activeTurn(api)

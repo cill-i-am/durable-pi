@@ -1,4 +1,3 @@
-/** Synthetic local workerd fixture. No cloud credentials, production routes or external effects. */
 import { runActivity } from "../../src/activity/run"
 import { InferenceUsage } from "../../src/inference/usage"
 import { DurableObject } from "cloudflare:workers"

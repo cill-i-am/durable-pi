@@ -10,7 +10,6 @@ import {
 } from "./records"
 import type { Watermark } from "./records"
 
-/** Paged reads keep exports bounded and backpressured. */
 export const archive = (until?: Watermark) =>
   Stream.unwrap(
     Effect.gen(function* () {
@@ -55,7 +54,6 @@ export const escapeHtml = (text: string) =>
       ]!
   )
 
-/** The Web Stream captures this Effect context and owns cancellation of its producer. */
 export const exportResponse = Effect.fn("Memory.export")(function* (
   html = false
 ) {

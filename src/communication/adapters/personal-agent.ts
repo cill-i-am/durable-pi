@@ -24,7 +24,6 @@ const edge = <T>(call: () => Promise<T>) =>
         : failure("transport", "Bot service is temporarily unavailable."),
   })
 
-/** Cloudflare/Pi host wiring only. Task orchestration lives in Communication. */
 export function personalCommunication(
   owner: PersonalAgent,
   namespace: DurableObjectNamespace<PersonalAgent>

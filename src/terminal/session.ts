@@ -7,7 +7,6 @@ export interface InteractiveRuntime {
 }
 export const SESSION_LEASE = 30_000
 export const SESSION_LIFETIME = 10 * 60_000
-/** Only authenticated HTTP renewals keep the lease alive; socket traffic never does. */
 export class InteractiveSession {
   readonly maximumAt = Date.now() + SESSION_LIFETIME
   expiresAt = Math.min(Date.now() + SESSION_LEASE, this.maximumAt)
@@ -88,7 +87,6 @@ export class InteractiveSession {
       throw new TerminalFailure({
         message: "This terminal session is not ready.",
       })
-    // One viewer at a time avoids two reconnecting tabs repeatedly taking control.
     if (this.connection)
       throw new TerminalFailure({
         message:

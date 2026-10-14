@@ -16,7 +16,6 @@ export type UploadAttempt = {
   error?: string
 }
 
-/** Originals remain intact; only the model input is resized. */
 async function visionPreview(file: File): Promise<Blob> {
   const bitmap = await createImageBitmap(file)
   try {

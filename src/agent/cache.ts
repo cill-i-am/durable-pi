@@ -7,7 +7,6 @@ const record = Schema.decodeUnknownSync(
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value)
 
-/** Boundaries include their newline, so concatenating blocks preserves the exact view. */
 export function viewBlocks(text: string) {
   let start = 0
   const blocks: {
@@ -30,7 +29,6 @@ export function viewBlocks(text: string) {
   return blocks
 }
 
-/** Pi assembles/replays reasoning and tools; only memory boundaries are changed here. */
 export function memoryPayload(payload: unknown) {
   const body = record(payload)
   const input = Array.isArray(body.input)
@@ -51,7 +49,6 @@ export function memoryPayload(payload: unknown) {
               !part.text.startsWith("<chat>\n")
             )
               return [part]
-            // Split only the leading, complete memory block, including legacy stored prompts.
             const end = part.text.indexOf("\n</chat>")
             if (end < 0) return [part]
             const boundary = end + "\n</chat>".length

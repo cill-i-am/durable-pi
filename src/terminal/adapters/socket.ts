@@ -1,4 +1,3 @@
-/** The bridge exposes terminal bytes/resize only, never an SDK control endpoint. */
 export function validTerminalInput(data: string | ArrayBuffer): boolean {
   if (data instanceof ArrayBuffer) return data.byteLength <= 16_384
   if (typeof data !== "string" || data.length > 256) return false
@@ -48,7 +47,6 @@ export function relayTerminal(
     typeof data === "string"
       ? new TextEncoder().encode(data).length
       : data.byteLength
-  // Explicitly request bytes: modern Workers otherwise deliver binary frames as Blob.
   server.binaryType = "arraybuffer"
   upstream.binaryType = "arraybuffer"
   server.accept()

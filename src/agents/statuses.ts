@@ -2,7 +2,6 @@ import { Effect } from "effect"
 import type { AgentProfile } from "./domain"
 import type { RuntimeStatus } from "../conversations/status"
 
-/** Only the authenticated owner's catalog admits reads; unavailable bots stay visible. */
 export function agentStatuses(
   agents: readonly AgentProfile[],
   read: (agent: AgentProfile) => Promise<RuntimeStatus>

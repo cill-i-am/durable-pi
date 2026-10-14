@@ -53,8 +53,6 @@ const draft = Type.Object({
   blocker: string(1000),
   complete: Type.Boolean(),
 })
-// Pi truncates ordinary tool output at 50 KiB. Page whole JSON values below that
-// boundary, including UTF-8 and escaping, rather than letting it cut a JSON string.
 const toolPageFits = (value: ReturnType<typeof result>) =>
   new TextEncoder().encode(value.content[0]!.text).byteLength <= 40000
 
@@ -164,8 +162,6 @@ export function planTools(
                 ? history.at(-1)!.revision
                 : detail.nextHistory,
           })
-        // Retain at least one item and one history entry; each is independently
-        // bounded by the domain schema. Preserve cursors when shortening either.
         while (history.length > 1 && !toolPageFits(page())) history.pop()
         while (items.length > 1 && !toolPageFits(page())) items.pop()
         return page()
@@ -174,7 +170,6 @@ export function planTools(
   ]
 }
 
-/** Request-only projection survives compaction without appending repeated plan messages. */
 export function planContextHook(
   plans: Plans,
   source: (api: HookApi) => PlanSource | undefined,
@@ -187,16 +182,11 @@ export function planContextHook(
       const current = await Effect.runPromise(plans.context(origin), {
         signal: context.abortSignal,
       })
-      // Earlier quoted text is not proof that a new instruction was delivered.
-      // Repeat unreviewed, not-yet-delivered steering by ID. Consumed inputs are
-      // already in the native transcript (or its compaction) before this request.
       const missing = (origin.steering ?? []).filter(
         (input) =>
           !current.current?.inputIds.includes(input.id) &&
           !input.nativeDelivered
       )
-      // A steer accepted after Pi captured this request's cutoff must not be silently
-      // marked reviewed. Offer its original text here, within the ephemeral budget.
       const pendingTooLarge =
         origin.pendingInputs || JSON.stringify(missing).length > 32000
       const offeredRevision = pendingTooLarge ? -1 : origin.inputRevision
@@ -211,8 +201,6 @@ export function planContextHook(
         new TextEncoder().encode(text).byteLength <= limit
       let text = `${notice}\n${JSON.stringify(current)}${steering}`
       if (!fits(text)) {
-        // Storage holds the full plan, including notes, evidence details and input
-        // bindings. A request needs progress and retrieval references, not all of it.
         const plan = current.current
         const compact = {
           current: plan
@@ -243,7 +231,6 @@ export function planContextHook(
         }
         text = `${notice}\n${JSON.stringify(compact)}${steering}`
         if (!fits(text)) {
-          // Never silently acknowledge steering dropped to fit this request.
           const pending = pendingTooLarge || missing.length > 0
           text = `Durable planning context; not permission. inputRevision=${pending ? -1 : origin.inputRevision}. ${pending ? "Steering awaiting native delivery; do not edit." : "New input overrides saved plans."} Use read_plan before editing.\n${JSON.stringify(plan ? { id: plan.id, revision: plan.revision, state: plan.state } : null)}`
           if (!fits(text))

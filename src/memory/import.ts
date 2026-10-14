@@ -16,7 +16,6 @@ const decodeMessage = Schema.decodeUnknownEffect(
   Schema.fromJsonString(ImportMessage)
 )
 
-/** Validate and hash all input before the one atomic import. History never submits a turn. */
 export const importHistory = Effect.fn("Memory.import")(function* (
   jsonl: string
 ) {

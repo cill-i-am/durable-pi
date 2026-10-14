@@ -42,7 +42,6 @@ export class AgentStorageError extends Schema.TaggedError<AgentStorageError>()(
 ) {}
 export type AgentError = AgentNotFound | AgentConflict | AgentStorageError
 
-/** The existing owner-named object is the home bot. Never migrate its data. */
 export function agentObjectName(owner: string, id: AgentId) {
   return id === homeAgentId ? owner : `bot:${owner}:${id}`
 }

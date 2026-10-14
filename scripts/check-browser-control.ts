@@ -49,7 +49,6 @@ await command("policy", {
   generation: 0,
   hosts: ["www.selenium.dev", "httpbingo.org"],
 })
-// Selenium's public demonstration form. Only synthetic values enter this page.
 await command("open", {
   generation: 1,
   url: "https://www.selenium.dev/selenium/web/web-form.html",

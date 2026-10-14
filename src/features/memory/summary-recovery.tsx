@@ -21,8 +21,6 @@ export function SummaryRecovery({
     setBusy(key)
     setError("")
     try {
-      // Keep uncertain attempts through sheet closes, bot switches and reloads.
-      // If storage is unavailable, do not send a mutation we cannot reconcile.
       const operationId =
         sessionStorage.getItem(storageKey) ?? crypto.randomUUID()
       sessionStorage.setItem(storageKey, operationId)

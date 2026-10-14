@@ -49,8 +49,6 @@ export function useBrowser(agentId: string) {
     setPending(path)
     setError("")
     try {
-      // A takeover changes generation before its capture returns. Close must revoke
-      // the current session even while that earlier response is still pending.
       const input =
         path === "close" && interrupt
           ? {

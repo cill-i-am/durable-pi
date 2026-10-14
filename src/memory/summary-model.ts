@@ -1,7 +1,6 @@
 import { Context, Schema, type Effect } from "effect"
 import type { SummaryJob } from "./domain"
 
-/** Provider-neutral conversation for byte-budget feedback. No SDK messages enter memory. */
 export type SummaryMessage = { role: "user" | "assistant"; text: string }
 export class SummaryFailure extends Schema.TaggedError<SummaryFailure>()(
   "SummaryFailure",

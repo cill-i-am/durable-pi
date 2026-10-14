@@ -3,7 +3,6 @@ import type { Sqlite } from "../../storage/sqlite"
 import { ResolvedRoute } from "../../inference/policy"
 import { InvalidMemory, type Part } from "../domain"
 
-/** Model selection for one immutable summary range. Memory remains the owner of source and result. */
 export class SummaryRoutes {
   constructor(private readonly db: Sqlite) {
     db.run(
@@ -62,7 +61,6 @@ export class SummaryRoutes {
     )
     return this.current(part)!
   }
-  /** Count dispatch intent before I/O so repeated runtime interruption cannot create unlimited requests. */
   beginRequest(part: Part) {
     const row = this.db.all<{ revision: number; requests: number }>(
       "SELECT revision,requests FROM summary_routes WHERE start=? AND count=? ORDER BY revision DESC LIMIT 1",
@@ -78,7 +76,6 @@ export class SummaryRoutes {
     )
     return true
   }
-  /** Explicit owner retry creates a revision; ordinary restarts never change the pin. */
   replace(part: Part, operation: string, candidate: ResolvedRoute) {
     this.applied(operation, part)
     const prior = this.db.all<{ route: string }>(

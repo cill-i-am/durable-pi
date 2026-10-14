@@ -36,7 +36,6 @@ function providerJson(result: ToolExecutionResult) {
   return JSON.parse(text) as unknown
 }
 
-/** Only the owner's explicit import UI can invoke this read-only skills protocol. */
 export function importSkillsRequest(
   provider: SkillProvider,
   request: Request,

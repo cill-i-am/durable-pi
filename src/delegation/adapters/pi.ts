@@ -120,7 +120,6 @@ const cut = (value: string, bytes: number) => {
         "\n[Shortened; inspect the child conversation for the full answer.]"
 }
 
-/** Native documents own membership and controls; native submissions own delivery and answers. */
 export function piDelegations(
   open: () => Promise<Harness>,
   authority: DelegationAuthority,
@@ -288,7 +287,6 @@ export function piDelegations(
       (child.stopped || now() >= group.deadline)
     )
       return
-    // Steer must not become the initial prompt if admission is still recovering.
     if (
       input.action.type === "steer" &&
       !(await status(h, child.id, requestId(group, child.id), context))
@@ -312,8 +310,6 @@ export function piDelegations(
       ;(await tx.doc(Operations, input.operationId, null)).applied = true
     }, context)
   }
-  // Every concurrent caller drains the same durable prefix. Native request IDs
-  // deduplicate admission, so a later steer cannot overtake an earlier intent.
   const deliver = async (h: Harness, input: Control, context: Context) => {
     const group = await load(h, input.groupId, context)
     for (const control of group.controls) {
@@ -432,7 +428,6 @@ export function piDelegations(
             )
               return
             const conversation = await childConversation(h, child.id, context)
-            // Exact request identity survives a crash between admission and waiting.
             const submission = await conversation.submit(
               {
                 type: "input",

@@ -1,4 +1,3 @@
-/** User agents are hints, not hardware identities or location evidence. */
 export function sessionLabel(userAgent: string | null | undefined) {
   if (!userAgent) return "Unknown browser"
   const browser = /Edg\//.test(userAgent)

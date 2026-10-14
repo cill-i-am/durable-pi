@@ -15,14 +15,9 @@ import { agentObjectName } from "../../agents/domain"
 
 type FetchNamespace = { getByName: (name: string) => Fetcher }
 
-/** Only the private DO binding reaches this route; the website gateway rejects it.
- * Alchemy's installed Fetcher adapter normalizes the synthetic origin to localhost.
- * Origin is not authority: handlers validate owner/catalog and committed outbox proof.
- */
 export const isMailboxRequest = (request: Request) =>
   request.method === "POST" && new URL(request.url).pathname === "/"
 
-/** Alchemy's supported Effect RPC bridge, carried exclusively by private DO fetch. */
 export function privateMailboxClient(namespace: FetchNamespace) {
   return bindEffectRpc(
     {
@@ -64,8 +59,6 @@ export function mailboxTransport(
     authenticate: (e) =>
       Effect.gen(function* () {
         yield* authorize(e)
-        // The envelope is a claim. Proof is the exact committed outbox at the
-        // registered sender, reached through the recipient's own private binding.
         const proven = yield* call(e, e.from, (rpc) =>
           rpc.prove({ envelope: e })
         )
@@ -77,7 +70,6 @@ export function mailboxTransport(
   })
 }
 
-/** Per-request scope owns the RPC server fibers, serialization and cancellation. */
 export function mailboxHandler(
   mailbox: Mailbox["Service"],
   transport: Layer.Layer<MailboxTransport>,
@@ -89,8 +81,6 @@ export function mailboxHandler(
   const services = Layer.merge(Layer.succeed(Mailbox, mailbox), transport)
   const handlers = MailboxRpc.toLayer({
     deliver: ({ envelope }) => {
-      // Persist a Lifecycle wake before acceptance; the acknowledgment follows
-      // the synchronous acceptance transaction. Acceptance never calls Pi.
       return receive(envelope, arm())
     },
     prove: ({ envelope }) => mailbox.prove(envelope),
@@ -127,7 +117,6 @@ export function mailboxHandler(
     )
 }
 
-/** Private does not mean unbounded: 96 KiB request limit and an owned reader. */
 export const boundedFrame = (request: Request) =>
   Effect.acquireUseRelease(
     Effect.try({

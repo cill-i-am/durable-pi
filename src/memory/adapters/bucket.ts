@@ -15,7 +15,6 @@ export type BackupBucket = {
   ) => Promise<{ etag: string } | null>
 }
 
-/** R2 has no AbortSignal API. An interrupted read/write cannot advance the workflow. */
 export const bucketLayer = (bucket: BackupBucket) =>
   Layer.succeed(
     BackupStore,

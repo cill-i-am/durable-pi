@@ -29,7 +29,6 @@ export const InferenceActivity = Schema.Struct({
   attempts: Schema.Array(Attempt),
 })
 
-/** Bot-local observations of provider requests, never an execution scheduler. */
 export class InferenceUsage {
   constructor(
     private readonly db: Sqlite,
@@ -41,7 +40,6 @@ export class InferenceUsage {
     db.run(
       "CREATE INDEX IF NOT EXISTS inference_attempts_run ON inference_attempts(json_extract(payload,'$.turnId'))"
     )
-    // Only constructor recovery can end orphaned observations; it schedules nothing.
     for (const row of db.all<{ id: string; payload: string }>(
       "SELECT id,payload FROM inference_attempts WHERE json_extract(payload,'$.outcome')='running'"
     )) {
@@ -100,9 +98,7 @@ export class InferenceUsage {
         this.save(finished)
         try {
           this.onFinished?.(finished)
-        } catch {
-          /* Telemetry cannot undo recorded usage. */
-        }
+        } catch {}
       },
     }
   }
@@ -114,9 +110,6 @@ export class InferenceUsage {
       .map((row) => Schema.decodeUnknownSync(Attempt)(JSON.parse(row.payload)))
   }
 
-  /** Committed totals are not limited to the Activity page's latest 100 rows.
-   * Partial usage is explicit: known totals never imply every request reported.
-   */
   totals(turnId: string) {
     return this.db.all<{
       modelRequests: number

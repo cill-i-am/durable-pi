@@ -19,7 +19,6 @@ export function createAuth(
   })
 }
 
-/** Shared native policy for the Workers D1 host and SQLite integration tests. */
 export function authOptions(
   env: Pick<
     WebsiteEnv,
@@ -41,7 +40,6 @@ export function authOptions(
     ],
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
-        // A remembered-device bypass would outlive revocation of its browser session.
         if (
           ctx.path.startsWith("/two-factor/") &&
           ctx.body?.trustDevice === true
@@ -52,8 +50,6 @@ export function authOptions(
           })
       }),
       after: createAuthMiddleware(async (ctx) => {
-        // Native enrollment/disable rotates the current session. Drop other sessions
-        // only for an authenticated factor change, never for a normal 2FA sign-in.
         if (
           (ctx.path === "/two-factor/verify-totp" ||
             ctx.path === "/two-factor/disable") &&
@@ -87,8 +83,6 @@ export function authOptions(
             passwordResetEmail(env.APP_URL, token, env.OWNER_EMAIL)
           )
         } catch {
-          // Do not log provider errors: they can contain recipient/message contents.
-          // Keep the public response identical for existing and unknown accounts.
           console.error("Password reset email delivery failed")
         }
       },
@@ -99,7 +93,6 @@ export function authOptions(
       window: 60,
       max: 30,
       customRules: {
-        // Polls/focus across tabs are read-only; login/factor limits stay at 30/min.
         "/get-session": { window: 60, max: 120 },
         "/request-password-reset": { window: 600, max: 3 },
         "/reset-password": { window: 600, max: 10 },
@@ -154,7 +147,6 @@ export function sameOrigin(request: Request, appUrl: string) {
   return request.headers.get("origin") === new URL(appUrl).origin
 }
 
-/** Keep bookmarks working while mutations remain bound to the configured origin. */
 export function canonicalOriginResponse(request: Request, appUrl: string) {
   const target = new URL(appUrl),
     source = new URL(request.url)

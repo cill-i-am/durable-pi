@@ -39,7 +39,6 @@ const buttonStyles = cva(
   }
 )
 
-// Native links and Button must resolve layout overrides in the same order.
 const buttonVariants: typeof buttonStyles = (props) => cn(buttonStyles(props))
 
 function Button({

@@ -22,7 +22,6 @@ const escape = (value: string) =>
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
 const voidTags = new Set(["br", "hr", "input"])
-/** Parse as HTML5, then serialize a closed vocabulary; never return raw markup. */
 export function appHtml(source: string) {
   const fragment = parseFragment(source)
   let nodes = 0

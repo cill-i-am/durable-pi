@@ -42,7 +42,6 @@ const TokenResponse = Schema.Struct({
 })
 export const decodeCredential = Schema.decodeUnknownSync(CredentialSchema)
 
-/** Pi's login flow owns a Node callback server. Only its refresh protocol runs in workerd. */
 export const workerChatGPTAuth: OAuthAuth = {
   name: "Sign in with ChatGPT",
   isSubscription: true,
@@ -104,7 +103,6 @@ export class DurableCredentials implements CredentialStore {
       "SELECT value,seed FROM model_credentials WHERE provider=?",
       providerId
     )[0]
-    // A new deployment credential explicitly replaces the old grant; unchanged seeds retain rotated tokens.
     if (this.seed && (!row || row.seed !== this.seed)) {
       const credential = decodeCredential(JSON.parse(this.seed))
       this.db.run(
@@ -154,7 +152,6 @@ export class DurableCredentials implements CredentialStore {
   }
 }
 
-/** All bots resolve rotating tokens through the existing owner object. */
 export async function resolveAccountCredential(
   credentials: CredentialStore,
   providerId: string,
@@ -170,7 +167,6 @@ export async function resolveAccountCredential(
   )
 }
 
-/** The account owns refresh; the child never persists a refresh token. */
 export function accountCredentials(
   resolve: (provider: string) => Promise<Credential | undefined>
 ): CredentialStore {
@@ -238,8 +234,6 @@ export function createAgentModels(
         return {
           ...model,
           contextWindow,
-          // Preserve the actual output allowance for reasoning/output reserves.
-          // ChatGPT sign-in rejects max_output_tokens; metadata is not an output cap.
           maxTokens: model.maxTokens,
         }
       }),
@@ -316,8 +310,6 @@ export function createAgentModels(
         await request?.onProviderStreamEvent?.(event, selected)
       },
     })
-    // This marks dispatch only. Detached work can outlive the native invocation;
-    // duration and usage belong to the durable attempt, never this short span.
     const telemetry = runObserved(
       Effect.annotateCurrentSpan({
         "inference.model": model.id,
@@ -332,14 +324,10 @@ export function createAgentModels(
         "run.id": observation?.turnId ?? "",
         "bot.id": options.botId?.() ?? "",
       }).pipe(Effect.withSpan("Inference.dispatch"))
-    ).catch(() => {
-      /* Telemetry cannot fail a dispatched request. */
-    })
+    ).catch(() => {})
     try {
       options.waitUntil?.(telemetry)
-    } catch {
-      /* Host lifetime already ended. */
-    }
+    } catch {}
     const observed = createAssistantMessageEventStream()
     const record = (operation: () => void) => {
       try {
@@ -359,7 +347,6 @@ export function createAgentModels(
     void (async () => {
       for await (const event of native) {
         if (event.type === "done") {
-          // Installed Pi rejects streams without a terminal event; incomplete is rejected above.
           record(() => observation?.end("completed"))
         } else if (event.type === "error") {
           record(() =>
@@ -382,7 +369,6 @@ export function createAgentModels(
   return models
 }
 
-/** Provider errors can include request data. Only actionable categories enter Activity. */
 export function safeInferenceError(message: string) {
   if (/401|403|authoriz|authentic|credential/i.test(message))
     return "ChatGPT authorization failed. Reconnect the account."

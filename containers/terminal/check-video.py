@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-"""Container-build regression checks with disposable synthetic media."""
 import json
 from pathlib import Path
 import shutil

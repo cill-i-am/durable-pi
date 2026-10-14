@@ -1,4 +1,3 @@
-// This is the only script in the opaque frame. Generated JavaScript runs on Cloudflare.
 const bridge = String.raw`(() => {
   const channel = "__PI_CHANNEL__";
   let enabled = false;

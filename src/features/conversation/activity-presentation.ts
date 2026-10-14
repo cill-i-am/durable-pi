@@ -13,7 +13,6 @@ type Section =
   | Extract<TimelineItem, { type: "text" | "steer" }>
   | { id: string; type: "inline"; item: ToolItem }
 
-/** Group only adjacent recorded work. Text, steering and editable results keep their order. */
 export function activitySections(items: readonly TimelineItem[]): Section[] {
   const sections: Section[] = []
   let work: WorkItem[] = []
@@ -105,7 +104,6 @@ export type ToolPresentation = {
   destination?: { label: string; view: WorkspaceSearch }
 }
 
-/** A read-only projection of known tool contracts. Arbitrary remote output stays raw. */
 export function toolPresentation(item: ToolItem): ToolPresentation {
   const kind: ToolPresentation["kind"] = item.name.startsWith("browser_")
     ? "browser"

@@ -2,7 +2,6 @@ import { Effect, Schema } from "effect"
 import { PlanFailure, Revision } from "./contracts"
 import type { Plans } from "./plans"
 
-/** The gateway resolves owner and bot before this read-only inspection surface. */
 export function plansRequest(plans: Plans, request: Request, path: string) {
   return Effect.gen(function* () {
     if (request.method !== "GET")

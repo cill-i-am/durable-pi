@@ -22,7 +22,6 @@ export function setMessageDeliveryDefault(mode: SubmissionMode) {
     window.localStorage.setItem(storageKey, mode)
     storageWriteFailed = false
   } catch {
-    // Keep the choice for this page session if browser storage is unavailable.
     storageWriteFailed = true
   }
   window.dispatchEvent(new Event(changeEvent))

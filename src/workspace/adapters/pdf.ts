@@ -9,7 +9,6 @@ import {
 
 export { PDF_PAGE_LIMIT, PDF_TEXT_LIMIT } from "../documents"
 
-/** Text only: never render PDF scripts, follow links, or fetch external fonts/assets. */
 export const extractPdf = (bytes: Uint8Array) =>
   Effect.tryPromise({
     try: async (signal): Promise<ExtractedDocument> => {
@@ -51,7 +50,6 @@ export const extractPdf = (bytes: Uint8Array) =>
             .getReader()
           let pageText = ""
           try {
-            // Drain the page after the cap: early cancel races PDF.js's inline worker stream close.
             for (;;) {
               const result = await reader.read()
               if (result.done) break

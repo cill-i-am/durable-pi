@@ -93,7 +93,6 @@ describe("recorded activity presentation", () => {
     )
     expect(html).toContain("Completed tool calls")
     expect(html).not.toContain("Read Tickets")
-    // Failed, uncertain, streaming and arbitrary remote outputs do not become verified sources.
     for (const item of [
       tool("browser_read", JSON.stringify(page), "error"),
       tool("browser_read", JSON.stringify(page), "interrupted"),

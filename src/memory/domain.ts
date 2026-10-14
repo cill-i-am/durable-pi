@@ -47,7 +47,6 @@ export const validRange = ({ start, count }: Part, total: number) =>
 export const NODE_BYTES = 512
 export const VIEW_BYTES = 128_000
 
-/** Only merge aligned siblings. Persisted parts never split as new text arrives. */
 export function fitView(
   parts: Part[],
   total: number,
@@ -71,8 +70,6 @@ export function fitView(
         !parent
       )
         continue
-      // Age is measured from the pair's LAST message. Measuring from its
-      // first message rewrites old prefixes (notably at T=10).
       const due = (total - (a.start + 2 * a.count - 1)) / a.count
       if (due > score) {
         score = due

@@ -25,7 +25,6 @@ const AccountModels = Schema.Struct({
   ),
 })
 
-/** Account access intersects the installed Responses adapter; neither catalog alone grants access. */
 export function reconcileCatalog(
   value: unknown,
   installed: readonly Model<string>[],

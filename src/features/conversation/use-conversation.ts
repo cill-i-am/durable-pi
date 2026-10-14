@@ -19,8 +19,6 @@ export function useConversation(agentId: string) {
     threadId: id,
     connection,
     live: true,
-    // Pi owns queuing, approvals and execution. No client tools or auto-resume
-    // submissions are registered; the live subscription is a read-only view.
     onCustomEvent(name, value) {
       if (name === "durable-pi.metadata")
         setMetadata({
@@ -39,8 +37,6 @@ export function useConversation(agentId: string) {
     [chat.messages, metadata, id]
   )
   const reload = useCallback(() => setRefresh((value) => value + 1), [])
-  // Admission returns a durable receipt promptly. Do not wait for a model reply
-  // or put pending messages into TanStack's browser-only queue.
   const submit = useCallback(
     (input: Submission) => connection.send([], input),
     [connection]

@@ -10,7 +10,6 @@ interface RoutineHost {
   stop: (id: string) => void
   notify: () => void
 }
-/** Reconciles durable schedule intent with the conversation; the platform owns alarms/retries. */
 export class RoutinePump {
   constructor(
     private readonly store: RoutineStore,

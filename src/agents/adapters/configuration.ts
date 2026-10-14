@@ -6,7 +6,6 @@ type Configuration = Pick<
   "instructions" | "revision" | "status"
 > & { owner: string }
 
-/** Persists the owner's ordered policy in the bot, including an admission fence. */
 export class BotConfigurationStore {
   constructor(private readonly db: Sqlite) {
     db.run(
@@ -27,7 +26,6 @@ export class BotConfigurationStore {
     this.db.transaction(() => {
       const current = this.read()
       if (current && current.owner !== owner) throw new Error("Owner mismatch")
-      // A request admitted before archival cannot reopen the bot with stale policy.
       if (current && current.revision >= profile.revision) return
       this.db.run(
         "INSERT INTO bot_configuration VALUES (1,?,?) ON CONFLICT(id) DO UPDATE SET instructions=excluded.instructions",

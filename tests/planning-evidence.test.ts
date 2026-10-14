@@ -233,7 +233,6 @@ it("checks real bot/task-owned receipts, legacy execution failures, stale eviden
       (await Effect.runPromise(plans.read(id))).plan.steps[0]?.status
     ).toBe("pending")
     unavailable = true
-    // Stop cannot depend on evidence availability, including after a cold restart.
     await Effect.runPromise(plans.cancel(root))
     expect((await Effect.runPromise(plans.read(id))).plan.state).toBe(
       "cancelled"

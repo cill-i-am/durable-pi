@@ -165,8 +165,6 @@ export function useTerminal(
     sequence.current++
     setBusy(true)
     try {
-      // Persist cancellation even if admission is still in flight. A late request
-      // with this ID cannot execute after the owner corrects the next transfer.
       await agentApi(agentId)(
         `terminal/${encodeURIComponent(transferAttempt.input.id)}/cancel`,
         {}
@@ -212,7 +210,6 @@ export function useTerminal(
       sequence.current++
       setBusy(true)
       try {
-        // Native cancellation persists a tombstone even before admission.
         await agentApi(agentId)(`terminal/${encodeURIComponent(id)}/cancel`, {})
         setAttempt((current) => (current?.id === id ? null : current))
         setSessionAttempt((current) => (current === id ? null : current))

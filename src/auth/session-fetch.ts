@@ -1,4 +1,3 @@
-/** Coordinate native session reads with cookie rotation, without caching sessions. */
 export function sessionFetch(fetcher: typeof fetch): typeof fetch {
   let rotation: Promise<void> | undefined
   const reads = new Map<string, Promise<Response>>()
@@ -32,7 +31,6 @@ export function sessionFetch(fetcher: typeof fetch): typeof fetch {
             },
           }
         )
-      // Different native query options/headers must not share an authorization read.
       const headers = new Headers(
         init?.headers ?? (input instanceof Request ? input.headers : undefined)
       )
@@ -44,8 +42,6 @@ export function sessionFetch(fetcher: typeof fetch): typeof fetch {
       ])
       let read = reads.get(key)
       if (!read) {
-        // A single caller's cancellation must not cancel another component's read.
-        // The shared network operation is bounded and cookie rotations still join it.
         read = fetcher(input, { ...init, signal: AbortSignal.timeout(15_000) })
           .then((response) => {
             if (response.status === 429) {
@@ -70,8 +66,6 @@ export function sessionFetch(fetcher: typeof fetch): typeof fetch {
       return (await abortable(read, callerSignal)).clone()
     }
     if (url.pathname.startsWith("/api/auth/") && method !== "GET") {
-      // Includes sign-out, password changes and factor rotation. Old reads cannot
-      // overwrite cookies after an authentication mutation has completed.
       const previous = rotation
       let release!: () => void
       const current = new Promise<void>((resolve) => {

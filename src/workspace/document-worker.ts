@@ -4,7 +4,6 @@ import { MAX_FILE_BYTES } from "./files"
 import { boundedBytes } from "./http"
 import { extractPdf } from "./adapters/pdf"
 
-/** Binding-only parser with an independent platform CPU/memory limit. */
 export default {
   async fetch(request: Request) {
     if (request.method !== "POST" || new URL(request.url).pathname !== "/pdf")

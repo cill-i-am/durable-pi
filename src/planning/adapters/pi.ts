@@ -99,7 +99,6 @@ const fingerprint = async (input: unknown) =>
     (n) => n.toString(16).padStart(2, "0")
   ).join("")
 
-/** Native document snapshots only: no harness opening, resume or evidence reconciliation. */
 export function savedPlanBlocked(
   session: Pick<Session, "snapshot">,
   turnId: string
@@ -118,7 +117,6 @@ export function savedPlanBlocked(
   })
 }
 
-/** The bridge owns warm storage. A cold status read owns only its disposable facade. */
 export function planBlockerStatus(
   current: () => Storage | undefined,
   openReadonly: () => Promise<Storage>,
@@ -132,8 +130,6 @@ export function planBlockerStatus(
     ({ storage }) => {
       const shared = current() ?? storage
       return savedPlanBlocked(createSession(shared), turnId).pipe(
-        // A native startup can replace a cold reader's facade while it awaits.
-        // Discard that view; the next status read uses the bridge's commit queue.
         Effect.map((blocked) =>
           current() && current() !== shared ? undefined : blocked
         )
@@ -144,7 +140,6 @@ export function planBlockerStatus(
   )
 }
 
-/** Native atomic documents own plan state, history, turn bindings and retry receipts together. */
 export function piPlans(
   open: () => Promise<Session>,
   authority: PlanAuthority,
@@ -344,7 +339,6 @@ export function piPlans(
               evidence.push(
                 await Effect.runPromise(transactionEvidence(tx)(ref, roots))
               )
-          // Reject invented, foreign or stale references instead of laundering them into completion.
           if (evidence.some((ref) => ref.state !== "valid"))
             throw new PlanFailure({
               code: "invalid",

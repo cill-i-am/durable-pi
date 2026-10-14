@@ -6,7 +6,6 @@ import {
   type ActivityQuery,
 } from "./contracts"
 
-/** Read-only cross-domain projection. Domain stores remain the only writers. */
 export function activityEntries(
   db: Sqlite,
   agent: ActivityAgent,

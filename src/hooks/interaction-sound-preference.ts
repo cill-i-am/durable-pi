@@ -30,7 +30,6 @@ const setEnabled = (enabled: boolean) => {
     window.localStorage.setItem(storageKey, enabled ? "on" : "off")
     storageWriteFailed = false
   } catch {
-    // The preference still works for this session when storage is unavailable.
     storageWriteFailed = true
   }
   window.dispatchEvent(new Event(changeEvent))

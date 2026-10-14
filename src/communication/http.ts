@@ -2,7 +2,6 @@ import { Effect, Schema } from "effect"
 import { MailboxControl, MessageId, failure } from "./contracts"
 import { Communication } from "./communication"
 
-/** Authenticated owner-facing inspection/control only. Never an envelope ingress. */
 export function communicationRequest(request: Request, path: string) {
   return Effect.gen(function* () {
     const app = yield* Communication

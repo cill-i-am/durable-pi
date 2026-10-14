@@ -33,7 +33,6 @@ function CodeBlock({ node, children }: ComponentProps<"pre"> & ExtraProps) {
   const text = code.children
     .map((child) => (child.type === "text" ? child.value : ""))
     .join("")
-    // Remark appends one newline when converting a code block to HTML.
     .replace(/\n$/, "")
   const classes = code.properties.className
   const language = Array.isArray(classes)

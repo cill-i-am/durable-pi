@@ -6,7 +6,6 @@ import {
   type ActivitySnapshot,
 } from "./contracts"
 
-/** An owner-catalog projection. Failed bots remain visible; reads grant no execution authority. */
 export function activityFeed(
   agents: readonly ActivityAgent[],
   query: ActivityQuery,
@@ -17,8 +16,6 @@ export function activityFeed(
 ) {
   return Effect.gen(function* () {
     const snapshots = new Map<string, ActivitySnapshot>()
-    // RPC promises cannot be cancelled. One deadline stops further admission;
-    // per-call timeouts would free slots while their RPCs were still pending.
     yield* Effect.all(
       agents.map((agent) =>
         Effect.tryPromise({

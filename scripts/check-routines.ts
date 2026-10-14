@@ -91,7 +91,6 @@ try {
     ).status,
     403
   )
-  // No requests reach this bot during the due time. The alarm must create its run first.
   await new Promise((resolve) => setTimeout(resolve, 8500))
   const requestedAt = Date.now()
   let state = Schema.decodeUnknownSync(RoutineList)(

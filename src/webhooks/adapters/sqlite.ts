@@ -3,7 +3,6 @@ import type { RoutineStore } from "../../routines/adapters/sqlite"
 import { type ConfigureWebhook, type WebhookInfo, reject } from "../contracts"
 
 type KeyRow = { revision: number; hash: string | null }
-/** Owns only inbound authority and receipts. RoutineStore owns run execution. */
 export class WebhookStore {
   constructor(
     private readonly db: Sqlite,
@@ -75,7 +74,6 @@ export class WebhookStore {
         input.expectedRevision + 1,
         input.hash
       )
-      // Revoking or rotating a key also cancels its unadmitted work.
       const pending = this.routines.inFlight()
       if (
         pending?.routineId === input.routineId &&

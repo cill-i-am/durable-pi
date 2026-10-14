@@ -29,7 +29,6 @@ type Storage = {
   setItem: (key: string, value: string) => void
 }
 
-/** One shared view for chat/workbench. Server revisions, never optimistic copies, win. */
 export class ObjectStore {
   private state: State = {
     list: [],
@@ -119,7 +118,6 @@ export class ObjectStore {
     }
   }
   private retain(pending: State["pending"]) {
-    // Persist before sending. A browser restart must retain the original retry identity.
     if (!this.storage)
       throw new Error(
         "Browser session storage is unavailable. Reopen this page to save safely."
@@ -157,7 +155,6 @@ export class ObjectStore {
       const { objects } = Schema.decodeUnknownSync(ObjectList)(
         await this.api("objects")
       )
-      // Detail responses and list responses can arrive out of order.
       const merged = objects.map((object) => {
         const old = this.state.list.find((item) => item.id === object.id)
         return old && old.revision > object.revision ? old : object
@@ -270,9 +267,7 @@ export class ObjectStore {
         delete pending[id]
         try {
           this.retain(pending)
-        } catch {
-          /* Keep the original retry on disk; it still cannot duplicate a change. */
-        }
+        } catch {}
       }
       this.set({
         problems: {

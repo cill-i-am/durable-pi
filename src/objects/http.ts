@@ -16,7 +16,6 @@ const invalid = () =>
   })
 const decode = <T>(body: () => T) => Effect.try({ try: body, catch: invalid })
 
-/** Called only after the gateway resolves the authenticated owner and owning bot. */
 export function objectsRequest(
   objects: WorkingObjects,
   request: Request,
@@ -73,7 +72,6 @@ export function objectsRequest(
     const input = yield* decode(() =>
       Schema.decodeUnknownSync(ObjectMutation)(raw)
     )
-    // The browser cannot impersonate a native tool's durable operation identity.
     yield* decode(() => Schema.decodeUnknownSync(ObjectId)(input.operationId))
     return Response.json(
       yield* objects.mutate(input, {

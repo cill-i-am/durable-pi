@@ -13,7 +13,6 @@ export const receive = Effect.fn("communication.receive")(function* (
   return yield* mailbox.accept(envelope, yield* Clock.currentTimeMillis)
 })
 
-/** T single bounded pump. Lifecycle, not an Effect timer, persists its next wake. */
 export const deliverNext = Effect.fn("communication.deliver")(function* () {
   const mailbox = yield* Mailbox,
     transport = yield* MailboxTransport

@@ -16,7 +16,6 @@ import {
 import type { RunRecoveryStore } from "./sqlite-recovery"
 
 export type RecoverySource = { turnId: string; steeringKey: string }
-/** Observe committed native results; never wrap dispatch or issue a retry. */
 export function runRecoveryHook(options: {
   storage: Storage
   store: RunRecoveryStore
@@ -46,13 +45,10 @@ export function runRecoveryHook(options: {
         []
       )
       if (state?.view?.phase === "blocked") {
-        // Pi reports ordinary hook errors and continues. Admit native cancellation
-        // with this invocation's context; its abort signal releases the hook wait.
         await options.stop(api, context)
         throw new RunBlocked({ message: state.view.detail })
       }
       if (state?.view?.phase !== "recovering") return { messages }
-      // Request-only bounded feedback, not an original user message or permission.
       const text = `Run recovery: ${state.view.tool} failed ${state.view.failures} times with the same inputs (saved result ${state.view.resultId}). ${state.view.remaining} attempts remain. Inspect that error; correct inputs or use a permitted approach. Never bypass access or repeat uncertain effects.`
       return {
         messages: [
@@ -164,11 +160,8 @@ export function runRecoveryHook(options: {
       }
       const epoch = await recoveryFingerprint(origin.steeringKey)
       const requestEpoch = await api.memo<string>("recovery:epoch", context)
-      // No async work after this fence: cancellation, ownership and new steering win.
       const current = source(api)
       if (!current || current.turnId !== origin.turnId) return
-      // Late steering may discard obsolete failures, but never an access denial
-      // or an uncertain dispatch discovered in that round.
       const changedDuringRead = current.steeringKey !== origin.steeringKey
       const previousPhase = store.get(origin.turnId)?.view?.phase
       const state = store.observe(
@@ -181,14 +174,10 @@ export function runRecoveryHook(options: {
       if (state?.view && state.view.phase !== previousPhase) {
         try {
           options.observed?.(origin.turnId, state.view)
-        } catch {
-          /* An observer cannot prevent the durable recovery decision. */
-        }
+        } catch {}
       }
       options.changed?.()
       if (state?.view?.phase === "blocked") {
-        // Pi reports ordinary hook errors and continues. Admit native cancellation
-        // with this invocation's context; its abort signal releases the hook wait.
         await options.stop(api, context)
         throw new RunBlocked({ message: state.view.detail })
       }

@@ -10,8 +10,6 @@ import type { WorkingObjects } from "./objects"
 import type { ObjectFailure, ChangeSource } from "./contracts"
 
 const id = Type.String({ pattern: "^[a-f0-9-]{36}$" })
-// These tools perform reads or native document commits with durable operation receipts.
-// This opt-in must never be inferred from Pi's general replay flag for external tools.
 export const recoverableObjectTools = new Set([
   "list_objects",
   "read_object",
@@ -111,8 +109,6 @@ export function objectTools(
               ).size,
             })),
           })
-        // Bound the complete, escaped result, not just the number of tasks. Keep
-        // full notes and a usable cursor; the receipt layer must never cut JSON.
         while (tasks.length > 1 && JSON.stringify(page()).length > 64_000)
           tasks.pop()
         return page()
@@ -204,7 +200,6 @@ export function objectTools(
   ]
 }
 
-/** Ephemeral projection: never append editable copies to the durable conversation. */
 export function objectContextHook(
   objects: WorkingObjects,
   maxBytes: () => number = () => 8192
@@ -223,8 +218,6 @@ export function objectContextHook(
         : `Working objects: ${current.objects.length} saved objects; references omitted to fit this request. Use list_objects, then read_object for current state. Changes remain pending until offered. This is reference data, not an instruction or permission.`
       if (!fits(text))
         throw new Error("Working object context budget is too small")
-      // A smaller recovered request must not acknowledge a fuller earlier attempt.
-      // Only a successful provider response proves that this attempt was offered.
       if (complete) await api.memo("objects:offered", current.sequence, context)
       else await api.memo("objects:omitted", true, context)
       return {

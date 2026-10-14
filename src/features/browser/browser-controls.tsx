@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { agentUrl } from "@/http/client"
 
-/** Owner input lives only in this mounted form and the authenticated command request. */
 export function BrowserControls({
   agentId,
   state,

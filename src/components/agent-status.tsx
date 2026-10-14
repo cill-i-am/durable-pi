@@ -49,7 +49,6 @@ export function AgentStatus({
   )
 }
 
-/** Decorative only: the owning agent link supplies the accessible status. */
 export function AgentStatusMarker({
   status,
 }: {

@@ -137,7 +137,6 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
   async function updateArchive(agent: AgentProfile, archived: boolean) {
     await api("/api/agent/bots/archive", { id: agent.id, archived })
     setError("")
-    // A failed list refresh must not present a confirmed mutation as a failed save.
     await catalog.refresh().catch(() => {
       setError(
         "Agent updated, but the list could not refresh. Try refreshing it."
@@ -388,8 +387,6 @@ function AgentWorkspace({
     })
   }, [agent.id, runState, runTurnId, onStatus])
   const files = useFiles(agent.id)
-  // Keep only the last rendered route view while Base UI completes its exit.
-  // The URL remains authoritative; this snapshot cannot admit another action.
   const [workbenchView, setWorkbenchView] = useState({
     panel: workbench,
     search: location.search,
@@ -457,7 +454,6 @@ function AgentWorkspace({
     executionPending ||
     filePending
   function openWorkbench(value: Workbench | null) {
-    // Restored, unconfirmed object saves must remain reachable after a reload.
     if (!locked || (value === "objects" && !editingLocked)) setWorkbench(value)
   }
   function openAgents() {

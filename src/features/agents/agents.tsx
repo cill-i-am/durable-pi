@@ -93,12 +93,8 @@ export function useAgentCatalog(ownerId: string, selectedId?: AgentId) {
     const controller = new AbortController()
     try {
       setSelected(localStorage.getItem(`pi:selected:${ownerId}`) ?? homeAgentId)
-    } catch {
-      /* Storage may be disabled. */
-    }
-    void refresh(controller.signal).catch(() => {
-      /* Rendered by the reducer. */
-    })
+    } catch {}
+    void refresh(controller.signal).catch(() => {})
     return () => controller.abort()
   }, [ownerId, refresh])
   useEffect(() => {
@@ -111,17 +107,13 @@ export function useAgentCatalog(ownerId: string, selectedId?: AgentId) {
       return
     try {
       localStorage.setItem(`pi:selected:${ownerId}`, selectedId)
-    } catch {
-      /* Optional preference only. */
-    }
+    } catch {}
   }, [selectedId, ownerId, state.agents])
   const select = (id: AgentId) => {
     setSelected(id)
     try {
       localStorage.setItem(`pi:selected:${ownerId}`, id)
-    } catch {
-      /* Selection still works without storage. */
-    }
+    } catch {}
   }
   return {
     ...state,

@@ -9,7 +9,6 @@ import type {
   ObjectSummary,
 } from "./contracts"
 
-/** Working objects owns state and events; callers supply authenticated, non-model-authored provenance. */
 export type WorkingObjects = {
   list: () => Effect.Effect<ObjectSummary[], ObjectFailure>
   read: (

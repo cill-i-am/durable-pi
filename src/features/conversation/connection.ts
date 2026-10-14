@@ -6,7 +6,6 @@ import { Schema } from "effect"
 import { SendInput } from "@/conversations/contracts"
 import { api, agentUrl, ApiError } from "@/http/client"
 
-/** Pi resumes by snapshot, not by a delivery-log cursor. Only GETs are retried. */
 export function conversationConnection(
   agentId: string
 ): SubscribeConnectionAdapter {
@@ -61,8 +60,6 @@ export function conversationConnection(
             value: "Connection interrupted. Reconnecting…",
           }
         }
-        // The server rotates connections to reauthorize sessions. TanStack parses
-        // SSE; this bounded retry only reopens Pi's read-only snapshot stream.
         await new Promise<void>((resolve) => {
           const finish = () => {
             clearTimeout(timer)
@@ -76,7 +73,6 @@ export function conversationConnection(
       }
     },
     async send(_messages, data, signal) {
-      // Never trust a client transcript or let an SDK continuation execute work.
       const input = Schema.decodeUnknownSync(SendInput)(data)
       await api(agentUrl(agentId, "send"), input, signal)
     },

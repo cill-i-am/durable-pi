@@ -109,7 +109,6 @@ export class CommunicationError extends Schema.TaggedError<CommunicationError>()
 export const failure = (code: CommunicationError["code"], message: string) =>
   new CommunicationError({ code, message })
 
-/** Internal procedures only. The host authenticates against the sender's committed outbox. */
 export class MailboxRpc extends RpcGroup.make(
   Rpc.make("deliver", {
     payload: { envelope: Envelope },

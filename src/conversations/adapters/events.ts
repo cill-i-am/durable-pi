@@ -10,7 +10,6 @@ type Source = {
   subscribe: (listener: () => void) => () => void
 }
 
-/** Each connection starts from committed state. Slow readers reconnect instead of accumulating history. */
 export function conversationEvents(
   source: Source,
   signal: AbortSignal,
@@ -98,7 +97,6 @@ export function conversationEvents(
             }
             last = state
           } catch {
-            // EventSource reconnects and receives a fresh durable snapshot.
             await close()
           } finally {
             refreshing = false
@@ -112,7 +110,6 @@ export function conversationEvents(
           if (!closed && !timer) timer = setTimeout(() => void refresh(), 80)
         }
         const unsubscribe = source.subscribe(schedule)
-        // Force periodic authorization at the website boundary, including session revocation.
         const expires = setTimeout(() => void close(), 60_000)
         const heartbeat = setInterval(() => {
           if (!closed) {

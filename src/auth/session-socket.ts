@@ -1,4 +1,3 @@
-/** A browser socket never outlives its database-backed session authorization. */
 export function bindSessionSocket(
   browser: WebSocket,
   upstream: WebSocket,
@@ -14,12 +13,9 @@ export function bindSessionSocket(
     for (const socket of [browser, upstream]) {
       try {
         socket.close(code, reason)
-      } catch {
-        /* Already disconnected. */
-      }
+      } catch {}
     }
   }
-  // The deadline is enforced even while a slow database check is outstanding.
   const timer = setInterval(() => {
     if (Date.now() >= deadline) return close(1008, "Sign in again")
     if (checking) return

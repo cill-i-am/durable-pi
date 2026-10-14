@@ -12,7 +12,6 @@ import {
   ROUTINE_BUDGET_MS,
 } from "../contracts"
 
-/** Owns schedule intent, run admission and replay receipts in the owning bot's database. */
 export class RoutineStore {
   constructor(
     private readonly db: Sqlite,
@@ -311,7 +310,6 @@ export class RoutineStore {
       return { routine, run: this.createRun(routine, "manual", this.now()) }
     })
   }
-  /** Called within the webhook receipt transaction in the same bot database. */
   acceptWebhook(id: string, payload: string) {
     this.available()
     const routine = this.get(id)

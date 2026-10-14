@@ -247,9 +247,7 @@ export class TerminalStore {
   private observe(run: CommandRun) {
     try {
       this.onFinished?.(run)
-    } catch {
-      /* Telemetry cannot undo a committed receipt. */
-    }
+    } catch {}
   }
   recover() {
     const interrupted = this.db.all<{ id: string }>(

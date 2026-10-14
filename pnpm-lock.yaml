@@ -164,7 +164,7 @@ settings:
 
 patchedDependencies:
   alchemy@2.0.0-beta.81: 8c7c549a52a1b098717482bd747c82276563d50ae80d28cd094d5963fd1ef00d
-  '@modelcontextprotocol/client@2.0.0': 15d1bd285126698c329611c034f679f96d0c99d2addd53f58fbebd991036b1d4
+  '@modelcontextprotocol/client@2.0.0': 60b94511da18761b992bd96da8e0f737edca1ab7fbd3593fc80e80ce9d01ca9b
 
 importers:
 
@@ -214,7 +214,7 @@ importers:
         version: 5.3.0
       '@modelcontextprotocol/client':
         specifier: 2.0.0
-        version: 2.0.0(patch_hash=15d1bd285126698c329611c034f679f96d0c99d2addd53f58fbebd991036b1d4)
+        version: 2.0.0(patch_hash=60b94511da18761b992bd96da8e0f737edca1ab7fbd3593fc80e80ce9d01ca9b)
       '@shadcn/react':
         specifier: ^0.3.1
         version: 0.3.1(@types/react@19.3.0)(react@19.3.0)
@@ -250,7 +250,7 @@ importers:
         version: 6.0.0
       agents:
         specifier: 0.27.0
-        version: 0.27.0(@babel/core@8.0.6)(@babel/runtime@7.29.7)(@earendil-works/pi-ai@1.0.4(@aws-sdk/credential-provider-node@3.972.84)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.6.5))(@smithy/signature-v4@5.7.4)(undici@8.11.2)(ws@8.22.0)(zod@4.6.5))(@earendil-works/pi-durable@1.0.4(@aws-sdk/credential-provider-node@3.972.84)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.6.5))(@smithy/signature-v4@5.7.4)(undici@8.11.2)(ws@8.22.0)(zod@4.6.5))(@modelcontextprotocol/client@2.0.0(patch_hash=15d1bd285126698c329611c034f679f96d0c99d2addd53f58fbebd991036b1d4))(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.6.5))(@modelcontextprotocol/server@2.0.0)(@tanstack/ai@0.68.0(zod@4.6.5))(react@19.3.0)(rolldown@1.2.12)(vite@8.3.3(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))(zod@4.6.5)
+        version: 0.27.0(@babel/core@8.0.6)(@babel/runtime@7.29.7)(@earendil-works/pi-ai@1.0.4(@aws-sdk/credential-provider-node@3.972.84)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.6.5))(@smithy/signature-v4@5.7.4)(undici@8.11.2)(ws@8.22.0)(zod@4.6.5))(@earendil-works/pi-durable@1.0.4(@aws-sdk/credential-provider-node@3.972.84)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.6.5))(@smithy/signature-v4@5.7.4)(undici@8.11.2)(ws@8.22.0)(zod@4.6.5))(@modelcontextprotocol/client@2.0.0(patch_hash=60b94511da18761b992bd96da8e0f737edca1ab7fbd3593fc80e80ce9d01ca9b))(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.6.5))(@modelcontextprotocol/server@2.0.0)(@tanstack/ai@0.68.0(zod@4.6.5))(react@19.3.0)(rolldown@1.2.12)(vite@8.3.3(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))(zod@4.6.5)
       alchemy:
         specifier: 2.0.0-beta.81
         version: 2.0.0-beta.81(patch_hash=8c7c549a52a1b098717482bd747c82276563d50ae80d28cd094d5963fd1ef00d)(caa46a6341af293e379fd403954f4700)
@@ -8183,7 +8183,7 @@ snapshots:
   '@libsql/win32-x64-msvc@0.5.29':
     optional: true
 
-  '@modelcontextprotocol/client@2.0.0(patch_hash=15d1bd285126698c329611c034f679f96d0c99d2addd53f58fbebd991036b1d4)':
+  '@modelcontextprotocol/client@2.0.0(patch_hash=60b94511da18761b992bd96da8e0f737edca1ab7fbd3593fc80e80ce9d01ca9b)':
     dependencies:
       '@modelcontextprotocol/core': 2.0.0
       cross-spawn: 7.0.6
@@ -9464,11 +9464,11 @@ snapshots:
 
   agent-base@9.0.0: {}
 
-  agents@0.27.0(@babel/core@8.0.6)(@babel/runtime@7.29.7)(@earendil-works/pi-ai@1.0.4(@aws-sdk/credential-provider-node@3.972.84)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.6.5))(@smithy/signature-v4@5.7.4)(undici@8.11.2)(ws@8.22.0)(zod@4.6.5))(@earendil-works/pi-durable@1.0.4(@aws-sdk/credential-provider-node@3.972.84)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.6.5))(@smithy/signature-v4@5.7.4)(undici@8.11.2)(ws@8.22.0)(zod@4.6.5))(@modelcontextprotocol/client@2.0.0(patch_hash=15d1bd285126698c329611c034f679f96d0c99d2addd53f58fbebd991036b1d4))(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.6.5))(@modelcontextprotocol/server@2.0.0)(@tanstack/ai@0.68.0(zod@4.6.5))(react@19.3.0)(rolldown@1.2.12)(vite@8.3.3(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))(zod@4.6.5):
+  agents@0.27.0(@babel/core@8.0.6)(@babel/runtime@7.29.7)(@earendil-works/pi-ai@1.0.4(@aws-sdk/credential-provider-node@3.972.84)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.6.5))(@smithy/signature-v4@5.7.4)(undici@8.11.2)(ws@8.22.0)(zod@4.6.5))(@earendil-works/pi-durable@1.0.4(@aws-sdk/credential-provider-node@3.972.84)(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.6.5))(@smithy/signature-v4@5.7.4)(undici@8.11.2)(ws@8.22.0)(zod@4.6.5))(@modelcontextprotocol/client@2.0.0(patch_hash=60b94511da18761b992bd96da8e0f737edca1ab7fbd3593fc80e80ce9d01ca9b))(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.6.5))(@modelcontextprotocol/server@2.0.0)(@tanstack/ai@0.68.0(zod@4.6.5))(react@19.3.0)(rolldown@1.2.12)(vite@8.3.3(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))(zod@4.6.5):
     dependencies:
       '@babel/plugin-proposal-decorators': 8.0.2(@babel/core@8.0.6)
       '@cfworker/json-schema': 4.1.1
-      '@modelcontextprotocol/client': 2.0.0(patch_hash=15d1bd285126698c329611c034f679f96d0c99d2addd53f58fbebd991036b1d4)
+      '@modelcontextprotocol/client': 2.0.0(patch_hash=60b94511da18761b992bd96da8e0f737edca1ab7fbd3593fc80e80ce9d01ca9b)
       '@modelcontextprotocol/sdk': 1.30.0(@cfworker/json-schema@4.1.1)(zod@4.6.5)
       '@modelcontextprotocol/server': 2.0.0
       '@rolldown/plugin-babel': 0.2.4(@babel/core@8.0.6)(@babel/runtime@7.29.7)(rolldown@1.2.12)(vite@8.3.3(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))

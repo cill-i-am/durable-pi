@@ -13,7 +13,6 @@ import {
   type BrowserController,
 } from "../contracts"
 
-/** Browser Run owns Chromium, session networking, and idle expiry. Never exports a CDP capability. */
 export class CloudflareBrowser implements BrowserDriver {
   constructor(private readonly binding: BrowserRun) {}
   async open(
@@ -38,7 +37,6 @@ export class CloudflareBrowser implements BrowserDriver {
     try {
       const page = await browser.newPage()
       if (!unrestricted) {
-        // Fail closed when a runtime accepts, but does not enforce, guardrails.
         const blocked = await page.goto(
           "https://durable-pi-policy-probe.invalid",
           { waitUntil: "domcontentloaded", timeout: 10_000 }
@@ -79,7 +77,6 @@ export class CloudflareBrowser implements BrowserDriver {
       .catch((cause: unknown) => {
         throw sessionFailure(cause, "connect")
       })
-    // Bound a hung CDP operation; disconnect rejects outstanding commands before releasing the tab.
     const deadline = setTimeout(() => {
       void browser.disconnect().catch(() => {})
     }, 30_000)
@@ -141,9 +138,6 @@ export class CloudflareBrowser implements BrowserDriver {
           waitUntil: "domcontentloaded",
         }
       )
-      // Chromium completed this navigation with its own error document. This is
-      // an observed failed load, not an unknown click/typing outcome. Keep it out
-      // of snapshot() so an interaction reaching this document remains uncertain.
       if (page.url() === "chrome-error://chromewebdata/")
         throw new BrowserFailure({
           outcome: "failed",
@@ -272,7 +266,6 @@ export class CloudflareBrowser implements BrowserDriver {
       url,
       capturedAt: Date.now(),
     })
-    // Page observations are untrusted data. No HTML, script, or cookie values reach the UI.
     let screenshot: string | null = null
     try {
       await this.isolated(page, MASK_FIELDS)
@@ -297,15 +290,10 @@ export class CloudflareBrowser implements BrowserDriver {
     return { page: contents, screenshot }
   }
   async close(id: string) {
-    // Closing an already-expired session is complete; errors still retry through the cleanup job.
     if (await this.binding.getSession(id)) await this.binding.closeSession(id)
   }
 }
 
-/** Puppeteer 1.4 reports launch HTTP status inside Error.message. Extract only
- * its fixed status marker; provider bodies and session handles stay private.
- * Neither launch nor reconnect has dispatched the requested page action.
- */
 function sessionFailure(cause: unknown, operation: "open" | "connect") {
   const status =
     cause instanceof Error
@@ -324,7 +312,6 @@ function sessionFailure(cause: unknown, operation: "open" | "connect") {
   })
 }
 
-// Native input properties normalize HTML case. Unknown/shadow focus fails closed.
 export const SUPPORTED_FOCUS = `(() => {
   let element = document.activeElement;
   for (let n = 0; n < 10 && element?.shadowRoot?.activeElement; n++) element = element.shadowRoot.activeElement;
@@ -336,8 +323,6 @@ export const SENSITIVE_FOCUS = `(() => {
   return !element || !['INPUT', 'TEXTAREA'].includes(element.tagName) || element.disabled || element.readOnly || (element.type || '').toLowerCase() === 'password' || /password|one-time-code/.test((element.autocomplete || '').toLowerCase());
 })()`
 
-// Mask every editable value, including revealed passwords and open shadow controls.
-// This does not hide text a site independently renders elsewhere after submission.
 export const MASK_FIELDS = `(() => {
   const masks = globalThis.__durablePiMasks = [];
   const roots = [document];
@@ -364,7 +349,6 @@ export const UNMASK_FIELDS = `(() => {
   return true;
 })()`
 
-// Trusted built-in observer, evaluated only in an isolated world. Never accepts page or model code.
 export const PAGE_OBSERVATION = `(() => ({
       focus: (() => {
         let el = document.activeElement;

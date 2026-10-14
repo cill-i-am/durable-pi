@@ -23,7 +23,6 @@ import {
 import type { WorkingObjects } from "../objects"
 import { changeChecklist } from "../checklist"
 
-// Session scope is the bot's native Harness, shared by all its per-turn conversations.
 const Catalog = defineDoc({
   kind: "working-objects.catalog",
   scope: "session",
@@ -68,7 +67,6 @@ const Operations = defineDocFamily({
     receipt: MutationReceipt | null
   } => ({ digest: "", cancelled: false, receipt: null }),
 })
-/** Read through the caller's native transaction; never nest Session.snapshot in a commit. */
 export async function checklistInTransaction(tx: Tx, id: string) {
   return (await tx.doc(Objects, id, null)).value
 }
@@ -217,7 +215,6 @@ export function piWorkingObjects(
           )
           const id = eventKey(value.id, value.revision)
           const event = changes.length ? await tx.doc(Events, id, null) : null
-          // Recheck after asynchronous document reads; revocation/Stop may have arrived meanwhile.
           writable(source)
           if (event) {
             event.value = {

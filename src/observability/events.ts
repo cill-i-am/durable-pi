@@ -4,7 +4,6 @@ import type { CommandRun } from "../terminal/contracts"
 import type { RecoveryView } from "../conversations/recovery"
 import type { Attempt } from "../inference/usage"
 
-/** Observations only. Durable domain records remain the source of truth. */
 export function inferenceFields(attempt: Attempt, botId?: string) {
   return {
     event: "inference.finished",
@@ -31,7 +30,6 @@ export function inferenceFields(attempt: Attempt, botId?: string) {
   }
 }
 
-// Native Pi callbacks are synchronous. Logging has no network/exporter lifetime.
 export function reportInference(attempt: Attempt, botId?: string) {
   Effect.runSync(
     (attempt.outcome === "failed" || attempt.outcome === "incomplete"

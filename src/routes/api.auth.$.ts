@@ -6,7 +6,6 @@ async function handle(request: Request) {
   const response = await createAuth(getEnv(), false, runInBackground).handler(
     request
   )
-  // Factor setup and the native session list contain credentials. Never cache them.
   response.headers.set("Cache-Control", "private, no-store")
   response.headers.set("Pragma", "no-cache")
   response.headers.set("X-Content-Type-Options", "nosniff")

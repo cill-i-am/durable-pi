@@ -160,7 +160,6 @@ it("persists atomic plans, revisions, root bindings and replay receipts across r
       )
     ).toBe("conflict")
     expect((await run(plans.context(origin))).current?.inputRevision).toBe(0)
-    // Native delivery can lag the accepted steer, particularly for image preparation.
     origin = { ...origin, pendingInputs: true }
     expect(
       await outcome(plans.update(update(6, origin, initial.id, 2), origin))
@@ -486,7 +485,6 @@ it("uses native tools in a multi-step run, injects one fresh context per request
     expect(JSON.stringify(events.snapshot.entries)).not.toContain(
       "Durable planning context"
     )
-    // Only explicit tool arguments contain plans in original history; update results are small receipts.
     const results = events.snapshot.entries
       .flatMap((entry) => entry.model ?? [])
       .filter((message) => message.role === "toolResult")
@@ -695,7 +693,6 @@ it("inspects the bound blocker after native restart without revalidating evidenc
     storage = await openNodeSqliteStorage(path)
     harness = await Harness.open(storage, options, ctx)
 
-    // Startup during acquisition adopts the shared queue and releases the unused cold facade.
     let live: typeof storage | undefined
     const unusedCold = await openNodeSqliteStorage(path)
     const unusedClose = vi.spyOn(unusedCold, "close")
@@ -713,7 +710,6 @@ it("inspects the bound blocker after native restart without revalidating evidenc
     ).toBe(true)
     expect(unusedClose).toHaveBeenCalledOnce()
 
-    // Startup after snapshots begin invalidates that view rather than publishing it.
     live = undefined
     const replacedCold = await openNodeSqliteStorage(path)
     const find = replacedCold.findDocument.bind(replacedCold)

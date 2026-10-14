@@ -10,7 +10,6 @@ import type {
   CommunicationError,
 } from "./contracts"
 
-/** Each operation is one local SQLite transaction; network and Pi calls happen outside it. */
 export class Mailbox extends Context.Service<
   Mailbox,
   {

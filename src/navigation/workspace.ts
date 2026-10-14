@@ -36,8 +36,6 @@ export const SettingsSection = Schema.Literals([
   "connections",
   "security",
 ])
-// Execution owns the receipt identity (e.g. command:<Pi task ID> or code:<Pi task ID>).
-// Routing preserves it as one encoded segment; it never renames the durable record.
 export const ResourceId = Schema.String.check(
   Schema.isPattern(/^[a-zA-Z0-9_:-]{1,200}$/)
 )
@@ -54,7 +52,6 @@ const Tab = Schema.Literals([
   "timeline",
   "webhook",
 ])
-/** Only view state belongs in search. panel/item describe the view behind Settings. */
 const Search = Schema.Struct({
   tab: Schema.optional(Tab),
   settingsView: Schema.optional(Schema.Literals(["sections", "detail"])),
@@ -77,7 +74,6 @@ const Search = Schema.Struct({
   item: Schema.optional(ResourceId),
 })
 export type WorkspaceQuery = typeof Search.Type
-/** Derived view, never a second source of routing state. */
 export type WorkspaceSearch = WorkspaceQuery & {
   settings?: SettingsCategory
   security?: boolean
@@ -144,7 +140,6 @@ export function workspaceView(
   return view
 }
 
-/** Central typed destination builder, used by links and imperative commands alike. */
 export function workspaceDestination(
   agentId: AgentId,
   view: WorkspaceSearch = {}
@@ -175,7 +170,6 @@ export function workspaceDestination(
   return { to: "/agents/$agentId" as const, params: { agentId }, search: query }
 }
 
-/** Auth redirects recognize only navigable pages; a URL never grants access or executes an action. */
 export function workspaceReturnPath(value: string, depth = 0): string {
   try {
     if (depth > 3) return "/"

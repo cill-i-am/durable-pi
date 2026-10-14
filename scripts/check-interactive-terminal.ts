@@ -68,8 +68,6 @@ async function rejectedSocket(
   headers: Record<string, string>,
   agent = bot
 ) {
-  // Vite's local upgrade bridge drops non-101 replies. Send the same Upgrade
-  // header over HTTP to observe the authenticated Worker's actual rejection.
   await new Promise<void>((resolve, reject) => {
     const request = httpRequest(
       socketUrl(id, agent).replace("ws:", "http:"),
@@ -118,7 +116,6 @@ async function connect(id: string) {
     socket,
     command: async (command: string) => {
       const marker = crypto.randomUUID().replaceAll("-", "")
-      // The complete marker never appears in the echoed command, proving actual shell output.
       socket.send(
         Buffer.from(
           `${command}\n printf '\\n%s%s\\n' '${marker.slice(0, 16)}' '${marker.slice(16)}'\r`
@@ -230,7 +227,6 @@ try {
     200
   )
   assert.equal((await api(`terminal/session/${expired}/renew`, {})).status, 401)
-  // Socket traffic cannot renew authority after logout.
   const traffic = setInterval(() => {
     if (fourth.socket.readyState === WebSocket.OPEN)
       fourth.socket.send(Buffer.from("\r"))

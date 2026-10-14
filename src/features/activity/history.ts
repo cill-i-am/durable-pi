@@ -1,6 +1,5 @@
 import type { PlanRevision } from "@/planning/contracts"
 
-/** Polling advances the head page. Fetch at the first gap, never from a stale mount-time cursor. */
 export function historyPage(
   current: readonly PlanRevision[],
   older: readonly PlanRevision[]

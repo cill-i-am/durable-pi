@@ -9,8 +9,6 @@ import * as FetchHttpClient from "effect/http/FetchHttpClient"
 import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
 
-// One-time, copy-only migration. Keep the local state as a private backup.
-// Conflicting remote state is never overwritten; a partial copy can be resumed.
 const credentialsPath = process.argv[2]
 if (!credentialsPath)
   throw new Error("Pass the private Alchemy state credentials file path")

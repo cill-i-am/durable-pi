@@ -192,7 +192,6 @@ export function workspaceLayer(
           }
           return yield* attempt(() =>
             db.transaction(() => {
-              // Storage reads yield: recheck the archive and Trash fences at commit.
               assertWritable()
               active(id)
               db.run(

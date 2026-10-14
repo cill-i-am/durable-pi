@@ -1,3 +1,2 @@
 #!/bin/sh
-# Give Bash a controlling terminal so job control and Ctrl+C work with Bun's PTY.
 exec setsid --ctty bash -i

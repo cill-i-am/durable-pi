@@ -37,7 +37,6 @@ function setEnabled(enabled: boolean) {
     window.localStorage.setItem(storageKey, enabled ? "on" : "off")
     storageWriteFailed = false
   } catch {
-    // Keep the control useful for this session when device storage is blocked.
     storageWriteFailed = true
   }
   window.dispatchEvent(new Event(changeEvent))

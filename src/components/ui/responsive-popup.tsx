@@ -9,7 +9,6 @@ const PopupContext = React.createContext<{
   afterClose: React.RefObject<(() => void) | null>
 } | null>(null)
 
-/** Keep menu/select state in its native root; Drawer owns mobile presentation. */
 function Root({
   open,
   onOpenChange,
@@ -22,8 +21,6 @@ function Root({
   const trigger = React.useRef<HTMLElement>(null)
   const parent = React.useContext(PopupContext)
   const localAction = React.useRef<(() => void) | null>(null)
-  // A selected submenu item closes the whole menu tree. Its root must own
-  // the handoff because the child unmounts with the parent's exit animation.
   const afterClose = parent?.afterClose ?? localAction
   return (
     <PopupContext.Provider value={{ mobile, trigger, afterClose }}>

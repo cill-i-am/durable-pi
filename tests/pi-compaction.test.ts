@@ -134,7 +134,6 @@ it.each(["continue", "restart", "cancel"])(
               options.signal?.addEventListener("abort", abort, { once: true })
           })
         }
-        // This synthetic summarizer can only preserve instructions it was given.
         expect(text(input.messages)).toContain("read-only")
         return fauxAssistantMessage(
           text(input.messages).includes("Use metric units")
@@ -436,7 +435,6 @@ it.each(["continue", "restart", "cancel"])(
           request.messages.match(/Working objects: current/g)
         ).toHaveLength(1)
       }
-      // Tool pairs remain intact in the actual provider requests after safe cut selection.
       for (const request of requests.filter(
         (candidate) => !candidate.summary
       )) {

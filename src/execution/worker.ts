@@ -4,7 +4,6 @@ import { boundedBytes } from "../workspace/http"
 import { CodeInput } from "./contracts"
 import { executeCode } from "./adapters/dynamic-worker"
 
-/** Private service: no parent storage, model credentials, public route or outbound code access. */
 export default {
   async fetch(request: Request, env: ExecutionEnv) {
     if (request.method !== "POST" || new URL(request.url).pathname !== "/run")

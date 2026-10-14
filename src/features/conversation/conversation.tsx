@@ -144,8 +144,6 @@ export function Conversation({
       pending.current = null
       setProfile("auto")
       setJob("conversation")
-      // The existing live stream publishes committed mutations. Recreating
-      // its TanStack client here would clear the transcript during hydration.
       return true
     } catch (e) {
       if (rejectedModelAttempt(e)) pending.current = null
