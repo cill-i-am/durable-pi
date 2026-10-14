@@ -17,7 +17,6 @@ import { Link } from "@tanstack/react-router"
 import { Option, Schema } from "effect"
 import { AgentId } from "@/agents/contracts"
 import { workspaceDestination } from "@/navigation/workspace"
-import { ActivityOrb } from "@/components/activity-visuals"
 import { CopyButton } from "@/components/copy-button"
 import { Badge } from "@/components/ui/badge"
 import { InlineApp } from "@/features/apps"
@@ -26,7 +25,6 @@ import { FileAttachments } from "@/features/files"
 import type { FileInfo } from "@/workspace/files"
 import type { ChatState, TimelineItem } from "../../conversations/contracts"
 import { Markdown } from "../../components/markdown"
-import { Button } from "../../components/ui/button"
 import {
   Message,
   MessageContent,
@@ -34,10 +32,22 @@ import {
 } from "../../components/ui/message"
 import { Bubble, BubbleContent } from "../../components/ui/bubble"
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "../../components/ui/collapsible"
+  Trace,
+  TraceLine,
+  TraceIcon,
+  TraceTitle,
+  TraceDescription,
+  TraceCollapsible,
+  TraceCollapsibleContent,
+  TraceCollapsibleTrigger,
+} from "@/components/ui/trace"
+import {
+  CodeBlock,
+  CodeBlockHeader,
+  CodeBlockTitle,
+  CodeBlockActions,
+  CodeBlockContent,
+} from "@/components/ui/code-block"
 import {
   activitySections,
   toolPresentation,
@@ -126,86 +136,90 @@ function WorkGroup({
   const [expanded, setExpanded] = useState<boolean | null>(null)
   const view = workPresentation(items, status, current, waitingForApproval)
   return (
-    <Collapsible
-      className="group/work activity-group"
-      open={expanded ?? view.defaultOpen}
-      onOpenChange={setExpanded}
-    >
-      <CollapsibleTrigger
-        render={<Button variant="ghost" className="activity-group-trigger" />}
+    <Trace>
+      <TraceCollapsible
+        open={expanded ?? view.defaultOpen}
+        onOpenChange={setExpanded}
       >
-        <span className="activity-icon-lane">
-          {view.active ? (
-            <ActivityOrb
-              state={
-                view.label === "Browsing"
-                  ? "connecting"
-                  : view.label === "Searching memory"
-                    ? "searching"
-                    : "working"
-              }
-            />
-          ) : view.paused ? (
-            <Pause aria-hidden="true" />
-          ) : view.attention ? (
-            <CircleAlert aria-hidden="true" />
-          ) : view.count ? (
-            <CircleCheck aria-hidden="true" />
-          ) : (
-            <Brain aria-hidden="true" />
-          )}
-        </span>
-        <span className="activity-group-label">{view.label}</span>
-        {!!view.count && (
-          <span className="activity-count">
-            {view.count} {view.count === 1 ? "step" : "steps"}
-          </span>
-        )}
-        <ChevronRight
-          aria-hidden="true"
-          className="group-data-open/work:rotate-90"
-        />
-      </CollapsibleTrigger>
-      <CollapsibleContent onFocusCapture={() => setExpanded(true)}>
-        <ol className="activity-trail" aria-label="Recorded agent activity">
-          {items.map((item) => (
-            <li key={item.id} className="activity-trail-item">
-              {item.type === "thinking" ? (
-                <Collapsible className="group/thinking thinking-step">
-                  <CollapsibleTrigger
-                    render={
-                      <Button
-                        variant="ghost"
-                        className="thinking-trigger activity-row-trigger"
-                      />
-                    }
-                  >
-                    <span className="activity-icon-lane">
-                      <Brain aria-hidden="true" />
-                    </span>
-                    <span className="tool-step-title">Thinking</span>
-                    <ChevronRight
-                      aria-hidden="true"
-                      className="group-data-open/thinking:rotate-90"
-                    />
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="thinking-details">
-                    <Markdown text={item.text} />
-                  </CollapsibleContent>
-                </Collapsible>
+        <TraceCollapsibleTrigger>
+          <TraceLine
+            status={
+              view.active ? "running" : view.attention ? "error" : undefined
+            }
+          >
+            <TraceIcon>
+              {view.active ? (
+                <Wrench />
+              ) : view.paused ? (
+                <Pause />
+              ) : view.attention ? (
+                <CircleAlert />
+              ) : view.count ? (
+                <CircleCheck />
+              ) : (
+                <Brain />
+              )}
+            </TraceIcon>
+            <TraceTitle>{view.label}</TraceTitle>
+            {!!view.count && (
+              <TraceDescription>
+                {view.count} {view.count === 1 ? "step" : "steps"}
+              </TraceDescription>
+            )}
+          </TraceLine>
+        </TraceCollapsibleTrigger>
+        <TraceCollapsibleContent
+          keepMounted
+          onFocusCapture={() => setExpanded(true)}
+        >
+          <Trace role="group" aria-label="Recorded agent activity">
+            {items.map((item, index) =>
+              item.type === "thinking" ? (
+                <ReasoningActivity
+                  key={item.id}
+                  text={item.text}
+                  running={view.active && current && index === items.length - 1}
+                />
               ) : (
                 <ToolActivity
+                  key={item.id}
                   item={item}
                   title={toolTitles?.[item.name]}
                   agentId={agentId}
                   runStatus={status}
+                  waitingForApproval={waitingForApproval}
                 />
-              )}
-            </li>
-          ))}
-        </ol>
-      </CollapsibleContent>
-    </Collapsible>
+              )
+            )}
+          </Trace>
+        </TraceCollapsibleContent>
+      </TraceCollapsible>
+    </Trace>
+  )
+}
+
+function ReasoningActivity({
+  text,
+  running,
+}: {
+  text: string
+  running: boolean
+}) {
+  const [expanded, setExpanded] = useState<boolean | null>(null)
+  return (
+    <TraceCollapsible open={expanded ?? running} onOpenChange={setExpanded}>
+      <TraceCollapsibleTrigger>
+        <TraceLine status={running ? "running" : undefined}>
+          <TraceIcon>
+            <Brain />
+          </TraceIcon>
+          <TraceTitle>{running ? "Thinking" : "Thought"}</TraceTitle>
+        </TraceLine>
+      </TraceCollapsibleTrigger>
+      <TraceCollapsibleContent keepMounted>
+        <Markdown text={text} />
+      </TraceCollapsibleContent>
+    </TraceCollapsible>
   )
 }
 
@@ -217,41 +231,37 @@ function SourceLink({
   const [unavailableIcon, setUnavailableIcon] = useState<string | null>(null)
   const favicon = source.favicon
   return (
-    <Badge
-      variant="outline"
-      className="activity-source"
-      render={
-        <a
-          href={source.href}
-          target="_blank"
-          rel="noreferrer noopener"
-          title={source.href}
-        />
-      }
+    <a
+      href={source.href}
+      target="_blank"
+      rel="noreferrer noopener"
+      title={source.href}
+      className="flex min-h-11 max-w-full items-center rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring/50 md:min-h-6"
     >
-      <span
-        className="activity-source-icon"
-        data-icon="inline-start"
-        aria-hidden="true"
-      >
-        {favicon && unavailableIcon !== favicon ? (
-          <img
-            src={favicon}
-            alt=""
-            width={14}
-            height={14}
-            loading="lazy"
-            decoding="async"
-            referrerPolicy="no-referrer"
-            onError={() => setUnavailableIcon(favicon)}
-          />
-        ) : (
-          <Globe />
-        )}
-      </span>
-      <span className="truncate">{source.label}</span>
-      <ArrowUpRight aria-hidden="true" data-icon="inline-end" />
-    </Badge>
+      <TraceLine>
+        <TraceIcon>
+          {favicon && unavailableIcon !== favicon ? (
+            <img
+              src={favicon}
+              alt=""
+              width={16}
+              height={16}
+              loading="lazy"
+              decoding="async"
+              referrerPolicy="no-referrer"
+              onError={() => setUnavailableIcon(favicon)}
+            />
+          ) : (
+            <Globe />
+          )}
+        </TraceIcon>
+        <TraceTitle>{source.label}</TraceTitle>
+        <TraceIcon>
+          <ArrowUpRight />
+        </TraceIcon>
+        <span className="sr-only"> (opens in a new tab)</span>
+      </TraceLine>
+    </a>
   )
 }
 
@@ -260,11 +270,13 @@ function ToolActivity({
   title,
   agentId,
   runStatus,
+  waitingForApproval,
 }: {
   item: ToolItem
   title?: string
   agentId?: string
   runStatus: ChatState["turns"][number]["status"]
+  waitingForApproval: boolean
 }) {
   const view = toolPresentation(item)
   const owner = Schema.decodeUnknownOption(AgentId)(agentId)
@@ -288,83 +300,103 @@ function ToolActivity({
         : runStatus === "cancelled"
           ? "Stopped"
           : "Interrupted"
-      : item.status === "done"
-        ? "Complete"
-        : item.status === "error"
-          ? "Failed"
-          : item.status === "interrupted"
-            ? "Interrupted"
-            : item.status === "pending"
-              ? "Queued"
-              : "Running"
+      : waitingForApproval && ["running", "pending"].includes(item.status)
+        ? "Waiting for approval"
+        : item.status === "done"
+          ? "Complete"
+          : item.status === "error"
+            ? "Failed"
+            : item.status === "interrupted"
+              ? "Interrupted"
+              : item.status === "pending"
+                ? "Queued"
+                : "Running"
+  const traceStatus =
+    label === "Running"
+      ? "running"
+      : label === "Queued" || label === "Waiting for approval"
+        ? "pending"
+        : label === "Failed" || label === "Interrupted"
+          ? "error"
+          : undefined
   return (
-    <Collapsible className="group/tool tool-step" data-status={item.status}>
-      <CollapsibleTrigger
-        render={<Button variant="ghost" className="activity-row-trigger" />}
-      >
-        <span className="activity-icon-lane">
-          <Icon aria-hidden="true" />
-        </span>
-        <span className="tool-step-title">
-          {title && title !== item.name
-            ? title
-            : item.name.charAt(0).toUpperCase() +
-              item.name.slice(1).replaceAll("_", " ")}
-        </span>
-        <span className="tool-step-status">{label}</span>
-        <ChevronRight
-          aria-hidden="true"
-          className="group-data-open/tool:rotate-90"
-        />
-      </CollapsibleTrigger>
-      <div className="activity-sources">
-        {view.sources[0] && <SourceLink source={view.sources[0]} />}
-        {view.destination && Option.isSome(owner) && (
-          <Badge
-            variant="outline"
-            className="activity-source"
-            render={
-              <Link
-                {...workspaceDestination(owner.value, view.destination.view)}
-              />
-            }
-          >
-            <span className="truncate">{view.destination.label}</span>
-            <ChevronRight aria-hidden="true" data-icon="inline-end" />
-          </Badge>
-        )}
-      </div>
-      <CollapsibleContent className="tool-step-details">
+    <TraceCollapsible>
+      <TraceCollapsibleTrigger>
+        <TraceLine status={traceStatus}>
+          <TraceIcon>
+            <Icon />
+          </TraceIcon>
+          <TraceTitle>
+            {title && title !== item.name
+              ? title
+              : item.name.charAt(0).toUpperCase() +
+                item.name.slice(1).replaceAll("_", " ")}
+          </TraceTitle>
+          <TraceDescription>{label}</TraceDescription>
+        </TraceLine>
+      </TraceCollapsibleTrigger>
+      {view.sources[0] && (
+        <Trace className="my-1">
+          <SourceLink source={view.sources[0]} />
+        </Trace>
+      )}
+      {view.destination && Option.isSome(owner) && (
+        <Badge
+          variant="outline"
+          className="my-1 min-h-11 w-fit max-w-full md:min-h-6"
+          render={
+            <Link
+              {...workspaceDestination(owner.value, view.destination.view)}
+            />
+          }
+        >
+          <span className="truncate">{view.destination.label}</span>
+          <ChevronRight aria-hidden="true" data-icon="inline-end" />
+        </Badge>
+      )}
+      <TraceCollapsibleContent keepMounted className="flex flex-col gap-3">
         <ToolDetail title="Input" text={item.input} />
         {item.output && <ToolDetail title="Result" text={item.output} />}
         {view.sources.length > 1 && (
-          <div className="flex min-w-0 flex-col gap-2">
-            <p className="text-xs font-medium text-muted-foreground">
-              Page links
-            </p>
-            <div className="flex min-w-0 flex-wrap gap-2">
-              {view.sources.slice(1).map((source) => (
-                <SourceLink key={source.href} source={source} />
-              ))}
-            </div>
-          </div>
+          <Trace>
+            <TraceCollapsible>
+              <TraceCollapsibleTrigger>
+                <TraceLine>
+                  <TraceIcon>
+                    <Globe />
+                  </TraceIcon>
+                  <TraceTitle>Page links</TraceTitle>
+                  <TraceDescription>{view.sources.length - 1}</TraceDescription>
+                </TraceLine>
+              </TraceCollapsibleTrigger>
+              <TraceCollapsibleContent keepMounted>
+                <Trace>
+                  {view.sources.slice(1).map((source) => (
+                    <SourceLink key={source.href} source={source} />
+                  ))}
+                </Trace>
+              </TraceCollapsibleContent>
+            </TraceCollapsible>
+          </Trace>
         )}
-      </CollapsibleContent>
-    </Collapsible>
+      </TraceCollapsibleContent>
+    </TraceCollapsible>
   )
 }
 
 function ToolDetail({ title, text }: { title: string; text: string }) {
   return (
-    <div className="activity-detail">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-medium text-muted-foreground">{title}</p>
-        <CopyButton text={text} label={`Copy tool ${title.toLowerCase()}`} />
-      </div>
-      <pre className="max-h-72 overflow-auto overscroll-contain text-xs break-all whitespace-pre-wrap">
+    <CodeBlock size="sm">
+      <CodeBlockHeader>
+        <CodeBlockTitle>{title}</CodeBlockTitle>
+        <CodeBlockActions>
+          <CopyButton text={text} label={`Copy tool ${title.toLowerCase()}`} />
+        </CodeBlockActions>
+      </CodeBlockHeader>
+      <CodeBlockContent wrap className="max-h-72">
         {text}
-      </pre>
-    </div>
+      </CodeBlockContent>
+    </CodeBlock>
   )
 }
 

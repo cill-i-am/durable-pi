@@ -12,6 +12,7 @@ import {
   ChevronDown,
   Circle,
   Clock3,
+  ListChecks,
 } from "lucide-react"
 import { Schema } from "effect"
 import { Button } from "@/components/ui/button"
@@ -28,6 +29,16 @@ import {
   CollapsibleTrigger,
   CollapsibleContent,
 } from "@/components/ui/collapsible"
+import {
+  Trace,
+  TraceLine,
+  TraceIcon,
+  TraceTitle,
+  TraceDescription,
+  TraceCollapsible,
+  TraceCollapsibleTrigger,
+  TraceCollapsibleContent,
+} from "@/components/ui/trace"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { PlanDetail, type Plan, type PlanRevision } from "@/planning/contracts"
@@ -325,67 +336,124 @@ export function PlanView({ plan }: { plan: Plan }) {
           ))}
         </ul>
       </section>
-      <ol className="flex flex-col gap-3">
-        {plan.steps.map((step) => (
-          <li key={step.id} className="flex flex-col gap-2 border-b pb-4">
-            <div className="flex items-start gap-3">
-              {step.status === "completed" ? (
-                <Check className="mt-1 size-4 shrink-0 text-primary" />
-              ) : (
-                <Circle className="mt-1 size-4 shrink-0 text-muted-foreground" />
-              )}
-              <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <p className="text-sm font-medium">{step.title}</p>
-                <span className="text-xs text-muted-foreground">
-                  {step.status === "completed"
-                    ? "Agent-reported completion"
-                    : step.status}
-                </span>
-              </div>
-            </div>
-            {step.note && (
-              <p className="pl-7 text-sm text-muted-foreground">{step.note}</p>
-            )}
-            {!!step.evidence.length && (
-              <Collapsible>
-                <CollapsibleTrigger
-                  render={<Button variant="ghost" size="sm" />}
+      <Trace>
+        <TraceCollapsible defaultOpen>
+          <TraceCollapsibleTrigger>
+            <TraceLine>
+              <TraceIcon>
+                <ListChecks />
+              </TraceIcon>
+              <TraceTitle>Plan</TraceTitle>
+              <TraceDescription>
+                {completed} of {plan.steps.length} done
+              </TraceDescription>
+            </TraceLine>
+          </TraceCollapsibleTrigger>
+          <TraceCollapsibleContent keepMounted>
+            <Trace role="group" aria-label="Plan steps">
+              {plan.steps.map((step) => (
+                <TraceCollapsible
+                  key={step.id}
+                  defaultOpen={
+                    step.status === "active" || step.status === "blocked"
+                  }
                 >
-                  <ChevronDown data-icon="inline-start" />{" "}
-                  {step.evidence.length} evidence{" "}
-                  {step.evidence.length === 1 ? "reference" : "references"}
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <ul className="flex flex-col gap-3 pt-2 pl-7">
-                    {step.evidence.map((ref, index) => (
-                      <li key={index} className="flex flex-col gap-1 text-xs">
-                        <div className="flex flex-wrap gap-2">
-                          <Badge
-                            variant={
-                              ref.state === "valid"
-                                ? "secondary"
-                                : "destructive"
-                            }
-                          >
-                            {ref.state === "valid"
-                              ? "Source validated"
-                              : "No longer current"}
-                          </Badge>
-                          <span className="text-muted-foreground">
-                            {ref.kind} · revision {ref.revision}
-                          </span>
-                        </div>
-                        <code className="break-all">{ref.id}</code>
-                        <p className="text-muted-foreground">{ref.detail}</p>
-                      </li>
-                    ))}
-                  </ul>
-                </CollapsibleContent>
-              </Collapsible>
-            )}
-          </li>
-        ))}
-      </ol>
+                  <TraceCollapsibleTrigger>
+                    <TraceLine
+                      className="flex-wrap"
+                      status={
+                        plan.state === "cancelled"
+                          ? undefined
+                          : step.status === "blocked"
+                            ? "error"
+                            : step.status === "active" &&
+                                plan.state === "open" &&
+                                !plan.blocker
+                              ? "running"
+                              : step.status === "pending"
+                                ? "pending"
+                                : undefined
+                      }
+                    >
+                      <TraceIcon>
+                        {step.status === "completed" ? (
+                          <Check />
+                        ) : step.status === "blocked" ? (
+                          <Clock3 />
+                        ) : (
+                          <Circle />
+                        )}
+                      </TraceIcon>
+                      <TraceTitle title={step.title}>{step.title}</TraceTitle>
+                      <TraceDescription>
+                        {step.status === "completed"
+                          ? "Reported done"
+                          : plan.state === "cancelled"
+                            ? "Stopped"
+                            : step.status}
+                      </TraceDescription>
+                    </TraceLine>
+                  </TraceCollapsibleTrigger>
+                  <TraceCollapsibleContent
+                    keepMounted
+                    className="flex flex-col gap-3"
+                  >
+                    {step.status === "completed" && (
+                      <p className="text-xs">Agent-reported completion</p>
+                    )}
+                    {step.note && <p className="text-sm">{step.note}</p>}
+                    {!!step.evidence.length && (
+                      <Trace>
+                        <TraceCollapsible>
+                          <TraceCollapsibleTrigger>
+                            <TraceLine>
+                              <TraceTitle>
+                                {step.evidence.length} evidence{" "}
+                                {step.evidence.length === 1
+                                  ? "reference"
+                                  : "references"}
+                              </TraceTitle>
+                            </TraceLine>
+                          </TraceCollapsibleTrigger>
+                          <TraceCollapsibleContent keepMounted>
+                            <ul className="flex flex-col gap-3">
+                              {step.evidence.map((ref, index) => (
+                                <li
+                                  key={index}
+                                  className="flex flex-col gap-1 text-xs"
+                                >
+                                  <div className="flex flex-wrap gap-2">
+                                    <Badge
+                                      variant={
+                                        ref.state === "valid"
+                                          ? "secondary"
+                                          : "destructive"
+                                      }
+                                    >
+                                      {ref.state === "valid"
+                                        ? "Source validated"
+                                        : "No longer current"}
+                                    </Badge>
+                                    <span>
+                                      {ref.kind} · revision {ref.revision}
+                                    </span>
+                                  </div>
+                                  <code className="break-all">{ref.id}</code>
+                                  <p>{ref.detail}</p>
+                                </li>
+                              ))}
+                            </ul>
+                          </TraceCollapsibleContent>
+                        </TraceCollapsible>
+                      </Trace>
+                    )}
+                  </TraceCollapsibleContent>
+                </TraceCollapsible>
+              ))}
+            </Trace>
+          </TraceCollapsibleContent>
+        </TraceCollapsible>
+      </Trace>
       {plan.nextAction && plan.state !== "cancelled" && (
         <section className="flex flex-col gap-2">
           <h4 className="text-sm font-medium">Next action</h4>

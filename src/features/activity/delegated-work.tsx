@@ -1,7 +1,7 @@
 import { BackgroundActions } from "./background-actions"
 import { useEffect, useRef, useState } from "react"
 import { Schema } from "effect"
-import { ChevronDown, GitBranch, Square } from "lucide-react"
+import { GitBranch, Square } from "lucide-react"
 import {
   Group,
   Transcript,
@@ -14,18 +14,24 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card"
+  Trace,
+  TraceLine,
+  TraceIcon,
+  TraceTitle,
+  TraceDescription,
+  TraceCollapsible,
+  TraceCollapsibleTrigger,
+  TraceCollapsibleContent,
+} from "@/components/ui/trace"
 import {
-  Collapsible,
-  CollapsibleTrigger,
-  CollapsibleContent,
-} from "@/components/ui/collapsible"
+  CodeBlock,
+  CodeBlockHeader,
+  CodeBlockTitle,
+  CodeBlockActions,
+  CodeBlockContent,
+} from "@/components/ui/code-block"
+import { CopyButton } from "@/components/copy-button"
+import { Markdown } from "@/components/markdown"
 import { Field, FieldLabel, FieldGroup } from "@/components/ui/field"
 import { Textarea } from "@/components/ui/textarea"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -147,12 +153,25 @@ export function DelegationGroup({
     ["completed", "failed", "cancelled"].includes(child.status)
   ).length
   return (
-    <div className="flex min-w-0 flex-col gap-3">
-      <Card>
-        <CardHeader>
-          <CardTitle>{group.objective}</CardTitle>
-          <CardDescription>
-            {done} of {group.children.length} branches settled ·{" "}
+    <Trace>
+      <TraceCollapsible defaultOpen>
+        <TraceCollapsibleTrigger>
+          <TraceLine
+            className="flex-wrap"
+            status={group.status === "working" ? "running" : undefined}
+          >
+            <TraceIcon>
+              <GitBranch />
+            </TraceIcon>
+            <TraceTitle title={group.objective}>{group.objective}</TraceTitle>
+            <TraceDescription>
+              {done} of {group.children.length} settled
+            </TraceDescription>
+          </TraceLine>
+        </TraceCollapsibleTrigger>
+        <TraceCollapsibleContent keepMounted className="flex flex-col gap-3">
+          <p className="text-sm text-foreground">{group.objective}</p>
+          <p className="text-xs">
             {group.background
               ? group.background.delivery
               : group.status === "completed"
@@ -160,36 +179,35 @@ export function DelegationGroup({
                 : group.status === "cancelled"
                   ? "Stopped with parent"
                   : "Parent is waiting for results"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-xs text-muted-foreground">
-            {group.route.model} · {group.route.thinking} · ChatGPT plan usage
           </p>
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="secondary">{group.route.model}</Badge>
+            <Badge variant="outline">{group.route.thinking}</Badge>
+          </div>
           {group.background && (
             <BackgroundActions agentId={agentId} group={group} />
           )}
-        </CardContent>
-      </Card>
-      <div className="flex min-w-0 flex-col gap-3 border-l pl-[18px]">
-        {group.children.map((child) => (
-          <ChildCard
-            key={child.id}
-            child={child}
-            group={group}
-            agentId={agentId}
-          />
-        ))}
-      </div>
-      <p className="text-xs text-muted-foreground">
-        {group.background
-          ? "Shared: a text reference snapshot and each child’s brief. No tools or live retrieval. Up to 12 requests per child and 10 minutes per group. Send revised requirements with the child’s steering control."
-          : "Shared: this bot’s reference context and parent steering. Selected read tools only. Up to 12 model requests per child and 10 minutes per group; stopping the parent stops its children."}
-      </p>
-    </div>
+          <Trace role="group" aria-label="Delegated branches">
+            {group.children.map((child) => (
+              <ChildTrace
+                key={child.id}
+                child={child}
+                group={group}
+                agentId={agentId}
+              />
+            ))}
+          </Trace>
+          <p className="text-xs">
+            {group.background
+              ? "Shared: a text reference snapshot and each child’s brief. No tools or live retrieval. Up to 12 requests per child and 10 minutes per group. Send revised requirements with the child’s steering control."
+              : "Shared: this bot’s reference context and parent steering. Selected read tools only. Up to 12 model requests per child and 10 minutes per group; stopping the parent stops its children."}
+          </p>
+        </TraceCollapsibleContent>
+      </TraceCollapsible>
+    </Trace>
   )
 }
-function ChildCard({
+function ChildTrace({
   child,
   group,
   agentId,
@@ -199,29 +217,53 @@ function ChildCard({
   agentId: string
 }) {
   const [inspect, setInspect] = useState(false)
-  const running =
-    group.status === "working" &&
-    ["queued", "working", "stopping"].includes(child.status)
+  const [expanded, setExpanded] = useState<boolean | null>(null)
+  const unsettled = ["queued", "working", "stopping"].includes(child.status)
+  const running = group.status === "working" && unsettled
+  const label =
+    unsettled && group.status !== "working"
+      ? group.status === "cancelled"
+        ? "Stopped with parent"
+        : "Interrupted"
+      : child.status
+  const status =
+    label === "Interrupted" || child.status === "failed"
+      ? "error"
+      : running && child.status === "working"
+        ? "running"
+        : running && child.status === "queued"
+          ? "pending"
+          : undefined
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <CardTitle>{child.name}</CardTitle>
-          <Badge
-            variant={child.status === "failed" ? "destructive" : "secondary"}
-          >
-            {child.status}
-          </Badge>
+    <TraceCollapsible
+      open={expanded ?? (running || !!child.error)}
+      onOpenChange={setExpanded}
+    >
+      <TraceCollapsibleTrigger>
+        <TraceLine status={status}>
+          <TraceIcon>
+            <GitBranch />
+          </TraceIcon>
+          <TraceTitle title={child.name}>{child.name}</TraceTitle>
+          <TraceDescription>{label}</TraceDescription>
+        </TraceLine>
+      </TraceCollapsibleTrigger>
+      <TraceCollapsibleContent keepMounted className="flex flex-col gap-3">
+        <p className="text-sm text-foreground">{child.task}</p>
+        <div className="flex flex-wrap gap-2">
+          {child.tools.length ? (
+            child.tools.map((tool) => (
+              <Badge key={tool} variant="outline">
+                {tool}
+              </Badge>
+            ))
+          ) : (
+            <Badge variant="outline">No tools</Badge>
+          )}
+          <Badge variant="secondary">{child.requests}/12 requests</Badge>
         </div>
-        <CardDescription>{child.task}</CardDescription>
-      </CardHeader>
-      <CardContent className="flex min-w-0 flex-col gap-3">
-        <p className="text-xs text-muted-foreground">
-          {child.tools.length ? child.tools.join(" · ") : "No tools"} ·{" "}
-          {child.requests}/12 requests
-        </p>
         {child.inputTokens !== null && (
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs">
             {child.inputTokens.toLocaleString()} input ·{" "}
             {child.outputTokens?.toLocaleString()} output tokens, including
             compaction
@@ -232,23 +274,25 @@ function ChildCard({
             <AlertDescription>{child.error}</AlertDescription>
           </Alert>
         )}
-        {child.answer && (
-          <p className="text-sm whitespace-pre-wrap">{child.answer}</p>
-        )}
+        {child.answer && <Markdown text={child.answer} />}
         {!!child.steering.length && (
-          <Collapsible>
-            <CollapsibleTrigger render={<Button variant="ghost" size="sm" />}>
-              <ChevronDown data-icon="inline-start" /> Steering history (
-              {child.steering.length})
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <ol className="flex list-decimal flex-col gap-2 pl-5 text-sm">
-                {child.steering.map((text, i) => (
-                  <li key={i}>{text}</li>
-                ))}
-              </ol>
-            </CollapsibleContent>
-          </Collapsible>
+          <Trace>
+            <TraceCollapsible>
+              <TraceCollapsibleTrigger>
+                <TraceLine>
+                  <TraceTitle>Steering history</TraceTitle>
+                  <TraceDescription>{child.steering.length}</TraceDescription>
+                </TraceLine>
+              </TraceCollapsibleTrigger>
+              <TraceCollapsibleContent keepMounted>
+                <ol className="flex list-decimal flex-col gap-2 pl-5 text-sm">
+                  {child.steering.map((text, i) => (
+                    <li key={i}>{text}</li>
+                  ))}
+                </ol>
+              </TraceCollapsibleContent>
+            </TraceCollapsible>
+          </Trace>
         )}
         <ChildControl
           agentId={agentId}
@@ -267,27 +311,28 @@ function ChildCard({
             childId={child.id}
           />
         )}
-      </CardContent>
-      <CardFooter className="flex flex-wrap gap-2">
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => setInspect(!inspect)}
-        >
-          {inspect ? "Close task" : "Open task"}
-        </Button>
-        <ChildControl
-          agentId={agentId}
-          groupId={group.id}
-          prefix={group.background ? "background" : "delegations"}
-          child={child}
-          action="stop"
-          active={running && child.status !== "stopping"}
-        />
-      </CardFooter>
-    </Card>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setInspect(!inspect)}
+          >
+            {inspect ? "Close task" : "Open task"}
+          </Button>
+          <ChildControl
+            agentId={agentId}
+            groupId={group.id}
+            prefix={group.background ? "background" : "delegations"}
+            child={child}
+            action="stop"
+            active={running && child.status !== "stopping"}
+          />
+        </div>
+      </TraceCollapsibleContent>
+    </TraceCollapsible>
   )
 }
+
 function ChildControl({
   agentId,
   groupId,
@@ -485,19 +530,31 @@ function ChildTranscript({
       ) : !page ? (
         <Skeleton className="h-24 w-full" />
       ) : (
-        page.entries.map((entry) => (
-          <Collapsible key={entry.id}>
-            <CollapsibleTrigger render={<Button variant="ghost" size="sm" />}>
-              <ChevronDown data-icon="inline-start" />{" "}
-              {entry.kind.replace("pi.", "")} · {entry.id}
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <pre className="max-h-80 overflow-auto text-xs wrap-anywhere whitespace-pre-wrap">
-                {entry.text}
-              </pre>
-            </CollapsibleContent>
-          </Collapsible>
-        ))
+        <Trace>
+          {page.entries.map((entry) => (
+            <TraceCollapsible key={entry.id}>
+              <TraceCollapsibleTrigger>
+                <TraceLine>
+                  <TraceTitle>{entry.kind.replace("pi.", "")}</TraceTitle>
+                  <TraceDescription>{entry.id}</TraceDescription>
+                </TraceLine>
+              </TraceCollapsibleTrigger>
+              <TraceCollapsibleContent keepMounted>
+                <CodeBlock size="sm">
+                  <CodeBlockHeader>
+                    <CodeBlockTitle>Saved entry</CodeBlockTitle>
+                    <CodeBlockActions>
+                      <CopyButton text={entry.text} label="Copy task entry" />
+                    </CodeBlockActions>
+                  </CodeBlockHeader>
+                  <CodeBlockContent wrap className="max-h-80">
+                    {entry.text}
+                  </CodeBlockContent>
+                </CodeBlock>
+              </TraceCollapsibleContent>
+            </TraceCollapsible>
+          ))}
+        </Trace>
       )}
       <div className="flex flex-wrap gap-2">
         {cursor && (

@@ -63,4 +63,5 @@ it("distinguishes agent completion from source validation and displays cancellat
   )
   expect(stopped).toContain("Work stopped")
   expect(stopped).not.toContain("Do not show")
+  expect(stopped).not.toContain('data-status="running"')
 })

@@ -4,6 +4,21 @@ import { Schema } from "effect"
 import { AccessState, type Approval, type ToolPolicy } from "@/access/contracts"
 import { agentApi } from "@/http/client"
 import { Button } from "@/components/ui/button"
+import {
+  Item,
+  ItemMedia,
+  ItemContent,
+  ItemTitle,
+  ItemActions,
+} from "@/components/ui/item"
+import {
+  CodeBlock,
+  CodeBlockHeader,
+  CodeBlockTitle,
+  CodeBlockActions,
+  CodeBlockContent,
+} from "@/components/ui/code-block"
+import { CopyButton } from "@/components/copy-button"
 import { approvalDecision, type ConfirmedDecision } from "./decision"
 
 export function ApprovalCard({
@@ -85,84 +100,102 @@ export function ApprovalCard({
           denied: "Denied",
           cancelled: "Cancelled",
           expired: "Approval expired",
-          interrupted: "Interrupted · check the outcome before retrying",
+          interrupted: "Interrupted",
         }[approval.status]
   return (
-    <section
+    <Item
+      variant="outline"
+      render={<section />}
       aria-label={`Approval for ${toolLabel ?? approval.tool}`}
-      className="approval-card"
+      className="mt-4 min-w-0 items-start"
       data-pending={pending}
     >
-      <div className="approval-heading">
-        <ShieldQuestion className="size-4" />
-        {heading}
-      </div>
-      <p className="text-sm">
-        <strong>{toolLabel ?? approval.tool}</strong>
-        {pending ? " · Review these inputs" : " · Action inputs"}
-      </p>
-      <pre className="max-h-64 overflow-auto rounded-md bg-background p-3 font-mono text-xs break-all whitespace-pre-wrap">
-        {formatInput(approval.input)}
-      </pre>
-      <p className="text-xs text-muted-foreground">
-        This action request expires at{" "}
-        {new Date(approval.expiresAt).toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        })}
-        .
-      </p>
-      {pending && (
-        <p id={scopeId} className="text-xs text-muted-foreground">
-          Always allow lets <strong>{agentName}</strong> use{" "}
-          <strong>{toolLabel ?? approval.tool}</strong> with any inputs until
-          you change it in Settings → Tool access. Other tools and internet
-          settings stay separate.
+      <ItemMedia variant="icon">
+        <ShieldQuestion />
+      </ItemMedia>
+      <ItemContent className="min-w-0 gap-3">
+        <ItemTitle>{heading}</ItemTitle>
+        {approval.status === "interrupted" && (
+          <p className="text-sm">Check the outcome before retrying.</p>
+        )}
+        <p className="text-sm">
+          <strong>{toolLabel ?? approval.tool}</strong>
+          {pending ? " · Review these inputs" : " · Action inputs"}
         </p>
-      )}
-      {error && (
-        <p role="alert" className="text-sm text-destructive">
-          {error}
+        <CodeBlock size="sm">
+          <CodeBlockHeader>
+            <CodeBlockTitle>Action inputs</CodeBlockTitle>
+            <CodeBlockActions>
+              <CopyButton
+                text={formatInput(approval.input)}
+                label="Copy action inputs"
+              />
+            </CodeBlockActions>
+          </CodeBlockHeader>
+          <CodeBlockContent wrap className="max-h-64">
+            {formatInput(approval.input)}
+          </CodeBlockContent>
+        </CodeBlock>
+        <p className="text-xs text-muted-foreground">
+          This action request expires at{" "}
+          {new Date(approval.expiresAt).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+          .
         </p>
-      )}
-      {pending && (
-        <div className="flex flex-wrap gap-2">
-          <Button
-            size="sm"
-            className="min-h-11 sm:min-h-0"
-            disabled={busy || disabled}
-            onClick={() => void decide(true)}
-          >
-            {busy ? "Saving decision…" : "Allow once"}
-          </Button>
-          <Button
-            size="sm"
-            className="min-h-11 sm:min-h-0"
-            variant="outline"
-            aria-describedby={scopeId}
-            disabled={
-              busy ||
-              disabled ||
-              !toolPolicy ||
-              toolPolicy.name !== approval.tool ||
-              toolPolicy.mode === "deny"
-            }
-            onClick={() => void decide(true, true)}
-          >
-            Always allow
-          </Button>
-          <Button
-            size="sm"
-            className="min-h-11 sm:min-h-0"
-            variant="outline"
-            disabled={busy || disabled}
-            onClick={() => void decide(false)}
-          >
-            Deny
-          </Button>
-        </div>
-      )}
-    </section>
+        {pending && (
+          <p id={scopeId} className="text-xs text-muted-foreground">
+            Always allow lets <strong>{agentName}</strong> use{" "}
+            <strong>{toolLabel ?? approval.tool}</strong> with any inputs until
+            you change it in Settings → Tool access. Other tools and internet
+            settings stay separate.
+          </p>
+        )}
+        {error && (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        )}
+        {pending && (
+          <ItemActions className="flex-wrap">
+            <Button
+              size="sm"
+              className="min-h-11 sm:min-h-0"
+              disabled={busy || disabled}
+              onClick={() => void decide(true)}
+            >
+              {busy ? "Saving decision…" : "Allow once"}
+            </Button>
+            <Button
+              size="sm"
+              className="min-h-11 sm:min-h-0"
+              variant="outline"
+              aria-describedby={scopeId}
+              disabled={
+                busy ||
+                disabled ||
+                !toolPolicy ||
+                toolPolicy.name !== approval.tool ||
+                toolPolicy.mode === "deny"
+              }
+              onClick={() => void decide(true, true)}
+            >
+              Always allow
+            </Button>
+            <Button
+              size="sm"
+              className="min-h-11 sm:min-h-0"
+              variant="outline"
+              disabled={busy || disabled}
+              onClick={() => void decide(false)}
+            >
+              Deny
+            </Button>
+          </ItemActions>
+        )}
+      </ItemContent>
+    </Item>
   )
 }
 function formatInput(input: string) {
