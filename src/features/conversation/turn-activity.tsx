@@ -168,10 +168,7 @@ function WorkGroup({
             )}
           </TraceLine>
         </TraceCollapsibleTrigger>
-        <TraceCollapsibleContent
-          keepMounted
-          onFocusCapture={() => setExpanded(true)}
-        >
+        <TraceCollapsibleContent onFocusCapture={() => setExpanded(true)}>
           <Trace role="group" aria-label="Recorded agent activity">
             {items.map((item, index) =>
               item.type === "thinking" ? (
@@ -216,7 +213,7 @@ function ReasoningActivity({
           <TraceTitle>{running ? "Thinking" : "Thought"}</TraceTitle>
         </TraceLine>
       </TraceCollapsibleTrigger>
-      <TraceCollapsibleContent keepMounted>
+      <TraceCollapsibleContent>
         <Markdown text={text} />
       </TraceCollapsibleContent>
     </TraceCollapsible>
@@ -354,7 +351,7 @@ function ToolActivity({
           <ChevronRight aria-hidden="true" data-icon="inline-end" />
         </Badge>
       )}
-      <TraceCollapsibleContent keepMounted className="flex flex-col gap-3">
+      <TraceCollapsibleContent className="flex flex-col gap-3">
         <ToolDetail title="Input" text={item.input} />
         {item.output && <ToolDetail title="Result" text={item.output} />}
         {view.sources.length > 1 && (
@@ -369,7 +366,7 @@ function ToolActivity({
                   <TraceDescription>{view.sources.length - 1}</TraceDescription>
                 </TraceLine>
               </TraceCollapsibleTrigger>
-              <TraceCollapsibleContent keepMounted>
+              <TraceCollapsibleContent>
                 <Trace>
                   {view.sources.slice(1).map((source) => (
                     <SourceLink key={source.href} source={source} />

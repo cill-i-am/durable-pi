@@ -1,0 +1,27 @@
+{
+  "baselineCommit": "5df056f814564e5b4f97d5c3629addd0eb2652ea",
+  "profile": {"width":390,"height":844,"cpuSlowdown":4,"latencyMs":150,"downloadBytesPerSecond":200000,"uploadBytesPerSecond":93750,"cacheDisabled":true,"visibility":"visible"},
+  "productionBaseline": {
+    "historyMs": [5835.4,5593,6019.8,6244.5,5695.1,5643.4,5996.6,5780.8,6197.3,6210.5],
+    "sessionMs": [4093.2,3887,3919.5,3912.5,3996.4,3962.6,3898,3954.9,3935,4246.2],
+    "streamFirstByteMs": [4395.7,4179.2,4574,4738.5,4295,4256.2,4466.6,4290,4728.6,4714],
+    "streamLastInitialDataMs": [5204.7,5006.9,5408.7,5578.7,5091.8,5011.3,5307.4,5133.1,5562.2,5562.5],
+    "streamDecodedBytes": 167698,
+    "dom": {"responses":20,"tracePanels":58,"closedTracePanels":49,"hiddenToolCopies":56,"hiddenCodeBlocks":56,"elements":4058},
+    "diagnosticCpuSampledHistoryMs":6112.6,
+    "note":"Ten cache-disabled reloads without CPU sampling. One separate CPU-sampled diagnostic is excluded. These are lab observations of production, not field percentiles. The historical 17.3-second observation was not reproduced."
+  },
+  "activityIncrement": {
+    "scenario":"20 synthetic turns, each with one reasoning item and two completed tools; identical 150/500/100-ms session/catalog/stream delays, loopback servers, actual workspace UI",
+    "order":"Alternating before/after order, ten runs per condition; same constrained profile as production",
+    "beforeHistoryMs":[4706.7,5328.4,4700,4959.5,4866,4692.4,4641.8,5033.8,4825,4668],
+    "afterHistoryMs":[4540.8,4637.7,4544.2,4507.8,4492.4,4491.4,4533.9,4533.7,4457.9,4454.4],
+    "beforeScriptMs":[644.164,712.643,610.065,872.028,774.359,568.95,525.872,840.002,703.842,601.83],
+    "afterScriptMs":[460,518.09,444.623,415.899,388.974,406.613,443.502,447.323,393.23,379.346],
+    "beforeElements":2905,"afterElements":985,
+    "beforeHiddenToolCopies":80,"afterHiddenToolCopies":0,
+    "responsesRetained":20,
+    "interactionChecks":"Completed group opens; nested tool opens and shows input/result copy controls; Enter collapses it with focus on its trigger; no horizontal overflow.",
+    "excludedProbes":"Four runs with labels activity-before-1/activity-after-1/activity-after-2/activity-before-2 were discarded: the initial helper captured the production handle. The corrected helper takes explicit tab/CDP parameters and records each origin."
+  }
+}
