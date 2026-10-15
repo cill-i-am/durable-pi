@@ -1,5 +1,13 @@
 type Stage =
-  "session" | "catalog" | "conversation" | "history" | "composer" | "models"
+  | "session"
+  | "catalog"
+  | "conversation"
+  | "history"
+  | "composer"
+  | "models"
+  | "stream-headers"
+  | "snapshot"
+  | "metadata"
 
 /** Bounded, local User Timing entries. No identities, content, or network
  * collection; browser traces can correlate these with Resource Timing. */

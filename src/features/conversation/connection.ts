@@ -5,6 +5,7 @@ import {
 import { Schema } from "effect"
 import { ConversationCursor, SendInput } from "@/conversations/contracts"
 import { api, agentUrl, ApiError } from "@/http/client"
+import { markReady } from "../performance"
 
 export function conversationConnection(
   agentId: string
@@ -28,6 +29,7 @@ export function conversationConnection(
               ? "Your session has expired. Sign in again."
               : "This agent is not available."
           )
+        if (response.ok) markReady("stream-headers")
         return response
       },
     }
@@ -40,6 +42,7 @@ export function conversationConnection(
           let received = false
           for await (const chunk of stream.joinRun(agentId, signal)) {
             if (signal?.aborted) return
+            if (chunk.type === "MESSAGES_SNAPSHOT") markReady("snapshot")
             failures = 0
             if (!received)
               yield { type: "CUSTOM", name: "durable-pi.connection", value: "" }

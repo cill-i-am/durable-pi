@@ -55,6 +55,66 @@ const messages = Array.from({ length: 20 }, (_, index) => {
     },
   ]
 }).flat()
+// Activity is opt-in so the original text-only baseline stays reproducible.
+// Closed reasoning/tool panels are the production rendering case this adds.
+if (process.env.PERF_SCENARIO === "activity") {
+  for (let index = 0; index < 20; index++) {
+    const turnId = `turn-${index}`
+    const position = messages.findIndex(
+      (message) => message.id === `${turnId}:answer`
+    )
+    messages[position].metadata.durablePi.kind = "text"
+    messages[position].metadata.durablePi.itemId = `${turnId}:answer`
+    messages.splice(
+      position,
+      0,
+      {
+        id: `${turnId}:thinking`,
+        role: "assistant",
+        content: "",
+        parts: [
+          {
+            type: "thinking",
+            content: "A hidden reasoning fixture. ".repeat(80),
+            stepId: `${turnId}:thinking`,
+          },
+          { type: "text", content: "" },
+        ],
+        metadata: {
+          durablePi: { turnId, kind: "thinking", itemId: `${turnId}:thinking` },
+        },
+      },
+      ...Array.from({ length: 2 }, (_, tool) => ({
+        id: `${turnId}:tool-${tool}`,
+        role: "assistant",
+        content: "",
+        parts: [
+          {
+            type: "tool-call",
+            id: `${turnId}:call-${tool}`,
+            name: "run_command",
+            arguments: JSON.stringify({ command: "printf synthetic" }),
+            state: "input-complete",
+          },
+          {
+            type: "tool-result",
+            toolCallId: `${turnId}:call-${tool}`,
+            content: "A hidden tool result fixture. ".repeat(30),
+            state: "complete",
+          },
+        ],
+        metadata: {
+          durablePi: {
+            turnId,
+            kind: "tool",
+            itemId: `${turnId}:tool-${tool}`,
+            toolStatus: "done",
+          },
+        },
+      }))
+    )
+  }
+}
 const profile = {
   id: "home",
   name: "Navi",

@@ -7,6 +7,16 @@ import {
 } from "@tanstack/react-router"
 import { ThemeProvider } from "next-themes"
 import { ChatApp } from "../../src/app/workspace"
+import { useState } from "react"
+import {
+  ActivityBorder,
+  ActivityOrb,
+} from "../../src/components/activity-visuals"
+import { Button } from "../../src/components/ui/button"
+import {
+  InputGroup,
+  InputGroupTextarea,
+} from "../../src/components/ui/input-group"
 import "../../src/styles.css"
 
 // The actual workspace, with only its transport and route shell replaced.
@@ -43,8 +53,35 @@ observe.observe(document.documentElement, {
   attributes: true,
   attributeFilter: ["disabled"],
 })
+function VisualsFixture() {
+  const [active, setActive] = useState(false)
+  return (
+    <main className="mx-auto flex max-w-md flex-col gap-4 p-6">
+      <Button
+        onPointerDown={(event) => event.preventDefault()}
+        onClick={() => setActive((value) => !value)}
+      >
+        Toggle activity
+      </Button>
+      <ActivityBorder active={active}>
+        <InputGroup className="chat-composer">
+          <InputGroupTextarea
+            aria-label="Synthetic draft"
+            placeholder="A synthetic draft"
+          />
+        </InputGroup>
+      </ActivityBorder>
+      {active && <ActivityOrb />}
+    </main>
+  )
+}
+
 createRoot(document.getElementById("root")!).render(
   <ThemeProvider attribute="class">
-    <RouterProvider router={router} />
+    {window.location.pathname === "/__visuals" ? (
+      <VisualsFixture />
+    ) : (
+      <RouterProvider router={router} />
+    )}
   </ThemeProvider>
 )

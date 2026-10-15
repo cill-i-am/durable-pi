@@ -1,27 +1,40 @@
-import type { ReactNode, ComponentProps } from "react"
-import { ThinkingOrb } from "thinking-orbs"
-import { BorderBeam } from "border-beam"
-import { useAppTheme } from "@/hooks/use-app-theme"
+import { lazy, Suspense, type ReactNode, type ComponentProps } from "react"
+import type { ThinkingOrb as NativeThinkingOrb } from "thinking-orbs"
 import { useActivityMotion } from "@/hooks/activity-motion"
+
+const ThinkingOrb = lazy(() =>
+  import("thinking-orbs").then((module) => ({ default: module.ThinkingOrb }))
+)
+const ActivityBorderEffect = lazy(() =>
+  import("./activity-border-effect").then((module) => ({
+    default: module.ActivityBorderEffect,
+  }))
+)
 
 export function ActivityOrb({
   state = "working",
   active = true,
 }: {
-  state?: ComponentProps<typeof ThinkingOrb>["state"]
+  state?: ComponentProps<typeof NativeThinkingOrb>["state"]
   active?: boolean
 }) {
   const { animate } = useActivityMotion()
   return (
-    <ThinkingOrb
-      state={state}
-      size={20}
-      theme="auto"
-      speed={0.7}
-      paused={!active || !animate}
-      aria-hidden="true"
-      className="activity-orb shrink-0"
-    />
+    <Suspense
+      fallback={
+        <span aria-hidden="true" className="activity-orb size-5 shrink-0" />
+      }
+    >
+      <ThinkingOrb
+        state={state}
+        size={20}
+        theme="auto"
+        speed={0.7}
+        paused={!active || !animate}
+        aria-hidden="true"
+        className="activity-orb shrink-0"
+      />
+    </Suspense>
   )
 }
 
@@ -32,21 +45,15 @@ export function ActivityBorder({
   active: boolean
   children: ReactNode
 }) {
-  const { resolvedTheme } = useAppTheme()
   const { animate } = useActivityMotion()
   return (
-    <BorderBeam
-      className="activity-border"
-      size="line"
-      colorVariant="ocean"
-      theme={resolvedTheme === "dark" ? "dark" : "light"}
-      active={active && animate}
-      duration={7}
-      strength={0.3}
-      glowSize={0.6}
-      staticColors
-    >
+    <div className="activity-border">
       {children}
-    </BorderBeam>
+      {active && animate && (
+        <Suspense fallback={null}>
+          <ActivityBorderEffect />
+        </Suspense>
+      )}
+    </div>
   )
 }
