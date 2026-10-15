@@ -25,6 +25,7 @@ export function useConversation(agentId: string, enabled = true) {
     live: enabled,
     onCustomEvent(name, value) {
       if (name === "durable-pi.metadata") {
+        markReady("metadata")
         setMetadata({
           id,
           value: Schema.decodeUnknownSync(ConversationMetadata)(value),

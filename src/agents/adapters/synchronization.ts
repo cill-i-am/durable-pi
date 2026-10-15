@@ -1,4 +1,4 @@
-import { Effect, Schema } from "effect"
+import { Cache, Context, Data, Effect, Exit, Layer, Schema } from "effect"
 import { nativeOperation, nativeResponse } from "../../shared/interop"
 import {
   AgentConflict,
@@ -68,3 +68,48 @@ export const synchronizeTerminalAuthority = (
         })
     })
   ).pipe(Effect.withSpan("Agents.synchronizeTerminalAuthority"))
+
+class ProjectionKey extends Data.Class<TerminalAuthorityProjection> {}
+
+/** One actor's successful terminal acknowledgments, never user admission.
+ * The revision and sticky revocation fence are both part of the key. */
+export class TerminalAuthoritySync extends Context.Service<
+  TerminalAuthoritySync,
+  {
+    sync: (
+      projection: TerminalAuthorityProjection
+    ) => Effect.Effect<void, AgentSynchronizationError>
+  }
+>()("durable-pi/agents/TerminalAuthoritySync") {}
+
+export const terminalAuthoritySyncLayer = (
+  binding: Parameters<typeof synchronizeTerminalAuthority>[0],
+  actor: string
+) =>
+  Layer.effect(
+    TerminalAuthoritySync,
+    Effect.gen(function* () {
+      const acknowledgments = yield* Cache.makeWith(
+        (projection: ProjectionKey) =>
+          synchronizeTerminalAuthority(binding, actor, projection),
+        {
+          capacity: 1,
+          requireServicesAt: "lookup",
+          timeToLive: (exit) => (Exit.isSuccess(exit) ? "60 seconds" : 0),
+        }
+      )
+      return {
+        sync: Effect.fn("Agents.ensureTerminalAuthority")(
+          (projection: TerminalAuthorityProjection) =>
+            Cache.get(
+              acknowledgments,
+              new ProjectionKey({
+                revision: projection.revision,
+                active: projection.active,
+                revokeThrough: projection.revokeThrough,
+              })
+            )
+        ),
+      }
+    })
+  )

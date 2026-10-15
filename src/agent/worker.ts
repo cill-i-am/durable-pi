@@ -198,6 +198,8 @@ import {
 import { agentCatalogRequest } from "../agents/adapters/http"
 import {
   agentNativeOperation,
+  TerminalAuthoritySync,
+  terminalAuthoritySyncLayer,
   synchronizeTerminalAuthority,
   configurationInput,
 } from "../agents/adapters/synchronization"
@@ -709,6 +711,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   private readonly catalogLayer = sqliteAgentCatalog(this.db)
   readonly actorRuntime = ManagedRuntime.make(
     Layer.mergeAll(
+      terminalAuthoritySyncLayer(
+        this.env.TERMINAL_SERVICE,
+        this.ctx.id.toString()
+      ),
       usageApplication(new SqliteUsage(this.db), () => crypto.randomUUID()),
       piModelStreamsLayer,
       activityApplication(
@@ -974,6 +980,9 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   })
   readonly catalog = this.actorRuntime.runSync(AgentCatalog)
   readonly catalogHttp = this.actorRuntime.runSync(AgentCatalogHttp)
+  readonly terminalAuthoritySync = this.actorRuntime.runSync(
+    TerminalAuthoritySync
+  )
   readonly configurationHost: AgentConfigurationHost<
     | Effect.Error<ReturnType<typeof synchronizeTerminalAuthority>>
     | Effect.Error<ReturnType<Workspace["Service"]["extractionPending"]>>
@@ -981,12 +990,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     | Effect.Error<ReturnType<Routines["Service"]["nextWake"]>>
   > = {
     invalidateApps: () => Effect.sync(() => this.webApps.invalidate()),
-    syncTerminal: (projection) =>
-      synchronizeTerminalAuthority(
-        this.env.TERMINAL_SERVICE,
-        this.ctx.id.toString(),
-        projection
-      ),
+    syncTerminal: (projection) => this.terminalAuthoritySync.sync(projection),
     wakeBrowser: () =>
       agentNativeOperation("wake browser cleanup", () =>
         this.browserCleanup.wake()
