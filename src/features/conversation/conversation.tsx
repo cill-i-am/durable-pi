@@ -1,3 +1,4 @@
+import { markReady } from "@/features/performance"
 import { AgentMark, agentTone } from "@/components/agent-mark"
 import { AgentStatus } from "@/components/agent-status"
 import { ActivityBorder } from "@/components/activity-visuals"
@@ -125,6 +126,11 @@ export function Conversation({
   const active = state?.turns.find((t) =>
     ["queued", "preparing", "running", "stopping"].includes(t.status)
   )
+  useEffect(() => {
+    if (state) markReady("history")
+    if (composerInput.current && !composerInput.current.disabled)
+      markReady("composer")
+  }, [state])
   async function send(text: string, mode: SubmissionMode) {
     if (archived) return false
     setSending(true)

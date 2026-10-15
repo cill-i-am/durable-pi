@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useState,
@@ -15,6 +16,7 @@ const Context = createContext<{
   open: (id: string) => void
   agentId: string
   archived: boolean
+  observe: () => () => void
 } | null>(null)
 export function ObjectsProvider({
   agentId,
@@ -29,6 +31,11 @@ export function ObjectsProvider({
   onPendingChange: (busy: boolean) => void
   children: ReactNode
 }) {
+  const [consumers, setConsumers] = useState(0)
+  const observe = useCallback(() => {
+    setConsumers((count) => count + 1)
+    return () => setConsumers((count) => count - 1)
+  }, [])
   const [store] = useState(
     () => new ObjectStore(agentApi(agentId), `pi:object-changes:${agentId}`)
   )
@@ -46,7 +53,9 @@ export function ObjectsProvider({
     onPendingChange(Object.keys(state.pending).length > 0)
     return () => onPendingChange(false)
   }, [state.pending, onPendingChange])
+  const refreshing = consumers > 0 || Object.keys(state.pending).length > 0
   useEffect(() => {
+    if (!refreshing) return
     const refresh = async () => {
       if (document.visibilityState === "visible") {
         await store.refresh()
@@ -64,9 +73,9 @@ export function ObjectsProvider({
       window.removeEventListener("online", reconnect)
       document.removeEventListener("visibilitychange", reconnect)
     }
-  }, [store])
+  }, [store, refreshing])
   return (
-    <Context value={{ store, open: onOpen, agentId, archived }}>
+    <Context value={{ store, open: onOpen, agentId, archived, observe }}>
       {children}
     </Context>
   )
@@ -75,6 +84,9 @@ export function useObjects() {
   return useContext(Context)
 }
 export function useObjectState(store: ObjectStore) {
+  const context = useObjects()
+  const observe = context?.store === store ? context.observe : undefined
+  useEffect(() => observe?.(), [observe])
   return useSyncExternalStore(
     store.subscribe,
     store.getSnapshot,

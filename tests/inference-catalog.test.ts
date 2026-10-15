@@ -33,6 +33,38 @@ const dies = <T, TError>(exit: Exit.Exit<T, TError>, defect: unknown) =>
   )
 
 it.effect(
+  "a new connection does not wait for obsolete in-flight discovery",
+  () =>
+    Effect.gen(function* () {
+      const entered = gate(),
+        release = gate()
+      let identity = "old"
+      const reader = yield* makeModelCatalog({
+        current: () =>
+          Effect.succeed({
+            identity,
+            load:
+              identity === "old"
+                ? () =>
+                    Effect.promise(async () => {
+                      entered.resolve()
+                      await release.promise
+                      return catalog
+                    })
+                : () => Effect.succeed(catalog),
+          }),
+      })
+      const obsolete = yield* Effect.forkChild(reader.read())
+      yield* Effect.promise(() => entered.promise)
+      identity = "new"
+      // This must complete while the old provider is still blocked.
+      expect(yield* reader.read()).toEqual(catalog)
+      release.resolve()
+      expect((yield* Fiber.join(obsolete)).error).toContain("changed")
+    })
+)
+
+it.effect(
   "catalog caches only successful reads and expires against invocation Clock",
   () =>
     Effect.gen(function* () {

@@ -3,17 +3,20 @@ import {
   type SubscribeConnectionAdapter,
 } from "@tanstack/ai-client"
 import { Schema } from "effect"
-import { SendInput } from "@/conversations/contracts"
+import { ConversationCursor, SendInput } from "@/conversations/contracts"
 import { api, agentUrl, ApiError } from "@/http/client"
 
 export function conversationConnection(
   agentId: string
 ): SubscribeConnectionAdapter {
+  let cursor: ConversationCursor | undefined
   const stream = fetchServerSentEvents(
     `${agentUrl(agentId, "events")}&protocol=tanstack`,
     {
       async fetchClient(input, init) {
-        const response = await fetch(input, init)
+        const url = new URL(String(input), "https://app.internal")
+        if (cursor) url.searchParams.set("after", cursor)
+        const response = await fetch(url.pathname + url.search, init)
         if (
           response.status === 401 ||
           response.status === 403 ||
@@ -41,6 +44,16 @@ export function conversationConnection(
             if (!received)
               yield { type: "CUSTOM", name: "durable-pi.connection", value: "" }
             received = true
+            if (
+              chunk.type === "CUSTOM" &&
+              chunk.name === "durable-pi.cursor" &&
+              typeof chunk.value === "string"
+            ) {
+              const decoded = Schema.decodeUnknownOption(ConversationCursor)(
+                chunk.value
+              )
+              if (decoded._tag === "Some") cursor = decoded.value
+            }
             yield chunk
           }
           if (!received && !signal?.aborted)

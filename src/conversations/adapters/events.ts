@@ -1,6 +1,10 @@
 import type { AgentEventStream } from "@earendil-works/pi-durable"
 import { Cause, Effect, Exit, Schema } from "effect"
-import type { ChatState, ConversationFrame } from "../contracts"
+import {
+  ConversationCursor,
+  type ChatState,
+  type ConversationFrame,
+} from "../contracts"
 import type { StreamChunk } from "@tanstack/ai/client"
 import { chatMessages, messageEvents } from "./tanstack"
 import { conversationEventPump } from "../events"
@@ -27,6 +31,23 @@ type Source<TError> = {
   activeSession: () => Effect.Effect<string | undefined, TError>
   watch: (id: string) => Promise<AgentEventStream>
   subscribe: (listener: () => void) => () => void
+}
+
+/** One bounded, volatile checkpoint per native agent instance. A restart or
+ * any state change falls back to a complete snapshot; no second journal. */
+export class ConversationCheckpoint {
+  private previous: string | undefined
+  private revision: ConversationCursor | undefined
+  current(state: ChatState): ConversationCursor {
+    const serialized = JSON.stringify(state)
+    if (serialized !== this.previous) {
+      this.previous = serialized
+      this.revision = Schema.decodeUnknownSync(ConversationCursor)(
+        crypto.randomUUID()
+      )
+    }
+    return this.revision!
+  }
 }
 
 function frames(
@@ -73,12 +94,19 @@ export function conversationEvents<TError>(
   source: Source<TError>,
   signal: AbortSignal,
   tanstack = false,
-  run: ConversationEventRunner = Effect.runPromiseExit
+  run: ConversationEventRunner = Effect.runPromiseExit,
+  resume?: { checkpoint: ConversationCheckpoint; after: string | null }
 ): Response {
   const encoder = new TextEncoder()
   const cancelled = new AbortController()
   let consumerClosed = false
   let task: Promise<Exit.Exit<void, unknown>> | undefined
+  let sentRevision: string | undefined
+  const decodedCursor = Schema.decodeUnknownOption(ConversationCursor)(
+    resume?.after
+  )
+  const acknowledged =
+    decodedCursor._tag === "Some" ? decodedCursor.value : undefined
   const body = new ReadableStream<Uint8Array>(
     {
       start(controller) {
@@ -112,8 +140,31 @@ export function conversationEvents<TError>(
             },
             {
               publish: (state, previous) => {
-                for (const frame of frames(state, previous, tanstack))
+                let revision =
+                  tanstack && !previous
+                    ? resume?.checkpoint.current(state)
+                    : undefined
+                const output =
+                  !previous && revision && revision === acknowledged
+                    ? []
+                    : frames(state, previous, tanstack)
+                // Unchanged heartbeats keep their existing reconciliation work
+                // without adding another full-state serialization for a cursor.
+                if (previous && output.length && tanstack)
+                  revision = resume?.checkpoint.current(state)
+                for (const frame of output)
                   if (!send(`data: ${JSON.stringify(frame)}\n\n`)) return false
+                // Advance the client only after every preceding frame has been
+                // delivered. A lost tail therefore causes a safe full resync.
+                if (revision && revision !== sentRevision) {
+                  if (
+                    !send(
+                      `data: ${JSON.stringify({ type: "CUSTOM", name: "durable-pi.cursor", value: revision })}\n\n`
+                    )
+                  )
+                    return false
+                  sentRevision = revision
+                }
                 return !consumerClosed
               },
               heartbeat: () => send(": keepalive\n\n"),

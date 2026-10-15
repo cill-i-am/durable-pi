@@ -7,6 +7,13 @@ import { Profile, JobType, ResolvedRoute } from "../inference/policy"
 import { SummaryIssue } from "../memory/domain"
 import { RuntimeStatus } from "./status"
 
+export const ConversationCursor = Schema.String.check(
+  Schema.isPattern(
+    /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i
+  )
+).pipe(Schema.brand("ConversationCursor"))
+export type ConversationCursor = typeof ConversationCursor.Type
+
 export const SendInput = Schema.Struct({
   operationId: Schema.String.check(Schema.isPattern(/^[a-f0-9-]{36}$/i)),
   text: Schema.String.check(Schema.isMaxLength(30_000)),

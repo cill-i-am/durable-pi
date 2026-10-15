@@ -1,3 +1,4 @@
+import { markReady } from "@/features/performance"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Schema } from "effect"
 import { ModelSelection } from "@/conversations/turns"
@@ -23,13 +24,15 @@ export function useModelCatalog(
       const next = Schema.decodeUnknownSync(Catalog)(
         await agentApi(agentId)("models")
       )
-      if (sequence === requestSequence.current)
+      if (sequence === requestSequence.current) {
+        markReady("models")
         setCatalog((current) =>
           current &&
           current.selection.settingsRevision > next.selection.settingsRevision
             ? current
             : next
         )
+      }
     } catch {
       if (sequence === requestSequence.current)
         onError("Could not verify model availability. Refresh to retry.")
