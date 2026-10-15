@@ -13,6 +13,24 @@ import { piWorkingObjects } from "../src/objects/adapters/pi"
 import { objectsRequest } from "../src/objects/adapters/http"
 import { ObjectMutation, ObjectDetail } from "../src/objects/contracts"
 
+it("unchanged empty refreshes preserve the external-store snapshot and recover a read failure", async () => {
+  let offline = false
+  const store = new ObjectStore(async <T>() => {
+    if (offline) throw new Error("Offline")
+    return { objects: [] } as T
+  }, "unchanged")
+  const initial = store.getSnapshot()
+  await store.refresh()
+  await store.refresh()
+  expect(store.getSnapshot()).toBe(initial)
+  offline = true
+  await store.refresh()
+  expect(store.getSnapshot().error).toBe("Offline")
+  offline = false
+  await store.refresh()
+  expect(store.getSnapshot().error).toBe("")
+})
+
 it("recovers a lost UI response after browser restart, explicitly reconciles conflicts and cancels uncertain unsent changes", async () => {
   const directory = await mkdtemp(join(tmpdir(), "objects-ui-")),
     harness = await Harness.open(

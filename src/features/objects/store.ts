@@ -157,9 +157,14 @@ export class ObjectStore {
       )
       const merged = objects.map((object) => {
         const old = this.state.list.find((item) => item.id === object.id)
-        return old && old.revision > object.revision ? old : object
+        return old && old.revision >= object.revision ? old : object
       })
-      this.set({ list: merged, error: "" })
+      if (
+        this.state.error ||
+        merged.length !== this.state.list.length ||
+        merged.some((object, index) => object !== this.state.list[index])
+      )
+        this.set({ list: merged, error: "" })
     } catch (error) {
       this.set({
         error:

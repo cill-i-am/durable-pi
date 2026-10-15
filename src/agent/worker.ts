@@ -227,7 +227,10 @@ import {
   ModelSettings,
   type Submission,
 } from "../conversations/turns"
-import { conversationEvents } from "../conversations/adapters/events"
+import {
+  ConversationCheckpoint,
+  conversationEvents,
+} from "../conversations/adapters/events"
 import { selectBotSkills } from "../skills/selection"
 import { AccessStore } from "../access/adapters/sqlite"
 import { AccessGate, type AccessError } from "../access/gate"
@@ -1847,6 +1850,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     .use(this.routineRunner)
     .use(this.actorServices)
 
+  private readonly conversationCheckpoint = new ConversationCheckpoint()
   private readonly conversationListeners = new Set<() => void>()
   notifyConversation() {
     for (const listener of this.conversationListeners) listener()
@@ -2582,7 +2586,11 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             this.actorRuntime.runPromiseExit(
               program.pipe(Effect.provide(WorkerTelemetry)),
               options
-            )
+            ),
+          {
+            checkpoint: this.conversationCheckpoint,
+            after: url.searchParams.get("after"),
+          }
         )
       if (request.method === "GET" && path === "state")
         return Response.json(yield* this.snapshotProgram())

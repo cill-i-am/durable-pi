@@ -1,3 +1,4 @@
+import { markReady } from "@/features/performance"
 import { Link } from "@tanstack/react-router"
 import {
   workspaceDestination,
@@ -82,8 +83,10 @@ export function useAgentCatalog(ownerId: string, selectedId?: AgentId) {
       const result = Schema.decodeUnknownSync(AgentList)(
         await api("/api/agent/bots", undefined, signal)
       )
-      if (!signal?.aborted)
+      if (!signal?.aborted) {
+        markReady("catalog")
         dispatch({ type: "loaded", request, agents: result.agents })
+      }
     } catch (error) {
       if (!signal?.aborted) dispatch({ type: "failed", request })
       if (request === requestId.current) throw error

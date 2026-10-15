@@ -1,0 +1,255 @@
+{
+  "baselineCommit": "6b0f49182e6216fe709d58e187b8ce4eecb3ea42",
+  "browser": [
+    {
+      "view": "desktop",
+      "name": "baseline",
+      "n": 10,
+      "p50": 912.5999999046326,
+      "min": 902.7000002861023,
+      "max": 940.6000003814697
+    },
+    {
+      "view": "desktop",
+      "name": "stage1",
+      "n": 10,
+      "p50": 886.7999997138977,
+      "min": 871.2000002861023,
+      "max": 943.7999997138977
+    },
+    {
+      "view": "desktop",
+      "name": "candidate",
+      "n": 10,
+      "p50": 777.8000001907349,
+      "min": 773.0999999046326,
+      "max": 935.1999998092651
+    },
+    {
+      "view": "mobile",
+      "name": "baseline",
+      "n": 10,
+      "p50": 918.5,
+      "min": 903.4000000953674,
+      "max": 970.9000000953674
+    },
+    {
+      "view": "mobile",
+      "name": "stage1",
+      "n": 10,
+      "p50": 895.2000002861023,
+      "min": 879.8000001907349,
+      "max": 1106.4000000953674
+    },
+    {
+      "view": "mobile",
+      "name": "candidate",
+      "n": 10,
+      "p50": 781.4000000953674,
+      "min": 774.3000001907349,
+      "max": 837.9000000953674
+    }
+  ],
+  "initialBundle": {
+    "baseline": {
+      "route": "/agents/home",
+      "compression": "local gzip, default level; not observed network bytes",
+      "bytes": 1894673,
+      "gzipBytes": 569877,
+      "files": [
+        {
+          "asset": "/assets/index-UVQCqul2.js",
+          "bytes": 322964,
+          "gzipBytes": 101663
+        },
+        {
+          "asset": "/assets/rolldown-runtime-hePW80VL.js",
+          "bytes": 716,
+          "gzipBytes": 430
+        },
+        {
+          "asset": "/assets/button-zRrjhLFf.js",
+          "bytes": 58891,
+          "gzipBytes": 22833
+        },
+        {
+          "asset": "/assets/workspace-D0XSjxb9.js",
+          "bytes": 102767,
+          "gzipBytes": 33910
+        },
+        {
+          "asset": "/assets/_workspace-BeO9v46m.js",
+          "bytes": 511,
+          "gzipBytes": 334
+        },
+        {
+          "asset": "/assets/_workspace-HBciFBF6.js",
+          "bytes": 981846,
+          "gzipBytes": 282107
+        },
+        {
+          "asset": "/assets/auth-Cw3HT20L.js",
+          "bytes": 426940,
+          "gzipBytes": 128542
+        },
+        {
+          "asset": "/assets/_workspace.agents._agentId.index-DJ7LAi8J.js",
+          "bytes": 38,
+          "gzipBytes": 58
+        }
+      ]
+    },
+    "candidate": {
+      "route": "/agents/home",
+      "compression": "local gzip, default level; not observed network bytes",
+      "bytes": 1521804,
+      "gzipBytes": 468147,
+      "files": [
+        {
+          "asset": "/assets/index-BXKOT1WY.js",
+          "bytes": 462898,
+          "gzipBytes": 149305
+        },
+        {
+          "asset": "/assets/jsx-runtime-D3jfb0Ew.js",
+          "bytes": 8901,
+          "gzipBytes": 3399
+        },
+        {
+          "asset": "/assets/link-BNIVaqmI.js",
+          "bytes": 9784,
+          "gzipBytes": 4442
+        },
+        {
+          "asset": "/assets/dist-aFJNwsOG.js",
+          "bytes": 3805,
+          "gzipBytes": 1711
+        },
+        {
+          "asset": "/assets/_workspace-D-46GR6j.js",
+          "bytes": 481696,
+          "gzipBytes": 138851
+        },
+        {
+          "asset": "/assets/client-CZZ6XYFx.js",
+          "bytes": 330391,
+          "gzipBytes": 98308
+        },
+        {
+          "asset": "/assets/arrow-left-BrK5wXEI.js",
+          "bytes": 196,
+          "gzipBytes": 182
+        },
+        {
+          "asset": "/assets/empty-Dt3c1Ulo.js",
+          "bytes": 1526,
+          "gzipBytes": 661
+        },
+        {
+          "asset": "/assets/copy-button-BiKsEF0G.js",
+          "bytes": 1584,
+          "gzipBytes": 855
+        },
+        {
+          "asset": "/assets/code-xml-CVNNE7_o.js",
+          "bytes": 258,
+          "gzipBytes": 203
+        },
+        {
+          "asset": "/assets/files-panel-BLOdU6d-.js",
+          "bytes": 20102,
+          "gzipBytes": 6397
+        },
+        {
+          "asset": "/assets/checkbox-Dh-VtfoO.js",
+          "bytes": 6074,
+          "gzipBytes": 2833
+        },
+        {
+          "asset": "/assets/rotate-ccw-8FbqdEMg.js",
+          "bytes": 479,
+          "gzipBytes": 316
+        },
+        {
+          "asset": "/assets/plus-Ya_e5g-P.js",
+          "bytes": 184,
+          "gzipBytes": 170
+        },
+        {
+          "asset": "/assets/refresh-cw-1Qtinxcl.js",
+          "bytes": 352,
+          "gzipBytes": 247
+        },
+        {
+          "asset": "/assets/poll-BP17a3qo.js",
+          "bytes": 1565,
+          "gzipBytes": 749
+        },
+        {
+          "asset": "/assets/useValueChanged-BcMwS-dS.js",
+          "bytes": 4498,
+          "gzipBytes": 2080
+        },
+        {
+          "asset": "/assets/markdown-BXTNalXS.js",
+          "bytes": 144016,
+          "gzipBytes": 42440
+        },
+        {
+          "asset": "/assets/dropdown-menu-DBnCYmh8.js",
+          "bytes": 33568,
+          "gzipBytes": 11044
+        },
+        {
+          "asset": "/assets/tabs-SFrixbSf.js",
+          "bytes": 9307,
+          "gzipBytes": 3519
+        },
+        {
+          "asset": "/assets/_workspace-DvBNCha1.js",
+          "bytes": 582,
+          "gzipBytes": 377
+        },
+        {
+          "asset": "/assets/_workspace.agents._agentId.index-DJ7LAi8J.js",
+          "bytes": 38,
+          "gzipBytes": 58
+        }
+      ]
+    }
+  },
+  "backend": {
+    "baseline": {
+      "n": 10,
+      "p50": 101.34929199999988,
+      "min": 100.53608299999996,
+      "max": 102.20241700000003,
+      "note": "new identity while an obsolete lookup is held for 100ms"
+    },
+    "candidate": {
+      "n": 10,
+      "p50": 0.08137500000020736,
+      "min": 0.049250000000029104,
+      "max": 0.3131670000000213,
+      "note": "new identity while an obsolete lookup is held for 100ms"
+    },
+    "reconnect": {
+      "fullBytes": 168317,
+      "resumedBytes": 99
+    }
+  },
+  "idle": {
+    "windowMs": 60000,
+    "baseline": {
+      "objects": 15,
+      "statuses": 6,
+      "session": 2
+    },
+    "candidate": {
+      "objects": 0,
+      "statuses": 2,
+      "session": 2
+    },
+    "scope": "empty synthetic chat; selected agent remains live; background status fallback 30 seconds"
+  }
+}

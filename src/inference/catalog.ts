@@ -1,4 +1,4 @@
-import { Clock, Context, Effect, Layer, Semaphore } from "effect"
+import { Cache, Context, Effect, Exit, Layer } from "effect"
 import { preserveFatal } from "../shared/effect"
 import { ModelUnavailable, type ModelCatalog } from "./policy"
 
@@ -19,54 +19,51 @@ export class ModelCatalogReader extends Context.Service<
 
 export const makeModelCatalog = (source: CatalogSource) =>
   Effect.gen(function* () {
-    const permit = yield* Semaphore.make(1)
-    let cache:
-      { identity: string; expires: number; value: ModelCatalog } | undefined
+    const cache = yield* Cache.makeWith(
+      (identity: string) =>
+        Effect.gen(function* () {
+          const grant = yield* source.current()
+          if (grant.identity !== identity)
+            return yield* new ModelUnavailable({
+              message:
+                "The ChatGPT connection changed. Reload to verify model availability.",
+            })
+          const value = yield* grant.load()
+          if (value.error)
+            return yield* new ModelUnavailable({ message: value.error })
+          // A reconnect during I/O must not publish the old connection's result.
+          if ((yield* source.current()).identity !== identity)
+            return yield* new ModelUnavailable({
+              message:
+                "The ChatGPT connection changed. Reload to verify model availability.",
+            })
+          return value
+        }),
+      {
+        capacity: 1,
+        requireServicesAt: "lookup",
+        timeToLive: (exit) => (Exit.isSuccess(exit) ? "60 seconds" : 0),
+      }
+    )
     return {
       read: Effect.fn("Inference.readModelCatalog")(() =>
-        permit
-          .withPermit(
-            Effect.gen(function* () {
-              const grant = yield* source.current()
-              const now = yield* Clock.currentTimeMillis
-              if (
-                grant.identity &&
-                cache?.identity === grant.identity &&
-                cache.expires > now
-              )
-                return cache.value
-              const value = yield* grant.load()
-              if (value.error) return value
-              if (grant.identity) {
-                // A reconnect during I/O must not publish the old connection's result.
-                const current = yield* source.current()
-                if (current.identity !== grant.identity) {
-                  cache = undefined
-                  return yield* new ModelUnavailable({
-                    message:
-                      "The ChatGPT connection changed. Reload to verify model availability.",
-                  })
-                }
-                cache = {
-                  identity: grant.identity,
-                  expires: (yield* Clock.currentTimeMillis) + 60_000,
-                  value,
-                }
-              }
-              return value
+        Effect.gen(function* () {
+          const grant = yield* source.current()
+          // Remote grants deliberately have no reusable local authority key.
+          return yield* grant.identity
+            ? Cache.get(cache, grant.identity)
+            : grant.load()
+        }).pipe(
+          preserveFatal,
+          Effect.catchTag("ModelUnavailable", (error) =>
+            Effect.succeed({
+              models: [],
+              checkedAt: null,
+              error: error.message,
+              usage: "ChatGPT plan usage" as const,
             })
           )
-          .pipe(
-            preserveFatal,
-            Effect.catchTag("ModelUnavailable", (error) =>
-              Effect.succeed({
-                models: [],
-                checkedAt: null,
-                error: error.message,
-                usage: "ChatGPT plan usage" as const,
-              })
-            )
-          )
+        )
       ),
     }
   })

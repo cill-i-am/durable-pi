@@ -19,6 +19,7 @@ export function useAgentStatuses(
     .map((agent) => `${agent.id}:${agent.status}`)
     .join(",")
   useEffect(() => {
+    if (!membership) return
     const controller = new AbortController()
     const stopped = () => controller.signal.aborted
     let pending = false
@@ -41,7 +42,7 @@ export function useAgentStatuses(
         pending = false
       }
     }
-    const stop = poll(refresh, 10_000, true)
+    const stop = poll(refresh, 30_000, true)
     const visible = () => {
       void refresh()
     }
@@ -51,7 +52,7 @@ export function useAgentStatuses(
       stop()
       document.removeEventListener("visibilitychange", visible)
     }
-  }, [ownerId, membership, selectedId])
+  }, [ownerId, membership])
   const statuses = useMemo(
     () =>
       Object.fromEntries(
