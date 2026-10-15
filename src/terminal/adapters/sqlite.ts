@@ -1,39 +1,74 @@
+import { Schema } from "effect"
+import * as Domain from "../domain"
+import type { TerminalLedger } from "../repository"
 import type { Sqlite } from "../../storage/sqlite"
 import {
   TerminalFailure,
+  TerminalStorageError,
   type CommandInput,
-  type CommandRun,
-  type Checkpoint,
+  CommandRun,
+  Checkpoint,
   type CommandSummary,
   type TerminalNetworkPolicy,
 } from "../contracts"
 
-export class TerminalStore {
+export class TerminalStore implements TerminalLedger {
   constructor(
     private readonly db: Sqlite,
     private readonly onFinished?: (run: CommandRun) => void
   ) {
-    db.run(
+    const storage = <T>(operation: string, body: () => T): T => {
+      try {
+        return body()
+      } catch (cause) {
+        throw new TerminalStorageError({ operation, cause })
+      }
+    }
+    this.db = {
+      all: (query, ...bindings) =>
+        storage("read", () => db.all(query, ...bindings)),
+      run: (query, ...bindings) =>
+        storage("write", () => db.run(query, ...bindings)),
+      transaction: (body) => {
+        const failure: { failed: boolean; cause?: unknown } = { failed: false }
+        try {
+          return db.transaction(() => {
+            try {
+              return body()
+            } catch (cause) {
+              failure.failed = true
+              failure.cause = cause
+              throw cause
+            }
+          })
+        } catch (cause) {
+          if (failure.failed && cause === failure.cause) throw cause
+          throw new TerminalStorageError({ operation: "transaction", cause })
+        }
+      },
+    }
+
+    this.db.run(
       "CREATE TABLE IF NOT EXISTS terminal_network (id INTEGER PRIMARY KEY CHECK(id=1),revision INTEGER NOT NULL,unrestricted INTEGER NOT NULL)"
     )
-    db.run(
+    this.db.run(
       "CREATE TABLE IF NOT EXISTS terminal_runs (id TEXT PRIMARY KEY,created INTEGER NOT NULL,record TEXT NOT NULL)"
     )
-    db.run(
+    this.db.run(
       "CREATE TABLE IF NOT EXISTS terminal_checkpoint (id INTEGER PRIMARY KEY CHECK(id=1),record TEXT NOT NULL)"
     )
-    db.run(
+    this.db.run(
       "CREATE TABLE IF NOT EXISTS terminal_cancellations (id TEXT PRIMARY KEY)"
     )
-    db.run(
+    this.db.run(
       "CREATE TABLE IF NOT EXISTS terminal_authority (id INTEGER PRIMARY KEY CHECK(id=1),revision INTEGER NOT NULL,active INTEGER NOT NULL)"
     )
     if (
-      !db
+      !this.db
         .all<{ name: string }>("PRAGMA table_info(terminal_authority)")
         .some((column) => column.name === "revoked_through")
     )
-      db.run(
+      this.db.run(
         "ALTER TABLE terminal_authority ADD COLUMN revoked_through INTEGER NOT NULL DEFAULT -1"
       )
   }
@@ -47,19 +82,15 @@ export class TerminalStore {
   }
   configureNetwork(input: TerminalNetworkPolicy) {
     return this.db.transaction(() => {
-      if (!this.authority()?.active)
-        throw new TerminalFailure({
-          message: "Restore this bot before changing its network settings.",
-        })
-      const current = this.networkPolicy()
-      if (current.revision !== input.revision)
-        throw new TerminalFailure({
-          message: "Network settings changed. Reload before saving again.",
-        })
+      const next = Domain.networkChange(
+        this.networkPolicy(),
+        input,
+        this.authority()
+      )
       this.db.run(
         "INSERT INTO terminal_network VALUES (1,?,?) ON CONFLICT(id) DO UPDATE SET revision=excluded.revision,unrestricted=excluded.unrestricted",
-        current.revision + 1,
-        input.unrestricted ? 1 : 0
+        next.revision,
+        next.unrestricted ? 1 : 0
       )
       return this.networkPolicy()
     })
@@ -72,7 +103,9 @@ export class TerminalStore {
       "SELECT record FROM terminal_exports WHERE id=?",
       id
     )[0]
-    return row ? (JSON.parse(row.record) as Checkpoint) : null
+    return row
+      ? Schema.decodeUnknownSync(Checkpoint)(JSON.parse(row.record))
+      : null
   }
   cancel(id: string) {
     this.db.run(
@@ -110,18 +143,17 @@ export class TerminalStore {
     )
   }
   authorized(run: CommandRun) {
-    const authority = this.authority()
-    return (
-      !!authority?.active &&
-      (run.authorityRevision ?? -1) > authority.revokedThrough
-    )
+    return Domain.authorized(run, this.authority())
   }
+
   get(id: string): CommandRun | undefined {
     const row = this.db.all<{ record: string }>(
       "SELECT record FROM terminal_runs WHERE id=?",
       id
     )[0]
-    return row ? (JSON.parse(row.record) as CommandRun) : undefined
+    return row
+      ? Schema.decodeUnknownSync(CommandRun)(JSON.parse(row.record))
+      : undefined
   }
   list(): CommandSummary[] {
     return this.db.all<CommandSummary>(
@@ -132,7 +164,9 @@ export class TerminalStore {
     const row = this.db.all<{ record: string }>(
       "SELECT record FROM terminal_checkpoint WHERE id=1"
     )[0]
-    return row ? (JSON.parse(row.record) as Checkpoint) : null
+    return row
+      ? Schema.decodeUnknownSync(Checkpoint)(JSON.parse(row.record))
+      : null
   }
   private put(value: CommandRun) {
     this.db.run(
@@ -149,49 +183,34 @@ export class TerminalStore {
     transfer?: CommandRun["transfer"]
   ) {
     return this.db.transaction(() => {
-      const previous = this.get(input.id)
-      if (previous) {
-        if (
-          previous.command !== input.command ||
-          (previous.kind ?? "command") !== kind ||
-          JSON.stringify(previous.transfer) !== JSON.stringify(transfer)
-        )
-          throw new TerminalFailure({
-            message: "This command ID already has different input.",
-          })
-        return previous
-      }
+      const previous = Domain.replayCommand(
+        this.get(input.id),
+        input,
+        kind,
+        transfer
+      )
+      if (previous) return previous
       const authority = this.authority()
-      if (!authority?.active || authority.revision <= authority.revokedThrough)
-        throw new TerminalFailure({ message: "This bot is not active." })
       const count = this.db.all<{ count: number }>(
         "SELECT count(*) AS count FROM terminal_runs"
       )[0]!.count
-      if (count >= 500)
-        throw new TerminalFailure({
-          message: "This bot has reached its 500-command history limit.",
-        })
       const stopped =
         this.db.all(
           "SELECT id FROM terminal_cancellations WHERE id=?",
           input.id
         ).length > 0
-      return this.put({
-        ...input,
-        authorityRevision: authority.revision,
-        networkUnrestricted: this.networkPolicy().unrestricted,
-        kind,
-        ...(transfer ? { transfer } : {}),
-        status: stopped ? "cancelled" : "running",
-        output: "",
-        exitCode: null,
-        error: stopped
-          ? "Stopped before dispatch. This command was not executed."
-          : null,
-        createdAt: Date.now(),
-        finishedAt: stopped ? Date.now() : null,
-        savedAt: null,
-      })
+      return this.put(
+        Domain.admitCommand(
+          input,
+          kind,
+          transfer,
+          authority,
+          count,
+          stopped,
+          this.networkPolicy().unrestricted,
+          Date.now()
+        )
+      )
     })
   }
   progress(id: string, output: string) {
@@ -209,16 +228,15 @@ export class TerminalStore {
       const run = this.get(id)
       if (!run) throw new TerminalFailure({ message: "Command not found." })
       if (run.status !== "running") return run
-      if ((checkpoint || exported) && !this.authorized(run))
-        return this.put({
-          ...run,
-          status: "cancelled",
-          exitCode: null,
-          error:
-            "Bot archived. Workspace recovery uses the last saved checkpoint.",
-          finishedAt: Date.now(),
-          savedAt: null,
-        })
+      const next = Domain.finishCommand(
+        run,
+        result,
+        !!(checkpoint || exported),
+        this.authorized(run),
+        checkpoint?.savedAt ?? null,
+        Date.now()
+      )
+      if (next.status === "cancelled") return this.put(next)
       if (exported) {
         this.db.run(
           "CREATE TABLE IF NOT EXISTS terminal_exports (id TEXT PRIMARY KEY,record TEXT NOT NULL)"
@@ -234,12 +252,7 @@ export class TerminalStore {
           "INSERT INTO terminal_checkpoint VALUES (1,?) ON CONFLICT(id) DO UPDATE SET record=excluded.record",
           JSON.stringify(checkpoint)
         )
-      return this.put({
-        ...run,
-        ...result,
-        finishedAt: Date.now(),
-        savedAt: checkpoint?.savedAt ?? null,
-      })
+      return this.put(next)
     })
     if (changed) this.observe(finished)
     return finished

@@ -2,11 +2,12 @@ import { expect, it } from "vitest"
 import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { Effect } from "effect"
+import { Cause, Effect, Exit } from "effect"
 import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context"
 import { Harness, createRegistry, type Tx } from "@earendil-works/pi-durable"
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
 import { createModels } from "@earendil-works/pi-ai"
+import { scopedReceiptFact } from "../src/access/receipt"
 import { AccessStore } from "../src/access/adapters/sqlite"
 import { ExecutionStore } from "../src/execution/adapters/sqlite"
 import { AppStore } from "../src/apps/adapters/sqlite"
@@ -14,9 +15,9 @@ import {
   piWorkingObjects,
   checklistInTransaction,
 } from "../src/objects/adapters/pi"
-import { ObjectFailure } from "../src/objects/contracts"
 import { piPlans } from "../src/planning/adapters/pi"
-import { planEvidence } from "../src/planning/adapters/evidence"
+import { ObjectFailure } from "../src/objects/contracts"
+import { planEvidence } from "../src/planning/evidence"
 import {
   PlanFailure,
   type PlanDraft,
@@ -53,20 +54,14 @@ it("checks real bot/task-owned receipts, legacy execution failures, stale eviden
   const origin = { turnId: root, inputIds: [root], inputRevision: 0 }
   const evidence = (tx?: Tx) =>
     planEvidence({
-      access,
-      executions,
-      apps,
-      files: async () => [],
+      receipt: (query) =>
+        Effect.sync(() => scopedReceiptFact(access.get(query.id), query)),
+      execution: (key) => Effect.sync(() => executions.get(key)),
+      app: (key) => Effect.sync(() => apps.get(key)),
+      files: () => Effect.succeed([]),
       object: (key) =>
         tx
-          ? Effect.tryPromise({
-              try: () => checklistInTransaction(tx, key),
-              catch: () =>
-                new ObjectFailure({
-                  code: "unavailable",
-                  message: "Unavailable",
-                }),
-            })
+          ? checklistInTransaction(tx, key)
           : objects.read(key).pipe(Effect.map((detail) => detail.object)),
     })
   const receipt = (
@@ -242,3 +237,33 @@ it("checks real bot/task-owned receipts, legacy execution failures, stale eviden
     await rm(directory, { recursive: true, force: true })
   }
 }, 5000)
+
+it.each(["not_found", "unavailable"] as const)(
+  "does not turn object %s plus failed evidence cleanup into unavailable/invalid evidence",
+  async (code) => {
+    const cleanup = new Error("Private evidence cleanup failure")
+    const evidence = planEvidence({
+      receipt: () => Effect.succeed(undefined),
+      execution: () => Effect.succeed(undefined),
+      app: () => Effect.succeed(undefined),
+      files: () => Effect.succeed([]),
+      object: () =>
+        Effect.fail(
+          new ObjectFailure({ code, message: "Object unavailable" })
+        ).pipe(Effect.ensuring(Effect.die(cleanup))),
+    })
+    const turnId = crypto.randomUUID()
+    const exit = await Effect.runPromiseExit(
+      evidence({ kind: "object", id: crypto.randomUUID(), revision: 1 }, [
+        turnId,
+      ])
+    )
+    expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)
+    expect(
+      Exit.isFailure(exit) &&
+        exit.cause.reasons.some(
+          (reason) => reason._tag === "Die" && reason.defect === cleanup
+        )
+    ).toBe(true)
+  }
+)

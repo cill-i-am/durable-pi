@@ -1,12 +1,19 @@
 import { describe, expect, it, vi } from "vitest"
-import { Effect } from "effect"
+import { Cause, Effect, Exit, Fiber } from "effect"
+import { it as effectIt } from "@effect/vitest"
+import { TestClock } from "effect/testing"
 import type { MCPClientManager } from "agents/mcp/client"
 import { database } from "./database"
-import { ConnectionStore } from "../src/access/adapters/connections"
-import { RemoteConnections } from "../src/access/adapters/mcp"
-import { connectionUrl, remoteTool } from "../src/access/connections"
+import {
+  ConnectionStore,
+  sqliteRemoteSelection,
+} from "../src/access/adapters/connections"
+import { connectionFixture } from "./connection-fixture"
+import { connectionUrl, ConnectionError } from "../src/access/connections"
+import { remoteTool } from "../src/access/adapters/remote-tool"
 import { selectRemoteTools } from "../src/access/remote-selection"
 import { AccessStore } from "../src/access/adapters/sqlite"
+import { connectionRequest } from "../src/access/adapters/connection-http"
 
 const input = {
   id: `mcp-${"a".repeat(32)}`,
@@ -23,7 +30,8 @@ const definition = {
   },
 }
 function fixture() {
-  const store = new ConnectionStore(database())
+  const db = database(),
+    store = new ConnectionStore(db)
   store.add(input)
   const calls: unknown[] = []
   const mcp = {
@@ -31,24 +39,199 @@ function fixture() {
     mcpConnections: { [input.id]: { connectionState: "ready" } },
     listTools: () => [definition],
     waitForConnections: async () => {},
-    callTool: async (args: unknown) => {
+    callTool: async (args: unknown, _options?: { signal?: AbortSignal }) => {
       calls.push(args)
       return { content: [{ type: "text", text: "Synthetic result" }] }
     },
     removeServer: vi.fn(async () => {}),
     registerServer: vi.fn(async () => {}),
+    connectToServer: vi.fn(async () => ({ state: "connected" as const })),
+    discoverIfConnected: vi.fn(async () => {}),
   }
+  const { runtime, service: connections } = connectionFixture(
+    store,
+    mcp as unknown as MCPClientManager
+  )
   return {
     store,
+    db,
     calls,
     mcp,
-    connections: new RemoteConnections(
-      store,
-      mcp as unknown as MCPClientManager
-    ),
+    connections,
+    runtime,
   }
 }
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((done) => {
+    resolve = done
+  })
+  return { promise, resolve }
+}
 describe("connection authority", () => {
+  effectIt.effect(
+    "expires mutation continuation on the Effect clock while joining native registration",
+    () =>
+      Effect.gen(function* () {
+        const f = fixture(),
+          started = deferred<void>(),
+          settled = deferred<void>()
+        f.mcp.listServers = () => []
+        f.mcp.registerServer.mockImplementation(async () => {
+          started.resolve()
+          await settled.promise
+        })
+        let finished = false
+        const pending = yield* Effect.forkChild(
+          f.connections.connect(input, "https://app.example.com").pipe(
+            Effect.result,
+            Effect.tap(() =>
+              Effect.sync(() => {
+                finished = true
+              })
+            )
+          )
+        )
+        yield* Effect.promise(() => started.promise)
+        yield* TestClock.adjust("60 seconds")
+        expect(finished).toBe(false)
+        expect(f.mcp.connectToServer).not.toHaveBeenCalled()
+        settled.resolve()
+        expect(yield* Fiber.join(pending)).toMatchObject({
+          _tag: "Failure",
+          failure: {
+            _tag: "ConnectionTransportError",
+            operation: "connection deadline",
+          },
+        })
+        expect(f.mcp.connectToServer).not.toHaveBeenCalled()
+        yield* f.connections.disconnect(input.id, 1)
+        expect(f.store.get(input.id)?.active).toBe(false)
+      })
+  )
+  it("holds the mutation permit through interrupted native registration and skips later connection steps", async () => {
+    const f = fixture(),
+      started = deferred<void>(),
+      settled = deferred<void>()
+    f.mcp.listServers = () => []
+    f.mcp.registerServer.mockImplementation(async () => {
+      started.resolve()
+      await settled.promise
+    })
+    const controller = new AbortController()
+    let interrupted = false
+    const request = Effect.runPromiseExit(
+      f.connections.connect(input, "https://app.example.com"),
+      { signal: controller.signal }
+    ).then((exit) => {
+      interrupted = true
+      return exit
+    })
+    await started.promise
+    controller.abort()
+    const disconnect = Effect.runPromise(f.connections.disconnect(input.id, 1))
+    expect(f.store.get(input.id)?.active).toBe(true)
+    expect(f.mcp.removeServer).not.toHaveBeenCalled()
+    expect(interrupted).toBe(false)
+    settled.resolve()
+    const exit = await request
+    expect(Exit.isFailure(exit) && Cause.hasInterrupts(exit.cause)).toBe(true)
+    await disconnect
+    expect(f.mcp.connectToServer).not.toHaveBeenCalled()
+    expect(f.mcp.discoverIfConnected).not.toHaveBeenCalled()
+    expect(f.mcp.removeServer).toHaveBeenCalledOnce()
+    expect(f.store.get(input.id)?.active).toBe(false)
+  })
+  it("propagates tool cancellation and waits for a noncooperative call before disposing the actor service", async () => {
+    const f = fixture(),
+      started = deferred<void>(),
+      aborted = deferred<void>(),
+      settled = deferred<void>()
+    const tool = (await Effect.runPromise(f.connections.list()))[0]!.tools[0]!
+    f.mcp.callTool = async (_, options) => {
+      options?.signal?.addEventListener("abort", () => aborted.resolve(), {
+        once: true,
+      })
+      started.resolve()
+      await settled.promise
+      return { content: [{ type: "text", text: "Late result" }] }
+    }
+    const controller = new AbortController()
+    let finished = false
+    const request = Effect.runPromiseExit(f.connections.call(tool.name, {}), {
+      signal: controller.signal,
+    }).then((exit) => {
+      finished = true
+      return exit
+    })
+    await started.promise
+    controller.abort()
+    await aborted.promise
+    let disposed = false
+    const disposal = f.runtime.dispose().then(() => {
+      disposed = true
+    })
+    await vi.waitFor(async () => {
+      await expect(Effect.runPromise(f.connections.list())).rejects.toThrow(
+        "host has stopped"
+      )
+    })
+    expect(finished).toBe(false)
+    expect(disposed).toBe(false)
+    settled.resolve()
+    const exit = await request
+    expect(Exit.isFailure(exit) && Cause.hasInterrupts(exit.cause)).toBe(true)
+    await disposal
+    expect(disposed).toBe(true)
+  })
+  it("preserves corrupt-record defects through resolution rather than treating them as unavailable transport", async () => {
+    const f = fixture()
+    f.db.run("UPDATE access_connections SET name='' WHERE id=?", input.id)
+    const exit = await Effect.runPromise(
+      Effect.exit(f.connections.resolve(["tool"]))
+    )
+    expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)
+    expect(Exit.isFailure(exit) && Cause.hasFails(exit.cause)).toBe(false)
+  })
+  it("keeps durable connection-write failures separate from transport failures", async () => {
+    const f = fixture()
+    f.db.run(
+      "CREATE TRIGGER reject_connection BEFORE UPDATE ON access_connections BEGIN SELECT RAISE(ABORT,'write failure'); END"
+    )
+    expect(
+      await Effect.runPromise(
+        f.connections.disconnect(input.id, 1).pipe(Effect.result)
+      )
+    ).toMatchObject({
+      _tag: "Failure",
+      failure: { _tag: "ConnectionStorageError" },
+    })
+    expect(f.mcp.removeServer).not.toHaveBeenCalled()
+    expect(f.store.get(input.id)?.active).toBe(true)
+  })
+  it("maps native transport failures only at HTTP without exposing their cause", async () => {
+    const f = fixture()
+    f.mcp.removeServer.mockRejectedValue(new Error("private-provider-secret"))
+    const response = await Effect.runPromise(
+      connectionRequest(
+        f.connections,
+        new Request("https://app.example.com", {
+          method: "POST",
+          body: JSON.stringify({ id: input.id, expectedRevision: 1 }),
+        }),
+        "connections/disconnect",
+        "https://app.example.com"
+      )
+    )
+    expect(response.status).toBe(409)
+    const body = await response.text()
+    expect(body).toContain("Could not connect")
+    expect(body).not.toContain("private-provider-secret")
+    expect(f.store.get(input.id)?.active).toBe(false)
+  })
+  it("classifies malformed endpoint URLs as expected connection rejections", () => {
+    expect(() => connectionUrl("not a url")).toThrow(ConnectionError)
+  })
   it.each([
     "http://mcp.example.com",
     "https://localhost",
@@ -66,6 +249,7 @@ describe("connection authority", () => {
   it("accepts public HTTPS endpoints and pins tools to connection generation and schema", async () => {
     expect(connectionUrl(input.url)).toBe(input.url)
     const first = await remoteTool({ ...input, revision: 1 }, definition)
+    expect(first.name).toBe("mcp_a4aba317c556a85e87ba0e551b86d28f1e09d64f")
     expect(await remoteTool({ ...input, revision: 1 }, definition)).toEqual(
       first
     )
@@ -100,9 +284,14 @@ describe("connection authority", () => {
     mcp.removeServer.mockImplementation(async () => {
       throw new Error("private-provider-secret")
     })
-    await expect(
-      Effect.runPromise(connections.disconnect(input.id, 1))
-    ).rejects.toThrow("Could not connect")
+    expect(
+      await Effect.runPromise(
+        connections.disconnect(input.id, 1).pipe(Effect.result)
+      )
+    ).toMatchObject({
+      _tag: "Failure",
+      failure: { _tag: "ConnectionTransportError" },
+    })
     expect(store.get(input.id)?.active).toBe(false)
     expect(store.get(input.id)?.revision).toBe(2)
     expect(() => store.change(input.id, 1, true)).toThrow("changed")
@@ -116,9 +305,13 @@ describe("connection authority", () => {
   })
   it("uses authoritative remote names and refuses old tool identities after reconnect", async () => {
     const { connections, calls, store } = fixture()
-    const tool = (await connections.list())[0]!.tools[0]!
+    const tool = (await Effect.runPromise(connections.list()))[0]!.tools[0]!
     expect(
-      (await connections.call(tool.name, { value: "Synthetic" })).isError
+      (
+        await Effect.runPromise(
+          connections.call(tool.name, { value: "Synthetic" })
+        )
+      ).isError
     ).not.toBe(true)
     expect(calls).toEqual([
       {
@@ -128,21 +321,25 @@ describe("connection authority", () => {
       },
     ])
     store.change(input.id, 1, true)
-    expect((await connections.call(tool.name, {})).isError).toBe(true)
+    expect(
+      (await Effect.runPromise(connections.call(tool.name, {}))).isError
+    ).toBe(true)
     expect(calls).toHaveLength(1)
   })
   it("rechecks revocation after waiting for a connection and never dispatches a revoked call", async () => {
     const { store, mcp, connections, calls } = fixture()
-    const tool = (await connections.list())[0]!.tools[0]!
+    const tool = (await Effect.runPromise(connections.list()))[0]!.tools[0]!
     mcp.waitForConnections = async () => {
       store.change(input.id, 1, false)
     }
-    expect((await connections.call(tool.name, {})).isError).toBe(true)
+    expect(
+      (await Effect.runPromise(connections.call(tool.name, {}))).isError
+    ).toBe(true)
     expect(calls).toHaveLength(0)
   })
   it("preserves structured-only results as bounded model content", async () => {
     const { mcp, connections } = fixture()
-    const tool = (await connections.list())[0]!.tools[0]!
+    const tool = (await Effect.runPromise(connections.list()))[0]!.tools[0]!
     Object.assign(mcp, {
       callTool: async () => ({
         content: [],
@@ -150,7 +347,7 @@ describe("connection authority", () => {
         _meta: { secret: "private-provider-secret" },
       }),
     })
-    expect(await connections.call(tool.name, {})).toEqual({
+    expect(await Effect.runPromise(connections.call(tool.name, {}))).toEqual({
       content: [{ type: "text", text: '{"answer":"Synthetic result"}' }],
       isError: undefined,
     })
@@ -165,17 +362,61 @@ describe("connection authority", () => {
         inputSchema: { ...definition.inputSchema, type: "string" },
       },
     ]
-    expect((await connections.list())[0]?.tools).toHaveLength(1)
-    const tool = (await connections.list())[0]!.tools[0]!
+    expect(
+      (await Effect.runPromise(connections.list()))[0]?.tools
+    ).toHaveLength(1)
+    const tool = (await Effect.runPromise(connections.list()))[0]!.tools[0]!
     mcp.callTool = async () => {
       throw new Error("private-provider-secret")
     }
-    expect(JSON.stringify(await connections.call(tool.name, {}))).not.toContain(
-      "private-provider-secret"
-    )
+    expect(
+      JSON.stringify(await Effect.runPromise(connections.call(tool.name, {})))
+    ).not.toContain("private-provider-secret")
   })
 })
 describe("per-bot connected tool selection", () => {
+  it("requires the selection write guard at the repository boundary", async () => {
+    const store = new ConnectionStore(database())
+    const tool = await remoteTool({ ...input, revision: 1 }, definition)
+    await expect(
+      Effect.runPromise(
+        sqliteRemoteSelection(store).select(0, [tool], () => false)
+      )
+    ).rejects.toThrow("Restore")
+    expect(store.selection()).toEqual({ revision: 0, tools: [] })
+  })
+  it("rolls back failed selection writes as typed storage failures", async () => {
+    const db = database(),
+      store = new ConnectionStore(db)
+    const tool = await remoteTool({ ...input, revision: 1 }, definition)
+    store.select(0, [tool])
+    db.run(
+      "CREATE TRIGGER reject_selection BEFORE UPDATE ON bot_remote_tools BEGIN SELECT RAISE(ABORT,'selection failure'); END"
+    )
+    const result = await Effect.runPromise(
+      sqliteRemoteSelection(store)
+        .select(1, [], () => true)
+        .pipe(Effect.result)
+    )
+    expect(result).toMatchObject({
+      _tag: "Failure",
+      failure: { _tag: "ConnectionStorageError" },
+    })
+    expect(store.selection()).toEqual({ revision: 1, tools: [tool] })
+  })
+  it("treats malformed historical selections as defects", async () => {
+    const db = database(),
+      store = new ConnectionStore(db)
+    db.run(
+      "INSERT INTO bot_remote_tools VALUES (1,1,?)",
+      JSON.stringify([{ name: "missing identity and schema" }])
+    )
+    const exit = await Effect.runPromise(
+      Effect.exit(sqliteRemoteSelection(store).selection())
+    )
+    expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)
+    expect(Exit.isFailure(exit) && Cause.hasFails(exit.cause)).toBe(false)
+  })
   it("retains pinned offline tools while removing another and rejects stale replacement", async () => {
     const first = new ConnectionStore(database()),
       second = new ConnectionStore(database())
@@ -188,9 +429,9 @@ describe("per-bot connected tool selection", () => {
     const resolve = vi.fn(async () => ({ tools: [], error: "Offline" }))
     const saved = await Effect.runPromise(
       selectRemoteTools(
-        first,
+        sqliteRemoteSelection(first),
         { expectedRevision: 1, names: [a.name] },
-        resolve,
+        () => Effect.promise(resolve),
         () => true
       )
     )
@@ -200,9 +441,9 @@ describe("per-bot connected tool selection", () => {
     await expect(
       Effect.runPromise(
         selectRemoteTools(
-          first,
+          sqliteRemoteSelection(first),
           { expectedRevision: 1, names: [] },
-          resolve,
+          () => Effect.promise(resolve),
           () => true
         )
       )
@@ -215,12 +456,13 @@ describe("per-bot connected tool selection", () => {
     await expect(
       Effect.runPromise(
         selectRemoteTools(
-          first,
+          sqliteRemoteSelection(first),
           { expectedRevision: 0, names: [tool.name] },
-          async () => {
-            writable = false
-            return { tools: [tool], error: null }
-          },
+          () =>
+            Effect.sync(() => {
+              writable = false
+              return { tools: [tool], error: null }
+            }),
           () => writable
         )
       )

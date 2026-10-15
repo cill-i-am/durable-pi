@@ -1,25 +1,42 @@
-import { Effect, Schema } from "effect"
-import { describe, expect, it, vi } from "vitest"
+import { Cause, Context, Effect, Exit, ManagedRuntime, Schema } from "effect"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import { database } from "./database"
-import { Executions, type CodeExecutor } from "../src/execution/execution"
-import { ExecutionStore } from "../src/execution/adapters/sqlite"
-import { CodeInput } from "../src/execution/contracts"
-import { executionRequest } from "../src/execution/http"
+import { Executions, executionApplication } from "../src/execution/service"
 import {
-  executeCode,
-  readOutput,
-} from "../src/execution/adapters/dynamic-worker"
+  ExecutorUnavailable,
+  type CodeExecutor,
+} from "../src/execution/executor"
+import { executionNativeOperation } from "../src/execution/adapters/interop"
+import { admitExecution } from "../src/execution/domain"
+import { ExecutionStore } from "../src/execution/adapters/sqlite"
+import { CodeInput, ExecutionStorageError } from "../src/execution/contracts"
+import { executionRequest } from "../src/execution/adapters/http"
+import { executeCode } from "../src/execution/adapters/dynamic-worker"
+import { readOutput } from "../src/execution/adapters/output"
 
 const input = { id: "synthetic-run", code: "return input + 1", data: "2" }
 const output = { result: "3", logs: "", error: null }
 const run = Effect.runPromise
-function fixture(executor: CodeExecutor = { run: async () => output }) {
-  const repository = new ExecutionStore(database())
+const disposals: Array<() => Promise<void>> = []
+afterEach(async () => {
+  for (const dispose of disposals.splice(0)) await dispose()
+})
+function fixture(
+  executor: CodeExecutor = { run: () => Effect.succeed(output) },
+  db = database()
+) {
+  const repository = new ExecutionStore(db)
   let writable = true
-  const execution = new Executions(repository, executor, () => writable)
+  const runtime = ManagedRuntime.make(
+    executionApplication(repository, executor, () => writable)
+  )
+  const execution = runtime.runSync(Executions)
+  disposals.push(() => runtime.dispose())
   return {
     repository,
     execution,
+    runtime,
+    db,
     archive: () => {
       writable = false
     },
@@ -27,17 +44,19 @@ function fixture(executor: CodeExecutor = { run: async () => output }) {
 }
 describe("Code execution", () => {
   it("persists admission before dispatch and reuses the same operation across retries", async () => {
-    const invoke = vi.fn(async () => {
-      expect(f.repository.get(input.id)?.status).toBe("running")
-      return output
-    })
+    const invoke = vi.fn(() =>
+      Effect.sync(() => {
+        expect(f.repository.get(input.id)?.status).toBe("running")
+        return output
+      })
+    )
     const f = fixture({ run: invoke })
     const first = await run(f.execution.start(input))
-    await first.completion
+    await run(first.completion)
     const replay = await run(f.execution.start(input))
-    expect((await replay.completion).status).toBe("succeeded")
+    expect((await run(replay.completion)).status).toBe("succeeded")
     expect(invoke).toHaveBeenCalledTimes(1)
-    expect(f.repository.list()).toEqual([
+    expect(await run(f.execution.list())).toEqual([
       expect.objectContaining({ id: input.id, status: "succeeded" }),
     ])
     expect(f.repository.list()[0]).not.toHaveProperty("input")
@@ -45,64 +64,97 @@ describe("Code execution", () => {
       run(f.execution.start({ ...input, data: "3" }))
     ).rejects.toThrow("different code")
   })
-  it("durably cancels, aborts the driver and rejects its late result", async () => {
+  it("durably cancels, aborts the driver, joins settlement and rejects its late result", async () => {
     let finish!: (value: typeof output) => void
     let signal!: AbortSignal
+    let entered!: () => void
+    const enteredPromise = new Promise<void>((resolve) => {
+      entered = resolve
+    })
     const f = fixture({
-      run: async (_input, current) => {
-        signal = current
-        return new Promise((resolve) => {
-          finish = resolve
-        })
-      },
+      run: () =>
+        executionNativeOperation((current) => {
+          signal = current
+          entered()
+          return new Promise((resolve) => {
+            finish = resolve
+          })
+        }),
     })
     const started = await run(f.execution.start(input))
+    await enteredPromise
+    const replay = await run(f.execution.start(input))
     await expect(
       run(f.execution.start({ ...input, id: "second" }))
     ).rejects.toThrow("current run")
-    await run(f.execution.cancel(input.id))
+    let settled = false
+    const cancelled = run(f.execution.cancel(input.id)).then((value) => {
+      settled = true
+      return value
+    })
+    expect(f.repository.get(input.id)?.status).toBe("cancelled")
     expect(signal.aborted).toBe(true)
+    expect(settled).toBe(false)
+    await expect(
+      run(f.execution.start({ ...input, id: "second" }))
+    ).rejects.toThrow("current run")
     finish(output)
-    expect((await started.completion).status).toBe("cancelled")
+    expect((await cancelled).status).toBe("cancelled")
+    expect((await run(started.completion)).status).toBe("cancelled")
+    expect((await run(replay.completion)).status).toBe("cancelled")
     expect(f.repository.get(input.id)?.output).toBeNull()
   })
   it("honors an immediate stop before dispatch", async () => {
-    const invoke = vi.fn(async () => output)
+    const invoke = vi.fn(() => Effect.succeed(output))
     const f = fixture({ run: invoke })
     const controller = new AbortController()
-    const pending = f.execution.run(input, controller.signal)
+    const pending = run(f.execution.run(input), { signal: controller.signal })
     controller.abort()
-    expect((await pending).status).toBe("cancelled")
+    await expect(pending).rejects.toThrow()
+    expect(f.repository.get(input.id)).toBeUndefined()
     expect(invoke).not.toHaveBeenCalled()
   })
   it("rejects already stopped requests and archive before dispatch", async () => {
-    const invoke = vi.fn(async () => output)
+    const invoke = vi.fn(() => Effect.succeed(output))
     const f = fixture({ run: invoke })
-    await expect(f.execution.run(input, AbortSignal.abort())).rejects.toThrow(
-      "stopped"
-    )
+    await expect(
+      run(f.execution.run(input), { signal: AbortSignal.abort() })
+    ).rejects.toThrow()
     expect(f.repository.get(input.id)).toBeUndefined()
-    const pending = f.execution.run(input)
+    const pending = run(f.execution.start(input))
     f.archive()
-    expect((await pending).status).toBe("cancelled")
+    expect((await run((await pending).completion)).status).toBe("cancelled")
     expect(invoke).not.toHaveBeenCalled()
   })
   it("marks interrupted intents after restart without re-executing them", async () => {
     const f = fixture()
-    f.repository.admit(input)
-    const invoke = vi.fn(async () => output)
-    const restored = new Executions(f.repository, { run: invoke }, () => true)
-    restored.recover()
-    expect((await (await run(restored.start(input))).completion).status).toBe(
-      "interrupted"
+    const admitted = admitExecution(
+      input,
+      undefined,
+      { total: 0, running: 0 },
+      true,
+      false,
+      1
     )
+    if (admitted._tag === "Failure") throw admitted.failure
+    f.repository.put(admitted.success.run)
+    // A new application sees a committed intent with no live fiber.
+    const invoke = vi.fn(() => Effect.succeed(output))
+    const runtime = ManagedRuntime.make(
+      executionApplication(f.repository, { run: invoke }, () => true)
+    )
+    disposals.push(() => runtime.dispose())
+    const restored = runtime.runSync(Executions)
+    await run(restored.recover())
+    expect(
+      (await run((await run(restored.start(input))).completion)).status
+    ).toBe("interrupted")
+    expect(f.repository.get(input.id)?.status).toBe("interrupted")
     expect(invoke).not.toHaveBeenCalled()
   })
   it("rejects archived admission but preserves read/replay of completed runs", async () => {
     const f = fixture()
-    await (
-      await run(f.execution.start(input))
-    ).completion
+    await run((await run(f.execution.start(input))).completion)
     f.archive()
     await expect(
       run(f.execution.start({ ...input, id: "second" }))
@@ -111,9 +163,9 @@ describe("Code execution", () => {
   })
   it("bounds and redacts malformed or oversized executor results", async () => {
     const f = fixture({
-      run: async () => ({ ...output, result: "x".repeat(32769) }),
+      run: () => Effect.succeed({ ...output, result: "x".repeat(32769) }),
     })
-    const saved = await (await run(f.execution.start(input))).completion
+    const saved = await run((await run(f.execution.start(input))).completion)
     expect(saved.status).toBe("failed")
     expect(saved.output?.result).toBe("")
     expect(saved.output?.error).toContain("limit")
@@ -125,44 +177,121 @@ describe("Code execution", () => {
     const a = fixture(),
       b = fixture()
     const tasks: Promise<unknown>[] = []
-    const result = await run(
-      executionRequest(
-        a.execution,
-        new Request("https://app.test/execution/run", {
-          method: "POST",
-          body: JSON.stringify(input),
-        }),
-        "execution/run",
-        (task) => tasks.push(task)
+    const submit = (body: string) =>
+      run(
+        executionRequest(
+          a.execution,
+          new Request("https://app.test/execution/run", {
+            method: "POST",
+            body,
+          }),
+          "execution/run",
+          (task) => {
+            tasks.push(a.runtime.runPromise(task))
+          }
+        )
       )
-    )
-    expect(result.status).toBe(202)
+    expect((await submit(JSON.stringify(input))).status).toBe(202)
     await Promise.all(tasks)
     expect(b.repository.get(input.id)).toBeUndefined()
-    const oversized = await run(
-      executionRequest(
-        a.execution,
-        new Request("https://app.test/execution/run", {
-          method: "POST",
-          body: "x".repeat(256001),
-        }),
-        "execution/run",
-        (task) => tasks.push(task)
-      )
+    expect((await submit("x".repeat(256001))).status).toBe(409)
+  })
+  it("inherits the invocation Context rather than the Layer's build Context", async () => {
+    const Caller = Context.Reference("execution-test/Caller", {
+      defaultValue: () => "default",
+    })
+    const f = fixture({
+      run: () =>
+        Caller.pipe(Effect.map((value) => ({ ...output, result: value }))),
+    })
+    const task = await run(
+      f.execution.start(input).pipe(Effect.provideService(Caller, "caller"))
     )
-    expect(oversized.status).toBe(409)
+    expect((await run(task.completion)).output?.result).toBe("caller")
+  })
+  it("seals an owned interrupted run and joins its driver before Layer disposal", async () => {
+    let entered!: () => void, finish!: (value: typeof output) => void
+    const begun = new Promise<void>((resolve) => {
+      entered = resolve
+    })
+    let signal!: AbortSignal
+    const f = fixture({
+      run: () =>
+        executionNativeOperation((current) => {
+          signal = current
+          entered()
+          return new Promise((resolve) => {
+            finish = resolve
+          })
+        }),
+    })
+    await run(f.execution.start(input))
+    await begun
+    let disposed = false
+    const closing = f.runtime.dispose().then(() => {
+      disposed = true
+    })
+    await Promise.resolve()
+    expect(signal.aborted).toBe(true)
+    expect(disposed).toBe(false)
+    finish(output)
+    await closing
+    expect(f.repository.get(input.id)?.status).toBe("interrupted")
+    expect(f.repository.get(input.id)?.output).toBeNull()
+  })
+  it("keeps executor defects fatal and the persisted intent uncertain", async () => {
+    const defect = new Error("executor invariant")
+    const f = fixture({ run: () => Effect.die(defect) })
+    const task = await run(f.execution.start(input))
+    const exit = await Effect.runPromiseExit(task.completion)
+    expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)
+    expect(f.repository.get(input.id)?.status).toBe("running")
+    await expect(
+      run(f.execution.start({ ...input, id: "second" }))
+    ).rejects.toThrow("executor invariant")
+    await expect(f.runtime.dispose()).rejects.toThrow("executor invariant")
+    disposals.pop()
+  })
+  it("does not turn typed failure plus failed cleanup into a saved ordinary failure", async () => {
+    const defect = new Error("failed executor cleanup")
+    const f = fixture({
+      run: () =>
+        Effect.fail(new ExecutorUnavailable()).pipe(
+          Effect.ensuring(Effect.die(defect))
+        ),
+    })
+    const task = await run(f.execution.start(input))
+    const exit = await Effect.runPromiseExit(task.completion)
+    expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)
+    expect(f.repository.get(input.id)?.status).toBe("running")
+    const disposal = await Effect.runPromiseExit(f.runtime.disposeEffect)
+    expect(
+      Exit.isFailure(disposal) &&
+        disposal.cause.reasons.some(
+          (reason) => reason._tag === "Die" && reason.defect === defect
+        )
+    ).toBe(true)
+    disposals.pop()
+  })
+  it("reports native storage failures while corrupted persisted records remain defects", async () => {
+    const db = database(),
+      f = fixture(undefined, db)
+    db.run("INSERT INTO code_runs VALUES (?,?,?)", "broken", 1, "{}")
+    const corrupt = await Effect.runPromiseExit(f.execution.get("broken"))
+    expect(Exit.isFailure(corrupt) && Cause.hasDies(corrupt.cause)).toBe(true)
+    db.run("DROP TABLE code_runs")
+    const unavailable = await run(
+      f.execution.get("missing").pipe(Effect.result)
+    )
+    expect(unavailable).toEqual(
+      expect.objectContaining({ failure: new ExecutionStorageError() })
+    )
   })
   it("provides no bindings/network and sets CPU/subrequest bounds at the isolation boundary", async () => {
     const load = vi.fn(() => ({
       getEntrypoint: () => ({ fetch: async () => Response.json(output) }),
     }))
-    expect(
-      await executeCode(
-        { load } as unknown as WorkerLoader,
-        input,
-        new AbortController().signal
-      )
-    ).toEqual(output)
+    expect(await run(executeCode({ load }, input))).toEqual(output)
     expect(load).toHaveBeenCalledWith(
       expect.objectContaining({
         env: {},
@@ -173,13 +302,15 @@ describe("Code execution", () => {
   })
   it("bounds untrusted responses independently of generated wrapper code", async () => {
     await expect(
-      readOutput(Response.redirect("https://execution.internal/again", 307))
+      run(
+        readOutput(Response.redirect("https://execution.internal/again", 307))
+      )
     ).rejects.toThrow()
-    await expect(readOutput(new Response("x".repeat(200001)))).rejects.toThrow(
-      "output"
-    )
     await expect(
-      readOutput(Response.json({ ...output, logs: "x".repeat(16001) }))
+      run(readOutput(new Response("x".repeat(200001))))
+    ).rejects.toThrow()
+    await expect(
+      run(readOutput(Response.json({ ...output, logs: "x".repeat(16001) })))
     ).rejects.toThrow()
   })
   it("never follows generated redirects into a second invocation", async () => {
@@ -188,20 +319,14 @@ describe("Code execution", () => {
       return Response.redirect("https://execution.internal/again", 307)
     })
     const loader = { load: () => ({ getEntrypoint: () => ({ fetch }) }) }
-    await expect(
-      executeCode(
-        loader as unknown as WorkerLoader,
-        input,
-        new AbortController().signal
-      )
-    ).rejects.toThrow()
+    await expect(run(executeCode(loader, input))).rejects.toThrow()
     expect(fetch).toHaveBeenCalledTimes(1)
   })
   it("aborts body consumption when cancellation arrives after response headers", async () => {
     const cancelled = vi.fn()
     const controller = new AbortController()
     const response = new Response(new ReadableStream({ cancel: cancelled }))
-    const pending = readOutput(response, controller.signal)
+    const pending = run(readOutput(response), { signal: controller.signal })
     controller.abort()
     await expect(pending).rejects.toThrow()
     expect(cancelled).toHaveBeenCalledTimes(1)

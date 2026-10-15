@@ -1,132 +1,133 @@
-import { Schema } from "effect"
-import type { Sqlite } from "../storage/sqlite"
-import type { CacheUsage } from "../agent/cache"
-import { ResolvedRoute } from "./policy"
+import { Clock, Context, Effect, Layer, Schema } from "effect"
+import type { ResolvedRoute } from "./policy"
+import {
+  type AccountUsage,
+  type Attempt,
+  type TerminalOutcome,
+  type UsageReport,
+  type UsageTotals,
+  UsageStorageError,
+  finishAttempt,
+  recordUsage,
+  restartError,
+} from "./usage-domain"
+import type { UsageLedger } from "./usage-ledger"
 
-export const Attempt = Schema.Struct({
-  id: Schema.String,
-  turnId: Schema.NullOr(Schema.String),
-  route: ResolvedRoute,
-  purpose: Schema.String,
-  startedAt: Schema.String,
-  finishedAt: Schema.NullOr(Schema.String),
-  outcome: Schema.Literals([
-    "running",
-    "completed",
-    "failed",
-    "incomplete",
-    "interrupted",
-    "cancelled",
-  ]),
-  error: Schema.NullOr(Schema.String),
-  reportedModel: Schema.NullOr(Schema.String),
-  input: Schema.NullOr(Schema.Number),
-  cached: Schema.NullOr(Schema.Number),
-  output: Schema.NullOr(Schema.Number),
-})
-export type Attempt = typeof Attempt.Type
-export const InferenceActivity = Schema.Struct({
-  attempts: Schema.Array(Attempt),
-})
+export interface InferenceObservation {
+  readonly id: string
+  readonly turnId: string | null
+  usage: (report: UsageReport) => Effect.Effect<void, UsageStorageError>
+  end: (
+    outcome: TerminalOutcome,
+    error?: string | null
+  ) => Effect.Effect<Attempt | undefined, UsageStorageError>
+}
+export class InferenceUsage extends Context.Service<
+  InferenceUsage,
+  {
+    start: (
+      route: ResolvedRoute,
+      turnId: string | null,
+      purpose: string
+    ) => Effect.Effect<InferenceObservation, UsageStorageError>
+    recover: () => Effect.Effect<number, UsageStorageError>
+    recent: () => Effect.Effect<readonly Attempt[], UsageStorageError>
+    totals: (turnId: string) => Effect.Effect<UsageTotals, UsageStorageError>
+    accountTotals: () => Effect.Effect<AccountUsage, UsageStorageError>
+  }
+>()("durable-pi/InferenceUsage") {}
 
-export class InferenceUsage {
-  constructor(
-    private readonly db: Sqlite,
-    private readonly onFinished?: (attempt: Attempt) => void
-  ) {
-    db.run(
-      "CREATE TABLE IF NOT EXISTS inference_attempts (id TEXT PRIMARY KEY,payload TEXT NOT NULL)"
-    )
-    db.run(
-      "CREATE INDEX IF NOT EXISTS inference_attempts_run ON inference_attempts(json_extract(payload,'$.turnId'))"
-    )
-    for (const row of db.all<{ id: string; payload: string }>(
-      "SELECT id,payload FROM inference_attempts WHERE json_extract(payload,'$.outcome')='running'"
-    )) {
-      const value = Schema.decodeUnknownSync(Attempt)(JSON.parse(row.payload))
-      this.save({
-        ...value,
-        outcome: "interrupted",
-        finishedAt: new Date().toISOString(),
-        error:
-          "Runtime restarted before a terminal provider event was recorded. Usage may be unreported.",
-      })
-    }
-  }
-  private save(value: Attempt) {
-    this.db.run(
-      "INSERT INTO inference_attempts VALUES (?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload",
-      value.id,
-      JSON.stringify(value)
-    )
-  }
-  start(route: ResolvedRoute, turnId: string | null, purpose: string) {
-    const value: Attempt = {
-      id: crypto.randomUUID(),
-      route,
-      turnId,
-      purpose,
-      startedAt: new Date().toISOString(),
-      finishedAt: null,
-      outcome: "running",
-      error: null,
-      reportedModel: null,
-      input: null,
-      cached: null,
-      output: null,
-    }
-    this.save(value)
-    return {
-      id: value.id,
-      turnId: value.turnId,
-      usage: (usage: CacheUsage) => {
-        Object.assign(value, {
-          reportedModel: usage.model,
-          input: usage.input,
-          cached: usage.cached,
-          output: usage.output,
+const storage = <T>(body: () => T) =>
+  Effect.try({
+    try: body,
+    catch: (cause) => {
+      const usageStorageError =
+        Schema.decodeUnknownOption(UsageStorageError)(cause)
+      if (usageStorageError._tag === "Some") return usageStorageError.value
+      throw cause
+    },
+  })
+
+export function usageApplication(ledger: UsageLedger, uuid: () => string) {
+  const service = InferenceUsage.of({
+    start: Effect.fn("InferenceUsage.start")(
+      function* (route, turnId, purpose) {
+        const now = yield* Clock.currentTimeMillis
+        const id = uuid()
+        yield* storage(() =>
+          ledger.insert({
+            id,
+            route,
+            turnId,
+            purpose,
+            startedAt: new Date(now).toISOString(),
+            finishedAt: null,
+            outcome: "running",
+            error: null,
+            reportedModel: null,
+            input: null,
+            cached: null,
+            output: null,
+          })
+        )
+        return {
+          id,
+          turnId,
+          usage: Effect.fn("InferenceUsage.report")(function* (report) {
+            const at = new Date(yield* Clock.currentTimeMillis).toISOString()
+            yield* storage(() =>
+              ledger.atomic(() => {
+                const current = ledger.read(id)
+                if (ledger.report(report, at))
+                  ledger.put(recordUsage(current, report))
+              })
+            )
+          }),
+          end: Effect.fn("InferenceUsage.finish")(function* (
+            outcome,
+            error = null
+          ) {
+            const at = new Date(yield* Clock.currentTimeMillis).toISOString()
+            return yield* storage(() =>
+              ledger.atomic(() => {
+                const finished = finishAttempt(
+                  ledger.read(id),
+                  outcome,
+                  error,
+                  at
+                )
+                if (finished) ledger.put(finished)
+                return finished
+              })
+            )
+          }),
+        } satisfies InferenceObservation
+      }
+    ),
+    recover: Effect.fn("InferenceUsage.recover")(function* () {
+      const at = new Date(yield* Clock.currentTimeMillis).toISOString()
+      return yield* storage(() =>
+        ledger.atomic(() => {
+          const running = ledger.running()
+          for (const attempt of running) {
+            const finished = finishAttempt(
+              attempt,
+              "interrupted",
+              restartError,
+              at
+            )
+            if (finished) ledger.put(finished)
+          }
+          return running.length
         })
-        this.save(value)
-      },
-      end: (outcome: Attempt["outcome"], error: string | null = null) => {
-        const finished = {
-          ...value,
-          outcome,
-          error,
-          finishedAt: new Date().toISOString(),
-        }
-        this.save(finished)
-        try {
-          this.onFinished?.(finished)
-        } catch {}
-      },
-    }
-  }
-  recent() {
-    return this.db
-      .all<{ payload: string }>(
-        "SELECT payload FROM inference_attempts ORDER BY rowid DESC LIMIT 100"
       )
-      .map((row) => Schema.decodeUnknownSync(Attempt)(JSON.parse(row.payload)))
-  }
-
-  totals(turnId: string) {
-    return this.db.all<{
-      modelRequests: number
-      usageReportedRequests: number
-      knownInputTokens: number
-      knownCachedInputTokens: number
-      knownOutputTokens: number
-    }>(
-      `SELECT count(*) AS modelRequests,
-        count(CASE WHEN json_extract(payload,'$.input') IS NOT NULL
-          AND json_extract(payload,'$.cached') IS NOT NULL
-          AND json_extract(payload,'$.output') IS NOT NULL THEN 1 END) AS usageReportedRequests,
-        coalesce(sum(json_extract(payload,'$.input')),0) AS knownInputTokens,
-        coalesce(sum(json_extract(payload,'$.cached')),0) AS knownCachedInputTokens,
-        coalesce(sum(json_extract(payload,'$.output')),0) AS knownOutputTokens
-       FROM inference_attempts WHERE json_extract(payload,'$.turnId')=?`,
-      turnId
-    )[0]!
-  }
+    }),
+    recent: () => storage(() => ledger.recent()),
+    totals: (turnId) => storage(() => ledger.totals(turnId)),
+    accountTotals: () => storage(() => ledger.accountTotals()),
+  })
+  return Layer.effect(
+    InferenceUsage,
+    service.recover().pipe(Effect.as(service))
+  )
 }

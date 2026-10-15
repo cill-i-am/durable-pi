@@ -1,14 +1,12 @@
-import { Effect } from "effect"
+import { relayTerminal } from "../src/terminal/adapters/socket"
+import { Cause, Effect, Exit, Fiber } from "effect"
 import type { Sandbox } from "@cloudflare/sandbox"
 import { describe, expect, it, vi } from "vitest"
-import { Terminal, type TerminalRuntime } from "../src/terminal/terminal"
+import { readBounded } from "../src/terminal/adapters/stream"
+import { Terminal, type TerminalRuntime } from "./terminal-fixture"
 import { TerminalStore } from "../src/terminal/adapters/sqlite"
-import {
-  readBounded,
-  readCommand,
-  sandboxRuntime,
-} from "../src/terminal/adapters/sandbox"
-import { MAX_OUTPUT } from "../src/terminal/contracts"
+import { readCommand, sandboxRuntime } from "../src/terminal/adapters/sandbox"
+import { MAX_OUTPUT, TerminalFailure } from "../src/terminal/contracts"
 import { database } from "./database"
 
 const input = { id: "command", command: "printf hello" }
@@ -31,7 +29,7 @@ function fixture(overrides: Partial<TerminalRuntime> = {}) {
     read: vi.fn(async () => new Uint8Array([1])),
     write: vi.fn(async () => checkpoint),
   }
-  const terminal = new Terminal(repository, runtime, backups)
+  const terminal = new Terminal(repository, runtime, backups, relayTerminal)
   terminal.configure(0, true)
   return { db, terminal, repository, runtime, backups }
 }
@@ -43,6 +41,106 @@ function deferred<T>() {
   return { promise, resolve }
 }
 describe("Linux commands", () => {
+  it("keeps an admitted command alive after its request scope closes", async () => {
+    const started = deferred<void>(),
+      done = deferred<number>()
+    const f = fixture({
+      execute: async () => {
+        started.resolve()
+        return done.promise
+      },
+    })
+    const task = await Effect.runPromise(
+      Effect.scoped(f.terminal.service.start(input))
+    )
+    await started.promise
+    expect(f.repository.get(input.id)?.status).toBe("running")
+    done.resolve(0)
+    await f.terminal.runtime.runPromise(task.completion)
+    expect(f.repository.get(input.id)?.status).toBe("succeeded")
+  })
+  it("awaits noncooperative foreign work during actor scope shutdown", async () => {
+    const restoring = deferred<void>(),
+      settled = deferred<void>(),
+      closing = deferred<void>()
+    let closes = 0
+    const f = fixture({
+      restore: async () => {
+        restoring.resolve()
+        await settled.promise
+      },
+      close: async () => {
+        if (++closes >= 2) closing.resolve()
+      },
+    })
+    const task = await run(f.terminal.start(input))
+    const completion = task.completion.catch(() => {})
+    await restoring.promise
+    let disposed = false
+    const disposal = f.terminal.runtime.dispose().then(() => {
+      disposed = true
+    })
+    await closing.promise
+    expect(disposed).toBe(false)
+    expect(f.repository.checkpoint()).toBeNull()
+    settled.resolve()
+    await disposal
+    await completion
+    expect(f.runtime.execute).not.toHaveBeenCalled()
+    expect(f.runtime.snapshot).not.toHaveBeenCalled()
+    expect(f.repository.get(input.id)?.status).not.toBe("running")
+    await expect(
+      run(f.terminal.service.start({ ...input, id: "after-stop" }))
+    ).rejects.toThrow("host has stopped")
+    expect(f.repository.get("after-stop")).toBeUndefined()
+  })
+  it("awaits cleanup even when recording a failed outcome also fails", async () => {
+    const f = fixture({
+      execute: async () => {
+        throw new Error("execution failure")
+      },
+    })
+    f.db.run(
+      "CREATE TRIGGER fail_finish BEFORE UPDATE ON terminal_runs WHEN json_extract(NEW.record,'$.status')!='running' BEGIN SELECT RAISE(ABORT,'storage failure'); END"
+    )
+    const task = await run(f.terminal.start(input))
+    await expect(task.completion).rejects.toBeDefined()
+    expect(f.runtime.close).toHaveBeenCalledTimes(3)
+    expect(f.terminal.state().busy).toBe(false)
+    f.db.run("DROP TRIGGER fail_finish")
+    await f.terminal.recover()
+    expect(f.repository.get(input.id)?.status).toBe("interrupted")
+  })
+  it("joins noncooperative recovery close before actor runtime disposal completes", async () => {
+    const closing = deferred<void>(),
+      closed = deferred<void>()
+    const f = fixture({
+      close: vi.fn(async () => {
+        closing.resolve()
+        await closed.promise
+      }),
+    })
+    f.repository.admit(input)
+    const recovery = f.terminal.recover().catch(() => {})
+    await closing.promise
+    let disposed = false
+    const disposal = f.terminal.runtime.dispose().then(() => {
+      disposed = true
+    })
+    await vi.waitFor(async () => {
+      await expect(
+        run(f.terminal.service.start({ ...input, id: "during-disposal" }))
+      ).rejects.toThrow("host has stopped")
+    })
+    expect(f.repository.get(input.id)?.status).toBe("interrupted")
+    expect(disposed).toBe(false)
+    expect((await run(f.terminal.service.state())).busy).toBe(true)
+    closed.resolve()
+    await disposal
+    await recovery
+    expect((await run(f.terminal.service.state())).busy).toBe(false)
+    expect(f.runtime.close).toHaveBeenCalledOnce()
+  })
   it("retains an archive revocation that arrives after restore without cancelling newer work", async () => {
     const started = deferred<void>(),
       done = deferred<number>()
@@ -329,7 +427,7 @@ describe("untrusted sandbox streams", () => {
       readCommand(
         body,
         () => {
-          throw new Error("Output limit")
+          throw new TerminalFailure({ message: "Output limit" })
         },
         new AbortController().signal
       )
@@ -351,7 +449,7 @@ describe("untrusted sandbox streams", () => {
 describe("Pi command service", () => {
   it("waits for teardown before reporting completion so sequential commands can enter", async () => {
     const { runCommand } = await import("../src/terminal/adapters/service")
-    const { terminalRequest } = await import("../src/terminal/http")
+    const { terminalRequest } = await import("../src/terminal/adapters/http")
     const closed = deferred<void>(),
       closing = deferred<void>()
     let closes = 0
@@ -366,16 +464,11 @@ describe("Pi command service", () => {
     const service = {
       fetch: async (request: Request) => {
         const path = new URL(request.url).pathname.replace("/owner/", "")
-        return run(terminalRequest(f.terminal, request, path, () => {}))
+        return run(terminalRequest(f.terminal.service, request, path, () => {}))
       },
-    } as unknown as Fetcher
+    }
     let reported = false
-    const pending = runCommand(
-      service,
-      "owner",
-      input,
-      new AbortController().signal
-    ).then((value) => {
+    const pending = run(runCommand(service, "owner", input)).then((value) => {
       reported = true
       return value
     })
@@ -385,19 +478,13 @@ describe("Pi command service", () => {
     closed.resolve()
     expect((await pending).status).toBe("succeeded")
     expect(
-      (
-        await runCommand(
-          service,
-          "owner",
-          { ...input, id: "second" },
-          new AbortController().signal
-        )
-      ).status
+      (await run(runCommand(service, "owner", { ...input, id: "second" })))
+        .status
     ).toBe("succeeded")
   })
   it("stops an admitted request even if Stop arrives before its start request", async () => {
     const { runCommand } = await import("../src/terminal/adapters/service")
-    const { terminalRequest } = await import("../src/terminal/http")
+    const { terminalRequest } = await import("../src/terminal/adapters/http")
     const admitted = deferred<void>(),
       release = deferred<void>(),
       f = fixture()
@@ -408,21 +495,72 @@ describe("Pi command service", () => {
           admitted.resolve()
           await release.promise
         }
-        return run(terminalRequest(f.terminal, request, path, () => {}))
+        return run(terminalRequest(f.terminal.service, request, path, () => {}))
       },
-    } as unknown as Fetcher
+    }
     const controller = new AbortController()
-    const pending = runCommand(service, "owner", input, controller.signal)
+    const pending = Effect.runPromiseExit(runCommand(service, "owner", input), {
+      signal: controller.signal,
+    })
     await admitted.promise
     controller.abort()
     await Promise.resolve()
     release.resolve()
-    expect((await pending).status).toBe("cancelled")
+    const exit = await pending
+    expect(Exit.isFailure(exit) && Cause.hasInterrupts(exit.cause)).toBe(true)
+    expect(f.repository.get(input.id)?.status).toBe("cancelled")
     expect(f.runtime.execute).not.toHaveBeenCalled()
   })
 })
 
 describe("interactive workspace ownership", () => {
+  it("retains the connection claim and closes a late socket after request interruption", async () => {
+    const connecting = deferred<void>(),
+      interrupted = deferred<void>(),
+      available = deferred<void>()
+    const socket = { accept: vi.fn(), close: vi.fn() }
+    const f = fixture({
+      openInteractive: async () => ({
+        connect: async (request) => {
+          request.signal.addEventListener(
+            "abort",
+            () => interrupted.resolve(),
+            { once: true }
+          )
+          connecting.resolve()
+          await available.promise
+          return { webSocket: socket } as unknown as Response
+        },
+        close: async () => {},
+      }),
+    })
+    const task = await run(f.terminal.startSession("interrupted-socket"))
+    await vi.waitFor(() =>
+      expect(f.terminal.state().session?.phase).toBe("ready")
+    )
+    const session = f.terminal.session("interrupted-socket")
+    const request = new Request("https://terminal.internal")
+    const fiber = Effect.runFork(session.connect(request))
+    await connecting.promise
+    let settled = false
+    const interruption = run(Fiber.interrupt(fiber)).then(() => {
+      settled = true
+    })
+    await interrupted.promise
+    expect(settled).toBe(false)
+    await expect(run(session.connect(request))).rejects.toThrow("another panel")
+    await run(session.save())
+    expect(f.backups.write).not.toHaveBeenCalled()
+    expect(f.terminal.state().busy).toBe(true)
+    available.resolve()
+    await interruption
+    const exit = await run(Fiber.await(fiber))
+    expect(Exit.isFailure(exit) && Cause.hasInterrupts(exit.cause)).toBe(true)
+    await task.completion
+    expect(socket.close).toHaveBeenCalledOnce()
+    expect(f.repository.get("interrupted-socket")?.status).toBe("succeeded")
+    expect(f.terminal.state().busy).toBe(false)
+  })
   it("holds the workspace until Save closes the shell and checkpoints it", async () => {
     const ready = deferred<void>(),
       close = vi.fn(async () => {})
@@ -438,7 +576,7 @@ describe("interactive workspace ownership", () => {
       expect(f.terminal.state().session?.phase).toBe("ready")
     )
     await expect(run(f.terminal.start(input))).rejects.toThrow("cleanup")
-    f.terminal.session("interactive").save()
+    await run(f.terminal.session("interactive").save())
     await task.completion
     expect(close).toHaveBeenCalledTimes(1)
     expect(f.repository.get("interactive")).toMatchObject({
@@ -531,7 +669,7 @@ it("revokes a pre-archive PTY after restore while preserving a newly admitted PT
   )
   f.terminal.configure(2, false)
   expect(f.terminal.session("restored-session").live).toBe(true)
-  f.terminal.session("restored-session").save()
+  await run(f.terminal.session("restored-session").save())
   await restored.completion
   expect(f.repository.get("restored-session")?.status).toBe("succeeded")
   expect(f.backups.write).toHaveBeenCalledOnce()
@@ -561,10 +699,12 @@ it.each(["cancel", "save"] as const)(
       expect(f.terminal.state().session?.phase).toBe("ready")
     )
     const session = f.terminal.session("interactive")
-    const pending = session.connect(new Request("https://terminal.internal"))
+    const pending = run(
+      session.connect(new Request("https://terminal.internal"))
+    )
     const rejected = expect(pending).rejects.toThrow("ended")
     if (action === "cancel") await run(f.terminal.cancel("interactive"))
-    else session.save()
+    else await run(session.save())
     await new Promise((resolve) => setTimeout(resolve, 5))
     expect(f.terminal.state().busy).toBe(true)
     expect(f.backups.write).not.toHaveBeenCalled()

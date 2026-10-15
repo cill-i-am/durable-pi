@@ -1,43 +1,53 @@
+import { preserveFatal, observeCleanup } from "../shared/effect"
 import { Effect } from "effect"
-import type { AgentProfile } from "./domain"
+import type { AgentRuntimeUnavailable, AgentProfile } from "./domain"
 import type { RuntimeStatus } from "../conversations/status"
 
-export function agentStatuses(
+export function agentStatuses<TRequirements>(
   agents: readonly AgentProfile[],
-  read: (agent: AgentProfile) => Promise<RuntimeStatus>
+  read: (
+    agent: AgentProfile
+  ) => Effect.Effect<RuntimeStatus, AgentRuntimeUnavailable, TRequirements>
 ) {
   return Effect.gen(function* () {
     const values = new Map<string, RuntimeStatus>()
     yield* Effect.all(
-      agents.map((agent) =>
-        agent.status === "archived"
-          ? Effect.sync(() => {
-              values.set(agent.id, { state: "archived", turnId: null })
-            })
-          : Effect.tryPromise({
-              try: () => read(agent),
-              catch: () => undefined,
-            }).pipe(
-              Effect.match({
-                onSuccess: (status) => {
-                  values.set(agent.id, status)
-                },
-                onFailure: () => {},
+      agents
+        .filter((agent) => agent.status === "active")
+        .map((agent) =>
+          read(agent).pipe(
+            preserveFatal,
+            Effect.catchTag("AgentRuntimeUnavailable", () =>
+              Effect.succeed(undefined)
+            ),
+            Effect.tap((status) =>
+              Effect.sync(() => {
+                if (status) values.set(agent.id, status)
               })
             )
-      ),
+          )
+        ),
       { concurrency: 4 }
-    ).pipe(
-      Effect.timeoutOrElse({ duration: "5 seconds", orElse: () => Effect.void })
+    ).pipe((timed) =>
+      observeCleanup(timed, (observed) =>
+        observed.pipe(
+          Effect.timeoutOrElse({
+            duration: "5 seconds",
+            orElse: () => Effect.void,
+          })
+        )
+      )
     )
     return {
       statuses: agents.map((agent) => ({
         agentId: agent.id,
-        ...(values.get(agent.id) ?? {
-          state: "unavailable" as const,
-          turnId: null,
-        }),
+        ...(agent.status === "archived"
+          ? { state: "archived" as const, turnId: null }
+          : (values.get(agent.id) ?? {
+              state: "unavailable" as const,
+              turnId: null,
+            })),
       })),
     }
-  })
+  }).pipe(Effect.withSpan("Agents.statuses"))
 }

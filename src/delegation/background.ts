@@ -1,4 +1,4 @@
-import { Effect, Schema } from "effect"
+import { Schema } from "effect"
 import { DelegateInput, DelegationFailure, NativeId } from "./contracts"
 import { ResolvedRoute } from "../inference/policy"
 import { validateBrief } from "./delegation"
@@ -32,17 +32,5 @@ export function backgroundBrief(input: unknown) {
 }
 export const backgroundFailure = (message: string) =>
   new DelegationFailure({ code: "unavailable", message })
-export const backgroundEffect = <T>(
-  body: (signal: AbortSignal) => Promise<T>
-) =>
-  Effect.tryPromise({
-    try: body,
-    catch: (cause) =>
-      cause instanceof DelegationFailure
-        ? cause
-        : backgroundFailure(
-            "Background task state could not be confirmed. Retry the same operation."
-          ),
-  })
 export const backgroundObjectName = (parent: string, id: number) =>
   `background:${parent}:${id}`

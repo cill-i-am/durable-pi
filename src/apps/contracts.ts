@@ -216,6 +216,10 @@ export class AppConflict extends Schema.TaggedError<AppConflict>()(
   "AppConflict",
   { message: Schema.String }
 ) {}
+export class AppStorageError extends Schema.TaggedError<AppStorageError>()(
+  "AppStorageError",
+  { operation: Schema.String, cause: Schema.Unknown }
+) {}
 
 export const RenderWebApp = Schema.Struct({ id: AppId, version: Revision })
 export const WebPreview = Schema.Struct({

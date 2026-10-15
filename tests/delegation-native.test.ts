@@ -20,7 +20,10 @@ import {
   type FauxResponseFactory,
 } from "@earendil-works/pi-ai"
 import { piDelegations } from "../src/delegation/adapters/pi"
-import { delegationTool, childSteeringHook } from "../src/delegation/tools"
+import {
+  delegationTool,
+  childSteeringHook,
+} from "../src/delegation/adapters/tools"
 import { resolveRoute } from "../src/inference/policy"
 import {
   DURATION_MS,
@@ -174,29 +177,37 @@ it.each([
     const configuredChild = {
       ...extension,
       hooks: [
-        childSteeringHook(service, () => [
-          {
-            id: "steer-parent",
-            text: "Keep findings private; source records must remain unchanged.",
-          },
-        ]),
+        childSteeringHook(
+          service,
+          () => [
+            {
+              id: "steer-parent",
+              text: "Keep findings private; source records must remain unchanged.",
+            },
+          ],
+          (work, signal) => Effect.runPromise(work, { signal })
+        ),
       ],
     }
     registry.install(configuredChild)
     registry.install({
       name: "parent",
       tools: [
-        delegationTool(service, (api) => {
-          delegateCalls++
-          source = {
-            turnId: turn,
-            conversationId: Number(api.conversationId),
-            taskId: Number(api.taskId),
-            route,
-            memory: "Private draft only; never publish.",
-          }
-          return source
-        }),
+        delegationTool(
+          service,
+          (api) => {
+            delegateCalls++
+            source = {
+              turnId: turn,
+              conversationId: Number(api.conversationId),
+              taskId: Number(api.taskId),
+              route,
+              memory: "Private draft only; never publish.",
+            }
+            return source
+          },
+          (work, signal) => Effect.runPromise(work, { signal })
+        ),
       ],
     })
     const factory: FauxResponseFactory = async (input, options) => {

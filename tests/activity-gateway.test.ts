@@ -46,12 +46,21 @@ const second = {
   id: Schema.decodeUnknownSync(AgentId)("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"),
   name: "Second bot",
 }
+const profile = (agent: typeof first) => ({
+  ...agent,
+  instructions: "",
+  status: "active" as const,
+  revision: 1,
+  createdAt: "2026-10-15T00:00:00Z",
+  updatedAt: "2026-10-15T00:00:00Z",
+})
 function fixture() {
   const names: string[] = []
   const read = vi.fn(async () => ({ entries: [], issues: [] }))
   const root = (agent: typeof first) => ({
     activityAgents: async () => [agent],
-    agentProfile: async (id: string) => (id === agent.id ? agent : null),
+    agentProfile: async (id: string) =>
+      id === agent.id ? profile(agent) : null,
     modelConnected: async () => true,
   })
   const env = {
@@ -77,7 +86,12 @@ function fixture() {
         method,
         headers: owner ? { "x-owner-id": owner } : {},
       }),
-      env
+      env,
+      {
+        waitUntil: (work) => {
+          work.catch(() => {})
+        },
+      }
     )
   return { request, names, read }
 }
@@ -138,7 +152,7 @@ it("keeps ordinary chat available when a new gateway reaches a previous-version 
     AGENT: {
       getByName: (name: string) =>
         name === "owner-a"
-          ? { agentProfile: async () => first }
+          ? { agentProfile: async () => profile(first) }
           : previousVersion,
     },
   } as unknown as AgentEnv
@@ -150,7 +164,11 @@ it("keeps ordinary chat available when a new gateway reaches a previous-version 
   )
   expect(result.status).toBe(200)
   expect(fetch).toHaveBeenCalledOnce()
-  expect(configureBot.mock.calls[0]).toEqual(["owner-a", first, "owner-a"])
+  expect(configureBot.mock.calls[0]).toEqual([
+    "owner-a",
+    profile(first),
+    "owner-a",
+  ])
   expect("bindCommunicationIdentity" in previousVersion).toBe(false)
 })
 

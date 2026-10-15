@@ -1,3 +1,4 @@
+import { AppConflict } from "./contracts"
 import { parseFragment, type DefaultTreeAdapterTypes } from "parse5"
 
 const tags = new Set(
@@ -30,7 +31,7 @@ export function appHtml(source: string) {
     depth: number
   ): string {
     if (++nodes > 1000 || depth > 40)
-      throw new Error("App markup is too complex")
+      throw new AppConflict({ message: "App markup is too complex" })
     if (node.nodeName === "#text")
       return escape((node as DefaultTreeAdapterTypes.TextNode).value)
     if (
@@ -63,6 +64,7 @@ export function appHtml(source: string) {
       : `${open}${node.childNodes.map((child) => render(child, depth + 1)).join("")}</${node.tagName}>`
   }
   const output = fragment.childNodes.map((node) => render(node, 0)).join("")
-  if (output.length > 64000) throw new Error("App markup is too large")
+  if (output.length > 64000)
+    throw new AppConflict({ message: "App markup is too large" })
   return output
 }

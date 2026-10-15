@@ -1,6 +1,6 @@
 import { expect, it } from "vitest"
-import { Effect } from "effect"
-import worker from "../src/workspace/document-worker"
+import { Cause, Effect, Exit } from "effect"
+import worker from "../src/workspace/adapters/document-worker"
 import { documentService } from "../src/workspace/adapters/document-service"
 import { pdfFixture } from "./pdf-fixture"
 
@@ -21,11 +21,10 @@ it("crosses the parser service boundary without exposing raw exceptions", async 
       })(new Uint8Array())
     )
   ).rejects.toMatchObject({ _tag: "WorkspaceUnavailable" })
-  await expect(
-    Effect.runPromise(
-      documentService({ fetch: async () => Response.json({ text: "bogus" }) })(
-        new Uint8Array()
-      )
+  const malformed = await Effect.runPromiseExit(
+    documentService({ fetch: async () => Response.json({ text: "bogus" }) })(
+      new Uint8Array()
     )
-  ).rejects.toMatchObject({ _tag: "WorkspaceUnavailable" })
+  )
+  expect(Exit.isFailure(malformed) && Cause.hasDies(malformed.cause)).toBe(true)
 })

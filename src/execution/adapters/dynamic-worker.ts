@@ -1,6 +1,9 @@
-import { Schema } from "effect"
+import { Effect } from "effect"
+import { observeCleanup } from "../../shared/effect"
+import { ExecutorUnavailable } from "../executor"
+import { executionResponse, type ExecutionTransport } from "./interop"
+import { readOutput } from "./output"
 import {
-  CodeOutput,
   EXECUTION_CPU_MS,
   EXECUTION_TIMEOUT_MS,
   type CodeInput,
@@ -23,90 +26,59 @@ export const RUNNER_MODULE = `export default { async fetch(request) {
   }
 } };`
 
-export async function readOutput(
-  response: Response,
-  signal?: AbortSignal
-): Promise<CodeOutput> {
-  if (!response.ok || !response.body) throw new Error("Execution failed")
-  const reader = response.body.getReader(),
-    chunks: Uint8Array[] = []
-  let length = 0
-  const abort = () => {
-    void reader.cancel().catch(() => {})
+/** Native subset consumed here; the real WorkerLoader satisfies this contract. */
+export interface ExecutionLoader {
+  load: (code: WorkerLoaderWorkerCode) => {
+    getEntrypoint: () => ExecutionTransport
   }
-  signal?.addEventListener("abort", abort, { once: true })
-  if (signal?.aborted) abort()
-  try {
-    for (;;) {
-      const next = await reader.read()
-      if (next.done) break
-      length += next.value.byteLength
-      if (length > 200000) {
-        await reader.cancel()
-        throw new Error("Execution output exceeded its limit")
-      }
-      chunks.push(next.value)
-    }
-  } finally {
-    signal?.removeEventListener("abort", abort)
-    reader.releaseLock()
-  }
-  const bytes = new Uint8Array(length)
-  let offset = 0
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset)
-    offset += chunk.length
-  }
-  return Schema.decodeUnknownSync(CodeOutput)(
-    JSON.parse(new TextDecoder().decode(bytes))
-  )
 }
 
-export async function executeCode(
-  loader: WorkerLoader,
-  input: CodeInput,
-  signal: AbortSignal
-) {
-  const isolated = loader.load({
-    compatibilityDate: "2026-09-25",
-    mainModule: "runner.js",
-    modules: {
-      "runner.js": RUNNER_MODULE,
-      "user.js": `export default async function(input, console) {\n${input.code}\n}`,
-    },
-    env: {},
-    globalOutbound: null,
-    limits: { cpuMs: EXECUTION_CPU_MS, subRequests: 0 },
-  })
-  const controller = new AbortController()
-  const abort = () => controller.abort()
-  signal.addEventListener("abort", abort, { once: true })
-  if (signal.aborted) abort()
-  let timer: ReturnType<typeof setTimeout> | undefined
-  const stopped = new Promise<never>((_, reject) => {
-    const fail = () => reject(new Error("Execution stopped or timed out"))
-    controller.signal.addEventListener("abort", fail, { once: true })
-    if (controller.signal.aborted) fail()
-    timer = setTimeout(abort, EXECUTION_TIMEOUT_MS)
-  })
-  try {
-    return await Promise.race([
-      isolated
-        .getEntrypoint()
-        .fetch(
-          new Request("https://execution.internal/run", {
-            method: "POST",
-            redirect: "manual",
-            body: input.data,
-            signal: controller.signal,
-          })
+/** CPU/network isolation remains native; Effects own request and body lifetime. */
+export const executeCode = Effect.fn("Execution.executeCode")(
+  (loader: ExecutionLoader, input: CodeInput) =>
+    Effect.yieldNow.pipe(
+      Effect.andThen(
+        observeCleanup(
+          Effect.scoped(
+            Effect.gen(function* () {
+              const entrypoint = yield* Effect.try({
+                try: () =>
+                  loader
+                    .load({
+                      compatibilityDate: "2026-09-25",
+                      mainModule: "runner.js",
+                      modules: {
+                        "runner.js": RUNNER_MODULE,
+                        "user.js": `export default async function(input, console) {\n${input.code}\n}`,
+                      },
+                      env: {},
+                      globalOutbound: null,
+                      limits: { cpuMs: EXECUTION_CPU_MS, subRequests: 0 },
+                    })
+                    .getEntrypoint(),
+                catch: () => new ExecutorUnavailable(),
+              })
+              const response = yield* executionResponse((signal) =>
+                entrypoint.fetch(
+                  new Request("https://execution.internal/run", {
+                    method: "POST",
+                    redirect: "manual",
+                    body: input.data,
+                    signal,
+                  })
+                )
+              )
+              return yield* readOutput(response)
+            })
+          ),
+          (observed) =>
+            observed.pipe(
+              Effect.timeoutOrElse({
+                duration: EXECUTION_TIMEOUT_MS,
+                orElse: () => new ExecutorUnavailable(),
+              })
+            )
         )
-        .then((response) => readOutput(response, controller.signal)),
-      stopped,
-    ])
-  } finally {
-    clearTimeout(timer)
-    signal.removeEventListener("abort", abort)
-    controller.abort()
-  }
-}
+      )
+    )
+)

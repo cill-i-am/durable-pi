@@ -2,14 +2,17 @@ import { describe, expect, it } from "vitest"
 import { Effect } from "effect"
 import { createModels } from "@earendil-works/pi-ai/models"
 import { openaiProvider } from "@earendil-works/pi-ai/providers/openai"
-import { reconcileCatalog, discoverCatalog } from "../src/inference/catalog"
+import {
+  catalogFromAccount,
+  discoverCatalog,
+} from "../src/inference/adapters/openai-catalog"
 import {
   resolveRoute,
   validateRoute,
   ModelUnavailable,
 } from "../src/inference/policy"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
-import { InferenceUsage } from "../src/inference/usage"
+import { usageFixture } from "./usage-fixture"
 import { submissionAttempt } from "../src/features/conversation/commands"
 import { database } from "./database"
 
@@ -28,7 +31,11 @@ export const account = {
 }
 const models = createModels()
 models.setProvider(openaiProvider())
-export const catalog = reconcileCatalog(account, models.getModels("openai"))
+export const catalog = catalogFromAccount(
+  account,
+  models.getModels("openai"),
+  "2026-09-01T00:00:00.000Z"
+)
 
 describe("job model routing", () => {
   it("uses explicit profile, then agent job setting, then application defaults without classifying prose", () => {
@@ -67,7 +74,7 @@ describe("job model routing", () => {
     expect(() =>
       validateRoute({ model: "gpt-6-luna", thinking: "off" }, catalog)
     ).toThrow(ModelUnavailable)
-    const narrowed = reconcileCatalog(
+    const narrowed = catalogFromAccount(
       {
         models: [
           {
@@ -78,7 +85,8 @@ describe("job model routing", () => {
           },
         ],
       },
-      models.getModels("openai")
+      models.getModels("openai"),
+      "2026-09-01T00:00:00.000Z"
     )
     expect(() => validateRoute(resolveRoute("conversation"), narrowed)).toThrow(
       /not available/i
@@ -93,9 +101,10 @@ describe("job model routing", () => {
       validateRoute(resolveRoute("labels"), narrowed, false, false)
         .contextWindow
     ).toBe(16000)
-    const unknown = reconcileCatalog(
+    const unknown = catalogFromAccount(
       { models: [{ ...account.models[0], slug: "future" }] },
-      models.getModels("openai")
+      models.getModels("openai"),
+      "2026-09-01T00:00:00.000Z"
     )
     expect(unknown.models[0]?.unavailable).toContain("installed")
   })
@@ -148,7 +157,11 @@ describe("job model routing", () => {
         )
       )
     ).rejects.toThrow(/verify/)
-    const other = reconcileCatalog({ models: [] }, models.getModels("openai"))
+    const other = catalogFromAccount(
+      { models: [] },
+      models.getModels("openai"),
+      "2026-09-01T00:00:00.000Z"
+    )
     expect(other.models.every((m) => m.unavailable)).toBe(true)
     expect(catalog.models.every((m) => !m.unavailable)).toBe(true)
   })
@@ -204,7 +217,7 @@ describe("job model routing", () => {
   })
   it("recovers orphaned activity without retrying execution or inventing usage", () => {
     const db = database(),
-      usage = new InferenceUsage(db)
+      usage = usageFixture(db)
     const observation = usage.start(
       resolveRoute("conversation"),
       "turn-a",
@@ -217,7 +230,7 @@ describe("job model routing", () => {
       cached: 100,
       output: 17,
     })
-    const recovered = new InferenceUsage(db)
+    const recovered = usageFixture(db)
     expect(recovered.recent()[0]).toMatchObject({
       outcome: "interrupted",
       input: 123,
@@ -228,11 +241,11 @@ describe("job model routing", () => {
     const second = recovered.start(resolveRoute("labels"), null, "memory")
     second.end("failed", "Connection failed")
     expect(recovered.recent()[0]?.input).toBeNull()
-    expect(new InferenceUsage(database()).recent()).toEqual([])
+    expect(usageFixture(database()).recent()).toEqual([])
   })
   it("totals the owning run beyond the recent-page limit and exposes unreported usage", () => {
     const db = database(),
-      usage = new InferenceUsage(db)
+      usage = usageFixture(db)
     for (let i = 0; i < 121; i++) {
       const attempt = usage.start(
         resolveRoute("conversation"),
@@ -252,14 +265,14 @@ describe("job model routing", () => {
     usage
       .start(resolveRoute("conversation"), "another-run", "conversation")
       .end("completed")
-    expect(new InferenceUsage(db).totals("run")).toEqual({
+    expect(usageFixture(db).totals("run")).toEqual({
       modelRequests: 122,
       usageReportedRequests: 121,
       knownInputTokens: 12100,
       knownCachedInputTokens: 9680,
       knownOutputTokens: 363,
     })
-    expect(new InferenceUsage(database()).totals("run").modelRequests).toBe(0)
+    expect(usageFixture(database()).totals("run").modelRequests).toBe(0)
   })
 })
 

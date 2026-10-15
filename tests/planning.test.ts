@@ -27,8 +27,8 @@ import {
   planTools,
   planContextHook,
   recoverablePlanTools,
-} from "../src/planning/tools"
-import { plansRequest } from "../src/planning/http"
+} from "../src/planning/adapters/tools"
+import { plansRequest } from "../src/planning/adapters/http"
 import type {
   PlanDraft,
   PlanFailure,
@@ -389,7 +389,7 @@ it("uses native tools in a multi-step run, injects one fresh context per request
     ].map(
       guardedTools(
         new AccessGate(access, () => true),
-        () => origin.turnId,
+        () => Effect.succeed(origin.turnId),
         recoverablePlanTools
       )
     ),

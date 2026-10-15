@@ -1,3 +1,4 @@
+import { preserveFatal, observeCleanup } from "../shared/effect"
 import type { Exit } from "effect"
 import { Clock, Effect, Queue } from "effect"
 import {
@@ -39,11 +40,15 @@ export const summarize = Effect.fn("Memory.summarize")(function* (
   ]
   let best: string | undefined
   for (let attempt = 0; attempt < TRIES; attempt++) {
-    const text = (yield* model.complete(messages, job).pipe(
-      Effect.timeoutOrElse({
-        duration: "60 seconds",
-        orElse: () => new SummaryFailure({ reason: "timeout" }),
-      })
+    const text = (yield* model.complete(messages, job).pipe((timed) =>
+      observeCleanup(timed, (observed) =>
+        observed.pipe(
+          Effect.timeoutOrElse({
+            duration: "60 seconds",
+            orElse: () => new SummaryFailure({ reason: "timeout" }),
+          })
+        )
+      )
     )).trim()
     if (!text) return yield* new SummaryFailure({ reason: "empty" })
     if (best === undefined || byteLength(text) < byteLength(best)) best = text
@@ -61,56 +66,63 @@ export const summarize = Effect.fn("Memory.summarize")(function* (
   return best
 })
 
-export const pumpSummaries = Effect.fn("Memory.compact")(function* (
-  options: {
-    maxBuilds?: number
-    timeBudgetMs?: number
-  } = {}
-) {
-  const memory = yield* MemoryRepository
-  const maxBuilds = options.maxBuilds ?? 64
-  const deadline =
-    (yield* Clock.currentTimeMillis) + (options.timeBudgetMs ?? 60_000)
-  const completed = yield* Queue.unbounded<{
-    key: string
-    exit: Exit.Exit<void, MemoryError>
-  }>()
-  const busy = new Set<string>()
-  let started = 0
-  for (;;) {
-    while (busy.size < JOBS && started < maxBuilds) {
-      const now = yield* Clock.currentTimeMillis
-      if (now >= deadline) break
-      const job = yield* memory.next(busy, now)
-      if (!job) break
-      const key = nodeKey(job)
-      busy.add(key)
-      started++
-      yield* summarize(job).pipe(
-        Effect.matchEffect({
-          onSuccess: (text) => memory.saveNode(job, text),
-          onFailure: (error) =>
-            Effect.gen(function* () {
-              const retryAt = (yield* Clock.currentTimeMillis) + RETRY_MS
-              if (yield* memory.failNode(job, retryAt))
-                yield* Effect.logWarning("Memory summary deferred").pipe(
-                  Effect.annotateLogs({
-                    range: key,
-                    reason: error.reason,
-                    retryAt,
-                  })
-                )
-            }),
-        }),
-        Effect.onExit((exit) => Queue.offer(completed, { key, exit })),
-        Effect.forkScoped
-      )
-    }
-    if (!busy.size) break
-    const result = yield* Queue.take(completed)
-    busy.delete(result.key)
-    yield* result.exit
-  }
-  const now = yield* Clock.currentTimeMillis
-  return (yield* memory.next(new Set(), now)) ? now : yield* memory.retryAt()
-}, Effect.scoped)
+export const pumpSummaries = Effect.fn("Memory.compact")(
+  (
+    options: {
+      maxBuilds?: number
+      timeBudgetMs?: number
+    } = {}
+  ) =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const memory = yield* MemoryRepository
+        const maxBuilds = options.maxBuilds ?? 64
+        const deadline =
+          (yield* Clock.currentTimeMillis) + (options.timeBudgetMs ?? 60_000)
+        const completed = yield* Queue.unbounded<{
+          key: string
+          exit: Exit.Exit<void, MemoryError>
+        }>()
+        const busy = new Set<string>()
+        let started = 0
+        for (;;) {
+          while (busy.size < JOBS && started < maxBuilds) {
+            const now = yield* Clock.currentTimeMillis
+            if (now >= deadline) break
+            const job = yield* memory.next(busy, now)
+            if (!job) break
+            const key = nodeKey(job)
+            busy.add(key)
+            started++
+            yield* summarize(job).pipe(
+              Effect.flatMap((text) => memory.saveNode(job, text)),
+              preserveFatal,
+              Effect.catchTag("SummaryFailure", (error) =>
+                Effect.gen(function* () {
+                  const retryAt = (yield* Clock.currentTimeMillis) + RETRY_MS
+                  if (yield* memory.failNode(job, retryAt))
+                    yield* Effect.logWarning("Memory summary deferred").pipe(
+                      Effect.annotateLogs({
+                        range: key,
+                        reason: error.reason,
+                        retryAt,
+                      })
+                    )
+                })
+              ),
+              Effect.onExit((exit) => Queue.offer(completed, { key, exit })),
+              Effect.forkScoped
+            )
+          }
+          if (!busy.size) break
+          const result = yield* Queue.take(completed)
+          busy.delete(result.key)
+          yield* result.exit
+        }
+        const now = yield* Clock.currentTimeMillis
+        return (yield* memory.next(new Set(), now))
+          ? now
+          : yield* memory.retryAt()
+      })
+    )
+)

@@ -6,9 +6,14 @@ import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import { RunRecoveryStore } from "../src/conversations/adapters/sqlite-recovery"
 import { AccessStore } from "../src/access/adapters/sqlite"
 import { AccessGate } from "../src/access/gate"
-import { InferenceUsage } from "../src/inference/usage"
+import { usageFixture } from "./usage-fixture"
 import { resolveRoute } from "../src/inference/policy"
-import { runActivity, RunActivity } from "../src/activity/run"
+import {
+  projectRunActivity,
+  RunActivity,
+  type RunCursor,
+} from "../src/activity/run"
+import { SqliteActivityRecords } from "../src/activity/adapters/sqlite"
 import {
   RunTimeline,
   RunEventView,
@@ -27,13 +32,19 @@ function fixture() {
   })
   const recovery = new RunRecoveryStore(db)
   const access = new AccessStore(db, tools)
-  const usage = new InferenceUsage(db)
+  const usage = usageFixture(db)
   const root = conversations.admit({
     operationId: crypto.randomUUID(),
     text: "Synthetic task",
   }).turn
-  const read = (cursor: Parameters<typeof runActivity>[4] = null) =>
-    runActivity(db, "bot", root.id, usage, cursor)!
+  const read = (cursor: RunCursor | null = null) =>
+    projectRunActivity(
+      new SqliteActivityRecords(db).run(root.id, cursor)!,
+      "bot",
+      root.id,
+      usage.totals(root.id),
+      Date.now()
+    )
   return { db, conversations, recovery, access, usage, root, read }
 }
 it("projects approval, model, compaction and steering records across reopen without executing work", async () => {
@@ -62,14 +73,14 @@ it("projects approval, model, compaction and steering records across reopen with
   await Effect.runPromise(
     new AccessGate(f.access, () => true).run(
       { id: "tool", turnId: f.root.id, tool: "write", input: "{}" },
-      effect
+      Effect.tryPromise({ try: effect, catch: (cause) => cause })
     )
   )
   const reopenedAccess = new AccessStore(f.db, tools)
   const replay = await Effect.runPromise(
     new AccessGate(reopenedAccess, () => true).run(
       { id: "tool", turnId: f.root.id, tool: "write", input: "{}" },
-      effect
+      Effect.tryPromise({ try: effect, catch: (cause) => cause })
     )
   )
   expect(replay).toMatchObject({ content: [{ text: "saved" }] })
@@ -102,7 +113,7 @@ it("projects approval, model, compaction and steering records across reopen with
     model: route.model,
     thinking: route.thinking,
   })
-  const usage = new InferenceUsage(f.db)
+  const usage = usageFixture(f.db)
   new RunRecoveryStore(f.db)
   expect(reopened.get(root.id)?.status).toBe("done")
   const readOnly = {
@@ -114,7 +125,13 @@ it("projects approval, model, compaction and steering records across reopen with
       throw new Error("Projection must not transact")
     },
   }
-  const final = runActivity(readOnly, "bot", root.id, usage)!
+  const final = projectRunActivity(
+    new SqliteActivityRecords(readOnly).run(root.id, null)!,
+    "bot",
+    root.id,
+    usage.totals(root.id),
+    Date.now()
+  )
   expect(final.finishedAt).not.toBeNull()
   expect(final.events.filter((e) => e.kind === "tool")).toEqual(
     before.events.filter((e) => e.kind === "tool")
@@ -138,7 +155,7 @@ it("includes every request beyond the 100-request activity limit with stable pag
   expect(f.read().totals.modelRequests).toBe(121)
   expect(f.read().totals.usageReportedRequests).toBe(0)
   const other = fixture()
-  expect(runActivity(other.db, "other-bot", f.root.id, other.usage)).toBeNull()
+  expect(new SqliteActivityRecords(other.db).run(f.root.id, null)).toBeNull()
 })
 it("marks orphaned attempts interrupted, preserves cancellation and never invents historical timings", () => {
   const f = fixture()
@@ -151,7 +168,7 @@ it("marks orphaned attempts interrupted, preserves cancellation and never invent
     "",
     null
   )
-  new InferenceUsage(f.db)
+  usageFixture(f.db)
   const run = f.read()
   const attempt = run.events.find((e) => e.kind === "model")!
   expect(attempt.status).toBe("interrupted")

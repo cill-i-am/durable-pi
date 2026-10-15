@@ -1,10 +1,10 @@
-import type { SkillReference } from "../skills/contracts"
-import { Schema } from "effect"
-import type { ChatTurn, TurnOrigin } from "./contracts"
-import type { AttachmentContent, FileInfo } from "../workspace/files"
+import { SkillReference } from "../skills/contracts"
+import { Option, Schema } from "effect"
+import { TurnOrigin, type ChatTurn } from "./contracts"
+import { AttachmentContent, FileInfo } from "../workspace/files"
 
 import { ModelSettings, ThinkingLevel } from "../inference/selection"
-import type { ResolvedRoute, Profile, JobType } from "../inference/policy"
+import { ResolvedRoute, type Profile, type JobType } from "../inference/policy"
 
 export { ModelSettings, ThinkingLevel }
 export const ModelSelection = Schema.Struct({
@@ -30,6 +30,45 @@ export type Turn = ChatTurn & {
   skill_context?: string
   input: readonly AttachmentContent[]
 }
+/** Durable row shape. Dates and IDs keep legacy compatibility; native metadata
+ * columns remain an adapter concern and may be retained alongside this shape. */
+export const TurnRecord = Schema.Struct({
+  id: Schema.String,
+  text: Schema.String,
+  status: Schema.Literals([
+    "queued",
+    "preparing",
+    "running",
+    "stopping",
+    "done",
+    "failed",
+    "cancelled",
+  ]),
+  answer: Schema.String,
+  error: Schema.NullOr(Schema.String),
+  created_at: Schema.String,
+  session_id: Schema.NullOr(Schema.String),
+  prompt: Schema.NullOr(Schema.String),
+  parent_id: Schema.NullOr(Schema.String),
+  mode: Schema.Literals(["followUp", "steer"]),
+  delivery: Schema.Literals([
+    "queued",
+    "accepted",
+    "consumed",
+    "answered",
+    "unanswered",
+  ]),
+  model: Schema.NullOr(Schema.String),
+  thinking: Schema.NullOr(ThinkingLevel),
+  routing: Schema.NullOr(ResolvedRoute),
+  origin: Schema.optional(TurnOrigin),
+  revision: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+  creation: Schema.NullOr(Schema.String),
+  attachments: Schema.Array(FileInfo),
+  input: Schema.Array(AttachmentContent),
+  skills: Schema.Array(SkillReference),
+  skill_context: Schema.String,
+})
 export type Submission = {
   origin?: TurnOrigin
   operationId: string
@@ -40,6 +79,15 @@ export type Submission = {
   profile?: Profile
   job?: JobType
 }
+export type PreparedMessage = {
+  files: readonly FileInfo[]
+  content: readonly AttachmentContent[]
+}
+export type TurnOutcome = {
+  id: string
+  delivery: Extract<Delivery, "answered" | "unanswered">
+}
+export type TurnAdmission = { turn: Turn; accepted: boolean }
 export class ConversationConflict extends Schema.TaggedError<ConversationConflict>()(
   "ConversationConflict",
   { message: Schema.String }
@@ -48,5 +96,24 @@ export class ConversationFull extends Schema.TaggedError<ConversationFull>()(
   "ConversationFull",
   {}
 ) {}
+export class ConversationStorageError extends Schema.TaggedError<ConversationStorageError>()(
+  "ConversationStorageError",
+  { operation: Schema.String, cause: Schema.Unknown }
+) {}
+export type ConversationFailure =
+  ConversationConflict | ConversationFull | ConversationStorageError
+const ConversationFailureSchema = Schema.Union([
+  ConversationConflict,
+  ConversationFull,
+  ConversationStorageError,
+])
+/** Decode the encoded fields into the owned error class; a JS prototype is not
+ * a transport contract. Schema mismatches are not conversation failures. */
+export const conversationFailure = (
+  cause: unknown
+): ConversationFailure | undefined =>
+  Option.getOrUndefined(
+    Schema.decodeUnknownOption(ConversationFailureSchema)(cause)
+  )
 export const isPending = (turn: Pick<Turn, "status">) =>
   ["queued", "preparing", "running", "stopping"].includes(turn.status)

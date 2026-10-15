@@ -1,4 +1,13 @@
 import type { ToolExecutionResult } from "@earendil-works/pi-durable"
+import type { RemoteToolResult } from "../connections"
+
+export const piRemoteResult = (
+  result: RemoteToolResult
+): ToolExecutionResult => ({
+  ...result,
+  content: [...result.content],
+  ...(result.diagnostics ? { diagnostics: [...result.diagnostics] } : {}),
+})
 
 export function toolReceipt(result: ToolExecutionResult): ToolExecutionResult {
   if (JSON.stringify(result).length <= 250_000) return result

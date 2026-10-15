@@ -67,6 +67,10 @@ export class AccessConflict extends Schema.TaggedError<AccessConflict>()(
   "AccessConflict",
   { message: Schema.String }
 ) {}
+export class AccessStorageError extends Schema.TaggedError<AccessStorageError>()(
+  "AccessStorageError",
+  { operation: Schema.String, cause: Schema.Unknown }
+) {}
 
 export const builtInTools = [
   {

@@ -50,14 +50,16 @@ export const ActivityPage = Schema.Struct({
   next: Schema.NullOr(ActivityCursor),
 })
 export type ActivityPage = typeof ActivityPage.Type
-export type ActivityQuery = {
-  filter: ActivityFilter
-  cursor: ActivityCursor | null
-}
-export type ActivitySnapshot = {
-  entries: readonly ActivityEntry[]
-  issues: readonly ActivityIssue[]
-}
+export const ActivityQuery = Schema.Struct({
+  filter: ActivityFilter,
+  cursor: Schema.NullOr(ActivityCursor),
+})
+export type ActivityQuery = typeof ActivityQuery.Type
+export const ActivitySnapshot = Schema.Struct({
+  entries: Schema.Array(ActivityEntry).check(Schema.isMaxLength(41)),
+  issues: Schema.Array(ActivityIssue).check(Schema.isMaxLength(2)),
+})
+export type ActivitySnapshot = typeof ActivitySnapshot.Type
 export const ActivityConversation = Schema.Struct({
   source: Schema.Literals(["user", "background"]),
   id: Schema.String,
@@ -71,19 +73,6 @@ export const ActivityConversation = Schema.Struct({
 })
 export type ActivityConversation = typeof ActivityConversation.Type
 export const ACTIVITY_PAGE_SIZE = 40
-
-export function activityQuery(url: URL): ActivityQuery {
-  const filter = Schema.decodeUnknownSync(ActivityFilter)(
-    url.searchParams.get("filter") ?? "all"
-  )
-  const cursor = url.searchParams.get("cursor")
-  return {
-    filter,
-    cursor: cursor
-      ? Schema.decodeUnknownSync(ActivityCursor)(JSON.parse(cursor))
-      : null,
-  }
-}
 
 export function activityPage(
   snapshots: readonly ActivitySnapshot[],

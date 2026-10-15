@@ -1,16 +1,16 @@
+import { relayTerminal } from "../src/terminal/adapters/socket"
 import { describe, expect, it, vi } from "vitest"
-import { Effect, Schema } from "effect"
-import { Terminal } from "../src/terminal/terminal"
+import { Cause, Effect, Exit, Schema, Stream } from "effect"
+import { Terminal } from "./terminal-fixture"
 import { TerminalStore } from "../src/terminal/adapters/sqlite"
-import {
-  WorkspacePath,
-  importPlan,
-  exportPlan,
-} from "../src/terminal/transfers"
+import { WorkspacePath, exportPlan } from "../src/terminal/transfers"
+import { importPlan } from "../src/terminal/adapters/files"
 import { database } from "./database"
-import { terminalRequest } from "../src/terminal/http"
-import { importWorkspaceFile } from "../src/terminal/file-import"
-import { Workspace } from "../src/workspace/workspace"
+import { terminalRequest } from "../src/terminal/adapters/http"
+import { importWorkspaceFile } from "../src/terminal/adapters/file-import"
+import type { Workspace } from "../src/workspace/workspace"
+import { workspaceFileImport } from "../src/terminal/workspace-import"
+import { terminalImports } from "../src/terminal/adapters/import-service"
 import { CommandRun } from "../src/terminal/contracts"
 
 const id = "d04a5143-0a58-4bf1-8b48-3daacfb59b29"
@@ -21,6 +21,11 @@ const checkpoint = {
   sha256: "hash",
   size: bytes.length,
   savedAt: 10,
+}
+function fileSource(
+  content: Workspace["Service"]["content"]
+): Pick<Workspace["Service"], "content"> {
+  return { content }
 }
 function fixture() {
   const repository = new TerminalStore(database())
@@ -40,7 +45,13 @@ function fixture() {
     write: vi.fn(async () => ({ ...checkpoint, key: "export" })),
     read: vi.fn(async () => bytes),
   }
-  const terminal = new Terminal(repository, runtime, backups, exports)
+  const terminal = new Terminal(
+    repository,
+    runtime,
+    backups,
+    relayTerminal,
+    exports
+  )
   terminal.configure(0, true)
   return { terminal, repository, runtime, backups, exports }
 }
@@ -213,7 +224,7 @@ describe("private terminal file transfer", () => {
     ).completion
     const response = await Effect.runPromise(
       terminalRequest(
-        f.terminal,
+        f.terminal.service,
         new Request("https://terminal.internal/"),
         `terminal/${id}/file`,
         () => {}
@@ -228,6 +239,45 @@ describe("private terminal file transfer", () => {
     expect(response.headers.get("x-content-type-options")).toBe("nosniff")
     expect(new Uint8Array(await response.arrayBuffer())).toEqual(binary)
   })
+  it("joins a noncooperative export read after request interruption", async () => {
+    const f = fixture()
+    await (
+      await Effect.runPromise(
+        f.terminal.startTransfer(
+          id,
+          exportPlan({ id, path: "/workspace/result.txt" })
+        )
+      )
+    ).completion
+    let entered!: () => void, release!: (value: typeof bytes) => void
+    const reading = new Promise<void>((resolve) => {
+      entered = resolve
+    })
+    const late = new Promise<typeof bytes>((resolve) => {
+      release = resolve
+    })
+    f.exports.read.mockImplementation(() => {
+      entered()
+      return late
+    })
+    const controller = new AbortController()
+    let ended = false
+    const pending = f.terminal.runtime
+      .runPromiseExit(f.terminal.service.exportedFile(id), {
+        signal: controller.signal,
+      })
+      .then((exit) => {
+        ended = true
+        return exit
+      })
+    await reading
+    controller.abort()
+    await Effect.runPromise(Effect.yieldNow)
+    expect(ended).toBe(false)
+    release(bytes)
+    const exit = await pending
+    expect(Exit.isFailure(exit) && Cause.hasInterrupts(exit.cause)).toBe(true)
+  })
   it("recovers the original import receipt without rereading a renamed or trashed source", async () => {
     const f = fixture()
     const plan = await importPlan(
@@ -239,33 +289,30 @@ describe("private terminal file transfer", () => {
     ).completion
     const service = {
       fetch: vi.fn(async () => Response.json(f.repository.get(id))),
-    } as unknown as Fetcher
-    const workspace = {
-      content: vi.fn(() => {
-        throw new Error("Source is unavailable")
-      }),
-    } as unknown as typeof Workspace.Service
+    }
+    const content = vi.fn(() => {
+      throw new Error("Source is unavailable")
+    })
+    const workspace = fileSource(content)
+    const copy = workspaceFileImport(
+      workspace,
+      terminalImports(service, "bot"),
+      () => Effect.succeed(true)
+    )
     const request = (fileId: string) =>
       new Request("https://agent.internal/", {
         method: "POST",
         body: JSON.stringify({ id, fileId }),
       })
     const response = await Effect.runPromise(
-      importWorkspaceFile(request(sourceId), service, "bot", () => true).pipe(
-        Effect.provideService(Workspace, workspace)
-      )
+      importWorkspaceFile(copy, request(sourceId))
     )
     expect(response.status).toBe(202)
     expect(
       Schema.decodeUnknownSync(CommandRun)(await response.json()).transfer?.name
     ).toBe("before.txt")
     const conflict = await Effect.runPromise(
-      importWorkspaceFile(
-        request(crypto.randomUUID()),
-        service,
-        "bot",
-        () => true
-      ).pipe(Effect.provideService(Workspace, workspace))
+      importWorkspaceFile(copy, request(crypto.randomUUID()))
     )
     expect(conflict.status).toBe(409)
     expect(workspace.content).not.toHaveBeenCalled()
@@ -284,25 +331,34 @@ describe("private terminal file transfer", () => {
       .mockResolvedValueOnce(new Response(null, { status: 404 }))
       .mockResolvedValueOnce(new Response(null, { status: 409 }))
       .mockResolvedValueOnce(Response.json(f.repository.get(id)))
-    const service = { fetch } as unknown as Fetcher
-    const workspace = {
-      content: () =>
-        Effect.succeed({
-          info: { name: "after.txt" },
+    const service = { fetch }
+    const workspace = fileSource(() =>
+      Effect.succeed({
+        info: {
+          id: sourceId,
+          name: "after.txt",
           mime: "text/plain",
-          body: bytes,
-        }),
-    } as unknown as typeof Workspace.Service
+          kind: "text",
+          size: bytes.length,
+          createdAt: "legacy",
+          status: "ready",
+          trashed: false,
+        },
+        mime: "text/plain",
+        body: Stream.make(bytes),
+        size: bytes.length,
+      })
+    )
     const response = await Effect.runPromise(
       importWorkspaceFile(
+        workspaceFileImport(workspace, terminalImports(service, "bot"), () =>
+          Effect.succeed(true)
+        ),
         new Request("https://agent.internal/", {
           method: "POST",
           body: JSON.stringify({ id, fileId: sourceId }),
-        }),
-        service,
-        "bot",
-        () => true
-      ).pipe(Effect.provideService(Workspace, workspace))
+        })
+      )
     )
     expect(response.status).toBe(202)
     expect(

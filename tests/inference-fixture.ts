@@ -1,6 +1,6 @@
 import { createModels } from "@earendil-works/pi-ai/models"
 import { openaiProvider } from "@earendil-works/pi-ai/providers/openai"
-import { reconcileCatalog } from "../src/inference/catalog"
+import { catalogFromAccount } from "../src/inference/adapters/openai-catalog"
 
 export const account = {
   models: ["gpt-6-luna", "gpt-6.1-sol", "gpt-6-astra"].map((slug) => ({
@@ -17,7 +17,11 @@ export const account = {
 }
 const models = createModels()
 models.setProvider(openaiProvider())
-export const catalog = reconcileCatalog(account, models.getModels("openai"))
+export const catalog = catalogFromAccount(
+  account,
+  models.getModels("openai"),
+  "2026-09-01T00:00:00.000Z"
+)
 export const credential = {
   type: "oauth" as const,
   access: "synthetic-local-access",

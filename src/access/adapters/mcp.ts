@@ -1,228 +1,247 @@
-import { Effect, Semaphore } from "effect"
+import { preserveFatal } from "../../shared/effect"
+import { Schema, Effect } from "effect"
 import type { MCPClientManager } from "agents/mcp/client"
+import type { ConnectionClient } from "../connection-client"
 import {
   ConnectionError,
-  remoteTool,
-  type ConnectionInfo,
-  type NewConnection,
-  type RemoteTool,
+  ConnectionTransportError,
+  prepareRemoteTool,
+  identifyRemoteTool,
+  type RemoteToolResult,
 } from "../connections"
-import type { ConnectionStore } from "./connections"
 import { toolReceipt } from "./receipt"
 import type { ToolExecutionResult } from "@earendil-works/pi-durable"
+import { nativeFailure, nativeOperation } from "../../shared/interop"
 
-export class RemoteConnections {
-  private readonly mutations = Semaphore.makeUnsafe(1)
-  constructor(
-    readonly store: ConnectionStore,
-    readonly mcp: MCPClientManager
-  ) {}
-  async list(): Promise<ConnectionInfo[]> {
-    const servers = this.mcp.listServers()
-    return Promise.all(
-      this.store.list().map(async (record) => {
-        const live = this.mcp.mcpConnections[record.id]
-        const server = servers.find((value) => value.id === record.id)
-        const status = !record.active
-          ? "disconnected"
-          : live?.connectionState === "ready"
-            ? "ready"
-            : live?.connectionState === "authenticating"
-              ? "authorization"
-              : live?.connectionState === "failed" || !live
-                ? "unavailable"
-                : "connecting"
-        let tools: RemoteTool[] = []
-        if (record.active && live?.connectionState === "ready")
-          tools = (
-            await Promise.all(
-              this.mcp
-                .listTools({ serverId: record.id })
-                .slice(0, 100)
-                .map((tool) => remoteTool(record, tool).catch(() => null))
-            )
-          ).filter((tool): tool is RemoteTool => tool !== null)
-        return {
-          ...record,
-          status,
-          authorizeUrl:
-            status === "authorization" && server?.auth_url
-              ? safeAuthorizeUrl(server.auth_url)
-              : null,
-          tools,
-        }
-      })
-    )
-  }
-  change(work: () => Promise<void>) {
-    return this.mutations.withPermit(
-      Effect.tryPromise({
-        try: work,
-        catch: (cause) =>
-          cause instanceof ConnectionError
-            ? cause
-            : new ConnectionError({
-                message:
-                  "Could not connect. This server must support public HTTPS MCP and, if required, OAuth registration. Reload to check its status.",
-              }),
-      })
-    )
-  }
-  connect(input: NewConnection, origin: string) {
-    return this.change(async () => {
-      const record = this.store.add(input)
-      if (!record.active) throw new Error("Connection disconnected")
-      if (this.mcp.listServers().some((server) => server.id === record.id))
-        return
-      await this.register(record, origin)
-    })
-  }
-  private async register(record: NewConnection, origin: string) {
-    await this.mcp.registerServer(record.id, {
-      name: record.name,
-      url: record.url,
-      callbackUrl: `${origin}/api/agent/connections/callback`,
-      transport: {
-        type: "streamable-http",
-        requestInit: { redirect: "manual" },
-        onInsufficientScope: "throw",
-        maxStepUpRetries: 0,
-        reconnectionOptions: {
-          maxRetries: 0,
-          initialReconnectionDelay: 1000,
-          maxReconnectionDelay: 1000,
-          reconnectionDelayGrowFactor: 1,
-        },
-      },
-      client: { listMaxPages: 2, inputRequired: { autoFulfill: false } },
-      retry: { maxAttempts: 1 },
-    })
-    const result = await this.mcp.connectToServer(record.id)
-    if (result.state === "connected")
-      await this.mcp.discoverIfConnected(record.id, { timeoutMs: 20_000 })
-  }
-  disconnect(id: string, revision: number) {
-    return this.change(async () => {
-      this.store.change(id, revision, false)
-      await this.mcp.removeServer(id)
-    })
-  }
-  reconnect(id: string, revision: number, origin: string) {
-    return this.change(async () => {
-      const replay = this.store.get(id)?.revision === revision + 1
-      const record = this.store.change(id, revision, true)
-      if (replay && this.mcp.listServers().some((server) => server.id === id))
-        return
-      await this.mcp.removeServer(id)
-      await this.register(record, origin)
-    })
-  }
-  refresh(id: string) {
-    return this.change(async () => {
-      if (!this.store.get(id)?.active) throw new Error("Disconnected")
-      await this.mcp.discoverIfConnected(id, { timeoutMs: 20_000 })
-    })
-  }
-  callback(request: Request) {
-    return this.change(async () => {
-      if (!this.mcp.isCallbackRequest(request))
-        throw new Error("Unknown callback")
-      const result = await this.mcp.handleCallbackRequest(request)
-      if (!result.authSuccess || !this.store.get(result.serverId)?.active)
-        throw new Error("Authorization failed")
-      await this.mcp.establishConnection(result.serverId)
-    })
-  }
-  async resolve(names: readonly string[]) {
-    try {
-      await this.mcp.waitForConnections({ timeout: 20_000 })
-      const catalog = (await this.list()).flatMap(
-        (connection) => connection.tools
+export type McpManager = Pick<
+  MCPClientManager,
+  | "listServers"
+  | "mcpConnections"
+  | "listTools"
+  | "registerServer"
+  | "connectToServer"
+  | "discoverIfConnected"
+  | "removeServer"
+  | "isCallbackRequest"
+  | "handleCallbackRequest"
+  | "establishConnection"
+  | "waitForConnections"
+  | "callTool"
+>
+
+/** SDK work has an independent lifetime. An interrupted Effect joins that work
+ * before releasing its caller's permit; the manager's Lifecycle owns disposal. */
+export function mcpConnectionClient(mcp: McpManager): ConnectionClient {
+  const pending = new Set<Promise<unknown>>()
+  const rejected =
+    (operation: string) =>
+    (cause: unknown, channel: "failure" | "rejection") => {
+      const expected = Schema.decodeUnknownOption(ConnectionTransportError)(
+        cause
       )
-      const tools = names.map((name) => {
-        const found = catalog.find((tool) => tool.name === name)
-        if (!found) throw new Error("Unavailable")
-        return found
-      })
-      return { tools, error: null }
-    } catch {
-      return {
-        tools: [],
-        error:
-          "A selected tool is unavailable or has changed. Refresh its connection.",
-      }
+      if (expected._tag === "Some") return expected.value
+      if (
+        channel === "failure" ||
+        Schema.isSchemaError(cause) ||
+        cause instanceof SyntaxError
+      )
+        throw cause
+      return new ConnectionTransportError({ operation, cause })
     }
-  }
-  async call(
-    name: string,
-    args: Record<string, unknown>
-  ): Promise<ToolExecutionResult> {
-    try {
-      const resolved = await this.resolve([name])
-      if (resolved.error || !resolved.tools[0]) throw new Error("Unavailable")
-      const reference = resolved.tools[0]
-      const current = this.store.get(reference.connectionId)
-      if (!current?.active || current.revision !== reference.connectionRevision)
-        throw new Error("Revoked")
-      const result = await this.mcp.callTool(
-        {
-          serverId: reference.connectionId,
-          name: `${reference.connectionId}.${reference.remoteName}`,
-          arguments: args,
+  const native = <T>(
+    operation: string,
+    body: (signal: AbortSignal) => Promise<T>
+  ) =>
+    nativeOperation((signal) => {
+      const task = body(signal)
+      pending.add(task)
+      return task.then(
+        (value) => {
+          pending.delete(task)
+          return value
         },
-        {
-          toolDefinition: {
-            name: reference.remoteName,
-            description: reference.description,
-            inputSchema: reference.parameters as { type: "object" },
-          },
-          timeout: 60_000,
-          maxTotalTimeout: 60_000,
-          resetTimeoutOnProgress: false,
+        (cause) => {
+          pending.delete(task)
+          throw cause
         }
       )
-      const content: NonNullable<ToolExecutionResult["content"]>[number][] = []
-      for (const block of result.content) {
-        if (block.type === "text")
-          content.push({ type: "text", text: block.text })
-        else if (block.type === "image")
-          content.push({
-            type: "image",
-            data: block.data,
-            mimeType: block.mimeType,
-          })
-        else
-          content.push({
-            type: "text",
-            text: "The server returned a resource format that this chat cannot display yet.",
-          })
+    }, rejected(operation))
+  const read = <T>(operation: string, body: () => T) =>
+    Effect.suspend(() => {
+      try {
+        return Effect.succeed(body())
+      } catch (cause) {
+        return Effect.failCause(nativeFailure(cause, rejected(operation)))
       }
-      if (!content.length && result.structuredContent !== undefined)
-        content.push({
-          type: "text",
-          text: JSON.stringify(result.structuredContent),
+    })
+  const discover = (id: string) =>
+    native("discover", () =>
+      mcp.discoverIfConnected(id, { timeoutMs: 20_000 })
+    ).pipe(Effect.asVoid)
+  return {
+    inspect: (id) =>
+      read("inspect", () => mcp.listServers()).pipe(
+        Effect.map((servers) => {
+          const server = servers.find((value) => value.id === id)
+          const live = mcp.mcpConnections[id]
+          return {
+            registered: !!server,
+            phase:
+              live?.connectionState === "ready"
+                ? "ready"
+                : live?.connectionState === "authenticating"
+                  ? "authorization"
+                  : live?.connectionState === "failed" || !live
+                    ? "unavailable"
+                    : "connecting",
+            authorizeUrl: server?.auth_url ?? null,
+          }
         })
-      return toolReceipt({ content, isError: result.isError })
-    } catch {
-      return {
-        content: [
+      ),
+    tools: (record) =>
+      Effect.gen(function* () {
+        const tools = yield* read("list tools", () =>
+          mcp.listTools({ serverId: record.id })
+        ).pipe(Effect.map((values) => values.slice(0, 100)))
+        const normalized = yield* Effect.forEach(
+          tools,
+          (tool) =>
+            Effect.gen(function* () {
+              const prepared = yield* Effect.try({
+                try: () => prepareRemoteTool(record, tool),
+                catch: (cause) => {
+                  const connectionError =
+                    Schema.decodeUnknownOption(ConnectionError)(cause)
+                  if (connectionError._tag === "Some")
+                    return connectionError.value
+                  throw cause
+                },
+              })
+              const digest = yield* native("derive tool identity", () =>
+                crypto.subtle.digest(
+                  "SHA-256",
+                  new TextEncoder().encode(prepared.identity)
+                )
+              )
+              return identifyRemoteTool(
+                prepared.reference,
+                new Uint8Array(digest)
+              )
+            }).pipe(
+              preserveFatal,
+              Effect.catchTag("ConnectionError", () => Effect.succeed(null))
+            ),
+          { concurrency: 4 }
+        )
+        return normalized.filter((tool) => tool !== null)
+      }),
+    connect: (record, origin) =>
+      Effect.gen(function* () {
+        yield* native("register", () =>
+          mcp.registerServer(record.id, {
+            name: record.name,
+            url: record.url,
+            callbackUrl: `${origin}/api/agent/connections/callback`,
+            transport: {
+              type: "streamable-http",
+              requestInit: { redirect: "manual" },
+              onInsufficientScope: "throw",
+              maxStepUpRetries: 0,
+              reconnectionOptions: {
+                maxRetries: 0,
+                initialReconnectionDelay: 1000,
+                maxReconnectionDelay: 1000,
+                reconnectionDelayGrowFactor: 1,
+              },
+            },
+            client: { listMaxPages: 2, inputRequired: { autoFulfill: false } },
+            retry: { maxAttempts: 1 },
+          })
+        )
+        const result = yield* native("connect", () =>
+          mcp.connectToServer(record.id)
+        )
+        if (result.state === "connected") yield* discover(record.id)
+      }),
+    remove: (id) => native("remove", () => mcp.removeServer(id)),
+    discover,
+    isCallback: (request) =>
+      read("inspect callback", () => mcp.isCallbackRequest(request)),
+    callback: (request) =>
+      native("authorize", (signal) =>
+        mcp.handleCallbackRequest(
+          new Request(request, {
+            signal: AbortSignal.any([request.signal, signal]),
+          })
+        )
+      ).pipe(
+        Effect.map((result) => ({
+          authenticated: result.authSuccess,
+          connectionId: result.serverId,
+        }))
+      ),
+    establish: (id) => native("establish", () => mcp.establishConnection(id)),
+    ready: () =>
+      native("await connections", () =>
+        mcp.waitForConnections({ timeout: 20_000 })
+      ),
+    call: (reference, input) =>
+      native("call tool", (signal) =>
+        mcp.callTool(
           {
-            type: "text",
-            text: "The connected tool could not complete. Check the connection and the remote service before retrying; an external action may have started.",
+            serverId: reference.connectionId,
+            name: `${reference.connectionId}.${reference.remoteName}`,
+            arguments: input,
           },
-        ],
-        isError: true,
-      }
-    }
-  }
-}
-function safeAuthorizeUrl(value: string) {
-  try {
-    const url = new URL(value)
-    return url.protocol === "https:" && !url.username && !url.password
-      ? url.href
-      : null
-  } catch {
-    return null
+          {
+            signal,
+            toolDefinition: {
+              name: reference.remoteName,
+              description: reference.description,
+              inputSchema: { ...reference.parameters, type: "object" },
+            },
+            timeout: 60_000,
+            maxTotalTimeout: 60_000,
+            resetTimeoutOnProgress: false,
+          }
+        )
+      ).pipe(
+        Effect.map((result): RemoteToolResult => {
+          const content: NonNullable<ToolExecutionResult["content"]>[number][] =
+            []
+          for (const block of result.content) {
+            if (block.type === "text")
+              content.push({ type: "text", text: block.text })
+            else if (block.type === "image")
+              content.push({
+                type: "image",
+                data: block.data,
+                mimeType: block.mimeType,
+              })
+            else
+              content.push({
+                type: "text",
+                text: "The server returned a resource format that this chat cannot display yet.",
+              })
+          }
+          if (!content.length && result.structuredContent !== undefined)
+            content.push({
+              type: "text",
+              text: JSON.stringify(result.structuredContent),
+            })
+          const bounded = toolReceipt({ content, isError: result.isError })
+          return {
+            content: bounded.content ?? [],
+            isError: bounded.isError,
+            ...(bounded.diagnostics
+              ? { diagnostics: bounded.diagnostics }
+              : {}),
+          }
+        })
+      ),
+    settle: () =>
+      Effect.promise(async () => {
+        while (pending.size) await Promise.allSettled([...pending])
+      }),
   }
 }

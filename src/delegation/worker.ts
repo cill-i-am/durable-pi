@@ -1,38 +1,70 @@
+import { preserveFatal } from "../shared/effect"
 import "../observability/lifecycle"
 import { reportInference, reportHarness } from "../observability/events"
 import { DurableObject } from "cloudflare:workers"
-import { Lifecycle } from "agents/lifecycle"
+import { Lifecycle, LifecycleCapability } from "agents/lifecycle"
 import { PiHarness } from "agents/harness/pi"
 import { Harness, createRegistry } from "@earendil-works/pi-durable"
-import { Effect, Schema } from "effect"
+import { Effect, Exit, Layer, ManagedRuntime, Schema } from "effect"
 import type { PersonalAgent } from "../agent/worker"
-import {
-  Control,
-  type Group,
-  type Transcript,
-  type DelegationFailure,
-} from "./contracts"
+import type { Group, Transcript, DelegationFailure } from "./contracts"
 import type { AgentEnv } from "../../alchemy.run"
-import { accountCredentials, createAgentModels } from "../agent/models"
+import { createAgentModels } from "../inference/adapters/models-pi"
+import { accountCredentials } from "../inference/adapters/credentials-pi"
 import { agentSettings } from "../agent/compaction"
-import { InferenceUsage } from "../inference/usage"
+import { InferenceUsage, usageApplication } from "../inference/usage"
+import { SqliteUsage } from "../inference/adapters/usage-sqlite"
+import { piUsage } from "../inference/adapters/usage-pi"
+import {
+  PiModelStreams,
+  piModelStreamsLayer,
+  modelCallback,
+} from "../inference/adapters/streams-pi"
 import type { Sqlite } from "../storage/sqlite"
 import { BackgroundHandoff, backgroundObjectName } from "./background"
 import {
-  piBackgroundGroup,
+  piBackgroundLedger,
   readBackgroundHandoff,
 } from "./adapters/background-pi"
+import { BackgroundTasks, backgroundTasksApplication } from "./background-tasks"
+import { backgroundNative } from "./adapters/interop"
+import { backgroundParentRpc } from "./adapters/background-parent"
+import {
+  accountRpc,
+  nativeAccountToken,
+} from "../inference/adapters/account-rpc"
+import {
+  BackgroundRequest,
+  BackgroundResult,
+  backgroundReply,
+  BackgroundOutcome,
+} from "./adapters/background-protocol"
 
 export type BackgroundControlResult =
   | { ok: true; accepted: boolean }
   | { ok: false; code: DelegationFailure["code"]; message: string }
 
 export interface BackgroundGroupRPC extends Rpc.DurableObjectBranded {
+  invokeV1: (request: unknown) => Promise<Schema.Json>
   start: (parentObject: string, id: number) => Promise<Group>
   read: () => Promise<Group>
   stop: () => Promise<void>
   control: (raw: unknown) => Promise<BackgroundControlResult>
   transcript: (child: number, cursor?: string) => Promise<Transcript>
+}
+
+class BackgroundServices extends LifecycleCapability {
+  constructor(readonly owner: BackgroundGroup) {
+    super("effect-services")
+  }
+  async dispose() {
+    await Effect.runPromise(
+      this.owner.runtime
+        .runSync(PiModelStreams)
+        .shutdown()
+        .pipe(Effect.ensuring(this.owner.runtime.disposeEffect))
+    )
+  }
 }
 
 export class BackgroundGroup
@@ -48,8 +80,38 @@ export class BackgroundGroup
     },
     transaction: (body) => this.ctx.storage.transactionSync(body),
   }
-  readonly usage = new InferenceUsage(this.db, (attempt) =>
-    reportInference(attempt, this.pin?.parentObject ?? this.ctx.id.toString())
+  readonly runtime = ManagedRuntime.make(
+    Layer.mergeAll(
+      usageApplication(new SqliteUsage(this.db), () => crypto.randomUUID()),
+      piModelStreamsLayer,
+      backgroundTasksApplication(
+        piBackgroundLedger(() => this.harness.pi(), {
+          submit: (child, text, operationId, steer) =>
+            this.harness.session(String(child)).submit(text, {
+              operationId,
+              whenBusy: steer ? "steer" : "followUp",
+            }),
+          abort: (child) => this.harness.session(String(child)).abort(),
+        }),
+        {
+          authorized: (handoff) =>
+            backgroundNative(() =>
+              backgroundParentRpc(
+                this.env.AGENT.get(
+                  this.env.AGENT.idFromString(handoff.parentObject)
+                )
+              ).authorized(handoff.id)
+            ),
+        }
+      )
+    )
+  )
+  readonly usage = this.runtime.runSync(InferenceUsage)
+  readonly observeInference = piUsage(
+    this.usage,
+    (work) => this.runtime.runSync(work),
+    (attempt) =>
+      reportInference(attempt, this.pin?.parentObject ?? this.ctx.id.toString())
   )
   private parent(): DurableObjectStub<PersonalAgent> {
     if (!this.pin) throw new Error("Background group has no handoff")
@@ -60,28 +122,31 @@ export class BackgroundGroup
   readonly models = createAgentModels(
     accountCredentials(async (provider) => {
       if (!this.pin) return undefined
-      return this.parent().backgroundCredential(this.pin.id, provider)
+      const value = await backgroundParentRpc(this.parent()).credential(
+        this.pin.id,
+        provider
+      )
+      return value ? nativeAccountToken(value) : undefined
     }),
     {
+      start: (request) =>
+        this.runtime.runSync(
+          Effect.flatMap(PiModelStreams, (streams) => streams.start(request))
+        ),
       botId: () => this.pin?.parentObject ?? this.ctx.id.toString(),
       waitUntil: (work) => this.ctx.waitUntil(work),
-      catalog: () => this.parent().accountModelCatalog(),
+      catalog: () => accountRpc(this.parent()).catalog(),
       contextWindow: (model) =>
         this.pin?.route.model === model
           ? this.pin.route.contextWindow
           : undefined,
-      beforeRequest: async (id, signal) => {
-        if (
-          !this.pin ||
-          !(await this.parent().backgroundAuthorized(this.pin.id))
-        )
-          throw new Error("This background group has stopped.")
-        signal?.throwIfAborted()
-        await Effect.runPromise(this.group.request(id), { signal })
-      },
+      beforeRequest: (id, signal) =>
+        modelCallback(
+          this.runtime.runPromiseExit(this.group.request(id), { signal })
+        ),
       onAttempt: (model, thinking, purpose) => {
         if (!this.pin) throw new Error("Background group has no route")
-        return this.usage.start(
+        return this.observeInference(
           { ...this.pin.route, model, thinking },
           this.pin.turnId,
           purpose
@@ -104,56 +169,90 @@ export class BackgroundGroup
         },
         context
       )
-      this.pin = await readBackgroundHandoff(h)
+      this.pin = await readBackgroundHandoff(h, context)
+      if (
+        this.pin &&
+        !this.ctx.id.equals(
+          this.env.BACKGROUND.idFromName(
+            backgroundObjectName(this.pin.parentObject, this.pin.id)
+          )
+        )
+      )
+        throw new Error(
+          "Stored background handoff belongs to a different object"
+        )
       return h
     },
   })
-  readonly group = piBackgroundGroup(() => this.harness.pi(), {
-    submit: (child, text, operationId, steer) =>
-      this.harness
-        .session(String(child))
-        .submit(text, { operationId, whenBusy: steer ? "steer" : "followUp" }),
-    abort: (child) => this.harness.session(String(child)).abort(),
-  })
-  readonly lifecycle = Lifecycle.install(this).use(this.harness)
-  async start(parentObject: string, id: number): Promise<Group> {
-    if (
-      !/^[a-f0-9]{64}$/.test(parentObject) ||
-      !Number.isSafeInteger(id) ||
-      id < 1 ||
-      !this.ctx.id.equals(
-        this.env.BACKGROUND.idFromName(backgroundObjectName(parentObject, id))
+  readonly group: BackgroundTasks["Service"] =
+    this.runtime.runSync(BackgroundTasks)
+  readonly services = new BackgroundServices(this)
+  readonly lifecycle = Lifecycle.install(this)
+    .use(this.harness)
+    .use(this.services)
+  private startProgram(parentObject: string, id: number) {
+    return Effect.gen({ self: this }, function* () {
+      if (
+        !/^[a-f0-9]{64}$/.test(parentObject) ||
+        !Number.isSafeInteger(id) ||
+        id < 1 ||
+        !this.ctx.id.equals(
+          this.env.BACKGROUND.idFromName(backgroundObjectName(parentObject, id))
+        )
       )
+        return yield* Effect.die(new Error("Invalid background owner"))
+      const parent = this.env.AGENT.get(
+        this.env.AGENT.idFromString(parentObject)
+      )
+      const handoff = Schema.decodeUnknownSync(BackgroundHandoff)(
+        yield* backgroundNative(() => backgroundParentRpc(parent).handoff(id))
+      )
+      if (handoff.id !== id || handoff.parentObject !== parentObject)
+        return yield* Effect.die(
+          new Error("Background handoff belongs to a different object")
+        )
+      yield* this.group.initialize(handoff)
+      this.pin = handoff
+      return yield* this.group.advance()
+    })
+  }
+  async invokeV1(raw: unknown): Promise<Schema.Json> {
+    const exit = await this.runtime.runPromiseExit(
+      Effect.suspend<typeof BackgroundResult.Type, DelegationFailure, never>(
+        () => {
+          const request = Schema.decodeUnknownSync(BackgroundRequest)(raw)
+          switch (request._tag) {
+            case "Start":
+              return this.startProgram(request.parentObject, request.id)
+            case "Read":
+              return this.group.read()
+            case "Stop":
+              return this.group.stop().pipe(Effect.as(null))
+            case "Control":
+              return this.group.control(request.input)
+            case "Transcript":
+              return this.group.transcript(request.child, request.cursor)
+          }
+        }
+      ).pipe(Effect.map(Schema.decodeUnknownSync(BackgroundResult)))
     )
-      throw new Error("Invalid background owner")
-    const parent = this.env.AGENT.get(this.env.AGENT.idFromString(parentObject))
-    const handoff = Schema.decodeUnknownSync(BackgroundHandoff)(
-      await parent.backgroundHandoff(id)
-    )
-    await Effect.runPromise(this.group.initialize(handoff))
-    this.pin = handoff
-    if (!(await parent.backgroundAuthorized(id)))
-      await Effect.runPromise(this.group.stop())
-    return Effect.runPromise(this.group.advance())
+    if (Exit.isFailure(exit) && BackgroundOutcome.isUnexpected(exit))
+      reportHarness(exit.cause, "background")
+    return backgroundReply(exit)
+  }
+  async start(parentObject: string, id: number): Promise<Group> {
+    return this.runtime.runPromise(this.startProgram(parentObject, id))
   }
   async read(): Promise<Group> {
-    return Effect.runPromise(this.group.read())
+    return this.runtime.runPromise(this.group.read())
   }
   async stop(): Promise<void> {
-    await Effect.runPromise(this.group.stop())
+    await this.runtime.runPromise(this.group.stop())
   }
   async control(raw: unknown): Promise<BackgroundControlResult> {
-    const input = Schema.decodeUnknownSync(Control)(raw)
-    await this.harness.pi()
-    if (!this.pin || input.groupId !== this.pin.id)
-      throw new Error("Invalid group")
-    if (
-      !(await this.parent().backgroundAuthorized(input.groupId)) &&
-      (await Effect.runPromise(this.group.read())).status === "working"
-    )
-      await Effect.runPromise(this.group.stop())
-    return Effect.runPromise(
-      this.group.control(input).pipe(
+    return this.runtime.runPromise(
+      this.group.control(raw).pipe(
+        preserveFatal,
         Effect.match({
           onSuccess: (result) => ({ ok: true as const, ...result }),
           onFailure: (error) => ({
@@ -166,6 +265,6 @@ export class BackgroundGroup
     )
   }
   async transcript(child: number, cursor?: string): Promise<Transcript> {
-    return Effect.runPromise(this.group.transcript(child, cursor))
+    return this.runtime.runPromise(this.group.transcript(child, cursor))
   }
 }

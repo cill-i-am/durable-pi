@@ -6,7 +6,7 @@ import {
   type AssetBucket,
 } from "../src/workspace/adapters/storage"
 import { Workspace } from "../src/workspace/workspace"
-import { filesRequest } from "../src/workspace/http"
+import { filesRequest } from "../src/workspace/adapters/http"
 import {
   inspectFile,
   MAX_FILE_BYTES,
@@ -153,7 +153,9 @@ describe("private workspace files", () => {
       next: 7,
       total: 13,
     })
-    await expect(b.run((w) => w.content(file.id))).rejects.toMatchObject({
+    await expect(
+      b.run((w) => Effect.scoped(w.content(file.id)))
+    ).rejects.toMatchObject({
       _tag: "FileNotFound",
     })
     await b.run((w) =>
@@ -193,7 +195,9 @@ describe("private workspace files", () => {
       input = textUpload()
     await f.run((w) => w.upload(input))
     await f.run((w) => w.trash(input.id, true))
-    await expect(f.run((w) => w.content(input.id))).rejects.toMatchObject({
+    await expect(
+      f.run((w) => Effect.scoped(w.content(input.id)))
+    ).rejects.toMatchObject({
       _tag: "FileNotFound",
     })
     await expect(

@@ -1,10 +1,134 @@
+import { Schema } from "effect"
 import {
+  AppEvent,
   AppConflict,
   type AppAction,
   type AppDefinition,
   type AppState,
   type WebResult,
+  type AppDocument,
+  type AppVersion,
+  type SaveApp,
+  type InteractApp,
 } from "./contracts"
+
+export function currentApp(
+  app: AppDocument | undefined,
+  revision: number,
+  allowArchived = false
+): AppDocument {
+  if (!app || app.revision !== revision)
+    throw new AppConflict({
+      message: "This app changed. Reload before making this change.",
+    })
+  if (app.archived && !allowArchived)
+    throw new AppConflict({ message: "Restore this app before changing it." })
+  return app
+}
+
+export function saveApp(
+  input: SaveApp,
+  current: AppDocument | undefined,
+  saved: number,
+  createdAt: string
+) {
+  if (current) currentApp(current, input.expectedRevision)
+  else if (input.expectedRevision !== 0 || saved >= 50)
+    throw new AppConflict({
+      message:
+        "Reload the app. Each bot supports at most 50 apps, including archived apps.",
+    })
+  if ((current?.version ?? 0) >= 50)
+    throw new AppConflict({
+      message: "This app has reached its 50-version limit.",
+    })
+  const version: AppVersion = {
+    id: input.id,
+    version: (current?.version ?? 0) + 1,
+    definition: input.definition,
+    createdAt,
+  }
+  const app: AppDocument = {
+    ...version,
+    revision: (current?.revision ?? 0) + 1,
+    publishedVersion: current?.publishedVersion ?? null,
+    archived: false,
+    state: current?.state ?? { checks: {}, forms: {} },
+  }
+  return { version, app }
+}
+
+export const publishApp = (
+  current: AppDocument,
+  version: AppVersion
+): AppDocument => ({
+  ...current,
+  publishedVersion: version.version,
+  revision: current.revision + 1,
+  state: retainState(version.definition, current.state),
+})
+
+export const archiveApp = (
+  current: AppDocument,
+  archived: boolean
+): AppDocument => ({
+  ...current,
+  archived,
+  revision: current.revision + 1,
+})
+
+export function interactionSnapshot(current: AppDocument, version: number) {
+  if (current.publishedVersion !== version)
+    throw new AppConflict({
+      message: "The published app changed. Reload before interacting.",
+    })
+  return current
+}
+
+export function interactionChange(
+  current: AppDocument,
+  version: AppVersion,
+  input: InteractApp,
+  pending: number,
+  turnId: string,
+  createdAt: string,
+  result?: WebResult
+) {
+  interactionSnapshot(current, input.version)
+  if (pending >= 20)
+    throw new AppConflict({
+      message:
+        "Twenty app updates are waiting for this bot. Reconnect its model before sending more.",
+    })
+  const { state, text } = applyAction(
+    version.definition,
+    current.state,
+    input.action,
+    result
+  )
+  const event: AppEvent = {
+    id: input.operationId,
+    appId: input.id,
+    turnId,
+    version: input.version,
+    text: `App ${input.id}, published version ${input.version}.\n${text}`,
+    createdAt,
+    delivery: "pending",
+  }
+  if (!Schema.is(AppEvent)(event))
+    throw new AppConflict({
+      message:
+        "This update is too large. Shorten the form responses and try again.",
+    })
+  return { event, app: { ...current, revision: current.revision + 1, state } }
+}
+
+export function operationCapacity(count: number) {
+  if (count >= 2000)
+    throw new AppConflict({
+      message: "This bot has reached its app operation limit.",
+    })
+}
 
 export function retainState(
   definition: AppDefinition,

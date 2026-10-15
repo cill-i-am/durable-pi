@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from "vitest"
-import { Schema } from "effect"
-import { RoutineStore } from "../src/routines/adapters/sqlite"
+import { Schema, Effect, Clock, Exit, Cause } from "effect"
+import { RoutineStorageError } from "../src/routines/persistence"
+import {
+  routineFixture,
+  fixtureClock,
+  run as runFixture,
+} from "./routine-fixture"
 import {
   SaveRoutine,
   followingTime,
@@ -8,13 +13,13 @@ import {
 } from "../src/routines/contracts"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import { database } from "./database"
-import { RoutinePump } from "../src/routines/pump"
+import { routinePump } from "../src/routines/pump"
 
 function fixture() {
   const db = database()
   let now = 1000000,
     active = true
-  const store = new RoutineStore(
+  const store = routineFixture(
     db,
     () => active,
     () => now
@@ -58,6 +63,85 @@ const status = (
   })
 
 describe("durable bot routines", () => {
+  it("preserves typed conversation persistence failure and keeps its run pending", () => {
+    const f = fixture(),
+      conversations = new ConversationStore(f.db, {
+        model: "test",
+        thinking: "off",
+      })
+    f.advance(60000)
+    f.store.claimDue()
+    f.db.run(
+      "CREATE TRIGGER reject_routine_turn BEFORE INSERT ON chat_turns BEGIN SELECT RAISE(ABORT,'admission failure'); END"
+    )
+    expect(
+      Effect.runSync(
+        f.store.service
+          .deliver({
+            transactionGroup: f.db,
+            admit: (value) =>
+              conversations.admit({
+                operationId: value.turnId,
+                text: value.prompt,
+              }).turn.id,
+          })
+          .pipe(Effect.result)
+      )
+    ).toMatchObject({
+      _tag: "Failure",
+      failure: { _tag: "ConversationStorageError" },
+    })
+    expect(f.store.inFlight()?.status).toBe("pending")
+    expect(conversations.recent()).toHaveLength(0)
+  })
+  it("refuses a different transaction group before conversation admission", () => {
+    const f = fixture(),
+      admit = vi.fn(() => "wrong")
+    f.advance(60000)
+    f.store.claimDue()
+    expect(() =>
+      runFixture(
+        f.store.service.deliver({ transactionGroup: database(), admit })
+      )
+    ).toThrow("share its storage transaction group")
+    expect(admit).not.toHaveBeenCalled()
+    expect(f.store.inFlight()?.status).toBe("pending")
+  })
+  it("rolls back conversation admission when the queued checkpoint write fails", () => {
+    const f = fixture(),
+      conversations = new ConversationStore(f.db, {
+        model: "test",
+        thinking: "off",
+      })
+    f.advance(60000)
+    const pending = f.store.claimDue()!
+    f.db.run(
+      "CREATE TRIGGER fail_queue BEFORE UPDATE ON routine_runs WHEN NEW.status='queued' BEGIN SELECT RAISE(ABORT,'disk failure'); END"
+    )
+    expect(() =>
+      f.store.deliver((value) => {
+        conversations.admit({ operationId: value.turnId, text: value.prompt })
+      })
+    ).toThrow(RoutineStorageError)
+    expect(conversations.get(pending.turnId)).toBeUndefined()
+    expect(f.store.inFlight()?.status).toBe("pending")
+    f.db.run("DROP TRIGGER fail_queue")
+    f.store.deliver((value) => {
+      conversations.admit({ operationId: value.turnId, text: value.prompt })
+    })
+    expect(conversations.recent()).toHaveLength(1)
+    expect(f.store.inFlight()?.status).toBe("queued")
+  })
+  it("preserves corrupt durable records as defects rather than expected conflicts", () => {
+    const f = fixture()
+    f.db.run("UPDATE routines SET record='broken' WHERE id=?", f.routine.id)
+    const exit = Effect.runSyncExit(f.store.service.get(f.routine.id))
+    expect(Exit.isFailure(exit)).toBe(true)
+    if (Exit.isFailure(exit)) {
+      expect(Cause.hasDies(exit.cause)).toBe(true)
+      expect(Cause.hasFails(exit.cause)).toBe(false)
+    }
+  })
   it("bounds and validates schedules before accepting intent", () => {
     const f = fixture()
     for (const schedule of [
@@ -144,7 +228,7 @@ describe("durable bot routines", () => {
     ).toThrow("rollback")
     expect(conversations.get(run.turnId)).toBeUndefined()
     expect(f.store.inFlight()?.status).toBe("pending")
-    const restored = new RoutineStore(
+    const restored = routineFixture(
       f.db,
       () => true,
       () => 1060000
@@ -271,14 +355,43 @@ describe("routine alarm reconciliation", () => {
       modelConnected: vi.fn(async () => true),
       wakeConversation: vi.fn(async () => {}),
       admit: vi.fn((run: { turnId: string; prompt: string }) => {
-        conversations.admit({ operationId: run.turnId, text: run.prompt })
+        return conversations.admit({
+          operationId: run.turnId,
+          text: run.prompt,
+        }).turn.id
       }),
       stop: vi.fn((id: string) => {
         conversations.requestStop(id)
       }),
       notify: vi.fn(),
     }
-    const pump = new RoutinePump(f.store, host, f.now)
+    const reconciliation = routinePump(f.store.service, {
+      getTurn: (id) => Effect.sync(() => host.getTurn(id)),
+      modelConnected: () =>
+        Effect.tryPromise({
+          try: () => host.modelConnected(),
+          catch: (cause) => cause,
+        }),
+      wakeConversation: () =>
+        Effect.tryPromise({
+          try: () => host.wakeConversation(),
+          catch: (cause) => cause,
+        }),
+      admission: { transactionGroup: f.db, admit: host.admit },
+      stop: (id) => Effect.sync(() => host.stop(id)),
+      notify: () => Effect.sync(host.notify),
+    })
+    const clock = fixtureClock(f.now)
+    const pump = {
+      run: () =>
+        Effect.runPromise(
+          reconciliation.run().pipe(Effect.provideService(Clock.Clock, clock))
+        ),
+      retry: () =>
+        Effect.runSync(
+          reconciliation.retry().pipe(Effect.provideService(Clock.Clock, clock))
+        ),
+    }
     f.advance(60000)
     return { f, conversations, host, pump }
   }

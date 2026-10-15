@@ -1,5 +1,5 @@
 import { Context, Schema, type Effect } from "effect"
-import type { SummaryJob } from "./domain"
+import type { MemoryError, SummaryJob } from "./domain"
 
 export type SummaryMessage = { role: "user" | "assistant"; text: string }
 export class SummaryFailure extends Schema.TaggedError<SummaryFailure>()(
@@ -20,6 +20,6 @@ export class SummaryModel extends Context.Service<
     complete: (
       messages: readonly SummaryMessage[],
       job: SummaryJob
-    ) => Effect.Effect<string, SummaryFailure>
+    ) => Effect.Effect<string, SummaryFailure | MemoryError>
   }
 >()("durable-pi/memory/SummaryModel") {}

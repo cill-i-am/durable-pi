@@ -1,5 +1,4 @@
 import { Schema } from "effect"
-import { Rpc, RpcGroup } from "effect/rpc"
 import { AgentId } from "../agents/domain"
 
 const text = (max: number) =>
@@ -108,24 +107,6 @@ export class CommunicationError extends Schema.TaggedError<CommunicationError>()
 ) {}
 export const failure = (code: CommunicationError["code"], message: string) =>
   new CommunicationError({ code, message })
-
-export class MailboxRpc extends RpcGroup.make(
-  Rpc.make("deliver", {
-    payload: { envelope: Envelope },
-    success: Receipt,
-    error: CommunicationError,
-  }),
-  Rpc.make("permit", {
-    payload: { envelope: Envelope },
-    success: Schema.Boolean,
-    error: CommunicationError,
-  }),
-  Rpc.make("prove", {
-    payload: { envelope: Envelope },
-    success: Schema.Boolean,
-    error: CommunicationError,
-  })
-) {}
 
 export const MAX_TASK_MS = 60 * 60 * 1000
 export const RESULT_WINDOW_MS = 24 * 60 * 60 * 1000

@@ -1,5 +1,6 @@
 import { expect, it } from "vitest"
-import { createAgentModels, accountCredentials } from "../src/agent/models"
+import { createAgentModels } from "./models-fixture"
+import { accountCredentials } from "../src/inference/adapters/credentials-pi"
 import { credential, catalog, response } from "./inference-fixture"
 
 it("guards actual installed Responses dispatch using native identity even when cache keys are shared", async () => {

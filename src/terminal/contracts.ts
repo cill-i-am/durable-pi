@@ -75,6 +75,14 @@ export class TerminalFailure extends Schema.TaggedError<TerminalFailure>()(
   "TerminalFailure",
   { message: Schema.String }
 ) {}
+export class TerminalStorageError extends Schema.TaggedError<TerminalStorageError>()(
+  "TerminalStorageError",
+  {
+    operation: Schema.String,
+    cause: Schema.Unknown,
+  }
+) {}
+export type TerminalState = typeof TerminalState.Type
 export const MAX_OUTPUT = 64000
 export const MAX_CHECKPOINT = 8 * 1024 * 1024
 export const COMMAND_TIMEOUT = 30000

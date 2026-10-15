@@ -1,4 +1,4 @@
-import { Context, type Effect } from "effect"
+import { Context, type Effect, type Scope, type Stream } from "effect"
 import type { VideoResult } from "./video"
 import type {
   AttachmentContent,
@@ -6,11 +6,12 @@ import type {
   FileId,
   FileInfo,
   Upload,
+  WorkspaceUnavailable,
 } from "./files"
 
 export type FileContent = {
   info: FileInfo
-  body: ReadableStream<Uint8Array>
+  body: Stream.Stream<Uint8Array, WorkspaceUnavailable>
   size: number
   mime: string
 }
@@ -41,7 +42,7 @@ export class Workspace extends Context.Service<
     content: (
       id: FileId,
       vision?: boolean
-    ) => Effect.Effect<FileContent, FileError>
+    ) => Effect.Effect<FileContent, FileError, Scope.Scope>
     trash: (id: FileId, trashed: boolean) => Effect.Effect<FileInfo, FileError>
     rename: (id: FileId, name: string) => Effect.Effect<FileInfo, FileError>
     requireFiles: (

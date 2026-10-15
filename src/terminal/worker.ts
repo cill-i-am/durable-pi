@@ -1,15 +1,17 @@
+import { relayTerminal } from "./adapters/socket"
 import { reportTerminal } from "../observability/events"
-import { runObserved } from "../observability/worker"
+import { WorkerTelemetry } from "../observability/worker"
 import { Sandbox as BaseSandbox, getSandbox } from "@cloudflare/sandbox"
-import { Schema } from "effect"
+import { Effect, ManagedRuntime } from "effect"
 import type { TerminalEnv } from "../../alchemy.run"
 import type { Sqlite } from "../storage/sqlite"
-import { Terminal } from "./terminal"
+import { TerminalService, terminalLayer } from "./terminal"
+import { effectTerminalRuntime, terminalFileDigest } from "./adapters/interop"
 import { TerminalStore } from "./adapters/sqlite"
 import { sandboxRuntime } from "./adapters/sandbox"
 import { checkpointStorage } from "./adapters/r2"
-import { extractVideoRequest } from "./video"
-import { terminalRequest } from "./http"
+import { extractVideoRequest, sandboxVideo } from "./adapters/video"
+import { terminalRequest } from "./adapters/http"
 
 export class LinuxSandbox extends BaseSandbox<TerminalEnv> {
   override enableInternet = false
@@ -22,27 +24,45 @@ export class LinuxSandbox extends BaseSandbox<TerminalEnv> {
     },
     transaction: (body) => this.ctx.storage.transactionSync(body),
   }
-  private readonly terminal = new Terminal(
-    new TerminalStore(this.db, reportTerminal),
-    sandboxRuntime(this),
-    checkpointStorage(this.env.BACKUPS, this.ctx.id.toString()),
-    checkpointStorage(this.env.BACKUPS, this.ctx.id.toString(), "file")
+  private readonly terminalRuntime = ManagedRuntime.make(
+    terminalLayer({
+      repository: new TerminalStore(this.db, reportTerminal),
+      runtime: effectTerminalRuntime(sandboxRuntime(this)),
+      backups: checkpointStorage(this.env.BACKUPS, this.ctx.id.toString()),
+      exports: checkpointStorage(
+        this.env.BACKUPS,
+        this.ctx.id.toString(),
+        "file"
+      ),
+      relay: relayTerminal,
+      digest: terminalFileDigest,
+    })
   )
+  private readonly terminal = this.terminalRuntime.runSync(TerminalService)
+
   constructor(
     ctx: ConstructorParameters<typeof BaseSandbox<TerminalEnv>>[0],
     env: TerminalEnv
   ) {
     super(ctx, env)
-    this.ctx.waitUntil(this.terminal.recover())
+    this.ctx.waitUntil(this.terminalRuntime.runPromise(this.terminal.recover()))
   }
   private videoBusy = false
+  private readonly extractVideo = sandboxVideo(this)
   override async fetch(request: Request): Promise<Response> {
     const path = new URL(request.url).pathname
     if (path === "/video" && request.method === "POST") {
       if (this.videoBusy) return new Response("Busy", { status: 503 })
       this.videoBusy = true
       try {
-        return await extractVideoRequest(this, request)
+        const response = this.terminalRuntime.runPromise(
+          extractVideoRequest(this.extractVideo, request).pipe(
+            Effect.provide(WorkerTelemetry)
+          ),
+          { signal: request.signal }
+        )
+        this.ctx.waitUntil(response)
+        return await response
       } finally {
         this.videoBusy = false
       }
@@ -56,35 +76,14 @@ export class LinuxSandbox extends BaseSandbox<TerminalEnv> {
     return this.commandRequest(request)
   }
   private async commandRequest(request: Request) {
-    if (
-      new URL(request.url).pathname === "/authority" &&
-      request.method === "POST"
-    ) {
-      const input = Schema.decodeUnknownSync(
-        Schema.Struct({
-          revision: Schema.Number.check(
-            Schema.isInt(),
-            Schema.isGreaterThanOrEqualTo(0)
-          ),
-          active: Schema.Boolean,
-          revokeThrough: Schema.optional(
-            Schema.Number.check(
-              Schema.isInt(),
-              Schema.isGreaterThanOrEqualTo(0)
-            )
-          ),
-        })
-      )(await request.json())
-      this.terminal.configure(input.revision, input.active, input.revokeThrough)
-      return Response.json({ ok: true })
-    }
-    return runObserved(
+    return this.terminalRuntime.runPromise(
       terminalRequest(
         this.terminal,
         request,
         new URL(request.url).pathname.slice(1),
-        (task) => this.ctx.waitUntil(task.catch(() => {}))
-      )
+        (task) => this.ctx.waitUntil(this.terminalRuntime.runPromise(task))
+      ).pipe(Effect.provide(WorkerTelemetry)),
+      { signal: request.signal }
     )
   }
 }

@@ -1,5 +1,6 @@
-import { Schema } from "effect"
-import { BACKGROUND_CONTEXT as context } from "@earendil-works/chord/context"
+import { Effect, Schema } from "effect"
+import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context"
+import type { Context } from "@earendil-works/chord"
 import {
   AssistantEntry,
   ProviderDoc,
@@ -10,52 +11,73 @@ import {
   type Harness,
   type EntryId,
 } from "@earendil-works/pi-durable"
-import { BackgroundHandoff, backgroundEffect } from "../background"
-import { Control, DelegationFailure, type Group } from "../contracts"
-import { REQUEST_LIMIT } from "../delegation"
+import type { BackgroundTaskLedger } from "../background-task-ledger"
+import {
+  BackgroundState,
+  backgroundChildInstructions,
+  backgroundInitialId,
+  backgroundControlId,
+  restoreBackgroundState,
+  trimBackgroundText,
+} from "../background-task-domain"
+import { delegationCommit, delegationNative, backgroundNative } from "./interop"
 
-const State = Schema.Struct({
-  handoff: BackgroundHandoff,
-  stopped: Schema.Boolean,
-  sealed: Schema.Boolean,
-  revision: Schema.Number,
-  children: Schema.Array(
-    Schema.Struct({
-      id: Schema.Number,
-      provider: Schema.String,
-      requests: Schema.Number,
-      stopped: Schema.Boolean,
-    })
-  ),
-  controls: Schema.Array(Control),
-  applied: Schema.Array(Schema.String),
-})
-type State = typeof State.Type
-const Document = defineDoc({
+export const BackgroundDocument = defineDoc({
   kind: "delegation.background",
   version: 1,
   scope: "session",
   initial: () => ({ value: "" }),
 })
+const JsonState = Schema.fromJsonString(BackgroundState)
 const decode = (value: string) =>
-  Schema.decodeUnknownSync(State)(JSON.parse(value))
-export async function readBackgroundHandoff(h: Harness) {
-  const document = await h.snapshot(Document, context)
+  restoreBackgroundState(Schema.decodeUnknownSync(JsonState)(value))
+export async function readBackgroundHandoff(
+  h: Harness,
+  context: Context = BACKGROUND_CONTEXT
+) {
+  const document = await h.snapshot(BackgroundDocument, context)
   return document?.value ? decode(document.value).handoff : undefined
 }
-const fail = (code: DelegationFailure["code"], message: string) =>
-  new DelegationFailure({ code, message })
-const requestId = (child: number) => `background-initial:${child}`
-const controlId = (input: Control) => `background-control:${input.operationId}`
-const trim = (value: string, limit = 12000) => {
-  const bytes = new TextEncoder().encode(value)
-  return bytes.length <= limit
-    ? value
-    : new TextDecoder().decode(bytes.slice(0, limit), { stream: true }) +
-        "\n[Shortened; full answer is in the native transcript.]"
+const stateView = (document: { value: string }) => {
+  let value = document.value ? decode(document.value) : null
+  return {
+    get value() {
+      return value
+    },
+    set value(next: BackgroundState | null) {
+      if (
+        value &&
+        (!next ||
+          JSON.stringify(value.handoff) !== JSON.stringify(next.handoff) ||
+          JSON.stringify(
+            value.children.map(({ id, provider }) => ({ id, provider }))
+          ) !==
+            JSON.stringify(
+              next.children.map(({ id, provider }) => ({ id, provider }))
+            ))
+      )
+        throw new Error(
+          "Background update changed its handoff or child identity."
+        )
+      if (next) restoreBackgroundState(next)
+      document.value = next ? Schema.encodeSync(JsonState)(next) : ""
+      value = next
+    },
+  }
 }
-
-export function piBackgroundGroup(
+const Facts = Schema.Struct({
+  inputs: Schema.Array(
+    Schema.UndefinedOr(
+      Schema.Struct({
+        status: Schema.Literals(["queued", "placed", "done", "unanswered"]),
+      })
+    )
+  ),
+  answer: Schema.String,
+  inputTokens: Schema.NullOr(Schema.Number),
+  outputTokens: Schema.NullOr(Schema.Number),
+})
+export function piBackgroundLedger(
   open: () => Promise<Harness>,
   bridge: {
     submit: (
@@ -65,397 +87,166 @@ export function piBackgroundGroup(
       steer: boolean
     ) => Promise<unknown>
     abort: (child: number) => Promise<unknown>
-  },
-  now: () => number = Date.now
-) {
-  const load = async (h: Harness): Promise<State> => {
-    const document = await h.snapshot(Document, context)
-    if (!document?.value)
-      throw fail("not_found", "This background group is unavailable.")
-    return decode(document.value)
   }
-  const edit = async <T>(
-    h: Harness,
-    body: (state: State) => { state: State; result: T }
-  ) =>
-    h.commit(async (tx) => {
-      const document = await tx.doc(Document)
-      if (!document.value)
-        throw fail("not_found", "This background group is unavailable.")
-      const change = body(decode(document.value))
-      document.value = JSON.stringify(change.state)
-      return change.result
-    }, context)
-  const project = async (h: Harness, state: State): Promise<Group> => {
-    const children: Group["children"][number][] = []
-    for (const [index, child] of state.children.entries()) {
-      const records = await h.commit(async (tx) => {
-        const ids = [
-          requestId(child.id),
-          ...state.controls
-            .filter((c) => c.childId === child.id && c.action.type === "steer")
-            .map(controlId),
-        ]
-        return Promise.all(
-          ids.map((id) =>
-            tx.submissionByRequest(child.id as ConversationId, id)
-          )
-        )
-      }, context)
-      const answer = records
-        .filter((r) => r?.type === "input" && r.status === "done")
-        .sort((a, b) => b.answer - a.answer)[0]
-      const entry = answer
-        ? await h.commit(
-            (tx) => tx.entry(AssistantEntry, answer.answer),
-            context
-          )
-        : undefined
-      const text = (entry?.model ?? [])
-        .flatMap((m) =>
-          Array.isArray(m.content)
-            ? m.content.filter((p) => p.type === "text").map((p) => p.text)
-            : []
-        )
-        .join("\n")
-      const stopped =
-        state.stopped ||
-        child.stopped ||
-        (!state.sealed && now() >= state.handoff.deadline)
-      const pending = records.some(
-        (r) =>
-          r?.status === "queued" || r?.status === "placed" || (!r && !stopped)
-      )
-      const failed = records.some((r) => !r || r.status === "unanswered")
-      const usage = await h.snapshot(
-        UsageDoc,
-        child.id as ConversationId,
+): BackgroundTaskLedger {
+  const snapshot = <T>(body: (h: Harness, context: Context) => Promise<T>) =>
+    delegationNative(open).pipe(
+      Effect.flatMap((h) => delegationNative((context) => body(h, context)))
+    )
+  const submission = (h: Harness, child: number, request: string) =>
+    delegationNative((context) =>
+      h.commit(
+        (tx) => tx.submissionByRequest(child as ConversationId, request),
         context
       )
-      const totals = Object.values(usage?.models ?? {})
-      children.push({
-        ...state.handoff.input.tasks[index]!,
-        id: child.id,
-        status: pending
-          ? stopped
-            ? "stopping"
-            : "working"
-          : stopped
-            ? "cancelled"
-            : failed
-              ? "failed"
-              : "completed",
-        answer: trim(text),
-        requests: child.requests,
-        inputTokens: totals.length
-          ? totals.reduce((n, u) => n + u.input + u.cacheRead + u.cacheWrite, 0)
-          : null,
-        outputTokens: totals.length
-          ? totals.reduce((n, u) => n + u.output, 0)
-          : null,
-        steering: state.controls
-          .filter((c) => c.childId === child.id && c.action.type === "steer")
-          .map((c) => (c.action.type === "steer" ? c.action.text : "")),
-        error:
-          failed && !pending && !stopped
-            ? child.requests >= REQUEST_LIMIT
-              ? "This child reached its request limit."
-              : "The model did not complete this task."
-            : null,
-      })
-    }
-    return {
-      id: state.handoff.id,
-      turnId: state.handoff.turnId,
-      conversationId: state.handoff.conversationId,
-      objective: state.handoff.input.objective,
-      route: state.handoff.route,
-      createdAt: state.handoff.createdAt,
-      deadline: state.handoff.deadline,
-      status: state.stopped
-        ? "cancelled"
-        : state.sealed
-          ? "completed"
-          : "working",
-      children,
-    }
-  }
-  const drain = async (h: Harness) => {
-    const state = await load(h)
-    for (const input of state.controls) {
-      const latest = await load(h)
-      if (latest.applied.includes(input.operationId)) continue
-      const child = latest.children.find((c) => c.id === input.childId)!
-      if (
-        input.action.type === "stop" ||
-        latest.stopped ||
-        child.stopped ||
-        now() >= latest.handoff.deadline
-      ) {
-        await bridge.abort(child.id)
-      } else if (!latest.sealed) {
-        const initial = await h.commit(
-          (tx) =>
-            tx.submissionByRequest(
-              child.id as ConversationId,
-              requestId(child.id)
-            ),
-          context
-        )
-        if (!initial) continue
-        await bridge.submit(child.id, input.action.text, controlId(input), true)
-      }
-      await edit(h, (value) => ({
-        state: {
-          ...value,
-          applied: [...new Set([...value.applied, input.operationId])],
-        },
-        result: undefined,
-      }))
-    }
-  }
+    )
   return {
-    pin: () =>
-      backgroundEffect(async () => {
-        const h = await open(),
-          doc = await h.snapshot(Document, context)
-        return doc?.value ? decode(doc.value).handoff : undefined
-      }),
-    initialize: (raw: BackgroundHandoff) =>
-      backgroundEffect(async () => {
-        const handoff = Schema.decodeUnknownSync(BackgroundHandoff)(raw),
-          h = await open()
-        if (handoff.input.tasks.some((t) => t.tools.length))
-          throw fail("invalid", "Background tasks have no tool grants.")
-        await h.commit(async (tx) => {
-          const document = await tx.doc(Document)
-          if (document.value) {
-            if (
-              JSON.stringify(decode(document.value).handoff) !==
-              JSON.stringify(handoff)
-            )
-              throw fail(
-                "conflict",
-                "This group already has a different handoff."
-              )
-            return
-          }
-          const children = []
-          for (const task of handoff.input.tasks) {
-            const child = await tx.createConversation({
-              ownership: { kind: "ownerless" },
-            })
-            await configure(tx, child.id, {
-              model: { provider: "openai", modelId: handoff.route.model },
-              thinkingLevel: handoff.route.thinking,
-              extensions: [],
-              tools: [],
-              instructions: `You are the background drafting child ${task.name}. Work only on the supplied task and text reference. You have no tools, live retrieval, images, outside-action authority or delegation. Report uncertainty and missing evidence explicitly. Respect all constraints and later steering.\n<reference>\n${handoff.memory}\n</reference>`,
-            })
-            const provider = await tx.doc(ProviderDoc, child.id)
-            children.push({
-              id: Number(child.id),
-              provider: provider.sessionId,
-              requests: 0,
-              stopped: false,
-            })
-          }
-          document.value = JSON.stringify({
-            handoff,
-            children,
-            stopped: false,
-            sealed: false,
-            revision: 0,
-            controls: [],
-            applied: [],
-          } satisfies State)
-        }, context)
-      }),
-    advance: () =>
-      backgroundEffect(async () => {
-        const h = await open(),
-          state = await load(h)
-        if (!state.sealed && now() >= state.handoff.deadline)
-          await edit(h, (current) => ({
-            state:
-              current.sealed || current.stopped
-                ? current
-                : { ...current, stopped: true, revision: current.revision + 1 },
-            result: undefined,
-          }))
-        for (const [index, child] of state.children.entries()) {
-          const latest = await load(h)
-          if (latest.sealed) break
-          if (
-            latest.stopped ||
-            latest.children[index]!.stopped ||
-            now() >= latest.handoff.deadline
-          )
-            await bridge.abort(child.id)
-          else
-            await bridge.submit(
-              child.id,
-              latest.handoff.input.tasks[index]!.task,
-              requestId(child.id),
-              false
-            )
-        }
-        await drain(h)
-        const latest = await load(h),
-          view = await project(h, latest)
-        if (
-          !view.children.some((c) =>
-            ["queued", "working", "stopping"].includes(c.status)
-          )
-        )
-          await edit(h, (current) => ({
-            state:
-              !current.sealed && current.revision === latest.revision
-                ? {
-                    ...current,
-                    sealed: true,
-                    stopped:
-                      current.stopped || now() >= current.handoff.deadline,
+    atomic: (body) =>
+      delegationNative(open).pipe(
+        Effect.flatMap((h) =>
+          delegationCommit(h, (tx) =>
+            body({
+              state: () =>
+                delegationNative(() => tx.doc(BackgroundDocument)).pipe(
+                  Effect.map(stateView)
+                ),
+              createChild: (handoff, task) =>
+                Effect.gen(function* () {
+                  const child = yield* delegationNative(() =>
+                    tx.createConversation({ ownership: { kind: "ownerless" } })
+                  )
+                  yield* delegationNative(() =>
+                    configure(tx, child.id, {
+                      model: {
+                        provider: "openai",
+                        modelId: handoff.route.model,
+                      },
+                      thinkingLevel: handoff.route.thinking,
+                      extensions: [],
+                      tools: [],
+                      instructions: backgroundChildInstructions(handoff, task),
+                    })
+                  )
+                  const provider = yield* delegationNative(() =>
+                    tx.doc(ProviderDoc, child.id)
+                  )
+                  return {
+                    id: Number(child.id),
+                    provider: provider.sessionId,
                   }
-                : current,
-            result: undefined,
-          }))
-        return project(h, await load(h))
-      }),
-    read: () =>
-      backgroundEffect(async () => {
-        const h = await open()
-        return project(h, await load(h))
-      }),
-    stop: () =>
-      backgroundEffect(async () => {
-        const h = await open()
-        const children = await edit(h, (state) =>
-          state.sealed
-            ? {
-                state,
-                result: [],
-              }
-            : {
-                state: {
-                  ...state,
-                  stopped: true,
-                  revision: state.revision + 1,
-                },
-                result: state.children,
-              }
+                }),
+            })
+          )
         )
-        for (const child of children) await bridge.abort(child.id)
-      }),
-    control: (raw: Control) =>
-      backgroundEffect(async () => {
-        const input = Schema.decodeUnknownSync(Control)(raw),
-          h = await open()
-        const accepted = await edit(h, (state) => {
-          if (
-            input.groupId !== state.handoff.id ||
-            !state.children.some((c) => c.id === input.childId)
+      ),
+    state: () =>
+      snapshot((h, context) => h.snapshot(BackgroundDocument, context)).pipe(
+        Effect.map((document) =>
+          document?.value ? decode(document.value) : undefined
+        )
+      ),
+    facts: (state) =>
+      delegationNative(open).pipe(
+        Effect.flatMap((h) =>
+          Effect.forEach(
+            state.children,
+            (child) =>
+              Effect.gen(function* () {
+                const records = []
+                for (const id of [
+                  backgroundInitialId(child.id),
+                  ...state.controls
+                    .filter(
+                      (control) =>
+                        control.childId === child.id &&
+                        control.action.type === "steer"
+                    )
+                    .map(backgroundControlId),
+                ])
+                  records.push(yield* submission(h, child.id, id))
+                const answer = records
+                  .filter(
+                    (record) =>
+                      record?.type === "input" && record.status === "done"
+                  )
+                  .sort((a, b) => b.answer - a.answer)[0]
+                const entry = answer
+                  ? yield* delegationNative((context) =>
+                      h.commit(
+                        (tx) => tx.entry(AssistantEntry, answer.answer),
+                        context
+                      )
+                    )
+                  : undefined
+                const text = (entry?.model ?? [])
+                  .flatMap((message) =>
+                    Array.isArray(message.content)
+                      ? message.content
+                          .filter((part) => part.type === "text")
+                          .map((part) => part.text)
+                      : []
+                  )
+                  .join("\n")
+                const usage = yield* delegationNative((context) =>
+                    h.snapshot(UsageDoc, child.id as ConversationId, context)
+                  ),
+                  totals = Object.values(usage?.models ?? {})
+                return Schema.decodeUnknownSync(Facts)({
+                  inputs: records.map((record) =>
+                    record ? { status: record.status } : undefined
+                  ),
+                  answer: text,
+                  inputTokens: totals.length
+                    ? totals.reduce(
+                        (n, u) => n + u.input + u.cacheRead + u.cacheWrite,
+                        0
+                      )
+                    : null,
+                  outputTokens: totals.length
+                    ? totals.reduce((n, u) => n + u.output, 0)
+                    : null,
+                })
+              }),
+            { concurrency: 3 }
           )
-            throw fail("not_found", "Child unavailable in this group.")
-          const previous = state.controls.find(
-            (c) => c.operationId === input.operationId
-          )
-          if (previous) {
-            if (JSON.stringify(previous) !== JSON.stringify(input))
-              throw fail(
-                "conflict",
-                "This control ID belongs to another operation."
+        )
+      ),
+    hasSubmission: (child, request) =>
+      delegationNative(open).pipe(
+        Effect.flatMap((h) => submission(h, child, request)),
+        Effect.map((record) => record !== undefined)
+      ),
+    submit: (child, text, request, steer) =>
+      backgroundNative(() => bridge.submit(child, text, request, steer)).pipe(
+        Effect.asVoid
+      ),
+    abort: (child) =>
+      backgroundNative(() => bridge.abort(child)).pipe(Effect.asVoid),
+    transcript: (child, before) =>
+      snapshot((h, context) =>
+        h.conversation(child as ConversationId, context)
+      ).pipe(
+        Effect.flatMap((conversation) =>
+          conversation
+            ? delegationNative((context) =>
+                conversation.entries(
+                  before ? { maxEntryId: before as EntryId } : {},
+                  20,
+                  undefined,
+                  context
+                )
               )
-            return { state, result: false }
-          }
-          if (
-            state.sealed ||
-            state.stopped ||
-            now() >= state.handoff.deadline ||
-            state.children.find((c) => c.id === input.childId)!.stopped
-          )
-            throw fail(
-              "cancelled",
-              "This background group has finished or stopped."
-            )
-          if (
-            input.action.type === "steer" &&
-            state.controls.filter(
-              (c) => c.childId === input.childId && c.action.type === "steer"
-            ).length >= 8
-          )
-            throw fail("limit", "This child reached its steering limit.")
-          return {
-            state: {
-              ...state,
-              revision: state.revision + 1,
-              controls: [...state.controls, input],
-              children: state.children.map((c) =>
-                c.id === input.childId && input.action.type === "stop"
-                  ? { ...c, stopped: true }
-                  : c
-              ),
-            },
-            result: true,
-          }
-        })
-        await drain(h)
-        return { accepted }
-      }),
-    request: (provider: string) =>
-      backgroundEffect(async () => {
-        const h = await open()
-        await edit(h, (state) => {
-          const child = state.children.find((c) => c.provider === provider)
-          if (!child || child.stopped || state.stopped || state.sealed)
-            throw fail("cancelled", "This background task has stopped.")
-          if (
-            now() >= state.handoff.deadline ||
-            child.requests >= REQUEST_LIMIT
-          )
-            throw fail(
-              "limit",
-              "This background task reached its execution limit."
-            )
-          return {
-            state: {
-              ...state,
-              revision: state.revision + 1,
-              children: state.children.map((c) =>
-                c.id === child.id ? { ...c, requests: c.requests + 1 } : c
-              ),
-            },
-            result: undefined,
-          }
-        })
-      }),
-    transcript: (childId: number, cursor?: string) =>
-      backgroundEffect(async () => {
-        const h = await open(),
-          state = await load(h)
-        if (!state.children.some((c) => c.id === childId))
-          throw fail("not_found", "Child unavailable in this group.")
-        const before = cursor ? Number(cursor) : undefined
-        if (
-          before !== undefined &&
-          (!Number.isSafeInteger(before) || before < 1)
-        )
-          throw fail("invalid", "Invalid transcript position.")
-        const conversation = await h.conversation(
-          childId as ConversationId,
-          context
-        )
-        const page = await conversation!.entries(
-          before ? { maxEntryId: before as EntryId } : {},
-          20,
-          undefined,
-          context
-        )
-        return {
+            : Effect.die(
+                new Error(
+                  "Stored background child conversation is unavailable."
+                )
+              )
+        ),
+        Effect.map((page) => ({
           entries: page.items.map((entry) => ({
             id: Number(entry.id),
             kind: entry.kind,
-            text: trim(
+            text: trimBackgroundText(
               JSON.stringify(entry.model ?? entry.data ?? null, null, 2),
               16000
             ),
@@ -464,7 +255,7 @@ export function piBackgroundGroup(
             page.next && page.items.length
               ? String(Number(page.items[page.items.length - 1]!.id) - 1)
               : null,
-        }
-      }),
+        }))
+      ),
   }
 }

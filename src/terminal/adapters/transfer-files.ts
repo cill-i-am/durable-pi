@@ -1,6 +1,6 @@
 import type { Sandbox } from "@cloudflare/sandbox"
 import { MAX_TRANSFER_BYTES } from "../transfers"
-import { readBounded } from "./sandbox"
+import { readBounded } from "./stream"
 
 const transfer = `import os,sys,stat
 mode,path=sys.argv[1:]

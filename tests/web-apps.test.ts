@@ -1,11 +1,15 @@
+import { nativeOperation } from "../src/shared/interop"
 import { describe, expect, it } from "vitest"
-import { Effect, Schema } from "effect"
+import { Cause, Effect, Exit, Schema } from "effect"
 import {
   AppDefinition,
   type InteractApp,
   type WebResult,
 } from "../src/apps/contracts"
 import { AppStore } from "../src/apps/adapters/sqlite"
+import { makeApps } from "../src/apps/service"
+import type { CodeOutput } from "../src/execution/contracts"
+import { AppConflict } from "../src/apps/contracts"
 import { WebApps, type WebExecutor } from "../src/apps/web"
 import { appHtml } from "../src/apps/html"
 import { webFrame } from "../src/features/apps/web-frame"
@@ -29,12 +33,17 @@ const output = (state = '{"count":1}'): WebResult => ({
   state,
   summary: "Added one.",
 })
+type ForeignExecutor = (
+  input: Parameters<WebExecutor>[0],
+  signal: AbortSignal
+) => Promise<CodeOutput>
 function setup(
-  execute: WebExecutor = async () => ({
+  execute: ForeignExecutor = async () => ({
     result: JSON.stringify(output()),
     logs: "",
     error: null,
-  })
+  }),
+  completed: () => void = () => {}
 ) {
   const db = database()
   let active = true
@@ -52,7 +61,17 @@ function setup(
     expectedRevision: draft.revision,
     version: 1,
   })
-  const web = new WebApps(store, execute)
+  const web = new WebApps(makeApps(store), (input, signal) =>
+    nativeOperation(
+      () => execute(input, signal),
+      (cause, channel) => {
+        const known = Schema.decodeUnknownOption(AppConflict)(cause)
+        if (known._tag === "Some") return known.value
+        if (channel === "failure" || Schema.isSchemaError(cause)) throw cause
+        return new AppConflict({ message: "Fixture execution failed." })
+      }
+    ).pipe(Effect.tap(() => Effect.sync(completed)))
+  )
   const input: InteractApp = {
     id,
     version: 1,
@@ -75,21 +94,28 @@ function setup(
   }
 }
 const signal = () => new AbortController().signal
-function controlled() {
-  let finish!: (value: Awaited<ReturnType<WebExecutor>>) => void,
-    enter!: () => void
+function controlled(completed: () => void = () => {}) {
+  let finish!: (value: CodeOutput) => void,
+    enter!: () => void,
+    enterAgain!: () => void,
+    calls = 0
   const entered = new Promise<void>((resolve) => {
     enter = resolve
   })
+  const enteredAgain = new Promise<void>((resolve) => {
+    enterAgain = resolve
+  })
   const f = setup(async () => {
-    enter()
+    if (++calls === 1) enter()
+    else enterAgain()
     return new Promise((resolve) => {
       finish = resolve
     })
-  })
+  }, completed)
   return {
     ...f,
     entered,
+    enteredAgain,
     finish: () =>
       finish({ result: JSON.stringify(output()), logs: "", error: null }),
   }
@@ -131,17 +157,40 @@ describe("generated HTML boundary", () => {
   })
 })
 describe("Cloudflare generated apps", () => {
+  it("joins native settlement before releasing the interrupted render lease and rejects a late result", async () => {
+    const f = controlled(),
+      controller = new AbortController()
+    const first = Effect.runPromiseExit(f.web.interact(f.input, signal()), {
+      signal: controller.signal,
+    })
+    await f.entered
+    controller.abort()
+    const overlapping = await Effect.runPromiseExit(
+      f.web.render({ id: f.app.id, version: 1 }, signal())
+    )
+    expect(
+      Exit.isFailure(overlapping) && Cause.hasFails(overlapping.cause)
+    ).toBe(true)
+    f.finish()
+    const exit = await first
+    expect(Exit.isFailure(exit)).toBe(true)
+    if (Exit.isFailure(exit)) expect(Cause.hasInterrupts(exit.cause)).toBe(true)
+    expect(f.store.get(f.app.id)?.revision).toBe(f.app.revision)
+    expect(f.store.pending()).toEqual([])
+    const resumed = Effect.runPromise(f.web.interact(f.input, signal()))
+    await f.enteredAgain
+    f.finish()
+    expect((await resumed).revision).toBe(f.app.revision + 1)
+    expect(f.store.pending()).toHaveLength(1)
+  })
   it("fences archive and restore between execution completion and commit", async () => {
-    const f = controlled()
+    const f = controlled(() => {
+      f.archiveBot()
+      f.restoreBot()
+    })
     const running = Effect.runPromise(f.web.interact(f.input, signal()))
     await f.entered
     f.finish()
-    queueMicrotask(() =>
-      queueMicrotask(() => {
-        f.archiveBot()
-        f.restoreBot()
-      })
-    )
     await expect(running).rejects.toThrow()
     expect(f.store.get(f.app.id)?.revision).toBe(f.app.revision)
     expect(f.store.pending()).toEqual([])
@@ -196,7 +245,7 @@ describe("Cloudflare generated apps", () => {
           signal()
         )
       )
-    ).rejects.toMatchObject({ cause: { _tag: "AppConflict" } })
+    ).rejects.toMatchObject({ _tag: "AppConflict" })
     expect(calls).toBe(2)
   })
   it.each([
@@ -244,7 +293,7 @@ describe("Cloudflare generated apps", () => {
     f.store.cancelOperation(f.input.operationId)
     await expect(
       Effect.runPromise(f.web.interact(f.input, signal()))
-    ).rejects.toMatchObject({ cause: { _tag: "AppConflict" } })
+    ).rejects.toMatchObject({ _tag: "AppConflict" })
     const preview = Effect.runPromise(
       f.web.render({ id: f.app.id, version: 1 }, signal())
     )
@@ -271,7 +320,7 @@ describe("Cloudflare generated apps", () => {
       }))
       await expect(
         Effect.runPromise(f.web.interact(f.input, signal()))
-      ).rejects.toThrow()
+      ).rejects.toMatchObject({ _tag: "AppConflict" })
       expect(f.store.get(f.app.id)?.revision).toBe(f.app.revision)
       expect(f.store.pending()).toEqual([])
     }
@@ -296,4 +345,83 @@ describe("Cloudflare generated apps", () => {
     })
     expect(published.state).toEqual({ checks: {}, forms: {} })
   })
+})
+it("does not dispatch generated code for a pre-aborted action", async () => {
+  let calls = 0
+  const f = setup(async () => {
+    calls++
+    return { result: JSON.stringify(output()), logs: "", error: null }
+  })
+  const controller = new AbortController()
+  controller.abort()
+  const exit = await Effect.runPromiseExit(
+    f.web.interact(f.input, controller.signal)
+  )
+  expect(Exit.isFailure(exit) && Cause.hasInterrupts(exit.cause)).toBe(true)
+  expect(calls).toBe(0)
+  expect(f.store.get(f.app.id)?.revision).toBe(f.app.revision)
+})
+it.each(["defect", "tagged defect", "mixed"])(
+  "keeps a generated app %s fatal and releases the lease",
+  async (mode) => {
+    const f = setup(),
+      expected = new AppConflict({ message: "Expected app rejection" })
+    const cause = Cause.fromReasons<AppConflict>(
+      mode === "mixed"
+        ? [
+            Cause.makeFailReason(expected),
+            Cause.makeDieReason("Private app defect"),
+            Cause.makeInterruptReason(73),
+          ]
+        : [
+            Cause.makeDieReason(
+              mode === "tagged defect" ? expected : "Private app defect"
+            ),
+          ]
+    )
+    let calls = 0
+    const app = new WebApps(makeApps(f.store), () =>
+      ++calls === 1
+        ? Effect.failCause(cause)
+        : Effect.succeed({
+            result: JSON.stringify(output()),
+            logs: "",
+            error: null,
+          })
+    )
+    const exit = await Effect.runPromiseExit(app.interact(f.input, signal()))
+    expect(
+      Exit.isFailure(exit) && exit.cause.reasons.map((reason) => reason._tag)
+    ).toEqual(cause.reasons.map((reason) => reason._tag))
+    expect(f.store.get(f.app.id)?.revision).toBe(f.app.revision)
+    expect(f.store.pending()).toEqual([])
+    expect(
+      (await Effect.runPromise(app.interact(f.input, signal()))).revision
+    ).toBe(f.app.revision + 1)
+  }
+)
+it("keeps corrupt owned state fatal before executing code", async () => {
+  const f = setup(),
+    service = makeApps(f.store)
+  const snapshot = f.store.interactionSnapshot(f.input)
+  Object.assign(service, {
+    interactionSnapshot: () =>
+      Effect.succeed({
+        ...snapshot,
+        state: { ...snapshot.state, web: { counter: "invalid" } },
+      }),
+  })
+  let calls = 0
+  const app = new WebApps(service, () => {
+    calls++
+    return Effect.succeed({
+      result: JSON.stringify(output()),
+      logs: "",
+      error: null,
+    })
+  })
+  const exit = await Effect.runPromiseExit(app.interact(f.input, signal()))
+  expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)
+  expect(calls).toBe(0)
+  expect(f.store.pending()).toEqual([])
 })

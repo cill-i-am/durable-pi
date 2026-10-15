@@ -177,7 +177,11 @@ describe("Effect memory compaction", () => {
         const layer = piSummaryLayer((_messages, abort) => {
           signal = abort
           Deferred.doneUnsafe(started, Effect.void)
-          return new Promise(() => {})
+          return new Promise((_resolve, reject) =>
+            abort.addEventListener("abort", () => reject(abort.reason), {
+              once: true,
+            })
+          )
         })
         const fiber = yield* pumpSummaries().pipe(
           Effect.provideService(MemoryRepository, memory),

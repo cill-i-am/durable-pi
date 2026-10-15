@@ -14,7 +14,7 @@ Follow OptChat §§6–8 and Pi's native steering API.
 - [ ] Update the composer, message status, response grouping, and stop behavior for multiple user messages joining one run.
 - [ ] Test tool-boundary delivery, rapid consecutive messages, completion races, cancellation, and Durable Object restart. Verify encrypted reasoning replay and cache usage after a steering message.
 
-Start in [the agent worker](src/agent/worker.ts), [chat contracts](src/shared/contracts.ts), [the chat UI](src/features/conversation/conversation.tsx), and [the cache adapter](src/agent/cache.ts).
+Start in [the agent worker](src/agent/worker.ts), [chat contracts](src/conversations/contracts.ts), [the chat UI](src/features/conversation/conversation.tsx), and [the cache adapter](src/inference/adapters/payload-openai.ts).
 
 ## 2. Add optional subagents
 

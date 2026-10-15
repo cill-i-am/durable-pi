@@ -21,7 +21,7 @@ import {
 import { agentSettings, contextProjectionBytes } from "../src/agent/compaction"
 import { originalTranscript } from "../src/conversations/adapters/pi-reply"
 import { piPlans } from "../src/planning/adapters/pi"
-import { planContextHook, planTools } from "../src/planning/tools"
+import { planContextHook, planTools } from "../src/planning/adapters/tools"
 
 it.each([8192, contextProjectionBytes(8192)])(
   "retrieves the authoritative plan with a %i-byte projection through native compaction and restart without history copies",

@@ -1,9 +1,14 @@
 import { describe, expect, it } from "vitest"
-import { Effect, Schema } from "effect"
+import { Cause, Effect, Exit, Schema } from "effect"
+import { makeApps } from "../src/apps/service"
 import { AppStore } from "../src/apps/adapters/sqlite"
-import { AppDefinition, type SaveApp } from "../src/apps/contracts"
-import { readAppPage } from "../src/apps/tools"
-import { appsRequest } from "../src/apps/http"
+import {
+  AppDefinition,
+  AppStorageError,
+  type SaveApp,
+} from "../src/apps/contracts"
+import { readAppPage } from "../src/apps/adapters/pi"
+import { appsRequest } from "../src/apps/adapters/http"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import { database } from "./database"
 
@@ -83,6 +88,64 @@ const click = (app: {
 })
 
 describe("private generated apps", () => {
+  it("refuses a separate transaction group before event admission", () => {
+    const f = fixture(),
+      app = publish(f)
+    f.store.interact(click(app))
+    let admitted = false
+    expect(() =>
+      f.store.deliverNext({
+        transactionGroup: database(),
+        admit: () => {
+          admitted = true
+          return "wrong"
+        },
+      })
+    ).toThrow("share its storage transaction group")
+    expect(admitted).toBe(false)
+    expect(f.store.pending()).toHaveLength(1)
+  })
+  it("rolls back conversation admission when the event checkpoint write fails", () => {
+    const f = fixture(),
+      app = publish(f)
+    f.store.interact(click(app))
+    const conversations = new ConversationStore(f.db, {
+      model: "test",
+      thinking: "off",
+    })
+    f.db.run(
+      "CREATE TRIGGER fail_app_queue BEFORE UPDATE ON generated_app_events WHEN NEW.queued=1 BEGIN SELECT RAISE(ABORT,'disk failure'); END"
+    )
+    expect(() =>
+      f.store.deliverNext({
+        transactionGroup: f.db,
+        admit: (event) =>
+          conversations.admit({ operationId: event.turnId, text: event.text })
+            .turn.id,
+      })
+    ).toThrow(AppStorageError)
+    expect(conversations.recent()).toEqual([])
+    expect(f.store.pending()).toHaveLength(1)
+    f.db.run("DROP TRIGGER fail_app_queue")
+    f.store.deliverNext({
+      transactionGroup: f.db,
+      admit: (event) =>
+        conversations.admit({ operationId: event.turnId, text: event.text })
+          .turn.id,
+    })
+    expect(conversations.recent()).toHaveLength(1)
+    expect(f.store.pending()).toHaveLength(0)
+  })
+  it("keeps a corrupt stored app in the defect channel", () => {
+    const f = fixture()
+    f.db.run("UPDATE generated_apps SET record='broken' WHERE id=?", f.draft.id)
+    const exit = Effect.runSyncExit(makeApps(f.store).get(f.draft.id))
+    expect(Exit.isFailure(exit)).toBe(true)
+    if (Exit.isFailure(exit)) {
+      expect(Cause.hasDies(exit.cause)).toBe(true)
+      expect(Cause.hasFails(exit.cause)).toBe(false)
+    }
+  })
   it("rejects executable component types, duplicate ids, malformed rows and oversized definitions", () => {
     expect(Schema.is(AppDefinition)(definition)).toBe(true)
     for (const blocks of [
@@ -285,8 +348,11 @@ describe("private generated apps", () => {
     f.archiveBot()
     expect(() => f.store.save(f.input)).toThrow("Restore this bot")
     expect(
-      f.store.deliverNext(() => {
-        throw Error("must not admit")
+      f.store.deliverNext({
+        transactionGroup: f.db,
+        admit: () => {
+          throw Error("must not admit")
+        },
       })
     ).toBe(false)
   })
@@ -313,22 +379,34 @@ describe("private generated apps", () => {
       thinking: "off",
     })
     expect(() =>
-      f.store.deliverNext((event) => {
-        conversations.admit({ operationId: event.turnId, text: event.text })
-        throw new Error("power loss")
+      f.store.deliverNext({
+        transactionGroup: f.db,
+        admit: (event) => {
+          conversations.admit({ operationId: event.turnId, text: event.text })
+          throw new Error("power loss")
+        },
       })
     ).toThrow("power loss")
     expect(conversations.recent()).toEqual([])
     expect(f.store.pending()).toHaveLength(1)
     const recovered = new AppStore(f.db, () => true)
     expect(
-      recovered.deliverNext((event) => {
-        conversations.admit({ operationId: event.turnId, text: event.text })
+      recovered.deliverNext({
+        transactionGroup: f.db,
+        admit: (event) => {
+          return conversations.admit({
+            operationId: event.turnId,
+            text: event.text,
+          }).turn.id
+        },
       })
     ).toBe(true)
     expect(
-      recovered.deliverNext(() => {
-        throw Error("must not repeat")
+      recovered.deliverNext({
+        transactionGroup: f.db,
+        admit: () => {
+          throw Error("must not repeat")
+        },
       })
     ).toBe(false)
     expect(conversations.recent()).toHaveLength(1)
@@ -415,15 +493,23 @@ describe("private generated apps", () => {
         })),
       },
     })
-    let page = await readAppPage(f.store, { id: draft.id })
+    let page = await readAppPage(
+      makeApps(f.store),
+      { id: draft.id },
+      (operation, signal) => Effect.runPromise(operation, { signal })
+    )
     let encoded = page.text
     while (page.next !== null) {
       expect(JSON.stringify(page).length).toBeLessThan(24000)
-      page = await readAppPage(f.store, {
-        id: draft.id,
-        offset: page.next,
-        snapshot: page.snapshot,
-      })
+      page = await readAppPage(
+        makeApps(f.store),
+        {
+          id: draft.id,
+          offset: page.next,
+          snapshot: page.snapshot,
+        },
+        (operation, signal) => Effect.runPromise(operation, { signal })
+      )
       encoded += page.text
     }
     expect(JSON.parse(encoded)).toEqual(draft.definition)
@@ -433,7 +519,11 @@ describe("private generated apps", () => {
       expectedRevision: draft.revision,
     })
     await expect(
-      readAppPage(f.store, { id: draft.id, snapshot: page.snapshot })
+      readAppPage(
+        makeApps(f.store),
+        { id: draft.id, snapshot: page.snapshot },
+        (operation, signal) => Effect.runPromise(operation, { signal })
+      )
     ).rejects.toThrow("changed between pages")
   })
   it("cancels uncertain admission before a late request and resolves already applied changes", () => {
@@ -456,7 +546,7 @@ describe("private generated apps", () => {
     const f = fixture()
     const response = await Effect.runPromise(
       appsRequest(
-        f.store,
+        makeApps(f.store),
         new Request("https://agent.internal/apps/save", {
           method: "POST",
           body: JSON.stringify({
@@ -466,7 +556,7 @@ describe("private generated apps", () => {
           }),
         }),
         "apps/save",
-        async () => {}
+        () => Effect.void
       )
     )
     expect(response.status).toBe(409)

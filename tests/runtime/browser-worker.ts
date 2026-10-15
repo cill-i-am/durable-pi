@@ -1,3 +1,7 @@
+import {
+  effectBrowserDriver,
+  browserWake,
+} from "../../src/browser/adapters/interop"
 import { DurableObject } from "cloudflare:workers"
 import { Effect } from "effect"
 import { BrowserWorkspace } from "../../src/browser/browser"
@@ -22,7 +26,7 @@ export class BrowserRecoveryBot extends DurableObject<Record<string, never>> {
   readonly gate = new AccessGate(this.access, () => true)
   readonly browser = new BrowserWorkspace(
     new BrowserStore(this.db),
-    {
+    effectBrowserDriver({
       open: async () => ({
         id: "synthetic",
         targetId: "target",
@@ -39,16 +43,16 @@ export class BrowserRecoveryBot extends DurableObject<Record<string, never>> {
         throw new Error("Unexpected interaction")
       },
       close: async () => {},
-    },
+    }),
     () => true,
-    async () => {}
+    browserWake(async () => {})
   )
   constructor(ctx: DurableObjectState, env: Record<string, never>) {
     super(ctx, env)
     this.db.run("CREATE TABLE IF NOT EXISTS browser_probe(actions INTEGER)")
     if (!this.db.all("SELECT * FROM browser_probe").length)
       this.db.run("INSERT INTO browser_probe VALUES (0)")
-    this.browser.recover()
+    Effect.runSync(this.browser.recover())
   }
   async fetch(request: Request) {
     const uncertain = new URL(request.url).pathname.endsWith("uncertain")
@@ -71,15 +75,12 @@ export class BrowserRecoveryBot extends DurableObject<Record<string, never>> {
             tool: "browser_open",
             input: '{"url":"https://example.com"}',
           },
-          () =>
-            Effect.runPromise(
-              browserToolResult(
-                this.browser.inspect(
-                  this.browser.state().policy.generation,
-                  "https://example.com"
-                )
-              )
+          browserToolResult(
+            this.browser.inspect(
+              (await Effect.runPromise(this.browser.state())).policy.generation,
+              "https://example.com"
             )
+          )
         )
       )
     } catch (cause) {

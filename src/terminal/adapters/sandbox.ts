@@ -1,65 +1,35 @@
 import type { Sandbox } from "@cloudflare/sandbox"
-import { MAX_CHECKPOINT } from "../contracts"
-import type { TerminalRuntime } from "../terminal"
+import { Cause, Option, Schema } from "effect"
+import { TerminalFailure, MAX_CHECKPOINT } from "../contracts"
+import type { ForeignTerminalRuntime } from "./interop"
 import { sandboxTransfers } from "./transfer-files"
+import { readBounded, withReader } from "./stream"
 
 const SESSIONLESS = "__DISABLE_SESSION__"
 
 function live(signal: AbortSignal) {
   if (signal.aborted) throw new Error("Stopped")
 }
-export async function readBounded(
-  stream: ReadableStream<Uint8Array>,
-  limit: number,
-  signal: AbortSignal
-) {
-  const reader = stream.getReader(),
-    chunks: Uint8Array[] = []
-  let size = 0
-  const stop = () => {
-    void reader.cancel().catch(() => {})
-  }
-  signal.addEventListener("abort", stop, { once: true })
-  try {
-    live(signal)
-    for (;;) {
-      const item = await reader.read()
-      live(signal)
-      if (item.done) break
-      size += item.value.length
-      if (size > limit) throw new Error("Output limit")
-      chunks.push(item.value)
-    }
-  } finally {
-    signal.removeEventListener("abort", stop)
-    await reader.cancel().catch(() => {})
-    reader.releaseLock()
-  }
-  const bytes = new Uint8Array(size)
-  let offset = 0
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset)
-    offset += chunk.length
-  }
-  return bytes
-}
-export async function readCommand(
+const CommandEvent = Schema.Struct({
+  type: Schema.optional(Schema.String),
+  data: Schema.optional(Schema.Unknown),
+  exitCode: Schema.optional(Schema.Unknown),
+  result: Schema.optional(
+    Schema.Struct({ exitCode: Schema.optional(Schema.Unknown) })
+  ),
+})
+const outputFailure = Schema.decodeUnknownOption(TerminalFailure)
+export function readCommand(
   stream: ReadableStream<Uint8Array>,
   append: (text: string) => void,
   signal: AbortSignal
 ) {
-  const reader = stream.getReader(),
-    decoder = new TextDecoder()
-  let buffer = "",
-    total = 0
-  const stop = () => {
-    void reader.cancel().catch(() => {})
-  }
-  signal.addEventListener("abort", stop, { once: true })
-  try {
-    live(signal)
+  return withReader(stream, signal, async (read) => {
+    const decoder = new TextDecoder()
+    let buffer = "",
+      total = 0
     for (;;) {
-      const item = await reader.read()
+      const item = await read()
       live(signal)
       if (item.done) throw new Error("Missing command completion")
       total += item.value.length
@@ -76,32 +46,31 @@ export async function readCommand(
           .map((line) => line.slice(5).trimStart())
           .join("\n")
         if (!data) continue
-        const value = JSON.parse(data) as {
-          type?: unknown
-          data?: unknown
-          exitCode?: unknown
-          result?: { exitCode?: unknown }
-        }
+        const value = Schema.decodeUnknownSync(
+          Schema.fromJsonString(CommandEvent)
+        )(data)
         if (
           (value.type === "stdout" || value.type === "stderr") &&
           typeof value.data === "string"
-        )
-          append(value.data)
+        ) {
+          try {
+            append(value.data)
+          } catch (cause) {
+            throw Option.isSome(outputFailure(cause)) ? cause : Cause.die(cause)
+          }
+        }
         if (value.type === "error") throw new Error("Command failed")
         if (value.type === "complete") {
           const code = value.exitCode ?? value.result?.exitCode
-          if (!Number.isSafeInteger(code)) throw new Error("Invalid exit code")
-          return code as number
+          if (typeof code !== "number" || !Number.isSafeInteger(code))
+            throw new Error("Invalid exit code")
+          return code
         }
       }
     }
-  } finally {
-    signal.removeEventListener("abort", stop)
-    await reader.cancel().catch(() => {})
-    reader.releaseLock()
-  }
+  })
 }
-export function sandboxRuntime(sandbox: Sandbox): TerminalRuntime {
+export function sandboxRuntime(sandbox: Sandbox): ForeignTerminalRuntime {
   const execute = async (
     command: string,
     append: (text: string) => void,
@@ -114,10 +83,6 @@ export function sandboxRuntime(sandbox: Sandbox): TerminalRuntime {
       timeout: 30000,
       signal,
     })
-    if (signal.aborted) {
-      await stream.cancel().catch(() => {})
-      live(signal)
-    }
     return readCommand(stream, append, signal)
   }
   const internal = async (command: string, signal: AbortSignal) => {
@@ -184,7 +149,6 @@ export function sandboxRuntime(sandbox: Sandbox): TerminalRuntime {
       const file = await sandbox.readFile("/tmp/pi-workspace.tar.gz", {
         encoding: "none",
       })
-      live(signal)
       return readBounded(file.content, MAX_CHECKPOINT, signal)
     },
   }

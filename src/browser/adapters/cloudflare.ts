@@ -1,10 +1,18 @@
+import { orDieAll } from "../../shared/effect"
 import puppeteer, {
   TimeoutError,
   type Browser,
   type Page,
+  type HTTPRequest,
 } from "@cloudflare/puppeteer"
-import { Schema } from "effect"
-import type { BrowserDriver } from "../browser"
+import { Clock, Effect, Exit, Schema } from "effect"
+import type { Scope } from "effect"
+import {
+  browserNativeFailure,
+  nativeBrowserOperation as native,
+} from "./interop"
+import { BrowserUnavailable, type BrowserDriver } from "../driver"
+import { BrowserSessionRecord } from "../domain"
 import {
   BROWSER_IDLE_MS,
   BROWSER_SESSION_MS,
@@ -19,113 +27,210 @@ import {
 
 export class CloudflareBrowser implements BrowserDriver {
   constructor(private readonly binding: BrowserRun) {}
-  async open(
+  private destination(
+    url: string,
     hosts: readonly string[],
-    unrestricted = false
-  ): Promise<BrowserSession> {
-    const browser = await puppeteer
-      .launch(this.binding, {
-        keep_alive: BROWSER_IDLE_MS,
-        ...(unrestricted
-          ? {}
-          : {
-              guardrails: {
-                allowedDomains: [...hosts],
-                allowedDomainSets: ["common-cdns"],
-              },
-            }),
-      })
-      .catch((cause: unknown) => {
-        throw sessionFailure(cause, "open")
-      })
-    try {
-      const page = await browser.newPage()
-      if (!unrestricted) {
-        const blocked = await page.goto(
-          "https://durable-pi-policy-probe.invalid",
-          { waitUntil: "domcontentloaded", timeout: 10_000 }
-        )
-        if (
-          blocked?.status() !== 403 ||
-          blocked.headers()["cf-mitigated"] !== "guardrails" ||
-          blocked.headers()["cf-brapi-guardrails-reason"] !== "not-in-allowlist"
-        )
-          throw new BrowserFailure({
-            message:
-              "The browser service did not confirm destination restrictions. No browsing session was opened.",
-          })
-      }
-      await page.goto("about:blank")
-      await page.setViewport({ width: 1024, height: 768, deviceScaleFactor: 1 })
-      const cdp = await page.createCDPSession()
-      const { targetInfo } = await cdp.send("Target.getTargetInfo")
-      await cdp.detach()
-      return {
-        id: browser.sessionId(),
-        targetId: targetInfo.targetId,
-        expiresAt: Date.now() + BROWSER_SESSION_MS,
-      }
-    } catch (cause) {
-      await browser.close().catch(() => {})
-      throw cause
-    } finally {
-      await browser.disconnect()
-    }
-  }
-  private async withPage<T>(
-    session: BrowserSession,
-    run: (page: Page) => Promise<T>
+    unrestricted: boolean
   ) {
-    const browser: Browser = await puppeteer
-      .connect(this.binding, session.id)
-      .catch((cause: unknown) => {
-        throw sessionFailure(cause, "connect")
-      })
-    const deadline = setTimeout(() => {
-      void browser.disconnect().catch(() => {})
-    }, 30_000)
-    try {
-      const pages = await browser.pages()
-      for (const page of pages.slice(0, 10)) {
-        const cdp = await page.createCDPSession()
-        const { targetInfo } = await cdp.send("Target.getTargetInfo")
-        await cdp.detach()
-        if (targetInfo.targetId === session.targetId) {
-          page.setDefaultTimeout(15_000)
-          page.setDefaultNavigationTimeout(15_000)
-          return await run(page)
-        }
-      }
-      throw new BrowserFailure({
-        outcome: "rejected",
-        message:
-          "This browser tab has closed. Close the session and open a page again.",
-      })
-    } finally {
-      clearTimeout(deadline)
-      await browser.disconnect()
-    }
+    return Effect.try({
+      try: () => allowedBrowserUrl(url, hosts, unrestricted),
+      catch: (cause) => {
+        const browserFailure = Schema.decodeUnknownOption(BrowserFailure)(cause)
+        if (browserFailure._tag === "Some") return browserFailure.value
+        throw cause
+      },
+    })
   }
-  private async restrictNavigation(
+  open(hosts: readonly string[], unrestricted = false) {
+    return Effect.scoped(
+      Effect.gen({ self: this }, function* () {
+        const browser = yield* Effect.acquireRelease(
+          native(
+            () =>
+              puppeteer.launch(this.binding, {
+                keep_alive: BROWSER_IDLE_MS,
+                ...(unrestricted
+                  ? {}
+                  : {
+                      guardrails: {
+                        allowedDomains: [...hosts],
+                        allowedDomainSets: ["common-cdns"],
+                      },
+                    }),
+              }),
+            (cause) => sessionFailure(cause, "open")
+          ),
+          (value, exit) => {
+            const disconnect = Effect.promise(async () => {
+              await value.disconnect()
+            })
+            // A session is handed to the application only after transport cleanup succeeds.
+            return Exit.isFailure(exit)
+              ? Effect.promise(async () => {
+                  await value.close()
+                }).pipe(Effect.ensuring(disconnect))
+              : disconnect.pipe(
+                  Effect.onError(() =>
+                    Effect.promise(async () => {
+                      await value.close()
+                    })
+                  )
+                )
+          }
+        )
+        const page = yield* native(() => browser.newPage())
+        if (!unrestricted) {
+          const blocked = yield* native(() =>
+            page.goto("https://durable-pi-policy-probe.invalid", {
+              waitUntil: "domcontentloaded",
+              timeout: 10000,
+            })
+          )
+          if (
+            blocked?.status() !== 403 ||
+            blocked.headers()["cf-mitigated"] !== "guardrails" ||
+            blocked.headers()["cf-brapi-guardrails-reason"] !==
+              "not-in-allowlist"
+          )
+            return yield* new BrowserFailure({
+              message:
+                "The browser service did not confirm destination restrictions. No browsing session was opened.",
+            })
+        }
+        yield* native(() => page.goto("about:blank"))
+        yield* native(() =>
+          page.setViewport({ width: 1024, height: 768, deviceScaleFactor: 1 })
+        )
+        const targetId = yield* this.targetId(page)
+        return Schema.decodeUnknownSync(BrowserSessionRecord)({
+          id: browser.sessionId(),
+          targetId,
+          expiresAt: (yield* Clock.currentTimeMillis) + BROWSER_SESSION_MS,
+        })
+      })
+    )
+  }
+  private withCdp<T>(
+    page: Page,
+    use: (
+      cdp: Awaited<ReturnType<Page["createCDPSession"]>>
+    ) => Effect.Effect<T, BrowserFailure | BrowserUnavailable>
+  ) {
+    return Effect.acquireUseRelease(
+      native(() => page.createCDPSession()),
+      use,
+      (cdp) =>
+        Effect.promise(async () => {
+          await cdp.detach()
+        })
+    )
+  }
+  private targetId(page: Page) {
+    return this.withCdp(page, (cdp) =>
+      native(() => cdp.send("Target.getTargetInfo")).pipe(
+        Effect.map(({ targetInfo }) => targetInfo.targetId)
+      )
+    )
+  }
+  private withPage<T>(
+    session: BrowserSession,
+    use: (
+      page: Page
+    ) => Effect.Effect<T, BrowserFailure | BrowserUnavailable, Scope.Scope>
+  ) {
+    return Effect.scoped(
+      Effect.gen({ self: this }, function* () {
+        let closing: Promise<void> | undefined
+        const browser: Browser = yield* Effect.acquireRelease(
+          native(
+            () => puppeteer.connect(this.binding, session.id),
+            (cause) => sessionFailure(cause, "connect")
+          ),
+          (value) => Effect.promise(() => disconnect(value))
+        )
+        function disconnect(value: Browser) {
+          return (closing ??= Promise.resolve().then(() => value.disconnect()))
+        }
+        // The timer belongs to this call. Scope closure joins a disconnect already in flight.
+        yield* Effect.sleep("30 seconds").pipe(
+          Effect.andThen(
+            Effect.promise(() => disconnect(browser)).pipe(
+              Effect.exit,
+              Effect.uninterruptible
+            )
+          ),
+          Effect.forkScoped
+        )
+        const pages = yield* native(() => browser.pages())
+        for (const page of pages.slice(0, 10)) {
+          if ((yield* this.targetId(page)) === session.targetId) {
+            page.setDefaultTimeout(15000)
+            page.setDefaultNavigationTimeout(15000)
+            return yield* use(page)
+          }
+        }
+        return yield* new BrowserFailure({
+          outcome: "rejected",
+          message:
+            "This browser tab has closed. Close the session and open a page again.",
+        })
+      })
+    )
+  }
+  private restrictNavigation(
     page: Page,
     hosts: readonly string[],
     unrestricted: boolean
   ) {
-    await page.setRequestInterception(true)
-    page.on("request", (request) => {
-      if (request.isInterceptResolutionHandled()) return
-      if (
-        request.isNavigationRequest() &&
-        request.frame() === page.mainFrame()
-      ) {
-        try {
-          allowedBrowserUrl(request.url(), hosts, unrestricted)
-        } catch {
-          void request.abort("blockedbyclient").catch(() => {})
-          return
-        }
+    return Effect.gen(function* () {
+      const pending = new Set<Promise<void>>()
+      let failure: { cause: unknown } | undefined
+      const handler = (request: HTTPRequest) => {
+        const work = Promise.resolve().then(async () => {
+          if (
+            request.isInterceptResolutionHandled() ||
+            request.interceptResolutionState().action === "disabled"
+          )
+            return
+          if (
+            request.isNavigationRequest() &&
+            request.frame() === page.mainFrame()
+          ) {
+            try {
+              allowedBrowserUrl(request.url(), hosts, unrestricted)
+            } catch {
+              await request.abort("blockedbyclient")
+              return
+            }
+          }
+          await request.continue()
+        })
+        pending.add(work)
+        void work.then(
+          () => pending.delete(work),
+          (cause: unknown) => {
+            pending.delete(work)
+            failure ??= { cause }
+          }
+        )
       }
-      void request.continue().catch(() => {})
+      yield* Effect.acquireRelease(
+        Effect.sync(() => {
+          page.on("request", handler)
+        }),
+        () =>
+          Effect.sync(() => {
+            page.off("request", handler)
+          }).pipe(
+            Effect.ensuring(
+              Effect.promise(async () => {
+                await Promise.allSettled([...pending])
+                if (failure) throw failure.cause
+              })
+            )
+          )
+      )
+      yield* native(() => page.setRequestInterception(true))
     })
   }
   navigate(
@@ -134,50 +239,59 @@ export class CloudflareBrowser implements BrowserDriver {
     hosts: readonly string[],
     unrestricted = false
   ) {
-    return this.withPage(session, async (page) => {
-      await this.restrictNavigation(page, hosts, unrestricted)
-      const response = await page
-        .goto(allowedBrowserUrl(url, hosts, unrestricted), {
-          waitUntil: "domcontentloaded",
-        })
-        .catch(async (cause: unknown) => {
-          if (cause instanceof TimeoutError) {
-            const cdp = await page.createCDPSession()
-            try {
-              await cdp.send("Page.stopLoading", undefined, { timeout: 5000 })
-            } finally {
-              await cdp.detach()
-            }
-            throw new BrowserFailure({
+    return this.withPage(session, (page) =>
+      Effect.gen({ self: this }, function* () {
+        yield* this.restrictNavigation(page, hosts, unrestricted)
+        const destination = yield* this.destination(url, hosts, unrestricted)
+        const result = yield* native(() =>
+          page
+            .goto(destination, {
+              waitUntil: "domcontentloaded",
+            })
+            .then(
+              (response) => ({ ok: true as const, response }),
+              (cause: unknown) => ({ ok: false as const, cause })
+            )
+        )
+        if (!result.ok) {
+          if (result.cause instanceof TimeoutError) {
+            yield* this.withCdp(page, (cdp) =>
+              native(() =>
+                cdp.send("Page.stopLoading", undefined, { timeout: 5000 })
+              )
+            )
+            return yield* new BrowserFailure({
               outcome: "failed",
               message:
                 "The page did not finish loading within 15 seconds. Loading was stopped. Inspect the current page before trying again or use another source.",
             })
           }
           const code =
-            cause instanceof Error
-              ? /^net::(ERR_[A-Z_]+)(?: at |$)/.exec(cause.message)?.[1]
+            result.cause instanceof Error
+              ? /^net::(ERR_[A-Z_]+)(?: at |$)/.exec(result.cause.message)?.[1]
               : undefined
           if (code)
-            throw new BrowserFailure({
+            return yield* new BrowserFailure({
               outcome: "failed",
               message: `Cloudflare Browser Run could not load the page (${code}). Check the address or use another source.`,
             })
-          throw cause
-        })
-      if (page.url() === "chrome-error://chromewebdata/")
-        throw new BrowserFailure({
-          outcome: "failed",
-          message:
-            "Cloudflare Browser Run could not load the page. Chromium returned a network error page instead of site content.",
-        })
-      if (response?.headers()["cf-mitigated"] === "guardrails")
-        throw new BrowserFailure({
-          message:
-            "The site requested a destination outside this bot's allowed sites. Update the allowed sites if it is needed.",
-        })
-      return this.snapshot(page, hosts, unrestricted)
-    })
+          return yield* browserNativeFailure(result.cause)
+        }
+        const response = result.response
+        if (page.url() === "chrome-error://chromewebdata/")
+          return yield* new BrowserFailure({
+            outcome: "failed",
+            message:
+              "Cloudflare Browser Run could not load the page. Chromium returned a network error page instead of site content.",
+          })
+        if (response?.headers()["cf-mitigated"] === "guardrails")
+          return yield* new BrowserFailure({
+            message:
+              "The site requested a destination outside this bot's allowed sites. Update the allowed sites if it is needed.",
+          })
+        return yield* this.snapshot(page, hosts, unrestricted)
+      })
+    )
   }
   capture(
     session: BrowserSession,
@@ -196,128 +310,166 @@ export class CloudflareBrowser implements BrowserDriver {
     actor: BrowserController,
     unrestricted = false
   ) {
-    return this.withPage(session, async (page) => {
-      if (allowedBrowserUrl(page.url(), hosts, unrestricted) !== expectedUrl)
-        throw new BrowserFailure({
-          outcome: "rejected",
-          message: "The page navigated. Refresh its view before interacting.",
-        })
-      await this.restrictNavigation(page, hosts, unrestricted)
-      if (
-        actor === "owner" &&
-        action.kind === "type" &&
-        (await this.isolated(page, SUPPORTED_FOCUS)) !== true
-      )
-        throw new BrowserFailure({
-          outcome: "rejected",
-          message:
-            "This field cannot be typed into safely here. Use a standard input on the site's own sign-in page; embedded frames and closed custom controls are not supported.",
-        })
-      if (actor === "agent" && action.kind === "type") {
-        const sensitive = await this.isolated(page, SENSITIVE_FOCUS)
-        if (sensitive !== false)
-          throw new BrowserFailure({
+    return this.withPage(session, (page) =>
+      Effect.gen({ self: this }, function* () {
+        if (
+          (yield* this.destination(page.url(), hosts, unrestricted)) !==
+          expectedUrl
+        )
+          return yield* new BrowserFailure({
+            outcome: "rejected",
+            message: "The page navigated. Refresh its view before interacting.",
+          })
+        yield* this.restrictNavigation(page, hosts, unrestricted)
+        if (
+          actor === "owner" &&
+          action.kind === "type" &&
+          (yield* this.isolated(page, SUPPORTED_FOCUS)) !== true
+        )
+          return yield* new BrowserFailure({
+            outcome: "rejected",
+            message:
+              "This field cannot be typed into safely here. Use a standard input on the site's own sign-in page; embedded frames and closed custom controls are not supported.",
+          })
+        if (
+          actor === "agent" &&
+          action.kind === "type" &&
+          (yield* this.isolated(page, SENSITIVE_FOCUS)) !== false
+        )
+          return yield* new BrowserFailure({
             outcome: "rejected",
             message:
               "This field requires owner control. Ask the owner to use Take control; do not request credentials in chat.",
           })
-      }
-      const navigation =
-        action.kind === "click" ||
-        (action.kind === "key" && action.key === "Enter")
-          ? page
-              .waitForNavigation({
-                waitUntil: "domcontentloaded",
-                timeout: 2000,
+        const watching =
+          action.kind === "click" ||
+          (action.kind === "key" && action.key === "Enter")
+            ? yield* Effect.acquireRelease(
+                Effect.sync(() =>
+                  page
+                    .waitForNavigation({
+                      waitUntil: "domcontentloaded",
+                      timeout: 2000,
+                    })
+                    .then(
+                      () => Effect.void,
+                      (cause: unknown) =>
+                        cause instanceof TimeoutError
+                          ? Effect.void
+                          : Effect.suspend(() => browserNativeFailure(cause))
+                    )
+                ),
+                (work) =>
+                  Effect.promise(async () => {
+                    await work
+                  })
+              )
+            : undefined
+        if (action.kind === "click")
+          yield* native(() => page.mouse.click(action.x, action.y))
+        else if (action.kind === "type")
+          yield* native(() => page.keyboard.sendCharacter(action.text))
+        else if (action.kind === "scroll")
+          yield* native(() => page.mouse.wheel({ deltaY: action.deltaY }))
+        else if (action.key === "SelectAll")
+          yield* native(() => page.keyboard.down("Control")).pipe(
+            Effect.andThen(native(() => page.keyboard.press("A"))),
+            Effect.ensuring(
+              Effect.promise(async () => {
+                await page.keyboard.up("Control")
               })
-              .catch(() => null)
-          : undefined
-      if (action.kind === "click") await page.mouse.click(action.x, action.y)
-      else if (action.kind === "type")
-        await page.keyboard.sendCharacter(action.text)
-      else if (action.kind === "scroll")
-        await page.mouse.wheel({ deltaY: action.deltaY })
-      else if (action.key === "SelectAll") {
-        await page.keyboard.down("Control")
-        try {
-          await page.keyboard.press("A")
-        } finally {
-          await page.keyboard.up("Control")
+            )
+          )
+        else {
+          const key = action.key
+          yield* native(() => page.keyboard.press(key))
         }
-      } else await page.keyboard.press(action.key)
-      await navigation
-      return this.snapshot(page, hosts, unrestricted)
-    })
-  }
-  private async isolated(page: Page, expression: string): Promise<unknown> {
-    const cdp = await page.createCDPSession()
-    try {
-      const { frameTree } = await cdp.send("Page.getFrameTree", undefined, {
-        timeout: 15_000,
+        if (watching)
+          yield* Effect.promise(() => watching).pipe(
+            Effect.flatMap((result) => result)
+          )
+        return yield* this.snapshot(page, hosts, unrestricted)
       })
-      const { executionContextId } = await cdp.send(
-        "Page.createIsolatedWorld",
-        {
-          frameId: frameTree.frame.id,
-          worldName: "durable-pi-observation",
-          grantUniveralAccess: false,
-        },
-        { timeout: 15_000 }
-      )
-      const observation = await cdp.send(
-        "Runtime.evaluate",
-        {
-          contextId: executionContextId,
-          expression,
-          returnByValue: true,
-          timeout: 15_000,
-        },
-        { timeout: 15_000 }
-      )
-      if (observation.exceptionDetails)
-        throw new Error("Page observation failed")
-      return observation.result.value
-    } finally {
-      await cdp.detach()
-    }
+    )
   }
-  private async snapshot(
+  private isolated(
+    page: Page,
+    expression: string
+  ): Effect.Effect<unknown, BrowserFailure | BrowserUnavailable> {
+    return this.withCdp(page, (cdp) =>
+      Effect.gen(function* () {
+        const { frameTree } = yield* native(() =>
+          cdp.send("Page.getFrameTree", undefined, { timeout: 15000 })
+        )
+        const { executionContextId } = yield* native(() =>
+          cdp.send(
+            "Page.createIsolatedWorld",
+            {
+              frameId: frameTree.frame.id,
+              worldName: "durable-pi-observation",
+              grantUniveralAccess: false,
+            },
+            { timeout: 15000 }
+          )
+        )
+        const observation = yield* native(() =>
+          cdp.send(
+            "Runtime.evaluate",
+            {
+              contextId: executionContextId,
+              expression,
+              returnByValue: true,
+              timeout: 15000,
+            },
+            { timeout: 15000 }
+          )
+        )
+        if (observation.exceptionDetails) return yield* new BrowserUnavailable()
+        return observation.result.value
+      })
+    )
+  }
+  private snapshot(
     page: Page,
     hosts: readonly string[],
     unrestricted: boolean
-  ): Promise<BrowserCapture> {
-    const url = allowedBrowserUrl(page.url(), hosts, unrestricted)
-    const raw = await this.isolated(page, PAGE_OBSERVATION)
-    const contents = Schema.decodeUnknownSync(BrowserPage)({
-      ...(typeof raw === "object" && raw !== null ? raw : {}),
-      url,
-      capturedAt: Date.now(),
-    })
-    let screenshot: string | null = null
-    try {
-      await this.isolated(page, MASK_FIELDS)
-      for (const quality of [45, 20]) {
-        const image = await page.screenshot({
-          type: "jpeg",
-          quality,
-          fullPage: false,
-        })
-        if (image.byteLength <= 96 * 1024) {
-          screenshot = Buffer.from(image).toString("base64")
-          break
-        }
-      }
-    } finally {
-      await this.isolated(page, UNMASK_FIELDS)
-    }
-    if (allowedBrowserUrl(page.url(), hosts, unrestricted) !== url)
-      throw new BrowserFailure({
-        message: "The page navigated while being captured. Refresh the view.",
+  ): Effect.Effect<BrowserCapture, BrowserFailure | BrowserUnavailable> {
+    return Effect.gen({ self: this }, function* () {
+      const url = yield* this.destination(page.url(), hosts, unrestricted)
+      const raw = yield* this.isolated(page, PAGE_OBSERVATION),
+        capturedAt = yield* Clock.currentTimeMillis
+      const contents = Schema.decodeUnknownSync(BrowserPage)({
+        ...(typeof raw === "object" && raw !== null ? raw : {}),
+        url,
+        capturedAt,
       })
-    return { page: contents, screenshot }
+      let screenshot: string | null = null
+      yield* Effect.gen({ self: this }, function* () {
+        yield* this.isolated(page, MASK_FIELDS)
+        for (const quality of [45, 20]) {
+          const image = yield* native(() =>
+            page.screenshot({ type: "jpeg", quality, fullPage: false })
+          )
+          if (image.byteLength <= 96 * 1024) {
+            screenshot = Buffer.from(image).toString("base64")
+            break
+          }
+        }
+      }).pipe(
+        Effect.ensuring(this.isolated(page, UNMASK_FIELDS).pipe(orDieAll))
+      )
+      if ((yield* this.destination(page.url(), hosts, unrestricted)) !== url)
+        return yield* new BrowserFailure({
+          message: "The page navigated while being captured. Refresh the view.",
+        })
+      return { page: contents, screenshot }
+    })
   }
-  async close(id: string) {
-    if (await this.binding.getSession(id)) await this.binding.closeSession(id)
+  close(id: string) {
+    return Effect.gen({ self: this }, function* () {
+      if (yield* native(() => this.binding.getSession(id)))
+        yield* native(() => this.binding.closeSession(id))
+    })
   }
 }
 

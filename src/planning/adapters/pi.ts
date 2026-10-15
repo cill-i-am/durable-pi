@@ -3,9 +3,9 @@ import { BACKGROUND_CONTEXT as context } from "@earendil-works/chord/context"
 import {
   defineDoc,
   defineDocFamily,
+  createSession,
   type Session,
   type Storage,
-  createSession,
   type Tx,
 } from "@earendil-works/pi-durable"
 import {
@@ -14,13 +14,13 @@ import {
   PlanId,
   PlanReceipt,
   PlanRevision,
-  PlanUpdate,
-  Revision,
-  summarizePlan,
-  type PlanDetail,
 } from "../contracts"
-import type { PlanAuthority, Plans, PlanSource } from "../plans"
-import { revisePlan } from "../plan"
+import type { PlanAuthority, PlanEvidence } from "../plans"
+import type { PlanLedger, PlanTransaction } from "../ledger"
+import { isPlanBlocked } from "../domain"
+import { makePlans } from "../service"
+import { nativeOperation } from "../../shared/interop"
+import { nativeCommit } from "../../shared/adapters/native-commit"
 
 const Catalog = defineDoc({
   kind: "plans.catalog",
@@ -59,73 +59,208 @@ const Operations = defineDocFamily({
   version: 1,
   initial: (_: null) => ({ digest: "", receipt: "" }),
 })
-const parse = (value: string) =>
-  Schema.decodeUnknownSync(Plan)(JSON.parse(value))
-const attempt = <T>(body: () => Promise<T>) =>
-  Effect.tryPromise({
-    try: body,
-    catch: (cause) =>
-      cause instanceof PlanFailure
-        ? cause
-        : new PlanFailure({
-            code: "unavailable",
-            message:
-              "The saved plan could not be confirmed. Retry the same update.",
-          }),
+const CatalogRecord = Schema.Struct({ ids: Schema.Array(PlanId) })
+const OperationRecord = Schema.Struct({
+  digest: Schema.String,
+  receipt: Schema.String,
+})
+const BindingRecord = Schema.Struct({
+  planId: Schema.Union([Schema.Literal(""), PlanId]),
+  cancelled: Schema.Boolean,
+})
+const parse = <T>(schema: Schema.ConstraintDecoder<T>, value: string) => {
+  const text = Schema.decodeUnknownSync(Schema.String)(value)
+  return text ? Schema.decodeUnknownSync(schema)(JSON.parse(text)) : null
+}
+
+/** Native operations can ignore abort. Join them and decode outside error conversion. */
+const planRejected = (cause: unknown, channel: "failure" | "rejection") => {
+  const expected = Schema.decodeUnknownOption(PlanFailure)(cause)
+  if (expected._tag === "Some") return expected.value
+  if (
+    channel === "failure" ||
+    Schema.isSchemaError(cause) ||
+    cause instanceof SyntaxError
+  )
+    throw cause
+  return new PlanFailure({
+    code: "unavailable",
+    message: "The saved plan could not be confirmed. Retry the same update.",
   })
-const decode = <T>(body: () => T) => {
-  try {
-    return body()
-  } catch {
-    throw new PlanFailure({
-      code: "invalid",
-      message: "Check the plan fields, step IDs and revisions.",
-    })
+}
+export const planNativeOperation = <T>(
+  start: (signal: AbortSignal) => Promise<T>
+) => nativeOperation(start, planRejected)
+// Owned views translate the existing JSON strings while remaining in one commit.
+const documentView = <T>(
+  doc: { value: string },
+  schema: Schema.ConstraintDecoder<T>
+) => {
+  let value = parse(schema, doc.value)
+  return {
+    get value() {
+      return value
+    },
+    set value(next: T | null) {
+      doc.value = next === null ? "" : JSON.stringify(next)
+      value = next
+    },
   }
 }
-const missing = () =>
-  new PlanFailure({
-    code: "not_found",
-    message: "This task is unavailable in this bot.",
-  })
-const fingerprint = async (input: unknown) =>
-  Array.from(
-    new Uint8Array(
-      await crypto.subtle.digest(
-        "SHA-256",
-        new TextEncoder().encode(JSON.stringify(input))
-      )
+const transaction = <TRequirements>(
+  tx: Tx,
+  evidence: PlanEvidence<TRequirements>
+): PlanTransaction<TRequirements> => ({
+  evidence,
+  catalog: () =>
+    planNativeOperation(() => tx.doc(Catalog)).pipe(
+      Effect.map((doc) => {
+        Schema.decodeUnknownSync(CatalogRecord)(doc)
+        return doc
+      })
     ),
-    (n) => n.toString(16).padStart(2, "0")
-  ).join("")
+  document: (id) =>
+    planNativeOperation(() => tx.doc(Documents, id, null)).pipe(
+      Effect.map((doc) => documentView(doc, Plan))
+    ),
+  history: (key) =>
+    planNativeOperation(() => tx.doc(History, key, null)).pipe(
+      Effect.map((doc) => documentView(doc, PlanRevision))
+    ),
+  binding: (turn) =>
+    planNativeOperation(() => tx.doc(Bindings, turn, null)).pipe(
+      Effect.map((doc) => {
+        Schema.decodeUnknownSync(BindingRecord)(doc)
+        return doc
+      })
+    ),
+  operation: (id) =>
+    planNativeOperation(() => tx.doc(Operations, id, null)).pipe(
+      Effect.map((doc) => {
+        Schema.decodeUnknownSync(OperationRecord)(doc)
+        let receipt = parse(PlanReceipt, doc.receipt)
+        return {
+          get digest() {
+            return doc.digest
+          },
+          set digest(value: string) {
+            doc.digest = value
+          },
+          get receipt() {
+            return receipt
+          },
+          set receipt(value) {
+            doc.receipt = value === null ? "" : JSON.stringify(value)
+            receipt = value
+          },
+        }
+      })
+    ),
+})
+
+export function piPlanLedger<TRequirements>(
+  open: () => Promise<Session>,
+  evidence: (tx: Tx) => PlanEvidence<TRequirements>
+): PlanLedger<TRequirements> {
+  const snapshot = <T>(
+    read: (session: Session, signal: AbortSignal) => Promise<T>
+  ) =>
+    planNativeOperation(open).pipe(
+      Effect.flatMap((session) =>
+        planNativeOperation((signal) => read(session, signal))
+      )
+    )
+  return {
+    atomic: <T, TError, TInvocation>(
+      change: (
+        tx: PlanTransaction<TRequirements>
+      ) => Effect.Effect<T, TError, TInvocation>
+    ) =>
+      planNativeOperation(open).pipe(
+        Effect.flatMap((session) =>
+          nativeCommit<Tx, T, TError, TInvocation, PlanFailure>(
+            (body, signal) =>
+              session.commit(body, { ...context, abortSignal: signal }),
+            (tx) => change(transaction(tx, evidence(tx))),
+            planRejected
+          )
+        )
+      ),
+    catalog: () =>
+      snapshot((session, signal) =>
+        session.snapshot(Catalog, { ...context, abortSignal: signal })
+      ).pipe(
+        Effect.map((doc) =>
+          doc ? Schema.decodeUnknownSync(CatalogRecord)(doc).ids : []
+        )
+      ),
+    binding: (turn) =>
+      snapshot((session, signal) =>
+        session.snapshot(Bindings, turn, { ...context, abortSignal: signal })
+      ).pipe(
+        Effect.map((doc) =>
+          doc ? Schema.decodeUnknownSync(BindingRecord)(doc) : undefined
+        )
+      ),
+    history: (key) =>
+      snapshot((session, signal) =>
+        session.snapshot(History, key, { ...context, abortSignal: signal })
+      ).pipe(Effect.map((doc) => parse(PlanRevision, doc?.value ?? ""))),
+  }
+}
+export const planDigest = (input: unknown) =>
+  planNativeOperation(() =>
+    crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(JSON.stringify(input))
+    )
+  ).pipe(
+    Effect.map((bytes) =>
+      Array.from(new Uint8Array(bytes), (n) =>
+        n.toString(16).padStart(2, "0")
+      ).join("")
+    )
+  )
+export const piPlans = <TRequirements>(
+  open: () => Promise<Session>,
+  authority: PlanAuthority<TRequirements>,
+  evidence: (tx: Tx) => PlanEvidence<TRequirements> = () => authority.evidence
+) => makePlans(piPlanLedger(open, evidence), authority, planDigest)
 
 export function savedPlanBlocked(
   session: Pick<Session, "snapshot">,
   turnId: string
 ) {
-  return attempt(async () => {
-    const binding = await session.snapshot(Bindings, turnId, context)
-    if (!binding?.planId || binding.cancelled) return false
-    const document = await session.snapshot(Documents, binding.planId, context)
-    if (!document?.value) return false
-    const plan = parse(document.value)
-    return (
-      plan.rootTurns.includes(turnId) &&
-      plan.state === "open" &&
-      !!plan.blocker.trim()
+  return Effect.gen(function* () {
+    const raw = yield* planNativeOperation((signal) =>
+      session.snapshot(Bindings, turnId, { ...context, abortSignal: signal })
     )
+    const binding = raw
+      ? Schema.decodeUnknownSync(BindingRecord)(raw)
+      : undefined
+    if (!binding?.planId || binding.cancelled) return false
+    const doc = yield* planNativeOperation((signal) =>
+      session.snapshot(Documents, binding.planId, {
+        ...context,
+        abortSignal: signal,
+      })
+    )
+    return isPlanBlocked(binding, parse(Plan, doc?.value ?? ""), turnId)
   })
 }
-
 export function planBlockerStatus(
   current: () => Storage | undefined,
   openReadonly: () => Promise<Storage>,
   turnId: string
 ) {
   return Effect.acquireUseRelease(
-    attempt(async () => {
+    Effect.suspend(() => {
       const shared = current()
-      return { storage: shared ?? (await openReadonly()), owned: !shared }
+      return shared
+        ? Effect.succeed({ storage: shared, owned: false })
+        : planNativeOperation(openReadonly).pipe(
+            Effect.map((storage) => ({ storage, owned: true }))
+          )
     }),
     ({ storage }) => {
       const shared = current() ?? storage
@@ -136,274 +271,8 @@ export function planBlockerStatus(
       )
     },
     ({ storage, owned }) =>
-      owned ? Effect.promise(() => storage.close(context)) : Effect.void
+      owned
+        ? planNativeOperation(() => storage.close(context)).pipe(Effect.orDie)
+        : Effect.void
   )
-}
-
-export function piPlans(
-  open: () => Promise<Session>,
-  authority: PlanAuthority,
-  transactionEvidence: (tx: Tx) => PlanAuthority["evidence"] = () =>
-    authority.evidence
-): Plans {
-  const writable = (source: PlanSource, replay = false) => {
-    const current = authority.current(source.turnId)
-    if (!current)
-      throw new PlanFailure({
-        code: "cancelled",
-        message: "This run has stopped. A saved plan cannot resume it.",
-      })
-    if (
-      !replay &&
-      (current.pendingInputs ||
-        current.inputRevision !== source.inputRevision ||
-        JSON.stringify(current.inputIds) !== JSON.stringify(source.inputIds))
-    )
-      throw new PlanFailure({
-        code: "conflict",
-        message:
-          "New user input arrived. Read the current input revision and revise the plan before continuing.",
-      })
-  }
-  const reconcile = (id: string) =>
-    attempt(async () => {
-      const session = await open()
-      return session.commit(async (tx) => {
-        const doc = await tx.doc(Documents, id, null)
-        if (!doc.value) throw missing()
-        const saved = parse(doc.value)
-        if (saved.state === "cancelled") return saved
-        let cancelled = saved.rootTurns.some(authority.cancelled)
-        for (const root of saved.rootTurns)
-          if ((await tx.doc(Bindings, root, null)).cancelled) cancelled = true
-        let changed = false
-        const steps = []
-        for (const step of saved.steps) {
-          const evidence = []
-          for (const ref of step.evidence)
-            evidence.push(
-              cancelled
-                ? ref
-                : await Effect.runPromise(
-                    transactionEvidence(tx)(ref, saved.rootTurns)
-                  )
-            )
-          const invalid = evidence.some((ref) => ref.state === "invalid")
-          const next = {
-            ...step,
-            evidence,
-            status:
-              invalid && step.status === "completed"
-                ? ("pending" as const)
-                : step.status,
-          }
-          if (JSON.stringify(next) !== JSON.stringify(step)) changed = true
-          steps.push(next)
-        }
-        if (!cancelled && !changed) return saved
-        const reopened = steps.some(
-          (step, i) => step.status !== saved.steps[i]!.status
-        )
-        const next: Plan = {
-          ...saved,
-          steps,
-          revision: saved.revision + 1,
-          updatedAt: new Date().toISOString(),
-          state: cancelled ? "cancelled" : reopened ? "open" : saved.state,
-          complete: cancelled || reopened ? false : saved.complete,
-          nextAction: cancelled
-            ? ""
-            : reopened
-              ? "Reassess the reopened steps; their evidence is no longer current."
-              : saved.nextAction,
-          blocker: cancelled
-            ? "Stopped by the user or run lifecycle."
-            : saved.blocker,
-        }
-        const history = await tx.doc(History, `${id}:${next.revision}`, null)
-        history.value = JSON.stringify({
-          plan: next,
-          actor: "system",
-          reason: cancelled ? "Run cancelled" : "Evidence revalidated",
-          turnId: null,
-        } satisfies PlanRevision)
-        doc.value = JSON.stringify(next)
-        return next
-      }, context)
-    })
-  const list = (offset = 0, limit = 20) =>
-    Effect.gen(function* () {
-      const ids = yield* attempt(
-        async () => (await (await open()).snapshot(Catalog, context))?.ids ?? []
-      )
-      const values = []
-      for (const id of ids
-        .slice()
-        .reverse()
-        .slice(offset, offset + limit))
-        values.push(summarizePlan(yield* reconcile(id)))
-      return values
-    })
-  return {
-    list,
-    read: (raw, before) =>
-      Effect.gen(function* () {
-        const id = yield* attempt(async () =>
-          decode(() => Schema.decodeUnknownSync(PlanId)(raw))
-        )
-        const plan = yield* reconcile(id)
-        return yield* attempt(async (): Promise<PlanDetail> => {
-          if (before !== undefined)
-            decode(() => Schema.decodeUnknownSync(Revision)(before))
-          const session = await open(),
-            from = Math.min(
-              plan.revision,
-              before === undefined ? plan.revision : before - 1
-            )
-          const history: PlanRevision[] = []
-          for (
-            let revision = from;
-            revision > Math.max(0, from - 10);
-            revision--
-          ) {
-            const value = (
-              await session.snapshot(History, `${id}:${revision}`, context)
-            )?.value
-            if (value)
-              history.push(
-                Schema.decodeUnknownSync(PlanRevision)(JSON.parse(value))
-              )
-          }
-          return { plan, history, nextHistory: from > 10 ? from - 9 : null }
-        })
-      }),
-    update: (raw, source) =>
-      attempt(async () => {
-        const input = decode(() => Schema.decodeUnknownSync(PlanUpdate)(raw)),
-          digest = await fingerprint({ input, source }),
-          session = await open()
-        if (source.inputRevision !== input.inputRevision)
-          throw new PlanFailure({
-            code: "conflict",
-            message:
-              "Read the current input revision before updating this plan.",
-          })
-        return session.commit(async (tx) => {
-          writable(source, true)
-          const binding = await tx.doc(Bindings, source.turnId, null)
-          if (binding.cancelled)
-            throw new PlanFailure({
-              code: "cancelled",
-              message: "This run was cancelled.",
-            })
-          if (binding.planId && binding.planId !== input.id)
-            throw new PlanFailure({
-              code: "conflict",
-              message: "This run already belongs to a different logical task.",
-            })
-          const operation = await tx.doc(Operations, input.operationId, null)
-          if (operation.receipt) {
-            if (operation.digest !== digest)
-              throw new PlanFailure({
-                code: "conflict",
-                message: "This tool operation belongs to another update.",
-              })
-            return Schema.decodeUnknownSync(PlanReceipt)(
-              JSON.parse(operation.receipt)
-            )
-          }
-          writable(source)
-          const catalog = await tx.doc(Catalog),
-            doc = await tx.doc(Documents, input.id, null),
-            previous = doc.value ? parse(doc.value) : null
-          if (
-            (!previous && catalog.ids.length >= 200) ||
-            (previous &&
-              (previous.revision >= 1000 || previous.rootTurns.length >= 100))
-          )
-            throw new PlanFailure({
-              code: "limit",
-              message:
-                "This task has reached its plan history limit. Start a new task when the user requests new work.",
-            })
-          if (previous?.rootTurns.some(authority.cancelled))
-            throw new PlanFailure({
-              code: "cancelled",
-              message:
-                "This task was cancelled. Do not resume it from its saved plan.",
-            })
-          const roots = [...(previous?.rootTurns ?? []), source.turnId],
-            evidence = []
-          for (const step of input.draft.steps)
-            for (const ref of step.evidence)
-              evidence.push(
-                await Effect.runPromise(transactionEvidence(tx)(ref, roots))
-              )
-          if (evidence.some((ref) => ref.state !== "valid"))
-            throw new PlanFailure({
-              code: "invalid",
-              message:
-                "An evidence reference is unavailable, stale or unsuccessful. Inspect the source before revising the plan.",
-            })
-          const next = revisePlan(
-            previous,
-            input,
-            source,
-            evidence,
-            new Date().toISOString()
-          )
-          const history = await tx.doc(
-            History,
-            `${input.id}:${next.revision}`,
-            null
-          )
-          writable(source)
-          history.value = JSON.stringify({
-            plan: next,
-            actor: "agent",
-            reason: input.reason,
-            turnId: source.turnId,
-          } satisfies PlanRevision)
-          doc.value = JSON.stringify(next)
-          binding.planId = next.id
-          if (!previous) catalog.ids.push(next.id)
-          const receipt: PlanReceipt = {
-            id: next.id,
-            revision: next.revision,
-            state: next.state,
-            reopened: next.steps
-              .filter((step, i) => step.status !== input.draft.steps[i]!.status)
-              .map((step) => step.id),
-          }
-          operation.digest = digest
-          operation.receipt = JSON.stringify(receipt)
-          return receipt
-        }, context)
-      }),
-    cancel: (turnId) =>
-      Effect.gen(function* () {
-        const id = yield* attempt(async () =>
-          (await open()).commit(async (tx) => {
-            const binding = await tx.doc(Bindings, turnId, null)
-            binding.cancelled = true
-            return binding.planId
-          }, context)
-        )
-        if (id) yield* reconcile(id)
-      }),
-    context: (source) =>
-      Effect.gen(function* () {
-        const binding = yield* attempt(
-          async () =>
-            (await (await open()).snapshot(Bindings, source.turnId, context))
-              ?.planId
-        )
-        const current = binding ? yield* reconcile(binding) : null
-        return {
-          current,
-          recent: current ? [] : yield* list(0, 8),
-          receipts: authority.receipts(current?.rootTurns ?? [source.turnId]),
-        }
-      }),
-  }
 }

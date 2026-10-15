@@ -36,7 +36,7 @@ import { guardedTools } from "../src/access/adapters/pi"
 import { MemoryRepository } from "../src/memory/repository"
 import { sqliteMemoryLayer } from "../src/memory/adapters/sqlite"
 import { piWorkingObjects } from "../src/objects/adapters/pi"
-import { objectContextHook } from "../src/objects/tools"
+import { objectContextHook } from "../src/objects/adapters/tools"
 import { database } from "./database"
 
 function gate() {
@@ -176,7 +176,7 @@ it.each(["continue", "restart", "cancel"])(
         if (accessStore.pending().length) approvalReady.resolve()
       }
     )
-    const protect = guardedTools(access, () => root.id)
+    const protect = guardedTools(access, () => Effect.succeed(root.id))
     const objects = piWorkingObjects(
       async () => harness,
       () => true

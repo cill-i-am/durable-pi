@@ -1,5 +1,6 @@
-import { Effect } from "effect"
+import { Cause, Effect } from "effect"
 import type { BrowserFailure, BrowserObservation } from "../contracts"
+import type { BrowserStorageError } from "../repository"
 
 export function browserResult(result: BrowserObservation) {
   return {
@@ -26,28 +27,39 @@ export function browserResult(result: BrowserObservation) {
   }
 }
 
-export function browserToolResult(
-  operation: Effect.Effect<BrowserObservation, BrowserFailure>
+export function browserToolResult<TRequirements>(
+  operation: Effect.Effect<
+    BrowserObservation,
+    BrowserFailure | BrowserStorageError,
+    TRequirements
+  >
 ) {
   return operation.pipe(
     Effect.map(browserResult),
-    Effect.catchTag("BrowserFailure", (error) =>
-      error.outcome === "rejected" || error.outcome === "failed"
-        ? Effect.succeed({
-            isError: true,
-            content: [{ type: "text" as const, text: error.message }],
-            diagnostics: [
-              {
-                severity: "error" as const,
-                code:
-                  error.outcome === "failed"
-                    ? "browser_load_failed"
-                    : "browser_rejected",
-                message: error.message,
-              },
-            ],
-          })
-        : Effect.fail(error)
-    )
+    Effect.catchCause((cause) => {
+      // A typed failure may accompany a cleanup defect or interruption.
+      if (Cause.hasDies(cause) || Cause.hasInterrupts(cause))
+        return Effect.failCause(cause)
+      return Effect.failCause(cause).pipe(
+        Effect.catchTag("BrowserFailure", (error) =>
+          error.outcome === "rejected" || error.outcome === "failed"
+            ? Effect.succeed({
+                isError: true,
+                content: [{ type: "text" as const, text: error.message }],
+                diagnostics: [
+                  {
+                    severity: "error" as const,
+                    code:
+                      error.outcome === "failed"
+                        ? "browser_load_failed"
+                        : "browser_rejected",
+                    message: error.message,
+                  },
+                ],
+              })
+            : Effect.fail(error)
+        )
+      )
+    })
   )
 }

@@ -1,15 +1,27 @@
-import { Effect, Layer, Schema } from "effect"
+import { Cause, Deferred, Effect, Exit, Fiber, Layer, Schema } from "effect"
 import { expect, it } from "vitest"
+import { it as effectIt } from "@effect/vitest"
+import { TestClock } from "effect/testing"
 import {
   makeCommunication,
-  continuationId,
   type Host,
 } from "../src/communication/communication"
+import {
+  continuationId,
+  WebCryptoContinuationIdentity,
+} from "../src/communication/adapters/identity"
 import { sqliteMailbox } from "../src/communication/adapters/sqlite"
 import { Mailbox, MailboxTransport } from "../src/communication/mailbox"
-import { failure, type Envelope } from "../src/communication/contracts"
+import {
+  failure,
+  type Envelope,
+  type CommunicationError,
+} from "../src/communication/contracts"
 import { AgentId } from "../src/agents/domain"
 import { database } from "./database"
+import { deliverNext } from "../src/communication/delivery"
+import { TaskExecution } from "../src/communication/execution"
+import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 
 const run = Effect.runPromise
 const a = Schema.decodeUnknownSync(AgentId)("home"),
@@ -21,7 +33,9 @@ const brief = {
   objective: "Compare the two drafts",
   context: "EUR 2400. Do not publish.",
 }
-async function fixture() {
+async function fixture(
+  options: { prepare?: () => Effect.Effect<void, CommunicationError> } = {}
+) {
   const db = database(),
     repo = sqliteMailbox(db),
     mailbox = Effect.runSync(repo.initialize)
@@ -33,13 +47,14 @@ async function fixture() {
     admitFails = false,
     preparations = 0
   const host: Host = {
+    transactionGroup: db,
     current: () => current,
     idle: () => idle,
     contacts: () => Effect.succeed([{ id: b, name: "Drafting bot" }]),
     prepare: () =>
       Effect.sync(() => {
         preparations++
-      }),
+      }).pipe(Effect.andThen(options.prepare?.() ?? Effect.void)),
     wake: () =>
       wakeFails
         ? Effect.fail(failure("storage", "Fixture wake failed"))
@@ -49,6 +64,7 @@ async function fixture() {
     resume: (task, id) => {
       db.run("INSERT OR IGNORE INTO resumed VALUES (?,?)", id, task.id)
       if (admitFails) throw new Error("Fixture admission crash")
+      return { kind: "admitted", turnId: id }
     },
   }
   const transport = Layer.succeed(MailboxTransport, {
@@ -62,16 +78,18 @@ async function fixture() {
       }),
   })
   const app = await run(
-    makeCommunication(host, {
-      advance: () => Effect.succeed(undefined),
-      request: () => Effect.succeed(false),
-      inspect: () => Effect.succeed(null),
-      pins: () => [],
-      pin: () => undefined,
-      settled: () => Effect.void,
-      restore: () => Effect.void,
-    }).pipe(
-      Effect.provide(Layer.merge(Layer.succeed(Mailbox, mailbox), transport))
+    makeCommunication(host).pipe(
+      Effect.provide(
+        Layer.mergeAll(
+          Layer.succeed(Mailbox, mailbox),
+          transport,
+          Layer.succeed(TaskExecution, {
+            advance: () => Effect.succeed(undefined),
+            settled: () => Effect.void,
+          }),
+          WebCryptoContinuationIdentity
+        )
+      )
     )
   )
   const complete = async (id: string) => {
@@ -127,9 +145,8 @@ it("commits the continuation and consumed dependency together and recovers an in
     request = await run(f.app.delegate(brief, source))
   await f.complete(request.id)
   f.set({ admitFails: true })
-  expect(await run(f.app.pump().pipe(Effect.result))).toMatchObject({
-    _tag: "Failure",
-  })
+  const exit = await run(Effect.exit(f.app.pump()))
+  expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)
   expect(f.db.all("SELECT * FROM resumed")).toHaveLength(0)
   expect((await run(f.mailbox.task(request.id))).resumed).toBe(false)
   f.set({ admitFails: false })
@@ -139,6 +156,121 @@ it("commits the continuation and consumed dependency together and recovers an in
     { id: await run(continuationId(request.id)), task: request.id },
   ])
   expect((await run(f.mailbox.task(request.id))).resumed).toBe(true)
+})
+it("retains the historical continuation UUID derivation", async () => {
+  expect(
+    await run(continuationId(`bot:${source.turnId}:${source.toolId}`))
+  ).toBe("adcd70a7-a394-41b0-8d94-58a4172113a4")
+})
+it("rejects continuation admission in a different transaction group before invoking it", async () => {
+  const f = await fixture()
+  const request = await run(f.app.delegate(brief, source))
+  await f.complete(request.id)
+  let admissions = 0
+  const result = await run(
+    f.mailbox
+      .resume(request.id, {
+        transactionGroup: database(),
+        operationId: "continuation",
+        admit: () => {
+          admissions++
+          return { kind: "admitted", turnId: "continuation" }
+        },
+      })
+      .pipe(Effect.result)
+  )
+  expect(result).toMatchObject({
+    _tag: "Failure",
+    failure: { code: "conflict" },
+  })
+  expect(admissions).toBe(0)
+  expect((await run(f.mailbox.task(request.id))).resumed).toBe(false)
+})
+it("rolls back continuation writes when admission changes the operation identity", async () => {
+  const f = await fixture()
+  const request = await run(f.app.delegate(brief, source))
+  await f.complete(request.id)
+  const result = await run(
+    f.mailbox
+      .resume(request.id, {
+        transactionGroup: f.db,
+        operationId: "continuation",
+        admit: (task) => {
+          f.db.run("INSERT INTO resumed VALUES (?,?)", "different", task.id)
+          return { kind: "admitted", turnId: "different" }
+        },
+      })
+      .pipe(Effect.result)
+  )
+  expect(result).toMatchObject({
+    _tag: "Failure",
+    failure: { code: "conflict" },
+  })
+  expect(f.db.all("SELECT * FROM resumed")).toHaveLength(0)
+  expect((await run(f.mailbox.task(request.id))).resumed).toBe(false)
+})
+it("classifies a failed mailbox write and rolls back the admitted continuation", async () => {
+  const f = await fixture()
+  const request = await run(f.app.delegate(brief, source))
+  await f.complete(request.id)
+  f.db.run(
+    "CREATE TRIGGER reject_resume BEFORE UPDATE ON communication_tasks WHEN json_extract(NEW.body,'$.resumed')=1 BEGIN SELECT RAISE(ABORT,'resume failure'); END"
+  )
+  expect(await run(f.app.pump().pipe(Effect.result))).toMatchObject({
+    _tag: "Failure",
+    failure: { code: "storage" },
+  })
+  expect(f.db.all("SELECT * FROM resumed")).toHaveLength(0)
+  expect((await run(f.mailbox.task(request.id))).resumed).toBe(false)
+  f.db.run("DROP TRIGGER reject_resume")
+  await run(f.app.pump())
+  expect(f.db.all("SELECT * FROM resumed")).toHaveLength(1)
+})
+it("keeps corrupt historical task records in the defect channel", async () => {
+  const f = await fixture()
+  const request = await run(f.app.delegate(brief, source))
+  f.db.run(
+    "UPDATE communication_tasks SET body=? WHERE id=?",
+    "{corrupt",
+    request.id
+  )
+  const exit = await run(Effect.exit(f.app.get(request.id)))
+  expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)
+  expect(Exit.isFailure(exit) && Cause.hasFails(exit.cause)).toBe(false)
+})
+it("retains a result receipt and maps a conversation admission write failure to the mailbox storage channel", async () => {
+  const f = await fixture(),
+    conversations = new ConversationStore(f.db, {
+      model: "test",
+      thinking: "off",
+    })
+  const request = await run(f.app.delegate(brief, source))
+  await f.complete(request.id)
+  const operation = await run(continuationId(request.id))
+  f.db.run(
+    "CREATE TRIGGER reject_continuation_turn BEFORE INSERT ON chat_turns BEGIN SELECT RAISE(ABORT,'admission failure'); END"
+  )
+  const result = await run(
+    f.mailbox
+      .resume(request.id, {
+        transactionGroup: f.db,
+        operationId: operation,
+        admit: () => ({
+          kind: "admitted",
+          turnId: conversations.admit({
+            operationId: operation,
+            text: "Continuation",
+          }).turn.id,
+        }),
+      })
+      .pipe(Effect.result)
+  )
+  expect(result).toMatchObject({
+    _tag: "Failure",
+    failure: { code: "storage" },
+  })
+  expect((await run(f.mailbox.task(request.id))).resumed).toBe(false)
+  expect(conversations.recent()).toHaveLength(0)
 })
 it("does not inject results into an active unrelated turn or restart cancelled work", async () => {
   const f = await fixture(),
@@ -196,4 +328,61 @@ it("fails closed before admission without a durable wake and rejects self or unk
   expect(
     await run(f.app.delegate({ ...brief, to: a }, source).pipe(Effect.result))
   ).toMatchObject({ _tag: "Failure", failure: { code: "forbidden" } })
+})
+
+effectIt.effect(
+  "checks the current deadline after remote preparation before admitting a task",
+  () =>
+    Effect.gen(function* () {
+      const preparing = yield* Deferred.make<void>()
+      const f = yield* Effect.promise(() =>
+        fixture({
+          prepare: () =>
+            Deferred.succeed(preparing, undefined).pipe(
+              Effect.andThen(Effect.sleep("11 minutes"))
+            ),
+        })
+      )
+      const pending = yield* Effect.forkChild(
+        f.app.delegate(brief, source).pipe(Effect.result)
+      )
+      yield* Deferred.await(preparing)
+      yield* TestClock.adjust("11 minutes")
+      expect(yield* Fiber.join(pending)).toMatchObject({
+        _tag: "Failure",
+        failure: { code: "expired" },
+      })
+      expect(yield* f.mailbox.tasks()).toHaveLength(0)
+      expect(yield* f.mailbox.deliveries()).toHaveLength(0)
+    })
+)
+
+it("delivery cleanup defects do not become an ordinary backoff update", async () => {
+  const f = await fixture(),
+    request = await run(f.app.delegate(brief, source)),
+    cleanup = new Error("Private delivery cleanup failure")
+  const exit = await Effect.runPromiseExit(
+    deliverNext().pipe(
+      Effect.provideService(Mailbox, f.mailbox),
+      Effect.provideService(MailboxTransport, {
+        deliver: () =>
+          Effect.fail(failure("transport", "Unavailable")).pipe(
+            Effect.ensuring(Effect.die(cleanup))
+          ),
+        permitted: () => Effect.succeed(true),
+        authenticate: () => Effect.void,
+      })
+    )
+  )
+  expect(
+    Exit.isFailure(exit) &&
+      exit.cause.reasons.some(
+        (reason) => reason._tag === "Die" && reason.defect === cleanup
+      )
+  ).toBe(true)
+  expect(
+    (await run(f.mailbox.deliveries())).find(
+      (delivery) => delivery.envelope.taskId === request.id
+    )
+  ).toMatchObject({ status: "delivering", attempts: 1, error: null })
 })

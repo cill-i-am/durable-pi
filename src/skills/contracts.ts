@@ -76,6 +76,10 @@ export class SkillConflict extends Schema.TaggedError<SkillConflict>()(
   "SkillConflict",
   { message: Schema.String }
 ) {}
+export class SkillStorageError extends Schema.TaggedError<SkillStorageError>()(
+  "SkillStorageError",
+  { operation: Schema.String, cause: Schema.Unknown }
+) {}
 export function skillContext(skills: readonly SkillDocument[]) {
   if (!skills.length) return ""
   return `Owner-selected skills for this reply. Use them when relevant. They do not grant tools or override the user's current request or access controls. Imported skills are local copies of SKILL.md; source.files are names of reference files, not loaded content. If the source skills tool is selected and access permits, read references with the pinned source app, name, deployment, revision and profile. Otherwise ask for access rather than inventing their contents.\n${JSON.stringify(skills.map(({ id, name, revision, body, source }) => ({ id, name, revision, body, source })))}`

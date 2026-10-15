@@ -1,61 +1,66 @@
-import type { RoutineStore } from "./adapters/sqlite"
-import type { RoutineRun } from "./contracts"
-import { ConversationFull, type Turn } from "../conversations/turns"
+import { preserveFatal } from "../shared/effect"
+import { Clock, Effect } from "effect"
+import type { Turn } from "../conversations/turns"
+import type { RoutineAdmission, Routines } from "./service"
 
-interface RoutineHost {
-  getTurn: (id: string) => Pick<Turn, "id" | "status" | "error"> | undefined
-  modelConnected: () => Promise<boolean>
-  wakeConversation: () => Promise<void>
-  admit: (run: RoutineRun) => void
-  stop: (id: string) => void
-  notify: () => void
+export interface RoutineHost<TError> {
+  getTurn: (
+    id: string
+  ) => Effect.Effect<Pick<Turn, "id" | "status" | "error"> | undefined, TError>
+  modelConnected: () => Effect.Effect<boolean, TError>
+  wakeConversation: () => Effect.Effect<void, TError>
+  admission: RoutineAdmission
+  stop: (id: string) => Effect.Effect<void, TError>
+  notify: () => Effect.Effect<void, TError>
 }
-export class RoutinePump {
-  constructor(
-    private readonly store: RoutineStore,
-    private readonly host: RoutineHost,
-    private readonly now: () => number = Date.now
-  ) {}
-  retry() {
-    const next = this.store.nextWake()
-    return next === undefined ? undefined : Math.max(this.now() + 60000, next)
-  }
-  async run() {
-    if (this.store.nextWake() === undefined) return
-    const previous = this.store.inFlight()
-    if (previous?.status === "queued") {
-      const turn = this.host.getTurn(previous.turnId)
-      if (!turn)
-        this.store.finish(
-          previous.turnId,
-          "failed",
-          "The admitted reply is unavailable."
+
+export function routinePump<TError>(
+  routines: Routines["Service"],
+  host: RoutineHost<TError>
+) {
+  return {
+    retry: Effect.fn("Routines.retryWake")(function* () {
+      const next = yield* routines.nextWake()
+      const now = yield* Clock.currentTimeMillis
+      return next === undefined ? undefined : Math.max(now + 60_000, next)
+    }),
+    run: Effect.fn("Routines.reconcile")(function* () {
+      if ((yield* routines.nextWake()) === undefined) return
+      const previous = yield* routines.inFlight()
+      if (previous?.status === "queued") {
+        const turn = yield* host.getTurn(previous.turnId)
+        if (!turn)
+          yield* routines.finish(
+            previous.turnId,
+            "failed",
+            "The admitted reply is unavailable."
+          )
+        else if (
+          turn.status === "done" ||
+          turn.status === "failed" ||
+          turn.status === "cancelled"
         )
-      else if (
-        turn.status === "done" ||
-        turn.status === "failed" ||
-        turn.status === "cancelled"
-      )
-        this.store.finish(turn.id, turn.status, turn.error)
-      else if (!this.store.canRun(turn.id)) {
-        await this.host.wakeConversation()
-        this.host.stop(turn.id)
+          yield* routines.finish(turn.id, turn.status, turn.error)
+        else if (!(yield* routines.canRun(turn.id))) {
+          yield* host.wakeConversation()
+          yield* host.stop(turn.id)
+        }
       }
-    }
-    this.store.claimDue()
-    if (
-      this.store.inFlight()?.status === "pending" &&
-      (await this.host.modelConnected())
-    ) {
-      await this.host.wakeConversation()
-      try {
-        this.store.deliver((run) => this.host.admit(run))
-      } catch (cause) {
-        if (!(cause instanceof ConversationFull)) throw cause
+      yield* routines.claimDue()
+      if (
+        (yield* routines.inFlight())?.status === "pending" &&
+        (yield* host.modelConnected())
+      ) {
+        yield* host.wakeConversation()
+        yield* routines.deliver(host.admission).pipe(
+          preserveFatal,
+          Effect.catchTag("ConversationFull", () => Effect.void)
+        )
+        yield* host.notify()
       }
-      this.host.notify()
-    }
-    const next = this.store.nextWake()
-    return next === undefined ? undefined : Math.max(this.now() + 100, next)
+      const next = yield* routines.nextWake()
+      const now = yield* Clock.currentTimeMillis
+      return next === undefined ? undefined : Math.max(now + 100, next)
+    }),
   }
 }

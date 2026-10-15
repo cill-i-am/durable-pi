@@ -1,25 +1,40 @@
-import { Schema } from "effect"
+import { Effect } from "effect"
 import type { ExecutionEnv } from "../../alchemy.run"
-import { boundedBytes } from "../workspace/http"
+import { preserveFatal } from "../shared/effect"
+import { runObserved } from "../observability/worker"
 import { CodeInput } from "./contracts"
-import { executeCode } from "./adapters/dynamic-worker"
+import { executeCode, type ExecutionLoader } from "./adapters/dynamic-worker"
+import { executionJson } from "./adapters/input"
 
-export default {
-  async fetch(request: Request, env: ExecutionEnv) {
-    if (request.method !== "POST" || new URL(request.url).pathname !== "/run")
-      return new Response("Not found", { status: 404 })
-    try {
-      const input = Schema.decodeUnknownSync(CodeInput)(
-        JSON.parse(
-          new TextDecoder().decode(await boundedBytes(request, 256000))
+export async function executionWorkerRequest(
+  request: Request,
+  loader: ExecutionLoader
+) {
+  if (request.method !== "POST" || new URL(request.url).pathname !== "/run")
+    return new Response("Not found", { status: 404 })
+  return runObserved(
+    Effect.yieldNow.pipe(
+      Effect.andThen(
+        Effect.gen(function* () {
+          const input = yield* executionJson(request, CodeInput)
+          return Response.json(yield* executeCode(loader, input))
+        })
+      ),
+      preserveFatal,
+      Effect.catchTag("ExecutorUnavailable", () =>
+        Effect.succeed(
+          Response.json(
+            { error: "Code execution failed or exceeded its limits." },
+            { status: 422 }
+          )
         )
       )
-      return Response.json(await executeCode(env.LOADER, input, request.signal))
-    } catch {
-      return Response.json(
-        { error: "Code execution failed or exceeded its limits." },
-        { status: 422 }
-      )
-    }
-  },
+    ),
+    { signal: request.signal }
+  )
+}
+
+export default {
+  fetch: (request: Request, env: Pick<ExecutionEnv, "LOADER">) =>
+    executionWorkerRequest(request, env.LOADER),
 }

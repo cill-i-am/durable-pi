@@ -1,86 +1,132 @@
+import { Option, Schema } from "effect"
+import type { TerminalSocket } from "../runtime"
+
+const Resize = Schema.fromJsonString(
+  Schema.Struct({
+    type: Schema.Literal("resize"),
+    cols: Schema.Number.check(
+      Schema.isInt(),
+      Schema.isBetween({ minimum: 2, maximum: 240 })
+    ),
+    rows: Schema.Number.check(
+      Schema.isInt(),
+      Schema.isBetween({ minimum: 2, maximum: 100 })
+    ),
+  })
+)
+const resize = Schema.decodeUnknownOption(Resize, { onExcessProperty: "error" })
 export function validTerminalInput(data: string | ArrayBuffer): boolean {
-  if (data instanceof ArrayBuffer) return data.byteLength <= 16_384
-  if (typeof data !== "string" || data.length > 256) return false
-  try {
-    const v = JSON.parse(data) as {
-      type?: unknown
-      cols?: unknown
-      rows?: unknown
-    }
-    return (
-      v.type === "resize" &&
-      typeof v.cols === "number" &&
-      typeof v.rows === "number" &&
-      Number.isInteger(v.cols) &&
-      Number.isInteger(v.rows) &&
-      v.cols >= 2 &&
-      v.cols <= 240 &&
-      v.rows >= 2 &&
-      v.rows <= 100 &&
-      Object.keys(v).length === 3
-    )
-  } catch {
-    return false
-  }
+  return typeof data === "string"
+    ? data.length <= 256 && Option.isSome(resize(data))
+    : data.byteLength <= 16_384
 }
+/** The session owns callback failures; native event handlers never detach an
+ * unobserved Effect or throw away a cleanup error. */
 export function relayTerminal(
-  upstream: WebSocket,
+  open: () => TerminalSocket,
   allow: (direction: "input" | "output", bytes: number) => boolean,
-  onClose: () => void
+  onClose: () => void,
+  onFailure: (cause: unknown) => void
 ) {
-  const pair = new WebSocketPair(),
-    client = pair[0],
-    server = pair[1]
+  let server: WebSocket | undefined, upstream: TerminalSocket | undefined
   let closed = false
+  const listeners: (() => void)[] = []
   const close = () => {
     if (closed) return
     closed = true
-    onClose()
+    for (const remove of listeners) {
+      try {
+        remove()
+      } catch (cause) {
+        onFailure(cause)
+      }
+    }
+    listeners.length = 0
     try {
-      server.close(1000, "Terminal disconnected")
-    } catch {}
-    try {
-      upstream.close(1000, "Terminal disconnected")
-    } catch {}
+      onClose()
+    } catch (cause) {
+      onFailure(cause)
+    }
+    for (const socket of [server, upstream]) {
+      if (!socket || socket.readyState >= 2) continue
+      try {
+        socket.close(1000, "Terminal disconnected")
+      } catch (cause) {
+        onFailure(cause)
+      }
+    }
   }
   const size = (data: string | ArrayBuffer) =>
     typeof data === "string"
       ? new TextEncoder().encode(data).length
       : data.byteLength
-  server.binaryType = "arraybuffer"
-  upstream.binaryType = "arraybuffer"
-  server.accept()
-  upstream.accept()
-  server.addEventListener("message", (event) => {
-    const data = event.data
-    if (!validTerminalInput(data) || !allow("input", size(data))) {
-      close()
-      return
+  try {
+    const pair = new WebSocketPair(),
+      downstream = pair[1]
+    server = downstream
+    downstream.binaryType = "arraybuffer"
+    downstream.accept()
+    const terminal = open()
+    upstream = terminal
+    terminal.binaryType = "arraybuffer"
+    const input = (event: MessageEvent<string | ArrayBuffer>) => {
+      if (closed) return
+      try {
+        if (
+          !validTerminalInput(event.data) ||
+          !allow("input", size(event.data))
+        ) {
+          close()
+          return
+        }
+      } catch (cause) {
+        onFailure(cause)
+        close()
+        return
+      }
+      try {
+        terminal.send(event.data)
+      } catch {
+        close()
+      }
     }
-    try {
-      upstream.send(data)
-    } catch {
-      close()
+    const output = (event: MessageEvent<string | ArrayBuffer>) => {
+      if (closed) return
+      try {
+        if (
+          size(event.data) > 256 * 1024 ||
+          !allow("output", size(event.data))
+        ) {
+          close()
+          return
+        }
+      } catch (cause) {
+        onFailure(cause)
+        close()
+        return
+      }
+      try {
+        downstream.send(event.data)
+      } catch {
+        close()
+      }
     }
-  })
-  upstream.addEventListener("message", (event) => {
-    const data = event.data
-    if (size(data) > 256 * 1024 || !allow("output", size(data))) {
-      close()
-      return
+    downstream.addEventListener("message", input)
+    listeners.push(() => downstream.removeEventListener("message", input))
+    terminal.addEventListener("message", output)
+    listeners.push(() => terminal.removeEventListener("message", output))
+    for (const socket of [downstream, terminal]) {
+      socket.addEventListener("close", close)
+      listeners.push(() => socket.removeEventListener("close", close))
+      socket.addEventListener("error", close)
+      listeners.push(() => socket.removeEventListener("error", close))
     }
-    try {
-      server.send(data)
-    } catch {
-      close()
+    return {
+      response: new Response(null, { status: 101, webSocket: pair[0] }),
+      close,
     }
-  })
-  for (const socket of [server, upstream]) {
-    socket.addEventListener("close", close)
-    socket.addEventListener("error", close)
-  }
-  return {
-    response: new Response(null, { status: 101, webSocket: client }),
-    close,
+  } catch (cause) {
+    close()
+    throw cause
   }
 }

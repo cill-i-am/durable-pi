@@ -1,5 +1,7 @@
-import { runActivity } from "../../src/activity/run"
-import { InferenceUsage } from "../../src/inference/usage"
+import { projectRunActivity } from "../../src/activity/run"
+import { SqliteActivityRecords } from "../../src/activity/adapters/sqlite"
+import { InferenceUsage, usageApplication } from "../../src/inference/usage"
+import { SqliteUsage } from "../../src/inference/adapters/usage-sqlite"
 import { DurableObject } from "cloudflare:workers"
 import { PiHarness } from "agents/harness/pi"
 import { Lifecycle } from "agents/lifecycle"
@@ -40,7 +42,13 @@ export class LoopBot extends DurableObject<Record<string, never>> {
     model: "faux-1",
     thinking: "off",
   })
-  readonly usage = new InferenceUsage(this.db)
+  readonly usage = Effect.runSync(
+    InferenceUsage.pipe(
+      Effect.provide(
+        usageApplication(new SqliteUsage(this.db), () => crypto.randomUUID())
+      )
+    )
+  )
   readonly recovery = new RunRecoveryStore(this.db)
   readonly access = new AccessStore(this.db, () => [
     { name: "check", description: "Synthetic failure", mode: "allow" },
@@ -93,10 +101,7 @@ export class LoopBot extends DurableObject<Record<string, never>> {
           }),
         ],
         tools: [
-          guardedTools(
-            this.gate,
-            () => "loop-run"
-          )(
+          guardedTools(this.gate, () => Effect.succeed("loop-run"))(
             defineTool({
               name: "check",
               description: "Synthetic failure",
@@ -162,15 +167,18 @@ export class LoopBot extends DurableObject<Record<string, never>> {
       }
     }
     if (path === "/loops/release") this.db.run("UPDATE loop_fixture SET hold=0")
+    const activity = new SqliteActivityRecords(this.db).run("loop-run", null)
     return Response.json({
       ...this.info(),
-
-      activity: runActivity(
-        this.db,
-        this.ctx.id.toString(),
-        "loop-run",
-        this.usage
-      ),
+      activity: activity
+        ? projectRunActivity(
+            activity,
+            this.ctx.id.toString(),
+            "loop-run",
+            Effect.runSync(this.usage.totals("loop-run")),
+            Date.now()
+          )
+        : null,
       state: this.recovery.get("loop-run"),
       receipts: this.db.all<{ id: string; status: string }>(
         "SELECT id,status FROM tool_operations"

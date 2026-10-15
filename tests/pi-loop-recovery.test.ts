@@ -1,3 +1,4 @@
+import { Effect } from "effect"
 import { expect, it } from "vitest"
 import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
@@ -133,7 +134,7 @@ it.each([
           if (scenario === "approval-wait" && access.pending().length) release()
         }
       )
-      const protect = guardedTools(gate, () => turnId)
+      const protect = guardedTools(gate, () => Effect.succeed(turnId))
       const registry = createRegistry()
       const recovery = runRecoveryHook({
         storage,

@@ -11,8 +11,9 @@ import {
   fauxAssistantMessage,
   fauxToolCall,
 } from "@earendil-works/pi-ai"
-import { RoutineStore } from "../src/routines/adapters/sqlite"
-import { routineTools } from "../src/routines/tools"
+import { routineFixture } from "./routine-fixture"
+import { Effect } from "effect"
+import { routineTools } from "../src/routines/adapters/pi"
 import { AccessStore } from "../src/access/adapters/sqlite"
 import { AccessGate } from "../src/access/gate"
 import { guardedTools } from "../src/access/adapters/pi"
@@ -23,7 +24,7 @@ it("requires durable approval to arm a native Pi routine and replays it once aft
   const directory = await mkdtemp(join(tmpdir(), "pi-routine-")),
     path = join(directory, "pi.sqlite")
   const db = database(),
-    routines = new RoutineStore(db, () => true)
+    routines = routineFixture(db, () => true)
   let store = new AccessStore(db, () => builtInTools)
   const turnId = crypto.randomUUID(),
     id = crypto.randomUUID()
@@ -68,9 +69,11 @@ it("requires durable approval to arm a native Pi routine and replays it once aft
     const registry = createRegistry()
     registry.install({
       name: "routines",
-      tools: routineTools(routines, async () => {}).map(
-        guardedTools(gate, () => turnId)
-      ),
+      tools: routineTools(
+        routines.service,
+        async () => {},
+        (operation, signal) => Effect.runPromise(operation, { signal })
+      ).map(guardedTools(gate, () => Effect.succeed(turnId))),
     })
     return {
       models,

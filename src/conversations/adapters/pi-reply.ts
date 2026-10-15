@@ -41,8 +41,10 @@ export async function readPiReply(
 
 export async function originalTranscript(
   conversation: Pick<Conversation, "entries">,
-  snapshot: Pick<SnapshotEvent, "entries">
+  snapshot: Pick<SnapshotEvent, "entries">,
+  signal?: AbortSignal
 ): Promise<readonly EntryRecord[]> {
+  signal?.throwIfAborted()
   if (!snapshot.entries.some((entry) => entry.head !== undefined))
     return snapshot.entries
   const tail = snapshot.entries.reduce((latest, entry) =>
@@ -51,12 +53,14 @@ export async function originalTranscript(
   const entries: EntryRecord[] = []
   let cursor: Cursor | undefined
   do {
+    signal?.throwIfAborted()
     const page = await conversation.entries(
       { maxEntryId: tail },
       256,
       cursor,
       BACKGROUND_CONTEXT
     )
+    signal?.throwIfAborted()
     entries.push(
       ...page.items.filter((entry) => entry.kind !== "pi.compaction")
     )

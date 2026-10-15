@@ -1,12 +1,13 @@
 import { Schema } from "effect"
 
+const counter = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0))
 export const RecoveryView = Schema.Struct({
   phase: Schema.Literals(["recovering", "recovered", "blocked"]),
   reason: Schema.Literals(["repetition", "denied", "uncertain"]),
   tool: Schema.String,
-  failures: Schema.Number,
-  remaining: Schema.Number,
-  resultId: Schema.Number,
+  failures: counter,
+  remaining: counter,
+  resultId: counter,
   receiptId: Schema.NullOr(Schema.String),
   detail: Schema.String,
 })
@@ -40,6 +41,72 @@ export type RecoveryState = {
   cursor: number
   buckets: { fingerprint: string; count: number }[]
   view: RecoveryView | null
+}
+export const RecoveryStateRecord = Schema.Struct({
+  version: Schema.Literal(1),
+  epoch: Schema.String,
+  cursor: counter,
+  buckets: Schema.Array(
+    Schema.Struct({ fingerprint: Schema.String, count: counter })
+  ),
+  view: Schema.NullOr(RecoveryView),
+})
+export function requireRecoveryPolicy(policy: RecoveryPolicy) {
+  if (
+    !Number.isInteger(policy.warnAfter) ||
+    policy.warnAfter < 2 ||
+    !Number.isInteger(policy.stopAfter) ||
+    policy.stopAfter <= policy.warnAfter ||
+    !Number.isInteger(policy.recoveryAttempts) ||
+    policy.recoveryAttempts < 1
+  )
+    throw new Error("Invalid tool recovery policy")
+}
+export const canObserveRecovery = (
+  turn: { status: string; session_id: string | null } | undefined,
+  session: string
+) =>
+  !!turn &&
+  turn.session_id === session &&
+  ["preparing", "running"].includes(turn.status)
+export function recoveryOutcome(input: {
+  receiptStatus?: string
+  diagnostics: readonly string[]
+  isError: boolean
+  tool: string
+  deniedPolicy: boolean
+}): { outcome: Observation["outcome"]; category: string } {
+  const { receiptStatus, diagnostics, isError, tool, deniedPolicy } = input
+  if (receiptStatus && ["running", "interrupted"].includes(receiptStatus))
+    return { outcome: "uncertain", category: "tool_error" }
+  if (receiptStatus && ["denied", "expired"].includes(receiptStatus))
+    return { outcome: "denied", category: "tool_error" }
+  if (
+    receiptStatus &&
+    ["pending", "approved", "cancelled"].includes(receiptStatus)
+  )
+    return { outcome: "ignored", category: "tool_error" }
+  if (diagnostics.includes("interrupted"))
+    return { outcome: "uncertain", category: "tool_error" }
+  if (diagnostics.includes("blocked"))
+    return { outcome: "denied", category: "tool_error" }
+  if (diagnostics.includes("aborted"))
+    return { outcome: "ignored", category: "tool_error" }
+  if (!isError)
+    return {
+      outcome: tool === "check_bot_task" ? "poll" : "success",
+      category: "tool_error",
+    }
+  if (!receiptStatus && deniedPolicy)
+    return { outcome: "denied", category: "tool_error" }
+  return {
+    outcome: "failure",
+    category: diagnostics.includes("invalid_arguments")
+      ? "invalid_arguments"
+      : diagnostics.includes("tool_unavailable")
+        ? "tool_unavailable"
+        : "tool_error",
+  }
 }
 export const initialRecovery = (epoch: string): RecoveryState => ({
   version: 1,
@@ -149,7 +216,7 @@ export function observeRound(
   return state
 }
 
-export async function recoveryFingerprint(value: unknown): Promise<string> {
+export function recoveryIdentity(value: unknown): string {
   const canonical = (v: unknown): unknown =>
     Array.isArray(v)
       ? v.map(canonical)
@@ -160,9 +227,5 @@ export async function recoveryFingerprint(value: unknown): Promise<string> {
               .map(([k, x]) => [k, canonical(x)])
           )
         : v
-  const bytes = new TextEncoder().encode(JSON.stringify(canonical(value)))
-  const digest = await crypto.subtle.digest("SHA-256", bytes)
-  return [...new Uint8Array(digest)]
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("")
+  return JSON.stringify(canonical(value)) || ""
 }

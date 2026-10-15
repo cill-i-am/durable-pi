@@ -1,55 +1,87 @@
-import { Cause, Effect } from "effect"
-import type { AccessStore, ToolIntent } from "./adapters/sqlite"
-import { AccessDenied } from "./contracts"
+import { Schema, Cause, Clock, Deferred, Effect } from "effect"
+import { scopedReceiptFact, type ReceiptQuery } from "./receipt"
+import type { AccessLedger, ToolIntent } from "./ledger"
+import {
+  AccessDenied,
+  AccessConflict,
+  AccessStorageError,
+  type AccessMode,
+} from "./contracts"
 
 export class AccessGate {
-  private version = 0
-  private listeners = new Set<() => void>()
+  private changed = Deferred.makeUnsafe<void>()
   constructor(
-    readonly store: AccessStore,
+    private readonly store: AccessLedger,
     private readonly canRun: (turnId: string) => boolean,
     private readonly onChange: () => void = () => {},
     private readonly botId: () => string | null = () => null
   ) {}
   notify() {
-    this.version++
-    for (const listener of [...this.listeners]) listener()
+    const previous = this.changed
+    this.changed = Deferred.makeUnsafe<void>()
+    Deferred.doneUnsafe(previous, Effect.void)
     this.onChange()
   }
-  private wait(version: number, expiresAt: number) {
-    return Effect.tryPromise({
-      try: (signal) =>
-        new Promise<void>((resolve, reject) => {
-          const cleanup = () => {
-            this.listeners.delete(done)
-            signal.removeEventListener("abort", abort)
-            clearTimeout(timer)
-          }
-          const done = () => {
-            cleanup()
-            resolve()
-          }
-          const abort = () => {
-            cleanup()
-            reject(new AccessDenied({ message: "Tool wait interrupted." }))
-          }
-          const timer = setTimeout(
-            done,
-            Math.max(1, Math.min(60_000, expiresAt - Date.now()))
-          )
-          if (signal.aborted) return abort()
-          this.listeners.add(done)
-          signal.addEventListener("abort", abort, { once: true })
-          if (this.version !== version) done()
-        }),
-      catch: (cause) => cause,
+  private wait(change: Deferred.Deferred<void>, expiresAt: number) {
+    return Effect.gen(function* () {
+      const now = yield* Clock.currentTimeMillis
+      yield* Effect.raceFirst(
+        Deferred.await(change),
+        Effect.sleep(Math.max(1, Math.min(60_000, expiresAt - now)))
+      )
     })
   }
-  run<T>(
+  operation = Effect.fn("Access.operation")((id: string) =>
+    accessAttempt(() => this.store.get(id))
+  )
+  receipt = Effect.fn("Access.receipt")((query: ReceiptQuery) =>
+    accessAttempt(() => scopedReceiptFact(this.store.get(query.id), query))
+  )
+  state = Effect.fn("Access.state")(() =>
+    accessAttempt(() => ({
+      tools: this.store.policies(),
+      approvals: this.store.pending(),
+    }))
+  )
+  pending = Effect.fn("Access.pending")(() =>
+    accessAttempt(() => this.store.pending())
+  )
+  awaitingApproval = Effect.fn("Access.awaitingApproval")((id: string) =>
+    accessAttempt(() => this.store.awaitingApproval(id))
+  )
+  cancel = Effect.fn("Access.cancel")((id: string) =>
+    accessAttempt(() => this.store.cancel(id)).pipe(
+      Effect.tap(() => Effect.sync(() => this.notify()))
+    )
+  )
+  revoke = Effect.fn("Access.revoke")((name: string) =>
+    accessAttempt(() => this.store.revoke(name)).pipe(
+      Effect.tap(() => Effect.sync(() => this.notify()))
+    )
+  )
+  updatePolicy = Effect.fn("Access.updatePolicy")(
+    (name: string, revision: number, mode: AccessMode) =>
+      accessAttempt(() => this.store.update(name, revision, mode)).pipe(
+        Effect.tap(() => Effect.sync(() => this.notify()))
+      )
+  )
+  decide = Effect.fn("Access.decide")(
+    (
+      id: string,
+      approve: boolean,
+      revision: number,
+      remember?: { expectedPolicyRevision: number }
+    ) =>
+      accessAttempt(() =>
+        this.store.decide(id, approve, revision, remember)
+      ).pipe(Effect.tap(() => Effect.sync(() => this.notify())))
+  )
+
+  run<T, TError, TRequirements>(
     intent: ToolIntent,
-    work: () => Promise<T>,
+    work: Effect.Effect<T, TError, TRequirements>,
     recoverable = false
-  ): Effect.Effect<T, unknown> {
+  ): Effect.Effect<T, AccessError | TError, TRequirements> {
     return Effect.gen({ self: this }, function* () {
       const fields = {
         botId: this.botId(),
@@ -84,11 +116,11 @@ export class AccessGate {
             })
           return this.store.begin(intent)
         },
-        catch: (cause) => cause,
+        catch: accessError,
       })
       this.notify()
       for (;;) {
-        const version = this.version
+        const change = this.changed
         const decision = yield* Effect.try({
           try: () => {
             if (!this.canRun(operation.turnId))
@@ -97,27 +129,24 @@ export class AccessGate {
               })
             return this.store.claim(intent.id, recoverable)
           },
-          catch: (cause) => cause,
+          catch: accessError,
         })
         if (decision === "pending") {
           if (!waiting) yield* observe("tool.waiting")
           waiting = true
-          yield* this.wait(version, operation.expiresAt)
+          yield* this.wait(change, operation.expiresAt)
           continue
         }
         if (typeof decision === "object") {
           yield* observe("tool.replayed")
-          return yield* Effect.try(() => JSON.parse(decision.result) as T)
+          return yield* Effect.sync(() => JSON.parse(decision.result) as T)
         }
         try {
           yield* observe("tool.dispatched")
-          const result = yield* Effect.tryPromise({
-            try: work,
-            catch: (cause) => cause,
-          })
+          const result = yield* work
           yield* Effect.try({
             try: () => this.store.finish(intent.id, JSON.stringify(result)),
-            catch: (cause) => cause,
+            catch: accessError,
           })
           yield* observe("tool.finished")
           return result
@@ -128,3 +157,14 @@ export class AccessGate {
     })
   }
 }
+
+export type AccessError = AccessDenied | AccessConflict | AccessStorageError
+const accessError = (cause: unknown): AccessError => {
+  const knownFailure = Schema.decodeUnknownOption(
+    Schema.Union([AccessDenied, AccessConflict, AccessStorageError])
+  )(cause)
+  if (knownFailure._tag === "Some") return knownFailure.value
+  throw cause
+}
+const accessAttempt = <T>(body: () => T) =>
+  Effect.try({ try: body, catch: accessError })

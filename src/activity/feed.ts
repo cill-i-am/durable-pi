@@ -1,4 +1,6 @@
+import { preserveFatal, observeCleanup } from "../shared/effect"
 import { Effect } from "effect"
+import type { ActivityUnavailable } from "./records"
 import {
   activityPage,
   type ActivityAgent,
@@ -6,33 +8,40 @@ import {
   type ActivitySnapshot,
 } from "./contracts"
 
-export function activityFeed(
+export function activityFeed<TRequirements>(
   agents: readonly ActivityAgent[],
   query: ActivityQuery,
   read: (
     agent: ActivityAgent,
     query: ActivityQuery
-  ) => Promise<ActivitySnapshot>
+  ) => Effect.Effect<ActivitySnapshot, ActivityUnavailable, TRequirements>
 ) {
   return Effect.gen(function* () {
     const snapshots = new Map<string, ActivitySnapshot>()
     yield* Effect.all(
       agents.map((agent) =>
-        Effect.tryPromise({
-          try: () => read(agent, query),
-          catch: () => agent,
-        }).pipe(
-          Effect.match({
-            onSuccess: (snapshot) => {
-              snapshots.set(agent.id, snapshot)
-            },
-            onFailure: () => {},
-          })
+        read(agent, query).pipe(
+          preserveFatal,
+          Effect.catchTag("ActivityUnavailable", () =>
+            Effect.succeed(undefined)
+          ),
+          Effect.tap((snapshot) =>
+            Effect.sync(() => {
+              if (snapshot) snapshots.set(agent.id, snapshot)
+            })
+          )
         )
       ),
       { concurrency: 4 }
-    ).pipe(
-      Effect.timeoutOrElse({ duration: "5 seconds", orElse: () => Effect.void })
+    ).pipe((timed) =>
+      observeCleanup(timed, (observed) =>
+        observed.pipe(
+          Effect.timeoutOrElse({
+            duration: "5 seconds",
+            orElse: () => Effect.void,
+          })
+        )
+      )
     )
     return activityPage(
       [...snapshots.values()],

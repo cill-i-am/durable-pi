@@ -1,17 +1,20 @@
-import { Data, Effect } from "effect"
+import { nativeOperation } from "../shared/interop"
+import { Effect, Schema } from "effect"
 
-export class OwnerSessionUnavailable extends Data.TaggedError(
-  "OwnerSessionUnavailable"
-)<{
-  readonly cause: unknown
-}> {}
+export class OwnerSessionUnavailable extends Schema.TaggedError<OwnerSessionUnavailable>()(
+  "OwnerSessionUnavailable",
+  { cause: Schema.Unknown }
+) {}
 
 export const ownerSession = Effect.fn("Identity.ownerSession")(function* <
   TUser extends { readonly id: string; readonly email: string },
 >(read: () => Promise<{ readonly user: TUser } | null>, ownerEmail: string) {
-  const session = yield* Effect.tryPromise({
-    try: read,
-    catch: (cause) => new OwnerSessionUnavailable({ cause }),
+  yield* Effect.yieldNow
+  const session = yield* nativeOperation(read, (cause, channel) => {
+    const known = Schema.decodeUnknownOption(OwnerSessionUnavailable)(cause)
+    if (known._tag === "Some") return known.value
+    if (channel === "failure" || Schema.isSchemaError(cause)) throw cause
+    return new OwnerSessionUnavailable({ cause })
   })
   return session?.user.email.toLowerCase() === ownerEmail.toLowerCase()
     ? session.user
