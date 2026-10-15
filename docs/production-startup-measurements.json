@@ -255,5 +255,100 @@
         "calls": 10
       }
     ]
+  },
+  "animationIncrement": {
+    "beforeHistoryMs": [
+      4820.8,
+      4625.5,
+      4499.2,
+      4535.8,
+      4571.5,
+      4550.7,
+      4565.5,
+      4484.8,
+      4481.2,
+      4537.7
+    ],
+    "afterHistoryMs": [
+      4766.8,
+      4368.8,
+      4394.4,
+      4367.3,
+      4360.2,
+      4383.2,
+      4417.1,
+      4415.6,
+      4362.3,
+      4400.5
+    ],
+    "beforeSessionMs": [
+      3294.5,
+      3104.7,
+      3090.6,
+      3088.7,
+      3068.7,
+      3114.1,
+      3113.9,
+      3059.1,
+      3058.8,
+      3090.2
+    ],
+    "afterSessionMs": [
+      3223.9,
+      2956.8,
+      2976.6,
+      2948.4,
+      2961,
+      2956.7,
+      2981.5,
+      2974,
+      2943.3,
+      2965.3
+    ],
+    "beforeScriptMs": [
+      783.808,
+      542.535,
+      442.162,
+      479.456,
+      485.477,
+      430.489,
+      508.934,
+      412.201,
+      393.513,
+      448.79
+    ],
+    "afterScriptMs": [
+      844.483,
+      387.571,
+      432.367,
+      393.024,
+      383.391,
+      415.408,
+      422.812,
+      449.232,
+      400.327,
+      430.502
+    ],
+    "beforeInitialJs": {
+      "bytes": 1521833,
+      "gzipBytes": 468181
+    },
+    "afterInitialJs": {
+      "bytes": 1413926,
+      "gzipBytes": 445436
+    },
+    "note": "Same activity fixture and browser profile; alternating order with ten runs per condition. Before includes retained increments 1 and 2. First cold-script observations are retained in both cohorts. JS compression is local default gzip of Start's actual matched-route preload graph, not CDN transfer bytes.",
+    "interactionChecks": {
+      "sameInputNodeAcrossActivation": true,
+      "draftLengthRetained": 30,
+      "focusRetained": true,
+      "lazyDecorationAbsentBeforeActivation": true,
+      "lazyDecorationLoadsOnActivation": true,
+      "decorationIsAriaHidden": true,
+      "pointerEvents": "none",
+      "decorationMatchesContainerBounds": true,
+      "reducedMotionHasNoBorderDecoration": true,
+      "noHorizontalOverflow": true
+    }
   }
 }

@@ -200,7 +200,7 @@ import {
   agentNativeOperation,
   TerminalAuthoritySync,
   terminalAuthoritySyncLayer,
-  synchronizeTerminalAuthority,
+  type synchronizeTerminalAuthority,
   configurationInput,
 } from "../agents/adapters/synchronization"
 import {
