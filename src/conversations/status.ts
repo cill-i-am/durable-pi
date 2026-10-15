@@ -1,4 +1,5 @@
-import { Schema } from "effect"
+import { Effect, Schema } from "effect"
+import type { Conversations } from "./service"
 import type { ChatTurn } from "./contracts"
 import type { RecoveryView } from "./recovery"
 
@@ -42,4 +43,39 @@ export function runtimeStatus(facts: {
   if (turn?.status === "failed") return result("failed")
   if (facts.planBlocked) return result("blocked")
   return result("ready")
+}
+export function runtimeStatusEffect<TError, TRequirements>(
+  conversations: Pick<typeof Conversations.Service, "statusTurns">,
+  host: {
+    archived: () => Effect.Effect<boolean, TError, TRequirements>
+    awaitingApproval: (
+      id: string
+    ) => Effect.Effect<boolean, TError, TRequirements>
+    planBlocked: (
+      id: string
+    ) => Effect.Effect<boolean | undefined, TError, TRequirements>
+  }
+) {
+  return Effect.fn("Conversations.runtimeStatus")(function* () {
+    const before = yield* conversations.statusTurns()
+    const planBlocked =
+      !before.active && before.latest?.status === "done"
+        ? yield* host.planBlocked(before.latest.id)
+        : false
+    const facts = yield* conversations.statusTurns()
+    if (
+      before.latest?.id === facts.latest?.id &&
+      !facts.active &&
+      planBlocked === undefined
+    )
+      return { state: "unavailable" as const, turnId: facts.latest?.id ?? null }
+    return runtimeStatus({
+      ...facts,
+      archived: yield* host.archived(),
+      needsApproval:
+        !!facts.active && (yield* host.awaitingApproval(facts.active.id)),
+      planBlocked:
+        before.latest?.id === facts.latest?.id && planBlocked === true,
+    })
+  })
 }

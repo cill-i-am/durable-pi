@@ -1,6 +1,6 @@
 import { ownerSession } from "./owner-session"
 import { betterAuth, type BetterAuthOptions } from "better-auth"
-import { APIError, createAuthMiddleware } from "better-auth/api"
+import { APIError, createAuthMiddleware, isAPIError } from "better-auth/api"
 import { twoFactor } from "better-auth/plugins"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
 import { drizzle } from "drizzle-orm/d1"
@@ -55,7 +55,7 @@ export function authOptions(
             ctx.path === "/two-factor/disable") &&
           ctx.context.session &&
           ctx.context.newSession &&
-          !(ctx.context.returned instanceof APIError) &&
+          !isAPIError(ctx.context.returned) &&
           ctx.context.newSession.session.token !==
             ctx.context.session.session.token
         ) {

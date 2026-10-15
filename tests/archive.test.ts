@@ -8,10 +8,10 @@ import { webCryptoLayer } from "../src/memory/adapters/crypto"
 import type { Part } from "../src/memory/domain"
 import {
   archive as archiveStream,
-  exportResponse as exportEffect,
   restoreArchive as restoreEffect,
   parseArchive as parseEffect,
 } from "../src/memory/archive"
+import { exportResponse as exportEffect } from "../src/memory/adapters/http"
 import {
   backupMemory as backupEffect,
   readBackup as readBackupEffect,

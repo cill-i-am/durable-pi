@@ -16,7 +16,7 @@ const decodeMessage = Schema.decodeUnknownEffect(
   Schema.fromJsonString(ImportMessage)
 )
 
-export const importHistory = Effect.fn("Memory.import")(function* (
+export const prepareHistory = Effect.fn("Memory.prepareImport")(function* (
   jsonl: string
 ) {
   if (byteLength(jsonl) > 1_000_000)
@@ -34,6 +34,12 @@ export const importHistory = Effect.fn("Memory.import")(function* (
     )
   )
   const id = yield* sha256(JSON.stringify(records))
+  return { id, records }
+})
+export const importHistory = Effect.fn("Memory.import")(function* (
+  jsonl: string
+) {
+  const { id, records } = yield* prepareHistory(jsonl)
   const memory = yield* MemoryRepository
   return yield* memory.importEntries(id, records)
 })

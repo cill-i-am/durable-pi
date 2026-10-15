@@ -1,6 +1,11 @@
+import {
+  effectBrowserDriver,
+  browserWake,
+  type ForeignBrowserDriver,
+} from "../src/browser/adapters/interop"
 import { describe, expect, it, vi } from "vitest"
 import { Effect, Schema } from "effect"
-import { BrowserWorkspace, type BrowserDriver } from "../src/browser/browser"
+import { BrowserWorkspace } from "../src/browser/browser"
 import { BrowserStore } from "../src/browser/adapters/sqlite"
 import {
   BrowserPolicy,
@@ -11,7 +16,7 @@ import {
   type BrowserCapture,
   type BrowserSession,
 } from "../src/browser/contracts"
-import { browserRequest } from "../src/browser/http"
+import { browserRequest } from "../src/browser/adapters/http"
 import { database } from "./database"
 
 const capture: BrowserCapture = {
@@ -31,7 +36,7 @@ function fixture() {
     visits: string[] = []
   let writable = true,
     wakes = 0
-  const driver: BrowserDriver = {
+  const driver: ForeignBrowserDriver = {
     open: async () => ({
       id: crypto.randomUUID(),
       targetId: "target-synthetic",
@@ -49,11 +54,11 @@ function fixture() {
   }
   const browser = new BrowserWorkspace(
     repository,
-    driver,
+    effectBrowserDriver(driver),
     () => writable,
-    async () => {
+    browserWake(async () => {
       wakes++
-    }
+    })
   )
   return {
     db,
@@ -118,14 +123,16 @@ describe("per-bot browser authority and lifetime", () => {
     const id = a.repository.read().session!.id
     await run(a.browser.inspect(1))
     expect(a.repository.read().session!.id).toBe(id)
-    expect(a.browser.state()).toMatchObject({
+    expect(await run(a.browser.state())).toMatchObject({
       status: "ready",
       hasScreenshot: true,
       page: capture.page,
     })
-    expect(JSON.stringify(a.browser.state())).not.toContain(id)
-    expect(JSON.stringify(a.browser.state())).not.toContain(capture.screenshot)
-    expect(b.browser.state()).toMatchObject({
+    expect(JSON.stringify(await run(a.browser.state()))).not.toContain(id)
+    expect(JSON.stringify(await run(a.browser.state()))).not.toContain(
+      capture.screenshot
+    )
+    expect(await run(b.browser.state())).toMatchObject({
       policy: { generation: 0, hosts: [] },
       status: "closed",
     })
@@ -159,7 +166,10 @@ describe("per-bot browser authority and lifetime", () => {
     expect(f.repository.retired()).toEqual(["late-session"])
     await run(f.browser.cleanup())
     expect(f.closed).toEqual(["late-session"])
-    expect(f.browser.state()).toMatchObject({ status: "closed", page: null })
+    expect(await run(f.browser.state())).toMatchObject({
+      status: "closed",
+      page: null,
+    })
   })
   it("fences revocation during navigation and does not publish stale page content", async () => {
     const f = fixture()
@@ -171,7 +181,7 @@ describe("per-bot browser authority and lifetime", () => {
     await expect(
       run(f.browser.inspect(1, "https://example.com"))
     ).rejects.toThrow("changed")
-    expect(f.browser.state()).toMatchObject({
+    expect(await run(f.browser.state())).toMatchObject({
       status: "closed",
       page: null,
       hasScreenshot: false,
@@ -186,7 +196,9 @@ describe("per-bot browser authority and lifetime", () => {
     await run(f.browser.inspect(1, "https://example.com"))
     const session = f.repository.read().session!
     f.repository.update(1, { session: { ...session, expiresAt: 1 } })
-    expect(browserState(new BrowserStore(f.db).read()).status).toBe("expired")
+    expect(browserState(new BrowserStore(f.db).read(), Date.now()).status).toBe(
+      "expired"
+    )
     f.driver.close = async () => {
       throw new Error("private provider error")
     }
@@ -226,10 +238,10 @@ describe("per-bot browser authority and lifetime", () => {
       }
       await run(f.browser.inspect(1))
       expect(f.closed).toEqual([])
-      expect(f.browser.state().status).toBe("ready")
+      expect((await run(f.browser.state())).status).toBe("ready")
       expect(f.repository.read().session!.expiresAt).toBe(absolute)
       now = f.repository.read().session!.idleExpiresAt! + 1
-      expect(f.browser.state().status).toBe("expired")
+      expect((await run(f.browser.state())).status).toBe("expired")
       await run(f.browser.cleanup())
       expect(f.closed).toHaveLength(1)
     } finally {
@@ -333,13 +345,13 @@ describe("per-bot browser authority and lifetime", () => {
       "https://example.com/first",
       "https://example.com/second",
     ])
-    expect(f.browser.state().status).toBe("ready")
+    expect((await run(f.browser.state())).status).toBe("ready")
   })
   it("rejects screenshot requests for an older capture", async () => {
     const f = fixture()
     await run(f.browser.configure(policy))
     await run(f.browser.inspect(1, "https://example.com"))
-    const version = f.browser.state().version
+    const version = (await run(f.browser.state())).version
     const image = () =>
       run(
         browserRequest(
@@ -355,7 +367,7 @@ describe("per-bot browser authority and lifetime", () => {
     expect((await image()).status).toBe(409)
     f.archive()
     await run(f.browser.close(1))
-    expect(f.browser.state().status).toBe("closed")
+    expect((await run(f.browser.state())).status).toBe("closed")
   })
   it("hands control to the owner, fences bot work, and keeps input out of the persisted record", async () => {
     const f = fixture()
@@ -367,7 +379,7 @@ describe("per-bot browser authority and lifetime", () => {
     })
     await run(f.browser.control(1, "owner"))
     const sessionId = f.repository.read().session!.id
-    expect(f.browser.state().controller).toBe("owner")
+    expect((await run(f.browser.state())).controller).toBe("owner")
     await expect(run(f.browser.inspect(2))).rejects.toThrow(
       "owner has browser control"
     )
@@ -379,7 +391,7 @@ describe("per-bot browser authority and lifetime", () => {
     }
     const input = {
       generation: 2,
-      version: f.browser.state().version,
+      version: (await run(f.browser.state())).version,
       action: { kind: "type" as const, text: "synthetic-sensitive-input" },
     }
     await run(f.browser.interact(input, "owner"))
@@ -390,11 +402,15 @@ describe("per-bot browser authority and lifetime", () => {
     expect(JSON.stringify(f.repository.read())).not.toContain(input.action.text)
     await run(f.browser.control(2, "agent"))
     expect(f.repository.read().session!.id).toBe(sessionId)
-    expect(f.browser.state().controller).toBe("agent")
+    expect((await run(f.browser.state())).controller).toBe("agent")
     await expect(
       run(
         f.browser.interact(
-          { ...input, generation: 3, version: f.browser.state().version },
+          {
+            ...input,
+            generation: 3,
+            version: (await run(f.browser.state())).version,
+          },
           "owner"
         )
       )
@@ -426,11 +442,11 @@ describe("per-bot browser authority and lifetime", () => {
     await started
     const takeover = run(f.browser.control(1, "owner"))
     await Promise.resolve()
-    expect(f.browser.state().controller).toBe("owner")
-    expect(f.browser.state().page).toBeNull()
+    expect((await run(f.browser.state())).controller).toBe("owner")
+    expect((await run(f.browser.state())).page).toBeNull()
     finish()
     await Promise.all([navigation, takeover])
-    expect(f.browser.state().page?.title).toBe("After takeover")
+    expect((await run(f.browser.state())).page?.title).toBe("After takeover")
   })
   it("never repeats an interrupted or uncertain interaction", async () => {
     const f = fixture()
@@ -447,7 +463,7 @@ describe("per-bot browser authority and lifetime", () => {
     }
     const input = {
       generation: 1,
-      version: f.browser.state().version,
+      version: (await run(f.browser.state())).version,
       action: { kind: "click" as const, x: 1, y: 1 },
     }
     await expect(run(f.browser.interact(input, "agent"))).rejects.toThrow(
@@ -455,16 +471,16 @@ describe("per-bot browser authority and lifetime", () => {
     )
     const restored = new BrowserWorkspace(
       new BrowserStore(f.db),
-      f.driver,
+      effectBrowserDriver(f.driver),
       () => true,
-      async () => {}
+      browserWake(async () => {})
     )
-    restored.recover()
-    expect(restored.state().hasScreenshot).toBe(false)
+    await run(restored.recover())
+    expect((await run(restored.state())).hasScreenshot).toBe(false)
     await expect(
       run(
         restored.interact(
-          { ...input, version: restored.state().version },
+          { ...input, version: (await run(restored.state())).version },
           "agent"
         )
       )
@@ -501,7 +517,7 @@ describe("per-bot browser authority and lifetime", () => {
     )
     expect(response.status).toBe(409)
     expect(await response.text()).not.toContain("private provider error")
-    expect(f.browser.state().status).toBe("error")
+    expect((await run(f.browser.state())).status).toBe("error")
     const invalid = await run(
       browserRequest(
         f.browser,
@@ -517,7 +533,7 @@ describe("per-bot browser authority and lifetime", () => {
 })
 
 describe("unrestricted browser internet settings", () => {
-  it("migrates saved policies as restricted and isolates bots", () => {
+  it("migrates saved policies as restricted and isolates bots", async () => {
     const f = fixture()
     f.db.run(
       "INSERT INTO bot_browser VALUES (1,?)",
@@ -526,7 +542,9 @@ describe("unrestricted browser internet settings", () => {
     expect(new BrowserStore(f.db).read().unrestricted).toBe(false)
     f.repository.reset(0, [], true)
     expect(new BrowserStore(f.db).read().unrestricted).toBe(true)
-    expect(fixture().browser.state().policy.unrestricted).toBe(true)
+    expect((await run(fixture().browser.state())).policy.unrestricted).toBe(
+      true
+    )
   })
   it("allows public HTTP(S) destinations without widening URL scheme or credential access", () => {
     expect(allowedBrowserUrl("http://example.org:8080/path", [], true)).toBe(
@@ -561,7 +579,7 @@ describe("unrestricted browser internet settings", () => {
     expect(f.driver.open).toHaveBeenCalledWith(["example.com"], true)
     const session = f.repository.read().session!
     await run(f.browser.close(1))
-    expect(f.browser.state().policy.unrestricted).toBe(true)
+    expect((await run(f.browser.state())).policy.unrestricted).toBe(true)
     await run(
       f.browser.configure({
         generation: 2,
@@ -577,7 +595,7 @@ describe("unrestricted browser internet settings", () => {
     await expect(
       run(f.browser.configure({ generation: 2, hosts: [], unrestricted: true }))
     ).rejects.toThrow("changed")
-    expect(f.browser.state().policy.unrestricted).toBe(false)
+    expect((await run(f.browser.state())).policy.unrestricted).toBe(false)
   })
   it("discards in-flight unrestricted output after policy revocation", async () => {
     const f = fixture()
@@ -602,7 +620,7 @@ describe("unrestricted browser internet settings", () => {
     )
     finish(capture)
     await expect(pending).rejects.toThrow("changed")
-    expect(f.browser.state()).toMatchObject({
+    expect(await run(f.browser.state())).toMatchObject({
       policy: { unrestricted: false },
       page: null,
       status: "closed",

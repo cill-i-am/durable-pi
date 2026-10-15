@@ -30,7 +30,7 @@ export const WorkspaceAssets = Cloudflare.R2.Bucket("WorkspaceAssets", {
   publicAccess: false,
 })
 export const DocumentWorker = Cloudflare.Worker("DocumentWorker", {
-  main: "./src/workspace/document-worker.ts",
+  main: "./src/workspace/adapters/document-worker.ts",
   dev: { port: 1339, strictPort: true },
   workersDev: { enabled: false, previewsEnabled: false },
   compatibility: { date: "2026-09-25", flags: ["nodejs_compat"] },

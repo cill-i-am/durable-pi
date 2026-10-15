@@ -1,6 +1,13 @@
+import { SqlitePilot } from "./sqlite-worker"
+import { agentProxy } from "../../src/auth/adapters/agent-proxy"
+import { agentGateway } from "../../src/agent/adapters/gateway"
 import { runObserved } from "../../src/observability/worker"
 import { BrowserRecoveryBot } from "./browser-worker"
 import { LoopBot } from "./loop-worker"
+import { executionWorkerRequest } from "../../src/execution/worker"
+import { PersonalAgentProbe } from "./personal-agent-worker"
+import { BackgroundGroupProbe } from "./background-worker"
+import { TerminalProbe } from "./terminal-worker"
 import { PiHarness } from "agents/harness/pi"
 import { Harness, createRegistry } from "@earendil-works/pi-durable"
 import {
@@ -30,9 +37,21 @@ import { Envelope, Identity, failure } from "../../src/communication/contracts"
 import { agentObjectName } from "../../src/agents/domain"
 import type { Sqlite } from "../../src/storage/sqlite"
 
-export { LoopBot, BrowserRecoveryBot }
+export {
+  LoopBot,
+  BrowserRecoveryBot,
+  PersonalAgentProbe,
+  BackgroundGroupProbe,
+  TerminalProbe,
+  SqlitePilot,
+}
 
 interface Env {
+  SQL_PILOT: DurableObjectNamespace<SqlitePilot>
+  LOADER: WorkerLoader
+  PERSONAL: DurableObjectNamespace<PersonalAgentProbe>
+  BACKGROUND: DurableObjectNamespace<BackgroundGroupProbe>
+  TERMINALS: DurableObjectNamespace<TerminalProbe>
   BROWSERS: DurableObjectNamespace<BrowserRecoveryBot>
   LOOPS: DurableObjectNamespace<LoopBot>
   BOTS: DurableObjectNamespace<MailboxBot>
@@ -254,10 +273,15 @@ export class MailboxBot extends DurableObject<Env> {
     for (const pending of await Effect.runPromise(this.mailbox.pending())) {
       if (pending.direction === "outgoing" && pending.outcome)
         await Effect.runPromise(
-          this.mailbox.resume(pending.id, () => {
-            this.db.run(
-              "INSERT INTO fixture_events(value) VALUES ('continuation')"
-            )
+          this.mailbox.resume(pending.id, {
+            transactionGroup: this.db,
+            operationId: `fixture:${pending.id}`,
+            admit: () => {
+              this.db.run(
+                "INSERT INTO fixture_events(value) VALUES ('continuation')"
+              )
+              return { kind: "admitted", turnId: `fixture:${pending.id}` }
+            },
           })
         )
     }
@@ -302,13 +326,88 @@ export class MailboxBot extends DurableObject<Env> {
     return response
   }
 }
+let websiteSessionValid = true
+let websiteSessionReads = 0
 export default {
-  async fetch(request: Request, env: Env) {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext) {
     const url = new URL(request.url)
+    if (url.pathname.startsWith("/sql-pilot/"))
+      return env.SQL_PILOT.getByName(url.pathname.split("/")[2]!).fetch(request)
+    if (url.pathname === "/website-session") {
+      if (request.method === "POST") websiteSessionValid = false
+      return Response.json({
+        valid: websiteSessionValid,
+        reads: websiteSessionReads,
+      })
+    }
+    if (url.pathname === "/website-probe")
+      return env.PERSONAL.getByName("gateway-owner").fetch(
+        new Request("https://probe/inspect")
+      )
+    if (url.pathname.startsWith("/website/")) {
+      const headers = new Headers(request.headers)
+      headers.set("origin", "https://website.example")
+      return agentProxy(
+        new Request(
+          new Request(
+            `https://website.example/api/agent/${url.pathname.slice(9)}${url.search}`,
+            request
+          ),
+          { headers }
+        ),
+        {
+          appUrl: "https://website.example",
+          owner: Effect.sync(() => {
+            websiteSessionReads++
+            return websiteSessionValid ? { id: "gateway-owner" } : null
+          }),
+          forward: (forwarded) =>
+            agentGateway(forwarded, { AGENT: env.PERSONAL }, ctx),
+          own: (pending) => ctx.waitUntil(pending),
+        }
+      )
+    }
+    if (url.pathname.startsWith("/gateway/")) {
+      const headers = new Headers(request.headers)
+      headers.set("x-owner-id", "gateway-owner")
+      return agentGateway(
+        new Request(
+          `https://agent.internal/api/agent/${url.pathname.slice(9)}${url.search}`,
+          {
+            method: request.method,
+            headers,
+            signal: request.signal,
+            body: request.method === "GET" ? undefined : request.body,
+          }
+        ),
+        { AGENT: env.PERSONAL },
+        ctx
+      )
+    }
+    if (url.pathname.startsWith("/native-terminal/"))
+      return env.TERMINALS.getByName("native-terminal-direct").fetch(
+        new Request(
+          `https://terminal.internal/${url.pathname.slice(17)}`,
+          request
+        )
+      )
+    if (url.pathname === "/native-execution")
+      return executionWorkerRequest(
+        new Request("https://execution.internal/run", request),
+        env.LOADER
+      )
     if (url.pathname.startsWith("/browser/"))
       return env.BROWSERS.getByName(url.pathname).fetch(request)
     if (url.pathname.startsWith("/loops/"))
       return env.LOOPS.getByName("loop-test").fetch(request)
+    if (url.pathname.startsWith("/personal-credential/"))
+      return env.PERSONAL.getByName("personal-credential-owner").fetch(request)
+    if (url.pathname.startsWith("/personal-code/"))
+      return env.PERSONAL.getByName("personal-code-owner").fetch(request)
+    if (url.pathname.startsWith("/personal-terminal/"))
+      return env.PERSONAL.getByName("personal-terminal-owner").fetch(request)
+    if (url.pathname.startsWith("/personal/"))
+      return env.PERSONAL.getByName("personal-owner").fetch(request)
     if (url.pathname === "/health") return new Response("local fixture")
     if (url.pathname === "/telemetry")
       return runObserved(
@@ -369,3 +468,5 @@ export default {
     return new Response("Not found", { status: 404 })
   },
 }
+
+export { LegacyAgentProbe } from "./legacy-agent-worker"

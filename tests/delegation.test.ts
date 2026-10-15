@@ -6,7 +6,7 @@ import { MemoryStorage } from "@earendil-works/pi-durable/storage/memory"
 import { createModels } from "@earendil-works/pi-ai"
 import { sharedReference, validateBrief } from "../src/delegation/delegation"
 import { piDelegations } from "../src/delegation/adapters/pi"
-import { delegationsRequest } from "../src/delegation/http"
+import { delegationsRequest } from "../src/delegation/adapters/http"
 import {
   acknowledgeControl,
   confirmedRejection,

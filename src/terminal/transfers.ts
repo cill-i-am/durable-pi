@@ -42,27 +42,21 @@ export const TransferPlan = Schema.Union([
   }),
 ])
 export type TransferPlan = typeof TransferPlan.Type
-export async function fileDigest(bytes: Uint8Array) {
-  return Array.from(
-    new Uint8Array(await crypto.subtle.digest("SHA-256", bytes.slice().buffer))
-  )
-    .map((value) => value.toString(16).padStart(2, "0"))
-    .join("")
-}
-export async function importPlan(
+export function planImport(
   input: typeof ImportFile.Type,
-  bytes: Uint8Array
-): Promise<TransferPlan> {
+  size: number,
+  sha256: string
+): TransferPlan {
   Schema.decodeUnknownSync(ImportFile)(input)
-  if (!bytes.length || bytes.length > MAX_TRANSFER_BYTES)
+  if (!Number.isSafeInteger(size) || size <= 0 || size > MAX_TRANSFER_BYTES)
     throw new Error("Choose a non-empty file up to 8 MB.")
-  return {
+  return Schema.decodeUnknownSync(TransferPlan)({
     kind: "import",
     fileId: input.fileId,
     name: input.name,
     path: `/workspace/imports/${input.id}/${input.name}`,
-    sha256: await fileDigest(bytes),
-  }
+    sha256,
+  })
 }
 export function exportPlan(input: typeof ExportFile.Type): TransferPlan {
   Schema.decodeUnknownSync(ExportFile)(input)

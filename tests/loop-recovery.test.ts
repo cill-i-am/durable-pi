@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest"
 import {
   initialRecovery,
   observeRound,
-  recoveryFingerprint,
   type Observation,
 } from "../src/conversations/recovery"
+import { recoveryFingerprint } from "../src/conversations/adapters/crypto"
 import { RunRecoveryStore } from "../src/conversations/adapters/sqlite-recovery"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import { database } from "./database"

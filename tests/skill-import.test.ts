@@ -2,11 +2,11 @@ import { describe, expect, it, vi } from "vitest"
 import { Effect, Schema } from "effect"
 import type { ToolExecutionResult } from "@earendil-works/pi-durable"
 import type { MCPClientManager } from "agents/mcp/client"
-import { importSkillsRequest } from "../src/skills/import"
+import { importSkillsRequest } from "../src/skills/adapters/hosted"
 import { type HostedSkill, hostedSkillQuery } from "../src/skills/source"
 import { SaveSkill, SkillDocument, skillContext } from "../src/skills/contracts"
 import { SkillStore } from "../src/skills/adapters/sqlite"
-import { RemoteConnections } from "../src/access/adapters/mcp"
+import { connectionFixture } from "./connection-fixture"
 import { ConnectionStore } from "../src/access/adapters/connections"
 import { database } from "./database"
 
@@ -59,12 +59,13 @@ function fixture() {
     waitForConnections: async () => {},
     callTool: call,
   }
-  const provider = new RemoteConnections(
+  const provider = connectionFixture(
     store,
     manager as unknown as MCPClientManager
-  )
+  ).service
   async function request(path: "list" | "read", input?: unknown) {
-    const toolName = (await provider.list())[0]!.tools[0]!.name
+    const toolName = (await Effect.runPromise(provider.list()))[0]!.tools[0]!
+      .name
     return Effect.runPromise(
       importSkillsRequest(
         provider,
@@ -156,12 +157,14 @@ describe("hosted skill import", () => {
     expect(
       (
         await f.request("list", {
-          toolName: (await f.provider.list())[0]!.tools[0]!.name,
+          toolName: (await Effect.runPromise(f.provider.list()))[0]!.tools[0]!
+            .name,
           app: "different-app",
         })
       ).status
     ).toBe(409)
-    const oldName = (await f.provider.list())[0]!.tools[0]!.name
+    const oldName = (await Effect.runPromise(f.provider.list()))[0]!.tools[0]!
+      .name
     f.store.change(f.connection.id, 1, true)
     f.call.mockClear()
     expect((await f.request("read", { toolName: oldName, skill })).status).toBe(
@@ -212,9 +215,10 @@ describe("hosted skill import", () => {
     ] satisfies ToolExecutionResult[]) {
       const provider = {
         resolve: f.provider.resolve.bind(f.provider),
-        call: async () => result,
+        call: () => Effect.succeed(result),
       }
-      const toolName = (await f.provider.list())[0]!.tools[0]!.name
+      const toolName = (await Effect.runPromise(f.provider.list()))[0]!
+        .tools[0]!.name
       const response = await Effect.runPromise(
         importSkillsRequest(
           provider,

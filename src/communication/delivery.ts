@@ -1,3 +1,4 @@
+import { preserveFatal, observeCleanup } from "../shared/effect"
 import { Clock, Effect, Random } from "effect"
 import { Mailbox, MailboxTransport } from "./mailbox"
 import { failure, type Envelope, type CommunicationError } from "./contracts"
@@ -20,10 +21,15 @@ export const deliverNext = Effect.fn("communication.deliver")(function* () {
   const d = yield* mailbox.claimDelivery(yield* Clock.currentTimeMillis)
   if (!d) return false
   const result = yield* transport.deliver(d.envelope).pipe(
-    Effect.timeout("10 seconds"),
+    (timed) =>
+      observeCleanup(timed, (observed) =>
+        observed.pipe(Effect.timeout("10 seconds"))
+      ),
+    preserveFatal,
     Effect.catchTag("TimeoutError", () =>
       Effect.fail(failure("transport", "Delivery acknowledgement timed out."))
     ),
+    preserveFatal,
     Effect.result
   )
   if (result._tag === "Success") {

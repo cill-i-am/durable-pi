@@ -1,6 +1,7 @@
+import documentWorker from "../src/workspace/adapters/document-worker"
 import { describe, expect, it, vi } from "vitest"
 import { getResolvedPDFJS } from "unpdf"
-import { Effect, ManagedRuntime } from "effect"
+import { Cause, Effect, Exit, ManagedRuntime } from "effect"
 import {
   extractPdf,
   PDF_PAGE_LIMIT,
@@ -104,6 +105,108 @@ describe("PDF extraction", () => {
       expect(destroy).toHaveBeenCalledOnce()
       const task = destroy.mock.contexts[0] as typeof probe
       expect(task.destroyed).toBe(true)
+    } finally {
+      destroy.mockRestore()
+    }
+  })
+  it("joins real parser reader cancellation and loading destruction before interruption completes", async () => {
+    const api = await getResolvedPDFJS()
+    const probe = api.getDocument({ data: pdfFixture(["probe"]), verbosity: 0 })
+    const pdf = await probe.promise,
+      page = await pdf.getPage(1)
+    const loadingPrototype: typeof probe = Object.getPrototypeOf(probe)
+    const pagePrototype: typeof page = Object.getPrototypeOf(page)
+    await probe.destroy()
+    let reading!: () => void,
+      cleaning!: () => void,
+      releaseReader!: () => void,
+      destroying!: () => void,
+      releaseDestroy!: () => void
+    const entered = new Promise<void>((done) => {
+      reading = done
+    })
+    const cancelled = new Promise<void>((done) => {
+      cleaning = done
+    })
+    const readerGate = new Promise<void>((done) => {
+      releaseReader = done
+    })
+    const destroyEntered = new Promise<void>((done) => {
+      destroying = done
+    })
+    const destroyGate = new Promise<void>((done) => {
+      releaseDestroy = done
+    })
+    const stream: ReturnType<typeof page.streamTextContent> =
+      new ReadableStream(
+        {
+          pull() {
+            reading()
+            return new Promise<void>(() => {})
+          },
+          async cancel() {
+            cleaning()
+            await readerGate
+          },
+        },
+        { highWaterMark: 0 }
+      )
+    const nativeDestroy = loadingPrototype.destroy
+    const destroy = vi
+      .spyOn(loadingPrototype, "destroy")
+      .mockImplementation(async function (this: typeof probe) {
+        destroying()
+        await destroyGate
+        await nativeDestroy.call(this)
+      })
+    const content = vi
+      .spyOn(pagePrototype, "streamTextContent")
+      .mockReturnValue(stream)
+    const abort = new AbortController()
+    let finished = false
+    try {
+      const work = Effect.runPromiseExit(extractPdf(pdfFixture(["held"])), {
+        signal: abort.signal,
+      }).then((exit) => {
+        finished = true
+        return exit
+      })
+      await entered
+      abort.abort()
+      await Promise.all([cancelled, destroyEntered])
+      expect(finished).toBe(false)
+      releaseReader()
+      await Promise.resolve()
+      expect(finished).toBe(false)
+      releaseDestroy()
+      const exit = await work
+      expect(Exit.isFailure(exit) && Cause.hasInterrupts(exit.cause)).toBe(true)
+      expect(stream.locked).toBe(false)
+      expect(destroy).toHaveBeenCalledOnce()
+    } finally {
+      releaseReader()
+      releaseDestroy()
+      content.mockRestore()
+      destroy.mockRestore()
+    }
+  })
+  it("keeps real PDF.js cleanup failures as defects", async () => {
+    const api = await getResolvedPDFJS()
+    const probe = api.getDocument({ data: pdfFixture(["probe"]), verbosity: 0 })
+    await probe.promise
+    const prototype: typeof probe = Object.getPrototypeOf(probe)
+    await probe.destroy()
+    const original = prototype.destroy
+    const destroy = vi
+      .spyOn(prototype, "destroy")
+      .mockImplementation(async function (this: typeof probe) {
+        await original.call(this)
+        throw new TypeError("Private parser cleanup failure")
+      })
+    try {
+      const exit = await Effect.runPromiseExit(extractPdf(pdfFixture(["text"])))
+      expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)
+      expect(destroy).toHaveBeenCalledOnce()
     } finally {
       destroy.mockRestore()
     }
@@ -241,4 +344,32 @@ describe("PDF extraction", () => {
     })
     await f.close()
   })
+})
+
+it("parser worker preserves invalid-document plus real PDF.js destruction failure instead of returning 422", async () => {
+  const api = await getResolvedPDFJS(),
+    probe = api.getDocument({ data: pdfFixture(["probe"]), verbosity: 0 })
+  await probe.promise
+  const prototype: typeof probe = Object.getPrototypeOf(probe)
+  await probe.destroy()
+  const destroy = prototype.destroy
+  const close = vi
+    .spyOn(prototype, "destroy")
+    .mockImplementation(async function (this: typeof probe) {
+      await destroy.call(this)
+      throw new Error("Private parser cleanup failure")
+    })
+  try {
+    await expect(
+      documentWorker.fetch(
+        new Request("https://documents/pdf", {
+          method: "POST",
+          body: new TextEncoder().encode("%PDF-invalid"),
+        })
+      )
+    ).rejects.toThrow()
+    expect(close).toHaveBeenCalledOnce()
+  } finally {
+    close.mockRestore()
+  }
 })

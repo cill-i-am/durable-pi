@@ -35,10 +35,16 @@ describe("durable tool authorization", () => {
       gate = new AccessGate(store, () => true)
     let calls = 0
     const run = Effect.runPromise(
-      gate.run(intent, async () => {
-        calls++
-        return { content: [{ type: "text", text: "done" }] }
-      })
+      gate.run(
+        intent,
+        Effect.tryPromise({
+          try: async () => {
+            calls++
+            return { content: [{ type: "text", text: "done" }] }
+          },
+          catch: (cause) => cause,
+        })
+      )
     )
     expect(calls).toBe(0)
     expect(store.pending()[0]?.status).toBe("pending")
@@ -48,10 +54,16 @@ describe("durable tool authorization", () => {
     expect(calls).toBe(1)
     expect(
       await Effect.runPromise(
-        gate.run(intent, async () => {
-          calls++
-          return null
-        })
+        gate.run(
+          intent,
+          Effect.tryPromise({
+            try: async () => {
+              calls++
+              return null
+            },
+            catch: (cause) => cause,
+          })
+        )
       )
     ).toEqual(result)
     expect(calls).toBe(1)
@@ -110,7 +122,13 @@ describe("durable tool authorization", () => {
       controller = new AbortController()
     const first = new AccessGate(store, () => true)
     const interrupted = Effect.runPromise(
-      first.run(intent, async () => "must not run"),
+      first.run(
+        intent,
+        Effect.tryPromise({
+          try: async () => "must not run",
+          catch: (cause) => cause,
+        })
+      ),
       { signal: controller.signal }
     )
     controller.abort()
@@ -119,7 +137,15 @@ describe("durable tool authorization", () => {
     store.decide(intent.id, true, store.get(intent.id)!.revision)
     const restarted = new AccessGate(store, () => true)
     expect(
-      await Effect.runPromise(restarted.run(intent, async () => "resumed"))
+      await Effect.runPromise(
+        restarted.run(
+          intent,
+          Effect.tryPromise({
+            try: async () => "resumed",
+            catch: (cause) => cause,
+          })
+        )
+      )
     ).toBe("resumed")
   })
   it("expires approvals and prevents approval after stop", () => {

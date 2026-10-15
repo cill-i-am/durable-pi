@@ -2,8 +2,9 @@ import { describe, expect, it } from "vitest"
 import { Effect } from "effect"
 import { database } from "./database"
 import { AccessStore } from "../src/access/adapters/sqlite"
+import { AccessStorageError } from "../src/access/contracts"
 import { AccessGate } from "../src/access/gate"
-import { accessRequest } from "../src/access/http"
+import { accessRequest } from "../src/access/adapters/http"
 
 const catalog = () => [
   { name: "record", description: "Synthetic effect", mode: "ask" as const },
@@ -47,12 +48,29 @@ describe("persistent approval through the existing access owner", () => {
     let effects = 0
     const gate = new AccessGate(store, () => true)
     const work = async () => ++effects
-    expect(await Effect.runPromise(gate.run(first, work))).toBe(1)
-    expect(store.decide(first.id, true, 0, remember).status).toBe("done")
-    expect(await Effect.runPromise(gate.run(first, work))).toBe(1)
     expect(
       await Effect.runPromise(
-        gate.run({ ...intent(), input: '{"next":true}' }, work)
+        gate.run(
+          first,
+          Effect.tryPromise({ try: work, catch: (cause) => cause })
+        )
+      )
+    ).toBe(1)
+    expect(store.decide(first.id, true, 0, remember).status).toBe("done")
+    expect(
+      await Effect.runPromise(
+        gate.run(
+          first,
+          Effect.tryPromise({ try: work, catch: (cause) => cause })
+        )
+      )
+    ).toBe(1)
+    expect(
+      await Effect.runPromise(
+        gate.run(
+          { ...intent(), input: '{"next":true}' },
+          Effect.tryPromise({ try: work, catch: (cause) => cause })
+        )
       )
     ).toBe(2)
     expect(effects).toBe(2)
@@ -150,7 +168,7 @@ describe("persistent approval through the existing access owner", () => {
     const op = intent()
     store.begin(op)
     expect(() => store.decide(op.id, true, 0, remember)).toThrow(
-      "write failure"
+      AccessStorageError
     )
     expect(store.policy("record")).toMatchObject({ mode: "ask", revision: 0 })
     expect(store.get(op.id)).toMatchObject({
@@ -180,7 +198,15 @@ describe("persistent approval through the existing access owner", () => {
     const gate = new AccessGate(store, () => false)
     let effects = 0
     await expect(
-      Effect.runPromise(gate.run(first, async () => ++effects))
+      Effect.runPromise(
+        gate.run(
+          first,
+          Effect.tryPromise({
+            try: async () => ++effects,
+            catch: (cause) => cause,
+          })
+        )
+      )
     ).rejects.toThrow("stopped")
     expect(effects).toBe(0)
   })

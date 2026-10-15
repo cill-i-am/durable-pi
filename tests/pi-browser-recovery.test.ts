@@ -1,3 +1,8 @@
+import {
+  effectBrowserDriver,
+  browserWake,
+  type ForeignBrowserDriver,
+} from "../src/browser/adapters/interop"
 import { expect, it } from "vitest"
 import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
@@ -18,7 +23,7 @@ import {
   fauxAssistantMessage,
   fauxToolCall,
 } from "@earendil-works/pi-ai"
-import { BrowserWorkspace, type BrowserDriver } from "../src/browser/browser"
+import { BrowserWorkspace } from "../src/browser/browser"
 import { BrowserStore } from "../src/browser/adapters/sqlite"
 import { browserToolResult } from "../src/browser/adapters/pi"
 import { BrowserFailure } from "../src/browser/contracts"
@@ -44,7 +49,7 @@ it.each(["restricted", "launch", "read", "failed", "uncertain"] as const)(
     const browserStore = new BrowserStore(db)
     let opens = 0,
       navigations = 0
-    const driver: BrowserDriver = {
+    const driver: ForeignBrowserDriver = {
       open: async () => {
         opens++
         if (scenario === "launch") throw new Error("Synthetic launch failure")
@@ -73,9 +78,9 @@ it.each(["restricted", "launch", "read", "failed", "uncertain"] as const)(
     }
     let browser = new BrowserWorkspace(
       browserStore,
-      driver,
+      effectBrowserDriver(driver),
       () => true,
-      async () => {}
+      browserWake(async () => {})
     )
     if (scenario === "restricted")
       await Effect.runPromise(
@@ -135,7 +140,7 @@ it.each(["restricted", "launch", "read", "failed", "uncertain"] as const)(
               access,
               () => recovery.get("browser-run")?.view?.phase !== "blocked"
             ),
-            () => "browser-run"
+            () => Effect.succeed("browser-run")
           )(
             defineTool({
               name: "browser_open",
@@ -146,7 +151,8 @@ it.each(["restricted", "launch", "read", "failed", "uncertain"] as const)(
                 Effect.runPromise(
                   browserToolResult(
                     browser.inspect(
-                      browser.state().policy.generation,
+                      (await Effect.runPromise(browser.state())).policy
+                        .generation,
                       scenario === "read" ? undefined : url
                     )
                   )
@@ -223,11 +229,11 @@ it.each(["restricted", "launch", "read", "failed", "uncertain"] as const)(
       recovery = new RunRecoveryStore(db)
       browser = new BrowserWorkspace(
         new BrowserStore(db),
-        driver,
+        effectBrowserDriver(driver),
         () => true,
-        async () => {}
+        browserWake(async () => {})
       )
-      browser.recover()
+      await Effect.runPromise(browser.recover())
       storage = await openNodeSqliteStorage(path)
       harness = await Harness.open(storage, options(storage), ctx)
       conversation = (await harness.conversation(conversation.id, ctx))!
@@ -242,9 +248,7 @@ it.each(["restricted", "launch", "read", "failed", "uncertain"] as const)(
               tool: "browser_open",
               input: JSON.stringify({ url: "https://example.com" }),
             },
-            async () => {
-              throw new Error("Must not dispatch on replay")
-            }
+            Effect.die(new Error("Must not dispatch on replay"))
           )
         )
         expect(replay).toEqual(JSON.parse(receipts[0]!.result!))

@@ -21,9 +21,9 @@ import {
   objectTools,
   objectContextHook,
   recoverableObjectTools,
-} from "../src/objects/tools"
+} from "../src/objects/adapters/tools"
 import { toolReceipt } from "../src/access/adapters/receipt"
-import { objectsRequest } from "../src/objects/http"
+import { objectsRequest } from "../src/objects/adapters/http"
 import type {
   ObjectFailure,
   ObjectMutation,
@@ -390,7 +390,7 @@ it("runs typed native tools, uses the same UI operations, sees live user edits n
           () => true,
           () => {}
         ),
-        () => turnId
+        () => Effect.succeed(turnId)
       )
     ),
     hooks: [objectContextHook(objects)],
@@ -666,7 +666,7 @@ it.each([
       const registry = createRegistry(),
         protect = guardedTools(
           new AccessGate(access, () => active),
-          () => turnId,
+          () => Effect.succeed(turnId),
           recoverableObjectTools
         )
       registry.install({

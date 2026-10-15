@@ -17,6 +17,12 @@ export const NewConnection = Schema.Struct({
   url: Schema.String.check(Schema.isMaxLength(2000)),
 })
 export type NewConnection = typeof NewConnection.Type
+export const SavedConnection = Schema.Struct({
+  ...NewConnection.fields,
+  revision: Revision,
+  active: Schema.Boolean,
+})
+export type SavedConnection = typeof SavedConnection.Type
 export const ChangeConnection = Schema.Struct({
   id: ConnectionId,
   expectedRevision: Revision,
@@ -31,6 +37,7 @@ export const RemoteTool = Schema.Struct({
   parameters: Schema.Record(Schema.String, Schema.Unknown),
 })
 export type RemoteTool = typeof RemoteTool.Type
+export const RemoteToolArguments = Schema.Record(Schema.String, Schema.Unknown)
 export const ConnectionInfo = Schema.Struct({
   ...NewConnection.fields,
   revision: Revision,
@@ -64,9 +71,56 @@ export class ConnectionError extends Schema.TaggedError<ConnectionError>()(
   "ConnectionError",
   { message: Schema.String }
 ) {}
+export class ConnectionStorageError extends Schema.TaggedError<ConnectionStorageError>()(
+  "ConnectionStorageError",
+  {
+    operation: Schema.String,
+    cause: Schema.Unknown,
+  }
+) {}
+export class ConnectionTransportError extends Schema.TaggedError<ConnectionTransportError>()(
+  "ConnectionTransportError",
+  {
+    operation: Schema.String,
+    cause: Schema.Unknown,
+  }
+) {}
+export const RemoteToolResult = Schema.Struct({
+  content: Schema.Array(
+    Schema.Union([
+      Schema.Struct({ type: Schema.Literal("text"), text: Schema.String }),
+      Schema.Struct({
+        type: Schema.Literal("image"),
+        data: Schema.String,
+        mimeType: Schema.String,
+      }),
+    ])
+  ),
+  isError: Schema.optional(Schema.Boolean),
+  diagnostics: Schema.optional(
+    Schema.Array(
+      Schema.Struct({
+        severity: Schema.Literals(["info", "warn", "error"]),
+        code: Schema.optional(Schema.String),
+        message: Schema.String,
+      })
+    )
+  ),
+})
+export type RemoteToolResult = typeof RemoteToolResult.Type
 
 export function connectionUrl(value: string) {
-  const url = new URL(value)
+  const invalid = () =>
+    new ConnectionError({
+      message:
+        "Use a public HTTPS MCP endpoint without a query, credentials, or custom port.",
+    })
+  let url: URL
+  try {
+    url = new URL(value)
+  } catch {
+    throw invalid()
+  }
   if (
     url.protocol !== "https:" ||
     url.username ||
@@ -77,21 +131,18 @@ export function connectionUrl(value: string) {
     !/^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?\.[a-z]{2,}$/i.test(url.hostname) ||
     /(^|\.)(localhost|local|internal|test|invalid|example)$/.test(url.hostname)
   )
-    throw new ConnectionError({
-      message:
-        "Use a public HTTPS MCP endpoint without a query, credentials, or custom port.",
-    })
+    throw invalid()
   return url.href
 }
 
-export async function remoteTool(
+export function prepareRemoteTool(
   connection: NewConnection & { revision: number },
   tool: {
     name: string
     description?: string
     inputSchema: Record<string, unknown>
   }
-): Promise<RemoteTool> {
+) {
   const parameters = tool.inputSchema
   if (
     !tool.name ||
@@ -110,14 +161,7 @@ export async function remoteTool(
     description,
     parameters,
   ])
-  const hash = Array.from(
-    new Uint8Array(
-      await crypto.subtle.digest("SHA-256", new TextEncoder().encode(identity))
-    ),
-    (byte) => byte.toString(16).padStart(2, "0")
-  ).join("")
-  return {
-    name: `mcp_${hash.slice(0, 40)}`,
+  const reference: Omit<RemoteTool, "name"> = {
     connectionId: connection.id,
     connectionRevision: connection.revision,
     connectionName: connection.name,
@@ -125,4 +169,16 @@ export async function remoteTool(
     description,
     parameters,
   }
+  return { identity, reference }
+}
+export function identifyRemoteTool(
+  reference: Omit<RemoteTool, "name">,
+  digest: Uint8Array
+): RemoteTool {
+  if (digest.length !== 32)
+    throw new RangeError("Remote tool identity requires a SHA-256 digest")
+  const hash = Array.from(digest, (byte) =>
+    byte.toString(16).padStart(2, "0")
+  ).join("")
+  return { name: `mcp_${hash.slice(0, 40)}`, ...reference }
 }

@@ -16,9 +16,10 @@ import {
   fauxAssistantMessage,
 } from "@earendil-works/pi-ai"
 import {
-  piBackgroundGroup,
+  piBackgroundLedger,
   readBackgroundHandoff,
 } from "../src/delegation/adapters/background-pi"
+import { makeBackgroundTasks } from "../src/delegation/background-tasks"
 import { resolveRoute } from "../src/inference/policy"
 import { agentSettings } from "../src/agent/compaction"
 import type { BackgroundHandoff } from "../src/delegation/background"
@@ -72,9 +73,8 @@ it.each(["finish", "restart", "stop", "steer", "deadline"])(
       createdAt: clock,
       deadline: clock + 600000,
     }
-    const service = piBackgroundGroup(
-      () => Promise.resolve(h),
-      {
+    const service = makeBackgroundTasks(
+      piBackgroundLedger(() => Promise.resolve(h), {
         submit: async (id, text, operationId, steer) =>
           (await h.conversation(id as ConversationId, ctx))!.submit(
             {
@@ -87,8 +87,9 @@ it.each(["finish", "restart", "stop", "steer", "deadline"])(
           ),
         abort: async (id) =>
           (await h.conversation(id as ConversationId, ctx))!.abort(ctx),
-      },
-      () => clock
+      }),
+      { authorized: () => Effect.succeed(true) },
+      Effect.sync(() => clock)
     )
     const models = createModels(),
       faux = fauxProvider({

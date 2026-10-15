@@ -1,24 +1,23 @@
 import { Effect, Layer, Schema } from "effect"
 import type { Sqlite } from "../../storage/sqlite"
 import { Mailbox } from "../mailbox"
+import * as Domain from "../domain"
+import {
+  ConversationConflict,
+  ConversationFull,
+  ConversationStorageError,
+} from "../../conversations/turns"
 import {
   CommunicationError,
   Delivery,
   Envelope,
   Identity,
-  Outcome,
+  type Outcome,
   Receipt,
   Task,
   canonicalEnvelope,
   failure,
   isRequest,
-  terminal,
-  LEASE_MS,
-  MAX_ATTEMPTS,
-  MAX_OPEN_TASKS,
-  MAX_RECORDS,
-  MAX_TASK_MS,
-  RESULT_WINDOW_MS,
 } from "../contracts"
 
 const DeliveryJson = Schema.fromJsonString(Delivery)
@@ -27,17 +26,61 @@ const ReceiptJson = Schema.fromJsonString(Receipt)
 const EnvelopeJson = Schema.fromJsonString(Envelope)
 const IdentityJson = Schema.fromJsonString(Identity)
 
-export function sqliteMailbox(db: Sqlite) {
+export function sqliteMailbox(nativeDb: Sqlite) {
+  const storage = <T>(body: () => T): T => {
+    try {
+      return body()
+    } catch {
+      throw failure(
+        "storage",
+        "Mailbox state could not be confirmed. Retry the same operation."
+      )
+    }
+  }
+  const db: Sqlite = {
+    all: (query, ...bindings) =>
+      storage(() => nativeDb.all(query, ...bindings)),
+    run: (query, ...bindings) =>
+      storage(() => nativeDb.run(query, ...bindings)),
+    transaction: (body) => {
+      const callback: { failed: boolean; cause?: unknown } = { failed: false }
+      try {
+        return nativeDb.transaction(() => {
+          try {
+            return body()
+          } catch (cause) {
+            callback.failed = true
+            callback.cause = cause
+            throw cause
+          }
+        })
+      } catch (cause) {
+        if (callback.failed && cause === callback.cause) throw cause
+        throw failure(
+          "storage",
+          "Mailbox state could not be confirmed. Retry the same operation."
+        )
+      }
+    },
+  }
+  const input = <T>(decode: () => T): T => {
+    try {
+      return decode()
+    } catch (cause) {
+      if (Schema.isSchemaError(cause))
+        throw failure("invalid", "Invalid mailbox input.")
+      throw cause
+    }
+  }
   const atomic = <T>(body: () => T) =>
     Effect.try({
       try: () => db.transaction(body),
-      catch: (error) =>
-        error instanceof CommunicationError
-          ? error
-          : failure(
-              "storage",
-              "Mailbox state could not be confirmed. Retry the same operation."
-            ),
+      catch: (error) => {
+        const communicationError =
+          Schema.decodeUnknownOption(CommunicationError)(error)
+        if (communicationError._tag === "Some") return communicationError.value
+        throw error
+      },
     })
   const read = (table: string, id: string) =>
     db.all<{ body: string }>(`SELECT body FROM ${table} WHERE id=?`, id)[0]
@@ -86,95 +129,23 @@ export function sqliteMailbox(db: Sqlite) {
   const count = (table: string) =>
     db.all<{ n: number }>(`SELECT count(*) AS n FROM ${table}`)[0]!.n
   const requireSpace = (table: string) => {
-    if (
-      count(table) >=
-      MAX_RECORDS *
-        (table === "communication_outbox" || table === "communication_inbox"
-          ? 3
-          : 1)
+    Domain.requireRetainedCapacity(
+      count(table),
+      table === "communication_outbox" || table === "communication_inbox"
     )
-      throw failure(
-        "limit",
-        "This bot's retained mailbox is full. Existing receipts are preserved."
-      )
-  }
-  const check = (e: Envelope) => {
-    Schema.decodeUnknownSync(Envelope)(e)
-    if (
-      e.from === e.to ||
-      e.depth !== 1 ||
-      e.deadline <= e.createdAt ||
-      e.deadline - e.createdAt > (isRequest(e) ? MAX_TASK_MS : RESULT_WINDOW_MS)
-    )
-      throw failure("invalid", "Invalid delegation bounds.")
-    if (isRequest(e) && (e.taskId !== e.id || e.id.length > 160))
-      throw failure("invalid", "Request and task identities must match.")
-  }
-  const sameTask = (e: Envelope, t: Task, reverse: boolean) => {
-    if (
-      e.owner !== t.request.owner ||
-      e.taskId !== t.id ||
-      e.correlationId !== t.request.correlationId ||
-      e.causationId !== t.request.id ||
-      e.from !== (reverse ? t.request.to : t.request.from) ||
-      e.to !== (reverse ? t.request.from : t.request.to)
-    )
-      throw failure("conflict", "Message does not belong to this task.")
   }
   const put = (e: Envelope, now: number): Delivery => {
     const existing = delivery(e.id)
-    if (existing) {
-      if (canonicalEnvelope(existing.envelope) !== canonicalEnvelope(e))
-        throw failure(
-          "conflict",
-          "Message identity already has different content."
-        )
-      return existing
-    }
+    if (existing) return Domain.replayDelivery(existing, e)
     requireSpace("communication_outbox")
-    const value: Delivery = {
-      envelope: e,
-      status: "pending",
-      attempts: 0,
-      attemptLimit: MAX_ATTEMPTS,
-      nextAt: now,
-      error: null,
-      receipt: null,
-    }
+    const value = Domain.newDelivery(e, now)
     saveDelivery(value)
     return value
   }
-  const newTask = (e: Envelope, direction: Task["direction"]): Task => ({
-    id: e.taskId,
-    direction,
-    request: e,
-    status: direction === "incoming" ? "accepted" : "waiting",
-    outcome: null,
-    revision: 0,
-    leaseUntil: null,
-    resumed: false,
-    cancelRequested: false,
-  })
   const finish = (t: Task, outcome: Outcome, now: number) => {
-    Schema.decodeUnknownSync(Outcome)(outcome)
-    const result: Envelope = {
-      ...t.request,
-      id: `result:${t.id}`,
-      from: t.request.to,
-      to: t.request.from,
-      causationId: t.request.id,
-      createdAt: now,
-      deadline: now + RESULT_WINDOW_MS,
-      payload: { kind: "result", outcome },
-    }
-    put(result, now)
-    saveTask({
-      ...t,
-      status: outcome.status,
-      outcome,
-      revision: t.revision + 1,
-      leaseUntil: null,
-    })
+    const result = Domain.taskResult(t, outcome, now)
+    put(result.envelope, now)
+    saveTask(result.task)
   }
   const capacity = (direction: Task["direction"]) => {
     requireSpace("communication_tasks")
@@ -182,43 +153,30 @@ export function sqliteMailbox(db: Sqlite) {
       "SELECT count(*) AS n FROM communication_tasks WHERE direction=? AND status IN ('accepted','running','waiting','cancelling')",
       direction
     )[0]!.n
-    if (n >= MAX_OPEN_TASKS)
-      throw failure(
-        "limit",
-        "This bot already has three unfinished communication tasks."
-      )
+    Domain.requireOpenCapacity(n)
   }
   const service = Mailbox.of({
+    transactionGroup: nativeDb,
     identity: () => atomic(identity),
     enqueue: (raw, now) =>
       atomic(() => {
-        const e = Schema.decodeUnknownSync(Envelope)(raw),
+        const e = Domain.validateEnvelope(raw),
           self = identity()
-        check(e)
-        if (e.owner !== self.owner || e.from !== self.bot)
-          throw failure("forbidden", "Sender does not match this bot.")
+        Domain.requireParty(e, self, "sender")
         const prior = delivery(e.id)
         if (prior) return put(e, now)
         if (!isRequest(e))
           throw failure("invalid", "Only task requests can be admitted here.")
-        if (e.deadline <= now || e.createdAt > now + 60000)
-          throw failure(
-            "expired",
-            "Task deadline has passed or its creation time is invalid."
-          )
-        if (
+        Domain.requireTimely(e, now, "Task")
+        Domain.requireFanout(
           db.all<{ n: number }>(
             "SELECT count(*) AS n FROM communication_tasks WHERE direction='outgoing' AND json_extract(body,'$.request.correlationId')=?",
             e.correlationId
-          )[0]!.n >= MAX_OPEN_TASKS
+          )[0]!.n
         )
-          throw failure(
-            "limit",
-            "This request already delegated its three permitted tasks."
-          )
         capacity("outgoing")
         const result = put(e, now)
-        saveTask(newTask(e, "outgoing"))
+        saveTask(Domain.newTask(e, "outgoing"))
         return result
       }),
     prove: (e) =>
@@ -234,11 +192,9 @@ export function sqliteMailbox(db: Sqlite) {
       }),
     accept: (raw, now) =>
       atomic(() => {
-        const e = Schema.decodeUnknownSync(Envelope)(raw),
+        const e = Domain.validateEnvelope(raw),
           self = identity()
-        check(e)
-        if (e.owner !== self.owner || e.to !== self.bot)
-          throw failure("forbidden", "Recipient does not match this bot.")
+        Domain.requireParty(e, self, "recipient")
         const existing = db.all<{ content: string; receipt: string }>(
           "SELECT content,receipt FROM communication_inbox WHERE id=?",
           e.id
@@ -251,20 +207,16 @@ export function sqliteMailbox(db: Sqlite) {
             )
           return Schema.decodeUnknownSync(ReceiptJson)(existing.receipt)
         }
-        if (e.deadline <= now || e.createdAt > now + 60000)
-          throw failure(
-            "expired",
-            "Message deadline has passed or its creation time is invalid."
-          )
+        Domain.requireTimely(e, now, "Message")
         requireSpace("communication_inbox")
         if (isRequest(e)) {
           capacity("incoming")
           if (read("communication_tasks", e.taskId))
             throw failure("conflict", "Task identity already exists.")
-          const t = newTask(e, "incoming")
+          const t = Domain.newTask(e, "incoming")
           const cancelled = read("communication_cancellations", e.taskId)
           if (cancelled) {
-            sameTask(
+            Domain.requireSameTask(
               Schema.decodeUnknownSync(EnvelopeJson)(cancelled),
               t,
               false
@@ -289,33 +241,13 @@ export function sqliteMailbox(db: Sqlite) {
           }
           if (read("communication_tasks", e.taskId)) {
             const t = task(e.taskId)
-            if (t.direction !== "incoming")
-              throw failure(
-                "forbidden",
-                "Only the requesting bot can cancel this task."
-              )
-            sameTask(e, t, false)
-            if (!terminal(t))
-              saveTask({
-                ...t,
-                cancelRequested: true,
-                status: "cancelling",
-                revision: t.revision + 1,
-                leaseUntil: null,
-              })
+            const transition = Domain.receiveCancellation(t, e)
+            if (transition) saveTask(transition)
           }
         } else if (e.payload.kind === "result") {
           const t = task(e.taskId)
-          if (t.direction !== "outgoing")
-            throw failure("forbidden", "Unexpected result direction.")
-          sameTask(e, t, true)
-          if (!terminal(t))
-            saveTask({
-              ...t,
-              status: e.payload.outcome.status,
-              outcome: e.payload.outcome,
-              revision: t.revision + 1,
-            })
+          const transition = Domain.receiveResult(t, e)
+          if (transition) saveTask(transition)
         }
         const receipt: Receipt = { id: e.id, taskId: e.taskId, acceptedAt: now }
         db.run(
@@ -345,12 +277,58 @@ export function sqliteMailbox(db: Sqlite) {
           )
           .map((row) => Schema.decodeUnknownSync(TaskJson)(row.body))
       ),
-    resume: (id, admit) =>
+    resume: (id, admission) =>
+      atomic(() => {
+        if (admission.transactionGroup !== nativeDb)
+          throw failure(
+            "conflict",
+            "Continuation admission must share the mailbox transaction."
+          )
+        const t = task(id)
+        if (!Domain.resumable(t)) return
+        let result: ReturnType<typeof admission.admit>
+        try {
+          result = admission.admit(t)
+        } catch (cause) {
+          const conversationStorageError = Schema.decodeUnknownOption(
+            ConversationStorageError
+          )(cause)
+          if (conversationStorageError._tag === "Some")
+            throw failure(
+              "storage",
+              "Continuation admission could not be confirmed. Retry the same operation."
+            )
+          const conversationFull =
+            Schema.decodeUnknownOption(ConversationFull)(cause)
+          if (conversationFull._tag === "Some")
+            throw failure(
+              "limit",
+              "The conversation queue is full. Retry this continuation later."
+            )
+          const conversationConflict =
+            Schema.decodeUnknownOption(ConversationConflict)(cause)
+          if (conversationConflict._tag === "Some")
+            throw failure(
+              "conflict",
+              "Continuation admission conflicts with its saved conversation identity."
+            )
+          throw cause
+        }
+        if (
+          result.kind === "admitted" &&
+          result.turnId !== admission.operationId
+        )
+          throw failure(
+            "conflict",
+            "Continuation admission changed its operation identity."
+          )
+        saveTask(Domain.consumeResult(t))
+      }),
+    discard: (id) =>
       atomic(() => {
         const t = task(id)
-        if (t.direction !== "outgoing" || !terminal(t) || t.resumed) return
-        admit(t)
-        saveTask({ ...t, resumed: true, revision: t.revision + 1 })
+        if (!Domain.resumable(t)) return
+        saveTask(Domain.consumeResult(t))
       }),
     deliveries: () =>
       atomic(() =>
@@ -368,56 +346,22 @@ export function sqliteMailbox(db: Sqlite) {
         )[0]
         if (!row) return undefined
         const d = Schema.decodeUnknownSync(DeliveryJson)(row.body)
-        if (d.envelope.deadline <= now || d.attempts >= d.attemptLimit) {
-          saveDelivery({
-            ...d,
-            status: d.envelope.deadline <= now ? "expired" : "failed",
-            nextAt: null,
-            error: "Delivery deadline or attempt budget exhausted.",
-          })
-          return undefined
-        }
-        const claimed: Delivery = {
-          ...d,
-          status: "delivering",
-          attempts: d.attempts + 1,
-          nextAt: now + LEASE_MS,
-        }
+        const claimed = Domain.claimDelivery(d, now)
         saveDelivery(claimed)
-        return claimed
+        return claimed.status === "delivering" ? claimed : undefined
       }),
     delivered: (id, attempt, receipt) =>
       atomic(() => {
         const d = delivery(id)
-        if (!d || d.attempts !== attempt || d.status !== "delivering") return
-        Schema.decodeUnknownSync(Receipt)(receipt)
-        if (receipt.id !== id || receipt.taskId !== d.envelope.taskId)
-          throw failure(
-            "conflict",
-            "Acknowledgment belongs to another message."
-          )
-        saveDelivery({
-          ...d,
-          status: "accepted",
-          receipt,
-          nextAt: null,
-          error: null,
-        })
+        const transition = d && Domain.acknowledge(d, attempt, receipt)
+        if (transition) saveDelivery(transition)
       }),
     deliveryFailed: (id, attempt, now, delay, permanent) =>
       atomic(() => {
         const d = delivery(id)
-        if (!d || d.attempts !== attempt || d.status !== "delivering") return
-        const expired = d.envelope.deadline <= now
-        const done = permanent || expired || attempt >= d.attemptLimit
-        saveDelivery({
-          ...d,
-          status: expired ? "expired" : done ? "failed" : "pending",
-          nextAt: done ? null : Math.min(d.envelope.deadline, now + delay),
-          error: permanent
-            ? "Delivery was rejected. Inspect this message before retrying."
-            : "Delivery could not be confirmed; retries preserve its identity.",
-        })
+        const transition =
+          d && Domain.deliveryFailed(d, attempt, now, delay, permanent)
+        if (transition) saveDelivery(transition)
       }),
     claimTask: (now) =>
       atomic(() => {
@@ -428,92 +372,36 @@ export function sqliteMailbox(db: Sqlite) {
         )[0]
         if (!row) return undefined
         const t = Schema.decodeUnknownSync(TaskJson)(row.body)
-        const claimed = {
-          ...t,
-          status: t.cancelRequested
-            ? ("cancelling" as const)
-            : ("running" as const),
-          revision: t.revision + 1,
-          leaseUntil: now + LEASE_MS,
-        }
+        const claimed = Domain.claimTask(t, now)
         saveTask(claimed)
         return claimed
       }),
     finish: (id, revision, outcome, now) =>
       atomic(() => {
         const t = task(id)
-        if (
-          t.direction !== "incoming" ||
-          t.revision !== revision ||
-          terminal(t)
-        )
-          throw failure("stale", "This execution no longer owns the task.")
-        if (t.cancelRequested && outcome.status !== "cancelled")
-          throw failure(
-            "stale",
-            "Cancellation must be reconciled before completion."
-          )
-        if (
-          now >= t.request.deadline &&
-          !["cancelled", "expired"].includes(outcome.status)
-        )
-          throw failure("expired", "The task deadline has passed.")
+        Domain.requireFinish(t, revision, outcome, now)
         finish(t, outcome, now)
       }),
     cancel: (id, now) =>
       atomic(() => {
         const t = task(id)
-        if (t.direction !== "outgoing")
-          throw failure("forbidden", "Cancel from the requesting bot.")
-        if (terminal(t) || t.cancelRequested) return t
-        const e: Envelope = {
-          ...t.request,
-          id: `cancel:${t.id}`,
-          causationId: t.id,
-          createdAt: now,
-          deadline: now + RESULT_WINDOW_MS,
-          payload: {
-            kind: "cancel",
-            reason: "The owner or originating task requested cancellation.",
-          },
-        }
-        put(e, now)
-        const cancelled: Task = {
-          ...t,
-          cancelRequested: true,
-          status: "cancelling",
-          revision: t.revision + 1,
-        }
-        saveTask(cancelled)
-        return cancelled
+        const transition = Domain.cancelTask(t, now)
+        if (!transition) return t
+        put(transition.envelope, now)
+        saveTask(transition.task)
+        return transition.task
       }),
     retry: (id, now) =>
       atomic(() => {
         const d = delivery(id)
         if (!d) throw failure("not_found", "Message unavailable in this bot.")
-        if (
-          d.status === "pending" ||
-          d.status === "delivering" ||
-          d.status === "accepted"
-        )
-          return
-        if (d.envelope.deadline <= now)
-          throw failure("expired", "Expired messages cannot be retried.")
+        const transition = Domain.retryDelivery(d, now)
+        if (!transition) return
         if (isRequest(d.envelope)) {
           const t = task(d.envelope.taskId)
-          if (t.cancelRequested || terminal(t))
-            throw failure(
-              "stale",
-              "Stopped or finished requests cannot be retried."
-            )
+          Domain.requireRetryableTask(t)
         }
-        saveDelivery({
-          ...d,
-          status: "pending",
-          attemptLimit: d.attempts + MAX_ATTEMPTS,
-          nextAt: now,
-          error: null,
-        })
+        saveDelivery(transition)
       }),
     expire: (now) =>
       atomic(() => {
@@ -523,17 +411,7 @@ export function sqliteMailbox(db: Sqlite) {
         )
         for (const row of rows) {
           const t = Schema.decodeUnknownSync(TaskJson)(row.body)
-          saveTask({
-            ...t,
-            status: "expired",
-            revision: t.revision + 1,
-            outcome: {
-              status: "expired",
-              text: t.cancelRequested
-                ? "Cancellation was requested; termination could not be confirmed before the deadline."
-                : "The result was not confirmed before the task deadline.",
-            },
-          })
+          saveTask(Domain.expireTask(t))
         }
       }),
     nextWake: () =>
@@ -570,7 +448,7 @@ export function sqliteMailbox(db: Sqlite) {
     initialize,
     bindIdentity: (raw: Identity) =>
       atomic(() => {
-        const value = Schema.decodeUnknownSync(Identity)(raw)
+        const value = input(() => Schema.decodeUnknownSync(Identity)(raw))
         const before = read("communication_identity", "self"),
           body = Schema.encodeSync(IdentityJson)(value)
         if (before && before !== body)

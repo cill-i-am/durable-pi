@@ -1,5 +1,9 @@
 import { expect, it } from "vitest"
-import { cacheUsage, memoryPayload, viewBlocks } from "../src/agent/cache"
+import {
+  memoryPayload,
+  viewBlocks,
+} from "../src/inference/adapters/payload-openai"
+import { providerUsage } from "../src/inference/adapters/usage-openai"
 
 it("splits on stable line ends and preserves every character", () => {
   const text =
@@ -66,7 +70,7 @@ it("preserves encrypted reasoning/tool replay and separates legacy user text", (
 })
 it("captures numerical cache usage without retaining provider content", () => {
   expect(
-    cacheUsage({
+    providerUsage({
       type: "response.completed",
       response: {
         id: "r",
@@ -81,13 +85,14 @@ it("captures numerical cache usage without retaining provider content", () => {
     })
   ).toEqual({ id: "r", model: "m", input: 2000, cached: 1800, output: 20 })
   expect(
-    cacheUsage({ type: "response.output_text.delta", delta: "private" })
+    providerUsage({ type: "response.output_text.delta", delta: "private" })
   ).toBeUndefined()
 })
 
 it("keeps native summary requests uncached and ordinary OptChat prompts cacheable on the subscription transport", async () => {
-  const { createAgentModels, accountCredentials } =
-    await import("../src/agent/models")
+  const { createAgentModels } = await import("./models-fixture")
+  const { accountCredentials } =
+    await import("../src/inference/adapters/credentials-pi")
   const models = createAgentModels(
     accountCredentials(async () => ({
       type: "oauth",

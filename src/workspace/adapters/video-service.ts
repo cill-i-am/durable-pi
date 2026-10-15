@@ -6,34 +6,34 @@ import {
   VideoUnreadable,
 } from "../video"
 import { WorkspaceUnavailable } from "../files"
-import { boundedBytes } from "../http"
+import { workspaceResponse } from "./interop"
+import { workspaceBytes } from "./stream"
 
 type VideoService = { fetch: (request: Request) => Promise<Response> }
 export const videoService =
   (service: VideoService, identity: string): ExtractVideo =>
   (bytes) =>
-    Effect.tryPromise({
-      try: async (signal) => {
-        const response = await service.fetch(
-          new Request(`https://terminal.internal/${identity}/video`, {
-            method: "POST",
-            body: new Uint8Array(bytes),
-            signal,
-          })
+    Effect.scoped(
+      Effect.gen(function* () {
+        const response = yield* workspaceResponse((signal) =>
+          service.fetch(
+            new Request(`https://terminal.internal/${identity}/video`, {
+              method: "POST",
+              body: new Uint8Array(bytes),
+              signal,
+            })
+          )
         )
-        if (response.status === 422) throw new VideoUnreadable()
-        if (!response.ok) throw new WorkspaceUnavailable()
-        const body = await boundedBytes(
-          new Request("https://video/result", {
-            method: "POST",
-            body: response.body,
-          }),
-          VIDEO_RESULT_BYTES
+        if (response.status === 422) return yield* new VideoUnreadable()
+        if (!response.ok || !response.body)
+          return yield* new WorkspaceUnavailable()
+        const body = yield* workspaceBytes(
+          response.body,
+          VIDEO_RESULT_BYTES,
+          () => new WorkspaceUnavailable()
         )
         return Schema.decodeUnknownSync(VideoResult)(
           JSON.parse(new TextDecoder().decode(body))
         )
-      },
-      catch: (cause) =>
-        cause instanceof VideoUnreadable ? cause : new WorkspaceUnavailable(),
-    })
+      })
+    )

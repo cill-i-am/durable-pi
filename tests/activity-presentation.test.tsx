@@ -5,7 +5,7 @@ import {
   chatMessages,
   conversationView,
   messageEvents,
-} from "../src/conversations/chat-messages"
+} from "../src/conversations/adapters/tanstack"
 import {
   activitySections,
   activitySource,

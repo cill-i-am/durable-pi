@@ -10,9 +10,18 @@ import type {
   CommunicationError,
 } from "./contracts"
 
+export type ContinuationAdmission = {
+  transactionGroup: object
+  operationId: string
+  admit: (
+    task: Task
+  ) => { kind: "admitted"; turnId: string } | { kind: "discarded" }
+}
+
 export class Mailbox extends Context.Service<
   Mailbox,
   {
+    readonly transactionGroup: object
     identity: () => Effect.Effect<Identity, CommunicationError>
     enqueue: (
       envelope: Envelope,
@@ -29,8 +38,9 @@ export class Mailbox extends Context.Service<
     pending: () => Effect.Effect<readonly Task[], CommunicationError>
     resume: (
       id: string,
-      admit: (task: Task) => void
+      admission: ContinuationAdmission
     ) => Effect.Effect<void, CommunicationError>
+    discard: (id: string) => Effect.Effect<void, CommunicationError>
     task: (id: string) => Effect.Effect<Task, CommunicationError>
     claimDelivery: (
       now: number

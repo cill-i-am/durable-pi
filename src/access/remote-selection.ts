@@ -1,30 +1,30 @@
-import { Effect } from "effect"
-import type { ConnectionStore } from "./adapters/connections"
-import {
-  ConnectionError,
-  type RemoteTool,
-  type SelectRemoteTools,
-} from "./connections"
+import { Schema, Effect } from "effect"
+import type {
+  ConnectionFailure,
+  RemoteSelectionRepository,
+  RemoteToolResolution,
+} from "./connection-ledger"
+import { ConnectionError, type SelectRemoteTools } from "./connections"
 
 export function selectRemoteTools(
-  store: ConnectionStore,
+  store: RemoteSelectionRepository,
   input: typeof SelectRemoteTools.Type,
   resolve: (
     names: readonly string[]
-  ) => Promise<{ tools: RemoteTool[]; error: string | null }>,
+  ) => Effect.Effect<RemoteToolResolution, ConnectionFailure>,
   canWrite: () => boolean
 ) {
   return Effect.gen(function* () {
-    const pinned = store.selection().tools
+    const pinned = (yield* store.selection()).tools
     const missing = input.names.filter(
       (name) => !pinned.some((tool) => tool.name === name)
     )
     const resolved = missing.length
-      ? yield* Effect.tryPromise(() => resolve(missing))
+      ? yield* resolve(missing)
       : { tools: [], error: null }
     if (resolved.error)
       return yield* new ConnectionError({ message: resolved.error })
-    return yield* Effect.try({
+    const selected = yield* Effect.try({
       try: () => {
         if (!canWrite())
           throw new ConnectionError({
@@ -41,9 +41,15 @@ export function selectRemoteTools(
             })
           return tool
         })
-        return store.select(input.expectedRevision, tools)
+        return tools
       },
-      catch: (cause) => cause,
+      catch: (cause) => {
+        const connectionError =
+          Schema.decodeUnknownOption(ConnectionError)(cause)
+        if (connectionError._tag === "Some") return connectionError.value
+        throw cause
+      },
     })
-  })
+    return yield* store.select(input.expectedRevision, selected, canWrite)
+  }).pipe(Effect.withSpan("Access.selectRemoteTools"))
 }

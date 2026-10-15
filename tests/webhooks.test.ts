@@ -1,17 +1,22 @@
 import { describe, expect, it, vi } from "vitest"
-import { Effect } from "effect"
+import { Cause, Effect, Exit } from "effect"
+import { WebhookStorageError } from "../src/webhooks/persistence"
 import { database } from "./database"
-import { RoutineStore } from "../src/routines/adapters/sqlite"
-import { WebhookStore } from "../src/webhooks/adapters/sqlite"
-import { digest, WebhookRejected } from "../src/webhooks/contracts"
-import { webhookIncoming, webhookOwnerRequest } from "../src/webhooks/http"
-import { receiveWebhook } from "../src/webhooks/public"
+import { routineFixture, webhookFixture } from "./routine-fixture"
+import { WebhookRejected } from "../src/webhooks/contracts"
+import { digest } from "../src/webhooks/adapters/crypto"
+import {
+  webhookIncoming,
+  webhookNative,
+  webhookOwnerRequest,
+} from "../src/webhooks/adapters/http"
+import { receiveWebhook } from "../src/webhooks/adapters/public"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 
 async function fixture() {
   const db = database()
   let active = true
-  const routines = new RoutineStore(db, () => active)
+  const routines = routineFixture(db, () => active)
   const id = crypto.randomUUID()
   routines.save({
     id,
@@ -22,7 +27,7 @@ async function fixture() {
     schedule: { type: "webhook" },
     status: "active",
   })
-  const store = new WebhookStore(db, routines, () => active)
+  const store = webhookFixture(db, routines, () => active)
   const key = "rpwh_" + "1".repeat(64),
     hash = await digest(key)
   const change = {
@@ -49,17 +54,32 @@ async function fixture() {
     },
   }
 }
-const rejected = (run: () => unknown, status: number) => {
+const rejected = (run: () => unknown, reason: WebhookRejected["reason"]) => {
   try {
     run()
     expect.unreachable("Expected rejection")
   } catch (e) {
     expect(e).toBeInstanceOf(WebhookRejected)
-    expect((e as WebhookRejected).status).toBe(status)
+    expect((e as WebhookRejected).reason).toBe(reason)
   }
+}
+function deferred() {
+  let resolve!: () => void
+  const promise = new Promise<void>((done) => {
+    resolve = done
+  })
+  return { promise, resolve }
 }
 
 describe("inbound webhook authority and durable receipts", () => {
+  it("refuses composition across separate receipt and routine databases", async () => {
+    const f = await fixture()
+    expect(() => webhookFixture(database(), f.routines, () => true)).toThrow(
+      "share a storage transaction group"
+    )
+    expect(f.store.info(f.id).accepted).toBe(0)
+    expect(f.routines.inFlight()).toBeUndefined()
+  })
   it("stores only key digests; replay and cancellation cannot rotate twice", async () => {
     const f = await fixture()
     expect(f.store.configure(f.change).revision).toBe(1)
@@ -71,27 +91,27 @@ describe("inbound webhook authority and durable receipts", () => {
     )
     rejected(
       () => f.store.configure({ ...f.change, hash: "2".repeat(64) }),
-      409
+      "conflict"
     )
     const operationId = crypto.randomUUID()
     expect(f.store.cancel(operationId)).toEqual({ applied: false })
     rejected(
       () =>
         f.store.configure({ ...f.change, expectedRevision: 1, operationId }),
-      409
+      "conflict"
     )
     expect(f.store.cancel(f.change.operationId)).toEqual({ applied: true })
   })
   it("deduplicates across restart, key rotation and run-history pruning", async () => {
     const f = await fixture(),
       first = f.store.accept(f.id, f.hash, "event-1", f.payload, f.payloadHash)
-    const restarted = new WebhookStore(f.db, f.routines, () => true)
+    const restarted = webhookFixture(f.db, f.routines, () => true)
     expect(
       restarted.accept(f.id, f.hash, "event-1", f.payload, f.payloadHash)
     ).toEqual({ ...first, duplicate: true })
     rejected(
       () => restarted.accept(f.id, f.hash, "event-1", "{}", "different"),
-      409
+      "conflict"
     )
     const hash = await digest("rpwh_" + "2".repeat(64))
     restarted.configure({
@@ -106,7 +126,7 @@ describe("inbound webhook authority and durable receipts", () => {
     ).toEqual({ ...first, duplicate: true })
     rejected(
       () => restarted.accept(f.id, f.hash, "event-1", f.payload, f.payloadHash),
-      401
+      "unauthorized"
     )
   })
   it("refuses concurrent work without accepting a receipt; same event can retry when free", async () => {
@@ -114,7 +134,7 @@ describe("inbound webhook authority and durable receipts", () => {
       first = f.store.accept(f.id, f.hash, "event-1", f.payload, f.payloadHash)
     rejected(
       () => f.store.accept(f.id, f.hash, "event-2", f.payload, f.payloadHash),
-      429
+      "busy"
     )
     expect(f.store.info(f.id).accepted).toBe(1)
     f.routines.cancelPendingRun(first.runId)
@@ -136,7 +156,7 @@ describe("inbound webhook authority and durable receipts", () => {
     expect(f.routines.runs()[0]?.status).toBe("cancelled")
     rejected(
       () => f.store.accept(f.id, f.hash, "event-2", f.payload, f.payloadHash),
-      401
+      "unauthorized"
     )
     f.store.configure({
       ...f.change,
@@ -161,7 +181,7 @@ describe("inbound webhook authority and durable receipts", () => {
           expectedRevision: 4,
           operationId: crypto.randomUUID(),
         }),
-      409
+      "conflict"
     )
   })
   it("does not accept paused routines or expose sibling keys", async () => {
@@ -176,7 +196,7 @@ describe("inbound webhook authority and durable receipts", () => {
     })
     rejected(
       () => f.store.accept(f.id, f.hash, "event-1", f.payload, f.payloadHash),
-      409
+      "conflict"
     )
     expect(f.routines.nextWake()).toBeUndefined()
   })
@@ -191,7 +211,7 @@ describe("inbound webhook authority and durable receipts", () => {
     )
     expect(() =>
       f.store.accept(f.id, f.hash, "event-1", f.payload, f.payloadHash)
-    ).toThrow("disk failure")
+    ).toThrow(WebhookStorageError)
     expect(f.routines.inFlight()).toBeUndefined()
     f.db.run("DROP TRIGGER fail_event")
     f.store.accept(f.id, f.hash, "event-1", f.payload, f.payloadHash)
@@ -219,7 +239,7 @@ describe("inbound webhook authority and durable receipts", () => {
     ).toEqual({ runId: "run-1", duplicate: true })
     rejected(
       () => f.store.accept(f.id, f.hash, "new", f.payload, f.payloadHash),
-      409
+      "conflict"
     )
     expect(f.routines.runs()).toHaveLength(0)
   })
@@ -245,6 +265,95 @@ describe("webhook HTTP boundary", () => {
       }
     )
   }
+  it.each(["owner", "incoming"])(
+    "retains a failed %s request reader cleanup as a defect",
+    async (surface) => {
+      const f = await fixture()
+      const cleanup = new Error("private body cleanup failure")
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new Uint8Array(17_000))
+        },
+        cancel() {
+          return Promise.reject(cleanup)
+        },
+      })
+      const original = incoming(f)
+      const init: RequestInit & { duplex: "half" } = {
+        method: "POST",
+        headers: original.headers,
+        body,
+        duplex: "half",
+      }
+      const request = new Request(original.url, init)
+      const exit = await Effect.runPromiseExit(
+        surface === "owner"
+          ? webhookOwnerRequest(f.store.service, request, "webhooks/configure")
+          : webhookIncoming(f.store.service, request, () => Effect.void)
+      )
+      expect(Exit.isFailure(exit)).toBe(true)
+      if (Exit.isFailure(exit))
+        expect(exit.cause.reasons).toContainEqual(
+          expect.objectContaining({ _tag: "Die", defect: cleanup })
+        )
+      expect(body.locked).toBe(false)
+      expect(f.store.info(f.id).accepted).toBe(0)
+      expect(f.routines.runs()).toEqual([])
+    }
+  )
+  it("does not turn a tagged wake defect into a normal webhook rejection", async () => {
+    const f = await fixture()
+    const defect = new WebhookRejected({
+      reason: "unauthorized",
+      message: "private wake defect",
+    })
+    const exit = await Effect.runPromiseExit(
+      webhookIncoming(f.store.service, incoming(f), () => Effect.die(defect))
+    )
+    expect(Exit.isFailure(exit)).toBe(true)
+    if (Exit.isFailure(exit))
+      expect(exit.cause.reasons).toContainEqual(
+        expect.objectContaining({ _tag: "Die", defect })
+      )
+    expect(f.store.info(f.id).accepted).toBe(0)
+    expect(f.routines.runs()).toEqual([])
+  })
+  it("joins cancellation during the acknowledgement wake and replays one committed event", async () => {
+    const f = await fixture(),
+      entered = deferred(),
+      closing = deferred(),
+      controller = new AbortController()
+    let wakes = 0
+    const wake = () =>
+      webhookNative(async () => {
+        if (++wakes === 2) {
+          entered.resolve()
+          await closing.promise
+        }
+      })
+    let settled = false
+    const observed = Effect.runPromiseExit(
+      webhookIncoming(f.store.service, incoming(f), wake),
+      { signal: controller.signal }
+    ).then((exit) => {
+      settled = true
+      return exit
+    })
+    await entered.promise
+    controller.abort()
+    await Promise.resolve()
+    expect(settled).toBe(false)
+    expect(f.store.info(f.id).accepted).toBe(1)
+    closing.resolve()
+    const exit = await observed
+    expect(Exit.isFailure(exit) && Cause.hasInterrupts(exit.cause)).toBe(true)
+    const replay = await Effect.runPromise(
+      webhookIncoming(f.store.service, incoming(f), () => Effect.void)
+    )
+    expect(replay.status).toBe(200)
+    expect(f.store.info(f.id).accepted).toBe(1)
+    expect(f.routines.runs()).toHaveLength(1)
+  })
   it("returns safe status codes and retries after a lost acknowledgement", async () => {
     const f = await fixture(),
       wake = vi.fn(async () => {})
@@ -252,17 +361,21 @@ describe("webhook HTTP boundary", () => {
       .mockResolvedValueOnce()
       .mockRejectedValueOnce(new Error("provider secret must not surface"))
     const first = await Effect.runPromise(
-      webhookIncoming(f.store, incoming(f), wake)
+      webhookIncoming(f.store.service, incoming(f), () => webhookNative(wake))
     )
     expect(first.status).toBe(503)
     expect(await first.text()).not.toContain("provider secret")
     const retried = await Effect.runPromise(
-      webhookIncoming(f.store, incoming(f), wake)
+      webhookIncoming(f.store.service, incoming(f), () => webhookNative(wake))
     )
     expect(retried.status).toBe(200)
     expect(f.routines.runs()).toHaveLength(1)
     const busy = await Effect.runPromise(
-      webhookIncoming(f.store, incoming(f, f.payload, f.key, "event-2"), wake)
+      webhookIncoming(
+        f.store.service,
+        incoming(f, f.payload, f.key, "event-2"),
+        () => webhookNative(wake)
+      )
     )
     expect(busy.status).toBe(429)
     expect(busy.headers.get("retry-after")).toBe("60")
@@ -278,19 +391,25 @@ describe("webhook HTTP boundary", () => {
       expect(
         (
           await Effect.runPromise(
-            webhookIncoming(f.store, incoming(f, body), async () => {})
+            webhookIncoming(
+              f.store.service,
+              incoming(f, body),
+              () => Effect.void
+            )
           )
         ).status
       ).toBe(400)
     const revoked = await Effect.runPromise(
-      webhookIncoming(f.store, incoming(f), async () => {
-        f.store.configure({
-          ...f.change,
-          operationId: crypto.randomUUID(),
-          expectedRevision: 1,
-          hash: null,
+      webhookIncoming(f.store.service, incoming(f), () =>
+        Effect.sync(() => {
+          f.store.configure({
+            ...f.change,
+            operationId: crypto.randomUUID(),
+            expectedRevision: 1,
+            hash: null,
+          })
         })
-      })
+      )
     )
     expect(revoked.status).toBe(401)
     expect(f.routines.runs()).toHaveLength(0)
@@ -308,9 +427,9 @@ describe("webhook HTTP boundary", () => {
     })
     const result = await Effect.runPromise(
       webhookIncoming(
-        f.store,
+        f.store.service,
         incoming(f, JSON.stringify({ data: "y".repeat(16360) })),
-        async () => {}
+        () => Effect.void
       )
     )
     expect(result.status).toBe(202)
@@ -322,7 +441,7 @@ describe("webhook HTTP boundary", () => {
     const body = '{"values":[' + Array(3000).fill("1e20").join(",") + "]}"
     expect(body.length).toBeLessThan(16384)
     const result = await Effect.runPromise(
-      webhookIncoming(f.store, incoming(f, body), async () => {})
+      webhookIncoming(f.store.service, incoming(f, body), () => Effect.void)
     )
     expect(result.status).toBe(413)
     expect(f.routines.inFlight()).toBeUndefined()
@@ -336,7 +455,7 @@ describe("webhook HTTP boundary", () => {
       "CREATE TRIGGER fail_event BEFORE INSERT ON webhook_events BEGIN SELECT RAISE(ABORT,'private database detail'); END"
     )
     const result = await Effect.runPromise(
-      webhookIncoming(f.store, incoming(f), async () => {})
+      webhookIncoming(f.store.service, incoming(f), () => Effect.void)
     )
     expect(result.status).toBe(503)
     expect(await result.text()).not.toContain("private database detail")
@@ -346,7 +465,7 @@ describe("webhook HTTP boundary", () => {
     expect(
       (
         await Effect.runPromise(
-          webhookIncoming(f.store, incoming(f), async () => {})
+          webhookIncoming(f.store.service, incoming(f), () => Effect.void)
         )
       ).status
     ).toBe(202)
@@ -366,14 +485,14 @@ describe("webhook HTTP boundary", () => {
       }
     )
     const result = await Effect.runPromise(
-      webhookOwnerRequest(f.store, request, "webhooks/configure")
+      webhookOwnerRequest(f.store.service, request, "webhooks/configure")
     )
     expect(result.status).toBe(200)
     expect(await result.text()).not.toContain(f.key)
   })
   it("public forwarding selects the configured owner and strips hostile headers and cookies", async () => {
     const f = await fixture(),
-      first = vi.fn(async () => ({ id: "configured-owner" })),
+      first = vi.fn(async () => "configured-owner"),
       bind = vi.fn(() => ({ first })),
       prepare = vi.fn(() => ({ bind }))
     const fetch = vi.fn(async (request: Request) => {
@@ -387,7 +506,7 @@ describe("webhook HTTP boundary", () => {
       OWNER_EMAIL: "owner@example.com",
       DB: { prepare },
       AGENT_SERVICE: { fetch },
-    } as unknown as Parameters<typeof receiveWebhook>[3]
+    }
     const request = new Request("https://bot.example/api/hooks/home/id", {
       method: "POST",
       headers: {

@@ -1,3 +1,4 @@
+import { preserveFatal, observeCleanup } from "../../shared/effect"
 import { Clock, Effect, Schema } from "effect"
 import {
   BACKGROUND_CONTEXT,
@@ -14,13 +15,14 @@ import {
 } from "@earendil-works/pi-durable"
 import { ResolvedRoute } from "../../inference/policy"
 import {
-  CommunicationError,
+  type CommunicationError,
   failure,
   terminal,
   type Task,
   type Outcome,
 } from "../contracts"
 import type { Mailbox, MailboxTransport } from "../mailbox"
+import { communicationNative as native } from "./interop"
 
 const Execution = Schema.Struct({
   conversation: Schema.Number,
@@ -45,15 +47,6 @@ const Providers = defineDocFamily({
 })
 export const REQUEST_BUDGET = 3
 const initialRequest = (id: string) => `communication:${id}`
-const native = <T>(call: (signal: AbortSignal) => Promise<T>) =>
-  Effect.tryPromise({
-    try: call,
-    catch: (error) =>
-      error instanceof CommunicationError
-        ? error
-        : failure("storage", "Pi task state is temporarily unavailable."),
-  })
-
 export function piMailbox(
   open: () => Promise<Harness>,
   bridge: {
@@ -77,7 +70,11 @@ export function piMailbox(
       )
         return false
       return yield* transport.permitted(task.request).pipe(
-        Effect.timeout("10 seconds"),
+        (timed) =>
+          observeCleanup(timed, (observed) =>
+            observed.pipe(Effect.timeout("10 seconds"))
+          ),
+        preserveFatal,
         Effect.catchTag("TimeoutError", () =>
           Effect.fail(
             failure(

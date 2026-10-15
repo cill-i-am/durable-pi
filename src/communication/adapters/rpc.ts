@@ -1,17 +1,23 @@
+import { preserveFatal, observeCleanup } from "../../shared/effect"
 import { Effect, Layer } from "effect"
 import { HttpEffect } from "effect/http"
 import { RpcSerialization, RpcServer } from "effect/rpc"
 import { bindEffectRpc, fromCloudflareFetcher } from "alchemy/Cloudflare/Bridge"
 import {
-  CommunicationError,
-  MailboxRpc,
+  type CommunicationError,
   failure,
   type Envelope,
   type Receipt,
 } from "../contracts"
+import { MailboxRpc } from "./protocol"
 import { Mailbox, MailboxTransport } from "../mailbox"
 import { receive } from "../delivery"
 import { agentObjectName } from "../../agents/domain"
+import type { RpcClientError } from "effect/rpc/RpcClientError"
+import { communicationNative } from "./interop"
+import { boundedFrame } from "./input"
+
+export { boundedFrame } from "./input"
 
 type FetchNamespace = { getByName: (name: string) => Fetcher }
 
@@ -37,18 +43,17 @@ export function mailboxTransport(
     target: Envelope["from"],
     body: (
       rpc: Effect.Success<ReturnType<typeof client.getByName>>
-    ) => Effect.Effect<T, unknown>
+    ) => Effect.Effect<T, CommunicationError | RpcClientError>
   ) =>
     Effect.gen(function* () {
       const rpc = yield* client.getByName(agentObjectName(e.owner, target))
       return yield* body(rpc)
     }).pipe(
-      Effect.catch((error) =>
-        Effect.fail(
-          error instanceof CommunicationError
-            ? error
-            : failure("transport", "Private mailbox request failed.")
-        )
+      preserveFatal,
+      Effect.catchTag("RpcClientError", (error) =>
+        error.reason._tag === "RpcClientDefect"
+          ? Effect.die(error)
+          : Effect.fail(failure("transport", "Private mailbox request failed."))
       ),
       Effect.scoped
     )
@@ -99,13 +104,18 @@ export function mailboxHandler(
   return (request: Request) =>
     Effect.runPromise(
       Effect.gen(function* () {
+        yield* Effect.yieldNow
         const body = yield* boundedFrame(request)
-        return yield* Effect.tryPromise({
-          try: () => handler(new Request(request, { body })),
-          catch: () => failure("transport", "Mailbox unavailable."),
-        })
+        return yield* communicationNative(
+          () => handler(new Request(request, { body: Uint8Array.from(body) })),
+          "transport"
+        )
       }).pipe(
-        Effect.timeout("15 seconds"),
+        (timed) =>
+          observeCleanup(timed, (observed) =>
+            observed.pipe(Effect.timeout("15 seconds"))
+          ),
+        preserveFatal,
         Effect.catch(() =>
           Effect.succeed(
             new Response("Invalid or unavailable mailbox request", {
@@ -113,55 +123,7 @@ export function mailboxHandler(
             })
           )
         )
-      )
+      ),
+      { signal: request.signal }
     )
 }
-
-export const boundedFrame = (request: Request) =>
-  Effect.acquireUseRelease(
-    Effect.try({
-      try: () => request.body?.getReader(),
-      catch: () => failure("invalid", "Invalid request body."),
-    }),
-    (reader) =>
-      Effect.gen(function* () {
-        if (!reader)
-          return yield* Effect.fail(
-            failure("invalid", "Missing request frame.")
-          )
-        let size = 0
-        const chunks: Uint8Array[] = []
-        let done = false
-        while (!done) {
-          const chunk = yield* Effect.tryPromise({
-            try: () => reader.read(),
-            catch: () => failure("invalid", "Unreadable frame."),
-          })
-          if (chunk.done) {
-            done = true
-            continue
-          }
-          size += chunk.value.length
-          if (size > 96 * 1024)
-            return yield* Effect.fail(
-              failure("invalid", "Request frame is too large.")
-            )
-          chunks.push(chunk.value)
-        }
-        const bytes = new Uint8Array(size)
-        let offset = 0
-        for (const chunk of chunks) {
-          bytes.set(chunk, offset)
-          offset += chunk.length
-        }
-        return bytes
-      }),
-    (reader) =>
-      Effect.promise(async () => {
-        try {
-          await reader?.cancel()
-        } finally {
-          reader?.releaseLock()
-        }
-      }).pipe(Effect.ignore)
-  )

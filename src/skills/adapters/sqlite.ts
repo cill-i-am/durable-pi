@@ -2,6 +2,7 @@ import { Schema } from "effect"
 import type { Sqlite } from "../../storage/sqlite"
 import {
   SkillConflict,
+  SkillStorageError,
   SkillDocument,
   SkillSelection,
   type SaveSkill,
@@ -9,42 +10,77 @@ import {
   type SelectSkills,
 } from "../contracts"
 import { SkillSource } from "../source"
+import * as Domain from "../domain"
+import type { SkillLedger } from "../repository"
 
 function document(
   row: Omit<SkillDocument, "source"> & { source?: string | null }
 ): SkillDocument {
   const { source, ...value } = row
-  return {
+  return Schema.decodeUnknownSync(SkillDocument)({
     ...value,
     ...(source
       ? { source: Schema.decodeUnknownSync(SkillSource)(JSON.parse(source)) }
       : {}),
-  }
+  })
 }
 
-export class SkillStore {
+export class SkillStore implements SkillLedger {
+  readonly transactionGroup: object
   constructor(private readonly db: Sqlite) {
-    db.run(
+    this.transactionGroup = db
+    const storage = <T>(operation: string, body: () => T): T => {
+      try {
+        return body()
+      } catch (cause) {
+        throw new SkillStorageError({ operation, cause })
+      }
+    }
+    this.db = {
+      all: (query, ...bindings) =>
+        storage("read", () => db.all(query, ...bindings)),
+      run: (query, ...bindings) =>
+        storage("write", () => db.run(query, ...bindings)),
+      transaction: (body) => {
+        const failure: { failed: boolean; cause?: unknown } = { failed: false }
+        try {
+          return db.transaction(() => {
+            try {
+              return body()
+            } catch (cause) {
+              failure.failed = true
+              failure.cause = cause
+              throw cause
+            }
+          })
+        } catch (cause) {
+          if (failure.failed && cause === failure.cause) throw cause
+          throw new SkillStorageError({ operation: "transaction", cause })
+        }
+      },
+    }
+
+    this.db.run(
       "CREATE TABLE IF NOT EXISTS workspace_skills (id TEXT PRIMARY KEY,revision INTEGER NOT NULL,archived INTEGER NOT NULL DEFAULT 0,stateRevision INTEGER NOT NULL DEFAULT 1)"
     )
     if (
-      !db
+      !this.db
         .all<{ name: string }>("PRAGMA table_info(workspace_skills)")
         .some((column) => column.name === "stateRevision")
     )
-      db.run(
+      this.db.run(
         "ALTER TABLE workspace_skills ADD COLUMN stateRevision INTEGER NOT NULL DEFAULT 1"
       )
-    db.run(
+    this.db.run(
       "CREATE TABLE IF NOT EXISTS workspace_skill_versions (id TEXT NOT NULL,revision INTEGER NOT NULL,name TEXT NOT NULL,body TEXT NOT NULL,createdAt TEXT NOT NULL,PRIMARY KEY(id,revision))"
     )
     if (
-      !db
+      !this.db
         .all<{ name: string }>("PRAGMA table_info(workspace_skill_versions)")
         .some((column) => column.name === "source")
     )
-      db.run("ALTER TABLE workspace_skill_versions ADD COLUMN source TEXT")
-    db.run(
+      this.db.run("ALTER TABLE workspace_skill_versions ADD COLUMN source TEXT")
+    this.db.run(
       "CREATE TABLE IF NOT EXISTS bot_skills (id INTEGER PRIMARY KEY,revision INTEGER NOT NULL,skills TEXT NOT NULL)"
     )
   }
@@ -75,43 +111,13 @@ export class SkillStore {
   save(input: SaveSkill): Skill {
     return this.db.transaction(() => {
       const current = this.list().find((skill) => skill.id === input.id)
-      if (current?.archived)
-        throw new SkillConflict({
-          message: "Restore this skill before editing it.",
-        })
-      if (
-        current &&
-        current.name === input.name &&
-        current.body === input.body &&
-        JSON.stringify(current.source) === JSON.stringify(input.source) &&
-        (input.expectedRevision === current.revision ||
-          input.expectedRevision === current.revision - 1)
+      const next = Domain.saveSkill(
+        input,
+        current,
+        current ? 0 : this.list().length,
+        new Date().toISOString()
       )
-        return current
-      if ((current?.revision ?? 0) !== input.expectedRevision)
-        throw new SkillConflict({
-          message:
-            "This skill changed in another window. Reload before saving.",
-        })
-      if (!current && this.list().length >= 100)
-        throw new SkillConflict({
-          message: "The library supports up to 100 skills.",
-        })
-      if ((current?.revision ?? 0) >= 100)
-        throw new SkillConflict({
-          message:
-            "This skill has reached its 100-revision limit. Create a new skill to continue.",
-        })
-      const next = {
-        id: input.id,
-        name: input.name,
-        body: input.body,
-        revision: input.expectedRevision + 1,
-        createdAt: new Date().toISOString(),
-        archived: false,
-        stateRevision: (current?.stateRevision ?? 0) + 1,
-        ...(input.source ? { source: input.source } : {}),
-      }
+      if (next === current) return current
       this.db.run(
         "INSERT INTO workspace_skill_versions (id,revision,name,body,createdAt,source) VALUES (?,?,?,?,?,?)",
         next.id,
@@ -133,35 +139,21 @@ export class SkillStore {
   archive(id: string, expectedStateRevision: number, archived: boolean) {
     return this.db.transaction(() => {
       const current = this.list().find((skill) => skill.id === id)
-      if (
-        current &&
-        current.stateRevision === expectedStateRevision + 1 &&
-        current.archived === archived
-      )
-        return current
-      if (!current || current.stateRevision !== expectedStateRevision)
-        throw new SkillConflict({
-          message: "This skill changed. Reload the library.",
-        })
-      if (current.archived === archived) return current
+      const next = Domain.archiveSkill(current, expectedStateRevision, archived)
+      if (next === current) return current
       this.db.run(
         "UPDATE workspace_skills SET archived=?,stateRevision=stateRevision+1 WHERE id=?",
         archived ? 1 : 0,
         id
       )
-      return { ...current, archived, stateRevision: current.stateRevision + 1 }
+      return next
     })
   }
   resolve(references: SelectSkills["skills"]): SkillDocument[] {
-    if (new Set(references.map((value) => value.id)).size !== references.length)
-      throw new SkillConflict({ message: "Select each skill once." })
+    Domain.uniqueReferences(references)
     const library = this.list()
     return references.map((ref) => {
-      if (!library.some((skill) => skill.id === ref.id && !skill.archived))
-        throw new SkillConflict({
-          message:
-            "A selected skill is archived or unavailable. Reload the library.",
-        })
+      Domain.requireAvailableSkill(library, ref.id)
       const value = this.versions(ref.id).find(
         (version) => version.revision === ref.revision
       )
@@ -186,16 +178,12 @@ export class SkillStore {
   select(expectedRevision: number, skills: readonly SkillDocument[]) {
     return this.db.transaction(() => {
       const current = this.selection()
-      if (JSON.stringify(current.skills) === JSON.stringify(skills))
-        return current
-      if (current.revision !== expectedRevision)
-        throw new SkillConflict({
-          message: "This bot's skills changed. Reload before selecting again.",
-        })
+      const next = Domain.selectSkills(current, expectedRevision, skills)
+      if (next === current) return current
       this.db.run(
         "INSERT INTO bot_skills VALUES (1,?,?) ON CONFLICT(id) DO UPDATE SET revision=excluded.revision,skills=excluded.skills",
-        current.revision + 1,
-        JSON.stringify(skills)
+        next.revision,
+        JSON.stringify(next.skills)
       )
       return this.selection()
     })

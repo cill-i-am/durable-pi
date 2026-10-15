@@ -1,7 +1,11 @@
 import { expect, it } from "vitest"
 import { Effect } from "effect"
 import { SummaryRoutes } from "../src/memory/adapters/model-routes"
-import { makeSqliteMemory } from "../src/memory/adapters/sqlite"
+import {
+  makeSqliteMemory,
+  sqliteMemoryLayer,
+} from "../src/memory/adapters/sqlite"
+import { MemoryTransaction } from "../src/memory/ledger"
 import { resolveRoute } from "../src/inference/policy"
 import { database } from "./database"
 
@@ -66,6 +70,9 @@ it("stops retries after three failures across restart, keeps valid memory and re
     ])
   }
   const reopened = run(makeSqliteMemory(db))
+  const ledger = run(
+    MemoryTransaction.pipe(Effect.provide(sqliteMemoryLayer(db)))
+  )
   expect(run(reopened.next(new Set(), 999999))).toBeUndefined()
   expect(run(reopened.blocked())).toBe(true)
   expect(run(reopened.retryAt())).toBeUndefined()
@@ -76,13 +83,13 @@ it("stops retries after three failures across restart, keeps valid memory and re
   expect(run(reopened.node(job))).toBeUndefined()
   expect(() =>
     db.transaction(() => {
-      run(reopened.retrySummary(job))
+      ledger.retrySummary(job)
       throw new Error("rollback")
     })
   ).toThrow("rollback")
   expect(run(reopened.issues())[0]?.attempts).toBe(3)
   db.transaction(() => {
-    expect(run(reopened.retrySummary(job))).toBe(true)
+    expect(ledger.retrySummary(job)).toBe(true)
     routes.replace(
       job,
       "retry",

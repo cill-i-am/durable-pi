@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
-import { Effect, ManagedRuntime } from "effect"
+import { Cause, Effect, Exit, ManagedRuntime } from "effect"
 import { database } from "./database"
 import {
   workspaceLayer,
@@ -228,9 +228,13 @@ describe("private video preparation", () => {
         })
       )
     )
-    await expect(f.run((w) => w.video(input.id))).rejects.toMatchObject({
-      _tag: "WorkspaceUnavailable",
-    })
+    const corrupted = await f.run((w) => Effect.exit(w.video(input.id)))
+    expect(Exit.isFailure(corrupted) && Cause.hasDies(corrupted.cause)).toBe(
+      true
+    )
+    expect(Exit.isFailure(corrupted) && Cause.hasFails(corrupted.cause)).toBe(
+      false
+    )
     await f.runtime.dispose()
   })
   it("backs off after a parent restart while the previous child decoder is still busy", async () => {

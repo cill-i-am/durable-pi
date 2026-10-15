@@ -12,6 +12,7 @@ import {
   agentStatusLabel,
 } from "../src/components/agent-status"
 import { agentStatuses } from "../src/agents/statuses"
+import { agentRuntimeReader } from "../src/agents/adapters/statuses"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import { AccessStore } from "../src/access/adapters/sqlite"
 import {
@@ -168,12 +169,18 @@ describe("agent runtime status", () => {
     ]
     const seen: string[] = []
     const result = await Effect.runPromise(
-      agentStatuses(agents, async (agent) => {
-        seen.push(agent.id)
-        if (agent.id === unreadable)
-          throw new Error("private infrastructure error")
-        return { state: "failed", turnId: "saved-root" }
-      })
+      agentStatuses(
+        agents,
+        agentRuntimeReader(
+          async (agent) => {
+            seen.push(agent.id)
+            if (agent.id === unreadable)
+              throw new Error("private infrastructure error")
+            return { state: "failed", turnId: "saved-root" }
+          },
+          () => {}
+        )
+      )
     )
     expect(seen).toEqual([homeAgentId, unreadable])
     expect(result.statuses).toEqual([

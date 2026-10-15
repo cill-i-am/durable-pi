@@ -1,22 +1,54 @@
+import { makeSummaryModel } from "../src/memory/summary-execution"
+import {
+  SummaryRouting,
+  summaryRoutingApplication,
+} from "../src/memory/routing"
+import { summaryInput } from "../src/memory/adapters/summary-input"
+import { summaryRetryAuthority } from "../src/memory/adapters/retry-authority"
 import { expect, it, vi } from "vitest"
-import { Effect, ManagedRuntime } from "effect"
+import { Cause, Effect, Exit, Layer, ManagedRuntime } from "effect"
+import {
+  Conversations,
+  conversationApplication,
+} from "../src/conversations/service"
 import { PersonalAgent } from "../src/agent/worker"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import { workspaceLayer } from "../src/workspace/adapters/storage"
 import { catalog, credential, response } from "./inference-fixture"
-import { accountCredentials } from "../src/agent/models"
-import { InferenceUsage } from "../src/inference/usage"
+import { accountCredentials } from "../src/inference/adapters/credentials-pi"
+import { usageFixture } from "./usage-fixture"
+import { piModelStreamsLayer } from "../src/inference/adapters/streams-pi"
 import { createRegistry } from "@earendil-works/pi-durable"
 import { database } from "./database"
-import { makeSqliteMemory } from "../src/memory/adapters/sqlite"
+import { sqliteMemoryLayer } from "../src/memory/adapters/sqlite"
+import { MemoryRepository } from "../src/memory/repository"
+import { MemoryTransaction, type MemoryLedger } from "../src/memory/ledger"
+import { memorySummaryRetry } from "../src/memory/retry"
+import type { Sqlite } from "../src/storage/sqlite"
 import { SummaryRoutes } from "../src/memory/adapters/model-routes"
-import { BackgroundMailbox } from "../src/delegation/adapters/background-mailbox"
+import { SqliteBackgroundMailbox } from "../src/delegation/adapters/background-mailbox"
+import { makeBackgroundMailbox } from "../src/delegation/background-mailbox"
+import { makeBackgroundDelegation } from "../src/delegation/background-service"
 import { resolveRoute } from "../src/inference/policy"
+import { conversationPump } from "../src/conversations/pump"
+import { conversationFixture } from "./conversation-fixture"
+import { BotConfigurationStore } from "../src/agents/adapters/configuration"
+import { SkillStore } from "../src/skills/adapters/sqlite"
+import { Workspace } from "../src/workspace/workspace"
+import { WorkspaceAdmission } from "../src/workspace/admission"
+import {
+  guardedMessageAdmission,
+  messageAdmission,
+} from "../src/conversations/admission"
+import { conversationTransactions } from "../src/conversations/adapters/sqlite-journal"
+import { conversationNativeOperation } from "../src/conversations/adapters/pi-execution"
+import { homeAgentId } from "../src/agents/domain"
 
 vi.mock("cloudflare:workers", () => ({
   DurableObject: class {},
   WorkerEntrypoint: class {},
   env: {},
+  tracing: undefined,
 }))
 vi.mock("agents/lifecycle", () => ({
   Lifecycle: class {},
@@ -24,6 +56,33 @@ vi.mock("agents/lifecycle", () => ({
 }))
 vi.mock("agents/harness/pi", () => ({ PiHarness: class {} }))
 
+class PersonalAgentTest extends PersonalAgent {
+  summaryProviderForTest() {
+    return this.createSummaryProvider()
+  }
+}
+function wireSummaryModel(host: PersonalAgentTest, routes: SummaryRoutes) {
+  const inputs = {
+    settings: () => summaryInput(host.conversationService.jobSetting("memory")),
+    catalog: () =>
+      summaryInput(
+        conversationNativeOperation("read summary catalog", () =>
+          host.accountModelCatalog()
+        )
+      ),
+  }
+  const routing = Effect.runSync(
+    SummaryRouting.pipe(Effect.provide(summaryRoutingApplication(routes)))
+  )
+  Object.assign(host, { summaryInputs: inputs })
+  Object.assign(host, {
+    summaryModel: makeSummaryModel(
+      routing,
+      inputs,
+      host.summaryProviderForTest()
+    ),
+  })
+}
 function fixture() {
   const db = database(),
     conversations = new ConversationStore(db, {
@@ -31,15 +90,28 @@ function fixture() {
       thinking: "medium",
     })
   const runtime = ManagedRuntime.make(
-    workspaceLayer(db, { get: async () => null, put: async () => {} }, "test")
+    Layer.mergeAll(
+      piModelStreamsLayer,
+      workspaceLayer(
+        db,
+        { get: async () => null, put: async () => {} },
+        "test"
+      ),
+      conversationApplication(conversations)
+    )
   )
   const wakes: (string | null)[] = []
-  const host: PersonalAgent = Object.create(PersonalAgent.prototype)
+  const botConfiguration = new BotConfigurationStore(db)
+  const skills = new SkillStore(db)
+  const host: PersonalAgentTest = Object.create(PersonalAgentTest.prototype)
   Object.assign(host, {
     conversations,
-    workspaceRuntime: runtime,
-    botConfiguration: { read: () => ({ status: "active" }) },
-    skills: { selection: () => ({ skills: [] }) },
+    actorRuntime: runtime,
+    ctx: { waitUntil: vi.fn() },
+    conversationService: runtime.runSync(Conversations),
+
+    botConfiguration,
+    skills,
     notifyConversation: () => {},
     modelConnected: async () => true,
     accountModelCatalog: async () => catalog,
@@ -49,11 +121,78 @@ function fixture() {
       },
     },
   })
+  Object.assign(host, {
+    messageAdmission: messageAdmission(
+      runtime.runSync(Conversations),
+      runtime.runSync(Workspace),
+      guardedMessageAdmission(
+        conversations,
+        botConfiguration,
+        runtime.runSync(WorkspaceAdmission),
+        skills,
+        conversationTransactions(db)
+      ),
+      {
+        connected: () =>
+          conversationNativeOperation("read model connection", () =>
+            host.modelConnected()
+          ),
+        archived: () =>
+          Effect.sync(() => botConfiguration.read()?.status === "archived"),
+        catalog: () =>
+          conversationNativeOperation("read model catalog", () =>
+            host.accountModelCatalog()
+          ),
+        wake: () =>
+          conversationNativeOperation("wake conversation", () =>
+            host.runner.wake()
+          ),
+        notify: () => Effect.sync(() => host.notifyConversation()),
+      }
+    ),
+  })
   return { host, conversations, runtime, wakes, db }
 }
 
+const summaryMemory = (db: Sqlite) =>
+  Effect.runSync(
+    Effect.gen(function* () {
+      return {
+        memory: yield* MemoryRepository,
+        ledger: yield* MemoryTransaction,
+      }
+    }).pipe(Effect.provide(sqliteMemoryLayer(db)))
+  )
+function wireSummaryRetry(
+  host: PersonalAgent,
+  db: Sqlite,
+  ledger: MemoryLedger,
+  routes: SummaryRoutes
+) {
+  const configuration = new BotConfigurationStore(db)
+  Object.assign(host, {
+    botConfiguration: configuration,
+    retrySummary: memorySummaryRetry(
+      ledger,
+      summaryRetryAuthority(configuration),
+      routes,
+      host.conversationService,
+      {
+        catalog: () =>
+          conversationNativeOperation("read summary model catalog", () =>
+            host.accountModelCatalog()
+          ),
+        wake: () =>
+          conversationNativeOperation("wake memory compaction", () =>
+            host.compactor.wake()
+          ),
+        notify: () => Effect.sync(() => host.notifyConversation()),
+      }
+    ),
+  })
+}
 it("bounds request projections by the active model and durable routing pin, including a smaller concurrent runtime budget", () => {
-  const host: PersonalAgent = Object.create(PersonalAgent.prototype)
+  const host: PersonalAgentTest = Object.create(PersonalAgentTest.prototype)
   let pin = 272000,
     window = 272000,
     floor: number | undefined
@@ -113,9 +252,10 @@ it("recovers a failed alarm acknowledgement on a submission retry without repeat
     if (++calls === 1) throw new Error("Synthetic alarm failure")
   }
   try {
-    await expect(host.acceptMessage(input)).rejects.toThrow(
-      "Synthetic alarm failure"
-    )
+    await expect(host.acceptMessage(input)).rejects.toMatchObject({
+      _tag: "ConversationExecutionError",
+      operation: "wake conversation",
+    })
     expect(conversations.get(input.operationId)?.status).toBe("queued")
     expect(await (await host.acceptMessage(input)).json()).toMatchObject({
       accepted: false,
@@ -129,8 +269,15 @@ it("recovers a failed alarm acknowledgement on a submission retry without repeat
 it("does not admit or wake new work when the bot is archived during catalog discovery", async () => {
   const { host, conversations, runtime, wakes } = fixture()
   host.accountModelCatalog = async () => {
-    Object.assign(host, {
-      botConfiguration: { read: () => ({ status: "archived" }) },
+    const now = new Date().toISOString()
+    host.botConfiguration.configure("owner", {
+      id: homeAgentId,
+      name: "Test",
+      instructions: "",
+      status: "archived",
+      revision: 1,
+      createdAt: now,
+      updatedAt: now,
     })
     return catalog
   }
@@ -153,7 +300,7 @@ it("does not admit or wake new work when the bot is archived during catalog disc
 it("repairs a failed summary retry wake on exact replay, without another route revision", async () => {
   const { host, runtime } = fixture(),
     db = database(),
-    memory = Effect.runSync(makeSqliteMemory(db)),
+    { memory, ledger } = summaryMemory(db),
     summaryRoutes = new SummaryRoutes(db),
     part = { start: 0, count: 1 },
     operationId = crypto.randomUUID()
@@ -166,7 +313,6 @@ it("repairs a failed summary retry wake on exact replay, without another route r
   Object.assign(host, {
     db,
     summaryRoutes,
-    memoryRuntime: { runSync: Effect.runSync },
     lifecycle: { start: async () => {} },
     compactor: {
       wake: async () => {
@@ -174,6 +320,7 @@ it("repairs a failed summary retry wake on exact replay, without another route r
       },
     },
   })
+  wireSummaryRetry(host, db, ledger, summaryRoutes)
   const request = () =>
     new Request("https://internal/api/agent/memory/retry", {
       method: "POST",
@@ -200,16 +347,26 @@ it("does not debit a replacement summary route when obsolete discovery returns a
     job = { start: 0, count: 1, source: "Synthetic source", context: "" },
     controller = new AbortController()
   let release!: () => void
+  let entered!: () => void
+  const started = new Promise<void>((resolve) => {
+    entered = resolve
+  })
   const waiting = new Promise<void>((resolve) => {
     release = resolve
   })
   Object.assign(host, { summaryRoutes: routes })
   host.accountModelCatalog = async () => {
+    entered()
     await waiting
     return catalog
   }
+  wireSummaryModel(host, routes)
   try {
-    const pending = host.completeMemorySummary([], controller.signal, job)
+    const pending = runtime.runPromiseExit(
+      host.summaryModel.complete([], job),
+      { signal: controller.signal }
+    )
+    await started
     controller.abort()
     routes.replace(
       job,
@@ -217,7 +374,8 @@ it("does not debit a replacement summary route when obsolete discovery returns a
       resolveRoute("memory", { model: "gpt-6.1-sol", thinking: "medium" })
     )
     release()
-    await expect(pending).rejects.toMatchObject({ name: "AbortError" })
+    const exit = await pending
+    expect(Exit.isFailure(exit) && Cause.hasInterrupts(exit.cause)).toBe(true)
     expect(
       db
         .all<{ requests: number }>("SELECT requests FROM summary_routes")
@@ -235,7 +393,7 @@ it("does not debit a replacement summary route when obsolete discovery returns a
 it("rejects a delayed retry for an older summary revision after the newer retry also pauses", async () => {
   const { host, runtime } = fixture(),
     db = database(),
-    memory = Effect.runSync(makeSqliteMemory(db)),
+    { memory, ledger } = summaryMemory(db),
     summaryRoutes = new SummaryRoutes(db),
     part = { start: 0, count: 1 }
   Effect.runSync(memory.append("failed", "user", "Original source"))
@@ -248,10 +406,10 @@ it("rejects a delayed retry for an older summary revision after the newer retry 
   Object.assign(host, {
     db,
     summaryRoutes,
-    memoryRuntime: { runSync: Effect.runSync },
     lifecycle: { start: async () => {} },
     compactor: { wake: async () => {} },
   })
+  wireSummaryRetry(host, db, ledger, summaryRoutes)
   let lookups = 0,
     release!: () => void,
     entered!: () => void
@@ -262,7 +420,8 @@ it("rejects a delayed retry for an older summary revision after the newer retry 
       entered = resolve
     })
   host.accountModelCatalog = async () => {
-    if (++lookups === 2) {
+    if (++lookups === 1) await started
+    else if (lookups === 2) {
       entered()
       await waiting
     }
@@ -294,15 +453,13 @@ it("sends the pinned independent memory model through the installed Responses ad
     db = database(),
     summaryRoutes = new SummaryRoutes(db),
     job = { start: 0, count: 1, source: "Synthetic original", context: "" },
-    inferenceUsage = new InferenceUsage(db),
+    inferenceUsage = usageFixture(db),
     payloads: Record<string, unknown>[] = []
-  db.run(
-    "CREATE TABLE model_usage (id TEXT PRIMARY KEY, model TEXT, input INTEGER, cached INTEGER, output INTEGER, date TEXT)"
-  )
   Object.assign(host, {
     db,
     summaryRoutes,
-    inferenceUsage,
+    inferenceUsage: inferenceUsage.service,
+    observeInference: inferenceUsage.start,
     ctx: { id: { toString: () => "synthetic-bot" }, waitUntil: vi.fn() },
     credentials: accountCredentials(async () => credential),
     registry: createRegistry(),
@@ -317,16 +474,17 @@ it("sends the pinned independent memory model through the installed Responses ad
   })
   try {
     conversations.setSettings({ model: "gpt-6-astra", thinking: "high" })
-    await host.completeMemorySummary(
-      [
-        {
-          role: "user",
-          content: "Compress the synthetic source.",
-          timestamp: 0,
-        },
-      ],
-      new AbortController().signal,
-      job
+    wireSummaryModel(host, summaryRoutes)
+    await runtime.runPromise(
+      host.summaryModel.complete(
+        [
+          {
+            role: "user",
+            text: "Compress the synthetic source.",
+          },
+        ],
+        job
+      )
     )
     expect(payloads).toHaveLength(1)
     expect(payloads[0]).toMatchObject({
@@ -372,54 +530,98 @@ it("delivers a ready background report when a later foreground turn fails on blo
   }).turn
   const route = { ...resolveRoute("conversation"), contextWindow: 8192 }
   let parentDone = false
-  const mailbox = new BackgroundMailbox(db, () =>
-    parentDone ? "done" : "active"
+  const mailbox = makeBackgroundMailbox(
+    new SqliteBackgroundMailbox(db),
+    () => (parentDone ? "done" : "active"),
+    "synthetic-parent",
+    () => crypto.randomUUID()
   )
-  const handoff = mailbox.create(
-    {
-      objective: "Draft",
-      tasks: [{ name: "Draft", task: "Draft only", tools: [] }],
-    },
-    {
-      turnId: source.id,
-      conversationId: 1,
-      taskId: 73,
-      route,
-      memory: "",
-    },
-    "synthetic-parent"
+  const handoff = Effect.runSync(
+    mailbox.create(
+      {
+        objective: "Draft",
+        tasks: [{ name: "Draft", task: "Draft only", tools: [] }],
+      },
+      {
+        turnId: source.id,
+        conversationId: 1,
+        taskId: 73,
+        route,
+        memory: "",
+      }
+    )
   ).handoff
   parentDone = true
-  mailbox.observed(73, {
-    id: 73,
-    turnId: source.id,
-    conversationId: 1,
-    objective: "Draft",
-    route,
-    createdAt: handoff.createdAt,
-    deadline: handoff.deadline,
-    status: "completed",
-    children: [],
-  })
-  Object.defineProperty(host, "memory", {
-    value: {
-      settled: () => Effect.succeed(false),
-      blocked: () => Effect.succeed(true),
-    },
-  })
+  Effect.runSync(
+    mailbox.observed(73, {
+      id: 73,
+      turnId: source.id,
+      conversationId: 1,
+      objective: "Draft",
+      route,
+      createdAt: handoff.createdAt,
+      deadline: handoff.deadline,
+      status: "completed",
+      children: [],
+    })
+  )
+  const f = await Effect.runPromise(conversationFixture(db))
+  f.memory.settled = () => Effect.succeed(false)
+  f.memory.blocked = () => Effect.succeed(true)
+  f.host.wakeBackground = () => Effect.promise(() => host.stepBackground())
+  f.host.notify = () => Effect.sync(() => host.notifyConversation())
   Object.assign(host, {
     backgroundMailbox: mailbox,
+    background: makeBackgroundDelegation(
+      mailbox,
+      {
+        start: () => Effect.die("Unexpected remote start"),
+        read: () => Effect.die("Unexpected remote read"),
+        stop: () => Effect.void,
+        control: () => Effect.die("Unexpected control"),
+        transcript: () => Effect.die("Unexpected transcript"),
+      },
+      {
+        active: () => Effect.sync(() => !!conversations.active()),
+        backgroundActive: () =>
+          Effect.sync(() => !!conversations.active()?.origin),
+        wakeConversation: () => Effect.promise(() => host.runner.wake()),
+        wakeBackground: () => Effect.void,
+        notify: () => Effect.sync(() => host.notifyConversation()),
+        admission: {
+          transactionGroup: db,
+          stop: () => {},
+          admit: (h, report) =>
+            conversations.admit(
+              {
+                operationId: h.reportId,
+                text: report,
+                origin: { kind: "background", groupId: h.id, turnId: h.turnId },
+              },
+              undefined,
+              [],
+              h.route
+            ).turn.id,
+        },
+      }
+    ),
     backgroundRunner: { wake: () => host.stepBackground() },
-    memoryRuntime: { runSync: Effect.runSync },
-    routines: { canRun: () => true },
+    routineAuthority: { canRun: () => true },
+    conversationPump: conversationPump(
+      host.conversationService,
+      f.memory,
+      f.journal,
+      f.execution,
+      f.host
+    ),
   })
   try {
     await host.stepBackground()
-    expect(mailbox.get(73)?.status).toBe("ready")
-    expect(mailbox.nextWake()).toBeUndefined()
+    expect(Effect.runSync(mailbox.get(73))?.status).toBe("ready")
+    expect(Effect.runSync(mailbox.nextWake())).toBeUndefined()
     await host.step()
     expect(conversations.get(foreground.id)?.status).toBe("failed")
-    expect(mailbox.get(73)?.status).toBe("delivered")
+    expect(Effect.runSync(mailbox.get(73))?.status).toBe("delivered")
     expect(conversations.active()?.origin).toMatchObject({
       kind: "background",
       groupId: 73,

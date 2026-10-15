@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { getEnv } from "../env"
-import { receiveWebhook } from "../webhooks/public"
+import { receiveWebhook } from "../webhooks/adapters/public"
 
 export const Route = createFileRoute("/api/hooks/$agent/$routine")({
   server: {

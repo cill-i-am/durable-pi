@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { Schema } from "effect"
-import { InferenceActivity, type Attempt } from "@/inference/usage"
+import { InferenceActivity, type Attempt } from "@/inference/usage-domain"
 import { agentApi } from "@/http/client"
 import { poll } from "@/http/poll"
 import { Badge } from "@/components/ui/badge"

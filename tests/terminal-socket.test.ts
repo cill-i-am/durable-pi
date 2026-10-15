@@ -1,6 +1,12 @@
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, it } from "vitest"
+import { it as effectIt } from "@effect/vitest"
+import { Clock, Effect } from "effect"
+import { TestClock } from "effect/testing"
 import { InteractiveSession } from "../src/terminal/session"
-import { validTerminalInput } from "../src/terminal/adapters/socket"
+import {
+  validTerminalInput,
+  relayTerminal,
+} from "../src/terminal/adapters/socket"
 
 describe("terminal transport boundary", () => {
   it("accepts only bounded binary input and a bounded resize control", () => {
@@ -17,23 +23,30 @@ describe("terminal transport boundary", () => {
     ])
       expect(validTerminalInput(data)).toBe(false)
   })
-  it("limits authenticated renewal to the fixed session lifetime", async () => {
-    vi.useFakeTimers()
-    try {
-      const controller = new AbortController(),
-        session = new InteractiveSession("id", controller)
-      const maximum = session.maximumAt
-      for (let i = 0; i < 59; i++) {
-        await vi.advanceTimersByTimeAsync(10000)
-        session.renew()
-      }
-      expect(session.maximumAt).toBe(maximum)
-      expect(session.expiresAt).toBe(maximum)
-      await vi.advanceTimersByTimeAsync(10001)
-      expect(controller.signal.aborted).toBe(true)
-      expect(() => session.renew()).toThrow("ended")
-    } finally {
-      vi.useRealTimers()
-    }
-  })
+  effectIt.effect(
+    "limits authenticated renewal to the fixed session lifetime",
+    () =>
+      Effect.gen(function* () {
+        const controller = new AbortController()
+        const session = new InteractiveSession(
+          "id",
+          controller,
+          relayTerminal,
+          yield* Clock.Clock
+        )
+        yield* Effect.forkScoped(session.watchLease())
+        const maximum = session.maximumAt
+        for (let i = 0; i < 59; i++) {
+          yield* TestClock.adjust("10 seconds")
+          yield* session.renew()
+        }
+        expect(session.maximumAt).toBe(maximum)
+        expect(session.expiresAt).toBe(maximum)
+        yield* TestClock.adjust("10001 millis")
+        expect(controller.signal.aborted).toBe(true)
+        expect(yield* Effect.result(session.renew())).toMatchObject({
+          _tag: "Failure",
+        })
+      }).pipe(Effect.scoped)
+  )
 })

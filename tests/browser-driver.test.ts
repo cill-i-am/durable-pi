@@ -1,5 +1,9 @@
+import { nativeBrowserOperation } from "../src/browser/adapters/interop"
 import { runInNewContext } from "node:vm"
 import { beforeEach, expect, it, vi } from "vitest"
+import { Cause, Effect, Exit, Fiber, Layer, ManagedRuntime } from "effect"
+import { it as effectIt } from "@effect/vitest"
+import { TestClock } from "effect/testing"
 import { TimeoutError } from "@cloudflare/puppeteer"
 import {
   CloudflareBrowser,
@@ -20,7 +24,17 @@ const session = {
   targetId: "target",
   expiresAt: Date.now() + 600_000,
 }
-const driver = new CloudflareBrowser({} as BrowserRun)
+const implementation = new CloudflareBrowser({} as BrowserRun)
+const driver = {
+  open: (...args: Parameters<CloudflareBrowser["open"]>) =>
+    Effect.runPromise(implementation.open(...args)),
+  navigate: (...args: Parameters<CloudflareBrowser["navigate"]>) =>
+    Effect.runPromise(implementation.navigate(...args)),
+  capture: (...args: Parameters<CloudflareBrowser["capture"]>) =>
+    Effect.runPromise(implementation.capture(...args)),
+  interact: (...args: Parameters<CloudflareBrowser["interact"]>) =>
+    Effect.runPromise(implementation.interact(...args)),
+}
 beforeEach(() => {
   vi.resetAllMocks()
 })
@@ -54,13 +68,15 @@ function fixture(
       throw new Error("Unexpected CDP method")
     }
   )
+  const detach = vi.fn(async () => {})
   const page = {
-    createCDPSession: async () => ({ send, detach: vi.fn() }),
+    createCDPSession: vi.fn(async () => ({ send, detach })),
     url: () => "https://example.com/",
     setDefaultTimeout: vi.fn(),
     setDefaultNavigationTimeout: vi.fn(),
     setRequestInterception: vi.fn(async () => {}),
     on: vi.fn(),
+    off: vi.fn(),
     waitForNavigation: vi.fn(async () => null),
     goto: vi.fn(async () => null),
     mouse: { click: vi.fn(async () => {}), wheel: vi.fn(async () => {}) },
@@ -80,7 +96,7 @@ function fixture(
     disconnect: vi.fn(async () => {}),
   }
   provider.connect.mockResolvedValue(browser)
-  return { page, browser, send }
+  return { page, browser, send, detach }
 }
 it("observes in an isolated world and validates the host contract", async () => {
   const f = fixture()
@@ -226,7 +242,7 @@ it("releases modifier keys even when selection fails", async () => {
       ["example.com"],
       "owner"
     )
-  ).rejects.toThrow("Disconnected")
+  ).rejects.toMatchObject({ _tag: "BrowserUnavailable" })
   expect(f.page.keyboard.up).toHaveBeenCalledExactlyOnceWith("Control")
 })
 
@@ -246,9 +262,9 @@ it.each([
 it("restores capture masks after screenshot failure", async () => {
   const f = fixture()
   f.page.screenshot.mockRejectedValue(new Error("Snapshot failed"))
-  await expect(driver.capture(session, ["example.com"])).rejects.toThrow(
-    "Snapshot failed"
-  )
+  await expect(driver.capture(session, ["example.com"])).rejects.toMatchObject({
+    _tag: "BrowserUnavailable",
+  })
   const expressions = f.send.mock.calls
     .filter(([method]) => method === "Runtime.evaluate")
     .map(([, params]) => params?.expression)
@@ -291,15 +307,15 @@ it("omits provider allowlists and the restriction probe only for unrestricted se
   const browser = {
     newPage: async () => ({
       goto,
-      setViewport: vi.fn(),
+      setViewport: vi.fn(async () => {}),
       createCDPSession: async () => ({
         send: async () => ({ targetInfo: { targetId: "target" } }),
-        detach: vi.fn(),
+        detach: vi.fn(async () => {}),
       }),
     }),
     sessionId: () => "unrestricted-session",
-    close: vi.fn(),
-    disconnect: vi.fn(),
+    close: vi.fn(async () => {}),
+    disconnect: vi.fn(async () => {}),
   }
   provider.launch.mockResolvedValue(browser)
   expect((await driver.open([], true)).id).toBe("unrestricted-session")
@@ -446,3 +462,393 @@ it("does not settle a click from a subsequent error document", async () => {
   expect(f.page.mouse.click).toHaveBeenCalledOnce()
   expect(f.browser.disconnect).toHaveBeenCalled()
 })
+
+function gate() {
+  let release!: () => void
+  const waiting = new Promise<void>((done) => {
+    release = done
+  })
+  return { waiting, release }
+}
+
+it("joins failed target discovery's CDP detach before disconnecting", async () => {
+  const f = fixture(),
+    cleaning = gate(),
+    release = gate()
+  let settled = false
+  f.send.mockRejectedValue(new Error("Private target lookup failure"))
+  f.detach.mockImplementation(async () => {
+    cleaning.release()
+    await release.waiting
+  })
+  const work = Effect.runPromiseExit(implementation.capture(session, [])).then(
+    (exit) => {
+      settled = true
+      return exit
+    }
+  )
+  await cleaning.waiting
+  expect(settled).toBe(false)
+  expect(f.browser.disconnect).not.toHaveBeenCalled()
+  release.release()
+  const exit = await work
+  expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(false)
+  expect(f.detach).toHaveBeenCalledOnce()
+  expect(f.browser.disconnect).toHaveBeenCalledOnce()
+})
+
+it("retains both target lookup failure and a CDP cleanup defect", async () => {
+  const f = fixture()
+  f.send.mockRejectedValue(new Error("Private target lookup failure"))
+  f.detach.mockRejectedValue(new Error("Private CDP release failure"))
+  const exit = await Effect.runPromiseExit(implementation.capture(session, []))
+  expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)
+  expect(Exit.isFailure(exit) && Cause.hasFails(exit.cause)).toBe(true)
+  expect(f.browser.disconnect).toHaveBeenCalledOnce()
+})
+
+it("failed acquisition joins close and disconnect even when close rejects", async () => {
+  const closing = gate(),
+    close = gate(),
+    disconnecting = gate(),
+    disconnect = gate()
+  const browser = {
+    newPage: vi.fn(async () => {
+      throw new Error("Private new-page failure")
+    }),
+    close: vi.fn(async () => {
+      closing.release()
+      await close.waiting
+      throw new Error("Private close failure")
+    }),
+    disconnect: vi.fn(async () => {
+      disconnecting.release()
+      await disconnect.waiting
+    }),
+  }
+  provider.launch.mockResolvedValue(browser)
+  let settled = false
+  const work = Effect.runPromiseExit(implementation.open([], true)).then(
+    (exit) => {
+      settled = true
+      return exit
+    }
+  )
+  await closing.waiting
+  expect(settled).toBe(false)
+  close.release()
+  await disconnecting.waiting
+  expect(settled).toBe(false)
+  disconnect.release()
+  const exit = await work
+  expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)
+  expect(browser.close).toHaveBeenCalledOnce()
+  expect(browser.disconnect).toHaveBeenCalledOnce()
+})
+
+it("does not hand off a session after successful acquisition's disconnect fails", async () => {
+  const f = fixture(),
+    browser = {
+      newPage: async () => ({ ...f.page, setViewport: async () => {} }),
+      sessionId: () => session.id,
+      close: vi.fn(async () => {}),
+      disconnect: vi.fn(async () => {
+        throw new Error("Private disconnect failure")
+      }),
+    }
+  provider.launch.mockResolvedValue(browser)
+  const exit = await Effect.runPromiseExit(implementation.open([], true))
+  expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)
+  expect(browser.close).toHaveBeenCalledOnce()
+  expect(f.detach).toHaveBeenCalledOnce()
+})
+
+it.each(["allowed", "blocked", "failed"])(
+  "joins the %s navigation interceptor and removes its handler",
+  async (destination) => {
+    const f = fixture(),
+      entered = gate(),
+      release = gate(),
+      removed = gate(),
+      frame = {}
+    const request = {
+      isInterceptResolutionHandled: () => false,
+      interceptResolutionState: () => ({ action: "none" }),
+      isNavigationRequest: () => true,
+      frame: () => frame,
+      url: () =>
+        destination === "blocked"
+          ? "https://outside.org/"
+          : "https://example.com/",
+      continue: vi.fn(async () => {
+        entered.release()
+        await release.waiting
+        if (destination === "failed")
+          throw new Error("Private interception failure")
+      }),
+      abort: vi.fn(async () => {
+        entered.release()
+        await release.waiting
+      }),
+    }
+    Object.assign(f.page, { mainFrame: () => frame })
+    f.page.goto.mockImplementation(async () => {
+      const handler = f.page.on.mock.calls[0]![1]
+      handler(request)
+      return null
+    })
+    f.page.off.mockImplementation(() => {
+      removed.release()
+    })
+    let settled = false
+    const work = Effect.runPromiseExit(
+      implementation.navigate(session, "https://example.com", ["example.com"])
+    ).then((exit) => {
+      settled = true
+      return exit
+    })
+    await entered.waiting
+    await removed.waiting
+    expect(settled).toBe(false)
+    expect(f.browser.disconnect).not.toHaveBeenCalled()
+    release.release()
+    const exit = await work
+    expect(Exit.isSuccess(exit)).toBe(destination !== "failed")
+    expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(
+      destination === "failed"
+    )
+    expect(
+      destination === "blocked" ? request.abort : request.continue
+    ).toHaveBeenCalledOnce()
+    expect(f.page.off).toHaveBeenCalledWith(
+      "request",
+      f.page.on.mock.calls[0]![1]
+    )
+    expect(f.browser.disconnect).toHaveBeenCalledOnce()
+  }
+)
+
+it("joins a navigation watcher after native click failure", async () => {
+  const f = fixture(),
+    clicked = gate(),
+    finish = gate()
+  f.page.waitForNavigation.mockImplementation(async () => {
+    await finish.waiting
+    return null
+  })
+  f.page.mouse.click.mockImplementation(async () => {
+    clicked.release()
+    throw new Error("Private click failure")
+  })
+  let settled = false
+  const work = Effect.runPromiseExit(
+    implementation.interact(
+      session,
+      { kind: "click", x: 1, y: 1 },
+      "https://example.com/",
+      [],
+      "agent",
+      true
+    )
+  ).then((exit) => {
+    settled = true
+    return exit
+  })
+  await clicked.waiting
+  expect(settled).toBe(false)
+  finish.release()
+  const exit = await work
+  expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(false)
+  expect(f.browser.disconnect).toHaveBeenCalledOnce()
+})
+
+for (const failed of [false, true])
+  effectIt.effect(
+    `timeout disconnect is joined exactly once and retains failure=${failed}`,
+    () =>
+      Effect.scoped(
+        Effect.gen(function* () {
+          const f = fixture(),
+            deadline = gate(),
+            release = gate(),
+            observed = gate(),
+            disconnecting = gate()
+          let settled = false
+          const send = f.send.getMockImplementation()!
+          f.send.mockImplementation(async (method, params) => {
+            if (
+              method === "Runtime.evaluate" &&
+              params?.expression === PAGE_OBSERVATION
+            ) {
+              observed.release()
+              await deadline.waiting
+            }
+            return send(method, params)
+          })
+          f.browser.disconnect.mockImplementation(async () => {
+            disconnecting.release()
+            deadline.release()
+            await release.waiting
+            if (failed) throw new Error("Private deadline disconnect failure")
+          })
+          const fiber = yield* implementation
+            .capture(session, ["example.com"])
+            .pipe(
+              Effect.ensuring(
+                Effect.sync(() => {
+                  settled = true
+                })
+              ),
+              Effect.forkScoped
+            )
+          yield* Effect.addFinalizer(() =>
+            Effect.sync(() => {
+              deadline.release()
+              release.release()
+            })
+          )
+          yield* Effect.promise(() => observed.waiting)
+          const advancing = yield* TestClock.adjust("30 seconds").pipe(
+            Effect.forkScoped
+          )
+          yield* Effect.promise(() => disconnecting.waiting)
+          yield* Effect.yieldNow
+          expect(f.browser.disconnect).toHaveBeenCalledOnce()
+          expect(settled).toBe(false)
+          release.release()
+          const exit = yield* Fiber.await(fiber)
+          yield* Fiber.join(advancing)
+          expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(failed)
+          expect(f.browser.disconnect).toHaveBeenCalledOnce()
+        })
+      )
+  )
+
+it("actor disposal joins a late CDP acquisition, detach and disconnect before releasing its Layer", async () => {
+  const f = fixture(),
+    acquiring = gate(),
+    acquired = gate(),
+    detaching = gate(),
+    detached = gate(),
+    events: string[] = []
+  f.page.createCDPSession.mockImplementation(async () => {
+    acquiring.release()
+    await acquired.waiting
+    return { send: f.send, detach: f.detach }
+  })
+  f.detach.mockImplementation(async () => {
+    detaching.release()
+    await detached.waiting
+    events.push("cdp.detached")
+  })
+  f.browser.disconnect.mockImplementation(async () => {
+    events.push("browser.disconnected")
+  })
+  const actor = ManagedRuntime.make(
+    Layer.effectDiscard(
+      Effect.addFinalizer(() =>
+        Effect.sync(() => {
+          events.push("layer.closed")
+        })
+      )
+    )
+  )
+  const work = actor.runPromiseExit(implementation.capture(session, []))
+  await acquiring.waiting
+  let disposed = false
+  const disposing = actor.dispose().then(() => {
+    disposed = true
+  })
+  acquired.release()
+  await detaching.waiting
+  expect(disposed).toBe(false)
+  expect(events).not.toContain("layer.closed")
+  detached.release()
+  const exit = await work
+  await disposing
+  expect(Exit.isFailure(exit) && Cause.hasInterrupts(exit.cause)).toBe(true)
+  expect(events).toEqual([
+    "cdp.detached",
+    "browser.disconnected",
+    "layer.closed",
+  ])
+  expect(f.detach).toHaveBeenCalledOnce()
+})
+
+it("closes malformed session acquisition before it can enter durable state", async () => {
+  const f = fixture(),
+    browser = {
+      newPage: async () => ({ ...f.page, setViewport: async () => {} }),
+      sessionId: () => undefined,
+      close: vi.fn(async () => {}),
+      disconnect: vi.fn(async () => {}),
+    }
+  provider.launch.mockResolvedValue(browser)
+  const exit = await Effect.runPromiseExit(implementation.open([], true))
+  expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)
+  expect(browser.close).toHaveBeenCalledOnce()
+  expect(browser.disconnect).toHaveBeenCalledOnce()
+})
+
+it("ignores requests created before interception was enabled", async () => {
+  const f = fixture(),
+    request = {
+      isInterceptResolutionHandled: () => false,
+      interceptResolutionState: () => ({ action: "disabled" }),
+      continue: vi.fn(async () => {}),
+      abort: vi.fn(async () => {}),
+    }
+  f.page.goto.mockImplementation(async () => {
+    f.page.on.mock.calls[0]![1](request)
+    return null
+  })
+  await Effect.runPromise(
+    implementation.navigate(session, "https://example.com", ["example.com"])
+  )
+  expect(request.continue).not.toHaveBeenCalled()
+  expect(request.abort).not.toHaveBeenCalled()
+  expect(f.page.off).toHaveBeenCalledOnce()
+})
+
+it("retains native rejection interpretation defects in the Effect cause", async () => {
+  const exit = await Effect.runPromiseExit(
+    nativeBrowserOperation(
+      async () => {
+        throw new Error("Native failure")
+      },
+      () => {
+        throw new TypeError("Interpreter defect")
+      }
+    )
+  )
+  expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)
+})
+
+it.each(["navigate", "capture", "interact"])(
+  "keeps %s destination rejection in the typed channel and cleans its connection",
+  async (operation) => {
+    const f = fixture()
+    f.page.url = () => "https://outside.org/"
+    const work =
+      operation === "navigate"
+        ? implementation.navigate(session, "https://outside.org", [
+            "example.com",
+          ])
+        : operation === "capture"
+          ? implementation.capture(session, ["example.com"])
+          : implementation.interact(
+              session,
+              { kind: "click", x: 1, y: 1 },
+              "https://example.com/",
+              ["example.com"],
+              "agent"
+            )
+    expect(await Effect.runPromise(work.pipe(Effect.result))).toMatchObject({
+      _tag: "Failure",
+      failure: { _tag: "BrowserFailure" },
+    })
+    expect(f.page.goto).not.toHaveBeenCalled()
+    expect(f.page.mouse.click).not.toHaveBeenCalled()
+    expect(f.browser.disconnect).toHaveBeenCalledOnce()
+  }
+)

@@ -10,7 +10,7 @@ import { createModels } from "@earendil-works/pi-ai"
 import { ObjectStore } from "../src/features/objects/store"
 import { ApiError } from "../src/http/client"
 import { piWorkingObjects } from "../src/objects/adapters/pi"
-import { objectsRequest } from "../src/objects/http"
+import { objectsRequest } from "../src/objects/adapters/http"
 import { ObjectMutation, ObjectDetail } from "../src/objects/contracts"
 
 it("recovers a lost UI response after browser restart, explicitly reconciles conflicts and cancels uncertain unsent changes", async () => {

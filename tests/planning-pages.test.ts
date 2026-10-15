@@ -13,7 +13,7 @@ import {
   fauxToolCall,
 } from "@earendil-works/pi-ai"
 import { piPlans } from "../src/planning/adapters/pi"
-import { planTools, recoverablePlanTools } from "../src/planning/tools"
+import { planTools, recoverablePlanTools } from "../src/planning/adapters/tools"
 import { AccessStore } from "../src/access/adapters/sqlite"
 import { AccessGate } from "../src/access/gate"
 import { guardedTools } from "../src/access/adapters/pi"
@@ -41,7 +41,7 @@ it("pages maximally escaped plan summaries through actual native tool and durabl
     tools: planTools(plans, source).map(
       guardedTools(
         new AccessGate(access, () => true),
-        () => root,
+        () => Effect.succeed(root),
         recoverablePlanTools
       )
     ),

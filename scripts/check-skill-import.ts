@@ -1,9 +1,8 @@
 import assert from "node:assert/strict"
 import { Effect, Schema } from "effect"
-import type { ToolExecutionResult } from "@earendil-works/pi-durable"
-import { importSkillsRequest } from "../src/skills/import"
+import { importSkillsRequest } from "../src/skills/adapters/hosted"
 import { Skill, SaveSkill, SkillSelection } from "../src/skills/contracts"
-import { remoteTool } from "../src/access/connections"
+import { remoteTool } from "../src/access/adapters/remote-tool"
 
 const origin = "http://localhost:1337"
 assert.equal(process.env.OWNER_EMAIL, "workspace-test@example.com")
@@ -52,10 +51,11 @@ const fixture = {
 const preview = await Effect.runPromise(
   importSkillsRequest(
     {
-      resolve: async () => ({ tools: [tool], error: null }),
-      call: async (): Promise<ToolExecutionResult> => ({
-        content: [{ type: "text", text: JSON.stringify(fixture) }],
-      }),
+      resolve: () => Effect.succeed([tool]),
+      call: () =>
+        Effect.succeed({
+          content: [{ type: "text", text: JSON.stringify(fixture) }],
+        }),
     },
     new Request(origin, {
       method: "POST",

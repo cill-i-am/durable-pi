@@ -1,10 +1,17 @@
+import { makeSkills } from "../src/skills/service"
+import {
+  SkillConflict,
+  SkillStorageError,
+  SaveSkill,
+  SelectSkills,
+  skillContext,
+} from "../src/skills/contracts"
 import { describe, expect, it } from "vitest"
-import { Effect, Schema } from "effect"
+import { Cause, Effect, Exit, Schema } from "effect"
 import { database } from "./database"
 import { SkillStore } from "../src/skills/adapters/sqlite"
-import { SaveSkill, SelectSkills, skillContext } from "../src/skills/contracts"
 import { selectBotSkills } from "../src/skills/selection"
-import { skillsRequest } from "../src/skills/http"
+import { skillsRequest } from "../src/skills/adapters/http"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 
 const make = () => new SkillStore(database())
@@ -16,6 +23,53 @@ const command = () => ({
 })
 
 describe("versioned owner skills", () => {
+  it("guards the selection write inside its synchronous Effect operation", async () => {
+    const store = make(),
+      document = store.save(command())
+    const result = await Effect.runPromise(
+      makeSkills(store)
+        .select(0, [document], () => false)
+        .pipe(Effect.result)
+    )
+    expect(result).toMatchObject({
+      _tag: "Failure",
+      failure: { _tag: "SkillConflict" },
+    })
+    expect(store.selection()).toEqual({ revision: 0, skills: [] })
+  })
+  it("rolls back the skill version when updating its head fails", () => {
+    const db = database(),
+      store = new SkillStore(db),
+      input = command()
+    db.run(
+      "CREATE TRIGGER fail_skill_head BEFORE INSERT ON workspace_skills BEGIN SELECT RAISE(ABORT,'disk failure'); END"
+    )
+    const exit = Effect.runSyncExit(makeSkills(store).save(input))
+    expect(Exit.isFailure(exit)).toBe(true)
+    if (Exit.isFailure(exit))
+      expect(Cause.squash(exit.cause)).toBeInstanceOf(SkillStorageError)
+    expect(store.versions(input.id)).toEqual([])
+    expect(store.list()).toEqual([])
+    db.run("DROP TRIGGER fail_skill_head")
+    expect(Effect.runSync(makeSkills(store).save(input)).revision).toBe(1)
+    expect(store.versions(input.id)).toHaveLength(1)
+  })
+  it("preserves malformed historical source metadata as a defect", () => {
+    const db = database(),
+      store = new SkillStore(db),
+      input = command()
+    store.save(input)
+    db.run(
+      "UPDATE workspace_skill_versions SET source='broken' WHERE id=?",
+      input.id
+    )
+    const exit = Effect.runSyncExit(makeSkills(store).versions(input.id))
+    expect(Exit.isFailure(exit)).toBe(true)
+    if (Exit.isFailure(exit)) {
+      expect(Cause.hasDies(exit.cause)).toBe(true)
+      expect(Cause.hasFails(exit.cause)).toBe(false)
+    }
+  })
   it("replays uncertain saves, detects stale edits, and preserves prior revisions", () => {
     const store = make(),
       input = command()
@@ -91,9 +145,14 @@ describe("versioned owner skills", () => {
     ) =>
       Effect.runPromise(
         selectBotSkills(
-          store,
+          makeSkills(store),
           { expectedRevision: revision, skills: refs },
-          resolve,
+          (references) =>
+            Effect.tryPromise({
+              try: () => resolve(references),
+              catch: () =>
+                new SkillConflict({ message: "Could not load these skills." }),
+            }),
           () => true
         )
       )
@@ -125,12 +184,18 @@ describe("versioned owner skills", () => {
     await expect(
       Effect.runPromise(
         selectBotSkills(
-          store,
+          makeSkills(store),
           input,
-          async (refs) => {
-            writable = false
-            return { skills: owner.resolve(refs), error: null }
-          },
+          (references) =>
+            Effect.tryPromise({
+              try: () =>
+                (async (refs) => {
+                  writable = false
+                  return { skills: owner.resolve(refs), error: null }
+                })(references),
+              catch: () =>
+                new SkillConflict({ message: "Could not load these skills." }),
+            }),
           () => writable
         )
       )
@@ -139,9 +204,9 @@ describe("versioned owner skills", () => {
     await expect(
       Effect.runPromise(
         selectBotSkills(
-          store,
+          makeSkills(store),
           { ...input, skills: [...input.skills, ...input.skills] },
-          async () => ({ skills: [], error: null }),
+          () => Effect.succeed({ skills: [], error: null }),
           () => true
         )
       )
@@ -210,12 +275,12 @@ describe("versioned owner skills", () => {
         body: JSON.stringify(value),
       })
     const saved = await Effect.runPromise(
-      skillsRequest(store, request(input), "skills/save")
+      skillsRequest(makeSkills(store), request(input), "skills/save")
     )
     expect(saved.status).toBe(200)
     const conflict = await Effect.runPromise(
       skillsRequest(
-        store,
+        makeSkills(store),
         request({ ...input, body: "different" }),
         "skills/save"
       )
@@ -226,7 +291,7 @@ describe("versioned owner skills", () => {
     )
     const oversized = await Effect.runPromise(
       skillsRequest(
-        store,
+        makeSkills(store),
         request({ ...input, body: "x".repeat(150_000) }),
         "skills/save"
       )

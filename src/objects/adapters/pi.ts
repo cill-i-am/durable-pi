@@ -10,18 +10,17 @@ import {
   Checklist,
   ObjectEvent,
   ObjectFailure,
-  ObjectMutation,
-  ChangeSource,
   ObjectId,
-  OperationId,
   MutationReceipt,
   Revision,
-  objectSummary,
   type ChecklistTask,
   type FieldChange,
+  type ChangeSource,
 } from "../contracts"
-import type { WorkingObjects } from "../objects"
-import { changeChecklist } from "../checklist"
+import type { ObjectLedger, ObjectTransaction } from "../ledger"
+import { nativeOperation } from "../../shared/interop"
+import { nativeCommit } from "../../shared/adapters/native-commit"
+import { makeWorkingObjects } from "../service"
 
 const Catalog = defineDoc({
   kind: "working-objects.catalog",
@@ -67,219 +66,127 @@ const Operations = defineDocFamily({
     receipt: MutationReceipt | null
   } => ({ digest: "", cancelled: false, receipt: null }),
 })
-export async function checklistInTransaction(tx: Tx, id: string) {
-  return (await tx.doc(Objects, id, null)).value
-}
-const eventKey = (id: string, revision: number) => `${id}:${revision}`
-const invalid = () =>
-  new ObjectFailure({
-    code: "invalid",
-    message: "Check the checklist fields, IDs, dates and revision.",
+const CatalogRecord = Schema.Struct({
+  ids: Schema.Array(ObjectId),
+  sequence: Revision,
+  offeredThrough: Revision,
+  operations: Revision,
+})
+const OperationRecord = Schema.Struct({
+  digest: Schema.String,
+  cancelled: Schema.Boolean,
+  receipt: Schema.NullOr(MutationReceipt),
+})
+
+/** Join native I/O on cancellation; decoding belongs outside this conversion. */
+const objectRejected = (cause: unknown, channel: "failure" | "rejection") => {
+  const expected = Schema.decodeUnknownOption(ObjectFailure)(cause)
+  if (expected._tag === "Some") return expected.value
+  if (
+    channel === "failure" ||
+    Schema.isSchemaError(cause) ||
+    cause instanceof SyntaxError
+  )
+    throw cause
+  return new ObjectFailure({
+    code: "unavailable",
+    message: "The saved state could not be confirmed. Retry the same change.",
   })
-const decode = <T>(body: () => T) => {
-  try {
-    return body()
-  } catch {
-    throw invalid()
+}
+export const objectNativeOperation = <T>(
+  start: (signal: AbortSignal) => Promise<T>
+) => nativeOperation(start, objectRejected)
+
+export const checklistInTransaction = (tx: Tx, id: string) =>
+  objectNativeOperation(() => tx.doc(Objects, id, null)).pipe(
+    Effect.map((doc) =>
+      doc.value ? Schema.decodeUnknownSync(Checklist)(doc.value) : null
+    )
+  )
+const transaction = (tx: Tx): ObjectTransaction => ({
+  catalog: () =>
+    objectNativeOperation(() => tx.doc(Catalog)).pipe(
+      Effect.map((doc) => {
+        Schema.decodeUnknownSync(CatalogRecord)(doc)
+        return doc
+      })
+    ),
+  checklist: (id) =>
+    objectNativeOperation(() => tx.doc(Objects, id, null)).pipe(
+      Effect.map((doc) => {
+        if (doc.value) Schema.decodeUnknownSync(Checklist)(doc.value)
+        return doc
+      })
+    ),
+  event: (id) =>
+    objectNativeOperation(() => tx.doc(Events, id, null)).pipe(
+      Effect.map((doc) => {
+        if (doc.value) Schema.decodeUnknownSync(ObjectEvent)(doc.value)
+        return doc
+      })
+    ),
+  operation: (id) =>
+    objectNativeOperation(() => tx.doc(Operations, id, null)).pipe(
+      Effect.map((doc) => {
+        Schema.decodeUnknownSync(OperationRecord)(doc)
+        return doc
+      })
+    ),
+})
+
+export function piObjectLedger(open: () => Promise<Session>): ObjectLedger {
+  return {
+    atomic: <T, TError, TRequirements>(
+      change: (tx: ObjectTransaction) => Effect.Effect<T, TError, TRequirements>
+    ) =>
+      objectNativeOperation(open).pipe(
+        Effect.flatMap((session) =>
+          nativeCommit<Tx, T, TError, TRequirements, ObjectFailure>(
+            (body, signal) =>
+              session.commit(body, { ...context, abortSignal: signal }),
+            (tx) => change(transaction(tx)),
+            objectRejected
+          )
+        )
+      ),
+    checklist: (id) =>
+      objectNativeOperation(open).pipe(
+        Effect.flatMap((session) =>
+          objectNativeOperation((signal) =>
+            session.snapshot(Objects, id, { ...context, abortSignal: signal })
+          )
+        ),
+        Effect.map((doc) =>
+          doc?.value ? Schema.decodeUnknownSync(Checklist)(doc.value) : null
+        )
+      ),
+    event: (id) =>
+      objectNativeOperation(open).pipe(
+        Effect.flatMap((session) =>
+          objectNativeOperation((signal) =>
+            session.snapshot(Events, id, { ...context, abortSignal: signal })
+          )
+        ),
+        Effect.map((doc) =>
+          doc?.value ? Schema.decodeUnknownSync(ObjectEvent)(doc.value) : null
+        )
+      ),
   }
 }
-const attempt = <T>(body: () => Promise<T>) =>
-  Effect.tryPromise({
-    try: body,
-    catch: (cause) =>
-      cause instanceof ObjectFailure
-        ? cause
-        : new ObjectFailure({
-            code: "unavailable",
-            message:
-              "The saved state could not be confirmed. Retry the same change.",
-          }),
-  })
-const hash = async (value: unknown) =>
-  Array.from(
-    new Uint8Array(
-      await crypto.subtle.digest(
-        "SHA-256",
-        new TextEncoder().encode(JSON.stringify(value))
-      )
-    ),
-    (byte) => byte.toString(16).padStart(2, "0")
-  ).join("")
-
-export function piWorkingObjects(
+export const objectDigest = (value: unknown) =>
+  objectNativeOperation(() =>
+    crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(JSON.stringify(value))
+    )
+  ).pipe(
+    Effect.map((bytes) =>
+      Array.from(new Uint8Array(bytes), (byte) =>
+        byte.toString(16).padStart(2, "0")
+      ).join("")
+    )
+  )
+export const piWorkingObjects = (
   open: () => Promise<Session>,
   canWrite: (source: ChangeSource) => boolean
-): WorkingObjects {
-  const writable = (source: ChangeSource) => {
-    if (!canWrite(source))
-      throw new ObjectFailure({
-        code: "read_only",
-        message: "This bot or agent run can no longer change objects.",
-      })
-  }
-  const contextSnapshot = () =>
-    attempt(async () => {
-      const session = await open()
-      return session.commit(async (tx) => {
-        const catalog = await tx.doc(Catalog)
-        const objects = []
-        for (const id of catalog.ids) {
-          const value = (await tx.doc(Objects, id, null)).value
-          if (value) objects.push(objectSummary(value))
-        }
-        return {
-          sequence: catalog.sequence,
-          offeredThrough: catalog.offeredThrough,
-          objects,
-        }
-      }, context)
-    })
-  return {
-    context: contextSnapshot,
-    list: () =>
-      contextSnapshot().pipe(Effect.map((snapshot) => snapshot.objects)),
-    read: (raw, before) =>
-      attempt(async () => {
-        const id = decode(() => Schema.decodeUnknownSync(ObjectId)(raw))
-        if (before !== undefined)
-          decode(() => Schema.decodeUnknownSync(Revision)(before))
-        const session = await open(),
-          stored = await session.snapshot(Objects, id, context)
-        if (!stored?.value)
-          throw new ObjectFailure({
-            code: "not_found",
-            message: "This checklist is unavailable in this bot.",
-          })
-        const object = Schema.decodeUnknownSync(Checklist)(stored.value)
-        const events: ObjectEvent[] = []
-        const from = Math.min(
-          object.revision,
-          before === undefined ? object.revision : before - 1
-        )
-        for (
-          let revision = from;
-          revision > Math.max(0, from - 20);
-          revision--
-        ) {
-          const event = await session.snapshot(
-            Events,
-            eventKey(id, revision),
-            context
-          )
-          if (event?.value)
-            events.push(Schema.decodeUnknownSync(ObjectEvent)(event.value))
-        }
-        return { object, events, nextHistory: from > 20 ? from - 19 : null }
-      }),
-    mutate: (raw, origin) =>
-      attempt(async () => {
-        const input = decode(() =>
-            Schema.decodeUnknownSync(ObjectMutation)(raw)
-          ),
-          source = decode(() => Schema.decodeUnknownSync(ChangeSource)(origin)),
-          digest = await hash({ input, source }),
-          session = await open()
-        return session.commit(async (tx) => {
-          writable(source)
-          const operation = await tx.doc(Operations, input.operationId, null)
-          if (operation.cancelled)
-            throw new ObjectFailure({
-              code: "cancelled",
-              message: "This change was cancelled. Start a new edit.",
-            })
-          if (operation.receipt) {
-            if (operation.digest !== digest)
-              throw new ObjectFailure({
-                code: "conflict",
-                message: "This operation ID belongs to another change.",
-              })
-            return Schema.decodeUnknownSync(MutationReceipt)(operation.receipt)
-          }
-          const catalog = await tx.doc(Catalog),
-            stored = await tx.doc(Objects, input.id, null)
-          if (
-            catalog.operations >= 20000 ||
-            (!stored.value && catalog.ids.length >= 50)
-          )
-            throw new ObjectFailure({
-              code: "limit",
-              message:
-                "This bot supports 50 objects and 20,000 changes, including archived objects.",
-            })
-          const { value, changes } = changeChecklist(
-            stored.value ?? undefined,
-            input,
-            source,
-            new Date().toISOString(),
-            catalog.sequence + 1
-          )
-          const id = eventKey(value.id, value.revision)
-          const event = changes.length ? await tx.doc(Events, id, null) : null
-          writable(source)
-          if (event) {
-            event.value = {
-              id,
-              objectId: value.id,
-              revision: value.revision,
-              sequence: value.lastEvent,
-              source,
-              at: value.updatedAt,
-              changes,
-            }
-            catalog.sequence = value.lastEvent
-          }
-          if (!stored.value) catalog.ids.push(value.id)
-          stored.value = { ...value, tasks: [...value.tasks] }
-          catalog.operations++
-          const receipt = {
-            objectId: value.id,
-            revision: value.revision,
-            eventId: id,
-          }
-          operation.digest = digest
-          operation.receipt = receipt
-          return receipt
-        }, context)
-      }),
-    cancel: (raw) =>
-      attempt(async () => {
-        const id = decode(() => Schema.decodeUnknownSync(OperationId)(raw)),
-          session = await open()
-        return session.commit(async (tx) => {
-          const source = {
-            actor: "user" as const,
-            surface: "workbench" as const,
-            turnId: null,
-            toolCallId: null,
-          }
-          writable(source)
-          const operation = await tx.doc(Operations, id, null),
-            catalog = await tx.doc(Catalog)
-          if (operation.receipt) return { applied: true }
-          if (!operation.cancelled) {
-            if (catalog.operations >= 20000)
-              throw new ObjectFailure({
-                code: "limit",
-                message: "This bot has reached its object operation limit.",
-              })
-            writable(source)
-            operation.cancelled = true
-            catalog.operations++
-          }
-          return { applied: false }
-        }, context)
-      }),
-    offered: (sequence) =>
-      attempt(async () => {
-        decode(() => Schema.decodeUnknownSync(Revision)(sequence))
-        const session = await open()
-        await session.commit(async (tx) => {
-          const catalog = await tx.doc(Catalog)
-          catalog.offeredThrough = Math.max(
-            catalog.offeredThrough,
-            Math.min(sequence, catalog.sequence)
-          )
-        }, context)
-      }),
-  }
-}
+) => makeWorkingObjects(piObjectLedger(open), canWrite, objectDigest)

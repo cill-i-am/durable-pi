@@ -1,5 +1,5 @@
-import { Effect } from "effect"
-import type { SkillStore } from "./adapters/sqlite"
+import { Schema, Effect } from "effect"
+import type { SkillError, SkillSelectionRepository } from "./repository"
 import {
   SkillConflict,
   type SkillDocument,
@@ -8,9 +8,11 @@ import {
 
 export type SkillResolution = { skills: SkillDocument[]; error: string | null }
 export const selectBotSkills = (
-  store: SkillStore,
+  store: SkillSelectionRepository,
   input: SelectSkills,
-  resolve: (references: SelectSkills["skills"]) => Promise<SkillResolution>,
+  resolve: (
+    references: SelectSkills["skills"]
+  ) => Effect.Effect<SkillResolution, SkillError>,
   canWrite: () => boolean
 ) =>
   Effect.gen(function* () {
@@ -19,23 +21,23 @@ export const selectBotSkills = (
       input.skills.length
     )
       return yield* new SkillConflict({ message: "Select each skill once." })
-    const current = yield* Effect.try(() => store.selection())
+    const current = yield* store.selection()
     const retained = (ref: { id: string; revision: number }) =>
       current.skills.find(
         (skill) => skill.id === ref.id && skill.revision === ref.revision
       )
     const needed = input.skills.filter((ref) => !retained(ref))
     const result = needed.length
-      ? yield* Effect.tryPromise(() => resolve(needed))
+      ? yield* resolve(needed)
       : { skills: [], error: null }
     if (result.error) return yield* new SkillConflict({ message: result.error })
-    return yield* Effect.try({
+    const selected = yield* Effect.try({
       try: () => {
         if (!canWrite())
           throw new SkillConflict({
             message: "Restore this bot before changing its skills.",
           })
-        const selected = input.skills.map((ref) => {
+        const documents = input.skills.map((ref) => {
           const skill =
             retained(ref) ??
             result.skills.find(
@@ -48,8 +50,13 @@ export const selectBotSkills = (
             })
           return skill
         })
-        return store.select(input.expectedRevision, selected)
+        return documents
       },
-      catch: (cause) => cause,
+      catch: (cause) => {
+        const skillConflict = Schema.decodeUnknownOption(SkillConflict)(cause)
+        if (skillConflict._tag === "Some") return skillConflict.value
+        throw cause
+      },
     })
-  })
+    return yield* store.select(input.expectedRevision, selected, canWrite)
+  }).pipe(Effect.withSpan("Skills.selectBotSkills"))

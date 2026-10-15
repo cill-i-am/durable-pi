@@ -1,3 +1,4 @@
+import { Effect } from "effect"
 import { expect, it } from "vitest"
 import { mkdtemp, rm } from "node:fs/promises"
 import { join } from "node:path"
@@ -16,8 +17,9 @@ import {
   fauxAssistantMessage,
   fauxToolCall,
 } from "@earendil-works/pi-ai"
+import { makeApps } from "../src/apps/service"
 import { AppStore } from "../src/apps/adapters/sqlite"
-import { appTools } from "../src/apps/tools"
+import { appTools } from "../src/apps/adapters/pi"
 import { AccessStore } from "../src/access/adapters/sqlite"
 import { AccessGate } from "../src/access/gate"
 import { guardedTools } from "../src/access/adapters/pi"
@@ -95,7 +97,9 @@ it("saves a native Pi app, resumes publication approval after restart and render
     const registry = createRegistry()
     registry.install({
       name: "apps",
-      tools: appTools(apps).map(guardedTools(gate, () => turnId)),
+      tools: appTools(makeApps(apps), (operation, signal) =>
+        Effect.runPromise(operation, { signal })
+      ).map(guardedTools(gate, () => Effect.succeed(turnId))),
     })
     return {
       models,

@@ -1,13 +1,13 @@
 import { AsyncLocalStorage } from "node:async_hooks"
 import { DurableObjectOAuthClientProvider } from "agents/mcp/do-oauth-client-provider"
-import type { ConnectionStore } from "./connections"
+import type { ConnectionLedger } from "../connection-ledger"
 
 export class ConnectionOAuthProvider extends DurableObjectOAuthClientProvider {
   private generation: number | undefined
   private readonly cleanup: AsyncLocalStorage<boolean>
   constructor(
     storage: DurableObjectStorage,
-    private readonly connections: ConnectionStore,
+    private readonly connections: Pick<ConnectionLedger, "get">,
     callbackUrl: string
   ) {
     const cleanup = new AsyncLocalStorage<boolean>()

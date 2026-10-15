@@ -6,8 +6,9 @@ import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context"
 import { Harness, createRegistry, defineTool } from "@earendil-works/pi-durable"
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
 import { Type } from "@earendil-works/pi-ai"
-import { createAgentModels, accountCredentials } from "../src/agent/models"
-import { InferenceUsage } from "../src/inference/usage"
+import { createAgentModels } from "./models-fixture"
+import { accountCredentials } from "../src/inference/adapters/credentials-pi"
+import { usageFixture } from "./usage-fixture"
 import { resolveRoute } from "../src/inference/policy"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import { submissionAttempt } from "../src/features/conversation/commands"
@@ -22,7 +23,7 @@ it("carries a composer override into native Pi Responses and preserves selection
       model: "gpt-6.1-sol",
       thinking: "medium",
     }),
-    usage = new InferenceUsage(db)
+    usage = usageFixture(db)
   const command = submissionAttempt(
     null,
     "Save the result, then verify it.",
@@ -143,7 +144,7 @@ it("carries a composer override into native Pi Responses and preserves selection
     expect((await replay.wait(ctx)).status).toBe("done")
     expect(toolCalls).toBe(1)
     expect(payloads.length).toBeGreaterThanOrEqual(3)
-    expect(telemetry).toHaveLength(payloads.length)
+    expect(telemetry).toHaveLength(payloads.length * 2)
     await Promise.all(telemetry)
     expect(
       new ConversationStore(db, { model: "gpt-6-luna", thinking: "low" }).get(
@@ -168,7 +169,7 @@ it("carries a composer override into native Pi Responses and preserves selection
 it.each(["response.incomplete", "response.failed", "interrupted"])(
   "does not mark %s as completed and retains reported partial usage",
   async (terminal) => {
-    const usage = new InferenceUsage(database()),
+    const usage = usageFixture(database()),
       route = resolveRoute("conversation")
     const models = createAgentModels(
       accountCredentials(async () => credential),
@@ -221,7 +222,7 @@ it("rejects unsupported efforts and API credentials before any inference request
 
 it("records an auth failure before provider dispatch and never hangs on a failed Activity write", async () => {
   const route = resolveRoute("conversation"),
-    usage = new InferenceUsage(database())
+    usage = usageFixture(database())
   const unauthorized = createAgentModels(
     accountCredentials(async () => {
       throw new Error("Refresh authorization expired")

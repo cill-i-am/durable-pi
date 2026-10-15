@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from "react"
 import { useChat } from "@tanstack/ai-react"
 import { Schema } from "effect"
 import { ConversationMetadata } from "@/conversations/contracts"
-import { conversationView } from "@/conversations/chat-messages"
+import { conversationView } from "@/conversations/adapters/tanstack"
 import type { Submission } from "@/conversations/turns"
 import { conversationConnection } from "./connection"
 

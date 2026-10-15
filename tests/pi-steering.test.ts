@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 import { mkdtemp, rm } from "node:fs/promises"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
+import { Effect } from "effect"
 import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context"
 import {
   Harness,
@@ -18,6 +19,7 @@ import {
   fauxToolCall,
 } from "@earendil-works/pi-ai"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
+import { piConversationObserver } from "../src/conversations/adapters/pi-execution"
 import {
   archiveEntries,
   placedInputs,
@@ -143,6 +145,18 @@ describe("native Pi steering with SQLite persistence", () => {
           content: [{ type: "text" as const, text: steer.text }, ...images],
           whenBusy: "steer" as const,
         }
+        const execution = piConversationObserver(() => ({
+          storage: async () => ({
+            submissionByRequest: async (_conversation, requestId) => {
+              const id = requestId === root.id ? initial.id : receipt.id
+              return (await harness.submission(id, ctx))?.status(ctx)
+            },
+          }),
+          conversation: async () => conversation,
+          session: () => ({
+            events: () => watchEvents(harness, conversation.id, ctx),
+          }),
+        }))
         let receipt = await conversation.submit(command, ctx)
         expect((await receipt.status(ctx)).status).toBe("queued")
         expect((await conversation.submit(command, ctx)).id).toBe(receipt.id)
@@ -176,6 +190,23 @@ describe("native Pi steering with SQLite persistence", () => {
             "echo",
           ])
           await stoppedStream.stop()
+          const observed = await Effect.runPromise(
+            execution.observe(
+              {
+                ...root,
+                session_id: String(conversation.id),
+                status: "stopping",
+              },
+              store.members(root.id)
+            )
+          )
+          expect(observed.settled).toBe(true)
+          expect(observed.archives).toEqual(archived)
+          expect(
+            observed.outcomes.every(
+              (outcome) => outcome.delivery === "unanswered"
+            )
+          ).toBe(true)
           expect(faux.state.callCount).toBe(1)
           return
         }
@@ -220,6 +251,18 @@ describe("native Pi steering with SQLite persistence", () => {
         ).toBe(true)
         const entryIds = stream.snapshot.entries.map((entry) => entry.id)
         await stream.stop()
+        const observed = await Effect.runPromise(
+          execution.observe(
+            { ...root, session_id: String(conversation.id) },
+            members
+          )
+        )
+        expect(observed.settled).toBe(true)
+        expect(observed.archives).toEqual(archived)
+        expect(observed.consumed).toEqual([root.id, steer.id])
+        expect(
+          observed.outcomes.every((outcome) => outcome.delivery === "answered")
+        ).toBe(true)
         await harness.close(ctx)
         harness = await Harness.open(
           await openNodeSqliteStorage(path),

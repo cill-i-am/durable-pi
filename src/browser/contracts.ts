@@ -134,10 +134,7 @@ export interface BrowserRecord {
   capture: BrowserCapture | null
   error: string | null
 }
-export function browserState(
-  record: BrowserRecord,
-  now = Date.now()
-): BrowserState {
+export function browserState(record: BrowserRecord, now: number): BrowserState {
   return {
     controller: record.controller,
     policy: {

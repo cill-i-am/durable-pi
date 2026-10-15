@@ -30,25 +30,14 @@ export type ConfigureWebhook = typeof ConfigureWebhook.Type
 export class WebhookRejected extends Schema.TaggedError<WebhookRejected>()(
   "WebhookRejected",
   {
-    status: Schema.Number,
+    reason: Schema.Literals(["unauthorized", "conflict", "busy"]),
     message: Schema.String,
   }
 ) {}
 export const MAX_EVENT_BYTES = 16_384
-export async function digest(value: string) {
-  return Array.from(
-    new Uint8Array(
-      await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value))
-    )
-  )
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("")
-}
-export function bearer(request: Request) {
-  const value =
-    request.headers.get("authorization")?.replace(/^Bearer /, "") ?? ""
-  return Schema.is(WebhookKey)(value) ? value : null
-}
-export const reject = (status: number, message: string): never => {
-  throw new WebhookRejected({ status, message })
+export const reject = (
+  reason: WebhookRejected["reason"],
+  message: string
+): never => {
+  throw new WebhookRejected({ reason, message })
 }

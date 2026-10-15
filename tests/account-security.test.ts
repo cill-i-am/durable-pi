@@ -7,6 +7,10 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle"
 import { drizzle } from "drizzle-orm/node-sqlite"
 import { authOptions } from "../src/auth/server"
 import * as schema from "../src/auth/schema"
+import {
+  ownerSetup,
+  type OwnerSetupBindings,
+} from "../src/auth/adapters/owner-setup"
 
 const origin = "http://localhost:1337"
 const password = "Only a disposable integration password 2026!"
@@ -149,6 +153,51 @@ function fixture() {
 }
 
 describe("native Better Auth account security", () => {
+  it("creates the configured owner through the bounded setup adapter and preserves native duplicate rejection", async () => {
+    const f = fixture(),
+      pending: Promise<unknown>[] = []
+    const bindings: OwnerSetupBindings = {
+      appUrl: origin,
+      ownerEmail: email,
+      secret: "isolated-owner-setup-secret",
+      registered: async () =>
+        Boolean(f.sql.prepare('SELECT id FROM "user" LIMIT 1').get()),
+      signUp: (body) => f.auth.api.signUpEmail({ body }).then(() => undefined),
+      own: (work) => {
+        pending.push(work)
+      },
+    }
+    const setup = () =>
+      new Request(`${origin}/api/setup`, {
+        method: "POST",
+        headers: { origin, "x-setup-token": bindings.secret },
+        body: JSON.stringify({
+          name: "Test owner",
+          password,
+          email: "forged@example.com",
+        }),
+      })
+    const response = await ownerSetup(setup(), bindings)
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({ ok: true })
+    expect(f.sql.prepare('SELECT email FROM "user"').all()).toEqual([{ email }])
+    expect((await new f.Browser().login()).status).toBe(200)
+    expect((await ownerSetup(setup(), bindings)).status).toBe(409)
+    // A stale pre-check still reaches the actual SDK's duplicate-user fence.
+    expect(
+      (
+        await ownerSetup(setup(), {
+          ...bindings,
+          registered: async () => false,
+        })
+      ).status
+    ).toBe(400)
+    expect(f.sql.prepare('SELECT COUNT(*) AS count FROM "user"').get()).toEqual(
+      { count: 1 }
+    )
+    await Promise.all(pending)
+  })
+
   it("preserves the second factor across password recovery and invalidates old sessions", async () => {
     const f = fixture(),
       owner = await f.owner()

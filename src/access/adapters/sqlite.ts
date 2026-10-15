@@ -1,62 +1,86 @@
 import type { Sqlite } from "../../storage/sqlite"
 import {
-  AccessConflict,
-  AccessDenied,
+  AccessStorageError,
   type AccessMode,
   type Approval,
   type ToolPolicy,
 } from "../contracts"
 
-export type ToolIntent = {
-  id: string
-  turnId: string
-  tool: string
-  input: string
-}
-type Operation = Approval & {
-  grantRevision: number
-  result: string | null
-  decision: string | null
-}
-export class AccessStore {
+import type { AccessLedger, ToolIntent, ToolOperation } from "../ledger"
+import * as Domain from "../domain"
+
+export class AccessStore implements AccessLedger {
   constructor(
     private readonly db: Sqlite,
     private readonly catalog: () => readonly Omit<ToolPolicy, "revision">[],
     private readonly now = Date.now
   ) {
-    db.run(
+    const storage = <T>(operation: string, body: () => T): T => {
+      try {
+        return body()
+      } catch (cause) {
+        throw new AccessStorageError({ operation, cause })
+      }
+    }
+    this.db = {
+      all: (query, ...bindings) =>
+        storage("read", () => db.all(query, ...bindings)),
+      run: (query, ...bindings) =>
+        storage("write", () => db.run(query, ...bindings)),
+      transaction: (body) => {
+        const failure: { failed: boolean; cause?: unknown } = { failed: false }
+        try {
+          return db.transaction(() => {
+            try {
+              return body()
+            } catch (cause) {
+              failure.failed = true
+              failure.cause = cause
+              throw cause
+            }
+          })
+        } catch (cause) {
+          if (failure.failed && cause === failure.cause) throw cause
+          throw new AccessStorageError({ operation: "transaction", cause })
+        }
+      },
+    }
+
+    this.db.run(
       "CREATE TABLE IF NOT EXISTS tool_grants (name TEXT PRIMARY KEY,mode TEXT NOT NULL,revision INTEGER NOT NULL)"
     )
-    db.run(
+    this.db.run(
       "CREATE TABLE IF NOT EXISTS tool_operations (id TEXT PRIMARY KEY,turnId TEXT NOT NULL,tool TEXT NOT NULL,input TEXT NOT NULL,createdAt INTEGER NOT NULL,expiresAt INTEGER NOT NULL,status TEXT NOT NULL,grantRevision INTEGER NOT NULL,result TEXT)"
     )
     if (
-      !db
+      !this.db
         .all<{ name: string }>("PRAGMA table_info(tool_operations)")
         .some((column) => column.name === "revision")
     )
-      db.run(
+      this.db.run(
         "ALTER TABLE tool_operations ADD COLUMN revision INTEGER NOT NULL DEFAULT 0"
       )
     if (
-      !db
+      !this.db
         .all<{ name: string }>("PRAGMA table_info(tool_operations)")
         .some((column) => column.name === "decision")
     )
-      db.run("ALTER TABLE tool_operations ADD COLUMN decision TEXT")
-    db.run(`CREATE TABLE IF NOT EXISTS tool_operation_history (
+      this.db.run("ALTER TABLE tool_operations ADD COLUMN decision TEXT")
+    this.db.run(`CREATE TABLE IF NOT EXISTS tool_operation_history (
       id INTEGER PRIMARY KEY AUTOINCREMENT, operationId TEXT NOT NULL, revision INTEGER NOT NULL,
       status TEXT NOT NULL, at INTEGER NOT NULL)`)
-    db.run(`CREATE TRIGGER IF NOT EXISTS tool_operation_insert AFTER INSERT ON tool_operations
+    this.db
+      .run(`CREATE TRIGGER IF NOT EXISTS tool_operation_insert AFTER INSERT ON tool_operations
       BEGIN INSERT INTO tool_operation_history(operationId,revision,status,at) VALUES (new.id,new.revision,new.status,new.createdAt); END`)
-    db.run(`CREATE TRIGGER IF NOT EXISTS tool_operation_status AFTER UPDATE OF status ON tool_operations
+    this.db
+      .run(`CREATE TRIGGER IF NOT EXISTS tool_operation_status AFTER UPDATE OF status ON tool_operations
       WHEN old.status != new.status
       BEGIN INSERT INTO tool_operation_history(operationId,revision,status,at) VALUES (new.id,new.revision,new.status,
         max(new.createdAt,cast((julianday('now')-2440587.5)*86400000 AS INTEGER))); END`)
-    db.run(
+    this.db.run(
       "CREATE INDEX IF NOT EXISTS tool_operation_history_operation ON tool_operation_history(operationId,id)"
     )
-    db.run(
+    this.db.run(
       "CREATE INDEX IF NOT EXISTS tool_operations_run ON tool_operations(turnId,createdAt,id)"
     )
   }
@@ -75,30 +99,22 @@ export class AccessStore {
     }))
   }
   policy(name: string) {
-    const value = this.policies().find((tool) => tool.name === name)
-    if (!value) throw new AccessDenied({ message: "This tool is unavailable." })
-    return value
+    return Domain.requirePolicy(
+      this.policies().find((tool) => tool.name === name)
+    )
   }
   update(name: string, expectedRevision: number, mode: AccessMode) {
     return this.db.transaction(() => {
       const current = this.policy(name)
-      if (
-        current.mode === mode &&
-        (current.revision === expectedRevision ||
-          current.revision === expectedRevision + 1)
-      )
-        return current
-      if (current.revision !== expectedRevision)
-        throw new AccessConflict({
-          message: "Tool access changed. Reload before updating it.",
-        })
+      const next = Domain.revisePolicy(current, expectedRevision, mode)
+      if (next === current) return current
       this.db.run(
         "INSERT INTO tool_grants VALUES (?,?,?) ON CONFLICT(name) DO UPDATE SET mode=excluded.mode,revision=excluded.revision",
         name,
-        mode,
-        current.revision + 1
+        next.mode,
+        next.revision
       )
-      if (mode === "deny")
+      if (next.mode === "deny")
         this.db.run(
           "UPDATE tool_operations SET status='denied',revision=revision+1 WHERE tool=? AND status IN ('pending','approved')",
           name
@@ -106,8 +122,9 @@ export class AccessStore {
       return this.policy(name)
     })
   }
+
   get(id: string) {
-    return this.db.all<Operation>(
+    return this.db.all<ToolOperation>(
       "SELECT * FROM tool_operations WHERE id=?",
       id
     )[0]
@@ -141,43 +158,24 @@ export class AccessStore {
   begin(input: ToolIntent) {
     return this.db.transaction(() => {
       this.expire()
-      const existing = this.get(input.id)
-      if (existing) {
-        if (
-          existing.turnId !== input.turnId ||
-          existing.tool !== input.tool ||
-          existing.input !== input.input
-        )
-          throw new AccessConflict({
-            message: "Tool operation identity does not match.",
-          })
-        return existing
-      }
-      const policy = this.policy(input.tool)
-      if (policy.mode === "deny")
-        throw new AccessDenied({
-          message: "This tool is denied by the bot's access policy.",
-        })
-      if (input.input.length > 64_000)
-        throw new AccessDenied({
-          message: "Tool arguments exceed the approval limit.",
-        })
-      if (this.pending().length >= 20)
-        throw new AccessDenied({
-          message:
-            "Resolve the pending approvals before requesting more tools.",
-        })
-      const now = this.now()
+      const existing = Domain.replayIntent(input, this.get(input.id))
+      if (existing) return existing
+      const operation = Domain.admitOperation(
+        input,
+        this.policy(input.tool),
+        this.pending().length,
+        this.now()
+      )
       this.db.run(
         "INSERT INTO tool_operations (id,turnId,tool,input,createdAt,expiresAt,status,grantRevision) VALUES (?,?,?,?,?,?,?,?)",
-        input.id,
-        input.turnId,
-        input.tool,
-        input.input,
-        now,
-        now + 15 * 60_000,
-        policy.mode === "ask" ? "pending" : "approved",
-        policy.revision
+        operation.id,
+        operation.turnId,
+        operation.tool,
+        operation.input,
+        operation.createdAt,
+        operation.expiresAt,
+        operation.status,
+        operation.grantRevision
       )
       return this.get(input.id)!
     })
@@ -188,59 +186,41 @@ export class AccessStore {
     expectedRevision: number,
     remember?: { expectedPolicyRevision: number }
   ) {
-    if (remember && !approve)
-      throw new AccessConflict({
-        message: "Only an approval can allow future calls.",
-      })
-    const decision = JSON.stringify({
+    const decision = Domain.decisionIdentity(
       approve,
       expectedRevision,
-      policyRevision: remember?.expectedPolicyRevision ?? null,
-    })
+      remember
+    )
     this.expire()
     return this.db.transaction(() => {
-      const operation = this.get(id)
-      if (!operation)
-        throw new AccessConflict({ message: "This approval no longer exists." })
-      if (operation.decision === decision && operation.status !== "pending")
-        return operation
-      if (
-        !remember &&
-        !operation.decision &&
-        operation.status === (approve ? "approved" : "denied") &&
-        operation.revision === expectedRevision + 1
+      const round = Domain.approvalRound(
+        this.get(id),
+        approve,
+        expectedRevision,
+        decision,
+        remember
       )
-        return operation
-      if (
-        operation.status !== "pending" ||
-        operation.revision !== expectedRevision
+      if (round.replay) return round.operation
+      const change = Domain.decideOperation(
+        round.operation,
+        this.policy(round.operation.tool),
+        approve,
+        decision,
+        remember
       )
-        throw new AccessConflict({
-          message: "This approval has already ended. Refresh the conversation.",
-        })
-      const policy = this.policy(operation.tool)
-      if (approve && policy.mode === "deny")
-        throw new AccessDenied({
-          message: "This tool has been denied. Update its access policy first.",
-        })
-      if (remember && policy.revision !== remember.expectedPolicyRevision)
-        throw new AccessConflict({
-          message: "Tool access changed. Reload before allowing future calls.",
-        })
-      const grantRevision =
-        policy.revision + (remember && policy.mode !== "allow" ? 1 : 0)
-      if (remember && policy.mode !== "allow")
+      const operation = change.operation
+      if (change.grant)
         this.db.run(
           "INSERT INTO tool_grants VALUES (?,?,?) ON CONFLICT(name) DO UPDATE SET mode=excluded.mode,revision=excluded.revision",
           operation.tool,
-          "allow",
-          grantRevision
+          change.grant.mode,
+          change.grant.revision
         )
       this.db.run(
         "UPDATE tool_operations SET status=?,grantRevision=?,decision=?,revision=revision+1 WHERE id=?",
-        approve ? "approved" : "denied",
-        grantRevision,
-        decision,
+        operation.status,
+        operation.grantRevision,
+        operation.decision,
         id
       )
       return this.get(id)!
@@ -251,92 +231,35 @@ export class AccessStore {
     recoverable = false
   ): "pending" | "execute" | { result: string } {
     this.expire()
-    const decision = this.db.transaction<
-      "pending" | "execute" | { result: string } | AccessDenied
-    >(() => {
-      const operation = this.get(id)
-      if (!operation)
-        throw new AccessDenied({
-          message: "This tool operation is unavailable.",
-        })
-      const policy = this.policy(operation.tool)
-      if (policy.mode === "deny")
-        throw new AccessDenied({ message: "Tool access has been revoked." })
-      if (operation.status === "done" && operation.result !== null)
-        return { result: operation.result }
-      if (
-        operation.status === "running" &&
-        recoverable &&
-        (operation.expiresAt <= this.now() ||
-          operation.grantRevision !== policy.revision)
-      ) {
-        const expired = operation.expiresAt <= this.now()
+    const decision = this.db.transaction(() => {
+      const operation = Domain.requireOperation(this.get(id))
+      const change = Domain.claimOperation(
+        operation,
+        this.policy(operation.tool),
+        recoverable,
+        this.now()
+      )
+      if (change.update)
         this.db.run(
-          "UPDATE tool_operations SET status=?,revision=revision+1 WHERE id=?",
-          expired ? "expired" : "denied",
+          "UPDATE tool_operations SET status=?,grantRevision=?,revision=revision+1 WHERE id=?",
+          change.update.status,
+          change.update.grantRevision,
           id
         )
-        return new AccessDenied({
-          message: expired
-            ? "This interrupted tool request has expired. Read current state before requesting a new change."
-            : "Tool access changed after dispatch. Read current state before requesting a new change.",
-        })
-      }
-      if (operation.status === "running" && !recoverable) {
-        this.db.run(
-          "UPDATE tool_operations SET status='interrupted',revision=revision+1 WHERE id=?",
-          id
-        )
-        return new AccessDenied({
-          message:
-            "This tool was interrupted after it started. Its outcome is unknown; check before retrying.",
-        })
-      }
-      if (
-        !["pending", "approved"].includes(operation.status) &&
-        !(recoverable && operation.status === "running")
-      )
-        throw new AccessDenied({
-          message: `This tool request is ${operation.status}.`,
-        })
-      if (
-        policy.mode === "ask" &&
-        ((operation.status !== "approved" &&
-          !(recoverable && operation.status === "running")) ||
-          operation.grantRevision !== policy.revision)
-      ) {
-        if (
-          operation.status !== "pending" ||
-          operation.grantRevision !== policy.revision
-        )
-          this.db.run(
-            "UPDATE tool_operations SET status='pending',grantRevision=?,revision=revision+1 WHERE id=?",
-            policy.revision,
-            id
-          )
-        return "pending"
-      }
-      this.db.run(
-        "UPDATE tool_operations SET status='running',grantRevision=?,revision=revision+1 WHERE id=?",
-        policy.revision,
-        id
-      )
-      return "execute"
+      return change.decision
     })
-    if (decision instanceof AccessDenied) throw decision
+    if (typeof decision === "object" && "_tag" in decision) throw decision
     return decision
   }
   finish(id: string, result: string) {
-    if (result.length > 250_000)
-      throw new AccessDenied({
-        message: "Tool output exceeded its stored result limit.",
-      })
+    Domain.validateResult(result)
     this.db.run(
       "UPDATE tool_operations SET status='done',result=?,revision=revision+1 WHERE id=? AND status='running'",
       result,
       id
     )
   }
+
   cancel(turnId: string) {
     this.db.run(
       "UPDATE tool_operations SET status='cancelled',revision=revision+1 WHERE turnId=? AND status IN ('pending','approved')",

@@ -1,19 +1,83 @@
-import { Effect } from "effect"
+import { Cause, Effect, Exit, Schema } from "effect"
 import type {
   ToolRegistration,
   ToolExecutionResult,
   ToolExecutionApi,
 } from "@earendil-works/pi-durable"
 import type { AccessGate } from "../gate"
+import { nativeOperation } from "../../shared/interop"
 import { toolReceipt } from "./receipt"
+import { AccessDenied, AccessConflict, AccessStorageError } from "../contracts"
+import {
+  ConnectionError,
+  ConnectionStorageError,
+  ConnectionTransportError,
+} from "../connections"
 
-export function guardedTools(
+const ToolFailure = Schema.Union([
+  AccessDenied,
+  AccessConflict,
+  AccessStorageError,
+  ConnectionError,
+  ConnectionStorageError,
+  ConnectionTransportError,
+])
+/** Pi renders rejected values as strings. Preserve the Cause shape while keeping
+ * private diagnostics and tracing annotations out of the model transcript. */
+const publicToolCause = (cause: Cause.Cause<unknown>): Cause.Cause<unknown> =>
+  Cause.fromReasons(
+    cause.reasons.map((reason): Cause.Reason<unknown> => {
+      switch (reason._tag) {
+        case "Interrupt":
+          return Cause.makeInterruptReason(reason.fiberId)
+        case "Die":
+          return Cause.makeDieReason("Tool execution failed unexpectedly.")
+        case "Fail": {
+          const known = Schema.decodeUnknownOption(ToolFailure)(reason.error)
+          if (known._tag === "None")
+            return Cause.makeFailReason(
+              "The tool result could not be confirmed. Check its status before repeating an external action."
+            )
+          switch (known.value._tag) {
+            case "AccessStorageError":
+              return Cause.makeFailReason(
+                new AccessStorageError({
+                  operation: known.value.operation,
+                  cause: "Tool access storage unavailable.",
+                })
+              )
+            case "ConnectionStorageError":
+              return Cause.makeFailReason(
+                new ConnectionStorageError({
+                  operation: known.value.operation,
+                  cause: "Tool connection storage unavailable.",
+                })
+              )
+            case "ConnectionTransportError":
+              return Cause.makeFailReason(
+                new ConnectionTransportError({
+                  operation: known.value.operation,
+                  cause: "Tool connection unavailable.",
+                })
+              )
+            default:
+              return Cause.makeFailReason(known.value)
+          }
+        }
+      }
+    })
+  )
+type ToolCallbackRunner = <TValue, TError>(
+  program: Effect.Effect<TValue, TError>,
+  options?: Parameters<typeof Effect.runPromiseExit>[1]
+) => Promise<Exit.Exit<TValue, unknown>>
+export function guardedTools<TError>(
   gate: AccessGate,
   activeTurn: (
     api: ToolExecutionApi
-  ) => string | undefined | Promise<string | undefined>,
+  ) => Effect.Effect<string | undefined, TError>,
   recoverableTools: ReadonlySet<string> = new Set(),
-  run: typeof Effect.runPromise = Effect.runPromise
+  run: ToolCallbackRunner = Effect.runPromiseExit
 ) {
   const running = new Map<
     string,
@@ -31,23 +95,32 @@ export function guardedTools(
           return Promise.reject(new Error("Tool identity conflict"))
         return existing.promise
       }
-      const promise = Promise.resolve().then(async () => {
-        const previous = gate.store.get(id)
-        const resolved = await activeTurn(api)
-        if (previous && resolved !== previous.turnId)
-          throw new Error(
-            "Tool ownership no longer matches its original request."
-          )
-        const turnId = previous?.turnId ?? resolved
-        if (!turnId) throw new Error("The reply has ended.")
-        return run(
-          gate.run(
+      const promise = run(
+        Effect.gen(function* () {
+          yield* Effect.yieldNow
+          const previous = yield* gate.operation(id)
+          const resolved = yield* activeTurn(api)
+          if (previous && resolved !== previous.turnId)
+            return yield* new AccessDenied({
+              message: "Tool ownership no longer matches its original request.",
+            })
+          const turnId = previous?.turnId ?? resolved
+          if (!turnId)
+            return yield* new AccessDenied({ message: "The reply has ended." })
+          return yield* gate.run(
             { id, turnId, tool: tool.name, input: JSON.stringify(args) },
-            async () => toolReceipt(await tool.execute(args, api, context)),
+            nativeOperation(
+              (signal) =>
+                tool.execute(args, api, { ...context, abortSignal: signal }),
+              (cause) => cause
+            ).pipe(Effect.map(toolReceipt)),
             recoverableTools.has(tool.name)
-          ),
-          { signal: context.abortSignal }
-        )
+          )
+        }),
+        { signal: context.abortSignal }
+      ).then((exit) => {
+        if (Exit.isFailure(exit)) throw publicToolCause(exit.cause)
+        return exit.value
       })
       running.set(id, { input, promise })
       void promise

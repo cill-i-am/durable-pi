@@ -54,4 +54,8 @@ export class ExecutionFailure extends Schema.TaggedError<ExecutionFailure>()(
   { message: Schema.String }
 ) {}
 export const EXECUTION_TIMEOUT_MS = 10000
+export class ExecutionStorageError extends Schema.TaggedError<ExecutionStorageError>()(
+  "ExecutionStorageError",
+  {}
+) {}
 export const EXECUTION_CPU_MS = 1000

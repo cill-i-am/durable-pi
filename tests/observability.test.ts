@@ -161,12 +161,13 @@ it("observes the native slow-dispatch signal but excludes normal waits and cance
 })
 
 it("ends the dispatch span while the actual provider request is still pending, retaining durable correlation", async () => {
-  const { createAgentModels, accountCredentials } =
-    await import("../src/agent/models")
-  const { InferenceUsage } = await import("../src/inference/usage")
+  const { createAgentModels } = await import("./models-fixture")
+  const { accountCredentials } =
+    await import("../src/inference/adapters/credentials-pi")
+  const { usageFixture } = await import("./usage-fixture")
   const { database } = await import("./database")
   const { credential, response } = await import("./inference-fixture")
-  const usage = new InferenceUsage(database())
+  const usage = usageFixture(database())
   let release!: () => void
   const held = new Promise<void>((resolve) => {
     release = resolve

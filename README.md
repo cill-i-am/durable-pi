@@ -29,7 +29,7 @@ Requires Node 24+ and pnpm 12.4.2. Install with `pnpm install --frozen-lockfile`
 3. Run `pnpm dev` with an authenticated Alchemy `default` profile, or `pnpm exec alchemy dev --stage dev --profile durable-pi` to use the configured project profile. Alchemy emulates Workers, Durable Objects, D1 and R2 locally; Browser uses the real Cloudflare Browser Run service because local Chromium does not enforce its network guardrails. Browser use incurs the account’s normal usage. The app URL appears in the output.
 4. Open the app, choose **First time? Set up your account**, and enter your private setup key and a password. Only the configured owner's email can be registered. Registration closes once that account exists.
 
-`pnpm verify` runs route generation, type checking, unit tests, and the browser/server build. `pnpm lint` checks source. Neither needs provider credentials. `pnpm run deploy` provisions the production stage through Alchemy using the explicitly configured profile. A Cloudflare account with Workers, D1, and R2 permissions is required; hosting charges are separate from ChatGPT model usage.
+`pnpm verify` runs route generation, type checking, unit tests, native runtime recovery checks, the website build and all four production Worker bundles. `pnpm lint` checks source and backend dependency boundaries. Neither needs provider credentials. `pnpm run deploy` provisions the production stage through Alchemy using the explicitly configured profile. A Cloudflare account with Workers, D1, and R2 permissions is required; hosting charges are separate from ChatGPT model usage.
 
 Production uses the dedicated `durable-pi` Alchemy profile. Configure it with `pnpm exec alchemy profile create durable-pi` and `pnpm exec alchemy profile edit --profile durable-pi`, selecting Workers scripts read/write, D1 read/write, Workers R2 Storage read/write, account settings read, memberships read, and user details read. OAuth adds offline refresh access. A fresh machine also needs Secrets Store read/write to retrieve remote-state credentials; an existing trusted state-credential cache avoids that additional local permission.
 
@@ -159,7 +159,6 @@ This repository contains code and placeholder configuration. `.env*`, `.alchemy`
 
 The public browser bundle contains no model credentials. Chat history, memory, authentication records, and refreshed credentials are private Cloudflare runtime data. Local test accounts are disposable and separate from production. The initial UI shows the latest 100 turns; older messages remain searchable and available through `zoom`.
 
-
 ## Private generated apps
 
 Open **Workbench → Apps** for a bot's private apps. Ask the bot to make a table, form or custom app. For a project checklist, use **Checklists → New checklist**; it uses the same durable object operations as the agent's checklist tools. Saving creates an immutable draft; publishing a saved version makes its controls usable. The bot asks before publishing by default. Completed publication tool calls also expose the app inline in the conversation. Everything remains behind owner authentication; no public app links are created.
@@ -173,7 +172,6 @@ Apps support text, metrics, tables, checklists and forms, or one custom web bloc
 Custom HTML is parsed into a closed set of semantic elements and controls. It renders in an opaque sandboxed frame with a trusted form/button bridge; generated JavaScript never runs in the browser. Scripts, external resources, embedded frames, navigation, credentials and parent bindings are unavailable. Apps can build custom layouts and stateful forms; client frameworks, CDN dependencies and arbitrary browser JavaScript are outside this runtime.
 
 Limits are 50 apps per bot, 50 versions per app, 20 pending updates and 2,000 app mutation/cancellation receipts per bot. Custom apps have 16,000-character code, 8,000-character JSON state, 12,000-character HTML and 4,000-character CSS limits. Each render/action has a one-second CPU and ten-second elapsed budget; one runs per bot at a time. External changes require an explicit reload so unsent fields are not silently overwritten. Archival, cancellation or a concurrent revision change prevents a late computation from saving.
-
 
 ## Linux command workbench
 
@@ -195,7 +193,6 @@ The workbench renews a thirty-second authenticated lease; switching its internal
 
 `node --env-file=.env --import tsx scripts/check-interactive-terminal.ts` checks the native shell and checkpoint lifecycle using the synthetic local owner, including resize, keyboard interruption, full-buffer reconnect and logout expiry. The image-local shell launcher establishes a controlling terminal for the pinned SDK's Bun PTY.
 
-
 ### Private file transfer
 
 In **Terminal → File transfer**, choose **Copy from Files** to place a selected private asset in a new `/workspace/imports/<transfer-id>/` folder. Its completed path is shown in the result. The next command restores that checkpoint. Transfers never overwrite a file, follow symlinks, or read outside `/workspace`.
@@ -206,7 +203,6 @@ An unconfirmed request retains its transfer ID. **Retry transfer** recovers that
 
 `node --env-file=.env --import tsx scripts/check-terminal-files.ts` exercises the native private-file boundary with the synthetic local owner, including fresh restore, exact bytes, replay, cancellation, isolation and special-file rejection.
 
-
 ## Scheduled routines
 
 Open **Workbench → More workbench tools (⋯) → Routines** to schedule work for the current bot, or ask the bot to create a routine. Scheduling through the bot asks for approval by default. Choose a one-off time or an elapsed-time interval; repeats continue on Cloudflare while the browser is closed. The editor shows your local timezone. Repeats are not calendar rules, so they follow elapsed time across daylight-saving changes.
@@ -214,7 +210,6 @@ Open **Workbench → More workbench tools (⋯) → Routines** to schedule work 
 Results appear in the bot's conversation under its current tool permissions. Only one routine waits or runs at once; missed intervals become one run, and each admitted run has a ten-minute budget. A disconnected model leaves the run waiting. **Pause** prevents future work; **Stop run** also stops a run already queued or running. **Archive** is recoverable through **Restore paused**. A completed one-off schedule can be run again with **Run now** or edited to a new future time.
 
 If another view changes the routine while you edit, choose **Keep my edits** or **Use saved values**. If a save is unconfirmed, retry the same change or resolve it before navigating away. The app does not send email/push notifications automatically. Incoming webhooks and calendar/timezone recurrence are separate follow-up work tracked in `BUILD.md`.
-
 
 ### Incoming events
 

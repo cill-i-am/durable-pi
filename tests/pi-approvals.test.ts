@@ -1,3 +1,4 @@
+import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import { mkdtemp, rm } from "node:fs/promises"
 import { join } from "node:path"
@@ -86,7 +87,7 @@ describe("native Pi tool approvals", () => {
             if (store.pending().length) approvalReady()
           }
         )
-        const protect = guardedTools(access, () => turnId)
+        const protect = guardedTools(access, () => Effect.succeed(turnId))
         const registry = createRegistry()
         registry.install({
           name: "test",

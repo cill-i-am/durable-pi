@@ -3,14 +3,12 @@ import { Effect, Schema } from "effect"
 import { database } from "./database"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import { AccessStore } from "../src/access/adapters/sqlite"
-import { BackgroundMailbox } from "../src/delegation/adapters/background-mailbox"
-import { activityEntries } from "../src/activity/sqlite"
+import { SqliteBackgroundMailbox } from "../src/delegation/adapters/background-mailbox"
+import { activityEntries } from "../src/activity/adapters/sqlite-entries"
 import { activityFeed } from "../src/activity/feed"
-import {
-  activityPage,
-  activityQuery,
-  type ActivityQuery,
-} from "../src/activity/contracts"
+import { activityPage, type ActivityQuery } from "../src/activity/contracts"
+import { activityQuery } from "../src/activity/adapters/http"
+import { ActivityUnavailable } from "../src/activity/records"
 import { AgentId } from "../src/agents/domain"
 
 const bot = { id: Schema.decodeUnknownSync(AgentId)("home"), name: "Home" }
@@ -22,7 +20,7 @@ function fixture() {
     thinking: "low",
   })
   new AccessStore(db, () => [])
-  new BackgroundMailbox(db, () => "active")
+  new SqliteBackgroundMailbox(db)
   return { db, turns }
 }
 it("paginates tied timestamps with stable domain and bot keys; new rows do not repeat earlier pages", () => {
@@ -41,7 +39,7 @@ it("paginates tied timestamps with stable domain and bot keys; new rows do not r
   }
   db.run("UPDATE chat_turns SET created_at='2026-10-11T10:00:00.000Z'")
   const first = activityPage(
-    [{ entries: activityEntries(db, bot, query), issues: [] }],
+    [{ entries: activityEntries(db, bot, query, Date.now()), issues: [] }],
     []
   )
   expect(first.entries).toHaveLength(40)
@@ -56,7 +54,12 @@ it("paginates tied timestamps with stable domain and bot keys; new rows do not r
   const second = activityPage(
     [
       {
-        entries: activityEntries(db, bot, { ...query, cursor: first.next }),
+        entries: activityEntries(
+          db,
+          bot,
+          { ...query, cursor: first.next },
+          Date.now()
+        ),
         issues: [],
       },
     ],
@@ -65,7 +68,12 @@ it("paginates tied timestamps with stable domain and bot keys; new rows do not r
   const third = activityPage(
     [
       {
-        entries: activityEntries(db, bot, { ...query, cursor: second.next }),
+        entries: activityEntries(
+          db,
+          bot,
+          { ...query, cursor: second.next },
+          Date.now()
+        ),
         issues: [],
       },
     ],
@@ -95,10 +103,15 @@ it("projects receipt state without arguments, results or execution side effects"
       throw new Error("Activity must not mutate")
     },
   }
-  const entries = activityEntries(readOnly, bot, {
-    ...query,
-    filter: "attention",
-  })
+  const entries = activityEntries(
+    readOnly,
+    bot,
+    {
+      ...query,
+      filter: "attention",
+    },
+    Date.now()
+  )
   expect(entries).toHaveLength(1)
   expect(entries[0]).toMatchObject({
     kind: "tool",
@@ -109,7 +122,12 @@ it("projects receipt state without arguments, results or execution side effects"
   expect(JSON.stringify(entries)).not.toContain("PRIVATE")
   db.run("UPDATE tool_operations SET status='done'")
   expect(
-    activityEntries(readOnly, bot, { ...query, filter: "attention" })
+    activityEntries(
+      readOnly,
+      bot,
+      { ...query, filter: "attention" },
+      Date.now()
+    )
   ).toEqual([])
 })
 it("shows expiry without mutating approval receipts and excludes obsolete failures after retry", () => {
@@ -117,10 +135,10 @@ it("shows expiry without mutating approval receipts and excludes obsolete failur
   db.run(
     "INSERT INTO tool_operations (id,turnId,tool,input,createdAt,expiresAt,status,grantRevision,result,revision) VALUES ('expired','turn-1','browser_open','PRIVATE',0,1,'pending',0,NULL,0)"
   )
-  expect(activityEntries(db, bot, query)[0]?.status).toBe("expired")
-  expect(activityEntries(db, bot, { ...query, filter: "attention" })).toEqual(
-    []
-  )
+  expect(activityEntries(db, bot, query, Date.now())[0]?.status).toBe("expired")
+  expect(
+    activityEntries(db, bot, { ...query, filter: "attention" }, Date.now())
+  ).toEqual([])
   expect(
     db.all<{ status: string }>("SELECT status FROM tool_operations")[0]?.status
   ).toBe("pending")
@@ -130,18 +148,18 @@ it("shows expiry without mutating approval receipts and excludes obsolete failur
   }).turn
   turns.finish(turn, [{ id: turn.id, delivery: "unanswered" }], "", "Failed")
   expect(
-    activityEntries(db, bot, { ...query, filter: "attention" })
+    activityEntries(db, bot, { ...query, filter: "attention" }, Date.now())
   ).toHaveLength(1)
   turns.admit({
     operationId: crypto.randomUUID(),
     text: turn.text,
     retryOf: turn.id,
   })
-  expect(activityEntries(db, bot, { ...query, filter: "attention" })).toEqual(
-    []
-  )
   expect(
-    activityEntries(db, bot, { ...query, filter: "running" })
+    activityEntries(db, bot, { ...query, filter: "attention" }, Date.now())
+  ).toEqual([])
+  expect(
+    activityEntries(db, bot, { ...query, filter: "running" }, Date.now())
   ).toHaveLength(1)
 })
 it("reads only supplied owner-catalog bots and exposes partial failure rather than an empty success", async () => {
@@ -151,11 +169,14 @@ it("reads only supplied owner-catalog bots and exposes partial failure rather th
   }
   const called: string[] = []
   const page = await Effect.runPromise(
-    activityFeed([bot, other], query, async (agent) => {
-      called.push(agent.id)
-      if (agent.id === other.id) throw new Error("Unavailable")
-      return { entries: [], issues: [] }
-    })
+    activityFeed([bot, other], query, (agent) =>
+      Effect.suspend(() => {
+        called.push(agent.id)
+        if (agent.id === other.id)
+          return Effect.fail(new ActivityUnavailable({ cause: "Unavailable" }))
+        return Effect.succeed({ entries: [], issues: [] })
+      })
+    )
   )
   expect(called).toEqual([bot.id, other.id])
   expect(page.unavailable).toEqual([other])
@@ -169,12 +190,14 @@ it("bounds owner-wide concurrent reads", async () => {
     name: `Bot ${index}`,
   }))
   await Effect.runPromise(
-    activityFeed(agents, query, async () => {
-      max = Math.max(max, ++active)
-      await new Promise((resolve) => setTimeout(resolve, 5))
-      active--
-      return { entries: [], issues: [] }
-    })
+    activityFeed(agents, query, () =>
+      Effect.promise(async () => {
+        max = Math.max(max, ++active)
+        await new Promise((resolve) => setTimeout(resolve, 5))
+        active--
+        return { entries: [], issues: [] }
+      })
+    )
   )
   expect(max).toBe(4)
 })
@@ -186,10 +209,12 @@ it("reports an unreachable bot after the read deadline", async () => {
   }))
   let calls = 0
   const page = await Effect.runPromise(
-    activityFeed(bots, query, () => {
-      calls++
-      return new Promise(() => {})
-    })
+    activityFeed(bots, query, () =>
+      Effect.suspend(() => {
+        calls++
+        return Effect.never
+      })
+    )
   )
   expect(calls).toBe(4)
   expect(page.unavailable).toEqual(bots)
@@ -215,7 +240,7 @@ it("shows recovery and blocked states while cancellation remains authoritative",
     JSON.stringify({ view: { phase: "recovering" } }),
     turn.id
   )
-  expect(activityEntries(db, bot, query)[0]).toMatchObject({
+  expect(activityEntries(db, bot, query, Date.now())[0]).toMatchObject({
     status: "recovering",
     running: true,
   })
@@ -225,10 +250,10 @@ it("shows recovery and blocked states while cancellation remains authoritative",
     turn.id
   )
   expect(
-    activityEntries(db, bot, { ...query, filter: "attention" })[0]
+    activityEntries(db, bot, { ...query, filter: "attention" }, Date.now())[0]
   ).toMatchObject({ status: "blocked", attention: true, running: false })
   db.run("UPDATE chat_turns SET status='cancelled' WHERE id=?", turn.id)
-  expect(activityEntries(db, bot, query)[0]).toMatchObject({
+  expect(activityEntries(db, bot, query, Date.now())[0]).toMatchObject({
     status: "cancelled",
     attention: false,
   })

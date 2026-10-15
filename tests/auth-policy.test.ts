@@ -4,7 +4,10 @@ import {
   matchesSecret,
   sameOrigin,
 } from "../src/auth/server"
-import { decodeCredential, workerChatGPTAuth } from "../src/agent/models"
+import {
+  decodeCredential,
+  workerChatGPTAuth,
+} from "../src/inference/adapters/credentials-pi"
 
 describe("private app boundaries", () => {
   it("redirects old bookmarks to the configured origin without an open redirect", () => {

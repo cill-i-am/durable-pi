@@ -1,3 +1,4 @@
+import { Effect } from "effect"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { ChatClient, StreamProcessor } from "@tanstack/ai-client"
 import { EventType } from "@tanstack/ai/client"
@@ -5,7 +6,7 @@ import {
   chatMessages,
   conversationView,
   messageEvents,
-} from "../src/conversations/chat-messages"
+} from "../src/conversations/adapters/tanstack"
 import { conversationEvents } from "../src/conversations/adapters/events"
 import { conversationConnection } from "../src/features/conversation/connection"
 import { submissionAttempt } from "../src/features/conversation/commands"
@@ -54,8 +55,8 @@ function fixture(initial: ChatState = { ...metadata, turns: [base] }) {
       if (init?.method === "POST") return Response.json({ ok: true })
       return conversationEvents(
         {
-          snapshot: async () => state,
-          activeSession: () => undefined,
+          snapshot: () => Effect.sync(() => state),
+          activeSession: () => Effect.succeed(undefined),
           watch: async () => {
             throw new Error("not needed")
           },

@@ -6,6 +6,7 @@
     "dev": "alchemy dev --stage dev --profile default",
     "generate-routes": "tsr generate",
     "build": "vite build",
+    "build:workers": "node scripts/build-workers.mjs",
     "preview": "vite preview",
     "lint": "eslint",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx}\"",
@@ -13,7 +14,7 @@
     "typecheck": "tsc --noEmit",
     "deploy": "alchemy deploy --stage production --profile durable-pi",
     "test": "vitest run",
-    "verify": "pnpm generate-routes && pnpm typecheck && pnpm test && pnpm test:communication-runtime && pnpm build",
+    "verify": "pnpm generate-routes && pnpm typecheck && pnpm test && pnpm test:communication-runtime && pnpm build && pnpm build:workers",
     "model:login": "tsx scripts/model-login.ts",
     "test:communication-runtime": "node scripts/test-communication-runtime.mjs"
   },
@@ -69,6 +70,8 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "5.20261006.1",
+    "@effect/sql-sqlite-do": "4.0.1",
+    "@effect/vitest": "4.0.1",
     "@tanstack/devtools-vite": "latest",
     "@tanstack/eslint-config": "latest",
     "@tanstack/router-cli": "^1.167.39",

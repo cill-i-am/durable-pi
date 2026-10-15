@@ -1,8 +1,9 @@
 import { Schema } from "effect"
 import type { Sqlite } from "../../storage/sqlite"
-import { applyAction, retainState } from "../app"
+import * as Domain from "../app"
 import {
   AppConflict,
+  AppStorageError,
   AppDocument,
   AppVersion,
   AppEvent,
@@ -14,21 +15,56 @@ import {
   WebResult,
 } from "../contracts"
 
-export class AppStore {
+import type { AppAdmission, AppLedger } from "../repository"
+
+export class AppStore implements AppLedger {
+  readonly transactionGroup: object
   constructor(
     private readonly db: Sqlite,
     private readonly active: () => boolean
   ) {
-    db.run(
+    this.transactionGroup = db
+    const storage = <T>(operation: string, body: () => T): T => {
+      try {
+        return body()
+      } catch (cause) {
+        throw new AppStorageError({ operation, cause })
+      }
+    }
+    this.db = {
+      all: (query, ...bindings) =>
+        storage("read", () => db.all(query, ...bindings)),
+      run: (query, ...bindings) =>
+        storage("write", () => db.run(query, ...bindings)),
+      transaction: (body) => {
+        const failure: { failed: boolean; cause?: unknown } = { failed: false }
+        try {
+          return db.transaction(() => {
+            try {
+              return body()
+            } catch (cause) {
+              failure.failed = true
+              failure.cause = cause
+              throw cause
+            }
+          })
+        } catch (cause) {
+          if (failure.failed && cause === failure.cause) throw cause
+          throw new AppStorageError({ operation: "transaction", cause })
+        }
+      },
+    }
+
+    this.db.run(
       "CREATE TABLE IF NOT EXISTS generated_apps (id TEXT PRIMARY KEY,record TEXT NOT NULL)"
     )
-    db.run(
+    this.db.run(
       "CREATE TABLE IF NOT EXISTS generated_app_versions (id TEXT NOT NULL,version INTEGER NOT NULL,record TEXT NOT NULL,PRIMARY KEY(id,version))"
     )
-    db.run(
+    this.db.run(
       "CREATE TABLE IF NOT EXISTS generated_app_operations (id TEXT PRIMARY KEY,input TEXT NOT NULL,result TEXT NOT NULL)"
     )
-    db.run(
+    this.db.run(
       "CREATE TABLE IF NOT EXISTS generated_app_events (id TEXT PRIMARY KEY,app_id TEXT NOT NULL,record TEXT NOT NULL,queued INTEGER NOT NULL DEFAULT 0)"
     )
   }
@@ -93,15 +129,9 @@ export class AppStore {
     return app
   }
   private current(id: string, revision: number, allowArchived = false) {
-    const app = this.get(id)
-    if (!app || app.revision !== revision)
-      throw new AppConflict({
-        message: "This app changed. Reload before making this change.",
-      })
-    if (app.archived && !allowArchived)
-      throw new AppConflict({ message: "Restore this app before changing it." })
-    return app
+    return Domain.currentApp(this.get(id), revision, allowArchived)
   }
+
   private operation(
     operationId: string,
     input: unknown,
@@ -126,14 +156,11 @@ export class AppStore {
           JSON.parse(previous.result)
         )
       }
-      if (
+      Domain.operationCapacity(
         this.db.all<{ n: number }>(
           "SELECT count(*) AS n FROM generated_app_operations"
-        )[0]!.n >= 2000
+        )[0]!.n
       )
-        throw new AppConflict({
-          message: "This bot has reached its app operation limit.",
-        })
       const result = execute()
       this.db.run(
         "INSERT INTO generated_app_operations VALUES (?,?,?)",
@@ -148,35 +175,19 @@ export class AppStore {
     const input = Schema.decodeUnknownSync(SaveApp)(raw)
     return this.operation(input.operationId, { type: "save", ...input }, () => {
       const current = this.get(input.id)
-      if (current) this.current(input.id, input.expectedRevision)
-      else if (input.expectedRevision !== 0 || this.list().length >= 50)
-        throw new AppConflict({
-          message:
-            "Reload the app. Each bot supports at most 50 apps, including archived apps.",
-        })
-      if ((current?.version ?? 0) >= 50)
-        throw new AppConflict({
-          message: "This app has reached its 50-version limit.",
-        })
-      const version: AppVersion = {
-        id: input.id,
-        version: (current?.version ?? 0) + 1,
-        definition: input.definition,
-        createdAt: new Date().toISOString(),
-      }
+      const change = Domain.saveApp(
+        input,
+        current,
+        current ? 0 : this.list().length,
+        new Date().toISOString()
+      )
       this.db.run(
         "INSERT INTO generated_app_versions VALUES (?,?,?)",
         input.id,
-        version.version,
-        JSON.stringify(version)
+        change.version.version,
+        JSON.stringify(change.version)
       )
-      return this.put({
-        ...version,
-        revision: (current?.revision ?? 0) + 1,
-        publishedVersion: current?.publishedVersion ?? null,
-        archived: false,
-        state: current?.state ?? { checks: {}, forms: {} },
-      })
+      return this.put(change.app)
     })
   }
   publish(raw: PublishApp) {
@@ -187,12 +198,7 @@ export class AppStore {
       () => {
         const current = this.current(input.id, input.expectedRevision)
         const version = this.version(input.id, input.version)
-        return this.put({
-          ...current,
-          publishedVersion: version.version,
-          revision: current.revision + 1,
-          state: retainState(version.definition, current.state),
-        })
+        return this.put(Domain.publishApp(current, version))
       }
     )
   }
@@ -203,11 +209,7 @@ export class AppStore {
       { type: "archive", ...input },
       () => {
         const current = this.current(input.id, input.expectedRevision, true)
-        return this.put({
-          ...current,
-          archived: input.archived,
-          revision: current.revision + 1,
-        })
+        return this.put(Domain.archiveApp(current, input.archived))
       }
     )
   }
@@ -233,56 +235,38 @@ export class AppStore {
       throw new AppConflict({
         message: "Restore this bot before changing its apps.",
       })
-    const current = this.current(input.id, input.expectedRevision)
-    if (current.publishedVersion !== input.version)
-      throw new AppConflict({
-        message: "The published app changed. Reload before interacting.",
-      })
-    return current
+    return Domain.interactionSnapshot(
+      this.current(input.id, input.expectedRevision),
+      input.version
+    )
   }
+
   interact(raw: InteractApp, webResult?: WebResult) {
     const input = Schema.decodeUnknownSync(InteractApp)(raw)
     return this.operation(
       input.operationId,
       { type: "interact", ...input },
       () => {
-        const current = this.current(input.id, input.expectedRevision)
-        if (current.publishedVersion !== input.version)
-          throw new AppConflict({
-            message: "The published app changed. Reload before interacting.",
-          })
-        if (this.pending().length >= 20)
-          throw new AppConflict({
-            message:
-              "Twenty app updates are waiting for this bot. Reconnect its model before sending more.",
-          })
-        const { state, text } = applyAction(
-          this.version(input.id, input.version).definition,
-          current.state,
-          input.action,
+        const current = Domain.interactionSnapshot(
+          this.current(input.id, input.expectedRevision),
+          input.version
+        )
+        const change = Domain.interactionChange(
+          current,
+          this.version(input.id, input.version),
+          input,
+          this.pending().length,
+          crypto.randomUUID(),
+          new Date().toISOString(),
           webResult ? Schema.decodeUnknownSync(WebResult)(webResult) : undefined
         )
-        const event: AppEvent = {
-          id: input.operationId,
-          appId: input.id,
-          turnId: crypto.randomUUID(),
-          version: input.version,
-          text: `App ${input.id}, published version ${input.version}.\n${text}`,
-          createdAt: new Date().toISOString(),
-          delivery: "pending",
-        }
-        if (!Schema.is(AppEvent)(event))
-          throw new AppConflict({
-            message:
-              "This update is too large. Shorten the form responses and try again.",
-          })
         this.db.run(
           "INSERT INTO generated_app_events VALUES (?,?,?,0)",
-          event.id,
-          event.appId,
-          JSON.stringify(event)
+          change.event.id,
+          change.event.appId,
+          JSON.stringify(change.event)
         )
-        return this.put({ ...current, revision: current.revision + 1, state })
+        return this.put(change.app)
       }
     )
   }
@@ -302,14 +286,11 @@ export class AppStore {
         id
       )[0]
       if (previous) return { applied: previous.result !== "null" }
-      if (
+      Domain.operationCapacity(
         this.db.all<{ n: number }>(
           "SELECT count(*) AS n FROM generated_app_operations"
-        )[0]!.n >= 2000
+        )[0]!.n
       )
-        throw new AppConflict({
-          message: "This bot has reached its app operation limit.",
-        })
       this.db.run(
         "INSERT INTO generated_app_operations VALUES (?,'','null')",
         id
@@ -317,12 +298,15 @@ export class AppStore {
       return { applied: false }
     })
   }
-  deliverNext(admit: (event: AppEvent) => void) {
+  deliverNext(admission: AppAdmission) {
+    if (admission.transactionGroup !== this.transactionGroup)
+      throw new Error("App admission must share its storage transaction group.")
     return this.db.transaction(() => {
       if (!this.active()) return false
       const event = this.pending()[0]
       if (!event) return false
-      admit(event)
+      if (admission.admit(event) !== event.turnId)
+        throw new Error("App admission returned a different turn identity.")
       this.db.run(
         "UPDATE generated_app_events SET queued=1,record=? WHERE id=?",
         JSON.stringify({ ...event, delivery: "queued" }),
