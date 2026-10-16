@@ -1,6 +1,6 @@
 import { relayTerminal } from "../src/terminal/adapters/socket"
 import { Cause, Effect, Exit, Fiber } from "effect"
-import type { Sandbox } from "@cloudflare/sandbox"
+import type { Sandbox } from "@cloudflare/sandbox-v0"
 import { describe, expect, it, vi } from "vitest"
 import { readBounded } from "../src/terminal/adapters/stream"
 import { Terminal, type TerminalRuntime } from "./terminal-fixture"

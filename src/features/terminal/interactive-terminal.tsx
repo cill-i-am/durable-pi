@@ -111,7 +111,7 @@ function LiveTerminal({
     void Promise.all([
       import("@xterm/xterm"),
       import("@xterm/addon-fit"),
-      import("@cloudflare/sandbox/xterm"),
+      import("@cloudflare/sandbox-v0/xterm"),
     ])
       .then(([{ Terminal }, { FitAddon }, { SandboxAddon }]) => {
         if (disposed) return

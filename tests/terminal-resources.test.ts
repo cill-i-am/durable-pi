@@ -17,7 +17,7 @@ import {
 import { TerminalRuntimeError } from "../src/terminal/runtime"
 import { TerminalFailure } from "../src/terminal/contracts"
 import { MAX_FILE_BYTES } from "../src/workspace/files"
-import type { Sandbox } from "@cloudflare/sandbox"
+import type { Sandbox } from "@cloudflare/sandbox-v0"
 
 function gate<T = void>() {
   let release!: (value: T) => void
@@ -48,10 +48,10 @@ const complete = (code = 0) =>
 function video(overrides: Partial<VideoSandbox> = {}) {
   const host = {
     destroy: vi.fn(async () => {}),
-    startAndWaitForPorts: vi.fn(async () => {}),
+    start: vi.fn(async () => {}),
     mkdir: vi.fn(async () => {}),
     writeFile: vi.fn(async () => {}),
-    execStream: vi.fn(async () => complete()),
+    execute: vi.fn(async () => 0),
     readFile: vi.fn(async (path: string) => ({
       content: path.endsWith("json")
         ? new Response(
@@ -340,7 +340,7 @@ it("extracts bounded video metadata and JPEG frames and closes the container bef
 })
 
 it("preserves unreadable video and unavailable extraction as distinct finite HTTP failures", async () => {
-  const unreadable = video({ execStream: async () => complete(1) })
+  const unreadable = video({ execute: async () => 1 })
   const rejected = await Effect.runPromise(
     extractVideoRequest(unreadable.extract, request())
   )
@@ -353,7 +353,7 @@ it("preserves unreadable video and unavailable extraction as distinct finite HTT
       }),
     }),
     video({
-      startAndWaitForPorts: async () => {
+      start: async () => {
         throw new Error("private SDK error")
       },
     }),
@@ -394,7 +394,7 @@ it("video abort joins late startup and held final destruction before releasing i
   let closes = 0,
     ended = false
   const f = video({
-    startAndWaitForPorts: async () => {
+    start: async () => {
       entered.release()
       await started.waiting
     },

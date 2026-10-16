@@ -1,0 +1,3 @@
+#!/bin/sh
+# tmux already gives this shell a controlling terminal.
+exec bash -i

@@ -29,6 +29,25 @@
       "matchManagers": ["npm"],
       "matchPackageNames": ["@earendil-works/**"],
       "groupName": "Pi"
+    },
+    {
+      "description": "Keep the compatibility SDK on 0.x until the existing Sandbox namespace is drained.",
+      "matchDepNames": ["@cloudflare/sandbox-v0"],
+      "allowedVersions": "<1.0.0"
+    },
+    {
+      "description": "Keep the production compatibility image aligned with the 0.x SDK.",
+      "matchManagers": ["dockerfile"],
+      "matchFileNames": ["containers/terminal/Dockerfile"],
+      "allowedVersions": "<1.0.0"
+    },
+    {
+      "matchDepNames": ["@cloudflare/sandbox", "docker.io/cloudflare/sandbox"],
+      "matchFileNames": [
+        "package.json",
+        "containers/terminal-native/Dockerfile"
+      ],
+      "groupName": "Sandbox SDK and native shim"
     }
   ],
   "lockFileMaintenance": {

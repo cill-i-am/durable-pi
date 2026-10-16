@@ -10,6 +10,7 @@ await build({
     "src/agent/worker.ts",
     "src/execution/worker.ts",
     "src/terminal/worker.ts",
+    "src/terminal/adapters/native-worker.ts",
     "src/workspace/adapters/document-worker.ts",
   ],
   outdir: "dist/workers",

@@ -1,4 +1,4 @@
-import type { Sandbox } from "@cloudflare/sandbox"
+import type { Sandbox } from "@cloudflare/sandbox-v0"
 import { Cause, Option, Schema } from "effect"
 import { TerminalFailure, MAX_CHECKPOINT } from "../contracts"
 import type { ForeignTerminalRuntime } from "./interop"
@@ -93,7 +93,7 @@ export function sandboxRuntime(sandbox: Sandbox): ForeignTerminalRuntime {
     ...sandboxTransfers(sandbox, internal),
     close: () => sandbox.destroy(),
     openInteractive: async (signal) => {
-      const { proxyTerminal } = await import("@cloudflare/sandbox")
+      const { proxyTerminal } = await import("@cloudflare/sandbox-v0")
       live(signal)
       await sandbox.createSession({
         id: "owner",
@@ -151,5 +151,31 @@ export function sandboxRuntime(sandbox: Sandbox): ForeignTerminalRuntime {
       })
       return readBounded(file.content, MAX_CHECKPOINT, signal)
     },
+  }
+}
+
+export function legacyVideoRuntime(sandbox: Sandbox) {
+  return {
+    destroy: () => sandbox.destroy(),
+    start: () =>
+      sandbox.startAndWaitForPorts({
+        ports: 3000,
+        cancellationOptions: {
+          instanceGetTimeoutMS: 15000,
+          portReadyTimeoutMS: 15000,
+        },
+      }),
+    mkdir: (path: string, options: { recursive: boolean }) =>
+      sandbox.mkdir(path, options),
+    writeFile: (path: string, body: ReadableStream<Uint8Array>) =>
+      sandbox.writeFile(path, body),
+    readFile: (path: string, options: { encoding: "none" }) =>
+      sandbox.readFile(path, options),
+    execute: async (command: string, signal: AbortSignal) =>
+      readCommand(
+        await sandbox.execStream(command, { timeout: 30000, signal }),
+        () => {},
+        signal
+      ),
   }
 }
