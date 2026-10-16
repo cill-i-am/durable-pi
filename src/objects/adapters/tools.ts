@@ -53,7 +53,7 @@ const changes = Type.Array(
   { minItems: 1, maxItems: 20 }
 )
 const result = (value: unknown) => ({
-  content: [{ type: "text" as const, text: JSON.stringify(value) }],
+  output: [{ type: "text" as const, text: JSON.stringify(value) }],
 })
 const standalone = <T>(
   operation: Effect.Effect<T, ObjectFailure>,

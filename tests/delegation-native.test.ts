@@ -122,7 +122,7 @@ it.each([
           (reads.get(Number(api.conversationId)) ?? 0) + 1
         )
         return {
-          content: [
+          output: [
             {
               type: "text",
               text: "Original private source detail ".repeat(

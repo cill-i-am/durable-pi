@@ -39,6 +39,7 @@ function watch(
   return {
     snapshot: {
       type: "snapshot",
+      nestedTools: [],
       entries: [],
       tools: [],
       compactions: [],
@@ -361,6 +362,7 @@ describe("conversation stream", () => {
     attach({
       snapshot: {
         type: "snapshot",
+        nestedTools: [],
         entries: [],
         tools: [],
         compactions: [],

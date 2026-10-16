@@ -101,7 +101,7 @@ it("carries a composer override into native Pi Responses and preserves selection
         replay: "unsafe",
         execute: async () => {
           toolCalls++
-          return { content: [{ type: "text", text: "result saved once" }] }
+          return { output: [{ type: "text", text: "result saved once" }] }
         },
       }),
     ],

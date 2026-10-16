@@ -371,7 +371,7 @@ it("browser tool projection preserves requirements and caller Context, and drive
       })
     ).pipe(Effect.provideService(Invocation, "caller context"))
   )
-  expect(result.content[0]).toMatchObject({
+  expect(result.output[0]).toMatchObject({
     type: "text",
     text: expect.stringContaining("caller context"),
   })

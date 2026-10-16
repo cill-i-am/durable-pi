@@ -29,7 +29,7 @@ export function communicationTools(
       replay: "safe",
       parameters: Type.Object({}),
       execute: async (_, _api, context) => ({
-        content: [
+        output: [
           {
             type: "text",
             text: JSON.stringify(
@@ -51,7 +51,7 @@ export function communicationTools(
         context: Type.String({ maxLength: 12000 }),
       }),
       execute: async (input, api, context) => ({
-        content: [
+        output: [
           {
             type: "text",
             text: JSON.stringify(
@@ -82,7 +82,7 @@ export function communicationTools(
       replay: "safe",
       parameters: Type.Object({ id: Type.String({ maxLength: 180 }) }),
       execute: async (input, _api, context) => ({
-        content: [
+        output: [
           {
             type: "text",
             text: JSON.stringify(

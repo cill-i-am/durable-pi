@@ -113,7 +113,7 @@ it.each([8192, contextProjectionBytes(8192)])(
           execute: async () => {
             calls++
             return {
-              content: [
+              output: [
                 { type: "text", text: "Original source detail ".repeat(300) },
               ],
             }

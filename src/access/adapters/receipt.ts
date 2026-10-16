@@ -4,16 +4,27 @@ import type { RemoteToolResult } from "../connections"
 export const piRemoteResult = (
   result: RemoteToolResult
 ): ToolExecutionResult => ({
-  ...result,
-  content: [...result.content],
+  isError: result.isError,
+  output: [...result.content],
   ...(result.diagnostics ? { diagnostics: [...result.diagnostics] } : {}),
 })
 
-export function toolReceipt(result: ToolExecutionResult): ToolExecutionResult {
+type LegacyToolResult = Omit<ToolExecutionResult, "output"> & {
+  readonly content: ToolExecutionResult["output"]
+}
+
+export function toolReceipt(
+  stored: ToolExecutionResult | LegacyToolResult
+): ToolExecutionResult {
+  // Completed receipts from Pi 1.0 must replay without dispatching the tool again.
+  const result: ToolExecutionResult =
+    "content" in stored
+      ? (({ content, ...rest }) => ({ ...rest, output: content }))(stored)
+      : stored
   if (JSON.stringify(result).length <= 250_000) return result
   let remaining = 24_000
-  const content: NonNullable<ToolExecutionResult["content"]>[number][] = []
-  for (const block of (result.content ?? []).slice(0, 32)) {
+  const content: NonNullable<ToolExecutionResult["output"]>[number][] = []
+  for (const block of (result.output ?? []).slice(0, 32)) {
     if (block.type === "text") {
       const text = block.text.slice(0, remaining)
       remaining -= text.length
@@ -27,7 +38,7 @@ export function toolReceipt(result: ToolExecutionResult): ToolExecutionResult {
     }
   }
   return {
-    content,
+    output: content,
     isError: result.isError,
     control:
       JSON.stringify(result.control ?? {}).length <= 8000

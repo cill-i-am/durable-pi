@@ -4,7 +4,7 @@ import type { Effect } from "effect"
 import type { MemoryRepository } from "../repository"
 
 const text = (value: string) => ({
-  content: [{ type: "text" as const, text: value }],
+  output: [{ type: "text" as const, text: value }],
 })
 /** SDK definitions and formatting stay at the native edge. The host applies
  * its existing approval wrapper and runs each invocation with its signal. */

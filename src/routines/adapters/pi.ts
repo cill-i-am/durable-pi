@@ -21,7 +21,7 @@ async function operationId(task: string) {
 }
 const summary = ({ prompt: _prompt, ...routine }: Routine) => routine
 const result = (value: unknown) => ({
-  content: [{ type: "text" as const, text: JSON.stringify(value) }],
+  output: [{ type: "text" as const, text: JSON.stringify(value) }],
 })
 export function routineTools(
   store: Routines["Service"],

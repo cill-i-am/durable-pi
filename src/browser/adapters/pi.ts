@@ -4,7 +4,7 @@ import type { BrowserStorageError } from "../repository"
 
 export function browserResult(result: BrowserObservation) {
   return {
-    content: [
+    output: [
       {
         type: "text" as const,
         text: JSON.stringify({
@@ -45,7 +45,7 @@ export function browserToolResult<TRequirements>(
           error.outcome === "rejected" || error.outcome === "failed"
             ? Effect.succeed({
                 isError: true,
-                content: [{ type: "text" as const, text: error.message }],
+                output: [{ type: "text" as const, text: error.message }],
                 diagnostics: [
                   {
                     severity: "error" as const,

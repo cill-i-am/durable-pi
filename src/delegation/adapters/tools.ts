@@ -41,7 +41,7 @@ export function backgroundTool(
     }),
     execute: async (input, api, context) => {
       return {
-        content: [
+        output: [
           {
             type: "text",
             text: await execute(run(input, api), context.abortSignal),
@@ -89,7 +89,7 @@ export function delegationTool(
       ),
     }),
     execute: async (input, api, context) => ({
-      content: [
+      output: [
         {
           type: "text",
           text: await execute(

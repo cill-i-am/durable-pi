@@ -1,5 +1,5 @@
 diff --git a/dist/harness/pi/index.d.ts b/dist/harness/pi/index.d.ts
-index 36ac5754a0615b307e0ad69362bc1a19cff08069..0ceabe50b36d4e8bd12df78e1eafb58f8389e158 100644
+index 32a6fab..ba8bbeb 100644
 --- a/dist/harness/pi/index.d.ts
 +++ b/dist/harness/pi/index.d.ts
 @@ -145,6 +145,10 @@ type PiSessionDefaults = {
@@ -14,7 +14,7 @@ index 36ac5754a0615b307e0ad69362bc1a19cff08069..0ceabe50b36d4e8bd12df78e1eafb58f
    readonly defaults?: PiSessionDefaults;
  };
 diff --git a/dist/harness/pi/index.js b/dist/harness/pi/index.js
-index 74e18490d21addac297ac627880e316b326795db..97794ff13fc2618a9ba07147244c570b68049600 100644
+index 9fceb9c..9722aec 100644
 --- a/dist/harness/pi/index.js
 +++ b/dist/harness/pi/index.js
 @@ -527,7 +527,8 @@ async function _open() {

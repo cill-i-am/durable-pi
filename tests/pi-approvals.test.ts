@@ -119,7 +119,7 @@ describe("native Pi tool approvals", () => {
                         })
                     })
                   return {
-                    content: [
+                    output: [
                       {
                         type: "text",
                         text:

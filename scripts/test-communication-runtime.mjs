@@ -637,7 +637,7 @@ const config :Workerd.Config = (
   assert.equal(browserRejected.receipt, "done")
   assert.equal(browserRejected.result.isError, true)
   assert.match(
-    browserRejected.result.content[0].text,
+    browserRejected.result.output[0].text,
     /enable unrestricted internet/
   )
   assert.equal(browserRejected.actions, 0)
