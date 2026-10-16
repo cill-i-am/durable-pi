@@ -31,7 +31,7 @@ export interface TerminalLedger {
     revision: number,
     active: boolean,
     revokeThrough?: number
-  ) => Effect.Effect<void, TerminalStorageError>
+  ) => Effect.Effect<void, TerminalStorageError | TerminalFailure>
   authorized: (run: CommandRun) => Effect.Effect<boolean, TerminalStorageError>
   get: (
     id: string
@@ -49,7 +49,7 @@ export interface TerminalLedger {
   progress: (
     id: string,
     output: string
-  ) => Effect.Effect<void, TerminalStorageError>
+  ) => Effect.Effect<void, TerminalStorageError | TerminalFailure>
   finish: (
     id: string,
     result: Pick<CommandRun, "status" | "exitCode" | "error">,

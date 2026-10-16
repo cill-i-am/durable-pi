@@ -39,7 +39,8 @@ const decode = (row: { record: string }) =>
 export class TerminalStore implements TerminalLedger {
   constructor(
     private readonly db: Sqlite,
-    private readonly onFinished?: (run: CommandRun) => void
+    private readonly onFinished?: (run: CommandRun) => void,
+    private readonly writable?: () => void
   ) {}
   private query<TValue, TError, TRequirements>(
     body: (
@@ -76,6 +77,7 @@ export class TerminalStore implements TerminalLedger {
   configureNetwork(input: TerminalNetworkPolicy) {
     return this.atomic(() =>
       Effect.gen({ self: this }, function* () {
+        yield* decision(() => this.writable?.())
         const current = yield* this.networkPolicy()
         const authority = yield* this.authority()
         const next = yield* decision(() =>
@@ -151,6 +153,7 @@ export class TerminalStore implements TerminalLedger {
   ) {
     return this.atomic(() =>
       Effect.gen({ self: this }, function* () {
+        yield* decision(() => this.writable?.())
         const current = yield* this.authority()
         const revokedThrough = Math.max(revokeThrough, active ? -1 : revision)
         const values = {
@@ -242,6 +245,7 @@ export class TerminalStore implements TerminalLedger {
   ) {
     return this.atomic(() =>
       Effect.gen({ self: this }, function* () {
+        yield* decision(() => this.writable?.())
         const stored = yield* this.get(input.id)
         const previous = yield* decision(() =>
           Domain.replayCommand(stored, input, kind, transfer)
