@@ -6,18 +6,50 @@ afterEach(() => {
   vi.unstubAllEnvs()
   vi.unstubAllGlobals()
 })
-it("enables Issues after deploy while preserving Alchemy tracing settings and excluding bindings", async () => {
+it("resolves truncated Worker names by ownership tags and preserves tracing settings", async () => {
   vi.stubEnv("GITHUB_REF", "refs/heads/main")
   vi.stubEnv("GITHUB_EVENT_NAME", "push")
   vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "synthetic")
   vi.stubEnv("CLOUDFLARE_API_TOKEN", "synthetic")
   const scripts = [
-    "agentworkerdrizzlev1",
-    "website",
-    "documentworker",
-    "executionworker",
-    "terminalworkerdrizzlev1",
-  ].map((p) => ({ id: `durable-pi-${p}-production-test` }))
+    [
+      "AgentWorkerDrizzleV1",
+      "durable-pi-agentworkerdrizzlev5hoqp3cxfzpncljlz6qzw7c5",
+    ],
+    ["Website", "durable-pi-website-production-test"],
+    ["DocumentWorker", "durable-pi-documentworker-production-test"],
+    ["ExecutionWorker", "durable-pi-executionworker-production-test"],
+    [
+      "TerminalWorkerDrizzleV1",
+      "durable-pi-terminalworkerdrizzayyx2ku63x7pdk7rakk3gtaw",
+    ],
+  ].map(([resourceId, id]) => ({
+    id,
+    tags: [
+      "alchemy:stack:durable-pi",
+      "alchemy:stage:production",
+      `alchemy:id:${resourceId}`,
+    ],
+  }))
+  const unrelated = [
+    { id: "durable-pi-agentworkerdrizzlev1-production-untagged" },
+    {
+      id: "another-stack",
+      tags: [
+        "alchemy:stack:other",
+        "alchemy:stage:production",
+        "alchemy:id:AgentWorkerDrizzleV1",
+      ],
+    },
+    {
+      id: "another-stage",
+      tags: [
+        "alchemy:stack:durable-pi",
+        "alchemy:stage:dev",
+        "alchemy:id:AgentWorkerDrizzleV1",
+      ],
+    },
+  ]
   const obs = {
     enabled: true,
     traces: { enabled: true, head_sampling_rate: 1, persist: true },
@@ -28,7 +60,10 @@ it("enables Issues after deploy while preserving Alchemy tracing settings and ex
   const network = vi.fn<typeof fetch>(async (input, init) => {
     const url = String(input)
     if (!url.endsWith("/settings"))
-      return Response.json({ success: true, result: scripts })
+      return Response.json({
+        success: true,
+        result: [...scripts, ...unrelated],
+      })
     if (init?.method === "PATCH") {
       expect(init.body).toBeInstanceOf(FormData)
       const part = (init.body as FormData).get("settings")
@@ -50,7 +85,14 @@ it("enables Issues after deploy while preserving Alchemy tracing settings and ex
   })
   vi.stubGlobal("fetch", network)
   await Effect.runPromise(configureObservability)
-  expect(updated.size).toBe(5)
+  expect(updated).toEqual(
+    new Set(
+      scripts.map(
+        ({ id }) =>
+          `https://api.cloudflare.com/client/v4/accounts/synthetic/workers/scripts/${id}/settings`
+      )
+    )
+  )
   expect(network).toHaveBeenCalledTimes(16)
 })
 it("rejects a non-main invocation before contacting Cloudflare", async () => {
@@ -63,3 +105,54 @@ it("rejects a non-main invocation before contacting Cloudflare", async () => {
   )
   expect(network).not.toHaveBeenCalled()
 })
+
+it.each(["missing", "duplicate", "wrong-stack", "wrong-stage", "untagged"])(
+  "rejects %s ownership before configuring a Worker",
+  async (scenario) => {
+    vi.stubEnv("GITHUB_REF", "refs/heads/main")
+    vi.stubEnv("GITHUB_EVENT_NAME", "push")
+    vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "synthetic")
+    vi.stubEnv("CLOUDFLARE_API_TOKEN", "synthetic")
+    const owned = {
+      id: "truncated-physical-name",
+      tags: [
+        "alchemy:stack:durable-pi",
+        "alchemy:stage:production",
+        "alchemy:id:AgentWorkerDrizzleV1",
+      ],
+    }
+    const scripts =
+      scenario === "missing"
+        ? []
+        : scenario === "duplicate"
+          ? [owned, { ...owned, id: "another-physical-name" }]
+          : [
+              {
+                ...owned,
+                tags:
+                  scenario === "untagged"
+                    ? undefined
+                    : owned.tags.map((tag) =>
+                        scenario === "wrong-stack" &&
+                        tag === "alchemy:stack:durable-pi"
+                          ? "alchemy:stack:other"
+                          : scenario === "wrong-stage" &&
+                              tag === "alchemy:stage:production"
+                            ? "alchemy:stage:dev"
+                            : tag
+                      ),
+              },
+            ]
+    const network = vi.fn<typeof fetch>(async () =>
+      Response.json({ success: true, result: scripts })
+    )
+    vi.stubGlobal("fetch", network)
+    await expect(
+      Effect.runPromise(configureObservability)
+    ).rejects.toMatchObject({
+      _tag: "ObservabilitySetupFailed",
+      operation: "resolve AgentWorkerDrizzleV1",
+    })
+    expect(network).toHaveBeenCalledTimes(1)
+  }
+)
