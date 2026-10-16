@@ -77,7 +77,10 @@ assert.deepEqual(await call("native", "migration/import", receipt), imported)
 const restored = await call("native", "terminal")
 assert.equal(restored.networkPolicy.unrestricted, false)
 assert.equal(restored.runs.length, 1)
-assert.equal(restored.runs[0].output, "history before migration")
+assert.equal(
+  (await call("native", "terminal/" + saved.input.id)).output,
+  "history before migration"
+)
 await call("legacy", "migration/commit", receipt)
 assert.equal((await call("legacy", "migration/status")).phase, "moved")
 await call("native", "terminal/run", saved.input)
