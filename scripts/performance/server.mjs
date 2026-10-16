@@ -9,16 +9,19 @@ import tailwindcss from "@tailwindcss/vite"
 
 const project = resolve(fileURLToPath(new URL("../..", import.meta.url)))
 const output = resolve(project, "dist/performance")
-await build({
-  configFile: false,
-  root: resolve(project, "scripts/performance"),
-  resolve: { alias: { "@": resolve(project, "src") } },
-  plugins: [tailwindcss(), react()],
-  build: { outDir: output, emptyOutDir: true },
-})
+if (!process.argv.includes("--serve-only"))
+  await build({
+    configFile: false,
+    root: resolve(project, "scripts/performance"),
+    resolve: { alias: { "@": resolve(project, "src") } },
+    plugins: [tailwindcss(), react()],
+    build: { outDir: output, emptyOutDir: true },
+  })
 if (process.argv.includes("--build-only")) process.exit(0)
 const wait = (ms) => new Promise((done) => setTimeout(done, ms))
 const requests = []
+// Read-only startup/recovery cases share the real UI and synthetic transports.
+const startupCase = process.env.PERF_CASE
 const metadata = {
   model: "test",
   connected: true,
@@ -143,8 +146,17 @@ const server = createServer(async (req, res) => {
     const path = url.pathname
     requests.push({ path, at: Date.now() })
     if (requests.length > 1000) requests.shift()
+    if (
+      (startupCase === "catalog-error" && path === "/api/agent/bots") ||
+      (startupCase === "conversation-error" && path === "/api/agent/events")
+    ) {
+      res.writeHead(503, { "content-type": "application/json" })
+      res.end(JSON.stringify({ error: "Synthetic startup failure" }))
+      return
+    }
     if (path === "/api/auth/get-session") {
       await wait(150)
+      if (startupCase === "anonymous") return sendJson(res, null)
       return sendJson(res, {
         user: {
           id: "benchmark-owner",
@@ -165,7 +177,7 @@ const server = createServer(async (req, res) => {
       })
     }
     if (path === "/api/agent/bots") {
-      await wait(500)
+      await wait(startupCase === "catalog-slow" ? 2200 : 500)
       return sendJson(res, { agents: [profile] })
     }
     if (path === "/api/agent/bots/statuses") {
@@ -176,18 +188,21 @@ const server = createServer(async (req, res) => {
     }
     if (path === "/api/agent/events") {
       await wait(100)
+      if (res.destroyed) return
       res.writeHead(200, {
         "content-type": "text/event-stream",
         "cache-control": "no-store",
       })
       res.write(
-        `data: ${JSON.stringify({ type: "MESSAGES_SNAPSHOT", messages })}\n\n`
+        `data: ${JSON.stringify({ type: "MESSAGES_SNAPSHOT", messages: startupCase === "empty" ? [] : messages })}\n\n`
       )
+      if (startupCase === "metadata-slow") await wait(2200)
+      if (res.destroyed) return
       res.write(
         `data: ${JSON.stringify({ type: "CUSTOM", name: "durable-pi.metadata", value: metadata })}\n\n`
       )
       const timer = setInterval(() => res.write(": keepalive\n\n"), 15000)
-      req.on("close", () => clearInterval(timer))
+      res.once("close", () => clearInterval(timer))
       return
     }
     if (path === "/api/agent/models") {
