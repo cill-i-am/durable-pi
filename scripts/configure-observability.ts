@@ -11,16 +11,21 @@ const ResponseEnvelope = Schema.Struct({
   success: Schema.Boolean,
   result: Schema.Unknown,
 })
-const Scripts = Schema.Array(Schema.Struct({ id: Schema.String }))
+const Scripts = Schema.Array(
+  Schema.Struct({
+    id: Schema.String,
+    tags: Schema.optional(Schema.Array(Schema.String)),
+  })
+)
 const Settings = Schema.Struct({
   observability: Schema.Record(Schema.String, Schema.Unknown),
 })
-const prefixes = [
-  "agentworkerdrizzlev1",
-  "website",
-  "documentworker",
-  "executionworker",
-  "terminalworkerdrizzlev1",
+const resources = [
+  "AgentWorkerDrizzleV1",
+  "Website",
+  "DocumentWorker",
+  "ExecutionWorker",
+  "TerminalWorkerDrizzleV1",
 ]
 
 export const configureObservability = Effect.gen(function* () {
@@ -71,15 +76,21 @@ export const configureObservability = Effect.gen(function* () {
   const scripts = yield* request("").pipe(
     Effect.flatMap(Schema.decodeUnknownEffect(Scripts))
   )
-  for (const prefix of prefixes) {
-    const matches = scripts.filter(({ id }) =>
-      id.startsWith(`durable-pi-${prefix}-production-`)
+  const selected: string[] = []
+  for (const resource of resources) {
+    const matches = scripts.filter(
+      ({ tags }) =>
+        tags?.includes("alchemy:stack:durable-pi") &&
+        tags.includes("alchemy:stage:production") &&
+        tags.includes(`alchemy:id:${resource}`)
     )
     if (matches.length !== 1)
       return yield* new ObservabilitySetupFailed({
-        operation: `resolve ${prefix}`,
+        operation: `resolve ${resource}`,
       })
-    const name = matches[0]!.id
+    selected.push(matches[0]!.id)
+  }
+  for (const name of selected) {
     const settings = yield* request(`/${name}/settings`).pipe(
       Effect.flatMap(Schema.decodeUnknownEffect(Settings))
     )

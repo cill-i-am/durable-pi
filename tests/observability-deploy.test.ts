@@ -2,22 +2,49 @@ import { afterEach, expect, it, vi } from "vitest"
 import { Effect } from "effect"
 import { configureObservability } from "../scripts/configure-observability"
 
+const deployed = (id: string, resource: string, stage = "production") => ({
+  id,
+  tags: [
+    "alchemy:stack:durable-pi",
+    `alchemy:stage:${stage}`,
+    `alchemy:id:${resource}`,
+  ],
+})
+const productionScripts = [
+  deployed("shortened-agent-script", "AgentWorkerDrizzleV1"),
+  deployed("website-script", "Website"),
+  deployed("document-script", "DocumentWorker"),
+  deployed("execution-script", "ExecutionWorker"),
+  deployed("shortened-terminal-script", "TerminalWorkerDrizzleV1"),
+]
+
 afterEach(() => {
   vi.unstubAllEnvs()
   vi.unstubAllGlobals()
 })
-it("enables Issues after deploy while preserving Alchemy tracing settings and excluding bindings", async () => {
+it("discovers shortened worker names by ownership tags and preserves tracing settings and bindings", async () => {
   vi.stubEnv("GITHUB_REF", "refs/heads/main")
   vi.stubEnv("GITHUB_EVENT_NAME", "push")
   vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "synthetic")
   vi.stubEnv("CLOUDFLARE_API_TOKEN", "synthetic")
   const scripts = [
-    "agentworkerdrizzlev1",
-    "website",
-    "documentworker",
-    "executionworker",
-    "terminalworkerdrizzlev1",
-  ].map((p) => ({ id: `durable-pi-${p}-production-test` }))
+    ...productionScripts,
+    deployed(
+      "durable-pi-agentworkerdrizzlev1-production-decoy",
+      "AgentWorkerDrizzleV1",
+      "dev"
+    ),
+    deployed("retired-agent", "AgentWorker"),
+    { id: "unmanaged-worker" },
+    {
+      id: "different-stack",
+      tags: [
+        "alchemy:stack:other",
+        "alchemy:stage:production",
+        "alchemy:id:Website",
+      ],
+    },
+  ]
   const obs = {
     enabled: true,
     traces: { enabled: true, head_sampling_rate: 1, persist: true },
@@ -50,7 +77,14 @@ it("enables Issues after deploy while preserving Alchemy tracing settings and ex
   })
   vi.stubGlobal("fetch", network)
   await Effect.runPromise(configureObservability)
-  expect(updated.size).toBe(5)
+  expect(updated).toEqual(
+    new Set(
+      productionScripts.map(
+        ({ id }) =>
+          `https://api.cloudflare.com/client/v4/accounts/synthetic/workers/scripts/${id}/settings`
+      )
+    )
+  )
   expect(network).toHaveBeenCalledTimes(16)
 })
 it("rejects a non-main invocation before contacting Cloudflare", async () => {
@@ -63,3 +97,31 @@ it("rejects a non-main invocation before contacting Cloudflare", async () => {
   )
   expect(network).not.toHaveBeenCalled()
 })
+
+it.each(["missing", "ambiguous"])(
+  "rejects %s ownership before changing any settings",
+  async (mode) => {
+    vi.stubEnv("GITHUB_REF", "refs/heads/main")
+    vi.stubEnv("GITHUB_EVENT_NAME", "push")
+    vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "synthetic")
+    vi.stubEnv("CLOUDFLARE_API_TOKEN", "synthetic")
+    const scripts =
+      mode === "missing"
+        ? productionScripts.slice(0, -1)
+        : [
+            ...productionScripts,
+            deployed("duplicate-terminal-script", "TerminalWorkerDrizzleV1"),
+          ]
+    const network = vi.fn<typeof fetch>(async () =>
+      Response.json({ success: true, result: scripts })
+    )
+    vi.stubGlobal("fetch", network)
+    await expect(
+      Effect.runPromise(configureObservability)
+    ).rejects.toMatchObject({
+      _tag: "ObservabilitySetupFailed",
+      operation: "resolve TerminalWorkerDrizzleV1",
+    })
+    expect(network).toHaveBeenCalledTimes(1)
+  }
+)
