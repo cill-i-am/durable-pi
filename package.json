@@ -14,7 +14,10 @@
     "typecheck": "tsc --noEmit",
     "deploy": "alchemy deploy --stage production --profile durable-pi",
     "test": "vitest run",
-    "verify": "pnpm generate-routes && pnpm typecheck && pnpm test && pnpm test:communication-runtime && pnpm build && pnpm build:workers",
+    "verify": "pnpm verify:static && pnpm verify:unit-and-build && pnpm verify:native-runtime",
+    "verify:static": "node --import tsx scripts/check-secrets.ts && pnpm generate-routes && pnpm typecheck && pnpm lint && pnpm check",
+    "verify:unit-and-build": "pnpm generate-routes && pnpm test && pnpm build && pnpm build:workers",
+    "verify:native-runtime": "pnpm generate-routes && pnpm test:communication-runtime",
     "model:login": "tsx scripts/model-login.ts",
     "test:communication-runtime": "node scripts/test-communication-runtime.mjs"
   },
