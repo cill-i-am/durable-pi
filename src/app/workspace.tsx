@@ -1,4 +1,5 @@
 import { markReady } from "@/features/performance"
+import { WorkspaceStartup } from "./workspace-startup"
 import { AgentCollection } from "@/features/agents/agent-collection"
 import { useAgentStatuses } from "@/features/agents/use-agent-statuses"
 import type { RuntimeStatus } from "@/conversations/status"
@@ -18,7 +19,6 @@ import { lazy, Suspense, useCallback, useEffect, useState, useRef } from "react"
 import { ObjectsProvider } from "@/features/objects/context"
 import { PanelRight } from "lucide-react"
 import { authClient } from "@/auth/client"
-import { AgentMark } from "@/components/agent-mark"
 import { Conversation, useConversation } from "@/features/conversation"
 import {
   AgentEditor,
@@ -30,7 +30,6 @@ import type { AgentProfile } from "@/agents/contracts"
 import { api } from "@/http/client"
 import { SidebarProvider, useSidebar } from "@/components/ui/sidebar"
 import { TooltipProvider } from "@/components/ui/tooltip"
-import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 
@@ -83,24 +82,10 @@ export function ChatApp() {
   useEffect(() => {
     if (session && !isPending) markReady("session")
   }, [session, isPending])
-  if (isPending)
-    return (
-      <main id="main-content" tabIndex={-1} className="loading-view">
-        <AgentMark className="pi-mark" />
-        <Skeleton className="h-4 w-40" />
-        <span className="sr-only">Loading your session</span>
-      </main>
-    )
+  if (isPending) return <WorkspaceStartup />
   if (!session)
     return (
-      <Suspense
-        fallback={
-          <main className="loading-view">
-            <AgentMark className="pi-mark" />
-            <p role="status">Opening sign in…</p>
-          </main>
-        }
-      >
+      <Suspense fallback={<WorkspaceStartup />}>
         <Login sessionError={error?.message} />
       </Suspense>
     )
@@ -122,6 +107,9 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
       (!!location.agentId || !!catalog.selected)
   )
   const runtime = useAgentStatuses(catalog.agents, ownerId, location.agentId)
+  const [startupComplete, setStartupComplete] = useState(false)
+  const collection =
+    location.pathname === "/agents" || location.pathname === "/agents/archived"
   const securityOpen = location.search.security ?? false
   const setSecurityOpen = location.setSecurity
   const [workLocked, setNavigationLocked] = useState(false)
@@ -242,6 +230,19 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
     )
       setWorkbench(action as Workbench)
   }
+  // The hooks above keep catalog and conversation requests parallel while the
+  // initial view stays stable. Errors release it; later reconnects and agent
+  // navigation keep their existing in-workspace loading/recovery controls.
+  const starting =
+    !catalog.error &&
+    (catalog.loading ||
+      (!collection &&
+        !editor &&
+        !!catalog.selected &&
+        !conversation.state &&
+        !conversation.error))
+  if (!startupComplete && starting) return <WorkspaceStartup />
+  if (!startupComplete) setStartupComplete(true)
   return (
     <TooltipProvider>
       <SidebarProvider
@@ -310,8 +311,7 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
                 </AlertDescription>
               </Alert>
             )}
-            {location.pathname === "/agents" ||
-            location.pathname === "/agents/archived" ? (
+            {collection ? (
               <AgentCollection
                 agents={catalog.agents}
                 archived={location.pathname === "/agents/archived"}
@@ -349,11 +349,8 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
               />
             ) : (
               <div className="loading-view">
-                <Skeleton className="h-6 w-44" />
                 <p className="text-sm text-muted-foreground">
-                  {catalog.loading
-                    ? "Opening your workspace…"
-                    : "Your workspace is unavailable."}
+                  Your workspace is unavailable.
                 </p>
                 {!catalog.loading && (
                   <Button

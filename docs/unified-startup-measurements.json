@@ -1,0 +1,386 @@
+{
+  "baseline": "31d6aa23e2b09a0c9f157b9bcd2ab83493e4e03b",
+  "protocol": {
+    "viewport": [
+      390,
+      844
+    ],
+    "cpu": "normal",
+    "network": "unthrottled loopback; cache-control no-store",
+    "sessionDelayMs": 150,
+    "catalogDelayMs": 500,
+    "metadataDelayAfterSnapshotMs": 2200,
+    "note": "Synthetic race/visual comparison, not production latency. Same explicit CSS sources and transports in both conditions."
+  },
+  "summary": [
+    {
+      "condition": "before",
+      "n": 5,
+      "historyMedianMs": 2649,
+      "chatDomMedianMs": 2651.5999999046326,
+      "all20": true,
+      "allNoOverflow": true,
+      "shapeCounts": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "phases": [
+        [
+          "session",
+          "workspace",
+          "conversation",
+          "chat"
+        ],
+        [
+          "session",
+          "workspace",
+          "conversation",
+          "chat"
+        ],
+        [
+          "session",
+          "workspace",
+          "conversation",
+          "chat"
+        ],
+        [
+          "session",
+          "workspace",
+          "conversation",
+          "chat"
+        ],
+        [
+          "session",
+          "workspace",
+          "conversation",
+          "chat"
+        ]
+      ]
+    },
+    {
+      "condition": "after",
+      "n": 5,
+      "historyMedianMs": 2636.5,
+      "chatDomMedianMs": 2670,
+      "all20": true,
+      "allNoOverflow": true,
+      "shapeCounts": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "phases": [
+        [
+          "startup",
+          "chat"
+        ],
+        [
+          "startup",
+          "chat"
+        ],
+        [
+          "startup",
+          "chat"
+        ],
+        [
+          "startup",
+          "chat"
+        ],
+        [
+          "startup",
+          "chat"
+        ]
+      ]
+    }
+  ],
+  "runs": [
+    {
+      "condition": "after",
+      "run": 1,
+      "phases": [
+        {
+          "stage": "document",
+          "ms": 93.19999980926514
+        },
+        {
+          "stage": "startup",
+          "ms": 113.09999990463257
+        },
+        {
+          "stage": "chat",
+          "ms": 2676.5999999046326
+        }
+      ],
+      "shapes": 1,
+      "controlsDuringStartup": false,
+      "history": 2640.699999809265,
+      "responses": 20,
+      "noOverflow": true
+    },
+    {
+      "condition": "before",
+      "run": 1,
+      "origin": "http://127.0.0.1:4405",
+      "phases": [
+        {
+          "stage": "document",
+          "ms": 112.5
+        },
+        {
+          "stage": "session",
+          "ms": 134.40000009536743
+        },
+        {
+          "stage": "workspace",
+          "ms": 303.2999997138977
+        },
+        {
+          "stage": "conversation",
+          "ms": 818.0999999046326
+        },
+        {
+          "stage": "chat",
+          "ms": 2651.5999999046326
+        }
+      ],
+      "shapes": 0,
+      "controlsDuringStartup": false,
+      "history": 2649,
+      "responses": 20,
+      "noOverflow": true
+    },
+    {
+      "condition": "before",
+      "run": 2,
+      "origin": "http://127.0.0.1:4405",
+      "phases": [
+        {
+          "stage": "document",
+          "ms": 138.5
+        },
+        {
+          "stage": "session",
+          "ms": 142.90000009536743
+        },
+        {
+          "stage": "workspace",
+          "ms": 310.40000009536743
+        },
+        {
+          "stage": "conversation",
+          "ms": 826.1999998092651
+        },
+        {
+          "stage": "chat",
+          "ms": 2661.4000000953674
+        }
+      ],
+      "shapes": 0,
+      "controlsDuringStartup": false,
+      "history": 2652.699999809265,
+      "responses": 20,
+      "noOverflow": true
+    },
+    {
+      "condition": "after",
+      "run": 2,
+      "origin": "http://127.0.0.1:4403",
+      "phases": [
+        {
+          "stage": "document",
+          "ms": 114.59999990463257
+        },
+        {
+          "stage": "startup",
+          "ms": 121.30000019073486
+        },
+        {
+          "stage": "chat",
+          "ms": 2670
+        }
+      ],
+      "shapes": 1,
+      "controlsDuringStartup": false,
+      "history": 2636.5,
+      "responses": 20,
+      "noOverflow": true
+    },
+    {
+      "condition": "after",
+      "run": 3,
+      "origin": "http://127.0.0.1:4403",
+      "phases": [
+        {
+          "stage": "document",
+          "ms": 105
+        },
+        {
+          "stage": "startup",
+          "ms": 123.5
+        },
+        {
+          "stage": "chat",
+          "ms": 2661.5
+        }
+      ],
+      "shapes": 1,
+      "controlsDuringStartup": false,
+      "history": 2625.2000002861023,
+      "responses": 20,
+      "noOverflow": true
+    },
+    {
+      "condition": "before",
+      "run": 3,
+      "origin": "http://127.0.0.1:4405",
+      "phases": [
+        {
+          "stage": "document",
+          "ms": 110.2999997138977
+        },
+        {
+          "stage": "session",
+          "ms": 114.09999990463257
+        },
+        {
+          "stage": "workspace",
+          "ms": 281.59999990463257
+        },
+        {
+          "stage": "conversation",
+          "ms": 797.5999999046326
+        },
+        {
+          "stage": "chat",
+          "ms": 2631.2999997138977
+        }
+      ],
+      "shapes": 0,
+      "controlsDuringStartup": false,
+      "history": 2628.2999997138977,
+      "responses": 20,
+      "noOverflow": true
+    },
+    {
+      "condition": "before",
+      "run": 4,
+      "origin": "http://127.0.0.1:4405",
+      "phases": [
+        {
+          "stage": "document",
+          "ms": 124
+        },
+        {
+          "stage": "session",
+          "ms": 128.40000009536743
+        },
+        {
+          "stage": "workspace",
+          "ms": 294.80000019073486
+        },
+        {
+          "stage": "conversation",
+          "ms": 813.9000000953674
+        },
+        {
+          "stage": "chat",
+          "ms": 2663
+        }
+      ],
+      "shapes": 0,
+      "controlsDuringStartup": false,
+      "history": 2654,
+      "responses": 20,
+      "noOverflow": true
+    },
+    {
+      "condition": "after",
+      "run": 4,
+      "origin": "http://127.0.0.1:4403",
+      "phases": [
+        {
+          "stage": "document",
+          "ms": 84.40000009536743
+        },
+        {
+          "stage": "startup",
+          "ms": 95.80000019073486
+        },
+        {
+          "stage": "chat",
+          "ms": 2635
+        }
+      ],
+      "shapes": 1,
+      "controlsDuringStartup": false,
+      "history": 2602.9000000953674,
+      "responses": 20,
+      "noOverflow": true
+    },
+    {
+      "condition": "after",
+      "run": 5,
+      "origin": "http://127.0.0.1:4403",
+      "phases": [
+        {
+          "stage": "document",
+          "ms": 131.39999961853027
+        },
+        {
+          "stage": "startup",
+          "ms": 147.19999980926514
+        },
+        {
+          "stage": "chat",
+          "ms": 2675.7999997138977
+        }
+      ],
+      "shapes": 1,
+      "controlsDuringStartup": false,
+      "history": 2642.3999996185303,
+      "responses": 20,
+      "noOverflow": true
+    },
+    {
+      "condition": "before",
+      "run": 5,
+      "origin": "http://127.0.0.1:4405",
+      "phases": [
+        {
+          "stage": "document",
+          "ms": 76.69999980926514
+        },
+        {
+          "stage": "session",
+          "ms": 90.19999980926514
+        },
+        {
+          "stage": "workspace",
+          "ms": 245.09999990463257
+        },
+        {
+          "stage": "conversation",
+          "ms": 757.6999998092651
+        },
+        {
+          "stage": "chat",
+          "ms": 2591.699999809265
+        }
+      ],
+      "shapes": 0,
+      "controlsDuringStartup": false,
+      "history": 2584.0999999046326,
+      "responses": 20,
+      "noOverflow": true
+    }
+  ],
+  "exclusions": [
+    "Initial 4x-CPU fixture cohort lacked complete utility styles and is excluded from visual/timing conclusions.",
+    "First styled baseline probe used candidate directory at the baseline port; detected by startup stage and discarded before comparing cohorts."
+  ]
+}

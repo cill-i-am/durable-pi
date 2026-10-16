@@ -1,5 +1,7 @@
 # Workspace performance hillclimb
 
+**16 October fixture correction:** the [startup follow-up](unified-startup.md#fixture-correction) corrected incomplete utility CSS in the synthetic browser fixture. Treat earlier local fixture timings as historical diagnostics rather than fully styled UI measurements. Production observations are independent.
+
 Baseline: `6b0f49182e6216fe709d58e187b8ce4eecb3ea42`, production audit on 15 October 2026. The audit's post-deployment telemetry window was 08:39–15:50 UTC, before audit traffic. Small samples do not establish production p95 or field Core Web Vitals.
 
 ## Measurements

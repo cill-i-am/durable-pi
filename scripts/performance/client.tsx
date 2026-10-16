@@ -17,7 +17,7 @@ import {
   InputGroup,
   InputGroupTextarea,
 } from "../../src/components/ui/input-group"
-import "../../src/styles.css"
+import "./styles.css"
 
 // The actual workspace, with only its transport and route shell replaced.
 // No Cloudflare credentials or real provider/tool calls enter this fixture.
