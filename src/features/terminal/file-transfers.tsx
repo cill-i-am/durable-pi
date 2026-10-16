@@ -35,11 +35,12 @@ export function FileTransfers({
   onCancel: () => void
 }) {
   const files = useFiles(agentId)
+  const { refresh } = files
   const [path, setPath] = useState("/workspace/result.txt")
   const [invalid, setInvalid] = useState(false)
   useEffect(() => {
-    void files.refresh()
-  }, [files.refresh])
+    void refresh()
+  }, [refresh])
   const available = files.files.filter(
     (file) => file.status === "ready" && !file.trashed
   )
@@ -60,7 +61,7 @@ export function FileTransfers({
       )}
       <DropdownMenu
         onOpenChange={(open) => {
-          if (open) void files.refresh()
+          if (open) void refresh()
         }}
       >
         <DropdownMenuTrigger

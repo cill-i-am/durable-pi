@@ -96,21 +96,25 @@ function HighlightedBlock({
   )
 }
 
+const markdownComponents: NonNullable<
+  ComponentProps<typeof ReactMarkdown>["components"]
+> = {
+  pre: MarkdownCodeBlock,
+  img: ({ alt }) => <span>[Image: {alt}]</span>,
+  a: ({ href, children }) => (
+    <a href={href} target="_blank" rel="noreferrer noopener">
+      {children}
+    </a>
+  ),
+}
+
 export function Markdown({ text }: { text: string }) {
   return (
     <div className="markdown">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         skipHtml
-        components={{
-          pre: MarkdownCodeBlock,
-          img: ({ alt }) => <span>[Image: {alt}]</span>,
-          a: ({ href, children }) => (
-            <a href={href} target="_blank" rel="noreferrer noopener">
-              {children}
-            </a>
-          ),
-        }}
+        components={markdownComponents}
       >
         {text}
       </ReactMarkdown>

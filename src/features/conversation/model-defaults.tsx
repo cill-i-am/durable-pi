@@ -41,6 +41,7 @@ export function ModelDefaults({
   onPendingChange: (pending: boolean) => void
 }) {
   const labels = useId()
+  const { model, thinking } = selection
   const [error, setError] = useState("")
   const { catalog, refresh, unavailable, setCatalog, requestSequence } =
     useModelCatalog(agentId, selection.settingsRevision, setError)
@@ -54,18 +55,10 @@ export function ModelDefaults({
       setDraft(
         catalog?.assignments[settingsJob] ??
           (settingsJob === "conversation"
-            ? selection
+            ? { model, thinking }
             : resolveRoute(settingsJob))
       )
-  }, [
-    catalog,
-    settingsJob,
-    selection.model,
-    selection.thinking,
-    selection.settingsRevision,
-    dirty,
-    saving,
-  ])
+  }, [catalog, settingsJob, model, thinking, dirty, saving])
   useEffect(() => {
     onPendingChange(dirty || saving)
   }, [dirty, saving, onPendingChange])

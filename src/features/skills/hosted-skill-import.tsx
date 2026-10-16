@@ -58,6 +58,7 @@ export function HostedSkillImport({
         if (version === request.current) setBusy(false)
       })
     return () => {
+      // oxlint-disable-next-line react/exhaustive-deps -- Advance the live request generation so all pending responses become stale.
       request.current++
     }
   }, [])

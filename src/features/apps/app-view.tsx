@@ -34,7 +34,7 @@ export function AppView({
   const app = useApp(agentId, id)
   const busy = app.busy || !!app.attempt
   useEffect(() => {
-    onPendingChange?.(busy)
+    onPendingChange?.(app.busy || !!app.attempt)
     return () => onPendingChange?.(false)
   }, [app.busy, app.attempt, onPendingChange])
   const [selected, setSelected] = useState<number | null>(

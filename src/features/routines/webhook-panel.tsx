@@ -1,6 +1,6 @@
 import { Schema } from "effect"
 import { ArrowLeft, KeyRound } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 
 import { CopyButton } from "@/components/copy-button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -46,10 +46,13 @@ export function WebhookPanel({
       ? "https://app.internal"
       : window.location.origin
   ).href
-  const load = async () =>
-    Schema.decodeUnknownSync(WebhookInfo)(
-      await api(`${agentUrl(agentId, "webhooks")}&routine=${routine.id}`)
-    )
+  const load = useCallback(
+    async () =>
+      Schema.decodeUnknownSync(WebhookInfo)(
+        await api(`${agentUrl(agentId, "webhooks")}&routine=${routine.id}`)
+      ),
+    [agentId, routine.id]
+  )
   useEffect(() => {
     let mounted = true
     void load()
@@ -65,7 +68,7 @@ export function WebhookPanel({
     return () => {
       mounted = false
     }
-  }, [agentId, routine.id])
+  }, [load])
   async function send(change: ConfigureWebhook) {
     if (lock.current) return
     lock.current = true
@@ -174,8 +177,8 @@ export function WebhookPanel({
       </div>
       <p className="text-sm text-muted-foreground">
         Let a service trigger these instructions with a JSON event. Anyone with
-        the key can trigger this routine while it is active. The bot's existing
-        permissions and approvals still apply.
+        the key can trigger this routine while it is active. The bot&apos;s
+        existing permissions and approvals still apply.
       </p>
       {error && (
         <Alert>
@@ -300,9 +303,9 @@ export function WebhookPanel({
               and retry with the same ID.
             </p>
             <p>
-              Use the canonical endpoint above. Keep the key in your service's
-              secret store; never put it in a URL or a chat message. This
-              endpoint does not verify vendor-specific signatures.
+              Use the canonical endpoint above. Keep the key in your
+              service&apos;s secret store; never put it in a URL or a chat
+              message. This endpoint does not verify vendor-specific signatures.
             </p>
             {routine.status !== "active" && (
               <p className="text-foreground">

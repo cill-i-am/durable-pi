@@ -168,15 +168,11 @@ function BrowserHeader({
   return (
     <div className="workbench-heading-row">
       <h2 className={settings ? "workbench-title" : "browser-title"}>
-        {settings ? (
-          "Browser internet access"
-        ) : (
-          <>
-            {state?.controller === "owner"
-              ? "You’re in control"
-              : `${agentName}’s browser`}
-          </>
-        )}
+        {settings
+          ? "Browser internet access"
+          : state?.controller === "owner"
+            ? "You’re in control"
+            : `${agentName}’s browser`}
       </h2>
       <div className="flex shrink-0 items-center gap-2">
         {!settings && (

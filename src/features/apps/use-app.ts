@@ -60,6 +60,7 @@ export function useApp(agentId: string, id: string) {
     )
     return () => {
       stop()
+      // oxlint-disable-next-line react/exhaustive-deps -- Advance the live request generation so all pending responses become stale.
       sequence.current++
     }
   }, [refresh])

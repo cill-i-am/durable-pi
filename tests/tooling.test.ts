@@ -41,12 +41,13 @@ it("enforces the real tooling contracts while accepting Effect classes and compl
         module: "ESNext",
         moduleResolution: "bundler",
         skipLibCheck: true,
+        jsx: "react-jsx",
         noEmit: true,
       },
-      include: ["src/**/*.ts"],
+      include: ["src/**/*.ts", "src/**/*.tsx"],
     }),
     "oxlint.config.ts": `import base from ${JSON.stringify(pathToFileURL(join(root, "oxlint.config.ts")).href)}
-export default {...base, jsPlugins: [${JSON.stringify(join(root, "scripts/architecture-rules.mjs"))}, "oxlint-plugin-effect/plugin"]}`,
+export default {...base, jsPlugins: base.jsPlugins.map(plugin => plugin === "./scripts/architecture-rules.mjs" ? ${JSON.stringify(join(root, "scripts/architecture-rules.mjs"))} : plugin)}`,
     "src/shared/valid.ts": `import { Context, Effect, Schema } from "effect"
 export class Failure extends Schema.TaggedError<Failure>()("Failure", {message: Schema.String}) {}
 export class Value extends Schema.Class<Value>("Value")({name: Schema.String}) {}
@@ -62,6 +63,28 @@ export const unsafe = JSON.parse("{}").missing
 export function overLimit(n: number) { ${branches(20)}; return -1 }`,
     "src/shared/a.ts": `import { b } from "./b"; export const a = (): number => b()`,
     "src/shared/b.ts": `import { a } from "./a"; export const b = (): number => a()`,
+    "src/features/react-invalid.tsx": `import {useEffect, useState} from "react"
+export function BadHooks({enabled, value}: {enabled: boolean; value: string}) {
+ function Child() { return <span>Nested component</span> }
+ if (enabled) useState(0)
+ useEffect(() => { console.info(value) }, [])
+ return <><Child /><button>Missing explicit type</button></>
+}`,
+    "src/app/use-invalid.ts": `import {useEffect} from "react"
+export function useInvalid(value: string) { useEffect(() => { console.info(value) }, []) }`,
+    "src/routes/tanstack-invalid.tsx": `import {createServerFn} from "@tanstack/react-start"
+export const unvalidated = createServerFn({method: "POST"}).handler(async ({data}) => ({value: data}))
+export function UnsafeLink() { return <a href="/agents">Agents</a> }
+`,
+    "src/routes/tanstack-valid.ts": `import {createServerFn} from "@tanstack/react-start"
+import {Schema} from "effect"
+const Input = Schema.Struct({id: Schema.String})
+export const validated = createServerFn({method: "POST"}).validator(Schema.decodeUnknownSync(Input)).handler(async ({data}) => ({value: data.id}))`,
+    "src/features/react-valid.tsx": `import {useEffect} from "react"
+export function GoodHooks({value}: {value: string}) {
+ useEffect(() => { console.info(value) }, [value])
+ return <button type="button">Submit</button>
+}`,
     "src/agent/host.ts": `export const value = 1`,
     "src/memory/invalid.ts": `import {value} from "../agent/host"; export const leaked = value`,
   }
@@ -100,10 +123,19 @@ export function overLimit(n: number) { ${branches(20)}; return -1 }`,
     expect(
       diagnostics.filter(
         (finding) =>
-          finding.filename.endsWith("valid.ts") &&
-          !finding.filename.endsWith("invalid.ts")
+          (finding.filename.endsWith("valid.ts") &&
+            !finding.filename.endsWith("invalid.ts")) ||
+          finding.filename.endsWith("react-valid.tsx")
       )
     ).toEqual([])
+    expect(diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          filename: "src/app/use-invalid.ts",
+          code: "react-hooks(exhaustive-deps)",
+        }),
+      ])
+    )
     expect(diagnostics.map((finding) => finding.code)).toEqual(
       expect.arrayContaining([
         "eslint(complexity)",
@@ -114,6 +146,12 @@ export function overLimit(n: number) { ${branches(20)}; return -1 }`,
         "architecture(boundaries)",
         "eslint(no-restricted-imports)",
         "import(no-cycle)",
+        "react-hooks(rules-of-hooks)",
+        "react-hooks(exhaustive-deps)",
+        "react(button-has-type)",
+        "react(no-unstable-nested-components)",
+        "react-doctor(tanstack-start-server-fn-validate-input)",
+        "react-doctor(tanstack-start-no-anchor-element)",
       ])
     )
   } finally {

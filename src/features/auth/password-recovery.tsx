@@ -126,6 +126,7 @@ export function ResetPassword() {
     loadLink()
     window.addEventListener("hashchange", loadLink)
     return () => {
+      // oxlint-disable-next-line react/exhaustive-deps -- Advance the live request generation so all pending responses become stale.
       linkVersion.current++
       window.removeEventListener("hashchange", loadLink)
     }

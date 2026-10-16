@@ -24,7 +24,8 @@ export function ActivityBorderEffect() {
       strength={0.3}
       glowSize={0.6}
       staticColors
-      children={null}
-    />
+    >
+      {null}
+    </BorderBeam>
   )
 }

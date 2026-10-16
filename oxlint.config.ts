@@ -1,7 +1,10 @@
 import { correctness } from "@effect/tsgo/oxlint-presets"
-import { defineConfig } from "oxlint"
+import { defineConfig, type OxlintConfig } from "oxlint"
 import core from "ultracite/oxlint/core"
+import { jsPluginSettings } from "ultracite/oxlint/js-plugins"
 import react from "ultracite/oxlint/react"
+import tanstack from "ultracite/oxlint/tanstack"
+import tanstackAddOn from "ultracite/oxlint/tanstack/js-plugins"
 
 // Keep Ultracite's safety rules; formatting and Effect idioms have their own owners.
 const typeSafetyRules = [
@@ -46,21 +49,33 @@ const typeSafetyRules = [
   "typescript/no-unsafe-unary-minus",
   "typescript/switch-exhaustiveness-check",
 ] as const
-const reactSafetyRules = [
-  "react/rules-of-hooks",
-  "react/jsx-key",
-  "react/jsx-no-duplicate-props",
-  "react/jsx-no-script-url",
-  "react/jsx-no-target-blank",
-  "react/jsx-no-undef",
-  "react/no-danger-with-children",
-  "react/no-direct-mutation-state",
-  "react/no-unknown-property",
-  "react/void-dom-elements-no-children",
-] as const
+// Keep React correctness checks without imposing component syntax or memo wrappers.
+const reactRules: NonNullable<OxlintConfig["rules"]> = {
+  ...react.rules,
+  "react/function-component-definition": "off",
+  "react/jsx-handler-names": "off",
+  "react/hook-use-state": "off",
+  "react/jsx-no-constructed-context-values": "off",
+  // Valid live regions and composite widget groups do not have interchangeable native tags.
+  "jsx-a11y/prefer-tag-over-role": "off",
+  "jsx-a11y/no-noninteractive-tabindex": ["error", { tags: ["pre"] }],
+  "react/no-unstable-nested-components": ["error", { allowAsProps: true }],
+  // Use the mature Hooks dependency checker. The compiler port cannot yet analyze
+  // our supported try/finally, dynamic imports, schemas and mutable request lifetimes.
+  "react/todo": "off",
+  "react/rule-suppression": "off",
+  "react/exhaustive-effect-dependencies": "off",
+  "react/memo-dependencies": "off",
+  "react/capitalized-calls": "off",
+  "react/set-state-in-effect": "off",
+  "react/refs": "off",
+  "react/immutability": "off",
+  "react/error-boundaries": "off",
+}
 
 export default defineConfig({
   extends: [
+    tanstack,
     {
       ...core,
       rules: Object.fromEntries(
@@ -92,7 +107,9 @@ export default defineConfig({
   jsPlugins: [
     "./scripts/architecture-rules.mjs",
     "oxlint-plugin-effect/plugin",
+    ...(tanstackAddOn.jsPlugins ?? []),
   ],
+  settings: jsPluginSettings,
   rules: {
     complexity: ["error", { max: 20, variant: "classic" }],
     "import/no-cycle": "off",
@@ -122,6 +139,8 @@ export default defineConfig({
     "effect/noUnboundedRetry": "error",
   },
   overrides: [
+    ...(tanstack.overrides ?? []),
+    { files: ["src/**/*.{ts,tsx}"], rules: tanstackAddOn.rules },
     {
       // These scripts are not checked JavaScript; tests deliberately exercise malformed input.
       files: ["**/*.{js,mjs,cjs}", "tests/**"],
@@ -134,12 +153,10 @@ export default defineConfig({
     {
       files: [
         "src/**/*.{tsx,jsx}",
-        "src/hooks/**/*.ts",
+        "src/{app,components,hooks,routes}/**/*.ts",
         "src/features/**/*.ts",
       ],
-      rules: Object.fromEntries(
-        reactSafetyRules.map((rule) => [rule, react.rules?.[rule] ?? "error"])
-      ),
+      rules: reactRules,
     },
     {
       files: [

@@ -42,6 +42,7 @@ export function useModelCatalog(
   useEffect(() => {
     void refresh()
     return () => {
+      // oxlint-disable-next-line react/exhaustive-deps -- Advance the live request generation so all pending responses become stale.
       requestSequence.current++
     }
   }, [refresh, revision])

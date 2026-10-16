@@ -343,7 +343,7 @@ export function WorkspaceNavigation({
           </DialogTitle>
           <DialogDescription className="sr-only">
             Find an active agent or open a workspace tool. Conversations are
-            searchable in each agent's memory.
+            searchable in each agent&apos;s memory.
           </DialogDescription>
           <Command loop>
             <CommandInput

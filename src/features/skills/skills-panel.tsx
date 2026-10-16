@@ -36,9 +36,10 @@ export function SkillsPanel({
   onOpenChange: (open: boolean) => void
 }) {
   const state = useSkills(agentId)
+  const { refresh } = state
   useEffect(() => {
-    if (open) void state.refresh()
-  }, [open, state.refresh])
+    if (open) void refresh()
+  }, [open, refresh])
   const [tab, setTab] = useState("library")
   const [draft, setDraft] = useState<SaveSkill | null>(null)
   const [history, setHistory] = useState<{
@@ -90,9 +91,10 @@ export function SkillsPanel({
       if (revision === historyRequest.current) setHistoryBusy(false)
     }
   }
+  const editing = draft !== null
   useEffect(() => {
-    onPendingChange?.(state.busy || !!draft || importing || hostedImport)
-  }, [state.busy, !!draft, importing, hostedImport, onPendingChange])
+    onPendingChange?.(state.busy || editing || importing || hostedImport)
+  }, [state.busy, editing, importing, hostedImport, onPendingChange])
   return (
     <SettingsSection
       embedded={embedded}
@@ -210,7 +212,7 @@ export function SkillsPanel({
                 disabled={state.busy}
                 onClick={() => {
                   setLocalError("")
-                  void state.refresh()
+                  void refresh()
                 }}
               >
                 Reload

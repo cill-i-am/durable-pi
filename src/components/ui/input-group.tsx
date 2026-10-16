@@ -41,6 +41,7 @@ const inputGroupAddonVariants = cva(
   }
 )
 
+// oxlint-disable jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions -- Pointer focus shortcut; the input is already keyboard accessible and this wrapper must not add a tab stop.
 function InputGroupAddon({
   className,
   align = "inline-start",
@@ -62,6 +63,8 @@ function InputGroupAddon({
     />
   )
 }
+
+// oxlint-enable jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions
 
 const inputGroupButtonVariants = cva(
   "flex items-center gap-2 text-sm shadow-none",

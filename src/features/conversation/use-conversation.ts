@@ -14,6 +14,7 @@ export function useConversation(agentId: string, enabled = true) {
   const id = `${agentId}:${refresh}`
   const connection = useMemo(
     () => conversationConnection(agentId),
+    // oxlint-disable-next-line react/exhaustive-deps -- A reconnect generation deliberately creates a fresh transport and cursor.
     [agentId, refresh]
   )
   const [metadata, setMetadata] = useState<{

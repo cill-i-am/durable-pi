@@ -87,10 +87,11 @@ export function RoutinesWorkbench({
     onSelect(value?.id ?? null, !!value)
   const [hookPending, setHookPending] = useState(false)
   const locked = actions.busy || !!actions.attempt || hookPending
+  const editing = editor !== null
   useEffect(() => {
-    onPendingChange(mutationPending || locked || editor !== null)
+    onPendingChange(mutationPending || locked || editing)
     return () => onPendingChange(false)
-  }, [mutationPending, locked, editor !== null, onPendingChange])
+  }, [mutationPending, locked, editing, onPendingChange])
   const setStatus = (routine: Routine, status: Routine["status"]) =>
     void actions.send({
       path: "status",

@@ -492,13 +492,11 @@ export function Conversation({
             pending={sending || files.uploading}
             hasAttachments={files.selected.length > 0}
             attachments={
-              <>
-                <ComposerAttachments
-                  files={files}
-                  agentId={agent.id}
-                  sending={sending}
-                />
-              </>
+              <ComposerAttachments
+                files={files}
+                agentId={agent.id}
+                sending={sending}
+              />
             }
             attachmentControl={
               <FilePicker

@@ -102,113 +102,111 @@ export function ActivityWorkbench({
       </Alert>
     )
   return (
-    <>
-      <div className="workbench-body">
-        {!showTimeline && (
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="workbench-title">Activity</h2>
-            <Badge variant="outline" className="max-w-[50%] min-w-0 shrink">
-              <span className="truncate">{agentName}</span>
-            </Badge>
-          </div>
-        )}
-        {showTimeline ? (
-          <ActivityTimeline
-            filters={filters}
-            onFiltersChange={onFiltersChange}
-            agent={
-              agents.find((value) => value.id === initialId) ?? {
-                id: initialId,
-                name: initialName,
-              }
+    <div className="workbench-body">
+      {!showTimeline && (
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="workbench-title">Activity</h2>
+          <Badge variant="outline" className="max-w-[50%] min-w-0 shrink">
+            <span className="truncate">{agentName}</span>
+          </Badge>
+        </div>
+      )}
+      {showTimeline ? (
+        <ActivityTimeline
+          filters={filters}
+          onFiltersChange={onFiltersChange}
+          agent={
+            agents.find((value) => value.id === initialId) ?? {
+              id: initialId,
+              name: initialName,
             }
-            agents={agents}
-            onOpenBot={onOpenBot}
-            onMemory={onMemory}
-            record={selected ? { agent: inspected, reference: selected } : null}
-            onRecordChange={(record) =>
-              onSelectionChange(
-                "timeline",
-                record?.agent.id ?? agentId,
-                record?.reference ?? null
-              )
-            }
-            onDetails={(agent) => {
-              onSelectionChange("tasks", agent.id, null)
-            }}
-          />
-        ) : (
-          <>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="self-start"
-              onClick={() => onSelectionChange("timeline", initialId, null)}
-            >
-              <ArrowLeft /> Activity timeline
-            </Button>
-            {!selected && (
-              <BotTasks
-                onOpenBot={onOpenBot}
-                key={`${agentId}:communication`}
-                agentId={agentId}
-                agents={agents}
-              />
-            )}
-            {!selected && <DelegatedWork key={agentId} agentId={agentId} />}
-            {!selected && (
-              <DelegatedWork
-                key={`${agentId}:background`}
-                agentId={agentId}
-                background
-              />
-            )}
-            {!selected && <InferenceRuns agentId={agentId} />}
-            {state.error && (
-              <Alert>
-                <AlertTitle>Updates interrupted</AlertTitle>
-                <AlertDescription>
-                  {state.error}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => void state.refresh()}
-                  >
-                    Reconnect
-                  </Button>
-                </AlertDescription>
-              </Alert>
-            )}
-            {!!state.approvals.length && (
-              <Alert>
-                <Clock3 />
-                <AlertTitle>Needs your approval</AlertTitle>
-                <AlertDescription>
-                  {state.approvals.length} tool{" "}
-                  {state.approvals.length === 1 ? "request is" : "requests are"}{" "}
-                  waiting. The plan grants no additional access.
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onOpenBot(agentId)}
-                  >
-                    Review in chat
-                  </Button>
-                </AlertDescription>
-              </Alert>
-            )}
-            <PlanBrowser
-              selected={selected}
-              setSelected={setSelected}
-              state={state}
+          }
+          agents={agents}
+          onOpenBot={onOpenBot}
+          onMemory={onMemory}
+          record={selected ? { agent: inspected, reference: selected } : null}
+          onRecordChange={(record) =>
+            onSelectionChange(
+              "timeline",
+              record?.agent.id ?? agentId,
+              record?.reference ?? null
+            )
+          }
+          onDetails={(agent) => {
+            onSelectionChange("tasks", agent.id, null)
+          }}
+        />
+      ) : (
+        <>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="self-start"
+            onClick={() => onSelectionChange("timeline", initialId, null)}
+          >
+            <ArrowLeft /> Activity timeline
+          </Button>
+          {!selected && (
+            <BotTasks
+              onOpenBot={onOpenBot}
+              key={`${agentId}:communication`}
               agentId={agentId}
-              offset={offset}
-              setOffset={setOffset}
+              agents={agents}
             />
-          </>
-        )}
-      </div>
-    </>
+          )}
+          {!selected && <DelegatedWork key={agentId} agentId={agentId} />}
+          {!selected && (
+            <DelegatedWork
+              key={`${agentId}:background`}
+              agentId={agentId}
+              background
+            />
+          )}
+          {!selected && <InferenceRuns agentId={agentId} />}
+          {state.error && (
+            <Alert>
+              <AlertTitle>Updates interrupted</AlertTitle>
+              <AlertDescription>
+                {state.error}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void state.refresh()}
+                >
+                  Reconnect
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+          {!!state.approvals.length && (
+            <Alert>
+              <Clock3 />
+              <AlertTitle>Needs your approval</AlertTitle>
+              <AlertDescription>
+                {state.approvals.length} tool{" "}
+                {state.approvals.length === 1 ? "request is" : "requests are"}{" "}
+                waiting. The plan grants no additional access.
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onOpenBot(agentId)}
+                >
+                  Review in chat
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+          <PlanBrowser
+            selected={selected}
+            setSelected={setSelected}
+            state={state}
+            agentId={agentId}
+            offset={offset}
+            setOffset={setOffset}
+          />
+        </>
+      )}
+    </div>
   )
 }
 

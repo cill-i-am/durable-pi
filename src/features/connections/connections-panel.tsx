@@ -50,9 +50,10 @@ export function ConnectionsPanel({
   onSaved: () => void
 }) {
   const state = useConnections(agentId, onSaved)
+  const { refresh } = state
   useEffect(() => {
-    if (open) void state.refresh()
-  }, [open, state.refresh])
+    if (open) void refresh()
+  }, [open, refresh])
   const [draft, setDraft] = useState<ReturnType<typeof newDraft> | null>(null)
   const [callback, setCallback] = useState("")
   const disabled = state.busy || state.loading || !state.ready
@@ -65,12 +66,13 @@ export function ConnectionsPanel({
         : "Authorization did not finish. Reconnect to try again."
     )
     setOpen(true)
-    void state.refresh()
+    void refresh()
     onCallbackConsumed()
-  }, [callbackResult, onCallbackConsumed, state.refresh])
+  }, [callbackResult, onCallbackConsumed, refresh, setOpen])
+  const editing = draft !== null
   useEffect(() => {
-    onPendingChange?.(state.busy || !!draft)
-  }, [state.busy, !!draft, onPendingChange])
+    onPendingChange?.(state.busy || editing)
+  }, [state.busy, editing, onPendingChange])
   return (
     <SettingsSection
       embedded={embedded}
@@ -87,7 +89,7 @@ export function ConnectionsPanel({
           variant="ghost"
           size="sm"
           disabled={state.busy}
-          onClick={() => void state.refresh()}
+          onClick={() => void refresh()}
         >
           <RefreshCw data-icon="inline-start" />
           {state.loading ? "Loading…" : "Reload"}

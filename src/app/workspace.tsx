@@ -120,9 +120,10 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
   const setSettings = location.setSettings
   const navigationLocked = workLocked || settingsPending
   const setWorkbench = location.setPanel
+  const { openAgent } = location
   useEffect(() => {
     if (location.pathname === "/" && !catalog.loading && catalog.selected) {
-      location.openAgent(
+      openAgent(
         catalog.selected.id,
         {
           ...(location.search.connections
@@ -142,7 +143,7 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
     }
   }, [
     location.pathname,
-    location.openAgent,
+    openAgent,
     location.search,
     catalog.loading,
     catalog.selected,
@@ -525,13 +526,11 @@ function AgentWorkspace({
       }
     />
   )
+  const { update: updateLocation } = location
   const consumeConnectionCallback = useCallback(
     () =>
-      location.update(
-        { connections: undefined, settings: "connections" },
-        true
-      ),
-    [location.update]
+      updateLocation({ connections: undefined, settings: "connections" }, true),
+    [updateLocation]
   )
   const settingsPanel = (
     <WorkspaceSettingsOverlay

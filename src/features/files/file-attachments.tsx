@@ -70,6 +70,7 @@ export function FileAttachments({
           <AttachmentTrigger
             render={
               <a
+                aria-label={`Download ${file.name}`}
                 href={
                   agentUrl(agentId, `files/${file.id}/content`) + "&download=1"
                 }

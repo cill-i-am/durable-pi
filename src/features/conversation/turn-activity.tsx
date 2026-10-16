@@ -235,6 +235,7 @@ function SourceLink({
       target="_blank"
       rel="noreferrer noopener"
       title={source.href}
+      aria-label={source.label}
       className="flex min-h-11 max-w-full items-center rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring/50 md:min-h-6"
     >
       <TraceLine>

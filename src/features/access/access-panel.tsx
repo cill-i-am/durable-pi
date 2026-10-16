@@ -64,9 +64,10 @@ export function AccessPanel({
       onSaved()
     }
   }
+  const pending = !!busy
   useEffect(() => {
-    onPendingChange?.(!!busy)
-  }, [!!busy, onPendingChange])
+    onPendingChange?.(pending)
+  }, [pending, onPendingChange])
   return (
     <SettingsSection
       embedded={embedded}
