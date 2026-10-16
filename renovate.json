@@ -1,0 +1,38 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", "helpers:pinGitHubActionDigests"],
+  "timezone": "Europe/Dublin",
+  "semanticCommits": "enabled",
+  "automerge": false,
+  "prConcurrentLimit": 3,
+  "packageRules": [
+    {
+      "matchManagers": ["github-actions"],
+      "schedule": ["before 7am on monday"]
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["minor", "patch", "digest", "pin", "pinDigest"],
+      "groupName": "GitHub Actions"
+    },
+    {
+      "matchManagers": ["npm"],
+      "matchPackageNames": ["alchemy", "@alchemy.run/**"],
+      "groupName": "Alchemy"
+    },
+    {
+      "matchManagers": ["npm"],
+      "matchPackageNames": ["effect", "@effect/**"],
+      "groupName": "Effect"
+    },
+    {
+      "matchManagers": ["npm"],
+      "matchPackageNames": ["@earendil-works/**"],
+      "groupName": "Pi"
+    }
+  ],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 7am on monday"]
+  }
+}
