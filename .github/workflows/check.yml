@@ -16,27 +16,35 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - suite: static
-            command: pnpm typecheck && pnpm lint && pnpm check
-          - suite: unit-and-build
-            command: pnpm test && pnpm build && pnpm build:workers
-          - suite: native-runtime
-            command: pnpm test:communication-runtime
+        suite: [static, unit-and-build, native-runtime]
     steps:
       - uses: actions/checkout@v7
+      - name: Install actionlint
+        if: matrix.suite == 'static'
+        env:
+          ACTIONLINT_VERSION: 1.7.12
+          ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+        run: |
+          archive="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          install_dir="$RUNNER_TEMP/actionlint"
+          mkdir -p "$install_dir"
+          curl --fail --silent --show-error --location --retry 3 \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/$archive" \
+            --output "$install_dir/$archive"
+          printf '%s  %s\n' "$ACTIONLINT_SHA256" "$install_dir/$archive" | sha256sum --check --strict
+          tar -xzf "$install_dir/$archive" -C "$install_dir" actionlint
+          printf '%s\n' "$install_dir" >> "$GITHUB_PATH"
+      - name: Validate GitHub Actions workflows
+        if: matrix.suite == 'static'
+        run: actionlint
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Check tracked files for secrets
-        if: matrix.suite == 'static'
-        run: node --import tsx scripts/check-secrets.ts
-      - run: pnpm generate-routes
       - name: Run ${{ matrix.suite }} checks
-        run: ${{ matrix.command }}
+        run: pnpm verify:${{ matrix.suite }}
   check:
     if: ${{ always() }}
     needs: verify
