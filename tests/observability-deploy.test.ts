@@ -22,7 +22,7 @@ afterEach(() => {
   vi.unstubAllEnvs()
   vi.unstubAllGlobals()
 })
-it("discovers shortened worker names by ownership tags and preserves tracing settings and bindings", async () => {
+it("updates script-level Issues without reconciling Durable Object exports or changing tracing and bindings", async () => {
   vi.stubEnv("GITHUB_REF", "refs/heads/main")
   vi.stubEnv("GITHUB_EVENT_NAME", "push")
   vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "synthetic")
@@ -54,13 +54,20 @@ it("discovers shortened worker names by ownership tags and preserves tracing set
   const updated = new Set<string>()
   const network = vi.fn<typeof fetch>(async (input, init) => {
     const url = String(input)
-    if (!url.endsWith("/settings"))
+    if (url.endsWith("/settings"))
+      return init?.method === "PATCH"
+        ? Response.json(
+            { success: false, errors: [{ code: 100402 }] },
+            { status: 400 }
+          )
+        : Response.json({ success: true, result: { observability: obs } })
+    if (!url.endsWith("/script-settings"))
       return Response.json({ success: true, result: scripts })
     if (init?.method === "PATCH") {
-      expect(init.body).toBeInstanceOf(FormData)
-      const part = (init.body as FormData).get("settings")
-      expect(part).toBeInstanceOf(Blob)
-      const payload = JSON.parse(await (part as Blob).text())
+      expect(init.headers).toMatchObject({
+        "content-type": "application/json",
+      })
+      const payload = JSON.parse(String(init.body))
       expect(payload).toEqual({
         observability: { ...obs, issues: { enabled: true } },
       })
@@ -81,7 +88,7 @@ it("discovers shortened worker names by ownership tags and preserves tracing set
     new Set(
       productionScripts.map(
         ({ id }) =>
-          `https://api.cloudflare.com/client/v4/accounts/synthetic/workers/scripts/${id}/settings`
+          `https://api.cloudflare.com/client/v4/accounts/synthetic/workers/scripts/${id}/script-settings`
       )
     )
   )

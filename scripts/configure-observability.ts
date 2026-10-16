@@ -40,7 +40,7 @@ export const configureObservability = Effect.gen(function* () {
   const token = yield* Config.Redacted("CLOUDFLARE_API_TOKEN")
   const request = Effect.fn("Observability.configureIssues")(function* (
     path: string,
-    body?: FormData
+    body?: { observability: Record<string, unknown> }
   ) {
     const response = yield* Effect.tryPromise({
       try: (signal) =>
@@ -49,8 +49,11 @@ export const configureObservability = Effect.gen(function* () {
           {
             method: body ? "PATCH" : "GET",
             signal,
-            headers: { authorization: `Bearer ${Redacted.value(token)}` },
-            body,
+            headers: {
+              authorization: `Bearer ${Redacted.value(token)}`,
+              ...(body ? { "content-type": "application/json" } : {}),
+            },
+            body: body ? JSON.stringify(body) : undefined,
           }
         ),
       catch: () =>
@@ -91,26 +94,17 @@ export const configureObservability = Effect.gen(function* () {
     selected.push(matches[0]!.id)
   }
   for (const name of selected) {
-    const settings = yield* request(`/${name}/settings`).pipe(
+    const settings = yield* request(`/${name}/script-settings`).pipe(
       Effect.flatMap(Schema.decodeUnknownEffect(Settings))
     )
-    const body = new FormData()
-    body.set(
-      "settings",
-      new Blob(
-        [
-          JSON.stringify({
-            observability: {
-              ...settings.observability,
-              issues: { enabled: true },
-            },
-          }),
-        ],
-        { type: "application/json" }
-      )
-    )
-    yield* request(`/${name}/settings`, body)
-    const verified = yield* request(`/${name}/settings`).pipe(
+    // Script-level settings preserve the deployed version and DO exports.
+    yield* request(`/${name}/script-settings`, {
+      observability: {
+        ...settings.observability,
+        issues: { enabled: true },
+      },
+    })
+    const verified = yield* request(`/${name}/script-settings`).pipe(
       Effect.flatMap(Schema.decodeUnknownEffect(Settings))
     )
     yield* Schema.decodeUnknownEffect(
