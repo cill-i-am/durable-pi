@@ -3,8 +3,8 @@ import { createRequire } from "node:module"
 const requireAlchemy = createRequire(import.meta.resolve("alchemy"))
 const { build } = requireAlchemy("esbuild")
 
-// Compile the four production entrypoints independently of the website and
-// native fixtures. This performs local bundling, without evaluating the stack.
+// Compile production entrypoints and the legacy migration fixture independently
+// of the website. This bundles locally without evaluating the stack.
 await build({
   entryPoints: [
     "src/agent/worker.ts",
