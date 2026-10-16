@@ -5,7 +5,9 @@ import { fileURLToPath } from "node:url"
 import { gzipSync } from "node:zlib"
 import { Readable } from "node:stream"
 import { pipeline } from "node:stream/promises"
-import { Effect } from "effect"
+import { Effect, Schema } from "effect"
+import { SendInput } from "../../src/conversations/contracts.ts"
+import { chatMessages } from "../../src/conversations/adapters/tanstack.ts"
 import { encodeEventStream } from "../../src/auth/adapters/event-stream-encoding.ts"
 import { build } from "vite"
 import react from "@vitejs/plugin-react"
@@ -28,6 +30,10 @@ const wait = (ms) => new Promise((done) => setTimeout(done, ms))
 const requests = []
 // Read-only startup/recovery cases share the real UI and synthetic transports.
 const startupCase = process.env.PERF_CASE
+const journey = startupCase === "journey"
+const sessions = new Map()
+const fixtureEmail = "browser-smoke@example.invalid"
+const fixturePassword = "Disposable browser fixture password 2026!"
 const metadata = {
   model: "test",
   connected: true,
@@ -144,12 +150,82 @@ const server = createServer(async (req, res) => {
   const url = new URL(req.url, "http://localhost")
   if (url.pathname === "/__measurements") return sendJson(res, requests)
   if (url.pathname.startsWith("/api/")) {
+    const path = url.pathname
+    const sessionId = req.headers.cookie?.match(
+      /(?:^|; )pi_fixture=([^;]+)/
+    )?.[1]
+    const session = sessions.get(sessionId)
+    if (journey && req.method === "POST") {
+      if (path === "/api/auth/sign-out") {
+        sessions.delete(sessionId)
+        res.setHeader(
+          "set-cookie",
+          "pi_fixture=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0"
+        )
+        return sendJson(res, { success: true })
+      }
+      let body
+      try {
+        const chunks = []
+        for await (const chunk of req) chunks.push(chunk)
+        body = JSON.parse(Buffer.concat(chunks).toString())
+      } catch {
+        res.writeHead(400)
+        res.end()
+        return
+      }
+      if (path === "/api/auth/sign-in/email") {
+        if (body.email !== fixtureEmail || body.password !== fixturePassword) {
+          res.writeHead(401, { "content-type": "application/json" })
+          res.end(JSON.stringify({ message: "Email or password is incorrect" }))
+          return
+        }
+        const id = crypto.randomUUID()
+        sessions.set(id, { messages: [], subscribers: new Set() })
+        res.setHeader(
+          "set-cookie",
+          `pi_fixture=${id}; Path=/; HttpOnly; SameSite=Lax`
+        )
+        return sendJson(res, {
+          redirect: false,
+          token: "synthetic",
+          user: { id: "benchmark-owner", name: "Bench", email: fixtureEmail },
+        })
+      }
+      if (path === "/api/agent/send" && session) {
+        try {
+          const input = Schema.decodeUnknownSync(SendInput)(body)
+          session.messages.push(
+            ...chatMessages([
+              {
+                id: input.operationId,
+                text: input.text,
+                answer: "Fixture reply received.",
+                status: "done",
+                error: null,
+                created_at: new Date().toISOString(),
+              },
+            ])
+          )
+          for (const publish of session.subscribers) publish()
+          return sendJson(res, { accepted: true })
+        } catch {
+          res.writeHead(400)
+          res.end()
+          return
+        }
+      }
+    }
+    if (journey && path.startsWith("/api/agent/") && !session) {
+      res.writeHead(401)
+      res.end()
+      return
+    }
     if (req.method !== "GET") {
       res.writeHead(405)
       res.end()
       return
     }
-    const path = url.pathname
     requests.push({ path, at: Date.now() })
     if (requests.length > 1000) requests.shift()
     if (
@@ -162,7 +238,8 @@ const server = createServer(async (req, res) => {
     }
     if (path === "/api/auth/get-session") {
       await wait(startupCase === "session-slow" ? 30_000 : 150)
-      if (startupCase === "anonymous") return sendJson(res, null)
+      if (startupCase === "anonymous" || (journey && !session))
+        return sendJson(res, null)
       return sendJson(res, {
         user: {
           id: "benchmark-owner",
@@ -197,13 +274,14 @@ const server = createServer(async (req, res) => {
       if (res.destroyed) return
       const bytes = new TextEncoder()
       let cancelled = false,
-        timer
+        timer,
+        publish
       const upstream = new Response(
         new ReadableStream({
           async start(controller) {
             controller.enqueue(
               bytes.encode(
-                `data: ${JSON.stringify({ type: "MESSAGES_SNAPSHOT", messages: startupCase === "empty" ? [] : messages })}\n\n`
+                `data: ${JSON.stringify({ type: "MESSAGES_SNAPSHOT", messages: session?.messages ?? (startupCase === "empty" ? [] : messages) })}\n\n`
               )
             )
             if (startupCase === "metadata-slow") await wait(2200)
@@ -213,6 +291,21 @@ const server = createServer(async (req, res) => {
                 `data: ${JSON.stringify({ type: "CUSTOM", name: "durable-pi.metadata", value: metadata })}\n\n`
               )
             )
+            if (session) {
+              publish = () => {
+                controller.enqueue(
+                  bytes.encode(
+                    `data: ${JSON.stringify({ type: "MESSAGES_SNAPSHOT", messages: session.messages })}\n\n`
+                  )
+                )
+                controller.enqueue(
+                  bytes.encode(
+                    `data: ${JSON.stringify({ type: "CUSTOM", name: "durable-pi.metadata", value: metadata })}\n\n`
+                  )
+                )
+              }
+              session.subscribers.add(publish)
+            }
             timer = setInterval(
               () => controller.enqueue(bytes.encode(": keepalive\n\n")),
               15000
@@ -221,6 +314,7 @@ const server = createServer(async (req, res) => {
           cancel() {
             cancelled = true
             clearInterval(timer)
+            session?.subscribers.delete(publish)
           },
         }),
         {
