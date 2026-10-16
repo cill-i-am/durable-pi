@@ -1,279 +1,452 @@
-import type { Sqlite } from "../../storage/sqlite"
+import { Effect, Schema } from "effect"
+import { and, desc, eq, inArray, lte, notInArray } from "drizzle-orm"
+import type { EffectDrizzleQueryError } from "drizzle-orm/effect-core/errors"
+import { mapSqliteError, type Sqlite } from "../../storage/sqlite"
 import {
   AccessStorageError,
+  AccessConflict,
+  AccessDenied,
+  Approval,
   type AccessMode,
-  type Approval,
   type ToolPolicy,
 } from "../contracts"
-
+import type { AccessError } from "../gate"
 import type { AccessLedger, ToolIntent, ToolOperation } from "../ledger"
 import * as Domain from "../domain"
+import {
+  toolGrants as grants,
+  toolOperations as operations,
+  toolOperationHistory as history,
+} from "./schema"
 
+const Operation = Schema.Struct({
+  ...Approval.fields,
+  grantRevision: Schema.Number,
+  result: Schema.NullOr(Schema.String),
+  decision: Schema.NullOr(Schema.String),
+})
+const query = <TValue>(
+  operation: string,
+  effect: Effect.Effect<TValue, EffectDrizzleQueryError>
+) =>
+  mapSqliteError(
+    effect,
+    (cause) => new AccessStorageError({ operation, cause })
+  )
+const decision = <TValue>(body: () => TValue) =>
+  Effect.try({
+    try: body,
+    catch: (cause) => {
+      if (Schema.is(AccessConflict)(cause) || Schema.is(AccessDenied)(cause))
+        return cause
+      throw cause
+    },
+  })
 export class AccessStore implements AccessLedger {
   constructor(
     private readonly db: Sqlite,
-    private readonly catalog: () => readonly Omit<ToolPolicy, "revision">[],
+    private readonly catalog: () => Effect.Effect<
+      readonly Omit<ToolPolicy, "revision">[],
+      AccessError
+    >,
     private readonly now = Date.now
+  ) {}
+  private atomic<TValue, TError, TRequirements>(
+    body: () => Effect.Effect<TValue, TError, TRequirements>
   ) {
-    const storage = <T>(operation: string, body: () => T): T => {
-      try {
-        return body()
-      } catch (cause) {
-        throw new AccessStorageError({ operation, cause })
-      }
-    }
-    this.db = {
-      all: (query, ...bindings) =>
-        storage("read", () => db.all(query, ...bindings)),
-      run: (query, ...bindings) =>
-        storage("write", () => db.run(query, ...bindings)),
-      transaction: (body) => {
-        const failure: { failed: boolean; cause?: unknown } = { failed: false }
-        try {
-          return db.transaction(() => {
-            try {
-              return body()
-            } catch (cause) {
-              failure.failed = true
-              failure.cause = cause
-              throw cause
-            }
-          })
-        } catch (cause) {
-          if (failure.failed && cause === failure.cause) throw cause
-          throw new AccessStorageError({ operation: "transaction", cause })
-        }
-      },
-    }
+    return mapSqliteError(
+      this.db.transaction(body),
+      (cause) => new AccessStorageError({ operation: "transaction", cause })
+    )
+  }
+  policies() {
+    return this.db
+      .use((orm) => query("read", orm.select().from(grants)))
+      .pipe(
+        Effect.flatMap((rows) =>
+          this.catalog().pipe(
+            Effect.map((catalog) => {
+              const saved = new Map(rows.map((row) => [row.name, row]))
+              return catalog
+                .map((tool) => ({
+                  ...tool,
+                  revision: 0,
+                  ...saved.get(tool.name),
+                  name: tool.name,
+                }))
+                .map((tool) => ({
+                  ...tool,
+                  mode: Schema.decodeUnknownSync(
+                    Schema.Literals(["allow", "ask", "deny"])
+                  )(tool.mode),
+                }))
+            })
+          )
+        )
+      )
+  }
 
-    this.db.run(
-      "CREATE TABLE IF NOT EXISTS tool_grants (name TEXT PRIMARY KEY,mode TEXT NOT NULL,revision INTEGER NOT NULL)"
-    )
-    this.db.run(
-      "CREATE TABLE IF NOT EXISTS tool_operations (id TEXT PRIMARY KEY,turnId TEXT NOT NULL,tool TEXT NOT NULL,input TEXT NOT NULL,createdAt INTEGER NOT NULL,expiresAt INTEGER NOT NULL,status TEXT NOT NULL,grantRevision INTEGER NOT NULL,result TEXT)"
-    )
-    if (
-      !this.db
-        .all<{ name: string }>("PRAGMA table_info(tool_operations)")
-        .some((column) => column.name === "revision")
-    )
-      this.db.run(
-        "ALTER TABLE tool_operations ADD COLUMN revision INTEGER NOT NULL DEFAULT 0"
-      )
-    if (
-      !this.db
-        .all<{ name: string }>("PRAGMA table_info(tool_operations)")
-        .some((column) => column.name === "decision")
-    )
-      this.db.run("ALTER TABLE tool_operations ADD COLUMN decision TEXT")
-    this.db.run(`CREATE TABLE IF NOT EXISTS tool_operation_history (
-      id INTEGER PRIMARY KEY AUTOINCREMENT, operationId TEXT NOT NULL, revision INTEGER NOT NULL,
-      status TEXT NOT NULL, at INTEGER NOT NULL)`)
-    this.db
-      .run(`CREATE TRIGGER IF NOT EXISTS tool_operation_insert AFTER INSERT ON tool_operations
-      BEGIN INSERT INTO tool_operation_history(operationId,revision,status,at) VALUES (new.id,new.revision,new.status,new.createdAt); END`)
-    this.db
-      .run(`CREATE TRIGGER IF NOT EXISTS tool_operation_status AFTER UPDATE OF status ON tool_operations
-      WHEN old.status != new.status
-      BEGIN INSERT INTO tool_operation_history(operationId,revision,status,at) VALUES (new.id,new.revision,new.status,
-        max(new.createdAt,cast((julianday('now')-2440587.5)*86400000 AS INTEGER))); END`)
-    this.db.run(
-      "CREATE INDEX IF NOT EXISTS tool_operation_history_operation ON tool_operation_history(operationId,id)"
-    )
-    this.db.run(
-      "CREATE INDEX IF NOT EXISTS tool_operations_run ON tool_operations(turnId,createdAt,id)"
-    )
-  }
-  policies(): ToolPolicy[] {
-    const saved = new Map(
-      this.db
-        .all<{ name: string; mode: AccessMode; revision: number }>(
-          "SELECT name,mode,revision FROM tool_grants"
-        )
-        .map((value) => [value.name, value])
-    )
-    return this.catalog().map((tool) => ({
-      ...tool,
-      revision: 0,
-      ...saved.get(tool.name),
-    }))
-  }
   policy(name: string) {
-    return Domain.requirePolicy(
-      this.policies().find((tool) => tool.name === name)
+    return this.policies().pipe(
+      Effect.flatMap((rows) =>
+        decision(() =>
+          Domain.requirePolicy(rows.find((tool) => tool.name === name))
+        )
+      )
     )
   }
-  update(name: string, expectedRevision: number, mode: AccessMode) {
-    return this.db.transaction(() => {
-      const current = this.policy(name)
-      const next = Domain.revisePolicy(current, expectedRevision, mode)
-      if (next === current) return current
-      this.db.run(
-        "INSERT INTO tool_grants VALUES (?,?,?) ON CONFLICT(name) DO UPDATE SET mode=excluded.mode,revision=excluded.revision",
-        name,
-        next.mode,
-        next.revision
-      )
-      if (next.mode === "deny")
-        this.db.run(
-          "UPDATE tool_operations SET status='denied',revision=revision+1 WHERE tool=? AND status IN ('pending','approved')",
-          name
+  get(id: string) {
+    return this.db
+      .use((orm) =>
+        query(
+          "read",
+          orm.select().from(operations).where(eq(operations.id, id))
         )
-      return this.policy(name)
+      )
+      .pipe(
+        Effect.map(([row]) =>
+          row ? Schema.decodeUnknownSync(Operation)(row) : undefined
+        )
+      )
+  }
+  private change(
+    operation: ToolOperation,
+    patch: Partial<Omit<ToolOperation, "id" | "revision">>
+  ) {
+    return Effect.gen({ self: this }, function* () {
+      const next = { ...operation, ...patch, revision: operation.revision + 1 }
+      yield* this.db.use((orm) =>
+        query(
+          "write",
+          orm
+            .update(operations)
+            .set({ ...patch, revision: next.revision })
+            .where(eq(operations.id, operation.id))
+        )
+      )
+      if (next.status !== operation.status)
+        yield* this.db.use((orm) =>
+          query(
+            "write",
+            orm.insert(history).values({
+              operationId: next.id,
+              revision: next.revision,
+              status: next.status,
+              at: Math.max(next.createdAt, this.now()),
+            })
+          )
+        )
+      return next
     })
   }
-
-  get(id: string) {
-    return this.db.all<ToolOperation>(
-      "SELECT * FROM tool_operations WHERE id=?",
-      id
-    )[0]
+  private changeOpen(
+    tool: string | undefined,
+    turnId: string | undefined,
+    status: ToolOperation["status"],
+    expired = false
+  ) {
+    return Effect.gen({ self: this }, function* () {
+      const rows = yield* this.db.use((orm) =>
+        query(
+          "read",
+          orm
+            .select()
+            .from(operations)
+            .where(
+              and(
+                inArray(operations.status, ["pending", "approved"]),
+                tool === undefined ? undefined : eq(operations.tool, tool),
+                turnId === undefined
+                  ? undefined
+                  : eq(operations.turnId, turnId),
+                expired ? lte(operations.expiresAt, this.now()) : undefined
+              )
+            )
+        )
+      )
+      for (const row of rows)
+        yield* this.change(Schema.decodeUnknownSync(Operation)(row), { status })
+    })
   }
-  receipts(turnIds: readonly string[]) {
-    if (!turnIds.length) return []
-    return this.db.all<{ id: string; revision: number }>(
-      `SELECT id,revision FROM tool_operations WHERE turnId IN (${turnIds.map(() => "?").join(",")}) AND status='done' AND tool NOT IN ('update_plan','read_plan') ORDER BY createdAt DESC LIMIT 20`,
-      ...turnIds
+  update(name: string, revision: number, mode: AccessMode) {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const current = yield* this.policy(name),
+          next = yield* decision(() =>
+            Domain.revisePolicy(current, revision, mode)
+          )
+        if (next === current) return current
+        yield* this.db.use((orm) =>
+          query(
+            "write",
+            orm
+              .insert(grants)
+              .values({ name, mode: next.mode, revision: next.revision })
+              .onConflictDoUpdate({
+                target: grants.name,
+                set: { mode: next.mode, revision: next.revision },
+              })
+          )
+        )
+        if (next.mode === "deny")
+          yield* this.changeOpen(name, undefined, "denied")
+        return yield* this.policy(name)
+      })
     )
   }
+  receipts(turnIds: readonly string[]) {
+    if (!turnIds.length) return Effect.succeed([])
+    return this.db
+      .use((orm) =>
+        query(
+          "read",
+          orm
+            .select({ id: operations.id, revision: operations.revision })
+            .from(operations)
+            .where(
+              and(
+                inArray(operations.turnId, [...turnIds]),
+                eq(operations.status, "done"),
+                notInArray(operations.tool, ["update_plan", "read_plan"])
+              )
+            )
+            .orderBy(desc(operations.createdAt))
+            .limit(20)
+        )
+      )
+      .pipe(
+        Effect.map((rows) =>
+          rows.map((row) => ({
+            ...row,
+            id: Schema.decodeUnknownSync(Schema.String)(row.id),
+          }))
+        )
+      )
+  }
   expire() {
-    this.db.run(
-      "UPDATE tool_operations SET status='expired',revision=revision+1 WHERE expiresAt<=? AND status IN ('pending','approved')",
-      this.now()
+    return this.atomic(() =>
+      this.changeOpen(undefined, undefined, "expired", true)
     )
   }
   pending() {
-    this.expire()
-    return this.db.all<Approval>(
-      "SELECT id,turnId,tool,input,createdAt,expiresAt,status,revision FROM tool_operations WHERE status IN ('pending','approved') ORDER BY createdAt,id"
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        yield* this.expire()
+        const rows = yield* this.db.use((orm) =>
+          query(
+            "read",
+            orm
+              .select()
+              .from(operations)
+              .where(inArray(operations.status, ["pending", "approved"]))
+              .orderBy(operations.createdAt, operations.id)
+          )
+        )
+        return rows.map((row) => Schema.decodeUnknownSync(Approval)(row))
+      })
     )
   }
   awaitingApproval(turnId: string) {
-    return !!this.db.all<{ id: string }>(
-      "SELECT id FROM tool_operations WHERE turnId=? AND status='pending' AND expiresAt>? LIMIT 1",
-      turnId,
-      this.now()
-    )[0]
+    return this.db
+      .use((orm) =>
+        query(
+          "read",
+          orm
+            .select({ id: operations.id, expiresAt: operations.expiresAt })
+            .from(operations)
+            .where(
+              and(
+                eq(operations.turnId, turnId),
+                eq(operations.status, "pending")
+              )
+            )
+        )
+      )
+      .pipe(
+        Effect.map((rows) => rows.some((row) => row.expiresAt > this.now()))
+      )
   }
-  begin(input: ToolIntent) {
-    return this.db.transaction(() => {
-      this.expire()
-      const existing = Domain.replayIntent(input, this.get(input.id))
-      if (existing) return existing
-      const operation = Domain.admitOperation(
-        input,
-        this.policy(input.tool),
-        this.pending().length,
-        this.now()
-      )
-      this.db.run(
-        "INSERT INTO tool_operations (id,turnId,tool,input,createdAt,expiresAt,status,grantRevision) VALUES (?,?,?,?,?,?,?,?)",
-        operation.id,
-        operation.turnId,
-        operation.tool,
-        operation.input,
-        operation.createdAt,
-        operation.expiresAt,
-        operation.status,
-        operation.grantRevision
-      )
-      return this.get(input.id)!
-    })
+  begin(
+    input: ToolIntent,
+    canRun: (turnId: string) => Effect.Effect<boolean, AccessError> = () =>
+      Effect.succeed(true)
+  ) {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        if (!(yield* canRun(input.turnId)))
+          return yield* new AccessDenied({
+            message: "This reply has stopped or its bot is archived.",
+          })
+        yield* this.expire()
+        const previous = yield* this.get(input.id),
+          existing = yield* decision(() => Domain.replayIntent(input, previous))
+        if (existing) return existing
+        const policy = yield* this.policy(input.tool),
+          pending = yield* this.pending(),
+          operation = yield* decision(() =>
+            Domain.admitOperation(input, policy, pending.length, this.now())
+          )
+        yield* this.db.use((orm) =>
+          query(
+            "write",
+            orm.insert(operations).values({
+              ...operation,
+              revision: 0,
+              result: null,
+              decision: null,
+            })
+          )
+        )
+        yield* this.db.use((orm) =>
+          query(
+            "write",
+            orm.insert(history).values({
+              operationId: operation.id,
+              revision: 0,
+              status: operation.status,
+              at: operation.createdAt,
+            })
+          )
+        )
+        return (yield* this.get(input.id))!
+      })
+    )
   }
   decide(
     id: string,
     approve: boolean,
-    expectedRevision: number,
+    revision: number,
     remember?: { expectedPolicyRevision: number }
   ) {
-    const decision = Domain.decisionIdentity(
-      approve,
-      expectedRevision,
-      remember
-    )
-    this.expire()
-    return this.db.transaction(() => {
-      const round = Domain.approvalRound(
-        this.get(id),
-        approve,
-        expectedRevision,
-        decision,
-        remember
+    return Effect.gen({ self: this }, function* () {
+      yield* this.expire()
+      return yield* this.atomic(() =>
+        Effect.gen({ self: this }, function* () {
+          const identity = yield* decision(() =>
+            Domain.decisionIdentity(approve, revision, remember)
+          )
+          const previous = yield* this.get(id),
+            round = yield* decision(() =>
+              Domain.approvalRound(
+                previous,
+                approve,
+                revision,
+                identity,
+                remember
+              )
+            )
+          if (round.replay) return round.operation
+          const policy = yield* this.policy(round.operation.tool),
+            change = yield* decision(() =>
+              Domain.decideOperation(
+                round.operation,
+                policy,
+                approve,
+                identity,
+                remember
+              )
+            ),
+            operation = change.operation
+          if (change.grant)
+            yield* this.db.use((orm) =>
+              query(
+                "write",
+                orm
+                  .insert(grants)
+                  .values({
+                    name: operation.tool,
+                    mode: change.grant!.mode,
+                    revision: change.grant!.revision,
+                  })
+                  .onConflictDoUpdate({
+                    target: grants.name,
+                    set: {
+                      mode: change.grant!.mode,
+                      revision: change.grant!.revision,
+                    },
+                  })
+              )
+            )
+          return yield* this.change(round.operation, {
+            status: operation.status,
+            grantRevision: operation.grantRevision,
+            decision: operation.decision,
+          })
+        })
       )
-      if (round.replay) return round.operation
-      const change = Domain.decideOperation(
-        round.operation,
-        this.policy(round.operation.tool),
-        approve,
-        decision,
-        remember
-      )
-      const operation = change.operation
-      if (change.grant)
-        this.db.run(
-          "INSERT INTO tool_grants VALUES (?,?,?) ON CONFLICT(name) DO UPDATE SET mode=excluded.mode,revision=excluded.revision",
-          operation.tool,
-          change.grant.mode,
-          change.grant.revision
-        )
-      this.db.run(
-        "UPDATE tool_operations SET status=?,grantRevision=?,decision=?,revision=revision+1 WHERE id=?",
-        operation.status,
-        operation.grantRevision,
-        operation.decision,
-        id
-      )
-      return this.get(id)!
     })
   }
   claim(
     id: string,
-    recoverable = false
-  ): "pending" | "execute" | { result: string } {
-    this.expire()
-    const decision = this.db.transaction(() => {
-      const operation = Domain.requireOperation(this.get(id))
-      const change = Domain.claimOperation(
-        operation,
-        this.policy(operation.tool),
-        recoverable,
-        this.now()
-      )
-      if (change.update)
-        this.db.run(
-          "UPDATE tool_operations SET status=?,grantRevision=?,revision=revision+1 WHERE id=?",
-          change.update.status,
-          change.update.grantRevision,
-          id
+    recoverable = false,
+    canRun: (turnId: string) => Effect.Effect<boolean, AccessError> = () =>
+      Effect.succeed(true)
+  ) {
+    return Effect.gen({ self: this }, function* () {
+      yield* this.expire()
+      return yield* this.atomic(() =>
+        Effect.gen({ self: this }, function* () {
+          const previous = yield* this.get(id),
+            operation = yield* decision(() =>
+              Domain.requireOperation(previous)
+            ),
+            runnable = yield* canRun(operation.turnId)
+          if (!runnable)
+            return yield* new AccessDenied({
+              message: "This reply has stopped or its bot is archived.",
+            })
+          const policy = yield* this.policy(operation.tool),
+            change = yield* decision(() =>
+              Domain.claimOperation(operation, policy, recoverable, this.now())
+            )
+          if (change.update)
+            yield* this.change(operation, {
+              status: change.update.status,
+              grantRevision: change.update.grantRevision,
+            })
+          return change.decision
+        })
+      ).pipe(
+        Effect.flatMap((value) =>
+          typeof value === "object" && "_tag" in value
+            ? Effect.fail(value)
+            : Effect.succeed(value)
         )
-      return change.decision
+      )
     })
-    if (typeof decision === "object" && "_tag" in decision) throw decision
-    return decision
   }
   finish(id: string, result: string) {
-    Domain.validateResult(result)
-    this.db.run(
-      "UPDATE tool_operations SET status='done',result=?,revision=revision+1 WHERE id=? AND status='running'",
-      result,
-      id
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        yield* decision(() => Domain.validateResult(result))
+        const operation = yield* this.get(id)
+        if (operation?.status === "running")
+          yield* this.change(operation, { status: "done", result })
+      })
     )
   }
-
   cancel(turnId: string) {
-    this.db.run(
-      "UPDATE tool_operations SET status='cancelled',revision=revision+1 WHERE turnId=? AND status IN ('pending','approved')",
-      turnId
-    )
+    return this.atomic(() => this.changeOpen(undefined, turnId, "cancelled"))
   }
   revoke(name: string) {
-    this.db.run(
-      "UPDATE tool_grants SET mode='ask',revision=revision+1 WHERE name=?",
-      name
-    )
-    this.db.run(
-      "UPDATE tool_operations SET status='denied',revision=revision+1 WHERE tool=? AND status IN ('pending','approved')",
-      name
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const rows = yield* this.db.use((orm) =>
+          query("read", orm.select().from(grants).where(eq(grants.name, name)))
+        )
+        const grant = rows[0]
+        if (grant)
+          yield* this.db.use((orm) =>
+            query(
+              "write",
+              orm
+                .update(grants)
+                .set({ mode: "ask", revision: grant.revision + 1 })
+                .where(eq(grants.name, name))
+            )
+          )
+        yield* this.changeOpen(name, undefined, "denied")
+      })
     )
   }
 }

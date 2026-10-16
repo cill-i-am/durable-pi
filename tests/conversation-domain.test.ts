@@ -4,7 +4,7 @@ import * as Domain from "../src/conversations/domain"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import { makeConversations } from "../src/conversations/service"
 import type { Turn } from "../src/conversations/turns"
-import { database } from "./database"
+import { database, corrupt } from "./database"
 
 const turn: Turn = {
   id: "root",
@@ -96,7 +96,9 @@ it("rolls back a steer and its root revision when the root update fails", async 
     ledger = new ConversationStore(db, { model: "test", thinking: "off" }),
     service = makeConversations(ledger)
   expect(ledger.transactionGroup).toBe(db)
-  const root = ledger.admit({ operationId: "root", text: "Request" }).turn
+  const root = Effect.runSync(
+    ledger.admit({ operationId: "root", text: "Request" })
+  ).turn
   db.run(
     "CREATE TRIGGER reject_steer BEFORE UPDATE ON chat_turns WHEN NEW.id='root' AND NEW.revision>OLD.revision BEGIN SELECT RAISE(ABORT,'revision failure'); END"
   )
@@ -109,18 +111,20 @@ it("rolls back a steer and its root revision when the root update fails", async 
     _tag: "Failure",
     failure: { _tag: "ConversationStorageError" },
   })
-  expect(ledger.get("steer")).toBeUndefined()
-  expect(ledger.get(root.id)?.revision).toBe(root.revision)
+  expect(Effect.runSync(ledger.get("steer"))).toBeUndefined()
+  expect(Effect.runSync(ledger.get(root.id))?.revision).toBe(root.revision)
 })
 it("rolls back all member outcomes when one completion update fails", async () => {
   const db = database(),
     ledger = new ConversationStore(db, { model: "test", thinking: "off" }),
     service = makeConversations(ledger)
-  ledger.admit({ operationId: "root", text: "Request" })
-  ledger.admit({ operationId: "child", text: "Correction", mode: "steer" })
-  ledger.submitted("root", "session")
-  ledger.submitted("child", "session")
-  const root = ledger.get("root")!
+  Effect.runSync(ledger.admit({ operationId: "root", text: "Request" }))
+  Effect.runSync(
+    ledger.admit({ operationId: "child", text: "Correction", mode: "steer" })
+  )
+  Effect.runSync(ledger.submitted("root", "session"))
+  Effect.runSync(ledger.submitted("child", "session"))
+  const root = Effect.runSync(ledger.get("root"))!
   db.run(
     "CREATE TRIGGER reject_child_finish BEFORE UPDATE ON chat_turns WHEN NEW.id='child' AND NEW.status='done' BEGIN SELECT RAISE(ABORT,'completion failure'); END"
   )
@@ -141,16 +145,16 @@ it("rolls back all member outcomes when one completion update fails", async () =
     _tag: "Failure",
     failure: { _tag: "ConversationStorageError" },
   })
-  expect(ledger.get("root")?.status).toBe("running")
-  expect(ledger.get("root")?.answer).toBe("")
-  expect(ledger.get("child")?.status).toBe("running")
+  expect(Effect.runSync(ledger.get("root"))?.status).toBe("running")
+  expect(Effect.runSync(ledger.get("root"))?.answer).toBe("")
+  expect(Effect.runSync(ledger.get("child"))?.status).toBe("running")
 })
 it("keeps corrupt historical primitive fields in the defect channel", async () => {
   const db = database(),
     ledger = new ConversationStore(db, { model: "test", thinking: "off" }),
     service = makeConversations(ledger)
-  ledger.admit({ operationId: "root", text: "Request" })
-  db.run("UPDATE chat_turns SET status='unknown' WHERE id='root'")
+  Effect.runSync(ledger.admit({ operationId: "root", text: "Request" }))
+  corrupt(db, "UPDATE chat_turns SET status='unknown' WHERE id='root'")
   const exit = await Effect.runPromise(Effect.exit(service.get("root")))
   expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)
   expect(Exit.isFailure(exit) && Cause.hasFails(exit.cause)).toBe(false)

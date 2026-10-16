@@ -1,24 +1,15 @@
-import { Schema, Clock, Effect, Layer } from "effect"
+import { Clock, Effect, Layer } from "effect"
 import { MemoryRepository } from "./repository"
 import type { MemoryLedger } from "./ledger"
-import { InvalidMemory, MemoryNotReady, MemoryStorageError } from "./domain"
+import type { MemoryError } from "./domain"
 
 export function makeMemoryRepository(
   storage: MemoryLedger
 ): typeof MemoryRepository.Service {
-  const read = <T>(operation: string, body: () => T) =>
-    Effect.fn(`Memory.${operation}`)(() =>
-      Effect.try({
-        try: body,
-        catch: (error) => {
-          const knownFailure = Schema.decodeUnknownOption(
-            Schema.Union([InvalidMemory, MemoryNotReady, MemoryStorageError])
-          )(error)
-          if (knownFailure._tag === "Some") return knownFailure.value
-          throw error
-        },
-      })
-    )()
+  const read = <T>(
+    operation: string,
+    body: () => Effect.Effect<T, MemoryError>
+  ) => Effect.suspend(body).pipe(Effect.withSpan(`Memory.${operation}`))
   const date = Clock.currentTimeMillis.pipe(
     Effect.map((now) => new Date(now).toISOString())
   )
@@ -64,15 +55,22 @@ export function makeMemoryRepository(
     watermark: () => read("watermark", () => storage.watermark()),
     snapshot: () =>
       read("snapshot", () =>
-        storage.atomic(() => {
-          const until = storage.watermark(),
-            parts = storage.parts()
-          const view = parts.map((part) => {
-            const node = storage.node(part)
-            return { ...part, text: node?.text, built: !!node }
+        storage.atomic(() =>
+          Effect.gen(function* () {
+            const until = yield* storage.watermark(),
+              parts = yield* storage.parts()
+            const view = yield* Effect.forEach(parts, (part) =>
+              storage.node(part).pipe(
+                Effect.map((node) => ({
+                  ...part,
+                  text: node?.text,
+                  built: !!node,
+                }))
+              )
+            )
+            return { until, parts, view }
           })
-          return { until, parts, view }
-        })
+        )
       ),
     archivePage: (after, until, limit) =>
       read("archivePage", () => storage.archivePage(after, until, limit)),

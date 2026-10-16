@@ -94,8 +94,12 @@ it("replays an acknowledged native Pi input after a lost host acknowledgment and
     )
   )
   const f = await Effect.runPromise(conversationFixture())
-  f.store.setSettings({ model: faux.getModel().id, thinking: "off" })
-  const root = f.store.admit({ operationId: "root", text: "hello" }).turn
+  Effect.runSync(
+    f.store.setSettings({ model: faux.getModel().id, thinking: "off" })
+  )
+  const root = Effect.runSync(
+    f.store.admit({ operationId: "root", text: "hello" })
+  ).turn
   const pump = conversationPump(
     f.conversations,
     f.memory,
@@ -110,7 +114,7 @@ it("replays an acknowledged native Pi input after a lost host acknowledgment and
       _tag: "Failure",
       failure: { _tag: "ConversationExecutionError", operation: "submit" },
     })
-    expect(f.store.get(root.id)?.status).toBe("preparing")
+    expect(Effect.runSync(f.store.get(root.id))?.status).toBe("preparing")
     const original = conversation!
     await original.waitForIdle(context)
     expect(
@@ -125,7 +129,7 @@ it("replays an acknowledged native Pi input after a lost host acknowledgment and
     expect(submitted).toHaveLength(2)
     expect(submitted[1]).toEqual(submitted[0])
     await Effect.runPromise(pump.run())
-    expect(f.store.get(root.id)).toMatchObject({
+    expect(Effect.runSync(f.store.get(root.id))).toMatchObject({
       status: "done",
       answer: "Native answer",
     })

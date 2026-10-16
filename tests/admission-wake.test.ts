@@ -117,7 +117,7 @@ function fixture() {
     accountModelCatalog: async () => catalog,
     runner: {
       wake: async () => {
-        wakes.push(conversations.active()?.id ?? null)
+        wakes.push(Effect.runSync(conversations.active())?.id ?? null)
       },
     },
   })
@@ -138,7 +138,9 @@ function fixture() {
             host.modelConnected()
           ),
         archived: () =>
-          Effect.sync(() => botConfiguration.read()?.status === "archived"),
+          Effect.sync(
+            () => Effect.runSync(botConfiguration.read())?.status === "archived"
+          ),
         catalog: () =>
           conversationNativeOperation("read model catalog", () =>
             host.accountModelCatalog()
@@ -197,9 +199,14 @@ it("bounds request projections by the active model and durable routing pin, incl
     window = 272000,
     floor: number | undefined
   Object.assign(host, {
-    active: () => ({ model: "selected", routing: { contextWindow: pin } }),
+    get foregroundSizing() {
+      return { model: "selected", routing: { contextWindow: pin } }
+    },
     models: { getModel: () => ({ contextWindow: window }) },
     communicationFloor: () => floor,
+  })
+  Object.defineProperty(host, "foregroundSizing", {
+    get: () => ({ model: "selected", routing: { contextWindow: pin } }),
   })
   expect(host.contextProjectionBytes()).toBe(8192)
   window = 1050000
@@ -225,7 +232,7 @@ it("arms the run after asynchronous discovery and durable admission; replay re-a
   try {
     const request = host.acceptMessage(input)
     await discoveryStarted
-    expect(conversations.active()).toBeUndefined()
+    expect(Effect.runSync(conversations.active())).toBeUndefined()
     expect(wakes).toEqual([])
     release()
     expect((await request).status).toBe(202)
@@ -236,7 +243,7 @@ it("arms the run after asynchronous discovery and durable admission; replay re-a
       operationId: input.operationId,
     })
     expect(wakes).toEqual([input.operationId, input.operationId])
-    expect(conversations.recent()).toHaveLength(1)
+    expect(Effect.runSync(conversations.recent())).toHaveLength(1)
   } finally {
     await runtime.dispose()
   }
@@ -256,12 +263,14 @@ it("recovers a failed alarm acknowledgement on a submission retry without repeat
       _tag: "ConversationExecutionError",
       operation: "wake conversation",
     })
-    expect(conversations.get(input.operationId)?.status).toBe("queued")
+    expect(Effect.runSync(conversations.get(input.operationId))?.status).toBe(
+      "queued"
+    )
     expect(await (await host.acceptMessage(input)).json()).toMatchObject({
       accepted: false,
     })
     expect(calls).toBe(2)
-    expect(conversations.recent()).toHaveLength(1)
+    expect(Effect.runSync(conversations.recent())).toHaveLength(1)
   } finally {
     await runtime.dispose()
   }
@@ -270,15 +279,17 @@ it("does not admit or wake new work when the bot is archived during catalog disc
   const { host, conversations, runtime, wakes } = fixture()
   host.accountModelCatalog = async () => {
     const now = new Date().toISOString()
-    host.botConfiguration.configure("owner", {
-      id: homeAgentId,
-      name: "Test",
-      instructions: "",
-      status: "archived",
-      revision: 1,
-      createdAt: now,
-      updatedAt: now,
-    })
+    Effect.runSync(
+      host.botConfiguration.configure("owner", {
+        id: homeAgentId,
+        name: "Test",
+        instructions: "",
+        status: "archived",
+        revision: 1,
+        createdAt: now,
+        updatedAt: now,
+      })
+    )
     return catalog
   }
   try {
@@ -290,7 +301,7 @@ it("does not admit or wake new work when the bot is archived during catalog disc
         })
       ).status
     ).toBe(409)
-    expect(conversations.recent()).toEqual([])
+    expect(Effect.runSync(conversations.recent())).toEqual([])
     expect(wakes).toEqual([])
   } finally {
     await runtime.dispose()
@@ -305,7 +316,7 @@ it("repairs a failed summary retry wake on exact replay, without another route r
     part = { start: 0, count: 1 },
     operationId = crypto.randomUUID()
   Effect.runSync(memory.append("failed", "user", "Original source"))
-  summaryRoutes.pin(part, resolveRoute("memory"))
+  Effect.runSync(summaryRoutes.pin(part, resolveRoute("memory")))
   for (let attempt = 0; attempt < 3; attempt++)
     Effect.runSync(memory.failNode(part, 10000))
   let wakes = 0
@@ -368,10 +379,12 @@ it("does not debit a replacement summary route when obsolete discovery returns a
     )
     await started
     controller.abort()
-    routes.replace(
-      job,
-      crypto.randomUUID(),
-      resolveRoute("memory", { model: "gpt-6.1-sol", thinking: "medium" })
+    Effect.runSync(
+      routes.replace(
+        job,
+        crypto.randomUUID(),
+        resolveRoute("memory", { model: "gpt-6.1-sol", thinking: "medium" })
+      )
     )
     release()
     const exit = await pending
@@ -381,8 +394,8 @@ it("does not debit a replacement summary route when obsolete discovery returns a
         .all<{ requests: number }>("SELECT requests FROM summary_routes")
         .map((row) => row.requests)
     ).toEqual([0, 0])
-    expect(routes.current(job)?.contextWindow).toBeUndefined()
-    expect(routes.current(job)).toMatchObject({
+    expect(Effect.runSync(routes.current(job))?.contextWindow).toBeUndefined()
+    expect(Effect.runSync(routes.current(job))).toMatchObject({
       model: "gpt-6.1-sol",
     })
   } finally {
@@ -397,7 +410,7 @@ it("rejects a delayed retry for an older summary revision after the newer retry 
     summaryRoutes = new SummaryRoutes(db),
     part = { start: 0, count: 1 }
   Effect.runSync(memory.append("failed", "user", "Original source"))
-  summaryRoutes.pin(part, resolveRoute("memory"))
+  Effect.runSync(summaryRoutes.pin(part, resolveRoute("memory")))
   const pause = () => {
     for (let n = 0; n < 3; n++) Effect.runSync(memory.failNode(part, 10000))
   }
@@ -441,7 +454,7 @@ it("rejects a delayed retry for an older summary revision after the newer retry 
     pause()
     release()
     expect((await b).ok).toBe(false)
-    expect(summaryRoutes.revision(part)).toBe(2)
+    expect(Effect.runSync(summaryRoutes.revision(part))).toBe(2)
     expect(Effect.runSync(memory.paused(part))).toBe(true)
   } finally {
     await runtime.dispose()
@@ -473,7 +486,9 @@ it("sends the pinned independent memory model through the installed Responses ad
     return response(payload.model)
   })
   try {
-    conversations.setSettings({ model: "gpt-6-astra", thinking: "high" })
+    Effect.runSync(
+      conversations.setSettings({ model: "gpt-6-astra", thinking: "high" })
+    )
     wireSummaryModel(host, summaryRoutes)
     await runtime.runPromise(
       host.summaryModel.complete(
@@ -492,7 +507,7 @@ it("sends the pinned independent memory model through the installed Responses ad
       reasoning: { effort: "medium" },
       store: false,
     })
-    expect(new SummaryRoutes(db).current(job)).toMatchObject({
+    expect(Effect.runSync(new SummaryRoutes(db).current(job))).toMatchObject({
       model: "gpt-6-luna",
       thinking: "medium",
       contextWindow: 272000,
@@ -514,25 +529,31 @@ it("sends the pinned independent memory model through the installed Responses ad
 
 it("delivers a ready background report when a later foreground turn fails on blocked memory", async () => {
   const { host, conversations, runtime, db, wakes } = fixture()
-  const source = conversations.admit({
-    operationId: crypto.randomUUID(),
-    text: "Draft in background",
-  }).turn
-  conversations.finish(
-    source,
-    [{ id: source.id, delivery: "answered" }],
-    "Started",
-    null
+  const source = Effect.runSync(
+    conversations.admit({
+      operationId: crypto.randomUUID(),
+      text: "Draft in background",
+    })
+  ).turn
+  Effect.runSync(
+    conversations.finish(
+      source,
+      [{ id: source.id, delivery: "answered" }],
+      "Started",
+      null
+    )
   )
-  const foreground = conversations.admit({
-    operationId: crypto.randomUUID(),
-    text: "Another question",
-  }).turn
+  const foreground = Effect.runSync(
+    conversations.admit({
+      operationId: crypto.randomUUID(),
+      text: "Another question",
+    })
+  ).turn
   const route = { ...resolveRoute("conversation"), contextWindow: 8192 }
   let parentDone = false
   const mailbox = makeBackgroundMailbox(
     new SqliteBackgroundMailbox(db),
-    () => (parentDone ? "done" : "active"),
+    () => Effect.succeed(parentDone ? "done" : "active"),
     "synthetic-parent",
     () => crypto.randomUUID()
   )
@@ -582,26 +603,32 @@ it("delivers a ready background report when a later foreground turn fails on blo
         transcript: () => Effect.die("Unexpected transcript"),
       },
       {
-        active: () => Effect.sync(() => !!conversations.active()),
+        active: () => conversations.active().pipe(Effect.map((turn) => !!turn)),
         backgroundActive: () =>
-          Effect.sync(() => !!conversations.active()?.origin),
+          conversations.active().pipe(Effect.map((turn) => !!turn?.origin)),
         wakeConversation: () => Effect.promise(() => host.runner.wake()),
         wakeBackground: () => Effect.void,
         notify: () => Effect.sync(() => host.notifyConversation()),
         admission: {
           transactionGroup: db,
-          stop: () => {},
+          stop: () => Effect.void,
           admit: (h, report) =>
-            conversations.admit(
-              {
-                operationId: h.reportId,
-                text: report,
-                origin: { kind: "background", groupId: h.id, turnId: h.turnId },
-              },
-              undefined,
-              [],
-              h.route
-            ).turn.id,
+            conversations
+              .admit(
+                {
+                  operationId: h.reportId,
+                  text: report,
+                  origin: {
+                    kind: "background",
+                    groupId: h.id,
+                    turnId: h.turnId,
+                  },
+                },
+                undefined,
+                [],
+                h.route
+              )
+              .pipe(Effect.map((admission) => admission.turn.id)),
         },
       }
     ),
@@ -620,15 +647,19 @@ it("delivers a ready background report when a later foreground turn fails on blo
     expect(Effect.runSync(mailbox.get(73))?.status).toBe("ready")
     expect(Effect.runSync(mailbox.nextWake())).toBeUndefined()
     await host.step()
-    expect(conversations.get(foreground.id)?.status).toBe("failed")
+    expect(Effect.runSync(conversations.get(foreground.id))?.status).toBe(
+      "failed"
+    )
     expect(Effect.runSync(mailbox.get(73))?.status).toBe("delivered")
-    expect(conversations.active()?.origin).toMatchObject({
+    expect(Effect.runSync(conversations.active())?.origin).toMatchObject({
       kind: "background",
       groupId: 73,
     })
     expect(wakes).toContain(handoff.reportId)
     await host.stepBackground()
-    expect(conversations.recent().filter((turn) => turn.origin)).toHaveLength(1)
+    expect(
+      Effect.runSync(conversations.recent()).filter((turn) => turn.origin)
+    ).toHaveLength(1)
   } finally {
     await runtime.dispose()
   }

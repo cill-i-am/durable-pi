@@ -47,14 +47,14 @@ export const ExecutionWorker = Cloudflare.Worker("ExecutionWorker", {
   env: { LOADER: Cloudflare.WorkerLoader() },
 })
 export type ExecutionEnv = Cloudflare.InferEnv<typeof ExecutionWorker>
-export const TerminalWorker = Cloudflare.Worker("TerminalWorker", {
+export const TerminalWorker = Cloudflare.Worker("TerminalWorkerDrizzleV1", {
   main: "./src/terminal/worker.ts",
   dev: { port: 1341, strictPort: true },
   workersDev: { enabled: false, previewsEnabled: false },
   compatibility: { date: "2026-09-25", flags: ["nodejs_compat"] },
   observability,
   env: {
-    SANDBOX: Cloudflare.Container<LinuxSandbox>("LinuxSandbox", {
+    SANDBOX: Cloudflare.Container<LinuxSandbox>("LinuxSandboxDrizzleV1", {
       className: "LinuxSandbox",
       context: "./containers/terminal",
       instanceType: "basic",
@@ -69,7 +69,7 @@ export const TerminalWorker = Cloudflare.Worker("TerminalWorker", {
 export type TerminalEnv = Cloudflare.InferEnv<typeof TerminalWorker>
 export const BackgroundGroups: Cloudflare.DurableObjectLike<BackgroundGroupRPC> =
   Cloudflare.DurableObject<BackgroundGroupRPC>("BackgroundGroup")
-export const AgentWorker = Cloudflare.Worker("AgentWorker", {
+export const AgentWorker = Cloudflare.Worker("AgentWorkerDrizzleV1", {
   observability,
   main: "./src/agent/worker.ts",
   dev: { port: 1338, strictPort: true },

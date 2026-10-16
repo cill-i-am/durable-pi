@@ -12,7 +12,7 @@ import {
   ROUTINE_BUDGET_MS,
 } from "../src/routines/contracts"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
-import { database } from "./database"
+import { database, corrupt } from "./database"
 import { routinePump } from "../src/routines/pump"
 
 function fixture() {
@@ -80,10 +80,12 @@ describe("durable bot routines", () => {
           .deliver({
             transactionGroup: f.db,
             admit: (value) =>
-              conversations.admit({
-                operationId: value.turnId,
-                text: value.prompt,
-              }).turn.id,
+              conversations
+                .admit({
+                  operationId: value.turnId,
+                  text: value.prompt,
+                })
+                .pipe(Effect.map(({ turn }) => turn.id)),
           })
           .pipe(Effect.result)
       )
@@ -92,11 +94,11 @@ describe("durable bot routines", () => {
       failure: { _tag: "ConversationStorageError" },
     })
     expect(f.store.inFlight()?.status).toBe("pending")
-    expect(conversations.recent()).toHaveLength(0)
+    expect(Effect.runSync(conversations.recent())).toHaveLength(0)
   })
   it("refuses a different transaction group before conversation admission", () => {
     const f = fixture(),
-      admit = vi.fn(() => "wrong")
+      admit = vi.fn(() => Effect.succeed("wrong"))
     f.advance(60000)
     f.store.claimDue()
     expect(() =>
@@ -120,21 +122,31 @@ describe("durable bot routines", () => {
     )
     expect(() =>
       f.store.deliver((value) => {
-        conversations.admit({ operationId: value.turnId, text: value.prompt })
+        return conversations.admit({
+          operationId: value.turnId,
+          text: value.prompt,
+        })
       })
     ).toThrow(RoutineStorageError)
-    expect(conversations.get(pending.turnId)).toBeUndefined()
+    expect(Effect.runSync(conversations.get(pending.turnId))).toBeUndefined()
     expect(f.store.inFlight()?.status).toBe("pending")
     f.db.run("DROP TRIGGER fail_queue")
     f.store.deliver((value) => {
-      conversations.admit({ operationId: value.turnId, text: value.prompt })
+      return conversations.admit({
+        operationId: value.turnId,
+        text: value.prompt,
+      })
     })
-    expect(conversations.recent()).toHaveLength(1)
+    expect(Effect.runSync(conversations.recent())).toHaveLength(1)
     expect(f.store.inFlight()?.status).toBe("queued")
   })
   it("preserves corrupt durable records as defects rather than expected conflicts", () => {
     const f = fixture()
-    f.db.run("UPDATE routines SET record='broken' WHERE id=?", f.routine.id)
+    corrupt(
+      f.db,
+      "UPDATE routines SET record='broken' WHERE id=?",
+      f.routine.id
+    )
     const exit = Effect.runSyncExit(f.store.service.get(f.routine.id))
     expect(Exit.isFailure(exit)).toBe(true)
     if (Exit.isFailure(exit)) {
@@ -222,11 +234,12 @@ describe("durable bot routines", () => {
     const run = f.store.claimDue()!
     expect(() =>
       f.store.deliver((value) => {
-        conversations.admit({ operationId: value.turnId, text: value.prompt })
-        throw new Error("rollback")
+        return conversations
+          .admit({ operationId: value.turnId, text: value.prompt })
+          .pipe(Effect.andThen(Effect.die(new Error("rollback"))))
       })
     ).toThrow("rollback")
-    expect(conversations.get(run.turnId)).toBeUndefined()
+    expect(Effect.runSync(conversations.get(run.turnId))).toBeUndefined()
     expect(f.store.inFlight()?.status).toBe("pending")
     const restored = routineFixture(
       f.db,
@@ -239,7 +252,7 @@ describe("durable bot routines", () => {
     restored.deliver(() => {
       throw new Error("duplicate")
     })
-    expect(conversations.recent()).toHaveLength(1)
+    expect(Effect.runSync(conversations.recent())).toHaveLength(1)
     expect(restored.inFlight()).toMatchObject({
       turnId: run.turnId,
       status: "queued",
@@ -355,18 +368,20 @@ describe("routine alarm reconciliation", () => {
       modelConnected: vi.fn(async () => true),
       wakeConversation: vi.fn(async () => {}),
       admit: vi.fn((run: { turnId: string; prompt: string }) => {
-        return conversations.admit({
-          operationId: run.turnId,
-          text: run.prompt,
-        }).turn.id
+        return conversations
+          .admit({
+            operationId: run.turnId,
+            text: run.prompt,
+          })
+          .pipe(Effect.map(({ turn }) => turn.id))
       }),
       stop: vi.fn((id: string) => {
-        conversations.requestStop(id)
+        return conversations.requestStop(id).pipe(Effect.asVoid)
       }),
       notify: vi.fn(),
     }
     const reconciliation = routinePump(f.store.service, {
-      getTurn: (id) => Effect.sync(() => host.getTurn(id)),
+      getTurn: (id) => host.getTurn(id),
       modelConnected: () =>
         Effect.tryPromise({
           try: () => host.modelConnected(),
@@ -378,7 +393,7 @@ describe("routine alarm reconciliation", () => {
           catch: (cause) => cause,
         }),
       admission: { transactionGroup: f.db, admit: host.admit },
-      stop: (id) => Effect.sync(() => host.stop(id)),
+      stop: (id) => host.stop(id),
       notify: () => Effect.sync(host.notify),
     })
     const clock = fixtureClock(f.now)
@@ -405,12 +420,12 @@ describe("routine alarm reconciliation", () => {
       await expect(pump.run()).rejects.toThrow("Temporary")
       const retryAt = pump.retry()!
       expect(retryAt).toBe(f.now() + 60000)
-      expect(conversations.recent()).toHaveLength(0)
+      expect(Effect.runSync(conversations.recent())).toHaveLength(0)
       expect(f.store.inFlight()?.status).toBe("pending")
       f.advance(retryAt - f.now())
       await pump.run()
       await pump.run()
-      expect(conversations.recent()).toHaveLength(1)
+      expect(Effect.runSync(conversations.recent())).toHaveLength(1)
       expect(host.admit).toHaveBeenCalledOnce()
       expect(f.store.inFlight()?.status).toBe("queued")
       f.archive()
@@ -424,12 +439,16 @@ describe("routine alarm reconciliation", () => {
     f.advance(ROUTINE_BUDGET_MS)
     await pump.run()
     expect(host.stop).toHaveBeenCalledWith(admitted.turnId)
-    expect(conversations.get(admitted.turnId)?.status).toBe("stopping")
-    conversations.finish(
-      conversations.get(admitted.turnId)!,
-      [{ id: admitted.turnId, delivery: "unanswered" }],
-      "",
-      null
+    expect(Effect.runSync(conversations.get(admitted.turnId))?.status).toBe(
+      "stopping"
+    )
+    Effect.runSync(
+      conversations.finish(
+        Effect.runSync(conversations.get(admitted.turnId))!,
+        [{ id: admitted.turnId, delivery: "unanswered" }],
+        "",
+        null
+      )
     )
     await pump.run()
     expect(f.store.inFlight()).toBeUndefined()

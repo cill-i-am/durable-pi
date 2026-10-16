@@ -97,7 +97,7 @@ describe("private model credentials", () => {
     const f = fixture()
     await f.resolve()
     f.db.run("UPDATE model_credentials SET value='{}'")
-    f.ledger.claim("openai", true)
+    Effect.runSync(f.ledger.claim("openai", true))
     const next = JSON.stringify({
       ...seedValue,
       access: "replacement",

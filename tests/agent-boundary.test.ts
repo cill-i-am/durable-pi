@@ -11,7 +11,9 @@ import {
   Schema,
 } from "effect"
 import { TestClock } from "effect/testing"
-import { database } from "./database"
+import { database, corrupt } from "./database"
+import { sqliteFailure } from "./sqlite-fault"
+import { migrateSqlite } from "../src/storage/migrations"
 import type { Sqlite } from "../src/storage/sqlite"
 import { AgentCatalog } from "../src/agents/catalog"
 import { agentCatalogApplication } from "../src/agents/service"
@@ -24,6 +26,8 @@ import {
   requireAgentCapacity,
   homeAgentId,
   type AgentProfile,
+  type AgentConflict,
+  type AgentStorageError,
 } from "../src/agents/domain"
 import {
   BotConfiguration,
@@ -184,10 +188,11 @@ it.effect(
       const failing: Sqlite = {
         ...f.db,
         transaction: (body) =>
-          f.db.transaction(() => {
-            body()
-            throw new Error("commit failed")
-          }),
+          f.db.transaction(() =>
+            body().pipe(
+              Effect.andThen(Effect.fail(sqliteFailure("commit failed")))
+            )
+          ),
       }
       const service = yield* AgentCatalog.pipe(
         Effect.provide(agentCatalogApplication(new SqliteAgentCatalog(failing)))
@@ -210,11 +215,12 @@ it.effect(
     Effect.gen(function* () {
       const f = yield* fixture()
       yield* f.catalog.create(details())
-      f.db.run("UPDATE agent_catalog SET revision=-1 WHERE id=?", id(1))
+      corrupt(f.db, "UPDATE agent_catalog SET revision=-1 WHERE id=?", id(1))
       const stored = yield* f.catalog.list().pipe(Effect.exit)
       expect(Exit.isFailure(stored) && Cause.hasDies(stored.cause)).toBe(true)
       expect(Exit.isFailure(stored) && Cause.hasFails(stored.cause)).toBe(false)
-      f.db.run(
+      corrupt(
+        f.db,
         "UPDATE agent_catalog SET revision=0,creation=x'ff' WHERE id=?",
         id(1)
       )
@@ -223,15 +229,12 @@ it.effect(
     })
 )
 it.effect(
-  "legacy catalog migration preserves profile dates and creation identity after reopening",
+  "catalog reopening preserves profile dates and creation identity",
   () =>
     Effect.gen(function* () {
       const db = database()
       db.run(
-        "CREATE TABLE agent_catalog(id TEXT PRIMARY KEY,name TEXT NOT NULL,instructions TEXT NOT NULL,status TEXT NOT NULL,createdAt TEXT NOT NULL,updatedAt TEXT NOT NULL,creation TEXT NOT NULL)"
-      )
-      db.run(
-        "INSERT INTO agent_catalog VALUES (?,?,?,?,?,?,?)",
+        "INSERT INTO agent_catalog(id,name,instructions,status,createdAt,updatedAt,creation) VALUES (?,?,?,?,?,?,?)",
         id(1),
         "Research",
         "Synthetic",
@@ -240,6 +243,7 @@ it.effect(
         "original date",
         JSON.stringify(details())
       )
+      yield* migrateSqlite(db)
       const f = yield* fixture(db)
       expect(yield* f.catalog.create(details())).toMatchObject({
         revision: 0,
@@ -263,7 +267,7 @@ it.effect(
       const f = yield* fixture(),
         events: string[] = [],
         projections: TerminalAuthorityProjection[] = []
-      f.configuration.configure("owner", profile(3, "active"))
+      yield* f.configuration.configure("owner", profile(3, "active"))
       yield* configureAgent(f.configured, host(events, projections))(
         "owner",
         profile(2, "archived")
@@ -272,7 +276,7 @@ it.effect(
         { revision: 3, active: true, revokeThrough: 2 },
       ])
       expect(events).toEqual(["terminal", "extract", "apps", "routines"])
-      expect(f.configuration.read()).toMatchObject({
+      expect(yield* f.configuration.read()).toMatchObject({
         revision: 3,
         status: "active",
       })
@@ -285,11 +289,14 @@ it.effect(
       const f = yield* fixture(),
         events: string[] = [],
         projections: TerminalAuthorityProjection[] = []
-      const h = host(events, projections)
+      const h: AgentConfigurationHost<AgentConflict | AgentStorageError> = host(
+        events,
+        projections
+      )
       h.syncTerminal = (value) =>
-        Effect.sync(() => {
+        Effect.gen(function* () {
           projections.push(value)
-          f.configuration.configure("owner", profile(2, "archived"))
+          yield* f.configuration.configure("owner", profile(2, "archived"))
         })
       yield* configureAgent(f.configured, h)("owner", profile(1))
       expect(projections).toEqual([
@@ -323,7 +330,7 @@ it.effect(
         Effect.forkChild
       )
       yield* Deferred.await(entered)
-      expect(f.ledger.read(id(1))).toMatchObject({
+      expect(yield* f.ledger.read(id(1))).toMatchObject({
         status: "archived",
         revision: 1,
       })
@@ -355,7 +362,7 @@ it.effect(
         { id: id(1), archived: true }
       )
       expect(response.status).toBe(409)
-      expect(f.ledger.read(id(1))).toMatchObject({
+      expect(yield* f.ledger.read(id(1))).toMatchObject({
         status: "archived",
         revision: 1,
       })
@@ -487,14 +494,14 @@ it.effect(
       })
       yield* Effect.promise(() => Promise.all(owned))
       expect(owned).toHaveLength(1)
-      const corrupt = agentRuntimeReader(
+      const malformedReader = agentRuntimeReader(
         async () => ({ state: "ready", turnId: 3 }),
         (work) => {
           owned.push(work)
           void work.catch(() => {})
         }
       )
-      const exit = yield* corrupt(profile()).pipe(Effect.exit)
+      const exit = yield* malformedReader(profile()).pipe(Effect.exit)
       expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)
       const defect = yield* agentStatuses([profile()], () =>
         Effect.die(new Error("local bug"))

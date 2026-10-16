@@ -1,4 +1,4 @@
-import { Schema } from "effect"
+import { Schema, type Effect } from "effect"
 import type {
   ActivityAgent,
   ActivityConversation,
@@ -25,7 +25,12 @@ export interface ActivityRecords {
     agent: ActivityAgent,
     query: ActivityQuery,
     now: number
-  ) => ActivityEntry[]
-  readonly conversation: (id: string) => ConversationRecord | null
-  readonly run: (id: string, cursor: RunCursor | null) => RunRecords | null
+  ) => Effect.Effect<ActivityEntry[], ActivityStorageError>
+  readonly conversation: (
+    id: string
+  ) => Effect.Effect<ConversationRecord | null, ActivityStorageError>
+  readonly run: (
+    id: string,
+    cursor: RunCursor | null
+  ) => Effect.Effect<RunRecords | null, ActivityStorageError>
 }

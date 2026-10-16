@@ -26,6 +26,7 @@ import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import { RunRecoveryStore } from "../src/conversations/adapters/sqlite-recovery"
 import { runRecoveryHook } from "../src/conversations/adapters/pi-recovery"
 import { AccessStore } from "../src/access/adapters/sqlite"
+import { AccessStorageError } from "../src/access/contracts"
 import { AccessGate } from "../src/access/gate"
 import { guardedTools } from "../src/access/adapters/pi"
 import { database } from "./database"
@@ -54,25 +55,32 @@ it.each([
       thinking: "off",
     })
     const turnId = crypto.randomUUID()
-    turns.admit({ operationId: turnId, text: "Check the synthetic operation" })
+    Effect.runSync(
+      turns.admit({
+        operationId: turnId,
+        text: "Check the synthetic operation",
+      })
+    )
     let store = new RunRecoveryStore(db)
-    let access = new AccessStore(db, () => [
-      {
-        name: "check",
-        description: "Synthetic",
-        mode:
-          scenario === "denied"
-            ? "deny"
-            : scenario === "approval-wait"
-              ? "ask"
-              : "allow",
-      },
-      {
-        name: "check_bot_task",
-        description: "Poll synthetic work",
-        mode: "allow",
-      },
-    ])
+    let access = new AccessStore(db, () =>
+      Effect.sync(() => [
+        {
+          name: "check",
+          description: "Synthetic",
+          mode:
+            scenario === "denied"
+              ? "deny"
+              : scenario === "approval-wait"
+                ? "ask"
+                : "allow",
+        },
+        {
+          name: "check_bot_task",
+          description: "Poll synthetic work",
+          mode: "allow",
+        },
+      ])
+    )
     let calls = 0,
       epoch = "original",
       active = true,
@@ -129,9 +137,20 @@ it.each([
     const options = (storage: Storage) => {
       gate = new AccessGate(
         access,
-        () => active && store.get(turnId)?.view?.phase !== "blocked",
+        () =>
+          store.get(turnId).pipe(
+            Effect.map((state) => active && state?.view?.phase !== "blocked"),
+            Effect.mapError(
+              (cause) =>
+                new AccessStorageError({ operation: "recovery guard", cause })
+            )
+          ),
         () => {
-          if (scenario === "approval-wait" && access.pending().length) release()
+          if (
+            scenario === "approval-wait" &&
+            Effect.runSync(access.pending()).length
+          )
+            release()
         }
       )
       const protect = guardedTools(gate, () => Effect.succeed(turnId))
@@ -140,7 +159,10 @@ it.each([
         storage,
         store,
         access,
-        source: () => (active ? { turnId, steeringKey: epoch } : undefined),
+        source: () =>
+          Effect.sync(() =>
+            active ? { turnId, steeringKey: epoch } : undefined
+          ),
         observed: () => {
           if (scenario === "repeat")
             throw new Error("Synthetic observer failure")
@@ -177,7 +199,8 @@ it.each([
             afterTools: async (_assistant, _results, _api, context) => {
               if (
                 ["restart-warning", "cancel", "steer"].includes(scenario) &&
-                store.get(turnId)?.view?.phase === "recovering" &&
+                Effect.runSync(store.get(turnId))?.view?.phase ===
+                  "recovering" &&
                 !paused
               ) {
                 paused = true
@@ -239,7 +262,7 @@ it.each([
       let conversation = await harness.root(ctx, {
         agent: { model: { provider: "faux", modelId: "faux-1" } },
       })
-      turns.saveSession(turnId, String(conversation.id))
+      Effect.runSync(turns.saveSession(turnId, String(conversation.id)))
       db.run("UPDATE chat_turns SET status='running' WHERE id=?", turnId)
       const command = {
         type: "input" as const,
@@ -259,33 +282,38 @@ it.each([
         await barrier
         if (scenario === "approval-wait") {
           expect(calls).toBe(0)
-          expect(store.get(turnId)?.view).toBeNull()
+          expect(Effect.runSync(store.get(turnId))?.view).toBeNull()
         }
         await harness.close(ctx)
-        const saved = store.get(turnId)
+        const saved = Effect.runSync(store.get(turnId))
         store = new RunRecoveryStore(db)
-        access = new AccessStore(db, () => [
-          { name: "check", description: "Synthetic", mode: "allow" },
-          { name: "check_bot_task", description: "Poll", mode: "allow" },
-        ])
+        access = new AccessStore(db, () =>
+          Effect.sync(() => [
+            { name: "check", description: "Synthetic", mode: "allow" },
+            { name: "check_bot_task", description: "Poll", mode: "allow" },
+          ])
+        )
         if (scenario === "cancel") {
           active = false
-          turns.requestStop(turnId)
-          access.cancel(turnId)
+          Effect.runSync(turns.requestStop(turnId))
+          Effect.runSync(access.cancel(turnId))
         }
         if (scenario === "steer") epoch = "New user constraints"
         if (scenario === "approval-wait")
-          access.decide(
-            access.pending()[0]!.id,
-            true,
-            access.pending()[0]!.revision
+          Effect.runSync(
+            access.decide(
+              Effect.runSync(access.pending())[0]!.id,
+              true,
+              Effect.runSync(access.pending())[0]!.revision
+            )
           )
         storage = await openNodeSqliteStorage(path)
         harness = await Harness.open(storage, options(storage), ctx)
         conversation = (await harness.conversation(conversation.id, ctx))!
         if (scenario === "cancel") await conversation.abort(ctx)
         expect((await conversation.submit(command, ctx)).id).toBe(first.id)
-        if (scenario === "cancel") expect(store.get(turnId)).toEqual(saved)
+        if (scenario === "cancel")
+          expect(Effect.runSync(store.get(turnId))).toEqual(saved)
       }
       await (await conversation.submit(command, ctx)).wait(ctx)
       await conversation.waitForIdle(ctx)
@@ -304,7 +332,7 @@ it.each([
                   ? 8
                   : 5
       expect(calls).toBe(expected)
-      expect(store.get(turnId)?.view?.phase).toBe(
+      expect(Effect.runSync(store.get(turnId))?.view?.phase).toBe(
         scenario === "corrected" || scenario === "poll"
           ? "recovered"
           : scenario === "cancel"
@@ -338,9 +366,11 @@ it.each([
         expect(requests[4]).not.toContain("Run recovery:")
       }
       if (scenario === "denied" || scenario === "hook-denied")
-        expect(store.get(turnId)?.view?.reason).toBe("denied")
+        expect(Effect.runSync(store.get(turnId))?.view?.reason).toBe("denied")
       if (scenario === "uncertain")
-        expect(store.get(turnId)?.view?.reason).toBe("uncertain")
+        expect(Effect.runSync(store.get(turnId))?.view?.reason).toBe(
+          "uncertain"
+        )
       await events.stop()
       const before = calls
       expect((await conversation.submit(command, ctx)).id).toBe(first.id)

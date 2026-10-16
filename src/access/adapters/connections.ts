@@ -1,7 +1,10 @@
 import { Effect, Schema } from "effect"
-import type { Sqlite } from "../../storage/sqlite"
+import { eq } from "drizzle-orm"
+import type { EffectDrizzleQueryError } from "drizzle-orm/effect-core/errors"
+import { mapSqliteError, type Sqlite } from "../../storage/sqlite"
 import type {
   ConnectionLedger,
+  ConnectionFailure,
   RemoteSelectionRepository,
 } from "../connection-ledger"
 import * as Domain from "../connection-domain"
@@ -13,136 +16,181 @@ import {
   type NewConnection,
   type RemoteTool,
 } from "../connections"
+import { accessConnections as connections, botRemoteTools } from "./schema"
 
-export class ConnectionStore implements ConnectionLedger {
-  constructor(private readonly db: Sqlite) {
-    const storage = <T>(operation: string, body: () => T): T => {
-      try {
-        return body()
-      } catch (cause) {
-        throw new ConnectionStorageError({ operation, cause })
-      }
-    }
-    this.db = {
-      all: (query, ...bindings) =>
-        storage("read", () => db.all(query, ...bindings)),
-      run: (query, ...bindings) =>
-        storage("write", () => db.run(query, ...bindings)),
-      transaction: (body) => {
-        const callback: { failed: boolean; cause?: unknown } = { failed: false }
-        try {
-          return db.transaction(() => {
-            try {
-              return body()
-            } catch (cause) {
-              callback.failed = true
-              callback.cause = cause
-              throw cause
-            }
-          })
-        } catch (cause) {
-          if (callback.failed && cause === callback.cause) throw cause
-          throw new ConnectionStorageError({ operation: "transaction", cause })
-        }
-      },
-    }
-    this.db.run(
-      "CREATE TABLE IF NOT EXISTS access_connections (id TEXT PRIMARY KEY,name TEXT NOT NULL,url TEXT NOT NULL,revision INTEGER NOT NULL,active INTEGER NOT NULL)"
-    )
-    this.db.run(
-      "CREATE TABLE IF NOT EXISTS bot_remote_tools (id INTEGER PRIMARY KEY,revision INTEGER NOT NULL,tools TEXT NOT NULL)"
-    )
-  }
-  list(): SavedConnection[] {
-    return this.db
-      .all<Omit<SavedConnection, "active"> & { active: number }>(
-        "SELECT * FROM access_connections ORDER BY name,id"
-      )
-      .map((row) =>
-        Schema.decodeUnknownSync(SavedConnection)({
-          ...row,
-          active: !!row.active,
-        })
-      )
-  }
-  get(id: string) {
-    return this.list().find((value) => value.id === id)
-  }
-  add(input: NewConnection) {
-    return this.db.transaction(() => {
-      const previous = this.get(input.id)
-      const next = Domain.addConnection(input, previous, this.list().length)
-      if (next === previous) return previous
-      this.db.run(
-        "INSERT INTO access_connections VALUES (?,?,?,?,?)",
-        next.id,
-        next.name,
-        next.url,
-        next.revision,
-        next.active ? 1 : 0
-      )
-      return this.get(input.id)!
-    })
-  }
-  change(id: string, expectedRevision: number, active: boolean) {
-    return this.db.transaction(() => {
-      const current = this.get(id)
-      const next = Domain.changeConnection(current, expectedRevision, active)
-      if (next === current) return current
-      this.db.run(
-        "UPDATE access_connections SET active=?,revision=revision+1 WHERE id=?",
-        active ? 1 : 0,
-        id
-      )
-      return this.get(id)!
-    })
-  }
-  selection(): ToolSelection {
-    const row = this.db.all<{ revision: number; tools: string }>(
-      "SELECT * FROM bot_remote_tools WHERE id=1"
-    )[0]
-    return row
-      ? Schema.decodeUnknownSync(ToolSelection)({
-          revision: row.revision,
-          tools: JSON.parse(row.tools),
-        })
-      : { revision: 0, tools: [] }
-  }
-  select(expectedRevision: number, tools: readonly RemoteTool[]) {
-    return this.db.transaction(() => {
-      const current = this.selection()
-      const next = Domain.selectTools(current, expectedRevision, tools)
-      if (next === current) return current
-      this.db.run(
-        "INSERT INTO bot_remote_tools VALUES (1,?,?) ON CONFLICT(id) DO UPDATE SET revision=excluded.revision,tools=excluded.tools",
-        next.revision,
-        JSON.stringify(next.tools)
-      )
-      return this.selection()
-    })
-  }
-}
-
-const attempt = <T>(body: () => T) =>
+const query = <TValue>(
+  operation: string,
+  effect: Effect.Effect<TValue, EffectDrizzleQueryError>
+) =>
+  mapSqliteError(
+    effect,
+    (cause) => new ConnectionStorageError({ operation, cause })
+  )
+const decision = <TValue>(body: () => TValue) =>
   Effect.try({
     try: body,
     catch: (cause) => {
-      const knownFailure = Schema.decodeUnknownOption(
-        Schema.Union([ConnectionError, ConnectionStorageError])
-      )(cause)
-      if (knownFailure._tag === "Some") return knownFailure.value
+      if (Schema.is(ConnectionError)(cause)) return cause
       throw cause
     },
   })
+export class ConnectionStore implements ConnectionLedger {
+  constructor(private readonly db: Sqlite) {}
+  private atomic<TValue, TError, TRequirements>(
+    body: () => Effect.Effect<TValue, TError, TRequirements>
+  ) {
+    return mapSqliteError(
+      this.db.transaction(body),
+      (cause) => new ConnectionStorageError({ operation: "transaction", cause })
+    )
+  }
+  list() {
+    return this.db
+      .use((orm) =>
+        query(
+          "read",
+          orm
+            .select()
+            .from(connections)
+            .orderBy(connections.name, connections.id)
+        )
+      )
+      .pipe(
+        Effect.map((rows) =>
+          rows.map((row) =>
+            Schema.decodeUnknownSync(SavedConnection)({
+              ...row,
+              active: !!row.active,
+            })
+          )
+        )
+      )
+  }
+  get(id: string) {
+    return this.db
+      .use((orm) =>
+        query(
+          "read",
+          orm.select().from(connections).where(eq(connections.id, id))
+        )
+      )
+      .pipe(
+        Effect.map(([row]) =>
+          row
+            ? Schema.decodeUnknownSync(SavedConnection)({
+                ...row,
+                active: !!row.active,
+              })
+            : undefined
+        )
+      )
+  }
+  add(input: NewConnection) {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const previous = yield* this.get(input.id),
+          records = yield* this.list()
+        const next = yield* decision(() =>
+          Domain.addConnection(input, previous, records.length)
+        )
+        if (next === previous) return previous
+        yield* this.db.use((orm) =>
+          query(
+            "write",
+            orm
+              .insert(connections)
+              .values({ ...next, active: next.active ? 1 : 0 })
+          )
+        )
+        return next
+      })
+    )
+  }
+  change(id: string, revision: number, active: boolean) {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const current = yield* this.get(id),
+          next = yield* decision(() =>
+            Domain.changeConnection(current, revision, active)
+          )
+        if (next !== current)
+          yield* this.db.use((orm) =>
+            query(
+              "write",
+              orm
+                .update(connections)
+                .set({ active: active ? 1 : 0, revision: next.revision })
+                .where(eq(connections.id, id))
+            )
+          )
+        return next
+      })
+    )
+  }
+  selection() {
+    return this.db
+      .use((orm) =>
+        query(
+          "read",
+          orm.select().from(botRemoteTools).where(eq(botRemoteTools.id, 1))
+        )
+      )
+      .pipe(
+        Effect.map(([row]) =>
+          row
+            ? Schema.decodeUnknownSync(ToolSelection)({
+                revision: row.revision,
+                tools: JSON.parse(row.tools),
+              })
+            : { revision: 0, tools: [] }
+        )
+      )
+  }
+  select(
+    revision: number,
+    tools: readonly RemoteTool[],
+    canWrite: () => Effect.Effect<boolean, ConnectionFailure> = () =>
+      Effect.succeed(true)
+  ) {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const writable = yield* canWrite()
+        yield* decision(() => Domain.requireSelectionWrite(writable))
+        const current = yield* this.selection(),
+          next = yield* decision(() =>
+            Domain.selectTools(current, revision, tools)
+          )
+        if (next !== current)
+          yield* this.db.use((orm) =>
+            query(
+              "write",
+              orm
+                .insert(botRemoteTools)
+                .values({
+                  id: 1,
+                  revision: next.revision,
+                  tools: JSON.stringify(next.tools),
+                })
+                .onConflictDoUpdate({
+                  target: botRemoteTools.id,
+                  set: {
+                    revision: next.revision,
+                    tools: JSON.stringify(next.tools),
+                  },
+                })
+            )
+          )
+        return next
+      })
+    )
+  }
+}
 export function sqliteRemoteSelection(
   store: ConnectionLedger
 ): RemoteSelectionRepository {
   return {
-    selection: () => attempt(() => store.selection()),
+    selection: () => store.selection(),
     select: (revision, tools, canWrite) =>
-      attempt(() => {
-        Domain.requireSelectionWrite(canWrite())
-        return store.select(revision, tools)
-      }),
+      store.select(revision, tools, canWrite),
   }
 }

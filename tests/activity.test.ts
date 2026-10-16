@@ -10,6 +10,9 @@ import { activityPage, type ActivityQuery } from "../src/activity/contracts"
 import { activityQuery } from "../src/activity/adapters/http"
 import { ActivityUnavailable } from "../src/activity/records"
 import { AgentId } from "../src/agents/domain"
+import { chatTurns } from "../src/conversations/adapters/schema"
+import { toolOperations } from "../src/access/adapters/schema"
+import { backgroundHandoffs } from "../src/delegation/adapters/schema"
 
 const bot = { id: Schema.decodeUnknownSync(AgentId)("home"), name: "Home" }
 const query: ActivityQuery = { filter: "all", cursor: null }
@@ -19,34 +22,45 @@ function fixture() {
     model: "gpt-6-luna",
     thinking: "low",
   })
-  new AccessStore(db, () => [])
+  new AccessStore(db, () => Effect.succeed([]))
   new SqliteBackgroundMailbox(db)
   return { db, turns }
 }
 it("paginates tied timestamps with stable domain and bot keys; new rows do not repeat earlier pages", () => {
   const { db, turns } = fixture()
   for (let n = 0; n < 85; n++) {
-    const turn = turns.admit({
-      operationId: crypto.randomUUID(),
-      text: `Task ${n}`,
-    }).turn
-    turns.finish(
-      turn,
-      [{ id: turn.id, delivery: "answered" }],
-      "Complete",
-      null
+    const turn = Effect.runSync(
+      turns.admit({
+        operationId: crypto.randomUUID(),
+        text: `Task ${n}`,
+      })
+    ).turn
+    Effect.runSync(
+      turns.finish(
+        turn,
+        [{ id: turn.id, delivery: "answered" }],
+        "Complete",
+        null
+      )
     )
   }
   db.run("UPDATE chat_turns SET created_at='2026-10-11T10:00:00.000Z'")
   const first = activityPage(
-    [{ entries: activityEntries(db, bot, query, Date.now()), issues: [] }],
+    [
+      {
+        entries: Effect.runSync(activityEntries(db, bot, query, Date.now())),
+        issues: [],
+      },
+    ],
     []
   )
   expect(first.entries).toHaveLength(40)
-  const newTurn = turns.admit({
-    operationId: crypto.randomUUID(),
-    text: "Newer",
-  }).turn
+  const newTurn = Effect.runSync(
+    turns.admit({
+      operationId: crypto.randomUUID(),
+      text: "Newer",
+    })
+  ).turn
   db.run(
     "UPDATE chat_turns SET created_at='2026-10-11T11:00:00.000Z' WHERE id=?",
     newTurn.id
@@ -54,11 +68,8 @@ it("paginates tied timestamps with stable domain and bot keys; new rows do not r
   const second = activityPage(
     [
       {
-        entries: activityEntries(
-          db,
-          bot,
-          { ...query, cursor: first.next },
-          Date.now()
+        entries: Effect.runSync(
+          activityEntries(db, bot, { ...query, cursor: first.next }, Date.now())
         ),
         issues: [],
       },
@@ -68,11 +79,13 @@ it("paginates tied timestamps with stable domain and bot keys; new rows do not r
   const third = activityPage(
     [
       {
-        entries: activityEntries(
-          db,
-          bot,
-          { ...query, cursor: second.next },
-          Date.now()
+        entries: Effect.runSync(
+          activityEntries(
+            db,
+            bot,
+            { ...query, cursor: second.next },
+            Date.now()
+          )
         ),
         issues: [],
       },
@@ -103,14 +116,16 @@ it("projects receipt state without arguments, results or execution side effects"
       throw new Error("Activity must not mutate")
     },
   }
-  const entries = activityEntries(
-    readOnly,
-    bot,
-    {
-      ...query,
-      filter: "attention",
-    },
-    Date.now()
+  const entries = Effect.runSync(
+    activityEntries(
+      readOnly,
+      bot,
+      {
+        ...query,
+        filter: "attention",
+      },
+      Date.now()
+    )
   )
   expect(entries).toHaveLength(1)
   expect(entries[0]).toMatchObject({
@@ -122,11 +137,13 @@ it("projects receipt state without arguments, results or execution side effects"
   expect(JSON.stringify(entries)).not.toContain("PRIVATE")
   db.run("UPDATE tool_operations SET status='done'")
   expect(
-    activityEntries(
-      readOnly,
-      bot,
-      { ...query, filter: "attention" },
-      Date.now()
+    Effect.runSync(
+      activityEntries(
+        readOnly,
+        bot,
+        { ...query, filter: "attention" },
+        Date.now()
+      )
     )
   ).toEqual([])
 })
@@ -135,31 +152,47 @@ it("shows expiry without mutating approval receipts and excludes obsolete failur
   db.run(
     "INSERT INTO tool_operations (id,turnId,tool,input,createdAt,expiresAt,status,grantRevision,result,revision) VALUES ('expired','turn-1','browser_open','PRIVATE',0,1,'pending',0,NULL,0)"
   )
-  expect(activityEntries(db, bot, query, Date.now())[0]?.status).toBe("expired")
   expect(
-    activityEntries(db, bot, { ...query, filter: "attention" }, Date.now())
+    Effect.runSync(activityEntries(db, bot, query, Date.now()))[0]?.status
+  ).toBe("expired")
+  expect(
+    Effect.runSync(
+      activityEntries(db, bot, { ...query, filter: "attention" }, Date.now())
+    )
   ).toEqual([])
   expect(
     db.all<{ status: string }>("SELECT status FROM tool_operations")[0]?.status
   ).toBe("pending")
-  const turn = turns.admit({
-    operationId: crypto.randomUUID(),
-    text: "A request",
-  }).turn
-  turns.finish(turn, [{ id: turn.id, delivery: "unanswered" }], "", "Failed")
+  const turn = Effect.runSync(
+    turns.admit({
+      operationId: crypto.randomUUID(),
+      text: "A request",
+    })
+  ).turn
+  Effect.runSync(
+    turns.finish(turn, [{ id: turn.id, delivery: "unanswered" }], "", "Failed")
+  )
   expect(
-    activityEntries(db, bot, { ...query, filter: "attention" }, Date.now())
+    Effect.runSync(
+      activityEntries(db, bot, { ...query, filter: "attention" }, Date.now())
+    )
   ).toHaveLength(1)
-  turns.admit({
-    operationId: crypto.randomUUID(),
-    text: turn.text,
-    retryOf: turn.id,
-  })
+  Effect.runSync(
+    turns.admit({
+      operationId: crypto.randomUUID(),
+      text: turn.text,
+      retryOf: turn.id,
+    })
+  )
   expect(
-    activityEntries(db, bot, { ...query, filter: "attention" }, Date.now())
+    Effect.runSync(
+      activityEntries(db, bot, { ...query, filter: "attention" }, Date.now())
+    )
   ).toEqual([])
   expect(
-    activityEntries(db, bot, { ...query, filter: "running" }, Date.now())
+    Effect.runSync(
+      activityEntries(db, bot, { ...query, filter: "running" }, Date.now())
+    )
   ).toHaveLength(1)
 })
 it("reads only supplied owner-catalog bots and exposes partial failure rather than an empty success", async () => {
@@ -231,16 +264,20 @@ it.each([
 
 it("shows recovery and blocked states while cancellation remains authoritative", () => {
   const { db, turns } = fixture()
-  const { turn } = turns.admit({
-    operationId: crypto.randomUUID(),
-    text: "Recover this task",
-  })
+  const { turn } = Effect.runSync(
+    turns.admit({
+      operationId: crypto.randomUUID(),
+      text: "Recover this task",
+    })
+  )
   db.run(
     "UPDATE chat_turns SET status='running',recovery=? WHERE id=?",
     JSON.stringify({ view: { phase: "recovering" } }),
     turn.id
   )
-  expect(activityEntries(db, bot, query, Date.now())[0]).toMatchObject({
+  expect(
+    Effect.runSync(activityEntries(db, bot, query, Date.now()))[0]
+  ).toMatchObject({
     status: "recovering",
     running: true,
   })
@@ -250,11 +287,81 @@ it("shows recovery and blocked states while cancellation remains authoritative",
     turn.id
   )
   expect(
-    activityEntries(db, bot, { ...query, filter: "attention" }, Date.now())[0]
+    Effect.runSync(
+      activityEntries(db, bot, { ...query, filter: "attention" }, Date.now())
+    )[0]
   ).toMatchObject({ status: "blocked", attention: true, running: false })
   db.run("UPDATE chat_turns SET status='cancelled' WHERE id=?", turn.id)
-  expect(activityEntries(db, bot, query, Date.now())[0]).toMatchObject({
+  expect(
+    Effect.runSync(activityEntries(db, bot, query, Date.now()))[0]
+  ).toMatchObject({
     status: "cancelled",
     attention: false,
   })
+})
+
+it("keeps mixed sources in one globally bounded page when timestamps tie", () => {
+  const db = database()
+  const at = "2026-10-16T12:00:00.000Z"
+  const now = new Date(at).getTime()
+  const turns = Array.from({ length: 20 }, (_, index) => ({
+    id: `request-${String(index).padStart(2, "0")}`,
+    text: "😀".repeat(190),
+    status: "failed",
+    created_at: at,
+  }))
+  const tools = Array.from({ length: 20 }, (_, index) => ({
+    id: `receipt-${String(index).padStart(2, "0")}`,
+    turnId: "run",
+    tool: "write",
+    input: "PRIVATE INPUT",
+    createdAt: now,
+    expiresAt: now + 60_000,
+    status: "pending",
+    grantRevision: 0,
+  }))
+  const background = Array.from({ length: 20 }, (_, index) => ({
+    id: index + 1,
+    turn_id: `background-${index}`,
+    handoff: JSON.stringify({
+      createdAt: now,
+      input: { objective: "Background task" },
+    }),
+    status: "paused",
+  }))
+  Effect.runSync(db.use((orm) => orm.insert(chatTurns).values(turns)))
+  Effect.runSync(db.use((orm) => orm.insert(toolOperations).values(tools)))
+  Effect.runSync(
+    db.use((orm) => orm.insert(backgroundHandoffs).values(background))
+  )
+  const read = (cursor: ActivityQuery["cursor"]) =>
+    Effect.runSync(
+      activityEntries(db, bot, { filter: "attention", cursor }, now)
+    )
+  const candidates = read(null)
+  expect(candidates).toHaveLength(41)
+  const first = activityPage([{ entries: candidates, issues: [] }], [])
+  const second = activityPage([{ entries: read(first.next), issues: [] }], [])
+  const expected = [
+    ...turns.map((turn) => `home:turn:${turn.id}`),
+    ...tools.map((tool) => `home:tool:${tool.id}`),
+    ...background.map((task) => `home:background:${task.id}`),
+  ]
+    .sort()
+    .reverse()
+  expect(
+    [...first.entries, ...second.entries].map((entry) => entry.key)
+  ).toEqual(expected)
+  expect(first.entries).toHaveLength(40)
+  expect(second.entries).toHaveLength(20)
+  expect(second.next).toBeNull()
+  expect(
+    first.entries.find((entry) => entry.kind === "conversation")?.title
+  ).toBe("😀".repeat(180))
+  expect(
+    Effect.runSync(
+      activityEntries(db, bot, { filter: "running", cursor: null }, now)
+    )
+  ).toEqual([])
+  expect(JSON.stringify(candidates)).not.toContain("PRIVATE INPUT")
 })

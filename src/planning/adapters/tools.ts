@@ -8,7 +8,7 @@ import {
 } from "@earendil-works/pi-durable"
 import { Type } from "@earendil-works/pi-ai"
 import type { Plans, PlanSource } from "../plans"
-import type { PlanFailure } from "../contracts"
+import { PlanFailure } from "../contracts"
 
 const standalone = <T>(
   operation: Effect.Effect<T, PlanFailure>,
@@ -67,7 +67,9 @@ const result = (value: unknown) => ({
 })
 export function planTools(
   plans: Plans,
-  source: (api: ToolExecutionApi) => PlanSource,
+  source: (
+    api: ToolExecutionApi
+  ) => Effect.Effect<PlanSource | undefined, PlanFailure>,
   run: typeof standalone = standalone
 ) {
   return [
@@ -85,9 +87,16 @@ export function planTools(
         draft,
       }),
       execute: async (args, api, context) => {
-        const origin =
-          (await api.memo<PlanSource>("plans:source", context)) ??
-          (await api.memo("plans:source", source(api), context))
+        let origin = await api.memo<PlanSource>("plans:source", context)
+        if (!origin) {
+          const current = await run(source(api), context.abortSignal)
+          if (!current)
+            throw new PlanFailure({
+              code: "cancelled",
+              message: "This run has stopped. A saved plan cannot resume it.",
+            })
+          origin = await api.memo("plans:source", current, context)
+        }
         const planId =
           args.id ?? (await api.memo("plans:id", crypto.randomUUID(), context))
         return result(
@@ -177,13 +186,14 @@ export function planTools(
 
 export function planContextHook(
   plans: Plans,
-  source: (api: HookApi) => PlanSource | undefined,
-  maxBytes: () => number = () => 8192,
+  source: (api: HookApi) => Effect.Effect<PlanSource | undefined, PlanFailure>,
+  maxBytes: () => Effect.Effect<number, PlanFailure> = () =>
+    Effect.succeed(8192),
   run: typeof standalone = standalone
 ) {
   return hook(GenerationTask, {
     beforeRequest: async ({ messages }, api, context) => {
-      const origin = source(api)
+      const origin = await run(source(api), context.abortSignal)
       if (!origin) return { messages }
       const current = await run(plans.context(origin), context.abortSignal)
       const missing = (origin.steering ?? []).filter(
@@ -200,7 +210,7 @@ export function planContextHook(
           ? "\nOriginal user steering for this task (reconcile these requirements):\n" +
             JSON.stringify(missing)
           : ""
-      const limit = maxBytes()
+      const limit = await run(maxBytes(), context.abortSignal)
       const fits = (text: string) =>
         new TextEncoder().encode(text).byteLength <= limit
       let text = `${notice}\n${JSON.stringify(current)}${steering}`

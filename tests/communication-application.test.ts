@@ -1,3 +1,4 @@
+import { sqliteTable, text } from "drizzle-orm/sqlite-core"
 import { Cause, Deferred, Effect, Exit, Fiber, Layer, Schema } from "effect"
 import { expect, it } from "vitest"
 import { it as effectIt } from "@effect/vitest"
@@ -18,11 +19,16 @@ import {
   type CommunicationError,
 } from "../src/communication/contracts"
 import { AgentId } from "../src/agents/domain"
-import { database } from "./database"
+import { database, corrupt } from "./database"
 import { deliverNext } from "../src/communication/delivery"
 import { TaskExecution } from "../src/communication/execution"
+import { ConversationStorageError } from "../src/conversations/turns"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 
+const resumedTable = sqliteTable("resumed", {
+  id: text("id").primaryKey(),
+  task: text("task").notNull(),
+})
 const run = Effect.runPromise
 const a = Schema.decodeUnknownSync(AgentId)("home"),
   b = Schema.decodeUnknownSync(AgentId)("00000000-0000-4000-8000-000000000001")
@@ -41,15 +47,15 @@ async function fixture(
     mailbox = Effect.runSync(repo.initialize)
   Effect.runSync(repo.bindIdentity({ owner: "synthetic-owner", bot: a }))
   db.run("CREATE TABLE resumed (id TEXT PRIMARY KEY,task TEXT NOT NULL)")
-  let current: ReturnType<Host["current"]> = "done",
+  let current: Effect.Success<ReturnType<Host["current"]>> = "done",
     idle = true,
     wakeFails = false,
     admitFails = false,
     preparations = 0
   const host: Host = {
     transactionGroup: db,
-    current: () => current,
-    idle: () => idle,
+    current: () => Effect.sync(() => current),
+    idle: () => Effect.sync(() => idle),
     contacts: () => Effect.succeed([{ id: b, name: "Drafting bot" }]),
     prepare: () =>
       Effect.sync(() => {
@@ -61,11 +67,29 @@ async function fixture(
         : Effect.void,
     wakeConversation: () => Effect.void,
     notify: () => {},
-    resume: (task, id) => {
-      db.run("INSERT OR IGNORE INTO resumed VALUES (?,?)", id, task.id)
-      if (admitFails) throw new Error("Fixture admission crash")
-      return { kind: "admitted", turnId: id }
-    },
+    resume: (task, id) =>
+      db
+        .use((orm) =>
+          orm
+            .insert(resumedTable)
+            .values({ id, task: task.id })
+            .onConflictDoNothing()
+        )
+        .pipe(
+          Effect.mapError(
+            (cause) =>
+              new ConversationStorageError({
+                operation: "resume fixture",
+                cause,
+              })
+          ),
+          Effect.andThen(() =>
+            Effect.sync(() => {
+              if (admitFails) throw new Error("Fixture admission crash")
+              return { kind: "admitted" as const, turnId: id }
+            })
+          )
+        ),
   }
   const transport = Layer.succeed(MailboxTransport, {
     permitted: () => Effect.succeed(true),
@@ -172,10 +196,11 @@ it("rejects continuation admission in a different transaction group before invok
       .resume(request.id, {
         transactionGroup: database(),
         operationId: "continuation",
-        admit: () => {
-          admissions++
-          return { kind: "admitted", turnId: "continuation" }
-        },
+        admit: () =>
+          Effect.sync(() => {
+            admissions++
+            return { kind: "admitted" as const, turnId: "continuation" }
+          }),
       })
       .pipe(Effect.result)
   )
@@ -195,10 +220,23 @@ it("rolls back continuation writes when admission changes the operation identity
       .resume(request.id, {
         transactionGroup: f.db,
         operationId: "continuation",
-        admit: (task) => {
-          f.db.run("INSERT INTO resumed VALUES (?,?)", "different", task.id)
-          return { kind: "admitted", turnId: "different" }
-        },
+        admit: (task) =>
+          f.db
+            .use((orm) =>
+              orm
+                .insert(resumedTable)
+                .values({ id: "different", task: task.id })
+            )
+            .pipe(
+              Effect.mapError(
+                (cause) =>
+                  new ConversationStorageError({
+                    operation: "resume fixture",
+                    cause,
+                  })
+              ),
+              Effect.as({ kind: "admitted" as const, turnId: "different" })
+            ),
       })
       .pipe(Effect.result)
   )
@@ -229,7 +267,8 @@ it("classifies a failed mailbox write and rolls back the admitted continuation",
 it("keeps corrupt historical task records in the defect channel", async () => {
   const f = await fixture()
   const request = await run(f.app.delegate(brief, source))
-  f.db.run(
+  corrupt(
+    f.db,
     "UPDATE communication_tasks SET body=? WHERE id=?",
     "{corrupt",
     request.id
@@ -255,13 +294,15 @@ it("retains a result receipt and maps a conversation admission write failure to 
       .resume(request.id, {
         transactionGroup: f.db,
         operationId: operation,
-        admit: () => ({
-          kind: "admitted",
-          turnId: conversations.admit({
-            operationId: operation,
-            text: "Continuation",
-          }).turn.id,
-        }),
+        admit: () =>
+          conversations
+            .admit({ operationId: operation, text: "Continuation" })
+            .pipe(
+              Effect.map((admission) => ({
+                kind: "admitted" as const,
+                turnId: admission.turn.id,
+              }))
+            ),
       })
       .pipe(Effect.result)
   )
@@ -270,7 +311,7 @@ it("retains a result receipt and maps a conversation admission write failure to 
     failure: { code: "storage" },
   })
   expect((await run(f.mailbox.task(request.id))).resumed).toBe(false)
-  expect(conversations.recent()).toHaveLength(0)
+  expect(Effect.runSync(conversations.recent())).toHaveLength(0)
 })
 it("does not inject results into an active unrelated turn or restart cancelled work", async () => {
   const f = await fixture(),

@@ -54,10 +54,10 @@ describe("Linux commands", () => {
       Effect.scoped(f.terminal.service.start(input))
     )
     await started.promise
-    expect(f.repository.get(input.id)?.status).toBe("running")
+    expect(Effect.runSync(f.repository.get(input.id))?.status).toBe("running")
     done.resolve(0)
     await f.terminal.runtime.runPromise(task.completion)
-    expect(f.repository.get(input.id)?.status).toBe("succeeded")
+    expect(Effect.runSync(f.repository.get(input.id))?.status).toBe("succeeded")
   })
   it("awaits noncooperative foreign work during actor scope shutdown", async () => {
     const restoring = deferred<void>(),
@@ -82,17 +82,19 @@ describe("Linux commands", () => {
     })
     await closing.promise
     expect(disposed).toBe(false)
-    expect(f.repository.checkpoint()).toBeNull()
+    expect(Effect.runSync(f.repository.checkpoint())).toBeNull()
     settled.resolve()
     await disposal
     await completion
     expect(f.runtime.execute).not.toHaveBeenCalled()
     expect(f.runtime.snapshot).not.toHaveBeenCalled()
-    expect(f.repository.get(input.id)?.status).not.toBe("running")
+    expect(Effect.runSync(f.repository.get(input.id))?.status).not.toBe(
+      "running"
+    )
     await expect(
       run(f.terminal.service.start({ ...input, id: "after-stop" }))
     ).rejects.toThrow("host has stopped")
-    expect(f.repository.get("after-stop")).toBeUndefined()
+    expect(Effect.runSync(f.repository.get("after-stop"))).toBeUndefined()
   })
   it("awaits cleanup even when recording a failed outcome also fails", async () => {
     const f = fixture({
@@ -109,7 +111,9 @@ describe("Linux commands", () => {
     expect(f.terminal.state().busy).toBe(false)
     f.db.run("DROP TRIGGER fail_finish")
     await f.terminal.recover()
-    expect(f.repository.get(input.id)?.status).toBe("interrupted")
+    expect(Effect.runSync(f.repository.get(input.id))?.status).toBe(
+      "interrupted"
+    )
   })
   it("joins noncooperative recovery close before actor runtime disposal completes", async () => {
     const closing = deferred<void>(),
@@ -120,7 +124,7 @@ describe("Linux commands", () => {
         await closed.promise
       }),
     })
-    f.repository.admit(input)
+    Effect.runSync(f.repository.admit(input))
     const recovery = f.terminal.recover().catch(() => {})
     await closing.promise
     let disposed = false
@@ -132,7 +136,9 @@ describe("Linux commands", () => {
         run(f.terminal.service.start({ ...input, id: "during-disposal" }))
       ).rejects.toThrow("host has stopped")
     })
-    expect(f.repository.get(input.id)?.status).toBe("interrupted")
+    expect(Effect.runSync(f.repository.get(input.id))?.status).toBe(
+      "interrupted"
+    )
     expect(disposed).toBe(false)
     expect((await run(f.terminal.service.state())).busy).toBe(true)
     closed.resolve()
@@ -155,15 +161,17 @@ describe("Linux commands", () => {
     await started.promise
     f.terminal.configure(3, true)
     f.terminal.configure(3, true, 2)
-    expect(f.repository.get(input.id)?.status).toBe("cancelled")
+    expect(Effect.runSync(f.repository.get(input.id))?.status).toBe("cancelled")
     done.resolve(0)
     await previous.completion
-    expect(f.repository.checkpoint()).toBeNull()
+    expect(Effect.runSync(f.repository.checkpoint())).toBeNull()
     const newer = await run(f.terminal.start({ ...input, id: "restored" }))
     f.terminal.configure(2, false)
     await newer.completion
-    expect(f.repository.get("restored")?.status).toBe("succeeded")
-    expect(f.repository.authority()).toMatchObject({
+    expect(Effect.runSync(f.repository.get("restored"))?.status).toBe(
+      "succeeded"
+    )
+    expect(Effect.runSync(f.repository.authority())).toMatchObject({
       revision: 3,
       active: 1,
       revokedThrough: 2,
@@ -171,32 +179,34 @@ describe("Linux commands", () => {
   })
   it("fences checkpoint commit even when authority revocation is applied directly", () => {
     const f = fixture()
-    f.repository.admit(input)
-    f.repository.configure(3, true, 2)
-    f.repository.finish(
-      input.id,
-      { status: "succeeded", exitCode: 0, error: null },
-      checkpoint
+    Effect.runSync(f.repository.admit(input))
+    Effect.runSync(f.repository.configure(3, true, 2))
+    Effect.runSync(
+      f.repository.finish(
+        input.id,
+        { status: "succeeded", exitCode: 0, error: null },
+        checkpoint
+      )
     )
-    expect(f.repository.get(input.id)?.status).toBe("cancelled")
-    expect(f.repository.checkpoint()).toBeNull()
+    expect(Effect.runSync(f.repository.get(input.id))?.status).toBe("cancelled")
+    expect(Effect.runSync(f.repository.checkpoint())).toBeNull()
   })
   it("durably admits once and atomically saves output with a workspace checkpoint", async () => {
     const f = fixture()
     f.runtime.execute = vi.fn(async (_, append) => {
-      expect(f.repository.get(input.id)?.status).toBe("running")
+      expect(Effect.runSync(f.repository.get(input.id))?.status).toBe("running")
       append("hello")
       return 0
     })
     await (
       await run(f.terminal.start(input))
     ).completion
-    expect(f.repository.get(input.id)).toMatchObject({
+    expect(Effect.runSync(f.repository.get(input.id))).toMatchObject({
       status: "succeeded",
       output: "hello",
       savedAt: 42,
     })
-    expect(f.repository.checkpoint()).toEqual(checkpoint)
+    expect(Effect.runSync(f.repository.checkpoint())).toEqual(checkpoint)
     await (
       await run(f.terminal.start(input))
     ).completion
@@ -213,7 +223,7 @@ describe("Linux commands", () => {
       expect.any(AbortSignal),
       true
     )
-    expect(f.repository.list()[0]).not.toHaveProperty("output")
+    expect(Effect.runSync(f.repository.list())[0]).not.toHaveProperty("output")
   })
   it("retains admission while cancelled startup settles and fences every later phase", async () => {
     const started = deferred<void>(),
@@ -227,7 +237,7 @@ describe("Linux commands", () => {
     const task = await run(f.terminal.start(input))
     await started.promise
     await run(f.terminal.cancel(input.id))
-    expect(f.repository.get(input.id)?.status).toBe("cancelled")
+    expect(Effect.runSync(f.repository.get(input.id))?.status).toBe("cancelled")
     await expect(
       run(f.terminal.start({ ...input, id: "second" }))
     ).rejects.toThrow("cleanup")
@@ -252,8 +262,8 @@ describe("Linux commands", () => {
     await run(f.terminal.cancel(input.id))
     done.resolve(checkpoint)
     await task.completion
-    expect(f.repository.checkpoint()).toBeNull()
-    expect(f.repository.get(input.id)?.status).toBe("cancelled")
+    expect(Effect.runSync(f.repository.checkpoint())).toBeNull()
+    expect(Effect.runSync(f.repository.get(input.id))?.status).toBe("cancelled")
   })
   it("bounds output and destroys a runaway command", async () => {
     const f = fixture({
@@ -265,32 +275,38 @@ describe("Linux commands", () => {
     await (
       await run(f.terminal.start(input))
     ).completion
-    expect(f.repository.get(input.id)).toMatchObject({
+    expect(Effect.runSync(f.repository.get(input.id))).toMatchObject({
       status: "failed",
       output: "x".repeat(MAX_OUTPUT),
     })
-    expect(f.repository.checkpoint()).toBeNull()
+    expect(Effect.runSync(f.repository.checkpoint())).toBeNull()
     expect(f.runtime.close).toHaveBeenCalledTimes(3)
   })
   it("keeps terminal outcomes immutable and never replays interrupted work", async () => {
     const f = fixture()
-    f.repository.admit(input)
+    Effect.runSync(f.repository.admit(input))
     await f.terminal.recover()
     await (
       await run(f.terminal.start(input))
     ).completion
-    expect(f.repository.get(input.id)?.status).toBe("interrupted")
+    expect(Effect.runSync(f.repository.get(input.id))?.status).toBe(
+      "interrupted"
+    )
     expect(f.runtime.execute).not.toHaveBeenCalled()
     await run(f.terminal.cancel(input.id))
-    expect(f.repository.get(input.id)?.status).toBe("interrupted")
+    expect(Effect.runSync(f.repository.get(input.id))?.status).toBe(
+      "interrupted"
+    )
   })
   it("destroys a surviving container after restart before reporting idle or admitting", async () => {
     const closed = deferred<void>()
     const f = fixture({ close: vi.fn(() => closed.promise) })
-    f.repository.admit(input)
+    Effect.runSync(f.repository.admit(input))
     const recovering = f.terminal.recover()
     expect(f.terminal.state().busy).toBe(true)
-    expect(f.repository.get(input.id)?.status).toBe("interrupted")
+    expect(Effect.runSync(f.repository.get(input.id))?.status).toBe(
+      "interrupted"
+    )
     await expect(
       run(f.terminal.start({ ...input, id: "new" }))
     ).rejects.toThrow("cleanup")
@@ -318,7 +334,7 @@ describe("Linux commands", () => {
     await (
       await run(f.terminal.start(input))
     ).completion
-    expect(f.repository.get(input.id)?.status).toBe("cancelled")
+    expect(Effect.runSync(f.repository.get(input.id))?.status).toBe("cancelled")
     expect(f.runtime.execute).not.toHaveBeenCalled()
   })
   it("rejects stale reactivation and stops running work on archival", async () => {
@@ -334,14 +350,14 @@ describe("Linux commands", () => {
     await started.promise
     f.terminal.configure(2, false)
     f.terminal.configure(1, true)
-    expect(f.repository.get(input.id)?.status).toBe("cancelled")
+    expect(Effect.runSync(f.repository.get(input.id))?.status).toBe("cancelled")
     done.resolve(0)
     await task.completion
     await expect(
       run(f.terminal.start({ ...input, id: "other" }))
     ).rejects.toThrow("not active")
     f.terminal.configure(3, true)
-    expect(f.repository.authority()?.active).toBe(1)
+    expect(Effect.runSync(f.repository.authority())?.active).toBe(1)
     expect(f.backups.write).not.toHaveBeenCalled()
   })
   it("does not expose another bot's output or checkpoint", async () => {
@@ -350,8 +366,8 @@ describe("Linux commands", () => {
     await (
       await run(a.terminal.start(input))
     ).completion
-    expect(b.repository.get(input.id)).toBeUndefined()
-    expect(b.repository.checkpoint()).toBeNull()
+    expect(Effect.runSync(b.repository.get(input.id))).toBeUndefined()
+    expect(Effect.runSync(b.repository.checkpoint())).toBeNull()
   })
 })
 describe("untrusted sandbox streams", () => {
@@ -508,7 +524,7 @@ describe("Pi command service", () => {
     release.resolve()
     const exit = await pending
     expect(Exit.isFailure(exit) && Cause.hasInterrupts(exit.cause)).toBe(true)
-    expect(f.repository.get(input.id)?.status).toBe("cancelled")
+    expect(Effect.runSync(f.repository.get(input.id))?.status).toBe("cancelled")
     expect(f.runtime.execute).not.toHaveBeenCalled()
   })
 })
@@ -558,7 +574,9 @@ describe("interactive workspace ownership", () => {
     expect(Exit.isFailure(exit) && Cause.hasInterrupts(exit.cause)).toBe(true)
     await task.completion
     expect(socket.close).toHaveBeenCalledOnce()
-    expect(f.repository.get("interrupted-socket")?.status).toBe("succeeded")
+    expect(Effect.runSync(f.repository.get("interrupted-socket"))?.status).toBe(
+      "succeeded"
+    )
     expect(f.terminal.state().busy).toBe(false)
   })
   it("holds the workspace until Save closes the shell and checkpoints it", async () => {
@@ -579,7 +597,7 @@ describe("interactive workspace ownership", () => {
     await run(f.terminal.session("interactive").save())
     await task.completion
     expect(close).toHaveBeenCalledTimes(1)
-    expect(f.repository.get("interactive")).toMatchObject({
+    expect(Effect.runSync(f.repository.get("interactive"))).toMatchObject({
       kind: "session",
       status: "succeeded",
       output: "",
@@ -602,7 +620,9 @@ describe("interactive workspace ownership", () => {
     await run(f.terminal.cancel("interactive"))
     await task.completion
     expect(f.backups.write).not.toHaveBeenCalled()
-    expect(f.repository.get("interactive")?.status).toBe("cancelled")
+    expect(Effect.runSync(f.repository.get("interactive"))?.status).toBe(
+      "cancelled"
+    )
   })
   it("expires without authenticated renewals and does not publish changes", async () => {
     vi.useFakeTimers()
@@ -620,7 +640,9 @@ describe("interactive workspace ownership", () => {
       await task.completion
       expect(f.backups.write).not.toHaveBeenCalled()
       expect(f.terminal.state().busy).toBe(false)
-      expect(f.repository.get("interactive")?.status).toBe("failed")
+      expect(Effect.runSync(f.repository.get("interactive"))?.status).toBe(
+        "failed"
+      )
     } finally {
       vi.useRealTimers()
     }
@@ -661,7 +683,9 @@ it("revokes a pre-archive PTY after restore while preserving a newly admitted PT
   )
   f.terminal.configure(3, true, 2)
   await old.completion
-  expect(f.repository.get("old-session")?.status).toBe("cancelled")
+  expect(Effect.runSync(f.repository.get("old-session"))?.status).toBe(
+    "cancelled"
+  )
   expect(f.backups.write).not.toHaveBeenCalled()
   const restored = await run(f.terminal.startSession("restored-session"))
   await vi.waitFor(() =>
@@ -671,7 +695,9 @@ it("revokes a pre-archive PTY after restore while preserving a newly admitted PT
   expect(f.terminal.session("restored-session").live).toBe(true)
   await run(f.terminal.session("restored-session").save())
   await restored.completion
-  expect(f.repository.get("restored-session")?.status).toBe("succeeded")
+  expect(Effect.runSync(f.repository.get("restored-session"))?.status).toBe(
+    "succeeded"
+  )
   expect(f.backups.write).toHaveBeenCalledOnce()
 })
 
@@ -715,7 +741,7 @@ it.each(["cancel", "save"] as const)(
     expect(alive).toBe(false)
     expect(socket.close).toHaveBeenCalledOnce()
     expect(f.terminal.state().busy).toBe(false)
-    expect(f.repository.get("interactive")?.status).toBe(
+    expect(Effect.runSync(f.repository.get("interactive"))?.status).toBe(
       action === "save" ? "succeeded" : "cancelled"
     )
   }
@@ -729,7 +755,7 @@ describe("owner-controlled terminal internet access", () => {
       unrestricted: true,
     })
     f.terminal.configureNetwork({ revision: 0, unrestricted: true })
-    expect(new TerminalStore(f.db).networkPolicy()).toEqual({
+    expect(Effect.runSync(new TerminalStore(f.db).networkPolicy())).toEqual({
       revision: 1,
       unrestricted: true,
     })
@@ -738,7 +764,9 @@ describe("owner-controlled terminal internet access", () => {
     ).toThrow("changed")
     expect(fixture().terminal.state().networkPolicy.unrestricted).toBe(true)
     f.terminal.configureNetwork({ revision: 1, unrestricted: false })
-    expect(new TerminalStore(f.db).networkPolicy().unrestricted).toBe(false)
+    expect(
+      Effect.runSync(new TerminalStore(f.db).networkPolicy()).unrestricted
+    ).toBe(false)
     f.terminal.configure(1, false)
     expect(() =>
       f.terminal.configureNetwork({ revision: 2, unrestricted: false })
@@ -750,7 +778,9 @@ describe("owner-controlled terminal internet access", () => {
     await (
       await run(f.terminal.start(input))
     ).completion
-    expect(f.repository.get(input.id)?.networkUnrestricted).toBe(true)
+    expect(
+      Effect.runSync(f.repository.get(input.id))?.networkUnrestricted
+    ).toBe(true)
     expect(f.runtime.restore).toHaveBeenLastCalledWith(
       null,
       expect.any(AbortSignal),
@@ -769,7 +799,9 @@ describe("owner-controlled terminal internet access", () => {
       expect.any(AbortSignal),
       false
     )
-    expect(f.repository.get("offline")?.networkUnrestricted).toBe(false)
+    expect(
+      Effect.runSync(f.repository.get("offline"))?.networkUnrestricted
+    ).toBe(false)
   })
   it("rejects network changes during commands, interactive sessions, and recovery", async () => {
     const started = deferred<void>(),
@@ -831,22 +863,26 @@ it("reports only newly committed terminal outcomes and restart interruptions", (
   const db = database(),
     observed = vi.fn()
   const store = new TerminalStore(db, observed)
-  store.configure(0, true)
-  store.admit(input)
-  store.finish(input.id, { status: "succeeded", exitCode: 0, error: null })
-  store.finish(input.id, {
-    status: "failed",
-    exitCode: 1,
-    error: "late replay",
-  })
+  Effect.runSync(store.configure(0, true))
+  Effect.runSync(store.admit(input))
+  Effect.runSync(
+    store.finish(input.id, { status: "succeeded", exitCode: 0, error: null })
+  )
+  Effect.runSync(
+    store.finish(input.id, {
+      status: "failed",
+      exitCode: 1,
+      error: "late replay",
+    })
+  )
   expect(observed).toHaveBeenCalledTimes(1)
   expect(observed.mock.calls[0]?.[0]).toMatchObject({
     id: input.id,
     status: "succeeded",
   })
-  store.admit({ ...input, id: "interrupted" })
-  new TerminalStore(db, observed).recover()
-  new TerminalStore(db, observed).recover()
+  Effect.runSync(store.admit({ ...input, id: "interrupted" }))
+  Effect.runSync(new TerminalStore(db, observed).recover())
+  Effect.runSync(new TerminalStore(db, observed).recover())
   expect(observed).toHaveBeenCalledTimes(2)
   expect(observed.mock.calls[1]?.[0]).toMatchObject({
     id: "interrupted",
@@ -857,10 +893,36 @@ it("does not let failed telemetry change a committed command result", () => {
   const store = new TerminalStore(database(), () => {
     throw new Error("telemetry failed")
   })
-  store.configure(0, true)
-  store.admit(input)
+  Effect.runSync(store.configure(0, true))
+  Effect.runSync(store.admit(input))
   expect(
-    store.finish(input.id, { status: "succeeded", exitCode: 0, error: null })
-      .status
+    Effect.runSync(
+      store.finish(input.id, { status: "succeeded", exitCode: 0, error: null })
+    ).status
   ).toBe("succeeded")
+})
+
+it("retains a cancellation fence when outcome publication fails and observes only a committed finish", () => {
+  const db = database(),
+    observed = vi.fn(),
+    store = new TerminalStore(db, observed)
+  Effect.runSync(store.configure(0, true))
+  Effect.runSync(store.admit(input))
+  db.run(
+    "CREATE TRIGGER reject_cancelled_command BEFORE UPDATE ON terminal_runs WHEN json_extract(NEW.record,'$.status')='cancelled' BEGIN SELECT RAISE(ABORT,'completion unavailable'); END"
+  )
+  expect(
+    Effect.runSync(store.cancel(input.id).pipe(Effect.result))
+  ).toMatchObject({
+    _tag: "Failure",
+    failure: { _tag: "TerminalStorageError" },
+  })
+  expect(db.all("SELECT id FROM terminal_cancellations")).toEqual([
+    { id: input.id },
+  ])
+  expect(observed).not.toHaveBeenCalled()
+  expect(Effect.runSync(store.get(input.id))?.status).toBe("running")
+  db.run("DROP TRIGGER reject_cancelled_command")
+  expect(Effect.runSync(store.cancel(input.id))?.status).toBe("cancelled")
+  expect(observed).toHaveBeenCalledOnce()
 })

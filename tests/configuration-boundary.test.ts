@@ -7,7 +7,7 @@ import {
 } from "../src/agents/configuration"
 import { homeAgentId } from "../src/agents/domain"
 import { BotConfigurationStore } from "../src/agents/adapters/configuration"
-import { database } from "./database"
+import { database, corrupt } from "./database"
 
 const profile = {
   id: homeAgentId,
@@ -110,18 +110,19 @@ it.effect(
         Effect.provide(configurationApplication(store))
       )
       yield* configuration.configure("owner", profile)
-      db.run("UPDATE bot_admission SET status='invalid'")
+      corrupt(db, "UPDATE bot_admission SET status='invalid'")
       const exit = yield* configuration.read().pipe(Effect.exit)
       expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)
       expect(Exit.isFailure(exit) && Cause.hasFails(exit.cause)).toBe(false)
-      db.all = () => {
-        throw new Error("private driver data")
-      }
+      db.run(
+        "ALTER TABLE bot_configuration RENAME TO unavailable_configuration"
+      )
       const result = yield* configuration.read().pipe(Effect.result)
       expect(result).toMatchObject({
         _tag: "Failure",
         failure: { _tag: "AgentStorageError" },
       })
-      expect(JSON.stringify(result)).not.toContain("private driver data")
+      expect(JSON.stringify(result)).not.toContain("no such table")
+      expect(JSON.stringify(result)).not.toContain("bot_configuration")
     })
 )

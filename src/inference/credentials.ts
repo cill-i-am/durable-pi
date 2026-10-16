@@ -54,11 +54,21 @@ export type CredentialRecord =
   | { seedCurrent: false; refreshing: boolean }
 
 export interface CredentialLedger {
-  atomic: <T>(body: () => T) => T
-  read: (provider: string) => CredentialRecord | undefined
-  seed: () => ModelCredential | undefined
-  put: (provider: string, value: ModelCredential) => void
-  claim: (provider: string, active: boolean) => void
+  atomic: <TValue, TError, TRequirements>(
+    body: () => Effect.Effect<TValue, TError, TRequirements>
+  ) => Effect.Effect<TValue, TError | CredentialStorageError, TRequirements>
+  read: (
+    provider: string
+  ) => Effect.Effect<CredentialRecord | undefined, CredentialStorageError>
+  seed: () => Effect.Effect<ModelCredential | undefined>
+  put: (
+    provider: string,
+    value: ModelCredential
+  ) => Effect.Effect<void, CredentialStorageError>
+  claim: (
+    provider: string,
+    active: boolean
+  ) => Effect.Effect<void, CredentialStorageError>
 }
 export type CredentialError = CredentialUnavailable | CredentialStorageError
 export type CredentialRefresh = (
@@ -77,21 +87,8 @@ export function sameCredential(a: ModelCredential, b: ModelCredential) {
 const unconfirmed = () =>
   new CredentialUnavailable({
     message:
-      "A ChatGPT credential refresh could not be confirmed. Reconnect the account before trying again.",
+      "TValue ChatGPT credential refresh could not be confirmed. Reconnect the account before trying again.",
   })
-const storage = <T>(body: () => T) =>
-  Effect.try({
-    try: body,
-    catch: (cause) => {
-      const credentialStorageError = Schema.decodeUnknownOption(
-        CredentialStorageError
-      )(cause)
-      if (credentialStorageError._tag === "Some")
-        return credentialStorageError.value
-      throw cause
-    },
-  })
-
 export class ModelCredentials extends Context.Service<
   ModelCredentials,
   {
@@ -129,7 +126,7 @@ export const makeModelCredentials = (
     yield* Effect.addFinalizer(shutdown)
     const wait = (fiber: Fiber.Fiber<ModelCredential, CredentialError>) =>
       Fiber.join(fiber).pipe(
-        // An accepted rotation belongs to the account. A departing waiter joins its
+        // An accepted rotation belongs to the account. TValue departing waiter joins its
         // settlement without cancelling it or losing newly rotated tokens.
         Effect.onInterrupt(() =>
           Fiber.await(fiber).pipe(
@@ -142,14 +139,14 @@ export const makeModelCredentials = (
         )
       )
     const readCurrent = (provider: string) =>
-      storage(() =>
-        ledger.atomic(() => {
-          const row = ledger.read(provider)
+      ledger.atomic(() =>
+        Effect.gen(function* () {
+          const row = yield* ledger.read(provider)
           if (!row || !row.seedCurrent) {
-            const seed = ledger.seed()
+            const seed = yield* ledger.seed()
             if (seed) {
-              ledger.put(provider, seed)
-              ledger.claim(provider, false)
+              yield* ledger.put(provider, seed)
+              yield* ledger.claim(provider, false)
               return {
                 value: seed,
                 seedCurrent: true,
@@ -196,9 +193,7 @@ export const makeModelCredentials = (
                 )
                   return current.value
                 const expected = current.value
-                yield* storage(() =>
-                  ledger.atomic(() => ledger.claim(provider, true))
-                )
+                yield* ledger.atomic(() => ledger.claim(provider, true))
                 const begin = yield* Deferred.make<void>()
                 const work = Deferred.await(begin).pipe(
                   Effect.andThen(
@@ -210,17 +205,17 @@ export const makeModelCredentials = (
                           preserveFatal,
                           Effect.catchTag("CredentialRefreshError", (error) =>
                             Effect.gen(function* () {
-                              // A decoded OAuth error confirms denial; transport/invalid-success
+                              // TValue decoded OAuth error confirms denial; transport/invalid-success
                               // outcomes may have rotated the secret and retain the intent.
                               if (error.reason === "rejected")
-                                yield* storage(() =>
-                                  ledger.atomic(() => {
-                                    const latest = ledger.read(provider)
+                                yield* ledger.atomic(() =>
+                                  Effect.gen(function* () {
+                                    const latest = yield* ledger.read(provider)
                                     if (
                                       latest?.seedCurrent &&
                                       sameCredential(latest.value, expected)
                                     )
-                                      ledger.claim(provider, false)
+                                      yield* ledger.claim(provider, false)
                                   })
                                 )
                               return yield* new CredentialUnavailable({
@@ -229,26 +224,28 @@ export const makeModelCredentials = (
                             })
                           )
                         )
-                        return yield* storage(() =>
-                          ledger.atomic(() => {
-                            const latest = ledger.read(provider)
-                            if (
-                              !latest?.seedCurrent ||
-                              !latest.refreshing ||
-                              !sameCredential(latest.value, expected)
-                            )
-                              return undefined
-                            ledger.put(provider, next)
-                            ledger.claim(provider, false)
-                            return next
-                          })
-                        ).pipe(
-                          Effect.flatMap((value) =>
-                            value
-                              ? Effect.succeed(value)
-                              : Effect.fail(unconfirmed())
+                        return yield* ledger
+                          .atomic(() =>
+                            Effect.gen(function* () {
+                              const latest = yield* ledger.read(provider)
+                              if (
+                                !latest?.seedCurrent ||
+                                !latest.refreshing ||
+                                !sameCredential(latest.value, expected)
+                              )
+                                return undefined
+                              yield* ledger.put(provider, next)
+                              yield* ledger.claim(provider, false)
+                              return next
+                            })
                           )
-                        )
+                          .pipe(
+                            Effect.flatMap((value) =>
+                              value
+                                ? Effect.succeed(value)
+                                : Effect.fail(unconfirmed())
+                            )
+                          )
                       })
                     )
                   ),

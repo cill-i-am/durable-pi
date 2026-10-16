@@ -1,19 +1,17 @@
-import { Schema, Clock, Context, Effect, Layer } from "effect"
-import {
-  conversationFailure,
-  type ConversationFailure,
-} from "../conversations/turns"
+import { Clock, Context, Effect, Layer } from "effect"
+import { type ConversationFailure } from "../conversations/turns"
 import { RoutineTransactions } from "./application"
-import {
+import type {
   RoutineConflict,
-  type Routine,
-  type RoutineRun,
-  type RoutineChange,
-  type SaveRoutine,
-  type SetRoutineStatus,
-  type RunRoutineNow,
+  Routine,
+  RoutineRun,
+  RoutineChange,
+  SaveRoutine,
+  SetRoutineStatus,
+  RunRoutineNow,
 } from "./contracts"
-import { RoutinePersistence, RoutineStorageError } from "./persistence"
+import type { RoutineStorageError } from "./persistence"
+import { RoutinePersistence } from "./persistence"
 
 export type RoutineError = RoutineConflict | RoutineStorageError
 export class Routines extends Context.Service<
@@ -54,94 +52,78 @@ export class Routines extends Context.Service<
 /** Admission writes must use this group and finish before the callback returns. */
 export interface RoutineAdmission {
   readonly transactionGroup: object
-  readonly admit: (run: RoutineRun) => string
+  readonly admit: (
+    run: RoutineRun
+  ) => Effect.Effect<string, ConversationFailure>
 }
 
-/** Synchronous authority checks for native Pi callbacks; no asynchronous gap. */
+/** Authority reads compose in the caller's actor transaction. */
 export class RoutineAuthority extends Context.Service<
   RoutineAuthority,
   {
-    canRun: (turnId: string) => boolean
-    nextWake: () => number | undefined
+    canRun: (turnId: string) => Effect.Effect<boolean, RoutineError>
+    nextWake: () => Effect.Effect<number | undefined, RoutineError>
   }
 >()("durable-pi/routines/Authority") {}
 
-/** Shared aggregate transaction operations, never an independently run Effect. */
+/** Shared aggregate operations join the current actor transaction. */
 export class RoutineAdmissionState extends Context.Service<
   RoutineAdmissionState,
   {
     readonly transactionGroup: object
-    readonly get: (id: string) => Routine | undefined
-    readonly inFlight: () => RoutineRun | undefined
-    readonly acceptWebhook: (id: string, payload: string) => RoutineRun
-    readonly cancelPendingRun: (id: string) => RoutineRun | undefined
+    readonly get: (
+      id: string
+    ) => Effect.Effect<Routine | undefined, RoutineError>
+    readonly inFlight: () => Effect.Effect<RoutineRun | undefined, RoutineError>
+    readonly acceptWebhook: (
+      id: string,
+      payload: string
+    ) => Effect.Effect<RoutineRun, RoutineError>
+    readonly cancelPendingRun: (
+      id: string
+    ) => Effect.Effect<RoutineRun | undefined, RoutineError>
   }
 >()("durable-pi/routines/AdmissionState") {}
 
-const attempt = <TResult>(body: () => TResult) =>
-  Effect.try({
-    try: body,
-    catch(cause) {
-      const knownFailure = Schema.decodeUnknownOption(
-        Schema.Union([RoutineConflict, RoutineStorageError])
-      )(cause)
-      if (knownFailure._tag === "Some") return knownFailure.value
-      throw cause // Corrupt records and programming errors remain defects.
-    },
-  })
-
 export function makeRoutineApplication(
   records: RoutinePersistence["Service"],
-  active: () => boolean,
+  active: () => Effect.Effect<boolean, RoutineStorageError>,
   now: () => number,
   uuid: () => string
 ) {
   const tx = new RoutineTransactions(records, active, now, uuid)
   const service = Routines.of({
-    list: Effect.fn("Routines.list")(() => attempt(() => tx.list())),
-    get: Effect.fn("Routines.get")((id: string) => attempt(() => tx.get(id))),
-    runs: Effect.fn("Routines.runs")(() => attempt(() => tx.runs())),
-    inFlight: Effect.fn("Routines.inFlight")(() =>
-      attempt(() => tx.inFlight())
-    ),
-    save: Effect.fn("Routines.save")((input: SaveRoutine) =>
-      attempt(() => tx.save(input))
-    ),
+    list: Effect.fn("Routines.list")(() => tx.list()),
+    get: Effect.fn("Routines.get")((id: string) => tx.get(id)),
+    runs: Effect.fn("Routines.runs")(() => tx.runs()),
+    inFlight: Effect.fn("Routines.inFlight")(() => tx.inFlight()),
+    save: Effect.fn("Routines.save")((input: SaveRoutine) => tx.save(input)),
     setStatus: Effect.fn("Routines.setStatus")((input: SetRoutineStatus) =>
-      attempt(() => tx.setStatus(input))
+      tx.setStatus(input)
     ),
     runNow: Effect.fn("Routines.runNow")((input: RunRoutineNow) =>
-      attempt(() => tx.runNow(input))
+      tx.runNow(input)
     ),
     cancelOperation: Effect.fn("Routines.cancelOperation")((id: string) =>
-      attempt(() => tx.cancelOperation(id))
+      tx.cancelOperation(id)
     ),
-    claimDue: Effect.fn("Routines.claimDue")(() =>
-      attempt(() => tx.claimDue())
-    ),
+    claimDue: Effect.fn("Routines.claimDue")(() => tx.claimDue()),
     deliver: Effect.fn("Routines.deliver")((admission: RoutineAdmission) =>
-      Effect.try({
-        try: () => {
-          if (admission.transactionGroup !== records.transactionGroup)
-            throw new Error(
-              "Routine admission must share its storage transaction group."
-            )
-          return tx.deliver((run) => {
-            if (admission.admit(run) !== run.turnId)
-              throw new Error(
-                "Routine admission returned a different turn identity."
-              )
-          })
-        },
-        catch(cause) {
-          const failure = conversationFailure(cause)
-          if (failure) return failure
-          const knownFailure2 = Schema.decodeUnknownOption(
-            Schema.Union([RoutineConflict, RoutineStorageError])
-          )(cause)
-          if (knownFailure2._tag === "Some") return knownFailure2.value
-          throw cause
-        },
+      Effect.suspend(() => {
+        if (admission.transactionGroup !== records.transactionGroup)
+          throw new Error(
+            "Routine admission must share its storage transaction group."
+          )
+        return tx.deliver((run) =>
+          admission.admit(run).pipe(
+            Effect.map((id) => {
+              if (id !== run.turnId)
+                throw new Error(
+                  "Routine admission returned a different turn identity."
+                )
+            })
+          )
+        )
       })
     ),
     finish: Effect.fn("Routines.finish")(
@@ -149,17 +131,13 @@ export function makeRoutineApplication(
         id: string,
         status: "done" | "failed" | "cancelled",
         error: string | null
-      ) => attempt(() => tx.finish(id, status, error))
+      ) => tx.finish(id, status, error)
     ),
     cancelPendingRun: Effect.fn("Routines.cancelPendingRun")((id: string) =>
-      attempt(() => tx.cancelPendingRun(id))
+      tx.cancelPendingRun(id)
     ),
-    canRun: Effect.fn("Routines.canRun")((id: string) =>
-      attempt(() => tx.canRun(id))
-    ),
-    nextWake: Effect.fn("Routines.nextWake")(() =>
-      attempt(() => tx.nextWake())
-    ),
+    canRun: Effect.fn("Routines.canRun")((id: string) => tx.canRun(id)),
+    nextWake: Effect.fn("Routines.nextWake")(() => tx.nextWake()),
   })
   return Context.make(Routines, service).pipe(
     Context.add(RoutineAuthority, {
@@ -176,7 +154,10 @@ export function makeRoutineApplication(
   )
 }
 
-export const routineApplication = (active: () => boolean, uuid: () => string) =>
+export const routineApplication = (
+  active: () => Effect.Effect<boolean, RoutineStorageError>,
+  uuid: () => string
+) =>
   Layer.effectContext(
     Effect.gen(function* () {
       const records = yield* RoutinePersistence

@@ -1,5 +1,6 @@
 import { expect, it, vi } from "vitest"
-import { Cause } from "effect"
+import { Cause, Effect } from "effect"
+import { AuthStorageError } from "../src/auth/adapters/accounts"
 import {
   receiveWebhook,
   type WebhookIngressBindings,
@@ -26,8 +27,11 @@ function fixture(
       (async () => Response.json({ accepted: true }, { status: 202 }))
   )
   const env: WebhookIngressBindings = {
-    OWNER_EMAIL: "owner@example.com",
-    DB: { prepare: () => ({ bind: () => ({ first: lookup }) }) },
+    owner: () =>
+      Effect.tryPromise({
+        try: lookup,
+        catch: (cause) => new AuthStorageError({ cause }),
+      }).pipe(Effect.uninterruptible),
     AGENT_SERVICE: { fetch: forward },
   }
   const routine = crypto.randomUUID()

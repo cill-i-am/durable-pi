@@ -14,3 +14,4 @@ minimumReleaseAgeExclude:
 patchedDependencies:
   alchemy@2.0.0-beta.81: patches/alchemy@2.0.0-beta.81.patch
   '@modelcontextprotocol/client@2.0.0': patches/@modelcontextprotocol__client@2.0.0.patch
+  agents@0.27.0: patches/agents@0.27.0.patch

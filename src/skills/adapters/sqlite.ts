@@ -1,21 +1,32 @@
-import { Schema } from "effect"
-import type { Sqlite } from "../../storage/sqlite"
+import { Effect, Schema } from "effect"
+import { and, desc, eq, getTableColumns } from "drizzle-orm"
+import type { EffectDrizzleQueryError } from "drizzle-orm/effect-core/errors"
+import { mapSqliteError, type Sqlite } from "../../storage/sqlite"
 import {
   SkillConflict,
   SkillStorageError,
   SkillDocument,
   SkillSelection,
   type SaveSkill,
-  type Skill,
   type SelectSkills,
 } from "../contracts"
 import { SkillSource } from "../source"
 import * as Domain from "../domain"
-import type { SkillLedger } from "../repository"
+import type { SkillError, SkillLedger } from "../repository"
+import {
+  workspaceSkills as skills,
+  workspaceSkillVersions as versions,
+  botSkills,
+} from "./schema"
 
-function document(
-  row: Omit<SkillDocument, "source"> & { source?: string | null }
-): SkillDocument {
+const document = (row: {
+  id: string
+  revision: number
+  name: string
+  body: string
+  createdAt: string
+  source: string | null
+}) => {
   const { source, ...value } = row
   return Schema.decodeUnknownSync(SkillDocument)({
     ...value,
@@ -24,168 +35,224 @@ function document(
       : {}),
   })
 }
-
+const query = <TValue>(
+  operation: string,
+  effect: Effect.Effect<TValue, EffectDrizzleQueryError>
+) =>
+  mapSqliteError(effect, (cause) => new SkillStorageError({ operation, cause }))
+const decision = <TValue>(body: () => TValue) =>
+  Effect.try({
+    try: body,
+    catch: (cause) => {
+      if (Schema.is(SkillConflict)(cause)) return cause
+      throw cause
+    },
+  })
 export class SkillStore implements SkillLedger {
   readonly transactionGroup: object
   constructor(private readonly db: Sqlite) {
     this.transactionGroup = db
-    const storage = <T>(operation: string, body: () => T): T => {
-      try {
-        return body()
-      } catch (cause) {
-        throw new SkillStorageError({ operation, cause })
-      }
-    }
-    this.db = {
-      all: (query, ...bindings) =>
-        storage("read", () => db.all(query, ...bindings)),
-      run: (query, ...bindings) =>
-        storage("write", () => db.run(query, ...bindings)),
-      transaction: (body) => {
-        const failure: { failed: boolean; cause?: unknown } = { failed: false }
-        try {
-          return db.transaction(() => {
-            try {
-              return body()
-            } catch (cause) {
-              failure.failed = true
-              failure.cause = cause
-              throw cause
-            }
-          })
-        } catch (cause) {
-          if (failure.failed && cause === failure.cause) throw cause
-          throw new SkillStorageError({ operation: "transaction", cause })
-        }
-      },
-    }
-
-    this.db.run(
-      "CREATE TABLE IF NOT EXISTS workspace_skills (id TEXT PRIMARY KEY,revision INTEGER NOT NULL,archived INTEGER NOT NULL DEFAULT 0,stateRevision INTEGER NOT NULL DEFAULT 1)"
-    )
-    if (
-      !this.db
-        .all<{ name: string }>("PRAGMA table_info(workspace_skills)")
-        .some((column) => column.name === "stateRevision")
-    )
-      this.db.run(
-        "ALTER TABLE workspace_skills ADD COLUMN stateRevision INTEGER NOT NULL DEFAULT 1"
-      )
-    this.db.run(
-      "CREATE TABLE IF NOT EXISTS workspace_skill_versions (id TEXT NOT NULL,revision INTEGER NOT NULL,name TEXT NOT NULL,body TEXT NOT NULL,createdAt TEXT NOT NULL,PRIMARY KEY(id,revision))"
-    )
-    if (
-      !this.db
-        .all<{ name: string }>("PRAGMA table_info(workspace_skill_versions)")
-        .some((column) => column.name === "source")
-    )
-      this.db.run("ALTER TABLE workspace_skill_versions ADD COLUMN source TEXT")
-    this.db.run(
-      "CREATE TABLE IF NOT EXISTS bot_skills (id INTEGER PRIMARY KEY,revision INTEGER NOT NULL,skills TEXT NOT NULL)"
+  }
+  private atomic<TValue, TError, TRequirements>(
+    body: () => Effect.Effect<TValue, TError, TRequirements>
+  ) {
+    return mapSqliteError(
+      this.db.transaction(body),
+      (cause) => new SkillStorageError({ operation: "transaction", cause })
     )
   }
-  list(): Skill[] {
+  list() {
     return this.db
-      .all<
-        Omit<Skill, "archived" | "source"> & {
-          archived: number
-          source: string | null
-        }
-      >(
-        "SELECT v.*,s.archived,s.stateRevision FROM workspace_skills s JOIN workspace_skill_versions v ON s.id=v.id AND s.revision=v.revision ORDER BY v.name,s.id"
+      .use((orm) =>
+        query(
+          "read",
+          orm
+            .select({
+              ...getTableColumns(versions),
+              archived: skills.archived,
+              stateRevision: skills.stateRevision,
+            })
+            .from(skills)
+            .innerJoin(
+              versions,
+              and(
+                eq(skills.id, versions.id),
+                eq(skills.revision, versions.revision)
+              )
+            )
+            .orderBy(versions.name, skills.id)
+        )
       )
-      .map((value) => ({
-        ...document(value),
-        archived: !!value.archived,
-        stateRevision: value.stateRevision,
-      }))
+      .pipe(
+        Effect.map((rows) =>
+          rows.map((row) => ({
+            ...document(row),
+            archived: !!row.archived,
+            stateRevision: row.stateRevision,
+          }))
+        )
+      )
   }
   versions(id: string) {
     return this.db
-      .all<Omit<SkillDocument, "source"> & { source: string | null }>(
-        "SELECT * FROM workspace_skill_versions WHERE id=? ORDER BY revision DESC",
-        id
+      .use((orm) =>
+        query(
+          "read",
+          orm
+            .select()
+            .from(versions)
+            .where(eq(versions.id, id))
+            .orderBy(desc(versions.revision))
+        )
       )
-      .map(document)
+      .pipe(Effect.map((rows) => rows.map(document)))
   }
-  save(input: SaveSkill): Skill {
-    return this.db.transaction(() => {
-      const current = this.list().find((skill) => skill.id === input.id)
-      const next = Domain.saveSkill(
-        input,
-        current,
-        current ? 0 : this.list().length,
-        new Date().toISOString()
-      )
-      if (next === current) return current
-      this.db.run(
-        "INSERT INTO workspace_skill_versions (id,revision,name,body,createdAt,source) VALUES (?,?,?,?,?,?)",
-        next.id,
-        next.revision,
-        next.name,
-        next.body,
-        next.createdAt,
-        next.source ? JSON.stringify(next.source) : null
-      )
-      this.db.run(
-        "INSERT INTO workspace_skills(id,revision,archived,stateRevision) VALUES (?,?,0,?) ON CONFLICT(id) DO UPDATE SET revision=excluded.revision,stateRevision=excluded.stateRevision",
-        next.id,
-        next.revision,
-        next.stateRevision
-      )
-      return next
-    })
+  save(input: SaveSkill) {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const library = yield* this.list(),
+          current = library.find((s) => s.id === input.id)
+        const next = yield* decision(() =>
+          Domain.saveSkill(
+            input,
+            current,
+            current ? 0 : library.length,
+            new Date().toISOString()
+          )
+        )
+        if (next === current) return current
+        yield* this.db.use((orm) =>
+          query(
+            "write",
+            orm
+              .insert(skills)
+              .values({
+                id: next.id,
+                revision: next.revision,
+                archived: 0,
+                stateRevision: next.stateRevision,
+              })
+              .onConflictDoUpdate({
+                target: skills.id,
+                set: {
+                  revision: next.revision,
+                  stateRevision: next.stateRevision,
+                },
+              })
+          )
+        )
+        yield* this.db.use((orm) =>
+          query(
+            "write",
+            orm.insert(versions).values({
+              ...next,
+              source: next.source ? JSON.stringify(next.source) : null,
+            })
+          )
+        )
+        return next
+      })
+    )
   }
-  archive(id: string, expectedStateRevision: number, archived: boolean) {
-    return this.db.transaction(() => {
-      const current = this.list().find((skill) => skill.id === id)
-      const next = Domain.archiveSkill(current, expectedStateRevision, archived)
-      if (next === current) return current
-      this.db.run(
-        "UPDATE workspace_skills SET archived=?,stateRevision=stateRevision+1 WHERE id=?",
-        archived ? 1 : 0,
-        id
-      )
-      return next
-    })
+  archive(id: string, revision: number, archived: boolean) {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const current = (yield* this.list()).find((s) => s.id === id)
+        const next = yield* decision(() =>
+          Domain.archiveSkill(current, revision, archived)
+        )
+        if (next !== current)
+          yield* this.db.use((orm) =>
+            query(
+              "write",
+              orm
+                .update(skills)
+                .set({
+                  archived: archived ? 1 : 0,
+                  stateRevision: next.stateRevision,
+                })
+                .where(eq(skills.id, id))
+            )
+          )
+        return next
+      })
+    )
   }
-  resolve(references: SelectSkills["skills"]): SkillDocument[] {
-    Domain.uniqueReferences(references)
-    const library = this.list()
-    return references.map((ref) => {
-      Domain.requireAvailableSkill(library, ref.id)
-      const value = this.versions(ref.id).find(
-        (version) => version.revision === ref.revision
-      )
-      if (!value)
-        throw new SkillConflict({
-          message: "This skill revision is unavailable.",
-        })
-      return Schema.decodeUnknownSync(SkillDocument)(value)
-    })
+  resolve(references: SelectSkills["skills"]) {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        yield* decision(() => Domain.uniqueReferences(references))
+        const library = yield* this.list()
+        return yield* Effect.forEach(references, (ref) =>
+          Effect.gen({ self: this }, function* () {
+            yield* decision(() => Domain.requireAvailableSkill(library, ref.id))
+            const value = (yield* this.versions(ref.id)).find(
+              (v) => v.revision === ref.revision
+            )
+            if (!value)
+              return yield* new SkillConflict({
+                message: "This skill revision is unavailable.",
+              })
+            return value
+          })
+        )
+      })
+    )
   }
-  selection(): SkillSelection {
-    const row = this.db.all<{ revision: number; skills: string }>(
-      "SELECT revision,skills FROM bot_skills WHERE id=1"
-    )[0]
-    return row
-      ? Schema.decodeUnknownSync(SkillSelection)({
-          revision: row.revision,
-          skills: JSON.parse(row.skills),
-        })
-      : { revision: 0, skills: [] }
-  }
-  select(expectedRevision: number, skills: readonly SkillDocument[]) {
-    return this.db.transaction(() => {
-      const current = this.selection()
-      const next = Domain.selectSkills(current, expectedRevision, skills)
-      if (next === current) return current
-      this.db.run(
-        "INSERT INTO bot_skills VALUES (1,?,?) ON CONFLICT(id) DO UPDATE SET revision=excluded.revision,skills=excluded.skills",
-        next.revision,
-        JSON.stringify(next.skills)
+  selection() {
+    return this.db
+      .use((orm) =>
+        query("read", orm.select().from(botSkills).where(eq(botSkills.id, 1)))
       )
-      return this.selection()
-    })
+      .pipe(
+        Effect.map(([row]) =>
+          row
+            ? Schema.decodeUnknownSync(SkillSelection)({
+                revision: row.revision,
+                skills: JSON.parse(row.skills),
+              })
+            : { revision: 0, skills: [] }
+        )
+      )
+  }
+  select(
+    revision: number,
+    documents: readonly SkillDocument[],
+    canWrite: () => Effect.Effect<boolean, SkillError> = () =>
+      Effect.succeed(true)
+  ) {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        if (!(yield* canWrite()))
+          return yield* new SkillConflict({
+            message: "Restore this bot before changing its skills.",
+          })
+        const current = yield* this.selection(),
+          next = yield* decision(() =>
+            Domain.selectSkills(current, revision, documents)
+          )
+        if (next !== current)
+          yield* this.db.use((orm) =>
+            query(
+              "write",
+              orm
+                .insert(botSkills)
+                .values({
+                  id: 1,
+                  revision: next.revision,
+                  skills: JSON.stringify(next.skills),
+                })
+                .onConflictDoUpdate({
+                  target: botSkills.id,
+                  set: {
+                    revision: next.revision,
+                    skills: JSON.stringify(next.skills),
+                  },
+                })
+            )
+          )
+        return next
+      })
+    )
   }
 }

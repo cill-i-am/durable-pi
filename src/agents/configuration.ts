@@ -1,5 +1,6 @@
 import { Context, Effect, Layer, Schema } from "effect"
-import { AgentConflict, AgentStorageError, type AgentProfile } from "./domain"
+import { AgentConflict } from "./domain"
+import type { AgentStorageError, AgentProfile } from "./domain"
 
 export const AgentConfiguration = Schema.Struct({
   owner: Schema.String,
@@ -11,8 +12,11 @@ export const AgentConfiguration = Schema.Struct({
 export type AgentConfiguration = typeof AgentConfiguration.Type
 export interface ConfigurationLedger {
   readonly transactionGroup: object
-  read: () => AgentConfiguration | undefined
-  configure: (owner: string, profile: AgentProfile) => void
+  read: () => Effect.Effect<AgentConfiguration | undefined, AgentStorageError>
+  configure: (
+    owner: string,
+    profile: AgentProfile
+  ) => Effect.Effect<void, AgentConflict | AgentStorageError>
 }
 export function configurationChange(
   current: AgentConfiguration | undefined,
@@ -36,24 +40,10 @@ export class BotConfiguration extends Context.Service<
     ) => Effect.Effect<void, AgentConflict | AgentStorageError>
   }
 >()("durable-pi/agents/BotConfiguration") {}
-const attempt = <T>(body: () => T) =>
-  Effect.try({
-    try: body,
-    catch: (cause) => {
-      const knownFailure = Schema.decodeUnknownOption(
-        Schema.Union([AgentConflict, AgentStorageError])
-      )(cause)
-      if (knownFailure._tag === "Some") return knownFailure.value
-      throw cause
-    },
-  })
 export const configurationApplication = (ledger: ConfigurationLedger) =>
   Layer.succeed(BotConfiguration, {
-    read: Effect.fn("Agents.readConfiguration")(() =>
-      attempt(() => ledger.read())
-    ),
+    read: Effect.fn("Agents.readConfiguration")(() => ledger.read()),
     configure: Effect.fn("Agents.configure")(
-      (owner: string, profile: AgentProfile) =>
-        attempt(() => ledger.configure(owner, profile))
+      (owner: string, profile: AgentProfile) => ledger.configure(owner, profile)
     ),
   })

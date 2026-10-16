@@ -47,7 +47,7 @@ function fixture(overrides: Partial<ActivitySources> = {}) {
     })
   sqliteConversationMaterialization(db)
   new RunRecoveryStore(db)
-  new AccessStore(db, () => [])
+  new AccessStore(db, () => Effect.succeed([]))
   new SqliteBackgroundMailbox(db)
   const usage = usageFixture(db)
   const sources: ActivitySources = {
@@ -83,10 +83,12 @@ it.effect(
   () =>
     Effect.gen(function* () {
       const f = fixture(),
-        turn = f.conversations.admit({
-          operationId: crypto.randomUUID(),
-          text: "Request",
-        }).turn
+        turn = Effect.runSync(
+          f.conversations.admit({
+            operationId: crypto.randomUUID(),
+            text: "Request",
+          })
+        ).turn
       f.db.run(
         "INSERT INTO tool_operations (id,turnId,tool,input,createdAt,expiresAt,status,grantRevision,result,revision) VALUES ('tool',?,'write','PRIVATE INPUT',0,1000,'pending',0,'PRIVATE OUTPUT',0)",
         turn.id
@@ -119,16 +121,20 @@ it.effect(
   () =>
     Effect.gen(function* () {
       const f = fixture(),
-        root = f.conversations.admit({
+        root = Effect.runSync(
+          f.conversations.admit({
+            operationId: crypto.randomUUID(),
+            text: "Root",
+          })
+        ).turn
+      Effect.runSync(f.conversations.submitted(root.id, "session"))
+      const steer = Effect.runSync(
+        f.conversations.admit({
           operationId: crypto.randomUUID(),
-          text: "Root",
-        }).turn
-      f.conversations.submitted(root.id, "session")
-      const steer = f.conversations.admit({
-        operationId: crypto.randomUUID(),
-        text: "Later constraint",
-        mode: "steer",
-      }).turn
+          text: "Later constraint",
+          mode: "steer",
+        })
+      ).turn
       f.db.run(
         "UPDATE chat_turns SET prompt='PRIVATE PROMPT' WHERE id=?",
         root.id
@@ -197,17 +203,16 @@ it.effect(
   () =>
     Effect.gen(function* () {
       const f = fixture(),
-        turn = f.conversations.admit({
-          operationId: crypto.randomUUID(),
-          text: "Request",
-        }).turn
+        turn = Effect.runSync(
+          f.conversations.admit({
+            operationId: crypto.randomUUID(),
+            text: "Request",
+          })
+        ).turn
+      const unavailableDatabase = database()
+      unavailableDatabase.run("DROP TABLE chat_turns")
       const broken = makeActivity(
-        new SqliteActivityRecords({
-          ...f.db,
-          all: () => {
-            throw new Error("Private database failure")
-          },
-        }),
+        new SqliteActivityRecords(unavailableDatabase),
         f.sources,
         "bot"
       )

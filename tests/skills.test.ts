@@ -8,7 +8,8 @@ import {
 } from "../src/skills/contracts"
 import { describe, expect, it } from "vitest"
 import { Cause, Effect, Exit, Schema } from "effect"
-import { database } from "./database"
+import { migrateSqlite } from "../src/storage/migrations"
+import { database, corrupt } from "./database"
 import { SkillStore } from "../src/skills/adapters/sqlite"
 import { selectBotSkills } from "../src/skills/selection"
 import { skillsRequest } from "../src/skills/adapters/http"
@@ -25,17 +26,20 @@ const command = () => ({
 describe("versioned owner skills", () => {
   it("guards the selection write inside its synchronous Effect operation", async () => {
     const store = make(),
-      document = store.save(command())
+      document = Effect.runSync(store.save(command()))
     const result = await Effect.runPromise(
       makeSkills(store)
-        .select(0, [document], () => false)
+        .select(0, [document], () => Effect.sync(() => false))
         .pipe(Effect.result)
     )
     expect(result).toMatchObject({
       _tag: "Failure",
       failure: { _tag: "SkillConflict" },
     })
-    expect(store.selection()).toEqual({ revision: 0, skills: [] })
+    expect(Effect.runSync(store.selection())).toEqual({
+      revision: 0,
+      skills: [],
+    })
   })
   it("rolls back the skill version when updating its head fails", () => {
     const db = database(),
@@ -48,18 +52,19 @@ describe("versioned owner skills", () => {
     expect(Exit.isFailure(exit)).toBe(true)
     if (Exit.isFailure(exit))
       expect(Cause.squash(exit.cause)).toBeInstanceOf(SkillStorageError)
-    expect(store.versions(input.id)).toEqual([])
-    expect(store.list()).toEqual([])
+    expect(Effect.runSync(store.versions(input.id))).toEqual([])
+    expect(Effect.runSync(store.list())).toEqual([])
     db.run("DROP TRIGGER fail_skill_head")
     expect(Effect.runSync(makeSkills(store).save(input)).revision).toBe(1)
-    expect(store.versions(input.id)).toHaveLength(1)
+    expect(Effect.runSync(store.versions(input.id))).toHaveLength(1)
   })
   it("preserves malformed historical source metadata as a defect", () => {
     const db = database(),
       store = new SkillStore(db),
       input = command()
-    store.save(input)
-    db.run(
+    Effect.runSync(store.save(input))
+    corrupt(
+      db,
       "UPDATE workspace_skill_versions SET source='broken' WHERE id=?",
       input.id
     )
@@ -73,56 +78,65 @@ describe("versioned owner skills", () => {
   it("replays uncertain saves, detects stale edits, and preserves prior revisions", () => {
     const store = make(),
       input = command()
-    const one = store.save(input)
-    expect(store.save(input)).toEqual(one)
-    const two = store.save({
-      ...input,
-      expectedRevision: 1,
-      body: "Use plain language.",
-    })
+    const one = Effect.runSync(store.save(input))
+    expect(Effect.runSync(store.save(input))).toEqual(one)
+    const two = Effect.runSync(
+      store.save({
+        ...input,
+        expectedRevision: 1,
+        body: "Use plain language.",
+      })
+    )
     expect(two.revision).toBe(2)
     expect(() =>
-      store.save({ ...input, expectedRevision: 1, body: "Conflicting edit" })
+      Effect.runSync(
+        store.save({ ...input, expectedRevision: 1, body: "Conflicting edit" })
+      )
     ).toThrow("changed")
-    expect(store.versions(input.id).map((value) => value.body)).toEqual([
-      two.body,
-      one.body,
-    ])
-    expect(store.resolve([{ id: input.id, revision: 1 }])[0]?.body).toBe(
-      one.body
-    )
-    store.archive(input.id, 2, true)
-    expect(() => store.resolve([{ id: input.id, revision: 1 }])).toThrow(
-      "archived"
-    )
-    expect(() => store.save({ ...input, expectedRevision: 2 })).toThrow(
-      "Restore"
-    )
-    store.archive(input.id, 3, false)
-    expect(store.save({ ...input, expectedRevision: 2 }).revision).toBe(3)
+    expect(
+      Effect.runSync(store.versions(input.id)).map((value) => value.body)
+    ).toEqual([two.body, one.body])
+    expect(
+      Effect.runSync(store.resolve([{ id: input.id, revision: 1 }]))[0]?.body
+    ).toBe(one.body)
+    Effect.runSync(store.archive(input.id, 2, true))
+    expect(() =>
+      Effect.runSync(store.resolve([{ id: input.id, revision: 1 }]))
+    ).toThrow("archived")
+    expect(() =>
+      Effect.runSync(store.save({ ...input, expectedRevision: 2 }))
+    ).toThrow("Restore")
+    Effect.runSync(store.archive(input.id, 3, false))
+    expect(
+      Effect.runSync(store.save({ ...input, expectedRevision: 2 })).revision
+    ).toBe(3)
   })
   it("replays uncertain archival but never undoes a later restore", () => {
     const store = make(),
-      skill = store.save(command())
-    const archived = store.archive(skill.id, skill.stateRevision, true)
-    expect(store.archive(skill.id, skill.stateRevision, true)).toEqual(archived)
-    const restored = store.archive(skill.id, archived.stateRevision, false)
-    expect(restored.archived).toBe(false)
-    expect(() => store.archive(skill.id, skill.stateRevision, true)).toThrow(
-      "changed"
+      skill = Effect.runSync(store.save(command()))
+    const archived = Effect.runSync(
+      store.archive(skill.id, skill.stateRevision, true)
     )
-    expect(store.list()[0]?.archived).toBe(false)
+    expect(
+      Effect.runSync(store.archive(skill.id, skill.stateRevision, true))
+    ).toEqual(archived)
+    const restored = Effect.runSync(
+      store.archive(skill.id, archived.stateRevision, false)
+    )
+    expect(restored.archived).toBe(false)
+    expect(() =>
+      Effect.runSync(store.archive(skill.id, skill.stateRevision, true))
+    ).toThrow("changed")
+    expect(Effect.runSync(store.list())[0]?.archived).toBe(false)
   })
-  it("migrates pre-skill turns without changing prompts or history", () => {
+  it("reopens turns with empty skill context without changing their prompts", () => {
     const db = database()
     db.run(
-      "CREATE TABLE chat_turns (id TEXT PRIMARY KEY,text TEXT NOT NULL,status TEXT NOT NULL,answer TEXT NOT NULL DEFAULT '',error TEXT,created_at TEXT NOT NULL,session_id TEXT,prompt TEXT)"
+      "INSERT INTO chat_turns(id,text,status,answer,error,created_at,session_id,prompt) VALUES ('old','saved message','running','',NULL,'2026-10-01',NULL,'existing prompt')"
     )
-    db.run(
-      "INSERT INTO chat_turns VALUES ('old','saved message','running','',NULL,'2026-10-01',NULL,'existing prompt')"
-    )
+    Effect.runSync(migrateSqlite(db))
     const turns = new ConversationStore(db, { model: "test", thinking: "off" })
-    expect(turns.get("old")).toMatchObject({
+    expect(Effect.runSync(turns.get("old"))).toMatchObject({
       text: "saved message",
       prompt: "existing prompt",
       skills: [],
@@ -133,9 +147,9 @@ describe("versioned owner skills", () => {
     const owner = make(),
       a = make(),
       b = make(),
-      skill = owner.save(command())
+      skill = Effect.runSync(owner.save(command()))
     const resolve = async (refs: typeof SelectSkills.Type.skills) => ({
-      skills: owner.resolve(refs),
+      skills: Effect.runSync(owner.resolve(refs)),
       error: null,
     })
     const select = (
@@ -153,29 +167,33 @@ describe("versioned owner skills", () => {
               catch: () =>
                 new SkillConflict({ message: "Could not load these skills." }),
             }),
-          () => true
+          () => Effect.sync(() => true)
         )
       )
     const refs = [{ id: skill.id, revision: 1 }]
     await select(a, 0, refs)
-    expect(b.selection().skills).toEqual([])
-    owner.save({ ...skill, expectedRevision: 1, body: "Changed" })
-    expect(a.selection().skills[0]?.body).toBe(skill.body)
-    owner.archive(skill.id, 2, true)
-    expect(await select(a, 1, refs)).toEqual(a.selection())
+    expect(Effect.runSync(b.selection()).skills).toEqual([])
+    Effect.runSync(
+      owner.save({ ...skill, expectedRevision: 1, body: "Changed" })
+    )
+    expect(Effect.runSync(a.selection()).skills[0]?.body).toBe(skill.body)
+    Effect.runSync(owner.archive(skill.id, 2, true))
+    expect(await select(a, 1, refs)).toEqual(Effect.runSync(a.selection()))
     await expect(select(b, 0, refs)).rejects.toBeDefined()
-    const next = owner.save({ ...command(), name: "Second skill" })
+    const next = Effect.runSync(
+      owner.save({ ...command(), name: "Second skill" })
+    )
     await select(a, 1, [...refs, { id: next.id, revision: 1 }])
     await expect(select(a, 1, [])).rejects.toMatchObject({
       _tag: "SkillConflict",
     })
     await select(a, 2, [])
-    expect(a.selection().skills).toEqual([])
+    expect(Effect.runSync(a.selection()).skills).toEqual([])
   })
   it("rechecks bot archival after remote resolution and rejects duplicates", async () => {
     const store = make(),
       owner = make(),
-      skill = owner.save(command())
+      skill = Effect.runSync(owner.save(command()))
     let writable = true
     const input = {
       expectedRevision: 0,
@@ -191,23 +209,26 @@ describe("versioned owner skills", () => {
               try: () =>
                 (async (refs) => {
                   writable = false
-                  return { skills: owner.resolve(refs), error: null }
+                  return {
+                    skills: Effect.runSync(owner.resolve(refs)),
+                    error: null,
+                  }
                 })(references),
               catch: () =>
                 new SkillConflict({ message: "Could not load these skills." }),
             }),
-          () => writable
+          () => Effect.sync(() => writable)
         )
       )
     ).rejects.toMatchObject({ _tag: "SkillConflict" })
-    expect(store.selection().revision).toBe(0)
+    expect(Effect.runSync(store.selection()).revision).toBe(0)
     await expect(
       Effect.runPromise(
         selectBotSkills(
           makeSkills(store),
           { ...input, skills: [...input.skills, ...input.skills] },
           () => Effect.succeed({ skills: [], error: null }),
-          () => true
+          () => Effect.sync(() => true)
         )
       )
     ).rejects.toMatchObject({ _tag: "SkillConflict" })
@@ -228,43 +249,50 @@ describe("versioned owner skills", () => {
     const db = database(),
       owner = make(),
       input = command(),
-      skill = owner.save(input)
+      skill = Effect.runSync(owner.save(input))
     let turns = new ConversationStore(db, { model: "test", thinking: "off" })
     const submission = {
       operationId: crypto.randomUUID(),
       text: "Draft a note",
     }
-    const admitted = turns.admit(submission, undefined, [skill]).turn
+    const admitted = Effect.runSync(
+      turns.admit(submission, undefined, [skill])
+    ).turn
     expect(admitted.skills).toEqual([
       { id: skill.id, name: skill.name, revision: 1 },
     ])
     expect(admitted.skill_context).toContain(skill.body)
-    const changed = owner.save({
-      ...input,
-      expectedRevision: 1,
-      body: "A new instruction",
-    })
+    const changed = Effect.runSync(
+      owner.save({
+        ...input,
+        expectedRevision: 1,
+        body: "A new instruction",
+      })
+    )
     expect(
-      turns.admit(submission, undefined, [changed]).turn.skill_context
+      Effect.runSync(turns.admit(submission, undefined, [changed])).turn
+        .skill_context
     ).toBe(admitted.skill_context)
     turns = new ConversationStore(db, { model: "test", thinking: "off" })
-    const steer = turns.admit(
-      {
-        operationId: crypto.randomUUID(),
-        text: "A shorter note",
-        mode: "steer",
-      },
-      undefined,
-      [changed]
+    const steer = Effect.runSync(
+      turns.admit(
+        {
+          operationId: crypto.randomUUID(),
+          text: "A shorter note",
+          mode: "steer",
+        },
+        undefined,
+        [changed]
+      )
     ).turn
     expect(steer.skills).toEqual(admitted.skills)
     expect(steer.skill_context).toBe("")
-    expect(turns.recent()[0]?.skill_context).toBe("")
+    expect(Effect.runSync(turns.recent())[0]?.skill_context).toBe("")
     const prompt = skillContext([skill]) + "\nUser: draft a note"
-    turns.savePrompt(admitted.id, prompt)
-    expect(turns.get(admitted.id)?.prompt).toBe(prompt)
-    expect(turns.get(admitted.id)?.skill_context).toBe("")
-    expect(turns.recent()[0]?.skills).toEqual(admitted.skills)
+    Effect.runSync(turns.savePrompt(admitted.id, prompt))
+    expect(Effect.runSync(turns.get(admitted.id))?.prompt).toBe(prompt)
+    expect(Effect.runSync(turns.get(admitted.id))?.skill_context).toBe("")
+    expect(Effect.runSync(turns.recent())[0]?.skills).toEqual(admitted.skills)
   })
   it("returns useful conflicts without leaking storage errors or accepting oversized bodies", async () => {
     const store = make(),

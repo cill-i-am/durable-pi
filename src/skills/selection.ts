@@ -13,7 +13,7 @@ export const selectBotSkills = (
   resolve: (
     references: SelectSkills["skills"]
   ) => Effect.Effect<SkillResolution, SkillError>,
-  canWrite: () => boolean
+  canWrite: () => Effect.Effect<boolean, SkillError>
 ) =>
   Effect.gen(function* () {
     if (
@@ -31,12 +31,12 @@ export const selectBotSkills = (
       ? yield* resolve(needed)
       : { skills: [], error: null }
     if (result.error) return yield* new SkillConflict({ message: result.error })
+    if (!(yield* canWrite()))
+      return yield* new SkillConflict({
+        message: "Restore this bot before changing its skills.",
+      })
     const selected = yield* Effect.try({
       try: () => {
-        if (!canWrite())
-          throw new SkillConflict({
-            message: "Restore this bot before changing its skills.",
-          })
         const documents = input.skills.map((ref) => {
           const skill =
             retained(ref) ??

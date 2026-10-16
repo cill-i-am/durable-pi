@@ -58,7 +58,14 @@ function fixture(extract: ExtractVideo = () => Effect.succeed(result)) {
   }
   const make = (prefix = "private-bot") =>
     ManagedRuntime.make(
-      workspaceLayer(db, bucket, prefix, () => active, undefined, extract)
+      workspaceLayer(
+        db,
+        bucket,
+        prefix,
+        () => Effect.sync(() => active),
+        undefined,
+        extract
+      )
     )
   const runtime = make()
   const run = <T, TError>(
@@ -310,36 +317,48 @@ describe("private video preparation", () => {
       f.db.run(
         `CREATE TRIGGER video_budget_${action} BEFORE ${action} ON chat_turns WHEN length(CAST(coalesce(NEW.prompt,'') || NEW.input || NEW.answer || NEW.skill_context AS BLOB)) > 2000000 BEGIN SELECT RAISE(ABORT,'row too large'); END`
       )
-    const turn = store.admit(
-      { operationId: crypto.randomUUID(), text: "Inspect these" },
-      attached
+    const turn = Effect.runSync(
+      store.admit(
+        { operationId: crypto.randomUUID(), text: "Inspect these" },
+        attached
+      )
     ).turn
-    store.savePrompt(turn.id, JSON.stringify(attached.content))
-    const follow = store.admit(
-      { operationId: crypto.randomUUID(), text: "Follow-up" },
-      attached
+    Effect.runSync(store.savePrompt(turn.id, JSON.stringify(attached.content)))
+    const follow = Effect.runSync(
+      store.admit(
+        { operationId: crypto.randomUUID(), text: "Follow-up" },
+        attached
+      )
     ).turn
     expect(follow.input.filter((c) => c.type === "image")).toHaveLength(24)
-    store.finish(
-      store.get(turn.id)!,
-      [{ id: turn.id, delivery: "answered" }],
-      "Done",
-      null
+    Effect.runSync(
+      store.finish(
+        Effect.runSync(store.get(turn.id))!,
+        [{ id: turn.id, delivery: "answered" }],
+        "Done",
+        null
+      )
     )
-    store.finish(
-      store.get(follow.id)!,
-      [{ id: follow.id, delivery: "answered" }],
-      "Done",
-      null
+    Effect.runSync(
+      store.finish(
+        Effect.runSync(store.get(follow.id))!,
+        [{ id: follow.id, delivery: "answered" }],
+        "Done",
+        null
+      )
     )
-    const parent = store.admit({
-      operationId: crypto.randomUUID(),
-      text: "Start",
-    }).turn
-    store.prepare(parent.id)
-    const steered = store.admit(
-      { operationId: crypto.randomUUID(), text: "Use these", mode: "steer" },
-      attached
+    const parent = Effect.runSync(
+      store.admit({
+        operationId: crypto.randomUUID(),
+        text: "Start",
+      })
+    ).turn
+    Effect.runSync(store.prepare(parent.id))
+    const steered = Effect.runSync(
+      store.admit(
+        { operationId: crypto.randomUUID(), text: "Use these", mode: "steer" },
+        attached
+      )
     ).turn
     expect(steered.parent_id).toBe(parent.id)
     expect(steered.input.filter((c) => c.type === "image")).toHaveLength(24)

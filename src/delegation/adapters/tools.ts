@@ -55,7 +55,9 @@ export function backgroundTool(
 export const delegationInstructions = `For substantial requests with independent research or drafting branches, delegate_tasks can run one group of up to three child tasks. Use it when parallel help improves the result, not for ordinary questions. Each child inherits your pinned model and gets only explicitly selected read tools and this bot's reference context. Include relevant user constraints in every brief. You remain responsible for evaluating their findings and completing the request. Children cannot perform outside actions or spawn agents. Delegation uses existing tool permissions. Do not promise background work: this group belongs to the current request and Stop cancels it. One combined report returns when children finish. Do not redelegate completed tasks.`
 export function delegationTool(
   delegations: Delegations,
-  source: (api: ToolExecutionApi) => DelegationSource,
+  source: (
+    api: ToolExecutionApi
+  ) => DelegationSource | Effect.Effect<DelegationSource, DelegationFailure>,
   execute: DelegationRunner
 ) {
   return defineTool({
@@ -91,7 +93,14 @@ export function delegationTool(
         {
           type: "text",
           text: await execute(
-            delegations.run(input, source(api)),
+            Effect.suspend(() => {
+              const value = source(api)
+              return Effect.isEffect(value)
+                ? Effect.flatMap(value, (admitted) =>
+                    delegations.run(input, admitted)
+                  )
+                : delegations.run(input, value)
+            }),
             context.abortSignal
           ),
         },
@@ -102,7 +111,11 @@ export function delegationTool(
 
 export function childSteeringHook(
   delegations: Delegations,
-  steering: (turnId: string) => readonly { id: string; text: string }[],
+  steering: (
+    turnId: string
+  ) =>
+    | readonly { id: string; text: string }[]
+    | Effect.Effect<readonly { id: string; text: string }[], DelegationFailure>,
   execute: DelegationRunner
 ) {
   return hook(GenerationTask, {
@@ -115,7 +128,15 @@ export function childSteeringHook(
         }),
         context.abortSignal
       )
-      const inputs = root ? steering(root) : []
+      const inputs = root
+        ? await execute(
+            Effect.suspend(() => {
+              const value = steering(root)
+              return Effect.isEffect(value) ? value : Effect.succeed(value)
+            }),
+            context.abortSignal
+          )
+        : []
       if (!inputs.length) return { messages }
       const text = JSON.stringify(inputs)
       if (text.length > 32000)

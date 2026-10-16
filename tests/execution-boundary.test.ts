@@ -1,3 +1,4 @@
+import { sqliteFailure } from "./sqlite-fault"
 import { expect, it } from "@effect/vitest"
 import { Cause, Deferred, Effect, Exit } from "effect"
 import { TestClock } from "effect/testing"
@@ -20,7 +21,7 @@ it.effect(
         const execution = yield* makeExecutions(
           ledger,
           { run: () => Deferred.await(gate).pipe(Effect.as(output)) },
-          () => true
+          () => Effect.sync(() => true)
         )
         yield* TestClock.setTime(20_000)
         const task = yield* execution.start(input)
@@ -51,21 +52,21 @@ it.effect(
             100
           )
         )
-        ledger.atomic(() => {
-          for (let n = 0; n < 500; n++)
-            ledger.put({
-              ...admitted.run,
-              id: n === 0 ? input.id : `run-${n}`,
-              status: "interrupted",
-              finishedAt: 200,
-            })
-        })
+        yield* ledger.atomic(() =>
+          Effect.gen(function* () {
+            for (let n = 0; n < 500; n++)
+              yield* ledger.put({
+                ...admitted.run,
+                id: n === 0 ? input.id : `run-${n}`,
+                status: "interrupted",
+                finishedAt: 200,
+              })
+          })
+        )
         let writable = false
         const invoke = () => Effect.die("replayed code must not execute")
-        const execution = yield* makeExecutions(
-          ledger,
-          { run: invoke },
-          () => writable
+        const execution = yield* makeExecutions(ledger, { run: invoke }, () =>
+          Effect.sync(() => writable)
         )
         expect((yield* execution.run(input)).status).toBe("interrupted")
         expect(
@@ -81,7 +82,10 @@ it.effect(
           _tag: "Failure",
           failure: { message: expect.stringContaining("500-run") },
         })
-        expect(ledger.counts()).toEqual({ total: 500, running: 0 })
+        expect(Effect.runSync(ledger.counts())).toEqual({
+          total: 500,
+          running: 0,
+        })
       })
     )
 )
@@ -97,11 +101,15 @@ it.effect(
         const ledger = new ExecutionStore({
           ...db,
           transaction: (body) =>
-            db.transaction(() => {
-              const value = body()
-              if (failCommit) throw new Error("native commit failed")
-              return value
-            }),
+            db.transaction(() =>
+              body().pipe(
+                Effect.flatMap((value) =>
+                  failCommit
+                    ? Effect.fail(sqliteFailure("native commit failed"))
+                    : Effect.succeed(value)
+                )
+              )
+            ),
         })
         const execution = yield* makeExecutions(
           ledger,
@@ -112,13 +120,13 @@ it.effect(
                 return output
               }),
           },
-          () => true
+          () => Effect.sync(() => true)
         )
         failCommit = true
         expect(yield* execution.start(input).pipe(Effect.result)).toMatchObject(
           { _tag: "Failure", failure: { _tag: "ExecutionStorageError" } }
         )
-        expect(ledger.get(input.id)).toBeUndefined()
+        expect(Effect.runSync(ledger.get(input.id))).toBeUndefined()
         expect(calls).toBe(0)
         failCommit = false
         expect((yield* execution.run(input)).status).toBe("succeeded")
@@ -141,7 +149,7 @@ it.effect(
               return Effect.fail(new ExecutorUnavailable())
             },
           },
-          () => true
+          () => Effect.sync(() => true)
         )
         const saved = yield* execution.run(input)
         expect(saved.status).toBe("failed")
@@ -175,7 +183,7 @@ it.effect(
                   Effect.ensuring(Effect.die(defect))
                 ),
             },
-            () => true
+            () => Effect.sync(() => true)
           )
           yield* execution.start(input)
           yield* Deferred.await(entered)
@@ -186,11 +194,11 @@ it.effect(
                 (reason) => reason._tag === "Die" && reason.defect === defect
               )
           ).toBe(true)
-          expect(ledger.get(input.id)?.status).toBe("cancelled")
+          expect(Effect.runSync(ledger.get(input.id))?.status).toBe("cancelled")
         })
       ).pipe(Effect.exit)
       expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)
-      expect(ledger.get(input.id)?.output).toBeNull()
+      expect(Effect.runSync(ledger.get(input.id))?.output).toBeNull()
     })
 )
 
@@ -207,7 +215,7 @@ it.effect("an admitted stop before dispatch does not invoke the executor", () =>
               return output
             }),
         },
-        () => true
+        () => Effect.sync(() => true)
       )
       const task = yield* execution.start(input)
       expect((yield* execution.cancel(input.id)).status).toBe("cancelled")
@@ -227,11 +235,15 @@ it.effect(
       const ledger = new ExecutionStore({
         ...db,
         transaction: (body) =>
-          db.transaction(() => {
-            const value = body()
-            if (failCommit) throw new Error("failed terminal commit")
-            return value
-          }),
+          db.transaction(() =>
+            body().pipe(
+              Effect.flatMap((value) =>
+                failCommit
+                  ? Effect.fail(sqliteFailure("failed terminal commit"))
+                  : Effect.succeed(value)
+              )
+            )
+          ),
       })
       const exit = yield* Effect.scoped(
         Effect.gen(function* () {
@@ -245,7 +257,7 @@ it.effect(
                   return output
                 }),
             },
-            () => true
+            () => Effect.sync(() => true)
           )
           const task = yield* execution.start(input)
           const failed = yield* task.completion.pipe(Effect.exit)
@@ -254,7 +266,7 @@ it.effect(
               Cause.hasFails(failed.cause) &&
               !Cause.hasDies(failed.cause)
           ).toBe(true)
-          expect(ledger.get(input.id)?.status).toBe("running")
+          expect(Effect.runSync(ledger.get(input.id))?.status).toBe("running")
           expect(
             yield* execution.start(input).pipe(Effect.result)
           ).toMatchObject({

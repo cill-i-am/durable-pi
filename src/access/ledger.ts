@@ -1,3 +1,5 @@
+import type { Effect } from "effect"
+import type { AccessError } from "./gate"
 import type { AccessMode, Approval, ToolPolicy } from "./contracts"
 
 export type ToolIntent = {
@@ -18,24 +20,31 @@ export type DispatchDecision = "pending" | "execute" | { result: string }
  * retries unless the operation is explicitly recoverable and its grant is valid.
  */
 export interface AccessLedger {
-  policies: () => ToolPolicy[]
-  pending: () => Approval[]
-  awaitingApproval: (turnId: string) => boolean
-  get: (id: string) => ToolOperation | undefined
-  begin: (intent: ToolIntent) => ToolOperation
-  claim: (id: string, recoverable?: boolean) => DispatchDecision
-  finish: (id: string, result: string) => void
-  cancel: (turnId: string) => void
-  revoke: (name: string) => void
+  policies: () => Effect.Effect<ToolPolicy[], AccessError>
+  pending: () => Effect.Effect<Approval[], AccessError>
+  awaitingApproval: (turnId: string) => Effect.Effect<boolean, AccessError>
+  get: (id: string) => Effect.Effect<ToolOperation | undefined, AccessError>
+  begin: (
+    intent: ToolIntent,
+    canRun?: (turnId: string) => Effect.Effect<boolean, AccessError>
+  ) => Effect.Effect<ToolOperation, AccessError>
+  claim: (
+    id: string,
+    recoverable?: boolean,
+    canRun?: (turnId: string) => Effect.Effect<boolean, AccessError>
+  ) => Effect.Effect<DispatchDecision, AccessError>
+  finish: (id: string, result: string) => Effect.Effect<void, AccessError>
+  cancel: (turnId: string) => Effect.Effect<void, AccessError>
+  revoke: (name: string) => Effect.Effect<void, AccessError>
   update: (
     name: string,
     expectedRevision: number,
     mode: AccessMode
-  ) => ToolPolicy
+  ) => Effect.Effect<ToolPolicy, AccessError>
   decide: (
     id: string,
     approve: boolean,
     expectedRevision: number,
     remember?: { expectedPolicyRevision: number }
-  ) => ToolOperation
+  ) => Effect.Effect<ToolOperation, AccessError>
 }

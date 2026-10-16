@@ -22,7 +22,12 @@ export function objectsRequest(
   objects: WorkingObjects,
   request: Request,
   path: string,
-  conversation: (id: string) => OriginConversation | undefined
+  conversation: (
+    id: string
+  ) =>
+    | OriginConversation
+    | undefined
+    | Effect.Effect<OriginConversation | undefined, ObjectFailure>
 ) {
   return Effect.gen(function* () {
     if (path === "objects" && request.method === "GET")
@@ -37,7 +42,10 @@ export function objectsRequest(
       if (parts.length === 2) return Response.json(detail)
       if (parts[2] === "origin") {
         const origin = detail.object.origin.turnId
-          ? conversation(detail.object.origin.turnId)
+          ? yield* Effect.suspend(() => {
+              const value = conversation(detail.object.origin.turnId!)
+              return Effect.isEffect(value) ? value : Effect.succeed(value)
+            })
           : undefined
         return origin
           ? Response.json(origin)

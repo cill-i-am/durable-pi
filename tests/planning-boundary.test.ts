@@ -82,9 +82,9 @@ async function fixture() {
   })
   const state = { source: source(), cancelled: false, evidence: valid }
   const authority: PlanAuthority = {
-    current: () => state.source,
-    cancelled: () => state.cancelled,
-    receipts: () => [],
+    current: () => Effect.sync(() => state.source),
+    cancelled: () => Effect.sync(() => state.cancelled),
+    receipts: () => Effect.sync(() => []),
     evidence: (ref, roots) => state.evidence(ref, roots),
   }
   const ledger = piPlanLedger(

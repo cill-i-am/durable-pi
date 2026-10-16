@@ -1,144 +1,171 @@
-import { Layer, Schema } from "effect"
-import type { Sqlite } from "../../storage/sqlite"
+import { and, asc, count, desc, eq, inArray, notInArray } from "drizzle-orm"
+import { Effect, Layer, Schema } from "effect"
+import {
+  mapSqliteError,
+  type Sqlite,
+  type EffectSqliteDatabase,
+} from "../../storage/sqlite"
 import { Routine, RoutineRun } from "../contracts"
 import {
   RoutinePersistence,
   RoutineStorageError,
   type OperationReceipt,
 } from "../persistence"
+import { routines, routineRuns, routineOperations } from "./schema"
 
 type Records = RoutinePersistence["Service"]
 export class SqliteRoutinePersistence implements Records {
   readonly transactionGroup: object
-  private readonly db: Sqlite
-  constructor(db: Sqlite) {
+  constructor(private readonly db: Sqlite) {
     this.transactionGroup = db
-    const storage = <TResult>(
-      operation: string,
-      body: () => TResult
-    ): TResult => {
-      try {
-        return body()
-      } catch (cause) {
-        throw new RoutineStorageError({ operation, cause })
-      }
-    }
-    this.db = {
-      all: (query, ...bindings) =>
-        storage("read", () => db.all(query, ...bindings)),
-      run: (query, ...bindings) =>
-        storage("write", () => db.run(query, ...bindings)),
-      transaction: (body) => {
-        const failure: { failed: boolean; cause?: unknown } = { failed: false }
-        try {
-          return db.transaction(() => {
-            try {
-              return body()
-            } catch (cause) {
-              failure.failed = true
-              failure.cause = cause
-              throw cause
-            }
-          })
-        } catch (cause) {
-          if (failure.failed && cause === failure.cause) throw cause
-          throw new RoutineStorageError({ operation: "transaction", cause })
-        }
-      },
-    }
-    this.db.run(
-      "CREATE TABLE IF NOT EXISTS routines (id TEXT PRIMARY KEY,record TEXT NOT NULL)"
-    )
-    this.db.run(
-      "CREATE TABLE IF NOT EXISTS routine_runs (id TEXT PRIMARY KEY,routine_id TEXT NOT NULL,turn_id TEXT NOT NULL UNIQUE,status TEXT NOT NULL,record TEXT NOT NULL)"
-    )
-    this.db.run(
-      "CREATE TABLE IF NOT EXISTS routine_operations (id TEXT PRIMARY KEY,input TEXT NOT NULL,result TEXT NOT NULL)"
-    )
-    this.db.run(
-      "CREATE INDEX IF NOT EXISTS routine_runs_status ON routine_runs(status)"
+  }
+  private query<TValue, TError, TRequirements>(
+    body: (
+      orm: EffectSqliteDatabase
+    ) => Effect.Effect<TValue, TError, TRequirements>
+  ) {
+    return mapSqliteError(
+      this.db.use(body),
+      (cause) => new RoutineStorageError({ operation: "query", cause })
     )
   }
-  list(): Routine[] {
-    return this.db
-      .all<{ record: string }>(
-        "SELECT record FROM routines ORDER BY rowid DESC"
+  atomic<TValue, TError, TRequirements>(
+    body: () => Effect.Effect<TValue, TError, TRequirements>
+  ) {
+    return mapSqliteError(
+      this.db.transaction(body),
+      (cause) => new RoutineStorageError({ operation: "transaction", cause })
+    )
+  }
+  list() {
+    return this.query((orm) =>
+      orm
+        .select({ record: routines.record })
+        .from(routines)
+        .orderBy(desc(routines.sequence))
+    ).pipe(
+      Effect.map((rows) =>
+        rows.map((row) =>
+          Schema.decodeUnknownSync(Routine)(JSON.parse(row.record))
+        )
       )
-      .map((row) => Schema.decodeUnknownSync(Routine)(JSON.parse(row.record)))
+    )
   }
   get(id: string) {
-    const row = this.db.all<{ record: string }>(
-      "SELECT record FROM routines WHERE id=?",
-      id
-    )[0]
-    return row
-      ? Schema.decodeUnknownSync(Routine)(JSON.parse(row.record))
-      : undefined
-  }
-  runs(): RoutineRun[] {
-    return this.db
-      .all<{ record: string }>(
-        "SELECT record FROM routine_runs ORDER BY rowid DESC LIMIT 200"
+    return this.query((orm) =>
+      orm
+        .select({ record: routines.record })
+        .from(routines)
+        .where(eq(routines.id, id))
+    ).pipe(
+      Effect.map((rows) =>
+        rows[0]
+          ? Schema.decodeUnknownSync(Routine)(JSON.parse(rows[0].record))
+          : undefined
       )
-      .map((row) =>
-        Schema.decodeUnknownSync(RoutineRun)(JSON.parse(row.record))
-      )
+    )
   }
-  inFlight(): RoutineRun | undefined {
-    const row = this.db.all<{ record: string }>(
-      "SELECT record FROM routine_runs WHERE status IN ('pending','queued') ORDER BY rowid LIMIT 1"
-    )[0]
-    return row
-      ? Schema.decodeUnknownSync(RoutineRun)(JSON.parse(row.record))
-      : undefined
+  runs() {
+    return this.query((orm) =>
+      orm
+        .select({ record: routineRuns.record })
+        .from(routineRuns)
+        .orderBy(desc(routineRuns.sequence))
+        .limit(200)
+    ).pipe(
+      Effect.map((rows) =>
+        rows.map((row) =>
+          Schema.decodeUnknownSync(RoutineRun)(JSON.parse(row.record))
+        )
+      )
+    )
+  }
+  inFlight() {
+    return this.query((orm) =>
+      orm
+        .select({ record: routineRuns.record })
+        .from(routineRuns)
+        .where(inArray(routineRuns.status, ["pending", "queued"]))
+        .orderBy(asc(routineRuns.sequence))
+        .limit(1)
+    ).pipe(
+      Effect.map((rows) =>
+        rows[0]
+          ? Schema.decodeUnknownSync(RoutineRun)(JSON.parse(rows[0].record))
+          : undefined
+      )
+    )
   }
   put(routine: Routine) {
-    this.db.run(
-      "INSERT INTO routines VALUES (?,?) ON CONFLICT(id) DO UPDATE SET record=excluded.record",
-      routine.id,
-      JSON.stringify(routine)
-    )
-    return routine
+    const record = JSON.stringify(routine)
+    return this.query((orm) =>
+      orm
+        .insert(routines)
+        .values({ id: routine.id, record })
+        .onConflictDoUpdate({ target: routines.id, set: { record } })
+    ).pipe(Effect.as(routine))
   }
   putRun(raw: RoutineRun) {
-    const run = Schema.decodeUnknownSync(RoutineRun)(raw)
-    this.db.run(
-      "INSERT INTO routine_runs VALUES (?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET status=excluded.status,record=excluded.record",
-      run.id,
-      run.routineId,
-      run.turnId,
-      run.status,
-      JSON.stringify(run)
-    )
-    return run
-  }
-  atomic<TResult>(body: () => TResult): TResult {
-    return this.db.transaction(body)
+    return Effect.suspend(() => {
+      const run = Schema.decodeUnknownSync(RoutineRun)(raw),
+        record = JSON.stringify(run)
+      return this.query((orm) =>
+        orm
+          .insert(routineRuns)
+          .values({
+            id: run.id,
+            routine_id: run.routineId,
+            turn_id: run.turnId,
+            status: run.status,
+            record,
+          })
+          .onConflictDoUpdate({
+            target: routineRuns.id,
+            set: { status: run.status, record },
+          })
+      ).pipe(Effect.as(run))
+    })
   }
   operation(id: string) {
-    return this.db.all<OperationReceipt>(
-      "SELECT input,result FROM routine_operations WHERE id=?",
-      id
-    )[0]
+    return this.query((orm) =>
+      orm
+        .select({
+          input: routineOperations.input,
+          result: routineOperations.result,
+        })
+        .from(routineOperations)
+        .where(eq(routineOperations.id, id))
+    ).pipe(Effect.map((rows) => rows[0]))
   }
   operationCount() {
-    return this.db.all<{ n: number }>(
-      "SELECT count(*) AS n FROM routine_operations"
-    )[0]!.n
+    return this.query((orm) =>
+      orm.select({ n: count() }).from(routineOperations)
+    ).pipe(Effect.map((rows) => rows[0]!.n))
   }
   putOperation(id: string, receipt: OperationReceipt) {
-    this.db.run(
-      "INSERT INTO routine_operations VALUES (?,?,?)",
-      id,
-      receipt.input,
-      receipt.result
-    )
+    return this.query((orm) =>
+      orm.insert(routineOperations).values({ id, ...receipt })
+    ).pipe(Effect.asVoid)
   }
   pruneRuns() {
-    this.db.run(
-      "DELETE FROM routine_runs WHERE status NOT IN ('pending','queued') AND id NOT IN (SELECT id FROM routine_runs ORDER BY rowid DESC LIMIT 200)"
-    )
+    return this.query((orm) =>
+      orm
+        .delete(routineRuns)
+        .where(
+          and(
+            notInArray(routineRuns.status, ["pending", "queued"]),
+            notInArray(
+              routineRuns.id,
+              orm
+                .select({ id: routineRuns.id })
+                .from(routineRuns)
+                .orderBy(desc(routineRuns.sequence))
+                .limit(200)
+            )
+          )
+        )
+    ).pipe(Effect.asVoid)
   }
 }
 export const sqliteRoutinePersistence = (db: Sqlite) =>
-  Layer.sync(RoutinePersistence, () => new SqliteRoutinePersistence(db))
+  Layer.succeed(RoutinePersistence, new SqliteRoutinePersistence(db))

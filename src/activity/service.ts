@@ -1,4 +1,4 @@
-import { Cause, Clock, Context, Effect, Layer, Schema } from "effect"
+import { Cause, Clock, Context, Effect, Layer } from "effect"
 import type { AgentProfile } from "../agents/domain"
 import type { UsageTotals } from "../inference/usage-domain"
 import type {
@@ -7,7 +7,7 @@ import type {
   ActivityQuery,
 } from "./contracts"
 import {
-  ActivityStorageError,
+  type ActivityStorageError,
   ActivityUnavailable,
   type ActivityRecords,
 } from "./records"
@@ -38,17 +38,6 @@ export const activitySource = <T, TError, TRequirements>(
       )
     )
   )
-const read = <T>(body: () => T) =>
-  Effect.try({
-    try: body,
-    catch: (cause) => {
-      const activityStorageError =
-        Schema.decodeUnknownOption(ActivityStorageError)(cause)
-      if (activityStorageError._tag === "Some")
-        return activityStorageError.value
-      throw cause
-    },
-  })
 export function makeActivity(
   records: ActivityRecords,
   sources: ActivitySources,
@@ -88,7 +77,7 @@ export function makeActivity(
       }
       const at = yield* Clock.currentTimeMillis
       return {
-        entries: yield* read(() => records.entries(agent, query, at)),
+        entries: yield* records.entries(agent, query, at),
         issues,
       }
     }),
@@ -99,10 +88,10 @@ export function makeActivity(
       ActivityConversation | null,
       ActivityStorageError | ActivityUnavailable
     > {
-      const record = yield* read(() => records.conversation(id))
+      const record = yield* records.conversation(id)
       if (!record) return null
       const { rootId, ...conversation } = record
-      const run = yield* read(() => records.run(rootId, cursor))
+      const run = yield* records.run(rootId, cursor)
       if (!run) return conversation
       const totals = yield* sources.totals(rootId),
         at = yield* Clock.currentTimeMillis

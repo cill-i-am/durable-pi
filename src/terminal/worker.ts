@@ -1,10 +1,11 @@
+import { Scheduler, Effect, Exit, Layer, ManagedRuntime, Scope } from "effect"
 import { relayTerminal } from "./adapters/socket"
 import { reportTerminal } from "../observability/events"
 import { WorkerTelemetry } from "../observability/worker"
 import { Sandbox as BaseSandbox, getSandbox } from "@cloudflare/sandbox"
-import { Effect, ManagedRuntime } from "effect"
 import type { TerminalEnv } from "../../alchemy.run"
-import type { Sqlite } from "../storage/sqlite"
+import { makeDurableObjectSqlite } from "../storage/durable-object"
+import { migrateSqlite } from "../storage/migrations"
 import { TerminalService, terminalLayer } from "./terminal"
 import { effectTerminalRuntime, terminalFileDigest } from "./adapters/interop"
 import { TerminalStore } from "./adapters/sqlite"
@@ -16,14 +17,17 @@ import { terminalRequest } from "./adapters/http"
 export class LinuxSandbox extends BaseSandbox<TerminalEnv> {
   override enableInternet = false
   override sleepAfter = "60s"
-  private readonly db: Sqlite = {
-    all: <T>(query: string, ...bindings: (string | number | null)[]) =>
-      this.ctx.storage.sql.exec(query, ...bindings).toArray() as T[],
-    run: (query, ...bindings) => {
-      this.ctx.storage.sql.exec(query, ...bindings)
-    },
-    transaction: (body) => this.ctx.storage.transactionSync(body),
-  }
+  private readonly databaseScope = Scope.makeUnsafe()
+  private readonly db = Effect.runSync(
+    Effect.gen({ self: this }, function* () {
+      const db = yield* makeDurableObjectSqlite(this.ctx.storage)
+      yield* migrateSqlite(db)
+      return db
+    }).pipe(
+      Effect.provideService(Scope.Scope, this.databaseScope),
+      Effect.provideService(Scheduler.PreventSchedulerYield, true)
+    )
+  )
   private readonly terminalRuntime = ManagedRuntime.make(
     terminalLayer({
       repository: new TerminalStore(this.db, reportTerminal),
@@ -36,7 +40,13 @@ export class LinuxSandbox extends BaseSandbox<TerminalEnv> {
       ),
       relay: relayTerminal,
       digest: terminalFileDigest,
-    })
+    }).pipe(
+      Layer.provide(
+        Layer.effectDiscard(
+          Effect.addFinalizer(() => Scope.close(this.databaseScope, Exit.void))
+        )
+      )
+    )
   )
   private readonly terminal = this.terminalRuntime.runSync(TerminalService)
 

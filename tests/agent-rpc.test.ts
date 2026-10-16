@@ -150,7 +150,7 @@ it("decodes real retained profile, status, configuration and account-connection 
   expect(await f.client.status()).toEqual({ state: "ready", turnId: null })
   expect(await f.client.configure("", profile, "account")).toBe(true)
   expect(f.bind).toHaveBeenCalledWith({ owner: "account", bot: homeAgentId })
-  expect(f.store.read()).toMatchObject({
+  expect(Effect.runSync(f.store.read())).toMatchObject({
     owner: "",
     revision: 1,
     status: "active",
@@ -283,15 +283,18 @@ it("reconciles a failed profile projection on explicit retry without another rev
   )
   expect(tags(first)).toEqual(["Fail"])
   expect(previous).not.toHaveBeenCalled()
-  expect(f.store.read()?.revision).toBe(1)
+  expect(Effect.runSync(f.store.read())?.revision).toBe(1)
   expect(await f.client.configure("", profile)).toBe(true)
-  expect(f.store.read()?.revision).toBe(1)
+  expect(Effect.runSync(f.store.read())?.revision).toBe(1)
 })
 it("does not restore an archived profile when an older active projection is repeated", async () => {
   const f = fixture()
   await f.client.configure("", { ...profile, revision: 2, status: "archived" })
   await f.client.configure("", profile)
-  expect(f.store.read()).toMatchObject({ revision: 2, status: "archived" })
+  expect(Effect.runSync(f.store.read())).toMatchObject({
+    revision: 2,
+    status: "archived",
+  })
   expect(f.projections.at(-1)).toMatchObject({ revision: 2, active: false })
 })
 it("rejects foreign mailbox identities before reading profiles or changing configuration", async () => {
@@ -302,17 +305,20 @@ it("rejects foreign mailbox identities before reading profiles or changing confi
   expect(tags(exit)).toEqual(["Fail"])
   expect(f.lookup).not.toHaveBeenCalled()
   expect(f.bind).not.toHaveBeenCalled()
-  expect(f.store.read()).toBeUndefined()
+  expect(Effect.runSync(f.store.read())).toBeUndefined()
 })
 it("prepares the same owned mailbox and profile through composed capabilities", async () => {
   const f = fixture()
   expect(await f.client.prepare("account", homeAgentId)).toBe(true)
-  expect(f.store.read()).toMatchObject({ owner: "", revision: 1 })
+  expect(Effect.runSync(f.store.read())).toMatchObject({
+    owner: "",
+    revision: 1,
+  })
   expect(f.bind).toHaveBeenCalledWith({ owner: "account", bot: homeAgentId })
 })
 it("resolves an account's own connection locally even when its configuration names itself", async () => {
   const f = fixture()
-  f.store.configure("account", profile)
+  Effect.runSync(f.store.configure("account", profile))
   expect(await f.host.modelConnected()).toBe(true)
   expect(f.lookup).toHaveBeenCalledOnce()
   expect(f.list).toHaveBeenCalledOnce()
@@ -533,7 +539,7 @@ it("rejects invalid modern requests before profile or identity mutation", async 
     ])
   }
   expect(f.bind).not.toHaveBeenCalled()
-  expect(f.store.read()).toBeUndefined()
+  expect(Effect.runSync(f.store.read())).toBeUndefined()
 })
 it("reconciles a lost modern configuration acknowledgement through the idempotent legacy projection", async () => {
   const f = fixture(),
@@ -549,6 +555,6 @@ it("reconciles a lost modern configuration acknowledgement through the idempoten
   })
   expect(await client.configure("", profile)).toBe(true)
   expect(previous).toHaveBeenCalledOnce()
-  expect(f.store.read()?.revision).toBe(1)
+  expect(Effect.runSync(f.store.read())?.revision).toBe(1)
   expect(f.projections).toHaveLength(2)
 })

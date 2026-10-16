@@ -62,7 +62,9 @@ const standalone = <T>(
 
 export function objectTools(
   objects: WorkingObjects,
-  origin: (api: ToolExecutionApi) => ChangeSource,
+  origin: (
+    api: ToolExecutionApi
+  ) => ChangeSource | Effect.Effect<ChangeSource, ObjectFailure>,
   run: typeof standalone = standalone
 ) {
   return [
@@ -151,7 +153,13 @@ export function objectTools(
                   })),
                 },
               },
-              origin(api)
+              await run(
+                Effect.suspend(() => {
+                  const value = origin(api)
+                  return Effect.isEffect(value) ? value : Effect.succeed(value)
+                }),
+                context.abortSignal
+              )
             ),
             context.abortSignal
           )
@@ -191,7 +199,13 @@ export function objectTools(
                   ),
                 },
               },
-              origin(api)
+              await run(
+                Effect.suspend(() => {
+                  const value = origin(api)
+                  return Effect.isEffect(value) ? value : Effect.succeed(value)
+                }),
+                context.abortSignal
+              )
             ),
             context.abortSignal
           )

@@ -1,5 +1,10 @@
-import { Schema } from "effect"
-import type { Sqlite } from "../../storage/sqlite"
+import { and, asc, count, desc, eq } from "drizzle-orm"
+import { Effect, Schema } from "effect"
+import {
+  mapSqliteError,
+  type Sqlite,
+  type EffectSqliteDatabase,
+} from "../../storage/sqlite"
 import * as Domain from "../app"
 import {
   AppConflict,
@@ -11,308 +16,409 @@ import {
   PublishApp,
   ArchiveApp,
   InteractApp,
-  type AppDetail,
   WebResult,
 } from "../contracts"
-
 import type { AppAdmission, AppLedger } from "../repository"
+import {
+  generatedApps,
+  generatedAppVersions,
+  generatedAppOperations,
+  generatedAppEvents,
+} from "./schema"
 
+const decision = <TValue>(body: () => TValue) =>
+  Effect.try({
+    try: body,
+    catch: (cause) => {
+      if (cause instanceof AppConflict) return cause
+      throw cause
+    },
+  })
+type AppError = AppConflict | AppStorageError
 export class AppStore implements AppLedger {
   readonly transactionGroup: object
   constructor(
     private readonly db: Sqlite,
-    private readonly active: () => boolean
+    private readonly active: () => Effect.Effect<boolean, AppStorageError>
   ) {
     this.transactionGroup = db
-    const storage = <T>(operation: string, body: () => T): T => {
-      try {
-        return body()
-      } catch (cause) {
-        throw new AppStorageError({ operation, cause })
-      }
-    }
-    this.db = {
-      all: (query, ...bindings) =>
-        storage("read", () => db.all(query, ...bindings)),
-      run: (query, ...bindings) =>
-        storage("write", () => db.run(query, ...bindings)),
-      transaction: (body) => {
-        const failure: { failed: boolean; cause?: unknown } = { failed: false }
-        try {
-          return db.transaction(() => {
-            try {
-              return body()
-            } catch (cause) {
-              failure.failed = true
-              failure.cause = cause
-              throw cause
-            }
-          })
-        } catch (cause) {
-          if (failure.failed && cause === failure.cause) throw cause
-          throw new AppStorageError({ operation: "transaction", cause })
-        }
-      },
-    }
-
-    this.db.run(
-      "CREATE TABLE IF NOT EXISTS generated_apps (id TEXT PRIMARY KEY,record TEXT NOT NULL)"
-    )
-    this.db.run(
-      "CREATE TABLE IF NOT EXISTS generated_app_versions (id TEXT NOT NULL,version INTEGER NOT NULL,record TEXT NOT NULL,PRIMARY KEY(id,version))"
-    )
-    this.db.run(
-      "CREATE TABLE IF NOT EXISTS generated_app_operations (id TEXT PRIMARY KEY,input TEXT NOT NULL,result TEXT NOT NULL)"
-    )
-    this.db.run(
-      "CREATE TABLE IF NOT EXISTS generated_app_events (id TEXT PRIMARY KEY,app_id TEXT NOT NULL,record TEXT NOT NULL,queued INTEGER NOT NULL DEFAULT 0)"
+  }
+  private query<TValue, TError, TRequirements>(
+    body: (
+      orm: EffectSqliteDatabase
+    ) => Effect.Effect<TValue, TError, TRequirements>
+  ) {
+    return mapSqliteError(
+      this.db.use(body),
+      (cause) => new AppStorageError({ operation: "query", cause })
     )
   }
-  list(): AppDocument[] {
-    return this.db
-      .all<{ record: string }>(
-        "SELECT record FROM generated_apps ORDER BY rowid DESC"
+  private atomic<TValue, TError, TRequirements>(
+    body: () => Effect.Effect<TValue, TError, TRequirements>
+  ) {
+    return mapSqliteError(
+      this.db.transaction(body),
+      (cause) => new AppStorageError({ operation: "transaction", cause })
+    )
+  }
+  list() {
+    return this.query((orm) =>
+      orm
+        .select({ record: generatedApps.record })
+        .from(generatedApps)
+        .orderBy(desc(generatedApps.sequence))
+    ).pipe(
+      Effect.map((rows) =>
+        rows.map((row) =>
+          Schema.decodeUnknownSync(AppDocument)(JSON.parse(row.record))
+        )
       )
-      .map(({ record }) =>
-        Schema.decodeUnknownSync(AppDocument)(JSON.parse(record))
-      )
+    )
   }
   get(id: string) {
-    const row = this.db.all<{ record: string }>(
-      "SELECT record FROM generated_apps WHERE id=?",
-      id
-    )[0]
-    return row
-      ? Schema.decodeUnknownSync(AppDocument)(JSON.parse(row.record))
-      : undefined
+    return this.query((orm) =>
+      orm
+        .select({ record: generatedApps.record })
+        .from(generatedApps)
+        .where(eq(generatedApps.id, id))
+    ).pipe(
+      Effect.map((rows) =>
+        rows[0]
+          ? Schema.decodeUnknownSync(AppDocument)(JSON.parse(rows[0].record))
+          : undefined
+      )
+    )
   }
-  version(id: string, version: number): AppVersion {
-    const row = this.db.all<{ record: string }>(
-      "SELECT record FROM generated_app_versions WHERE id=? AND version=?",
-      id,
-      version
-    )[0]
-    if (!row)
-      throw new AppConflict({ message: "This app version is unavailable." })
-    return Schema.decodeUnknownSync(AppVersion)(JSON.parse(row.record))
+  version(id: string, version: number) {
+    return this.query((orm) =>
+      orm
+        .select({ record: generatedAppVersions.record })
+        .from(generatedAppVersions)
+        .where(
+          and(
+            eq(generatedAppVersions.id, id),
+            eq(generatedAppVersions.version, version)
+          )
+        )
+    ).pipe(
+      Effect.flatMap((rows) =>
+        rows[0]
+          ? Effect.sync(() =>
+              Schema.decodeUnknownSync(AppVersion)(JSON.parse(rows[0]!.record))
+            )
+          : Effect.fail(
+              new AppConflict({ message: "This app version is unavailable." })
+            )
+      )
+    )
   }
-  detail(id: string): AppDetail {
-    const app = this.get(id)
-    if (!app)
-      throw new AppConflict({ message: "This app is unavailable in this bot." })
-    return {
-      app,
-      versions: this.db
-        .all<{ record: string }>(
-          "SELECT record FROM generated_app_versions WHERE id=? ORDER BY version DESC",
-          id
+  detail(id: string) {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const app = yield* this.get(id)
+        if (!app)
+          return yield* new AppConflict({
+            message: "This app is unavailable in this bot.",
+          })
+        const versions = yield* this.query((orm) =>
+          orm
+            .select({ record: generatedAppVersions.record })
+            .from(generatedAppVersions)
+            .where(eq(generatedAppVersions.id, id))
+            .orderBy(desc(generatedAppVersions.version))
         )
-        .map(({ record }) =>
-          Schema.decodeUnknownSync(AppVersion)(JSON.parse(record))
-        ),
-      events: this.db
-        .all<{ record: string }>(
-          "SELECT record FROM generated_app_events WHERE app_id=? ORDER BY rowid DESC LIMIT 20",
-          id
+        const events = yield* this.query((orm) =>
+          orm
+            .select({ record: generatedAppEvents.record })
+            .from(generatedAppEvents)
+            .where(eq(generatedAppEvents.app_id, id))
+            .orderBy(desc(generatedAppEvents.sequence))
+            .limit(20)
         )
-        .map(({ record }) =>
-          Schema.decodeUnknownSync(AppEvent)(JSON.parse(record))
-        ),
-    }
+        return {
+          app,
+          versions: versions.map((row) =>
+            Schema.decodeUnknownSync(AppVersion)(JSON.parse(row.record))
+          ),
+          events: events.map((row) =>
+            Schema.decodeUnknownSync(AppEvent)(JSON.parse(row.record))
+          ),
+        }
+      })
+    )
   }
   private put(app: AppDocument) {
-    this.db.run(
-      "INSERT INTO generated_apps VALUES (?,?) ON CONFLICT(id) DO UPDATE SET record=excluded.record",
-      app.id,
-      JSON.stringify(app)
-    )
-    return app
+    const record = JSON.stringify(app)
+    return this.query((orm) =>
+      orm
+        .insert(generatedApps)
+        .values({ id: app.id, record })
+        .onConflictDoUpdate({ target: generatedApps.id, set: { record } })
+    ).pipe(Effect.as(app))
   }
   private current(id: string, revision: number, allowArchived = false) {
-    return Domain.currentApp(this.get(id), revision, allowArchived)
+    return this.get(id).pipe(
+      Effect.flatMap((app) =>
+        decision(() => Domain.currentApp(app, revision, allowArchived))
+      )
+    )
   }
-
+  private available() {
+    return this.active().pipe(
+      Effect.flatMap((active) =>
+        active
+          ? Effect.void
+          : Effect.fail(
+              new AppConflict({
+                message: "Restore this bot before changing its apps.",
+              })
+            )
+      )
+    )
+  }
   private operation(
     operationId: string,
     input: unknown,
-    execute: () => AppDocument
+    execute: () => Effect.Effect<AppDocument, AppError>
   ) {
-    return this.db.transaction(() => {
-      if (!this.active())
-        throw new AppConflict({
-          message: "Restore this bot before changing its apps.",
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        yield* this.available()
+        const encoded = JSON.stringify(input)
+        const rows = yield* this.query((orm) =>
+          orm
+            .select({
+              input: generatedAppOperations.input,
+              result: generatedAppOperations.result,
+            })
+            .from(generatedAppOperations)
+            .where(eq(generatedAppOperations.id, operationId))
+        )
+        const previous = rows[0]
+        if (previous) {
+          if (previous.input !== encoded)
+            return yield* new AppConflict({
+              message: "This operation ID belongs to another change.",
+            })
+          return Schema.decodeUnknownSync(AppDocument)(
+            JSON.parse(previous.result)
+          )
+        }
+        const counts = yield* this.query((orm) =>
+          orm.select({ n: count() }).from(generatedAppOperations)
+        )
+        yield* decision(() => Domain.operationCapacity(counts[0]!.n))
+        const result = yield* execute()
+        yield* this.query((orm) =>
+          orm.insert(generatedAppOperations).values({
+            id: operationId,
+            input: encoded,
+            result: JSON.stringify(result),
+          })
+        )
+        return result
+      })
+    )
+  }
+  save(raw: SaveApp) {
+    return Effect.suspend(() => {
+      const input = Schema.decodeUnknownSync(SaveApp)(raw)
+      return this.operation(input.operationId, { type: "save", ...input }, () =>
+        Effect.gen({ self: this }, function* () {
+          const current = yield* this.get(input.id),
+            total = current ? 0 : (yield* this.list()).length
+          const change = yield* decision(() =>
+            Domain.saveApp(input, current, total, new Date().toISOString())
+          )
+          const saved = yield* this.put(change.app)
+          yield* this.query((orm) =>
+            orm.insert(generatedAppVersions).values({
+              id: input.id,
+              version: change.version.version,
+              record: JSON.stringify(change.version),
+            })
+          )
+          return saved
         })
-      const encoded = JSON.stringify(input)
-      const previous = this.db.all<{ input: string; result: string }>(
-        "SELECT input,result FROM generated_app_operations WHERE id=?",
-        operationId
-      )[0]
-      if (previous) {
-        if (previous.input !== encoded)
-          throw new AppConflict({
+      )
+    })
+  }
+  publish(raw: PublishApp) {
+    return Effect.suspend(() => {
+      const input = Schema.decodeUnknownSync(PublishApp)(raw)
+      return this.operation(
+        input.operationId,
+        { type: "publish", ...input },
+        () =>
+          Effect.gen({ self: this }, function* () {
+            const current = yield* this.current(
+                input.id,
+                input.expectedRevision
+              ),
+              version = yield* this.version(input.id, input.version)
+            const app = yield* decision(() =>
+              Domain.publishApp(current, version)
+            )
+            return yield* this.put(app)
+          })
+      )
+    })
+  }
+  archive(raw: ArchiveApp) {
+    return Effect.suspend(() => {
+      const input = Schema.decodeUnknownSync(ArchiveApp)(raw)
+      return this.operation(
+        input.operationId,
+        { type: "archive", ...input },
+        () =>
+          Effect.gen({ self: this }, function* () {
+            const current = yield* this.current(
+              input.id,
+              input.expectedRevision,
+              true
+            )
+            return yield* this.put(Domain.archiveApp(current, input.archived))
+          })
+      )
+    })
+  }
+  interactionReceipt(raw: InteractApp) {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const input = Schema.decodeUnknownSync(InteractApp)(raw)
+        yield* this.available()
+        const rows = yield* this.query((orm) =>
+          orm
+            .select({
+              input: generatedAppOperations.input,
+              result: generatedAppOperations.result,
+            })
+            .from(generatedAppOperations)
+            .where(eq(generatedAppOperations.id, input.operationId))
+        )
+        const previous = rows[0]
+        if (!previous) return undefined
+        if (previous.input !== JSON.stringify({ type: "interact", ...input }))
+          return yield* new AppConflict({
             message: "This operation ID belongs to another change.",
           })
         return Schema.decodeUnknownSync(AppDocument)(
           JSON.parse(previous.result)
         )
-      }
-      Domain.operationCapacity(
-        this.db.all<{ n: number }>(
-          "SELECT count(*) AS n FROM generated_app_operations"
-        )[0]!.n
-      )
-      const result = execute()
-      this.db.run(
-        "INSERT INTO generated_app_operations VALUES (?,?,?)",
-        operationId,
-        encoded,
-        JSON.stringify(result)
-      )
-      return result
-    })
-  }
-  save(raw: SaveApp) {
-    const input = Schema.decodeUnknownSync(SaveApp)(raw)
-    return this.operation(input.operationId, { type: "save", ...input }, () => {
-      const current = this.get(input.id)
-      const change = Domain.saveApp(
-        input,
-        current,
-        current ? 0 : this.list().length,
-        new Date().toISOString()
-      )
-      this.db.run(
-        "INSERT INTO generated_app_versions VALUES (?,?,?)",
-        input.id,
-        change.version.version,
-        JSON.stringify(change.version)
-      )
-      return this.put(change.app)
-    })
-  }
-  publish(raw: PublishApp) {
-    const input = Schema.decodeUnknownSync(PublishApp)(raw)
-    return this.operation(
-      input.operationId,
-      { type: "publish", ...input },
-      () => {
-        const current = this.current(input.id, input.expectedRevision)
-        const version = this.version(input.id, input.version)
-        return this.put(Domain.publishApp(current, version))
-      }
-    )
-  }
-  archive(raw: ArchiveApp) {
-    const input = Schema.decodeUnknownSync(ArchiveApp)(raw)
-    return this.operation(
-      input.operationId,
-      { type: "archive", ...input },
-      () => {
-        const current = this.current(input.id, input.expectedRevision, true)
-        return this.put(Domain.archiveApp(current, input.archived))
-      }
-    )
-  }
-  interactionReceipt(raw: InteractApp) {
-    const input = Schema.decodeUnknownSync(InteractApp)(raw)
-    if (!this.active())
-      throw new AppConflict({
-        message: "Restore this bot before changing its apps.",
       })
-    const previous = this.db.all<{ input: string; result: string }>(
-      "SELECT input,result FROM generated_app_operations WHERE id=?",
-      input.operationId
-    )[0]
-    if (!previous) return undefined
-    if (previous.input !== JSON.stringify({ type: "interact", ...input }))
-      throw new AppConflict({
-        message: "This operation ID belongs to another change.",
-      })
-    return Schema.decodeUnknownSync(AppDocument)(JSON.parse(previous.result))
+    )
   }
   interactionSnapshot(input: InteractApp) {
-    if (!this.active())
-      throw new AppConflict({
-        message: "Restore this bot before changing its apps.",
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        yield* this.available()
+        const current = yield* this.current(input.id, input.expectedRevision)
+        return yield* decision(() =>
+          Domain.interactionSnapshot(current, input.version)
+        )
       })
-    return Domain.interactionSnapshot(
-      this.current(input.id, input.expectedRevision),
-      input.version
     )
   }
-
   interact(raw: InteractApp, webResult?: WebResult) {
-    const input = Schema.decodeUnknownSync(InteractApp)(raw)
-    return this.operation(
-      input.operationId,
-      { type: "interact", ...input },
-      () => {
-        const current = Domain.interactionSnapshot(
-          this.current(input.id, input.expectedRevision),
-          input.version
-        )
-        const change = Domain.interactionChange(
-          current,
-          this.version(input.id, input.version),
-          input,
-          this.pending().length,
-          crypto.randomUUID(),
-          new Date().toISOString(),
-          webResult ? Schema.decodeUnknownSync(WebResult)(webResult) : undefined
-        )
-        this.db.run(
-          "INSERT INTO generated_app_events VALUES (?,?,?,0)",
-          change.event.id,
-          change.event.appId,
-          JSON.stringify(change.event)
-        )
-        return this.put(change.app)
-      }
-    )
+    return Effect.suspend(() => {
+      const input = Schema.decodeUnknownSync(InteractApp)(raw)
+      return this.operation(
+        input.operationId,
+        { type: "interact", ...input },
+        () =>
+          Effect.gen({ self: this }, function* () {
+            const current = yield* this.interactionSnapshot(input),
+              version = yield* this.version(input.id, input.version),
+              pending = yield* this.pending()
+            const result = webResult
+              ? Schema.decodeUnknownSync(WebResult)(webResult)
+              : undefined
+            const change = yield* decision(() =>
+              Domain.interactionChange(
+                current,
+                version,
+                input,
+                pending.length,
+                crypto.randomUUID(),
+                new Date().toISOString(),
+                result
+              )
+            )
+            yield* this.query((orm) =>
+              orm.insert(generatedAppEvents).values({
+                id: change.event.id,
+                app_id: change.event.appId,
+                record: JSON.stringify(change.event),
+                queued: 0,
+              })
+            )
+            return yield* this.put(change.app)
+          })
+      )
+    })
   }
-  pending(): AppEvent[] {
-    return this.db
-      .all<{ record: string }>(
-        "SELECT record FROM generated_app_events WHERE queued=0 ORDER BY rowid LIMIT 20"
+  pending() {
+    return this.query((orm) =>
+      orm
+        .select({ record: generatedAppEvents.record })
+        .from(generatedAppEvents)
+        .where(eq(generatedAppEvents.queued, 0))
+        .orderBy(asc(generatedAppEvents.sequence))
+        .limit(20)
+    ).pipe(
+      Effect.map((rows) =>
+        rows.map((row) =>
+          Schema.decodeUnknownSync(AppEvent)(JSON.parse(row.record))
+        )
       )
-      .map(({ record }) =>
-        Schema.decodeUnknownSync(AppEvent)(JSON.parse(record))
-      )
+    )
   }
   cancelOperation(id: string) {
-    return this.db.transaction(() => {
-      const previous = this.db.all<{ result: string }>(
-        "SELECT result FROM generated_app_operations WHERE id=?",
-        id
-      )[0]
-      if (previous) return { applied: previous.result !== "null" }
-      Domain.operationCapacity(
-        this.db.all<{ n: number }>(
-          "SELECT count(*) AS n FROM generated_app_operations"
-        )[0]!.n
-      )
-      this.db.run(
-        "INSERT INTO generated_app_operations VALUES (?,'','null')",
-        id
-      )
-      return { applied: false }
-    })
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const rows = yield* this.query((orm) =>
+          orm
+            .select({ result: generatedAppOperations.result })
+            .from(generatedAppOperations)
+            .where(eq(generatedAppOperations.id, id))
+        )
+        if (rows[0]) return { applied: rows[0].result !== "null" }
+        const counts = yield* this.query((orm) =>
+          orm.select({ n: count() }).from(generatedAppOperations)
+        )
+        yield* decision(() => Domain.operationCapacity(counts[0]!.n))
+        yield* this.query((orm) =>
+          orm
+            .insert(generatedAppOperations)
+            .values({ id, input: "", result: "null" })
+        )
+        return { applied: false }
+      })
+    )
   }
   deliverNext(admission: AppAdmission) {
-    if (admission.transactionGroup !== this.transactionGroup)
-      throw new Error("App admission must share its storage transaction group.")
-    return this.db.transaction(() => {
-      if (!this.active()) return false
-      const event = this.pending()[0]
-      if (!event) return false
-      if (admission.admit(event) !== event.turnId)
-        throw new Error("App admission returned a different turn identity.")
-      this.db.run(
-        "UPDATE generated_app_events SET queued=1,record=? WHERE id=?",
-        JSON.stringify({ ...event, delivery: "queued" }),
-        event.id
-      )
-      return true
-    })
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        if (admission.transactionGroup !== this.transactionGroup)
+          throw new Error(
+            "App admission must share its storage transaction group."
+          )
+        if (!(yield* this.active())) return false
+        const event = (yield* this.pending())[0]
+        if (!event) return false
+        if ((yield* admission.admit(event)) !== event.turnId)
+          throw new Error("App admission returned a different turn identity.")
+        yield* this.query((orm) =>
+          orm
+            .update(generatedAppEvents)
+            .set({
+              queued: 1,
+              record: JSON.stringify({ ...event, delivery: "queued" }),
+            })
+            .where(eq(generatedAppEvents.id, event.id))
+        )
+        return true
+      })
+    )
   }
 }

@@ -1,3 +1,4 @@
+import { sqliteFailure } from "./sqlite-fault"
 import { expect, it } from "@effect/vitest"
 import { it as test, vi } from "vitest"
 import { Cause, Context, Effect, Exit, Layer, ManagedRuntime } from "effect"
@@ -68,15 +69,15 @@ test("late usage fills known tokens without reopening or changing the first term
   })
 })
 
-test("first terminal publication wins and the native callback reports it once", () => {
+test("first terminal publication wins and the native callback reports it once", async () => {
   const usage = usageFixture(database())
   const finished = vi.fn()
-  const start = piUsage(usage.service, Effect.runSync, finished)
-  const observation = start(route, null, "compaction")
-  observation.end("failed", "First failure")
+  const start = piUsage(usage.service, Effect.runPromise, finished)
+  const observation = await start(route, null, "compaction")
+  await observation.end("failed", "First failure")
   const before = usage.recent()[0]
-  observation.end("completed")
-  observation.end("failed", "Later failure")
+  await observation.end("completed")
+  await observation.end("failed", "Later failure")
   expect(usage.recent()[0]).toEqual(before)
   expect(finished).toHaveBeenCalledExactlyOnceWith(before)
 })
@@ -161,56 +162,53 @@ test("a stored payload cannot redirect an attempt update to a different identity
 
 test("report and attempt updates roll back together, then the same native report can be retried", () => {
   const db = database()
-  let fail = false
-  const failing: Sqlite = {
-    ...db,
-    run: (query, ...bindings) => {
-      if (fail && query.startsWith("UPDATE inference_attempts"))
-        throw new Error("Synthetic write unavailable")
-      db.run(query, ...bindings)
-    },
-  }
-  const usage = usageFixture(failing)
+  const usage = usageFixture(db)
   const observation = Effect.runSync(
     usage.service.start(route, "turn", "conversation")
   )
-  fail = true
+  db.run(
+    "CREATE TRIGGER fail_usage_update BEFORE UPDATE ON inference_attempts BEGIN SELECT RAISE(ABORT,'Synthetic write unavailable'); END"
+  )
   const exit = Effect.runSyncExit(observation.usage(report))
   expect(Exit.isFailure(exit) && Cause.hasFails(exit.cause)).toBe(true)
   expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(false)
   expect(db.all("SELECT * FROM model_usage")).toEqual([])
   expect(usage.recent()[0]?.input).toBeNull()
-  fail = false
+  db.run("DROP TRIGGER fail_usage_update")
   Effect.runSync(observation.usage(report))
   expect(db.all("SELECT * FROM model_usage")).toHaveLength(1)
   expect(usage.recent()[0]?.input).toBe(123)
 })
 
-test("failed terminal commit publishes no callback and permits a later successful finish", () => {
+test("failed terminal commit publishes no callback and permits a later successful finish", async () => {
   const db = database()
   let fail = false
   const failing: Sqlite = {
     ...db,
     transaction: (body) =>
-      db.transaction(() => {
-        const value = body()
-        if (fail) throw new Error("Synthetic commit failed")
-        return value
-      }),
+      db.transaction(() =>
+        body().pipe(
+          Effect.flatMap((value) =>
+            fail
+              ? Effect.fail(sqliteFailure("Synthetic commit failed"))
+              : Effect.succeed(value)
+          )
+        )
+      ),
   }
   const usage = usageFixture(failing),
     finished = vi.fn()
-  const observation = piUsage(usage.service, Effect.runSync, finished)(
+  const observation = await piUsage(usage.service, Effect.runPromise, finished)(
     route,
     "turn",
     "conversation"
   )
   fail = true
-  expect(() => observation.end("completed")).toThrow()
+  await expect(observation.end("completed")).rejects.toThrow()
   expect(finished).not.toHaveBeenCalled()
   expect(usage.recent()[0]?.outcome).toBe("running")
   fail = false
-  observation.end("completed")
+  await observation.end("completed")
   expect(finished).toHaveBeenCalledOnce()
   expect(usage.recent()[0]?.outcome).toBe("completed")
 })
@@ -220,17 +218,12 @@ test("activation recovery rolls back every attempt if one update fails", () => {
     initial = usageFixture(db)
   initial.start(route, "one", "conversation")
   initial.start(route, "two", "conversation")
-  let writes = 0
-  const failing: Sqlite = {
-    ...db,
-    run: (query, ...bindings) => {
-      if (query.startsWith("UPDATE inference_attempts") && ++writes === 2)
-        throw new Error("Synthetic recovery failure")
-      db.run(query, ...bindings)
-    },
-  }
-  expect(() => usageFixture(failing)).toThrow()
+  db.run(
+    "CREATE TRIGGER fail_usage_recovery BEFORE UPDATE ON inference_attempts WHEN (SELECT count(*) FROM inference_attempts WHERE json_extract(payload,'$.outcome')='interrupted')=1 BEGIN SELECT RAISE(ABORT,'Synthetic recovery failure'); END"
+  )
+  expect(() => usageFixture(db)).toThrow()
   expect(initial.recent().map((a) => a.outcome)).toEqual(["running", "running"])
+  db.run("DROP TRIGGER fail_usage_recovery")
   expect(
     usageFixture(db)
       .recent()
@@ -260,11 +253,22 @@ test("malformed read rows and totals are defects rather than storage rejections"
   let corrupt = false
   const broken: Sqlite = {
     ...db,
-    all: (query, ...bindings) => {
-      if (corrupt && query.includes("count(*) AS modelRequests"))
-        return db.all("SELECT 'not a number' AS modelRequests")
-      return db.all(query, ...bindings)
-    },
+    use: (body) =>
+      db
+        .use(body)
+        .pipe(
+          Effect.map((result) =>
+            corrupt && Array.isArray(result)
+              ? (result.map((row) =>
+                  typeof row === "object" &&
+                  row !== null &&
+                  "modelRequests" in row
+                    ? { ...row, modelRequests: "not a number" }
+                    : row
+                ) as typeof result)
+              : result
+          )
+        ),
   }
   const usage = usageFixture(broken)
   corrupt = true
@@ -339,7 +343,7 @@ test("the actual Pi callback uses the retained host Context and stops after runt
   const service = runtime.runSync(InferenceUsage)
   const markers: string[] = []
   const native = piUsage(service, (work) =>
-    runtime.runSync(
+    runtime.runPromise(
       Effect.gen(function* () {
         markers.push((yield* Caller).marker)
         return yield* work
@@ -347,13 +351,13 @@ test("the actual Pi callback uses the retained host Context and stops after runt
     )
   )
   try {
-    native(route, "turn", "conversation").end("completed")
+    await (await native(route, "turn", "conversation")).end("completed")
     expect(markers).toEqual(["native invocation", "native invocation"])
   } finally {
     await runtime.dispose()
   }
-  expect(() => native(route, "turn", "conversation")).toThrow()
-  expect(ledger.recent()).toHaveLength(1)
+  await expect(native(route, "turn", "conversation")).rejects.toThrow()
+  expect(Effect.runSync(ledger.recent())).toHaveLength(1)
 })
 
 test("existing account rows survive activation and new attempt identity collisions cannot overwrite history", () => {
@@ -374,12 +378,12 @@ test("existing account rows survive activation and new attempt identity collisio
     )
   )
   Effect.runSync(service.start(route, "first", "conversation"))
-  const before = ledger.recent()[0]
+  const before = Effect.runSync(ledger.recent())[0]
   const exit = Effect.runSyncExit(
     service.start(route, "second", "conversation")
   )
   expect(Exit.isFailure(exit) && Cause.hasFails(exit.cause)).toBe(true)
-  expect(ledger.recent()).toEqual([before])
+  expect(Effect.runSync(ledger.recent())).toEqual([before])
   expect(Effect.runSync(service.accountTotals())).toEqual({
     input: 100,
     cached: 80,

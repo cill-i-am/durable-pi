@@ -47,20 +47,24 @@ function setup(
 ) {
   const db = database()
   let active = true
-  const store = new AppStore(db, () => active),
+  const store = new AppStore(db, () => Effect.sync(() => active)),
     id = crypto.randomUUID()
-  const draft = store.save({
-    id,
-    operationId: crypto.randomUUID(),
-    expectedRevision: 0,
-    definition,
-  })
-  const app = store.publish({
-    id,
-    operationId: crypto.randomUUID(),
-    expectedRevision: draft.revision,
-    version: 1,
-  })
+  const draft = Effect.runSync(
+    store.save({
+      id,
+      operationId: crypto.randomUUID(),
+      expectedRevision: 0,
+      definition,
+    })
+  )
+  const app = Effect.runSync(
+    store.publish({
+      id,
+      operationId: crypto.randomUUID(),
+      expectedRevision: draft.revision,
+      version: 1,
+    })
+  )
   const web = new WebApps(makeApps(store), (input, signal) =>
     nativeOperation(
       () => execute(input, signal),
@@ -175,13 +179,13 @@ describe("Cloudflare generated apps", () => {
     const exit = await first
     expect(Exit.isFailure(exit)).toBe(true)
     if (Exit.isFailure(exit)) expect(Cause.hasInterrupts(exit.cause)).toBe(true)
-    expect(f.store.get(f.app.id)?.revision).toBe(f.app.revision)
-    expect(f.store.pending()).toEqual([])
+    expect(Effect.runSync(f.store.get(f.app.id))?.revision).toBe(f.app.revision)
+    expect(Effect.runSync(f.store.pending())).toEqual([])
     const resumed = Effect.runPromise(f.web.interact(f.input, signal()))
     await f.enteredAgain
     f.finish()
     expect((await resumed).revision).toBe(f.app.revision + 1)
-    expect(f.store.pending()).toHaveLength(1)
+    expect(Effect.runSync(f.store.pending())).toHaveLength(1)
   })
   it("fences archive and restore between execution completion and commit", async () => {
     const f = controlled(() => {
@@ -192,8 +196,8 @@ describe("Cloudflare generated apps", () => {
     await f.entered
     f.finish()
     await expect(running).rejects.toThrow()
-    expect(f.store.get(f.app.id)?.revision).toBe(f.app.revision)
-    expect(f.store.pending()).toEqual([])
+    expect(Effect.runSync(f.store.get(f.app.id))?.revision).toBe(f.app.revision)
+    expect(Effect.runSync(f.store.pending())).toEqual([])
   })
   it("requires a sole web block and valid bounded initial JSON", () => {
     expect(Schema.is(AppDefinition)(definition)).toBe(true)
@@ -224,10 +228,10 @@ describe("Cloudflare generated apps", () => {
       f.web.render({ id: f.app.id, version: 1 }, signal())
     )
     expect(preview.html).toContain('data-action="add"')
-    expect(f.store.get(f.app.id)?.state.web).toBeUndefined()
+    expect(Effect.runSync(f.store.get(f.app.id))?.state.web).toBeUndefined()
     const applied = await Effect.runPromise(f.web.interact(f.input, signal()))
     expect(applied.state.web).toEqual({ counter: '{"count":1}' })
-    expect(f.store.pending()).toHaveLength(1)
+    expect(Effect.runSync(f.store.pending())).toHaveLength(1)
     expect(await Effect.runPromise(f.web.interact(f.input, signal()))).toEqual(
       applied
     )
@@ -262,35 +266,40 @@ describe("Cloudflare generated apps", () => {
       f.web.interact(f.input, controller.signal)
     )
     await f.entered
-    if (mode === "cancel") f.store.cancelOperation(f.input.operationId)
+    if (mode === "cancel")
+      Effect.runSync(f.store.cancelOperation(f.input.operationId))
     if (mode === "archive-app")
-      f.store.archive({
-        id: f.app.id,
-        operationId: crypto.randomUUID(),
-        expectedRevision: f.app.revision,
-        archived: true,
-      })
+      Effect.runSync(
+        f.store.archive({
+          id: f.app.id,
+          operationId: crypto.randomUUID(),
+          expectedRevision: f.app.revision,
+          archived: true,
+        })
+      )
     if (mode === "archive-bot") f.archiveBot()
     if (mode === "restore-bot") {
       f.archiveBot()
       f.restoreBot()
     }
     if (mode === "publish")
-      f.store.publish({
-        id: f.app.id,
-        operationId: crypto.randomUUID(),
-        expectedRevision: f.app.revision,
-        version: 1,
-      })
+      Effect.runSync(
+        f.store.publish({
+          id: f.app.id,
+          operationId: crypto.randomUUID(),
+          expectedRevision: f.app.revision,
+          version: 1,
+        })
+      )
     if (mode === "abort") controller.abort()
     f.finish()
     await expect(running).rejects.toThrow()
-    expect(f.store.get(f.app.id)?.state.web).toBeUndefined()
-    expect(f.store.pending()).toEqual([])
+    expect(Effect.runSync(f.store.get(f.app.id))?.state.web).toBeUndefined()
+    expect(Effect.runSync(f.store.pending())).toEqual([])
   })
   it("rejects cancellation before dispatch and overlapping bot computation", async () => {
     const f = controlled()
-    f.store.cancelOperation(f.input.operationId)
+    Effect.runSync(f.store.cancelOperation(f.input.operationId))
     await expect(
       Effect.runPromise(f.web.interact(f.input, signal()))
     ).rejects.toMatchObject({ _tag: "AppConflict" })
@@ -321,28 +330,34 @@ describe("Cloudflare generated apps", () => {
       await expect(
         Effect.runPromise(f.web.interact(f.input, signal()))
       ).rejects.toMatchObject({ _tag: "AppConflict" })
-      expect(f.store.get(f.app.id)?.revision).toBe(f.app.revision)
-      expect(f.store.pending()).toEqual([])
+      expect(Effect.runSync(f.store.get(f.app.id))?.revision).toBe(
+        f.app.revision
+      )
+      expect(Effect.runSync(f.store.pending())).toEqual([])
     }
   )
   it("retains a legacy record without web state and strips web state when its component is removed", async () => {
     const f = setup()
     const changed = await Effect.runPromise(f.web.interact(f.input, signal()))
-    const draft = f.store.save({
-      id: f.app.id,
-      operationId: crypto.randomUUID(),
-      expectedRevision: changed.revision,
-      definition: {
-        ...definition,
-        blocks: [{ id: "text", type: "text", text: "Replacement" }],
-      },
-    })
-    const published = f.store.publish({
-      id: f.app.id,
-      operationId: crypto.randomUUID(),
-      expectedRevision: draft.revision,
-      version: 2,
-    })
+    const draft = Effect.runSync(
+      f.store.save({
+        id: f.app.id,
+        operationId: crypto.randomUUID(),
+        expectedRevision: changed.revision,
+        definition: {
+          ...definition,
+          blocks: [{ id: "text", type: "text", text: "Replacement" }],
+        },
+      })
+    )
+    const published = Effect.runSync(
+      f.store.publish({
+        id: f.app.id,
+        operationId: crypto.randomUUID(),
+        expectedRevision: draft.revision,
+        version: 2,
+      })
+    )
     expect(published.state).toEqual({ checks: {}, forms: {} })
   })
 })
@@ -359,7 +374,7 @@ it("does not dispatch generated code for a pre-aborted action", async () => {
   )
   expect(Exit.isFailure(exit) && Cause.hasInterrupts(exit.cause)).toBe(true)
   expect(calls).toBe(0)
-  expect(f.store.get(f.app.id)?.revision).toBe(f.app.revision)
+  expect(Effect.runSync(f.store.get(f.app.id))?.revision).toBe(f.app.revision)
 })
 it.each(["defect", "tagged defect", "mixed"])(
   "keeps a generated app %s fatal and releases the lease",
@@ -393,8 +408,8 @@ it.each(["defect", "tagged defect", "mixed"])(
     expect(
       Exit.isFailure(exit) && exit.cause.reasons.map((reason) => reason._tag)
     ).toEqual(cause.reasons.map((reason) => reason._tag))
-    expect(f.store.get(f.app.id)?.revision).toBe(f.app.revision)
-    expect(f.store.pending()).toEqual([])
+    expect(Effect.runSync(f.store.get(f.app.id))?.revision).toBe(f.app.revision)
+    expect(Effect.runSync(f.store.pending())).toEqual([])
     expect(
       (await Effect.runPromise(app.interact(f.input, signal()))).revision
     ).toBe(f.app.revision + 1)
@@ -403,7 +418,7 @@ it.each(["defect", "tagged defect", "mixed"])(
 it("keeps corrupt owned state fatal before executing code", async () => {
   const f = setup(),
     service = makeApps(f.store)
-  const snapshot = f.store.interactionSnapshot(f.input)
+  const snapshot = Effect.runSync(f.store.interactionSnapshot(f.input))
   Object.assign(service, {
     interactionSnapshot: () =>
       Effect.succeed({
@@ -423,5 +438,5 @@ it("keeps corrupt owned state fatal before executing code", async () => {
   const exit = await Effect.runPromiseExit(app.interact(f.input, signal()))
   expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)
   expect(calls).toBe(0)
-  expect(f.store.pending()).toEqual([])
+  expect(Effect.runSync(f.store.pending())).toEqual([])
 })

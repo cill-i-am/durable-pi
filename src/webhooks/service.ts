@@ -1,14 +1,14 @@
-import { Schema, Context, Effect, Layer } from "effect"
+import { Context, Effect, Layer } from "effect"
 import { RoutineAdmissionState } from "../routines/service"
-import { RoutineStorageError } from "../routines/persistence"
-import { RoutineConflict } from "../routines/contracts"
+import type { RoutineStorageError } from "../routines/persistence"
 import { WebhookTransactions } from "./application"
-import {
+import type {
   WebhookRejected,
-  type ConfigureWebhook,
-  type WebhookInfo,
+  ConfigureWebhook,
+  WebhookInfo,
 } from "./contracts"
-import { WebhookPersistence, WebhookStorageError } from "./persistence"
+import type { WebhookStorageError } from "./persistence"
+import { WebhookPersistence } from "./persistence"
 
 export type WebhookError =
   WebhookRejected | WebhookStorageError | RoutineStorageError
@@ -39,46 +39,20 @@ export class Webhooks extends Context.Service<
   }
 >()("durable-pi/webhooks/Webhooks") {}
 
-const attempt = <TResult>(body: () => TResult) =>
-  Effect.try({
-    try: body,
-    catch(cause) {
-      const knownFailure = Schema.decodeUnknownOption(
-        Schema.Union([
-          WebhookRejected,
-          WebhookStorageError,
-          RoutineStorageError,
-        ])
-      )(cause)
-      if (knownFailure._tag === "Some") return knownFailure.value
-      const routineConflict = Schema.decodeUnknownOption(RoutineConflict)(cause)
-      if (routineConflict._tag === "Some")
-        return new WebhookRejected({
-          reason: "conflict",
-          message: routineConflict.value.message,
-        })
-      throw cause
-    },
-  })
-
 export function makeWebhooks(
   records: WebhookPersistence["Service"],
   routines: RoutineAdmissionState["Service"],
-  active: () => boolean
+  active: () => Effect.Effect<boolean, WebhookStorageError>
 ) {
   const tx = new WebhookTransactions(records, routines, active)
   return Webhooks.of({
-    info: Effect.fn("Webhooks.info")((id: string) =>
-      attempt(() => tx.info(id))
-    ),
+    info: Effect.fn("Webhooks.info")((id: string) => tx.info(id)),
     configure: Effect.fn("Webhooks.configure")((input: WebhookConfiguration) =>
-      attempt(() => tx.configure(input))
+      tx.configure(input)
     ),
-    cancel: Effect.fn("Webhooks.cancel")((id: string) =>
-      attempt(() => tx.cancel(id))
-    ),
+    cancel: Effect.fn("Webhooks.cancel")((id: string) => tx.cancel(id)),
     authorized: Effect.fn("Webhooks.authorized")((id: string, hash: string) =>
-      attempt(() => tx.authorized(id, hash))
+      tx.authorized(id, hash)
     ),
     accept: Effect.fn("Webhooks.accept")(
       (
@@ -87,11 +61,13 @@ export function makeWebhooks(
         eventId: string,
         payload: string,
         payloadHash: string
-      ) => attempt(() => tx.accept(id, hash, eventId, payload, payloadHash))
+      ) => tx.accept(id, hash, eventId, payload, payloadHash)
     ),
   })
 }
-export const webhookApplication = (active: () => boolean) =>
+export const webhookApplication = (
+  active: () => Effect.Effect<boolean, WebhookStorageError>
+) =>
   Layer.effect(
     Webhooks,
     Effect.gen(function* () {

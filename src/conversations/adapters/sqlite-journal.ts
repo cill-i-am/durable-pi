@@ -1,6 +1,7 @@
+import { eq } from "drizzle-orm"
 import { Effect, Layer, Schema } from "effect"
+import { mapSqliteError, type Sqlite } from "../../storage/sqlite"
 import { TimelineItem } from "../contracts"
-import type { Sqlite } from "../../storage/sqlite"
 import type { MemoryLedger } from "../../memory/ledger"
 import type { ConversationLedger } from "../ledger"
 import {
@@ -9,83 +10,63 @@ import {
   type ConversationMaterialization,
 } from "../journal"
 import { ConversationStorageError } from "../turns"
+import { chatActivity } from "./schema"
 
-export function sqliteConversationMaterialization(
-  db: Sqlite
-): ConversationMaterialization {
-  try {
-    db.run(
-      "CREATE TABLE IF NOT EXISTS chat_activity (turn_id TEXT PRIMARY KEY,payload TEXT NOT NULL)"
-    )
-  } catch (cause) {
-    throw new ConversationStorageError({
-      operation: "open materialization",
-      cause,
-    })
-  }
-  return {
-    ...conversationTransactions(db),
-    readActivity: (id) => {
-      let row: { payload: string } | undefined
-      try {
-        row = db.all<{ payload: string }>(
-          "SELECT payload FROM chat_activity WHERE turn_id=?",
-          id
-        )[0]
-      } catch (cause) {
-        throw new ConversationStorageError({
-          operation: "read activity",
-          cause,
-        })
-      }
-      return row
-        ? Schema.decodeUnknownSync(Schema.Array(TimelineItem))(
-            JSON.parse(row.payload)
-          )
-        : undefined
-    },
-    saveActivity: (id, activity) => {
-      const payload = JSON.stringify(activity)
-      try {
-        db.run(
-          "INSERT INTO chat_activity VALUES (?,?) ON CONFLICT(turn_id) DO UPDATE SET payload=excluded.payload",
-          id,
-          payload
-        )
-      } catch (cause) {
-        throw new ConversationStorageError({
-          operation: "save activity",
-          cause,
-        })
-      }
-    },
-  }
-}
 export function conversationTransactions(
   db: Sqlite
 ): Pick<ConversationMaterialization, "transactionGroup" | "atomic"> {
   return {
     transactionGroup: db,
-    atomic: (body) => {
-      const callback: { failed: boolean; cause?: unknown } = { failed: false }
-      try {
-        return db.transaction(() => {
-          try {
-            return body()
-          } catch (cause) {
-            callback.failed = true
-            callback.cause = cause
-            throw cause
-          }
-        })
-      } catch (cause) {
-        if (callback.failed && cause === callback.cause) throw cause
-        throw new ConversationStorageError({
-          operation: "materialization transaction",
-          cause,
-        })
-      }
-    },
+    atomic: (body) =>
+      mapSqliteError(
+        db.transaction(body),
+        (cause) =>
+          new ConversationStorageError({
+            operation: "materialization transaction",
+            cause,
+          })
+      ),
+  }
+}
+export function sqliteConversationMaterialization(
+  db: Sqlite
+): ConversationMaterialization {
+  return {
+    ...conversationTransactions(db),
+    readActivity: (id) =>
+      mapSqliteError(
+        db.use((orm) =>
+          orm
+            .select({ payload: chatActivity.payload })
+            .from(chatActivity)
+            .where(eq(chatActivity.turn_id, id))
+            .limit(1)
+        ),
+        (cause) =>
+          new ConversationStorageError({ operation: "read activity", cause })
+      ).pipe(
+        Effect.map((rows) =>
+          rows[0]
+            ? Schema.decodeUnknownSync(
+                Schema.fromJsonString(Schema.Array(TimelineItem))
+              )(rows[0].payload)
+            : undefined
+        )
+      ),
+    saveActivity: (id, activity) =>
+      mapSqliteError(
+        db.use((orm) =>
+          orm
+            .insert(chatActivity)
+            .values({ turn_id: id, payload: JSON.stringify(activity) })
+            .onConflictDoUpdate({
+              target: chatActivity.turn_id,
+              set: { payload: JSON.stringify(activity) },
+            })
+        ),
+        (cause) =>
+          new ConversationStorageError({ operation: "save activity", cause })
+      ).pipe(Effect.asVoid),
   }
 }
 export const sqliteConversationJournal = (
@@ -93,22 +74,11 @@ export const sqliteConversationJournal = (
   conversations: ConversationLedger,
   memory: Pick<MemoryLedger, "transactionGroup" | "append" | "render" | "notes">
 ) =>
-  Layer.effect(
+  Layer.succeed(
     ConversationJournal,
-    Effect.try({
-      try: () =>
-        makeConversationJournal(
-          conversations,
-          memory,
-          sqliteConversationMaterialization(db)
-        ),
-      catch: (cause) => {
-        const conversationStorageError = Schema.decodeUnknownOption(
-          ConversationStorageError
-        )(cause)
-        if (conversationStorageError._tag === "Some")
-          return conversationStorageError.value
-        throw cause
-      },
-    }).pipe(Effect.withSpan("Conversations.sqlite.openJournal"))
+    makeConversationJournal(
+      conversations,
+      memory,
+      sqliteConversationMaterialization(db)
+    )
   )

@@ -118,10 +118,12 @@ describe("native Pi steering with SQLite persistence", () => {
           model: "faux-1",
           thinking: "off",
         })
-        const root = store.admit({
-          operationId: crypto.randomUUID(),
-          text: "make a design",
-        }).turn
+        const root = Effect.runSync(
+          store.admit({
+            operationId: crypto.randomUUID(),
+            text: "make a design",
+          })
+        ).turn
         let initial = await conversation.submit(
           {
             type: "input",
@@ -134,11 +136,13 @@ describe("native Pi steering with SQLite persistence", () => {
           ctx
         )
         await toolEntered.promise
-        const steer = store.admit({
-          operationId: crypto.randomUUID(),
-          text: "use blue",
-          mode: "steer",
-        }).turn
+        const steer = Effect.runSync(
+          store.admit({
+            operationId: crypto.randomUUID(),
+            text: "use blue",
+            mode: "steer",
+          })
+        ).turn
         const command = {
           type: "input" as const,
           requestId: steer.id,
@@ -175,14 +179,14 @@ describe("native Pi steering with SQLite persistence", () => {
           expect(
             replySettled(
               { ...root, status: "stopping" },
-              store.members(root.id),
+              Effect.runSync(store.members(root.id)),
               { snapshot: stoppedStream.snapshot, records }
             )
           ).toBe(true)
           const archived = archiveEntries(
             root,
             stoppedStream.snapshot.entries,
-            placedInputs(store.members(root.id), records)
+            placedInputs(Effect.runSync(store.members(root.id)), records)
           )
           expect(archived.map((item) => item.kind)).toEqual([
             "user",
@@ -197,7 +201,7 @@ describe("native Pi steering with SQLite persistence", () => {
                 session_id: String(conversation.id),
                 status: "stopping",
               },
-              store.members(root.id)
+              Effect.runSync(store.members(root.id))
             )
           )
           expect(observed.settled).toBe(true)
@@ -231,7 +235,7 @@ describe("native Pi steering with SQLite persistence", () => {
           [root.id, await initial.status(ctx)],
           [steer.id, await receipt.status(ctx)],
         ])
-        const members = store.members(root.id)
+        const members = Effect.runSync(store.members(root.id))
         const archived = archiveEntries(
           root,
           stream.snapshot.entries,

@@ -322,7 +322,7 @@ export class BackgroundGroupProbe extends BackgroundGroup {
     super(ctx, { ...env, AGENT: env.PERSONAL })
     this.parents = env.PERSONAL
     this.legacy = env.LEGACY
-    this.db.run(
+    this.ctx.storage.sql.exec(
       "CREATE TABLE IF NOT EXISTS background_probe (id INTEGER PRIMARY KEY,calls INTEGER NOT NULL)"
     )
     const faux = fauxProvider({
@@ -355,7 +355,7 @@ export class BackgroundGroupProbe extends BackgroundGroup {
         ...options,
         fetch: async (_input, request) => {
           this.probe.entered = true
-          this.db.run(
+          this.ctx.storage.sql.exec(
             "INSERT INTO background_probe VALUES (1,1) ON CONFLICT(id) DO UPDATE SET calls=calls+1"
           )
           request?.signal?.addEventListener(
@@ -396,16 +396,19 @@ export class BackgroundGroupProbe extends BackgroundGroup {
   inspectHeld() {
     return {
       ...this.probe,
-      attempts: this.db
-        .all<{ payload: string }>(
+      attempts: this.ctx.storage.sql
+        .exec<{ payload: string }>(
           "SELECT payload FROM inference_attempts ORDER BY rowid"
         )
+        .toArray()
         .map((row) => JSON.parse(row.payload)),
       runtimeOpen: this.runtime.scope.state._tag !== "Closed",
       calls:
-        this.db.all<{ calls: number }>(
-          "SELECT calls FROM background_probe WHERE id=1"
-        )[0]?.calls ?? 0,
+        this.ctx.storage.sql
+          .exec<{ calls: number }>(
+            "SELECT calls FROM background_probe WHERE id=1"
+          )
+          .toArray()[0]?.calls ?? 0,
     }
   }
 }

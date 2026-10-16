@@ -1,15 +1,13 @@
-import { Clock, Context, Effect, Layer, Schema } from "effect"
+import { Clock, Context, Effect, Layer } from "effect"
 import type { ResolvedRoute } from "./policy"
-import {
-  type AccountUsage,
-  type Attempt,
-  type TerminalOutcome,
-  type UsageReport,
-  type UsageTotals,
+import { finishAttempt, recordUsage, restartError } from "./usage-domain"
+import type {
+  AccountUsage,
+  Attempt,
+  TerminalOutcome,
+  UsageReport,
+  UsageTotals,
   UsageStorageError,
-  finishAttempt,
-  recordUsage,
-  restartError,
 } from "./usage-domain"
 import type { UsageLedger } from "./usage-ledger"
 
@@ -37,49 +35,36 @@ export class InferenceUsage extends Context.Service<
   }
 >()("durable-pi/InferenceUsage") {}
 
-const storage = <T>(body: () => T) =>
-  Effect.try({
-    try: body,
-    catch: (cause) => {
-      const usageStorageError =
-        Schema.decodeUnknownOption(UsageStorageError)(cause)
-      if (usageStorageError._tag === "Some") return usageStorageError.value
-      throw cause
-    },
-  })
-
 export function usageApplication(ledger: UsageLedger, uuid: () => string) {
   const service = InferenceUsage.of({
     start: Effect.fn("InferenceUsage.start")(
       function* (route, turnId, purpose) {
         const now = yield* Clock.currentTimeMillis
         const id = uuid()
-        yield* storage(() =>
-          ledger.insert({
-            id,
-            route,
-            turnId,
-            purpose,
-            startedAt: new Date(now).toISOString(),
-            finishedAt: null,
-            outcome: "running",
-            error: null,
-            reportedModel: null,
-            input: null,
-            cached: null,
-            output: null,
-          })
-        )
+        yield* ledger.insert({
+          id,
+          route,
+          turnId,
+          purpose,
+          startedAt: new Date(now).toISOString(),
+          finishedAt: null,
+          outcome: "running",
+          error: null,
+          reportedModel: null,
+          input: null,
+          cached: null,
+          output: null,
+        })
         return {
           id,
           turnId,
           usage: Effect.fn("InferenceUsage.report")(function* (report) {
             const at = new Date(yield* Clock.currentTimeMillis).toISOString()
-            yield* storage(() =>
-              ledger.atomic(() => {
-                const current = ledger.read(id)
-                if (ledger.report(report, at))
-                  ledger.put(recordUsage(current, report))
+            yield* ledger.atomic(() =>
+              Effect.gen(function* () {
+                const current = yield* ledger.read(id)
+                if (yield* ledger.report(report, at))
+                  yield* ledger.put(recordUsage(current, report))
               })
             )
           }),
@@ -88,15 +73,11 @@ export function usageApplication(ledger: UsageLedger, uuid: () => string) {
             error = null
           ) {
             const at = new Date(yield* Clock.currentTimeMillis).toISOString()
-            return yield* storage(() =>
-              ledger.atomic(() => {
-                const finished = finishAttempt(
-                  ledger.read(id),
-                  outcome,
-                  error,
-                  at
-                )
-                if (finished) ledger.put(finished)
+            return yield* ledger.atomic(() =>
+              Effect.gen(function* () {
+                const current = yield* ledger.read(id)
+                const finished = finishAttempt(current, outcome, error, at)
+                if (finished) yield* ledger.put(finished)
                 return finished
               })
             )
@@ -106,9 +87,9 @@ export function usageApplication(ledger: UsageLedger, uuid: () => string) {
     ),
     recover: Effect.fn("InferenceUsage.recover")(function* () {
       const at = new Date(yield* Clock.currentTimeMillis).toISOString()
-      return yield* storage(() =>
-        ledger.atomic(() => {
-          const running = ledger.running()
+      return yield* ledger.atomic(() =>
+        Effect.gen(function* () {
+          const running = yield* ledger.running()
           for (const attempt of running) {
             const finished = finishAttempt(
               attempt,
@@ -116,15 +97,15 @@ export function usageApplication(ledger: UsageLedger, uuid: () => string) {
               restartError,
               at
             )
-            if (finished) ledger.put(finished)
+            if (finished) yield* ledger.put(finished)
           }
           return running.length
         })
       )
     }),
-    recent: () => storage(() => ledger.recent()),
-    totals: (turnId) => storage(() => ledger.totals(turnId)),
-    accountTotals: () => storage(() => ledger.accountTotals()),
+    recent: () => ledger.recent(),
+    totals: (turnId) => ledger.totals(turnId),
+    accountTotals: () => ledger.accountTotals(),
   })
   return Layer.effect(
     InferenceUsage,

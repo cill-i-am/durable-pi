@@ -1,20 +1,26 @@
+import type { Effect } from "effect"
 import type {
   AccountUsage,
   Attempt,
   UsageReport,
   UsageTotals,
+  UsageStorageError,
 } from "./usage-domain"
 
-/** Callbacks run synchronously in the native SQLite transaction. No Effect
- * runner or asynchronous work may escape the commit. */
+/** Related attempt and account usage writes share one actor transaction. */
 export interface UsageLedger {
-  atomic: <T>(body: () => T) => T
-  insert: (attempt: Attempt) => void
-  read: (id: string) => Attempt
-  put: (attempt: Attempt) => void
-  report: (report: UsageReport, at: string) => boolean
-  running: () => readonly Attempt[]
-  recent: () => readonly Attempt[]
-  totals: (turnId: string) => UsageTotals
-  accountTotals: () => AccountUsage
+  atomic: <TValue, TError, TRequirements>(
+    body: () => Effect.Effect<TValue, TError, TRequirements>
+  ) => Effect.Effect<TValue, TError | UsageStorageError, TRequirements>
+  insert: (attempt: Attempt) => Effect.Effect<void, UsageStorageError>
+  read: (id: string) => Effect.Effect<Attempt, UsageStorageError>
+  put: (attempt: Attempt) => Effect.Effect<void, UsageStorageError>
+  report: (
+    report: UsageReport,
+    at: string
+  ) => Effect.Effect<boolean, UsageStorageError>
+  running: () => Effect.Effect<readonly Attempt[], UsageStorageError>
+  recent: () => Effect.Effect<readonly Attempt[], UsageStorageError>
+  totals: (turnId: string) => Effect.Effect<UsageTotals, UsageStorageError>
+  accountTotals: () => Effect.Effect<AccountUsage, UsageStorageError>
 }

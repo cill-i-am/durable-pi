@@ -32,7 +32,7 @@ const definition = {
 function fixture() {
   const db = database(),
     store = new ConnectionStore(db)
-  store.add(input)
+  Effect.runSync(store.add(input))
   const calls: unknown[] = []
   const mcp = {
     listServers: () => [{ id: input.id }],
@@ -106,7 +106,7 @@ describe("connection authority", () => {
         })
         expect(f.mcp.connectToServer).not.toHaveBeenCalled()
         yield* f.connections.disconnect(input.id, 1)
-        expect(f.store.get(input.id)?.active).toBe(false)
+        expect((yield* f.store.get(input.id))?.active).toBe(false)
       })
   )
   it("holds the mutation permit through interrupted native registration and skips later connection steps", async () => {
@@ -130,7 +130,7 @@ describe("connection authority", () => {
     await started.promise
     controller.abort()
     const disconnect = Effect.runPromise(f.connections.disconnect(input.id, 1))
-    expect(f.store.get(input.id)?.active).toBe(true)
+    expect(Effect.runSync(f.store.get(input.id))?.active).toBe(true)
     expect(f.mcp.removeServer).not.toHaveBeenCalled()
     expect(interrupted).toBe(false)
     settled.resolve()
@@ -140,7 +140,7 @@ describe("connection authority", () => {
     expect(f.mcp.connectToServer).not.toHaveBeenCalled()
     expect(f.mcp.discoverIfConnected).not.toHaveBeenCalled()
     expect(f.mcp.removeServer).toHaveBeenCalledOnce()
-    expect(f.store.get(input.id)?.active).toBe(false)
+    expect(Effect.runSync(f.store.get(input.id))?.active).toBe(false)
   })
   it("propagates tool cancellation and waits for a noncooperative call before disposing the actor service", async () => {
     const f = fixture(),
@@ -207,7 +207,7 @@ describe("connection authority", () => {
       failure: { _tag: "ConnectionStorageError" },
     })
     expect(f.mcp.removeServer).not.toHaveBeenCalled()
-    expect(f.store.get(input.id)?.active).toBe(true)
+    expect(Effect.runSync(f.store.get(input.id))?.active).toBe(true)
   })
   it("maps native transport failures only at HTTP without exposing their cause", async () => {
     const f = fixture()
@@ -227,7 +227,7 @@ describe("connection authority", () => {
     const body = await response.text()
     expect(body).toContain("Could not connect")
     expect(body).not.toContain("private-provider-secret")
-    expect(f.store.get(input.id)?.active).toBe(false)
+    expect(Effect.runSync(f.store.get(input.id))?.active).toBe(false)
   })
   it("classifies malformed endpoint URLs as expected connection rejections", () => {
     expect(() => connectionUrl("not a url")).toThrow(ConnectionError)
@@ -292,16 +292,18 @@ describe("connection authority", () => {
       _tag: "Failure",
       failure: { _tag: "ConnectionTransportError" },
     })
-    expect(store.get(input.id)?.active).toBe(false)
-    expect(store.get(input.id)?.revision).toBe(2)
-    expect(() => store.change(input.id, 1, true)).toThrow("changed")
-    store.change(input.id, 2, true)
+    expect(Effect.runSync(store.get(input.id))?.active).toBe(false)
+    expect(Effect.runSync(store.get(input.id))?.revision).toBe(2)
+    expect(() => Effect.runSync(store.change(input.id, 1, true))).toThrow(
+      "changed"
+    )
+    Effect.runSync(store.change(input.id, 2, true))
     mcp.removeServer.mockClear()
     await Effect.runPromise(
       connections.reconnect(input.id, 2, "https://app.example.com")
     )
     expect(mcp.removeServer).not.toHaveBeenCalled()
-    expect(store.get(input.id)?.revision).toBe(3)
+    expect(Effect.runSync(store.get(input.id))?.revision).toBe(3)
   })
   it("uses authoritative remote names and refuses old tool identities after reconnect", async () => {
     const { connections, calls, store } = fixture()
@@ -320,7 +322,7 @@ describe("connection authority", () => {
         arguments: { value: "Synthetic" },
       },
     ])
-    store.change(input.id, 1, true)
+    Effect.runSync(store.change(input.id, 1, true))
     expect(
       (await Effect.runPromise(connections.call(tool.name, {}))).isError
     ).toBe(true)
@@ -330,7 +332,7 @@ describe("connection authority", () => {
     const { store, mcp, connections, calls } = fixture()
     const tool = (await Effect.runPromise(connections.list()))[0]!.tools[0]!
     mcp.waitForConnections = async () => {
-      store.change(input.id, 1, false)
+      Effect.runSync(store.change(input.id, 1, false))
     }
     expect(
       (await Effect.runPromise(connections.call(tool.name, {}))).isError
@@ -380,29 +382,37 @@ describe("per-bot connected tool selection", () => {
     const tool = await remoteTool({ ...input, revision: 1 }, definition)
     await expect(
       Effect.runPromise(
-        sqliteRemoteSelection(store).select(0, [tool], () => false)
+        sqliteRemoteSelection(store).select(0, [tool], () =>
+          Effect.sync(() => false)
+        )
       )
     ).rejects.toThrow("Restore")
-    expect(store.selection()).toEqual({ revision: 0, tools: [] })
+    expect(Effect.runSync(store.selection())).toEqual({
+      revision: 0,
+      tools: [],
+    })
   })
   it("rolls back failed selection writes as typed storage failures", async () => {
     const db = database(),
       store = new ConnectionStore(db)
     const tool = await remoteTool({ ...input, revision: 1 }, definition)
-    store.select(0, [tool])
+    Effect.runSync(store.select(0, [tool]))
     db.run(
       "CREATE TRIGGER reject_selection BEFORE UPDATE ON bot_remote_tools BEGIN SELECT RAISE(ABORT,'selection failure'); END"
     )
     const result = await Effect.runPromise(
       sqliteRemoteSelection(store)
-        .select(1, [], () => true)
+        .select(1, [], () => Effect.sync(() => true))
         .pipe(Effect.result)
     )
     expect(result).toMatchObject({
       _tag: "Failure",
       failure: { _tag: "ConnectionStorageError" },
     })
-    expect(store.selection()).toEqual({ revision: 1, tools: [tool] })
+    expect(Effect.runSync(store.selection())).toEqual({
+      revision: 1,
+      tools: [tool],
+    })
   })
   it("treats malformed historical selections as defects", async () => {
     const db = database(),
@@ -425,26 +435,26 @@ describe("per-bot connected tool selection", () => {
       { ...input, revision: 1 },
       { ...definition, name: "other" }
     )
-    first.select(0, [a, b])
+    Effect.runSync(first.select(0, [a, b]))
     const resolve = vi.fn(async () => ({ tools: [], error: "Offline" }))
     const saved = await Effect.runPromise(
       selectRemoteTools(
         sqliteRemoteSelection(first),
         { expectedRevision: 1, names: [a.name] },
         () => Effect.promise(resolve),
-        () => true
+        () => Effect.sync(() => true)
       )
     )
     expect(saved.tools).toEqual([a])
     expect(resolve).not.toHaveBeenCalled()
-    expect(second.selection().tools).toEqual([])
+    expect(Effect.runSync(second.selection()).tools).toEqual([])
     await expect(
       Effect.runPromise(
         selectRemoteTools(
           sqliteRemoteSelection(first),
           { expectedRevision: 1, names: [] },
           () => Effect.promise(resolve),
-          () => true
+          () => Effect.sync(() => true)
         )
       )
     ).rejects.toThrow("changed")
@@ -463,27 +473,31 @@ describe("per-bot connected tool selection", () => {
               writable = false
               return { tools: [tool], error: null }
             }),
-          () => writable
+          () => Effect.sync(() => writable)
         )
       )
     ).rejects.toThrow("Restore")
-    expect(first.selection().tools).toEqual([])
-    first.select(0, [tool])
+    expect(Effect.runSync(first.selection()).tools).toEqual([])
+    Effect.runSync(first.select(0, [tool]))
     const access = new AccessStore(database(), () =>
-      first.selection().tools.map((value) => ({
-        name: value.name,
-        description: value.description,
-        mode: "ask",
-      }))
+      Effect.sync(() =>
+        Effect.runSync(first.selection()).tools.map((value) => ({
+          name: value.name,
+          description: value.description,
+          mode: "ask",
+        }))
+      )
     )
     const id = crypto.randomUUID()
     expect(
-      access.begin({ id, turnId: "turn", tool: tool.name, input: "{}" }).status
+      Effect.runSync(
+        access.begin({ id, turnId: "turn", tool: tool.name, input: "{}" })
+      ).status
     ).toBe("pending")
-    access.update(tool.name, 0, "allow")
-    access.revoke(tool.name)
-    expect(access.get(id)?.status).toBe("denied")
-    expect(access.policy(tool.name).mode).toBe("ask")
-    expect(access.policy(tool.name).revision).toBe(2)
+    Effect.runSync(access.update(tool.name, 0, "allow"))
+    Effect.runSync(access.revoke(tool.name))
+    expect(Effect.runSync(access.get(id))?.status).toBe("denied")
+    expect(Effect.runSync(access.policy(tool.name)).mode).toBe("ask")
+    expect(Effect.runSync(access.policy(tool.name)).revision).toBe(2)
   })
 })

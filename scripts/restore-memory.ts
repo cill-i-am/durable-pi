@@ -1,8 +1,8 @@
 import { readFile, open, rm } from "node:fs/promises"
 import { resolve, sep } from "node:path"
-import { DatabaseSync } from "node:sqlite"
 import { Effect } from "effect"
-import type { Sqlite } from "../src/storage/sqlite"
+import { makeNodeSqlite } from "../src/storage/node"
+import { migrateSqlite } from "../src/storage/migrations"
 import { makeSqliteMemory } from "../src/memory/adapters/sqlite"
 import { MemoryRepository } from "../src/memory/repository"
 import { bucketLayer } from "../src/memory/adapters/bucket"
@@ -43,42 +43,25 @@ async function main() {
     : Effect.runSync(parseArchive(await readFile(source, "utf8")))
   const file = await open(destination, "wx", 0o600)
   await file.close()
-  const sql = new DatabaseSync(destination)
-  const db: Sqlite = {
-    all: <T>(query: string, ...args: (string | number | null)[]) =>
-      sql.prepare(query).all(...args) as T[],
-    run: (query, ...args) => {
-      sql.prepare(query).run(...args)
-    },
-    transaction: (body) => {
-      sql.exec("SAVEPOINT operation")
-      try {
-        const result = body()
-        sql.exec("RELEASE operation")
-        return result
-      } catch (error) {
-        sql.exec("ROLLBACK TO operation")
-        sql.exec("RELEASE operation")
-        throw error
-      }
-    },
-  }
   try {
-    const memory = Effect.runSync(makeSqliteMemory(db))
-    Effect.runSync(
-      restoreArchive(data.records, data.parts).pipe(
-        Effect.provideService(MemoryRepository, memory)
+    const restored = await Effect.runPromise(
+      Effect.scoped(
+        Effect.gen(function* () {
+          const db = yield* makeNodeSqlite({ filename: destination })
+          yield* migrateSqlite(db)
+          const memory = yield* makeSqliteMemory(db)
+          yield* restoreArchive(data.records, data.parts).pipe(
+            Effect.provideService(MemoryRepository, memory)
+          )
+          return yield* memory.watermark()
+        })
       )
     )
-    console.log(
-      JSON.stringify({ restored: Effect.runSync(memory.watermark()) })
-    )
+    console.log(JSON.stringify({ restored }))
   } catch (error) {
-    sql.close()
     await rm(destination)
     throw error
   }
-  sql.close()
 }
 main().catch(() => {
   console.error(

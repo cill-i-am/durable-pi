@@ -94,10 +94,12 @@ it.each(["continue", "restart", "cancel"])(
       model: "small",
       thinking: "off",
     })
-    const root = store.admit({
-      operationId: crypto.randomUUID(),
-      text: constraint,
-    }).turn
+    const root = Effect.runSync(
+      store.admit({
+        operationId: crypto.randomUUID(),
+        text: constraint,
+      })
+    ).turn
     let harness: Harness,
       firstProcess = true,
       normalRequests = 0,
@@ -156,24 +158,27 @@ it.each(["continue", "restart", "cancel"])(
       )
     }
     faux.setResponses(Array.from({ length: 40 }, () => response))
-    const accessStore = new AccessStore(database(), () => [
-      {
-        name: "save_receipt",
-        description: "Synthetic external action",
-        mode: "ask",
-      },
-      {
-        name: "read_page",
-        description: "Read synthetic source",
-        mode: "allow",
-      },
-    ])
+    const accessStore = new AccessStore(database(), () =>
+      Effect.succeed([
+        {
+          name: "save_receipt",
+          description: "Synthetic external action",
+          mode: "ask",
+        },
+        {
+          name: "read_page",
+          description: "Read synthetic source",
+          mode: "allow",
+        },
+      ])
+    )
     let active = true
     const access = new AccessGate(
       accessStore,
-      () => active,
+      () => Effect.succeed(active),
       () => {
-        if (accessStore.pending().length) approvalReady.resolve()
+        if (Effect.runSync(accessStore.pending()).length)
+          approvalReady.resolve()
       }
     )
     const protect = guardedTools(access, () => Effect.succeed(root.id))
@@ -286,15 +291,17 @@ it.each(["continue", "restart", "cancel"])(
       }
       const submission = await conversation.submit(command, ctx)
       await approvalReady.promise
-      const approval = accessStore.pending()[0]!
-      accessStore.decide(approval.id, true, approval.revision)
+      const approval = Effect.runSync(accessStore.pending())[0]!
+      Effect.runSync(accessStore.decide(approval.id, true, approval.revision))
       access.notify()
       await enteredTool.promise
-      const steer = store.admit({
-        operationId: crypto.randomUUID(),
-        text: steering,
-        mode: "steer",
-      }).turn
+      const steer = Effect.runSync(
+        store.admit({
+          operationId: crypto.randomUUID(),
+          text: steering,
+          mode: "steer",
+        })
+      ).turn
       const steerCommand = {
         type: "input" as const,
         requestId: steer.id,
@@ -314,7 +321,7 @@ it.each(["continue", "restart", "cancel"])(
         firstProcess = false
         if (scenario === "cancel") {
           active = false
-          accessStore.cancel(root.id)
+          Effect.runSync(accessStore.cancel(root.id))
         }
         harness = await Harness.open(
           await openNodeSqliteStorage(path),
@@ -329,8 +336,10 @@ it.each(["continue", "restart", "cancel"])(
       const receipt = await recovered.wait(ctx)
       await conversation.waitForIdle(ctx)
       expect(mutations).toBe(1)
-      expect(accessStore.pending()).toHaveLength(0)
-      expect(accessStore.get(approval.id)).toMatchObject({ status: "done" })
+      expect(Effect.runSync(accessStore.pending())).toHaveLength(0)
+      expect(Effect.runSync(accessStore.get(approval.id))).toMatchObject({
+        status: "done",
+      })
       const events = await watchEvents(harness, conversation.id, ctx)
       const working = events.snapshot
       await events.stop()
@@ -511,37 +520,48 @@ it("pins the active run budget across selection changes and storage reopen, then
   }
   const settings = agentSettings(
     () =>
-      models[(turns.active()?.model ?? defaults.model) as keyof typeof models]
+      models[
+        (Effect.runSync(turns.active())?.model ??
+          defaults.model) as keyof typeof models
+      ]
   )
-  const first = turns.admit({
-    operationId: crypto.randomUUID(),
-    text: "First task",
-  }).turn
-  turns.setSettings({ model: "small", thinking: "off" })
-  const second = turns.admit({
-    operationId: crypto.randomUUID(),
-    text: "Next task",
-  }).turn
-  const steer = turns.admit({
-    operationId: crypto.randomUUID(),
-    text: "Keep this constraint",
-    mode: "steer",
-  }).turn
+  const first = Effect.runSync(
+    turns.admit({
+      operationId: crypto.randomUUID(),
+      text: "First task",
+    })
+  ).turn
+  Effect.runSync(turns.setSettings({ model: "small", thinking: "off" }))
+  const second = Effect.runSync(
+    turns.admit({
+      operationId: crypto.randomUUID(),
+      text: "Next task",
+    })
+  ).turn
+  const steer = Effect.runSync(
+    turns.admit({
+      operationId: crypto.randomUUID(),
+      text: "Keep this constraint",
+      mode: "steer",
+    })
+  ).turn
   expect(steer.model).toBe("large")
   expect(settings.compaction?.reserveTokens).toBe(160000)
   turns = new ConversationStore(db, defaults)
   expect(settings.compaction?.reserveTokens).toBe(160000)
   expect(
-    turns.finish(
-      turns.get(first.id)!,
-      [
-        { id: first.id, delivery: "answered" },
-        { id: steer.id, delivery: "answered" },
-      ],
-      "Done",
-      null
+    Effect.runSync(
+      turns.finish(
+        Effect.runSync(turns.get(first.id))!,
+        [
+          { id: first.id, delivery: "answered" },
+          { id: steer.id, delivery: "answered" },
+        ],
+        "Done",
+        null
+      )
     )
   ).toBe(true)
-  expect(turns.active()?.id).toBe(second.id)
+  expect(Effect.runSync(turns.active())?.id).toBe(second.id)
   expect(settings.compaction?.reserveTokens).toBe(3072)
 })

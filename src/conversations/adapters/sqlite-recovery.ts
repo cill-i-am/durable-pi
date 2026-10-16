@@ -1,5 +1,6 @@
-import type { Sqlite } from "../../storage/sqlite"
-import { Schema } from "effect"
+import { and, eq, isNull } from "drizzle-orm"
+import { Effect, Schema } from "effect"
+import { mapSqliteError, type Sqlite } from "../../storage/sqlite"
 import { ConversationStorageError } from "../turns"
 import type { RecoveryLedger } from "../recovery-service"
 import {
@@ -11,8 +12,8 @@ import {
   RecoveryStateRecord,
   type Observation,
   type RecoveryPolicy,
-  type RecoveryState,
 } from "../recovery"
+import { chatTurns, chatRecoveryHistory } from "./schema"
 
 export class RunRecoveryStore implements RecoveryLedger {
   readonly transactionGroup: object
@@ -22,61 +23,31 @@ export class RunRecoveryStore implements RecoveryLedger {
   ) {
     requireRecoveryPolicy(policy)
     this.transactionGroup = db
-    const native = db
-    const storage = <T>(operation: string, body: () => T): T => {
-      try {
-        return body()
-      } catch (cause) {
-        throw new ConversationStorageError({ operation, cause })
-      }
-    }
-    this.db = db = {
-      all: (query, ...bindings) =>
-        storage("read recovery", () => native.all(query, ...bindings)),
-      run: (query, ...bindings) =>
-        storage("write recovery", () => native.run(query, ...bindings)),
-      transaction: (body) => {
-        const callback: { failed: boolean; cause?: unknown } = { failed: false }
-        try {
-          return native.transaction(() => {
-            try {
-              return body()
-            } catch (cause) {
-              callback.failed = true
-              callback.cause = cause
-              throw cause
-            }
-          })
-        } catch (cause) {
-          if (callback.failed && cause === callback.cause) throw cause
-          throw new ConversationStorageError({
-            operation: "recovery transaction",
-            cause,
-          })
-        }
-      },
-    }
-    db.run(`CREATE TABLE IF NOT EXISTS chat_recovery_history (
-      id INTEGER PRIMARY KEY AUTOINCREMENT, turn_id TEXT NOT NULL,
-      at TEXT NOT NULL, view TEXT NOT NULL)`)
-    db.run(
-      "CREATE INDEX IF NOT EXISTS chat_recovery_run ON chat_recovery_history(turn_id,id)"
-    )
   }
-  get(turnId: string): RecoveryState | undefined {
-    const row = this.db.all<{ recovery: string | null }>(
-      "SELECT recovery FROM chat_turns WHERE id=? AND parent_id IS NULL",
-      turnId
-    )[0]
-    if (!row?.recovery) return
-    const historical = JSON.parse(row.recovery)
-    const decoded = Schema.decodeUnknownSync(RecoveryStateRecord)(historical)
-    return {
-      ...historical,
-      ...decoded,
-      buckets: decoded.buckets.map((bucket) => ({ ...bucket })),
-      view: decoded.view ? { ...decoded.view } : null,
-    }
+  get(turnId: string): ReturnType<RecoveryLedger["get"]> {
+    return mapSqliteError(
+      this.db.use((orm) =>
+        orm
+          .select({ recovery: chatTurns.recovery })
+          .from(chatTurns)
+          .where(and(eq(chatTurns.id, turnId), isNull(chatTurns.parent_id)))
+          .limit(1)
+      ),
+      (cause) =>
+        new ConversationStorageError({ operation: "read recovery", cause })
+    ).pipe(
+      Effect.map((rows) => {
+        if (!rows[0]?.recovery) return
+        const historical = JSON.parse(rows[0].recovery),
+          decoded = Schema.decodeUnknownSync(RecoveryStateRecord)(historical)
+        return {
+          ...historical,
+          ...decoded,
+          buckets: decoded.buckets.map((bucket) => ({ ...bucket })),
+          view: decoded.view ? { ...decoded.view } : null,
+        }
+      })
+    )
   }
   observe(
     turnId: string,
@@ -84,38 +55,55 @@ export class RunRecoveryStore implements RecoveryLedger {
     epoch: string,
     requestEpoch: string,
     observations: readonly Observation[],
-    at = new Date().toISOString()
-  ) {
-    return this.db.transaction(() => {
-      const turn = this.db.all<{ status: string; session_id: string | null }>(
-        "SELECT status,session_id FROM chat_turns WHERE id=? AND parent_id IS NULL",
-        turnId
-      )[0]
-      if (!canObserveRecovery(turn, conversationId)) return
-      const previous = this.get(turnId)
-      const state = observeRound(
-        previous ?? initialRecovery(epoch),
-        epoch,
-        requestEpoch,
-        observations,
-        this.policy
-      )
-      this.db.run(
-        "UPDATE chat_turns SET recovery=? WHERE id=?",
-        JSON.stringify(state),
-        turnId
-      )
-      if (
-        state.view &&
-        JSON.stringify(previous?.view) !== JSON.stringify(state.view)
-      )
-        this.db.run(
-          "INSERT INTO chat_recovery_history(turn_id,at,view) VALUES (?,?,?)",
-          turnId,
-          at,
-          JSON.stringify(state.view)
-        )
-      return state
-    })
+    at = new Date().toISOString(),
+    guard?: () => Effect.Effect<string | undefined, ConversationStorageError>
+  ): ReturnType<RecoveryLedger["observe"]> {
+    return mapSqliteError(
+      this.db.transaction(() =>
+        Effect.gen({ self: this }, function* () {
+          const currentEpoch = guard ? yield* guard() : requestEpoch
+          if (currentEpoch === undefined) return
+          const rows = yield* this.db.use((orm) =>
+            orm
+              .select({
+                status: chatTurns.status,
+                session_id: chatTurns.session_id,
+              })
+              .from(chatTurns)
+              .where(and(eq(chatTurns.id, turnId), isNull(chatTurns.parent_id)))
+              .limit(1)
+          )
+          if (!canObserveRecovery(rows[0], conversationId)) return
+          const previous = yield* this.get(turnId),
+            state = observeRound(
+              previous ?? initialRecovery(epoch),
+              epoch,
+              currentEpoch,
+              observations,
+              this.policy
+            )
+          yield* this.db.use((orm) =>
+            orm
+              .update(chatTurns)
+              .set({ recovery: JSON.stringify(state) })
+              .where(eq(chatTurns.id, turnId))
+          )
+          if (
+            state.view &&
+            JSON.stringify(previous?.view) !== JSON.stringify(state.view)
+          )
+            yield* this.db.use((orm) =>
+              orm.insert(chatRecoveryHistory).values({
+                turn_id: turnId,
+                at,
+                view: JSON.stringify(state.view),
+              })
+            )
+          return state
+        })
+      ),
+      (cause) =>
+        new ConversationStorageError({ operation: "observe recovery", cause })
+    )
   }
 }

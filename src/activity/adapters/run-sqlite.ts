@@ -1,5 +1,36 @@
-import { Schema } from "effect"
-import type { Sqlite } from "../../storage/sqlite"
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  or,
+  type SQLWrapper,
+} from "drizzle-orm"
+import { Effect, Schema } from "effect"
+import { mapSqliteError, type Sqlite } from "../../storage/sqlite"
+import {
+  asText,
+  caseWhen,
+  concat,
+  isoMillis,
+  jsonField,
+  jsonObject,
+  jsonValid,
+  literal,
+} from "../../storage/expressions"
+import {
+  chatRecoveryHistory,
+  chatTurns,
+} from "../../conversations/adapters/schema"
+import { inferenceAttempts } from "../../inference/adapters/schema"
+import {
+  toolOperationHistory,
+  toolOperations,
+} from "../../access/adapters/schema"
 import { ActivityStorageError } from "../records"
 import { Attempt } from "../../inference/usage-domain"
 import { RecoveryView } from "../../conversations/recovery"
@@ -7,7 +38,6 @@ import {
   RUN_PAGE_SIZE,
   type RunCursor,
   type RunFact,
-  type RunHeader,
   type RunRecords,
 } from "../run"
 
@@ -26,112 +56,236 @@ const FactRow = Schema.Struct({
   reference: Schema.String,
   payload: Schema.String,
 })
-type RawFact = typeof FactRow.Type
 const Payload = Schema.Struct({
   title: Schema.String,
   status: Schema.String,
   expiresAt: Schema.optional(Schema.Number),
   isError: Schema.optional(Schema.NullOr(Schema.Number)),
 })
-const Transition = Schema.Struct({ status: Schema.String, at: Schema.Number })
-/** Only driver calls are converted. Bad historical rows remain defects. */
-export const activityRows =
-  (db: Sqlite) =>
-  <T>(query: string, ...bindings: (string | number | null)[]): T[] => {
-    try {
-      return db.all<T>(query, ...bindings)
-    } catch (cause) {
-      throw new ActivityStorageError({ cause })
-    }
-  }
+const Transition = Schema.Struct({
+  operationId: Schema.String,
+  status: Schema.String,
+  at: Schema.Number,
+})
+
+/** Project recorded facts in SQLite, limiting the global union before decoding. */
 export function readRunRecords(
   db: Sqlite,
   runId: string,
   cursor: RunCursor | null
-): RunRecords | null {
-  const read = activityRows(db)
-  const turn = read<RunHeader>(
-    "SELECT id,status,session_id,created_at,started_at,finished_at FROM chat_turns WHERE id=? AND parent_id IS NULL",
-    runId
-  )[0]
-  if (!turn) return null
-  const rows = read<RawFact>(
-    `
-    WITH facts AS (
-      SELECT json_extract(value,'$.key') AS key, json_extract(value,'$.at') AS at,
-        'run' AS kind, t.id AS reference, value AS payload
-      FROM chat_turns t, json_each(json_array(
-        json_object('key','accepted:'||t.id,'at',t.created_at,'title','Request accepted','status','accepted'),
-        json_object('key','started:'||t.id,'at',t.started_at,'title','Pi session started','status','started'),
-        json_object('key','stopped:'||t.id,'at',t.stopped_at,'title','Stop requested','status','stopping'),
-        json_object('key','finished:'||t.id,'at',t.finished_at,'title','Run ended','status',t.status)
-      )) WHERE t.id=? AND json_extract(value,'$.at') IS NOT NULL
-      UNION ALL
-      SELECT 'steer:'||id,created_at,'steering',id,json_object('title','Steering accepted','status',delivery)
-      FROM chat_turns WHERE parent_id=?
-      UNION ALL
-      SELECT 'model:'||id,json_extract(payload,'$.startedAt'),'model',id,payload
-      FROM inference_attempts WHERE json_extract(payload,'$.turnId')=?
-      UNION ALL
-      SELECT 'tool:'||id,strftime('%Y-%m-%dT%H:%M:%fZ',createdAt/1000.0,'unixepoch'),'tool',id,
-        json_object('title',tool,'status',status,'expiresAt',expiresAt,'isError',
-          CASE WHEN json_valid(result) THEN json_extract(result,'$.isError') ELSE NULL END)
-      FROM tool_operations WHERE turnId=?
-      UNION ALL
-      SELECT 'recovery:'||id,at,'recovery',CAST(id AS TEXT),view
-      FROM chat_recovery_history WHERE turn_id=?
-    ) SELECT * FROM facts WHERE (? IS NULL OR at<? OR (at=? AND key<?))
-      ORDER BY at DESC,key DESC LIMIT ?`,
-    runId,
-    runId,
-    runId,
-    runId,
-    runId,
-    cursor?.at ?? null,
-    cursor?.at ?? null,
-    cursor?.at ?? null,
-    cursor?.key ?? null,
-    RUN_PAGE_SIZE + 1
-  )
-  return {
-    turn: Schema.decodeUnknownSync(Header)(turn),
-    rows: rows.map((raw): RunFact => {
-      const row = Schema.decodeUnknownSync(FactRow)(raw)
-      const base = { key: row.key, at: row.at, reference: row.reference }
-      if (row.kind === "model")
-        return {
-          ...base,
-          kind: "model",
-          attempt: Schema.decodeUnknownSync(Schema.fromJsonString(Attempt))(
-            row.payload
-          ),
-        }
-      if (row.kind === "recovery")
-        return {
-          ...base,
-          kind: "recovery",
-          view: Schema.decodeUnknownSync(Schema.fromJsonString(RecoveryView))(
-            row.payload
-          ),
-        }
-      const payload = Schema.decodeUnknownSync(Schema.fromJsonString(Payload))(
-        row.payload
+): Effect.Effect<RunRecords | null, ActivityStorageError> {
+  return mapSqliteError(
+    Effect.gen(function* () {
+      const rawTurn = yield* db.use((orm) =>
+        orm
+          .select({
+            id: chatTurns.id,
+            status: chatTurns.status,
+            session_id: chatTurns.session_id,
+            created_at: chatTurns.created_at,
+            started_at: chatTurns.started_at,
+            finished_at: chatTurns.finished_at,
+          })
+          .from(chatTurns)
+          .where(and(eq(chatTurns.id, runId), isNull(chatTurns.parent_id)))
+          .get()
       )
+      if (!rawTurn) return null
+      const turn = Schema.decodeUnknownSync(Header)(rawTurn)
+      const rawRows = yield* db.use((orm) => {
+        const event = (
+          key: string,
+          at: SQLWrapper,
+          title: string,
+          status: string | SQLWrapper
+        ) =>
+          orm
+            .select({
+              key: concat(key, chatTurns.id).as("key"),
+              at: asText(at).as("at"),
+              kind: literal<string>("run").as("kind"),
+              reference: asText(chatTurns.id).as("reference"),
+              payload: jsonObject({ title, status }).as("payload"),
+            })
+            .from(chatTurns)
+            .where(and(eq(chatTurns.id, runId), isNotNull(at)))
+        const runEvents = event(
+          "accepted:",
+          chatTurns.created_at,
+          "Request accepted",
+          "accepted"
+        )
+          .unionAll(
+            event(
+              "started:",
+              chatTurns.started_at,
+              "Pi session started",
+              "started"
+            )
+          )
+          .unionAll(
+            event(
+              "stopped:",
+              chatTurns.stopped_at,
+              "Stop requested",
+              "stopping"
+            )
+          )
+          .unionAll(
+            event(
+              "finished:",
+              chatTurns.finished_at,
+              "Run ended",
+              chatTurns.status
+            )
+          )
+          .as("run_events")
+        const executionEvents = orm
+          .select({
+            key: concat("steer:", chatTurns.id).as("key"),
+            at: asText(chatTurns.created_at).as("at"),
+            kind: literal<string>("steering").as("kind"),
+            reference: asText(chatTurns.id).as("reference"),
+            payload: jsonObject({
+              title: "Steering accepted",
+              status: chatTurns.delivery,
+            }).as("payload"),
+          })
+          .from(chatTurns)
+          .where(eq(chatTurns.parent_id, runId))
+          .unionAll(
+            orm
+              .select({
+                key: concat("model:", inferenceAttempts.id),
+                at: jsonField<string>(inferenceAttempts.payload, "$.startedAt"),
+                kind: literal<string>("model"),
+                reference: asText(inferenceAttempts.id),
+                payload: inferenceAttempts.payload,
+              })
+              .from(inferenceAttempts)
+              .where(
+                eq(
+                  jsonField<string>(inferenceAttempts.payload, "$.turnId"),
+                  runId
+                )
+              )
+          )
+          .unionAll(
+            orm
+              .select({
+                key: concat("tool:", toolOperations.id),
+                at: isoMillis(toolOperations.createdAt),
+                kind: literal<string>("tool"),
+                reference: asText(toolOperations.id),
+                payload: jsonObject({
+                  title: toolOperations.tool,
+                  status: toolOperations.status,
+                  expiresAt: toolOperations.expiresAt,
+                  isError: caseWhen<number | null>(
+                    jsonValid(toolOperations.result),
+                    jsonField<number | null>(
+                      toolOperations.result,
+                      "$.isError"
+                    ),
+                    null
+                  ),
+                }),
+              })
+              .from(toolOperations)
+              .where(eq(toolOperations.turnId, runId))
+          )
+          .unionAll(
+            orm
+              .select({
+                key: concat("recovery:", asText(chatRecoveryHistory.id)),
+                at: chatRecoveryHistory.at,
+                kind: literal<string>("recovery"),
+                reference: asText(chatRecoveryHistory.id),
+                payload: chatRecoveryHistory.view,
+              })
+              .from(chatRecoveryHistory)
+              .where(eq(chatRecoveryHistory.turn_id, runId))
+          )
+          .as("execution_events")
+        // Cloudflare caps each compound SELECT below this eight-event union.
+        // Group bounded branches, then apply one global cursor/order/limit.
+        const facts = orm
+          .select()
+          .from(runEvents)
+          .unionAll(orm.select().from(executionEvents))
+          .as("run_facts")
+        const before = cursor
+          ? or(
+              lt(facts.at, cursor.at),
+              and(eq(facts.at, cursor.at), lt(facts.key, cursor.key))
+            )
+          : undefined
+        return orm
+          .select()
+          .from(facts)
+          .where(before)
+          .orderBy(desc(facts.at), desc(facts.key))
+          .limit(RUN_PAGE_SIZE + 1)
+      })
+      const rows = rawRows.map((raw) => Schema.decodeUnknownSync(FactRow)(raw))
+      const tools = rows
+        .filter((row) => row.kind === "tool")
+        .map((row) => row.reference)
+      const transitions = new Map<string, { status: string; at: number }[]>()
+      if (tools.length) {
+        const history = yield* db.use((orm) =>
+          orm
+            .select({
+              operationId: toolOperationHistory.operationId,
+              status: toolOperationHistory.status,
+              at: toolOperationHistory.at,
+            })
+            .from(toolOperationHistory)
+            .where(inArray(toolOperationHistory.operationId, tools))
+            .orderBy(asc(toolOperationHistory.id))
+        )
+        for (const raw of history) {
+          const { operationId, ...transition } =
+            Schema.decodeUnknownSync(Transition)(raw)
+          const list = transitions.get(operationId) ?? []
+          list.push(transition)
+          transitions.set(operationId, list)
+        }
+      }
       return {
-        ...base,
-        kind: row.kind,
-        ...payload,
-        ...(row.kind === "tool"
-          ? {
-              transitions: read<unknown>(
-                "SELECT status,at FROM tool_operation_history WHERE operationId=? ORDER BY id",
-                row.reference
-              ).map((transition) =>
-                Schema.decodeUnknownSync(Transition)(transition)
+        turn,
+        rows: rows.map((row): RunFact => {
+          const base = { key: row.key, at: row.at, reference: row.reference }
+          if (row.kind === "model")
+            return {
+              ...base,
+              kind: "model",
+              attempt: Schema.decodeUnknownSync(Schema.fromJsonString(Attempt))(
+                row.payload
               ),
             }
-          : {}),
+          if (row.kind === "recovery")
+            return {
+              ...base,
+              kind: "recovery",
+              view: Schema.decodeUnknownSync(
+                Schema.fromJsonString(RecoveryView)
+              )(row.payload),
+            }
+          const payload = Schema.decodeUnknownSync(
+            Schema.fromJsonString(Payload)
+          )(row.payload)
+          return {
+            ...base,
+            kind: row.kind,
+            ...payload,
+            ...(row.kind === "tool"
+              ? { transitions: transitions.get(row.reference) ?? [] }
+              : {}),
+          }
+        }),
       }
     }),
-  }
+    (cause) => new ActivityStorageError({ cause })
+  )
 }

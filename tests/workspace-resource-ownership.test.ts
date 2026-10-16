@@ -51,7 +51,7 @@ function fixture(
       ...assets,
       open: (asset) => inspect().pipe(Effect.andThen(assets.open(asset))),
     },
-    () => true,
+    () => Effect.sync(() => true),
     () => Effect.fail(new WorkspaceUnavailable()),
     () => Effect.fail(new WorkspaceUnavailable())
   )

@@ -12,7 +12,7 @@ export function selectRemoteTools(
   resolve: (
     names: readonly string[]
   ) => Effect.Effect<RemoteToolResolution, ConnectionFailure>,
-  canWrite: () => boolean
+  canWrite: () => Effect.Effect<boolean, ConnectionFailure>
 ) {
   return Effect.gen(function* () {
     const pinned = (yield* store.selection()).tools
@@ -24,12 +24,12 @@ export function selectRemoteTools(
       : { tools: [], error: null }
     if (resolved.error)
       return yield* new ConnectionError({ message: resolved.error })
+    if (!(yield* canWrite()))
+      return yield* new ConnectionError({
+        message: "Restore this bot before changing its tools.",
+      })
     const selected = yield* Effect.try({
       try: () => {
-        if (!canWrite())
-          throw new ConnectionError({
-            message: "Restore this bot before changing its tools.",
-          })
         const tools = input.names.map((name) => {
           const tool = [...pinned, ...resolved.tools].find(
             (value) => value.name === name

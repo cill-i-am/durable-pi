@@ -1,3 +1,4 @@
+import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import type { PiHarness } from "agents/harness/pi"
 import type {
@@ -41,9 +42,11 @@ function fixture() {
     model: "test",
     thinking: "off",
   })
-  const root = store.admit({ operationId: "root", text: "hello" }).turn
-  store.saveSession(root.id, "session")
-  return { store, root: store.get(root.id)! }
+  const root = Effect.runSync(
+    store.admit({ operationId: "root", text: "hello" })
+  ).turn
+  Effect.runSync(store.saveSession(root.id, "session"))
+  return { store, root: Effect.runSync(store.get(root.id))! }
 }
 describe("Pi snapshot and receipt consistency", () => {
   it("pages original history through the captured tail without including later writes or summary projections", async () => {
@@ -147,13 +150,15 @@ describe("Pi snapshot and receipt consistency", () => {
   })
   it("settles a stop before initial submission or before a queued steer was submitted", () => {
     const { root, store } = fixture()
-    const child = store.admit({
-      operationId: "child",
-      text: "change it",
-      mode: "steer",
-    }).turn
-    store.requestStop(root.id)
-    const stopping = store.get(root.id)!
+    const child = Effect.runSync(
+      store.admit({
+        operationId: "child",
+        text: "change it",
+        mode: "steer",
+      })
+    ).turn
+    Effect.runSync(store.requestStop(root.id))
+    const stopping = Effect.runSync(store.get(root.id))!
     expect(
       replySettled(stopping, [stopping, child], {
         snapshot: snapshot([]),

@@ -28,7 +28,9 @@ function fixture(
   const repository = new ExecutionStore(db)
   let writable = true
   const runtime = ManagedRuntime.make(
-    executionApplication(repository, executor, () => writable)
+    executionApplication(repository, executor, () =>
+      Effect.sync(() => writable)
+    )
   )
   const execution = runtime.runSync(Executions)
   disposals.push(() => runtime.dispose())
@@ -46,7 +48,9 @@ describe("Code execution", () => {
   it("persists admission before dispatch and reuses the same operation across retries", async () => {
     const invoke = vi.fn(() =>
       Effect.sync(() => {
-        expect(f.repository.get(input.id)?.status).toBe("running")
+        expect(Effect.runSync(f.repository.get(input.id))?.status).toBe(
+          "running"
+        )
         return output
       })
     )
@@ -59,7 +63,7 @@ describe("Code execution", () => {
     expect(await run(f.execution.list())).toEqual([
       expect.objectContaining({ id: input.id, status: "succeeded" }),
     ])
-    expect(f.repository.list()[0]).not.toHaveProperty("input")
+    expect(Effect.runSync(f.repository.list())[0]).not.toHaveProperty("input")
     await expect(
       run(f.execution.start({ ...input, data: "3" }))
     ).rejects.toThrow("different code")
@@ -92,7 +96,7 @@ describe("Code execution", () => {
       settled = true
       return value
     })
-    expect(f.repository.get(input.id)?.status).toBe("cancelled")
+    expect(Effect.runSync(f.repository.get(input.id))?.status).toBe("cancelled")
     expect(signal.aborted).toBe(true)
     expect(settled).toBe(false)
     await expect(
@@ -102,7 +106,7 @@ describe("Code execution", () => {
     expect((await cancelled).status).toBe("cancelled")
     expect((await run(started.completion)).status).toBe("cancelled")
     expect((await run(replay.completion)).status).toBe("cancelled")
-    expect(f.repository.get(input.id)?.output).toBeNull()
+    expect(Effect.runSync(f.repository.get(input.id))?.output).toBeNull()
   })
   it("honors an immediate stop before dispatch", async () => {
     const invoke = vi.fn(() => Effect.succeed(output))
@@ -111,7 +115,7 @@ describe("Code execution", () => {
     const pending = run(f.execution.run(input), { signal: controller.signal })
     controller.abort()
     await expect(pending).rejects.toThrow()
-    expect(f.repository.get(input.id)).toBeUndefined()
+    expect(Effect.runSync(f.repository.get(input.id))).toBeUndefined()
     expect(invoke).not.toHaveBeenCalled()
   })
   it("rejects already stopped requests and archive before dispatch", async () => {
@@ -120,7 +124,7 @@ describe("Code execution", () => {
     await expect(
       run(f.execution.run(input), { signal: AbortSignal.abort() })
     ).rejects.toThrow()
-    expect(f.repository.get(input.id)).toBeUndefined()
+    expect(Effect.runSync(f.repository.get(input.id))).toBeUndefined()
     const pending = run(f.execution.start(input))
     f.archive()
     expect((await run((await pending).completion)).status).toBe("cancelled")
@@ -137,11 +141,13 @@ describe("Code execution", () => {
       1
     )
     if (admitted._tag === "Failure") throw admitted.failure
-    f.repository.put(admitted.success.run)
+    Effect.runSync(f.repository.put(admitted.success.run))
     // A new application sees a committed intent with no live fiber.
     const invoke = vi.fn(() => Effect.succeed(output))
     const runtime = ManagedRuntime.make(
-      executionApplication(f.repository, { run: invoke }, () => true)
+      executionApplication(f.repository, { run: invoke }, () =>
+        Effect.sync(() => true)
+      )
     )
     disposals.push(() => runtime.dispose())
     const restored = runtime.runSync(Executions)
@@ -149,7 +155,9 @@ describe("Code execution", () => {
     expect(
       (await run((await run(restored.start(input))).completion)).status
     ).toBe("interrupted")
-    expect(f.repository.get(input.id)?.status).toBe("interrupted")
+    expect(Effect.runSync(f.repository.get(input.id))?.status).toBe(
+      "interrupted"
+    )
     expect(invoke).not.toHaveBeenCalled()
   })
   it("rejects archived admission but preserves read/replay of completed runs", async () => {
@@ -193,7 +201,7 @@ describe("Code execution", () => {
       )
     expect((await submit(JSON.stringify(input))).status).toBe(202)
     await Promise.all(tasks)
-    expect(b.repository.get(input.id)).toBeUndefined()
+    expect(Effect.runSync(b.repository.get(input.id))).toBeUndefined()
     expect((await submit("x".repeat(256001))).status).toBe(409)
   })
   it("inherits the invocation Context rather than the Layer's build Context", async () => {
@@ -236,8 +244,10 @@ describe("Code execution", () => {
     expect(disposed).toBe(false)
     finish(output)
     await closing
-    expect(f.repository.get(input.id)?.status).toBe("interrupted")
-    expect(f.repository.get(input.id)?.output).toBeNull()
+    expect(Effect.runSync(f.repository.get(input.id))?.status).toBe(
+      "interrupted"
+    )
+    expect(Effect.runSync(f.repository.get(input.id))?.output).toBeNull()
   })
   it("keeps executor defects fatal and the persisted intent uncertain", async () => {
     const defect = new Error("executor invariant")
@@ -245,7 +255,7 @@ describe("Code execution", () => {
     const task = await run(f.execution.start(input))
     const exit = await Effect.runPromiseExit(task.completion)
     expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)
-    expect(f.repository.get(input.id)?.status).toBe("running")
+    expect(Effect.runSync(f.repository.get(input.id))?.status).toBe("running")
     await expect(
       run(f.execution.start({ ...input, id: "second" }))
     ).rejects.toThrow("executor invariant")
@@ -263,7 +273,7 @@ describe("Code execution", () => {
     const task = await run(f.execution.start(input))
     const exit = await Effect.runPromiseExit(task.completion)
     expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)
-    expect(f.repository.get(input.id)?.status).toBe("running")
+    expect(Effect.runSync(f.repository.get(input.id))?.status).toBe("running")
     const disposal = await Effect.runPromiseExit(f.runtime.disposeEffect)
     expect(
       Exit.isFailure(disposal) &&

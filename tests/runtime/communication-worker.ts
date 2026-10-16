@@ -26,7 +26,7 @@ import {
   LifecycleCapability,
   type LifecycleJobOutcome,
 } from "agents/lifecycle"
-import { Effect, Layer, Schema } from "effect"
+import { Effect, Exit, Layer, Schema, Scope } from "effect"
 import { sqliteMailbox } from "../../src/communication/adapters/sqlite"
 import {
   mailboxHandler,
@@ -36,7 +36,7 @@ import {
 import { deliverNext } from "../../src/communication/delivery"
 import { Envelope, Identity, failure } from "../../src/communication/contracts"
 import { agentObjectName } from "../../src/agents/domain"
-import type { Sqlite } from "../../src/storage/sqlite"
+import { nativeDatabase } from "./database"
 
 export {
   LoopBot,
@@ -91,14 +91,8 @@ class OtherCapability extends LifecycleCapability {
   }
 }
 export class MailboxBot extends DurableObject<Env> {
-  readonly db: Sqlite = {
-    all: <T>(sql: string, ...args: (string | number | null)[]) =>
-      this.ctx.storage.sql.exec(sql, ...args).toArray() as T[],
-    run: (sql, ...args) => {
-      this.ctx.storage.sql.exec(sql, ...args)
-    },
-    transaction: (body) => this.ctx.storage.transactionSync(body),
-  }
+  readonly storageScope = Effect.runSync(Scope.make())
+  readonly db = nativeDatabase(this.ctx.storage, this.storageScope)
   readonly repository = sqliteMailbox(this.db)
   readonly mailbox = Effect.runSync(this.repository.initialize)
   readonly transport = mailboxTransport(this.env.BOTS, (e) =>
@@ -114,6 +108,7 @@ export class MailboxBot extends DurableObject<Env> {
   )
   readonly models = createModels()
   readonly harness = new PiHarness({
+    coordinateStorage: this.db.coordinatePi,
     harness: ({ storage, context }) => {
       const faux = fauxProvider({
         provider: "openai",
@@ -177,6 +172,16 @@ export class MailboxBot extends DurableObject<Env> {
     .use(this.harness)
     .use(this.jobs)
     .use(this.other)
+    .use(
+      new (class extends LifecycleCapability {
+        constructor(private readonly scope: Scope.Closeable) {
+          super("fixture-database")
+        }
+        async dispose() {
+          await Effect.runPromise(Scope.close(this.scope, Exit.void))
+        }
+      })(this.storageScope)
+    )
   readonly rpc = mailboxHandler(
     this.mailbox,
     this.transport,
@@ -277,12 +282,16 @@ export class MailboxBot extends DurableObject<Env> {
           this.mailbox.resume(pending.id, {
             transactionGroup: this.db,
             operationId: `fixture:${pending.id}`,
-            admit: () => {
-              this.db.run(
-                "INSERT INTO fixture_events(value) VALUES ('continuation')"
-              )
-              return { kind: "admitted", turnId: `fixture:${pending.id}` }
-            },
+            admit: () =>
+              Effect.sync(() => {
+                this.db.run(
+                  "INSERT INTO fixture_events(value) VALUES ('continuation')"
+                )
+                return {
+                  kind: "admitted" as const,
+                  turnId: `fixture:${pending.id}`,
+                }
+              }),
           })
         )
     }

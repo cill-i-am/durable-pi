@@ -9,54 +9,59 @@ import { MemoryTransaction } from "../src/memory/ledger"
 import { resolveRoute } from "../src/inference/policy"
 import { database } from "./database"
 
+const run = Effect.runSync
+
 it("pins memory separately from conversation settings and survives restart; only an explicit retry changes the route", () => {
   const db = database(),
     routes = new SummaryRoutes(db),
     part = { start: 0, count: 1 }
-  const pinned = routes.pin(part, resolveRoute("memory"))
+  const pinned = run(routes.pin(part, resolveRoute("memory")))
   expect(pinned).toMatchObject({
     model: "gpt-6-luna",
     thinking: "medium",
     reason: "application default",
   })
-  routes.budget(part, 272000)
+  run(routes.budget(part, 272000))
   const reopened = new SummaryRoutes(db)
   expect(
-    reopened.pin(
-      part,
-      resolveRoute("memory", { model: "gpt-6-astra", thinking: "high" })
+    run(
+      reopened.pin(
+        part,
+        resolveRoute("memory", { model: "gpt-6-astra", thinking: "high" })
+      )
     )
   ).toMatchObject({ ...pinned, contextWindow: 272000 })
-  expect(reopened.budget(part, 16000).contextWindow).toBe(272000)
+  expect(run(reopened.budget(part, 16000)).contextWindow).toBe(272000)
   const replacement = {
     ...resolveRoute("memory", { model: "gpt-6.1-sol", thinking: "high" }),
     contextWindow: 272000,
   }
-  reopened.replace(part, "explicit-retry", replacement)
-  expect(new SummaryRoutes(db).current(part)).toEqual(replacement)
-  expect(reopened.replace(part, "explicit-retry", pinned)).toEqual(replacement)
+  run(reopened.replace(part, "explicit-retry", replacement))
+  expect(run(new SummaryRoutes(db).current(part))).toEqual(replacement)
+  expect(run(reopened.replace(part, "explicit-retry", pinned))).toEqual(
+    replacement
+  )
   expect(() =>
-    reopened.applied("explicit-retry", { start: 1, count: 1 })
+    run(reopened.applied("explicit-retry", { start: 1, count: 1 }))
   ).toThrow(/another summary/)
   expect(db.all("SELECT * FROM summary_routes")).toHaveLength(2)
   for (let request = 0; request < 15; request++)
-    expect(new SummaryRoutes(db).beginRequest(part)).toBe(true)
-  expect(new SummaryRoutes(db).beginRequest(part)).toBe(false)
-  reopened.replace(part, "another-explicit-retry", replacement)
-  expect(reopened.beginRequest(part)).toBe(true)
-  expect(new SummaryRoutes(database()).current(part)).toBeUndefined()
+    expect(run(new SummaryRoutes(db).beginRequest(part))).toBe(true)
+  expect(run(new SummaryRoutes(db).beginRequest(part))).toBe(false)
+  run(reopened.replace(part, "another-explicit-retry", replacement))
+  expect(run(reopened.beginRequest(part))).toBe(true)
+  expect(run(new SummaryRoutes(database()).current(part))).toBeUndefined()
 })
 
 it("stops retries after three failures across restart, keeps valid memory and requires an explicit atomic retry", () => {
   const db = database(),
     memory = Effect.runSync(makeSqliteMemory(db)),
     routes = new SummaryRoutes(db)
-  const run = Effect.runSync
   run(memory.append("prior", "user", "Keep this decision"))
   run(memory.saveNode({ start: 0, count: 1 }, "user: Keep this decision"))
   run(memory.append("new", "user", "Original evidence ".repeat(80)))
   const job = run(memory.next())!
-  routes.pin(job, resolveRoute("memory"))
+  run(routes.pin(job, resolveRoute("memory")))
   for (let attempt = 1; attempt <= 3; attempt++) {
     run(memory.failNode(job, attempt * 10000))
     const reopened = run(makeSqliteMemory(db))
@@ -82,20 +87,28 @@ it("stops retries after three failures across restart, keeps valid memory and re
   expect(run(reopened.zoom(1, 1))).toContain("Original evidence")
   expect(run(reopened.node(job))).toBeUndefined()
   expect(() =>
-    db.transaction(() => {
-      ledger.retrySummary(job)
-      throw new Error("rollback")
-    })
+    run(
+      db.transaction(() =>
+        Effect.gen(function* () {
+          yield* ledger.retrySummary(job)
+          return yield* Effect.fail(new Error("rollback"))
+        })
+      )
+    )
   ).toThrow("rollback")
   expect(run(reopened.issues())[0]?.attempts).toBe(3)
-  db.transaction(() => {
-    expect(ledger.retrySummary(job)).toBe(true)
-    routes.replace(
-      job,
-      "retry",
-      resolveRoute("memory", { model: "gpt-6.1-sol", thinking: "medium" })
+  run(
+    db.transaction(() =>
+      Effect.gen(function* () {
+        expect(yield* ledger.retrySummary(job)).toBe(true)
+        yield* routes.replace(
+          job,
+          "retry",
+          resolveRoute("memory", { model: "gpt-6.1-sol", thinking: "medium" })
+        )
+      })
     )
-  })
+  )
   expect(run(reopened.retrySummary(job))).toBe(false)
   expect(run(reopened.next(new Set(), 999999))).toMatchObject({
     start: 1,
@@ -108,8 +121,7 @@ it("stops retries after three failures across restart, keeps valid memory and re
 
 it("does not let an optional paused merge block required short leaves or subsequent chat", () => {
   const db = database(),
-    memory = Effect.runSync(makeSqliteMemory(db)),
-    run = Effect.runSync
+    memory = Effect.runSync(makeSqliteMemory(db))
   for (let id = 0; id < 2; id++) {
     run(memory.append(`entry-${id}`, "user", `Decision ${id}`))
     run(memory.saveNode({ start: id, count: 1 }, `user: Decision ${id}`))

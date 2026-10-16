@@ -104,6 +104,7 @@ it("rolls back a damaged archive without partial history", () => {
 it("streams escaped HTML with links to exact originals and a private machine export", async () => {
   const db = database()
   const memory = fixture(8, db)
+  db.run("DROP TABLE model_credentials")
   db.run("CREATE TABLE model_credentials(value TEXT)")
   db.run(
     "INSERT INTO model_credentials VALUES ('synthetic-credential-must-not-export')"

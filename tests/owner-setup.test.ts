@@ -1,5 +1,6 @@
 import { APIError } from "better-auth/api"
-import { Cause } from "effect"
+import { Cause, Effect } from "effect"
+import { AuthStorageError } from "../src/auth/adapters/accounts"
 import { expect, it, vi } from "vitest"
 import {
   ownerSetup,
@@ -32,7 +33,11 @@ function fixture() {
     appUrl: "https://private.example",
     ownerEmail: "owner@example.com",
     secret: "synthetic-setup-secret",
-    registered,
+    registered: () =>
+      Effect.tryPromise({
+        try: registered,
+        catch: (cause) => new AuthStorageError({ cause }),
+      }).pipe(Effect.uninterruptible),
     signUp,
     own,
   }

@@ -1,5 +1,11 @@
-import { Schema } from "effect"
-import type { Sqlite } from "../../storage/sqlite"
+import { Effect, Schema } from "effect"
+import { mapSqliteError, type Sqlite } from "../../storage/sqlite"
+import { desc, eq, inArray } from "drizzle-orm"
+import type { EffectDrizzleQueryError } from "drizzle-orm/effect-core/errors"
+import {
+  backgroundHandoffs as handoffs,
+  backgroundRetries as retries,
+} from "./schema"
 import { BackgroundHandoff } from "../background"
 import { Handoff } from "../background-domain"
 import {
@@ -22,110 +28,136 @@ const restore = (raw: unknown): Handoff => {
   return row
 }
 
-/** Native SQLite mechanics and codecs only; decisions live in the application. */
+/** Drizzle persistence and codecs; decisions remain in BackgroundMailbox. */
 export class SqliteBackgroundMailbox implements BackgroundLedger {
   readonly transactionGroup: object
-  private readonly sql: Sqlite
-  constructor(db: Sqlite) {
+  constructor(private readonly db: Sqlite) {
     this.transactionGroup = db
-    const storage = <T>(operation: string, body: () => T): T => {
-      try {
-        return body()
-      } catch (cause) {
-        throw new BackgroundStorageError({ operation, cause })
-      }
-    }
-    this.sql = {
-      all: (query, ...bindings) =>
-        storage("read", () => db.all(query, ...bindings)),
-      run: (query, ...bindings) =>
-        storage("write", () => db.run(query, ...bindings)),
-      transaction: (body) => {
-        let callbackFailure: { cause: unknown } | undefined
-        try {
-          return db.transaction(() => {
-            try {
-              return body()
-            } catch (cause) {
-              callbackFailure = { cause }
-              throw cause
-            }
-          })
-        } catch (cause) {
-          if (callbackFailure && cause === callbackFailure.cause) throw cause
-          throw new BackgroundStorageError({ operation: "transaction", cause })
-        }
-      },
-    }
-    this.sql.run(
-      "CREATE TABLE IF NOT EXISTS background_handoffs (id INTEGER PRIMARY KEY,turn_id TEXT NOT NULL UNIQUE,handoff TEXT NOT NULL,status TEXT NOT NULL,report TEXT,error TEXT,failures INTEGER NOT NULL DEFAULT 0,next_at INTEGER)"
-    )
-    this.sql.run(
-      "CREATE TABLE IF NOT EXISTS background_retries (operation_id TEXT PRIMARY KEY,group_id INTEGER NOT NULL)"
+  }
+  atomic<TValue, TError, TRequirements>(
+    body: () => Effect.Effect<TValue, TError, TRequirements>
+  ) {
+    return mapSqliteError(
+      this.db.transaction(body),
+      (cause) => new BackgroundStorageError({ operation: "transaction", cause })
     )
   }
-  atomic<T>(body: () => T) {
-    return this.sql.transaction(body)
+  private q<TValue>(work: Effect.Effect<TValue, EffectDrizzleQueryError>) {
+    return mapSqliteError(
+      work,
+      (cause) => new BackgroundStorageError({ operation: "query", cause })
+    )
   }
   get(id: number) {
-    const row = this.sql.all<unknown>(
-      "SELECT * FROM background_handoffs WHERE id=?",
-      id
-    )[0]
-    return row === undefined ? undefined : restore(row)
+    return this.db
+      .use((orm) =>
+        this.q(orm.select().from(handoffs).where(eq(handoffs.id, id)))
+      )
+      .pipe(
+        Effect.map(([row]) => (row === undefined ? undefined : restore(row)))
+      )
   }
   list(offset: number) {
-    return this.sql
-      .all<unknown>(
-        "SELECT * FROM background_handoffs ORDER BY id DESC LIMIT 20 OFFSET ?",
-        offset
+    return this.db
+      .use((orm) =>
+        this.q(
+          orm
+            .select()
+            .from(handoffs)
+            .orderBy(desc(handoffs.id))
+            .limit(20)
+            .offset(offset)
+        )
       )
-      .map(restore)
+      .pipe(Effect.map((rows) => rows.map(restore)))
   }
   unfinished() {
-    return this.sql
-      .all<unknown>(
-        "SELECT * FROM background_handoffs WHERE status IN ('pending','running','ready','paused') ORDER BY id"
+    return this.db
+      .use((orm) =>
+        this.q(
+          orm
+            .select()
+            .from(handoffs)
+            .where(
+              inArray(handoffs.status, [
+                "pending",
+                "running",
+                "ready",
+                "paused",
+              ])
+            )
+            .orderBy(handoffs.id)
+        )
       )
-      .map(restore)
+      .pipe(Effect.map((rows) => rows.map(restore)))
   }
   hasTurn(turnId: string) {
-    return (
-      this.sql.all("SELECT id FROM background_handoffs WHERE turn_id=?", turnId)
-        .length > 0
-    )
+    return this.db
+      .use((orm) =>
+        this.q(
+          orm
+            .select({ id: handoffs.id })
+            .from(handoffs)
+            .where(eq(handoffs.turn_id, turnId))
+        )
+      )
+      .pipe(Effect.map((rows) => rows.length > 0))
   }
   put(row: Handoff) {
-    // Validate application writes before entering driver error conversion.
-    restore({ ...row, handoff: JSON.stringify(row.handoff) })
-    this.sql.run(
-      "INSERT INTO background_handoffs (id,turn_id,handoff,status,report,error,failures,next_at) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET status=excluded.status,report=excluded.report,error=excluded.error,failures=excluded.failures,next_at=excluded.next_at",
-      row.id,
-      row.turn_id,
-      JSON.stringify(row.handoff),
-      row.status,
-      row.report,
-      row.error,
-      row.failures,
-      row.next_at
+    return Effect.sync(() =>
+      restore({ ...row, handoff: JSON.stringify(row.handoff) })
+    ).pipe(
+      Effect.andThen(() =>
+        this.db.use((orm) =>
+          this.q(
+            orm
+              .insert(handoffs)
+              .values({ ...row, handoff: JSON.stringify(row.handoff) })
+              .onConflictDoUpdate({
+                target: handoffs.id,
+                set: {
+                  status: row.status,
+                  report: row.report,
+                  error: row.error,
+                  failures: row.failures,
+                  next_at: row.next_at,
+                },
+              })
+          )
+        )
+      ),
+      Effect.asVoid
     )
   }
   retry(operationId: string) {
-    const row = this.sql.all<unknown>(
-      "SELECT group_id FROM background_retries WHERE operation_id=?",
-      operationId
-    )[0]
-    return row === undefined
-      ? undefined
-      : Schema.decodeUnknownSync(
-          Schema.Struct({ group_id: BackgroundHandoff.fields.id })
-        )(row).group_id
+    return this.db
+      .use((orm) =>
+        this.q(
+          orm
+            .select()
+            .from(retries)
+            .where(eq(retries.operation_id, operationId))
+        )
+      )
+      .pipe(
+        Effect.map(([row]) =>
+          row === undefined
+            ? undefined
+            : Schema.decodeUnknownSync(BackgroundHandoff.fields.id)(
+                row.group_id
+              )
+        )
+      )
   }
   putRetry(operationId: string, groupId: number) {
-    this.sql.run(
-      "INSERT INTO background_retries VALUES (?,?)",
-      operationId,
-      groupId
-    )
+    return this.db
+      .use((orm) =>
+        this.q(
+          orm
+            .insert(retries)
+            .values({ operation_id: operationId, group_id: groupId })
+        )
+      )
+      .pipe(Effect.asVoid)
   }
 }

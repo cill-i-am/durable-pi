@@ -4,7 +4,7 @@ import type { Apps } from "./service"
 import type { AppAdmission } from "./repository"
 
 export interface AppEventHost<TError, TRequirements = never> {
-  active: () => boolean
+  active: () => Effect.Effect<boolean, TError, TRequirements>
   modelConnected: () => Effect.Effect<boolean, TError, TRequirements>
   wakeConversation: () => Effect.Effect<void, TError, TRequirements>
   admission: AppAdmission
@@ -18,8 +18,7 @@ export function appEventPump<TError, TRequirements>(
 ) {
   return {
     run: Effect.fn("Apps.deliverEvents")(function* () {
-      if (!(yield* Effect.sync(host.active)) || !(yield* apps.pending()).length)
-        return
+      if (!(yield* host.active()) || !(yield* apps.pending()).length) return
       if (!(yield* host.modelConnected()))
         return (yield* Clock.currentTimeMillis) + 60_000
       // Wake is persisted before atomic event-to-conversation admission.

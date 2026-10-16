@@ -56,7 +56,13 @@ export function makePlans<TRequirements>(
   digest: PlanDigest
 ): Plans<TRequirements> {
   const writable = (source: PlanSource, replay = false) =>
-    requirePlanWritable(authority.current(source.turnId), source, replay)
+    authority
+      .current(source.turnId)
+      .pipe(
+        Effect.flatMap((current) =>
+          decision(() => requirePlanWritable(current, source, replay))
+        )
+      )
   const reconcile = Effect.fn("Planning.reconcile")((id: string) =>
     ledger.atomic((tx) =>
       Effect.gen(function* () {
@@ -72,9 +78,16 @@ export function makePlans<TRequirements>(
         for (const root of saved.rootTurns)
           bindings.push(yield* tx.binding(root))
         const cancelled = () =>
-          bindings.some((binding) => binding.cancelled) ||
-          saved.rootTurns.some(authority.cancelled)
-        const alreadyCancelled = cancelled()
+          Effect.forEach(saved.rootTurns, (root) =>
+            authority.cancelled(root)
+          ).pipe(
+            Effect.map(
+              (values) =>
+                bindings.some((entry) => entry.cancelled) ||
+                values.some(Boolean)
+            )
+          )
+        const alreadyCancelled = yield* cancelled()
         const evidence: Evidence[][] = []
         for (const step of saved.steps) {
           const refs: Evidence[] = []
@@ -85,11 +98,12 @@ export function makePlans<TRequirements>(
           evidence.push(refs)
         }
         const now = yield* timestamp
-        const next = reconcilePlan(saved, evidence, cancelled(), now)
+        const next = reconcilePlan(saved, evidence, yield* cancelled(), now)
         if (!next) return saved
         const history = yield* tx.history(planHistoryKey(id, next.revision))
+        const finalCancelled = yield* cancelled()
         return yield* Effect.sync(() => {
-          const final = reconcilePlan(saved, evidence, cancelled(), now)
+          const final = reconcilePlan(saved, evidence, finalCancelled, now)
           if (!final) return saved
           history.value = {
             plan: final,
@@ -141,7 +155,7 @@ export function makePlans<TRequirements>(
       yield* decision(() => requirePlanInputRevision(input, source))
       return yield* ledger.atomic((tx) =>
         Effect.gen(function* () {
-          yield* decision(() => writable(source, true))
+          yield* writable(source, true)
           const binding = yield* tx.binding(source.turnId)
           yield* decision(() => requirePlanBinding(binding, input.id))
           const operation = yield* tx.operation(input.operationId)
@@ -149,7 +163,7 @@ export function makePlans<TRequirements>(
             planReplay(operation, fingerprint)
           )
           if (replay) return replay
-          yield* decision(() => writable(source))
+          yield* writable(source)
           const catalog = yield* tx.catalog(),
             doc = yield* tx.document(input.id),
             previous = doc.value
@@ -160,9 +174,17 @@ export function makePlans<TRequirements>(
           for (const root of previous?.rootTurns ?? [])
             bindings.push(yield* tx.binding(root))
           const cancelled = () =>
-            bindings.some((value) => value.cancelled) ||
-            !!previous?.rootTurns.some(authority.cancelled)
-          yield* decision(() => requireUncancelledPlan(cancelled()))
+            Effect.forEach(previous?.rootTurns ?? [], (root) =>
+              authority.cancelled(root)
+            ).pipe(
+              Effect.map(
+                (values) =>
+                  bindings.some((entry) => entry.cancelled) ||
+                  values.some(Boolean)
+              )
+            )
+          const wasCancelled = yield* cancelled()
+          yield* decision(() => requireUncancelledPlan(wasCancelled))
           const roots = [...(previous?.rootTurns ?? []), source.turnId],
             evidence: Evidence[] = []
           for (const step of input.draft.steps)
@@ -176,9 +198,10 @@ export function makePlans<TRequirements>(
           const history = yield* tx.history(
             planHistoryKey(input.id, next.revision)
           )
+          yield* writable(source)
+          const finallyCancelled = yield* cancelled()
           return yield* decision(() => {
-            writable(source)
-            requireUncancelledPlan(cancelled())
+            requireUncancelledPlan(finallyCancelled)
             history.value = {
               plan: next,
               actor: "agent",
@@ -222,7 +245,9 @@ export function makePlans<TRequirements>(
       return {
         current,
         recent: current ? [] : yield* list(0, 8),
-        receipts: authority.receipts(current?.rootTurns ?? [source.turnId]),
+        receipts: yield* authority.receipts(
+          current?.rootTurns ?? [source.turnId]
+        ),
       }
     }),
   }

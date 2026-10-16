@@ -28,6 +28,7 @@ import { BrowserStore } from "../src/browser/adapters/sqlite"
 import { browserToolResult } from "../src/browser/adapters/pi"
 import { BrowserFailure } from "../src/browser/contracts"
 import { AccessStore } from "../src/access/adapters/sqlite"
+import { AccessStorageError } from "../src/access/contracts"
 import { AccessGate } from "../src/access/gate"
 import { guardedTools } from "../src/access/adapters/pi"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
@@ -45,7 +46,12 @@ it.each(["restricted", "launch", "read", "failed", "uncertain"] as const)(
       model: "faux-1",
       thinking: "off",
     })
-    turns.admit({ operationId: "browser-run", text: "Open the synthetic page" })
+    Effect.runSync(
+      turns.admit({
+        operationId: "browser-run",
+        text: "Open the synthetic page",
+      })
+    )
     const browserStore = new BrowserStore(db)
     let opens = 0,
       navigations = 0
@@ -79,7 +85,7 @@ it.each(["restricted", "launch", "read", "failed", "uncertain"] as const)(
     let browser = new BrowserWorkspace(
       browserStore,
       effectBrowserDriver(driver),
-      () => true,
+      () => Effect.sync(() => true),
       browserWake(async () => {})
     )
     if (scenario === "restricted")
@@ -87,10 +93,18 @@ it.each(["restricted", "launch", "read", "failed", "uncertain"] as const)(
         browser.configure({ generation: 0, hosts: [], unrestricted: false })
       )
     if (scenario === "read")
-      browserStore.update(0, { session: await driver.open([], true) })
-    let access = new AccessStore(db, () => [
-      { name: "browser_open", description: "Synthetic browser", mode: "allow" },
-    ])
+      await Effect.runPromise(
+        browserStore.update(0, { session: await driver.open([], true) })
+      )
+    let access = new AccessStore(db, () =>
+      Effect.sync(() => [
+        {
+          name: "browser_open",
+          description: "Synthetic browser",
+          mode: "allow",
+        },
+      ])
+    )
     let recovery = new RunRecoveryStore(db)
     const requests: string[] = []
     const models = createModels()
@@ -125,7 +139,11 @@ it.each(["restricted", "launch", "read", "failed", "uncertain"] as const)(
             storage,
             store: recovery,
             access,
-            source: () => ({ turnId: "browser-run", steeringKey: "original" }),
+            source: () =>
+              Effect.succeed({
+                turnId: "browser-run",
+                steeringKey: "original",
+              }),
             stop: async (api, context) => {
               await (await harness.conversation(
                 api.conversationId,
@@ -136,9 +154,17 @@ it.each(["restricted", "launch", "read", "failed", "uncertain"] as const)(
         ],
         tools: [
           guardedTools(
-            new AccessGate(
-              access,
-              () => recovery.get("browser-run")?.view?.phase !== "blocked"
+            new AccessGate(access, () =>
+              recovery.get("browser-run").pipe(
+                Effect.map((state) => state?.view?.phase !== "blocked"),
+                Effect.mapError(
+                  (cause) =>
+                    new AccessStorageError({
+                      operation: "recovery guard",
+                      cause,
+                    })
+                )
+              )
             ),
             () => Effect.succeed("browser-run")
           )(
@@ -173,7 +199,7 @@ it.each(["restricted", "launch", "read", "failed", "uncertain"] as const)(
       let conversation = await harness.root(ctx, {
         agent: { model: { provider: "faux", modelId: "faux-1" } },
       })
-      turns.saveSession("browser-run", String(conversation.id))
+      Effect.runSync(turns.saveSession("browser-run", String(conversation.id)))
       db.run("UPDATE chat_turns SET status='running' WHERE id='browser-run'")
       const command = {
         type: "input" as const,
@@ -200,10 +226,12 @@ it.each(["restricted", "launch", "read", "failed", "uncertain"] as const)(
         scenario === "uncertain" ? "running" : "done"
       )
       if (scenario === "uncertain") {
-        expect(recovery.get("browser-run")?.view?.reason).toBe("uncertain")
+        expect(Effect.runSync(recovery.get("browser-run"))?.view?.reason).toBe(
+          "uncertain"
+        )
         expect(requests).toHaveLength(0)
       } else {
-        expect(recovery.get("browser-run")?.view).toBeNull()
+        expect(Effect.runSync(recovery.get("browser-run"))?.view).toBeNull()
         expect(requests).toHaveLength(1)
         expect(requests[0]).toContain(
           scenario === "restricted"
@@ -219,18 +247,20 @@ it.each(["restricted", "launch", "read", "failed", "uncertain"] as const)(
       await watch.stop()
       const before = { opens, navigations }
       await harness.close(ctx)
-      access = new AccessStore(db, () => [
-        {
-          name: "browser_open",
-          description: "Synthetic browser",
-          mode: "allow",
-        },
-      ])
+      access = new AccessStore(db, () =>
+        Effect.sync(() => [
+          {
+            name: "browser_open",
+            description: "Synthetic browser",
+            mode: "allow",
+          },
+        ])
+      )
       recovery = new RunRecoveryStore(db)
       browser = new BrowserWorkspace(
         new BrowserStore(db),
         effectBrowserDriver(driver),
-        () => true,
+        () => Effect.sync(() => true),
         browserWake(async () => {})
       )
       await Effect.runPromise(browser.recover())
@@ -241,7 +271,7 @@ it.each(["restricted", "launch", "read", "failed", "uncertain"] as const)(
       await conversation.waitForIdle(ctx)
       if (scenario !== "uncertain") {
         const replay = await Effect.runPromise(
-          new AccessGate(access, () => true).run(
+          new AccessGate(access, () => Effect.sync(() => true)).run(
             {
               id: receipts[0]!.id,
               turnId: "browser-run",

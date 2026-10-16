@@ -55,7 +55,7 @@ function fixture() {
   const browser = new BrowserWorkspace(
     repository,
     effectBrowserDriver(driver),
-    () => writable,
+    () => Effect.sync(() => writable),
     browserWake(async () => {
       wakes++
     })
@@ -120,9 +120,9 @@ describe("per-bot browser authority and lifetime", () => {
       b = fixture()
     await run(a.browser.configure(policy))
     await run(a.browser.inspect(1, "https://example.com"))
-    const id = a.repository.read().session!.id
+    const id = Effect.runSync(a.repository.read()).session!.id
     await run(a.browser.inspect(1))
-    expect(a.repository.read().session!.id).toBe(id)
+    expect(Effect.runSync(a.repository.read()).session!.id).toBe(id)
     expect(await run(a.browser.state())).toMatchObject({
       status: "ready",
       hasScreenshot: true,
@@ -143,7 +143,7 @@ describe("per-bot browser authority and lifetime", () => {
       run(b.browser.inspect(1, "https://example.com"))
     ).rejects.toThrow("allowed")
     expect(b.visits).toEqual([])
-    expect(new BrowserStore(a.db).read().session?.id).toBe(id)
+    expect(Effect.runSync(new BrowserStore(a.db).read()).session?.id).toBe(id)
   })
   it("fences revocation during acquisition and retires the late session", async () => {
     const f = fixture()
@@ -163,7 +163,7 @@ describe("per-bot browser authority and lifetime", () => {
     })
     await expect(opening).rejects.toThrow("changed")
     expect(f.visits).toEqual([])
-    expect(f.repository.retired()).toEqual(["late-session"])
+    expect(Effect.runSync(f.repository.retired())).toEqual(["late-session"])
     await run(f.browser.cleanup())
     expect(f.closed).toEqual(["late-session"])
     expect(await run(f.browser.state())).toMatchObject({
@@ -194,21 +194,24 @@ describe("per-bot browser authority and lifetime", () => {
     const f = fixture()
     await run(f.browser.configure(policy))
     await run(f.browser.inspect(1, "https://example.com"))
-    const session = f.repository.read().session!
-    f.repository.update(1, { session: { ...session, expiresAt: 1 } })
-    expect(browserState(new BrowserStore(f.db).read(), Date.now()).status).toBe(
-      "expired"
+    const session = Effect.runSync(f.repository.read()).session!
+    Effect.runSync(
+      f.repository.update(1, { session: { ...session, expiresAt: 1 } })
     )
+    expect(
+      browserState(Effect.runSync(new BrowserStore(f.db).read()), Date.now())
+        .status
+    ).toBe("expired")
     f.driver.close = async () => {
       throw new Error("private provider error")
     }
     const retry = await run(f.browser.cleanup())
     expect(retry).toBeGreaterThan(Date.now())
-    expect(f.repository.retired()).toEqual([session.id])
-    expect(f.repository.read().session).toBeNull()
+    expect(Effect.runSync(f.repository.retired())).toEqual([session.id])
+    expect(Effect.runSync(f.repository.read()).session).toBeNull()
     f.driver.close = async () => {}
     expect(await run(f.browser.cleanup())).toBeUndefined()
-    expect(f.repository.retired()).toEqual([])
+    expect(Effect.runSync(f.repository.retired())).toEqual([])
   })
   it("rejects archived bot actions and cleans its session", async () => {
     const f = fixture()
@@ -229,8 +232,8 @@ describe("per-bot browser authority and lifetime", () => {
       const f = fixture()
       await run(f.browser.configure(policy))
       await run(f.browser.inspect(1, "https://example.com"))
-      const absolute = f.repository.read().session!.expiresAt
-      now = f.repository.read().session!.idleExpiresAt! - 100
+      const absolute = Effect.runSync(f.repository.read()).session!.expiresAt
+      now = Effect.runSync(f.repository.read()).session!.idleExpiresAt! - 100
       f.driver.capture = async () => {
         now += 200
         await run(f.browser.cleanup())
@@ -239,8 +242,10 @@ describe("per-bot browser authority and lifetime", () => {
       await run(f.browser.inspect(1))
       expect(f.closed).toEqual([])
       expect((await run(f.browser.state())).status).toBe("ready")
-      expect(f.repository.read().session!.expiresAt).toBe(absolute)
-      now = f.repository.read().session!.idleExpiresAt! + 1
+      expect(Effect.runSync(f.repository.read()).session!.expiresAt).toBe(
+        absolute
+      )
+      now = Effect.runSync(f.repository.read()).session!.idleExpiresAt! + 1
       expect((await run(f.browser.state())).status).toBe("expired")
       await run(f.browser.cleanup())
       expect(f.closed).toHaveLength(1)
@@ -378,7 +383,7 @@ describe("per-bot browser authority and lifetime", () => {
       page: { ...capture.page, capturedAt: Date.now() },
     })
     await run(f.browser.control(1, "owner"))
-    const sessionId = f.repository.read().session!.id
+    const sessionId = Effect.runSync(f.repository.read()).session!.id
     expect((await run(f.browser.state())).controller).toBe("owner")
     await expect(run(f.browser.inspect(2))).rejects.toThrow(
       "owner has browser control"
@@ -399,9 +404,11 @@ describe("per-bot browser authority and lifetime", () => {
       "view changed"
     )
     expect(inputs).toBe(1)
-    expect(JSON.stringify(f.repository.read())).not.toContain(input.action.text)
+    expect(JSON.stringify(Effect.runSync(f.repository.read()))).not.toContain(
+      input.action.text
+    )
     await run(f.browser.control(2, "agent"))
-    expect(f.repository.read().session!.id).toBe(sessionId)
+    expect(Effect.runSync(f.repository.read()).session!.id).toBe(sessionId)
     expect((await run(f.browser.state())).controller).toBe("agent")
     await expect(
       run(
@@ -472,7 +479,7 @@ describe("per-bot browser authority and lifetime", () => {
     const restored = new BrowserWorkspace(
       new BrowserStore(f.db),
       effectBrowserDriver(f.driver),
-      () => true,
+      () => Effect.sync(() => true),
       browserWake(async () => {})
     )
     await run(restored.recover())
@@ -537,11 +544,18 @@ describe("unrestricted browser internet settings", () => {
     const f = fixture()
     f.db.run(
       "INSERT INTO bot_browser VALUES (1,?)",
-      JSON.stringify({ ...f.repository.read(), unrestricted: undefined })
+      JSON.stringify({
+        ...Effect.runSync(f.repository.read()),
+        unrestricted: undefined,
+      })
     )
-    expect(new BrowserStore(f.db).read().unrestricted).toBe(false)
-    f.repository.reset(0, [], true)
-    expect(new BrowserStore(f.db).read().unrestricted).toBe(true)
+    expect(Effect.runSync(new BrowserStore(f.db).read()).unrestricted).toBe(
+      false
+    )
+    Effect.runSync(f.repository.reset(0, [], true))
+    expect(Effect.runSync(new BrowserStore(f.db).read()).unrestricted).toBe(
+      true
+    )
     expect((await run(fixture().browser.state())).policy.unrestricted).toBe(
       true
     )
@@ -577,7 +591,7 @@ describe("unrestricted browser internet settings", () => {
     )
     await run(f.browser.inspect(1, "https://example.org"))
     expect(f.driver.open).toHaveBeenCalledWith(["example.com"], true)
-    const session = f.repository.read().session!
+    const session = Effect.runSync(f.repository.read()).session!
     await run(f.browser.close(1))
     expect((await run(f.browser.state())).policy.unrestricted).toBe(true)
     await run(

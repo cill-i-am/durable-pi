@@ -114,9 +114,9 @@ function fixture() {
     model: "test",
     thinking: "off",
   })
-  store.admit({ operationId: "root", text: "hello" })
-  store.saveSession("root", "session")
-  const root = store.get("root")!
+  Effect.runSync(store.admit({ operationId: "root", text: "hello" }))
+  Effect.runSync(store.saveSession("root", "session"))
+  const root = Effect.runSync(store.get("root"))!
   const reads = vi.fn(async () => done)
   const stop = vi.fn(async () => {})
   const events = vi.fn(async () => ({ snapshot: snapshot([1, 2]), stop }))
@@ -139,11 +139,13 @@ function fixture() {
 
 it("normalizes historical archive identities, steering, consumed inputs and live text", () => {
   const { root, store } = fixture()
-  const child = store.admit({
-    operationId: "child",
-    text: "use blue",
-    mode: "steer",
-  }).turn
+  const child = Effect.runSync(
+    store.admit({
+      operationId: "child",
+      text: "use blue",
+      mode: "steer",
+    })
+  ).turn
   const user = {
     ...entry(1),
     model: [{ role: "user" as const, content: "hello", timestamp: 1 }],

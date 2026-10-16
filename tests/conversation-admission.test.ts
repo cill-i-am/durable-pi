@@ -1,6 +1,6 @@
 import { expect, it } from "@effect/vitest"
 import { Cause, Context, Deferred, Effect, Exit, Fiber, Layer } from "effect"
-import { database } from "./database"
+import { database, corrupt } from "./database"
 import { catalog } from "./inference-fixture"
 import { BotConfigurationStore } from "../src/agents/adapters/configuration"
 import { homeAgentId } from "../src/agents/domain"
@@ -36,7 +36,7 @@ const fixture = Effect.gen(function* () {
       model: "gpt-6.1-sol",
       thinking: "medium",
     })
-  configuration.configure("owner", profile)
+  Effect.runSync(configuration.configure("owner", profile))
   const objects = new Map<string, Uint8Array>()
   const layer = workspaceLayer(
     db,
@@ -62,7 +62,10 @@ const fixture = Effect.gen(function* () {
     conversations = makeConversations(ledger)
   const effects: MessageAdmissionHost<FileError> = {
     connected: () => Effect.succeed(true),
-    archived: () => Effect.succeed(configuration.read()?.status === "archived"),
+    archived: () =>
+      Effect.succeed(
+        Effect.runSync(configuration.read())?.status === "archived"
+      ),
     catalog: () => Effect.succeed(catalog),
     wake: () =>
       Effect.sync(() => {
@@ -116,7 +119,7 @@ it.effect(
       expect(
         yield* f.admit({ ...input(), files: [file.id] }).pipe(Effect.result)
       ).toMatchObject(failure("FileNotFound"))
-      expect(f.ledger.recent()).toEqual([])
+      expect(Effect.runSync(f.ledger.recent())).toEqual([])
       expect(f.counters()).toEqual({ wakes: 0, notifications: 0 })
     })
 )
@@ -125,23 +128,25 @@ it.effect(
   () =>
     Effect.gen(function* () {
       const f = yield* fixture,
-        root = f.ledger.admit(input()).turn
+        root = Effect.runSync(f.ledger.admit(input())).turn
       f.effects.catalog = () =>
         Effect.sync(() => {
-          f.ledger.finish(
-            root,
-            [{ id: root.id, delivery: "answered" }],
-            "Done",
-            null
+          Effect.runSync(
+            f.ledger.finish(
+              root,
+              [{ id: root.id, delivery: "answered" }],
+              "Done",
+              null
+            )
           )
-          f.ledger.admit(input())
+          Effect.runSync(f.ledger.admit(input()))
           return catalog
         })
       const steer = { ...input(), mode: "steer" as const }
       expect(yield* f.admit(steer).pipe(Effect.result)).toMatchObject(
         failure("ConversationConflict")
       )
-      expect(f.ledger.get(steer.operationId)).toBeUndefined()
+      expect(Effect.runSync(f.ledger.get(steer.operationId))).toBeUndefined()
       expect(f.counters().wakes).toBe(0)
     })
 )
@@ -174,7 +179,7 @@ it.effect(
         ).pipe(Effect.result)
       ).toMatchObject(failure("ConversationConflict"))
       expect(transactions).toBe(0)
-      expect(f.ledger.recent()).toEqual([])
+      expect(Effect.runSync(f.ledger.recent())).toEqual([])
     })
 )
 it.effect("leaves no turn or wake after a native admission write failure", () =>
@@ -186,7 +191,7 @@ it.effect("leaves no turn or wake after a native admission write failure", () =>
     expect(yield* f.admit(input()).pipe(Effect.result)).toMatchObject(
       failure("ConversationStorageError")
     )
-    expect(f.ledger.recent()).toEqual([])
+    expect(Effect.runSync(f.ledger.recent())).toEqual([])
     expect(f.counters()).toEqual({ wakes: 0, notifications: 0 })
   })
 )
@@ -204,18 +209,20 @@ it.effect(
         submission = { ...input(), files: [file.id] }
       expect(yield* f.admit(submission)).toMatchObject({ accepted: true })
       yield* f.workspace.trash(file.id, true)
-      f.configuration.configure("owner", {
-        ...profile,
-        revision: 1,
-        status: "archived",
-      })
+      Effect.runSync(
+        f.configuration.configure("owner", {
+          ...profile,
+          revision: 1,
+          status: "archived",
+        })
+      )
       f.effects.connected = () => Effect.succeed(false)
       f.effects.catalog = () => Effect.die("replay must not discover models")
       expect(yield* f.admit(submission)).toMatchObject({
         accepted: false,
         operationId: submission.operationId,
       })
-      expect(f.ledger.recent()).toHaveLength(1)
+      expect(Effect.runSync(f.ledger.recent())).toHaveLength(1)
       expect(f.counters()).toEqual({ wakes: 2, notifications: 1 })
     })
 )
@@ -227,19 +234,21 @@ it.effect(
         submission = input()
       f.effects.catalog = () =>
         Effect.sync(() => {
-          f.ledger.admit(submission)
-          f.configuration.configure("owner", {
-            ...profile,
-            revision: 1,
-            status: "archived",
-          })
+          Effect.runSync(f.ledger.admit(submission))
+          Effect.runSync(
+            f.configuration.configure("owner", {
+              ...profile,
+              revision: 1,
+              status: "archived",
+            })
+          )
           return { ...catalog, models: [] }
         })
       expect(yield* f.admit(submission)).toMatchObject({
         accepted: false,
         operationId: submission.operationId,
       })
-      expect(f.ledger.recent()).toHaveLength(1)
+      expect(Effect.runSync(f.ledger.recent())).toHaveLength(1)
       expect(f.counters().wakes).toBe(1)
     })
 )
@@ -275,7 +284,7 @@ it.effect(
         _tag: "Failure",
         failure: { _tag: "DiscoveryFailure", value: "current invocation" },
       })
-      expect(f.ledger.recent()).toEqual([])
+      expect(Effect.runSync(f.ledger.recent())).toEqual([])
     })
 )
 it.effect(
@@ -289,13 +298,15 @@ it.effect(
           mime: "text/plain",
           bytes: new TextEncoder().encode("Notes"),
         })
-      f.db.run("UPDATE workspace_files SET kind='invalid' WHERE id=?", file.id)
+      corrupt(
+        f.db,
+        "UPDATE workspace_files SET kind='invalid' WHERE id=?",
+        file.id
+      )
       const exit = yield* f.workspace.requireFiles([file.id]).pipe(Effect.exit)
       expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)
       expect(Exit.isFailure(exit) && Cause.hasFails(exit.cause)).toBe(false)
-      f.db.all = () => {
-        throw new Error("private driver data")
-      }
+      f.db.run("DROP TABLE workspace_files")
       expect(
         yield* f.workspace.requireFiles([file.id]).pipe(Effect.result)
       ).toMatchObject(failure("WorkspaceUnavailable"))
@@ -325,7 +336,7 @@ it.effect(
       yield* Deferred.await(entered)
       yield* Fiber.interrupt(pending)
       yield* Deferred.succeed(release, undefined)
-      expect(f.ledger.recent()).toEqual([])
+      expect(Effect.runSync(f.ledger.recent())).toEqual([])
       expect(f.counters()).toEqual({ wakes: 0, notifications: 0 })
     })
 )
@@ -337,7 +348,7 @@ it.effect("rejects an unavailable model before durable admission", () =>
     expect(yield* f.admit(input()).pipe(Effect.result)).toMatchObject(
       failure("ModelUnavailable")
     )
-    expect(f.ledger.recent()).toEqual([])
+    expect(Effect.runSync(f.ledger.recent())).toEqual([])
     expect(f.counters()).toEqual({ wakes: 0, notifications: 0 })
   })
 )
@@ -363,7 +374,9 @@ it.effect(
         Effect.forkChild
       )
       yield* Deferred.await(entered)
-      expect(f.ledger.get(submission.operationId)?.status).toBe("queued")
+      expect(Effect.runSync(f.ledger.get(submission.operationId))?.status).toBe(
+        "queued"
+      )
       const interruption = yield* Fiber.interrupt(pending).pipe(
         Effect.forkChild
       )
@@ -375,6 +388,6 @@ it.effect(
       expect(Exit.isFailure(exit) && Cause.hasInterrupts(exit.cause)).toBe(true)
       expect(settled).toBe(true)
       expect(f.counters().notifications).toBe(1)
-      expect(f.ledger.recent()).toHaveLength(1)
+      expect(Effect.runSync(f.ledger.recent())).toHaveLength(1)
     })
 )

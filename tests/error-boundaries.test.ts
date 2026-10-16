@@ -1,5 +1,5 @@
 import { expect, it } from "vitest"
-import { Context, Effect, Exit } from "effect"
+import { Cause, Context, Effect, Exit } from "effect"
 import { AppStore } from "../src/apps/adapters/sqlite"
 import { AppStorageError } from "../src/apps/contracts"
 import { makeApps } from "../src/apps/service"
@@ -17,41 +17,69 @@ import { ConversationStorageError } from "../src/conversations/turns"
 import { makeConversations } from "../src/conversations/service"
 import { database } from "./database"
 
+const compoundDefect = new Error("Programming failure")
 const cases: readonly {
   name: string
   error: () => { readonly _tag: string }
-  read: (cause: unknown) => Effect.Effect<unknown, unknown>
+  read: (
+    cause: unknown,
+    mode?: "failure" | "defect" | "compound"
+  ) => Effect.Effect<unknown, unknown>
 }[] = [
   {
     name: "Apps",
     error: () => new AppStorageError({ operation: "read", cause: "private" }),
-    read: (cause: unknown) => {
-      const store = new AppStore(database(), () => true)
-      store.list = () => {
-        throw cause
-      }
+    read: (cause: unknown, mode = "failure") => {
+      const store = new AppStore(database(), () => Effect.sync(() => true))
+      store.list = () =>
+        mode === "defect"
+          ? Effect.die(cause)
+          : mode === "compound"
+            ? Effect.failCause(
+                Cause.combine(
+                  Cause.fail(cause as AppStorageError),
+                  Cause.die(compoundDefect)
+                )
+              )
+            : Effect.fail(cause as AppStorageError)
       return makeApps(store).list()
     },
   },
   {
     name: "Skills",
     error: () => new SkillStorageError({ operation: "read", cause: "private" }),
-    read: (cause: unknown) => {
+    read: (cause: unknown, mode = "failure") => {
       const store = new SkillStore(database())
-      store.list = () => {
-        throw cause
-      }
+      store.list = () =>
+        mode === "defect"
+          ? Effect.die(cause)
+          : mode === "compound"
+            ? Effect.failCause(
+                Cause.combine(
+                  Cause.fail(cause as SkillStorageError),
+                  Cause.die(compoundDefect)
+                )
+              )
+            : Effect.fail(cause as SkillStorageError)
       return makeSkills(store).list()
     },
   },
   {
     name: "Agents",
     error: () => new AgentStorageError(),
-    read: (cause: unknown) => {
+    read: (cause: unknown, mode = "failure") => {
       const store = new SqliteAgentCatalog(database())
-      store.list = () => {
-        throw cause
-      }
+      store.list = () =>
+        mode === "defect"
+          ? Effect.die(cause)
+          : mode === "compound"
+            ? Effect.failCause(
+                Cause.combine(
+                  Cause.fail(cause as AgentStorageError),
+                  Cause.die(compoundDefect)
+                )
+              )
+            : Effect.fail(cause as AgentStorageError)
       return makeAgentCatalog(store).list()
     },
   },
@@ -59,15 +87,23 @@ const cases: readonly {
     name: "Routines",
     error: () =>
       new RoutineStorageError({ operation: "read", cause: "private" }),
-    read: (cause: unknown) => {
+    read: (cause: unknown, mode = "failure") => {
       const store = new SqliteRoutinePersistence(database())
-      store.list = () => {
-        throw cause
-      }
+      store.list = () =>
+        mode === "defect"
+          ? Effect.die(cause)
+          : mode === "compound"
+            ? Effect.failCause(
+                Cause.combine(
+                  Cause.fail(cause as RoutineStorageError),
+                  Cause.die(compoundDefect)
+                )
+              )
+            : Effect.fail(cause as RoutineStorageError)
       return Context.get(
         makeRoutineApplication(
           store,
-          () => true,
+          () => Effect.sync(() => true),
           () => 1000,
           () => crypto.randomUUID()
         ),
@@ -79,21 +115,29 @@ const cases: readonly {
     name: "Conversations",
     error: () =>
       new ConversationStorageError({ operation: "read", cause: "private" }),
-    read: (cause: unknown) => {
+    read: (cause: unknown, mode = "failure") => {
       const store = new ConversationStore(database(), {
         model: "gpt-6-luna",
         thinking: "low",
       })
-      store.recent = () => {
-        throw cause
-      }
+      store.recent = () =>
+        mode === "defect"
+          ? Effect.die(cause)
+          : mode === "compound"
+            ? Effect.failCause(
+                Cause.combine(
+                  Cause.fail(cause as ConversationStorageError),
+                  Cause.die(compoundDefect)
+                )
+              )
+            : Effect.fail(cause as ConversationStorageError)
       return makeConversations(store).recent()
     },
   },
 ]
 
 for (const context of cases) {
-  it(`${context.name} decodes its expected storage failure without a class prototype`, () => {
+  it(`${context.name} preserves its checked storage failure without a class prototype`, () => {
     const error = context.error()
     Object.setPrototypeOf(error, Error.prototype)
     const exit = Effect.runSyncExit(context.read(error))
@@ -103,7 +147,7 @@ for (const context of cases) {
   })
   it(`${context.name} preserves an unexpected programming failure as a defect`, () => {
     const defect = new Error("Programming failure")
-    const exit = Effect.runSyncExit(context.read(defect))
+    const exit = Effect.runSyncExit(context.read(defect, "defect"))
     expect(Exit.isFailure(exit) && exit.cause.reasons).toMatchObject([
       { _tag: "Die", defect },
     ])
@@ -113,14 +157,12 @@ for (const context of cases) {
         exit.cause.reasons[0].defect
     ).toBe(defect)
   })
-  it(`${context.name} rejects an invalid error contract even with the original class prototype`, () => {
-    const defect = context.error()
-    Object.defineProperty(defect, "_tag", { value: "UndocumentedFailure" })
-    const exit = Effect.runSyncExit(context.read(defect))
-    expect(
-      Exit.isFailure(exit) &&
-        exit.cause.reasons[0]?._tag === "Die" &&
-        exit.cause.reasons[0].defect
-    ).toBe(defect)
+  it(`${context.name} preserves compound checked and defect Causes`, () => {
+    const error = context.error(),
+      exit = Effect.runSyncExit(context.read(error, "compound"))
+    expect(Exit.isFailure(exit) && exit.cause.reasons).toMatchObject([
+      { _tag: "Fail", error },
+      { _tag: "Die", defect: compoundDefect },
+    ])
   })
 }

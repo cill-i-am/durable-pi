@@ -46,7 +46,7 @@ function fixture(
   }
   const db = database()
   const runtime = ManagedRuntime.make(
-    workspaceLayer(db, bucket, prefix, canWrite)
+    workspaceLayer(db, bucket, prefix, () => Effect.sync(canWrite))
   )
   const run = <T, TError>(
     f: (workspace: Workspace["Service"]) => Effect.Effect<T, TError>
@@ -116,25 +116,30 @@ describe("private workspace files", () => {
     }))
     for (const skill of skills)
       Schema.decodeUnknownSync(SkillSource)(skill.source)
-    const root = store.admit(
-      command,
-      { files: [], content: blocks },
-      skills
+    const root = Effect.runSync(
+      store.admit(command, { files: [], content: blocks }, skills)
     ).turn
-    store.savePrompt(
-      root.id,
-      JSON.stringify([{ type: "text", text: skillContext(skills) }, ...blocks])
+    Effect.runSync(
+      store.savePrompt(
+        root.id,
+        JSON.stringify([
+          { type: "text", text: skillContext(skills) },
+          ...blocks,
+        ])
+      )
     )
-    expect(store.get(root.id)?.input).toEqual([])
+    expect(Effect.runSync(store.get(root.id))?.input).toEqual([])
     expect(
-      store.finish(
-        store.get(root.id)!,
-        [{ id: root.id, delivery: "answered" }],
-        "answer".repeat(180_000),
-        null
+      Effect.runSync(
+        store.finish(
+          Effect.runSync(store.get(root.id))!,
+          [{ id: root.id, delivery: "answered" }],
+          "answer".repeat(180_000),
+          null
+        )
       )
     ).toBe(true)
-    expect(store.get(root.id)?.prompt).toBeNull()
+    expect(Effect.runSync(store.get(root.id))?.prompt).toBeNull()
   })
   it("keeps R2 bytes out of metadata and isolates bot namespaces", async () => {
     const a = fixture(),
@@ -288,25 +293,33 @@ describe("private workspace files", () => {
       text: "",
       files: [input.id],
     }
-    const first = store.admit(command, prepared)
+    const first = Effect.runSync(store.admit(command, prepared))
     expect(first.turn.attachments).toHaveLength(1)
     expect(first.turn.input).toEqual(prepared.content)
     await f.run((w) => w.trash(input.id, true))
-    expect(store.admit(command).accepted).toBe(false)
-    expect(() => store.admit({ ...command, files: [] })).toThrow()
-    expect(store.recent()[0]?.input).toEqual([])
-    store.savePrompt(first.turn.id, JSON.stringify(prepared.content))
-    expect(store.get(first.turn.id)?.input).toEqual([])
-    expect(store.recent()[0]?.prompt).toBeNull()
+    expect(Effect.runSync(store.admit(command)).accepted).toBe(false)
+    expect(() =>
+      Effect.runSync(store.admit({ ...command, files: [] }))
+    ).toThrow()
+    expect(Effect.runSync(store.recent())[0]?.input).toEqual([])
+    Effect.runSync(
+      store.savePrompt(first.turn.id, JSON.stringify(prepared.content))
+    )
+    expect(Effect.runSync(store.get(first.turn.id))?.input).toEqual([])
+    expect(Effect.runSync(store.recent())[0]?.prompt).toBeNull()
     for (let i = 0; i < 3; i++)
-      store.admit(
-        { ...command, operationId: crypto.randomUUID(), mode: "steer" },
-        prepared
+      Effect.runSync(
+        store.admit(
+          { ...command, operationId: crypto.randomUUID(), mode: "steer" },
+          prepared
+        )
       )
     expect(() =>
-      store.admit(
-        { ...command, operationId: crypto.randomUUID(), mode: "steer" },
-        prepared
+      Effect.runSync(
+        store.admit(
+          { ...command, operationId: crypto.randomUUID(), mode: "steer" },
+          prepared
+        )
       )
     ).toThrow(/four-file/)
     await f.runtime.dispose()

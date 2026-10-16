@@ -6,7 +6,7 @@ import type {
   Model,
   Api,
 } from "@earendil-works/pi-ai"
-import { orDieAll } from "../../shared/effect"
+import { fatalCause, orDieAll } from "../../shared/effect"
 
 export const MAX_PROVIDER_BYTES = 16 * 1024 * 1024
 export const MAX_PENDING_MODEL_EVENTS = 128
@@ -57,10 +57,10 @@ export class PiModelRequest {
     readonly model: Model<Api>,
     private readonly source: (
       request: PiModelRequest
-    ) => AssistantMessageEventStream,
+    ) => AssistantMessageEventStream | Promise<AssistantMessageEventStream>,
     private readonly finished: (
       event: Extract<AssistantMessageEvent, { type: "done" | "error" }>
-    ) => void,
+    ) => void | Promise<void>,
     private readonly callerSignal?: AbortSignal
   ) {
     this.stream = new OwnedModelStream(this)
@@ -193,7 +193,7 @@ export class PiModelRequest {
       let iterator: AsyncIterator<AssistantMessageEvent> | undefined
       try {
         if (this.signal.aborted) return
-        iterator = this.source(this)[Symbol.asyncIterator]()
+        iterator = (await this.source(this))[Symbol.asyncIterator]()
         for (;;) {
           const next = await iterator.next()
           if (next.done) break
@@ -238,7 +238,23 @@ export class PiModelRequest {
       )
     )
   })
-  complete(exit: Exit.Exit<void>) {
+  private completion?: Promise<Exit.Exit<void>>
+  complete(exit: Exit.Exit<void>): Effect.Effect<void> {
+    return Effect.callback<void>((resume) => {
+      const work = (this.completion ??= this.finish(exit))
+      work.then(
+        (settled) =>
+          resume(
+            Exit.isFailure(settled)
+              ? Effect.failCause(settled.cause)
+              : Effect.void
+          ),
+        (cause) => resume(Effect.die(cause))
+      )
+      return Effect.promise(() => work).pipe(Effect.asVoid)
+    })
+  }
+  private async finish(exit: Exit.Exit<void>): Promise<Exit.Exit<void>> {
     let event = this.terminal
     if (
       Exit.isFailure(exit) ||
@@ -269,17 +285,28 @@ export class PiModelRequest {
         error: message,
       }
     }
+    let completion: Exit.Exit<void> = Exit.void
     try {
-      this.finished(event)
+      await this.finished(event)
+    } catch (cause) {
+      completion = Exit.failCause(
+        fatalCause(Cause.isCause(cause) ? cause : Cause.die(cause))
+      )
     } finally {
-      this.resolve(exit)
+      const settled = Exit.isFailure(completion)
+        ? Exit.isFailure(exit)
+          ? Exit.failCause(Cause.combine(exit.cause, completion.cause))
+          : completion
+        : exit
+      this.resolve(settled)
       this.stream.finish(event)
     }
+    return completion
   }
   decline(reason: string) {
     const message = failedMessage(this.model, false, reason)
     this.terminal = { type: "error", reason: "error", error: message }
-    this.complete(Exit.void)
+    return this.complete(Exit.void)
   }
 }
 
@@ -374,10 +401,13 @@ export const piModelStreamsLayer = Layer.effect(
         Effect.uninterruptible(
           Effect.gen(function* () {
             if (closed || active.size >= MAX_ACTIVE_MODEL_STREAMS) {
-              request.decline(
-                closed
-                  ? "Model requests are currently unavailable."
-                  : "Too many model requests are active. Wait for some work to finish."
+              yield* Effect.forkIn(
+                request.decline(
+                  closed
+                    ? "Model requests are currently unavailable."
+                    : "Too many model requests are active. Wait for some work to finish."
+                ),
+                scope
               )
               return
             }
@@ -396,6 +426,7 @@ export const piModelStreamsLayer = Layer.effect(
                   )
                 })
               ).pipe(
+                Effect.onExit((exit) => request.complete(exit)),
                 Effect.onExit((exit) =>
                   Effect.sync(() => {
                     active.delete(entry)
@@ -405,7 +436,6 @@ export const piModelStreamsLayer = Layer.effect(
                         ? Cause.combine(fatal, exit.cause)
                         : exit.cause
                     }
-                    request.complete(exit)
                   })
                 )
               ),

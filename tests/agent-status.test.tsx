@@ -109,16 +109,17 @@ describe("agent runtime status", () => {
     )
     const before = db.all("SELECT * FROM chat_turns")
     store = new ConversationStore(db, defaults)
-    expect(store.statusTurns()).toEqual({
+    expect(Effect.runSync(store.statusTurns())).toEqual({
       active: undefined,
       latest: { id: root, status: "failed", recovery: { phase: "blocked" } },
     })
     expect(db.all("SELECT * FROM chat_turns")).toEqual(before)
-    expect(JSON.stringify(store.statusTurns())).not.toMatch(
+    expect(JSON.stringify(Effect.runSync(store.statusTurns()))).not.toMatch(
       /private|tool output/
     )
     expect(
-      new ConversationStore(database(), defaults).statusTurns().latest
+      Effect.runSync(new ConversationStore(database(), defaults).statusTurns())
+        .latest
     ).toBeUndefined()
   })
   it("checks only the current turn's unexpired pending approval without mutating receipts", () => {
@@ -126,7 +127,8 @@ describe("agent runtime status", () => {
     let now = 100
     const store = new AccessStore(
       db,
-      () => [{ name: "test", description: "test", mode: "ask" }],
+      () =>
+        Effect.sync(() => [{ name: "test", description: "test", mode: "ask" }]),
       () => now
     )
     const intent = {
@@ -135,16 +137,16 @@ describe("agent runtime status", () => {
       tool: "test",
       input: "private",
     }
-    store.begin(intent)
-    expect(store.awaitingApproval("other")).toBe(false)
-    expect(store.awaitingApproval("root")).toBe(true)
-    store.decide(intent.id, true, 0)
-    expect(store.awaitingApproval("root")).toBe(false)
+    Effect.runSync(store.begin(intent))
+    expect(Effect.runSync(store.awaitingApproval("other"))).toBe(false)
+    expect(Effect.runSync(store.awaitingApproval("root"))).toBe(true)
+    Effect.runSync(store.decide(intent.id, true, 0))
+    expect(Effect.runSync(store.awaitingApproval("root"))).toBe(false)
     const other = { ...intent, id: "expired" }
-    store.begin(other)
+    Effect.runSync(store.begin(other))
     const before = db.all("SELECT * FROM tool_operations")
     now = Number.MAX_SAFE_INTEGER
-    expect(store.awaitingApproval("root")).toBe(false)
+    expect(Effect.runSync(store.awaitingApproval("root"))).toBe(false)
     expect(db.all("SELECT * FROM tool_operations")).toEqual(before)
   })
   it("isolates owner-catalog projections and marks unreadable bots unavailable rather than Ready", async () => {

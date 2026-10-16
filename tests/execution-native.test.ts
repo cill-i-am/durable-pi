@@ -237,7 +237,7 @@ test("Execution HTTP never admits an oversized input whose stream cleanup fails"
     ledger = new ExecutionStore(db)
   const invoke = vi.fn(() => Effect.succeed(output))
   const runtime = ManagedRuntime.make(
-    executionApplication(ledger, { run: invoke }, () => true)
+    executionApplication(ledger, { run: invoke }, () => Effect.sync(() => true))
   )
   const execution = runtime.runSync(Executions)
   const defect = new Error("upload cancellation failed")
@@ -257,7 +257,7 @@ test("Execution HTTP never admits an oversized input whose stream cleanup fails"
     )
     expect(dies(exit, defect)).toBe(true)
     expect(body.locked).toBe(false)
-    expect(ledger.counts().total).toBe(0)
+    expect(Effect.runSync(ledger.counts()).total).toBe(0)
     expect(invoke).not.toHaveBeenCalled()
   } finally {
     await runtime.dispose()
@@ -435,7 +435,7 @@ test("failed native response cleanup leaves the actual Execution intent uncertai
   })
   const ledger = new ExecutionStore(database())
   const runtime = ManagedRuntime.make(
-    executionApplication(ledger, executor, () => true)
+    executionApplication(ledger, executor, () => Effect.sync(() => true))
   )
   const execution = runtime.runSync(Executions)
   try {
@@ -443,8 +443,8 @@ test("failed native response cleanup leaves the actual Execution intent uncertai
     expect(dies(await Effect.runPromiseExit(task.completion), defect)).toBe(
       true
     )
-    expect(ledger.get(input.id)?.status).toBe("running")
-    expect(ledger.get(input.id)?.output).toBeNull()
+    expect(Effect.runSync(ledger.get(input.id))?.status).toBe("running")
+    expect(Effect.runSync(ledger.get(input.id))?.output).toBeNull()
   } finally {
     expect(
       dies(await Effect.runPromiseExit(runtime.disposeEffect), defect)
@@ -479,26 +479,35 @@ test("worker preserves safe success/error responses through its real HTTP handle
 })
 
 test("Apps keeps its execution permit until failed native teardown and commits no interaction", async () => {
-  const store = new AppStore(database(), () => true),
+  const store = new AppStore(database(), () => Effect.sync(() => true)),
     id = crypto.randomUUID()
-  const saved = store.save({
-    id,
-    operationId: crypto.randomUUID(),
-    expectedRevision: 0,
-    definition: {
-      title: "Native",
-      description: "Synthetic",
-      blocks: [
-        { id: "counter", type: "web", initialState: "null", code: "return {}" },
-      ],
-    },
-  })
-  const app = store.publish({
-    id,
-    operationId: crypto.randomUUID(),
-    expectedRevision: saved.revision,
-    version: 1,
-  })
+  const saved = Effect.runSync(
+    store.save({
+      id,
+      operationId: crypto.randomUUID(),
+      expectedRevision: 0,
+      definition: {
+        title: "Native",
+        description: "Synthetic",
+        blocks: [
+          {
+            id: "counter",
+            type: "web",
+            initialState: "null",
+            code: "return {}",
+          },
+        ],
+      },
+    })
+  )
+  const app = Effect.runSync(
+    store.publish({
+      id,
+      operationId: crypto.randomUUID(),
+      expectedRevision: saved.revision,
+      version: 1,
+    })
+  )
   const started = gate(),
     response = gate<Response>(),
     cleaning = gate(),
@@ -554,6 +563,6 @@ test("Apps keeps its execution permit until failed native teardown and commits n
   })
   close.resolve()
   expect(dies(await pending, defect)).toBe(true)
-  expect(store.detail(id).app.revision).toBe(app.revision)
-  expect(store.interactionReceipt(action)).toBeUndefined()
+  expect(Effect.runSync(store.detail(id)).app.revision).toBe(app.revision)
+  expect(Effect.runSync(store.interactionReceipt(action))).toBeUndefined()
 })

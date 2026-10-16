@@ -94,7 +94,7 @@ describe("private terminal file transfer", () => {
           )
         )
       ).completion
-      expect(f.repository.get(id)?.status).toBe("cancelled")
+      expect(Effect.runSync(f.repository.get(id))?.status).toBe("cancelled")
       expect(f.runtime.importFile).not.toHaveBeenCalled()
       expect(f.runtime.exportFile).not.toHaveBeenCalled()
       expect(f.backups.write).not.toHaveBeenCalled()
@@ -117,7 +117,7 @@ describe("private terminal file transfer", () => {
     )
     expect(f.runtime.execute).not.toHaveBeenCalled()
     expect(f.backups.write).toHaveBeenCalledOnce()
-    expect(f.repository.get(id)).toMatchObject({
+    expect(Effect.runSync(f.repository.get(id))).toMatchObject({
       status: "succeeded",
       kind: "import",
       transfer: plan,
@@ -151,7 +151,7 @@ describe("private terminal file transfer", () => {
     expect(f.backups.write).not.toHaveBeenCalled()
     expect(f.exports.write).toHaveBeenCalledWith(bytes)
     expect(await f.terminal.exportedFile(id)).toEqual(bytes)
-    expect(f.repository.get(id)).toMatchObject({
+    expect(Effect.runSync(f.repository.get(id))).toMatchObject({
       status: "succeeded",
       savedAt: null,
     })
@@ -181,9 +181,9 @@ describe("private terminal file transfer", () => {
     await Effect.runPromise(f.terminal.cancel(id))
     resolve(checkpoint)
     await task.completion
-    expect(f.repository.get(id)?.status).toBe("cancelled")
+    expect(Effect.runSync(f.repository.get(id))?.status).toBe("cancelled")
     await expect(f.terminal.exportedFile(id)).rejects.toThrow("not ready")
-    expect(f.repository.checkpoint()).toBeNull()
+    expect(Effect.runSync(f.repository.checkpoint())).toBeNull()
   })
   it("fences an exported-file receipt when archival overtakes the storage write", async () => {
     const f = fixture()
@@ -201,13 +201,13 @@ describe("private terminal file transfer", () => {
       )
     )
     await vi.waitFor(() => expect(f.exports.write).toHaveBeenCalledOnce())
-    f.repository.configure(3, true, 2)
+    Effect.runSync(f.repository.configure(3, true, 2))
     resolve(checkpoint)
     await task.completion
-    expect(f.repository.get(id)?.status).toBe("cancelled")
-    expect(f.repository.exported(id)).toBeNull()
+    expect(Effect.runSync(f.repository.get(id))?.status).toBe("cancelled")
+    expect(Effect.runSync(f.repository.exported(id))).toBeNull()
     await expect(f.terminal.exportedFile(id)).rejects.toThrow("not ready")
-    expect(f.repository.checkpoint()).toBeNull()
+    expect(Effect.runSync(f.repository.checkpoint())).toBeNull()
   })
   it("downloads arbitrary regular-file bytes even when the Files library cannot classify them", async () => {
     const f = fixture()
@@ -288,7 +288,9 @@ describe("private terminal file transfer", () => {
       await Effect.runPromise(f.terminal.startTransfer(id, plan, bytes))
     ).completion
     const service = {
-      fetch: vi.fn(async () => Response.json(f.repository.get(id))),
+      fetch: vi.fn(async () =>
+        Response.json(Effect.runSync(f.repository.get(id)))
+      ),
     }
     const content = vi.fn(() => {
       throw new Error("Source is unavailable")
@@ -330,7 +332,9 @@ describe("private terminal file transfer", () => {
       .fn()
       .mockResolvedValueOnce(new Response(null, { status: 404 }))
       .mockResolvedValueOnce(new Response(null, { status: 409 }))
-      .mockResolvedValueOnce(Response.json(f.repository.get(id)))
+      .mockResolvedValueOnce(
+        Response.json(Effect.runSync(f.repository.get(id)))
+      )
     const service = { fetch }
     const workspace = fileSource(() =>
       Effect.succeed({

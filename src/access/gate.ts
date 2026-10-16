@@ -1,18 +1,20 @@
-import { Schema, Cause, Clock, Deferred, Effect } from "effect"
+import { Cause, Clock, Deferred, Effect } from "effect"
 import { scopedReceiptFact, type ReceiptQuery } from "./receipt"
 import type { AccessLedger, ToolIntent } from "./ledger"
-import {
+import type {
   AccessDenied,
   AccessConflict,
   AccessStorageError,
-  type AccessMode,
+  AccessMode,
 } from "./contracts"
 
 export class AccessGate {
   private changed = Deferred.makeUnsafe<void>()
   constructor(
     private readonly store: AccessLedger,
-    private readonly canRun: (turnId: string) => boolean,
+    private readonly canRun: (
+      turnId: string
+    ) => Effect.Effect<boolean, AccessError>,
     private readonly onChange: () => void = () => {},
     private readonly botId: () => string | null = () => null
   ) {}
@@ -31,39 +33,39 @@ export class AccessGate {
       )
     })
   }
-  operation = Effect.fn("Access.operation")((id: string) =>
-    accessAttempt(() => this.store.get(id))
-  )
+  operation = Effect.fn("Access.operation")((id: string) => this.store.get(id))
   receipt = Effect.fn("Access.receipt")((query: ReceiptQuery) =>
-    accessAttempt(() => scopedReceiptFact(this.store.get(query.id), query))
+    this.store
+      .get(query.id)
+      .pipe(Effect.map((operation) => scopedReceiptFact(operation, query)))
   )
   state = Effect.fn("Access.state")(() =>
-    accessAttempt(() => ({
-      tools: this.store.policies(),
-      approvals: this.store.pending(),
-    }))
+    Effect.gen({ self: this }, function* () {
+      return {
+        tools: yield* this.store.policies(),
+        approvals: yield* this.store.pending(),
+      }
+    })
   )
-  pending = Effect.fn("Access.pending")(() =>
-    accessAttempt(() => this.store.pending())
-  )
+  pending = Effect.fn("Access.pending")(() => this.store.pending())
   awaitingApproval = Effect.fn("Access.awaitingApproval")((id: string) =>
-    accessAttempt(() => this.store.awaitingApproval(id))
+    this.store.awaitingApproval(id)
   )
   cancel = Effect.fn("Access.cancel")((id: string) =>
-    accessAttempt(() => this.store.cancel(id)).pipe(
-      Effect.tap(() => Effect.sync(() => this.notify()))
-    )
+    this.store
+      .cancel(id)
+      .pipe(Effect.tap(() => Effect.sync(() => this.notify())))
   )
   revoke = Effect.fn("Access.revoke")((name: string) =>
-    accessAttempt(() => this.store.revoke(name)).pipe(
-      Effect.tap(() => Effect.sync(() => this.notify()))
-    )
+    this.store
+      .revoke(name)
+      .pipe(Effect.tap(() => Effect.sync(() => this.notify())))
   )
   updatePolicy = Effect.fn("Access.updatePolicy")(
     (name: string, revision: number, mode: AccessMode) =>
-      accessAttempt(() => this.store.update(name, revision, mode)).pipe(
-        Effect.tap(() => Effect.sync(() => this.notify()))
-      )
+      this.store
+        .update(name, revision, mode)
+        .pipe(Effect.tap(() => Effect.sync(() => this.notify())))
   )
   decide = Effect.fn("Access.decide")(
     (
@@ -72,9 +74,9 @@ export class AccessGate {
       revision: number,
       remember?: { expectedPolicyRevision: number }
     ) =>
-      accessAttempt(() =>
-        this.store.decide(id, approve, revision, remember)
-      ).pipe(Effect.tap(() => Effect.sync(() => this.notify())))
+      this.store
+        .decide(id, approve, revision, remember)
+        .pipe(Effect.tap(() => Effect.sync(() => this.notify())))
   )
 
   run<T, TError, TRequirements>(
@@ -108,29 +110,15 @@ export class AccessGate {
           )
         )
       let waiting = false
-      const operation = yield* Effect.try({
-        try: () => {
-          if (!this.canRun(intent.turnId))
-            throw new AccessDenied({
-              message: "This reply has stopped or its bot is archived.",
-            })
-          return this.store.begin(intent)
-        },
-        catch: accessError,
-      })
+      const operation = yield* this.store.begin(intent, this.canRun)
       this.notify()
       for (;;) {
         const change = this.changed
-        const decision = yield* Effect.try({
-          try: () => {
-            if (!this.canRun(operation.turnId))
-              throw new AccessDenied({
-                message: "This reply has stopped or its bot is archived.",
-              })
-            return this.store.claim(intent.id, recoverable)
-          },
-          catch: accessError,
-        })
+        const decision = yield* this.store.claim(
+          intent.id,
+          recoverable,
+          this.canRun
+        )
         if (decision === "pending") {
           if (!waiting) yield* observe("tool.waiting")
           waiting = true
@@ -144,10 +132,7 @@ export class AccessGate {
         try {
           yield* observe("tool.dispatched")
           const result = yield* work
-          yield* Effect.try({
-            try: () => this.store.finish(intent.id, JSON.stringify(result)),
-            catch: accessError,
-          })
+          yield* this.store.finish(intent.id, JSON.stringify(result))
           yield* observe("tool.finished")
           return result
         } finally {
@@ -159,12 +144,3 @@ export class AccessGate {
 }
 
 export type AccessError = AccessDenied | AccessConflict | AccessStorageError
-const accessError = (cause: unknown): AccessError => {
-  const knownFailure = Schema.decodeUnknownOption(
-    Schema.Union([AccessDenied, AccessConflict, AccessStorageError])
-  )(cause)
-  if (knownFailure._tag === "Some") return knownFailure.value
-  throw cause
-}
-const accessAttempt = <T>(body: () => T) =>
-  Effect.try({ try: body, catch: accessError })

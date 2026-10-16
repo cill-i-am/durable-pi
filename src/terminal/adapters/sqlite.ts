@@ -1,7 +1,13 @@
-import { Schema } from "effect"
+import { count, desc, eq } from "drizzle-orm"
+import { Effect, Schema } from "effect"
 import * as Domain from "../domain"
-import type { TerminalLedger } from "../repository"
-import type { Sqlite } from "../../storage/sqlite"
+import type { TerminalAuthority, TerminalLedger } from "../repository"
+import {
+  mapSqliteError,
+  type Sqlite,
+  type EffectSqliteDatabase,
+} from "../../storage/sqlite"
+import { jsonField } from "../../storage/expressions"
 import {
   TerminalFailure,
   TerminalStorageError,
@@ -11,211 +17,270 @@ import {
   type CommandSummary,
   type TerminalNetworkPolicy,
 } from "../contracts"
+import {
+  terminalAuthority,
+  terminalCancellations,
+  terminalCheckpoint,
+  terminalExports,
+  terminalNetwork,
+  terminalRuns,
+} from "./schema"
 
+const decision = <TValue>(body: () => TValue) =>
+  Effect.try({
+    try: body,
+    catch: (cause) => {
+      if (cause instanceof TerminalFailure) return cause
+      throw cause
+    },
+  })
+const decode = (row: { record: string }) =>
+  Schema.decodeUnknownSync(CommandRun)(JSON.parse(row.record))
 export class TerminalStore implements TerminalLedger {
   constructor(
     private readonly db: Sqlite,
     private readonly onFinished?: (run: CommandRun) => void
+  ) {}
+  private query<TValue, TError, TRequirements>(
+    body: (
+      orm: EffectSqliteDatabase
+    ) => Effect.Effect<TValue, TError, TRequirements>
   ) {
-    const storage = <T>(operation: string, body: () => T): T => {
-      try {
-        return body()
-      } catch (cause) {
-        throw new TerminalStorageError({ operation, cause })
-      }
-    }
-    this.db = {
-      all: (query, ...bindings) =>
-        storage("read", () => db.all(query, ...bindings)),
-      run: (query, ...bindings) =>
-        storage("write", () => db.run(query, ...bindings)),
-      transaction: (body) => {
-        const failure: { failed: boolean; cause?: unknown } = { failed: false }
-        try {
-          return db.transaction(() => {
-            try {
-              return body()
-            } catch (cause) {
-              failure.failed = true
-              failure.cause = cause
-              throw cause
-            }
-          })
-        } catch (cause) {
-          if (failure.failed && cause === failure.cause) throw cause
-          throw new TerminalStorageError({ operation: "transaction", cause })
-        }
-      },
-    }
-
-    this.db.run(
-      "CREATE TABLE IF NOT EXISTS terminal_network (id INTEGER PRIMARY KEY CHECK(id=1),revision INTEGER NOT NULL,unrestricted INTEGER NOT NULL)"
+    return mapSqliteError(
+      this.db.use(body),
+      (cause) => new TerminalStorageError({ operation: "query", cause })
     )
-    this.db.run(
-      "CREATE TABLE IF NOT EXISTS terminal_runs (id TEXT PRIMARY KEY,created INTEGER NOT NULL,record TEXT NOT NULL)"
-    )
-    this.db.run(
-      "CREATE TABLE IF NOT EXISTS terminal_checkpoint (id INTEGER PRIMARY KEY CHECK(id=1),record TEXT NOT NULL)"
-    )
-    this.db.run(
-      "CREATE TABLE IF NOT EXISTS terminal_cancellations (id TEXT PRIMARY KEY)"
-    )
-    this.db.run(
-      "CREATE TABLE IF NOT EXISTS terminal_authority (id INTEGER PRIMARY KEY CHECK(id=1),revision INTEGER NOT NULL,active INTEGER NOT NULL)"
-    )
-    if (
-      !this.db
-        .all<{ name: string }>("PRAGMA table_info(terminal_authority)")
-        .some((column) => column.name === "revoked_through")
-    )
-      this.db.run(
-        "ALTER TABLE terminal_authority ADD COLUMN revoked_through INTEGER NOT NULL DEFAULT -1"
-      )
   }
-  networkPolicy(): TerminalNetworkPolicy {
-    const row = this.db.all<{ revision: number; unrestricted: number }>(
-      "SELECT revision,unrestricted FROM terminal_network WHERE id=1"
-    )[0]
-    return row
-      ? { revision: row.revision, unrestricted: row.unrestricted === 1 }
-      : { revision: 0, unrestricted: true }
+  private atomic<TValue, TError, TRequirements>(
+    body: () => Effect.Effect<TValue, TError, TRequirements>
+  ) {
+    return mapSqliteError(
+      this.db.transaction(body),
+      (cause) => new TerminalStorageError({ operation: "transaction", cause })
+    )
+  }
+  networkPolicy() {
+    return this.query((orm) =>
+      orm.select().from(terminalNetwork).where(eq(terminalNetwork.id, 1))
+    ).pipe(
+      Effect.map((rows) =>
+        rows[0]
+          ? {
+              revision: rows[0].revision,
+              unrestricted: rows[0].unrestricted === 1,
+            }
+          : { revision: 0, unrestricted: true }
+      )
+    )
   }
   configureNetwork(input: TerminalNetworkPolicy) {
-    return this.db.transaction(() => {
-      const next = Domain.networkChange(
-        this.networkPolicy(),
-        input,
-        this.authority()
-      )
-      this.db.run(
-        "INSERT INTO terminal_network VALUES (1,?,?) ON CONFLICT(id) DO UPDATE SET revision=excluded.revision,unrestricted=excluded.unrestricted",
-        next.revision,
-        next.unrestricted ? 1 : 0
-      )
-      return this.networkPolicy()
-    })
-  }
-  exported(id: string): Checkpoint | null {
-    this.db.run(
-      "CREATE TABLE IF NOT EXISTS terminal_exports (id TEXT PRIMARY KEY,record TEXT NOT NULL)"
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const current = yield* this.networkPolicy()
+        const authority = yield* this.authority()
+        const next = yield* decision(() =>
+          Domain.networkChange(current, input, authority)
+        )
+        const values = {
+          id: 1,
+          revision: next.revision,
+          unrestricted: next.unrestricted ? 1 : 0,
+        }
+        yield* this.query((orm) =>
+          orm
+            .insert(terminalNetwork)
+            .values(values)
+            .onConflictDoUpdate({ target: terminalNetwork.id, set: values })
+        )
+        return yield* this.networkPolicy()
+      })
     )
-    const row = this.db.all<{ record: string }>(
-      "SELECT record FROM terminal_exports WHERE id=?",
-      id
-    )[0]
-    return row
-      ? Schema.decodeUnknownSync(Checkpoint)(JSON.parse(row.record))
-      : null
+  }
+  exported(id: string) {
+    return this.query((orm) =>
+      orm
+        .select({ record: terminalExports.record })
+        .from(terminalExports)
+        .where(eq(terminalExports.id, id))
+    ).pipe(
+      Effect.map((rows) =>
+        rows[0]
+          ? Schema.decodeUnknownSync(Checkpoint)(JSON.parse(rows[0].record))
+          : null
+      )
+    )
   }
   cancel(id: string) {
-    this.db.run(
-      "INSERT OR IGNORE INTO terminal_cancellations (id) VALUES (?)",
-      id
+    // The cancellation fence commits before finalization. A failed outcome
+    // publication must retain that fence, and observers run after its own commit.
+    return this.db.use(() =>
+      Effect.gen({ self: this }, function* () {
+        yield* this.query((orm) =>
+          orm.insert(terminalCancellations).values({ id }).onConflictDoNothing()
+        )
+        return (yield* this.get(id))
+          ? yield* this.finish(id, {
+              status: "cancelled",
+              exitCode: null,
+              error:
+                "Cancelled. Workspace recovery uses the last saved checkpoint.",
+            })
+          : null
+      })
     )
-    return this.get(id)
-      ? this.finish(id, {
-          status: "cancelled",
-          exitCode: null,
-          error:
-            "Cancelled. Workspace recovery uses the last saved checkpoint.",
-        })
-      : null
   }
-  authority() {
-    return this.db.all<{
-      revision: number
-      active: number
-      revokedThrough: number
-    }>(
-      "SELECT revision,active,revoked_through AS revokedThrough FROM terminal_authority WHERE id=1"
-    )[0]
+  authority(): Effect.Effect<
+    TerminalAuthority | undefined,
+    TerminalStorageError
+  > {
+    return this.query((orm) =>
+      orm
+        .select({
+          revision: terminalAuthority.revision,
+          active: terminalAuthority.active,
+          revokedThrough: terminalAuthority.revoked_through,
+        })
+        .from(terminalAuthority)
+        .where(eq(terminalAuthority.id, 1))
+    ).pipe(Effect.map((rows) => rows[0]))
   }
   configure(
     revision: number,
     active: boolean,
     revokeThrough = active ? -1 : revision
   ) {
-    this.db.run(
-      "INSERT INTO terminal_authority (id,revision,active,revoked_through) VALUES (1,?,?,?) ON CONFLICT(id) DO UPDATE SET revision=max(terminal_authority.revision,excluded.revision),active=CASE WHEN excluded.revision>terminal_authority.revision THEN excluded.active ELSE terminal_authority.active END,revoked_through=max(terminal_authority.revoked_through,excluded.revoked_through)",
-      revision,
-      active ? 1 : 0,
-      Math.max(revokeThrough, active ? -1 : revision)
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const current = yield* this.authority()
+        const revokedThrough = Math.max(revokeThrough, active ? -1 : revision)
+        const values = {
+          id: 1,
+          revision: Math.max(current?.revision ?? revision, revision),
+          active:
+            current && revision <= current.revision
+              ? current.active
+              : active
+                ? 1
+                : 0,
+          revoked_through: Math.max(
+            current?.revokedThrough ?? -1,
+            revokedThrough
+          ),
+        }
+        yield* this.query((orm) =>
+          orm
+            .insert(terminalAuthority)
+            .values(values)
+            .onConflictDoUpdate({ target: terminalAuthority.id, set: values })
+        )
+      })
     )
   }
   authorized(run: CommandRun) {
-    return Domain.authorized(run, this.authority())
-  }
-
-  get(id: string): CommandRun | undefined {
-    const row = this.db.all<{ record: string }>(
-      "SELECT record FROM terminal_runs WHERE id=?",
-      id
-    )[0]
-    return row
-      ? Schema.decodeUnknownSync(CommandRun)(JSON.parse(row.record))
-      : undefined
-  }
-  list(): CommandSummary[] {
-    return this.db.all<CommandSummary>(
-      "SELECT id,substr(json_extract(record,'$.command'),1,100) AS label,json_extract(record,'$.status') AS status,created AS createdAt,json_extract(record,'$.finishedAt') AS finishedAt,json_extract(record,'$.savedAt') AS savedAt FROM terminal_runs ORDER BY created DESC,id DESC LIMIT 20"
+    return this.authority().pipe(
+      Effect.map((authority) => Domain.authorized(run, authority))
     )
   }
-  checkpoint(): Checkpoint | null {
-    const row = this.db.all<{ record: string }>(
-      "SELECT record FROM terminal_checkpoint WHERE id=1"
-    )[0]
-    return row
-      ? Schema.decodeUnknownSync(Checkpoint)(JSON.parse(row.record))
-      : null
+  get(id: string) {
+    return this.query((orm) =>
+      orm
+        .select({ record: terminalRuns.record })
+        .from(terminalRuns)
+        .where(eq(terminalRuns.id, id))
+    ).pipe(Effect.map((rows) => (rows[0] ? decode(rows[0]) : undefined)))
+  }
+  list(): Effect.Effect<CommandSummary[], TerminalStorageError> {
+    return this.query((orm) =>
+      orm
+        .select({ record: terminalRuns.record })
+        .from(terminalRuns)
+        .orderBy(desc(terminalRuns.created), desc(terminalRuns.id))
+        .limit(20)
+    ).pipe(
+      Effect.map((rows) =>
+        rows.map((row) => {
+          const run = decode(row)
+          return {
+            id: run.id,
+            label: Array.from(run.command).slice(0, 100).join(""),
+            status: run.status,
+            createdAt: run.createdAt,
+            finishedAt: run.finishedAt,
+            savedAt: run.savedAt,
+          }
+        })
+      )
+    )
+  }
+  checkpoint() {
+    return this.query((orm) =>
+      orm
+        .select({ record: terminalCheckpoint.record })
+        .from(terminalCheckpoint)
+        .where(eq(terminalCheckpoint.id, 1))
+    ).pipe(
+      Effect.map((rows) =>
+        rows[0]
+          ? Schema.decodeUnknownSync(Checkpoint)(JSON.parse(rows[0].record))
+          : null
+      )
+    )
   }
   private put(value: CommandRun) {
-    this.db.run(
-      "INSERT INTO terminal_runs VALUES (?,?,?) ON CONFLICT(id) DO UPDATE SET record=excluded.record",
-      value.id,
-      value.createdAt,
-      JSON.stringify(value)
-    )
-    return value
+    const record = JSON.stringify(value)
+    return this.query((orm) =>
+      orm
+        .insert(terminalRuns)
+        .values({ id: value.id, created: value.createdAt, record })
+        .onConflictDoUpdate({ target: terminalRuns.id, set: { record } })
+    ).pipe(Effect.as(value))
   }
   admit(
     input: CommandInput,
     kind: NonNullable<CommandRun["kind"]> = "command",
     transfer?: CommandRun["transfer"]
   ) {
-    return this.db.transaction(() => {
-      const previous = Domain.replayCommand(
-        this.get(input.id),
-        input,
-        kind,
-        transfer
-      )
-      if (previous) return previous
-      const authority = this.authority()
-      const count = this.db.all<{ count: number }>(
-        "SELECT count(*) AS count FROM terminal_runs"
-      )[0]!.count
-      const stopped =
-        this.db.all(
-          "SELECT id FROM terminal_cancellations WHERE id=?",
-          input.id
-        ).length > 0
-      return this.put(
-        Domain.admitCommand(
-          input,
-          kind,
-          transfer,
-          authority,
-          count,
-          stopped,
-          this.networkPolicy().unrestricted,
-          Date.now()
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const stored = yield* this.get(input.id)
+        const previous = yield* decision(() =>
+          Domain.replayCommand(stored, input, kind, transfer)
         )
-      )
-    })
+        if (previous) return previous
+        const authority = yield* this.authority()
+        const counts = yield* this.query((orm) =>
+          orm.select({ n: count() }).from(terminalRuns)
+        )
+        const cancellations = yield* this.query((orm) =>
+          orm
+            .select({ id: terminalCancellations.id })
+            .from(terminalCancellations)
+            .where(eq(terminalCancellations.id, input.id))
+        )
+        const policy = yield* this.networkPolicy()
+        const run = yield* decision(() =>
+          Domain.admitCommand(
+            input,
+            kind,
+            transfer,
+            authority,
+            counts[0]!.n,
+            cancellations.length > 0,
+            policy.unrestricted,
+            Date.now()
+          )
+        )
+        return yield* this.put(run)
+      })
+    )
   }
   progress(id: string, output: string) {
-    const run = this.get(id)
-    if (run?.status === "running") this.put({ ...run, output })
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const run = yield* this.get(id)
+        if (run?.status === "running") yield* this.put({ ...run, output })
+      })
+    )
   }
   finish(
     id: string,
@@ -223,39 +288,47 @@ export class TerminalStore implements TerminalLedger {
     checkpoint?: Checkpoint,
     exported?: Checkpoint
   ) {
-    const changed = this.get(id)?.status === "running"
-    const finished = this.db.transaction(() => {
-      const run = this.get(id)
-      if (!run) throw new TerminalFailure({ message: "Command not found." })
-      if (run.status !== "running") return run
-      const next = Domain.finishCommand(
-        run,
-        result,
-        !!(checkpoint || exported),
-        this.authorized(run),
-        checkpoint?.savedAt ?? null,
-        Date.now()
-      )
-      if (next.status === "cancelled") return this.put(next)
-      if (exported) {
-        this.db.run(
-          "CREATE TABLE IF NOT EXISTS terminal_exports (id TEXT PRIMARY KEY,record TEXT NOT NULL)"
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const run = yield* this.get(id)
+        if (!run)
+          return yield* new TerminalFailure({ message: "Command not found." })
+        if (run.status !== "running") return { run, changed: false }
+        const allowed = yield* this.authorized(run)
+        const next = Domain.finishCommand(
+          run,
+          result,
+          !!(checkpoint || exported),
+          allowed,
+          checkpoint?.savedAt ?? null,
+          Date.now()
         )
-        this.db.run(
-          "INSERT INTO terminal_exports VALUES (?,?)",
-          id,
-          JSON.stringify(exported)
-        )
-      }
-      if (checkpoint)
-        this.db.run(
-          "INSERT INTO terminal_checkpoint VALUES (1,?) ON CONFLICT(id) DO UPDATE SET record=excluded.record",
-          JSON.stringify(checkpoint)
-        )
-      return this.put(next)
-    })
-    if (changed) this.observe(finished)
-    return finished
+        if (next.status !== "cancelled") {
+          if (exported)
+            yield* this.query((orm) =>
+              orm
+                .insert(terminalExports)
+                .values({ id, record: JSON.stringify(exported) })
+            )
+          if (checkpoint)
+            yield* this.query((orm) =>
+              orm
+                .insert(terminalCheckpoint)
+                .values({ id: 1, record: JSON.stringify(checkpoint) })
+                .onConflictDoUpdate({
+                  target: terminalCheckpoint.id,
+                  set: { record: JSON.stringify(checkpoint) },
+                })
+            )
+        }
+        return { run: yield* this.put(next), changed: true }
+      })
+    ).pipe(
+      Effect.tap(({ run, changed }) =>
+        changed ? Effect.sync(() => this.observe(run)) : Effect.void
+      ),
+      Effect.map(({ run }) => run)
+    )
   }
   private observe(run: CommandRun) {
     try {
@@ -263,13 +336,33 @@ export class TerminalStore implements TerminalLedger {
     } catch {}
   }
   recover() {
-    const interrupted = this.db.all<{ id: string }>(
-      "SELECT id FROM terminal_runs WHERE json_extract(record,'$.status')='running'"
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const rows = yield* this.query((orm) =>
+          orm
+            .select({ record: terminalRuns.record })
+            .from(terminalRuns)
+            .where(
+              eq(jsonField<string>(terminalRuns.record, "$.status"), "running")
+            )
+        )
+        const now = Date.now()
+        const interrupted = rows.map((row) => ({
+          ...decode(row),
+          status: "interrupted" as const,
+          finishedAt: now,
+          error:
+            "The runtime restarted. This command was not repeated. Workspace recovery uses the last saved checkpoint.",
+        }))
+        for (const run of interrupted) yield* this.put(run)
+        return interrupted
+      })
+    ).pipe(
+      Effect.flatMap((runs) =>
+        Effect.sync(() => {
+          for (const run of runs) this.observe(run)
+        })
+      )
     )
-    this.db.run(
-      "UPDATE terminal_runs SET record=json_set(record,'$.status','interrupted','$.finishedAt',?,'$.error','The runtime restarted. This command was not repeated. Workspace recovery uses the last saved checkpoint.') WHERE json_extract(record,'$.status')='running'",
-      Date.now()
-    )
-    for (const { id } of interrupted) this.observe(this.get(id)!)
   }
 }

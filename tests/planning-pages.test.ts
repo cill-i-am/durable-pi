@@ -28,19 +28,19 @@ it("pages maximally escaped plan summaries through actual native tool and durabl
   let root = crypto.randomUUID()
   const source = () => ({ turnId: root, inputIds: [root], inputRevision: 0 })
   const plans = piPlans(async () => harness, {
-    current: source,
-    cancelled: () => false,
+    current: () => Effect.sync(source),
+    cancelled: () => Effect.sync(() => false),
     evidence: (ref) =>
       Effect.succeed({ ...ref, state: "valid", detail: "Saved" }),
-    receipts: () => [],
+    receipts: () => Effect.sync(() => []),
   })
   const registry = createRegistry(),
-    access = new AccessStore(database(), () => builtInTools)
+    access = new AccessStore(database(), () => Effect.sync(() => builtInTools))
   registry.install({
     name: "plans",
-    tools: planTools(plans, source).map(
+    tools: planTools(plans, () => Effect.sync(source)).map(
       guardedTools(
-        new AccessGate(access, () => true),
+        new AccessGate(access, () => Effect.sync(() => true)),
         () => Effect.succeed(root),
         recoverablePlanTools
       )
@@ -136,7 +136,7 @@ it("pages maximally escaped plan summaries through actual native tool and durabl
     expect(seen).toHaveLength(20)
     expect(new Set(seen).size).toBe(20)
     expect(sizes[0]).toBeLessThan(20)
-    expect(access.pending()).toHaveLength(0)
+    expect(Effect.runSync(access.pending())).toHaveLength(0)
     root = crypto.randomUUID()
     const crowded = {
       objective: large,

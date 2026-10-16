@@ -27,9 +27,13 @@ export type PlanEvidence<TRequirements = never> = (
   roots: readonly string[]
 ) => Effect.Effect<Evidence, PlanFailure, TRequirements>
 export type PlanControl = {
-  current: (turnId: string) => PlanSource | undefined
-  cancelled: (turnId: string) => boolean
-  receipts: (roots: readonly string[]) => EvidenceRef[]
+  current: (
+    turnId: string
+  ) => Effect.Effect<PlanSource | undefined, PlanFailure>
+  cancelled: (turnId: string) => Effect.Effect<boolean, PlanFailure>
+  receipts: (
+    roots: readonly string[]
+  ) => Effect.Effect<EvidenceRef[], PlanFailure>
 }
 export type PlanAuthority<TRequirements = never> = PlanControl & {
   evidence: PlanEvidence<TRequirements>

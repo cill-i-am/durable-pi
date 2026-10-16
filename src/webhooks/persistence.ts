@@ -1,4 +1,4 @@
-import { Context, Schema } from "effect"
+import { Context, Schema, type Effect } from "effect"
 import type { OperationReceipt } from "../routines/persistence"
 
 export type WebhookKeyRecord = { revision: number; hash: string | null }
@@ -13,21 +13,35 @@ export class WebhookPersistence extends Context.Service<
   WebhookPersistence,
   {
     readonly transactionGroup: object
-    readonly atomic: <TResult>(body: () => TResult) => TResult
-    readonly key: (id: string) => WebhookKeyRecord | undefined
-    readonly putKey: (id: string, key: WebhookKeyRecord) => void
-    readonly operation: (id: string) => OperationReceipt | undefined
-    readonly operationCount: () => number
-    readonly putOperation: (id: string, receipt: OperationReceipt) => void
+    readonly atomic: <TValue, TError, TRequirements>(
+      body: () => Effect.Effect<TValue, TError, TRequirements>
+    ) => Effect.Effect<TValue, TError | WebhookStorageError, TRequirements>
+    readonly key: (
+      id: string
+    ) => Effect.Effect<WebhookKeyRecord | undefined, WebhookStorageError>
+    readonly putKey: (
+      id: string,
+      key: WebhookKeyRecord
+    ) => Effect.Effect<void, WebhookStorageError>
+    readonly operation: (
+      id: string
+    ) => Effect.Effect<OperationReceipt | undefined, WebhookStorageError>
+    readonly operationCount: () => Effect.Effect<number, WebhookStorageError>
+    readonly putOperation: (
+      id: string,
+      receipt: OperationReceipt
+    ) => Effect.Effect<void, WebhookStorageError>
     readonly event: (
       id: string,
       eventId: string
-    ) => WebhookEventReceipt | undefined
-    readonly eventCount: (id?: string) => number
+    ) => Effect.Effect<WebhookEventReceipt | undefined, WebhookStorageError>
+    readonly eventCount: (
+      id?: string
+    ) => Effect.Effect<number, WebhookStorageError>
     readonly putEvent: (
       id: string,
       eventId: string,
       receipt: WebhookEventReceipt
-    ) => void
+    ) => Effect.Effect<void, WebhookStorageError>
   }
 >()("durable-pi/webhooks/Persistence") {}

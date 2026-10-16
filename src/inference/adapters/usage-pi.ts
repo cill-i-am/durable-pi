@@ -5,27 +5,27 @@ import type { Attempt, TerminalOutcome, UsageReport } from "../usage-domain"
 export interface NativeInferenceObservation {
   readonly id: string
   readonly turnId: string | null
-  usage: (report: UsageReport) => void
-  end: (outcome: TerminalOutcome, error?: string | null) => void
+  usage: (report: UsageReport) => void | Promise<void>
+  end: (outcome: TerminalOutcome, error?: string | null) => void | Promise<void>
 }
 
-/** Pi invokes these synchronous callbacks outside an Effect fiber. The host
- * supplies its retained runtime; the application never runs an Effect. */
+/** The owning stream awaits admission, each usage hook and final settlement.
+ * Its retained runtime preserves the complete Cause through modelCallback. */
 export function piUsage(
   service: typeof InferenceUsage.Service,
-  run: <T, TError>(work: Effect.Effect<T, TError>) => T,
+  run: <T, TError>(work: Effect.Effect<T, TError>) => Promise<T>,
   onFinished?: (attempt: Attempt) => void
 ) {
-  return (
+  return async (
     ...args: Parameters<typeof service.start>
-  ): NativeInferenceObservation => {
-    const observation = run(service.start(...args))
+  ): Promise<NativeInferenceObservation> => {
+    const observation = await run(service.start(...args))
     return {
       id: observation.id,
       turnId: observation.turnId,
       usage: (report) => run(observation.usage(report)),
-      end: (outcome, error) => {
-        const finished = run(observation.end(outcome, error))
+      end: async (outcome, error) => {
+        const finished = await run(observation.end(outcome, error))
         if (finished) onFinished?.(finished)
       },
     }
