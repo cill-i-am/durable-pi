@@ -16,11 +16,11 @@ const Settings = Schema.Struct({
   observability: Schema.Record(Schema.String, Schema.Unknown),
 })
 const prefixes = [
-  "agentworker",
+  "agentworkerdrizzlev1",
   "website",
   "documentworker",
   "executionworker",
-  "terminalworker",
+  "terminalworkerdrizzlev1",
 ]
 
 export const configureObservability = Effect.gen(function* () {

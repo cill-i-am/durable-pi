@@ -12,11 +12,11 @@ it("enables Issues after deploy while preserving Alchemy tracing settings and ex
   vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "synthetic")
   vi.stubEnv("CLOUDFLARE_API_TOKEN", "synthetic")
   const scripts = [
-    "agentworker",
+    "agentworkerdrizzlev1",
     "website",
     "documentworker",
     "executionworker",
-    "terminalworker",
+    "terminalworkerdrizzlev1",
   ].map((p) => ({ id: `durable-pi-${p}-production-test` }))
   const obs = {
     enabled: true,
