@@ -25,6 +25,7 @@ const resources = [
   "Website",
   "DocumentWorker",
   "ExecutionWorker",
+  "TerminalWorkerSandboxV1",
   "TerminalWorkerDrizzleV1",
 ]
 
