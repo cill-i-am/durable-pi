@@ -1,0 +1,1386 @@
+{
+  "date": "2026-10-16",
+  "productionConstrained": {
+    "workerVersion": "39c1afa6-20ab-4f51-a4c6-85965ddb9c00",
+    "protocol": {
+      "viewport": [390, 844],
+      "cpuSlowdown": 4,
+      "latencyMs": 150,
+      "downloadBytesPerSecond": 200000,
+      "uploadBytesPerSecond": 93750,
+      "cache": "disabled",
+      "settling": "2000ms after model readiness and fonts loaded"
+    },
+    "caveat": "Chrome controller instrumented. Ten unique navigation origins; not interchangeable with the independent local browser or the unthrottled desktop cohort. A later trace was stale and excluded. The responses selector was wrong in this first collector; a separate DOM inspection verified 20 response copy buttons.",
+    "warmup": {
+      "timeOrigin": 1792152584416.8,
+      "visible": "visible",
+      "responses": 0,
+      "messages": 55,
+      "composer": true,
+      "startup": false,
+      "overflow": false,
+      "metrics": {
+        "LayoutDuration": 0.376264,
+        "RecalcStyleDuration": 0.787748,
+        "ScriptDuration": 3.936762,
+        "TaskDuration": 7.841068,
+        "JSHeapUsedSize": 33100308
+      },
+      "marks": {
+        "session": 5881.7,
+        "catalog": 6114.1,
+        "stream-headers": 6527.5,
+        "snapshot": 7359.3,
+        "metadata": 7539.2,
+        "history": 10469.9,
+        "composer": 10469.9,
+        "conversation": 10473.7,
+        "models": 11835
+      },
+      "stream": []
+    },
+    "samples": [
+      {
+        "timeOrigin": 1792152661760.7,
+        "visible": "visible",
+        "responses": 0,
+        "messages": 55,
+        "composer": true,
+        "startup": false,
+        "overflow": false,
+        "metrics": {
+          "LayoutDuration": 0.528646,
+          "RecalcStyleDuration": 0.841586,
+          "ScriptDuration": 3.480544,
+          "TaskDuration": 6.239204,
+          "JSHeapUsedSize": 46997756
+        },
+        "marks": {
+          "session": 4322.8,
+          "stream-headers": 4516.7,
+          "catalog": 5079.3,
+          "snapshot": 5372.7,
+          "metadata": 5391.2,
+          "history": 7748.1,
+          "composer": 7748.2,
+          "conversation": 7748.4,
+          "models": 10127.7
+        },
+        "stream": [
+          {
+            "path": "/api/agent/events",
+            "start": 3121297.141945,
+            "type": "Fetch",
+            "initiator": "script",
+            "headers": 3121297.341753,
+            "status": 200,
+            "cache": false,
+            "firstData": 3121297.347772,
+            "lastData": 3121298.215054,
+            "decoded": 167698,
+            "encoded": 167725
+          }
+        ]
+      },
+      {
+        "timeOrigin": 1792152672256.7,
+        "visible": "visible",
+        "responses": 0,
+        "messages": 55,
+        "composer": true,
+        "startup": false,
+        "overflow": false,
+        "metrics": {
+          "LayoutDuration": 0.31152,
+          "RecalcStyleDuration": 0.795295,
+          "ScriptDuration": 3.049359,
+          "TaskDuration": 5.216275,
+          "JSHeapUsedSize": 61965868
+        },
+        "marks": {
+          "session": 4069.6,
+          "catalog": 4249.4,
+          "stream-headers": 4285.8,
+          "snapshot": 5116.1,
+          "metadata": 5134.7,
+          "history": 7740.9,
+          "composer": 7741,
+          "conversation": 7742.3,
+          "models": 8733.7
+        },
+        "stream": [
+          {
+            "path": "/api/agent/events",
+            "start": 3121307.388696,
+            "type": "Fetch",
+            "initiator": "script",
+            "headers": 3121307.605885,
+            "status": 200,
+            "cache": false,
+            "firstData": 3121307.608077,
+            "lastData": 3121308.455267,
+            "decoded": 167698,
+            "encoded": 167733
+          }
+        ]
+      },
+      {
+        "timeOrigin": 1792152681394.7,
+        "visible": "visible",
+        "responses": 0,
+        "messages": 55,
+        "composer": true,
+        "startup": false,
+        "overflow": false,
+        "metrics": {
+          "LayoutDuration": 0.244872,
+          "RecalcStyleDuration": 0.783441,
+          "ScriptDuration": 3.056217,
+          "TaskDuration": 5.480617,
+          "JSHeapUsedSize": 59303180
+        },
+        "marks": {
+          "session": 4242.3,
+          "stream-headers": 4419.9,
+          "catalog": 4464.7,
+          "snapshot": 5270.9,
+          "metadata": 5287.4,
+          "history": 7876.9,
+          "composer": 7877.1,
+          "conversation": 7878.2,
+          "models": 8721.5
+        },
+        "stream": [
+          {
+            "path": "/api/agent/events",
+            "start": 3121316.700553,
+            "type": "Fetch",
+            "initiator": "script",
+            "headers": 3121316.877656,
+            "status": 200,
+            "cache": false,
+            "firstData": 3121316.894257,
+            "lastData": 3121317.743468,
+            "decoded": 167698,
+            "encoded": 167725
+          }
+        ]
+      },
+      {
+        "timeOrigin": 1792152693908.2,
+        "visible": "visible",
+        "responses": 0,
+        "messages": 55,
+        "composer": true,
+        "startup": false,
+        "overflow": false,
+        "metrics": {
+          "LayoutDuration": 0.382539,
+          "RecalcStyleDuration": 1.072688,
+          "ScriptDuration": 3.332409,
+          "TaskDuration": 6.384694,
+          "JSHeapUsedSize": 84337576
+        },
+        "marks": {
+          "session": 4464.1,
+          "catalog": 4653.6,
+          "stream-headers": 4800.5,
+          "snapshot": 5628.2,
+          "metadata": 5649.2,
+          "history": 8345.4,
+          "composer": 8345.5,
+          "conversation": 8345.8,
+          "models": 9885.8
+        },
+        "stream": [
+          {
+            "path": "/api/agent/events",
+            "start": 3121329.435156,
+            "type": "Fetch",
+            "initiator": "script",
+            "headers": 3121329.77237,
+            "status": 200,
+            "cache": false,
+            "firstData": 3121329.777706,
+            "lastData": 3121330.620949,
+            "decoded": 167698,
+            "encoded": 167725
+          }
+        ]
+      },
+      {
+        "timeOrigin": 1792152704407.5,
+        "visible": "visible",
+        "responses": 0,
+        "messages": 55,
+        "composer": true,
+        "startup": false,
+        "overflow": false,
+        "metrics": {
+          "LayoutDuration": 0.496093,
+          "RecalcStyleDuration": 0.983912,
+          "ScriptDuration": 2.752879,
+          "TaskDuration": 5.428867,
+          "JSHeapUsedSize": 53788212
+        },
+        "marks": {
+          "session": 3905.5,
+          "catalog": 4085.7,
+          "stream-headers": 4131.1,
+          "snapshot": 4959.3,
+          "metadata": 4980.3,
+          "history": 7339.8,
+          "composer": 7339.8,
+          "conversation": 7340.3,
+          "models": 8868
+        },
+        "stream": [
+          {
+            "path": "/api/agent/events",
+            "start": 3121339.375984,
+            "type": "Fetch",
+            "initiator": "script",
+            "headers": 3121339.602239,
+            "status": 200,
+            "cache": false,
+            "firstData": 3121339.604179,
+            "lastData": 3121340.448712,
+            "decoded": 167698,
+            "encoded": 167728
+          }
+        ]
+      },
+      {
+        "timeOrigin": 1792152713841.9,
+        "visible": "visible",
+        "responses": 0,
+        "messages": 55,
+        "composer": true,
+        "startup": false,
+        "overflow": false,
+        "metrics": {
+          "LayoutDuration": 0.456341,
+          "RecalcStyleDuration": 0.911767,
+          "ScriptDuration": 3.133916,
+          "TaskDuration": 5.883434,
+          "JSHeapUsedSize": 71420876
+        },
+        "marks": {
+          "session": 3923.4,
+          "stream-headers": 4133.4,
+          "catalog": 4143.7,
+          "snapshot": 4960.8,
+          "metadata": 4977.3,
+          "history": 7451.7,
+          "composer": 7452.2,
+          "conversation": 7452.5,
+          "models": 9370.1
+        },
+        "stream": [
+          {
+            "path": "/api/agent/events",
+            "start": 3121348.827043,
+            "type": "Fetch",
+            "initiator": "script",
+            "headers": 3121349.038612,
+            "status": 200,
+            "cache": false,
+            "firstData": 3121349.054752,
+            "lastData": 3121349.881529,
+            "decoded": 167698,
+            "encoded": 167728
+          }
+        ]
+      },
+      {
+        "timeOrigin": 1792152729676.2,
+        "visible": "visible",
+        "responses": 0,
+        "messages": 55,
+        "composer": true,
+        "startup": false,
+        "overflow": false,
+        "metrics": {
+          "LayoutDuration": 0.345351,
+          "RecalcStyleDuration": 0.811518,
+          "ScriptDuration": 3.975842,
+          "TaskDuration": 6.99147,
+          "JSHeapUsedSize": 105821988
+        },
+        "marks": {
+          "session": 4310,
+          "catalog": 4500.4,
+          "stream-headers": 5180.7,
+          "snapshot": 6009.3,
+          "metadata": 6032,
+          "history": 8667.7,
+          "composer": 8672.3,
+          "conversation": 8672.8,
+          "models": 10520.4
+        },
+        "stream": [
+          {
+            "path": "/api/agent/events",
+            "start": 3121365.042923,
+            "type": "Fetch",
+            "initiator": "script",
+            "headers": 3121365.919381,
+            "status": 200,
+            "cache": false,
+            "firstData": 3121365.943261,
+            "lastData": 3121366.767025,
+            "decoded": 167698,
+            "encoded": 167732
+          }
+        ]
+      },
+      {
+        "timeOrigin": 1792152740490.3,
+        "visible": "visible",
+        "responses": 0,
+        "messages": 55,
+        "composer": true,
+        "startup": false,
+        "overflow": false,
+        "metrics": {
+          "LayoutDuration": 0.335859,
+          "RecalcStyleDuration": 0.836437,
+          "ScriptDuration": 2.979166,
+          "TaskDuration": 5.698203,
+          "JSHeapUsedSize": 83991848
+        },
+        "marks": {
+          "session": 4351.1,
+          "catalog": 4545.5,
+          "stream-headers": 4644,
+          "snapshot": 5469.9,
+          "metadata": 5487,
+          "history": 7536.7,
+          "composer": 7536.8,
+          "conversation": 7537.9,
+          "models": 8683.9
+        },
+        "stream": [
+          {
+            "path": "/api/agent/events",
+            "start": 3121375.903645,
+            "type": "Fetch",
+            "initiator": "script",
+            "headers": 3121376.194337,
+            "status": 200,
+            "cache": false,
+            "firstData": 3121376.199517,
+            "lastData": 3121377.037082,
+            "decoded": 167698,
+            "encoded": 165030
+          }
+        ]
+      },
+      {
+        "timeOrigin": 1792152749995,
+        "visible": "visible",
+        "responses": 0,
+        "messages": 55,
+        "composer": true,
+        "startup": false,
+        "overflow": false,
+        "metrics": {
+          "LayoutDuration": 0.414971,
+          "RecalcStyleDuration": 0.937666,
+          "ScriptDuration": 3.199934,
+          "TaskDuration": 5.910975,
+          "JSHeapUsedSize": 101361432
+        },
+        "marks": {
+          "session": 4597,
+          "catalog": 4777.7,
+          "stream-headers": 4812.4,
+          "snapshot": 5656.6,
+          "metadata": 5669.7,
+          "history": 8584.1,
+          "composer": 8584.2,
+          "conversation": 8596,
+          "models": 9850.2
+        },
+        "stream": [
+          {
+            "path": "/api/agent/events",
+            "start": 3121385.652564,
+            "type": "Fetch",
+            "initiator": "script",
+            "headers": 3121385.866066,
+            "status": 200,
+            "cache": false,
+            "firstData": 3121385.875164,
+            "lastData": 3121386.725899,
+            "decoded": 167698,
+            "encoded": 167728
+          }
+        ]
+      },
+      {
+        "timeOrigin": 1792152760006.3,
+        "visible": "visible",
+        "responses": 0,
+        "messages": 55,
+        "composer": true,
+        "startup": false,
+        "overflow": false,
+        "metrics": {
+          "LayoutDuration": 0.269135,
+          "RecalcStyleDuration": 0.626605,
+          "ScriptDuration": 3.151931,
+          "TaskDuration": 5.405729,
+          "JSHeapUsedSize": 118192592
+        },
+        "marks": {
+          "session": 4333.2,
+          "catalog": 4518.6,
+          "stream-headers": 4562.7,
+          "snapshot": 5403.8,
+          "metadata": 5417.8,
+          "history": 8004.3,
+          "composer": 8004.3,
+          "conversation": 8007.5,
+          "models": 8808.5
+        },
+        "stream": [
+          {
+            "path": "/api/agent/events",
+            "start": 3121395.398865,
+            "type": "Fetch",
+            "initiator": "script",
+            "headers": 3121395.630407,
+            "status": 200,
+            "cache": false,
+            "firstData": 3121395.634146,
+            "lastData": 3121396.484244,
+            "decoded": 167698,
+            "encoded": 167730
+          }
+        ]
+      }
+    ]
+  },
+  "productionDesktop": {
+    "beforeWorkerVersion": "458ac0d2-9479-46ec-88cb-8f52a39d8831",
+    "protocol": {
+      "viewport": [1272, 902],
+      "cpuSlowdown": 1,
+      "network": "unthrottled",
+      "cache": "browser-managed reload; not a cold-cache claim",
+      "warmServer": true,
+      "readiness": "history mark plus composer, 20 response controls, loaded fonts, visible document and no horizontal overflow"
+    },
+    "columns": [
+      "timeOrigin",
+      "historyMs",
+      "sessionMs",
+      "snapshotMs",
+      "headersMs",
+      "catalogMs"
+    ],
+    "before": [
+      [1792157909590.3, 1179.2, 790.5, 1004.3, 989.7, 937.6],
+      [1792157911153.8, 1316.5, 941.2, 1140.5, 1104.3, 1083.2],
+      [1792157913488.5, 1438.2, 674.4, 844.3, 820.9, 820.2],
+      [1792157915219.3, 917.5, 572.5, 777.3, 758.6, 701],
+      [1792157916500.8, 1357.3, 488.8, 993.4, 975.2, 599.5],
+      [1792157921426.9, 944.6, 543.5, 798.9, 762.7, 740.2],
+      [1792157922794.2, 916, 605, 804.1, 740.7, 716.6],
+      [1792157924155.9, 889.3, 584.3, 752.2, 738.4, 696.2],
+      [1792157925433.8, 964.1, 619.3, 834.7, 793.6, 742.8],
+      [1792157926725.6, 861.4, 537.5, 744, 695.3, 644.2]
+    ],
+    "after": "Record the post-deployment cohort in the PR; do not compare to constrained mobile numbers."
+  },
+  "matchedLocal": {
+    "baseCommit": "5edac3fcd7f7685923272cea1bcec6b8aae043f4",
+    "scenario": "Fully styled activity fixture, 20 responses, 190948 decoded stream bytes. Same build and server code, identity versus gzip.",
+    "protocol": {
+      "viewport": [390, 844],
+      "cpuSlowdown": 4,
+      "latencyMs": 150,
+      "downloadBytesPerSecond": 200000,
+      "uploadBytesPerSecond": 93750,
+      "cache": "disabled",
+      "settling": "2000ms after model readiness and fonts loaded"
+    },
+    "order": "One warmup per condition, then ten alternating AB/BA pairs; no profiling/builds during samples.",
+    "warmup": [
+      {
+        "condition": "before",
+        "timeOrigin": 1792157579635.2,
+        "visibility": "visible",
+        "responses": 20,
+        "composer": true,
+        "startup": false,
+        "overflow": false,
+        "metrics": {
+          "LayoutDuration": 0.067747,
+          "RecalcStyleDuration": 0.062309,
+          "ScriptDuration": 0.705667,
+          "TaskDuration": 1.079402
+        },
+        "marks": {
+          "session": 3170.7,
+          "stream-headers": 3327.6,
+          "catalog": 3684.7,
+          "snapshot": 4297.7,
+          "metadata": 4308.9,
+          "history": 4649,
+          "composer": 4649.7,
+          "conversation": 4650.7,
+          "models": 4914.5
+        },
+        "stream": [
+          {
+            "path": "/api/agent/events",
+            "type": "Fetch",
+            "start": 3126213.843292,
+            "status": 200,
+            "headersAt": 3126214.000879,
+            "cache": false,
+            "firstData": 3126214.00869,
+            "lastData": 3126214.970377,
+            "bytes": 190948
+          }
+        ]
+      },
+      {
+        "condition": "after",
+        "timeOrigin": 1792157586559.4,
+        "visibility": "visible",
+        "responses": 20,
+        "composer": true,
+        "startup": false,
+        "overflow": false,
+        "metrics": {
+          "LayoutDuration": 0.043339,
+          "RecalcStyleDuration": 0.047778,
+          "ScriptDuration": 0.758882,
+          "TaskDuration": 1.031342
+        },
+        "marks": {
+          "session": 3166.9,
+          "stream-headers": 3336.2,
+          "snapshot": 3351.5,
+          "metadata": 3361.9,
+          "conversation": 3370.1,
+          "catalog": 3673.6,
+          "history": 3977.7,
+          "composer": 3977.7,
+          "models": 4318
+        },
+        "stream": [
+          {
+            "path": "/api/agent/events",
+            "type": "Fetch",
+            "start": 3126220.763244,
+            "status": 200,
+            "headersAt": 3126220.934357,
+            "cache": false,
+            "firstData": 3126220.939814,
+            "lastData": 3126220.948447,
+            "bytes": 190948
+          }
+        ]
+      }
+    ],
+    "samples": [
+      {
+        "condition": "before",
+        "timeOrigin": 1792157592893.1,
+        "visibility": "visible",
+        "responses": 20,
+        "composer": true,
+        "startup": false,
+        "overflow": false,
+        "metrics": {
+          "LayoutDuration": 0.025041,
+          "RecalcStyleDuration": 0.042246,
+          "ScriptDuration": 0.384086,
+          "TaskDuration": 0.649078
+        },
+        "marks": {
+          "session": 3001.3,
+          "stream-headers": 3157.3,
+          "catalog": 3513.4,
+          "snapshot": 4126.9,
+          "metadata": 4129.6,
+          "history": 4328.1,
+          "composer": 4328.2,
+          "conversation": 4328.2,
+          "models": 4593
+        },
+        "stream": [
+          {
+            "path": "/api/agent/events",
+            "type": "Fetch",
+            "start": 3126226.932349,
+            "status": 200,
+            "headersAt": 3126227.088889,
+            "cache": false,
+            "firstData": 3126227.098054,
+            "lastData": 3126228.058149,
+            "bytes": 190948
+          }
+        ]
+      },
+      {
+        "condition": "after",
+        "timeOrigin": 1792157599507.3,
+        "visibility": "visible",
+        "responses": 20,
+        "composer": true,
+        "startup": false,
+        "overflow": false,
+        "metrics": {
+          "LayoutDuration": 0.041799,
+          "RecalcStyleDuration": 0.048815,
+          "ScriptDuration": 0.47902,
+          "TaskDuration": 0.726877
+        },
+        "marks": {
+          "session": 3004.8,
+          "stream-headers": 3167,
+          "snapshot": 3181.1,
+          "metadata": 3183.9,
+          "conversation": 3187.4,
+          "catalog": 3511.3,
+          "history": 3703.5,
+          "composer": 3703.5,
+          "models": 4024.9
+        },
+        "stream": [
+          {
+            "path": "/api/agent/events",
+            "type": "Fetch",
+            "start": 3126233.549722,
+            "status": 200,
+            "headersAt": 3126233.713002,
+            "cache": false,
+            "firstData": 3126233.720529,
+            "lastData": 3126233.726139,
+            "bytes": 190948
+          }
+        ]
+      },
+      {
+        "condition": "after",
+        "timeOrigin": 1792157605540.9,
+        "visibility": "visible",
+        "responses": 20,
+        "composer": true,
+        "startup": false,
+        "overflow": false,
+        "metrics": {
+          "LayoutDuration": 0.04383,
+          "RecalcStyleDuration": 0.047881,
+          "ScriptDuration": 0.463589,
+          "TaskDuration": 0.707441
+        },
+        "marks": {
+          "session": 3007.2,
+          "stream-headers": 3161.8,
+          "snapshot": 3177.7,
+          "metadata": 3180.5,
+          "conversation": 3184,
+          "catalog": 3517.3,
+          "history": 3694.2,
+          "composer": 3694.3,
+          "models": 4016.8
+        },
+        "stream": [
+          {
+            "path": "/api/agent/events",
+            "type": "Fetch",
+            "start": 3126239.585716,
+            "status": 200,
+            "headersAt": 3126239.741298,
+            "cache": false,
+            "firstData": 3126239.751236,
+            "lastData": 3126239.75639,
+            "bytes": 190948
+          }
+        ]
+      },
+      {
+        "condition": "before",
+        "timeOrigin": 1792157611574.1,
+        "visibility": "visible",
+        "responses": 20,
+        "composer": true,
+        "startup": false,
+        "overflow": false,
+        "metrics": {
+          "LayoutDuration": 0.027041,
+          "RecalcStyleDuration": 0.04329,
+          "ScriptDuration": 0.360995,
+          "TaskDuration": 0.620177
+        },
+        "marks": {
+          "session": 3005.5,
+          "stream-headers": 3167.2,
+          "catalog": 3520.6,
+          "snapshot": 4135.6,
+          "metadata": 4138.7,
+          "history": 4330.6,
+          "composer": 4330.6,
+          "conversation": 4331.7,
+          "models": 4595.1
+        },
+        "stream": [
+          {
+            "path": "/api/agent/events",
+            "type": "Fetch",
+            "start": 3126245.616362,
+            "status": 200,
+            "headersAt": 3126245.779574,
+            "cache": false,
+            "firstData": 3126245.787756,
+            "lastData": 3126246.747674,
+            "bytes": 190948
+          }
+        ]
+      },
+      {
+        "condition": "before",
+        "timeOrigin": 1792157618190,
+        "visibility": "visible",
+        "responses": 20,
+        "composer": true,
+        "startup": false,
+        "overflow": false,
+        "metrics": {
+          "LayoutDuration": 0.025031,
+          "RecalcStyleDuration": 0.044328,
+          "ScriptDuration": 0.388674,
+          "TaskDuration": 0.623471
+        },
+        "marks": {
+          "session": 3001.3,
+          "stream-headers": 3158.6,
+          "catalog": 3512.9,
+          "snapshot": 4126.4,
+          "metadata": 4128.6,
+          "history": 4350.8,
+          "composer": 4351.1,
+          "conversation": 4351.2,
+          "models": 4607.1
+        },
+        "stream": [
+          {
+            "path": "/api/agent/events",
+            "type": "Fetch",
+            "start": 3126252.228928,
+            "status": 200,
+            "headersAt": 3126252.387149,
+            "cache": false,
+            "firstData": 3126252.396108,
+            "lastData": 3126253.354147,
+            "bytes": 190948
+          }
+        ]
+      },
+      {
+        "condition": "after",
+        "timeOrigin": 1792157624807.1,
+        "visibility": "visible",
+        "responses": 20,
+        "composer": true,
+        "startup": false,
+        "overflow": false,
+        "metrics": {
+          "LayoutDuration": 0.040455,
+          "RecalcStyleDuration": 0.043883,
+          "ScriptDuration": 0.475124,
+          "TaskDuration": 0.723088
+        },
+        "marks": {
+          "session": 2993.4,
+          "stream-headers": 3148.7,
+          "snapshot": 3165.3,
+          "metadata": 3167.9,
+          "conversation": 3171.7,
+          "catalog": 3503.8,
+          "history": 3720.1,
+          "composer": 3720.1,
+          "models": 4008.4
+        },
+        "stream": [
+          {
+            "path": "/api/agent/events",
+            "type": "Fetch",
+            "start": 3126258.837971,
+            "status": 200,
+            "headersAt": 3126258.993613,
+            "cache": false,
+            "firstData": 3126259.004348,
+            "lastData": 3126259.009708,
+            "bytes": 190948
+          }
+        ]
+      },
+      {
+        "condition": "after",
+        "timeOrigin": 1792157630824.1,
+        "visibility": "visible",
+        "responses": 20,
+        "composer": true,
+        "startup": false,
+        "overflow": false,
+        "metrics": {
+          "LayoutDuration": 0.041644,
+          "RecalcStyleDuration": 0.044452,
+          "ScriptDuration": 0.455989,
+          "TaskDuration": 0.685848
+        },
+        "marks": {
+          "session": 2997,
+          "stream-headers": 3154.4,
+          "snapshot": 3169.7,
+          "metadata": 3172.2,
+          "conversation": 3174.9,
+          "catalog": 3500.5,
+          "history": 3701.9,
+          "composer": 3702,
+          "models": 3989.4
+        },
+        "stream": [
+          {
+            "path": "/api/agent/events",
+            "type": "Fetch",
+            "start": 3126264.858396,
+            "status": 200,
+            "headersAt": 3126265.016423,
+            "cache": false,
+            "firstData": 3126265.026543,
+            "lastData": 3126265.031043,
+            "bytes": 190948
+          }
+        ]
+      },
+      {
+        "condition": "before",
+        "timeOrigin": 1792157636825,
+        "visibility": "visible",
+        "responses": 20,
+        "composer": true,
+        "startup": false,
+        "overflow": false,
+        "metrics": {
+          "LayoutDuration": 0.023456,
+          "RecalcStyleDuration": 0.040715,
+          "ScriptDuration": 0.363546,
+          "TaskDuration": 0.647453
+        },
+        "marks": {
+          "session": 2996.1,
+          "stream-headers": 3153.3,
+          "catalog": 3509.6,
+          "snapshot": 4122.3,
+          "metadata": 4125,
+          "history": 4322,
+          "composer": 4322,
+          "conversation": 4322.5,
+          "models": 4580.2
+        },
+        "stream": [
+          {
+            "path": "/api/agent/events",
+            "type": "Fetch",
+            "start": 3126270.858584,
+            "status": 200,
+            "headersAt": 3126271.016632,
+            "cache": false,
+            "firstData": 3126271.024811,
+            "lastData": 3126271.984405,
+            "bytes": 190948
+          }
+        ]
+      },
+      {
+        "condition": "before",
+        "timeOrigin": 1792157643424.6,
+        "visibility": "visible",
+        "responses": 20,
+        "composer": true,
+        "startup": false,
+        "overflow": false,
+        "metrics": {
+          "LayoutDuration": 0.023305,
+          "RecalcStyleDuration": 0.04412,
+          "ScriptDuration": 0.354258,
+          "TaskDuration": 0.596312
+        },
+        "marks": {
+          "session": 2998.5,
+          "stream-headers": 3153.5,
+          "catalog": 3517.1,
+          "snapshot": 4123.5,
+          "metadata": 4126.3,
+          "history": 4310.8,
+          "composer": 4310.8,
+          "conversation": 4310.9,
+          "models": 4574.8
+        },
+        "stream": [
+          {
+            "path": "/api/agent/events",
+            "type": "Fetch",
+            "start": 3126277.460489,
+            "status": 200,
+            "headersAt": 3126277.616296,
+            "cache": false,
+            "firstData": 3126277.62367,
+            "lastData": 3126278.585638,
+            "bytes": 190948
+          }
+        ]
+      },
+      {
+        "condition": "after",
+        "timeOrigin": 1792157650008.4,
+        "visibility": "visible",
+        "responses": 20,
+        "composer": true,
+        "startup": false,
+        "overflow": false,
+        "metrics": {
+          "LayoutDuration": 0.042648,
+          "RecalcStyleDuration": 0.05182,
+          "ScriptDuration": 0.44573,
+          "TaskDuration": 0.700944
+        },
+        "marks": {
+          "session": 2998.4,
+          "stream-headers": 3154.7,
+          "snapshot": 3169.7,
+          "metadata": 3172.4,
+          "conversation": 3175.7,
+          "catalog": 3510.4,
+          "history": 3693.3,
+          "composer": 3693.3,
+          "models": 4000
+        },
+        "stream": [
+          {
+            "path": "/api/agent/events",
+            "type": "Fetch",
+            "start": 3126284.044158,
+            "status": 200,
+            "headersAt": 3126284.201215,
+            "cache": false,
+            "firstData": 3126284.210849,
+            "lastData": 3126284.215726,
+            "bytes": 190948
+          }
+        ]
+      },
+      {
+        "condition": "after",
+        "timeOrigin": 1792157656025,
+        "visibility": "visible",
+        "responses": 20,
+        "composer": true,
+        "startup": false,
+        "overflow": false,
+        "metrics": {
+          "LayoutDuration": 0.045576,
+          "RecalcStyleDuration": 0.052272,
+          "ScriptDuration": 0.480632,
+          "TaskDuration": 0.761809
+        },
+        "marks": {
+          "session": 3001.5,
+          "stream-headers": 3161.9,
+          "snapshot": 3177.6,
+          "metadata": 3180.5,
+          "conversation": 3185,
+          "catalog": 3507.9,
+          "history": 3688.4,
+          "composer": 3688.4,
+          "models": 4026.2
+        },
+        "stream": [
+          {
+            "path": "/api/agent/events",
+            "type": "Fetch",
+            "start": 3126290.063631,
+            "status": 200,
+            "headersAt": 3126290.224938,
+            "cache": false,
+            "firstData": 3126290.231307,
+            "lastData": 3126290.239509,
+            "bytes": 190948
+          }
+        ]
+      },
+      {
+        "condition": "before",
+        "timeOrigin": 1792157662056,
+        "visibility": "visible",
+        "responses": 20,
+        "composer": true,
+        "startup": false,
+        "overflow": false,
+        "metrics": {
+          "LayoutDuration": 0.021689,
+          "RecalcStyleDuration": 0.045431,
+          "ScriptDuration": 0.359648,
+          "TaskDuration": 0.630415
+        },
+        "marks": {
+          "session": 2980.1,
+          "stream-headers": 3137.9,
+          "catalog": 3492.1,
+          "snapshot": 4106.6,
+          "metadata": 4109.3,
+          "history": 4287.2,
+          "composer": 4287.2,
+          "conversation": 4287.3,
+          "models": 4541.2
+        },
+        "stream": [
+          {
+            "path": "/api/agent/events",
+            "type": "Fetch",
+            "start": 3126296.07324,
+            "status": 200,
+            "headersAt": 3126296.231719,
+            "cache": false,
+            "firstData": 3126296.238837,
+            "lastData": 3126297.199811,
+            "bytes": 190948
+          }
+        ]
+      },
+      {
+        "condition": "before",
+        "timeOrigin": 1792157668605.3,
+        "visibility": "visible",
+        "responses": 20,
+        "composer": true,
+        "startup": false,
+        "overflow": false,
+        "metrics": {
+          "LayoutDuration": 0.025107,
+          "RecalcStyleDuration": 0.044325,
+          "ScriptDuration": 0.375457,
+          "TaskDuration": 0.617313
+        },
+        "marks": {
+          "session": 2985.9,
+          "stream-headers": 3142.9,
+          "catalog": 3498.7,
+          "snapshot": 4112.2,
+          "metadata": 4114.4,
+          "history": 4312.3,
+          "composer": 4312.8,
+          "conversation": 4313,
+          "models": 4569.2
+        },
+        "stream": [
+          {
+            "path": "/api/agent/events",
+            "type": "Fetch",
+            "start": 3126302.628389,
+            "status": 200,
+            "headersAt": 3126302.786147,
+            "cache": false,
+            "firstData": 3126302.794229,
+            "lastData": 3126303.754675,
+            "bytes": 190948
+          }
+        ]
+      },
+      {
+        "condition": "after",
+        "timeOrigin": 1792157675188.6,
+        "visibility": "visible",
+        "responses": 20,
+        "composer": true,
+        "startup": false,
+        "overflow": false,
+        "metrics": {
+          "LayoutDuration": 0.043754,
+          "RecalcStyleDuration": 0.049135,
+          "ScriptDuration": 0.482925,
+          "TaskDuration": 0.746143
+        },
+        "marks": {
+          "session": 3002.5,
+          "stream-headers": 3159.7,
+          "snapshot": 3176.5,
+          "metadata": 3179.1,
+          "conversation": 3184.6,
+          "catalog": 3506.2,
+          "history": 3714.8,
+          "composer": 3715.4,
+          "models": 4021.6
+        },
+        "stream": [
+          {
+            "path": "/api/agent/events",
+            "type": "Fetch",
+            "start": 3126309.228082,
+            "status": 200,
+            "headersAt": 3126309.386139,
+            "cache": false,
+            "firstData": 3126309.395023,
+            "lastData": 3126309.401736,
+            "bytes": 190948
+          }
+        ]
+      },
+      {
+        "condition": "after",
+        "timeOrigin": 1792157681222.8,
+        "visibility": "visible",
+        "responses": 20,
+        "composer": true,
+        "startup": false,
+        "overflow": false,
+        "metrics": {
+          "LayoutDuration": 0.043372,
+          "RecalcStyleDuration": 0.050557,
+          "ScriptDuration": 0.45958,
+          "TaskDuration": 0.709901
+        },
+        "marks": {
+          "session": 2982.1,
+          "stream-headers": 3140.7,
+          "snapshot": 3157.2,
+          "metadata": 3159.7,
+          "conversation": 3163.8,
+          "catalog": 3486.5,
+          "history": 3677.4,
+          "composer": 3677.5,
+          "models": 3986.2
+        },
+        "stream": [
+          {
+            "path": "/api/agent/events",
+            "type": "Fetch",
+            "start": 3126315.241916,
+            "status": 200,
+            "headersAt": 3126315.401227,
+            "cache": false,
+            "firstData": 3126315.40927,
+            "lastData": 3126315.416532,
+            "bytes": 190948
+          }
+        ]
+      },
+      {
+        "condition": "before",
+        "timeOrigin": 1792157687222.8,
+        "visibility": "visible",
+        "responses": 20,
+        "composer": true,
+        "startup": false,
+        "overflow": false,
+        "metrics": {
+          "LayoutDuration": 0.020636,
+          "RecalcStyleDuration": 0.045658,
+          "ScriptDuration": 0.368262,
+          "TaskDuration": 0.648814
+        },
+        "marks": {
+          "session": 3005.8,
+          "stream-headers": 3163.5,
+          "catalog": 3517.5,
+          "snapshot": 4131.9,
+          "metadata": 4134.8,
+          "history": 4342.5,
+          "composer": 4342.5,
+          "conversation": 4342.6,
+          "models": 4596.8
+        },
+        "stream": [
+          {
+            "path": "/api/agent/events",
+            "type": "Fetch",
+            "start": 3126321.26526,
+            "status": 200,
+            "headersAt": 3126321.424121,
+            "cache": false,
+            "firstData": 3126321.432337,
+            "lastData": 3126322.391522,
+            "bytes": 190948
+          }
+        ]
+      },
+      {
+        "condition": "before",
+        "timeOrigin": 1792157693839.1,
+        "visibility": "visible",
+        "responses": 20,
+        "composer": true,
+        "startup": false,
+        "overflow": false,
+        "metrics": {
+          "LayoutDuration": 0.024005,
+          "RecalcStyleDuration": 0.045614,
+          "ScriptDuration": 0.39847,
+          "TaskDuration": 0.658907
+        },
+        "marks": {
+          "session": 2976.2,
+          "stream-headers": 3133.7,
+          "catalog": 3486.5,
+          "snapshot": 4101.9,
+          "metadata": 4104.7,
+          "history": 4317.5,
+          "composer": 4317.5,
+          "conversation": 4317.6,
+          "models": 4573.4
+        },
+        "stream": [
+          {
+            "path": "/api/agent/events",
+            "type": "Fetch",
+            "start": 3126327.851878,
+            "status": 200,
+            "headersAt": 3126328.010477,
+            "cache": false,
+            "firstData": 3126328.017094,
+            "lastData": 3126328.977141,
+            "bytes": 190948
+          }
+        ]
+      },
+      {
+        "condition": "after",
+        "timeOrigin": 1792157700423.2,
+        "visibility": "visible",
+        "responses": 20,
+        "composer": true,
+        "startup": false,
+        "overflow": false,
+        "metrics": {
+          "LayoutDuration": 0.042671,
+          "RecalcStyleDuration": 0.047789,
+          "ScriptDuration": 0.470801,
+          "TaskDuration": 0.727359
+        },
+        "marks": {
+          "session": 3004.7,
+          "stream-headers": 3163.2,
+          "snapshot": 3179.2,
+          "metadata": 3181.7,
+          "conversation": 3185.8,
+          "catalog": 3509.2,
+          "history": 3722,
+          "composer": 3722.1,
+          "models": 4016.2
+        },
+        "stream": [
+          {
+            "path": "/api/agent/events",
+            "type": "Fetch",
+            "start": 3126334.464813,
+            "status": 200,
+            "headersAt": 3126334.624059,
+            "cache": false,
+            "firstData": 3126334.6322,
+            "lastData": 3126334.639204,
+            "bytes": 190948
+          }
+        ]
+      },
+      {
+        "condition": "after",
+        "timeOrigin": 1792157706454.9,
+        "visibility": "visible",
+        "responses": 20,
+        "composer": true,
+        "startup": false,
+        "overflow": false,
+        "metrics": {
+          "LayoutDuration": 0.041497,
+          "RecalcStyleDuration": 0.045911,
+          "ScriptDuration": 0.433004,
+          "TaskDuration": 0.663031
+        },
+        "marks": {
+          "session": 2981.5,
+          "stream-headers": 3139.6,
+          "snapshot": 3155,
+          "metadata": 3157.3,
+          "conversation": 3161.1,
+          "catalog": 3485.1,
+          "history": 3665.5,
+          "composer": 3665.5,
+          "models": 3957
+        },
+        "stream": [
+          {
+            "path": "/api/agent/events",
+            "type": "Fetch",
+            "start": 3126340.473051,
+            "status": 200,
+            "headersAt": 3126340.632166,
+            "cache": false,
+            "firstData": 3126340.638881,
+            "lastData": 3126340.646713,
+            "bytes": 190948
+          }
+        ]
+      },
+      {
+        "condition": "before",
+        "timeOrigin": 1792157712420.4,
+        "visibility": "visible",
+        "responses": 20,
+        "composer": true,
+        "startup": false,
+        "overflow": false,
+        "metrics": {
+          "LayoutDuration": 0.02157,
+          "RecalcStyleDuration": 0.040802,
+          "ScriptDuration": 0.332406,
+          "TaskDuration": 0.57196
+        },
+        "marks": {
+          "session": 2977.3,
+          "stream-headers": 3137.3,
+          "catalog": 3490.8,
+          "snapshot": 4104.8,
+          "metadata": 4107.3,
+          "history": 4284,
+          "composer": 4284,
+          "conversation": 4284.3,
+          "models": 4540
+        },
+        "stream": [
+          {
+            "path": "/api/agent/events",
+            "type": "Fetch",
+            "start": 3126346.434394,
+            "status": 200,
+            "headersAt": 3126346.595066,
+            "cache": false,
+            "firstData": 3126346.602207,
+            "lastData": 3126347.561658,
+            "bytes": 190948
+          }
+        ]
+      }
+    ],
+    "initialStreamBytes": {
+      "identity": 190948,
+      "gzip": 3009,
+      "decodedBoth": 190948
+    }
+  },
+  "exclusions": [
+    "Four constrained production setup probes; initial actor wake is separate from warm-server samples.",
+    "Stale production trace, discarded without profiling conclusions.",
+    "Authentication shell split: 5 local runs each, history median 4477.4 to 4755.6ms; reverted.",
+    "Unused FilesWorkbench barrel experiment: 10 local runs each, 4322.55 to 4238.1ms, gzip initial JS grew 841 bytes; reverted.",
+    "Production controller recovery reset viewport and throttling: discarded probes, then began a separately labelled unthrottled desktop cohort."
+  ]
+}

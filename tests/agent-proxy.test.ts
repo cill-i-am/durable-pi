@@ -291,29 +291,34 @@ it("retains construction defects instead of treating them as transport outages",
   )
   expect(upstream.socket.close).toHaveBeenCalledOnce()
 })
-it("joins work and closes the native reply after failed host work registration", async () => {
-  const f = fixture(),
-    closed = vi.fn(),
-    defect = new Error("Registration failed")
-  f.forward.mockResolvedValue(
-    new Response(new ReadableStream<Uint8Array>({ cancel: closed }))
-  )
-  await expect(
-    agentProxy(f.request(), {
-      ...f.bindings,
-      own: () => {
-        throw defect
-      },
-    })
-  ).rejects.toSatisfy(
-    (cause: unknown) =>
-      Cause.isCause(cause) &&
-      cause.reasons.some(
-        (reason) => reason._tag === "Die" && reason.defect === defect
-      )
-  )
-  expect(closed).toHaveBeenCalledOnce()
-})
+it.each(["identity", "gzip"])(
+  "joins work and closes the %s reply after failed host work registration",
+  async (encoding) => {
+    const f = fixture(),
+      closed = vi.fn(),
+      defect = new Error("Registration failed")
+    f.forward.mockResolvedValue(
+      new Response(new ReadableStream<Uint8Array>({ cancel: closed }), {
+        headers: { "content-type": "text/event-stream" },
+      })
+    )
+    await expect(
+      agentProxy(f.request({ headers: { "accept-encoding": encoding } }), {
+        ...f.bindings,
+        own: () => {
+          throw defect
+        },
+      })
+    ).rejects.toSatisfy(
+      (cause: unknown) =>
+        Cause.isCause(cause) &&
+        cause.reasons.some(
+          (reason) => reason._tag === "Die" && reason.defect === defect
+        )
+    )
+    expect(closed).toHaveBeenCalledOnce()
+  }
+)
 it("retains response projection defects and releases their native body", async () => {
   const f = fixture(),
     closed = vi.fn(),

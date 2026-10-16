@@ -5,6 +5,7 @@ import { tmpdir } from "node:os"
 import { spawn } from "node:child_process"
 import { createServer } from "node:net"
 import assert from "node:assert/strict"
+import { get as getHttp } from "node:http"
 
 const requireAlchemy = createRequire(import.meta.resolve("alchemy"))
 const { build } = requireAlchemy("esbuild")
@@ -92,7 +93,7 @@ try {
 const config :Workerd.Config = (
   services = [
     (name = "fixture", worker = (
-      compatibilityDate = ${JSON.stringify(workerd.compatibilityDate)}, compatibilityFlags = ["nodejs_compat"],
+      compatibilityDate = ${JSON.stringify(workerd.compatibilityDate)}, compatibilityFlags = ["nodejs_compat", "enable_request_signal"],
       modules = [(name = "worker.mjs", esModule = embed "worker.mjs")],
       bindings = [(name = "SQL_PILOT", durableObjectNamespace = (className = "SqlitePilot")), (name = "LEGACY", durableObjectNamespace = (className = "LegacyAgentProbe")), (name = "TERMINALS", durableObjectNamespace = (className = "TerminalProbe")), (name = "BACKGROUND", durableObjectNamespace = (className = "BackgroundGroupProbe")), (name = "LOADER", workerLoader = (id = "native-code-local")), (name = "BROWSERS", durableObjectNamespace = (className = "BrowserRecoveryBot")), (name = "BOTS", durableObjectNamespace = (className = "MailboxBot")), (name = "LOOPS", durableObjectNamespace = (className = "LoopBot")), (name = "PERSONAL", durableObjectNamespace = (className = "PersonalAgentProbe"))],
       durableObjectNamespaces = [(className = "SqlitePilot", uniqueKey = "sqlite-pilot-local-test", enableSql = true), (className = "LegacyAgentProbe", uniqueKey = "legacy-agent-local-test", enableSql = true), (className = "TerminalProbe", uniqueKey = "terminal-local-test", enableSql = true), (className = "BackgroundGroupProbe", uniqueKey = "background-local-test", enableSql = true), (className = "BrowserRecoveryBot", uniqueKey = "browser-local-test", enableSql = true), (className = "MailboxBot", uniqueKey = "mailbox-local-test", enableSql = true), (className = "LoopBot", uniqueKey = "loops-local-test", enableSql = true), (className = "PersonalAgentProbe", uniqueKey = "personal-local-test", enableSql = true)],
@@ -104,6 +105,75 @@ const config :Workerd.Config = (
 );`
   )
   await start()
+  // Chunk boundaries are transport details (including empty gzip chunks).
+  const nextFrame = (reader) => {
+    let pending = ""
+    const decoder = new TextDecoder()
+    return async () => {
+      while (!pending.includes("\n\n")) {
+        const next = await reader.read()
+        assert.equal(next.done, false, "SSE ended before its next frame")
+        pending += decoder.decode(next.value, { stream: true })
+      }
+      const end = pending.indexOf("\n\n") + 2
+      const frame = pending.slice(0, end)
+      pending = pending.slice(end)
+      return frame
+    }
+  }
+  const encoded = await fetch(`${origin}/encoding/stream?id=delivery`, {
+    headers: { "accept-encoding": "gzip" },
+    signal: AbortSignal.timeout(5000),
+  })
+  assert.equal(encoded.status, 200, output.slice(-5000))
+  assert.equal(encoded.headers.get("content-encoding"), "gzip")
+  assert.equal(encoded.headers.get("cache-control"), "private, no-store")
+  const encodedReader = encoded.body.getReader()
+  const frame = nextFrame(encodedReader)
+  assert.equal(await frame(), "data: first\n\n")
+  assert.equal(await frame(), ": keepalive\n\n")
+  await encodedReader.cancel()
+  // Destroy the TCP socket explicitly. A Fetch reader cancellation can tear
+  // down gently without making workerd observe the disconnect promptly.
+  await new Promise((done, fail) => {
+    const pending = getHttp(
+      `${origin}/encoding/stream?id=disconnect`,
+      { headers: { "accept-encoding": "gzip" } },
+      (response) => {
+        response.on("error", () => {})
+        response.once("data", () => {
+          response.socket.destroy()
+          done()
+        })
+      }
+    )
+    pending.on("error", fail)
+    pending.setTimeout(5000, () =>
+      pending.destroy(new Error("Encoding probe timed out"))
+    )
+  })
+  let encodingCancellations = 0
+  for (let n = 0; n < 20; n++) {
+    encodingCancellations = (
+      await (await fetch(`${origin}/encoding/state?id=disconnect`)).json()
+    ).cancellations
+    if (encodingCancellations) break
+    await sleep(50)
+  }
+  assert.equal(encodingCancellations, 1)
+  // Assert the adapter's error before the HTTP server chooses how to close
+  // a response whose headers are already sent (workerd may send a clean EOF).
+  const failedEncoding = await fetch(`${origin}/encoding/probe-failure`, {
+    headers: { "accept-encoding": "gzip" },
+    signal: AbortSignal.timeout(5000),
+  })
+  assert.deepEqual(await failedEncoding.json(), {
+    received: true,
+    failed: true,
+  })
+  console.log(
+    "PASS website SSE gzip: small initial event and later heartbeat arrive before EOF, cloned Response is encoded once, cancellation reaches the source exactly once and a late source error fails the native body reader."
+  )
   const sqlPilot = {}
   for (const mode of [
     "commit",

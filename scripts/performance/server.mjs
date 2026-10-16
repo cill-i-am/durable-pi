@@ -3,6 +3,10 @@ import { readFile, stat } from "node:fs/promises"
 import { resolve, extname } from "node:path"
 import { fileURLToPath } from "node:url"
 import { gzipSync } from "node:zlib"
+import { Readable } from "node:stream"
+import { pipeline } from "node:stream/promises"
+import { Effect } from "effect"
+import { encodeEventStream } from "../../src/auth/adapters/event-stream-encoding.ts"
 import { build } from "vite"
 import react from "@vitejs/plugin-react"
 import tailwindcss from "@tailwindcss/vite"
@@ -189,20 +193,58 @@ const server = createServer(async (req, res) => {
     if (path === "/api/agent/events") {
       await wait(100)
       if (res.destroyed) return
-      res.writeHead(200, {
-        "content-type": "text/event-stream",
-        "cache-control": "no-store",
-      })
-      res.write(
-        `data: ${JSON.stringify({ type: "MESSAGES_SNAPSHOT", messages: startupCase === "empty" ? [] : messages })}\n\n`
+      const bytes = new TextEncoder()
+      let cancelled = false,
+        timer
+      const upstream = new Response(
+        new ReadableStream({
+          async start(controller) {
+            controller.enqueue(
+              bytes.encode(
+                `data: ${JSON.stringify({ type: "MESSAGES_SNAPSHOT", messages: startupCase === "empty" ? [] : messages })}\n\n`
+              )
+            )
+            if (startupCase === "metadata-slow") await wait(2200)
+            if (cancelled) return
+            controller.enqueue(
+              bytes.encode(
+                `data: ${JSON.stringify({ type: "CUSTOM", name: "durable-pi.metadata", value: metadata })}\n\n`
+              )
+            )
+            timer = setInterval(
+              () => controller.enqueue(bytes.encode(": keepalive\n\n")),
+              15000
+            )
+          },
+          cancel() {
+            cancelled = true
+            clearInterval(timer)
+          },
+        }),
+        {
+          headers: {
+            "content-type": "text/event-stream",
+            "cache-control": "no-store",
+          },
+        }
       )
-      if (startupCase === "metadata-slow") await wait(2200)
-      if (res.destroyed) return
-      res.write(
-        `data: ${JSON.stringify({ type: "CUSTOM", name: "durable-pi.metadata", value: metadata })}\n\n`
+      const response = await Effect.runPromise(
+        encodeEventStream(
+          new Request("http://fixture/api/agent/events", {
+            headers: {
+              "accept-encoding":
+                process.env.PERF_COMPRESSION === "gzip" ? "gzip" : "identity",
+            },
+          }),
+          upstream
+        )
       )
-      const timer = setInterval(() => res.write(": keepalive\n\n"), 15000)
-      res.once("close", () => clearInterval(timer))
+      res.writeHead(200, Object.fromEntries(response.headers))
+      try {
+        await pipeline(Readable.fromWeb(response.body), res)
+      } catch (cause) {
+        if (!res.destroyed) res.destroy(cause)
+      }
       return
     }
     if (path === "/api/agent/models") {
