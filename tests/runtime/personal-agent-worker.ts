@@ -1206,6 +1206,19 @@ export class PersonalAgentProbe extends PersonalAgent {
       this.models.setProvider(faux.provider)
       faux.setResponses(
         Array.from({ length: 6 }, () => async (context) => {
+          const summary = "The Native shell command completed successfully."
+          if (
+            context.messages.some(
+              (message) =>
+                message.role === "system" &&
+                message.content.startsWith(
+                  "You are a context summarization assistant."
+                )
+            )
+          )
+            return fauxAssistantMessage(summary)
+          if (JSON.stringify(context.messages).includes(summary))
+            return fauxAssistantMessage("Native Pi command complete")
           const result = context.messages.find(
             (message) => message.role === "toolResult"
           )
@@ -1397,15 +1410,31 @@ export class PersonalAgentProbe extends PersonalAgent {
       faux.setResponses(
         Array.from({ length: 12 }, () => async (context) => {
           const messages = JSON.stringify(context.messages)
+          const summary = "The background_tasks call was accepted."
+          if (
+            context.messages.some(
+              (message) =>
+                message.role === "system" &&
+                message.content.startsWith(
+                  "You are a context summarization assistant."
+                )
+            )
+          )
+            return fauxAssistantMessage(
+              messages.includes(
+                "These are child findings from an earlier request"
+              )
+                ? "These are child findings from an earlier request; ready to reconcile."
+                : summary
+            )
           if (
             messages.includes(
               "These are child findings from an earlier request"
             )
           )
             return fauxAssistantMessage("Native background findings reconciled")
-          return context.messages.some(
-            (message) => message.role === "toolResult"
-          )
+          return messages.includes(summary) ||
+            context.messages.some((message) => message.role === "toolResult")
             ? fauxAssistantMessage("Native background accepted")
             : fauxAssistantMessage(
                 fauxToolCall("background_tasks", brief, {
@@ -1621,9 +1650,21 @@ export class PersonalAgentProbe extends PersonalAgent {
             )
           )
             return fauxAssistantMessage("Native child findings")
-          return context.messages.some(
-            (message) => message.role === "toolResult"
+          // Compaction has no tools. Return a summary rather than another tool call.
+          const summary =
+            "The delegate_tasks call completed with Native child findings."
+          if (
+            context.messages.some(
+              (message) =>
+                message.role === "system" &&
+                message.content.startsWith(
+                  "You are a context summarization assistant."
+                )
+            )
           )
+            return fauxAssistantMessage(summary)
+          return JSON.stringify(context.messages).includes(summary) ||
+            context.messages.some((message) => message.role === "toolResult")
             ? fauxAssistantMessage("Native delegation complete")
             : fauxAssistantMessage(
                 fauxToolCall("delegate_tasks", brief, {

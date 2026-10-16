@@ -34,7 +34,7 @@ export function executionTools(
         )
         return {
           isError: run.status !== "succeeded",
-          content: [
+          output: [
             {
               type: "text" as const,
               text: JSON.stringify({
