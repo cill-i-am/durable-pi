@@ -127,7 +127,7 @@ it.each(["missing", "ambiguous"])(
       Effect.runPromise(configureObservability)
     ).rejects.toMatchObject({
       _tag: "ObservabilitySetupFailed",
-      operation: "resolve TerminalWorkerDrizzleV1",
+      operation: "resolve TerminalWorkerSandboxV1",
     })
     expect(network).toHaveBeenCalledTimes(1)
   }
