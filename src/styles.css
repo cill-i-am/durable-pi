@@ -71,6 +71,8 @@
 }
 
 :root {
+  --mobile-panel-inset: 48px;
+  --mobile-panel-handle: 28px;
   --background: #ffffff;
   --canvas: #fafafa;
   --foreground: #28282c;
@@ -546,12 +548,13 @@ body {
   gap: 8px;
 }
 .chat-composer {
+  --composer-input-min-height: 62px;
   border-radius: var(--radius-lg);
   background: var(--background);
   box-shadow: 0 2px 20px oklch(0.2 0 0 / 0.035);
 }
 .chat-composer textarea {
-  min-height: 62px;
+  min-height: var(--composer-input-min-height);
   max-height: 180px;
   resize: none;
   font-size: 14px;
@@ -683,6 +686,7 @@ body {
 }
 
 .workspace-shell {
+  --workspace-sidebar-width: 224px;
   flex-direction: column;
   height: 100svh;
   min-height: 0;
@@ -776,7 +780,7 @@ body {
   padding-right: 16px;
 }
 .workspace-brand {
-  width: 224px;
+  width: var(--workspace-sidebar-width);
   flex-shrink: 0;
   padding-inline: 10px;
 }
@@ -2716,7 +2720,7 @@ body {
   display: flex;
   align-items: flex-end;
   pointer-events: none;
-  padding-top: max(48px, env(safe-area-inset-top));
+  padding-top: max(var(--mobile-panel-inset), env(safe-area-inset-top));
   padding-bottom: var(--drawer-keyboard-inset, 0px);
 }
 .responsive-overlay[data-overlay-mobile="true"] {
@@ -2755,7 +2759,7 @@ body {
 }
 .responsive-overlay[data-overlay-mobile="true"] > .responsive-overlay-handle {
   display: flex;
-  flex: 0 0 28px;
+  flex: 0 0 var(--mobile-panel-handle);
   align-items: center;
   justify-content: center;
   touch-action: none;
@@ -2830,11 +2834,6 @@ body {
   .workbench-host[data-open="false"] {
     width: 0;
     border-left: 0;
-  }
-  @starting-style {
-    .workbench-host[data-open="true"] {
-      width: 0;
-    }
   }
   .workbench-host > [data-base-ui-portal] > .responsive-overlay-viewport {
     display: block;
@@ -2939,5 +2938,90 @@ body {
   textarea[data-slot="textarea"],
   [data-slot="input-group-control"] {
     font-size: 1rem;
+  }
+}
+
+/* The public loader shares workspace chrome, composer and panel geometry. CSS
+   resolves it before hydration, with no matchMedia-driven layout correction. */
+.workspace-startup-sidebar {
+  display: none;
+  inline-size: var(--workspace-sidebar-width);
+  flex-shrink: 0;
+  border-inline-end: 1px solid var(--border);
+}
+.workspace-startup-sidebar-trigger {
+  inline-size: 36px;
+  block-size: 44px;
+  flex-shrink: 0;
+}
+.workspace-startup-action {
+  inline-size: 32px;
+  block-size: 32px;
+  flex-shrink: 0;
+}
+.workspace-startup-composer-input {
+  min-block-size: var(--composer-input-min-height);
+  inline-size: 100%;
+  padding: 12px;
+}
+.workspace-startup-panel-backdrop,
+.workspace-startup-handle {
+  display: none;
+}
+.workspace-startup-workbench {
+  display: none;
+  flex-direction: column;
+  min-inline-size: 0;
+  min-block-size: 0;
+}
+[data-slot="workspace-startup"][data-workbench="open"]
+  .workspace-startup-workbench {
+  display: flex;
+}
+@media (min-width: 768px) {
+  .workspace-startup-sidebar {
+    display: flex;
+  }
+  .workspace-startup-sidebar-trigger {
+    display: none;
+  }
+}
+@media (min-width: 1024px) {
+  [data-slot="workspace-startup"][data-workbench="desktop-default"]
+    .workspace-startup-workbench {
+    display: flex;
+  }
+}
+@media (max-width: 767px) {
+  [data-slot="workspace-startup"][data-workbench="open"] .workspace-startup-panel-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: var(--overlay);
+  }
+  .workspace-startup-action {
+    inline-size: 44px;
+    block-size: 44px;
+  }
+  .workspace-startup-workbench {
+    position: fixed;
+    inset-block-start: max(var(--mobile-panel-inset), env(safe-area-inset-top));
+    inset-block-end: 0;
+    inset-inline: 0;
+    border-radius: 20px 20px 0 0;
+    background: var(--popover);
+    overflow: hidden;
+  }
+  .workspace-startup-handle {
+    display: flex;
+    flex: 0 0 var(--mobile-panel-handle);
+    align-items: center;
+    justify-content: center;
+  }
+  .workspace-startup-handle > span {
+    inline-size: 36px;
+    block-size: 4px;
+    border-radius: 999px;
+    background: var(--border);
   }
 }

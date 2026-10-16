@@ -88,6 +88,9 @@ export function WorkbenchPanel({
       inert={!open}
     >
       <Sheet
+        // Mount the open Root with its portal host so Base UI skips an initial
+        // enter transition instead of replaying it after the loading view.
+        key={container ? "host-ready" : "awaiting-host"}
         open={open && container !== null}
         desktop="panel"
         breakpoint="md"

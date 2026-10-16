@@ -247,7 +247,11 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
     <TooltipProvider>
       <SidebarProvider
         className="workspace-shell"
-        style={{ "--sidebar-width": "224px" } as React.CSSProperties}
+        style={
+          {
+            "--sidebar-width": "var(--workspace-sidebar-width)",
+          } as React.CSSProperties
+        }
       >
         <WorkspaceNavigation
           name={name}

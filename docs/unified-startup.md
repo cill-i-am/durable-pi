@@ -1,5 +1,7 @@
 # One startup view
 
+The subsequent [responsive layout increment](responsive-startup.md) adds mobile/desktop geometry and CLS checks to this shared view. The measurements below describe the original unification increment.
+
 Production investigation on 16 October 2026 confirmed three distinct layouts: session (Pi mark and short bar), catalog (workspace-opening bar), and conversation (two bars inside the chat). A throttled live observation switched at 3.84 and 4.06 seconds, then showed conversation content at 5.13 seconds.
 
 `WorkspaceStartup` provides one public, noninteractive chat-shaped placeholder for session checking, lazy sign-in loading, and initial workspace data. Authenticated catalog and conversation hooks still run in parallel. The workspace reveals when its catalog and initial conversation state are available, or when a failure can be presented. Collections and the agent editor do not wait for conversation data. Empty conversations are ready states.
