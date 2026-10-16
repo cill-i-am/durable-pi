@@ -1,12 +1,28 @@
 name: Check and deploy
 on:
   push:
+    branches: [main]
   pull_request:
 permissions:
   contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
-  check:
+  verify:
+    name: ${{ matrix.suite }}
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite: static
+            command: pnpm typecheck && pnpm lint && pnpm check
+          - suite: unit-and-build
+            command: pnpm test && pnpm build && pnpm build:workers
+          - suite: native-runtime
+            command: pnpm test:communication-runtime
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -15,9 +31,22 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm verify
-      - run: pnpm lint
-      - run: node --import tsx scripts/check-secrets.ts
+      - name: Check tracked files for secrets
+        if: matrix.suite == 'static'
+        run: node --import tsx scripts/check-secrets.ts
+      - run: pnpm generate-routes
+      - name: Run ${{ matrix.suite }} checks
+        run: ${{ matrix.command }}
+  check:
+    if: ${{ always() }}
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Require every verification suite to pass
+        env:
+          RESULT: ${{ needs.verify.result }}
+        run: test "$RESULT" = success
   deploy:
     needs: check
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
