@@ -12,7 +12,9 @@ import react from "@vitejs/plugin-react"
 import tailwindcss from "@tailwindcss/vite"
 
 const project = resolve(fileURLToPath(new URL("../..", import.meta.url)))
-const output = resolve(project, "dist/performance")
+const output = process.env.PERF_DIST
+  ? resolve(process.env.PERF_DIST)
+  : resolve(project, "dist/performance")
 if (!process.argv.includes("--serve-only"))
   await build({
     configFile: false,
@@ -159,7 +161,7 @@ const server = createServer(async (req, res) => {
       return
     }
     if (path === "/api/auth/get-session") {
-      await wait(150)
+      await wait(startupCase === "session-slow" ? 30_000 : 150)
       if (startupCase === "anonymous") return sendJson(res, null)
       return sendJson(res, {
         user: {
@@ -266,7 +268,7 @@ const server = createServer(async (req, res) => {
   }
   try {
     const file = resolve(output, "." + decodeURIComponent(url.pathname))
-    if (!file.startsWith(output + "/")) {
+    if (file !== output && !file.startsWith(output + "/")) {
       res.writeHead(404)
       res.end()
       return

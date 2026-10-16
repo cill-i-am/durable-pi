@@ -23,6 +23,7 @@ import "./styles.css"
 // No Cloudflare credentials or real provider/tool calls enter this fixture.
 const root = createRootRoute({ component: ChatApp })
 const paths = [
+  "/",
   "/agents",
   "/agents/archived",
   "/agents/$agentId",
