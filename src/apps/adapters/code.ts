@@ -1,9 +1,10 @@
 import { Cause, Effect } from "effect"
-import { codeService } from "../../execution/adapters/service"
+
 import {
   executionWithSignal,
   type ExecutionTransport,
 } from "../../execution/adapters/interop"
+import { codeService } from "../../execution/adapters/service"
 import { AppConflict } from "../contracts"
 import type { WebExecutor } from "../web"
 

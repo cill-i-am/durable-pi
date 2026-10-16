@@ -1,13 +1,14 @@
 import { count, desc, eq } from "drizzle-orm"
 import { Effect, Schema } from "effect"
+
+import { jsonField } from "../../storage/expressions"
 import {
   mapSqliteError,
   type Sqlite,
   type EffectSqliteDatabase,
 } from "../../storage/sqlite"
-import { jsonField } from "../../storage/expressions"
-import type { ExecutionLedger } from "../ledger"
 import { CodeRun, ExecutionStorageError, RunSummary } from "../contracts"
+import type { ExecutionLedger } from "../ledger"
 import { codeRuns } from "./schema"
 
 const decode = (row: { record: string }) =>

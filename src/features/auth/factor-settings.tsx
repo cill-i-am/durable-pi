@@ -1,10 +1,9 @@
-import { useEffect, useState } from "react"
 import { QRCodeSVG } from "qrcode.react"
+import { useEffect, useState } from "react"
+
 import { authClient } from "@/auth/client"
-import { PasswordInput } from "./password-input"
-import { VerificationCode } from "./verification-code"
-import { securityError } from "./security-errors"
 import { CopyButton } from "@/components/copy-button"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
   Field,
@@ -12,7 +11,10 @@ import {
   FieldLabel,
   FieldDescription,
 } from "@/components/ui/field"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+
+import { PasswordInput } from "./password-input"
+import { securityError } from "./security-errors"
+import { VerificationCode } from "./verification-code"
 
 type View =
   | { kind: "manage" }
@@ -103,18 +105,7 @@ export function FactorSettings({
       setPending(false)
     }
   }
-  const title =
-    view.kind === "manage"
-      ? "Manage two-factor authentication"
-      : view.kind === "verify"
-        ? "Scan, then verify"
-        : view.kind === "codes"
-          ? "Save your recovery codes"
-          : view.action === "enable"
-            ? "Set up two-factor"
-            : view.action === "disable"
-              ? "Turn off two-factor authentication?"
-              : "Replace your recovery codes?"
+  const title = factorTitle(view)
   return (
     <section className="space-y-6">
       <h2 className="text-xl font-semibold">{title}</h2>
@@ -268,17 +259,7 @@ export function FactorSettings({
                 pending || (view.kind === "verify" && code.length !== 6)
               }
             >
-              {pending
-                ? view.kind === "verify"
-                  ? "Verifying…"
-                  : "Saving…"
-                : view.kind === "verify"
-                  ? "Verify and turn on"
-                  : view.action === "enable"
-                    ? "Continue"
-                    : view.action === "disable"
-                      ? "Turn off two-factor"
-                      : "Generate new codes"}
+              {factorSubmitLabel(view, pending)}
             </Button>
           </FieldGroup>
         </form>
@@ -295,4 +276,35 @@ export function FactorSettings({
       )}
     </section>
   )
+}
+
+function factorTitle(view: View) {
+  return view.kind === "manage"
+    ? "Manage two-factor authentication"
+    : view.kind === "verify"
+      ? "Scan, then verify"
+      : view.kind === "codes"
+        ? "Save your recovery codes"
+        : view.action === "enable"
+          ? "Set up two-factor"
+          : view.action === "disable"
+            ? "Turn off two-factor authentication?"
+            : "Replace your recovery codes?"
+}
+
+function factorSubmitLabel(
+  view: Extract<View, { kind: "password" | "verify" }>,
+  pending: boolean
+) {
+  return pending
+    ? view.kind === "verify"
+      ? "Verifying…"
+      : "Saving…"
+    : view.kind === "verify"
+      ? "Verify and turn on"
+      : view.action === "enable"
+        ? "Continue"
+        : view.action === "disable"
+          ? "Turn off two-factor"
+          : "Generate new codes"
 }

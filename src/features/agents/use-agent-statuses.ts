@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react"
 import { Schema } from "effect"
+import { useEffect, useMemo, useState } from "react"
+
 import { AgentStatuses, type AgentProfile } from "@/agents/contracts"
 import type { RuntimeStatus } from "@/conversations/status"
 import { api } from "@/http/client"

@@ -1,3 +1,13 @@
+import { Clock, Context, Effect } from "effect"
+
+import { type MemoryError } from "../memory/domain"
+import type { MemoryLedger } from "../memory/ledger"
+import { messageArchiveText } from "../workspace/files"
+import type { TimelineItem } from "./contracts"
+import { canSubmit, finishTransition } from "./domain"
+import type { ConversationObservation } from "./execution"
+import type { ConversationLedger } from "./ledger"
+import { conversationPrompt, unansweredArchives } from "./prompt"
 import { ConversationConflict } from "./turns"
 import type {
   ConversationStorageError,
@@ -5,15 +15,6 @@ import type {
   Turn,
   TurnOutcome,
 } from "./turns"
-import { Clock, Context, Effect } from "effect"
-import { type MemoryError } from "../memory/domain"
-import type { MemoryLedger } from "../memory/ledger"
-import { messageArchiveText } from "../workspace/files"
-import type { TimelineItem } from "./contracts"
-import type { ConversationLedger } from "./ledger"
-import type { ConversationObservation } from "./execution"
-import { canSubmit, finishTransition } from "./domain"
-import { conversationPrompt, unansweredArchives } from "./prompt"
 
 export interface ConversationMaterialization {
   readonly transactionGroup: object

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
-import { randomBytes, randomUUID } from "node:crypto"
 import { spawnSync } from "node:child_process"
+import { randomBytes, randomUUID } from "node:crypto"
 
 const origin = process.env.NATIVE_SANDBOX_URL ?? "http://localhost:1342"
 const identity = randomBytes(32).toString("hex")

@@ -15,11 +15,7 @@ import {
 } from "drizzle-orm"
 import { alias } from "drizzle-orm/sqlite-core"
 import { Effect, Layer, Schema } from "effect"
-import {
-  mapSqliteError,
-  type Sqlite,
-  type SqliteOrm,
-} from "../../storage/sqlite"
+
 import {
   containsText,
   divide,
@@ -27,9 +23,11 @@ import {
   multiply,
   remainder,
 } from "../../storage/expressions"
-import { makeMemoryRepository, memoryApplication } from "../service"
-import * as Policy from "../policy"
-import { MemoryTransaction, type MemoryLedger } from "../ledger"
+import {
+  mapSqliteError,
+  type Sqlite,
+  type SqliteOrm,
+} from "../../storage/sqlite"
 import {
   nodeKey,
   VIEW_BYTES,
@@ -41,6 +39,8 @@ import {
   type MemoryNode,
   type Part,
 } from "../domain"
+import { MemoryTransaction, type MemoryLedger } from "../ledger"
+import * as Policy from "../policy"
 import {
   type ArchiveRecord,
   type Watermark,
@@ -53,6 +53,7 @@ import {
   StoredIssue,
   StoredArchiveRecord,
 } from "../records"
+import { makeMemoryRepository, memoryApplication } from "../service"
 import * as t from "./schema"
 
 const attempt = <TValue>(body: () => TValue) =>
@@ -879,7 +880,7 @@ class SqliteMemory implements MemoryLedger {
 
 const openSqliteMemory = Effect.fn("Memory.sqlite.open")(function* (
   db: Sqlite,
-  budget = VIEW_BYTES
+  budget: number = VIEW_BYTES
 ) {
   const storage = new SqliteMemory(db, budget)
   yield* storage.initialize()

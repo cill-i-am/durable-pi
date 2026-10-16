@@ -1,12 +1,13 @@
-import { useCallback, useRef, useState } from "react"
 import { Schema } from "effect"
-import { agentApi } from "@/http/client"
+import { useCallback, useRef, useState } from "react"
+
 import {
   ConnectionList,
   ToolSelection,
   type ConnectionInfo,
   type NewConnection,
 } from "@/access/connections"
+import { agentApi } from "@/http/client"
 
 export function useConnections(agentId: string, onSaved: () => void) {
   const [connections, setConnections] = useState<readonly ConnectionInfo[]>([])

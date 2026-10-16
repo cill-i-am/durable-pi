@@ -1,12 +1,13 @@
+import type { MCPClientManager } from "agents/mcp/client"
 import { ManagedRuntime } from "effect"
 import { afterEach } from "vitest"
-import type { MCPClientManager } from "agents/mcp/client"
+
+import { mcpConnectionClient } from "../src/access/adapters/mcp"
 import type { ConnectionLedger } from "../src/access/connection-ledger"
 import {
   RemoteConnections,
   connectionApplication,
 } from "../src/access/connection-service"
-import { mcpConnectionClient } from "../src/access/adapters/mcp"
 
 const runtimes = new Set<
   ManagedRuntime.ManagedRuntime<RemoteConnections, never>

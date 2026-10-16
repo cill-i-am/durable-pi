@@ -1,31 +1,33 @@
-import { useEffect, useMemo, useState } from "react"
 import { Search, ChevronDown } from "lucide-react"
-import { agentApi, agentUrl } from "@/http/client"
-import type { ChatState } from "@/conversations/contracts"
+import { useEffect, useMemo, useState } from "react"
+
 import { Markdown } from "@/components/markdown"
-import { Button, buttonVariants } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import {
-  Field,
-  FieldGroup,
-  FieldLabel,
-  FieldDescription,
-} from "@/components/ui/field"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Skeleton } from "@/components/ui/skeleton"
+import { Button, buttonVariants } from "@/components/ui/button"
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+} from "@/components/ui/collapsible"
 import {
   Empty,
   EmptyHeader,
   EmptyTitle,
   EmptyDescription,
 } from "@/components/ui/empty"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { SummaryRecovery } from "./summary-recovery"
 import {
-  Collapsible,
-  CollapsibleTrigger,
-  CollapsibleContent,
-} from "@/components/ui/collapsible"
+  Field,
+  FieldGroup,
+  FieldLabel,
+  FieldDescription,
+} from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import type { ChatState } from "@/conversations/contracts"
+import { agentApi, agentUrl } from "@/http/client"
+
+import { SummaryRecovery } from "./summary-recovery"
 
 export function MemoryWorkbench({
   state,
@@ -118,7 +120,7 @@ export function MemoryWorkbench({
       </form>
       <Tabs
         value={tab}
-        onValueChange={(value) => {
+        onValueChange={(value: unknown) => {
           if (
             value === "notes" ||
             value === "history" ||

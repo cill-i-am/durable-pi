@@ -1,5 +1,6 @@
 import type { Effect } from "effect"
 import { Schema } from "effect"
+
 import type { Handoff } from "./background-domain"
 
 export class BackgroundStorageError extends Schema.TaggedError<BackgroundStorageError>()(

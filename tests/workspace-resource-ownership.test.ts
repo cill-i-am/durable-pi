@@ -1,4 +1,3 @@
-import { afterEach, expect, it } from "vitest"
 import {
   Cause,
   Context,
@@ -8,16 +7,18 @@ import {
   ManagedRuntime,
   Option,
 } from "effect"
-import { database } from "./database"
-import { makeWorkspace } from "../src/workspace/service"
-import { SqliteWorkspace } from "../src/workspace/adapters/sqlite"
+import { afterEach, expect, it } from "vitest"
+
+import { filesRequest } from "../src/workspace/adapters/http"
 import {
   r2WorkspaceAssets,
   type AssetBucket,
 } from "../src/workspace/adapters/r2"
-import { filesRequest } from "../src/workspace/adapters/http"
-import { Workspace } from "../src/workspace/workspace"
+import { SqliteWorkspace } from "../src/workspace/adapters/sqlite"
 import { WorkspaceUnavailable, type FileError } from "../src/workspace/files"
+import { makeWorkspace } from "../src/workspace/service"
+import { Workspace } from "../src/workspace/workspace"
+import { database } from "./database"
 
 const cleanups: (() => Promise<void>)[] = []
 afterEach(async () => {

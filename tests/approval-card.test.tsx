@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest"
 import { renderToStaticMarkup } from "react-dom/server"
-import { ApprovalCard } from "../src/features/access/approval-card"
+import { describe, expect, it } from "vitest"
+
 import type { Approval } from "../src/access/contracts"
+import { ApprovalCard } from "../src/features/access/approval-card"
 
 function render(status: Approval["status"], disabled = false) {
   return renderToStaticMarkup(

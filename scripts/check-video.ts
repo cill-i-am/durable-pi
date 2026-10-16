@@ -1,8 +1,14 @@
 import assert from "node:assert/strict"
+import { Buffer as NativeBuffer } from "node:buffer"
 import { readFile } from "node:fs/promises"
+
 import { Schema } from "effect"
+
 import { FileInfo, FileList } from "../src/workspace/files"
 import { VideoResult } from "../src/workspace/video"
+
+// Workers declares the Node export as any; use Node's published constructor contract.
+const Buffer = NativeBuffer as BufferConstructor
 
 const origin = "http://localhost:1337"
 assert.equal(process.env.OWNER_EMAIL, "workspace-test@example.com")

@@ -1,4 +1,3 @@
-import { useEffect, useId, useState } from "react"
 import { cn } from "cn"
 import { Schema } from "effect"
 import {
@@ -9,6 +8,34 @@ import {
   Plus,
   RotateCcw,
 } from "lucide-react"
+import { useEffect, useId, useState } from "react"
+
+import { Markdown } from "@/components/markdown"
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+} from "@/components/ui/select"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { Textarea } from "@/components/ui/textarea"
+import { agentApi } from "@/http/client"
 import {
   type Checklist,
   ChecklistTask,
@@ -19,34 +46,9 @@ import {
   TaskStatus,
   objectSummary,
 } from "@/objects/contracts"
-import { agentApi } from "@/http/client"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-} from "@/components/ui/select"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Markdown } from "@/components/markdown"
-import type { ObjectStore } from "./store"
+
 import { useObjects, useObjectState } from "./context"
+import type { ObjectStore } from "./store"
 
 export const statusLabels = {
   pending: "To do",
@@ -71,6 +73,12 @@ const dateLabel = (date: string) =>
     month: "short",
   })
 
+const saveProblemTitles = {
+  conflict: "A newer version may be saved",
+  uncertain: "Save not confirmed",
+  error: "Could not save",
+} as const
+
 export function SaveState({ store, id }: { store: ObjectStore; id: string }) {
   const state = useObjectState(store),
     problem = state.problems[id],
@@ -90,13 +98,7 @@ export function SaveState({ store, id }: { store: ObjectStore; id: string }) {
   if (problem)
     return (
       <Alert className="checklist-save-problem" data-kind={problem.kind}>
-        <AlertTitle>
-          {problem.kind === "conflict"
-            ? "A newer version may be saved"
-            : problem.kind === "uncertain"
-              ? "Save not confirmed"
-              : "Could not save"}
-        </AlertTitle>
+        <AlertTitle>{saveProblemTitles[problem.kind]}</AlertTitle>
         <AlertDescription className="flex flex-col gap-3">
           <p>{problem.message}</p>
           {problem.kind === "conflict" && (
@@ -348,9 +350,7 @@ export function ChecklistView({
   const state = useObjectState(store),
     detail = state.details[id],
     object = detail?.object
-  const [draft, setDraft] = useState<Draft | null>(null),
-    [origin, setOrigin] = useState<OriginConversation | null>(null),
-    [originError, setOriginError] = useState("")
+  const [draft, setDraft] = useState<Draft | null>(null)
   const [submitted, setSubmitted] = useState<string | null>(null)
   useEffect(() => {
     void store.load(id)
@@ -376,20 +376,13 @@ export function ChecklistView({
       </>
     )
   const busy = !!state.pending[id],
-    disabled = archived || busy || !!draft,
+    unavailable = archived || busy,
+    disabled = unavailable || !!draft,
     summary = objectSummary(object)
+  const editingDisabled =
+    unavailable || object.archived || state.problems[id]?.kind === "conflict"
   const edit = (task?: ChecklistTask, newTask = false) =>
-    setDraft({
-      baseTitle: object.title,
-      baseNotes: object.notes,
-      revision: object.revision,
-      task,
-      newTask,
-      title: task?.title ?? (newTask ? "" : object.title),
-      notes: task?.notes ?? (newTask ? "" : object.notes),
-      status: task?.status ?? "pending",
-      dueDate: task?.dueDate ?? "",
-    })
+    setDraft(checklistDraft(object, task, newTask))
   const submit = () => {
     if (!draft) return
     const changes: ChecklistChange[] = draft.newTask
@@ -475,7 +468,7 @@ export function ChecklistView({
             <Button
               variant="outline"
               className="mt-3"
-              disabled={archived || busy}
+              disabled={unavailable}
               onClick={() =>
                 void store.submit(
                   mutation(object, [{ type: "archive", archived: false }])
@@ -527,12 +520,7 @@ export function ChecklistView({
           {draft && (
             <TaskEditor
               draft={draft}
-              disabled={
-                busy ||
-                archived ||
-                object.archived ||
-                state.problems[id]?.kind === "conflict"
-              }
+              disabled={editingDisabled}
               cancelDisabled={busy}
               onChange={setDraft}
               onSave={submit}
@@ -584,12 +572,7 @@ export function ChecklistView({
             <Button
               variant="ghost"
               className="self-start"
-              disabled={
-                busy ||
-                archived ||
-                object.archived ||
-                state.problems[id]?.kind === "conflict"
-              }
+              disabled={editingDisabled}
               onClick={() => {
                 const input = {
                   ...mutation(object, [
@@ -669,36 +652,7 @@ export function ChecklistView({
       <p className="text-xs text-muted-foreground">
         Your agent sees edits on your next message.
       </p>
-      {object.origin.turnId ? (
-        <Button
-          variant="link"
-          className="h-auto justify-start p-0"
-          onClick={() => {
-            void agentApi(agentId)(`objects/${id}/origin`)
-              .then((value) => {
-                setOrigin(Schema.decodeUnknownSync(OriginConversation)(value))
-                setOriginError("")
-              })
-              .catch(() =>
-                setOriginError(
-                  "Could not open the originating conversation. Try again."
-                )
-              )
-          }}
-        >
-          From the conversation
-          <ArrowUpRight data-icon="inline-end" />
-        </Button>
-      ) : (
-        <p className="text-xs text-muted-foreground">
-          Created in the workbench.
-        </p>
-      )}
-      {originError && (
-        <p role="alert" className="text-sm text-destructive">
-          {originError}
-        </p>
-      )}
+      <ChecklistOrigin object={object} agentId={agentId} id={id} />
       {!object.archived && (
         <Button
           variant="outline"
@@ -714,27 +668,6 @@ export function ChecklistView({
           Archive checklist
         </Button>
       )}
-      <Dialog
-        open={!!origin}
-        onOpenChange={(open) => {
-          if (!open) setOrigin(null)
-        }}
-      >
-        <DialogContent className="max-h-[85dvh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Originating conversation</DialogTitle>
-            <DialogDescription>
-              {origin ? new Date(origin.createdAt).toLocaleString() : ""}
-            </DialogDescription>
-          </DialogHeader>
-          {origin && (
-            <div className="flex min-w-0 flex-col gap-5">
-              <p className="whitespace-pre-wrap">{origin.text}</p>
-              <Markdown text={origin.answer} />
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
@@ -977,5 +910,91 @@ function ChangeComparison({
         </div>
       ))}
     </div>
+  )
+}
+
+function checklistDraft(
+  object: Checklist,
+  task: ChecklistTask | undefined,
+  newTask: boolean
+): Draft {
+  return {
+    baseTitle: object.title,
+    baseNotes: object.notes,
+    revision: object.revision,
+    task,
+    newTask,
+    title: task?.title ?? (newTask ? "" : object.title),
+    notes: task?.notes ?? (newTask ? "" : object.notes),
+    status: task?.status ?? "pending",
+    dueDate: task?.dueDate ?? "",
+  }
+}
+
+function ChecklistOrigin({
+  object,
+  agentId,
+  id,
+}: {
+  object: Checklist
+  agentId: string
+  id: string
+}) {
+  const [origin, setOrigin] = useState<OriginConversation | null>(null),
+    [originError, setOriginError] = useState("")
+  return (
+    <>
+      {object.origin.turnId ? (
+        <Button
+          variant="link"
+          className="h-auto justify-start p-0"
+          onClick={() => {
+            void agentApi(agentId)(`objects/${id}/origin`)
+              .then((value) => {
+                setOrigin(Schema.decodeUnknownSync(OriginConversation)(value))
+                setOriginError("")
+              })
+              .catch(() =>
+                setOriginError(
+                  "Could not open the originating conversation. Try again."
+                )
+              )
+          }}
+        >
+          From the conversation
+          <ArrowUpRight data-icon="inline-end" />
+        </Button>
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          Created in the workbench.
+        </p>
+      )}
+      {originError && (
+        <p role="alert" className="text-sm text-destructive">
+          {originError}
+        </p>
+      )}
+      <Dialog
+        open={!!origin}
+        onOpenChange={(open) => {
+          if (!open) setOrigin(null)
+        }}
+      >
+        <DialogContent className="max-h-[85dvh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Originating conversation</DialogTitle>
+            <DialogDescription>
+              {origin ? new Date(origin.createdAt).toLocaleString() : ""}
+            </DialogDescription>
+          </DialogHeader>
+          {origin && (
+            <div className="flex min-w-0 flex-col gap-5">
+              <p className="whitespace-pre-wrap">{origin.text}</p>
+              <Markdown text={origin.answer} />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }

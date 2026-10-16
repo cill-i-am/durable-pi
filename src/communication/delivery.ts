@@ -1,7 +1,8 @@
-import { preserveFatal, observeCleanup } from "../shared/effect"
 import { Clock, Effect, Random } from "effect"
-import { Mailbox, MailboxTransport } from "./mailbox"
+
+import { preserveFatal, observeCleanup } from "../shared/effect"
 import { failure, type Envelope, type CommunicationError } from "./contracts"
+import { Mailbox, MailboxTransport } from "./mailbox"
 
 export const receive = Effect.fn("communication.receive")(function* (
   envelope: Envelope,

@@ -1,17 +1,18 @@
 import { eq } from "drizzle-orm"
 import { Effect, Schema } from "effect"
+
 import {
   mapSqliteError,
   type Sqlite,
   type EffectSqliteDatabase,
 } from "../../storage/sqlite"
-import type { AgentProfile } from "../domain"
-import { AgentConflict, AgentStorageError } from "../domain"
 import {
   AgentConfiguration,
   configurationChange,
   type ConfigurationLedger,
 } from "../configuration"
+import type { AgentProfile } from "../domain"
+import { AgentConflict, AgentStorageError } from "../domain"
 import { botAdmission, botConfiguration } from "./schema"
 
 export class BotConfigurationStore implements ConfigurationLedger {

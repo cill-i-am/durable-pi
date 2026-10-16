@@ -1,4 +1,5 @@
 import type { Effect, Scope, Stream } from "effect"
+
 import type { WorkspaceUnavailable } from "./files"
 
 export interface WorkspaceAsset {

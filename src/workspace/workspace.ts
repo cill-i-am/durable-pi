@@ -1,5 +1,5 @@
 import { Context, type Effect, type Scope, type Stream } from "effect"
-import type { VideoResult } from "./video"
+
 import type {
   AttachmentContent,
   FileError,
@@ -8,6 +8,7 @@ import type {
   Upload,
   WorkspaceUnavailable,
 } from "./files"
+import type { VideoResult } from "./video"
 
 export type FileContent = {
   info: FileInfo

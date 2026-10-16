@@ -1,4 +1,5 @@
 import type { Effect } from "effect"
+
 import type { InferenceUsage } from "../usage"
 import type { Attempt, TerminalOutcome, UsageReport } from "../usage-domain"
 

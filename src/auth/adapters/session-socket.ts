@@ -71,8 +71,10 @@ export function bindSessionSocket(
       closeSafely()
     }
   }
-  const fromBrowser = (event: MessageEvent) => forward(upstream, event.data)
-  const fromUpstream = (event: MessageEvent) => forward(browser, event.data)
+  const fromBrowser = (event: MessageEvent<string | ArrayBuffer>) =>
+    forward(upstream, event.data)
+  const fromUpstream = (event: MessageEvent<string | ArrayBuffer>) =>
+    forward(browser, event.data)
   const disconnected = () => closeSafely()
   browser.addEventListener("message", fromBrowser)
   upstream.addEventListener("message", fromUpstream)

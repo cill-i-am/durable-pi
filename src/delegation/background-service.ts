@@ -1,4 +1,6 @@
 import { Context, Effect, Layer, Schema } from "effect"
+
+import type { ConversationFailure } from "../conversations/turns"
 import { preserveFatal } from "../shared/effect"
 import { backgroundBrief } from "./background"
 import {
@@ -7,7 +9,6 @@ import {
   requireReportOwner,
   type BackgroundAuthority,
 } from "./background-domain"
-import type { ConversationFailure } from "../conversations/turns"
 import type {
   BackgroundStorageError,
   BackgroundLedger,
@@ -112,7 +113,7 @@ export function makeBackgroundDelegation(
   })
   return {
     read,
-    list: Effect.fn("Background.list")(function* (offset = 0) {
+    list: Effect.fn("Background.list")(function* (offset: number = 0) {
       const rows = yield* mailbox.list(offset)
       return yield* Effect.forEach(rows, (row) => read(row.id), {
         concurrency: 2,

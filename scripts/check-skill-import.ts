@@ -1,8 +1,10 @@
 import assert from "node:assert/strict"
+
 import { Effect, Schema } from "effect"
+
+import { remoteTool } from "../src/access/adapters/remote-tool"
 import { importSkillsRequest } from "../src/skills/adapters/hosted"
 import { Skill, SaveSkill, SkillSelection } from "../src/skills/contracts"
-import { remoteTool } from "../src/access/adapters/remote-tool"
 
 const origin = "http://localhost:1337"
 assert.equal(process.env.OWNER_EMAIL, "workspace-test@example.com")

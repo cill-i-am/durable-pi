@@ -1,29 +1,31 @@
-import { Effect } from "effect"
-import { expect, it } from "vitest"
 import { mkdtemp, rm } from "node:fs/promises"
-import { join } from "node:path"
 import { tmpdir } from "node:os"
-import { renderToStaticMarkup } from "react-dom/server"
+import { join } from "node:path"
+
 import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context"
-import {
-  Harness,
-  createRegistry,
-  watchEvents,
-} from "@earendil-works/pi-durable"
-import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
 import {
   createModels,
   fauxProvider,
   fauxAssistantMessage,
   fauxToolCall,
 } from "@earendil-works/pi-ai"
-import { makeApps } from "../src/apps/service"
-import { AppStore } from "../src/apps/adapters/sqlite"
-import { appTools } from "../src/apps/adapters/pi"
-import { AccessStore } from "../src/access/adapters/sqlite"
-import { AccessGate } from "../src/access/gate"
+import {
+  Harness,
+  createRegistry,
+  watchEvents,
+} from "@earendil-works/pi-durable"
+import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
+import { Effect } from "effect"
+import { renderToStaticMarkup } from "react-dom/server"
+import { expect, it } from "vitest"
+
 import { guardedTools } from "../src/access/adapters/pi"
+import { AccessStore } from "../src/access/adapters/sqlite"
 import { builtInTools } from "../src/access/contracts"
+import { AccessGate } from "../src/access/gate"
+import { appTools } from "../src/apps/adapters/pi"
+import { AppStore } from "../src/apps/adapters/sqlite"
+import { makeApps } from "../src/apps/service"
 import { piTimeline } from "../src/conversations/adapters/pi-timeline"
 import { TurnActivity } from "../src/features/conversation/turn-activity"
 import { database } from "./database"

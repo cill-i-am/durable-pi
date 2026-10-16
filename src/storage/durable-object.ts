@@ -11,9 +11,10 @@ import {
   Schema,
 } from "effect"
 import { classifySqliteError, SqlError } from "effect/sql/SqlError"
+
+import { fatalCause } from "../shared/effect"
 import { assertSqliteAccess, makeSqlite, SqliteTransaction } from "./effect"
 import type { Sqlite } from "./sqlite"
-import { fatalCause } from "../shared/effect"
 
 export class SqliteTransactionSuspended extends Schema.TaggedError<SqliteTransactionSuspended>()(
   "SqliteTransactionSuspended",
@@ -113,20 +114,24 @@ export function makeDurableObjectSqlite(storage: DurableObjectStorage) {
     const owner = {}
     const sql = new Proxy(storage.sql, {
       get(target, key) {
-        const member = Reflect.get(target, key, target)
+        const member: unknown = Reflect.get(target, key, target)
         if (key === "exec")
           return (...args: unknown[]) => {
             assertSqliteAccess(owner)
-            return Reflect.apply(member, target, args)
+            return Reflect.apply(target.exec, target, args) as unknown
           }
-        return typeof member === "function" ? member.bind(target) : member
+        return typeof member === "function"
+          ? (member.bind(target) as unknown)
+          : member
       },
     })
     const guarded = new Proxy(storage, {
       get(target, key) {
         if (key === "sql") return sql
-        const member = Reflect.get(target, key, target)
-        return typeof member === "function" ? member.bind(target) : member
+        const member: unknown = Reflect.get(target, key, target)
+        return typeof member === "function"
+          ? (member.bind(target) as unknown)
+          : member
       },
     })
     const services = yield* Layer.build(Driver.layer({ storage: guarded }))

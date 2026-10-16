@@ -1,6 +1,8 @@
-import { preserveFatal } from "../../shared/effect"
 import { Effect, Schema } from "effect"
+
+import { preserveFatal } from "../../shared/effect"
 import type { AgentCatalog } from "../catalog"
+import { CreateAgent, UpdateAgent, ArchiveAgent } from "../contracts"
 import {
   AgentConflict,
   type AgentId,
@@ -8,7 +10,6 @@ import {
   type AgentError,
   type AgentSynchronizationError,
 } from "../domain"
-import { CreateAgent, UpdateAgent, ArchiveAgent } from "../contracts"
 
 class AgentRequestInvalid extends Schema.TaggedError<AgentRequestInvalid>()(
   "AgentRequestInvalid",

@@ -47,15 +47,15 @@ Severity applies to the observed baseline. All findings below are consolidated r
 
 Ratios use the actual rendered foreground/background, including the selected surface, not inferred token names.
 
-| Pair | Ratio |
-| --- | --- |
-| Light body #28282c / white | 14.68:1 |
-| Light secondary #67676f / white | 5.61:1 |
-| Light selected navigation #535fc6 / #ebebef | 4.62:1 |
-| Dark body #ededef / #242427 | 13.24:1 |
-| Dark secondary #a0a0aa / #242427 | 5.97:1 |
-| New light input border #8b8b95 / terminal #18181b | 5.25:1 |
-| New dark input border #73737c / terminal #18181b | 3.77:1 |
+| Pair                                              | Ratio   |
+| ------------------------------------------------- | ------- |
+| Light body #28282c / white                        | 14.68:1 |
+| Light secondary #67676f / white                   | 5.61:1  |
+| Light selected navigation #535fc6 / #ebebef       | 4.62:1  |
+| Dark body #ededef / #242427                       | 13.24:1 |
+| Dark secondary #a0a0aa / #242427                  | 5.97:1  |
+| New light input border #8b8b95 / terminal #18181b | 5.25:1  |
+| New dark input border #73737c / terminal #18181b  | 3.77:1  |
 
 No palette replacement was warranted by these measurements. Borders separating decorative regions keep their quieter semantic token. Security consequences, run limits, confirmation copy, approval controls and raw execution evidence remain intact.
 

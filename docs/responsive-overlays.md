@@ -48,7 +48,6 @@ References: [Base UI Drawer](https://base-ui.com/react/components/drawer), [shad
 
 Parent sizing: retain the parent’s own layout (`height: 100%` for panels, content height for menus) while a nested drawer is open. Do not assign a measured drawer height or `--drawer-frontmost-height` to the parent: a short menu would collapse a full-height Settings or navigation drawer. Verify parent geometry and retained scroll position before, during and after opening shorter children, not just the visible child and focus return.
 
-
 ### Selected workbench treatment — 13 October 2026
 
 The selected design uses a document toolbar rather than a second navigation sidebar. One labelled Select names the current tool and exposes all nine destinations. Desktop Browser, Terminal, Files, Apps and Activity shortcuts are native resource links, with an active state and Base UI tooltips on hover or keyboard focus. On a narrow desktop panel, the last two shortcuts yield to the Select instead of crowding the toolbar. The tool picker remains available at every width.

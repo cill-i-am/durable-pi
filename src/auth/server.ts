@@ -1,12 +1,14 @@
-import { ownerSession } from "./owner-session"
 import { betterAuth, type BetterAuthOptions } from "better-auth"
+import { drizzleAdapter } from "better-auth/adapters/drizzle"
 import { APIError, createAuthMiddleware, isAPIError } from "better-auth/api"
 import { twoFactor } from "better-auth/plugins"
-import { drizzleAdapter } from "better-auth/adapters/drizzle"
 import { drizzle } from "drizzle-orm/d1"
+import { Schema } from "effect"
+
 import type { WebsiteEnv } from "../../alchemy.run"
-import * as schema from "./schema"
+import { ownerSession } from "./owner-session"
 import { passwordResetEmail, PASSWORD_RESET_SECONDS } from "./password-email"
+import * as schema from "./schema"
 
 export function createAuth(
   env: WebsiteEnv,
@@ -42,7 +44,9 @@ export function authOptions(
       before: createAuthMiddleware(async (ctx) => {
         if (
           ctx.path.startsWith("/two-factor/") &&
-          ctx.body?.trustDevice === true
+          Schema.is(Schema.Struct({ trustDevice: Schema.Literal(true) }))(
+            ctx.body
+          )
         )
           throw new APIError("BAD_REQUEST", {
             code: "TRUST_DEVICE_DISABLED",

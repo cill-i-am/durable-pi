@@ -1,17 +1,19 @@
-import { useEffect, useState } from "react"
 import { ArrowUpRight, Plug, RefreshCw, X } from "lucide-react"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { useEffect, useState } from "react"
+
 import { SettingsSection } from "@/components/settings-section"
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
+import { Button, buttonVariants } from "@/components/ui/button"
 import {
   Empty,
   EmptyHeader,
   EmptyTitle,
   EmptyDescription,
 } from "@/components/ui/empty"
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
+
 import { useConnections } from "./use-connections"
 
 const newDraft = () => ({

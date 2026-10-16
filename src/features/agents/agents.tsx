@@ -1,10 +1,4 @@
-import { markReady } from "@/features/performance"
 import { Link } from "@tanstack/react-router"
-import {
-  workspaceDestination,
-  type WorkspaceSearch,
-} from "@/navigation/workspace"
-import { useCallback, useEffect, useReducer, useRef, useState } from "react"
 import { Schema } from "effect"
 import {
   Archive,
@@ -19,35 +13,19 @@ import {
   Settings2,
   Undo2,
 } from "lucide-react"
+import { useCallback, useEffect, useReducer, useRef, useState } from "react"
+
 import {
   AgentList,
   AgentProfile,
   type AgentId,
   homeAgentId,
 } from "@/agents/contracts"
-import { api } from "@/http/client"
-import { catalogReducer, initialCatalog } from "./catalog-state"
+import { authClient } from "@/auth/client"
 import { AgentMark, agentTone } from "@/components/agent-mark"
 import { AgentStatusMarker, agentStatusLabel } from "@/components/agent-status"
-import type { RuntimeStatus } from "@/conversations/status"
-import { authClient } from "@/auth/client"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import {
-  Field,
-  FieldGroup,
-  FieldLabel,
-  FieldDescription,
-} from "@/components/ui/field"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet"
+import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -57,6 +35,20 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
+import {
+  Field,
+  FieldGroup,
+  FieldLabel,
+  FieldDescription,
+} from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet"
 import {
   Sidebar,
   SidebarHeader,
@@ -71,6 +63,16 @@ import {
   SidebarInput,
   useSidebar,
 } from "@/components/ui/sidebar"
+import { Textarea } from "@/components/ui/textarea"
+import type { RuntimeStatus } from "@/conversations/status"
+import { markReady } from "@/features/performance"
+import { api } from "@/http/client"
+import {
+  workspaceDestination,
+  type WorkspaceSearch,
+} from "@/navigation/workspace"
+
+import { catalogReducer, initialCatalog } from "./catalog-state"
 
 export function useAgentCatalog(ownerId: string, selectedId?: AgentId) {
   const [state, dispatch] = useReducer(catalogReducer, initialCatalog)

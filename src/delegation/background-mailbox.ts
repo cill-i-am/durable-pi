@@ -1,16 +1,19 @@
 import { Clock, Context, Effect, Schema } from "effect"
+
 import { type ConversationFailure } from "../conversations/turns"
 import { BackgroundHandoff } from "./background"
-import { DelegationFailure, type DelegateInput, type Group } from "./contracts"
-import { DURATION_MS, type DelegationSource } from "./delegation"
+import * as Domain from "./background-domain"
 import {
   BackgroundStorageError,
   type BackgroundLedger,
 } from "./background-ledger"
-import * as Domain from "./background-domain"
+import { DelegationFailure, type DelegateInput, type Group } from "./contracts"
+import { DURATION_MS, type DelegationSource } from "./delegation"
 
 export type BackgroundError =
-  DelegationFailure | BackgroundStorageError | ConversationFailure
+  | DelegationFailure
+  | BackgroundStorageError
+  | ConversationFailure
 export interface BackgroundAdmission {
   readonly transactionGroup: object
   readonly admit: (
@@ -55,7 +58,7 @@ export function makeBackgroundMailbox(
     })
   return {
     get: Effect.fn("BackgroundMailbox.get")((id: number) => records.get(id)),
-    list: Effect.fn("BackgroundMailbox.list")((offset = 0) =>
+    list: Effect.fn("BackgroundMailbox.list")((offset: number = 0) =>
       records.list(offset)
     ),
     create: Effect.fn("BackgroundMailbox.create")(function* (

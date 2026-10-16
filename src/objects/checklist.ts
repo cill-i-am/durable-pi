@@ -1,4 +1,5 @@
 import { Schema } from "effect"
+
 import {
   Checklist,
   ObjectFailure,
@@ -85,83 +86,7 @@ export function changeChecklist(
         message: "Restore this checklist before changing it.",
       })
     value = { ...current, tasks: current.tasks.map((task) => ({ ...task })) }
-    const record = (
-      taskId: string | null,
-      field: string,
-      before: unknown,
-      after: unknown
-    ) => {
-      if (before !== after)
-        changes.push({
-          taskId,
-          field,
-          before: before === null ? null : String(before),
-          after: after === null ? null : String(after),
-        })
-    }
-    for (const change of input.action.changes) {
-      switch (change.type) {
-        case "edit":
-          if (change.title !== undefined) {
-            record(null, "title", value.title, change.title)
-            value = { ...value, title: change.title }
-          }
-          if (change.notes !== undefined) {
-            record(null, "notes", value.notes, change.notes)
-            value = { ...value, notes: change.notes }
-          }
-          break
-        case "archive":
-          record(null, "archived", value.archived, change.archived)
-          value = { ...value, archived: change.archived }
-          break
-        case "add_task": {
-          if (value.tasks.some((task) => task.id === change.task.id))
-            throw new ObjectFailure({
-              code: "conflict",
-              message:
-                "This task ID is already in use, including archived tasks.",
-            })
-          const task = { ...change.task, archived: false }
-          value = { ...value, tasks: [...value.tasks, task] }
-          changes.push({
-            taskId: task.id,
-            field: "added",
-            before: null,
-            after: JSON.stringify(task),
-          })
-          break
-        }
-        case "edit_task": {
-          const task = value.tasks.find((item) => item.id === change.taskId)
-          if (!task)
-            throw new ObjectFailure({
-              code: "not_found",
-              message: "This task is unavailable in this checklist.",
-            })
-          if (
-            task.archived &&
-            (Object.keys(change.patch).length !== 1 ||
-              change.patch.archived !== false)
-          )
-            throw new ObjectFailure({
-              code: "read_only",
-              message: "Restore this task before editing it.",
-            })
-          for (const field of Object.keys(
-            change.patch
-          ) as (keyof typeof change.patch)[])
-            record(task.id, field, task[field], change.patch[field])
-          const updated: ChecklistTask = { ...task, ...change.patch }
-          value = {
-            ...value,
-            tasks: value.tasks.map((item) =>
-              item.id === task.id ? updated : item
-            ),
-          }
-        }
-      }
-    }
+    value = applyChecklistChanges(value, input.action.changes, changes)
     if (changes.length)
       value = {
         ...value,
@@ -177,4 +102,89 @@ export function changeChecklist(
         "A checklist supports 100 tasks and 180,000 characters, including archived tasks.",
     })
   return { value: Schema.decodeUnknownSync(Checklist)(value), changes }
+}
+
+function applyChecklistChanges(
+  value: Checklist,
+  edits: Exclude<ObjectMutation["action"], { type: "create" }>["changes"],
+  changes: FieldChange[]
+): Checklist {
+  const record = (
+    taskId: string | null,
+    field: string,
+    before: unknown,
+    after: unknown
+  ) => {
+    if (before !== after)
+      changes.push({
+        taskId,
+        field,
+        before: before === null ? null : String(before),
+        after: after === null ? null : String(after),
+      })
+  }
+  for (const change of edits) {
+    switch (change.type) {
+      case "edit":
+        if (change.title !== undefined) {
+          record(null, "title", value.title, change.title)
+          value = { ...value, title: change.title }
+        }
+        if (change.notes !== undefined) {
+          record(null, "notes", value.notes, change.notes)
+          value = { ...value, notes: change.notes }
+        }
+        break
+      case "archive":
+        record(null, "archived", value.archived, change.archived)
+        value = { ...value, archived: change.archived }
+        break
+      case "add_task": {
+        if (value.tasks.some((task) => task.id === change.task.id))
+          throw new ObjectFailure({
+            code: "conflict",
+            message:
+              "This task ID is already in use, including archived tasks.",
+          })
+        const task = { ...change.task, archived: false }
+        value = { ...value, tasks: [...value.tasks, task] }
+        changes.push({
+          taskId: task.id,
+          field: "added",
+          before: null,
+          after: JSON.stringify(task),
+        })
+        break
+      }
+      case "edit_task": {
+        const task = value.tasks.find((item) => item.id === change.taskId)
+        if (!task)
+          throw new ObjectFailure({
+            code: "not_found",
+            message: "This task is unavailable in this checklist.",
+          })
+        if (
+          task.archived &&
+          (Object.keys(change.patch).length !== 1 ||
+            change.patch.archived !== false)
+        )
+          throw new ObjectFailure({
+            code: "read_only",
+            message: "Restore this task before editing it.",
+          })
+        for (const field of Object.keys(
+          change.patch
+        ) as (keyof typeof change.patch)[])
+          record(task.id, field, task[field], change.patch[field])
+        const updated: ChecklistTask = { ...task, ...change.patch }
+        value = {
+          ...value,
+          tasks: value.tasks.map((item) =>
+            item.id === task.id ? updated : item
+          ),
+        }
+      }
+    }
+  }
+  return value
 }

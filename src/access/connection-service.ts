@@ -1,5 +1,13 @@
-import { preserveFatal, observeCleanup } from "../shared/effect"
 import { Schema, Context, Deferred, Effect, Layer, Semaphore } from "effect"
+
+import { preserveFatal, observeCleanup } from "../shared/effect"
+import type { ConnectionClient } from "./connection-client"
+import {
+  describeConnection,
+  requireActiveConnection,
+  requireToolGeneration,
+} from "./connection-domain"
+import type { ConnectionLedger, ConnectionFailure } from "./connection-ledger"
 import {
   ConnectionError,
   ConnectionStorageError,
@@ -9,13 +17,6 @@ import {
   type RemoteTool,
   type RemoteToolResult,
 } from "./connections"
-import type { ConnectionLedger, ConnectionFailure } from "./connection-ledger"
-import type { ConnectionClient } from "./connection-client"
-import {
-  describeConnection,
-  requireActiveConnection,
-  requireToolGeneration,
-} from "./connection-domain"
 
 type OperationError = ConnectionFailure | ConnectionTransportError
 export interface RemoteConnectionOperations {

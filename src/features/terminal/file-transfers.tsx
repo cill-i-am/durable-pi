@@ -1,13 +1,8 @@
-import { useEffect, useRef, useState } from "react"
 import { ArrowDownToLine, ArrowUpFromLine } from "lucide-react"
-import { useFiles, uploadFile } from "@/features/files"
-import { agentUrl, errorMessage } from "@/http/client"
-import type { CommandRun } from "@/terminal/contracts"
-import { exportPlan, MAX_TRANSFER_BYTES } from "@/terminal/transfers"
-import { Button, buttonVariants } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { useEffect, useRef, useState } from "react"
+
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Button, buttonVariants } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -15,6 +10,12 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
+import { useFiles, uploadFile } from "@/features/files"
+import { agentUrl, errorMessage } from "@/http/client"
+import type { CommandRun } from "@/terminal/contracts"
+import { exportPlan, MAX_TRANSFER_BYTES } from "@/terminal/transfers"
 
 export function FileTransfers({
   agentId,

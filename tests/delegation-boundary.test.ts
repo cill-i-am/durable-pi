@@ -1,19 +1,19 @@
-import { expect, expectTypeOf, it } from "@effect/vitest"
-import { it as test, vi } from "vitest"
-import { Cause, Clock, Context, Effect, Exit, Fiber } from "effect"
-import { TestClock } from "effect/testing"
 import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context"
+import { createModels } from "@earendil-works/pi-ai"
 import {
   Harness,
   createRegistry,
   defineDocFamily,
 } from "@earendil-works/pi-durable"
 import { MemoryStorage } from "@earendil-works/pi-durable/storage/memory"
-import { createModels } from "@earendil-works/pi-ai"
-import { piDelegationLedger } from "../src/delegation/adapters/pi"
-import { delegationNative } from "../src/delegation/adapters/interop"
+import { expect, expectTypeOf, it } from "@effect/vitest"
+import { Cause, Clock, Context, Effect, Exit, Fiber } from "effect"
+import { TestClock } from "effect/testing"
+import { it as test, vi } from "vitest"
+
 import { delegationsRequest } from "../src/delegation/adapters/http"
-import { makeDelegations } from "../src/delegation/service"
+import { delegationNative } from "../src/delegation/adapters/interop"
+import { piDelegationLedger } from "../src/delegation/adapters/pi"
 import { DelegationFailure, type Control } from "../src/delegation/contracts"
 import {
   acceptControl,
@@ -21,6 +21,7 @@ import {
   projectGroup,
   type SavedGroup,
 } from "../src/delegation/domain"
+import { makeDelegations } from "../src/delegation/service"
 import { resolveRoute } from "../src/inference/policy"
 
 const authority = { current: () => true, cancelled: () => false }
@@ -262,7 +263,7 @@ test("interruption joins delayed callback cleanup and restores a late defect bef
             Effect.gen(function* () {
               ;(yield* tx.group(7)).value = group()
               enter()
-              yield* Effect.never
+              return yield* Effect.never
             }).pipe(
               Effect.ensuring(
                 Effect.promise(() => held).pipe(

@@ -1,6 +1,7 @@
 import { Effect, Schema } from "effect"
-import { nativeBytes } from "./stream"
+
 import { preserveFatal } from "./effect"
+import { nativeBytes } from "./stream"
 
 /** Own the bounded reader until read/cancel settlement and lock release. */
 export function requestBytes<TError>(

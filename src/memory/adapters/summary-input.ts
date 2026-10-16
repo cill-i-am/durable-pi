@@ -1,9 +1,10 @@
-import { preserveFatal } from "../../shared/effect"
 import { Schema, Effect } from "effect"
+
 import { AgentConflict, AgentStorageError } from "../../agents/domain"
 import { ConversationExecutionError } from "../../conversations/execution"
 import { ConversationStorageError } from "../../conversations/turns"
 import { ModelUnavailable } from "../../inference/policy"
+import { preserveFatal } from "../../shared/effect"
 import { InvalidMemory, MemoryNotReady, MemoryStorageError } from "../domain"
 import { SummaryFailure } from "../summary-model"
 

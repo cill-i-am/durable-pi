@@ -1,14 +1,15 @@
-import { preserveFatal } from "../../shared/effect"
 import { Effect, Schema } from "effect"
-import type { SkillError } from "../repository"
+
 import type {
   ConnectionError,
   ConnectionStorageError,
   ConnectionTransportError,
 } from "../../access/connections"
-import type { Skills } from "../service"
-import { ArchiveSkill, SaveSkill, SkillId, SkillConflict } from "../contracts"
+import { preserveFatal } from "../../shared/effect"
 import { jsonRequest } from "../../shared/http"
+import { ArchiveSkill, SaveSkill, SkillId, SkillConflict } from "../contracts"
+import type { SkillError } from "../repository"
+import type { Skills } from "../service"
 
 export const readSkillJson = (request: Request) =>
   jsonRequest(

@@ -1,18 +1,19 @@
-import { expect, it } from "vitest"
 import { Effect, Schema } from "effect"
-import { database } from "./database"
-import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
+import { expect, it } from "vitest"
+
+import { toolOperations } from "../src/access/adapters/schema"
 import { AccessStore } from "../src/access/adapters/sqlite"
-import { SqliteBackgroundMailbox } from "../src/delegation/adapters/background-mailbox"
-import { activityEntries } from "../src/activity/adapters/sqlite-entries"
-import { activityFeed } from "../src/activity/feed"
-import { activityPage, type ActivityQuery } from "../src/activity/contracts"
 import { activityQuery } from "../src/activity/adapters/http"
+import { activityEntries } from "../src/activity/adapters/sqlite-entries"
+import { activityPage, type ActivityQuery } from "../src/activity/contracts"
+import { activityFeed } from "../src/activity/feed"
 import { ActivityUnavailable } from "../src/activity/records"
 import { AgentId } from "../src/agents/domain"
 import { chatTurns } from "../src/conversations/adapters/schema"
-import { toolOperations } from "../src/access/adapters/schema"
+import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
+import { SqliteBackgroundMailbox } from "../src/delegation/adapters/background-mailbox"
 import { backgroundHandoffs } from "../src/delegation/adapters/schema"
+import { database } from "./database"
 
 const bot = { id: Schema.decodeUnknownSync(AgentId)("home"), name: "Home" }
 const query: ActivityQuery = { filter: "all", cursor: null }

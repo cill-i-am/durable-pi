@@ -1,10 +1,5 @@
-import { FilePicker, UploadStatus } from "./upload-controls"
 import { Link } from "@tanstack/react-router"
-import { parseAgentId, workspaceDestination } from "@/navigation/workspace"
-import { Markdown } from "@/components/markdown"
 import { Schema } from "effect"
-import { VideoResult } from "@/workspace/video"
-import { useEffect, useRef, useState } from "react"
 import {
   Plus,
   ChevronDown,
@@ -18,27 +13,34 @@ import {
   RotateCcw,
   Trash2,
 } from "lucide-react"
-import { agentApi, agentUrl } from "@/http/client"
-import type { FileInfo } from "@/workspace/files"
+import { useEffect, useRef, useState } from "react"
+
+import { Markdown } from "@/components/markdown"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Button, buttonVariants } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"
-import { Button, buttonVariants } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Field, FieldLabel } from "@/components/ui/field"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   Empty,
   EmptyHeader,
   EmptyTitle,
   EmptyDescription,
 } from "@/components/ui/empty"
+import { Field, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { attachmentReady, fileDescription, legacyPdf } from "./preparation"
+import { agentApi, agentUrl } from "@/http/client"
+import { parseAgentId, workspaceDestination } from "@/navigation/workspace"
+import type { FileInfo } from "@/workspace/files"
+import { VideoResult } from "@/workspace/video"
+
 import { fileSize } from "./file-attachments"
+import { attachmentReady, fileDescription, legacyPdf } from "./preparation"
+import { FilePicker, UploadStatus } from "./upload-controls"
 import type { FilesState } from "./use-files"
 
 export { FilePicker, UploadStatus } from "./upload-controls"
@@ -137,18 +139,7 @@ export function FilesWorkbench({
           <p className="text-sm text-muted-foreground">Loading files…</p>
         )}
         {!state.loading && !visible.length && (
-          <Empty>
-            <EmptyHeader>
-              <EmptyTitle>
-                {tab === "trash" ? "Trash is empty" : "A place for the context"}
-              </EmptyTitle>
-              <EmptyDescription>
-                {tab === "trash"
-                  ? "Removed files can be restored here."
-                  : "Upload images, notes, documents, or a video. Attach up to four files to a message."}
-              </EmptyDescription>
-            </EmptyHeader>
-          </Empty>
+          <EmptyFileCollection collection={tab} />
         )}
         {!!visible.length && (
           <div className="file-explorer">
@@ -488,7 +479,7 @@ function FilePreview({
       ) : /\.md(?:own)?$/i.test(file.name) && loaded && !error ? (
         <Tabs
           value={view}
-          onValueChange={(value) => {
+          onValueChange={(value: unknown) => {
             if (value === "preview" || value === "source") onViewChange(value)
           }}
           className="file-text-preview"
@@ -586,5 +577,28 @@ function VideoPreview({ file, agentId }: { file: FileInfo; agentId: string }) {
         </>
       )}
     </figure>
+  )
+}
+
+function EmptyFileCollection({
+  collection,
+}: {
+  collection: "files" | "trash"
+}) {
+  return (
+    <Empty>
+      <EmptyHeader>
+        <EmptyTitle>
+          {collection === "trash"
+            ? "Trash is empty"
+            : "A place for the context"}
+        </EmptyTitle>
+        <EmptyDescription>
+          {collection === "trash"
+            ? "Removed files can be restored here."
+            : "Upload images, notes, documents, or a video. Attach up to four files to a message."}
+        </EmptyDescription>
+      </EmptyHeader>
+    </Empty>
   )
 }

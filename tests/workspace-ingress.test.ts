@@ -1,15 +1,16 @@
-import { expect, it } from "vitest"
 import { Cause, Effect, Exit, Layer } from "effect"
+import { expect, it } from "vitest"
+
 import { documentService } from "../src/workspace/adapters/document-service"
-import { videoService } from "../src/workspace/adapters/video-service"
 import { filesRequest } from "../src/workspace/adapters/http"
-import { Workspace } from "../src/workspace/workspace"
-import { makeWorkspace } from "../src/workspace/service"
-import { SqliteWorkspace } from "../src/workspace/adapters/sqlite"
 import { r2WorkspaceAssets } from "../src/workspace/adapters/r2"
+import { SqliteWorkspace } from "../src/workspace/adapters/sqlite"
+import { videoService } from "../src/workspace/adapters/video-service"
 import type { DocumentUnreadable } from "../src/workspace/documents"
-import type { VideoUnreadable } from "../src/workspace/video"
 import { WorkspaceUnavailable } from "../src/workspace/files"
+import { makeWorkspace } from "../src/workspace/service"
+import type { VideoUnreadable } from "../src/workspace/video"
+import { Workspace } from "../src/workspace/workspace"
 import { database } from "./database"
 
 function gate() {

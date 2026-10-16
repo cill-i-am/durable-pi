@@ -1,9 +1,11 @@
-import { runObserved } from "../src/observability/worker"
 import { AsyncLocalStorage } from "node:async_hooks"
+
 import { Effect } from "effect"
 import { beforeEach, expect, it, vi } from "vitest"
-import { inferenceFields, reportHarness } from "../src/observability/events"
+
 import { resolveRoute } from "../src/inference/policy"
+import { inferenceFields, reportHarness } from "../src/observability/events"
+import { runObserved } from "../src/observability/worker"
 
 const native = vi.hoisted(() => ({
   spans: [] as {

@@ -1,25 +1,26 @@
 import { Cause, Schema, type Effect } from "effect"
-import { RunCursor } from "../run"
-import { rpcOutcome } from "../../shared/rpc-outcome"
+
 import {
   AgentFailure,
   agentRpc,
   type AgentRpc,
 } from "../../agents/adapters/rpc"
+import { ACTIVE_AGENTS, agentObjectName } from "../../agents/domain"
 import {
   AccountFailure,
   accountConnectionRpc,
 } from "../../inference/adapters/account-rpc"
+import { nativeObservation } from "../../shared/observation"
+import { rpcOutcome } from "../../shared/rpc-outcome"
 import {
   ActivityAgent,
   ActivityConversation,
   ActivitySnapshot,
   ActivityQuery,
 } from "../contracts"
-import { ActivityUnavailable } from "../records"
 import type { ActivityDirectory } from "../reader"
-import { ACTIVE_AGENTS, agentObjectName } from "../../agents/domain"
-import { nativeObservation } from "../../shared/observation"
+import { ActivityUnavailable } from "../records"
+import { RunCursor } from "../run"
 
 /** A DTO-only native RPC has no cancellation primitive. The observer may stop
  * at its display deadline; the request's ExecutionContext owns the actual RPC

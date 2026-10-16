@@ -1,26 +1,28 @@
-import { useEffect, useState } from "react"
 import { Schema } from "effect"
 import { ArrowRight, RotateCw, Square } from "lucide-react"
-import { MailboxView, terminal, type Task } from "@/communication/contracts"
+import { useEffect, useState } from "react"
+
 import type { ActivityAgent } from "@/activity/contracts"
-import { agentApi } from "@/http/client"
-import { poll } from "@/http/poll"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import { MailboxView, terminal, type Task } from "@/communication/contracts"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+} from "@/components/ui/collapsible"
 import {
   Empty,
   EmptyHeader,
   EmptyTitle,
   EmptyDescription,
 } from "@/components/ui/empty"
-import {
-  Collapsible,
-  CollapsibleTrigger,
-  CollapsibleContent,
-} from "@/components/ui/collapsible"
-import { Skeleton } from "@/components/ui/skeleton"
 import { Separator } from "@/components/ui/separator"
+import { Skeleton } from "@/components/ui/skeleton"
+import { agentApi } from "@/http/client"
+import { poll } from "@/http/poll"
+
 import { ActivityRecord } from "./activity-record"
 
 export function BotTasks({

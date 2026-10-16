@@ -1,19 +1,20 @@
-import { describe, expect, it, vi } from "vitest"
 import { Schema, Effect, Clock, Exit, Cause } from "effect"
-import { RoutineStorageError } from "../src/routines/persistence"
-import {
-  routineFixture,
-  fixtureClock,
-  run as runFixture,
-} from "./routine-fixture"
+import { describe, expect, it, vi } from "vitest"
+
+import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import {
   SaveRoutine,
   followingTime,
   ROUTINE_BUDGET_MS,
 } from "../src/routines/contracts"
-import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
-import { database, corrupt } from "./database"
+import { RoutineStorageError } from "../src/routines/persistence"
 import { routinePump } from "../src/routines/pump"
+import { database, corrupt } from "./database"
+import {
+  routineFixture,
+  fixtureClock,
+  run as runFixture,
+} from "./routine-fixture"
 
 function fixture() {
   const db = database()

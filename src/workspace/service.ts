@@ -1,20 +1,8 @@
 import { Clock, Effect, Layer } from "effect"
-import { Workspace, type AttachmentContent } from "./workspace"
+
 import { WorkspaceAdmission } from "./admission"
-import {
-  FileRejected,
-  WorkspaceReadOnly,
-  WorkspaceUnavailable,
-  MAX_VISION_BYTES,
-  type FileId,
-  type Upload,
-} from "./files"
-import type { WorkspaceLedger } from "./ledger"
 import type { WorkspaceAssets } from "./assets"
 import type { ExtractDocument } from "./documents"
-import type { ExtractVideo } from "./video"
-import { fileAsset, workspacePreparation } from "./preparation"
-import { workspaceOperation as attempt } from "./effects"
 import {
   attachedFileNotice,
   attachedText,
@@ -27,6 +15,19 @@ import {
   workspaceUploadReplay,
   requireTextRange,
 } from "./domain"
+import { workspaceOperation as attempt } from "./effects"
+import {
+  FileRejected,
+  WorkspaceReadOnly,
+  WorkspaceUnavailable,
+  MAX_VISION_BYTES,
+  type FileId,
+  type Upload,
+} from "./files"
+import type { WorkspaceLedger } from "./ledger"
+import { fileAsset, workspacePreparation } from "./preparation"
+import type { ExtractVideo } from "./video"
+import { Workspace, type AttachmentContent } from "./workspace"
 
 const base64 = (bytes: Uint8Array) => {
   let binary = ""

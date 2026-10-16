@@ -1,11 +1,12 @@
 import { Volume2, VolumeX } from "lucide-react"
-import { useInteractionSoundPreference } from "@/hooks/interaction-sound-preference"
+
 import { Button } from "@/components/ui/button"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { useInteractionSoundPreference } from "@/hooks/interaction-sound-preference"
 
 export function InteractionSoundToggle() {
   const { enabled, setEnabled } = useInteractionSoundPreference()

@@ -1,5 +1,7 @@
 import assert from "node:assert/strict"
+
 import { Schema } from "effect"
+
 import { BrowserState, type BrowserAction } from "../src/browser/contracts"
 
 const origin = "http://localhost:1337"

@@ -1,9 +1,10 @@
 import { expect, it } from "@effect/vitest"
 import { Clock, Context, Effect } from "effect"
+
 import { AppStore } from "../src/apps/adapters/sqlite"
-import { makeApps } from "../src/apps/service"
 import { appEventPump } from "../src/apps/pump"
 import type { AppAdmission } from "../src/apps/repository"
+import { makeApps } from "../src/apps/service"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import { database } from "./database"
 

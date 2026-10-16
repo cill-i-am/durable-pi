@@ -1,28 +1,30 @@
-import { expect, it } from "vitest"
 import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { Effect } from "effect"
+
 import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context"
-import {
-  Harness,
-  createRegistry,
-  type ConversationId,
-} from "@earendil-works/pi-durable"
-import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
 import {
   createModels,
   fauxProvider,
   fauxAssistantMessage,
 } from "@earendil-works/pi-ai"
 import {
+  Harness,
+  createRegistry,
+  type ConversationId,
+} from "@earendil-works/pi-durable"
+import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
+import { Effect } from "effect"
+import { expect, it } from "vitest"
+
+import { agentSettings } from "../src/agent/compaction"
+import {
   piBackgroundLedger,
   readBackgroundHandoff,
 } from "../src/delegation/adapters/background-pi"
+import type { BackgroundHandoff } from "../src/delegation/background"
 import { makeBackgroundTasks } from "../src/delegation/background-tasks"
 import { resolveRoute } from "../src/inference/policy"
-import { agentSettings } from "../src/agent/compaction"
-import type { BackgroundHandoff } from "../src/delegation/background"
 
 async function until<T>(read: () => Promise<T>, valid: (value: T) => boolean) {
   for (let i = 0; i < 200; i++) {

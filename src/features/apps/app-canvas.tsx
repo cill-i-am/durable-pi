@@ -1,15 +1,14 @@
-import { WebCanvas } from "./web-canvas"
 import { useId, useState } from "react"
+
 import type {
   AppAction,
   AppBlock,
   AppDefinition,
   AppState,
 } from "@/apps/contracts"
-import { Checkbox } from "@/components/ui/checkbox"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Field,
   FieldGroup,
@@ -17,6 +16,8 @@ import {
   FieldSet,
   FieldLegend,
 } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
+import { Separator } from "@/components/ui/separator"
 import {
   Table,
   TableBody,
@@ -25,8 +26,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Separator } from "@/components/ui/separator"
+import { Textarea } from "@/components/ui/textarea"
+
+import { WebCanvas } from "./web-canvas"
 
 export function AppCanvas({
   definition,

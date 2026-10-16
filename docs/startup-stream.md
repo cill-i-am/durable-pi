@@ -10,14 +10,14 @@ Recovery of the production browser reset its emulation. A separately labelled te
 
 The controlled fixture uses the fully styled workspace and the same synthetic twenty-response activity history, build, server, browser and delays on both sides. Only encoding changes. One warmup per condition is separate; ten AB/BA pairs use the constrained mobile profile. No builds or profiling run during this cohort.
 
-| Measure                                              |           Identity |               Gzip |
-| ---------------------------------------------------- | -----------------: | -----------------: |
-| Median committed-history readiness                   |         4,319.8 ms |         3,698.1 ms |
-| History range                                        | 4,284.0–4,350.8 ms | 3,665.5–3,722.0 ms |
-| Median initial body transfer interval                |           960.0 ms |             6.2 ms |
-| Initial stream bytes, excluding HTTP headers/framing |            190,948 |              3,009 |
-| Decoded bytes                                        |            190,948 |            190,948 |
-| Median browser script time                           |           365.9 ms |           467.2 ms |
+| Measure | Identity | Gzip |
+| --- | --: | --: |
+| Median committed-history readiness | 4,319.8 ms | 3,698.1 ms |
+| History range | 4,284.0–4,350.8 ms | 3,665.5–3,722.0 ms |
+| Median initial body transfer interval | 960.0 ms | 6.2 ms |
+| Initial stream bytes, excluding HTTP headers/framing | 190,948 | 3,009 |
+| Decoded bytes | 190,948 | 190,948 |
+| Median browser script time | 365.9 ms | 467.2 ms |
 
 Readiness improves **621.7 ms (14.4%)** in this fixture. Script time rises by 101.3 ms; the net improvement includes that cost. The fixture is highly compressible and does not predict the production compression ratio or latency gain. Every run retains twenty responses and the composer without overflow. [Numeric samples and exclusions](startup-stream-measurements.json) retain no conversation content, credentials, headers or query strings.
 

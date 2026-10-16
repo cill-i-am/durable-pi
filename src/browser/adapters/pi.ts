@@ -1,4 +1,5 @@
 import { Cause, Effect } from "effect"
+
 import type { BrowserFailure, BrowserObservation } from "../contracts"
 import type { BrowserStorageError } from "../repository"
 

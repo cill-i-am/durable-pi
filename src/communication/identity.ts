@@ -1,4 +1,5 @@
 import { Context, type Effect } from "effect"
+
 import type { CommunicationError } from "./contracts"
 
 /** Stable across retries and adapter changes: the existing continuation UUID

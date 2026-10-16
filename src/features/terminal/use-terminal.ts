@@ -1,5 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from "react"
 import { Schema } from "effect"
+import { useCallback, useEffect, useRef, useState } from "react"
+
+import { agentApi } from "@/http/client"
+import { poll } from "@/http/poll"
 import {
   CommandRun,
   CommandInput,
@@ -8,8 +11,7 @@ import {
   type CommandSummary,
   type InteractiveState,
 } from "@/terminal/contracts"
-import { agentApi } from "@/http/client"
-import { poll } from "@/http/poll"
+
 import { maintainSessionLease, type LeaseState } from "./session-lease"
 
 export function useTerminal(

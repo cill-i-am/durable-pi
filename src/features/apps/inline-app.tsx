@@ -1,7 +1,9 @@
-import { useCallback, useId, useState } from "react"
 import { Schema } from "effect"
+import { useCallback, useId, useState } from "react"
+
 import { AppId, Revision } from "@/apps/contracts"
 import { Button } from "@/components/ui/button"
+
 import { AppView } from "./app-view"
 
 const Reference = Schema.Struct({

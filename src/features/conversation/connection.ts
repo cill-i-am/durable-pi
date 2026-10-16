@@ -1,10 +1,13 @@
+import { EventType, type StreamChunk } from "@tanstack/ai"
 import {
   fetchServerSentEvents,
   type SubscribeConnectionAdapter,
 } from "@tanstack/ai-client"
 import { Schema } from "effect"
+
 import { ConversationCursor, SendInput } from "@/conversations/contracts"
 import { api, agentUrl, ApiError } from "@/http/client"
+
 import { markReady } from "../performance"
 
 export function conversationConnection(
@@ -42,21 +45,14 @@ export function conversationConnection(
           let received = false
           for await (const chunk of stream.joinRun(agentId, signal)) {
             if (signal?.aborted) return
-            if (chunk.type === "MESSAGES_SNAPSHOT") markReady("snapshot")
+            if (chunk.type === EventType.MESSAGES_SNAPSHOT)
+              markReady("snapshot")
             failures = 0
             if (!received)
               yield { type: "CUSTOM", name: "durable-pi.connection", value: "" }
             received = true
-            if (
-              chunk.type === "CUSTOM" &&
-              chunk.name === "durable-pi.cursor" &&
-              typeof chunk.value === "string"
-            ) {
-              const decoded = Schema.decodeUnknownOption(ConversationCursor)(
-                chunk.value
-              )
-              if (decoded._tag === "Some") cursor = decoded.value
-            }
+            const nextCursor = streamCursor(chunk)
+            if (nextCursor) cursor = nextCursor
             yield chunk
           }
           if (!received && !signal?.aborted)
@@ -93,4 +89,15 @@ export function conversationConnection(
       await api(agentUrl(agentId, "send"), input, signal)
     },
   }
+}
+
+function streamCursor(chunk: StreamChunk): ConversationCursor | undefined {
+  if (
+    chunk.type !== "CUSTOM" ||
+    chunk.name !== "durable-pi.cursor" ||
+    typeof chunk.value !== "string"
+  )
+    return undefined
+  const decoded = Schema.decodeUnknownOption(ConversationCursor)(chunk.value)
+  return decoded._tag === "Some" ? decoded.value : undefined
 }

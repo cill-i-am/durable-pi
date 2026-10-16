@@ -12,6 +12,7 @@ import {
 } from "drizzle-orm"
 import { alias } from "drizzle-orm/sqlite-core"
 import { Effect, Schema } from "effect"
+
 import { toolOperations } from "../../access/adapters/schema"
 import { chatTurns } from "../../conversations/adapters/schema"
 import { backgroundHandoffs } from "../../delegation/adapters/schema"
@@ -26,13 +27,13 @@ import {
   substring,
 } from "../../storage/expressions"
 import { mapSqliteError, type Sqlite } from "../../storage/sqlite"
-import { ActivityStorageError } from "../records"
 import {
   ACTIVITY_PAGE_SIZE,
   type ActivityAgent,
   ActivityEntry,
   type ActivityQuery,
 } from "../contracts"
+import { ActivityStorageError } from "../records"
 
 const Row = Schema.Struct({
   key: Schema.String,

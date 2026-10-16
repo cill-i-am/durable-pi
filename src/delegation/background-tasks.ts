@@ -1,9 +1,8 @@
 import { Clock, Context, Effect, Layer, Schema } from "effect"
+
 import { preserveFatal } from "../shared/effect"
 import { BackgroundHandoff } from "./background"
-import { Control, DelegationFailure } from "./contracts"
 import { backgroundRejected } from "./background-domain"
-import type { BackgroundTaskLedger } from "./background-task-ledger"
 import {
   acceptBackgroundControl,
   backgroundChild,
@@ -15,6 +14,8 @@ import {
   stopBackgroundState,
   type BackgroundState,
 } from "./background-task-domain"
+import type { BackgroundTaskLedger } from "./background-task-ledger"
+import { Control, DelegationFailure } from "./contracts"
 
 export interface BackgroundTaskAuthority {
   readonly authorized: (

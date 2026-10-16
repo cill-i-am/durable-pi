@@ -1,7 +1,8 @@
 import { Effect, Schema } from "effect"
+
 import { RuntimeStatus } from "../../conversations/status"
-import { AgentRuntimeUnavailable, type AgentProfile } from "../domain"
 import { nativeObservation } from "../../shared/observation"
+import { AgentRuntimeUnavailable, type AgentProfile } from "../domain"
 
 /** Only detached DTOs cross this display observation; the Worker owns late work. */
 export function agentRuntimeReader(

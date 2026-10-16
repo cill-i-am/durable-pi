@@ -356,12 +356,14 @@ Enable Pi Durable’s built-in automatic compaction for long-running sessions in
 Currently, each new user turn starts a fresh Pi session with an OptChat memory view, but Pi’s automatic compaction is explicitly disabled. A long individual run can therefore accumulate browser output, terminal results, tool calls, and steering messages until it exceeds the available context window.
 
 Keep the responsibilities clear:
+
 - OptChat owns long-term memory, original-message archival, summaries, notes, and retrieval between turns.
 - Pi’s native compaction manages working context within an active run.
 
 Inspect the installed Pi Durable implementation and use its supported configuration and hooks. Keep this a focused integration.
 
 Before choosing thresholds:
+
 - Verify the effective context window for our selected model and ChatGPT subscription connection.
 - Reconcile Pi’s model catalog with current official provider documentation. Establish whether any difference is intentional, connection-specific, or outdated metadata.
 - Do not assume 300k is a universal OpenAI default or increase the configured window solely because the public API advertises a larger maximum.
@@ -369,6 +371,7 @@ Before choosing thresholds:
 - Distinguish Pi’s harness compaction from OpenAI’s server-side compaction. Establish which mechanism owns active-run compaction and avoid accidentally enabling competing policies.
 
 Verify that:
+
 - Long runs compact and continue successfully.
 - Recent steering, user constraints, and pending work survive compaction.
 - Original messages and tool results remain available through the existing archive and retrieval mechanisms.
@@ -383,6 +386,7 @@ Add meaningful integration coverage using a deliberately small context budget to
 Track the work in the existing build tracker, follow our backend domain boundaries, and carry it through the established review and deployment workflow. Report the chosen thresholds and their rationale, plus what was verified locally versus against the hosted app. Then continue the existing roadmap.
 
 Investigation already completed before the ordering correction (no implementation):
+
 - Installed Pi Durable/Pi AI version 1.0.4; app default `gpt-6.1-sol`. Pi's catalog reports 272,000 context tokens and 128,000 maximum output tokens.
 - A read-only request through the production account's single credential-refresh owner to `https://api.openai.com/v1/models` returned `context_window: 272000` and `auto_compact_token_limit: null` for the selected model and the other visible GPT-6/GPT-5.6 choices on 2026-10-11. This confirms a connection-specific difference from the public API model page's 1,050,000 maximum. No inference or private conversation was sent. The temporary authenticated diagnostic Worker was deleted after the check; credentials stayed in Cloudflare.
 - [Subscription model discovery](https://developers.openai.com/siwc/token-sharing-open-source/models-and-inference), [subscription limitations](https://developers.openai.com/siwc/token-sharing-open-source/preview-limitations), [GPT-6.1 Sol API model](https://developers.openai.com/api/docs/models/gpt-6.1-sol), and [provider compaction](https://developers.openai.com/api/docs/guides/compaction) were inspected. The subscription route rejects `max_output_tokens`; do not mistake Pi's configured output budget for an enforced provider cap.
@@ -401,6 +405,7 @@ This is not a separate Plan Mode. Do not introduce a planner agent, plan-approva
 Inspect the existing conversation/run lifecycle and installed Pi Durable APIs first. Use Pi’s supported extension, tool, and durable-state mechanisms where they fit. Follow domain-driven design on the backend and feature-sliced design on the frontend.
 
 The plan should contain:
+
 - The user’s objective and relevant constraints.
 - Observable criteria for completing the request.
 - Concrete steps with pending, active, blocked, or completed status.
@@ -412,6 +417,7 @@ Expose an update_plan tool so the agent can create and revise its plan during ex
 Supply the current plan to subsequent model requests without accumulating repeated full-plan copies in conversation history. Preserve revisions for recovery and inspection. Plans must survive compaction and Durable Object restarts.
 
 Maintain these boundaries:
+
 - Plans never grant permissions or override existing approval requirements.
 - Ask the user only when necessary information is missing or an action requires approval.
 - Agent-reported completion is distinct from verified evidence. Validate evidence references and ownership.
@@ -480,6 +486,7 @@ Keep this focused within the existing architecture. Track it in the build tracke
 Implemented owner catalog, per-bot routing and instructions, shared account credential refresh, archive/restore, and shadcn Base UI navigation. Preserved the original default object and all existing memory routes. Frontend split into auth, agents, conversation and memory features.
 
 Proof (2026-10-10):
+
 - 49 tests passed, including catalog creation/replay/capacity/restore, OAuth refresh coalescing, catalog response ordering and revisioned archive admission across restart.
 - Local workerd protocol check passed: owner login/logout, bot CRUD and replay, input validation, CSRF, isolated memory search/import/export, missing/archived bot rejection and restore.
 - Browser and Worker restart checks passed at desktop and 390×844: create/select/edit/archive/restore, sidebar behavior and scoped conversation. Synthetic account only; no production credential copied.
@@ -494,6 +501,7 @@ Replaced frequent chat polling with an authenticated SSE stream driven by Pi eve
 The frontend renders ordered text, collapsible thinking, tool inputs/results and completed/interrupted states. Only display fields cross the HTTP boundary; provider replay signatures remain private. A single Pi snapshot supplies entries and partial text, avoiding duplicate output at commit. Disclosure IDs remain stable when partial output commits.
 
 Proof (2026-10-11):
+
 - 62 tests passed, including stream deltas/removal, cancellation, bounded buffers, late watcher cleanup, replay-data exclusion, stable disclosure identities and thinking/tool-only terminal states.
 - Local workerd SSE authenticated snapshot/reconnect/logout check passed. Existing model tokens remain absent from the local stage.
 - Read-only reviews identified and resolved hidden terminal status and disclosure remounting; follow-up review passed. Browser checks confirmed expanded thinking/tool details and failed/cancelled status using a synthetic local transcript. Typecheck, lint and production build passed. Delivered in PR #4, main `29b74f7`; production run `38093923092` succeeded.
@@ -506,13 +514,13 @@ A reply owns its steering inputs; a queued follow-up starts a separate Pi sessio
 The composer offers Steer/Queue while working, a durable Stop control and per-bot model/reasoning settings. Uncertain HTTP sends retain their original payload and ID even when live activity changes. Revisioned settings prevent a delayed event stream from reverting a model just saved through the menu. Settings apply to new replies; steers inherit their active reply's settings.
 
 Proof (2026-10-11):
+
 - 74 tests passed. Native Pi with its SQLite adapter and a deterministic provider verified tool-boundary steering, duplicate admission, shutdown/reopen during a pending tool and steer, transcript ordering, completed replay and cancellation with queued input withdrawal. No real model or credentials used.
 - Adapter regressions cover snapshot/receipt ordering, final-output coverage, quiescence and stop before native submission. Store tests cover legacy migration, admission/finish races, durable stop, queue bounds and model snapshotting.
 - Local workerd HTTP check passed: session/origin protection, model validation/persistence, missing bot/turn rejection, offline model boundary and idempotent stop.
 - Browser verified model/reasoning changes, Steer/Queue copy and durable stopping of a synthetic pending correction. At 390×844 there was no horizontal overflow. Synthetic transcript fixtures are not live-model evidence.
 - Backend review found and fixed archive-order and finalization races; frontend review found and fixed uncertain-send duplication and delayed-settings rollback. Follow-up reviews passed. Typecheck, lint and production build passed.
 - No new cloud resource or permission. Delivered in PR #5, main `46b010f`; production run `38095052504` succeeded. Owner's hosted live-model acceptance remains deferred at their request.
-
 
 ### 03a — Private files and image/text attachments
 
@@ -521,6 +529,7 @@ Workspace owns private R2 originals, bounded JPEG model inputs, per-bot metadata
 Images retain their originals (up to 8 MB); the browser derives a JPEG of at most 192 KB for Pi. At most four files can enter one reply, including steers. Captured prompt/input bytes are released from the host turn row on completion because Pi retains its durable transcript. Videos and other binary documents are honestly labelled stored-only until extraction in 03b.
 
 Proof (2026-10-11):
+
 - 84 tests passed, including private namespace isolation, upload interruption/replay/collision, Trash/restore, text ranges, HTML download isolation, archive fences, attachment identity and row-size budget regressions.
 - Native Pi with SQLite and a deterministic provider verified four maximum-size image blocks across initial input, tool-boundary steering, shutdown/reopen and duplicate replay. No live model or production credential used.
 - Local workerd HTTP verification passed for authenticated multipart upload, CSRF, deduplication, immutable ID conflicts, private downloads, safe headers, text ranges, rename, Trash/restore, missing bot and logout.
@@ -528,19 +537,18 @@ Proof (2026-10-11):
 - New Alchemy resource: private `WorkspaceAssets` R2 bucket, bound only to AgentWorker. Existing approved R2 permissions suffice; no new credential or public bucket.
 - Delivered in PR #6, main `2d4f722`; production run `38096362130` succeeded. Live owner/model acceptance remains deferred. PDF extraction and reusable skills are subsequent slices; video processing follows the execution runtime.
 
-
 ### 03b — Durable PDF text extraction
 
 PDF uploads enqueue a durable background extraction job. A private binding-only `DocumentWorker` parses bytes without storage or credential bindings and has a configured 5,000 ms CPU limit. The agent retains originals and extracted text in its private R2 namespace. Extraction reports page coverage, truncation, readable/empty/failed states and supports explicit retry. Only ready text enters attachment context; scanned PDFs honestly require future OCR.
 
 Proof (2026-10-11):
+
 - 93 tests passed, including ordered text, 50-page/200,000-character bounds, malformed/empty PDFs, real parser cleanup after failed loading, interrupted job recovery, three-attempt bounds, legacy upload upgrade/replay, archive fences, and slow polling/unmount.
 - Local workerd checked background extraction across the service binding, private page-labelled text, unchanged original bytes and safe download headers. Browser verified the readable PDF preview in Files.
 - Independent reviews found and resolved parser isolation/cleanup, pre-upgrade PDF MIME compatibility, response-starving polling and polling while in Trash. Focused follow-up reviews passed.
 - CPU enforcement is configured at Cloudflare's Worker boundary; a production CPU-exhaustion fault was not injected. Output and page limits are independently tested. Early PDF.js stream cancellation races its inline worker, so extraction drains the current page inside the isolated Worker before cleanup.
 - New Alchemy resource: `DocumentWorker`, callable only through AgentWorker's service binding. Existing Workers permissions suffice. No owner model credential used in local proof.
 - Typecheck, lint, production build and secret scan passed. Delivered in PR #7, main `0a21a76`; production run `38097238664` succeeded.
-
 
 ### 04a — Versioned reusable skill library
 
@@ -549,13 +557,13 @@ The owner has one private library with immutable Markdown revisions and recovera
 The shadcn/Base UI sheet supports creating/editing, local Markdown import, revision history, restoring an earlier version as a new revision, per-bot selection/update/removal, and archival. Conflicting edits preserve the draft and offer comparison with the latest saved version before the user chooses how to proceed.
 
 Proof (2026-10-11):
+
 - 100 tests passed, including immutable revisions, uncertain-save replay, stale-edit conflicts, state-version fencing for archive/restore, isolated bot pins, archived-skill retention, archive-after-RPC fences, legacy conversation migration, frozen admission/steering context, and maximum Unicode skills alongside image inputs under SQLite's row limit.
 - Local workerd verified authenticated owner library and child-object RPC selection, explicit updates, archival/restoration, stale writes, CSRF and anonymous rejection. No model credential used.
 - Browser verified create → pin v1 → edit v2 → explicit update, persistence after Worker rebuild, mobile history, and two-tab conflict → reload → compare → preserve draft → save new revision. Mobile 390×844 had no horizontal overflow; temporary viewport reset.
 - Independent reviews found and fixed stale archive replay, initial-load mutation races, conflict recovery, draft replacement and late import/history results. Both follow-up reviews passed. Typecheck, lint and production build passed.
 - No new Cloudflare resource or permission. Selected bodies remain private SQLite data, not repository files. Executor-hosted import is 04b, built with the scoped connection/approval path in slice 05; local Markdown import does not claim a live Executor connection.
 - Secret scan passed. Delivered in PR #8, main `308068e`; production run `38098209727` succeeded.
-
 
 ### 05a — Per-bot tool policies and durable approvals
 
@@ -564,6 +572,7 @@ All seven built-in Pi tools pass through the Access context before execution. Ea
 The shadcn/Base UI Tools sheet edits policies; chat displays the action, exact inputs, expiry and Allow once/Deny controls. Successful changes survive older event snapshots. Phone layouts keep the bot identity and status on one row with feature actions below.
 
 Proof (2026-10-11):
+
 - 112 tests passed. Real Pi harness with SQLite and a deterministic model covers restart while waiting, approval exactly once, stop, revocation, interrupted dispatch with explicitly unknown outcome, and a large tool result retained with a truncation diagnostic. No real model credential is used.
 - Operation intent is committed before dispatch, and the bounded returned result is stored before completion. A restart after dispatch but before receipt cannot silently repeat the effect. This deliberately reports an unknown outcome; it does not claim exactly-once delivery by external services.
 - Policy and approval revisions fence stale changes; tests cover expiry, cancellation, fresh approval rounds and frontend reconciliation. Local workerd checks verified isolated policies, uncertain-update replay, stale/oversized/invalid requests, metadata, missing/archived bots, CSRF and logout.
@@ -572,7 +581,6 @@ Proof (2026-10-11):
 - Browser verified changing write_note to Ask and persistence across reload. A synthetic pending approval rendered its exact inputs and actions; native Pi tests, rather than that fixture, prove execution. At 390×844 the corrected header retained the bot name and had no horizontal overflow; the viewport was reset.
 - Typecheck, lint, production build and secret scan passed. No new infrastructure or cloud permission. Delivered in PR #9, main `aa0358e`; production run `38099292561` succeeded.
 
-
 ### 05b — External MCP connections
 
 The owner connects public HTTPS Streamable HTTP servers in **Connect**, completes provider OAuth if needed, and chooses up to 16 tools per bot. The account object owns native MCP transport/OAuth state; child bots keep pinned tool definitions. New and re-added tools default to Ask, and the existing durable approval gate owns their execution receipts. Connection generation and definition hashes invalidate stale selections after reconnect or schema changes. Removing a tool revokes waiting operations and resets any automatic grant.
@@ -580,6 +588,7 @@ The owner connects public HTTPS Streamable HTTP servers in **Connect**, complete
 Native `MCPClientManager` persists discovery/credentials and handles issuer-bound OAuth, state and PKCE. The app accepts no endpoint credentials, query strings, custom ports, or private literal addresses; native SDK protections remain enabled. Tool errors omit provider internals. Model-visible text/images and structured-only JSON results pass through bounded receipts. Unsupported resource formats get an explicit placeholder. OAuth elicitation and scope expansion are not silently accepted. Already-dispatched remote work can finish after Stop/disconnect; interrupted outcomes must be checked at the remote service before retrying.
 
 Proof (2026-10-11):
+
 - 136 tests passed, including real Pi/SQLite restart with a remote JSON Schema, per-bot selection, stale updates, archival during resolution, revocation, grant reset and bounded result projection.
 - Local workerd connected to Cloudflare's public documentation MCP server, discovered real tools, selected a tool for one bot, verified default Ask and isolation, disconnected/reconnected with changed tool identity, rejected stale selection, archived-bot writes, forged callbacks, unauthenticated requests and foreign origins. The script is `scripts/check-connections.ts` and uses only the synthetic local account.
 - A separate native MCP manager/adapter probe executed the public documentation search and received usable model content. It used an in-memory SQLite fixture; this is not a hosted owner-model or owner-Executor connection claim.
@@ -589,13 +598,11 @@ Proof (2026-10-11):
 - Browser verified a real discovered tool's selection, persistence after reload, and Ask state. At 390×844 the header and Connections sheet fit with no horizontal overflow; viewport reset. One transient unavailable selection during development reload recovered by reloading connections.
 - Typecheck, lint and production build passed. No new infrastructure or Cloudflare permission. Owner OAuth connections remain optional user setup, not a blocker for later slices. Secret scan passed for all 208 tracked files; delivered in PR #10, main `d85956f`; production run `38101419107` succeeded. Fresh-page browser logs contained no errors.
 
-
 ### 04b — Hosted skill import
 
 Status: deployed in PR #11, main `4ff1fb4`; production run `38102126049` succeeded. The owner chooses a ready Executor connection and app, browses the catalog, previews a pinned SKILL.md, and explicitly saves a local library revision. Source metadata records app, deployment, revision, profile when present, connection and reference file names. Library edits and bot pins keep their existing isolation/recovery behavior. Provider updates never silently change a bot's selected copy.
 
 Acceptance: reject mismatched provider identities, stale/disconnected tools, malformed or truncated/oversized responses; preserve existing SQLite skills and revision history; keep source metadata through save, edits, restore and bot selection; canceling or changing views cannot replace a newer draft; authenticated workerd and browser checks. Only the owner import route invokes the `skills` read protocol. It never calls `execute`, accepts arbitrary remote tool names, changes bot grants, or copies this Codex session's credentials. Referenced files are not bundled: the UI and admitted context explain that access requires the bot's selected provider tool and normal approval policy.
-
 
 Verification for 04b:
 
@@ -603,7 +610,6 @@ Verification for 04b:
 - `scripts/check-skill-import.ts` uses a synthetic provider preview, then saves/edits/selects it through real local workerd. It checks bot isolation, pinned text/source retention, CAS conflicts, unregistered-provider rejection, 401 and foreign-origin 403. No owner Executor credentials or skill contents are used.
 - Browser verified source details, reference access guidance, v1 bot pin alongside v2 library copy, import choices, no-connection state and cancellation. At 390×844 the sheet and document measured 390 px wide with no overflow; viewport reset. Independent backend and frontend reviews found no actionable defects.
 - The Executor response contract was compared with live read-only catalog and pinned-skill responses. This is not an authenticated owner connection E2E claim: connecting the app's Executor account remains optional owner setup. No new Cloudflare resource or permission is required.
-
 
 ### 06a — Guarded browser navigation and inspection
 
@@ -625,7 +631,6 @@ Deployed in PR #13, main `2d39c2a`; production run `38105176070` succeeded. Scre
 
 Use authenticated application commands with capture-version checks for this first control surface. Cloudflare Live View URLs are bearer credentials whose expiry does not terminate an established viewer; issuing them directly would need an additional revocation boundary. The app-owned control surface keeps revocation under the same bot authority. Live streaming can be added later without weakening that boundary. No browser warning bypass, arbitrary JavaScript execution, downloads or cross-bot cookie copying.
 
-
 Verification for 06b:
 
 - 201 tests passed, with typecheck, lint and production build. Coverage includes owner takeover fencing, session reuse, private command input, consumed action versions, interrupted execution/recovery, late operations, unknown focus, normalized password/OTP attributes, screenshot masking and restoration, and refresh-before-retry after an uncertain result.
@@ -633,7 +638,6 @@ Verification for 06b:
 - Read-only reviews identified uncertain action retries and sensitive focus/capture edges; fixes require a ready current observation, fail closed on unknown typing targets, and mask editable values in captures. Typed values in standard input/textarea fields and open shadow controls are masked; unsupported iframe/closed-shadow typing fails closed. Editable link text is excluded. Arbitrary script execution remains unavailable.
 - Browser verified takeover → remote Tab → private Type (local field clears) → masked capture → return, followed by takeover and Close on 390×844. No horizontal overflow; temporary viewport overrides removed. Backend/frontend follow-up reviews closed with no remaining actionable findings.
 - No new infrastructure/permissions. Secret scan passed for 227 tracked files. Whole-repository formatting check still reports four pre-existing files outside this slice; changed TypeScript files pass formatting. Production build retains the existing chunk-size advisory.
-
 
 ### 07a — Isolated JavaScript execution
 
@@ -643,7 +647,6 @@ Limits: one active run per bot, 16,384 code characters, 32,768 JSON input/result
 
 References: [Dynamic Workers](https://developers.cloudflare.com/dynamic-workers/), [resource limits](https://developers.cloudflare.com/dynamic-workers/usage/limits/), [Cloudflare code interpreter](https://developers.cloudflare.com/sandbox/get-started/build-an-ai-code-interpreter/). Current Sandbox docs have moved beyond the bundled preview skill's API; use the live docs and installed types. No new permission is expected for the private Worker/Loader binding.
 
-
 Verification for 07a:
 
 - 213 tests passed, with typecheck, lint and production build. Tests cover durable admission, identical retries, conflicting payloads, bot isolation, immediate Stop before dispatch, archive fencing, restart without re-execution, independent output limits and body cancellation.
@@ -651,7 +654,6 @@ Verification for 07a:
 - Independent backend review reproduced implicit reruns through generated 307 redirects and an immediate-Stop race. Manual redirect rejection and synchronous abort binding fix both; follow-up native/unit checks pass. Frontend review corrected desktop containment and mobile sheet width; both reviews closed.
 - Browser verified run → result 6 → console output → stored code/input. Phone 390×844 verified a running command and Cancel with a full-width sheet and no horizontal overflow; temporary viewport override removed.
 - A private ExecutionWorker and Worker Loader binding use existing Workers deployment permissions. Existing infrastructure identities stay unchanged. Changed-file formatting passes; pre-existing formatting warnings and build chunk-size advisory remain outside this slice.
-
 
 ### 07b–07d — Linux, interactive terminal and private file transfer
 
@@ -673,7 +675,6 @@ Verification for 08a:
 - Browser verified create → preview → publish → interact, persistence after reload, form save at 390×844, dirty draft preservation across desktop/mobile transitions, concurrent form-update conflict, and background publication without replacing the open version or unsent text. Mobile panel and document both measure 390 px; desktop toolbar wraps without clipping. Temporary viewport overrides removed.
 - Typecheck, lint and production build passed. Existing chunk-size advisory remains. No new Cloudflare resources or permissions; Linux PRs remain separate and pending provisioning approval.
 
-
 ### 08b — Custom apps running on Cloudflare
 
 Deployed in PR #19, main `60fdff6`; production run `38113900807` succeeded.
@@ -683,12 +684,12 @@ Added a versioned web block whose JavaScript executes in the existing private Dy
 The browser receives parsed allowlisted HTML in an opaque frame with restrictive CSP and one trusted nonce-protected control bridge. Generated JavaScript stays on Cloudflare. There are no external resources, arbitrary client frameworks, public sharing or parent capabilities. Native forms and buttons dispatch authenticated actions; a changed saved revision requires explicit reload.
 
 Proof (2026-10-11):
+
 - 246 tests passed, including malformed/complex markup, state bounds, replay, pure previews, cancellation, archive/restore across both execution and Promise continuation boundaries, and unchanged state after failed execution.
 - Native workerd E2E passed through the real ExecutionWorker binding: render, saved form action, replay, conflict, cancelled admission, denied outbound fetch, timeout and invalid output. No model credential used.
 - Browser verified native form submission (including the formerly clobbering `dataset` field name), counter actions, invalid-action recovery, reopening, persistence, unsent fields across desktop/mobile resize, and no horizontal overflow at 390 px. A hostile-markup fixture retained only allowed text/form controls and did not navigate.
 - Read-only backend/frontend reviews found and corrected blocked native submissions, form property clobbering, reserved-name recovery, late archive/restore commit and stale archive configuration. Follow-up reviews passed. Development effect replay also exposed duplicate rendering; concurrent render loads now share their in-flight request.
 - Typecheck, lint and production build passed. Existing private ExecutionWorker is reused; no new cloud permissions or resources.
-
 
 ### 07b — Linux execution, terminal and workspace recovery
 
@@ -699,6 +700,7 @@ Decision: native `Container.exec` was present but stalled under both Alchemy bet
 A command has 30 seconds for cold start, restore, execution and checkpoint. Only `/workspace` survives; `node_modules`, `.git` and `.cache` are excluded. Checkpoints have a host-enforced 8 MiB compressed cap and SHA-256 validation, scoped to the bot's object. Up to 500 immutable commands, latest 20 metadata summaries, 64,000 output characters. Nonzero exits can save files; failed/interrupted/cancelled checkpoint attempts preserve the prior head. All descendants are killed by container teardown; SDK timeout alone does not kill them. Interrupted commands are not replayed.
 
 Verification (2026-10-11):
+
 - 228 total tests passed; typecheck, lint and production build passed. Dedicated tests cover late startup, cancellation before admission, late checkpoint publication, restart with a surviving runtime, cleanup failure/retry, stale archive revisions, bounded hostile streams, and sequential model tools waiting for cleanup.
 - Real local workerd + Docker + R2 E2E passed: output, write/checkpoint/destroy/fresh restore, identical replay/conflict, sibling isolation, outbound-network denial, output bound, Stop/rollback, stop-before-dispatch, archive/restore, anonymous401 and foreign-origin403. The synthetic account has no real model credential. Native cloud container execution is not yet claimed.
 - Review identified surviving processes after a DO restart and completion reported before teardown. Recovery now holds a cleanup barrier; new commands fail closed when cleanup cannot be confirmed. Model results wait for idle. Both review findings are closed.
@@ -764,7 +766,6 @@ Verification (2026-10-11):
 
 References: [Agents scheduled tasks](https://developers.cloudflare.com/agents/runtime/execution/schedule-tasks/), installed `agents` 0.27.0 Lifecycle job/error contract, [Base UI Select](https://ui.shadcn.com/docs/components/base/select), [Toggle Group](https://ui.shadcn.com/docs/components/base/toggle-group). Incoming authenticated webhook triggers remain 09b; calendar schedules can be a later enhancement.
 
-
 ### 09a deployment completed
 
 PR #20 merged as `3ca33c0`; production workflow `38116403026` succeeded, including hosted authentication checks. Owner/model acceptance remains deferred; native Pi approval/restart coverage and synthetic workerd alarm checks passed locally.
@@ -789,12 +790,12 @@ Verification:
 
 References: [Workers Web Crypto](https://developers.cloudflare.com/workers/runtime-apis/web-crypto/), [Durable Object SQLite storage](https://developers.cloudflare.com/durable-objects/api/sqlite-storage-api/).
 
-
 ### 03c — Private video frame and caption preparation
 
 MP4/WebM uploads enqueue durable preparation in Workspace. The existing private TerminalWorker runs FFmpeg in a separate media container identity with no outbound network or model credentials. Up to six JPEG frames carry their decoded presentation timestamps; supported embedded text captions are retained within an 8,000 UTF-16-unit budget. Originals and derivatives remain private in R2. Files exposes pending/ready/failed states, explicit legacy preparation/retry, timestamped previews and attachment readiness. Pi receives image/text blocks, with explicit sampling and audio limitations.
 
 Proof (2026-10-11):
+
 - 323 tests, typecheck, lint and production build passed. Focused tests cover persistence/reopen, three-attempt retry/backoff, archive/Trash publication fences, legacy upgrades, malformed results, sibling namespaces and maximum four-video attachment/steering budgets. Four six-frame videos fit within the existing image input budget; JPEGs are capped at 24 KB.
 - The Linux/amd64 container build runs real FFmpeg regression checks: MP4 embedded captions, long Unicode captions, hostile metadata, sparse and variable-frame-rate timestamps, short WebM, frame byte bounds, invalid media and the ten-minute limit. Python/decoder subprocesses have memory, CPU, file-size and elapsed-time limits.
 - Local workerd E2E passed through the actual private service binding, Sandbox Linux runtime, durable extraction and R2: authenticated upload, four correct JPEG frames, original preservation, private preview, sibling/anonymous rejection, Trash fence and restore. Browser verified upload, preview, attachment selection/removal and mobile 390×844 without overflow; no fresh browser errors. No live model or owner conversation used.
@@ -813,6 +814,7 @@ Design first: inspected the approved Paper desktop, inline-app, mobile and token
 Persistence decision: installed Pi Durable 1.0.4 exposes `defineDocFamily({ scope: "session" })`, `Session.commit`, typed snapshots and document watches. Cloudflare `PiHarness.pi()` returns one native Harness/Session for the bot; its UI-named sessions are individual Pi conversations. Session-scoped documents therefore outlive per-turn conversations and fit this domain. Use those native documents and atomic commits for the authoritative object, catalog, immutable events and idempotency receipts, with no second editable copy in Apps, chat or OptChat. The existing Apps renderer remains separate and unchanged for existing generated applications.
 
 Acceptance contract:
+
 - UI and typed agent tools call the same Effect application operations; owner/bot boundaries come from authenticated routing, never request-supplied identities.
 - Targeted edits use expected revisions; stale writes return explicit conflicts preserving drafts. Stable operation IDs replay the original receipt; cancellation fences uncertain writes.
 - Every successful change commits its actor/source event atomically with state. Native context hooks make changed object references available on model requests; checkbox clicks never enqueue a run. History and pending change state survive restart.
@@ -820,6 +822,7 @@ Acceptance contract:
 - Verify native Pi tool creation, user edits, later agent reads, cross-bot isolation, concurrent writes, lost-response retry, native SQLite reopen and local workerd recovery. Hosted deployment evidence remains distinct from owner/live-model acceptance.
 
 Delivered:
+
 - `src/objects` owns typed checklist contracts, targeted domain edits, Effect operations, native Pi persistence, HTTP routes and tools. `src/features/objects` owns the shared chat/workbench projection, editing, conflict comparison and recovery. No new Cloudflare resource or permission.
 - `create_checklist`, `read_object`, `update_checklist` and `list_objects` use authenticated bot scope. Field changes, current revision and retry receipt commit atomically. Each event preserves actor, source surface and originating tool/turn where applicable.
 - Current references are injected ephemerally on each native GenerationTask request, never appended as chat or OptChat originals. A durable sequence watermark records changes offered to successful model requests. User clicks start no model run.
@@ -828,6 +831,7 @@ Delivered:
 - Paper boards 32–35 cover exploration, live workspace, conflicts/recovery/history and mobile. [Design file](https://app.paper.design/file/01M4GJ8G5KNDADJRVDDC3PQ6CT/p-1-0). Workbench and compact live card use existing shadcn/Base UI primitives and semantic tokens.
 
 Verification on 2026-10-11:
+
 - Full local `pnpm verify`: typecheck, 337 tests across 45 files, client/server build. Lint passed. New files are included in the pre-push tracked-file secret scan.
 - Native Pi + deterministic provider journey: agent tool creates the checklist, UI HTTP operation edits it, a later native conversation reads the current edited state, no approval or automatic run for the UI change, one ephemeral reference projection and no duplicate transcript entry.
 - Native SQLite reopen and in-flight tool recovery: interruption before/after commit; retry retains one object/event; revoked/expired grants and cancellation cannot start new work. CAS races, isolation, atomic batch rollback, archive/restore, paged history, pending change watermark, mutation cancellation and large escaped tool pages passed.
@@ -851,6 +855,7 @@ Policy: compact above 112,000 estimated/measured context tokens for the current 
 Compatibility fixes: native event snapshots contain only active context after a head marker. The conversation adapter now pages immutable original history through the captured snapshot tail for archival, settlement and display, excluding `pi.compaction` projections. Receipt mappings still distinguish actual user submissions from synthetic summaries; stable archive sources deduplicate replay. Cached Activity and fallback answers are bounded below SQLite row limits, with explicit notices for older messages/tool results; authoritative native and OptChat originals remain complete. The model adapter now respects the native summarizer’s `cacheRetention: none`, while ordinary OptChat requests retain the stable cache key and explicit memory breakpoints.
 
 Verification on 2026-10-11:
+
 - 345 repository tests, typecheck, lint and production build passed. Focused tests cover continued multi-tool execution, steering/constraints/pending work, complete original tool retrieval and duplicate-free archive, safe tool pairing, unchanged approval receipts, native SQLite restart during summary generation, cancellation across another reopen, object-context injection without transcript copies, and pinned model selection across queued tasks/restart.
 - Deliberately small native window: 8,192 tokens; reserve 3,072; recent retention 1,706. The deterministic provider journey made nine normal requests and three native summaries, with 5,054 reported summary input tokens and 407 output tokens (5,461 of 35,226 aggregate fixture tokens). Native usage equals normal generation plus summarization usage. These are measured synthetic-provider accounting values, not OpenAI tokenizer/billing or live summary-quality evidence. Both uninterrupted and mid-summary restart journeys returned the same totals; 23 originals remained while the active context held five entries.
 - Actual local workerd/Agents PiHarness recovery: an isolated credential-free Alchemy fixture paused at a durable blocking compaction after four tools. The Worker process was stopped and restarted against the same SQLite storage; it finished all eight unique tool calls exactly once, with 21 original entries and seven active entries. No production fixture or resource was created. Node-native tests additionally cover approval and cancellation recovery.
@@ -874,6 +879,7 @@ Evidence resolves through the owning bot's Access, Execution, Workspace, Apps an
 Activity uses shadcn/Base UI and the approved Paper layout direction. The read-only inspector shows objectives, constraints, completion criteria, step progress, blockers, next action, evidence and durable revision history. Actual pending approvals link back to the existing chat controls. Polls and reconnects reject stale bot/task responses; history remains navigable when new revisions arrive. Full visual fidelity remains the separate follow-on goal.
 
 Verification:
+
 - Native SQLite/provider fixtures exercise ordinary multi-step tool execution, exactly-once action receipts, simple chat without a plan or approval, atomic concurrent/replayed updates, root-task continuation, steering revisions, cancellation before creation and after restart, bot isolation, invalidated evidence and revision history. A deliberately small 8,192-token model compacts during execution; the current plan remains available once per request, absent from original transcript copies, and survives reopen without starting work.
 - Native tool tests page maximum escaped summaries and detailed plans without invalid JSON or lost entries. Cold checklist evidence after native restart does not deadlock; a later owner edit reopens the completed step once. Failed code/command receipts remain invalid.
 - Real local workerd verified authenticated reads, an owner edit through the shared checklist operation, durable evidence invalidation (plan revision 12 → 13), cross-bot 404 and history pagination. Stopping and restarting the whole local process preserved that state. Initial plan data was seeded through native Pi application operations into a synthetic bot; this is not a live ChatGPT-generated journey.
@@ -900,7 +906,6 @@ Use Paper as the visual and interaction reference. Audit every implemented scree
 
 Acceptance: compare product screenshots with the corresponding Paper artboards at matching desktop and mobile sizes; record and resolve material differences, including loading, empty, error, conflict, archived and recovery states. Verify keyboard and touch interactions as well as visual fidelity. Preserve implemented behavior and accessibility. Track any deliberate departures and their reasons, carry changes through the established review/deployment workflow, and distinguish local screenshot verification from hosted verification.
 
-
 ## 02d — Different models for different jobs
 
 Owner request (2026-10-11), retained verbatim:
@@ -916,7 +921,7 @@ Each job should use an appropriate model and reasoning effort, with clear defaul
 Initial model assignments
 
 | Job | Model ID | Reasoning effort |
-|---|---|---|
+| --- | --- | --- |
 | Conversation titles, labels, classification | gpt-6-luna | low |
 | Structured extraction from text or images | gpt-6-luna | medium |
 | Routine summaries and memory compaction | gpt-6-luna | medium |
@@ -994,6 +999,7 @@ Implemented per-agent conversation/implementation/planning/review defaults, one-
 Activity records each actual attempt, purpose, requested and reported model, effort, routing reason, duration, terminal outcome and provider-reported input/cached/output tokens. Cached input is a subset of input. Missing usage remains unknown. Partial responses are not completed jobs; interrupted observations do not schedule execution. The existing bounded native retry policy remains in charge; provider-level retries are disabled.
 
 Verification on 2026-10-11:
+
 - 368 tests, typecheck, production build and lint passed. Real installed Pi harness plus SQLite proves UI command → durable route → Responses payload, restart during inference, stable model after settings change, and no replay of an already completed tool action. Fixtures cover API-key refusal, unavailable effort/account access, truncated/incomplete/failed streams, partial usage, pre-provider auth errors, legacy pins, bot isolation and observation recovery.
 - Local workerd gateway verifies owner authentication, cross-origin rejection, scoped Activity and unavailable subscription behavior without any model credential. Browser controls were checked with an explicitly synthetic catalog; the real credential-free error state was also checked. The settings dialog fits 390×844 without horizontal overflow. This is UI evidence, not live model access.
 - Independent backend/frontend reviews closed after checking shared catalog isolation from active-run budgets, admission fences after async discovery, late settings acknowledgements, steering presentation and observation failure handling.
@@ -1020,7 +1026,7 @@ Local verification: 378 tests, typecheck, lint, production build and staged-file
 Small live comparison (2026-10-11): six direct subscription Responses calls from a temporary Cloudflare Worker, using synthetic inputs. Extraction requested project owner, corrected budget/date, unconfirmed due-date status and an unknown accessibility detail. Memory requested a ≤512-byte summary retaining numbered sources, corrected decisions, pending draft/venue confirmation, uncertainty and approval before payment. Planning requested a ≤220-word JSON→SQLite migration plan with stable IDs, no lost writes, ≤60-second write pause and rollback/acceptance evidence. These calls assess output quality separately from app integration. No tools executed; the Worker was deleted.
 
 | Task | Model / effort | Reported input / output tokens | Duration | Result |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | Extraction | Luna / medium | 111 / 46 | 2.69 s | Valid JSON; required facts and uncertainty retained |
 | Extraction | Sol / medium | 111 / 116 | 5.98 s | Valid JSON; required facts and uncertainty retained |
 | Memory | Luna / medium | 153 / 129 | 4.28 s | 270 bytes; corrected facts, source refs, approval and unfinished work retained |
@@ -1030,11 +1036,9 @@ Small live comparison (2026-10-11): six direct subscription Responses calls from
 
 All six reached `response.completed`; cached input was zero. Aggregate usage was 728 input and 1,489 output tokens, including reported reasoning. Both plans slightly missed the requested 220-word cap. This one-case-per-task comparison does not establish a universal quality/latency ranking: keep the requested initial defaults and require explicit Deep selection. Native working-context compaction stays on the run’s pinned model as described above. No API-priced subscription estimates or API-key fallback.
 
-
 Hosted 02e acceptance: a temporary bot completed a longer corrected-facts request on Sol/medium while its independent memory job used Luna/medium. The summary completed in 4.05 seconds with 5,046 reported input / 105 output tokens (cached input 0). Memory reached a settled view before the follow-up; Sol then correctly returned the owner, corrected EUR 2,400 budget, tentative 2026-10-20 target, unconfirmed ramp, deposit-approval requirement and unsent draft. The two conversation attempts reported 5,549 / 58 and 5,544 / 48 input / output tokens. Replaying the first admission returned `accepted:false` and kept one provider attempt for that conversation. No tools or plan were created for the simple checks. The bot was archived and Worker deleted. A preceding diagnostic route returned a transient non-JSON 404 before bot creation; a read verified no orphan bot existed. Hosted runtime restart and failure-retry injection were not performed; those remain local deterministic/native tests.
 
 10a implementation is now active. The approved Paper delegation workbench was re-read with unchanged design tokens. Foreground children inherit the parent request's pinned model, effort and context budget: installed Pi's compaction policy is harness-wide, so heterogeneous concurrent child budgets cannot safely borrow a mutable global policy. Use native child ownership and commits, at most three research/drafting children, explicit read tools, no recursive spawn, existing approval receipts, inspectable native child transcripts, and parent-authoritative Stop. Background delivery and cross-bot sharing remain 10b. The full Paper-fidelity goal remains after the complete product build.
-
 
 #### 10a implementation and local verification — 2026-10-11
 
@@ -1047,6 +1051,7 @@ Controls commit their identity and intent before delivery. Concurrent callers dr
 Activity follows the Paper delegation hierarchy using shadcn/Base UI: parent objective, child status/brief/tools/usage, results, steer/Stop, steering history and paged native transcripts. Unknown acknowledgements retain their original payload/ID through close/reload; authentication failures do not discard them. Latest transcripts poll while visible; older pages keep their position.
 
 Verification:
+
 - Ten installed-native-Pi/SQLite scenarios cover completion, reopen, child/parent Stop, steering and steering across restart, distinct out-of-order delivery, deadlines, dispatch ceilings and deliberately small-window compaction. Native root history contains one combined result; child history remains separate. Exact completed replay does not dispatch again.
 - Installed Responses adapter tests verify original-session guard identity with a shared cache key, blocked compaction dispatch, and cancellation during account validation. Schema/HTTP/recovery tests cover tool escalation, duplicate briefs, bot-local lookup, media exclusion, uncertain controls and late acknowledgements.
 - Real local Cloudflare workerd + PiHarness: stopped/restarted the runtime with two model requests suspended and a saved steer. Group 12 retained children 15/23, both completed, the first incorporated the steer, and the parent recorded exactly one tool result. Five synthetic provider attempts were observed (initial two, recovered two, one steering continuation); no owner credential or live model was used.
@@ -1055,7 +1060,6 @@ Verification:
 - Independent read-only backend/frontend review found and corrected encoded-media context, concurrent control ordering/stale answer selection, expired-login acknowledgement loss and stale open transcripts; focused re-review is clear.
 
 Production deployment, hosted authenticated delegation and observed subscription usage are reported separately after CI. Remaining work: 10b background groups/mailbox, 11 activity/recovery completion, 12 full product verification, then the saved Paper-fidelity goal.
-
 
 10a deployed in PR #29 as `4ccba9f`; production run `38128495310` passed check, deployment and hosted authentication probes. The hosted synthetic-bot journey ran two tool-free children through the subscription connection, inheriting Luna/low and a 272,000-token window. Both returned their required markers, the parent produced one combined report, and replaying the original admission returned `accepted:false` with no extra conversation requests. Each child made one request: 244 input / 52 output and 244 input / 81 output tokens. The parent used 5,782 / 79 and 5,931 / 13 input / output tokens; its continuation reported 5,632 cached input tokens. The independent memory summary used Luna/medium, 5,392 input / 99 output. All five observed attempts completed. The synthetic bot was archived and temporary diagnostic Worker deleted. No hosted restart or logged-in owner browser is claimed.
 
@@ -1075,7 +1079,6 @@ Real local Cloudflare workerd was killed with two native requests suspended and 
 
 Activity fixtures at 1440×900 and 390×844 expose results, usage, steering, transcript and independent group Stop/reconnect actions. An intentionally lost reconnect acknowledgement retained its operation ID; another retry reused it, while Stop remained available and acknowledged separately. The mobile page had no horizontal overflow. Fixtures were removed. Hosted tool admission, report completion and subscription usage remain deployment acceptance checks; hosted restart is not claimed.
 
-
 10b merged in PR #30 as `eead3f2`. Exact-head CI passed after terminal-history regressions were added: deadline cancellation persists before abort/seal, while completed groups survive later deadlines and delayed Stop. Production run `38129899345` passed check, Alchemy deployment and hosted authentication probes.
 
 10b hosted acceptance: a synthetic bot started two tool-free children through `background_tasks`, immediately acknowledged them, then received exactly one internally identified report. Both children returned their required markers using Luna/low and a 272,000-token window, even after the bot's foreground default changed to Astra/high. Each child made one request and reported 248 input / 8 output tokens. The original root attempts reported 5,960/75 and 6,106/9 input/output; the second had 5,632 cached input. The report turn used the original Luna/low pin, no tools, and 2,341/13 input/output. Three observed independent memory requests used Luna/medium (5,323/96, 5,535/98 and 5,571/73); the latter two each reported 4,608 cached input. Exact replay returned `accepted:false`, retained one group/report and added no conversation attempt. The bot was archived and temporary Worker deleted. Hosted restart remains untested; the native workerd restart evidence above is local.
@@ -1087,8 +1090,6 @@ Re-read the approved Paper Activity cross-agent timeline and recovery screens be
 Bound cross-bot reads to the owner's catalog, report partial failures explicitly and never infer permission from a timeline item. Reading Activity must not retry an external action. Show conversation/tool outcomes, steering, background delivery and actionable memory/backup connection issues. Recovery buttons lead to the existing domain operation. Verify ownership, reconnect/restart, paging, failed reads and mobile navigation. Audit historic foreground delegation outcomes so successful completed tasks do not become cancelled merely because their deadline has passed.
 
 The complete product verification and separate Paper-fidelity goal remain subsequent work.
-
-
 
 11 local verification: 421 tests across 62 files, typecheck, lint and production build passed. SQLite projection coverage exercises 85 same-timestamp entries, stable keyset paging across new arrivals, expiring approvals without mutating receipts, retried failures, owner-only fanout and partial failures. A shared five-second deadline stops admitting reads after four stalled RPCs; pending/unattempted bots remain explicitly unavailable. Gateway tests reject foreign bots/conversations and unauthenticated reads. Independent backend/frontend reviews are clear after correcting cross-bot recovery links, scoped plan state, one-shot Memory navigation and the RPC admission deadline.
 
@@ -1112,19 +1113,15 @@ Terminal acceptance exposed an upstream Sandbox 0.12.10 default-session race: it
 
 Local native workerd plus the matching Linux image passed exact unterminated UTF-8 output across three additional teardown/restore cycles, durable checkpoint restore, replay/conflict/isolation, network denial, output bound, Stop, rollback, timeout and archive revocation. Parser coverage also exercises split UTF-8, stderr, nonzero exit, missing completion, cancellation and failing output admission. Full local suite: 422 tests across 62 files; typecheck, lint and production build passed. Hosted verification of the changed adapter follows its reviewed deployment. Synthetic cloud bots were archived and temporary diagnostic Workers deleted; no production refresh token was copied and no owner conversation was used.
 
-
 12 deployment acceptance: PR #32 merged as `f364576`; production run `38131680063` passed all checks, Alchemy deployment and hosted authentication probes. A fresh hosted synthetic bot wrote a file, streamed exact unterminated output, checkpointed, tore down its container, restored in a subsequent command and returned the same exact bytes. Both commands succeeded and saved their checkpoint; cleanup completed, the bots were archived and the temporary Worker deleted. This exercises the deployed direct-instance adapter.
 
 The functional build goal is complete. The owner-requested visual fidelity work follows in [UI_FIDELITY.md](UI_FIDELITY.md), using the existing approved Paper file. The app uses the ChatGPT subscription only, with no API-key fallback.
-
 
 Paper fidelity progress: F1–F3 shipped in PRs #34–#36. F4 consolidates the workbench shell, files and memory presentation while preserving bot-scoped state and recovery access. Exact layout, browser evidence and intentional adaptations are tracked in [UI_FIDELITY.md](UI_FIDELITY.md); working-object fidelity and final mobile acceptance follow.
 
 F5 working-object presentation is locally verified: shared live card/workbench, mobile editing, real concurrent conflict/reapply, history and archive/restore. The final responsive/navigation and hosted delivery pass remains in UI_FIDELITY.md.
 
-
 Paper fidelity source acceptance: F1–F5 merged in PRs #34–#38; F6 completes the mobile navigation and responsive composition. The full local suite (431 tests, types, lint and build), independent review, accessibility checks and actual recovery/navigation interactions pass. [UI_FIDELITY.md](UI_FIDELITY.md) records each design state, intentional adaptation, evidence and hosted-verification boundary. Final release proceeds through the existing reviewed main/Cloudflare workflow. Subscription-only models remain unchanged.
-
 
 Paper fidelity goal complete — 2026-10-11: F1–F6 deployed in PRs #34–#39. Final source `4f4fc66` passed production run `38135689129`, including the owner authentication boundary. Fresh hosted mobile access also passed the settled accessibility/overflow check. The full evidence and remaining verification limits are in [UI_FIDELITY.md](UI_FIDELITY.md). The functional product and approved visual-fidelity roadmap are complete; no API-key fallback was added.
 
@@ -1208,7 +1205,6 @@ Produce a compact comparison report with individual failures and supporting evid
 
 No suite code, fixtures, real-model runs, or evaluation results are delivered by this tracker entry.
 
-
 ### UI follow-up — Paper interiors (2026-10-11)
 
 Reconciled settings, workbench interiors and conversation density against the approved Paper page. Applied the owner’s account/login/sound/subscription/network decisions to Paper as well. See UI_FIDELITY.md F8 for per-screen comparisons and delivery evidence. Existing roadmap and the final harness evaluation slice remain queued after this correction.
@@ -1252,7 +1248,6 @@ Status: implemented and locally verified; release CI and hosted evidence are rec
 Use the installed Base UI Drawer for gestures, scroll/focus handling and virtual-keyboard support. The shared `ResponsiveOverlay` primitive backs existing shadcn Dialog, Sheet and AlertDialog compositions. Desktop presentation and mobile interaction share one mounted tree; form drafts and terminal content must survive breakpoint changes. The workbench delegates docking and modal behavior to this primitive. Sidebar navigation swipes from the side; dialogs and tool panels use bottom drawers with a visible handle. Existing pending-operation guards, confirmation semantics, keyboard access and focus return remain required.
 
 Local verification: 571 tests across 80 files, the native workerd restart suite, typecheck, lint (four existing warnings), and production build pass. Browser checks cover 320px/390px/desktop layouts, sidebar and workbench handle dismissal, focus return, scrolling, settings over a workbench during resizing, nested Activity dismissal, confirmation semantics, pending archive dismissal protection, and retained agent/terminal drafts across breakpoints. Browser and terminal interaction surfaces opt out of drawer swipes. Production-CSS checks include narrow confirmation error states. No production archive or account mutation is needed for hosted verification. Physical-phone touch arbitration and software-keyboard behavior remain device checks, not claims based on desktop emulation. See `docs/responsive-overlays.md` for the shared API and verification procedure.
-
 
 ### Bottom drawers and nested mobile menus — 12 October 2026
 
@@ -1311,13 +1306,11 @@ The requested [XState–Effect skill PR #12](https://github.com/cill-i-am/skills
 
 Mobile QA reproduced the desktop-to-mobile Settings/Security accessibility regression. The workbench now yields modal focus ownership while Settings is open, and Settings yields to Security. Parents retain their own height and mounted content; the frontmost child remains accessible. Local verification: 633 tests across 82 files (51 navigation tests), native workerd restart/replay coverage, typecheck, production build, lint (four existing warnings), and formatting pass. Actual route components were checked with synthetic owner data for active/archived lists, archive filtering/reload, read-only archived chat, file resource links and source-mode reload, New Agent/Cancel return, synthetic creation selecting its returned ID and an edit returning to its originating Settings page, retained conversation drafts, guarded unsaved rename on Back, Memory search restoration, Activity filters/record paths, and nested mobile Settings/selector/Security across breakpoint changes. The latter preserves parent heights and exposes the frontmost child; Back restores Settings and its underlying panel. Small pre-existing formatting defects in two files were normalized. The existing deployment probe now checks ten canonical page locations and unauthenticated catalog/bot reads. Release: [PR #78](https://github.com/cill-i-am/durable-pi/pull/78) merged as `b3415d6`. Both branch/PR checks passed, followed by the [main production workflow](https://github.com/cill-i-am/durable-pi/actions/runs/38322483980), including the ten page probes and authentication checks. Hosted browser verification confirmed root replacement with the owned bot path, archive filter/reload, native creation and editing return, Models Back/Forward, an existing saved file’s path/reload/Back, retained then cleared conversation draft, and desktop-to-mobile Settings → selector → Security → Back over Files. Parent drawers retained their own heights and Security remained accessible. The synthetic verification bot was archived through the existing confirmation modal; opening and reloading its bot path stayed read-only and did not restore it. No model or tool run was started, existing saved files were only read, and no console errors were observed. No new password reset, 2FA enrollment, production restart, physical-phone gesture, or software-keyboard behavior is claimed by this routing check. The compact live activity trail remains the next goal item.
 
-
 ### Workbench entry motion — 13 October 2026
 
 The owner reported that the workbench appeared abruptly. Its route-mounted Sheet was initially open, bypassing Base UI's entry transition; its unresolved ref container could also fall back to the document body and leave the desktop panel outside its dock. The workbench now opens after its actual container exists, preserving the existing Base UI lifecycle and native mobile bottom slide. Desktop entry grows the dock and slides the panel from the right over 200ms with the sidebar's linear timing. The interior retains its final width; viewport clipping contains the entering panel without clipping separate menu portals. Reduced-motion preferences disable both dock and panel animations. No execution, access or route authority changes.
 
 Local browser checks used the actual components and production-built CSS with synthetic data. An intermediate desktop frame had a 97px dock, a constant 581px panel and a 484px horizontal translation; the settled panel matched the dock at the workspace's 48px top edge. Mobile entry was observed below the viewport before settling at the bottom; nested action menus retained the full-height parent. Checked 320px, 390px and desktop, retained chat drafts, dock menu visibility, and zero-duration animation under emulated reduced motion. Physical-phone gestures and the software keyboard are not verified by these browser checks. Full local verification passes 633 tests across 82 files, native workerd restart/replay coverage, typecheck, production build, formatting and lint (four existing warnings). Release checks and hosted verification are tracked on the delivery PR.
-
 
 ## Agent status and workbench navigation correction — 13 October 2026
 
@@ -1337,7 +1330,6 @@ PR #92 CI reproduced only the pre-existing multi-job backup fixture timeout (687
 
 Native snapshot ownership follow-up: the installed DO adapter queues reads behind a transaction on its storage facade. Warm status reads now reuse the facade supplied by PiHarness; they never close it. Cold status reads open and close only their own snapshot facade, without opening a harness. If native startup changes the facade during a snapshot, its result is discarded and the next read uses the shared commit queue. The native SQLite test covers warm ownership, cold cleanup, startup during acquisition, startup during snapshots, unchanged history and subsequent plan cancellation. Focused status/planning tests (16), types, targeted lint and build pass; full release checks and hosted acceptance are recorded on the follow-up PR. PR #92 deployed as `ec4c441`; initial hosted inspection confirmed its navigation and a saved Ready snapshot. An already-open old stream temporarily lacked the new metadata during rollout, then its normal authorization rotation restored the matching header/sidebar status. No production failure was fabricated.
 
-
 ### Selected avatar status and document toolbar — 13 October 2026
 
 The earlier second-sidebar workbench treatment was rejected during visual review. The user selected variation B (avatar-corner state) and the document toolbar, with tooltips. This supersedes the navigation presentation described above; the durable status projection and execution ownership remain unchanged.
@@ -1347,7 +1339,6 @@ Sidebar rows restore their agent description. Non-ready states appear as a small
 The workbench removes the vertical tool rail. A labelled, typed Select shows the current tool and all nine destinations; five primary icon links have Base UI tooltips and a visible current state. Small panels reduce shortcut density and mobile keeps only the labelled picker, which uses the existing nested bottom drawer. Native URLs, dirty/pending guards, the slide in/out, retained view during exit and focus return are preserved. The Select primitive gains a ghost variant for toolbar use; its default form appearance is unchanged.
 
 The local design exploration used the existing semantic palette, Geist and agent mark, with Jakob Krehel’s UI/layout guidance. Paper MCP could not connect; no canvas edit is claimed. Verification and release evidence are recorded below when complete.
-
 
 Local verification of the selected treatment: 688 tests pass across 86 files, including the existing native restart/replay checks. Typecheck, production build, formatting of changed TypeScript, secret scanning (504 tracked files) and lint pass; lint retains four existing warnings. The existing status presentation test now covers the header’s labels, seven non-ready avatar markers, a quiet Ready avatar and an explicit Unavailable fallback.
 

@@ -1,4 +1,6 @@
 import { Cause, Effect, Schema } from "effect"
+
+import { nativeFailure, nativeOperation } from "../../shared/interop"
 import {
   BrowserFailure,
   type BrowserSession,
@@ -6,9 +8,8 @@ import {
   type BrowserAction,
   type BrowserController,
 } from "../contracts"
-import { BrowserUnavailable, type BrowserDriver } from "../driver"
 import { BrowserCaptureRecord, BrowserSessionRecord } from "../domain"
-import { nativeFailure, nativeOperation } from "../../shared/interop"
+import { BrowserUnavailable, type BrowserDriver } from "../driver"
 
 export interface ForeignBrowserDriver {
   open: (

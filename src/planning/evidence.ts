@@ -1,15 +1,16 @@
-import { preserveFatal } from "../shared/effect"
 import { Effect } from "effect"
+
+import type { AccessError } from "../access/gate"
 import type { ReceiptFact, ReceiptQuery } from "../access/receipt"
+import type { AppDocument } from "../apps/contracts"
+import type { AppError } from "../apps/service"
 import type {
   CodeRun,
   ExecutionFailure,
   ExecutionStorageError,
 } from "../execution/contracts"
-import type { AccessError } from "../access/gate"
-import type { AppError } from "../apps/service"
 import type { ObjectFailure, Checklist } from "../objects/contracts"
-import type { AppDocument } from "../apps/contracts"
+import { preserveFatal } from "../shared/effect"
 import type { FileInfo, FileError } from "../workspace/files"
 import { PlanFailure, type Evidence, type EvidenceRef } from "./contracts"
 
@@ -53,22 +54,7 @@ export function planEvidence<TRequirements>(
             revision: ref.revision,
             roots,
           })
-          if (
-            !receipt ||
-            !roots.includes(receipt.turnId) ||
-            receipt.revision !== ref.revision ||
-            receipt.outcome === "unavailable"
-          )
-            return value(
-              false,
-              "A successful receipt from this task at this revision is unavailable."
-            )
-          return value(
-            receipt.outcome === "succeeded",
-            receipt.outcome === "failed"
-              ? "The tool recorded an error."
-              : `${receipt.tool}: successful tool receipt. The claimed outcome is agent-reported.`
-          )
+          return receiptEvidence(ref, roots, receipt)
         }
         case "execution": {
           const run = yield* sources.execution(ref.id)
@@ -125,4 +111,31 @@ export function planEvidence<TRequirements>(
           })
       )
     )
+}
+
+function receiptEvidence(
+  ref: EvidenceRef,
+  roots: readonly string[],
+  receipt: ReceiptFact | undefined
+): Evidence {
+  if (
+    !receipt ||
+    !roots.includes(receipt.turnId) ||
+    receipt.revision !== ref.revision ||
+    receipt.outcome === "unavailable"
+  )
+    return {
+      ...ref,
+      state: "invalid",
+      detail:
+        "A successful receipt from this task at this revision is unavailable.",
+    }
+  return {
+    ...ref,
+    state: receipt.outcome === "succeeded" ? "valid" : "invalid",
+    detail:
+      receipt.outcome === "failed"
+        ? "The tool recorded an error."
+        : `${receipt.tool}: successful tool receipt. The claimed outcome is agent-reported.`,
+  }
 }

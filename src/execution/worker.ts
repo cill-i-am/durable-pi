@@ -1,10 +1,11 @@
 import { Effect } from "effect"
+
 import type { ExecutionEnv } from "../../alchemy.run"
-import { preserveFatal } from "../shared/effect"
 import { runObserved } from "../observability/worker"
-import { CodeInput } from "./contracts"
+import { preserveFatal } from "../shared/effect"
 import { executeCode, type ExecutionLoader } from "./adapters/dynamic-worker"
 import { executionJson } from "./adapters/input"
+import { CodeInput } from "./contracts"
 
 export async function executionWorkerRequest(
   request: Request,

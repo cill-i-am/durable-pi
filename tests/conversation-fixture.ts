@@ -1,16 +1,17 @@
 import { Effect } from "effect"
-import { MemoryRepository } from "../src/memory/repository"
-import { MemoryTransaction } from "../src/memory/ledger"
-import { sqliteMemoryLayer } from "../src/memory/adapters/sqlite"
-import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
+
 import { sqliteConversationMaterialization } from "../src/conversations/adapters/sqlite-journal"
-import { makeConversationJournal } from "../src/conversations/journal"
-import { makeConversations } from "../src/conversations/service"
+import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import type {
   ConversationExecution,
   ConversationObservation,
 } from "../src/conversations/execution"
+import { makeConversationJournal } from "../src/conversations/journal"
 import type { ConversationPumpHost } from "../src/conversations/pump"
+import { makeConversations } from "../src/conversations/service"
+import { sqliteMemoryLayer } from "../src/memory/adapters/sqlite"
+import { MemoryTransaction } from "../src/memory/ledger"
+import { MemoryRepository } from "../src/memory/repository"
 import { database, type TestSqlite } from "./database"
 
 export const conversationFixture = Effect.fn("Test.conversationFixture")(

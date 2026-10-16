@@ -1,12 +1,13 @@
-import { sqliteFailure } from "./sqlite-fault"
 import { expect, it } from "@effect/vitest"
 import { Cause, Deferred, Effect, Exit } from "effect"
 import { TestClock } from "effect/testing"
-import { database } from "./database"
+
 import { ExecutionStore } from "../src/execution/adapters/sqlite"
-import { makeExecutions } from "../src/execution/service"
 import { admitExecution } from "../src/execution/domain"
 import { ExecutorUnavailable } from "../src/execution/executor"
+import { makeExecutions } from "../src/execution/service"
+import { database } from "./database"
+import { sqliteFailure } from "./sqlite-fault"
 
 const input = { id: "clock-run", code: "return 3", data: "null" }
 const output = { result: "3", logs: "", error: null }

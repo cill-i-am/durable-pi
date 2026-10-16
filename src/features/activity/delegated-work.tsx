@@ -1,18 +1,22 @@
-import { BackgroundActions } from "./background-actions"
-import { useEffect, useRef, useState } from "react"
 import { Schema } from "effect"
 import { GitBranch, Square } from "lucide-react"
-import {
-  Group,
-  Transcript,
-  type Child,
-  type Control,
-} from "@/delegation/contracts"
-import { agentApi } from "@/http/client"
-import { poll } from "@/http/poll"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import { useEffect, useRef, useState } from "react"
+
+import { CopyButton } from "@/components/copy-button"
+import { Markdown } from "@/components/markdown"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import {
+  CodeBlock,
+  CodeBlockHeader,
+  CodeBlockTitle,
+  CodeBlockActions,
+  CodeBlockContent,
+} from "@/components/ui/code-block"
+import { Field, FieldLabel, FieldGroup } from "@/components/ui/field"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Trace,
   TraceLine,
@@ -24,17 +28,15 @@ import {
   TraceCollapsibleContent,
 } from "@/components/ui/trace"
 import {
-  CodeBlock,
-  CodeBlockHeader,
-  CodeBlockTitle,
-  CodeBlockActions,
-  CodeBlockContent,
-} from "@/components/ui/code-block"
-import { CopyButton } from "@/components/copy-button"
-import { Markdown } from "@/components/markdown"
-import { Field, FieldLabel, FieldGroup } from "@/components/ui/field"
-import { Textarea } from "@/components/ui/textarea"
-import { Skeleton } from "@/components/ui/skeleton"
+  Group,
+  Transcript,
+  type Child,
+  type Control,
+} from "@/delegation/contracts"
+import { agentApi } from "@/http/client"
+import { poll } from "@/http/poll"
+
+import { BackgroundActions } from "./background-actions"
 import {
   acknowledgeControl,
   confirmedRejection,
@@ -207,17 +209,7 @@ export function DelegationGroup({
     </Trace>
   )
 }
-function ChildTrace({
-  child,
-  group,
-  agentId,
-}: {
-  child: Child
-  group: Group
-  agentId: string
-}) {
-  const [inspect, setInspect] = useState(false)
-  const [expanded, setExpanded] = useState<boolean | null>(null)
+function childPresentation(child: Child, group: Group) {
   const unsettled = ["queued", "working", "stopping"].includes(child.status)
   const running = group.status === "working" && unsettled
   const label =
@@ -234,6 +226,32 @@ function ChildTrace({
         : running && child.status === "queued"
           ? "pending"
           : undefined
+  return { running, label, status } as const
+}
+
+function controlLabel(
+  action: "stop" | "steer",
+  busy: boolean,
+  uncertain: boolean
+) {
+  if (busy) return "Sending…"
+  if (uncertain) return `Retry saved ${action}`
+  return action === "stop" ? "Stop task" : "Send steering"
+}
+
+function ChildTrace({
+  child,
+  group,
+  agentId,
+}: {
+  child: Child
+  group: Group
+  agentId: string
+}) {
+  const [inspect, setInspect] = useState(false)
+  const [expanded, setExpanded] = useState<boolean | null>(null)
+  const { running, label, status } = childPresentation(child, group)
+  const prefix = group.background ? "background" : "delegations"
   return (
     <TraceCollapsible
       open={expanded ?? (running || !!child.error)}
@@ -297,7 +315,7 @@ function ChildTrace({
         <ChildControl
           agentId={agentId}
           groupId={group.id}
-          prefix={group.background ? "background" : "delegations"}
+          prefix={prefix}
           child={child}
           action="steer"
           active={running && child.status !== "stopping"}
@@ -307,7 +325,7 @@ function ChildTrace({
             key={child.id}
             agentId={agentId}
             groupId={group.id}
-            prefix={group.background ? "background" : "delegations"}
+            prefix={prefix}
             childId={child.id}
           />
         )}
@@ -322,7 +340,7 @@ function ChildTrace({
           <ChildControl
             agentId={agentId}
             groupId={group.id}
-            prefix={group.background ? "background" : "delegations"}
+            prefix={prefix}
             child={child}
             action="stop"
             active={running && child.status !== "stopping"}
@@ -418,13 +436,7 @@ function ChildControl({
       onClick={() => void submit()}
     >
       {action === "stop" && <Square data-icon="inline-start" />}
-      {busy
-        ? "Sending…"
-        : uncertain
-          ? `Retry saved ${action}`
-          : action === "stop"
-            ? "Stop task"
-            : "Send steering"}
+      {controlLabel(action, busy, uncertain)}
     </Button>
   )
   return (

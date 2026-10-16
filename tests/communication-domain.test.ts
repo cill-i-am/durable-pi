@@ -1,5 +1,6 @@
-import { expect, it } from "vitest"
 import { Schema } from "effect"
+import { expect, it } from "vitest"
+
 import { AgentId } from "../src/agents/domain"
 import { Outcome, type Envelope } from "../src/communication/contracts"
 import * as Domain from "../src/communication/domain"

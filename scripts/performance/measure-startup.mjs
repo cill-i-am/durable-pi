@@ -1,4 +1,5 @@
 import { writeFile } from "node:fs/promises"
+
 import puppeteer from "@cloudflare/puppeteer"
 
 // Connect to an explicitly selected audit browser. Retain numeric timing and

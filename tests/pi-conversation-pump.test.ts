@@ -1,10 +1,13 @@
-import { expect, it } from "vitest"
 import { mkdtemp, rm } from "node:fs/promises"
-import { join } from "node:path"
 import { tmpdir } from "node:os"
-import { Effect } from "effect"
-import type { PiHarness } from "agents/harness/pi"
+import { join } from "node:path"
+
 import { BACKGROUND_CONTEXT as context } from "@earendil-works/chord/context"
+import {
+  createModels,
+  fauxProvider,
+  fauxAssistantMessage,
+} from "@earendil-works/pi-ai"
 import {
   Harness,
   createRegistry,
@@ -12,13 +15,12 @@ import {
   type Conversation,
 } from "@earendil-works/pi-durable"
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
-import {
-  createModels,
-  fauxProvider,
-  fauxAssistantMessage,
-} from "@earendil-works/pi-ai"
-import { ConversationExecution } from "../src/conversations/execution"
+import type { PiHarness } from "agents/harness/pi"
+import { Effect } from "effect"
+import { expect, it } from "vitest"
+
 import { piConversationLayer } from "../src/conversations/adapters/pi-execution"
+import { ConversationExecution } from "../src/conversations/execution"
 import { conversationPump } from "../src/conversations/pump"
 import { conversationFixture } from "./conversation-fixture"
 

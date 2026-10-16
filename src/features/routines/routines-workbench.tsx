@@ -1,10 +1,15 @@
-import { useEffect, useState } from "react"
 import { ArrowLeft, Clock3, Plus } from "lucide-react"
-import type { Routine, RoutineRun, SaveRoutine } from "@/routines/contracts"
-import { WebhookPanel } from "./webhook-panel"
-import { useRoutines } from "./use-routines"
-import { Button } from "@/components/ui/button"
+import { useEffect, useState } from "react"
+
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import {
+  Empty,
+  EmptyHeader,
+  EmptyTitle,
+  EmptyDescription,
+} from "@/components/ui/empty"
 import {
   Field,
   FieldDescription,
@@ -12,8 +17,6 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   Select,
   SelectContent,
@@ -22,13 +25,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import {
-  Empty,
-  EmptyHeader,
-  EmptyTitle,
-  EmptyDescription,
-} from "@/components/ui/empty"
+import type { Routine, RoutineRun, SaveRoutine } from "@/routines/contracts"
+
+import { useRoutines } from "./use-routines"
+import { WebhookPanel } from "./webhook-panel"
 
 const time = (at: number) =>
   new Date(at).toLocaleString(undefined, {
@@ -70,11 +72,7 @@ export function RoutinesWorkbench({
   const selectedRoutine = actions.data.routines.find(
     (value) => value.id === selected
   )
-  const editor =
-    newEditor ??
-    (selectedRoutine && !webhook
-      ? { key: selectedRoutine.id, routine: selectedRoutine }
-      : null)
+  const editor = routineEditorSelection(newEditor, selectedRoutine, webhook)
   const hook = webhook ? selectedRoutine : undefined
   function setEditor(value: { key: string; routine?: Routine } | null) {
     if (value?.routine) {
@@ -466,26 +464,15 @@ function RoutineEditor({
   const [baseline, setBaseline] = useState(routine)
   const [savedSchedule, setSavedSchedule] = useState(routine?.schedule)
   const conflict = !!latest && latest.revision !== baseline?.revision
-  const [id] = useState(() => routine?.id ?? crypto.randomUUID())
-  const [title, setTitle] = useState(routine?.title ?? ""),
-    [prompt, setPrompt] = useState(routine?.prompt ?? "")
-  const [type, setType] = useState<"once" | "interval" | "webhook">(
-    routine?.schedule.type ?? "once"
-  )
-  const [at, setAt] = useState(() =>
-    localTime(
-      routine && routine.schedule.type !== "webhook"
-        ? routine.schedule.at
-        : Date.now() + 3600000
-    )
-  )
-  const [minutes, setMinutes] = useState(
-    routine?.schedule.type === "interval" ? routine.schedule.minutes : 60
-  )
+  const [initial] = useState(() => routineEditorDefaults(routine))
+  const [id] = useState(initial.id)
+  const [title, setTitle] = useState(initial.title),
+    [prompt, setPrompt] = useState(initial.prompt)
+  const [type, setType] = useState(initial.type)
+  const [at, setAt] = useState(initial.at)
+  const [minutes, setMinutes] = useState(initial.minutes)
   const [changedTime, setChangedTime] = useState(false)
-  const [status, setStatus] = useState<"active" | "paused">(
-    routine?.status === "paused" ? "paused" : "active"
-  )
+  const [status, setStatus] = useState(initial.status)
   const [error, setError] = useState("")
   const choices = intervals.some((item) => item.value === minutes)
     ? intervals
@@ -726,4 +713,32 @@ function RoutineEditor({
       </fieldset>
     </form>
   )
+}
+
+function routineEditorSelection(
+  draft: { key: string; routine?: Routine } | null,
+  selected: Routine | undefined,
+  webhook: boolean
+) {
+  return (
+    draft ??
+    (selected && !webhook ? { key: selected.id, routine: selected } : null)
+  )
+}
+function routineEditorDefaults(routine?: Routine) {
+  return {
+    id: routine?.id ?? crypto.randomUUID(),
+    title: routine?.title ?? "",
+    prompt: routine?.prompt ?? "",
+    type: routine?.schedule.type ?? "once",
+    at: localTime(
+      routine && routine.schedule.type !== "webhook"
+        ? routine.schedule.at
+        : Date.now() + 3600000
+    ),
+    minutes:
+      routine?.schedule.type === "interval" ? routine.schedule.minutes : 60,
+    status:
+      routine?.status === "paused" ? ("paused" as const) : ("active" as const),
+  }
 }

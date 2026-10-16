@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState } from "react"
 import { Schema } from "effect"
+import { useEffect, useRef, useState } from "react"
+
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
 import type { Group } from "@/delegation/contracts"
 import { agentApi } from "@/http/client"
-import { Button } from "@/components/ui/button"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+
 import { confirmedRejection } from "./delegation-commands"
 
 const Command = Schema.Struct({

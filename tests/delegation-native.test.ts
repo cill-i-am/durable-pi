@@ -1,16 +1,8 @@
-import { expect, it } from "vitest"
 import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { Effect } from "effect"
+
 import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context"
-import {
-  Harness,
-  createRegistry,
-  defineTool,
-  type Extension,
-} from "@earendil-works/pi-durable"
-import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
 import {
   createModels,
   Type,
@@ -19,18 +11,28 @@ import {
   fauxToolCall,
   type FauxResponseFactory,
 } from "@earendil-works/pi-ai"
+import {
+  Harness,
+  createRegistry,
+  defineTool,
+  type Extension,
+} from "@earendil-works/pi-durable"
+import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
+import { Effect } from "effect"
+import { expect, it } from "vitest"
+
+import { agentSettings } from "../src/agent/compaction"
 import { piDelegations } from "../src/delegation/adapters/pi"
 import {
   delegationTool,
   childSteeringHook,
 } from "../src/delegation/adapters/tools"
-import { resolveRoute } from "../src/inference/policy"
+import type { Group } from "../src/delegation/contracts"
 import {
   DURATION_MS,
   type DelegationSource,
 } from "../src/delegation/delegation"
-import { agentSettings } from "../src/agent/compaction"
-import type { Group } from "../src/delegation/contracts"
+import { resolveRoute } from "../src/inference/policy"
 
 const brief = {
   objective: "Compare two private draft approaches",
@@ -281,108 +283,10 @@ it.each([
         ...(scenario === "compact" ? {} : { compaction: { enabled: false } }),
       },
     }
-    h = await Harness.open(await openNodeSqliteStorage(path), options, ctx)
-    try {
-      const root = await h.root(ctx, {
-        agent: {
-          model: { provider: "openai", modelId: "gpt-6-luna" },
-          extensions: [registry.snapshot().extension("parent")!],
-        },
-      })
-      parent = Number(root.id)
-      const submission = await root.submit(
-        {
-          type: "input",
-          content: "Use parallel help to compare these two approaches.",
-          requestId: turn,
-        },
-        ctx
-      )
-      let group: Group
-      if (["finish", "budget", "compact"].includes(scenario)) {
-        await submission.wait(ctx)
-        group = (await Effect.runPromise(service.list()))[0]!
-      } else {
-        await until(
-          async () => generation,
-          (n) => n === 2
-        )
-        group = (await Effect.runPromise(service.list()))[0]!
-        if (scenario === "restart") {
-          await h.close(ctx)
-          release = true
-          h = await Harness.open(
-            await openNodeSqliteStorage(path),
-            options,
-            ctx
-          )
-          await (await h.submission(submission.id, ctx))!.wait(ctx)
-        } else if (scenario === "ordered-steers") {
-          const first = {
-            groupId: group.id,
-            childId: group.children[0]!.id,
-            operationId: crypto.randomUUID(),
-            action: { type: "steer" as const, text: "FIRST requirement" },
-          }
-          operationA = first.operationId
-          const a = Effect.runPromise(service.control(first))
-          await until(async () => held, Boolean)
-          await Effect.runPromise(
-            service.control({
-              ...first,
-              operationId: crypto.randomUUID(),
-              action: { type: "steer", text: "SECOND requirement" },
-            })
-          )
-          releaseA()
-          await a
-          release = true
-          await submission.wait(ctx)
-        } else if (scenario === "deadline") {
-          clock += DURATION_MS + 1
-          await Effect.runPromise(service.reconcile(turn))
-          await submission.wait(ctx)
-        } else if (scenario === "stop-parent") {
-          cancelled = true
-          await root.abort(ctx)
-        } else {
-          const control = {
-            groupId: group.id,
-            childId: group.children[0]!.id,
-            operationId: crypto.randomUUID(),
-            action: scenario.startsWith("steer")
-              ? { type: "steer" as const, text: "Use metric units." }
-              : { type: "stop" as const },
-          }
-          const results = await Promise.all([
-            Effect.runPromise(service.control(control)),
-            Effect.runPromise(service.control(control)),
-          ])
-          expect(results.map((r) => r.accepted).sort()).toEqual([false, true])
-          await expect(
-            Effect.runPromise(
-              service.control({ ...control, childId: group.children[1]!.id })
-            )
-          ).rejects.toThrow("another operation")
-          if (scenario === "steer-restart") {
-            await h.close(ctx)
-            h = await Harness.open(
-              await openNodeSqliteStorage(path),
-              options,
-              ctx
-            )
-            expect(await Effect.runPromise(service.control(control))).toEqual({
-              accepted: false,
-            })
-          }
-          release = true
-          await (await h.submission(submission.id, ctx))!.wait(ctx)
-          expect(await Effect.runPromise(service.control(control))).toEqual({
-            accepted: false,
-          })
-        }
-        group = await Effect.runPromise(service.read(group.id))
-      }
+    async function verifyGroup(
+      group: Group,
+      root: Awaited<ReturnType<Harness["root"]>>
+    ) {
       expect(group.children).toHaveLength(2)
       expect(group.children.map((c) => c.id)).toEqual([
         ...new Set(group.children.map((c) => c.id)),
@@ -501,6 +405,110 @@ it.each([
         )
       ).toEqual(ids)
       expect(generation).toBe(count)
+    }
+    h = await Harness.open(await openNodeSqliteStorage(path), options, ctx)
+    try {
+      const root = await h.root(ctx, {
+        agent: {
+          model: { provider: "openai", modelId: "gpt-6-luna" },
+          extensions: [registry.snapshot().extension("parent")!],
+        },
+      })
+      parent = Number(root.id)
+      const submission = await root.submit(
+        {
+          type: "input",
+          content: "Use parallel help to compare these two approaches.",
+          requestId: turn,
+        },
+        ctx
+      )
+      let group: Group
+      if (["finish", "budget", "compact"].includes(scenario)) {
+        await submission.wait(ctx)
+        group = (await Effect.runPromise(service.list()))[0]!
+      } else {
+        await until(
+          async () => generation,
+          (n) => n === 2
+        )
+        group = (await Effect.runPromise(service.list()))[0]!
+        if (scenario === "restart") {
+          await h.close(ctx)
+          release = true
+          h = await Harness.open(
+            await openNodeSqliteStorage(path),
+            options,
+            ctx
+          )
+          await (await h.submission(submission.id, ctx))!.wait(ctx)
+        } else if (scenario === "ordered-steers") {
+          const first = {
+            groupId: group.id,
+            childId: group.children[0]!.id,
+            operationId: crypto.randomUUID(),
+            action: { type: "steer" as const, text: "FIRST requirement" },
+          }
+          operationA = first.operationId
+          const a = Effect.runPromise(service.control(first))
+          await until(async () => held, Boolean)
+          await Effect.runPromise(
+            service.control({
+              ...first,
+              operationId: crypto.randomUUID(),
+              action: { type: "steer", text: "SECOND requirement" },
+            })
+          )
+          releaseA()
+          await a
+          release = true
+          await submission.wait(ctx)
+        } else if (scenario === "deadline") {
+          clock += DURATION_MS + 1
+          await Effect.runPromise(service.reconcile(turn))
+          await submission.wait(ctx)
+        } else if (scenario === "stop-parent") {
+          cancelled = true
+          await root.abort(ctx)
+        } else {
+          const control = {
+            groupId: group.id,
+            childId: group.children[0]!.id,
+            operationId: crypto.randomUUID(),
+            action: scenario.startsWith("steer")
+              ? { type: "steer" as const, text: "Use metric units." }
+              : { type: "stop" as const },
+          }
+          const results = await Promise.all([
+            Effect.runPromise(service.control(control)),
+            Effect.runPromise(service.control(control)),
+          ])
+          expect(results.map((r) => r.accepted).sort()).toEqual([false, true])
+          await expect(
+            Effect.runPromise(
+              service.control({ ...control, childId: group.children[1]!.id })
+            )
+          ).rejects.toThrow("another operation")
+          if (scenario === "steer-restart") {
+            await h.close(ctx)
+            h = await Harness.open(
+              await openNodeSqliteStorage(path),
+              options,
+              ctx
+            )
+            expect(await Effect.runPromise(service.control(control))).toEqual({
+              accepted: false,
+            })
+          }
+          release = true
+          await (await h.submission(submission.id, ctx))!.wait(ctx)
+          expect(await Effect.runPromise(service.control(control))).toEqual({
+            accepted: false,
+          })
+        }
+        group = await Effect.runPromise(service.read(group.id))
+      }
+      await verifyGroup(group, root)
     } finally {
       releaseA()
       release = true

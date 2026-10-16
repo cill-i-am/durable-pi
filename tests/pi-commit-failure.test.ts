@@ -1,15 +1,17 @@
-import { Cause, Effect, Exit, Schema } from "effect"
-import { afterEach, expect, it } from "vitest"
 import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+
 import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context"
+import { createModels } from "@earendil-works/pi-ai"
 import { Harness, createRegistry } from "@earendil-works/pi-durable"
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
-import { createModels } from "@earendil-works/pi-ai"
+import { Cause, Effect, Exit, Schema } from "effect"
+import { afterEach, expect, it } from "vitest"
+
+import { piDelegationLedger } from "../src/delegation/adapters/pi"
 import { piObjectLedger } from "../src/objects/adapters/pi"
 import { piPlanLedger } from "../src/planning/adapters/pi"
-import { piDelegationLedger } from "../src/delegation/adapters/pi"
 
 class Refused extends Schema.TaggedError<Refused>()("CallbackRefused", {}) {}
 const closers: (() => Promise<void>)[] = []

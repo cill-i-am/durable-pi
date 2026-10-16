@@ -1,5 +1,6 @@
 import { Schema } from "effect"
 import type { Effect } from "effect"
+
 import type {
   BrowserAction,
   BrowserCapture,

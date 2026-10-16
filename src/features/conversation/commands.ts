@@ -1,10 +1,10 @@
-import { ApiError } from "@/http/client"
-import type { Profile, JobType } from "@/inference/policy"
 import type {
   ModelSelection,
   Submission,
   SubmissionMode,
 } from "@/conversations/turns"
+import { ApiError } from "@/http/client"
+import type { Profile, JobType } from "@/inference/policy"
 
 export function submissionAttempt(
   previous: Submission | null,

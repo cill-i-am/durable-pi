@@ -1,5 +1,6 @@
 import { Schema } from "effect"
 import { Rpc, RpcGroup } from "effect/rpc"
+
 import { Envelope, Receipt, CommunicationError } from "../contracts"
 
 export class MailboxRpc extends RpcGroup.make(

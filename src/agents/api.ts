@@ -5,6 +5,7 @@ import {
   HttpApiGroup,
   HttpApiSchema,
 } from "effect/http-api"
+
 import { AgentProfile } from "./domain"
 
 export const AgentCatalogResponse = Schema.Struct({

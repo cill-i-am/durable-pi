@@ -1,3 +1,4 @@
+import { Check, CircleAlert, Copy } from "lucide-react"
 import {
   useEffect,
   useRef,
@@ -5,7 +6,7 @@ import {
   type ComponentProps,
   type ReactNode,
 } from "react"
-import { Check, CircleAlert, Copy } from "lucide-react"
+
 import { Button } from "@/components/ui/button"
 import {
   Tooltip,

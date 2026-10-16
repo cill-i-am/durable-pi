@@ -1,16 +1,4 @@
-import { markReady } from "@/features/performance"
-import { AgentMark, agentTone } from "@/components/agent-mark"
-import { AgentStatus } from "@/components/agent-status"
-import { ActivityBorder } from "@/components/activity-visuals"
-import type { Profile, JobType } from "@/inference/policy"
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-  type RefObject,
-} from "react"
+import { Schema } from "effect"
 import {
   ArrowUp,
   ChevronDown,
@@ -27,28 +15,22 @@ import {
   ShieldCheck,
   Plug,
 } from "lucide-react"
-import type { useConversation } from "./use-conversation"
-import { TurnReply } from "./turn-reply"
-import { QueuedTurnAnchor } from "./queued-turn-anchor"
-import { ModelMenu } from "./model-menu"
-import { submissionAttempt, rejectedModelAttempt } from "./commands"
-import { useMessageDeliveryDefault } from "./delivery-preference"
 import {
-  ThinkingLevel,
-  type Submission,
-  type SubmissionMode,
-} from "@/conversations/turns"
-import { Schema } from "effect"
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from "react"
+
 import type { AgentProfile } from "@/agents/contracts"
-import { agentApi } from "@/http/client"
-import {
-  type FilesState,
-  FilePicker,
-  UploadStatus,
-  FileAttachments,
-} from "@/features/files"
-import { ApprovalCard } from "@/features/access"
-import { SidebarTrigger } from "@/components/ui/sidebar"
+import { ActivityBorder } from "@/components/activity-visuals"
+import { AgentMark, agentTone } from "@/components/agent-mark"
+import { AgentStatus } from "@/components/agent-status"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Bubble, BubbleContent } from "@/components/ui/bubble"
+import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -60,9 +42,6 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu"
-import { Button } from "@/components/ui/button"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Skeleton } from "@/components/ui/skeleton"
 import {
   Empty,
   EmptyHeader,
@@ -77,7 +56,6 @@ import {
   InputGroupButton,
 } from "@/components/ui/input-group"
 import { Message, MessageContent, MessageFooter } from "@/components/ui/message"
-import { Bubble, BubbleContent } from "@/components/ui/bubble"
 import {
   MessageScrollerProvider,
   MessageScroller,
@@ -86,6 +64,30 @@ import {
   MessageScrollerItem,
   MessageScrollerButton,
 } from "@/components/ui/message-scroller"
+import { SidebarTrigger } from "@/components/ui/sidebar"
+import { Skeleton } from "@/components/ui/skeleton"
+import {
+  ThinkingLevel,
+  type Submission,
+  type SubmissionMode,
+} from "@/conversations/turns"
+import { ApprovalCard } from "@/features/access"
+import {
+  type FilesState,
+  FilePicker,
+  UploadStatus,
+  FileAttachments,
+} from "@/features/files"
+import { markReady } from "@/features/performance"
+import { agentApi } from "@/http/client"
+import type { Profile, JobType } from "@/inference/policy"
+
+import { submissionAttempt, rejectedModelAttempt } from "./commands"
+import { useMessageDeliveryDefault } from "./delivery-preference"
+import { ModelMenu } from "./model-menu"
+import { QueuedTurnAnchor } from "./queued-turn-anchor"
+import { TurnReply } from "./turn-reply"
+import type { useConversation } from "./use-conversation"
 
 export function Conversation({
   name,
@@ -465,29 +467,13 @@ export function Conversation({
         {state && <QueuedTurnAnchor turns={state.turns} />}
       </MessageScrollerProvider>
       <div className="composer-area">
-        {(error || connectionError) && (
-          <Alert>
-            <AlertDescription className="flex items-center justify-between gap-3">
-              {error || connectionError}
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label="Reconnect"
-                onClick={() => reload()}
-              >
-                <RefreshCw />
-              </Button>
-            </AlertDescription>
-          </Alert>
-        )}
-        {state && !state.connected && !archived && (
-          <Alert>
-            <AlertDescription>
-              Your model connection is unavailable. Reconnect it before sending
-              a message.
-            </AlertDescription>
-          </Alert>
-        )}
+        <ConversationConnection
+          state={state}
+          archived={archived}
+          error={error}
+          connectionError={connectionError}
+          reload={reload}
+        />
         {archived ? (
           <p className="py-3 text-sm text-muted-foreground">
             Archived agent. Restore it from the agent menu to continue.
@@ -501,29 +487,17 @@ export function Conversation({
             onSend={send}
             onStop={stop}
             active={!!active}
-            working={
-              !!active &&
-              ["preparing", "running"].includes(active.status) &&
-              !state?.access?.approvals.some(
-                (approval) => approval.status === "pending"
-              )
-            }
+            working={conversationWorking(active, state)}
             stopping={active?.status === "stopping"}
             pending={sending || files.uploading}
             hasAttachments={files.selected.length > 0}
             attachments={
               <>
-                <FileAttachments
-                  files={files.selected}
+                <ComposerAttachments
+                  files={files}
                   agentId={agent.id}
-                  onRemove={sending ? undefined : files.remove}
+                  sending={sending}
                 />
-                <UploadStatus state={files} />
-                {files.error && (
-                  <p role="alert" className="py-2 text-sm text-destructive">
-                    {files.error}
-                  </p>
-                )}
               </>
             }
             attachmentControl={
@@ -684,7 +658,7 @@ function Composer({
                       <DropdownMenuLabel>For this message</DropdownMenuLabel>
                       <DropdownMenuRadioGroup
                         value={delivery}
-                        onValueChange={(value) => {
+                        onValueChange={(value: unknown) => {
                           if (value === "steer" || value === "followUp")
                             setOverride(value)
                         }}
@@ -747,5 +721,86 @@ function Composer({
         </InputGroup>
       </ActivityBorder>
     </form>
+  )
+}
+
+function ConversationConnection({
+  state,
+  archived,
+  error,
+  connectionError,
+  reload,
+}: {
+  state: ReturnType<typeof useConversation>["state"]
+  archived: boolean
+  error: string
+  connectionError: ReturnType<typeof useConversation>["error"]
+  reload: () => void
+}) {
+  return (
+    <>
+      {(error || connectionError) && (
+        <Alert>
+          <AlertDescription className="flex items-center justify-between gap-3">
+            {error || connectionError}
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Reconnect"
+              onClick={() => reload()}
+            >
+              <RefreshCw />
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+      {state && !state.connected && !archived && (
+        <Alert>
+          <AlertDescription>
+            Your model connection is unavailable. Reconnect it before sending a
+            message.
+          </AlertDescription>
+        </Alert>
+      )}
+    </>
+  )
+}
+
+function conversationWorking(
+  active:
+    | NonNullable<ReturnType<typeof useConversation>["state"]>["turns"][number]
+    | undefined,
+  state: ReturnType<typeof useConversation>["state"]
+) {
+  return (
+    !!active &&
+    ["preparing", "running"].includes(active.status) &&
+    !state?.access?.approvals.some((approval) => approval.status === "pending")
+  )
+}
+
+function ComposerAttachments({
+  files,
+  agentId,
+  sending,
+}: {
+  files: FilesState
+  agentId: string
+  sending: boolean
+}) {
+  return (
+    <>
+      <FileAttachments
+        files={files.selected}
+        agentId={agentId}
+        onRemove={sending ? undefined : files.remove}
+      />
+      <UploadStatus state={files} />
+      {files.error && (
+        <p role="alert" className="py-2 text-sm text-destructive">
+          {files.error}
+        </p>
+      )}
+    </>
   )
 }

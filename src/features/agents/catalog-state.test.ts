@@ -1,4 +1,5 @@
 import { expect, it } from "vitest"
+
 import { homeAgentId } from "../../agents/contracts"
 import { catalogReducer, initialCatalog } from "./catalog-state"
 

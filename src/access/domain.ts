@@ -175,20 +175,8 @@ export function claimOperation(
     operation.status === "running" &&
     recoverable &&
     (operation.expiresAt <= now || operation.grantRevision !== policy.revision)
-  ) {
-    const expired = operation.expiresAt <= now
-    return {
-      update: {
-        status: expired ? "expired" : "denied",
-        grantRevision: operation.grantRevision,
-      },
-      decision: new AccessDenied({
-        message: expired
-          ? "This interrupted tool request has expired. Read current state before requesting a new change."
-          : "Tool access changed after dispatch. Read current state before requesting a new change.",
-      }),
-    }
-  }
+  )
+    return rejectRecoveredOperation(operation, now)
   if (operation.status === "running" && !recoverable)
     return {
       update: { status: "interrupted", grantRevision: operation.grantRevision },
@@ -221,6 +209,24 @@ export function claimOperation(
   return {
     decision: "execute",
     update: { status: "running", grantRevision: policy.revision },
+  }
+}
+
+function rejectRecoveredOperation(
+  operation: ToolOperation,
+  now: number
+): DispatchTransition {
+  const expired = operation.expiresAt <= now
+  return {
+    update: {
+      status: expired ? "expired" : "denied",
+      grantRevision: operation.grantRevision,
+    },
+    decision: new AccessDenied({
+      message: expired
+        ? "This interrupted tool request has expired. Read current state before requesting a new change."
+        : "Tool access changed after dispatch. Read current state before requesting a new change.",
+    }),
   }
 }
 

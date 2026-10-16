@@ -1,12 +1,14 @@
+import { Effect, Schema } from "effect"
+import { describe, expect, it, vi } from "vitest"
+
+import { browserRequest } from "../src/browser/adapters/http"
 import {
   effectBrowserDriver,
   browserWake,
   type ForeignBrowserDriver,
 } from "../src/browser/adapters/interop"
-import { describe, expect, it, vi } from "vitest"
-import { Effect, Schema } from "effect"
-import { BrowserWorkspace } from "../src/browser/browser"
 import { BrowserStore } from "../src/browser/adapters/sqlite"
+import { BrowserWorkspace } from "../src/browser/browser"
 import {
   BrowserPolicy,
   BrowserInteraction,
@@ -16,7 +18,6 @@ import {
   type BrowserCapture,
   type BrowserSession,
 } from "../src/browser/contracts"
-import { browserRequest } from "../src/browser/adapters/http"
 import { database } from "./database"
 
 const capture: BrowserCapture = {

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict"
+
 import type { AccessState } from "../src/access/contracts"
 
 const origin = "http://localhost:1337"

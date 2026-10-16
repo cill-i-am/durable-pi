@@ -1,12 +1,13 @@
-import { expect, it } from "vitest"
 import { Effect } from "effect"
+import { expect, it } from "vitest"
+
+import { resolveRoute } from "../src/inference/policy"
 import { SummaryRoutes } from "../src/memory/adapters/model-routes"
 import {
   makeSqliteMemory,
   sqliteMemoryLayer,
 } from "../src/memory/adapters/sqlite"
 import { MemoryTransaction } from "../src/memory/ledger"
-import { resolveRoute } from "../src/inference/policy"
 import { database } from "./database"
 
 const run = Effect.runSync

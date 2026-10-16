@@ -1,6 +1,7 @@
 import { Cause, Effect, Exit } from "effect"
-import { nativeFailure } from "./interop"
+
 import { orDieAll } from "./effect"
+import { nativeFailure } from "./interop"
 
 /** Data-only observations can outlive a display deadline. The native owner keeps
  * the real settlement, including late validation defects; no resource transfers. */

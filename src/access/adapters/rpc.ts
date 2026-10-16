@@ -1,4 +1,7 @@
 import { Cause, Exit, Schema } from "effect"
+
+import { nativeOperation } from "../../shared/interop"
+import { rpcOutcome } from "../../shared/rpc-outcome"
 import {
   ConnectionError,
   ConnectionStorageError,
@@ -7,8 +10,6 @@ import {
   RemoteToolResult,
   SelectRemoteTools,
 } from "../connections"
-import { rpcOutcome } from "../../shared/rpc-outcome"
-import { nativeOperation } from "../../shared/interop"
 
 const ToolSnapshot = Schema.Struct({
   ...RemoteTool.fields,

@@ -1,9 +1,10 @@
 import { Type } from "@earendil-works/pi-ai"
 import { defineTool } from "@earendil-works/pi-durable"
-import type { Routines } from "../service"
+import { Schema, type Effect } from "effect"
+
 import type { Routine } from "../contracts"
 import { SaveRoutine } from "../contracts"
-import { Schema, type Effect } from "effect"
+import type { Routines } from "../service"
 
 async function operationId(task: string) {
   const hash = Array.from(
@@ -80,7 +81,7 @@ export function routineTools(
               ...args,
               id: args.id ?? operation,
               operationId: operation,
-              schedule: JSON.parse(args.schedule),
+              schedule: JSON.parse(args.schedule) as unknown,
             })
           ),
           execution.abortSignal

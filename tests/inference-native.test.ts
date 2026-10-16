@@ -1,20 +1,22 @@
-import { Effect } from "effect"
-import { expect, it } from "vitest"
 import { mkdtemp, rm } from "node:fs/promises"
-import { join } from "node:path"
 import { tmpdir } from "node:os"
+import { join } from "node:path"
+
 import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context"
+import { Type } from "@earendil-works/pi-ai"
 import { Harness, createRegistry, defineTool } from "@earendil-works/pi-durable"
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
-import { Type } from "@earendil-works/pi-ai"
-import { createAgentModels, expectModelDefect } from "./models-fixture"
-import { accountCredentials } from "../src/inference/adapters/credentials-pi"
-import { usageFixture } from "./usage-fixture"
-import { resolveRoute } from "../src/inference/policy"
+import { Effect } from "effect"
+import { expect, it } from "vitest"
+
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import { submissionAttempt } from "../src/features/conversation/commands"
+import { accountCredentials } from "../src/inference/adapters/credentials-pi"
+import { resolveRoute } from "../src/inference/policy"
 import { database } from "./database"
 import { catalog, credential, response } from "./inference-fixture"
+import { createAgentModels, expectModelDefect } from "./models-fixture"
+import { usageFixture } from "./usage-fixture"
 
 it("carries a composer override into native Pi Responses and preserves selection and completed actions across restart", async () => {
   const directory = await mkdtemp(join(tmpdir(), "pi-routing-")),

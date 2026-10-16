@@ -1,16 +1,8 @@
-import { expect, it } from "vitest"
 import { mkdtemp, rm } from "node:fs/promises"
-import { join } from "node:path"
 import { tmpdir } from "node:os"
-import { Effect, ManagedRuntime } from "effect"
+import { join } from "node:path"
+
 import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context"
-import {
-  Harness,
-  createRegistry,
-  defineTool,
-  watchEvents,
-} from "@earendil-works/pi-durable"
-import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
 import {
   Type,
   createModels,
@@ -21,6 +13,19 @@ import {
   type Message,
   type FauxResponseFactory,
 } from "@earendil-works/pi-ai"
+import {
+  Harness,
+  createRegistry,
+  defineTool,
+  watchEvents,
+} from "@earendil-works/pi-durable"
+import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
+import { Effect, ManagedRuntime } from "effect"
+import { expect, it } from "vitest"
+
+import { guardedTools } from "../src/access/adapters/pi"
+import { AccessStore } from "../src/access/adapters/sqlite"
+import { AccessGate } from "../src/access/gate"
 import { agentSettings, workingContextPolicy } from "../src/agent/compaction"
 import {
   originalTranscript,
@@ -28,13 +33,10 @@ import {
   placedInputs,
   replySettled,
 } from "../src/conversations/adapters/pi-reply"
-import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import { piTimeline } from "../src/conversations/adapters/pi-timeline"
-import { AccessStore } from "../src/access/adapters/sqlite"
-import { AccessGate } from "../src/access/gate"
-import { guardedTools } from "../src/access/adapters/pi"
-import { MemoryRepository } from "../src/memory/repository"
+import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import { sqliteMemoryLayer } from "../src/memory/adapters/sqlite"
+import { MemoryRepository } from "../src/memory/repository"
 import { piWorkingObjects } from "../src/objects/adapters/pi"
 import { objectContextHook } from "../src/objects/adapters/tools"
 import { database } from "./database"

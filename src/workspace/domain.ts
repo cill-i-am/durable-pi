@@ -1,4 +1,5 @@
 import { Schema } from "effect"
+
 import {
   FileInfo,
   FileName,
@@ -11,9 +12,9 @@ import {
   type Upload,
   type AttachmentContent,
 } from "./files"
-import { VideoPreparation, type VideoResult } from "./video"
 import { DocumentExtraction } from "./files"
 import type { DocumentJob, VideoJob, WorkspaceFile } from "./ledger"
+import { VideoPreparation, type VideoResult } from "./video"
 
 export function requireWorkspaceWritable(canWrite: () => boolean) {
   if (!canWrite()) throw new WorkspaceReadOnly()

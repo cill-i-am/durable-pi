@@ -1,15 +1,13 @@
-import { afterEach, expect, it, vi } from "vitest"
 import { Cause, Effect, Exit, Layer, ManagedRuntime, Schema } from "effect"
-import { PersonalAgent } from "../src/agent/worker"
+import { afterEach, expect, it, vi } from "vitest"
+
+import { remoteToolResolution } from "../src/access/adapters/resolution"
 import {
   ConnectionOutcome,
   ConnectionRequest,
   connectionNative,
   connectionRpc,
 } from "../src/access/adapters/rpc"
-import { SkillOutcome, skillNative, skillRpc } from "../src/skills/adapters/rpc"
-import { remoteToolResolution } from "../src/access/adapters/resolution"
-import { skillResolution } from "../src/skills/adapters/resolution"
 import {
   ConnectionError,
   ConnectionStorageError,
@@ -17,6 +15,9 @@ import {
   type RemoteTool,
   type RemoteToolResult,
 } from "../src/access/connections"
+import { PersonalAgent } from "../src/agent/worker"
+import { skillResolution } from "../src/skills/adapters/resolution"
+import { SkillOutcome, skillNative, skillRpc } from "../src/skills/adapters/rpc"
 import {
   SkillConflict,
   SkillStorageError,

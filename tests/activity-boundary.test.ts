@@ -1,27 +1,28 @@
 import { expect, it } from "@effect/vitest"
-import { it as test } from "vitest"
 import { Cause, Effect, Exit, Fiber, Schema } from "effect"
 import { TestClock } from "effect/testing"
-import { database } from "./database"
-import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
-import { sqliteConversationMaterialization } from "../src/conversations/adapters/sqlite-journal"
-import { RunRecoveryStore } from "../src/conversations/adapters/sqlite-recovery"
+import { it as test } from "vitest"
+
 import { AccessStore } from "../src/access/adapters/sqlite"
-import { SqliteBackgroundMailbox } from "../src/delegation/adapters/background-mailbox"
-import { usageFixture } from "./usage-fixture"
-import { SqliteActivityRecords } from "../src/activity/adapters/sqlite"
-import { makeActivity, type ActivitySources } from "../src/activity/service"
-import { activityFeed } from "../src/activity/feed"
-import { ActivitySnapshot, type ActivityAgent } from "../src/activity/contracts"
-import { ActivityUnavailable } from "../src/activity/records"
+import { activityRequest } from "../src/activity/adapters/http"
 import {
   activityDirectory,
   activityRpc,
   type ActivityAgentRpc,
 } from "../src/activity/adapters/rpc"
-import { activityRequest } from "../src/activity/adapters/http"
+import { SqliteActivityRecords } from "../src/activity/adapters/sqlite"
+import { ActivitySnapshot, type ActivityAgent } from "../src/activity/contracts"
+import { activityFeed } from "../src/activity/feed"
 import type { ActivityDirectory } from "../src/activity/reader"
+import { ActivityUnavailable } from "../src/activity/records"
+import { makeActivity, type ActivitySources } from "../src/activity/service"
 import { homeAgentId, AgentId, agentObjectName } from "../src/agents/domain"
+import { sqliteConversationMaterialization } from "../src/conversations/adapters/sqlite-journal"
+import { RunRecoveryStore } from "../src/conversations/adapters/sqlite-recovery"
+import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
+import { SqliteBackgroundMailbox } from "../src/delegation/adapters/background-mailbox"
+import { database } from "./database"
+import { usageFixture } from "./usage-fixture"
 
 const bot = { id: homeAgentId, name: "Home" }
 const query = { filter: "all" as const, cursor: null }

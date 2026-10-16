@@ -4,15 +4,7 @@ export function sessionFetch(fetcher: typeof fetch): typeof fetch {
   let limitedUntil = 0
 
   return async (input, init) => {
-    const url = new URL(
-      input instanceof Request ? input.url : String(input),
-      "http://local"
-    )
-    const method = (
-      init?.method ?? (input instanceof Request ? input.method : "GET")
-    ).toUpperCase()
-    const callerSignal =
-      init?.signal ?? (input instanceof Request ? input.signal : undefined)
+    const { url, method, callerSignal } = fetchRequest(input, init)
     if (url.pathname === "/api/auth/get-session" && method === "GET") {
       while (rotation) await abortable(rotation, callerSignal)
       callerSignal?.throwIfAborted()
@@ -108,4 +100,17 @@ function abortable<T>(
       .then(resolve, reject)
       .finally(() => signal.removeEventListener("abort", abort))
   })
+}
+
+function fetchRequest(input: Parameters<typeof fetch>[0], init?: RequestInit) {
+  const url = new URL(
+    input instanceof Request ? input.url : String(input),
+    "http://local"
+  )
+  const method = (
+    init?.method ?? (input instanceof Request ? input.method : "GET")
+  ).toUpperCase()
+  const callerSignal =
+    init?.signal ?? (input instanceof Request ? input.signal : undefined)
+  return { url, method, callerSignal }
 }

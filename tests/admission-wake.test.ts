@@ -1,48 +1,49 @@
-import { makeSummaryModel } from "../src/memory/summary-execution"
-import {
-  SummaryRouting,
-  summaryRoutingApplication,
-} from "../src/memory/routing"
-import { summaryInput } from "../src/memory/adapters/summary-input"
-import { summaryRetryAuthority } from "../src/memory/adapters/retry-authority"
-import { expect, it, vi } from "vitest"
-import { Cause, Effect, Exit, Layer, ManagedRuntime } from "effect"
-import {
-  Conversations,
-  conversationApplication,
-} from "../src/conversations/service"
-import { PersonalAgent } from "../src/agent/worker"
-import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
-import { workspaceLayer } from "../src/workspace/adapters/storage"
-import { catalog, credential, response } from "./inference-fixture"
-import { accountCredentials } from "../src/inference/adapters/credentials-pi"
-import { usageFixture } from "./usage-fixture"
-import { piModelStreamsLayer } from "../src/inference/adapters/streams-pi"
 import { createRegistry } from "@earendil-works/pi-durable"
-import { database } from "./database"
-import { sqliteMemoryLayer } from "../src/memory/adapters/sqlite"
-import { MemoryRepository } from "../src/memory/repository"
-import { MemoryTransaction, type MemoryLedger } from "../src/memory/ledger"
-import { memorySummaryRetry } from "../src/memory/retry"
-import type { Sqlite } from "../src/storage/sqlite"
-import { SummaryRoutes } from "../src/memory/adapters/model-routes"
-import { SqliteBackgroundMailbox } from "../src/delegation/adapters/background-mailbox"
-import { makeBackgroundMailbox } from "../src/delegation/background-mailbox"
-import { makeBackgroundDelegation } from "../src/delegation/background-service"
-import { resolveRoute } from "../src/inference/policy"
-import { conversationPump } from "../src/conversations/pump"
-import { conversationFixture } from "./conversation-fixture"
+import { Cause, Effect, Exit, Layer, ManagedRuntime } from "effect"
+import { expect, it, vi } from "vitest"
+
+import { PersonalAgent } from "../src/agent/worker"
 import { BotConfigurationStore } from "../src/agents/adapters/configuration"
-import { SkillStore } from "../src/skills/adapters/sqlite"
-import { Workspace } from "../src/workspace/workspace"
-import { WorkspaceAdmission } from "../src/workspace/admission"
+import { homeAgentId } from "../src/agents/domain"
+import { conversationNativeOperation } from "../src/conversations/adapters/pi-execution"
+import { conversationTransactions } from "../src/conversations/adapters/sqlite-journal"
+import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import {
   guardedMessageAdmission,
   messageAdmission,
 } from "../src/conversations/admission"
-import { conversationTransactions } from "../src/conversations/adapters/sqlite-journal"
-import { conversationNativeOperation } from "../src/conversations/adapters/pi-execution"
-import { homeAgentId } from "../src/agents/domain"
+import { conversationPump } from "../src/conversations/pump"
+import {
+  Conversations,
+  conversationApplication,
+} from "../src/conversations/service"
+import { SqliteBackgroundMailbox } from "../src/delegation/adapters/background-mailbox"
+import { makeBackgroundMailbox } from "../src/delegation/background-mailbox"
+import { makeBackgroundDelegation } from "../src/delegation/background-service"
+import { accountCredentials } from "../src/inference/adapters/credentials-pi"
+import { piModelStreamsLayer } from "../src/inference/adapters/streams-pi"
+import { resolveRoute } from "../src/inference/policy"
+import { SummaryRoutes } from "../src/memory/adapters/model-routes"
+import { summaryRetryAuthority } from "../src/memory/adapters/retry-authority"
+import { sqliteMemoryLayer } from "../src/memory/adapters/sqlite"
+import { summaryInput } from "../src/memory/adapters/summary-input"
+import { MemoryTransaction, type MemoryLedger } from "../src/memory/ledger"
+import { MemoryRepository } from "../src/memory/repository"
+import { memorySummaryRetry } from "../src/memory/retry"
+import {
+  SummaryRouting,
+  summaryRoutingApplication,
+} from "../src/memory/routing"
+import { makeSummaryModel } from "../src/memory/summary-execution"
+import { SkillStore } from "../src/skills/adapters/sqlite"
+import type { Sqlite } from "../src/storage/sqlite"
+import { workspaceLayer } from "../src/workspace/adapters/storage"
+import { WorkspaceAdmission } from "../src/workspace/admission"
+import { Workspace } from "../src/workspace/workspace"
+import { conversationFixture } from "./conversation-fixture"
+import { database } from "./database"
+import { catalog, credential, response } from "./inference-fixture"
+import { usageFixture } from "./usage-fixture"
 
 vi.mock("cloudflare:workers", () => ({
   DurableObject: class {},

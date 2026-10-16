@@ -1,6 +1,7 @@
 import { Effect } from "effect"
-import { InferenceUsage, usageApplication } from "../src/inference/usage"
+
 import { SqliteUsage } from "../src/inference/adapters/usage-sqlite"
+import { InferenceUsage, usageApplication } from "../src/inference/usage"
 import type {
   TerminalOutcome,
   UsageReport,

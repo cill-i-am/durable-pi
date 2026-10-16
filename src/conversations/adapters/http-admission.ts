@@ -1,5 +1,6 @@
-import { preserveFatal } from "../../shared/effect"
 import { Effect, Schema } from "effect"
+
+import { preserveFatal } from "../../shared/effect"
 import { ConversationRejected, type SubmissionReceipt } from "../admission"
 import type { ConversationNotFound } from "../commands"
 

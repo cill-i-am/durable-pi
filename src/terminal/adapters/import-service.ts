@@ -1,7 +1,8 @@
 import { Effect, Schema } from "effect"
+
+import { preserveFatal } from "../../shared/effect"
 import { nativeResponse } from "../../shared/interop"
 import { nativeBytes } from "../../shared/stream"
-import { preserveFatal } from "../../shared/effect"
 import { CommandRun } from "../contracts"
 import { TerminalRuntimeError } from "../runtime"
 import type { TerminalImports } from "../workspace-import"

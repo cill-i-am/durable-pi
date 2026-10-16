@@ -49,17 +49,7 @@ export function saveRoutine(
     throw new RoutineConflict({
       message: "A routine with this name already exists. Edit it instead.",
     })
-  const rescheduled =
-    !previous ||
-    JSON.stringify(previous.schedule) !== JSON.stringify(input.schedule)
-  if (
-    rescheduled &&
-    input.schedule.type !== "webhook" &&
-    (input.schedule.at <= now || input.schedule.at > now + 366 * 86400000)
-  )
-    throw new RoutineConflict({
-      message: "Choose a first run in the coming year.",
-    })
+  const nextAt = nextRoutineTime(input, previous, pending, now)
   return {
     id: input.id,
     title: input.title.trim(),
@@ -67,16 +57,31 @@ export function saveRoutine(
     schedule: input.schedule,
     status: input.status,
     revision: (previous?.revision ?? 0) + 1,
-    nextAt: rescheduled
-      ? input.schedule.type === "webhook"
-        ? null
-        : input.schedule.at
-      : pending?.trigger === "scheduled"
-        ? pending.scheduledAt
-        : previous.nextAt,
+    nextAt,
     createdAt: previous?.createdAt ?? now,
     updatedAt: now,
   }
+}
+
+function nextRoutineTime(
+  input: SaveRoutine,
+  previous: Routine | undefined,
+  pending: RoutineRun | undefined,
+  now: number
+) {
+  if (
+    previous &&
+    JSON.stringify(previous.schedule) === JSON.stringify(input.schedule)
+  )
+    return pending?.trigger === "scheduled"
+      ? pending.scheduledAt
+      : previous.nextAt
+  if (input.schedule.type === "webhook") return null
+  if (input.schedule.at <= now || input.schedule.at > now + 366 * 86400000)
+    throw new RoutineConflict({
+      message: "Choose a first run in the coming year.",
+    })
+  return input.schedule.at
 }
 
 export function changeRoutineStatus(

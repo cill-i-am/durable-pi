@@ -1,12 +1,12 @@
 import { eq } from "drizzle-orm"
 import { Effect, Schema } from "effect"
+
 import {
   mapSqliteError,
   type Sqlite,
   type EffectSqliteDatabase,
 } from "../../storage/sqlite"
 import { browserApplication } from "../browser"
-import type { BrowserDriver, BrowserUnavailable } from "../driver"
 import { BrowserFailure, type BrowserRecord } from "../contracts"
 import {
   BrowserRecordSchema,
@@ -15,6 +15,7 @@ import {
   transferBrowser,
   updateBrowser,
 } from "../domain"
+import type { BrowserDriver, BrowserUnavailable } from "../driver"
 import { BrowserStorageError, type BrowserRepository } from "../repository"
 import { botBrowser, retiredBrowsers } from "./schema"
 

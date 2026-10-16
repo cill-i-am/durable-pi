@@ -1,10 +1,7 @@
 {
   "baseline": "31d6aa23e2b09a0c9f157b9bcd2ab83493e4e03b",
   "protocol": {
-    "viewport": [
-      390,
-      844
-    ],
+    "viewport": [390, 844],
     "cpu": "normal",
     "network": "unthrottled loopback; cache-control no-store",
     "sessionDelayMs": 150,
@@ -20,44 +17,13 @@
       "chatDomMedianMs": 2651.5999999046326,
       "all20": true,
       "allNoOverflow": true,
-      "shapeCounts": [
-        0,
-        0,
-        0,
-        0,
-        0
-      ],
+      "shapeCounts": [0, 0, 0, 0, 0],
       "phases": [
-        [
-          "session",
-          "workspace",
-          "conversation",
-          "chat"
-        ],
-        [
-          "session",
-          "workspace",
-          "conversation",
-          "chat"
-        ],
-        [
-          "session",
-          "workspace",
-          "conversation",
-          "chat"
-        ],
-        [
-          "session",
-          "workspace",
-          "conversation",
-          "chat"
-        ],
-        [
-          "session",
-          "workspace",
-          "conversation",
-          "chat"
-        ]
+        ["session", "workspace", "conversation", "chat"],
+        ["session", "workspace", "conversation", "chat"],
+        ["session", "workspace", "conversation", "chat"],
+        ["session", "workspace", "conversation", "chat"],
+        ["session", "workspace", "conversation", "chat"]
       ]
     },
     {
@@ -67,34 +33,13 @@
       "chatDomMedianMs": 2670,
       "all20": true,
       "allNoOverflow": true,
-      "shapeCounts": [
-        1,
-        1,
-        1,
-        1,
-        1
-      ],
+      "shapeCounts": [1, 1, 1, 1, 1],
       "phases": [
-        [
-          "startup",
-          "chat"
-        ],
-        [
-          "startup",
-          "chat"
-        ],
-        [
-          "startup",
-          "chat"
-        ],
-        [
-          "startup",
-          "chat"
-        ],
-        [
-          "startup",
-          "chat"
-        ]
+        ["startup", "chat"],
+        ["startup", "chat"],
+        ["startup", "chat"],
+        ["startup", "chat"],
+        ["startup", "chat"]
       ]
     }
   ],

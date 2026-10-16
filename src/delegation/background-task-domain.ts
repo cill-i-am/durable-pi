@@ -1,9 +1,10 @@
 import { Schema } from "effect"
+
 import { BackgroundHandoff } from "./background"
-import { Control, NativeId, type Group, type TaskBrief } from "./contracts"
 import { backgroundRejected } from "./background-domain"
-import type { ChildFacts } from "./domain"
+import { Control, NativeId, type Group, type TaskBrief } from "./contracts"
 import { REQUEST_LIMIT } from "./delegation"
+import type { ChildFacts } from "./domain"
 
 export const BackgroundChild = Schema.Struct({
   id: NativeId,

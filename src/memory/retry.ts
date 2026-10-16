@@ -1,4 +1,5 @@
 import { Schema, Effect } from "effect"
+
 import type { Conversations } from "../conversations/service"
 import {
   ModelUnavailable,

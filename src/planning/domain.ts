@@ -4,8 +4,8 @@ import {
   type PlanUpdate,
   type Evidence,
 } from "./contracts"
-import type { PlanSource } from "./plans"
 import type { PlanBinding, PlanOperation } from "./ledger"
+import type { PlanSource } from "./plans"
 
 export function requirePlanWritable(
   current: PlanSource | undefined,
@@ -144,7 +144,11 @@ export interface PlanningInput {
   readonly text: string
   readonly hasAttachments: boolean
   readonly delivery:
-    "queued" | "accepted" | "consumed" | "answered" | "unanswered"
+    | "queued"
+    | "accepted"
+    | "consumed"
+    | "answered"
+    | "unanswered"
 }
 export function planningInputSource(
   turnId: string,

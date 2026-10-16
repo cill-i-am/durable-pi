@@ -1,12 +1,13 @@
 import { expect, it } from "@effect/vitest"
 import { Cause, Effect, Exit } from "effect"
+
+import { BotConfigurationStore } from "../src/agents/adapters/configuration"
 import {
   BotConfiguration,
   configurationApplication,
   configurationChange,
 } from "../src/agents/configuration"
 import { homeAgentId } from "../src/agents/domain"
-import { BotConfigurationStore } from "../src/agents/adapters/configuration"
 import { database, corrupt } from "./database"
 
 const profile = {

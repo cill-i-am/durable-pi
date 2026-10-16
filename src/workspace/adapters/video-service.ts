@@ -1,11 +1,12 @@
 import { Effect, Schema } from "effect"
+
+import { WorkspaceUnavailable } from "../files"
 import {
   type ExtractVideo,
   VideoResult,
   VIDEO_RESULT_BYTES,
   VideoUnreadable,
 } from "../video"
-import { WorkspaceUnavailable } from "../files"
 import { workspaceResponse } from "./interop"
 import { workspaceBytes } from "./stream"
 

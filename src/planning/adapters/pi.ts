@@ -1,4 +1,3 @@
-import { Effect, Schema } from "effect"
 import { BACKGROUND_CONTEXT as context } from "@earendil-works/chord/context"
 import {
   defineDoc,
@@ -8,6 +7,10 @@ import {
   type Storage,
   type Tx,
 } from "@earendil-works/pi-durable"
+import { Effect, Schema } from "effect"
+
+import { nativeCommit } from "../../shared/adapters/native-commit"
+import { nativeOperation } from "../../shared/interop"
 import {
   Plan,
   PlanFailure,
@@ -15,12 +18,10 @@ import {
   PlanReceipt,
   PlanRevision,
 } from "../contracts"
-import type { PlanAuthority, PlanEvidence } from "../plans"
-import type { PlanLedger, PlanTransaction } from "../ledger"
 import { isPlanBlocked } from "../domain"
+import type { PlanLedger, PlanTransaction } from "../ledger"
+import type { PlanAuthority, PlanEvidence } from "../plans"
 import { makePlans } from "../service"
-import { nativeOperation } from "../../shared/interop"
-import { nativeCommit } from "../../shared/adapters/native-commit"
 
 const Catalog = defineDoc({
   kind: "plans.catalog",

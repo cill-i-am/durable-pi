@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router"
 import { Archive, Plus, Undo2 } from "lucide-react"
+
 import type { AgentProfile } from "@/agents/contracts"
 import { AgentMark, agentTone } from "@/components/agent-mark"
 import { Button, buttonVariants } from "@/components/ui/button"

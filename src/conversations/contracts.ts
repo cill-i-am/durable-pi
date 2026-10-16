@@ -1,10 +1,10 @@
-import { AccessState } from "../access/contracts"
-import { SkillReference } from "../skills/contracts"
 import * as Schema from "effect/Schema"
-import { FileInfo, FileSelection } from "../workspace/files"
 
+import { AccessState } from "../access/contracts"
 import { Profile, JobType, ResolvedRoute } from "../inference/policy"
 import { SummaryIssue } from "../memory/domain"
+import { SkillReference } from "../skills/contracts"
+import { FileInfo, FileSelection } from "../workspace/files"
 import { RuntimeStatus } from "./status"
 
 export const ConversationCursor = Schema.String.check(

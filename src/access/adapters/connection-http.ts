@@ -1,5 +1,8 @@
-import { preserveFatal } from "../../shared/effect"
 import { Effect, Schema } from "effect"
+
+import { preserveFatal } from "../../shared/effect"
+import { jsonRequest } from "../../shared/http"
+import type { RemoteConnectionOperations } from "../connection-service"
 import {
   ChangeConnection,
   ConnectionError,
@@ -8,8 +11,6 @@ import {
   type ConnectionStorageError,
   type ConnectionTransportError,
 } from "../connections"
-import type { RemoteConnectionOperations } from "../connection-service"
-import { jsonRequest } from "../../shared/http"
 
 class ConnectionRequestInvalid extends Schema.TaggedError<ConnectionRequestInvalid>()(
   "ConnectionRequestInvalid",

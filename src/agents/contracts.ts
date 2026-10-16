@@ -1,6 +1,7 @@
 import { Schema } from "effect"
-import { AgentId, AgentInstructions, AgentName, AgentProfile } from "./domain"
+
 import { RuntimeStatus } from "../conversations/status"
+import { AgentId, AgentInstructions, AgentName, AgentProfile } from "./domain"
 
 export const CreateAgent = Schema.Struct({
   id: AgentId,

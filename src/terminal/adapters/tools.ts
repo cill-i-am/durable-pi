@@ -1,6 +1,7 @@
 import { Type } from "@earendil-works/pi-ai"
 import { defineTool } from "@earendil-works/pi-durable"
 import { Effect } from "effect"
+
 import { preserveFatal } from "../../shared/effect"
 import type { CommandInput, CommandRun, TerminalFailure } from "../contracts"
 import type { TerminalRuntimeError } from "../runtime"

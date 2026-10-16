@@ -1,7 +1,8 @@
-import { preserveFatal } from "../shared/effect"
 import { Clock, Effect } from "effect"
-import type { Apps } from "./service"
+
+import { preserveFatal } from "../shared/effect"
 import type { AppAdmission } from "./repository"
+import type { Apps } from "./service"
 
 export interface AppEventHost<TError, TRequirements = never> {
   active: () => Effect.Effect<boolean, TError, TRequirements>

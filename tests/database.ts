@@ -1,7 +1,8 @@
-import { onTestFinished } from "vitest"
 import { Effect, Exit, Scope } from "effect"
-import { makeNodeSqlite } from "../src/storage/node"
+import { onTestFinished } from "vitest"
+
 import { migrateSqlite } from "../src/storage/migrations"
+import { makeNodeSqlite } from "../src/storage/node"
 import type { Sqlite } from "../src/storage/sqlite"
 
 export type TestSqlite = Sqlite & {

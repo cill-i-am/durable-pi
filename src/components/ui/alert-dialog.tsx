@@ -1,8 +1,9 @@
-import * as React from "react"
-import { ResponsiveOverlay as AlertDialogPrimitive } from "./responsive-overlay"
 import { cn } from "cn"
+import * as React from "react"
 
 import { Button } from "@/components/ui/button"
+
+import { ResponsiveOverlay as AlertDialogPrimitive } from "./responsive-overlay"
 
 function AlertDialog({
   ...props

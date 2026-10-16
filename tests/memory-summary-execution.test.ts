@@ -1,11 +1,13 @@
-import { modelStart } from "./models-fixture"
 import { expect, it } from "@effect/vitest"
-import { vi } from "vitest"
 import { Cause, Clock, Context, Deferred, Effect, Exit, Fiber } from "effect"
 import { TestClock } from "effect/testing"
-import { catalog, credential, response } from "./inference-fixture"
-import { database } from "./database"
+import { vi } from "vitest"
+
+import { accountCredentials } from "../src/inference/adapters/credentials-pi"
+import { resolveRoute, type ResolvedRoute } from "../src/inference/policy"
 import { SummaryRoutes } from "../src/memory/adapters/model-routes"
+import { piModelSummaryProvider } from "../src/memory/adapters/pi-model"
+import { MemoryStorageError } from "../src/memory/domain"
 import {
   SummaryRouting,
   summaryRoutingApplication,
@@ -15,10 +17,9 @@ import {
   type SummaryInputs,
   type SummaryProvider,
 } from "../src/memory/summary-execution"
-import { MemoryStorageError } from "../src/memory/domain"
-import { resolveRoute, type ResolvedRoute } from "../src/inference/policy"
-import { piModelSummaryProvider } from "../src/memory/adapters/pi-model"
-import { accountCredentials } from "../src/inference/adapters/credentials-pi"
+import { database } from "./database"
+import { catalog, credential, response } from "./inference-fixture"
+import { modelStart } from "./models-fixture"
 
 vi.mock("cloudflare:workers", () => ({ env: {}, tracing: undefined }))
 const job = { start: 0, count: 1, source: "Original", context: "" }

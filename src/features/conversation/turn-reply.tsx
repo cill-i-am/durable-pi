@@ -1,17 +1,18 @@
+import { ActivityOrb } from "@/components/activity-visuals"
 import { AgentMark, agentTone } from "@/components/agent-mark"
 import { CopyButton } from "@/components/copy-button"
-import { ActivityOrb } from "@/components/activity-visuals"
-import type { ChatState } from "@/conversations/contracts"
 import { Markdown } from "@/components/markdown"
-import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Bubble, BubbleContent } from "@/components/ui/bubble"
+import { Button } from "@/components/ui/button"
 import {
   Message,
   MessageContent,
   MessageHeader,
   MessageFooter,
 } from "@/components/ui/message"
-import { Bubble, BubbleContent } from "@/components/ui/bubble"
+import type { ChatState } from "@/conversations/contracts"
+
 import { TurnActivity, SteeringMessage } from "./turn-activity"
 
 export function TurnReply({
@@ -52,36 +53,13 @@ export function TurnReply({
               .join(" · ")}
           </p>
         )}
-        <Bubble variant="ghost">
-          <BubbleContent className="message-text">
-            {turn.activity?.length ? (
-              <TurnActivity
-                onAppPendingChange={onAppPendingChange}
-                items={turn.activity}
-                agentId={agentId}
-                toolTitles={toolTitles}
-                status={turn.status}
-                waitingForApproval={waitingForApproval}
-              />
-            ) : turn.answer ? (
-              <Markdown text={turn.answer} />
-            ) : ["running", "preparing", "stopping"].includes(turn.status) ? (
-              <span className="working-indicator" role="status">
-                <ActivityOrb
-                  state={
-                    turn.status === "preparing" ? "searching" : "breathing"
-                  }
-                  active={turn.status !== "stopping"}
-                />
-                {turn.status === "stopping"
-                  ? "Stopping…"
-                  : turn.status === "preparing"
-                    ? "Finding the thread…"
-                    : "Thinking…"}
-              </span>
-            ) : null}
-          </BubbleContent>
-        </Bubble>
+        <ReplyBody
+          turn={turn}
+          agentId={agentId}
+          toolTitles={toolTitles}
+          onAppPendingChange={onAppPendingChange}
+          waitingForApproval={waitingForApproval}
+        />
         {turn.steering
           ?.filter(
             (input) =>
@@ -148,5 +126,51 @@ export function TurnReply({
         )}
       </MessageContent>
     </Message>
+  )
+}
+
+function ReplyBody({
+  turn,
+  agentId,
+  toolTitles,
+  onAppPendingChange,
+  waitingForApproval,
+}: Pick<
+  Parameters<typeof TurnReply>[0],
+  | "turn"
+  | "agentId"
+  | "toolTitles"
+  | "onAppPendingChange"
+  | "waitingForApproval"
+>) {
+  return (
+    <Bubble variant="ghost">
+      <BubbleContent className="message-text">
+        {turn.activity?.length ? (
+          <TurnActivity
+            onAppPendingChange={onAppPendingChange}
+            items={turn.activity}
+            agentId={agentId}
+            toolTitles={toolTitles}
+            status={turn.status}
+            waitingForApproval={waitingForApproval}
+          />
+        ) : turn.answer ? (
+          <Markdown text={turn.answer} />
+        ) : ["running", "preparing", "stopping"].includes(turn.status) ? (
+          <span className="working-indicator" role="status">
+            <ActivityOrb
+              state={turn.status === "preparing" ? "searching" : "breathing"}
+              active={turn.status !== "stopping"}
+            />
+            {turn.status === "stopping"
+              ? "Stopping…"
+              : turn.status === "preparing"
+                ? "Finding the thread…"
+                : "Thinking…"}
+          </span>
+        ) : null}
+      </BubbleContent>
+    </Bubble>
   )
 }

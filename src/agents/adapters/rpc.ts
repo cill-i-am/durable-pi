@@ -1,4 +1,8 @@
 import { Cause, Schema } from "effect"
+
+import { RuntimeStatus } from "../../conversations/status"
+import { nativeOperation } from "../../shared/interop"
+import { rpcOutcome } from "../../shared/rpc-outcome"
 import {
   AgentId,
   AgentProfile,
@@ -8,9 +12,6 @@ import {
   AgentSynchronizationError,
   AgentRuntimeUnavailable,
 } from "../domain"
-import { RuntimeStatus } from "../../conversations/status"
-import { rpcOutcome } from "../../shared/rpc-outcome"
-import { nativeOperation } from "../../shared/interop"
 
 export const AgentProfiles = Schema.Array(AgentProfile)
 export const AgentContacts = Schema.Array(

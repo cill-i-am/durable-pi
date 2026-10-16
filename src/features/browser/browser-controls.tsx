@@ -1,9 +1,10 @@
-import { useState } from "react"
 import { ArrowDown, ArrowUp, Eye, EyeOff } from "lucide-react"
+import { useState } from "react"
+
 import type { BrowserAction, BrowserState } from "@/browser/contracts"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Field, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
 import { agentUrl } from "@/http/client"
 
 export function BrowserControls({

@@ -3,11 +3,12 @@ import * as Cloudflare from "alchemy/Cloudflare"
 import * as Config from "effect/Config"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
-import { PASSWORD_EMAIL_FROM } from "./src/auth/password-email"
+
 import type { PersonalAgent } from "./src/agent/worker"
+import { PASSWORD_EMAIL_FROM } from "./src/auth/password-email"
 import type { BackgroundGroupRPC } from "./src/delegation/worker"
-import type { LinuxSandbox } from "./src/terminal/worker"
 import type { LinuxSandboxV1 } from "./src/terminal/adapters/native-worker"
+import type { LinuxSandbox } from "./src/terminal/worker"
 
 const observability = {
   enabled: true,

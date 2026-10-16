@@ -1,15 +1,16 @@
 import { Cause, Effect, Exit, Schema } from "effect"
-import { nativeOperation, releaseUnreadResponse } from "../../shared/interop"
+
+import { reportService } from "../../observability/events"
+import { WorkerTelemetry } from "../../observability/worker"
 import { releaseForwardedResponse } from "../../shared/adapters/response"
 import { preserveFatal } from "../../shared/effect"
+import { nativeOperation, releaseUnreadResponse } from "../../shared/interop"
 import {
   type OwnerSessionUnavailable,
   sessionUnavailableResponse,
 } from "../owner-session"
-import { sessionSocketResponse, type SessionSocket } from "./session-socket"
-import { WorkerTelemetry } from "../../observability/worker"
-import { reportService } from "../../observability/events"
 import { encodeEventStream } from "./event-stream-encoding"
+import { sessionSocketResponse, type SessionSocket } from "./session-socket"
 
 export interface AgentProxyBindings {
   readonly appUrl: string

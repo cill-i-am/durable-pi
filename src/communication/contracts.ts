@@ -1,4 +1,5 @@
 import { Schema } from "effect"
+
 import { AgentId } from "../agents/domain"
 
 const text = (max: number) =>

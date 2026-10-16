@@ -1,6 +1,7 @@
 import type { EntryRecord, SnapshotEvent } from "@earendil-works/pi-durable"
-import type { TimelineItem } from "../contracts"
+
 import type { FileInfo } from "../../workspace/files"
+import type { TimelineItem } from "../contracts"
 
 export function piTimeline(
   entries: readonly EntryRecord[],
@@ -11,8 +12,6 @@ export function piTimeline(
   > = new Map()
 ): TimelineItem[] {
   const items: TimelineItem[] = []
-  type Tool = Extract<TimelineItem, { type: "tool" }>
-  type MutableTool = { -readonly [K in keyof Tool]: Tool[K] }
   const tools = new Map<string, MutableTool>()
   const messages = entries.flatMap((entry) =>
     (entry.model ?? []).map((message, index) => ({
@@ -75,15 +74,7 @@ export function piTimeline(
       }
     }
   }
-  for (const slot of live?.tools ?? []) {
-    const tool = tools.get(slot.callId)
-    if (tool && slot.status === "done" && !slot.entry) {
-      tool.status = "error"
-    } else if (tool && slot.status !== "done") {
-      tool.status = slot.status === "pending" ? "pending" : "running"
-      tool.output = slot.output?.slice(-32_000) ?? tool.output
-    }
-  }
+  mergeLiveTools(tools, live)
   return boundedActivity(items)
 }
 
@@ -141,4 +132,19 @@ export function displayAnswer(entries: readonly EntryRecord[]) {
     }
   }
   return parts.reverse().join("\n\n")
+}
+
+type Tool = Extract<TimelineItem, { type: "tool" }>
+type MutableTool = { -readonly [K in keyof Tool]: Tool[K] }
+
+function mergeLiveTools(tools: Map<string, MutableTool>, live?: SnapshotEvent) {
+  for (const slot of live?.tools ?? []) {
+    const tool = tools.get(slot.callId)
+    if (tool && slot.status === "done" && !slot.entry) {
+      tool.status = "error"
+    } else if (tool && slot.status !== "done") {
+      tool.status = slot.status === "pending" ? "pending" : "running"
+      tool.output = slot.output?.slice(-32_000) ?? tool.output
+    }
+  }
 }

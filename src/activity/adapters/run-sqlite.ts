@@ -11,7 +11,18 @@ import {
   type SQLWrapper,
 } from "drizzle-orm"
 import { Effect, Schema } from "effect"
-import { mapSqliteError, type Sqlite } from "../../storage/sqlite"
+
+import {
+  toolOperationHistory,
+  toolOperations,
+} from "../../access/adapters/schema"
+import {
+  chatRecoveryHistory,
+  chatTurns,
+} from "../../conversations/adapters/schema"
+import { RecoveryView } from "../../conversations/recovery"
+import { inferenceAttempts } from "../../inference/adapters/schema"
+import { Attempt } from "../../inference/usage-domain"
 import {
   asText,
   caseWhen,
@@ -22,18 +33,8 @@ import {
   jsonValid,
   literal,
 } from "../../storage/expressions"
-import {
-  chatRecoveryHistory,
-  chatTurns,
-} from "../../conversations/adapters/schema"
-import { inferenceAttempts } from "../../inference/adapters/schema"
-import {
-  toolOperationHistory,
-  toolOperations,
-} from "../../access/adapters/schema"
+import { mapSqliteError, type Sqlite } from "../../storage/sqlite"
 import { ActivityStorageError } from "../records"
-import { Attempt } from "../../inference/usage-domain"
-import { RecoveryView } from "../../conversations/recovery"
 import {
   RUN_PAGE_SIZE,
   type RunCursor,

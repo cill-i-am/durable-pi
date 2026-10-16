@@ -1,4 +1,5 @@
 import { Effect } from "effect"
+
 import type { AgentCatalog } from "./catalog"
 import type { BotConfiguration } from "./configuration"
 import type { AgentId, AgentProfile } from "./domain"

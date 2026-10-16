@@ -1,16 +1,8 @@
-import { expect, it } from "vitest"
 import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { Effect } from "effect"
+
 import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context"
-import {
-  Harness,
-  createRegistry,
-  defineTool,
-  watchEvents,
-} from "@earendil-works/pi-durable"
-import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
 import {
   createModels,
   fauxProvider,
@@ -18,6 +10,16 @@ import {
   fauxToolCall,
   Type,
 } from "@earendil-works/pi-ai"
+import {
+  Harness,
+  createRegistry,
+  defineTool,
+  watchEvents,
+} from "@earendil-works/pi-durable"
+import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
+import { Effect } from "effect"
+import { expect, it } from "vitest"
+
 import { agentSettings, contextProjectionBytes } from "../src/agent/compaction"
 import { originalTranscript } from "../src/conversations/adapters/pi-reply"
 import { piPlans } from "../src/planning/adapters/pi"

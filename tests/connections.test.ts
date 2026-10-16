@@ -1,19 +1,20 @@
-import { describe, expect, it, vi } from "vitest"
-import { Cause, Effect, Exit, Fiber } from "effect"
 import { it as effectIt } from "@effect/vitest"
-import { TestClock } from "effect/testing"
 import type { MCPClientManager } from "agents/mcp/client"
-import { database } from "./database"
+import { Cause, Effect, Exit, Fiber } from "effect"
+import { TestClock } from "effect/testing"
+import { describe, expect, it, vi } from "vitest"
+
+import { connectionRequest } from "../src/access/adapters/connection-http"
 import {
   ConnectionStore,
   sqliteRemoteSelection,
 } from "../src/access/adapters/connections"
-import { connectionFixture } from "./connection-fixture"
-import { connectionUrl, ConnectionError } from "../src/access/connections"
 import { remoteTool } from "../src/access/adapters/remote-tool"
-import { selectRemoteTools } from "../src/access/remote-selection"
 import { AccessStore } from "../src/access/adapters/sqlite"
-import { connectionRequest } from "../src/access/adapters/connection-http"
+import { connectionUrl, ConnectionError } from "../src/access/connections"
+import { selectRemoteTools } from "../src/access/remote-selection"
+import { connectionFixture } from "./connection-fixture"
+import { database } from "./database"
 
 const input = {
   id: `mcp-${"a".repeat(32)}`,

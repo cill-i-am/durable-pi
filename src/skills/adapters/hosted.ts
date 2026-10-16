@@ -1,7 +1,8 @@
-import { preserveFatal } from "../../shared/effect"
 import { Effect, Schema } from "effect"
-import type { RemoteToolResult } from "../../access/connections"
+
 import type { RemoteConnectionOperations } from "../../access/connection-service"
+import type { RemoteToolResult } from "../../access/connections"
+import { preserveFatal } from "../../shared/effect"
 import { SkillBody, SkillConflict, SkillName } from "../contracts"
 import {
   BrowseHostedSkills,

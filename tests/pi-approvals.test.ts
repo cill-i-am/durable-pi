@@ -1,16 +1,8 @@
-import { Effect } from "effect"
-import { describe, expect, it } from "vitest"
 import { mkdtemp, rm } from "node:fs/promises"
-import { join } from "node:path"
 import { tmpdir } from "node:os"
+import { join } from "node:path"
+
 import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context"
-import {
-  Harness,
-  createRegistry,
-  defineTool,
-  watchEvents,
-} from "@earendil-works/pi-durable"
-import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
 import {
   Type,
   createModels,
@@ -18,9 +10,19 @@ import {
   fauxAssistantMessage,
   fauxToolCall,
 } from "@earendil-works/pi-ai"
+import {
+  Harness,
+  createRegistry,
+  defineTool,
+  watchEvents,
+} from "@earendil-works/pi-durable"
+import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
+import { Effect } from "effect"
+import { describe, expect, it } from "vitest"
+
+import { guardedTools } from "../src/access/adapters/pi"
 import { AccessStore } from "../src/access/adapters/sqlite"
 import { AccessGate } from "../src/access/gate"
-import { guardedTools } from "../src/access/adapters/pi"
 import { database } from "./database"
 
 describe("native Pi tool approvals", () => {
@@ -32,7 +34,7 @@ describe("native Pi tool approvals", () => {
     "dispatch-interrupted",
     "large-result",
     "remote-schema",
-  ])(
+  ] as const)(
     "survives a harness restart: %s",
     async (scenario) => {
       const directory = await mkdtemp(join(tmpdir(), "pi-approval-"))
@@ -179,10 +181,9 @@ describe("native Pi tool approvals", () => {
         if (scenario === "revoke")
           Effect.runSync(store.update("record", 0, "deny"))
         if (
-          scenario === "always" ||
-          scenario === "approve" ||
-          scenario === "large-result" ||
-          scenario === "remote-schema"
+          ["always", "approve", "large-result", "remote-schema"].includes(
+            scenario
+          )
         )
           Effect.runSync(
             store.decide(
@@ -202,16 +203,7 @@ describe("native Pi tool approvals", () => {
         expect(replay.id).toBe(first.id)
         await replay.wait(ctx)
         await conversation.waitForIdle(ctx)
-        expect(calls).toBe(
-          scenario === "always"
-            ? 2
-            : scenario === "approve" ||
-                scenario === "large-result" ||
-                scenario === "remote-schema" ||
-                scenario === "dispatch-interrupted"
-              ? 1
-              : 0
-        )
+        expect(calls).toBe(expectedCalls[scenario])
         expect(Effect.runSync(store.get(id))?.status).toBe(
           {
             approve: "done",
@@ -246,16 +238,7 @@ describe("native Pi tool approvals", () => {
           )
         await events.stop()
         expect((await conversation.submit(command, ctx)).id).toBe(first.id)
-        expect(calls).toBe(
-          scenario === "always"
-            ? 2
-            : scenario === "approve" ||
-                scenario === "large-result" ||
-                scenario === "remote-schema" ||
-                scenario === "dispatch-interrupted"
-              ? 1
-              : 0
-        )
+        expect(calls).toBe(expectedCalls[scenario])
       } finally {
         await harness.close(ctx)
         await rm(directory, { recursive: true, force: true })
@@ -264,3 +247,13 @@ describe("native Pi tool approvals", () => {
     15000
   )
 })
+
+const expectedCalls = {
+  always: 2,
+  approve: 1,
+  "large-result": 1,
+  "remote-schema": 1,
+  "dispatch-interrupted": 1,
+  stop: 0,
+  revoke: 0,
+} as const

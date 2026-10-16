@@ -1,18 +1,19 @@
+import { Sandbox as BaseSandbox, getSandbox } from "@cloudflare/sandbox-v0"
 import { Scheduler, Effect, Exit, Layer, ManagedRuntime, Scope } from "effect"
-import { relayTerminal } from "./adapters/socket"
+
+import type { TerminalEnv } from "../../alchemy.run"
 import { reportTerminal } from "../observability/events"
 import { WorkerTelemetry } from "../observability/worker"
-import { Sandbox as BaseSandbox, getSandbox } from "@cloudflare/sandbox-v0"
-import type { TerminalEnv } from "../../alchemy.run"
 import { makeDurableObjectSqlite } from "../storage/durable-object"
 import { migrateSqlite } from "../storage/migrations"
-import { TerminalService, terminalLayer } from "./terminal"
-import { effectTerminalRuntime, terminalFileDigest } from "./adapters/interop"
-import { TerminalStore } from "./adapters/sqlite"
-import { sandboxRuntime, legacyVideoRuntime } from "./adapters/sandbox"
-import { checkpointStorage } from "./adapters/r2"
-import { extractVideoRequest, sandboxVideo } from "./adapters/video"
 import { terminalRequest } from "./adapters/http"
+import { effectTerminalRuntime, terminalFileDigest } from "./adapters/interop"
+import { checkpointStorage } from "./adapters/r2"
+import { sandboxRuntime, legacyVideoRuntime } from "./adapters/sandbox"
+import { relayTerminal } from "./adapters/socket"
+import { TerminalStore } from "./adapters/sqlite"
+import { extractVideoRequest, sandboxVideo } from "./adapters/video"
+import { TerminalService, terminalLayer } from "./terminal"
 
 export class LinuxSandbox extends BaseSandbox<TerminalEnv> {
   override enableInternet = false

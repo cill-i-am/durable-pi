@@ -1,3 +1,9 @@
+import { Harness, createRegistry } from "@earendil-works/pi-durable"
+import { PiHarness } from "agents/harness/pi"
+
+import "../observability/lifecycle"
+import { Lifecycle, LifecycleCapability } from "agents/lifecycle"
+import { DurableObject } from "cloudflare:workers"
 import {
   Scheduler,
   Effect,
@@ -7,47 +13,43 @@ import {
   Schema,
   Scope,
 } from "effect"
-import { preserveFatal } from "../shared/effect"
-import "../observability/lifecycle"
-import { reportInference, reportHarness } from "../observability/events"
-import { DurableObject } from "cloudflare:workers"
-import { Lifecycle, LifecycleCapability } from "agents/lifecycle"
-import { PiHarness } from "agents/harness/pi"
-import { Harness, createRegistry } from "@earendil-works/pi-durable"
-import type { PersonalAgent } from "../agent/worker"
-import type { Group, Transcript, DelegationFailure } from "./contracts"
+
 import type { AgentEnv } from "../../alchemy.run"
-import { createAgentModels } from "../inference/adapters/models-pi"
-import { accountCredentials } from "../inference/adapters/credentials-pi"
 import { agentSettings } from "../agent/compaction"
-import { InferenceUsage, usageApplication } from "../inference/usage"
-import { SqliteUsage } from "../inference/adapters/usage-sqlite"
-import { piUsage } from "../inference/adapters/usage-pi"
+import type { PersonalAgent } from "../agent/worker"
+import {
+  accountRpc,
+  nativeAccountToken,
+} from "../inference/adapters/account-rpc"
+import { accountCredentials } from "../inference/adapters/credentials-pi"
+import { createAgentModels } from "../inference/adapters/models-pi"
 import {
   PiModelStreams,
   piModelStreamsLayer,
   modelCallback,
 } from "../inference/adapters/streams-pi"
+import { piUsage } from "../inference/adapters/usage-pi"
+import { SqliteUsage } from "../inference/adapters/usage-sqlite"
+import { InferenceUsage, usageApplication } from "../inference/usage"
+import { reportInference, reportHarness } from "../observability/events"
+import { preserveFatal } from "../shared/effect"
 import { makeDurableObjectSqlite } from "../storage/durable-object"
 import { migrateSqlite } from "../storage/migrations"
-import { BackgroundHandoff, backgroundObjectName } from "./background"
+import { backgroundParentRpc } from "./adapters/background-parent"
 import {
   piBackgroundLedger,
   readBackgroundHandoff,
 } from "./adapters/background-pi"
-import { BackgroundTasks, backgroundTasksApplication } from "./background-tasks"
-import { backgroundNative } from "./adapters/interop"
-import { backgroundParentRpc } from "./adapters/background-parent"
-import {
-  accountRpc,
-  nativeAccountToken,
-} from "../inference/adapters/account-rpc"
 import {
   BackgroundRequest,
   BackgroundResult,
   backgroundReply,
   BackgroundOutcome,
 } from "./adapters/background-protocol"
+import { backgroundNative } from "./adapters/interop"
+import { BackgroundHandoff, backgroundObjectName } from "./background"
+import { BackgroundTasks, backgroundTasksApplication } from "./background-tasks"
+import type { Group, Transcript, DelegationFailure } from "./contracts"
 
 export type BackgroundControlResult =
   | { ok: true; accepted: boolean }

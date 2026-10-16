@@ -4,6 +4,7 @@ import {
   type UIMessage,
 } from "@tanstack/ai/client"
 import { Schema } from "effect"
+
 import { ChatState, type TimelineItem } from "../contracts"
 
 type Turn = ChatState["turns"][number]
@@ -148,38 +149,7 @@ export function conversationView(
       continue
     }
     const id = details.itemId ?? message.id
-    let item: TimelineItem | undefined
-    if (details.kind === "text") item = { id, type: "text", text }
-    if (details.kind === "steer")
-      item = { id, type: "steer", text, attachments: details.attachments }
-    if (details.kind === "thinking")
-      item = {
-        id,
-        type: "thinking",
-        text: message.parts
-          .filter((part) => part.type === "thinking")
-          .map((part) => part.content)
-          .join(""),
-      }
-    if (details.kind === "tool") {
-      const call = message.parts.find((part) => part.type === "tool-call")
-      const result = message.parts.find(
-        (part) => part.type === "tool-result" && part.toolCallId === call?.id
-      )
-      if (
-        call &&
-        result?.type === "tool-result" &&
-        typeof result.content === "string"
-      )
-        item = {
-          id,
-          type: "tool",
-          name: call.name,
-          input: call.arguments,
-          output: result.content,
-          status: details.toolStatus ?? "interrupted",
-        }
-    }
+    const item = timelineMessage(message, details, id, text)
     if (item)
       turns.set(turn.id, {
         ...turn,
@@ -198,6 +168,47 @@ export function conversationView(
       answer: copyAnswers.get(turn.id) ?? turn.answer,
     })),
   })
+}
+
+function timelineMessage(
+  message: UIMessage,
+  details: MessageDetails,
+  id: string,
+  text: string
+): TimelineItem | undefined {
+  let item: TimelineItem | undefined
+  if (details.kind === "text") item = { id, type: "text", text }
+  if (details.kind === "steer")
+    item = { id, type: "steer", text, attachments: details.attachments }
+  if (details.kind === "thinking")
+    item = {
+      id,
+      type: "thinking",
+      text: message.parts
+        .filter((part) => part.type === "thinking")
+        .map((part) => part.content)
+        .join(""),
+    }
+  if (details.kind === "tool") {
+    const call = message.parts.find((part) => part.type === "tool-call")
+    const result = message.parts.find(
+      (part) => part.type === "tool-result" && part.toolCallId === call?.id
+    )
+    if (
+      call &&
+      result?.type === "tool-result" &&
+      typeof result.content === "string"
+    )
+      item = {
+        id,
+        type: "tool",
+        name: call.name,
+        input: call.arguments,
+        output: result.content,
+        status: details.toolStatus ?? "interrupted",
+      }
+  }
+  return item
 }
 
 export function messageEvents(

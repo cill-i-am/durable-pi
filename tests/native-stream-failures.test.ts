@@ -1,8 +1,10 @@
 import { Cause, Effect, Exit, Schema } from "effect"
 import { expect, it } from "vitest"
-import { nativeBytes } from "../src/shared/stream"
+
 import { piSummaryCompletion } from "../src/memory/adapters/pi"
 import { MemoryStorageError } from "../src/memory/domain"
+import { nativeBytes } from "../src/shared/stream"
+import { readBounded } from "../src/terminal/adapters/stream"
 
 class ReadFailed extends Schema.TaggedError<ReadFailed>()("ReadFailed", {}) {}
 for (const mode of ["defect", "interruption", "compound"]) {
@@ -84,3 +86,36 @@ it("a Cause-wrapped summary storage failure keeps its original operation", async
     },
   ])
 })
+
+it.each(["Effect", "native"])(
+  "rejects non-byte chunks and releases the %s reader",
+  async (owner) => {
+    let cancelled = 0
+    const body = new ReadableStream<unknown>({
+      start(controller) {
+        controller.enqueue("not bytes")
+      },
+      cancel() {
+        cancelled++
+      },
+    })
+    if (owner === "Effect") {
+      const exit = await Effect.runPromiseExit(
+        nativeBytes(
+          body,
+          8,
+          () => new ReadFailed(),
+          () => new ReadFailed()
+        )
+      )
+      expect(Exit.isFailure(exit) && exit.cause.reasons).toMatchObject([
+        { _tag: "Fail", error: { _tag: "ReadFailed" } },
+      ])
+    } else
+      await expect(
+        readBounded(body, 8, new AbortController().signal)
+      ).rejects.toThrow("Invalid byte stream chunk")
+    expect(cancelled).toBe(1)
+    expect(body.locked).toBe(false)
+  }
+)

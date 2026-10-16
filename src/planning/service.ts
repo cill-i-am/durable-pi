@@ -1,4 +1,5 @@
 import { Clock, Context, Effect, Layer, Schema } from "effect"
+
 import {
   PlanFailure,
   PlanId,
@@ -9,9 +10,6 @@ import {
   type Evidence,
   type PlanReceipt,
 } from "./contracts"
-import type { PlanControl, PlanSource, Plans } from "./plans"
-import type { PlanBinding, PlanDigest, PlanLedger } from "./ledger"
-import { revisePlan } from "./plan"
 import {
   planHistoryKey,
   planReplay,
@@ -23,6 +21,9 @@ import {
   requirePlanWritable,
   requireUncancelledPlan,
 } from "./domain"
+import type { PlanBinding, PlanDigest, PlanLedger } from "./ledger"
+import { revisePlan } from "./plan"
+import type { PlanControl, PlanSource, Plans } from "./plans"
 
 export class Planning extends Context.Service<Planning, Plans>()(
   "durable-pi/planning/Planning"
@@ -120,7 +121,10 @@ export function makePlans<TRequirements>(
       })
     )
   )
-  const list = Effect.fn("Planning.list")(function* (offset = 0, limit = 20) {
+  const list = Effect.fn("Planning.list")(function* (
+    offset: number = 0,
+    limit: number = 20
+  ) {
     yield* decode(Revision, offset)
     yield* decode(Revision, limit)
     const ids = yield* ledger.catalog()

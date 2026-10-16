@@ -1,4 +1,4 @@
-import { Effect } from "effect"
+import { Type } from "@earendil-works/pi-ai"
 import {
   defineTool,
   GenerationTask,
@@ -6,9 +6,10 @@ import {
   type HookApi,
   type ToolExecutionApi,
 } from "@earendil-works/pi-durable"
-import { Type } from "@earendil-works/pi-ai"
-import type { Plans, PlanSource } from "../plans"
+import { Effect } from "effect"
+
 import { PlanFailure } from "../contracts"
+import type { Plans, PlanSource } from "../plans"
 
 const standalone = <T>(
   operation: Effect.Effect<T, PlanFailure>,

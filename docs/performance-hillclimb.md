@@ -6,14 +6,14 @@ Baseline: `6b0f49182e6216fe709d58e187b8ce4eecb3ea42`, production audit on 15 Oct
 
 ## Measurements
 
-| Experiment                                       | Before           | After           | Evidence and limits                                                                                                                                         |
-| ------------------------------------------------ | ---------------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Initial chat JavaScript, local gzip              | 569,877 bytes    | 468,147 bytes   | 17.9% reduction in Start's matched-route preload graph; default local gzip, not Cloudflare transfer bytes.                                                  |
-| Desktop history visible                          | 912.6 ms median  | 777.8 ms median | Ten synthetic browser runs per condition, 871 × 853.                                                                                                        |
-| Mobile-width history visible                     | 918.5 ms median  | 781.4 ms median | Ten synthetic browser runs per condition, 390 × 844; desktop Chromium without CPU/network throttling.                                                       |
-| Idle finite requests in one minute               | 23               | 4               | Empty chat: checklist 15 → 0, statuses 6 → 2, session 2 → 2. Stream traffic excluded.                                                                       |
-| New credential version during obsolete discovery | 101.35 ms median | 0.08 ms median  | Ten controlled runs: the old provider lookup is deliberately held for 100 ms. Measures removal of queueing, not provider discovery speed.                   |
-| Unchanged conversation reconnect                 | 168,317 bytes    | 99 bytes        | Synthetic twenty-turn transcript, application SSE frames, excluding headers and later heartbeats. Changed/unknown/restarted state receives a full snapshot. |
+| Experiment | Before | After | Evidence and limits |
+| --- | --- | --- | --- |
+| Initial chat JavaScript, local gzip | 569,877 bytes | 468,147 bytes | 17.9% reduction in Start's matched-route preload graph; default local gzip, not Cloudflare transfer bytes. |
+| Desktop history visible | 912.6 ms median | 777.8 ms median | Ten synthetic browser runs per condition, 871 × 853. |
+| Mobile-width history visible | 918.5 ms median | 781.4 ms median | Ten synthetic browser runs per condition, 390 × 844; desktop Chromium without CPU/network throttling. |
+| Idle finite requests in one minute | 23 | 4 | Empty chat: checklist 15 → 0, statuses 6 → 2, session 2 → 2. Stream traffic excluded. |
+| New credential version during obsolete discovery | 101.35 ms median | 0.08 ms median | Ten controlled runs: the old provider lookup is deliberately held for 100 ms. Measures removal of queueing, not provider discovery speed. |
+| Unchanged conversation reconnect | 168,317 bytes | 99 bytes | Synthetic twenty-turn transcript, application SSE frames, excluding headers and later heartbeats. Changed/unknown/restarted state receives a full snapshot. |
 
 The initial split achieved only 5.4%; moving the highlighter behind its first actual use and separating shared upload controls improved it. Initial-JS reduction and history readiness remain below the proposed 30%/25% goals. The changes are retained for repeatable smaller gains; those goals are not reported as achieved.
 

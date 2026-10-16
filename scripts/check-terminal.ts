@@ -1,5 +1,7 @@
 import assert from "node:assert/strict"
+
 import { Schema } from "effect"
+
 import { CommandRun, TerminalState } from "../src/terminal/contracts"
 
 const origin = "http://localhost:1337"

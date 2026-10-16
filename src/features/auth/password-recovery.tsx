@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react"
-import { workspaceReturnLink } from "@/navigation/workspace"
 import { Link, useSearch } from "@tanstack/react-router"
+import { useEffect, useRef, useState } from "react"
+
 import { authClient } from "@/auth/client"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button, buttonVariants } from "@/components/ui/button"
@@ -11,6 +11,8 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { workspaceReturnLink } from "@/navigation/workspace"
+
 import { AuthFrame } from "./auth-frame"
 import { PasswordInput } from "./password-input"
 

@@ -1,7 +1,7 @@
-import { preserveFatal } from "../shared/effect"
 import { Clock, Context, Effect, Schema } from "effect"
+
 import { AgentId, type AgentName } from "../agents/domain"
-import { Mailbox, MailboxTransport } from "./mailbox"
+import { preserveFatal } from "../shared/effect"
 import {
   RequestPayload,
   failure,
@@ -10,10 +10,11 @@ import {
 } from "./contracts"
 import type { Envelope, Task } from "./contracts"
 import { deliverNext } from "./delivery"
+import { requireFanout } from "./domain"
 import { TaskExecution } from "./execution"
 import { ContinuationIdentity } from "./identity"
+import { Mailbox, MailboxTransport } from "./mailbox"
 import type { ContinuationAdmission } from "./mailbox"
-import { requireFanout } from "./domain"
 
 export const DelegateInput = Schema.Struct({
   to: AgentId,

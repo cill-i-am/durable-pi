@@ -1,6 +1,4 @@
-import { sqliteFailure } from "./sqlite-fault"
 import { expect, it } from "@effect/vitest"
-import { it as test } from "vitest"
 import {
   Cause,
   Effect,
@@ -11,15 +9,18 @@ import {
   Schema,
 } from "effect"
 import { TestClock } from "effect/testing"
+import { it as test } from "vitest"
+
+import { SqliteCredentials } from "../src/inference/adapters/credential-sqlite"
+import { refreshOAuth } from "../src/inference/adapters/oauth"
 import {
   ModelCredentials,
   OAuthCredential,
   credentialApplication,
   makeModelCredentials,
 } from "../src/inference/credentials"
-import { SqliteCredentials } from "../src/inference/adapters/credential-sqlite"
-import { refreshOAuth } from "../src/inference/adapters/oauth"
 import { database } from "./database"
+import { sqliteFailure } from "./sqlite-fault"
 
 const plain = {
   type: "oauth" as const,

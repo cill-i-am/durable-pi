@@ -1,14 +1,15 @@
+import { DurableObject } from "cloudflare:workers"
+import { Effect, Scope } from "effect"
+
+import { AccessStore } from "../../src/access/adapters/sqlite"
+import { AccessGate } from "../../src/access/gate"
 import {
   effectBrowserDriver,
   browserWake,
 } from "../../src/browser/adapters/interop"
-import { DurableObject } from "cloudflare:workers"
-import { Effect, Scope } from "effect"
-import { BrowserWorkspace } from "../../src/browser/browser"
-import { BrowserStore } from "../../src/browser/adapters/sqlite"
 import { browserToolResult } from "../../src/browser/adapters/pi"
-import { AccessGate } from "../../src/access/gate"
-import { AccessStore } from "../../src/access/adapters/sqlite"
+import { BrowserStore } from "../../src/browser/adapters/sqlite"
+import { BrowserWorkspace } from "../../src/browser/browser"
 import { nativeDatabase } from "./database"
 
 export class BrowserRecoveryBot extends DurableObject<Record<string, never>> {

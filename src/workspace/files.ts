@@ -1,4 +1,5 @@
 import { Schema } from "effect"
+
 import { VideoPreparation } from "./video"
 
 export const MAX_FILE_BYTES = 8 * 1024 * 1024
@@ -85,7 +86,10 @@ export class WorkspaceUnavailable extends Schema.TaggedError<WorkspaceUnavailabl
   {}
 ) {}
 export type FileError =
-  FileRejected | FileNotFound | WorkspaceUnavailable | WorkspaceReadOnly
+  | FileRejected
+  | FileNotFound
+  | WorkspaceUnavailable
+  | WorkspaceReadOnly
 export type Upload = {
   id: FileId
   name: string

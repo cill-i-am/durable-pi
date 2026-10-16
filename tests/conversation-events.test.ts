@@ -1,6 +1,7 @@
-import { Cause, Effect, Exit, Layer, Logger, ManagedRuntime } from "effect"
 import type { AgentEventStream } from "@earendil-works/pi-durable"
+import { Cause, Effect, Exit, Layer, Logger, ManagedRuntime } from "effect"
 import { afterEach, describe, expect, it, vi } from "vitest"
+
 import {
   ConversationStreamError,
   conversationEvents,

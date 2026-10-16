@@ -1,22 +1,23 @@
+import { openaiProvider } from "@earendil-works/pi-ai/providers/openai"
 import { expect, it } from "@effect/vitest"
-import { it as test, vi } from "vitest"
 import { Cause, Effect, Exit, Fiber, ManagedRuntime } from "effect"
-import { nativeOperation } from "../src/shared/interop"
 import { TestClock } from "effect/testing"
+import { it as test, vi } from "vitest"
+
+import {
+  discoverCatalog,
+  openaiCatalogSource,
+} from "../src/inference/adapters/openai-catalog"
+import { ownerCatalogSource } from "../src/inference/adapters/owner-catalog"
 import {
   makeModelCatalog,
   catalogApplication,
   ModelCatalogReader,
   type CatalogSource,
 } from "../src/inference/catalog"
-import {
-  discoverCatalog,
-  openaiCatalogSource,
-} from "../src/inference/adapters/openai-catalog"
-import { ownerCatalogSource } from "../src/inference/adapters/owner-catalog"
 import { ModelUnavailable } from "../src/inference/policy"
+import { nativeOperation } from "../src/shared/interop"
 import { account, catalog, credential } from "./inference-fixture"
-import { openaiProvider } from "@earendil-works/pi-ai/providers/openai"
 
 const installed = openaiProvider().getModels()
 const gate = <T = void>() => {

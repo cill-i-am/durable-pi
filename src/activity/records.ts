@@ -1,4 +1,5 @@
 import { Schema, type Effect } from "effect"
+
 import type {
   ActivityAgent,
   ActivityConversation,

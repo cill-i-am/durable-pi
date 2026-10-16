@@ -7,8 +7,10 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react"
+
 import { agentApi } from "@/http/client"
 import { poll } from "@/http/poll"
+
 import { ObjectStore } from "./store"
 
 const Context = createContext<{

@@ -1,5 +1,5 @@
-import { useSyncExternalStore } from "react"
 import { useTheme } from "next-themes"
+import { useSyncExternalStore } from "react"
 
 const subscribe = () => () => {}
 const clientSnapshot = () => true

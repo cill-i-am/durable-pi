@@ -1,14 +1,6 @@
 import { Effect, ManagedRuntime } from "effect"
 import { afterEach } from "vitest"
-import { TerminalService, terminalLayer } from "../src/terminal/terminal"
-import type {
-  CommandInput,
-  CommandRun,
-  TerminalNetworkPolicy,
-} from "../src/terminal/contracts"
-import type { TransferPlan } from "../src/terminal/transfers"
-import type { TerminalLedger } from "../src/terminal/repository"
-import type { TerminalRelay } from "../src/terminal/session"
+
 import {
   effectTerminalRuntime,
   effectCheckpointStorage,
@@ -16,6 +8,15 @@ import {
   type ForeignTerminalRuntime,
   type ForeignCheckpointStorage,
 } from "../src/terminal/adapters/interop"
+import type {
+  CommandInput,
+  CommandRun,
+  TerminalNetworkPolicy,
+} from "../src/terminal/contracts"
+import type { TerminalLedger } from "../src/terminal/repository"
+import type { TerminalRelay } from "../src/terminal/session"
+import { TerminalService, terminalLayer } from "../src/terminal/terminal"
+import type { TransferPlan } from "../src/terminal/transfers"
 
 export type { ForeignTerminalRuntime as TerminalRuntime } from "../src/terminal/adapters/interop"
 

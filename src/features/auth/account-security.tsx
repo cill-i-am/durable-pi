@@ -1,21 +1,24 @@
-import { useCallback, useEffect, useRef, useState } from "react"
 import { Monitor, ShieldCheck } from "lucide-react"
+import { useCallback, useEffect, useRef, useState } from "react"
+
 import { authClient } from "@/auth/client"
-import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog"
-import { sessionLabel } from "./session-label"
-import { securityError } from "./security-errors"
+
 import { FactorSettings } from "./factor-settings"
+import { securityError } from "./security-errors"
+import { sessionLabel } from "./session-label"
 
 type BrowserSession = typeof authClient.$Infer.Session.session
 type Confirmation =
-  { kind: "others" } | { kind: "one"; session: BrowserSession }
+  | { kind: "others" }
+  | { kind: "one"; session: BrowserSession }
 
 export function AccountSecurity({
   onClose,
@@ -98,16 +101,18 @@ export function AccountSecurity({
   const others = sessions.filter(
     (session) => session.id !== current?.session.id
   )
+  const twoFactorEnabled = !!current?.user.twoFactorEnabled
+  const locked = pending || factorLocked
   return (
     <Dialog
       open
-      dismissible={!pending && !factorLocked}
+      dismissible={!locked}
       onOpenChange={(open) => {
-        if (!open && !pending && !factorLocked) onClose()
+        if (!open && !locked) onClose()
       }}
     >
       <DialogContent
-        showCloseButton={!pending && !factorLocked}
+        showCloseButton={!locked}
         className="account-security flex max-h-[90dvh] flex-col gap-6 overflow-y-auto p-6 max-sm:top-0 max-sm:left-0 max-sm:h-dvh max-sm:max-h-dvh max-sm:max-w-none max-sm:translate-0 max-sm:rounded-none sm:max-w-[720px] sm:p-8"
       >
         <header className="space-y-2 pr-8">
@@ -128,32 +133,11 @@ export function AccountSecurity({
           />
         ) : (
           <>
-            <section
-              className="flex flex-wrap items-center gap-4 rounded-lg border p-5 max-sm:grid max-sm:grid-cols-[20px_1fr]"
-              aria-labelledby="two-factor-heading"
-            >
-              <ShieldCheck className="size-5 text-primary" />
-              <div className="min-w-0 flex-1 space-y-1">
-                <h2 id="two-factor-heading" className="font-semibold">
-                  Two-factor authentication
-                </h2>
-                <p className="text-sm leading-6 text-muted-foreground">
-                  {current?.user.twoFactorEnabled
-                    ? "On · Your authenticator protects sign-ins."
-                    : "Off · Add an authenticator for an extra layer of protection."}
-                </p>
-              </div>
-              <Button
-                className="max-sm:col-span-2 max-sm:w-full"
-                variant={current?.user.twoFactorEnabled ? "outline" : "default"}
-                disabled={pending}
-                onClick={() => setFactorView(true)}
-              >
-                {current?.user.twoFactorEnabled
-                  ? "Manage"
-                  : "Set up two-factor"}
-              </Button>
-            </section>
+            <TwoFactorCard
+              enabled={twoFactorEnabled}
+              pending={pending}
+              onManage={() => setFactorView(true)}
+            />
             <section
               className="space-y-4"
               aria-labelledby="sessions-heading"
@@ -311,5 +295,42 @@ export function AccountSecurity({
         )}
       </DialogContent>
     </Dialog>
+  )
+}
+
+function TwoFactorCard({
+  enabled,
+  pending,
+  onManage,
+}: {
+  enabled: boolean
+  pending: boolean
+  onManage: () => void
+}) {
+  return (
+    <section
+      className="flex flex-wrap items-center gap-4 rounded-lg border p-5 max-sm:grid max-sm:grid-cols-[20px_1fr]"
+      aria-labelledby="two-factor-heading"
+    >
+      <ShieldCheck className="size-5 text-primary" />
+      <div className="min-w-0 flex-1 space-y-1">
+        <h2 id="two-factor-heading" className="font-semibold">
+          Two-factor authentication
+        </h2>
+        <p className="text-sm leading-6 text-muted-foreground">
+          {enabled
+            ? "On · Your authenticator protects sign-ins."
+            : "Off · Add an authenticator for an extra layer of protection."}
+        </p>
+      </div>
+      <Button
+        className="max-sm:col-span-2 max-sm:w-full"
+        variant={enabled ? "outline" : "default"}
+        disabled={pending}
+        onClick={onManage}
+      >
+        {enabled ? "Manage" : "Set up two-factor"}
+      </Button>
+    </section>
   )
 }

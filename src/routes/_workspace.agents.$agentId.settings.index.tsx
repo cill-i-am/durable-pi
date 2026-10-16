@@ -1,4 +1,5 @@
 import { createFileRoute, redirect } from "@tanstack/react-router"
+
 import { parseAgentId, validateWorkspaceSearch } from "@/navigation/workspace"
 
 export const Route = createFileRoute("/_workspace/agents/$agentId/settings/")({

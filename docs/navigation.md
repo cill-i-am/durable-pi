@@ -2,17 +2,17 @@
 
 TanStack Start’s file routes own page and resource identity. `src/navigation/workspace.ts` owns the Effect Schema contracts and typed destinations; `src/app/use-workspace-location.ts` adapts those destinations to the router. Features receive controlled selections and report changes to this boundary. They do not maintain a second selected resource in local storage.
 
-| Screen | Path |
-| --- | --- |
-| Active agents | `/agents` |
-| Archived agents | `/agents/archived` |
-| Create an agent | `/agents/new` |
-| Agent conversation | `/agents/$agentId` |
-| Edit an agent | `/agents/$agentId/edit` |
-| Workbench screen | `/agents/$agentId/$panel` |
-| Saved workbench resource | `/agents/$agentId/$panel/$itemId` |
-| Settings section | `/agents/$agentId/settings/$section` |
-| Account security | `/agents/$agentId/settings/security` |
+| Screen                   | Path                                 |
+| ------------------------ | ------------------------------------ |
+| Active agents            | `/agents`                            |
+| Archived agents          | `/agents/archived`                   |
+| Create an agent          | `/agents/new`                        |
+| Agent conversation       | `/agents/$agentId`                   |
+| Edit an agent            | `/agents/$agentId/edit`              |
+| Workbench screen         | `/agents/$agentId/$panel`            |
+| Saved workbench resource | `/agents/$agentId/$panel/$itemId`    |
+| Settings section         | `/agents/$agentId/settings/$section` |
+| Account security         | `/agents/$agentId/settings/security` |
 
 Panels are Browser, Terminal, Files, Apps, Activity, Checklists, Memory, Code and Routines. A selected app, file, checklist, command, execution result, routine, plan or activity record belongs in the resource path. Browser and Memory currently have no independent saved-detail screen. Source disclosure and tree expansion inside Memory remain local interactions.
 

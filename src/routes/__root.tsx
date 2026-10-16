@@ -4,8 +4,9 @@ import {
   Scripts,
   createRootRoute,
 } from "@tanstack/react-router"
-import { buttonVariants } from "@/components/ui/button"
 import { ThemeProvider } from "next-themes"
+
+import { buttonVariants } from "@/components/ui/button"
 
 import appCss from "../styles.css?url"
 

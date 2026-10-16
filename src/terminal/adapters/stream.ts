@@ -1,4 +1,4 @@
-import { Cause, Exit } from "effect"
+import { Cause, Exit, Schema } from "effect"
 
 function live(signal: AbortSignal) {
   if (signal.aborted) throw new Error("Stopped")
@@ -6,11 +6,11 @@ function live(signal: AbortSignal) {
 /** Native reader ownership is shared by command and file SDK callbacks. The
  * owning Effect adapter interprets this local Cause without flattening cleanup. */
 export async function withReader<T>(
-  stream: ReadableStream<Uint8Array>,
+  stream: ReadableStream<unknown>,
   signal: AbortSignal,
   use: (read: () => Promise<ReadableStreamReadResult<Uint8Array>>) => Promise<T>
 ): Promise<T> {
-  let reader: ReadableStreamDefaultReader<Uint8Array>
+  let reader: ReadableStreamDefaultReader<unknown>
   try {
     reader = stream.getReader()
   } catch (cause) {
@@ -33,14 +33,18 @@ export async function withReader<T>(
     live(signal)
     result = Exit.succeed(
       await use(async () => {
+        let item: ReadableStreamReadResult<unknown>
         try {
-          const item = await reader.read()
-          state.ended = item.done
-          return item
+          item = await reader.read()
         } catch (cause) {
           state.ended = true
           throw cause
         }
+        state.ended = item.done
+        if (item.done) return { done: true, value: undefined }
+        if (!Schema.is(Schema.Uint8Array)(item.value))
+          throw new Error("Invalid byte stream chunk")
+        return { done: false, value: item.value }
       })
     )
   } catch (cause) {
@@ -70,7 +74,7 @@ export async function withReader<T>(
   throw result.cause
 }
 export function readBounded(
-  stream: ReadableStream<Uint8Array>,
+  stream: ReadableStream<unknown>,
   limit: number,
   signal: AbortSignal
 ) {

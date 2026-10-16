@@ -1,24 +1,25 @@
-import { expect, it, vi } from "vitest"
-import { renderToStaticMarkup } from "react-dom/server"
 import { Effect, Schema } from "effect"
-import { database } from "./database"
-import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
-import { RunRecoveryStore } from "../src/conversations/adapters/sqlite-recovery"
+import { renderToStaticMarkup } from "react-dom/server"
+import { expect, it, vi } from "vitest"
+
 import { AccessStore } from "../src/access/adapters/sqlite"
 import { AccessGate } from "../src/access/gate"
-import { usageFixture } from "./usage-fixture"
-import { resolveRoute } from "../src/inference/policy"
+import { SqliteActivityRecords } from "../src/activity/adapters/sqlite"
 import {
   projectRunActivity,
   RunActivity,
   type RunCursor,
 } from "../src/activity/run"
-import { SqliteActivityRecords } from "../src/activity/adapters/sqlite"
+import { RunRecoveryStore } from "../src/conversations/adapters/sqlite-recovery"
+import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
+import type { Observation } from "../src/conversations/recovery"
 import {
   RunTimeline,
   RunEventView,
 } from "../src/features/activity/run-timeline"
-import type { Observation } from "../src/conversations/recovery"
+import { resolveRoute } from "../src/inference/policy"
+import { database } from "./database"
+import { usageFixture } from "./usage-fixture"
 
 const route = resolveRoute("conversation")
 const tools = () => [

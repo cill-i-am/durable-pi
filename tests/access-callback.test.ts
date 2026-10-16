@@ -1,16 +1,8 @@
-import { afterEach, expect, it, vi } from "vitest"
-import { Cause, Effect } from "effect"
 import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+
 import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context"
-import {
-  Harness,
-  createRegistry,
-  defineTool,
-  type ToolExecutionResult,
-} from "@earendil-works/pi-durable"
-import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
 import {
   Type,
   createModels,
@@ -18,13 +10,23 @@ import {
   fauxAssistantMessage,
   fauxToolCall,
 } from "@earendil-works/pi-ai"
-import { AccessGate } from "../src/access/gate"
-import { AccessStore } from "../src/access/adapters/sqlite"
+import {
+  Harness,
+  createRegistry,
+  defineTool,
+  type ToolExecutionResult,
+} from "@earendil-works/pi-durable"
+import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
+import { Cause, Effect } from "effect"
+import { afterEach, expect, it, vi } from "vitest"
+
 import { guardedTools } from "../src/access/adapters/pi"
+import { AccessStore } from "../src/access/adapters/sqlite"
 import {
   ConnectionStorageError,
   ConnectionError,
 } from "../src/access/connections"
+import { AccessGate } from "../src/access/gate"
 import { database } from "./database"
 
 function deferred<T>() {

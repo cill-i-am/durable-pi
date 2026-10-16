@@ -1,19 +1,4 @@
-import { projectRunActivity } from "../../src/activity/run"
-import { SqliteActivityRecords } from "../../src/activity/adapters/sqlite"
-import { InferenceUsage, usageApplication } from "../../src/inference/usage"
-import { SqliteUsage } from "../../src/inference/adapters/usage-sqlite"
-import { DurableObject } from "cloudflare:workers"
-import { PiHarness } from "agents/harness/pi"
-import { Lifecycle, LifecycleCapability } from "agents/lifecycle"
-import { Effect, Exit, Scope } from "effect"
 import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context"
-import {
-  Harness,
-  GenerationTask,
-  hook,
-  createRegistry,
-  defineTool,
-} from "@earendil-works/pi-durable"
 import {
   Type,
   createModels,
@@ -21,13 +6,29 @@ import {
   fauxAssistantMessage,
   fauxToolCall,
 } from "@earendil-works/pi-ai"
-import { ConversationStore } from "../../src/conversations/adapters/sqlite-turns"
-import { RunRecoveryStore } from "../../src/conversations/adapters/sqlite-recovery"
-import { runRecoveryHook } from "../../src/conversations/adapters/pi-recovery"
-import { AccessStorageError } from "../../src/access/contracts"
-import { AccessStore } from "../../src/access/adapters/sqlite"
-import { AccessGate } from "../../src/access/gate"
+import {
+  Harness,
+  GenerationTask,
+  hook,
+  createRegistry,
+  defineTool,
+} from "@earendil-works/pi-durable"
+import { PiHarness } from "agents/harness/pi"
+import { Lifecycle, LifecycleCapability } from "agents/lifecycle"
+import { DurableObject } from "cloudflare:workers"
+import { Effect, Exit, Scope } from "effect"
+
 import { guardedTools } from "../../src/access/adapters/pi"
+import { AccessStore } from "../../src/access/adapters/sqlite"
+import { AccessStorageError } from "../../src/access/contracts"
+import { AccessGate } from "../../src/access/gate"
+import { SqliteActivityRecords } from "../../src/activity/adapters/sqlite"
+import { projectRunActivity } from "../../src/activity/run"
+import { runRecoveryHook } from "../../src/conversations/adapters/pi-recovery"
+import { RunRecoveryStore } from "../../src/conversations/adapters/sqlite-recovery"
+import { ConversationStore } from "../../src/conversations/adapters/sqlite-turns"
+import { SqliteUsage } from "../../src/inference/adapters/usage-sqlite"
+import { InferenceUsage, usageApplication } from "../../src/inference/usage"
 import { nativeDatabase } from "./database"
 
 export class LoopBot extends DurableObject<Record<string, never>> {

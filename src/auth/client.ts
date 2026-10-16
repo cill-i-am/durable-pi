@@ -1,6 +1,8 @@
-import { createAuthClient } from "better-auth/react"
 import { twoFactorClient } from "better-auth/client/plugins"
+import { createAuthClient } from "better-auth/react"
+
 import { workspaceReturnPath } from "@/navigation/workspace"
+
 import { sessionFetch } from "./session-fetch"
 
 export const authClient = createAuthClient({

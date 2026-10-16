@@ -1,6 +1,7 @@
 import type { Effect } from "effect"
-import type { AccessError } from "./gate"
+
 import type { AccessMode, Approval, ToolPolicy } from "./contracts"
+import type { AccessError } from "./gate"
 
 export type ToolIntent = {
   id: string

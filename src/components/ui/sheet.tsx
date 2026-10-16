@@ -1,9 +1,10 @@
-import * as React from "react"
-import { ResponsiveOverlay as SheetPrimitive } from "./responsive-overlay"
 import { cn } from "cn"
+import { XIcon } from "lucide-react"
+import * as React from "react"
 
 import { Button } from "@/components/ui/button"
-import { XIcon } from "lucide-react"
+
+import { ResponsiveOverlay as SheetPrimitive } from "./responsive-overlay"
 
 function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
   return <SheetPrimitive.Root data-slot="sheet" desktop="sheet" {...props} />

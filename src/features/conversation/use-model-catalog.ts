@@ -1,10 +1,11 @@
-import { markReady } from "@/features/performance"
-import { useCallback, useEffect, useRef, useState } from "react"
 import { Schema } from "effect"
+import { useCallback, useEffect, useRef, useState } from "react"
+
 import { ModelSelection } from "@/conversations/turns"
+import { markReady } from "@/features/performance"
+import { agentApi } from "@/http/client"
 import { ModelCatalog, ResolvedRoute, validateRoute } from "@/inference/policy"
 import type { ModelSettings } from "@/inference/selection"
-import { agentApi } from "@/http/client"
 
 const Catalog = Schema.Struct({
   ...ModelCatalog.fields,

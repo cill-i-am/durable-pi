@@ -1,22 +1,23 @@
-import { expect, it } from "vitest"
-import { database } from "./database"
 import { Deferred, Effect, Stream } from "effect"
-import { makeSqliteMemory } from "../src/memory/adapters/sqlite"
-import { MemoryRepository } from "../src/memory/repository"
+import { expect, it } from "vitest"
+
 import { bucketLayer, type BackupBucket } from "../src/memory/adapters/bucket"
 import { webCryptoLayer } from "../src/memory/adapters/crypto"
-import type { Part } from "../src/memory/domain"
+import { exportResponse as exportEffect } from "../src/memory/adapters/http"
+import { makeSqliteMemory } from "../src/memory/adapters/sqlite"
 import {
   archive as archiveStream,
   restoreArchive as restoreEffect,
   parseArchive as parseEffect,
 } from "../src/memory/archive"
-import { exportResponse as exportEffect } from "../src/memory/adapters/http"
 import {
   backupMemory as backupEffect,
   readBackup as readBackupEffect,
 } from "../src/memory/backup"
+import type { Part } from "../src/memory/domain"
 import { importHistory as importEffect } from "../src/memory/import"
+import { MemoryRepository } from "../src/memory/repository"
+import { database } from "./database"
 
 function fixture(count = 8, db = database()) {
   const memory = Effect.runSync(makeSqliteMemory(db, 50))

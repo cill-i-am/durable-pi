@@ -1,11 +1,12 @@
 "use client"
 
-import * as React from "react"
-import { ResponsiveOverlay as DialogPrimitive } from "./responsive-overlay"
 import { cn } from "cn"
+import { XIcon } from "lucide-react"
+import * as React from "react"
 
 import { Button } from "@/components/ui/button"
-import { XIcon } from "lucide-react"
+
+import { ResponsiveOverlay as DialogPrimitive } from "./responsive-overlay"
 
 function Dialog({
   ...props

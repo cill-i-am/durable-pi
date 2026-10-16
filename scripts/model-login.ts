@@ -1,10 +1,11 @@
+import { randomUUID } from "node:crypto"
+import { readFile, writeFile, chmod } from "node:fs/promises"
+import { stdin, stdout } from "node:process"
+import { createInterface } from "node:readline/promises"
+
+import type { Credential, CredentialStore } from "@earendil-works/pi-ai"
 import { createModels } from "@earendil-works/pi-ai/models"
 import { openaiProvider } from "@earendil-works/pi-ai/providers/openai"
-import type { Credential, CredentialStore } from "@earendil-works/pi-ai"
-import { readFile, writeFile, chmod } from "node:fs/promises"
-import { randomUUID } from "node:crypto"
-import { createInterface } from "node:readline/promises"
-import { stdin, stdout } from "node:process"
 
 let stored: Credential | undefined
 const credentials: CredentialStore = {

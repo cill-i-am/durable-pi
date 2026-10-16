@@ -1,12 +1,13 @@
-import { corrupt } from "./database"
 import { expect, it } from "@effect/vitest"
 import { Cause, Context, Effect, Exit } from "effect"
+
 import {
   conversationSnapshot,
   type SnapshotMetadata,
 } from "../src/conversations/snapshot"
 import { runtimeStatusEffect } from "../src/conversations/status"
 import { conversationFixture } from "./conversation-fixture"
+import { corrupt } from "./database"
 
 const metadata: SnapshotMetadata = {
   connected: true,

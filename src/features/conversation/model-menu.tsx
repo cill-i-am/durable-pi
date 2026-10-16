@@ -1,7 +1,5 @@
-import { useModelCatalog } from "./use-model-catalog"
 import { ChevronDown, Settings2, Sparkles } from "lucide-react"
-import type { ModelSelection } from "@/conversations/turns"
-import { resolveRoute, type Profile, type JobType } from "@/inference/policy"
+
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -14,6 +12,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"
+import type { ModelSelection } from "@/conversations/turns"
+import { resolveRoute, type Profile, type JobType } from "@/inference/policy"
+
+import { useModelCatalog } from "./use-model-catalog"
 
 const names: Record<Profile, string> = {
   auto: "Auto",

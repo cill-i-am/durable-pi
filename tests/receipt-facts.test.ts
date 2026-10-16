@@ -1,6 +1,7 @@
 import { expect, it } from "vitest"
-import { receiptFact, scopedReceiptFact } from "../src/access/receipt"
+
 import type { ToolOperation } from "../src/access/ledger"
+import { receiptFact, scopedReceiptFact } from "../src/access/receipt"
 
 const operation: ToolOperation = {
   id: "receipt",

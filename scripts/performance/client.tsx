@@ -1,4 +1,3 @@
-import { createRoot } from "react-dom/client"
 import {
   createRootRoute,
   createRoute,
@@ -6,8 +5,10 @@ import {
   RouterProvider,
 } from "@tanstack/react-router"
 import { ThemeProvider } from "next-themes"
-import { ChatApp } from "../../src/app/workspace"
 import { useState } from "react"
+import { createRoot } from "react-dom/client"
+
+import { ChatApp } from "../../src/app/workspace"
 import {
   ActivityBorder,
   ActivityOrb,
@@ -17,6 +18,7 @@ import {
   InputGroup,
   InputGroupTextarea,
 } from "../../src/components/ui/input-group"
+
 import "./styles.css"
 
 // The actual workspace, with only its transport and route shell replaced.

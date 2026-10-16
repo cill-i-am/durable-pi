@@ -1,4 +1,5 @@
 import { Clock, Context, Effect, Layer, Schema } from "effect"
+
 import { preserveFatal } from "../shared/effect"
 import { Control, DelegationFailure } from "./contracts"
 import {
@@ -8,7 +9,6 @@ import {
   type DelegationSource,
 } from "./delegation"
 import type { DelegationAuthority, Delegations } from "./delegations"
-import type { DelegationLedger } from "./ledger"
 import {
   type SavedGroup,
   acceptControl,
@@ -23,6 +23,7 @@ import {
   requireChild,
   requireCurrent,
 } from "./domain"
+import type { DelegationLedger } from "./ledger"
 
 export class Delegation extends Context.Service<Delegation, Delegations>()(
   "durable-pi/delegation/Delegation"

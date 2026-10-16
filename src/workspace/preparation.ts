@@ -1,27 +1,28 @@
-import { preserveFatal } from "../shared/effect"
 import { Clock, Effect, Schema, Semaphore } from "effect"
+
+import { preserveFatal } from "../shared/effect"
+import type { WorkspaceAssets, WorkspaceAsset } from "./assets"
+import { type ExtractDocument, ExtractedDocument } from "./documents"
+import { requireWorkspaceFile } from "./domain"
+import { workspaceOperation as attempt } from "./effects"
 import {
   FileNotFound,
   FileRejected,
   WorkspaceUnavailable,
   WorkspaceReadOnly,
 } from "./files"
-import { type ExtractDocument, ExtractedDocument } from "./documents"
-import {
-  type ExtractVideo,
-  VideoResult,
-  VIDEO_RESULT_BYTES,
-  VIDEO_FRAME_BYTES,
-} from "./video"
 import type {
   WorkspaceLedger,
   WorkspaceFile,
   DocumentJob,
   VideoJob,
 } from "./ledger"
-import type { WorkspaceAssets, WorkspaceAsset } from "./assets"
-import { requireWorkspaceFile } from "./domain"
-import { workspaceOperation as attempt } from "./effects"
+import {
+  type ExtractVideo,
+  VideoResult,
+  VIDEO_RESULT_BYTES,
+  VIDEO_FRAME_BYTES,
+} from "./video"
 
 export const fileAsset = (
   file: WorkspaceFile,

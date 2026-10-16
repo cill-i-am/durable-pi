@@ -1,18 +1,19 @@
 import { Cause, Context, Effect, Exit, ManagedRuntime, Schema } from "effect"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { database } from "./database"
-import { Executions, executionApplication } from "../src/execution/service"
+
+import { executeCode } from "../src/execution/adapters/dynamic-worker"
+import { executionRequest } from "../src/execution/adapters/http"
+import { executionNativeOperation } from "../src/execution/adapters/interop"
+import { readOutput } from "../src/execution/adapters/output"
+import { ExecutionStore } from "../src/execution/adapters/sqlite"
+import { CodeInput, ExecutionStorageError } from "../src/execution/contracts"
+import { admitExecution } from "../src/execution/domain"
 import {
   ExecutorUnavailable,
   type CodeExecutor,
 } from "../src/execution/executor"
-import { executionNativeOperation } from "../src/execution/adapters/interop"
-import { admitExecution } from "../src/execution/domain"
-import { ExecutionStore } from "../src/execution/adapters/sqlite"
-import { CodeInput, ExecutionStorageError } from "../src/execution/contracts"
-import { executionRequest } from "../src/execution/adapters/http"
-import { executeCode } from "../src/execution/adapters/dynamic-worker"
-import { readOutput } from "../src/execution/adapters/output"
+import { Executions, executionApplication } from "../src/execution/service"
+import { database } from "./database"
 
 const input = { id: "synthetic-run", code: "return input + 1", data: "2" }
 const output = { result: "3", logs: "", error: null }

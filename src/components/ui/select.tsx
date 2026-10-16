@@ -1,9 +1,11 @@
-import * as React from "react"
 import { Select as SelectPrimitive } from "@base-ui/react/select"
 import { cn } from "cn"
-import { ResponsivePopup, usePopupMobile } from "./responsive-popup"
-import { useIsMobile } from "@/hooks/use-mobile"
 import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react"
+import * as React from "react"
+
+import { useIsMobile } from "@/hooks/use-mobile"
+
+import { ResponsivePopup, usePopupMobile } from "./responsive-popup"
 
 function Select<TValue, TMultiple extends boolean | undefined = false>({
   open: controlledOpen,

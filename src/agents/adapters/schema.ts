@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm"
 import {
   check,
   integer,
@@ -5,7 +6,6 @@ import {
   sqliteTable,
   text,
 } from "drizzle-orm/sqlite-core"
-import { sql } from "drizzle-orm"
 
 export const botConfiguration = sqliteTable(
   "bot_configuration",

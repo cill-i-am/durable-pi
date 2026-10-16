@@ -1,8 +1,9 @@
 import { Effect } from "effect"
+
+import type { WorkspaceAsset, WorkspaceAssets } from "../assets"
+import { WorkspaceUnavailable } from "../files"
 import { workspaceNativeOperation } from "./interop"
 import { workspaceByteStream } from "./stream"
-import { WorkspaceUnavailable } from "../files"
-import type { WorkspaceAsset, WorkspaceAssets } from "../assets"
 
 export interface AssetBucket {
   put: (key: string, bytes: Uint8Array) => Promise<unknown>

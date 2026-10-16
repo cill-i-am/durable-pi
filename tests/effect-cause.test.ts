@@ -1,4 +1,3 @@
-import { expect, expectTypeOf, it } from "vitest"
 import { it as effectIt } from "@effect/vitest"
 import {
   Cause,
@@ -11,6 +10,8 @@ import {
   Schema,
 } from "effect"
 import { TestClock } from "effect/testing"
+import { expect, expectTypeOf, it } from "vitest"
+
 import { observeCleanup, orDieAll, preserveFatal } from "../src/shared/effect"
 
 class Expected extends Schema.TaggedError<Expected>()("Expected", {

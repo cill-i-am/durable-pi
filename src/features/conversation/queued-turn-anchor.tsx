@@ -1,9 +1,10 @@
 import { useEffect, useLayoutEffect, useRef } from "react"
-import type { ChatState } from "@/conversations/contracts"
+
 import {
   useMessageScroller,
   useMessageScrollerScrollable,
 } from "@/components/ui/message-scroller"
+import type { ChatState } from "@/conversations/contracts"
 
 export function QueuedTurnAnchor({ turns }: { turns: ChatState["turns"] }) {
   const { scrollToMessage } = useMessageScroller()

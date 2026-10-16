@@ -1,13 +1,28 @@
-import { RunTimeline } from "./run-timeline"
-import { Separator } from "@/components/ui/separator"
-import type { RecoveryView } from "@/conversations/recovery"
-import { useEffect, useState } from "react"
 import { Schema } from "effect"
+import { Brain, Wrench } from "lucide-react"
+import { useEffect, useState } from "react"
+
 import { ActivityConversation, type ActivityEntry } from "@/activity/contracts"
-import { agentApi } from "@/http/client"
+import { CopyButton } from "@/components/copy-button"
 import { Markdown } from "@/components/markdown"
-import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
+import {
+  CodeBlock,
+  CodeBlockHeader,
+  CodeBlockTitle,
+  CodeBlockActions,
+  CodeBlockContent,
+} from "@/components/ui/code-block"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
+import { Separator } from "@/components/ui/separator"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Trace,
   TraceLine,
@@ -18,24 +33,11 @@ import {
   TraceCollapsibleTrigger,
   TraceCollapsibleContent,
 } from "@/components/ui/trace"
-import {
-  CodeBlock,
-  CodeBlockHeader,
-  CodeBlockTitle,
-  CodeBlockActions,
-  CodeBlockContent,
-} from "@/components/ui/code-block"
-import { CopyButton } from "@/components/copy-button"
-import { Brain, Wrench } from "lucide-react"
+import type { RecoveryView } from "@/conversations/recovery"
+import { agentApi } from "@/http/client"
 import { poll } from "@/http/poll"
-import { Skeleton } from "@/components/ui/skeleton"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog"
+
+import { RunTimeline } from "./run-timeline"
 
 export function ActivityRecord({
   entry,

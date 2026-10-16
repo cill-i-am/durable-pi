@@ -1,4 +1,5 @@
 import { Effect } from "effect"
+
 import type { ConfigurationLedger } from "../../agents/configuration"
 import { MemoryStorageError } from "../domain"
 import type { SummaryRetryAuthority } from "../retry"

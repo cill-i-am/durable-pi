@@ -1,6 +1,8 @@
-import { Effect } from "effect"
 import { AsyncLocalStorage } from "node:async_hooks"
+
 import { DurableObjectOAuthClientProvider } from "agents/mcp/do-oauth-client-provider"
+import { Effect } from "effect"
+
 import type { ConnectionLedger } from "../connection-ledger"
 
 export class ConnectionOAuthProvider extends DurableObjectOAuthClientProvider {
@@ -14,7 +16,7 @@ export class ConnectionOAuthProvider extends DurableObjectOAuthClientProvider {
     const cleanup = new AsyncLocalStorage<boolean>()
     const guarded = new Proxy(storage, {
       get(target, property) {
-        const value = Reflect.get(target, property, target)
+        const value: unknown = Reflect.get(target, property, target)
         if (typeof value !== "function") return value
         return async (...args: unknown[]) => {
           if (
@@ -22,7 +24,7 @@ export class ConnectionOAuthProvider extends DurableObjectOAuthClientProvider {
             ["get", "put", "delete", "list"].includes(String(property))
           )
             await current()
-          return Reflect.apply(value, target, args)
+          return Reflect.apply(value, target, args) as unknown
         }
       },
     })

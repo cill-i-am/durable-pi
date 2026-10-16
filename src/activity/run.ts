@@ -1,6 +1,7 @@
 import { Schema } from "effect"
-import { Attempt, UsageTotals } from "../inference/usage-domain"
+
 import type { RecoveryView } from "../conversations/recovery"
+import { Attempt, UsageTotals } from "../inference/usage-domain"
 
 export const RunCursor = Schema.Struct({
   at: Schema.String.check(Schema.isMaxLength(40)),

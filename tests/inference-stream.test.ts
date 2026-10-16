@@ -1,14 +1,13 @@
-import { afterEach, expect, it, vi } from "vitest"
-import { it as effectIt } from "@effect/vitest"
-import { TestClock } from "effect/testing"
-import { openaiProvider } from "@earendil-works/pi-ai/providers/openai"
-import { Cause, Effect, Exit, Fiber, ManagedRuntime } from "effect"
-import { piModelSummaryProvider } from "../src/memory/adapters/pi-model"
-import { resolveRoute } from "../src/inference/policy"
-import { AssistantMessageEventStream } from "@earendil-works/pi-ai/utils/event-stream"
 import { fauxAssistantMessage } from "@earendil-works/pi-ai"
-import { createAgentModels } from "../src/inference/adapters/models-pi"
+import { openaiProvider } from "@earendil-works/pi-ai/providers/openai"
+import { AssistantMessageEventStream } from "@earendil-works/pi-ai/utils/event-stream"
+import { it as effectIt } from "@effect/vitest"
+import { Cause, Effect, Exit, Fiber, ManagedRuntime } from "effect"
+import { TestClock } from "effect/testing"
+import { afterEach, expect, it, vi } from "vitest"
+
 import { accountCredentials } from "../src/inference/adapters/credentials-pi"
+import { createAgentModels } from "../src/inference/adapters/models-pi"
 import {
   PiModelRequest,
   PiModelStreams,
@@ -18,6 +17,8 @@ import {
   MAX_PROVIDER_BYTES,
   MAX_MODEL_STREAM_MILLIS,
 } from "../src/inference/adapters/streams-pi"
+import { resolveRoute } from "../src/inference/policy"
+import { piModelSummaryProvider } from "../src/memory/adapters/pi-model"
 import { credential, response } from "./inference-fixture"
 
 const gate = () => {

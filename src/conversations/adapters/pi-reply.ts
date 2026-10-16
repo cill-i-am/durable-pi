@@ -1,5 +1,4 @@
 import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context"
-import type { PiHarness } from "agents/harness/pi"
 import type {
   EntryRecord,
   SubmissionRecord,
@@ -7,8 +6,10 @@ import type {
   Conversation,
   Cursor,
 } from "@earendil-works/pi-durable"
-import type { Turn } from "../turns"
+import type { PiHarness } from "agents/harness/pi"
+
 import { messageArchiveText } from "../../workspace/files"
+import type { Turn } from "../turns"
 
 export async function readPiReply(
   harness: PiHarness,

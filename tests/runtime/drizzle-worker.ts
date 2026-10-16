@@ -1,10 +1,21 @@
-import { DurableObject } from "cloudflare:workers"
+import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context"
+import { createModels } from "@earendil-works/pi-ai"
+import { Harness, createRegistry, defineDoc } from "@earendil-works/pi-durable"
 import * as SqliteDriver from "@effect/sql-sqlite-do/SqliteClient"
-import * as DrizzleEffect from "drizzle-orm/effect-sqlite-do"
+import { PiHarness, openPiSessionStore } from "agents/harness/pi"
+import { Lifecycle } from "agents/lifecycle"
+import {
+  DurableObjectState as AlchemyDurableObjectState,
+  fromDurableObjectState,
+} from "alchemy/Cloudflare/Workers"
+import * as AlchemyDrizzle from "alchemy/Drizzle/Cloudflare"
+import { RuntimeContext as AlchemyRuntimeContext } from "alchemy/RuntimeContext"
+import { DurableObject } from "cloudflare:workers"
+import { count, eq } from "drizzle-orm"
 import { drizzle } from "drizzle-orm/durable-sqlite"
 import { migrate } from "drizzle-orm/durable-sqlite/migrator"
+import * as DrizzleEffect from "drizzle-orm/effect-sqlite-do"
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core"
-import { count, eq } from "drizzle-orm"
 import {
   Cause,
   Clock,
@@ -17,22 +28,12 @@ import {
   Scheduler,
   Scope,
 } from "effect"
-import { PiHarness, openPiSessionStore } from "agents/harness/pi"
-import { Lifecycle } from "agents/lifecycle"
-import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context"
-import { Harness, createRegistry, defineDoc } from "@earendil-works/pi-durable"
-import { createModels } from "@earendil-works/pi-ai"
-import * as AlchemyDrizzle from "alchemy/Drizzle/Cloudflare"
-import { RuntimeContext as AlchemyRuntimeContext } from "alchemy/RuntimeContext"
-import {
-  DurableObjectState as AlchemyDurableObjectState,
-  fromDurableObjectState,
-} from "alchemy/Cloudflare/Workers"
-import { drizzleProbeRows } from "./drizzle-schema"
+
+import { readRunRecords } from "../../src/activity/adapters/run-sqlite"
+import { chatTurns } from "../../src/conversations/adapters/schema"
 import { makeDurableObjectSqlite } from "../../src/storage/durable-object"
 import { migrateSqlite } from "../../src/storage/migrations"
-import { chatTurns } from "../../src/conversations/adapters/schema"
-import { readRunRecords } from "../../src/activity/adapters/run-sqlite"
+import { drizzleProbeRows } from "./drizzle-schema"
 
 declare const DRIZZLE_PROBE_MIGRATIONS: Record<string, string>
 
@@ -127,6 +128,11 @@ export class DrizzleProbe extends DurableObject<Record<string, never>> {
         return typeof value === "function" ? value.bind(target) : value
       },
     })
+    const nativeFault = [
+      "lost-ack",
+      "before-commit",
+      "rollback-settlement",
+    ].includes(mode)
     const temporary =
       mode === "lost-ack" ||
       mode === "before-commit" ||
@@ -156,13 +162,7 @@ export class DrizzleProbe extends DurableObject<Record<string, never>> {
           )
         : yield* DrizzleEffect.makeWithDefaults({ storage })
       const guarded = guardedMode
-        ? yield* makeDurableObjectSqlite(
-            mode === "lost-ack" ||
-              mode === "before-commit" ||
-              mode === "rollback-settlement"
-              ? wrapped
-              : storage
-          )
+        ? yield* makeDurableObjectSqlite(nativeFault ? wrapped : storage)
         : undefined
       const scheduler = new Scheduler.MixedScheduler("sync")
       const atomic = <TValue, TError, TRequirements>(
@@ -419,7 +419,7 @@ export class DrizzleProbe extends DurableObject<Record<string, never>> {
         const work = atomic(
           Effect.gen(function* () {
             yield* insert(1, "must-rollback")
-            yield* Effect.never
+            return yield* Effect.never
           }).pipe(
             Effect.ensuring(
               Effect.uninterruptible(
@@ -455,8 +455,7 @@ export class DrizzleProbe extends DurableObject<Record<string, never>> {
             Effect.gen(function* () {
               yield* insert(1, "must-rollback")
               yield* Deferred.succeed(entered, undefined)
-              yield* Effect.never
-              yield* insert(2, "must-not-orphan")
+              return yield* Effect.never
             }).pipe(
               Effect.ensuring(
                 Effect.sync(() => {
@@ -525,159 +524,164 @@ export class DrizzleProbe extends DurableObject<Record<string, never>> {
           rows: yield* read(),
         }
       }
-      if (
-        mode === "pi-rollback-app-write" ||
-        mode === "pi-rollback-app-statement" ||
-        mode === "app-rollback-pi-write" ||
-        mode === "queued-cancellation"
-      ) {
-        const entered = deferred(),
-          release = deferred()
-        let holdPi = false
-        const piStorage = new Proxy(storage, {
-          get(target, key) {
-            if (key === "transaction")
-              return <TValue>(
-                body: (txn: DurableObjectTransaction) => Promise<TValue>
-              ) =>
-                target.transaction(async (txn) => {
-                  const result = await body(txn)
-                  if (holdPi) {
-                    holdPi = false
-                    entered.resolve()
-                    await release.promise
-                    throw new Error("Synthetic Pi rollback")
-                  }
-                  return result
-                })
-            const value = Reflect.get(target, key, target)
-            return typeof value === "function" ? value.bind(target) : value
-          },
-        })
-        const pi = yield* Effect.promise(async () =>
-          Harness.open(
-            guarded
-              ? guarded.coordinatePi(await openPiSessionStore(piStorage))
-              : await openPiSessionStore(piStorage),
-            { models: createModels(), registry: createRegistry() },
-            BACKGROUND_CONTEXT
-          )
-        )
-        const commit = () =>
-          pi.commit(async (tx) => {
-            const doc = await tx.doc(ProbeDocument)
-            doc.value = 1
-          }, BACKGROUND_CONTEXT)
-        if (mode === "queued-cancellation") {
-          holdPi = true
-          const pendingPi = commit().catch(() => undefined)
-          yield* Effect.promise(() => entered.promise)
-          const task = yield* Effect.forkScoped(insert(1, "must-not-run"), {
-            startImmediately: true,
+      const mixedWriter = () =>
+        Effect.gen({ self: this }, function* () {
+          const entered = deferred(),
+            release = deferred()
+          let holdPi = false
+          const piStorage = new Proxy(storage, {
+            get(target, key) {
+              if (key === "transaction")
+                return <TValue>(
+                  body: (txn: DurableObjectTransaction) => Promise<TValue>
+                ) =>
+                  target.transaction(async (txn) => {
+                    const result = await body(txn)
+                    if (holdPi) {
+                      holdPi = false
+                      entered.resolve()
+                      await release.promise
+                      throw new Error("Synthetic Pi rollback")
+                    }
+                    return result
+                  })
+              const value = Reflect.get(target, key, target)
+              return typeof value === "function" ? value.bind(target) : value
+            },
           })
-          let interruptionFinished = false
-          const interrupted = yield* Effect.forkScoped(
-            Fiber.interrupt(task).pipe(
-              Effect.andThen(
-                Effect.sync(() => {
-                  interruptionFinished = true
-                })
-              )
-            ),
-            { startImmediately: true }
-          )
-          yield* Effect.promise(() => microtasks())
-          const cancellationJoinedBeforePiRelease = interruptionFinished
-          release.resolve()
-          yield* Effect.promise(() => pendingPi)
-          yield* Fiber.join(interrupted)
-          const exit = yield* Fiber.await(task)
-          const rows = yield* read()
-          yield* Effect.promise(() => pi.close(BACKGROUND_CONTEXT))
-          return {
-            cancellationJoinedBeforePiRelease,
-            reasons: reasonTags(exit),
-            rows,
-          }
-        }
-        let appEarly = false,
-          piEarly = false
-        let appExit: Exit.Exit<unknown, unknown> | undefined
-        let piError = false
-        if (
-          mode === "pi-rollback-app-write" ||
-          mode === "pi-rollback-app-statement"
-        ) {
-          holdPi = true
-          const pendingPi = commit().catch(() => {
-            piError = true
-          })
-          yield* Effect.promise(() => entered.promise)
-          const pendingApp = runtime
-            .runPromiseExit(
-              mode === "pi-rollback-app-statement"
-                ? insert(1, "app-success")
-                : atomic(insert(1, "app-success"))
+          const pi = yield* Effect.promise(async () =>
+            Harness.open(
+              guarded
+                ? guarded.coordinatePi(await openPiSessionStore(piStorage))
+                : await openPiSessionStore(piStorage),
+              { models: createModels(), registry: createRegistry() },
+              BACKGROUND_CONTEXT
             )
-            .then((exit) => {
-              appEarly = true
-              appExit = exit
+          )
+          const commit = () =>
+            pi.commit(async (tx) => {
+              const doc = await tx.doc(ProbeDocument)
+              doc.value = 1
+            }, BACKGROUND_CONTEXT)
+          if (mode === "queued-cancellation") {
+            holdPi = true
+            const pendingPi = commit().catch(() => undefined)
+            yield* Effect.promise(() => entered.promise)
+            const task = yield* Effect.forkScoped(insert(1, "must-not-run"), {
+              startImmediately: true,
             })
-          yield* Effect.promise(() => microtasks())
-          const returnedBeforePiRelease = appEarly
+            let interruptionFinished = false
+            const interrupted = yield* Effect.forkScoped(
+              Fiber.interrupt(task).pipe(
+                Effect.andThen(
+                  Effect.sync(() => {
+                    interruptionFinished = true
+                  })
+                )
+              ),
+              { startImmediately: true }
+            )
+            yield* Effect.promise(() => microtasks())
+            const cancellationJoinedBeforePiRelease = interruptionFinished
+            release.resolve()
+            yield* Effect.promise(() => pendingPi)
+            yield* Fiber.join(interrupted)
+            const exit = yield* Fiber.await(task)
+            const rows = yield* read()
+            yield* Effect.promise(() => pi.close(BACKGROUND_CONTEXT))
+            return {
+              cancellationJoinedBeforePiRelease,
+              reasons: reasonTags(exit),
+              rows,
+            }
+          }
+          let appEarly = false,
+            piEarly = false
+          let appExit: Exit.Exit<unknown, unknown> | undefined
+          let piError = false
+          if (
+            mode === "pi-rollback-app-write" ||
+            mode === "pi-rollback-app-statement"
+          ) {
+            holdPi = true
+            const pendingPi = commit().catch(() => {
+              piError = true
+            })
+            yield* Effect.promise(() => entered.promise)
+            const pendingApp = runtime
+              .runPromiseExit(
+                mode === "pi-rollback-app-statement"
+                  ? insert(1, "app-success")
+                  : atomic(insert(1, "app-success"))
+              )
+              .then((exit) => {
+                appEarly = true
+                appExit = exit
+              })
+            yield* Effect.promise(() => microtasks())
+            const returnedBeforePiRelease = appEarly
+            release.resolve()
+            yield* Effect.promise(() => Promise.all([pendingPi, pendingApp]))
+            const rows = yield* read()
+            yield* Effect.promise(() => pi.close(BACKGROUND_CONTEXT))
+            return {
+              returnedBeforePiRelease,
+              piError,
+              appReasons: appExit ? reasonTags(appExit) : [],
+              rows,
+            }
+          }
+          const app = atomic(
+            Effect.gen(function* () {
+              yield* insert(1, "rolled-back")
+              entered.resolve()
+              yield* Effect.promise(() => release.promise)
+              return yield* Effect.fail("Synthetic app rollback")
+            })
+          )
+          const pendingApp = runtime.runPromiseExit(app).then((exit) => {
+            appExit = exit
+          })
+          yield* Effect.promise(() => entered.promise)
+          const pendingPi = commit().then(
+            () => {
+              piEarly = true
+            },
+            () => {
+              piError = true
+            }
+          )
+          yield* Effect.promise(() => microtasks(1000))
+          const returnedBeforeAppRelease = piEarly
           release.resolve()
-          yield* Effect.promise(() => Promise.all([pendingPi, pendingApp]))
+          yield* Effect.promise(() => Promise.all([pendingApp, pendingPi]))
+          const cached = yield* Effect.promise(() =>
+            pi.snapshot(ProbeDocument, BACKGROUND_CONTEXT)
+          )
+          const persisted = this.native
+            .select({ n: count() })
+            .from(piDocuments)
+            .all()[0]!.n
           const rows = yield* read()
           yield* Effect.promise(() => pi.close(BACKGROUND_CONTEXT))
           return {
-            returnedBeforePiRelease,
+            returnedBeforeAppRelease,
             piError,
             appReasons: appExit ? reasonTags(appExit) : [],
+            cached,
+            piDocuments: persisted,
             rows,
           }
-        }
-        const app = atomic(
-          Effect.gen(function* () {
-            yield* insert(1, "rolled-back")
-            entered.resolve()
-            yield* Effect.promise(() => release.promise)
-            return yield* Effect.fail("Synthetic app rollback")
-          })
-        )
-        const pendingApp = runtime.runPromiseExit(app).then((exit) => {
-          appExit = exit
         })
-        yield* Effect.promise(() => entered.promise)
-        const pendingPi = commit().then(
-          () => {
-            piEarly = true
-          },
-          () => {
-            piError = true
-          }
-        )
-        yield* Effect.promise(() => microtasks(1000))
-        const returnedBeforeAppRelease = piEarly
-        release.resolve()
-        yield* Effect.promise(() => Promise.all([pendingApp, pendingPi]))
-        const cached = yield* Effect.promise(() =>
-          pi.snapshot(ProbeDocument, BACKGROUND_CONTEXT)
-        )
-        const persisted = this.native
-          .select({ n: count() })
-          .from(piDocuments)
-          .all()[0]!.n
-        const rows = yield* read()
-        yield* Effect.promise(() => pi.close(BACKGROUND_CONTEXT))
-        return {
-          returnedBeforeAppRelease,
-          piError,
-          appReasons: appExit ? reasonTags(appExit) : [],
-          cached,
-          piDocuments: persisted,
-          rows,
-        }
-      }
+      if (
+        [
+          "pi-rollback-app-write",
+          "pi-rollback-app-statement",
+          "app-rollback-pi-write",
+          "queued-cancellation",
+        ].includes(mode)
+      )
+        return yield* mixedWriter()
       const gate = yield* Deferred.make<void>()
       const outside = yield* Effect.forkScoped(
         Deferred.await(gate).pipe(Effect.andThen(read()))
@@ -697,7 +701,7 @@ export class DrizzleProbe extends DurableObject<Record<string, never>> {
           )
           if (mode === "nested-caught")
             yield* nested.pipe(Effect.catch(() => Effect.void))
-          else yield* nested
+          else return yield* nested
           return
         }
         yield* Deferred.succeed(gate, undefined)

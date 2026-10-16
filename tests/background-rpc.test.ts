@@ -1,10 +1,11 @@
-import { expect, it } from "vitest"
 import { Cause, Context, Effect, Exit, Schema } from "effect"
-import { backgroundRemote } from "../src/delegation/adapters/background-rpc"
+import { expect, it } from "vitest"
+
 import {
   BackgroundRequest,
   backgroundReply,
 } from "../src/delegation/adapters/background-protocol"
+import { backgroundRemote } from "../src/delegation/adapters/background-rpc"
 import { DelegationFailure, type Group } from "../src/delegation/contracts"
 import { resolveRoute } from "../src/inference/policy"
 

@@ -1,18 +1,19 @@
-import { expect, expectTypeOf, it } from "vitest"
 import { Cause, Context, Effect, Exit } from "effect"
+import { expect, expectTypeOf, it } from "vitest"
+
 import {
   connectionDecode,
   connectionJson,
   connectionRequest,
   connectionResponse,
 } from "../src/access/adapters/connection-http"
+import type { RemoteConnectionOperations } from "../src/access/connection-service"
 import {
   ConnectionError,
   ConnectionStorageError,
   ConnectionTransportError,
   SelectRemoteTools,
 } from "../src/access/connections"
-import type { RemoteConnectionOperations } from "../src/access/connection-service"
 
 const incomplete =
   "The connection request could not be completed. Reload and try again."

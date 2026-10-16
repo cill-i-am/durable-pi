@@ -1,6 +1,7 @@
 import { Effect } from "effect"
-import { observeCleanup } from "../shared/effect"
+
 import type { AgentId } from "../agents/domain"
+import { observeCleanup } from "../shared/effect"
 import type {
   ActivityAgent,
   ActivityConversation,

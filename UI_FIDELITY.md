@@ -2,7 +2,6 @@
 
 The subsequent five-pass audit is recorded in [UI_AUDIT.md](UI_AUDIT.md). It removes repeated copy and duplicate checklist creation, and corrects navigation semantics, input contrast, pending-action guards and mobile reflow. Earlier slice evidence below is historical; it does not describe the current labels in every case.
 
-
 Requested after the functional build. Reference: [Pi — Quiet Workroom · Product design](https://app.paper.design/file/01M4GJ8G5KNDADJRVDDC3PQ6CT/p-1-0), page “Quiet Workroom · Complete product states”. Re-read 2026-10-11: 36 artboards; tokens hash `30a00488`. This is implementation of the approved design, not a new visual direction.
 
 ## Outcome
@@ -48,7 +47,6 @@ Artboards 00–01 document the direction/treatment; 32 explores object alternati
 
 2026-10-11 baseline: Paper inspected through MCP. Main workroom specifies a 48px workspace bar, 224px sidebar, 68px conversation header and 664px workbench at 1440×900. Mobile reference is 390×844. Current product lacks the shared workspace bar/tab composition and uses approximate colors/avatar marks; start with foundations and access before changing navigation.
 
-
 ### F1 — Foundations and access
 
 Uses Paper’s exact light palette, Geist/Geist Mono, 6/10/14/20px radii and original agent-mark SVG. The desktop access composition follows the 620/820px split and 380px form at 1440×900; setup and recovery share the same frame. The static workspace illustration is explicitly labeled as an example. Owner setup, workspace sign-in and subscription connection remain distinct. Password visibility controls preserve field constraints and pending state.
@@ -56,7 +54,6 @@ Uses Paper’s exact light palette, Geist/Geist Mono, 6/10/14/20px radii and ori
 Intentional accessibility adaptations: editable controls remain 16px on phones to avoid focus zoom; primary-button hover uses opaque `#126b5a` rather than translucent green, preserving text contrast. Mobile omits the decorative story, retains the Pi brand and scrolls on short viewports.
 
 Local evidence: 422 tests across 62 files, typecheck and production build passed. Eight focused authentication/email tests also passed. Browser checks at 1440×900, 390×844 and 320×568 cover sign-in, setup, recovery, an unavailable reset link, password visibility, keyboard navigation and horizontal overflow. A synthetic local owner signed in and signed out successfully. Settled desktop/mobile access screens and the primary-button hover audit have zero axe violations. Mobile conversation has zero violations; its decorative initial-letter avatar needs manual contrast interpretation and will be replaced in F2. Independent review identified the mobile-input and hover-contrast regressions; both were corrected and re-reviewed clear. This is local evidence; hosted deployment verification is recorded separately after merge.
-
 
 Hosted F1 evidence: PR #34 merged as `2f5987e`; production run `38132564840` passed. The deployed unauthenticated access screen at bot.cill-i-am.com uses Geist and the exact primary token, has no horizontal overflow, and passes axe with zero violations or incomplete checks. This check did not sign into the owner's account.
 
@@ -67,7 +64,6 @@ The desktop workspace now follows the 48px menu bar and 224px sidebar. Agent/Vie
 Intentional adaptations: search advertises agents and commands only; conversation search remains in each agent's memory. The personal menu shows actual owner/workspace information without a fictional save indicator. Agent creation/editing retains the existing modal and supported name/instructions fields; default models, tools and connections remain their actual separate controls. The broader settings/workbench composition is F4. On phones the existing sidebar and conversation controls remain, with keyboard command search responsive; the final touch navigation composition is F6. Adding cmdk introduced its transitive dependencies but did not upgrade unrelated installed dependencies.
 
 Local evidence: 422 tests in 62 files, typecheck, lint and production build passed. Independent review is clear after moving the Close button outside cmdk's Enter handler and preserving mobile focus return. Browser QA measured a 48px bar, 224px sidebar and a centered 620px command dialog at y=168 on a 1440×900 viewport. A synthetic agent was created, edited and archived through the new navigation. Menu and command transitions, keyboard dismissal, desktop split-pane opening, mobile search at 390×844, no horizontal overflow, and an unsaved checklist's navigation fence passed. The pending draft prevented agent/menu/command navigation; cancel restored it. Local desktop split-pane, search and mobile search axe audits have zero violations; incomplete checks are Base UI focus guards and the existing decorative owner initial. Screenshots remain in ignored local evidence, including `screenshot-1791715623376.png` (split workspace), `screenshot-1791715641645.png` (desktop search) and `screenshot-1791715655730.png` (mobile search). These are local synthetic-data checks, without a production model connection. Hosted authenticated navigation remains unverified for this slice.
-
 
 Hosted F2 delivery: PR #35 merged as `ce1a570`; production run `38133447207` passed, including the unauthenticated owner boundary. Authenticated hosted navigation was not exercised.
 
@@ -81,7 +77,6 @@ Intentional adaptations: completed tool labels use the darker primary-hover toke
 
 Local evidence: 431 tests across 63 files, typecheck, lint and production build passed. Independent review covered draft acknowledgement, bot isolation, uploads, steering, approval controls and the queued-anchor correction. Real local text drag/drop and image-picker uploads completed through the existing API; attachments were removed from the composer without losing its draft. Browser-only state fixtures exercised running/expanded tool output, steering, queued follow-ups, pending approval, stopped/retry and completed replies with model/mutation routes blocked. These fixtures demonstrate presentation, not model execution or recovery. An actual same-page queued-to-preparing transition after a long reply made the new turn visible; keyboard navigation to earlier content stayed in place through that transition. Desktop 1440×900 split workbench and mobile 390×844/320×568 fit without horizontal overflow. Pending-approval and stopped mobile screens and expanded-tool desktop audit have zero axe violations; desktop incomplete checks concern existing focus guards/decorative initials. Representative screenshots: `screenshot-1791715943609.png` (mobile fresh), `screenshot-1791715991851.png` (real attachments), `screenshot-1791716224823.png` (pending approval), `screenshot-1791716235418.png` (320px stopped), `screenshot-1791716262832.png` (expanded tool/queue split) and `screenshot-1791716270105.png` (completed). Screenshots and fixtures stay in ignored local evidence. Authenticated hosted conversation is not yet verified for this slice.
 
-
 Hosted F3 delivery: PR #36 merged as `b47a437`; production run `38134211346` passed, including the unauthenticated owner boundary. Authenticated hosted conversation was not exercised for this visual slice.
 
 ### F4 — Shared workbench
@@ -92,7 +87,6 @@ Intentional adaptations: private bot files remain a flat collection; no fictiona
 
 Local evidence: 431 tests in 63 files, typecheck, lint and production build passed. Independent reviews covered lifted state, acknowledgement handling, recovery navigation, breakpoint stability, previews and source-request cancellation. Browser QA at 1440×900, 390×844 and 320×568 verified terminal draft retention across resizing, keyboard tab activation, file selection/rename/text preview, a real upload while renaming, attachment selection without losing the chat draft, memory source inspection and mobile overflow. A restored synthetic unconfirmed object mutation kept Objects reachable while all unrelated navigation stayed locked; the real cancellation operation removed the pending save and unlocked navigation. A new checklist draft survived resizing and Escape could not dismiss it. Review corrections preserve the default file selection across uploads, use distinct detail/preview keys, and retain access to object recovery after reload. Terminal desktop, Files desktop/mobile and Memory desktop/mobile axe audits report zero violations; incomplete checks involve modal focus guards and decorative initials. Native domain/runtime coverage remains unchanged; browser memory data was a read-only presentation fixture, not a new model run. Screenshots include `screenshot-1791716992393.png` (terminal desktop), `screenshot-1791717060439.png` (file preview), `screenshot-1791717074840.png` (restored save recovery), `screenshot-1791717127298.png` (320px Files) and `screenshot-1791717157785.png`/`screenshot-1791717158051.png` (memory provenance desktop/mobile). Fixtures and screenshots remain ignored local evidence. Authenticated hosted workbench verification is not claimed.
 
-
 F4 delivery: PR #37 merged as `7565a1d`; production run `38134941867` passed, including the unauthenticated owner boundary. The Apps draft also survived local desktop/phone resizing. Authenticated hosted workbench was not exercised.
 
 ### F5 — Working objects
@@ -102,7 +96,6 @@ The live chat card follows Paper's 16px title, 14px radius, compact task lanes a
 Intentional adaptations: retain explicit task status beside due dates, actual saved revisions and runtime recovery actions even where the mock is more compact. Changes continue to use targeted existing mutations; no optimistic second copy is introduced. Actual origin links are shown only when the checklist has a conversation origin. Active-row metadata uses the darker primary token, unchecked borders use the muted foreground, and hovered sidebar descriptions use the foreground for readable contrast.
 
 Local evidence: 431 tests across 63 files, typecheck, lint and production build passed; independent object review passed 11 focused tests with no material findings. A synthetic local checklist was created through the authenticated application operation, then referenced by a browser-only chat fixture. A mobile notes edit saved revision 2; a concurrent real edit saved revision 3; the stale UI draft produced an explicit conflict without overwriting it. Reapply saved revision 4, checking a task updated both surfaces at revision 5, and archive/restore preserved history through revision 7. This is actual local object persistence combined with fixture-based chat presentation, not a new model/tool run. Desktop/mobile editing, 320px stacking, saved state and hover contrast have zero settled axe violations; semantic-heading findings were corrected. Screenshots include `screenshot-1791717371099.png` (inline/workbench), `screenshot-1791717422099.png` (real conflict), `screenshot-1791717428633.png` (history), `screenshot-1791717441767.png` (archive), `screenshot-1791717473003.png` (320px editor), `screenshot-1791717473591.png` (390px editor), and `screenshot-1791717474344.png` (shared revision after restore). All remain ignored local evidence. Hosted authenticated checklist presentation is not claimed for this slice.
-
 
 F5 delivery: PR #38 merged as `86ba331`; production run `38135359671` passed, including the unauthenticated owner boundary. Authenticated hosted checklist presentation was not exercised for this visual slice.
 
@@ -116,9 +109,7 @@ Local evidence: all 431 tests across 63 files, typecheck, lint and production bu
 
 Representative ignored screenshots: `screenshot-1791717674249.png` and `screenshot-1791717909874.png` (mobile chat), `screenshot-1791717680621.png` (mobile Files), `screenshot-1791717850132.png` (desktop shared checklist), `screenshot-1791717876965.png` (320px editor controls) and `screenshot-1791717897129.png` (restored mobile save recovery). Conversation presentation uses synthetic browser fixtures with inference and send routes blocked; checklist/file operations use the real local application. These checks do not claim a new hosted model run or authenticated hosted visual acceptance. The previous functional hosted acceptance remains in BUILD.md. Final CI, Cloudflare delivery and unauthenticated hosted access are verified on the release PR; no owner sign-in is required to finish this source/design scope.
 
-
 F6 delivery and goal completion: PR #39 merged as `4f4fc66`; [production run 38135689129](https://github.com/cill-i-am/durable-pi/actions/runs/38135689129) passed checks, Alchemy deployment and the hosted authentication-boundary probes. A fresh unauthenticated mobile load at bot.cill-i-am.com served the new viewport configuration and stylesheet assets, fit the 390px viewport and passed the settled access-screen axe audit with zero violations and zero incomplete checks. An audit taken during the entrance fade reported transient contrast failures; the settled rerun passed. `screenshot-1791718295592.png` is the hosted access evidence. Authenticated hosted UI and physical iOS keyboard/safe-area testing remain unclaimed. F1–F6 are complete; subscription-only model connections and domain/runtime behavior remain intact.
-
 
 ### F7 — Correct navigation drift and audit the complete page
 
@@ -189,7 +180,6 @@ The synthetic production-binding network check passed browser unrestricted/restr
 
 The owner’s later browser annotations override the original login artboard copy: remove the privacy tagline, ChatGPT-connection footer/divider and Pi wordmark text. Keep the mascot and layout. The shared password eye now plays Meal Planner’s short activation click, with a remembered mute control in the auth header and account menu. Locally checked desktop, 390 px and 320 px layouts, keyboard access, native audio creation, muted playback, persistence and optional-audio/storage failure handling. Hosted release evidence belongs to the delivery PR.
 
-
 ### F8 — Settings, interiors and conversation density
 
 Implementation and local comparison complete. [PR #52](https://github.com/cill-i-am/durable-pi/pull/52) records release and hosted verification. References use the original Paper page plus the explicitly requested updates, at 1440×900, 390×844 and a 320px stress viewport.
@@ -197,7 +187,6 @@ Implementation and local comparison complete. [PR #52](https://github.com/cill-i
 Carry owner annotations into Paper: account dropdown, removed login wordmark and helper copy, remembered interaction sound, subscription-only models, and public-internet controls for Browser and Linux Terminal. These changes amend the reference; unsupported image-region pins, file folders and global content search remain explicit product gaps.
 
 Delivery evidence will distinguish local synthetic visual fixtures, deterministic/native checks and authenticated hosted checks. No backend authority, durable record, model connection or execution policy changes are intended.
-
 
 #### F8 screen comparison and behavior checks
 

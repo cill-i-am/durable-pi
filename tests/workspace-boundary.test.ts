@@ -1,28 +1,29 @@
-import { afterEach, expect, it } from "vitest"
 import { it as effectIt } from "@effect/vitest"
 import { Cause, Effect, Exit, ManagedRuntime, Semaphore } from "effect"
 import { TestClock } from "effect/testing"
-import { database, corrupt } from "./database"
-import { SqliteWorkspace } from "../src/workspace/adapters/sqlite"
+import { afterEach, expect, it } from "vitest"
+
 import {
   r2WorkspaceAssets,
   type AssetBucket,
 } from "../src/workspace/adapters/r2"
-import { makeWorkspace } from "../src/workspace/service"
-import { Workspace } from "../src/workspace/workspace"
+import { SqliteWorkspace } from "../src/workspace/adapters/sqlite"
+import { workspaceLayer } from "../src/workspace/adapters/storage"
+import { WorkspaceAdmission } from "../src/workspace/admission"
 import {
   workspaceExtractionCycle,
   workspaceExtractionFailure,
 } from "../src/workspace/application"
-import { WorkspaceAdmission } from "../src/workspace/admission"
-import { workspaceLayer } from "../src/workspace/adapters/storage"
-import { WorkspaceUnavailable, type Upload } from "../src/workspace/files"
 import {
   DocumentUnreadable,
   type ExtractDocument,
   type ExtractedDocument,
 } from "../src/workspace/documents"
+import { WorkspaceUnavailable, type Upload } from "../src/workspace/files"
+import { makeWorkspace } from "../src/workspace/service"
 import { VideoUnreadable, type ExtractVideo } from "../src/workspace/video"
+import { Workspace } from "../src/workspace/workspace"
+import { database, corrupt } from "./database"
 
 const cleanups: (() => Promise<void>)[] = []
 afterEach(async () => {

@@ -1,5 +1,3 @@
-import { preserveFatal, observeCleanup } from "../../shared/effect"
-import { Clock, Effect, Schema } from "effect"
 import {
   BACKGROUND_CONTEXT,
   withAbortSignal,
@@ -13,7 +11,10 @@ import {
   type Harness,
   type ConversationId,
 } from "@earendil-works/pi-durable"
+import { Clock, Effect, Schema } from "effect"
+
 import { ResolvedRoute } from "../../inference/policy"
+import { preserveFatal, observeCleanup } from "../../shared/effect"
 import {
   type CommunicationError,
   failure,

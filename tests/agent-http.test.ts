@@ -1,16 +1,6 @@
-import { afterEach, expect, it, vi } from "vitest"
 import { Cause, Effect, Exit, Layer, ManagedRuntime, Schema } from "effect"
-import { PersonalAgent } from "../src/agent/worker"
-import * as AgentHttp from "../src/agent/adapters/http"
-import {
-  agentJson,
-  agentNative,
-  agentResponse,
-  AgentRequestInvalid,
-  AgentRequestUnavailable,
-} from "../src/agent/adapters/http"
-import { proxyTerminalRequest } from "../src/agent/adapters/terminal"
-import { ModelUnavailable } from "../src/inference/policy"
+import { afterEach, expect, it, vi } from "vitest"
+
 import {
   connectionJson,
   connectionResponse,
@@ -20,14 +10,25 @@ import {
   ConnectionError,
   ConnectionStorageError,
 } from "../src/access/connections"
+import * as AgentHttp from "../src/agent/adapters/http"
+import {
+  agentJson,
+  agentNative,
+  agentResponse,
+  AgentRequestInvalid,
+  AgentRequestUnavailable,
+} from "../src/agent/adapters/http"
+import { proxyTerminalRequest } from "../src/agent/adapters/terminal"
+import { PersonalAgent } from "../src/agent/worker"
 import { appsRequest } from "../src/apps/adapters/http"
-import { makeApps } from "../src/apps/service"
 import { AppStore } from "../src/apps/adapters/sqlite"
 import { AppConflict } from "../src/apps/contracts"
+import { makeApps } from "../src/apps/service"
+import { ModelUnavailable } from "../src/inference/policy"
 import { routinesRequest } from "../src/routines/adapters/http"
 import { RoutineConflict } from "../src/routines/contracts"
-import { routineFixture } from "./routine-fixture"
 import { database } from "./database"
+import { routineFixture } from "./routine-fixture"
 
 vi.mock("cloudflare:workers", () => ({
   DurableObject: class {},

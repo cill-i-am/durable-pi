@@ -1,15 +1,15 @@
 import type { Context } from "@earendil-works/chord"
-import { Cause, Effect } from "effect"
 import {
   GenerationTask,
   hook,
   type HookApi,
   type Storage,
 } from "@earendil-works/pi-durable"
+import { Cause, Effect } from "effect"
+
 import type { AccessLedger } from "../../access/ledger"
 import type { AgentStorageError } from "../../agents/domain"
 import type { RoutineStorageError } from "../../routines/persistence"
-import { ConversationStorageError } from "../turns"
 import {
   recoveryOutcome,
   RunBlocked,
@@ -21,6 +21,7 @@ import {
   type RecoveryLedger,
   type RunRecovery,
 } from "../recovery-service"
+import { ConversationStorageError } from "../turns"
 import { webCryptoRecoveryFingerprint } from "./crypto"
 
 export type RecoverySource = { turnId: string; steeringKey: string }
@@ -63,6 +64,88 @@ export function runRecoveryHook(options: {
   const run = options.run ?? Effect.runPromise
   const fingerprint = (value: unknown, context: Context) =>
     run(app.epoch(value), { signal: context.abortSignal })
+  async function roundObservations(
+    assistantId: Parameters<Storage["entry"]>[1],
+    results: readonly Parameters<Storage["entry"]>[1][],
+    api: HookApi,
+    context: Context,
+    origin: RecoverySource
+  ) {
+    const assistant = (
+      await storage.entry(api.conversationId, assistantId, context)
+    )?.entry
+    const message = assistant?.model?.[0]
+    if (assistant?.kind !== "pi.assistant" || message?.role !== "assistant")
+      throw new Error("Recovery requires a native assistant entry")
+    const calls = message.content.filter((part) => part.type === "toolCall")
+    async function observeResult(
+      id: Parameters<Storage["entry"]>[1]
+    ): Promise<Observation> {
+      const entry = (await storage.entry(api.conversationId, id, context))
+        ?.entry
+      const result = entry?.model?.[0]
+      if (entry?.kind !== "pi.tool-result" || result?.role !== "toolResult")
+        throw new Error("Recovery requires a native tool result")
+      const call = calls.find((candidate) => candidate.id === result.toolCallId)
+      if (!call) throw new Error("Recovery tool/result pairing is missing")
+      const receipt =
+        entry.byTaskId === undefined
+          ? undefined
+          : await run(
+              checked(
+                "read recovery receipt",
+                access.get(String(entry.byTaskId))
+              ),
+              { signal: context.abortSignal }
+            )
+      if (
+        receipt &&
+        (receipt.turnId !== origin.turnId || receipt.tool !== call.name)
+      )
+        throw new Error("Recovery receipt ownership mismatch")
+      const codes = diagnosticCodes(entry.data)
+      const { outcome, category } = recoveryOutcome({
+        receiptStatus: receipt?.status,
+        diagnostics: codes,
+        isError: result.isError,
+        tool: call.name,
+        deniedPolicy:
+          !receipt &&
+          result.isError &&
+          (
+            await run(checked("read recovery policy", access.policies()), {
+              signal: context.abortSignal,
+            })
+          ).some(
+            (policy) => policy.name === call.name && policy.mode === "deny"
+          ),
+      })
+      return {
+        resultId: Number(id),
+        invocation: recoveryInvocation(entry.byTaskId, id, result.toolCallId),
+        tool: /^[a-zA-Z0-9_.:-]{1,160}$/.test(call.name)
+          ? call.name
+          : "unavailable_tool",
+        fingerprint: await fingerprint(
+          {
+            tool: call.name,
+            args: receipt
+              ? (JSON.parse(receipt.input) as unknown)
+              : call.arguments,
+            category,
+          },
+          context
+        ),
+        outcome,
+        receiptId: receipt?.id ?? null,
+      }
+    }
+    const observations: Observation[] = []
+    for (const id of results) {
+      observations.push(await observeResult(id))
+    }
+    return observations
+  }
   return hook(GenerationTask, {
     beforeRequest: async ({ messages }, api, context) => {
       const origin = await run(source(api), { signal: context.abortSignal })
@@ -118,92 +201,13 @@ export function runRecoveryHook(options: {
     afterTools: async (assistantId, results, api, context) => {
       const origin = await run(source(api), { signal: context.abortSignal })
       if (!origin) return
-      const assistant = (
-        await storage.entry(api.conversationId, assistantId, context)
-      )?.entry
-      const message = assistant?.model?.[0]
-      if (assistant?.kind !== "pi.assistant" || message?.role !== "assistant")
-        throw new Error("Recovery requires a native assistant entry")
-      const calls = message.content.filter((part) => part.type === "toolCall")
-      const observations: Observation[] = []
-      for (const id of results) {
-        const entry = (await storage.entry(api.conversationId, id, context))
-          ?.entry
-        const result = entry?.model?.[0]
-        if (entry?.kind !== "pi.tool-result" || result?.role !== "toolResult")
-          throw new Error("Recovery requires a native tool result")
-        const call = calls.find(
-          (candidate) => candidate.id === result.toolCallId
-        )
-        if (!call) throw new Error("Recovery tool/result pairing is missing")
-        const receipt =
-          entry.byTaskId === undefined
-            ? undefined
-            : await run(
-                checked(
-                  "read recovery receipt",
-                  access.get(String(entry.byTaskId))
-                ),
-                { signal: context.abortSignal }
-              )
-        if (
-          receipt &&
-          (receipt.turnId !== origin.turnId || receipt.tool !== call.name)
-        )
-          throw new Error("Recovery receipt ownership mismatch")
-        const diagnostics =
-          entry.data &&
-          typeof entry.data === "object" &&
-          !Array.isArray(entry.data)
-            ? entry.data.diagnostics
-            : undefined
-        const codes = Array.isArray(diagnostics)
-          ? diagnostics.flatMap((value) =>
-              value &&
-              typeof value === "object" &&
-              !Array.isArray(value) &&
-              typeof value.code === "string"
-                ? [value.code]
-                : []
-            )
-          : []
-        const { outcome, category } = recoveryOutcome({
-          receiptStatus: receipt?.status,
-          diagnostics: codes,
-          isError: result.isError,
-          tool: call.name,
-          deniedPolicy:
-            !receipt &&
-            result.isError &&
-            (
-              await run(checked("read recovery policy", access.policies()), {
-                signal: context.abortSignal,
-              })
-            ).some(
-              (policy) => policy.name === call.name && policy.mode === "deny"
-            ),
-        })
-        observations.push({
-          resultId: Number(id),
-          invocation:
-            entry.byTaskId === undefined
-              ? `entry:${id}`
-              : `task:${entry.byTaskId}:${result.toolCallId}`,
-          tool: /^[a-zA-Z0-9_.:-]{1,160}$/.test(call.name)
-            ? call.name
-            : "unavailable_tool",
-          fingerprint: await fingerprint(
-            {
-              tool: call.name,
-              args: receipt ? JSON.parse(receipt.input) : call.arguments,
-              category,
-            },
-            context
-          ),
-          outcome,
-          receiptId: receipt?.id ?? null,
-        })
-      }
+      const observations = await roundObservations(
+        assistantId,
+        results,
+        api,
+        context,
+        origin
+      )
       const epoch = await fingerprint(origin.steeringKey, context)
       const requestEpoch = await api.memo<string>("recovery:epoch", context)
       const current = await run(source(api), { signal: context.abortSignal })
@@ -243,4 +247,35 @@ export function runRecoveryHook(options: {
       }
     },
   })
+}
+
+function diagnosticCodes(data: unknown): string[] {
+  const diagnostics =
+    data && typeof data === "object" && !Array.isArray(data)
+      ? "diagnostics" in data
+        ? data.diagnostics
+        : undefined
+      : undefined
+  const codes = Array.isArray(diagnostics)
+    ? diagnostics.flatMap((value: unknown) =>
+        value &&
+        typeof value === "object" &&
+        !Array.isArray(value) &&
+        "code" in value &&
+        typeof value.code === "string"
+          ? [value.code]
+          : []
+      )
+    : []
+  return codes
+}
+
+function recoveryInvocation(
+  taskId: unknown,
+  entryId: unknown,
+  toolCallId: string
+) {
+  return taskId === undefined
+    ? `entry:${entryId}`
+    : `task:${taskId}:${toolCallId}`
 }

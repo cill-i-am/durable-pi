@@ -1,9 +1,10 @@
 import { expect, it } from "@effect/vitest"
 import { Clock, Deferred, Effect, Layer } from "effect"
 import { TestClock } from "effect/testing"
-import { TerminalService, terminalLayer } from "../src/terminal/terminal"
-import type { TerminalRuntime } from "../src/terminal/runtime"
+
 import { TerminalStore } from "../src/terminal/adapters/sqlite"
+import type { TerminalRuntime } from "../src/terminal/runtime"
+import { TerminalService, terminalLayer } from "../src/terminal/terminal"
 import { database } from "./database"
 
 it.effect(

@@ -11,13 +11,27 @@ import {
   Schema,
 } from "effect"
 import { TestClock } from "effect/testing"
-import { database, corrupt } from "./database"
-import { sqliteFailure } from "./sqlite-fault"
-import { migrateSqlite } from "../src/storage/migrations"
-import type { Sqlite } from "../src/storage/sqlite"
-import { AgentCatalog } from "../src/agents/catalog"
-import { agentCatalogApplication } from "../src/agents/service"
+
+import { BotConfigurationStore } from "../src/agents/adapters/configuration"
+import { agentCatalogRequest } from "../src/agents/adapters/http"
 import { SqliteAgentCatalog } from "../src/agents/adapters/sqlite"
+import { agentRuntimeReader } from "../src/agents/adapters/statuses"
+import {
+  agentNativeOperation,
+  configurationInput,
+  synchronizeTerminalAuthority,
+} from "../src/agents/adapters/synchronization"
+import {
+  archiveAgent,
+  configureAgent,
+  type AgentConfigurationHost,
+  type TerminalAuthorityProjection,
+} from "../src/agents/application"
+import { AgentCatalog } from "../src/agents/catalog"
+import {
+  BotConfiguration,
+  configurationApplication,
+} from "../src/agents/configuration"
 import {
   AgentId,
   AgentSynchronizationError,
@@ -29,25 +43,12 @@ import {
   type AgentConflict,
   type AgentStorageError,
 } from "../src/agents/domain"
-import {
-  BotConfiguration,
-  configurationApplication,
-} from "../src/agents/configuration"
-import { BotConfigurationStore } from "../src/agents/adapters/configuration"
-import {
-  archiveAgent,
-  configureAgent,
-  type AgentConfigurationHost,
-  type TerminalAuthorityProjection,
-} from "../src/agents/application"
-import { agentCatalogRequest } from "../src/agents/adapters/http"
-import {
-  agentNativeOperation,
-  configurationInput,
-  synchronizeTerminalAuthority,
-} from "../src/agents/adapters/synchronization"
+import { agentCatalogApplication } from "../src/agents/service"
 import { agentStatuses } from "../src/agents/statuses"
-import { agentRuntimeReader } from "../src/agents/adapters/statuses"
+import { migrateSqlite } from "../src/storage/migrations"
+import type { Sqlite } from "../src/storage/sqlite"
+import { database, corrupt } from "./database"
+import { sqliteFailure } from "./sqlite-fault"
 
 const id = (n: number) =>
   Schema.decodeUnknownSync(AgentId)(

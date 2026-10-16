@@ -1,12 +1,13 @@
 import { Cause, Clock, Deferred, Effect } from "effect"
-import { scopedReceiptFact, type ReceiptQuery } from "./receipt"
-import type { AccessLedger, ToolIntent } from "./ledger"
+
 import type {
   AccessDenied,
   AccessConflict,
   AccessStorageError,
   AccessMode,
 } from "./contracts"
+import type { AccessLedger, ToolIntent } from "./ledger"
+import { scopedReceiptFact, type ReceiptQuery } from "./receipt"
 
 export class AccessGate {
   private changed = Deferred.makeUnsafe<void>()

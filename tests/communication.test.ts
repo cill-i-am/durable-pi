@@ -1,5 +1,7 @@
 import { Effect, Layer, Schema } from "effect"
 import { describe, expect, it } from "vitest"
+
+import { AgentId } from "../src/agents/domain"
 import { sqliteMailbox } from "../src/communication/adapters/sqlite"
 import {
   LEASE_MS,
@@ -8,10 +10,9 @@ import {
   type Envelope,
   type Identity,
 } from "../src/communication/contracts"
-import { MailboxTransport, Mailbox } from "../src/communication/mailbox"
 import { deliverNext, receive } from "../src/communication/delivery"
+import { MailboxTransport, Mailbox } from "../src/communication/mailbox"
 import { database } from "./database"
-import { AgentId } from "../src/agents/domain"
 
 const a = Schema.decodeUnknownSync(AgentId)("home")
 const b = Schema.decodeUnknownSync(AgentId)(
@@ -94,7 +95,7 @@ describe("durable bot mailbox", () => {
       authenticate: (input) =>
         Effect.gen(function* () {
           if (!(yield* sender.service.prove(input)))
-            yield* Effect.fail(failure("forbidden", "No proof"))
+            return yield* Effect.fail(failure("forbidden", "No proof"))
         }),
     })
     const invoke = (envelope: Envelope) =>

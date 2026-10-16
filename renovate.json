@@ -48,6 +48,16 @@
         "containers/terminal-native/Dockerfile"
       ],
       "groupName": "Sandbox SDK and native shim"
+    },
+    {
+      "description": "Effect's native diagnostics patch supports a matched set of compiler and Oxlint versions.",
+      "groupName": "Effect native diagnostics",
+      "matchDepNames": [
+        "@effect/tsgo",
+        "@typescript/native",
+        "oxlint",
+        "oxlint-tsgolint"
+      ]
     }
   ],
   "lockFileMaintenance": {

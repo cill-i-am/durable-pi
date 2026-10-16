@@ -1,16 +1,17 @@
-import { useEffect, useRef, useState } from "react"
-import { Check, RefreshCw } from "lucide-react"
 import { Schema } from "effect"
+import { Check, RefreshCw } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+
 import {
   AccessState,
   type AccessMode,
   type ToolPolicy,
 } from "@/access/contracts"
-import { agentApi } from "@/http/client"
-import { Button } from "@/components/ui/button"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { SettingsSection } from "@/components/settings-section"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { agentApi } from "@/http/client"
 
 export function AccessPanel({
   embedded = false,

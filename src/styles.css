@@ -851,7 +851,10 @@ body {
   flex: 1;
   gap: 2px;
 }
-.workspace-sidebar [data-slot="sidebar-menu-button"] > .agent-sidebar-copy > span:last-child {
+.workspace-sidebar
+  [data-slot="sidebar-menu-button"]
+  > .agent-sidebar-copy
+  > span:last-child {
   font-size: 11px;
   line-height: 15px;
 }
@@ -1196,7 +1199,10 @@ body {
   color: var(--muted-foreground);
   pointer-events: none;
 }
-.workspace-sidebar [data-slot="sidebar-menu-button"] .agent-status-marker > svg {
+.workspace-sidebar
+  [data-slot="sidebar-menu-button"]
+  .agent-status-marker
+  > svg {
   width: 10px;
   height: 10px;
   stroke-width: 1.7;
@@ -1204,7 +1210,10 @@ body {
 .agent-status-marker[data-agent-status="working"] {
   color: var(--primary);
 }
-.agent-status-marker:is([data-agent-status="blocked"], [data-agent-status="needs-approval"]) {
+.agent-status-marker:is(
+  [data-agent-status="blocked"],
+  [data-agent-status="needs-approval"]
+) {
   color: var(--warning);
 }
 .agent-status-marker[data-agent-status="failed"] {
@@ -2852,9 +2861,9 @@ body {
     transition: transform 200ms linear;
   }
   .workbench-sheet[data-desktop="panel"]:is(
-    [data-starting-style],
-    [data-ending-style]
-  ) {
+      [data-starting-style],
+      [data-ending-style]
+    ) {
     transform: translateX(100%);
   }
 }
@@ -2993,7 +3002,8 @@ body {
   }
 }
 @media (max-width: 767px) {
-  [data-slot="workspace-startup"][data-workbench="open"] .workspace-startup-panel-backdrop {
+  [data-slot="workspace-startup"][data-workbench="open"]
+    .workspace-startup-panel-backdrop {
     display: block;
     position: fixed;
     inset: 0;

@@ -1,7 +1,14 @@
-import documentWorker from "../src/workspace/adapters/document-worker"
-import { describe, expect, it, vi } from "vitest"
-import { getResolvedPDFJS } from "unpdf"
 import { Cause, Effect, Exit, ManagedRuntime } from "effect"
+import { getResolvedPDFJS } from "unpdf"
+import { describe, expect, it, vi } from "vitest"
+
+import {
+  preparingFile,
+  legacyPdf,
+  attachmentReady,
+  fileDescription,
+} from "../src/features/files/preparation"
+import documentWorker from "../src/workspace/adapters/document-worker"
 import {
   extractPdf,
   PDF_PAGE_LIMIT,
@@ -12,12 +19,6 @@ import {
   type AssetBucket,
 } from "../src/workspace/adapters/storage"
 import { Workspace } from "../src/workspace/workspace"
-import {
-  preparingFile,
-  legacyPdf,
-  attachmentReady,
-  fileDescription,
-} from "../src/features/files/preparation"
 import { database } from "./database"
 import { pdfFixture } from "./pdf-fixture"
 

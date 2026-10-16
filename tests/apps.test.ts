@@ -1,14 +1,15 @@
-import { describe, expect, it } from "vitest"
 import { Cause, Effect, Exit, Schema } from "effect"
-import { makeApps } from "../src/apps/service"
+import { describe, expect, it } from "vitest"
+
+import { appsRequest } from "../src/apps/adapters/http"
+import { readAppPage } from "../src/apps/adapters/pi"
 import { AppStore } from "../src/apps/adapters/sqlite"
 import {
   AppDefinition,
   AppStorageError,
   type SaveApp,
 } from "../src/apps/contracts"
-import { readAppPage } from "../src/apps/adapters/pi"
-import { appsRequest } from "../src/apps/adapters/http"
+import { makeApps } from "../src/apps/service"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import { database, corrupt } from "./database"
 

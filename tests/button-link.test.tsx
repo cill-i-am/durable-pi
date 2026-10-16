@@ -1,6 +1,7 @@
-import { expect, it } from "vitest"
-import { renderToStaticMarkup } from "react-dom/server"
 import { parseFragment, defaultTreeAdapter } from "parse5"
+import { renderToStaticMarkup } from "react-dom/server"
+import { expect, it } from "vitest"
+
 import { Button, buttonVariants } from "../src/components/ui/button"
 
 it("gives native navigation links the same layout overrides as buttons", () => {

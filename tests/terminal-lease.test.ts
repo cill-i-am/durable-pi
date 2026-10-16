@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
+
 import { maintainSessionLease } from "../src/features/terminal/session-lease"
 import { ApiError } from "../src/http/client"
 

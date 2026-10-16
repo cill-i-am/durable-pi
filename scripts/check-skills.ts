@@ -1,4 +1,5 @@
 import assert from "node:assert/strict"
+
 import type { Skill, SkillSelection } from "../src/skills/contracts"
 
 const origin = "http://localhost:1337"

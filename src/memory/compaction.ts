@@ -1,6 +1,7 @@
-import { preserveFatal, observeCleanup } from "../shared/effect"
 import type { Exit } from "effect"
 import { Clock, Effect, Queue } from "effect"
+
+import { preserveFatal, observeCleanup } from "../shared/effect"
 import {
   byteLength,
   NODE_BYTES,

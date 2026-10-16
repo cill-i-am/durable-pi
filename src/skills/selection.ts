@@ -1,10 +1,11 @@
 import { Schema, Effect } from "effect"
-import type { SkillError, SkillSelectionRepository } from "./repository"
+
 import {
   SkillConflict,
   type SkillDocument,
   type SelectSkills,
 } from "./contracts"
+import type { SkillError, SkillSelectionRepository } from "./repository"
 
 export type SkillResolution = { skills: SkillDocument[]; error: string | null }
 export const selectBotSkills = (

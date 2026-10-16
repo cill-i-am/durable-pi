@@ -1,8 +1,9 @@
 import { Effect } from "effect"
-import { OperationalLogger } from "./logger"
-import type { CommandRun } from "../terminal/contracts"
+
 import type { RecoveryView } from "../conversations/recovery"
 import type { Attempt } from "../inference/usage-domain"
+import type { CommandRun } from "../terminal/contracts"
+import { OperationalLogger } from "./logger"
 
 export function inferenceFields(attempt: Attempt, botId?: string) {
   return {

@@ -1,18 +1,16 @@
-import { orDieAll } from "../../shared/effect"
+import { Buffer as NativeBuffer } from "node:buffer"
+
 import puppeteer, {
   TimeoutError,
+  InterceptResolutionAction,
   type Browser,
   type Page,
   type HTTPRequest,
 } from "@cloudflare/puppeteer"
 import { Clock, Effect, Exit, Schema } from "effect"
 import type { Scope } from "effect"
-import {
-  browserNativeFailure,
-  nativeBrowserOperation as native,
-} from "./interop"
-import { BrowserUnavailable, type BrowserDriver } from "../driver"
-import { BrowserSessionRecord } from "../domain"
+
+import { orDieAll } from "../../shared/effect"
 import {
   BROWSER_IDLE_MS,
   BROWSER_SESSION_MS,
@@ -24,6 +22,15 @@ import {
   type BrowserAction,
   type BrowserController,
 } from "../contracts"
+import { BrowserSessionRecord } from "../domain"
+import { BrowserUnavailable, type BrowserDriver } from "../driver"
+import {
+  browserNativeFailure,
+  nativeBrowserOperation as native,
+} from "./interop"
+
+// Workers declares the Node export as any; use Node's published constructor contract.
+const Buffer = NativeBuffer as BufferConstructor
 
 export class CloudflareBrowser implements BrowserDriver {
   constructor(private readonly binding: BrowserRun) {}
@@ -189,7 +196,8 @@ export class CloudflareBrowser implements BrowserDriver {
         const work = Promise.resolve().then(async () => {
           if (
             request.isInterceptResolutionHandled() ||
-            request.interceptResolutionState().action === "disabled"
+            request.interceptResolutionState().action ===
+              InterceptResolutionAction.Disabled
           )
             return
           if (
@@ -345,23 +353,20 @@ export class CloudflareBrowser implements BrowserDriver {
           action.kind === "click" ||
           (action.kind === "key" && action.key === "Enter")
             ? yield* Effect.acquireRelease(
-                Effect.sync(() =>
-                  page
+                Effect.sync(() => ({
+                  completed: page
                     .waitForNavigation({
                       waitUntil: "domcontentloaded",
                       timeout: 2000,
                     })
                     .then(
-                      () => Effect.void,
-                      (cause: unknown) =>
-                        cause instanceof TimeoutError
-                          ? Effect.void
-                          : Effect.suspend(() => browserNativeFailure(cause))
-                    )
-                ),
+                      () => ({ ok: true as const }),
+                      (cause: unknown) => ({ ok: false as const, cause })
+                    ),
+                })),
                 (work) =>
                   Effect.promise(async () => {
-                    await work
+                    await work.completed
                   })
               )
             : undefined
@@ -384,10 +389,11 @@ export class CloudflareBrowser implements BrowserDriver {
           const key = action.key
           yield* native(() => page.keyboard.press(key))
         }
-        if (watching)
-          yield* Effect.promise(() => watching).pipe(
-            Effect.flatMap((result) => result)
-          )
+        if (watching) {
+          const result = yield* Effect.promise(() => watching.completed)
+          if (!result.ok && !(result.cause instanceof TimeoutError))
+            return yield* browserNativeFailure(result.cause)
+        }
         return yield* this.snapshot(page, hosts, unrestricted)
       })
     )
@@ -425,7 +431,7 @@ export class CloudflareBrowser implements BrowserDriver {
           )
         )
         if (observation.exceptionDetails) return yield* new BrowserUnavailable()
-        return observation.result.value
+        return observation.result.value as unknown
       })
     )
   }

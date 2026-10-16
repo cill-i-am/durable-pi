@@ -1,8 +1,9 @@
-import { describe, expect, it } from "vitest"
 import { Effect } from "effect"
-import { database } from "./database"
+import { describe, expect, it } from "vitest"
+
 import { AccessStore } from "../src/access/adapters/sqlite"
 import { AccessGate } from "../src/access/gate"
+import { database } from "./database"
 
 const input = () => ({
   id: crypto.randomUUID(),

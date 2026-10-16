@@ -1,5 +1,6 @@
 import { layer as CloudflareTracer } from "alchemy/Cloudflare/Workers/CloudflareTracer"
 import { Effect, Layer } from "effect"
+
 import { OperationalLogger } from "./logger"
 
 export const WorkerTelemetry = Layer.mergeAll(

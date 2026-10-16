@@ -1,22 +1,24 @@
-import { expect, it } from "vitest"
 import { mkdtemp, rm } from "node:fs/promises"
-import { join } from "node:path"
 import { tmpdir } from "node:os"
-import { Context, Effect, Layer, ManagedRuntime } from "effect"
+import { join } from "node:path"
+
 import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context"
-import { Harness, createRegistry } from "@earendil-works/pi-durable"
-import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
 import {
   createModels,
   fauxProvider,
   fauxAssistantMessage,
   fauxToolCall,
 } from "@earendil-works/pi-ai"
-import { workspaceTools } from "../src/workspace/adapters/tools"
+import { Harness, createRegistry } from "@earendil-works/pi-durable"
+import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
+import { Context, Effect, Layer, ManagedRuntime } from "effect"
+import { expect, it } from "vitest"
+
 import { r2WorkspaceAssets } from "../src/workspace/adapters/r2"
-import { makeWorkspace } from "../src/workspace/service"
 import { SqliteWorkspace } from "../src/workspace/adapters/sqlite"
+import { workspaceTools } from "../src/workspace/adapters/tools"
 import { WorkspaceUnavailable } from "../src/workspace/files"
+import { makeWorkspace } from "../src/workspace/service"
 import { database } from "./database"
 
 it("native Pi file tools retain the actor runner, invocation Context, cancellation signal and range semantics", async () => {

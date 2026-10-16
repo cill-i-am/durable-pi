@@ -1,5 +1,6 @@
 import { Schema } from "effect"
 import type { Effect } from "effect"
+
 import type { CodeInput, CodeOutput } from "./contracts"
 
 export class ExecutorUnavailable extends Schema.TaggedError<ExecutorUnavailable>()(

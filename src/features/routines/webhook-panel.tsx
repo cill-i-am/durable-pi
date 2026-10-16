@@ -1,15 +1,16 @@
-import { useEffect, useRef, useState } from "react"
 import { Schema } from "effect"
 import { ArrowLeft, KeyRound } from "lucide-react"
-import type { Routine } from "@/routines/contracts"
-import { type ConfigureWebhook, WebhookInfo } from "@/webhooks/contracts"
-import { agentApi, agentUrl, api } from "@/http/client"
+import { useEffect, useRef, useState } from "react"
+
 import { CopyButton } from "@/components/copy-button"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Field, FieldLabel } from "@/components/ui/field"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Field, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
+import { agentApi, agentUrl, api } from "@/http/client"
+import type { Routine } from "@/routines/contracts"
+import { type ConfigureWebhook, WebhookInfo } from "@/webhooks/contracts"
 
 function createKey() {
   return (

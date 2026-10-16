@@ -1,13 +1,15 @@
-import * as React from "react"
 import { Menu as MenuPrimitive } from "@base-ui/react/menu"
 import { cn } from "cn"
+import { ChevronRightIcon, CheckIcon } from "lucide-react"
+import * as React from "react"
+
+import { useIsMobile } from "@/hooks/use-mobile"
+
 import {
   ResponsivePopup,
   usePopupMobile,
   usePopupAction,
 } from "./responsive-popup"
-import { useIsMobile } from "@/hooks/use-mobile"
-import { ChevronRightIcon, CheckIcon } from "lucide-react"
 
 function useMenuPresentation({
   open: controlledOpen,

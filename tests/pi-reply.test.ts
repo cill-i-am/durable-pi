@@ -1,11 +1,12 @@
-import { Effect } from "effect"
-import { describe, expect, it } from "vitest"
-import type { PiHarness } from "agents/harness/pi"
 import type {
   EntryRecord,
   SnapshotEvent,
   SubmissionRecord,
 } from "@earendil-works/pi-durable"
+import type { PiHarness } from "agents/harness/pi"
+import { Effect } from "effect"
+import { describe, expect, it } from "vitest"
+
 import {
   readPiReply,
   replySettled,

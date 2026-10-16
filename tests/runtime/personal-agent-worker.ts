@@ -1,18 +1,30 @@
-import * as SqliteDriver from "@effect/sql-sqlite-do/SqliteClient"
-import { SqlClient } from "effect/sql"
-import { executionWorkerRequest } from "../../src/execution/worker"
-import { ActivityStorageError } from "../../src/activity/records"
-import { WebhookStorageError } from "../../src/webhooks/persistence"
-import { piSummaryCompletion } from "../../src/memory/adapters/pi"
-import type { SummaryProvider } from "../../src/memory/summary-execution"
-import { Cause, Effect, Exit, Schema } from "effect"
 import {
-  OAuthCredential,
-  CredentialRefreshError,
-  CredentialStorageError,
-  type CredentialRefresh,
-} from "../../src/inference/credentials"
-import { nativeOperation } from "../../src/shared/interop"
+  fauxAssistantMessage,
+  fauxProvider,
+  fauxToolCall,
+} from "@earendil-works/pi-ai"
+import * as SqliteDriver from "@effect/sql-sqlite-do/SqliteClient"
+import { Cause, Effect, Exit, Schema } from "effect"
+import { SqlClient } from "effect/sql"
+
+import type { AgentEnv } from "../../alchemy.run"
+import { ConnectionStorageError } from "../../src/access/connections"
+import { activityRequest } from "../../src/activity/adapters/http"
+import { activityDirectory } from "../../src/activity/adapters/rpc"
+import { ActivityStorageError } from "../../src/activity/records"
+import { PersonalAgent } from "../../src/agent/worker"
+import {
+  AgentStorageError,
+  AgentSynchronizationError,
+  homeAgentId,
+} from "../../src/agents/domain"
+import { conversationEvents } from "../../src/conversations/adapters/events"
+import { backgroundRemote } from "../../src/delegation/adapters/background-rpc"
+import { backgroundNative } from "../../src/delegation/adapters/interop"
+import { piDelegationLedger } from "../../src/delegation/adapters/pi"
+import { backgroundObjectName } from "../../src/delegation/background"
+import { DelegationFailure } from "../../src/delegation/contracts"
+import { executionWorkerRequest } from "../../src/execution/worker"
 import {
   toNativeCredential,
   accountCredentials,
@@ -20,39 +32,28 @@ import {
 import { createAgentModels } from "../../src/inference/adapters/models-pi"
 import { PiModelStreams } from "../../src/inference/adapters/streams-pi"
 import {
-  fauxAssistantMessage,
-  fauxProvider,
-  fauxToolCall,
-} from "@earendil-works/pi-ai"
-import { PersonalAgent } from "../../src/agent/worker"
-import type { AgentEnv } from "../../alchemy.run"
-import type { ModelCatalog } from "../../src/inference/policy"
-import {
-  AgentStorageError,
-  AgentSynchronizationError,
-  homeAgentId,
-} from "../../src/agents/domain"
-import { conversationEvents } from "../../src/conversations/adapters/events"
-import { WorkerTelemetry } from "../../src/observability/worker"
-import { resolveRoute } from "../../src/inference/policy"
-import { pumpSummaries } from "../../src/memory/compaction"
-import { exportResponse } from "../../src/memory/adapters/http"
-import { MemoryRepository } from "../../src/memory/repository"
-import type { PlanUpdate } from "../../src/planning/contracts"
-import type { BackgroundGroupProbe } from "./background-worker"
-import { activityRequest } from "../../src/activity/adapters/http"
-import { activityDirectory } from "../../src/activity/adapters/rpc"
-import type { TerminalProbe } from "./terminal-worker"
-import { backgroundObjectName } from "../../src/delegation/background"
-import { backgroundNative } from "../../src/delegation/adapters/interop"
-import { backgroundRemote } from "../../src/delegation/adapters/background-rpc"
-import { DelegationFailure } from "../../src/delegation/contracts"
-import { ConnectionStorageError } from "../../src/access/connections"
-import { SkillStorageError } from "../../src/skills/contracts"
+  OAuthCredential,
+  CredentialRefreshError,
+  CredentialStorageError,
+  type CredentialRefresh,
+} from "../../src/inference/credentials"
 import { CredentialUnavailable } from "../../src/inference/credentials"
+import type { ModelCatalog } from "../../src/inference/policy"
+import { resolveRoute } from "../../src/inference/policy"
+import { exportResponse } from "../../src/memory/adapters/http"
+import { piSummaryCompletion } from "../../src/memory/adapters/pi"
+import { pumpSummaries } from "../../src/memory/compaction"
+import { MemoryRepository } from "../../src/memory/repository"
+import type { SummaryProvider } from "../../src/memory/summary-execution"
 import { piObjectLedger } from "../../src/objects/adapters/pi"
+import { WorkerTelemetry } from "../../src/observability/worker"
 import { piPlanLedger } from "../../src/planning/adapters/pi"
-import { piDelegationLedger } from "../../src/delegation/adapters/pi"
+import type { PlanUpdate } from "../../src/planning/contracts"
+import { nativeOperation } from "../../src/shared/interop"
+import { SkillStorageError } from "../../src/skills/contracts"
+import { WebhookStorageError } from "../../src/webhooks/persistence"
+import type { BackgroundGroupProbe } from "./background-worker"
+import type { TerminalProbe } from "./terminal-worker"
 
 class NativeCommitRefused extends Schema.TaggedError<NativeCommitRefused>()(
   "NativeCommitRefused",
@@ -909,6 +910,117 @@ export class PersonalAgentProbe extends PersonalAgent {
         )
       )
     const action = new URL(request.url).pathname.split("/").at(-1)
+    for (const probe of [
+      this.nativeCommitProbe,
+      this.nativeRpcProbe,
+      this.commandsProbe,
+      this.backgroundWorkProbe,
+      this.delegatedWorkProbe,
+      this.providerWorkProbe,
+      this.credentialWorkProbe,
+      this.workspaceFilesProbe,
+      this.structuredWorkProbe,
+      this.memoryWorkProbe,
+    ]) {
+      const response = await probe.call(this, request, action)
+      if (response) return response
+    }
+    if (action === "release") {
+      this.releaseStop?.()
+      this.releaseSummary?.()
+      this.releaseExport?.()
+    }
+    if (action === "release-download") this.downloadProbe.release?.()
+    if (action === "dispose") {
+      await this.lifecycle.dispose()
+      this.events.push("host.dispose")
+    }
+    return Response.json({
+      provider: {
+        entered: this.providerProbe.entered,
+        aborted: this.providerProbe.aborted,
+        cleaning: this.providerProbe.cleaning,
+        closed: this.providerProbe.closed,
+        settled: this.providerProbe.settled,
+        interrupted: this.providerProbe.interrupted,
+        attempt: this.fixtureRows<{ payload: string }>(
+          "SELECT payload FROM inference_attempts WHERE json_extract(payload,'$.turnId')='native-held-provider'"
+        ).map((row) => JSON.parse(row.payload))[0],
+      },
+      credential: {
+        entered: this.credentialProbe.entered,
+        aborted: this.credentialProbe.aborted,
+        settled: this.credentialProbe.settled,
+        interrupted: this.credentialProbe.interrupted,
+        pending: this.fixtureRows("SELECT 1 FROM model_credential_refresh")
+          .length,
+      },
+      code: {
+        calls: this.codeProbe.calls,
+        entered: this.codeProbe.entered,
+        aborted: this.codeProbe.aborted,
+        settled: this.codeProbe.settled,
+        saved: this.fixtureRows<{ record: string }>(
+          "SELECT record FROM code_runs WHERE id='native-held-code'"
+        )[0]?.record,
+      },
+      // This inspection endpoint deliberately runs after the actor runtime closes.
+      // Read assertion snapshots through fixture instrumentation, like counters below.
+      turn: this.fixtureRows(
+        "SELECT * FROM chat_turns WHERE id=?",
+        "native-personal-turn"
+      )[0],
+      stopped: this.fixtureRows(
+        "SELECT * FROM chat_turns WHERE id=?",
+        "00000000-0000-4000-8000-000000000004"
+      )[0],
+      retry: this.fixtureRows<{
+        start: number
+        count: number
+        revision: number
+        versions: number
+      }>(
+        "SELECT p.start,p.count,max(r.revision) AS revision,count(r.revision) AS versions FROM personal_probe_summary_retry p JOIN summary_routes r USING(start,count) GROUP BY p.start,p.count"
+      )[0],
+      messages: this.fixtureRows<{ count: number }>(
+        "SELECT count(*) AS count FROM memory_log"
+      )[0]!.count,
+      attempts: this.fixtureRows<{ count: number }>(
+        "SELECT count(*) AS count FROM inference_attempts WHERE json_extract(payload,'$.turnId')='native-personal-turn'"
+      )[0]!.count,
+      activations: this.fixtureRows<{ activations: number }>(
+        "SELECT activations FROM personal_probe WHERE id=1"
+      )[0]!.activations,
+      externalCalls: this.externalCalls.count,
+      catalog: this.fixtureRows(
+        "SELECT id,name,status,revision FROM agent_catalog WHERE id='00000000-0000-4000-8000-000000000006'"
+      )[0],
+      stopEntered: this.stopEntered,
+      watchAttached: this.watchAttached,
+      summaryEntered: this.summaryEntered,
+      summaryAborted: this.summaryAborted,
+      summaryInterrupted: this.summaryInterrupted,
+      exportEntered: this.exportEntered,
+      exportCleanupEntered: this.exportCleanupEntered,
+      exportInterrupted: this.exportInterrupted,
+      download: {
+        entered: this.downloadProbe.entered,
+        cleaning: this.downloadProbe.cleaning,
+        closed: this.downloadProbe.closed,
+        interrupted: this.downloadProbe.interrupted,
+      },
+      heldSummaryBuilt:
+        this.fixtureRows(
+          "SELECT 1 FROM memory_log l JOIN memory_nodes n ON n.start=l.id AND n.count=1 WHERE l.source='native-held-summary'"
+        ).length > 0,
+      observationInterrupted: this.observationInterrupted,
+      events: this.events,
+    })
+  }
+  private async nativeCommitProbe(
+    request: Request,
+    action: string | undefined
+  ): Promise<Response | undefined> {
     if (action === "pi-commit-probe") {
       const { kind, mode } = await request.json<{
         kind: string
@@ -1039,6 +1151,14 @@ export class PersonalAgentProbe extends PersonalAgent {
         harness.commit = original
       }
     }
+
+    return undefined
+  }
+
+  private async nativeRpcProbe(
+    request: Request,
+    action: string | undefined
+  ): Promise<Response | undefined> {
     if (action === "http-api-probe") {
       const { mode } = await request.json<{ mode: string }>()
       const previous = this.catalog.list
@@ -1185,6 +1305,14 @@ export class PersonalAgentProbe extends PersonalAgent {
       }
       return Response.json(results)
     }
+
+    return undefined
+  }
+
+  private async commandsProbe(
+    _request: Request,
+    action: string | undefined
+  ): Promise<Response | undefined> {
     if (action === "command-start" || action === "command-hold") {
       await this.harness.pi()
       const grant = await this.actorRuntime.runPromise(
@@ -1288,6 +1416,14 @@ export class PersonalAgentProbe extends PersonalAgent {
           .getByName(this.ctx.id.toString())
           .inspect(),
       })
+
+    return undefined
+  }
+
+  private async backgroundWorkProbe(
+    _request: Request,
+    action: string | undefined
+  ): Promise<Response | undefined> {
     if (action === "background-held-start") {
       this.fixtureRun(
         "INSERT INTO model_credentials VALUES (?,?,?) ON CONFLICT(provider) DO UPDATE SET value=excluded.value",
@@ -1617,6 +1753,14 @@ export class PersonalAgentProbe extends PersonalAgent {
           : null,
       })
     }
+
+    return undefined
+  }
+
+  private async delegatedWorkProbe(
+    _request: Request,
+    action: string | undefined
+  ): Promise<Response | undefined> {
     if (action === "delegation-start") {
       await this.harness.pi()
       const grant = await this.actorRuntime.runPromise(
@@ -1752,6 +1896,14 @@ export class PersonalAgentProbe extends PersonalAgent {
       )
         throw new Error("Native memory retry or replay failed")
     }
+
+    return undefined
+  }
+
+  private async providerWorkProbe(
+    _request: Request,
+    action: string | undefined
+  ): Promise<Response | undefined> {
     if (action === "usage-start") {
       await this.lifecycle.start()
       const observation = await this.observeInference(
@@ -1767,14 +1919,14 @@ export class PersonalAgentProbe extends PersonalAgent {
         cached: 100,
         output: 17,
       })
-      observation.usage({
+      await observation.usage({
         id: "native-usage-response",
         model: "gpt-6.1-sol",
         input: 999,
         cached: 0,
         output: 999,
       })
-      observation.end("completed")
+      await observation.end("completed")
       await this.observeInference(
         resolveRoute("conversation"),
         "native-usage",
@@ -1876,6 +2028,14 @@ export class PersonalAgentProbe extends PersonalAgent {
       )
     }
     if (action === "release-provider") this.providerProbe.release?.()
+
+    return undefined
+  }
+
+  private async credentialWorkProbe(
+    _request: Request,
+    action: string | undefined
+  ): Promise<Response | undefined> {
     if (action === "credential-start") {
       await this.lifecycle.start()
       this.fixtureRun(
@@ -1985,6 +2145,14 @@ export class PersonalAgentProbe extends PersonalAgent {
       return Response.json({ run, calls: this.codeProbe.calls })
     }
     if (action === "release-code") this.codeProbe.release?.()
+
+    return undefined
+  }
+
+  private async workspaceFilesProbe(
+    _request: Request,
+    action: string | undefined
+  ): Promise<Response | undefined> {
     if (action === "hold") await this.holdObservation()
     if (action === "files") {
       const id = "00000000-0000-4000-8000-000000000014"
@@ -2156,6 +2324,14 @@ export class PersonalAgentProbe extends PersonalAgent {
         list: await response.json(),
       })
     }
+
+    return undefined
+  }
+
+  private async structuredWorkProbe(
+    _request: Request,
+    action: string | undefined
+  ): Promise<Response | undefined> {
     if (action === "objects") {
       const change = (value: unknown) =>
         super.fetch(
@@ -2374,6 +2550,14 @@ export class PersonalAgentProbe extends PersonalAgent {
         released: this.terminalProbe.released,
       })
     }
+
+    return undefined
+  }
+
+  private async memoryWorkProbe(
+    _request: Request,
+    action: string | undefined
+  ): Promise<Response | undefined> {
     if (action === "memory") {
       const jsonl = JSON.stringify({
         kind: "note",
@@ -2431,96 +2615,7 @@ export class PersonalAgentProbe extends PersonalAgent {
         ),
       })
     }
-    if (action === "release") {
-      this.releaseStop?.()
-      this.releaseSummary?.()
-      this.releaseExport?.()
-    }
-    if (action === "release-download") this.downloadProbe.release?.()
-    if (action === "dispose") {
-      await this.lifecycle.dispose()
-      this.events.push("host.dispose")
-    }
-    return Response.json({
-      provider: {
-        entered: this.providerProbe.entered,
-        aborted: this.providerProbe.aborted,
-        cleaning: this.providerProbe.cleaning,
-        closed: this.providerProbe.closed,
-        settled: this.providerProbe.settled,
-        interrupted: this.providerProbe.interrupted,
-        attempt: this.fixtureRows<{ payload: string }>(
-          "SELECT payload FROM inference_attempts WHERE json_extract(payload,'$.turnId')='native-held-provider'"
-        ).map((row) => JSON.parse(row.payload))[0],
-      },
-      credential: {
-        entered: this.credentialProbe.entered,
-        aborted: this.credentialProbe.aborted,
-        settled: this.credentialProbe.settled,
-        interrupted: this.credentialProbe.interrupted,
-        pending: this.fixtureRows("SELECT 1 FROM model_credential_refresh")
-          .length,
-      },
-      code: {
-        calls: this.codeProbe.calls,
-        entered: this.codeProbe.entered,
-        aborted: this.codeProbe.aborted,
-        settled: this.codeProbe.settled,
-        saved: this.fixtureRows<{ record: string }>(
-          "SELECT record FROM code_runs WHERE id='native-held-code'"
-        )[0]?.record,
-      },
-      // This inspection endpoint deliberately runs after the actor runtime closes.
-      // Read assertion snapshots through fixture instrumentation, like counters below.
-      turn: this.fixtureRows(
-        "SELECT * FROM chat_turns WHERE id=?",
-        "native-personal-turn"
-      )[0],
-      stopped: this.fixtureRows(
-        "SELECT * FROM chat_turns WHERE id=?",
-        "00000000-0000-4000-8000-000000000004"
-      )[0],
-      retry: this.fixtureRows<{
-        start: number
-        count: number
-        revision: number
-        versions: number
-      }>(
-        "SELECT p.start,p.count,max(r.revision) AS revision,count(r.revision) AS versions FROM personal_probe_summary_retry p JOIN summary_routes r USING(start,count) GROUP BY p.start,p.count"
-      )[0],
-      messages: this.fixtureRows<{ count: number }>(
-        "SELECT count(*) AS count FROM memory_log"
-      )[0]!.count,
-      attempts: this.fixtureRows<{ count: number }>(
-        "SELECT count(*) AS count FROM inference_attempts WHERE json_extract(payload,'$.turnId')='native-personal-turn'"
-      )[0]!.count,
-      activations: this.fixtureRows<{ activations: number }>(
-        "SELECT activations FROM personal_probe WHERE id=1"
-      )[0]!.activations,
-      externalCalls: this.externalCalls.count,
-      catalog: this.fixtureRows(
-        "SELECT id,name,status,revision FROM agent_catalog WHERE id='00000000-0000-4000-8000-000000000006'"
-      )[0],
-      stopEntered: this.stopEntered,
-      watchAttached: this.watchAttached,
-      summaryEntered: this.summaryEntered,
-      summaryAborted: this.summaryAborted,
-      summaryInterrupted: this.summaryInterrupted,
-      exportEntered: this.exportEntered,
-      exportCleanupEntered: this.exportCleanupEntered,
-      exportInterrupted: this.exportInterrupted,
-      download: {
-        entered: this.downloadProbe.entered,
-        cleaning: this.downloadProbe.cleaning,
-        closed: this.downloadProbe.closed,
-        interrupted: this.downloadProbe.interrupted,
-      },
-      heldSummaryBuilt:
-        this.fixtureRows(
-          "SELECT 1 FROM memory_log l JOIN memory_nodes n ON n.start=l.id AND n.count=1 WHERE l.source='native-held-summary'"
-        ).length > 0,
-      observationInterrupted: this.observationInterrupted,
-      events: this.events,
-    })
+
+    return undefined
   }
 }

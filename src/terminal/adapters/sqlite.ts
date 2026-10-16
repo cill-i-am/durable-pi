@@ -1,13 +1,12 @@
 import { count, desc, eq } from "drizzle-orm"
 import { Effect, Schema } from "effect"
-import * as Domain from "../domain"
-import type { TerminalAuthority, TerminalLedger } from "../repository"
+
+import { jsonField } from "../../storage/expressions"
 import {
   mapSqliteError,
   type Sqlite,
   type EffectSqliteDatabase,
 } from "../../storage/sqlite"
-import { jsonField } from "../../storage/expressions"
 import {
   TerminalFailure,
   TerminalStorageError,
@@ -17,6 +16,8 @@ import {
   type CommandSummary,
   type TerminalNetworkPolicy,
 } from "../contracts"
+import * as Domain from "../domain"
+import type { TerminalAuthority, TerminalLedger } from "../repository"
 import {
   terminalAuthority,
   terminalCancellations,

@@ -1,10 +1,11 @@
 import { Effect } from "effect"
+
+import { observeCleanup } from "../../shared/effect"
 import {
   nativeOperation,
   nativeResponse,
   releaseUnreadResponse,
 } from "../../shared/interop"
-import { observeCleanup } from "../../shared/effect"
 import { ExecutorUnavailable } from "../executor"
 
 export interface ExecutionTransport {

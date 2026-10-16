@@ -1,5 +1,6 @@
 import type { Effect, Scope } from "effect"
 import { Schema } from "effect"
+
 import type { Checkpoint } from "./contracts"
 
 export class TerminalRuntimeError extends Schema.TaggedError<TerminalRuntimeError>()(

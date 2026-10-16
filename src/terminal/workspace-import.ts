@@ -1,10 +1,11 @@
 import { Effect, Schema, Stream } from "effect"
-import type { FileContent, Workspace } from "../workspace/workspace"
-import { FileId, type FileError } from "../workspace/files"
+
 import { preserveFatal } from "../shared/effect"
+import { FileId, type FileError } from "../workspace/files"
+import type { FileContent, Workspace } from "../workspace/workspace"
 import { type CommandRun, TerminalFailure } from "./contracts"
-import { ImportFile, MAX_TRANSFER_BYTES } from "./transfers"
 import type { TerminalRuntimeError } from "./runtime"
+import { ImportFile, MAX_TRANSFER_BYTES } from "./transfers"
 
 export const WorkspaceImport = Schema.Struct({
   id: ImportFile.fields.id,
@@ -12,7 +13,9 @@ export const WorkspaceImport = Schema.Struct({
 })
 export type WorkspaceImport = typeof WorkspaceImport.Type
 export type WorkspaceImportError =
-  FileError | TerminalFailure | TerminalRuntimeError
+  | FileError
+  | TerminalFailure
+  | TerminalRuntimeError
 export interface TerminalImports {
   readonly find: (
     id: string

@@ -42,7 +42,7 @@ export function sandboxTransfers(
     readFile: (
       path: string,
       options: { encoding: "none" }
-    ) => Promise<{ content: ReadableStream<Uint8Array> }>
+    ) => Promise<{ content: ReadableStream<unknown> }>
   },
   internal: (command: string, signal: AbortSignal) => Promise<void>
 ) {
@@ -55,7 +55,7 @@ export function sandboxTransfers(
       signal.throwIfAborted()
       await sandbox.writeFile(
         "/tmp/pi-transfer-input",
-        new Response(bytes.slice().buffer).body!
+        new Blob([bytes.slice()]).stream()
       )
       signal.throwIfAborted()
       await internal(

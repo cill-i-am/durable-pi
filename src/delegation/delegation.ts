@@ -1,7 +1,8 @@
 import { Schema } from "effect"
-import { DelegateInput, DelegationFailure } from "./contracts"
-import { AttachmentContent } from "../workspace/files"
+
 import type { ResolvedRoute } from "../inference/policy"
+import { AttachmentContent } from "../workspace/files"
+import { DelegateInput, DelegationFailure } from "./contracts"
 
 export const CHILD_LIMIT = 3
 export const REQUEST_LIMIT = 12

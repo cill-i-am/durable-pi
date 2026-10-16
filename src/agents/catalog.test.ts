@@ -1,8 +1,9 @@
-import { describe, expect, it } from "vitest"
 import { Effect, ManagedRuntime, Schema } from "effect"
+import { describe, expect, it } from "vitest"
+
 import { database } from "../../tests/database"
-import { AgentCatalog } from "./catalog"
 import { sqliteAgentCatalog } from "./adapters/sqlite"
+import { AgentCatalog } from "./catalog"
 import { AgentId, agentObjectName, homeAgentId } from "./domain"
 
 const details = (name = "Research") => ({

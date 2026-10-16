@@ -1,5 +1,6 @@
-import { nativeOperation } from "../shared/interop"
 import { Effect, Schema } from "effect"
+
+import { nativeOperation } from "../shared/interop"
 
 export class OwnerSessionUnavailable extends Schema.TaggedError<OwnerSessionUnavailable>()(
   "OwnerSessionUnavailable",

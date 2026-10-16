@@ -1,7 +1,8 @@
 import { Effect } from "effect"
+
 import type { CodeExecutor } from "../executor"
-import { readOutput } from "./output"
 import { executionResponse, type ExecutionTransport } from "./interop"
+import { readOutput } from "./output"
 
 export function codeService(service: ExecutionTransport): CodeExecutor {
   return {

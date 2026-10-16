@@ -1,6 +1,7 @@
 import type { SqliteStorage } from "@earendil-works/pi-durable/storage/sqlite"
 import { Context, Effect, Fiber } from "effect"
 import type { SqlError } from "effect/sql/SqlError"
+
 import type { EffectSqliteDatabase, Sqlite } from "./sqlite"
 
 interface Lease {
@@ -131,7 +132,7 @@ export function makeSqlite(
       >()
       const proxy = new Proxy(storage, {
         get(target, key) {
-          const member = Reflect.get(target, key, target)
+          const member: unknown = Reflect.get(target, key, target)
           if (!piMethods.has(key) || typeof member !== "function") return member
           let method = methods.get(key)
           if (!method) {
@@ -147,7 +148,7 @@ export function makeSqlite(
                 coordinator.acquire(resolve)
               )
               try {
-                return await Reflect.apply(member, target, args)
+                return (await Reflect.apply(member, target, args)) as unknown
               } finally {
                 release()
               }

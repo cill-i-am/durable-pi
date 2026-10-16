@@ -1,5 +1,6 @@
 import { Effect, Schema } from "effect"
 import { getResolvedPDFJS } from "unpdf"
+
 import {
   DocumentUnreadable,
   PDF_PAGE_LIMIT,
@@ -130,8 +131,17 @@ export const extractPdf = (bytes: Uint8Array) =>
               )
               ended = result.done
               if (result.done) break
-              for (const item of result.value.items) {
-                if ("str" in item) {
+              for (const item of Schema.decodeUnknownSync(
+                Schema.Struct({ items: Schema.Array(Schema.Unknown) })
+              )(result.value).items) {
+                if (
+                  Schema.is(
+                    Schema.Struct({
+                      str: Schema.String,
+                      hasEOL: Schema.optional(Schema.Boolean),
+                    })
+                  )(item)
+                ) {
                   const remaining = Math.max(
                     0,
                     PDF_TEXT_LIMIT - text.length - value.length

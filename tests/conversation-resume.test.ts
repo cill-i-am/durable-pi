@@ -1,11 +1,12 @@
 import { Effect } from "effect"
 import { afterEach, expect, it, vi } from "vitest"
-import { conversationConnection } from "../src/features/conversation/connection"
+
 import {
   ConversationCheckpoint,
   conversationEvents,
 } from "../src/conversations/adapters/events"
 import type { ChatState } from "../src/conversations/contracts"
+import { conversationConnection } from "../src/features/conversation/connection"
 
 afterEach(() => {
   vi.unstubAllGlobals()

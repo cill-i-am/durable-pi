@@ -1,5 +1,6 @@
 import type { Effect } from "effect"
 import { Schema } from "effect"
+
 import type {
   BrowserRecord,
   BrowserController,

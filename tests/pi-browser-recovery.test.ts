@@ -1,21 +1,8 @@
-import {
-  effectBrowserDriver,
-  browserWake,
-  type ForeignBrowserDriver,
-} from "../src/browser/adapters/interop"
-import { expect, it } from "vitest"
 import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { Effect } from "effect"
+
 import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context"
-import {
-  Harness,
-  createRegistry,
-  defineTool,
-  watchEvents,
-} from "@earendil-works/pi-durable"
-import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
 import {
   Type,
   createModels,
@@ -23,17 +10,32 @@ import {
   fauxAssistantMessage,
   fauxToolCall,
 } from "@earendil-works/pi-ai"
-import { BrowserWorkspace } from "../src/browser/browser"
-import { BrowserStore } from "../src/browser/adapters/sqlite"
-import { browserToolResult } from "../src/browser/adapters/pi"
-import { BrowserFailure } from "../src/browser/contracts"
+import {
+  Harness,
+  createRegistry,
+  defineTool,
+  watchEvents,
+} from "@earendil-works/pi-durable"
+import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
+import { Effect } from "effect"
+import { expect, it } from "vitest"
+
+import { guardedTools } from "../src/access/adapters/pi"
 import { AccessStore } from "../src/access/adapters/sqlite"
 import { AccessStorageError } from "../src/access/contracts"
 import { AccessGate } from "../src/access/gate"
-import { guardedTools } from "../src/access/adapters/pi"
-import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
-import { RunRecoveryStore } from "../src/conversations/adapters/sqlite-recovery"
+import {
+  effectBrowserDriver,
+  browserWake,
+  type ForeignBrowserDriver,
+} from "../src/browser/adapters/interop"
+import { browserToolResult } from "../src/browser/adapters/pi"
+import { BrowserStore } from "../src/browser/adapters/sqlite"
+import { BrowserWorkspace } from "../src/browser/browser"
+import { BrowserFailure } from "../src/browser/contracts"
 import { runRecoveryHook } from "../src/conversations/adapters/pi-recovery"
+import { RunRecoveryStore } from "../src/conversations/adapters/sqlite-recovery"
+import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import { database } from "./database"
 
 it.each(["restricted", "launch", "read", "failed", "uncertain"] as const)(

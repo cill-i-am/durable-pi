@@ -1,6 +1,7 @@
-import { afterEach, expect } from "vitest"
-import { Cause, Effect, Exit, ManagedRuntime } from "effect"
 import type { CredentialStore } from "@earendil-works/pi-ai"
+import { Cause, Effect, Exit, ManagedRuntime } from "effect"
+import { afterEach, expect } from "vitest"
+
 import { createAgentModels as nativeModels } from "../src/inference/adapters/models-pi"
 import {
   PiModelStreams,

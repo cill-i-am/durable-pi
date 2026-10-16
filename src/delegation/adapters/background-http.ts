@@ -1,8 +1,9 @@
 import { Effect, Schema } from "effect"
+
+import { preserveFatal } from "../../shared/effect"
+import { nativeBytes } from "../../shared/stream"
 import type { BackgroundDelegation } from "../background-service"
 import { NativeId, DelegationFailure } from "../contracts"
-import { nativeBytes } from "../../shared/stream"
-import { preserveFatal } from "../../shared/effect"
 import { delegationsRequest } from "./http"
 
 const Change = Schema.Struct({

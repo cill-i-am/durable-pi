@@ -1,17 +1,19 @@
+import { Link, useSearch } from "@tanstack/react-router"
+import { useState } from "react"
+
+import { authClient } from "@/auth/client"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
 import {
   workspaceReturnPath,
   workspaceReturnLink,
 } from "@/navigation/workspace"
-import { useState } from "react"
-import { Link, useSearch } from "@tanstack/react-router"
-import { authClient } from "@/auth/client"
+
 import { AuthFrame } from "./auth-frame"
-import { VerificationCode } from "./verification-code"
 import { securityError } from "./security-errors"
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { VerificationCode } from "./verification-code"
 
 export function TwoFactorChallenge() {
   const { returnTo } = useSearch({ strict: false })

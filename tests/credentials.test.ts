@@ -1,9 +1,12 @@
-import { afterEach, describe, expect, it } from "vitest"
 import { Cause, Effect, Exit, ManagedRuntime, Redacted, Schema } from "effect"
+import { afterEach, describe, expect, it } from "vitest"
+
+import { SqliteCredentials } from "../src/inference/adapters/credential-sqlite"
 import {
   accountCredentials,
   toNativeCredential,
 } from "../src/inference/adapters/credentials-pi"
+import { refreshOAuth } from "../src/inference/adapters/oauth"
 import {
   ModelCredentials,
   ModelCredential,
@@ -11,8 +14,6 @@ import {
   CredentialRefreshError,
   type CredentialRefresh,
 } from "../src/inference/credentials"
-import { SqliteCredentials } from "../src/inference/adapters/credential-sqlite"
-import { refreshOAuth } from "../src/inference/adapters/oauth"
 import { database } from "./database"
 
 const seedValue = {

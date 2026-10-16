@@ -1,19 +1,18 @@
-import { TestClock } from "effect/testing"
 import { expect, it } from "@effect/vitest"
 import { Cause, Effect, Exit, Schema } from "effect"
-import { database, corrupt } from "./database"
+import { TestClock } from "effect/testing"
+
 import {
   makeSqliteMemory,
   sqliteMemoryLayer,
 } from "../src/memory/adapters/sqlite"
-import { MemoryTransaction } from "../src/memory/ledger"
-import { makeMemoryRepository } from "../src/memory/service"
 import {
   byteLength,
   InvalidMemory,
   type LogEntry,
   type MemoryError,
 } from "../src/memory/domain"
+import { MemoryTransaction } from "../src/memory/ledger"
 import {
   memoryRestorePlan,
   summarySavePlan,
@@ -21,6 +20,8 @@ import {
   memoryAncestors,
 } from "../src/memory/policy"
 import { StoredPart } from "../src/memory/records"
+import { makeMemoryRepository } from "../src/memory/service"
+import { database, corrupt } from "./database"
 
 it.effect(
   "the core operation factory is lazy and uses the invocation Clock",

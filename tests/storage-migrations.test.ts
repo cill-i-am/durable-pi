@@ -1,5 +1,6 @@
-import { expect, it } from "vitest"
 import { Effect, Exit } from "effect"
+import { expect, it } from "vitest"
+
 import { migrateSqlite } from "../src/storage/migrations"
 import { database } from "./database"
 import { sqliteFailure } from "./sqlite-fault"

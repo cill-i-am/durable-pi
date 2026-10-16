@@ -1,4 +1,5 @@
 import assert from "node:assert/strict"
+
 import type { FileInfo } from "../src/workspace/files"
 
 const origin = "http://localhost:1337"

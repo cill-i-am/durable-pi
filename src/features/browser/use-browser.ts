@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from "react"
 import { Schema } from "effect"
-import { poll } from "@/http/poll"
-import { agentApi } from "@/http/client"
+import { useCallback, useEffect, useRef, useState } from "react"
+
 import { BrowserState } from "@/browser/contracts"
+import { agentApi } from "@/http/client"
+import { poll } from "@/http/poll"
 
 export function useBrowser(agentId: string) {
   const [state, setState] = useState<BrowserState | null>(null)

@@ -1,3 +1,8 @@
+import { fauxAssistantMessage, fauxProvider } from "@earendil-works/pi-ai"
+import { Cause, Effect, Exit, Schema } from "effect"
+
+import type { AgentEnv } from "../../alchemy.run"
+import { connectionNative, connectionRpc } from "../../src/access/adapters/rpc"
 import {
   activityDirectory,
   activityReadRpc,
@@ -7,26 +12,22 @@ import {
   ActivitySnapshot,
   ActivityConversation,
 } from "../../src/activity/contracts"
-import { webhookAuthorizationRpc } from "../../src/webhooks/adapters/authorization-rpc"
-import { fauxAssistantMessage, fauxProvider } from "@earendil-works/pi-ai"
-import { BackgroundGroup } from "../../src/delegation/worker"
-import type { AgentEnv } from "../../alchemy.run"
-import type { PersonalAgentProbe } from "./personal-agent-worker"
-import { Cause, Effect, Exit, Schema } from "effect"
-import { connectionNative, connectionRpc } from "../../src/access/adapters/rpc"
-import { skillNative, skillRpc } from "../../src/skills/adapters/rpc"
 import { agentRpc, agentRpcNative } from "../../src/agents/adapters/rpc"
-import type { LegacyAgentProbe } from "./legacy-agent-worker"
-import { nativeOperation } from "../../src/shared/interop"
 import { homeAgentId } from "../../src/agents/domain"
-import { DelegationFailure } from "../../src/delegation/contracts"
 import { backgroundParentRpc } from "../../src/delegation/adapters/background-parent"
 import { backgroundNative } from "../../src/delegation/adapters/interop"
+import { DelegationFailure } from "../../src/delegation/contracts"
+import { BackgroundGroup } from "../../src/delegation/worker"
 import {
   accountNative,
   accountRpc,
   accountConnectionRpc,
 } from "../../src/inference/adapters/account-rpc"
+import { nativeOperation } from "../../src/shared/interop"
+import { skillNative, skillRpc } from "../../src/skills/adapters/rpc"
+import { webhookAuthorizationRpc } from "../../src/webhooks/adapters/authorization-rpc"
+import type { LegacyAgentProbe } from "./legacy-agent-worker"
+import type { PersonalAgentProbe } from "./personal-agent-worker"
 
 /** Actual BackgroundGroup host, Layer, native Pi and SQLite. Only provider
  * responses are synthetic; parent authority travels over real DO RPC. */

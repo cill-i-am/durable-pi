@@ -1,9 +1,9 @@
-import type { ComponentProps } from "react"
 import { CodeXml } from "lucide-react"
+import type { ComponentProps } from "react"
 import ReactMarkdown, { type ExtraProps } from "react-markdown"
 import remarkGfm from "remark-gfm"
+
 import { CopyButton } from "@/components/copy-button"
-import { useHighlightedCode } from "@/hooks/use-highlighted-code"
 import {
   CodeBlock,
   CodeBlockActions,
@@ -12,6 +12,7 @@ import {
   CodeBlockLine,
   CodeBlockTitle,
 } from "@/components/ui/code-block"
+import { useHighlightedCode } from "@/hooks/use-highlighted-code"
 
 const languageNames: Record<string, string> = {
   bash: "Bash",

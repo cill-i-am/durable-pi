@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest"
 import {
   defaultStringifySearch,
   createRootRoute,
@@ -6,6 +5,8 @@ import {
   createRouter,
   createMemoryHistory,
 } from "@tanstack/react-router"
+import { describe, expect, it } from "vitest"
+
 import {
   parseAgentId,
   parsePanel,

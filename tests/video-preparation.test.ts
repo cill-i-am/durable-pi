@@ -1,24 +1,25 @@
-import { describe, expect, it, vi } from "vitest"
 import { Cause, Effect, Exit, ManagedRuntime } from "effect"
-import { database } from "./database"
+import { describe, expect, it, vi } from "vitest"
+
+import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
+import {
+  preparingFile,
+  attachmentReady,
+  fileDescription,
+} from "../src/features/files/preparation"
 import {
   workspaceLayer,
   type AssetBucket,
 } from "../src/workspace/adapters/storage"
-import { Workspace } from "../src/workspace/workspace"
+import { videoService } from "../src/workspace/adapters/video-service"
 import { type Upload, WorkspaceUnavailable } from "../src/workspace/files"
 import {
   VideoUnreadable,
   type VideoResult,
   type ExtractVideo,
 } from "../src/workspace/video"
-import {
-  preparingFile,
-  attachmentReady,
-  fileDescription,
-} from "../src/features/files/preparation"
-import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
-import { videoService } from "../src/workspace/adapters/video-service"
+import { Workspace } from "../src/workspace/workspace"
+import { database } from "./database"
 
 const jpeg = btoa(String.fromCharCode(255, 216, 255, 1, 255, 217))
 const result: VideoResult = {

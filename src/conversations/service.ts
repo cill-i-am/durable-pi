@@ -1,4 +1,5 @@
 import { Context, Layer } from "effect"
+
 import type { ConversationLedger } from "./ledger"
 import type {
   ConversationConflict,
@@ -7,7 +8,9 @@ import type {
 } from "./turns"
 
 export type ConversationError =
-  ConversationConflict | ConversationFull | ConversationStorageError
+  | ConversationConflict
+  | ConversationFull
+  | ConversationStorageError
 export type ConversationOperations = Omit<
   ConversationLedger,
   "transactionGroup"

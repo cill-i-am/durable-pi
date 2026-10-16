@@ -1,5 +1,7 @@
 import assert from "node:assert/strict"
+
 import { Schema } from "effect"
+
 import { RoutineList, RoutineChange } from "../src/routines/contracts"
 
 const origin = "http://localhost:1337"

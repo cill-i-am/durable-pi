@@ -1,18 +1,19 @@
 import { Cause, Effect, Layer, ManagedRuntime } from "effect"
-import { ConversationStorageError } from "../../conversations/turns"
-import { agentRpc, agentRpcNative } from "../../agents/adapters/rpc"
+
 import type { PersonalAgent } from "../../agent/worker"
+import { agentRpc, agentRpcNative } from "../../agents/adapters/rpc"
 import { agentObjectName, type AgentId } from "../../agents/domain"
+import { ConversationStorageError } from "../../conversations/turns"
 import { resolveRoute, validateRoute } from "../../inference/policy"
-import { Mailbox, MailboxTransport } from "../mailbox"
-import { failure, isRequest, terminal, type Envelope } from "../contracts"
 import { makeCommunication, Communication } from "../communication"
-import { sqliteMailbox } from "./sqlite"
-import { mailboxHandler, mailboxTransport } from "./rpc"
-import { piMailbox } from "./pi"
+import { failure, isRequest, terminal, type Envelope } from "../contracts"
 import { TaskExecution } from "../execution"
+import { Mailbox, MailboxTransport } from "../mailbox"
 import { WebCryptoContinuationIdentity } from "./identity"
 import { communicationNative } from "./interop"
+import { piMailbox } from "./pi"
+import { mailboxHandler, mailboxTransport } from "./rpc"
+import { sqliteMailbox } from "./sqlite"
 
 const edge = <T>(call: () => Promise<T>) =>
   communicationNative(call, "transport")
@@ -90,7 +91,7 @@ export function personalCommunication(
         self.bot !== e.to ||
         (isRequest(e) && !(yield* activePair(e)))
       )
-        yield* Effect.fail(
+        return yield* Effect.fail(
           failure("forbidden", "Bots are not active contacts of this owner.")
         )
     })

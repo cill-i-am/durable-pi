@@ -1,4 +1,9 @@
-import { makeSkills } from "../src/skills/service"
+import { Cause, Effect, Exit, Schema } from "effect"
+import { describe, expect, it } from "vitest"
+
+import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
+import { skillsRequest } from "../src/skills/adapters/http"
+import { SkillStore } from "../src/skills/adapters/sqlite"
 import {
   SkillConflict,
   SkillStorageError,
@@ -6,14 +11,10 @@ import {
   SelectSkills,
   skillContext,
 } from "../src/skills/contracts"
-import { describe, expect, it } from "vitest"
-import { Cause, Effect, Exit, Schema } from "effect"
+import { selectBotSkills } from "../src/skills/selection"
+import { makeSkills } from "../src/skills/service"
 import { migrateSqlite } from "../src/storage/migrations"
 import { database, corrupt } from "./database"
-import { SkillStore } from "../src/skills/adapters/sqlite"
-import { selectBotSkills } from "../src/skills/selection"
-import { skillsRequest } from "../src/skills/adapters/http"
-import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 
 const make = () => new SkillStore(database())
 const command = () => ({

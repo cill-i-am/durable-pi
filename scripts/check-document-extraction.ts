@@ -1,7 +1,8 @@
 import assert from "node:assert/strict"
 import { writeFileSync } from "node:fs"
-import { pdfFixture } from "../tests/pdf-fixture"
+
 import type { FileInfo } from "../src/workspace/files"
+import { pdfFixture } from "../tests/pdf-fixture"
 
 const origin = "http://localhost:1337"
 assert.equal(process.env.OWNER_EMAIL, "workspace-test@example.com")

@@ -1,6 +1,7 @@
 import { AgentMark } from "@/components/agent-mark"
-import { Skeleton } from "@/components/ui/skeleton"
 import { InputGroup, InputGroupAddon } from "@/components/ui/input-group"
+import { Skeleton } from "@/components/ui/skeleton"
+
 import { useWorkspaceLocation } from "./use-workspace-location"
 
 /** One public placeholder spans session, catalog and initial history. Shared

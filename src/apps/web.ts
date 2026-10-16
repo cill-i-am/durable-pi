@@ -1,7 +1,7 @@
-import { preserveFatal } from "../shared/effect"
 import { Effect, Schema } from "effect"
+
 import { CodeInput, type CodeOutput } from "../execution/contracts"
-import type { WebAppRepository } from "./repository"
+import { preserveFatal } from "../shared/effect"
 import {
   AppConflict,
   WebResult,
@@ -10,6 +10,7 @@ import {
   type RenderWebApp,
 } from "./contracts"
 import { appHtml } from "./html"
+import type { WebAppRepository } from "./repository"
 
 export type WebExecutor = (
   input: CodeInput,
@@ -57,7 +58,7 @@ export class WebApps {
               // Stored state was decoded by the owning repository. Corruption is a defect.
               const data = JSON.stringify({
                 mode: action ? "action" : "render",
-                state: JSON.parse(state),
+                state: JSON.parse(state) as unknown,
                 action,
               })
               const input = yield* Schema.decodeUnknownEffect(CodeInput)({

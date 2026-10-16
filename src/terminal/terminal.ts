@@ -1,4 +1,3 @@
-import { preserveFatal, observeCleanup } from "../shared/effect"
 import {
   Clock,
   Context,
@@ -11,6 +10,8 @@ import {
   Option,
   Schema,
 } from "effect"
+
+import { preserveFatal, observeCleanup } from "../shared/effect"
 import {
   COMMAND_TIMEOUT,
   CommandInput,
@@ -22,6 +23,12 @@ import {
   type CommandRun,
   type TerminalState,
 } from "./contracts"
+import type { TerminalLedger } from "./repository"
+import type {
+  CheckpointStorage,
+  TerminalRuntime,
+  TerminalRuntimeError,
+} from "./runtime"
 import {
   InteractiveSession,
   type TerminalRelay,
@@ -33,12 +40,6 @@ import {
   MAX_TRANSFER_BYTES,
   planImport,
 } from "./transfers"
-import type { TerminalLedger } from "./repository"
-import type {
-  CheckpointStorage,
-  TerminalRuntime,
-  TerminalRuntimeError,
-} from "./runtime"
 
 export type { TerminalRuntime, CheckpointStorage } from "./runtime"
 export interface TerminalOptions {
@@ -54,7 +55,9 @@ export interface StartedCommand {
   completion: Effect.Effect<void, TerminalOperationError>
 }
 export type TerminalOperationError =
-  TerminalFailure | TerminalStorageError | TerminalRuntimeError
+  | TerminalFailure
+  | TerminalStorageError
+  | TerminalRuntimeError
 export type TerminalSnapshot = TerminalState & {
   readonly networkPolicy: TerminalNetworkPolicy
 }
@@ -142,7 +145,7 @@ export class Terminal implements TerminalOperations {
     (
       revision: number,
       active: boolean,
-      revokeThrough = active ? -1 : revision
+      revokeThrough: number = active ? -1 : revision
     ) =>
       Effect.gen({ self: this }, function* () {
         yield* this.repository.configure(revision, active, revokeThrough)

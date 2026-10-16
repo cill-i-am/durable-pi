@@ -1,5 +1,6 @@
-import { preserveFatal } from "../../shared/effect"
 import { Effect, Schema } from "effect"
+
+import { preserveFatal } from "../../shared/effect"
 import { jsonRequest } from "../../shared/http"
 import {
   AppConflict,
@@ -10,8 +11,8 @@ import {
   InteractApp,
   RenderWebApp,
 } from "../contracts"
-import type { WebApps } from "../web"
 import type { Apps, AppError } from "../service"
+import type { WebApps } from "../web"
 
 export function appsRequest<TRequirements>(
   store: Apps["Service"],

@@ -1,14 +1,15 @@
-import { describe, expect, it, vi } from "vitest"
-import { Effect, Schema } from "effect"
-import type { RemoteToolResult } from "../src/access/connections"
 import type { MCPClientManager } from "agents/mcp/client"
-import { importSkillsRequest } from "../src/skills/adapters/hosted"
-import { type HostedSkill, hostedSkillQuery } from "../src/skills/source"
-import { SaveSkill, SkillDocument, skillContext } from "../src/skills/contracts"
-import { SkillStore } from "../src/skills/adapters/sqlite"
-import { connectionFixture } from "./connection-fixture"
+import { Effect, Schema } from "effect"
+import { describe, expect, it, vi } from "vitest"
+
 import { ConnectionStore } from "../src/access/adapters/connections"
+import type { RemoteToolResult } from "../src/access/connections"
+import { importSkillsRequest } from "../src/skills/adapters/hosted"
+import { SkillStore } from "../src/skills/adapters/sqlite"
+import { SaveSkill, SkillDocument, skillContext } from "../src/skills/contracts"
+import { type HostedSkill, hostedSkillQuery } from "../src/skills/source"
 import { migrateSqlite } from "../src/storage/migrations"
+import { connectionFixture } from "./connection-fixture"
 import { database } from "./database"
 
 const skill: HostedSkill = {
