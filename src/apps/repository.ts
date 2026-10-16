@@ -1,4 +1,5 @@
 import type { Effect } from "effect"
+import type { ConversationFailure } from "../conversations/turns"
 import type {
   AppDetail,
   AppDocument,
@@ -13,37 +14,9 @@ import type {
   AppStorageError,
 } from "./contracts"
 
-/** Atomic interaction commands fence the published version and revision again
- * after remote rendering. Receipt and state/event changes commit together. */
-export interface WebAppRecords {
-  detail: (id: string) => AppDetail
-  version: (id: string, version: number) => AppVersion
-  interactionReceipt: (input: InteractApp) => AppDocument | undefined
-  interactionSnapshot: (input: InteractApp) => AppDocument
-  interact: (input: InteractApp, result: WebResult) => AppDocument
-}
-
-export interface AppAdmission {
-  readonly transactionGroup: object
-  readonly admit: (event: AppEvent) => string
-}
-
-/** Commands execute atomically. Admission uses this same transaction group;
- * callbacks are synchronous and cannot hand off work to another runtime. */
-export interface AppLedger extends WebAppRecords {
-  readonly transactionGroup: object
-  list: () => AppDocument[]
-  get: (id: string) => AppDocument | undefined
-  save: (input: SaveApp) => AppDocument
-  publish: (input: PublishApp) => AppDocument
-  archive: (input: ArchiveApp) => AppDocument
-  interact: (input: InteractApp, result?: WebResult) => AppDocument
-  pending: () => AppEvent[]
-  cancelOperation: (id: string) => { applied: boolean }
-  deliverNext: (admission: AppAdmission) => boolean
-}
-
 type AppError = AppConflict | AppStorageError
+
+/** Interaction commands fence the published version after remote rendering. */
 export interface WebAppRepository {
   detail: (id: string) => Effect.Effect<AppDetail, AppError>
   version: (id: string, version: number) => Effect.Effect<AppVersion, AppError>
@@ -57,4 +30,29 @@ export interface WebAppRepository {
     input: InteractApp,
     result: WebResult
   ) => Effect.Effect<AppDocument, AppError>
+}
+export type WebAppRecords = WebAppRepository
+export interface AppAdmission {
+  readonly transactionGroup: object
+  readonly admit: (
+    event: AppEvent
+  ) => Effect.Effect<string, ConversationFailure>
+}
+/** Receipt, state, events and shared admission writes commit atomically. */
+export interface AppLedger extends WebAppRepository {
+  readonly transactionGroup: object
+  list: () => Effect.Effect<AppDocument[], AppError>
+  get: (id: string) => Effect.Effect<AppDocument | undefined, AppError>
+  save: (input: SaveApp) => Effect.Effect<AppDocument, AppError>
+  publish: (input: PublishApp) => Effect.Effect<AppDocument, AppError>
+  archive: (input: ArchiveApp) => Effect.Effect<AppDocument, AppError>
+  interact: (
+    input: InteractApp,
+    result?: WebResult
+  ) => Effect.Effect<AppDocument, AppError>
+  pending: () => Effect.Effect<AppEvent[], AppError>
+  cancelOperation: (id: string) => Effect.Effect<{ applied: boolean }, AppError>
+  deliverNext: (
+    admission: AppAdmission
+  ) => Effect.Effect<boolean, AppError | ConversationFailure>
 }

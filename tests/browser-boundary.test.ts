@@ -1,3 +1,4 @@
+import { sqliteFailure } from "./sqlite-fault"
 import { mkdtemp, rm } from "node:fs/promises"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
@@ -24,7 +25,7 @@ import {
 } from "effect"
 import { TestClock } from "effect/testing"
 import { database } from "./database"
-import type { Sqlite } from "../src/storage/sqlite"
+import type { TestSqlite } from "./database"
 import {
   Browser,
   BrowserWorkspace,
@@ -91,7 +92,7 @@ function fixture(db = database()) {
   const browser = new BrowserWorkspace(
     ledger,
     driver,
-    () => state.writable,
+    () => Effect.sync(() => state.writable),
     wake
   )
   return { ledger, driver, db, state, closed, wake, browser }
@@ -105,7 +106,7 @@ effectIt.effect(
       yield* TestClock.setTime(1000)
       const view = yield* f.browser.inspect(0, "https://example.com")
       expect(view.page.capturedAt).toBe(1000)
-      expect(f.ledger.read().session).toMatchObject({
+      expect(Effect.runSync(f.ledger.read()).session).toMatchObject({
         expiresAt: 601000,
         idleExpiresAt: 121000,
       })
@@ -123,7 +124,7 @@ effectIt.effect(
           .pipe(Effect.result)
       ).toMatchObject({ _tag: "Failure", failure: { outcome: "rejected" } })
       yield* f.browser.inspect(0)
-      expect(f.ledger.read().session).toMatchObject({
+      expect(Effect.runSync(f.ledger.read()).session).toMatchObject({
         expiresAt: 601000,
         idleExpiresAt: 181001,
       })
@@ -131,8 +132,8 @@ effectIt.effect(
       expect((yield* f.browser.state()).status).toBe("expired")
       f.driver.close = () => Effect.fail(new BrowserUnavailable())
       expect(yield* f.browser.cleanup()).toBe(211002)
-      expect(f.ledger.read().session).toBeNull()
-      expect(f.ledger.retired()).toEqual([session.id])
+      expect(Effect.runSync(f.ledger.read()).session).toBeNull()
+      expect(Effect.runSync(f.ledger.retired())).toEqual([session.id])
       f.driver.close = (id) =>
         Effect.sync(() => {
           f.closed.push(id)
@@ -145,43 +146,51 @@ effectIt.effect(
 it("native reset atomically rolls back retirement and generation on a failed commit, without waking cleanup", async () => {
   const native = database()
   let fail = false
-  const db: Sqlite = {
-    all: native.all,
-    run: native.run,
+  const db: TestSqlite = {
+    ...native,
     transaction: (change) =>
-      native.transaction(() => {
-        const value = change()
-        if (fail) throw new Error("Private commit failure")
-        return value
-      }),
+      native.transaction(() =>
+        change().pipe(
+          Effect.flatMap((value) =>
+            fail
+              ? Effect.fail(sqliteFailure("Private commit failure"))
+              : Effect.succeed(value)
+          )
+        )
+      ),
   }
   const f = fixture(db)
-  f.ledger.update(0, {
-    session: { ...session, expiresAt: Date.now() + 600000 },
-  })
-  const before = f.ledger.read()
+  Effect.runSync(
+    f.ledger.update(0, {
+      session: { ...session, expiresAt: Date.now() + 600000 },
+    })
+  )
+  const before = Effect.runSync(f.ledger.read())
   fail = true
   expect(
     await Effect.runPromise(f.browser.close(0).pipe(Effect.result))
   ).toMatchObject({ _tag: "Failure", failure: { _tag: "BrowserStorageError" } })
-  expect(f.ledger.read()).toEqual(before)
-  expect(f.ledger.retired()).toEqual([])
+  expect(Effect.runSync(f.ledger.read())).toEqual(before)
+  expect(Effect.runSync(f.ledger.retired())).toEqual([])
   expect(f.state.wakes).toBe(0)
   fail = false
   expect(() =>
-    f.ledger.atomic(() => {
-      throw new TypeError("Callback defect")
-    })
+    Effect.runSync(
+      f.ledger.atomic(() => Effect.die(new TypeError("Callback defect")))
+    )
   ).toThrow(TypeError)
   await Effect.runPromise(f.browser.close(0))
-  expect(f.ledger.read()).toMatchObject({ generation: 1, session: null })
-  expect(f.ledger.retired()).toEqual([session.id])
+  expect(Effect.runSync(f.ledger.read())).toMatchObject({
+    generation: 1,
+    session: null,
+  })
+  expect(Effect.runSync(f.ledger.retired())).toEqual([session.id])
   expect(f.state.wakes).toBe(1)
 })
 
 it("historical codecs preserve restricted defaults, reject corrupt records as defects, and keep SQL failures typed at HTTP", async () => {
   const f = fixture(),
-    legacy = f.ledger.read()
+    legacy = Effect.runSync(f.ledger.read())
   f.db.run(
     "INSERT INTO bot_browser VALUES (1,?)",
     JSON.stringify({
@@ -190,7 +199,7 @@ it("historical codecs preserve restricted defaults, reject corrupt records as de
       unrestricted: undefined,
     })
   )
-  expect(f.ledger.read()).toMatchObject({
+  expect(Effect.runSync(f.ledger.read())).toMatchObject({
     controller: "agent",
     unrestricted: false,
   })
@@ -206,15 +215,9 @@ it("historical codecs preserve restricted defaults, reject corrupt records as de
     )
   )
   expect(Exit.isFailure(corrupt) && Cause.hasDies(corrupt.cause)).toBe(true)
-  const native = database(),
-    db: Sqlite = {
-      run: native.run,
-      transaction: native.transaction,
-      all: () => {
-        throw new Error("Private driver details")
-      },
-    }
-  const offline = fixture(db)
+  const native = database()
+  native.run("DROP TABLE bot_browser")
+  const offline = fixture(native)
   expect(
     await Effect.runPromise(offline.browser.state().pipe(Effect.result))
   ).toMatchObject({ _tag: "Failure", failure: { _tag: "BrowserStorageError" } })
@@ -258,7 +261,7 @@ it("actor disposal joins late browser acquisition, durably retires it and wakes 
     })
   const actor = ManagedRuntime.make(
     Layer.mergeAll(
-      browserApplication(ledger, driver, () => true, wake),
+      browserApplication(ledger, driver, () => Effect.sync(() => true), wake),
       Layer.effectDiscard(
         Effect.addFinalizer(() =>
           Effect.sync(() => {
@@ -286,12 +289,17 @@ it("actor disposal joins late browser acquisition, durably retires it and wakes 
   await dispose
   expect(Exit.isFailure(exit) && Cause.hasInterrupts(exit.cause)).toBe(true)
   expect(navigations).toBe(0)
-  expect(ledger.retired()).toEqual([session.id])
+  expect(Effect.runSync(ledger.retired())).toEqual([session.id])
   expect(events.indexOf("wake")).toBeLessThan(events.indexOf("layer.closed"))
-  const restored = new BrowserWorkspace(ledger, driver, () => true, wake)
+  const restored = new BrowserWorkspace(
+    ledger,
+    driver,
+    () => Effect.sync(() => true),
+    wake
+  )
   await Effect.runPromise(restored.recover())
   await Effect.runPromise(restored.cleanup())
-  expect(ledger.retired()).toEqual([])
+  expect(Effect.runSync(ledger.retired())).toEqual([])
   expect(
     events.filter((event) => event === `close:${session.id}`)
   ).toHaveLength(1)
@@ -303,9 +311,11 @@ it("interrupted native navigation settles under the tab permit and cannot publis
     abort = new AbortController(),
     f = fixture()
   let settled = false
-  f.ledger.update(0, {
-    session: { ...session, expiresAt: Date.now() + 600000 },
-  })
+  Effect.runSync(
+    f.ledger.update(0, {
+      session: { ...session, expiresAt: Date.now() + 600000 },
+    })
+  )
   const driver = effectBrowserDriver({
     open: async () => session,
     capture: async () => capture,
@@ -317,7 +327,12 @@ it("interrupted native navigation settles under the tab permit and cannot publis
       return capture
     },
   })
-  const browser = new BrowserWorkspace(f.ledger, driver, () => true, f.wake)
+  const browser = new BrowserWorkspace(
+    f.ledger,
+    driver,
+    () => Effect.sync(() => true),
+    f.wake
+  )
   const work = Effect.runPromiseExit(
     browser.inspect(0, "https://example.com"),
     { signal: abort.signal }
@@ -332,8 +347,11 @@ it("interrupted native navigation settles under the tab permit and cannot publis
   finish.release()
   const exit = await work
   expect(Exit.isFailure(exit) && Cause.hasInterrupts(exit.cause)).toBe(true)
-  expect(f.ledger.read()).toMatchObject({ status: "error", capture: null })
-  expect(f.ledger.read().error).toContain("may have run")
+  expect(Effect.runSync(f.ledger.read())).toMatchObject({
+    status: "error",
+    capture: null,
+  })
+  expect(Effect.runSync(f.ledger.read()).error).toContain("may have run")
 })
 
 it("browser tool projection preserves requirements and caller Context, and driver programming defects remain defects", async () => {
@@ -370,7 +388,7 @@ it("browser tool projection preserves requirements and caller Context, and drive
   const browser = new BrowserWorkspace(
     f.ledger,
     effectBrowserDriver(native),
-    () => true,
+    () => Effect.sync(() => true),
     f.wake
   )
   const exit = await Effect.runPromiseExit(
@@ -537,14 +555,14 @@ it.each(["defect", "interruption"])(
 
 it("keeps a retired session ticket and cleanup defects when a transport failure accompanies failed release", async () => {
   const f = fixture()
-  f.ledger.retire(session.id)
+  Effect.runSync(f.ledger.retire(session.id))
   f.driver.close = () =>
     Effect.fail(new BrowserUnavailable()).pipe(
       Effect.ensuring(Effect.die(new Error("Private cleanup failure")))
     )
   const exit = await Effect.runPromiseExit(f.browser.cleanup())
   expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)
-  expect(f.ledger.retired()).toEqual([session.id])
+  expect(Effect.runSync(f.ledger.retired())).toEqual([session.id])
 })
 
 it("fatal browser conversion preserves every typed failure, defect and interruption reason", async () => {

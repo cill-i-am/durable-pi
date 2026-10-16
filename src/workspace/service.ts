@@ -3,6 +3,7 @@ import { Workspace, type AttachmentContent } from "./workspace"
 import { WorkspaceAdmission } from "./admission"
 import {
   FileRejected,
+  WorkspaceReadOnly,
   WorkspaceUnavailable,
   MAX_VISION_BYTES,
   type FileId,
@@ -21,7 +22,6 @@ import {
   inspectWorkspaceUpload,
   requireWorkspaceCapacity,
   requireWorkspaceFile,
-  requireWorkspaceWritable,
   workspaceFileInfo,
   workspaceFileName,
   workspaceUploadReplay,
@@ -37,7 +37,7 @@ const base64 = (bytes: Uint8Array) => {
 export function makeWorkspace(
   ledger: WorkspaceLedger,
   assets: WorkspaceAssets,
-  canWrite: () => boolean,
+  canWrite: () => Effect.Effect<boolean, WorkspaceUnavailable>,
   extractDocument: ExtractDocument,
   extractVideo: ExtractVideo
 ): Workspace["Service"] {
@@ -49,21 +49,37 @@ export function makeWorkspace(
     extractVideo
   )
   const row = (id: string, active = false) =>
-    requireWorkspaceFile(ledger.read(id), active)
+    ledger
+      .read(id)
+      .pipe(
+        Effect.flatMap((file) =>
+          attempt(() => requireWorkspaceFile(file, active))
+        )
+      )
   const info = (id: string) =>
-    workspaceFileInfo(row(id), ledger.document(id), ledger.video(id))
-  const requireFiles = (ids: readonly FileId[]) =>
-    ids.map((id) => {
-      row(id, true)
-      return info(id)
+    Effect.gen(function* () {
+      return workspaceFileInfo(
+        yield* row(id),
+        yield* ledger.document(id),
+        yield* ledger.video(id)
+      )
     })
-  const writable = () => requireWorkspaceWritable(canWrite)
+  const requireFiles = (ids: readonly FileId[]) =>
+    Effect.forEach(ids, (id) =>
+      row(id, true).pipe(Effect.andThen(() => info(id)))
+    )
+  const writable = () =>
+    canWrite().pipe(
+      Effect.flatMap((allowed) =>
+        allowed ? Effect.void : Effect.fail(new WorkspaceReadOnly())
+      )
+    )
   const textContent = (id: string) =>
     Effect.gen(function* () {
-      const file = yield* attempt(() => row(id, true))
+      const file = yield* row(id, true)
       if (file.kind === "text")
         return { file, bytes: yield* assets.read(fileAsset(file)) }
-      const state = yield* attempt(() => ledger.document(id))
+      const state = yield* ledger.document(id)
       if (state?.status !== "ready")
         return yield* new FileRejected({
           message:
@@ -79,7 +95,7 @@ export function makeWorkspace(
     extractNext: preparation.next,
     retryExtraction: Effect.fn("Workspace.retryExtraction")(function* (id) {
       yield* preparation.retry(id)
-      return yield* attempt(() => info(id))
+      return yield* info(id)
     }),
     readText: Effect.fn("Workspace.readText")(function* (id, offset, limit) {
       yield* attempt(() => requireTextRange(offset, limit))
@@ -87,7 +103,7 @@ export function makeWorkspace(
         text = new TextDecoder().decode(bytes),
         end = Math.min(offset + limit, text.length)
       return {
-        file: yield* attempt(() => info(id)),
+        file: yield* info(id),
         text: text.slice(offset, end),
         offset,
         next: end < text.length ? end : null,
@@ -95,20 +111,20 @@ export function makeWorkspace(
       }
     }),
     list: Effect.fn("Workspace.list")(() =>
-      attempt(() =>
-        ledger
-          .list()
-          .map((file) =>
-            workspaceFileInfo(
+      Effect.gen(function* () {
+        return yield* Effect.forEach(yield* ledger.list(), (file) =>
+          Effect.gen(function* () {
+            return workspaceFileInfo(
               file,
-              ledger.document(file.id),
-              ledger.video(file.id)
+              yield* ledger.document(file.id),
+              yield* ledger.video(file.id)
             )
-          )
-      )
+          })
+        )
+      })
     ),
     requireFiles: Effect.fn("Workspace.requireFiles")((ids) =>
-      attempt(() => requireFiles(ids))
+      requireFiles(ids)
     ),
     upload: Effect.fn("Workspace.upload")(function* (source: Upload) {
       const input = {
@@ -120,19 +136,25 @@ export function makeWorkspace(
       const hash = yield* assets.digest(input.bytes),
         visionHash = input.vision ? yield* assets.digest(input.vision) : null
       const now = yield* Clock.currentTimeMillis
-      const reserved = yield* attempt(() =>
-        ledger.atomic(() => {
-          const existing = ledger.read(input.id)
+      const reserved = yield* ledger.atomic(() =>
+        Effect.gen(function* () {
+          const existing = yield* ledger.read(input.id)
           if (existing) {
-            if (workspaceUploadReplay(existing, metadata, hash, visionHash)) {
-              ledger.promotePdf(input.id)
-              if (existing.status === "ready") ledger.enqueueDocument(input.id)
+            if (
+              yield* attempt(() =>
+                workspaceUploadReplay(existing, metadata, hash, visionHash)
+              )
+            ) {
+              yield* ledger.promotePdf(input.id)
+              if (existing.status === "ready")
+                yield* ledger.enqueueDocument(input.id)
             }
-            return row(input.id)
+            return yield* row(input.id)
           }
-          writable()
-          requireWorkspaceCapacity(ledger.usage(), metadata.size)
-          ledger.insert({
+          yield* writable()
+          const usage = yield* ledger.usage()
+          yield* attempt(() => requireWorkspaceCapacity(usage, metadata.size))
+          yield* ledger.insert({
             ...metadata,
             id: input.id,
             createdAt: new Date(now).toISOString(),
@@ -141,34 +163,33 @@ export function makeWorkspace(
             hash,
             visionHash,
           })
-          return row(input.id)
+          return yield* row(input.id)
         })
       )
-      if (reserved.status === "ready")
-        return yield* attempt(() => info(reserved.id))
+      if (reserved.status === "ready") return yield* info(reserved.id)
       yield* assets.write(fileAsset(reserved), input.bytes)
       if (input.vision)
         yield* assets.write(
           { id: reserved.id, hash: reserved.visionHash! },
           input.vision
         )
-      return yield* attempt(() =>
-        ledger.atomic(() => {
-          ledger.ready(input.id)
-          if (metadata.kind === "video") ledger.enqueueVideo(input.id)
+      return yield* ledger.atomic(() =>
+        Effect.gen(function* () {
+          yield* ledger.ready(input.id)
+          if (metadata.kind === "video") yield* ledger.enqueueVideo(input.id)
           if (metadata.mime === "application/pdf")
-            ledger.enqueueDocument(input.id)
-          return info(input.id)
+            yield* ledger.enqueueDocument(input.id)
+          return yield* info(input.id)
         })
       )
     }),
     content: Effect.fn("Workspace.content")(function* (id, vision) {
-      const file = yield* attempt(() => row(id, true))
+      const file = yield* row(id, true)
       if (vision && !file.visionHash)
         return yield* new FileRejected({
           message: "This file has no image preview.",
         })
-      const metadata = yield* attempt(() => info(id))
+      const metadata = yield* info(id)
       const body = yield* assets.open(
         vision ? { id: file.id, hash: file.visionHash! } : fileAsset(file)
       )
@@ -180,23 +201,23 @@ export function makeWorkspace(
       }
     }),
     trash: Effect.fn("Workspace.trash")((id, trashed) =>
-      attempt(() =>
-        ledger.atomic(() => {
-          writable()
-          row(id)
-          ledger.trash(id, trashed)
-          return info(id)
+      ledger.atomic(() =>
+        Effect.gen(function* () {
+          yield* writable()
+          yield* row(id)
+          yield* ledger.trash(id, trashed)
+          return yield* info(id)
         })
       )
     ),
     rename: Effect.fn("Workspace.rename")((id, name) =>
-      attempt(() =>
-        ledger.atomic(() => {
-          writable()
-          const decoded = workspaceFileName(name)
-          row(id, true)
-          ledger.rename(id, decoded)
-          return info(id)
+      ledger.atomic(() =>
+        Effect.gen(function* () {
+          yield* writable()
+          const decoded = yield* attempt(() => workspaceFileName(name))
+          yield* row(id, true)
+          yield* ledger.rename(id, decoded)
+          return yield* info(id)
         })
       )
     ),
@@ -204,8 +225,8 @@ export function makeWorkspace(
       const files = [],
         content: AttachmentContent[] = []
       for (const id of ids) {
-        const file = yield* attempt(() => row(id, true))
-        files.push(yield* attempt(() => info(id)))
+        const file = yield* row(id, true)
+        files.push(yield* info(id))
         content.push(attachedFileNotice(file))
         if (file.kind === "image") {
           if (!file.visionHash)
@@ -229,7 +250,7 @@ export function makeWorkspace(
             ...attachedText(
               id,
               new TextDecoder().decode(bytes),
-              yield* attempt(() => ledger.document(id))
+              yield* ledger.document(id)
             )
           )
         } else if (file.kind === "video")
@@ -247,7 +268,7 @@ export function makeWorkspace(
 export const workspaceApplication = (
   ledger: WorkspaceLedger,
   assets: WorkspaceAssets,
-  canWrite: () => boolean,
+  canWrite: () => Effect.Effect<boolean, WorkspaceUnavailable>,
   document: ExtractDocument,
   video: ExtractVideo
 ) =>
@@ -259,9 +280,21 @@ export const workspaceApplication = (
     Layer.succeed(WorkspaceAdmission, {
       transactionGroup: ledger.transactionGroup,
       requireFiles: (ids) =>
-        ids.map((id) => {
-          const file = requireWorkspaceFile(ledger.read(id), true)
-          return workspaceFileInfo(file, ledger.document(id), ledger.video(id))
-        }),
+        Effect.forEach(ids, (id) =>
+          Effect.gen(function* () {
+            const file = yield* ledger
+              .read(id)
+              .pipe(
+                Effect.flatMap((row) =>
+                  attempt(() => requireWorkspaceFile(row, true))
+                )
+              )
+            return workspaceFileInfo(
+              file,
+              yield* ledger.document(id),
+              yield* ledger.video(id)
+            )
+          })
+        ),
     })
   )

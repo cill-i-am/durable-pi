@@ -1,6 +1,6 @@
 import { DurableObject } from "cloudflare:workers"
-import { Effect, ManagedRuntime } from "effect"
-import type { Sqlite } from "../../src/storage/sqlite"
+import { Effect, ManagedRuntime, Scope } from "effect"
+import { nativeDatabase } from "./database"
 import { TerminalStore } from "../../src/terminal/adapters/sqlite"
 import { terminalRequest } from "../../src/terminal/adapters/http"
 import {
@@ -23,14 +23,8 @@ import {
 /** Native service/HTTP/SQLite/Layer ownership. The container and R2 binding
  * are synthetic; their bytes and invocation counts persist in local SQLite. */
 export class TerminalProbe extends DurableObject<unknown> {
-  private readonly db: Sqlite = {
-    all: <T>(sql: string, ...bindings: (string | number | null)[]) =>
-      this.ctx.storage.sql.exec(sql, ...bindings).toArray() as T[],
-    run: (sql, ...bindings) => {
-      this.ctx.storage.sql.exec(sql, ...bindings)
-    },
-    transaction: (body) => this.ctx.storage.transactionSync(body),
-  }
+  readonly databaseScope = Scope.makeUnsafe()
+  readonly db = nativeDatabase(this.ctx.storage, this.databaseScope)
   private readonly repository = new TerminalStore(this.db)
   private readonly bytes = new TextEncoder().encode("Native transfer 🍀")
   private readonly bucket: CheckpointBucket = {

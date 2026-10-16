@@ -1,22 +1,65 @@
+import type { EffectDrizzleQueryError } from "drizzle-orm/effect-core/errors"
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  getTableColumns,
+  inArray,
+  isNull,
+  or,
+} from "drizzle-orm"
+import { Effect, Schema } from "effect"
+import {
+  mapSqliteError,
+  type Sqlite,
+  type EffectSqliteDatabase,
+} from "../../storage/sqlite"
+import { coalesce, increment, literal } from "../../storage/expressions"
 import { ResolvedRoute, type JobType } from "../../inference/policy"
 import { SkillReference, type SkillDocument } from "../../skills/contracts"
-import type { Sqlite } from "../../storage/sqlite"
-import { Schema } from "effect"
 import { AttachmentContent, FileInfo } from "../../workspace/files"
 import { TurnOrigin } from "../contracts"
-import type { StatusTurn } from "../status"
 import { RecoveryView } from "../recovery"
 import type { ConversationLedger } from "../ledger"
 import * as Domain from "../domain"
 import {
   ConversationStorageError,
   TurnRecord,
+  conversationFailure,
   type PreparedMessage,
   type TurnOutcome,
-  type ModelSettings,
+  ModelSettings,
   type Submission,
   type Turn,
 } from "../turns"
+import { chatTurns, chatSettings, jobModelSettings } from "./schema"
+
+const activeStatuses = ["queued", "preparing", "running", "stopping"]
+const RawTurn = Schema.Struct({
+  ...TurnRecord.fields,
+  origin: Schema.NullOr(Schema.String),
+  routing: Schema.NullOr(Schema.String),
+  skills: Schema.String,
+  attachments: Schema.String,
+  input: Schema.String,
+})
+const visible = {
+  ...getTableColumns(chatTurns),
+  prompt: literal(null),
+  skill_context: literal(""),
+  input: literal("[]"),
+}
+const attempt = <TValue>(body: () => TValue) =>
+  Effect.try({
+    try: body,
+    catch: (cause) => {
+      const failure = conversationFailure(cause)
+      if (failure) return failure
+      throw cause
+    },
+  })
 
 export class ConversationStore implements ConversationLedger {
   readonly transactionGroup: object
@@ -25,386 +68,450 @@ export class ConversationStore implements ConversationLedger {
     private readonly defaults: ModelSettings
   ) {
     this.transactionGroup = db
-    const storage = <T>(operation: string, body: () => T): T => {
-      try {
-        return body()
-      } catch (cause) {
-        throw new ConversationStorageError({ operation, cause })
-      }
-    }
-    this.db = {
-      all: (query, ...bindings) =>
-        storage("read", () => db.all(query, ...bindings)),
-      run: (query, ...bindings) =>
-        storage("write", () => db.run(query, ...bindings)),
-      transaction: (body) => {
-        const callback: { failed: boolean; cause?: unknown } = { failed: false }
-        try {
-          return db.transaction(() => {
-            try {
-              return body()
-            } catch (cause) {
-              callback.failed = true
-              callback.cause = cause
-              throw cause
-            }
-          })
-        } catch (cause) {
-          if (callback.failed && cause === callback.cause) throw cause
-          throw new ConversationStorageError({
-            operation: "transaction",
-            cause,
-          })
-        }
-      },
-    }
-    this.db.run(
-      "CREATE TABLE IF NOT EXISTS chat_turns (id TEXT PRIMARY KEY,text TEXT NOT NULL,status TEXT NOT NULL,answer TEXT NOT NULL DEFAULT '',error TEXT,created_at TEXT NOT NULL,session_id TEXT,prompt TEXT)"
-    )
-    const columns = new Set(
-      this.db
-        .all<{ name: string }>("PRAGMA table_info(chat_turns)")
-        .map((row) => row.name)
-    )
-    for (const [name, definition] of Object.entries({
-      parent_id: "TEXT",
-      started_at: "TEXT",
-      finished_at: "TEXT",
-      stopped_at: "TEXT",
-      recovery: "TEXT",
-      mode: "TEXT NOT NULL DEFAULT 'followUp'",
-      delivery: "TEXT NOT NULL DEFAULT 'queued'",
-      model: "TEXT",
-      routing: "TEXT",
-      origin: "TEXT",
-      thinking: "TEXT",
-      revision: "INTEGER NOT NULL DEFAULT 0",
-      creation: "TEXT",
-      attachments: "TEXT NOT NULL DEFAULT '[]'",
-      input: "TEXT NOT NULL DEFAULT '[]'",
-      skills: "TEXT NOT NULL DEFAULT '[]'",
-      skill_context: "TEXT NOT NULL DEFAULT ''",
-    })) {
-      if (!columns.has(name))
-        this.db.run(`ALTER TABLE chat_turns ADD COLUMN ${name} ${definition}`)
-    }
-    this.db.run(
-      "CREATE INDEX IF NOT EXISTS chat_turns_parent ON chat_turns(parent_id)"
-    )
-    this.db.run(
-      "CREATE TABLE IF NOT EXISTS job_model_settings (job TEXT PRIMARY KEY,model TEXT NOT NULL,thinking TEXT NOT NULL)"
-    )
-    this.db.run(
-      "CREATE TABLE IF NOT EXISTS chat_settings (id INTEGER PRIMARY KEY,model TEXT NOT NULL,thinking TEXT NOT NULL)"
-    )
-    if (
-      !this.db
-        .all<{ name: string }>("PRAGMA table_info(chat_settings)")
-        .some((column) => column.name === "revision")
-    )
-      this.db.run(
-        "ALTER TABLE chat_settings ADD COLUMN revision INTEGER NOT NULL DEFAULT 0"
-      )
   }
-  jobSetting(job: JobType): ModelSettings | undefined {
+  private query<TValue, TError, TRequirements>(
+    body: (
+      orm: EffectSqliteDatabase
+    ) => Effect.Effect<TValue, TError, TRequirements>
+  ) {
+    return mapSqliteError(
+      this.db.use(body),
+      (cause) => new ConversationStorageError({ operation: "query", cause })
+    )
+  }
+  private atomic<TValue, TError, TRequirements>(
+    body: () => Effect.Effect<TValue, TError, TRequirements>
+  ) {
+    return mapSqliteError(
+      this.db.transaction(body),
+      (cause) =>
+        new ConversationStorageError({ operation: "transaction", cause })
+    )
+  }
+  jobSetting(job: JobType): ReturnType<ConversationLedger["jobSetting"]> {
     if (job === "conversation")
-      return this.db.all<ModelSettings>(
-        "SELECT model,thinking FROM chat_settings WHERE id=1"
-      )[0]
-    return this.db.all<ModelSettings>(
-      "SELECT model,thinking FROM job_model_settings WHERE job=?",
-      job
-    )[0]
+      return this.query((orm) =>
+        orm
+          .select({
+            model: chatSettings.model,
+            thinking: chatSettings.thinking,
+          })
+          .from(chatSettings)
+          .where(eq(chatSettings.id, 1))
+          .limit(1)
+      ).pipe(
+        Effect.map((rows) =>
+          rows[0] ? Schema.decodeUnknownSync(ModelSettings)(rows[0]) : undefined
+        )
+      )
+    return this.query((orm) =>
+      orm
+        .select({
+          model: jobModelSettings.model,
+          thinking: jobModelSettings.thinking,
+        })
+        .from(jobModelSettings)
+        .where(eq(jobModelSettings.job, job))
+        .limit(1)
+    ).pipe(
+      Effect.map((rows) =>
+        rows[0] ? Schema.decodeUnknownSync(ModelSettings)(rows[0]) : undefined
+      )
+    )
   }
-  setJobSetting(job: JobType, settings: ModelSettings) {
+  setJobSetting(
+    job: JobType,
+    settings: ModelSettings
+  ): ReturnType<ConversationLedger["setJobSetting"]> {
     if (job === "conversation") return this.setSettings(settings)
-    this.db.transaction(() => {
-      this.setSettings(this.settings())
-      this.db.run(
-        "INSERT INTO job_model_settings VALUES (?,?,?) ON CONFLICT(job) DO UPDATE SET model=excluded.model,thinking=excluded.thinking",
-        job,
-        settings.model,
-        settings.thinking
-      )
-    })
-  }
-
-  settings(): ModelSettings {
-    return (
-      this.db.all<ModelSettings>(
-        "SELECT model,thinking FROM chat_settings WHERE id=1"
-      )[0] ?? this.defaults
-    )
-  }
-  setSettings(settings: ModelSettings) {
-    this.db.run(
-      "INSERT INTO chat_settings VALUES (1,?,?,1) ON CONFLICT(id) DO UPDATE SET model=excluded.model,thinking=excluded.thinking,revision=chat_settings.revision+1",
-      settings.model,
-      settings.thinking
-    )
-    return this.selection()
-  }
-  selection() {
-    return {
-      ...this.settings(),
-      settingsRevision:
-        this.db.all<{ revision: number }>(
-          "SELECT revision FROM chat_settings WHERE id=1"
-        )[0]?.revision ?? 0,
-    }
-  }
-  get(id: string) {
-    const row = this.db.all<StoredTurn>(
-      "SELECT * FROM chat_turns WHERE id=?",
-      id
-    )[0]
-    return row ? restore(row) : undefined
-  }
-  active() {
-    const row = this.db.all<StoredTurn>(
-      "SELECT * FROM chat_turns WHERE parent_id IS NULL AND status IN ('queued','preparing','running','stopping') ORDER BY rowid LIMIT 1"
-    )[0]
-    return row ? restore(row) : undefined
-  }
-  recent() {
-    return this.db
-      .all<StoredTurn>(
-        `SELECT ${visibleColumns} FROM chat_turns WHERE parent_id IS NULL ORDER BY rowid DESC LIMIT 100`
-      )
-      .reverse()
-      .map(restore)
-  }
-  statusTurns() {
-    type Row = { id: string; status: string; recovery: string | null }
-    const projection = Schema.decodeUnknownSync(
-      Schema.Struct({
-        id: Schema.String,
-        status: TurnRecord.fields.status,
-        phase: Schema.NullOr(RecoveryView.fields.phase),
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        yield* this.setSettings(yield* this.settings())
+        yield* this.query((orm) =>
+          orm
+            .insert(jobModelSettings)
+            .values({ job, ...settings })
+            .onConflictDoUpdate({ target: jobModelSettings.job, set: settings })
+        )
+        return undefined
       })
     )
-    const read = (filter: string, order: string): StatusTurn | undefined => {
-      const row = this.db.all<Row>(
-        `SELECT id,status,recovery FROM chat_turns
-         WHERE parent_id IS NULL ${filter} ORDER BY rowid ${order} LIMIT 1`
-      )[0]
-      if (!row) return
-      // Status exposes only these facts, including historical phase-only rows.
-      // Parse owned JSON outside the driver so corruption is not an I/O failure.
-      const decoded = projection({
-        id: row.id,
-        status: row.status,
-        phase: row.recovery
-          ? (JSON.parse(row.recovery)?.view?.phase ?? null)
-          : null,
-      })
-      return {
-        id: decoded.id,
-        status: decoded.status,
-        recovery: decoded.phase ? { phase: decoded.phase } : null,
-      }
-    }
-    return {
-      active: read(
-        "AND status IN ('queued','preparing','running','stopping')",
-        "ASC"
-      ),
-      latest: read("", "DESC"),
-    }
   }
-  members(rootId: string, includeInput = true) {
-    return this.db
-      .all<StoredTurn>(
-        `SELECT ${includeInput ? "*" : visibleColumns} FROM chat_turns WHERE id=? OR parent_id=? ORDER BY rowid`,
-        rootId,
-        rootId
-      )
-      .map(restore)
+  settings(): ReturnType<ConversationLedger["settings"]> {
+    return this.jobSetting("conversation").pipe(
+      Effect.map((value) => value ?? this.defaults)
+    )
+  }
+  setSettings(
+    settings: ModelSettings
+  ): ReturnType<ConversationLedger["setSettings"]> {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        yield* this.query((orm) =>
+          orm
+            .insert(chatSettings)
+            .values({ id: 1, ...settings, revision: 1 })
+            .onConflictDoUpdate({
+              target: chatSettings.id,
+              set: { ...settings, revision: increment(chatSettings.revision) },
+            })
+        )
+        return yield* this.selection()
+      })
+    )
+  }
+  selection(): ReturnType<ConversationLedger["selection"]> {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const settings = yield* this.settings()
+        const rows = yield* this.query((orm) =>
+          orm
+            .select({ revision: chatSettings.revision })
+            .from(chatSettings)
+            .where(eq(chatSettings.id, 1))
+            .limit(1)
+        )
+        return { ...settings, settingsRevision: rows[0]?.revision ?? 0 }
+      })
+    )
+  }
+  get(id: string): ReturnType<ConversationLedger["get"]> {
+    return this.query((orm) =>
+      orm.select().from(chatTurns).where(eq(chatTurns.id, id)).limit(1)
+    ).pipe(Effect.map((rows) => (rows[0] ? restore(rows[0]) : undefined)))
+  }
+  active(): ReturnType<ConversationLedger["active"]> {
+    return this.query((orm) =>
+      orm
+        .select()
+        .from(chatTurns)
+        .where(
+          and(
+            isNull(chatTurns.parent_id),
+            inArray(chatTurns.status, activeStatuses)
+          )
+        )
+        .orderBy(asc(chatTurns.sequence))
+        .limit(1)
+    ).pipe(Effect.map((rows) => (rows[0] ? restore(rows[0]) : undefined)))
+  }
+  recent(): ReturnType<ConversationLedger["recent"]> {
+    return this.query((orm) =>
+      orm
+        .select(visible)
+        .from(chatTurns)
+        .where(isNull(chatTurns.parent_id))
+        .orderBy(desc(chatTurns.sequence))
+        .limit(100)
+    ).pipe(Effect.map((rows) => rows.reverse().map(restore)))
+  }
+  statusTurns(): ReturnType<ConversationLedger["statusTurns"]> {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const active = yield* this.query((orm) =>
+          orm
+            .select({
+              id: chatTurns.id,
+              status: chatTurns.status,
+              recovery: chatTurns.recovery,
+            })
+            .from(chatTurns)
+            .where(
+              and(
+                isNull(chatTurns.parent_id),
+                inArray(chatTurns.status, activeStatuses)
+              )
+            )
+            .orderBy(asc(chatTurns.sequence))
+            .limit(1)
+        )
+        const latest = yield* this.query((orm) =>
+          orm
+            .select({
+              id: chatTurns.id,
+              status: chatTurns.status,
+              recovery: chatTurns.recovery,
+            })
+            .from(chatTurns)
+            .where(isNull(chatTurns.parent_id))
+            .orderBy(desc(chatTurns.sequence))
+            .limit(1)
+        )
+        const decode = (row: (typeof active)[number] | undefined) => {
+          if (!row) return undefined
+          const value = Schema.decodeUnknownSync(
+            Schema.Struct({
+              id: Schema.String,
+              status: TurnRecord.fields.status,
+              phase: Schema.NullOr(RecoveryView.fields.phase),
+            })
+          )({
+            id: row.id,
+            status: row.status,
+            phase: row.recovery
+              ? (JSON.parse(row.recovery)?.view?.phase ?? null)
+              : null,
+          })
+          return {
+            id: value.id,
+            status: value.status,
+            recovery: value.phase ? { phase: value.phase } : null,
+          }
+        }
+        return { active: decode(active[0]), latest: decode(latest[0]) }
+      })
+    )
+  }
+  members(
+    rootId: string,
+    includeInput = true
+  ): ReturnType<ConversationLedger["members"]> {
+    return this.query((orm) =>
+      orm
+        .select(includeInput ? getTableColumns(chatTurns) : visible)
+        .from(chatTurns)
+        .where(or(eq(chatTurns.id, rootId), eq(chatTurns.parent_id, rootId)))
+        .orderBy(asc(chatTurns.sequence))
+    ).pipe(Effect.map((rows) => rows.map(restore)))
   }
   admit(
     input: Submission,
     prepared?: PreparedMessage,
     skills: readonly SkillDocument[] = [],
     resolved?: ResolvedRoute
-  ) {
-    return this.db.transaction(() => {
-      const source = input.retryOf ? this.get(input.retryOf) : undefined
-      const origin = input.retryOf ? source?.origin : input.origin
-      const creation = Domain.submissionIdentity(input, origin)
-      const existing = this.get(input.operationId)
-      if (existing) {
-        Domain.requireReplay(existing, input, creation)
-        return { turn: existing, accepted: false }
-      }
-      Domain.requireCapacity(
-        this.db.all<{ n: number }>(
-          "SELECT count(*) AS n FROM chat_turns WHERE status IN ('queued','preparing','running','stopping')"
-        )[0]!.n
-      )
-      Domain.requireRetry(input, source)
-      const parent = Domain.admissionParent(input, this.active())
-      Domain.requireSteer(
-        parent,
-        input,
-        (parent
-          ? this.members(parent.id, false).reduce(
-              (count, member) => count + member.attachments.length,
-              0
-            )
-          : 0) + (prepared?.files.length ?? 0)
-      )
-      const job = input.job ?? "conversation"
-      const settings = Domain.admissionRoute(input, {
-        parent,
-        source,
-        resolved,
-        defaults: this.defaults,
-        jobSetting:
-          parent || source || resolved ? undefined : this.jobSetting(job),
+  ): ReturnType<ConversationLedger["admit"]> {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const source = input.retryOf
+          ? yield* this.get(input.retryOf)
+          : undefined
+        const origin = input.retryOf ? source?.origin : input.origin
+        const creation = Domain.submissionIdentity(input, origin)
+        const existing = yield* this.get(input.operationId)
+        if (existing) {
+          yield* attempt(() => Domain.requireReplay(existing, input, creation))
+          return { turn: existing, accepted: false }
+        }
+        const capacity = yield* this.query((orm) =>
+          orm
+            .select({ n: count() })
+            .from(chatTurns)
+            .where(inArray(chatTurns.status, activeStatuses))
+        )
+        yield* attempt(() => Domain.requireCapacity(capacity[0]!.n))
+        yield* attempt(() => Domain.requireRetry(input, source))
+        const active = yield* this.active()
+        const parent = yield* attempt(() =>
+          Domain.admissionParent(input, active)
+        )
+        const members = parent ? yield* this.members(parent.id, false) : []
+        yield* attempt(() =>
+          Domain.requireSteer(
+            parent,
+            input,
+            members.reduce((n, member) => n + member.attachments.length, 0) +
+              (prepared?.files.length ?? 0)
+          )
+        )
+        const job = input.job ?? "conversation"
+        const jobSetting =
+          parent || source || resolved ? undefined : yield* this.jobSetting(job)
+        const settings = yield* attempt(() =>
+          Domain.admissionRoute(input, {
+            parent,
+            source,
+            resolved,
+            defaults: this.defaults,
+            jobSetting,
+          })
+        )
+        const content = Domain.admissionContent(parent, skills, prepared)
+        yield* this.query((orm) =>
+          orm.insert(chatTurns).values({
+            id: input.operationId,
+            text: input.text,
+            status: "queued",
+            created_at: new Date().toISOString(),
+            parent_id: parent?.id ?? null,
+            mode: input.mode ?? "followUp",
+            model: settings.model,
+            thinking: settings.thinking,
+            creation,
+            attachments: JSON.stringify(content.attachments),
+            input: JSON.stringify(content.input),
+            skills: JSON.stringify(content.skills),
+            skill_context: content.skill_context,
+            routing: JSON.stringify(settings),
+            origin: origin ? JSON.stringify(origin) : null,
+          })
+        )
+        if (parent)
+          yield* this.query((orm) =>
+            orm
+              .update(chatTurns)
+              .set({ revision: increment(chatTurns.revision) })
+              .where(eq(chatTurns.id, parent.id))
+          )
+        const turn = yield* this.get(input.operationId)
+        if (!turn)
+          return yield* Effect.die(new Error("Committed turn was not readable"))
+        return { turn, accepted: true }
       })
-      const content = Domain.admissionContent(parent, skills, prepared)
-      this.db.run(
-        "INSERT INTO chat_turns(id,text,status,created_at,parent_id,mode,model,thinking,creation,attachments,input,skills,skill_context,routing,origin) VALUES (?,?,'queued',?,?,?,?,?,?,?,?,?,?,?,?)",
-        input.operationId,
-        input.text,
-        new Date().toISOString(),
-        parent?.id ?? null,
-        input.mode ?? "followUp",
-        settings.model,
-        settings.thinking,
-        creation,
-        JSON.stringify(content.attachments),
-        JSON.stringify(content.input),
-        JSON.stringify(content.skills),
-        content.skill_context,
-        JSON.stringify(settings),
-        origin ? JSON.stringify(origin) : null
-      )
-      if (parent)
-        this.db.run(
-          "UPDATE chat_turns SET revision=revision+1 WHERE id=?",
-          parent.id
+    )
+  }
+  private updateIf(
+    id: string,
+    eligible: (turn: Turn) => boolean,
+    change: (
+      orm: EffectSqliteDatabase
+    ) => Effect.Effect<unknown, EffectDrizzleQueryError>
+  ) {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const turn = yield* this.get(id)
+        if (turn && eligible(turn)) yield* this.query(change)
+      })
+    ).pipe(Effect.asVoid)
+  }
+  prepare(id: string): ReturnType<ConversationLedger["prepare"]> {
+    return this.updateIf(id, Domain.canPrepare, (orm) =>
+      orm
+        .update(chatTurns)
+        .set({ status: "preparing" })
+        .where(eq(chatTurns.id, id))
+    )
+  }
+  savePrompt(
+    id: string,
+    prompt: string
+  ): ReturnType<ConversationLedger["savePrompt"]> {
+    return this.updateIf(id, Domain.canSavePrompt, (orm) =>
+      orm
+        .update(chatTurns)
+        .set({ prompt, input: "[]", skill_context: "" })
+        .where(eq(chatTurns.id, id))
+    )
+  }
+  saveSession(
+    id: string,
+    session: string
+  ): ReturnType<ConversationLedger["saveSession"]> {
+    return this.updateIf(id, Domain.canSaveSession, (orm) =>
+      orm
+        .update(chatTurns)
+        .set({ session_id: session })
+        .where(eq(chatTurns.id, id))
+    )
+  }
+  submitted(
+    id: string,
+    session: string
+  ): ReturnType<ConversationLedger["submitted"]> {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const turn = yield* this.get(id)
+        if (!turn || !Domain.canSubmit(turn)) return
+        yield* this.query((orm) =>
+          orm
+            .update(chatTurns)
+            .set({
+              session_id: session,
+              status: "running",
+              started_at: coalesce(
+                chatTurns.started_at,
+                new Date().toISOString()
+              ),
+              delivery: Domain.submittedDelivery(turn),
+            })
+            .where(eq(chatTurns.id, id))
         )
-      return { turn: this.get(input.operationId)!, accepted: true }
-    })
+      })
+    ).pipe(Effect.asVoid)
   }
-  prepare(id: string) {
-    this.updateIf(
-      id,
-      Domain.canPrepare,
-      "UPDATE chat_turns SET status='preparing' WHERE id=?"
+  consumed(id: string): ReturnType<ConversationLedger["consumed"]> {
+    return this.updateIf(id, Domain.canConsume, (orm) =>
+      orm
+        .update(chatTurns)
+        .set({ delivery: "consumed" })
+        .where(eq(chatTurns.id, id))
     )
   }
-  savePrompt(id: string, prompt: string) {
-    this.updateIf(
-      id,
-      Domain.canSavePrompt,
-      "UPDATE chat_turns SET prompt=?,input='[]',skill_context='' WHERE id=?",
-      prompt
+  requestStop(id: string): ReturnType<ConversationLedger["requestStop"]> {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const turn = yield* this.get(id)
+        const rootId = Domain.stopRoot(turn)
+        if (!rootId) return
+        const root = yield* this.get(rootId)
+        const next = Domain.stopTransition(turn, root)
+        if (!next) return
+        if (next.change)
+          yield* this.query((orm) =>
+            orm
+              .update(chatTurns)
+              .set({
+                status: "stopping",
+                stopped_at: coalesce(
+                  chatTurns.stopped_at,
+                  new Date().toISOString()
+                ),
+                revision: increment(chatTurns.revision),
+              })
+              .where(eq(chatTurns.id, next.rootId))
+          )
+        return next.rootId
+      })
     )
-  }
-  saveSession(id: string, session: string) {
-    this.updateIf(
-      id,
-      Domain.canSaveSession,
-      "UPDATE chat_turns SET session_id=? WHERE id=?",
-      session
-    )
-  }
-  submitted(id: string, session: string) {
-    this.db.transaction(() => {
-      const turn = this.get(id)
-      if (!turn || !Domain.canSubmit(turn)) return
-      this.db.run(
-        "UPDATE chat_turns SET session_id=?,status='running',started_at=coalesce(started_at,strftime('%Y-%m-%dT%H:%M:%fZ','now')),delivery=? WHERE id=?",
-        session,
-        Domain.submittedDelivery(turn),
-        id
-      )
-    })
-  }
-  consumed(id: string) {
-    this.updateIf(
-      id,
-      Domain.canConsume,
-      "UPDATE chat_turns SET delivery='consumed' WHERE id=?"
-    )
-  }
-  requestStop(id: string) {
-    return this.db.transaction(() => {
-      const turn = this.get(id)
-      const rootId = Domain.stopRoot(turn)
-      if (!rootId) return
-      const next = Domain.stopTransition(turn, this.get(rootId))
-      if (!next) return
-      if (next.change)
-        this.db.run(
-          "UPDATE chat_turns SET status='stopping',stopped_at=coalesce(stopped_at,strftime('%Y-%m-%dT%H:%M:%fZ','now')),revision=revision+1 WHERE id=?",
-          next.rootId
-        )
-      return next.rootId
-    })
   }
   finish(
     root: Turn,
     outcomes: readonly TurnOutcome[],
     answer: string,
     error: string | null
-  ) {
-    return this.db.transaction(() => {
-      const current = this.get(root.id)!
-      const next = Domain.finishTransition(
-        root,
-        current,
-        this.members(root.id),
-        outcomes,
-        answer,
-        error
-      )
-      if (!next) return false
-      for (const outcome of next.members) {
-        this.db.run(
-          "UPDATE chat_turns SET status=?,finished_at=strftime('%Y-%m-%dT%H:%M:%fZ','now'),delivery=?,input='[]',prompt=NULL,skill_context='' WHERE id=?",
-          outcome.status,
-          outcome.delivery,
-          outcome.id
+  ): ReturnType<ConversationLedger["finish"]> {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const current = yield* this.get(root.id)
+        if (!current)
+          return yield* Effect.die(new Error("Missing conversation completion"))
+        const members = yield* this.members(root.id)
+        const next = Domain.finishTransition(
+          root,
+          current,
+          members,
+          outcomes,
+          answer,
+          error
         )
-      }
-      this.db.run(
-        "UPDATE chat_turns SET answer=?,error=? WHERE id=?",
-        next.answer,
-        next.error,
-        root.id
-      )
-      return true
-    })
-  }
-  private updateIf(
-    id: string,
-    eligible: (turn: Turn) => boolean,
-    query: string,
-    ...bindings: (string | number | null)[]
-  ) {
-    this.db.transaction(() => {
-      const turn = this.get(id)
-      if (turn && eligible(turn)) this.db.run(query, ...bindings, id)
-    })
+        if (!next) return false
+        for (const outcome of next.members)
+          yield* this.query((orm) =>
+            orm
+              .update(chatTurns)
+              .set({
+                status: outcome.status,
+                finished_at: new Date().toISOString(),
+                delivery: outcome.delivery,
+                input: "[]",
+                prompt: null,
+                skill_context: "",
+              })
+              .where(eq(chatTurns.id, outcome.id))
+          )
+        yield* this.query((orm) =>
+          orm
+            .update(chatTurns)
+            .set({ answer: next.answer, error: next.error })
+            .where(eq(chatTurns.id, root.id))
+        )
+        return true
+      })
+    )
   }
 }
 
-type StoredTurn = Omit<
-  Turn,
-  "attachments" | "input" | "skills" | "routing" | "origin"
-> & {
-  origin: string | null
-  routing: string | null
-  attachments: string
-  input: string
-  skills: string
-}
-const visibleColumns =
-  "id,text,status,answer,error,created_at,session_id,NULL AS prompt,parent_id,mode,delivery,model,thinking,routing,origin,revision,creation,attachments,skills,'' AS skill_context,'[]' AS input"
-function restore(row: StoredTurn): Turn {
+function restore(raw: unknown): Turn {
+  const row = Schema.decodeUnknownSync(RawTurn)(raw)
   const decoded = Schema.decodeUnknownSync(TurnRecord)({
     ...row,
     origin: row.origin

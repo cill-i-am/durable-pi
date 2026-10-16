@@ -12,12 +12,15 @@ const fixture = Effect.gen(function* () {
   const started = yield* Deferred.make<void>()
   const store = new AccessStore(
     database(),
-    () => [{ name: "test", description: "Fixture", mode: "ask" }],
+    () =>
+      Effect.sync(() => [
+        { name: "test", description: "Fixture", mode: "ask" },
+      ]),
     () => clock.currentTimeMillisUnsafe()
   )
   const gate = new AccessGate(
     store,
-    () => true,
+    () => Effect.sync(() => true),
     () => {
       Deferred.doneUnsafe(started, Effect.void)
     }
@@ -42,7 +45,7 @@ it.effect(
       const exit = yield* Fiber.await(fiber)
       expect(Exit.isFailure(exit)).toBe(true)
       if (Exit.isFailure(exit)) expect(Cause.hasFails(exit.cause)).toBe(true)
-      expect(store.get(intent.id)?.status).toBe("expired")
+      expect((yield* store.get(intent.id))?.status).toBe("expired")
       expect(calls).toBe(0)
     })
 )
@@ -61,7 +64,11 @@ it.effect(
       expect(Exit.isFailure(exit)).toBe(true)
       if (Exit.isFailure(exit))
         expect(Cause.hasInterrupts(exit.cause)).toBe(true)
-      yield* gate.decide(intent.id, true, store.get(intent.id)!.revision)
+      yield* gate.decide(
+        intent.id,
+        true,
+        (yield* store.get(intent.id))!.revision
+      )
       yield* TestClock.adjust("1 minute")
       expect(calls).toBe(0)
       expect(yield* gate.run(intent, work)).toBe(1)
@@ -80,25 +87,26 @@ it.effect(
         pending: () => store.pending(),
         awaitingApproval: (id) => store.awaitingApproval(id),
         get: (id) => store.get(id),
-        begin: (input) => store.begin(input),
+        begin: (input, canRun) => store.begin(input, canRun),
         finish: (id, result) => store.finish(id, result),
         cancel: (id) => store.cancel(id),
         revoke: (name) => store.revoke(name),
         update: (name, revision, mode) => store.update(name, revision, mode),
         decide: (id, approve, revision, remember) =>
           store.decide(id, approve, revision, remember),
-        claim: (id, recoverable) => {
-          const decision = store.claim(id, recoverable)
-          if (decision === "pending") {
-            store.decide(id, true, store.get(id)!.revision)
-            gate.notify()
-          }
-          return decision
-        },
+        claim: (id, recoverable, canRun) =>
+          Effect.gen(function* () {
+            const choice = yield* store.claim(id, recoverable, canRun)
+            if (choice === "pending") {
+              yield* store.decide(id, true, (yield* store.get(id))!.revision)
+              gate.notify()
+            }
+            return choice
+          }),
       }
-      const gate = new AccessGate(ledger, () => true)
+      const gate = new AccessGate(ledger, () => Effect.sync(() => true))
       expect(yield* gate.run(intent, Effect.succeed("saved"))).toBe("saved")
-      expect(store.get(intent.id)?.status).toBe("done")
+      expect((yield* store.get(intent.id))?.status).toBe("done")
     })
 )
 
@@ -110,8 +118,8 @@ it.effect(
   () =>
     Effect.gen(function* () {
       const { store, gate } = yield* fixture
-      store.begin(intent)
-      store.decide(intent.id, true, 0)
+      yield* store.begin(intent)
+      yield* store.decide(intent.id, true, 0)
       const work = WorkValue.use((value) => Effect.succeed(value.value))
       expect(
         yield* gate

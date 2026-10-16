@@ -669,7 +669,7 @@ it("native multipart admission hashes a private byte snapshot once and replays i
   const repository = new TerminalStore(database()),
     digest = vi.fn(terminalFileDigest),
     imported: Uint8Array[] = []
-  repository.configure(0, true)
+  Effect.runSync(repository.configure(0, true))
   const host: TerminalRuntime = {
     restore: () => Effect.void,
     execute: unsupported,
@@ -729,7 +729,7 @@ it("native multipart admission hashes a private byte snapshot once and replays i
     await Promise.all(work)
     expect(digest).toHaveBeenCalledOnce()
     expect(imported).toEqual([bytes])
-    const saved = repository.get(id)
+    const saved = Effect.runSync(repository.get(id))
     const original = bytes.slice(),
       nextId = crypto.randomUUID(),
       entered = gate(),
@@ -753,7 +753,7 @@ it("native multipart admission hashes a private byte snapshot once and replays i
       service.startImport({ id, fileId, name: "source.txt" }, bytes)
     )
     await runtime.runPromise(replay.completion)
-    expect(repository.get(id)).toEqual(saved)
+    expect(Effect.runSync(repository.get(id))).toEqual(saved)
     expect(imported).toHaveLength(2)
   } finally {
     await runtime.dispose()

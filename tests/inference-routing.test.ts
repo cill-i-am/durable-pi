@@ -171,18 +171,23 @@ describe("job model routing", () => {
         model: "gpt-6.1-sol",
         thinking: "medium",
       })
-    store.setJobSetting("planning", { model: "gpt-6.1-sol", thinking: "high" })
+    Effect.runSync(
+      store.setJobSetting("planning", {
+        model: "gpt-6.1-sol",
+        thinking: "high",
+      })
+    )
     const command = submissionAttempt(null, "design it", "followUp", [], "deep")
     const route = {
       ...resolveRoute("conversation", undefined, command.profile),
       contextWindow: 272000,
     }
-    const root = store.admit(command, undefined, [], route).turn
-    store.setSettings({ model: "gpt-6-luna", thinking: "low" })
-    expect(store.admit(command).turn.routing).toEqual(route)
-    expect(() => store.admit({ ...command, profile: "fast" })).toThrow(
-      /another message/
-    )
+    const root = Effect.runSync(store.admit(command, undefined, [], route)).turn
+    Effect.runSync(store.setSettings({ model: "gpt-6-luna", thinking: "low" }))
+    expect(Effect.runSync(store.admit(command)).turn.routing).toEqual(route)
+    expect(() =>
+      Effect.runSync(store.admit({ ...command, profile: "fast" }))
+    ).toThrow(/another message/)
     expect(
       submissionAttempt(command, "design it", "steer", [], "fast")
     ).toEqual(command)
@@ -190,29 +195,37 @@ describe("job model routing", () => {
       model: "new-app-default",
       thinking: "low",
     })
-    expect(restored.get(root.id)?.model).toBe("gpt-6-astra")
-    const steer = restored.admit({
-      operationId: crypto.randomUUID(),
-      text: "keep mobile support",
-      mode: "steer",
-    }).turn
-    expect(steer.routing).toMatchObject({ ...route, reason: "active run" })
-    expect(() =>
+    expect(Effect.runSync(restored.get(root.id))?.model).toBe("gpt-6-astra")
+    const steer = Effect.runSync(
       restored.admit({
         operationId: crypto.randomUUID(),
-        text: "steer",
+        text: "keep mobile support",
         mode: "steer",
-        profile: "fast",
       })
+    ).turn
+    expect(steer.routing).toMatchObject({ ...route, reason: "active run" })
+    expect(() =>
+      Effect.runSync(
+        restored.admit({
+          operationId: crypto.randomUUID(),
+          text: "steer",
+          mode: "steer",
+          profile: "fast",
+        })
+      )
     ).toThrow(/Steering keeps/)
     const other = new ConversationStore(database(), {
       model: "gpt-6.1-sol",
       thinking: "medium",
     })
-    expect(other.jobSetting("planning")).toBeUndefined()
-    expect(restored.jobSetting("planning")?.model).toBe("gpt-6.1-sol")
+    expect(Effect.runSync(other.jobSetting("planning"))).toBeUndefined()
+    expect(Effect.runSync(restored.jobSetting("planning"))?.model).toBe(
+      "gpt-6.1-sol"
+    )
     expect(
-      restored.admit(submissionAttempt(null, "next", "followUp")).turn.model
+      Effect.runSync(
+        restored.admit(submissionAttempt(null, "next", "followUp"))
+      ).turn.model
     ).toBe("gpt-6-luna")
   })
   it("recovers orphaned activity without retrying execution or inventing usage", () => {
@@ -282,20 +295,26 @@ it("keeps legacy model pins and versions every job setting update", () => {
       model: "gpt-6.1-sol",
       thinking: "medium",
     })
-  const turn = store.admit(submissionAttempt(null, "old task", "followUp")).turn
+  const turn = Effect.runSync(
+    store.admit(submissionAttempt(null, "old task", "followUp"))
+  ).turn
   db.run(
     "UPDATE chat_turns SET routing=NULL,model='gpt-6-astra',thinking='high',status='failed' WHERE id=?",
     turn.id
   )
-  store.setSettings({ model: "gpt-6-luna", thinking: "low" })
-  const before = store.selection().settingsRevision
-  store.setJobSetting("planning", { model: "gpt-6.1-sol", thinking: "high" })
-  expect(store.selection().settingsRevision).toBe(before + 1)
-  const retry = store.admit({
-    operationId: crypto.randomUUID(),
-    text: turn.text,
-    retryOf: turn.id,
-  }).turn
+  Effect.runSync(store.setSettings({ model: "gpt-6-luna", thinking: "low" }))
+  const before = Effect.runSync(store.selection()).settingsRevision
+  Effect.runSync(
+    store.setJobSetting("planning", { model: "gpt-6.1-sol", thinking: "high" })
+  )
+  expect(Effect.runSync(store.selection()).settingsRevision).toBe(before + 1)
+  const retry = Effect.runSync(
+    store.admit({
+      operationId: crypto.randomUUID(),
+      text: turn.text,
+      retryOf: turn.id,
+    })
+  ).turn
   expect(retry.routing).toMatchObject({
     model: "gpt-6-astra",
     thinking: "high",

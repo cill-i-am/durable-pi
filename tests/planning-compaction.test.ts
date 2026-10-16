@@ -43,9 +43,9 @@ it.each([8192, contextProjectionBytes(8192)])(
       id = crypto.randomUUID(),
       source = { turnId: root, inputRevision: 0, inputIds: [root] }
     const plans = piPlans(async () => harness, {
-      current: () => source,
-      cancelled: () => false,
-      receipts: () => [],
+      current: () => Effect.sync(() => source),
+      cancelled: () => Effect.sync(() => false),
+      receipts: () => Effect.sync(() => []),
       evidence: (ref) =>
         Effect.succeed({ ...ref, state: "valid", detail: "Saved" }),
     })
@@ -97,12 +97,12 @@ it.each([8192, contextProjectionBytes(8192)])(
       hooks: [
         planContextHook(
           plans,
-          () => source,
-          () => budget
+          () => Effect.sync(() => source),
+          () => Effect.sync(() => budget)
         ),
       ],
       tools: [
-        ...planTools(plans, () => source).filter(
+        ...planTools(plans, () => Effect.sync(() => source)).filter(
           (tool) => tool.name === "read_plan"
         ),
         defineTool({

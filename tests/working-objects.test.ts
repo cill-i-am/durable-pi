@@ -108,7 +108,7 @@ it.each(["shrink", "grow"])(
       settings: { retry: { enabled: false }, compaction: { enabled: false } },
     }
     faux.setResponses(
-      Array.from({ length: 3 }, () => async (input, options) => {
+      Array.from({ length: 3 }, () => async (input, requestOptions) => {
         const last = input.messages.at(-1)
         if (last?.role !== "user" || typeof last.content === "string")
           throw new Error("Missing projection")
@@ -122,9 +122,11 @@ it.each(["shrink", "grow"])(
           entered()
           await new Promise<void>((_, reject) => {
             const abort = () => reject(new Error("Synthetic eviction"))
-            if (options?.signal?.aborted) abort()
+            if (requestOptions?.signal?.aborted) abort()
             else
-              options?.signal?.addEventListener("abort", abort, { once: true })
+              requestOptions?.signal?.addEventListener("abort", abort, {
+                once: true,
+              })
           })
         }
         return fauxAssistantMessage("Saved references inspected.")
@@ -368,7 +370,9 @@ it("runs typed native tools, uses the same UI operations, sees live user edits n
     requests.push(JSON.stringify(input.messages))
     return original(model, input, options)
   }
-  const access = new AccessStore(database(), () => builtInTools),
+  const access = new AccessStore(database(), () =>
+      Effect.sync(() => builtInTools)
+    ),
     turnId = crypto.randomUUID()
   let harness: Harness
   const objects = piWorkingObjects(
@@ -387,7 +391,7 @@ it("runs typed native tools, uses the same UI operations, sees live user edits n
       guardedTools(
         new AccessGate(
           access,
-          () => true,
+          () => Effect.sync(() => true),
           () => {}
         ),
         () => Effect.succeed(turnId)
@@ -438,7 +442,7 @@ it("runs typed native tools, uses the same UI operations, sees live user edits n
       )
     ).wait(ctx)
     await first.waitForIdle(ctx)
-    expect(access.pending()).toHaveLength(0)
+    expect(Effect.runSync(access.pending())).toHaveLength(0)
     const listed = await execute(objects.list()),
       objectId = listed[0]!.id
     const detail = await execute(objects.read(objectId)),
@@ -639,7 +643,7 @@ it.each([
     })
     const access = new AccessStore(
         db,
-        () => builtInTools,
+        () => Effect.sync(() => builtInTools),
         () => now
       ),
       turnId = crypto.randomUUID()
@@ -665,7 +669,7 @@ it.each([
     const options = () => {
       const registry = createRegistry(),
         protect = guardedTools(
-          new AccessGate(access, () => active),
+          new AccessGate(access, () => Effect.sync(() => active)),
           () => Effect.succeed(turnId),
           recoverableObjectTools
         )
@@ -728,13 +732,13 @@ it.each([
       await harness.close(ctx)
       firstProcess = false
       if (scenario.startsWith("revoked")) {
-        access.update("create_checklist", 0, "deny")
-        access.update("create_checklist", 1, "allow")
+        Effect.runSync(access.update("create_checklist", 0, "deny"))
+        Effect.runSync(access.update("create_checklist", 1, "allow"))
       }
       if (scenario.startsWith("expired")) now += 16 * 60_000
       if (scenario.startsWith("cancelled")) {
         active = false
-        access.cancel(turnId)
+        Effect.runSync(access.cancel(turnId))
       }
       harness = await Harness.open(
         await openNodeSqliteStorage(path),

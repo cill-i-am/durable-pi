@@ -1,3 +1,4 @@
+import { Effect } from "effect"
 import { expect, it } from "vitest"
 import { homeAgentId } from "./domain"
 import { database } from "../../tests/database"
@@ -15,24 +16,32 @@ it("keeps archive admission closed across delayed routing, restart and out-of-or
     createdAt: "today",
     updatedAt: "today",
   }
-  bot.configure("owner", active)
-  bot.configure("owner", { ...active, revision: 1, status: "archived" })
-  bot.configure("owner", active)
-  expect(bot.read()?.status).toBe("archived")
+  Effect.runSync(bot.configure("owner", active))
+  Effect.runSync(
+    bot.configure("owner", { ...active, revision: 1, status: "archived" })
+  )
+  Effect.runSync(bot.configure("owner", active))
+  expect(Effect.runSync(bot.read())?.status).toBe("archived")
   const restarted = new BotConfigurationStore(db)
-  expect(restarted.read()?.status).toBe("archived")
-  restarted.configure("owner", {
-    ...active,
-    revision: 2,
-    instructions: "New policy",
-  })
-  restarted.configure("owner", { ...active, revision: 1, status: "archived" })
-  expect(restarted.read()).toMatchObject({
+  expect(Effect.runSync(restarted.read())?.status).toBe("archived")
+  Effect.runSync(
+    restarted.configure("owner", {
+      ...active,
+      revision: 2,
+      instructions: "New policy",
+    })
+  )
+  Effect.runSync(
+    restarted.configure("owner", { ...active, revision: 1, status: "archived" })
+  )
+  expect(Effect.runSync(restarted.read())).toMatchObject({
     status: "active",
     revision: 2,
     instructions: "New policy",
   })
   expect(() =>
-    restarted.configure("different-owner", { ...active, revision: 3 })
+    Effect.runSync(
+      restarted.configure("different-owner", { ...active, revision: 3 })
+    )
   ).toThrow("Owner mismatch")
 })

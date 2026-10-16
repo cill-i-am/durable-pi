@@ -93,7 +93,7 @@ export class PersonalAgentProbe extends PersonalAgent {
         async (signal) => {
           this.credentialProbe.calls++
           this.credentialProbe.entered = true
-          this.db.run(
+          this.fixtureRun(
             "INSERT INTO personal_probe_credential VALUES (1,1) ON CONFLICT(id) DO UPDATE SET attempts=attempts+1"
           )
           const abort = () => {
@@ -372,42 +372,46 @@ export class PersonalAgentProbe extends PersonalAgent {
     this.backgroundNamespace = env.BACKGROUND
     this.commandProbe = command
     this.downloadProbe = download
-    this.db.run(
+    this.fixtureRun(
       "CREATE TABLE IF NOT EXISTS personal_probe (id INTEGER PRIMARY KEY,activations INTEGER NOT NULL)"
     )
-    this.db.run(
+    this.fixtureRun(
       "INSERT INTO personal_probe VALUES (1,1) ON CONFLICT(id) DO UPDATE SET activations=activations+1"
     )
-    this.db.run(
+    this.fixtureRun(
       "CREATE TABLE IF NOT EXISTS personal_probe_summary_retry (start INTEGER NOT NULL,count INTEGER NOT NULL)"
     )
-    this.db.run(
+    this.fixtureRun(
       "CREATE TABLE IF NOT EXISTS personal_probe_credential (id INTEGER PRIMARY KEY,attempts INTEGER NOT NULL)"
     )
     const now = new Date().toISOString()
-    this.botConfiguration.configure(
-      this.ctx.id.equals(env.PERSONAL.idFromName("gateway-owner"))
-        ? ""
-        : "personal-owner",
-      {
-        id: homeAgentId,
-        name: "Native probe",
-        instructions: "Synthetic probe only.",
-        status: "active",
-        revision: 1,
-        createdAt: now,
-        updatedAt: now,
-      }
+    this.actorRuntime.runSync(
+      this.botConfiguration.configure(
+        this.ctx.id.equals(env.PERSONAL.idFromName("gateway-owner"))
+          ? ""
+          : "personal-owner",
+        {
+          id: homeAgentId,
+          name: "Native probe",
+          instructions: "Synthetic probe only.",
+          status: "active",
+          revision: 1,
+          createdAt: now,
+          updatedAt: now,
+        }
+      )
     )
     const faux = fauxProvider({
       provider: "openai",
       models: [{ id: "gpt-6-luna", contextWindow: 8192, maxTokens: 2048 }],
       tokensPerSecond: 1000000,
     })
-    this.conversations.setJobSetting("conversation", {
-      model: "gpt-6-luna",
-      thinking: "medium",
-    })
+    this.actorRuntime.runSync(
+      this.conversations.setJobSetting("conversation", {
+        model: "gpt-6-luna",
+        thinking: "medium",
+      })
+    )
     this.models.setProvider(faux.provider)
     faux.setResponses([fauxAssistantMessage("Native actor answer")])
     const settle = this.connectionClient.settle.bind(this.connectionClient)
@@ -415,6 +419,18 @@ export class PersonalAgentProbe extends PersonalAgent {
       Effect.sync(() => {
         this.events.push("actor.connections.close")
       }).pipe(Effect.flatMap(settle))
+  }
+
+  /** Native SQL here is fixture instrumentation; application calls use db Effects. */
+  private fixtureRun(query: string, ...bindings: (string | number | null)[]) {
+    this.ctx.storage.sql.exec(query, ...bindings)
+  }
+
+  private fixtureRows<T>(
+    query: string,
+    ...bindings: (string | number | null)[]
+  ): T[] {
+    return this.ctx.storage.sql.exec(query, ...bindings).toArray() as T[]
   }
 
   protected override catalogProgram(): Effect.Effect<ModelCatalog> {
@@ -741,7 +757,9 @@ export class PersonalAgentProbe extends PersonalAgent {
         this.events.push("download.body.close")
       })
     )
-    const root = this.conversations.get("native-personal-turn")!
+    const root = (await this.actorRuntime.runPromise(
+      this.conversations.get("native-personal-turn")
+    ))!
     const session = this.harness.session.bind(this.harness)
     const held = new Promise<void>((resolve) => {
       this.releaseStop = resolve
@@ -1169,8 +1187,12 @@ export class PersonalAgentProbe extends PersonalAgent {
     }
     if (action === "command-start" || action === "command-hold") {
       await this.harness.pi()
-      const grant = this.accessStore.policy("run_command")
-      this.accessStore.update("run_command", grant.revision, "allow")
+      const grant = await this.actorRuntime.runPromise(
+        this.accessStore.policy("run_command")
+      )
+      await this.actorRuntime.runPromise(
+        this.accessStore.update("run_command", grant.revision, "allow")
+      )
       const held = action === "command-hold"
       if (held)
         this.commandProbe.wait = new Promise<void>((resolve) => {
@@ -1225,8 +1247,12 @@ export class PersonalAgentProbe extends PersonalAgent {
     if (action === "command-release") this.commandProbe.release?.()
     if (action === "command-read" || action === "command-release")
       return Response.json({
-        command: this.conversations.get("native-command-turn"),
-        stopped: this.conversations.get("00000000-0000-4000-8000-000000000020"),
+        command: await this.actorRuntime.runPromise(
+          this.conversations.get("native-command-turn")
+        ),
+        stopped: await this.actorRuntime.runPromise(
+          this.conversations.get("00000000-0000-4000-8000-000000000020")
+        ),
         probe: {
           entered: this.commandProbe.entered,
           aborted: this.commandProbe.aborted,
@@ -1237,7 +1263,9 @@ export class PersonalAgentProbe extends PersonalAgent {
       })
     if (action === "command-pending")
       return Response.json({
-        stopped: this.conversations.get("00000000-0000-4000-8000-000000000020"),
+        stopped: await this.actorRuntime.runPromise(
+          this.conversations.get("00000000-0000-4000-8000-000000000020")
+        ),
         probe: {
           entered: this.commandProbe.entered,
           aborted: this.commandProbe.aborted,
@@ -1247,7 +1275,7 @@ export class PersonalAgentProbe extends PersonalAgent {
           .inspect(),
       })
     if (action === "background-held-start") {
-      this.db.run(
+      this.fixtureRun(
         "INSERT INTO model_credentials VALUES (?,?,?) ON CONFLICT(provider) DO UPDATE SET value=excluded.value",
         "openai",
         JSON.stringify({
@@ -1259,9 +1287,9 @@ export class PersonalAgentProbe extends PersonalAgent {
         }),
         ""
       )
-      const source = this.conversations.get(
-        "00000000-0000-4000-8000-000000000020"
-      )!
+      const source = (await this.actorRuntime.runPromise(
+        this.conversations.get("00000000-0000-4000-8000-000000000020")
+      ))!
       const row = await this.actorRuntime.runPromise(
         this.backgroundMailbox.create(
           {
@@ -1296,7 +1324,7 @@ export class PersonalAgentProbe extends PersonalAgent {
         await this.actorRuntime.runPromise(
           this.backgroundMailbox.cancel(910002)
         )
-        this.db.run("DELETE FROM model_credentials WHERE provider='openai'")
+        this.fixtureRun("DELETE FROM model_credentials WHERE provider='openai'")
       }
       return Response.json(await child.inspectHeld())
     }
@@ -1307,7 +1335,7 @@ export class PersonalAgentProbe extends PersonalAgent {
         (value) =>
           value.handoff.input.objective === "Native background workflow"
       )!
-      const before = this.db.all<{ n: number }>(
+      const before = this.fixtureRows<{ n: number }>(
         "SELECT count(*) AS n FROM chat_turns"
       )[0]!.n
       const directory = activityDirectory(
@@ -1340,15 +1368,19 @@ export class PersonalAgentProbe extends PersonalAgent {
         recordStatus: record.status,
         record: await record.json(),
         before,
-        after: this.db.all<{ n: number }>(
+        after: this.fixtureRows<{ n: number }>(
           "SELECT count(*) AS n FROM chat_turns"
         )[0]!.n,
       })
     }
     if (action === "background-start") {
       await this.harness.pi()
-      const grant = this.accessStore.policy("background_tasks")
-      this.accessStore.update("background_tasks", grant.revision, "allow")
+      const grant = await this.actorRuntime.runPromise(
+        this.accessStore.policy("background_tasks")
+      )
+      await this.actorRuntime.runPromise(
+        this.accessStore.update("background_tasks", grant.revision, "allow")
+      )
       const faux = fauxProvider({
         provider: "openai",
         models: [{ id: "gpt-6-luna", contextWindow: 8192, maxTokens: 2048 }],
@@ -1402,8 +1434,14 @@ export class PersonalAgentProbe extends PersonalAgent {
         group: row
           ? await this.actorRuntime.runPromise(this.background.read(row.id))
           : null,
-        parent: this.conversations.get("native-background-workflow"),
-        report: row ? this.conversations.get(row.handoff.reportId) : null,
+        parent: await this.actorRuntime.runPromise(
+          this.conversations.get("native-background-workflow")
+        ),
+        report: row
+          ? await this.actorRuntime.runPromise(
+              this.conversations.get(row.handoff.reportId)
+            )
+          : null,
       })
     }
     if (action === "background-mailbox") {
@@ -1414,14 +1452,18 @@ export class PersonalAgentProbe extends PersonalAgent {
         }),
         contextWindow: 8192,
       }
-      const source = this.conversations.admit(
-        {
-          operationId: "native-background-parent",
-          text: "Draft a private background report.",
-        },
-        undefined,
-        [],
-        route
+      const source = (
+        await this.actorRuntime.runPromise(
+          this.conversations.admit(
+            {
+              operationId: "native-background-parent",
+              text: "Draft a private background report.",
+            },
+            undefined,
+            [],
+            route
+          )
+        )
       ).turn
       const row = await this.actorRuntime.runPromise(
         this.backgroundMailbox.create(
@@ -1440,11 +1482,13 @@ export class PersonalAgentProbe extends PersonalAgent {
           }
         )
       )
-      this.conversations.finish(
-        source,
-        [{ id: source.id, delivery: "answered" }],
-        "Background accepted",
-        null
+      await this.actorRuntime.runPromise(
+        this.conversations.finish(
+          source,
+          [{ id: source.id, delivery: "answered" }],
+          "Background accepted",
+          null
+        )
       )
       await this.actorRuntime.runPromise(
         this.backgroundMailbox.observed(row.id, {
@@ -1461,34 +1505,41 @@ export class PersonalAgentProbe extends PersonalAgent {
       )
       const admission = {
         transactionGroup: this.db,
-        stop: (id: string) => {
-          this.conversations.requestStop(id)
-        },
+        stop: (id: string) =>
+          this.conversations.requestStop(id).pipe(Effect.asVoid),
         admit: (h: typeof row.handoff, report: string) =>
-          this.conversations.admit(
-            {
-              operationId: h.reportId,
-              text: report,
-              origin: { kind: "background", groupId: h.id, turnId: h.turnId },
-            },
-            undefined,
-            [],
-            h.route
-          ).turn.id,
+          this.conversations
+            .admit(
+              {
+                operationId: h.reportId,
+                text: report,
+                origin: { kind: "background", groupId: h.id, turnId: h.turnId },
+              },
+              undefined,
+              [],
+              h.route
+            )
+            .pipe(Effect.map((result) => result.turn.id)),
       }
       const failed = await this.actorRuntime.runPromiseExit(
         this.backgroundMailbox.deliver({
           ...admission,
-          admit: (h, report) => {
-            admission.admit(h, report)
-            throw new Error("Synthetic report admission fault")
-          },
+          admit: (h, report) =>
+            admission
+              .admit(h, report)
+              .pipe(
+                Effect.andThen(
+                  Effect.die(new Error("Synthetic report admission fault"))
+                )
+              ),
         })
       )
       const rolledBack =
         Exit.isFailure(failed) &&
         Cause.hasDies(failed.cause) &&
-        !this.conversations.get(row.handoff.reportId) &&
+        !(await this.actorRuntime.runPromise(
+          this.conversations.get(row.handoff.reportId)
+        )) &&
         (await this.actorRuntime.runPromise(this.backgroundMailbox.get(row.id)))
           ?.status === "ready"
       if (!rolledBack)
@@ -1499,12 +1550,16 @@ export class PersonalAgentProbe extends PersonalAgent {
       const replay = await this.actorRuntime.runPromise(
         this.backgroundMailbox.deliver(admission)
       )
-      const turn = this.conversations.get(row.handoff.reportId)!
-      this.conversations.finish(
-        turn,
-        [{ id: turn.id, delivery: "answered" }],
-        "Native background report acknowledged",
-        null
+      const turn = (await this.actorRuntime.runPromise(
+        this.conversations.get(row.handoff.reportId)
+      ))!
+      await this.actorRuntime.runPromise(
+        this.conversations.finish(
+          turn,
+          [{ id: turn.id, delivery: "answered" }],
+          "Native background report acknowledged",
+          null
+        )
       )
       return Response.json({
         rolledBack,
@@ -1513,7 +1568,9 @@ export class PersonalAgentProbe extends PersonalAgent {
         row: await this.actorRuntime.runPromise(
           this.backgroundMailbox.get(row.id)
         ),
-        turn: this.conversations.get(turn.id),
+        turn: await this.actorRuntime.runPromise(
+          this.conversations.get(turn.id)
+        ),
       })
     }
     if (action === "background-mailbox-read") {
@@ -1522,13 +1579,21 @@ export class PersonalAgentProbe extends PersonalAgent {
       )
       return Response.json({
         row,
-        turn: row ? this.conversations.get(row.handoff.reportId) : null,
+        turn: row
+          ? await this.actorRuntime.runPromise(
+              this.conversations.get(row.handoff.reportId)
+            )
+          : null,
       })
     }
     if (action === "delegation-start") {
       await this.harness.pi()
-      const grant = this.accessStore.policy("delegate_tasks")
-      this.accessStore.update("delegate_tasks", grant.revision, "allow")
+      const grant = await this.actorRuntime.runPromise(
+        this.accessStore.policy("delegate_tasks")
+      )
+      await this.actorRuntime.runPromise(
+        this.accessStore.update("delegate_tasks", grant.revision, "allow")
+      )
       const faux = fauxProvider({
         provider: "openai",
         models: [{ id: "gpt-6-luna", contextWindow: 8192, maxTokens: 2048 }],
@@ -1577,7 +1642,9 @@ export class PersonalAgentProbe extends PersonalAgent {
     if (action === "delegation-read") {
       await this.lifecycle.start()
       return Response.json({
-        turn: this.conversations.get("native-delegation-turn"),
+        turn: await this.actorRuntime.runPromise(
+          this.conversations.get("native-delegation-turn")
+        ),
         groups: await this.actorRuntime.runPromise(this.delegations.list()),
       })
     }
@@ -1590,10 +1657,12 @@ export class PersonalAgentProbe extends PersonalAgent {
         throw new Error("Native message admission failed")
     }
     if (action === "stop") {
-      this.conversations.admit({
-        operationId: "00000000-0000-4000-8000-000000000004",
-        text: "Stop before dispatch.",
-      })
+      await this.actorRuntime.runPromise(
+        this.conversations.admit({
+          operationId: "00000000-0000-4000-8000-000000000004",
+          text: "Stop before dispatch.",
+        })
+      )
       const stopped = await super.fetch(
         new Request("https://internal/api/agent/cancel", {
           method: "POST",
@@ -1614,10 +1683,12 @@ export class PersonalAgentProbe extends PersonalAgent {
         )
       )
       const part = { start: source.id, count: 1 }
-      this.summaryRoutes.pin(part, resolveRoute("memory"))
+      await this.actorRuntime.runPromise(
+        this.summaryRoutes.pin(part, resolveRoute("memory"))
+      )
       for (let n = 0; n < 3; n++)
         await this.actorRuntime.runPromise(this.memory.failNode(part, 10000))
-      this.db.run(
+      this.fixtureRun(
         "INSERT INTO personal_probe_summary_retry VALUES (?,?)",
         part.start,
         part.count
@@ -1639,13 +1710,13 @@ export class PersonalAgentProbe extends PersonalAgent {
     }
     if (action === "usage-start") {
       await this.lifecycle.start()
-      const observation = this.observeInference(
+      const observation = await this.observeInference(
         resolveRoute("conversation"),
         "native-usage",
         "conversation"
       )
-      observation.end("cancelled", "Stopped by user")
-      observation.usage({
+      await observation.end("cancelled", "Stopped by user")
+      await observation.usage({
         id: "native-usage-response",
         model: "gpt-6.1-sol",
         input: 123,
@@ -1660,7 +1731,7 @@ export class PersonalAgentProbe extends PersonalAgent {
         output: 999,
       })
       observation.end("completed")
-      this.observeInference(
+      await this.observeInference(
         resolveRoute("conversation"),
         "native-usage",
         "compaction"
@@ -1675,7 +1746,7 @@ export class PersonalAgentProbe extends PersonalAgent {
         totals: await this.actorRuntime.runPromise(
           this.inferenceUsage.totals("native-usage")
         ),
-        reports: this.db.all(
+        reports: this.fixtureRows(
           "SELECT * FROM model_usage WHERE id='native-usage-response'"
         ),
       })
@@ -1763,7 +1834,7 @@ export class PersonalAgentProbe extends PersonalAgent {
     if (action === "release-provider") this.providerProbe.release?.()
     if (action === "credential-start") {
       await this.lifecycle.start()
-      this.db.run(
+      this.fixtureRun(
         "INSERT INTO model_credentials VALUES (?,?,?)",
         "openai",
         JSON.stringify({
@@ -1801,10 +1872,11 @@ export class PersonalAgentProbe extends PersonalAgent {
               reason.error._tag === "CredentialUnavailable"
           ),
         calls: this.credentialProbe.calls,
-        attempts: this.db.all<{ attempts: number }>(
+        attempts: this.fixtureRows<{ attempts: number }>(
           "SELECT attempts FROM personal_probe_credential WHERE id=1"
         )[0]?.attempts,
-        pending: this.db.all("SELECT 1 FROM model_credential_refresh").length,
+        pending: this.fixtureRows("SELECT 1 FROM model_credential_refresh")
+          .length,
       })
     }
     if (action === "release-credential") this.credentialProbe.release?.()
@@ -2102,12 +2174,14 @@ export class PersonalAgentProbe extends PersonalAgent {
     }
     if (action === "planning") {
       const turnId = "00000000-0000-4000-8000-000000000012"
-      this.conversations.admit({
-        operationId: turnId,
-        text: "Inspect the synthetic checklist in a private plan.",
-      })
-      this.conversations.prepare(turnId)
-      const source = this.planSource(turnId)
+      await this.actorRuntime.runPromise(
+        this.conversations.admit({
+          operationId: turnId,
+          text: "Inspect the synthetic checklist in a private plan.",
+        })
+      )
+      await this.actorRuntime.runPromise(this.conversations.prepare(turnId))
+      const source = await this.actorRuntime.runPromise(this.planSource(turnId))
       if (!source) throw new Error("Native planning source unavailable")
       const input: PlanUpdate = {
         id: "00000000-0000-4000-8000-000000000011",
@@ -2167,18 +2241,26 @@ export class PersonalAgentProbe extends PersonalAgent {
       )
       const reopened = await response.json()
       await this.actorRuntime.runPromise(this.plans.cancel(turnId))
-      this.conversations.requestStop(turnId)
-      const root = this.conversations.get(turnId)!
+      await this.actorRuntime.runPromise(this.conversations.requestStop(turnId))
+      const root = (await this.actorRuntime.runPromise(
+        this.conversations.get(turnId)
+      ))!
       if (
-        !this.conversations.finish(
-          root,
-          this.conversations.members(turnId).map((member) => ({
-            id: member.id,
-            delivery: "unanswered" as const,
-          })),
-          "",
-          null
-        )
+        !(await this.actorRuntime.runPromise(
+          this.conversations.finish(
+            root,
+            (
+              await this.actorRuntime.runPromise(
+                this.conversations.members(turnId)
+              )
+            ).map((member) => ({
+              id: member.id,
+              delivery: "unanswered" as const,
+            })),
+            "",
+            null
+          )
+        ))
       )
         throw new Error("Native fixture planning turn did not stop")
       return Response.json({
@@ -2323,31 +2405,38 @@ export class PersonalAgentProbe extends PersonalAgent {
         closed: this.providerProbe.closed,
         settled: this.providerProbe.settled,
         interrupted: this.providerProbe.interrupted,
-        attempt: this.db
-          .all<{ payload: string }>(
-            "SELECT payload FROM inference_attempts WHERE json_extract(payload,'$.turnId')='native-held-provider'"
-          )
-          .map((row) => JSON.parse(row.payload))[0],
+        attempt: this.fixtureRows<{ payload: string }>(
+          "SELECT payload FROM inference_attempts WHERE json_extract(payload,'$.turnId')='native-held-provider'"
+        ).map((row) => JSON.parse(row.payload))[0],
       },
       credential: {
         entered: this.credentialProbe.entered,
         aborted: this.credentialProbe.aborted,
         settled: this.credentialProbe.settled,
         interrupted: this.credentialProbe.interrupted,
-        pending: this.db.all("SELECT 1 FROM model_credential_refresh").length,
+        pending: this.fixtureRows("SELECT 1 FROM model_credential_refresh")
+          .length,
       },
       code: {
         calls: this.codeProbe.calls,
         entered: this.codeProbe.entered,
         aborted: this.codeProbe.aborted,
         settled: this.codeProbe.settled,
-        saved: this.db.all<{ record: string }>(
+        saved: this.fixtureRows<{ record: string }>(
           "SELECT record FROM code_runs WHERE id='native-held-code'"
         )[0]?.record,
       },
-      turn: this.conversations.get("native-personal-turn"),
-      stopped: this.conversations.get("00000000-0000-4000-8000-000000000004"),
-      retry: this.db.all<{
+      // This inspection endpoint deliberately runs after the actor runtime closes.
+      // Read assertion snapshots through fixture instrumentation, like counters below.
+      turn: this.fixtureRows(
+        "SELECT * FROM chat_turns WHERE id=?",
+        "native-personal-turn"
+      )[0],
+      stopped: this.fixtureRows(
+        "SELECT * FROM chat_turns WHERE id=?",
+        "00000000-0000-4000-8000-000000000004"
+      )[0],
+      retry: this.fixtureRows<{
         start: number
         count: number
         revision: number
@@ -2355,17 +2444,17 @@ export class PersonalAgentProbe extends PersonalAgent {
       }>(
         "SELECT p.start,p.count,max(r.revision) AS revision,count(r.revision) AS versions FROM personal_probe_summary_retry p JOIN summary_routes r USING(start,count) GROUP BY p.start,p.count"
       )[0],
-      messages: this.db.all<{ count: number }>(
+      messages: this.fixtureRows<{ count: number }>(
         "SELECT count(*) AS count FROM memory_log"
       )[0]!.count,
-      attempts: this.db.all<{ count: number }>(
+      attempts: this.fixtureRows<{ count: number }>(
         "SELECT count(*) AS count FROM inference_attempts WHERE json_extract(payload,'$.turnId')='native-personal-turn'"
       )[0]!.count,
-      activations: this.db.all<{ activations: number }>(
+      activations: this.fixtureRows<{ activations: number }>(
         "SELECT activations FROM personal_probe WHERE id=1"
       )[0]!.activations,
       externalCalls: this.externalCalls.count,
-      catalog: this.db.all(
+      catalog: this.fixtureRows(
         "SELECT id,name,status,revision FROM agent_catalog WHERE id='00000000-0000-4000-8000-000000000006'"
       )[0],
       stopEntered: this.stopEntered,
@@ -2383,7 +2472,7 @@ export class PersonalAgentProbe extends PersonalAgent {
         interrupted: this.downloadProbe.interrupted,
       },
       heldSummaryBuilt:
-        this.db.all(
+        this.fixtureRows(
           "SELECT 1 FROM memory_log l JOIN memory_nodes n ON n.start=l.id AND n.count=1 WHERE l.source='native-held-summary'"
         ).length > 0,
       observationInterrupted: this.observationInterrupted,

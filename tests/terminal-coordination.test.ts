@@ -25,7 +25,7 @@ it.effect(
         },
       }
       const repository = new TerminalStore(database())
-      repository.configure(0, true)
+      Effect.runSync(repository.configure(0, true))
       const executing = yield* Deferred.make<void>()
       let snapshots = 0
       let closes = 0
@@ -75,8 +75,8 @@ it.effect(
       yield* Deferred.await(executing)
       yield* TestClock.adjust("30 seconds")
       yield* task.completion
-      expect(repository.get("deadline")?.status).toBe("failed")
-      expect(repository.checkpoint()).toBeNull()
+      expect(Effect.runSync(repository.get("deadline"))?.status).toBe("failed")
+      expect(Effect.runSync(repository.checkpoint())).toBeNull()
       expect(snapshots).toBe(0)
       expect(closes).toBe(3)
       expect(requestSleeps).toBe(0)

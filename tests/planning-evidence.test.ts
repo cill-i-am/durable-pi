@@ -36,14 +36,16 @@ it("checks real bot/task-owned receipts, legacy execution failures, stale eviden
   )
   const db = database(),
     access = new AccessStore(db, () =>
-      ["run_code", "run_command", "read_note"].map((name) => ({
-        name,
-        mode: "allow",
-        description: name,
-      }))
+      Effect.sync(() =>
+        ["run_code", "run_command", "read_note"].map((name) => ({
+          name,
+          mode: "allow",
+          description: name,
+        }))
+      )
     )
   const executions = new ExecutionStore(db),
-    apps = new AppStore(db, () => true)
+    apps = new AppStore(db, () => Effect.sync(() => true))
   const objects = piWorkingObjects(
     async () => harness,
     () => true
@@ -55,9 +57,11 @@ it("checks real bot/task-owned receipts, legacy execution failures, stale eviden
   const evidence = (tx?: Tx) =>
     planEvidence({
       receipt: (query) =>
-        Effect.sync(() => scopedReceiptFact(access.get(query.id), query)),
-      execution: (key) => Effect.sync(() => executions.get(key)),
-      app: (key) => Effect.sync(() => apps.get(key)),
+        access
+          .get(query.id)
+          .pipe(Effect.map((operation) => scopedReceiptFact(operation, query))),
+      execution: (key) => executions.get(key),
+      app: (key) => apps.get(key),
       files: () => Effect.succeed([]),
       object: (key) =>
         tx
@@ -70,10 +74,14 @@ it("checks real bot/task-owned receipts, legacy execution failures, stale eviden
     value: unknown,
     turnId = root
   ): EvidenceRef => {
-    access.begin({ id: key, turnId, tool, input: "{}" })
-    access.claim(key)
-    access.finish(key, JSON.stringify(value))
-    return { kind: "receipt", id: key, revision: access.get(key)!.revision }
+    Effect.runSync(access.begin({ id: key, turnId, tool, input: "{}" }))
+    Effect.runSync(access.claim(key))
+    Effect.runSync(access.finish(key, JSON.stringify(value)))
+    return {
+      kind: "receipt",
+      id: key,
+      revision: Effect.runSync(access.get(key))!.revision,
+    }
   }
   try {
     const failed = receipt("1", "run_code", {
@@ -169,10 +177,10 @@ it("checks real bot/task-owned receipts, legacy execution failures, stale eviden
     const plans = piPlans(
       async () => harness,
       {
-        current: () => origin,
-        cancelled: () => false,
+        current: () => Effect.sync(() => origin),
+        cancelled: () => Effect.sync(() => false),
         evidence: evidence(),
-        receipts: () => [],
+        receipts: () => Effect.sync(() => []),
       },
       checker
     )

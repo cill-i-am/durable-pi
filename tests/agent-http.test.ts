@@ -384,7 +384,9 @@ it("does not turn connection request cleanup failure into an ordinary conflict",
 })
 
 it("composes app wake effects without boxing a tagged defect as an HTTP conflict", async () => {
-  const store = makeApps(new AppStore(database(), () => true))
+  const store = makeApps(
+    new AppStore(database(), () => Effect.sync(() => true))
+  )
   const defect = new AppConflict({ message: "private wake defect" })
   const exit = await Effect.runPromiseExit(
     appsRequest(

@@ -45,7 +45,7 @@ describe("native Pi tool approvals", () => {
           mode: "ask" as const,
         },
       ]
-      let store = new AccessStore(db, catalog)
+      let store = new AccessStore(db, () => Effect.sync(catalog))
       const turnId = crypto.randomUUID()
       let active = true,
         calls = 0
@@ -82,9 +82,9 @@ describe("native Pi tool approvals", () => {
       function options() {
         access = new AccessGate(
           store,
-          () => active,
+          () => Effect.sync(() => active),
           () => {
-            if (store.pending().length) approvalReady()
+            if (Effect.runSync(store.pending()).length) approvalReady()
           }
         )
         const protect = guardedTools(access, () => Effect.succeed(turnId))
@@ -161,31 +161,36 @@ describe("native Pi tool approvals", () => {
         }
         const first = await conversation.submit(command, ctx)
         await waiting
-        const id = store.pending()[0]!.id
+        const id = Effect.runSync(store.pending())[0]!.id
         expect(calls).toBe(0)
         if (scenario === "dispatch-interrupted") {
-          store.decide(id, true, store.get(id)!.revision)
+          Effect.runSync(
+            store.decide(id, true, Effect.runSync(store.get(id))!.revision)
+          )
           access!.notify()
           await dispatched
         }
         await harness.close(ctx)
-        store = new AccessStore(db, catalog)
+        store = new AccessStore(db, () => Effect.sync(catalog))
         if (scenario === "stop") {
           active = false
-          store.cancel(turnId)
+          Effect.runSync(store.cancel(turnId))
         }
-        if (scenario === "revoke") store.update("record", 0, "deny")
+        if (scenario === "revoke")
+          Effect.runSync(store.update("record", 0, "deny"))
         if (
           scenario === "always" ||
           scenario === "approve" ||
           scenario === "large-result" ||
           scenario === "remote-schema"
         )
-          store.decide(
-            id,
-            true,
-            store.get(id)!.revision,
-            scenario === "always" ? { expectedPolicyRevision: 0 } : undefined
+          Effect.runSync(
+            store.decide(
+              id,
+              true,
+              Effect.runSync(store.get(id))!.revision,
+              scenario === "always" ? { expectedPolicyRevision: 0 } : undefined
+            )
           )
         harness = await Harness.open(
           await openNodeSqliteStorage(path),
@@ -207,7 +212,7 @@ describe("native Pi tool approvals", () => {
               ? 1
               : 0
         )
-        expect(store.get(id)?.status).toBe(
+        expect(Effect.runSync(store.get(id))?.status).toBe(
           {
             approve: "done",
             always: "done",
@@ -219,13 +224,15 @@ describe("native Pi tool approvals", () => {
           }[scenario]
         )
         if (scenario === "always") {
-          expect(store.policy("record")).toMatchObject({
+          expect(Effect.runSync(store.policy("record"))).toMatchObject({
             mode: "allow",
             revision: 1,
           })
-          expect(store.pending()).toHaveLength(0)
+          expect(Effect.runSync(store.pending())).toHaveLength(0)
           expect(
-            store.decide(id, true, 0, { expectedPolicyRevision: 0 }).status
+            Effect.runSync(
+              store.decide(id, true, 0, { expectedPolicyRevision: 0 })
+            ).status
           ).toBe("done")
         }
         const events = await watchEvents(harness, conversation.id, ctx)

@@ -86,61 +86,64 @@ export function guardedMessageAdmission(
   skills: SkillLedger,
   storage: Pick<ConversationMaterialization, "transactionGroup" | "atomic">
 ) {
-  return Effect.fn("Conversations.commitMessage")(
-    (
-      input: Submission,
-      prepared: PreparedMessage,
-      route: ResolvedRoute,
-      parentId: string | null,
-      catalog: ModelCatalog
-    ) =>
-      attempt(() => {
+  return Effect.fn("Conversations.commitMessage")(function* (
+    input: Submission,
+    prepared: PreparedMessage,
+    route: ResolvedRoute,
+    parentId: string | null,
+    catalog: ModelCatalog
+  ) {
+    yield* attempt(() => {
+      if (
+        [
+          conversations.transactionGroup,
+          configuration.transactionGroup,
+          files.transactionGroup,
+          skills.transactionGroup,
+        ].some((group) => group !== storage.transactionGroup)
+      )
+        throw new ConversationConflict({
+          message:
+            "Message capabilities must share their native transaction group.",
+        })
+    })
+    return yield* storage.atomic(() =>
+      Effect.gen(function* () {
+        if (yield* conversations.get(input.operationId))
+          return yield* conversations.admit(input)
+        if ((yield* configuration.read())?.status === "archived")
+          return yield* new ConversationRejected({ reason: "archived" })
+        yield* files.requireFiles(input.files ?? [])
         if (
-          [
-            conversations.transactionGroup,
-            configuration.transactionGroup,
-            files.transactionGroup,
-            skills.transactionGroup,
-          ].some((group) => group !== storage.transactionGroup)
+          (submissionParent(input, yield* conversations.active())?.id ??
+            null) !== parentId
         )
-          throw new ConversationConflict({
+          return yield* new ConversationConflict({
             message:
-              "Message capabilities must share their native transaction group.",
+              "The active reply changed. Retry to send with the current run settings.",
           })
-        return storage.atomic(() => {
-          if (conversations.get(input.operationId))
-            return conversations.admit(input)
-          if (configuration.read()?.status === "archived")
-            throw new ConversationRejected({ reason: "archived" })
-          files.requireFiles(input.files ?? [])
-          if (
-            (submissionParent(input, conversations.active())?.id ?? null) !==
-            parentId
-          )
-            throw new ConversationConflict({
-              message:
-                "The active reply changed. Retry to send with the current run settings.",
-            })
-          const capability = validateRoute(
+        const capability = yield* attempt(() =>
+          validateRoute(
             route,
             catalog,
             prepared.content.some((block) => block.type === "image")
           )
-          return conversations.admit(
-            input,
-            prepared,
-            skills.selection().skills,
-            {
-              ...route,
-              contextWindow: Math.min(
-                route.contextWindow ?? capability.contextWindow,
-                capability.contextWindow
-              ),
-            }
-          )
-        })
+        )
+        return yield* conversations.admit(
+          input,
+          prepared,
+          (yield* skills.selection()).skills,
+          {
+            ...route,
+            contextWindow: Math.min(
+              route.contextWindow ?? capability.contextWindow,
+              capability.contextWindow
+            ),
+          }
+        )
       })
-  )
+    )
+  })
 }
 export type MessageCommit = ReturnType<typeof guardedMessageAdmission>
 export interface MessageAdmissionHost<TError, TRequirements = never> {

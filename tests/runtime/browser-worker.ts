@@ -3,27 +3,23 @@ import {
   browserWake,
 } from "../../src/browser/adapters/interop"
 import { DurableObject } from "cloudflare:workers"
-import { Effect } from "effect"
+import { Effect, Scope } from "effect"
 import { BrowserWorkspace } from "../../src/browser/browser"
 import { BrowserStore } from "../../src/browser/adapters/sqlite"
 import { browserToolResult } from "../../src/browser/adapters/pi"
 import { AccessGate } from "../../src/access/gate"
 import { AccessStore } from "../../src/access/adapters/sqlite"
-import type { Sqlite } from "../../src/storage/sqlite"
+import { nativeDatabase } from "./database"
 
 export class BrowserRecoveryBot extends DurableObject<Record<string, never>> {
-  readonly db: Sqlite = {
-    all: <T>(sql: string, ...args: (string | number | null)[]) =>
-      this.ctx.storage.sql.exec(sql, ...args).toArray() as T[],
-    run: (sql, ...args) => {
-      this.ctx.storage.sql.exec(sql, ...args)
-    },
-    transaction: (body) => this.ctx.storage.transactionSync(body),
-  }
-  readonly access = new AccessStore(this.db, () => [
-    { name: "browser_open", description: "Synthetic", mode: "allow" },
-  ])
-  readonly gate = new AccessGate(this.access, () => true)
+  readonly databaseScope = Scope.makeUnsafe()
+  readonly db = nativeDatabase(this.ctx.storage, this.databaseScope)
+  readonly access = new AccessStore(this.db, () =>
+    Effect.succeed([
+      { name: "browser_open", description: "Synthetic", mode: "allow" },
+    ])
+  )
+  readonly gate = new AccessGate(this.access, () => Effect.succeed(true))
   readonly browser = new BrowserWorkspace(
     new BrowserStore(this.db),
     effectBrowserDriver({
@@ -44,7 +40,7 @@ export class BrowserRecoveryBot extends DurableObject<Record<string, never>> {
       },
       close: async () => {},
     }),
-    () => true,
+    () => Effect.succeed(true),
     browserWake(async () => {})
   )
   constructor(ctx: DurableObjectState, env: Record<string, never>) {
@@ -56,7 +52,10 @@ export class BrowserRecoveryBot extends DurableObject<Record<string, never>> {
   }
   async fetch(request: Request) {
     const uncertain = new URL(request.url).pathname.endsWith("uncertain")
-    if (!this.access.get("browser-operation") && !uncertain)
+    if (
+      !(await Effect.runPromise(this.access.get("browser-operation"))) &&
+      !uncertain
+    )
       await Effect.runPromise(
         this.browser.configure({
           generation: 0,
@@ -92,7 +91,8 @@ export class BrowserRecoveryBot extends DurableObject<Record<string, never>> {
       actions: this.db.all<{ actions: number }>(
         "SELECT actions FROM browser_probe"
       )[0]!.actions,
-      receipt: this.access.get("browser-operation")?.status,
+      receipt: (await Effect.runPromise(this.access.get("browser-operation")))
+        ?.status,
     })
   }
 }

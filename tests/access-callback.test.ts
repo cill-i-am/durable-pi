@@ -53,10 +53,12 @@ async function fixture(
   const directory = await mkdtemp(join(tmpdir(), "access-callback-"))
   const turn = crypto.randomUUID(),
     controller = options.controller ?? new AbortController()
-  const store = new AccessStore(database(), () => [
-    { name: "checked", description: "Synthetic operation", mode: "allow" },
-  ])
-  const gate = new AccessGate(store, () => true)
+  const store = new AccessStore(database(), () =>
+    Effect.sync(() => [
+      { name: "checked", description: "Synthetic operation", mode: "allow" },
+    ])
+  )
+  const gate = new AccessGate(store, () => Effect.sync(() => true))
   const active = vi.fn(() =>
     options.active ? options.active(turn) : Effect.succeed(turn)
   )
@@ -153,7 +155,7 @@ it("does not admit a pre-aborted SDK invocation", async () => {
   )
   expect(f.active).not.toHaveBeenCalled()
   expect(f.execute).not.toHaveBeenCalled()
-  expect(f.store.get(f.id)).toBeUndefined()
+  expect(Effect.runSync(f.store.get(f.id))).toBeUndefined()
 })
 it("joins authority lookup finalization before its SDK invocation settles", async () => {
   const entered = deferred<void>(),
@@ -182,7 +184,7 @@ it("joins authority lookup finalization before its SDK invocation settles", asyn
   await cleaning.promise
   expect(settled).toBe(false)
   expect(f.execute).not.toHaveBeenCalled()
-  expect(f.store.get(f.id)).toBeUndefined()
+  expect(Effect.runSync(f.store.get(f.id))).toBeUndefined()
   release.resolve()
   expect(tags(await observed)).toContain("Interrupt")
 })
@@ -206,14 +208,14 @@ it("joins a non-cooperative tool, shares its pending invocation and retains the 
   f.controller.abort()
   await Promise.resolve()
   expect(settled).toBe(false)
-  expect(f.store.get(f.id)?.status).toBe("running")
+  expect(Effect.runSync(f.store.get(f.id))?.status).toBe("running")
   pending.resolve({ content: [{ type: "text", text: "late result" }] })
   expect(tags(await observed)).toContain("Interrupt")
   await expect(f.retry()).rejects.toSatisfy((cause: unknown) =>
     tags(cause).includes("Fail")
   )
   expect(f.execute).toHaveBeenCalledOnce()
-  expect(f.store.get(f.id)?.status).toBe("interrupted")
+  expect(Effect.runSync(f.store.get(f.id))?.status).toBe("interrupted")
 })
 it("retains a late tool defect after cancellation and never records a successful receipt", async () => {
   const pending = deferred<ToolExecutionResult>(),
@@ -230,7 +232,7 @@ it("retains a late tool defect after cancellation and never records a successful
   f.controller.abort()
   pending.reject(Cause.die(new Error("private late tool defect")))
   expect(tags(await observed)).toEqual(["Interrupt", "Die"])
-  expect(f.store.get(f.id)?.result).toBeNull()
+  expect(Effect.runSync(f.store.get(f.id))?.result).toBeNull()
   expect(f.execute).toHaveBeenCalledOnce()
 })
 it("retains all native tool reasons instead of boxing a compound Cause as one Fail", async () => {
@@ -243,7 +245,7 @@ it("retains all native tool reasons instead of boxing a compound Cause as one Fa
   const observed = await f.work.catch((cause: unknown) => cause)
   expect(tags(observed)).toEqual(["Fail", "Die", "Interrupt"])
   expect(String(observed)).not.toContain("private tool defect")
-  expect(f.store.get(f.id)?.result).toBeNull()
+  expect(Effect.runSync(f.store.get(f.id))?.result).toBeNull()
 })
 
 it("keeps private storage diagnostics out of Pi's native error rendering", async () => {

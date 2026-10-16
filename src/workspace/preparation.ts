@@ -1,6 +1,11 @@
 import { preserveFatal } from "../shared/effect"
 import { Clock, Effect, Schema, Semaphore } from "effect"
-import { FileNotFound, FileRejected, WorkspaceUnavailable } from "./files"
+import {
+  FileNotFound,
+  FileRejected,
+  WorkspaceUnavailable,
+  WorkspaceReadOnly,
+} from "./files"
 import { type ExtractDocument, ExtractedDocument } from "./documents"
 import {
   type ExtractVideo,
@@ -15,7 +20,7 @@ import type {
   VideoJob,
 } from "./ledger"
 import type { WorkspaceAssets, WorkspaceAsset } from "./assets"
-import { requireWorkspaceFile, requireWorkspaceWritable } from "./domain"
+import { requireWorkspaceFile } from "./domain"
 import { workspaceOperation as attempt } from "./effects"
 
 export const fileAsset = (
@@ -47,24 +52,48 @@ const validatedVideo = (raw: unknown) => {
 export function workspacePreparation(
   ledger: WorkspaceLedger,
   assets: WorkspaceAssets,
-  canWrite: () => boolean,
+  canWrite: () => Effect.Effect<boolean, WorkspaceUnavailable>,
   extractDocument: ExtractDocument,
   extractVideo: ExtractVideo
 ) {
   const processing = Semaphore.makeUnsafe(1)
-  const active = (id: string) => requireWorkspaceFile(ledger.read(id), true)
-  const videoSource = (id: string) => {
-    const file = active(id)
-    if (file.kind !== "video") throw new FileNotFound()
-    return file
-  }
-  const writable = () => requireWorkspaceWritable(canWrite)
+  const active = (id: string) =>
+    ledger
+      .read(id)
+      .pipe(
+        Effect.flatMap((file) =>
+          attempt(() => requireWorkspaceFile(file, true))
+        )
+      )
+  const videoSource = (id: string) =>
+    active(id).pipe(
+      Effect.flatMap((file) =>
+        file.kind === "video"
+          ? Effect.succeed(file)
+          : Effect.fail(new FileNotFound())
+      )
+    )
+  const writable = () =>
+    canWrite().pipe(
+      Effect.flatMap((allowed) =>
+        allowed ? Effect.void : Effect.fail(new WorkspaceReadOnly())
+      )
+    )
   const pendingDocument = () =>
-    canWrite() ? ledger.pendingDocument() : undefined
-  const pendingVideo = () => (canWrite() ? ledger.pendingVideo() : undefined)
+    canWrite().pipe(
+      Effect.flatMap((allowed) =>
+        allowed ? ledger.pendingDocument() : Effect.succeed(undefined)
+      )
+    )
+  const pendingVideo = () =>
+    canWrite().pipe(
+      Effect.flatMap((allowed) =>
+        allowed ? ledger.pendingVideo() : Effect.succeed(undefined)
+      )
+    )
   const video = Effect.fn("Workspace.video")(function* (id: string) {
-    const source = yield* attempt(() => videoSource(id))
-    const prepared = yield* attempt(() => ledger.video(id))
+    const source = yield* videoSource(id)
+    const prepared = yield* ledger.video(id)
     if (prepared?.status !== "ready")
       return yield* new FileRejected({
         message: "Prepare this video's frames from Files before attaching it.",
@@ -72,25 +101,23 @@ export function workspacePreparation(
     const bytes = yield* assets.read(fileAsset(source, "video-v1"))
     if (bytes.byteLength > VIDEO_RESULT_BYTES)
       return yield* new WorkspaceUnavailable()
-    yield* attempt(() => videoSource(id))
+    yield* videoSource(id)
     return yield* Effect.sync(() =>
       validatedVideo(JSON.parse(new TextDecoder().decode(bytes)))
     )
   })
   const retry = Effect.fn("Workspace.retryPreparation")(function* (id: string) {
-    const file = yield* attempt(() => {
-      writable()
-      return active(id)
-    })
+    yield* writable()
+    const file = yield* active(id)
     if (file.kind === "video") {
-      yield* attempt(() =>
-        ledger.atomic(() => {
-          writable()
-          videoSource(id)
-          const existing = ledger.video(id)
-          if (!existing) ledger.enqueueVideo(id)
+      yield* ledger.atomic(() =>
+        Effect.gen(function* () {
+          yield* writable()
+          yield* videoSource(id)
+          const existing = yield* ledger.video(id)
+          if (!existing) yield* ledger.enqueueVideo(id)
           else if (existing.status === "failed")
-            ledger.saveVideo({
+            yield* ledger.saveVideo({
               ...existing,
               status: "pending",
               attempts: 0,
@@ -110,15 +137,15 @@ export function workspacePreparation(
       if (new TextDecoder().decode(bytes.subarray(0, 5)) !== "%PDF-")
         return yield* new FileRejected({ message: "This file is not a PDF." })
     }
-    yield* attempt(() =>
-      ledger.atomic(() => {
-        writable()
-        active(id)
-        ledger.promotePdf(id)
-        const existing = ledger.document(id)
-        if (!existing) ledger.enqueueDocument(id)
+    yield* ledger.atomic(() =>
+      Effect.gen(function* () {
+        yield* writable()
+        yield* active(id)
+        yield* ledger.promotePdf(id)
+        const existing = yield* ledger.document(id)
+        if (!existing) yield* ledger.enqueueDocument(id)
         else if (existing.status === "failed" || existing.status === "empty")
-          ledger.saveDocument({
+          yield* ledger.saveDocument({
             ...existing,
             status: "pending",
             attempts: 0,
@@ -128,7 +155,7 @@ export function workspacePreparation(
     )
   })
   const nextVideo = Effect.fn("Workspace.prepareVideo")(function* () {
-    const pending = yield* attempt(pendingVideo),
+    const pending = yield* pendingVideo(),
       now = yield* Clock.currentTimeMillis
     if (!pending || pending.retryAt > now) return false
     const running: VideoJob = {
@@ -136,18 +163,13 @@ export function workspacePreparation(
       status: "running",
       attempts: pending.attempts + 1,
     }
-    if (!(yield* attempt(() => ledger.claimVideo(running)))) return false
+    if (!(yield* ledger.claimVideo(running))) return false
     const update = (
       status: VideoJob["status"],
       error: string | null,
       retryAt = 0
     ) =>
-      attempt(() =>
-        ledger.saveVideo(
-          { ...running, status, error, retryAt },
-          running.attempts
-        )
-      )
+      ledger.saveVideo({ ...running, status, error, retryAt }, running.attempts)
     if (running.attempts > 3) {
       yield* update(
         "failed",
@@ -156,26 +178,27 @@ export function workspacePreparation(
       return true
     }
     yield* Effect.gen(function* () {
-      const source = yield* attempt(() => videoSource(pending.id))
-      const fence = () => {
-        videoSource(pending.id)
-        writable()
-        if (ledger.video(pending.id)?.attempts !== running.attempts)
-          throw new FileNotFound()
-      }
+      const source = yield* videoSource(pending.id)
+      const fence = () =>
+        Effect.gen(function* () {
+          yield* videoSource(pending.id)
+          yield* writable()
+          if ((yield* ledger.video(pending.id))?.attempts !== running.attempts)
+            return yield* new FileNotFound()
+        })
       const original = yield* assets.read(fileAsset(source))
-      yield* attempt(fence)
+      yield* fence()
       const raw = yield* extractVideo(original)
       const result = yield* Effect.sync(() => validatedVideo(raw))
-      yield* attempt(fence)
+      yield* fence()
       yield* assets.write(
         fileAsset(source, "video-v1"),
         new TextEncoder().encode(JSON.stringify(result))
       )
-      yield* attempt(() =>
-        ledger.atomic(() => {
-          fence()
-          ledger.saveVideo(
+      yield* ledger.atomic(() =>
+        Effect.gen(function* () {
+          yield* fence()
+          yield* ledger.saveVideo(
             {
               ...running,
               status: "ready",
@@ -215,18 +238,16 @@ export function workspacePreparation(
     return true
   })
   const next = Effect.fn("Workspace.prepareNext")(function* () {
-    const pending = yield* attempt(pendingDocument)
+    const pending = yield* pendingDocument()
     if (!pending) return yield* nextVideo()
     if (pending.attempts >= 3) {
-      yield* attempt(() =>
-        ledger.saveDocument(
-          {
-            ...pending,
-            status: "failed",
-            error: "Extraction was interrupted. Retry from Files.",
-          },
-          pending.attempts
-        )
+      yield* ledger.saveDocument(
+        {
+          ...pending,
+          status: "failed",
+          error: "Extraction was interrupted. Retry from Files.",
+        },
+        pending.attempts
       )
       return true
     }
@@ -235,35 +256,36 @@ export function workspacePreparation(
       status: "running",
       attempts: pending.attempts + 1,
     }
-    if (!(yield* attempt(() => ledger.claimDocument(running)))) return false
+    if (!(yield* ledger.claimDocument(running))) return false
     const update = (status: DocumentJob["status"], error: string | null) =>
-      attempt(() =>
-        ledger.saveDocument({ ...running, status, error }, running.attempts)
-      )
+      ledger.saveDocument({ ...running, status, error }, running.attempts)
     yield* Effect.gen(function* () {
-      const source = yield* attempt(() => active(pending.id))
-      const fence = () => {
-        active(pending.id)
-        writable()
-        if (ledger.document(pending.id)?.attempts !== running.attempts)
-          throw new FileNotFound()
-      }
+      const source = yield* active(pending.id)
+      const fence = () =>
+        Effect.gen(function* () {
+          yield* active(pending.id)
+          yield* writable()
+          if (
+            (yield* ledger.document(pending.id))?.attempts !== running.attempts
+          )
+            return yield* new FileNotFound()
+        })
       const original = yield* assets.read(fileAsset(source))
-      yield* attempt(fence)
+      yield* fence()
       const raw = yield* extractDocument(original)
       const result = yield* Effect.sync(() =>
         Schema.decodeUnknownSync(ExtractedDocument)(raw)
       )
-      yield* attempt(fence)
+      yield* fence()
       if (result.text)
         yield* assets.write(
           fileAsset(source, "pdf-text-v1"),
           new TextEncoder().encode(result.text)
         )
-      yield* attempt(() =>
-        ledger.atomic(() => {
-          fence()
-          ledger.saveDocument(
+      yield* ledger.atomic(() =>
+        Effect.gen(function* () {
+          yield* fence()
+          yield* ledger.saveDocument(
             {
               ...running,
               status: result.text ? "ready" : "empty",
@@ -306,6 +328,9 @@ export function workspacePreparation(
     video,
     retry,
     next: () => processing.withPermits(1)(next()),
-    pending: () => attempt(() => !!pendingDocument() || !!pendingVideo()),
+    pending: () =>
+      Effect.gen(function* () {
+        return !!(yield* pendingDocument()) || !!(yield* pendingVideo())
+      }),
   }
 }

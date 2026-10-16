@@ -1,5 +1,6 @@
-import { Schema, type Effect } from "effect"
+import { Schema, Effect } from "effect"
 import { defineTool, type ToolExecutionApi } from "@earendil-works/pi-durable"
+import type { DelegationFailure } from "../../delegation/contracts"
 import { Type } from "@earendil-works/pi-ai"
 import {
   DelegateInput,
@@ -15,7 +16,9 @@ type Runner = <T, TError>(
 export const communicationInstructions = `For an internal question or text-only drafting task for another named bot, use discover_bots then delegate_bot. Supply only the necessary text and all constraints. This persists a dependency and returns immediately. You may finish your reply while waiting; a correlated result will return to this chat. Do not claim acceptance is completion, poll in a loop, share object/file IDs as authority, or retry by creating another task. Recipients have no tools, external actions or onward delegation. Activity supports cancellation and safe delivery retries.`
 export function communicationTools(
   app: Communication["Service"],
-  source: (api: ToolExecutionApi) => Source,
+  source: (
+    api: ToolExecutionApi
+  ) => Source | Effect.Effect<Source, DelegationFailure>,
   run: Runner
 ) {
   return [
@@ -55,7 +58,15 @@ export function communicationTools(
               await run(
                 app.delegate(
                   Schema.decodeUnknownSync(DelegateInput)(input),
-                  source(api)
+                  await run(
+                    Effect.suspend(() => {
+                      const value = source(api)
+                      return Effect.isEffect(value)
+                        ? value
+                        : Effect.succeed(value)
+                    }),
+                    context.abortSignal
+                  )
                 ),
                 context.abortSignal
               )

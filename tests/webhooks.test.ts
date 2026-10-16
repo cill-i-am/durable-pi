@@ -218,10 +218,10 @@ describe("inbound webhook authority and durable receipts", () => {
     f.routines.deliver((run) =>
       conversations.admit({ operationId: run.turnId, text: run.prompt })
     )
-    expect(conversations.recent()[0]?.text).toContain(
+    expect(Effect.runSync(conversations.recent())[0]?.text).toContain(
       "untrusted source material"
     )
-    expect(conversations.recent()[0]?.text).toContain(f.payload)
+    expect(Effect.runSync(conversations.recent())[0]?.text).toContain(f.payload)
     expect(f.routines.inFlight()?.deadline).toBeGreaterThan(Date.now())
   })
   it("retains dedup receipts at the limit rather than reopening old event IDs", async () => {
@@ -492,9 +492,7 @@ describe("webhook HTTP boundary", () => {
   })
   it("public forwarding selects the configured owner and strips hostile headers and cookies", async () => {
     const f = await fixture(),
-      first = vi.fn(async () => "configured-owner"),
-      bind = vi.fn(() => ({ first })),
-      prepare = vi.fn(() => ({ bind }))
+      owner = vi.fn(() => Effect.succeed("configured-owner"))
     const fetch = vi.fn(async (request: Request) => {
       expect(request.headers.get("x-owner-id")).toBe("configured-owner")
       expect(request.headers.get("cookie")).toBeNull()
@@ -503,8 +501,7 @@ describe("webhook HTTP boundary", () => {
       return Response.json({ runId: "safe" }, { status: 202 })
     })
     const env = {
-      OWNER_EMAIL: "owner@example.com",
-      DB: { prepare },
+      owner,
       AGENT_SERVICE: { fetch },
     }
     const request = new Request("https://bot.example/api/hooks/home/id", {
@@ -522,7 +519,7 @@ describe("webhook HTTP boundary", () => {
     const result = await receiveWebhook(request, "home", f.id, env)
     expect(result.status).toBe(202)
     expect(result.headers.get("cache-control")).toBe("no-store")
-    expect(bind).toHaveBeenCalledWith("owner@example.com")
+    expect(owner).toHaveBeenCalledOnce()
     expect(
       (
         await receiveWebhook(

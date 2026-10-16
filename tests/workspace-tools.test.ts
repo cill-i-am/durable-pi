@@ -46,7 +46,7 @@ it("native Pi file tools retain the actor runner, invocation Context, cancellati
   const workspace = makeWorkspace(
     ledger,
     assets,
-    () => true,
+    () => Effect.sync(() => true),
     () => Effect.fail(new WorkspaceUnavailable()),
     () => Effect.fail(new WorkspaceUnavailable())
   )

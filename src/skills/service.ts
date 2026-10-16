@@ -1,7 +1,5 @@
-import { Schema, Context, Effect, Layer } from "effect"
+import { Context, Effect, Layer } from "effect"
 import {
-  SkillConflict,
-  SkillStorageError,
   type Skill,
   type SkillDocument,
   type SaveSkill,
@@ -30,49 +28,25 @@ export class Skills extends Context.Service<
   }
 >()("durable-pi/skills/Skills") {}
 
-const attempt = <T>(body: () => T) =>
-  Effect.try({
-    try: body,
-    catch(cause) {
-      const knownFailure = Schema.decodeUnknownOption(
-        Schema.Union([SkillConflict, SkillStorageError])
-      )(cause)
-      if (knownFailure._tag === "Some") return knownFailure.value
-      throw cause
-    },
-  })
 export const makeSkills = (ledger: SkillLedger) =>
   Skills.of({
-    list: Effect.fn("Skills.list")(() => attempt(() => ledger.list())),
-    versions: Effect.fn("Skills.versions")((id: string) =>
-      attempt(() => ledger.versions(id))
-    ),
-    save: Effect.fn("Skills.save")((input: SaveSkill) =>
-      attempt(() => ledger.save(input))
-    ),
+    list: Effect.fn("Skills.list")(() => ledger.list()),
+    versions: Effect.fn("Skills.versions")((id: string) => ledger.versions(id)),
+    save: Effect.fn("Skills.save")((input: SaveSkill) => ledger.save(input)),
     archive: Effect.fn("Skills.archive")(
       (id: string, revision: number, archived: boolean) =>
-        attempt(() => ledger.archive(id, revision, archived))
+        ledger.archive(id, revision, archived)
     ),
     resolve: Effect.fn("Skills.resolve")((references: SelectSkills["skills"]) =>
-      attempt(() => ledger.resolve(references))
+      ledger.resolve(references)
     ),
-    selection: Effect.fn("Skills.selection")(() =>
-      attempt(() => ledger.selection())
-    ),
+    selection: Effect.fn("Skills.selection")(() => ledger.selection()),
     select: Effect.fn("Skills.select")(
       (
         revision: number,
         skills: readonly SkillDocument[],
-        canWrite: () => boolean
-      ) =>
-        attempt(() => {
-          if (!canWrite())
-            throw new SkillConflict({
-              message: "Restore this bot before changing its skills.",
-            })
-          return ledger.select(revision, skills)
-        })
+        canWrite: () => Effect.Effect<boolean, SkillError>
+      ) => ledger.select(revision, skills, canWrite)
     ),
   })
 export const skillApplication = (ledger: SkillLedger) =>

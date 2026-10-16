@@ -15,11 +15,14 @@
     "deploy": "alchemy deploy --stage production --profile durable-pi",
     "test": "vitest run",
     "verify": "pnpm verify:static && pnpm verify:unit-and-build && pnpm verify:native-runtime",
-    "verify:static": "node --import tsx scripts/check-secrets.ts && pnpm generate-routes && pnpm typecheck && pnpm lint && pnpm check",
+    "verify:static": "node --import tsx scripts/check-secrets.ts && pnpm generate-routes && pnpm db:check:agent && pnpm typecheck && pnpm lint && pnpm check",
     "verify:unit-and-build": "pnpm generate-routes && pnpm test && pnpm build && pnpm build:workers",
-    "verify:native-runtime": "pnpm generate-routes && pnpm test:communication-runtime",
+    "verify:native-runtime": "pnpm generate-routes && pnpm test:communication-runtime && pnpm test:drizzle-runtime",
     "model:login": "tsx scripts/model-login.ts",
-    "test:communication-runtime": "node scripts/test-communication-runtime.mjs"
+    "test:communication-runtime": "node scripts/test-communication-runtime.mjs",
+    "db:generate:agent": "drizzle-kit generate --config drizzle.agent.config.ts && node scripts/generate-agent-migration-manifest.mjs",
+    "db:check:agent": "node scripts/generate-agent-migration-manifest.mjs --check",
+    "test:drizzle-runtime": "node scripts/test-drizzle-runtime.mjs"
   },
   "dependencies": {
     "@alchemy.run/frontend-frameworks": "2.0.0-beta.81",
@@ -31,6 +34,7 @@
     "@earendil-works/pi-durable": "1.0.4",
     "@effect/platform-bun": "4.0.1",
     "@effect/platform-node": "4.0.1",
+    "@effect/sql-sqlite-do": "4.0.1",
     "@fontsource-variable/geist": "^5.3.0",
     "@fontsource-variable/geist-mono": "^5.3.0",
     "@modelcontextprotocol/client": "2.0.0",
@@ -73,7 +77,7 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "5.20261006.1",
-    "@effect/sql-sqlite-do": "4.0.1",
+    "@effect/sql-sqlite-node": "4.0.1",
     "@effect/vitest": "4.0.1",
     "@tanstack/devtools-vite": "latest",
     "@tanstack/eslint-config": "latest",

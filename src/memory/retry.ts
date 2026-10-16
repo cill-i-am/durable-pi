@@ -19,7 +19,7 @@ import { summaryRetryTransition, type SummaryRouteLedger } from "./routing"
 export type SummaryRetry = Part & { operationId: string }
 export interface SummaryRetryAuthority {
   readonly transactionGroup: object
-  archived: () => boolean
+  archived: () => Effect.Effect<boolean, MemoryStorageError>
 }
 const attempt = <T>(body: () => T) =>
   Effect.try({
@@ -68,43 +68,52 @@ export function memorySummaryRetry<TError, TRequirements>(
       candidate: ResolvedRoute,
       catalog: ModelCatalog
     ) =>
-      attempt(() => {
-        checkGroup()
-        return memory.atomic(() => {
-          const applied = routes.applied(input.operationId, input)
+      memory.atomic(() =>
+        Effect.gen(function* () {
+          yield* attempt(checkGroup)
+          const applied = yield* routes.applied(input.operationId, input)
           if (applied) return false
-          summaryRetryTransition({
-            applied,
-            archived: authority.archived(),
-            revision: routes.revision(input),
-            expectedRevision: revision,
-            paused: memory.paused(input),
-          })
-          const capability = validateRoute(candidate, catalog)
-          if (!memory.retrySummary(input))
-            throw new InvalidMemory({
+          const archived = yield* authority.archived(),
+            currentRevision = yield* routes.revision(input),
+            paused = yield* memory.paused(input)
+          yield* attempt(() =>
+            summaryRetryTransition({
+              applied,
+              archived,
+              revision: currentRevision,
+              expectedRevision: revision,
+              paused,
+            })
+          )
+          const capability = yield* attempt(() =>
+            validateRoute(candidate, catalog)
+          )
+          if (!(yield* memory.retrySummary(input)))
+            return yield* new InvalidMemory({
               message: "This summary is not paused. Refresh its status.",
             })
-          routes.replace(input, input.operationId, {
+          yield* routes.replace(input, input.operationId, {
             ...candidate,
             contextWindow: capability.contextWindow,
           })
           return true
         })
-      })
+      )
   )
   return Effect.fn("Memory.retrySummary")(function* (input: SummaryRetry) {
-    const state = yield* attempt(() => {
-      checkGroup()
-      if (routes.applied(input.operationId, input))
-        return { applied: true as const }
-      const revision = routes.revision(input)
-      if (!memory.paused(input))
-        throw new InvalidMemory({
-          message: "This summary is not paused. Refresh its status.",
-        })
-      return { applied: false as const, revision }
-    })
+    const state = yield* memory.atomic(() =>
+      Effect.gen(function* () {
+        yield* attempt(checkGroup)
+        if (yield* routes.applied(input.operationId, input))
+          return { applied: true as const }
+        const revision = yield* routes.revision(input)
+        if (!(yield* memory.paused(input)))
+          return yield* new InvalidMemory({
+            message: "This summary is not paused. Refresh its status.",
+          })
+        return { applied: false as const, revision }
+      })
+    )
     if (state.applied) return yield* host.wake().pipe(Effect.uninterruptible)
     const candidate = resolveRoute(
       "memory",

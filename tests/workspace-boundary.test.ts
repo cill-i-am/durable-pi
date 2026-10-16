@@ -2,8 +2,7 @@ import { afterEach, expect, it } from "vitest"
 import { it as effectIt } from "@effect/vitest"
 import { Cause, Effect, Exit, ManagedRuntime, Semaphore } from "effect"
 import { TestClock } from "effect/testing"
-import { database } from "./database"
-import type { Sqlite } from "../src/storage/sqlite"
+import { database, corrupt } from "./database"
 import { SqliteWorkspace } from "../src/workspace/adapters/sqlite"
 import {
   r2WorkspaceAssets,
@@ -87,7 +86,7 @@ function fixture(
     workspace: makeWorkspace(
       ledger,
       assets,
-      () => state.writable,
+      () => Effect.sync(() => state.writable),
       extract,
       video
     ),
@@ -122,36 +121,28 @@ effectIt.effect(
       }
       yield* f.workspace.upload(clip)
       yield* f.workspace.extractNext()
-      expect(f.ledger.video(clip.id)).toMatchObject({
+      expect(yield* f.ledger.video(clip.id)).toMatchObject({
         attempts: 1,
         retryAt: 85_000,
       })
       expect(yield* f.workspace.extractNext()).toBe(false)
       yield* TestClock.adjust("60 seconds")
       expect(yield* f.workspace.extractNext()).toBe(true)
-      expect(f.ledger.video(clip.id)?.attempts).toBe(2)
+      expect((yield* f.ledger.video(clip.id))?.attempts).toBe(2)
     })
 )
 
 it("rolls back failed ready publication while retaining the reservation and exact asset for retry", async () => {
   const native = database()
-  let rejectCommit = false
-  const db: Sqlite = {
-    all: native.all,
-    run: native.run,
-    transaction: (change) =>
-      native.transaction(() => {
-        const result = change()
-        if (rejectCommit) throw new Error("Commit not acknowledged")
-        return result
-      }),
-  }
+  const db = native
   const f = fixture(undefined, undefined, db),
     input = upload(),
     write = f.bucket.put
   f.bucket.put = async (...args) => {
     await write(...args)
-    rejectCommit = true
+    native.run(
+      "CREATE TRIGGER reject_file_ready BEFORE UPDATE OF status ON workspace_files BEGIN SELECT RAISE(ABORT,'Commit not acknowledged'); END"
+    )
   }
   expect(
     await Effect.runPromise(f.workspace.upload(input).pipe(Effect.result))
@@ -159,13 +150,13 @@ it("rolls back failed ready publication while retaining the reservation and exac
     _tag: "Failure",
     failure: { _tag: "WorkspaceUnavailable" },
   })
-  expect(f.ledger.read(input.id)?.status).toBe("uploading")
+  expect(Effect.runSync(f.ledger.read(input.id))?.status).toBe("uploading")
   expect(f.values.size).toBe(1)
-  rejectCommit = false
+  native.run("DROP TRIGGER reject_file_ready")
   f.bucket.put = write
   const result = await Effect.runPromise(f.workspace.upload(input))
   expect(result.status).toBe("ready")
-  expect(f.ledger.list()).toHaveLength(1)
+  expect(Effect.runSync(f.ledger.list())).toHaveLength(1)
   expect(f.values.size).toBe(1)
 })
 
@@ -173,7 +164,8 @@ it("keeps malformed file/job records as defects and performs no asset read for c
   const f = fixture(),
     input = pdf()
   await Effect.runPromise(f.workspace.upload(input))
-  f.db.run(
+  corrupt(
+    f.db,
     "UPDATE workspace_extractions SET status='corrupt' WHERE id=?",
     input.id
   )
@@ -184,7 +176,11 @@ it("keeps malformed file/job records as defects and performs no asset read for c
   )
   expect(Exit.isFailure(content) && Cause.hasDies(content.cause)).toBe(true)
   expect(f.calls.reads).toBe(0)
-  f.db.run("UPDATE workspace_files SET kind='corrupt' WHERE id=?", input.id)
+  corrupt(
+    f.db,
+    "UPDATE workspace_files SET kind='corrupt' WHERE id=?",
+    input.id
+  )
   const row = await Effect.runPromiseExit(f.workspace.requireFiles([input.id]))
   expect(Exit.isFailure(row) && Cause.hasDies(row.cause)).toBe(true)
 })
@@ -203,13 +199,14 @@ it("does not publish a PDF result after a newer preparation generation claimed t
   await Effect.runPromise(f.workspace.upload(input))
   const pending = Effect.runPromise(f.workspace.extractNext())
   await entered.promise
-  f.db.run(
+  corrupt(
+    f.db,
     "UPDATE workspace_extractions SET attempts=2,status='running' WHERE id=?",
     input.id
   )
   release.resolve()
   expect(await pending).toBe(true)
-  expect(f.ledger.document(input.id)).toMatchObject({
+  expect(Effect.runSync(f.ledger.document(input.id))).toMatchObject({
     status: "running",
     attempts: 2,
     pages: 0,
@@ -236,7 +233,7 @@ it("pauses PDF publication after archive and resumes through the same durable jo
   f.state.writable = false
   release.resolve()
   await pending
-  expect(f.ledger.document(input.id)).toMatchObject({
+  expect(Effect.runSync(f.ledger.document(input.id))).toMatchObject({
     status: "pending",
     attempts: 1,
   })
@@ -246,7 +243,7 @@ it("pauses PDF publication after archive and resumes through the same durable jo
   )
   f.state.writable = true
   await Effect.runPromise(f.workspace.extractNext())
-  expect(f.ledger.document(input.id)).toMatchObject({
+  expect(Effect.runSync(f.ledger.document(input.id))).toMatchObject({
     status: "ready",
     attempts: 2,
   })
@@ -271,7 +268,7 @@ it("rechecks authority after original acquisition before dispatching the documen
   }
   await Effect.runPromise(f.workspace.extractNext())
   expect(decodes).toBe(0)
-  expect(f.ledger.document(input.id)?.status).toBe("pending")
+  expect(Effect.runSync(f.ledger.document(input.id))?.status).toBe("pending")
 })
 
 it("joins an interrupted R2 body and its release before caller resources close", async () => {
@@ -340,11 +337,11 @@ it("retains shared native transaction identity for final attachment eligibility"
   await runtime.runPromise(workspace.upload(input))
   expect(admission.transactionGroup).toBe(f.db)
   expect(
-    f.db.transaction(() => admission.requireFiles([input.id]))
+    Effect.runSync(f.db.transaction(() => admission.requireFiles([input.id])))
   ).toHaveLength(1)
   await runtime.runPromise(workspace.trash(input.id, true))
   expect(() =>
-    f.db.transaction(() => admission.requireFiles([input.id]))
+    Effect.runSync(f.db.transaction(() => admission.requireFiles([input.id])))
   ).toThrow()
   expect(
     JSON.stringify(await runtime.runPromise(workspace.list()))
@@ -391,11 +388,11 @@ it("serializes preparation calls and claims each file once instead of treating l
   expect(await two).toBe(true)
   expect(maximum).toBe(1)
   expect(decodes).toBe(2)
-  expect(f.ledger.document(first.id)).toMatchObject({
+  expect(Effect.runSync(f.ledger.document(first.id))).toMatchObject({
     status: "ready",
     attempts: 1,
   })
-  expect(f.ledger.document(second.id)).toMatchObject({
+  expect(Effect.runSync(f.ledger.document(second.id))).toMatchObject({
     status: "ready",
     attempts: 1,
   })
@@ -429,7 +426,7 @@ it("interrupted upload joins its native write, retains an exact reservation, and
   })
   await entered.promise
   input.bytes.fill(120)
-  const date = f.ledger.read(input.id)!.createdAt
+  const date = Effect.runSync(f.ledger.read(input.id))!.createdAt
   abort.abort()
   const replay = Effect.runPromise(
     permit.withPermits(1)(
@@ -441,7 +438,7 @@ it("interrupted upload joins its native write, retains an exact reservation, and
   await Promise.resolve()
   expect(completed).toBe(false)
   expect(calls).toBe(1)
-  expect(f.ledger.read(input.id)?.status).toBe("uploading")
+  expect(Effect.runSync(f.ledger.read(input.id))?.status).toBe("uploading")
   release.resolve()
   const exit = await first
   expect(Exit.isFailure(exit) && Cause.hasInterrupts(exit.cause)).toBe(true)
@@ -518,7 +515,9 @@ it.each(["pdf", "video"])(
         )
     ).toBe(true)
     expect(
-      kind === "pdf" ? f.ledger.document(input.id) : f.ledger.video(input.id)
+      kind === "pdf"
+        ? Effect.runSync(f.ledger.document(input.id))
+        : Effect.runSync(f.ledger.video(input.id))
     ).toMatchObject({ status: "running", attempts: 1, error: null })
   }
 )

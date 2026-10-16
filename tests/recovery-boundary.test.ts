@@ -9,7 +9,7 @@ import {
   initialRecovery,
   type Observation,
 } from "../src/conversations/recovery"
-import { database } from "./database"
+import { database, corrupt } from "./database"
 import { makeConversations } from "../src/conversations/service"
 
 const failure = (id: number): Observation => ({
@@ -23,8 +23,8 @@ const failure = (id: number): Observation => ({
 function fixture() {
   const db = database(),
     turns = new ConversationStore(db, { model: "test", thinking: "off" })
-  turns.admit({ operationId: "root", text: "hello" })
-  turns.submitted("root", "session")
+  Effect.runSync(turns.admit({ operationId: "root", text: "hello" }))
+  Effect.runSync(turns.submitted("root", "session"))
   const ledger = new RunRecoveryStore(db)
   const recovery = makeRunRecovery(ledger, webCryptoRecoveryFingerprint)
   return { db, turns, ledger, recovery }
@@ -42,12 +42,17 @@ it.effect(
           privateData: "private output",
         }),
       ]) {
-        f.db.run("UPDATE chat_turns SET recovery=? WHERE id='root'", recovery)
+        corrupt(
+          f.db,
+          "UPDATE chat_turns SET recovery=? WHERE id='root'",
+          recovery
+        )
         const exit = yield* conversations.statusTurns().pipe(Effect.exit)
         expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)
         expect(Exit.isFailure(exit) && Cause.hasFails(exit.cause)).toBe(false)
       }
-      f.db.run(
+      corrupt(
+        f.db,
         "UPDATE chat_turns SET recovery=? WHERE id='root'",
         JSON.stringify({
           view: { phase: "blocked" },
@@ -88,7 +93,7 @@ it.effect(
           "epoch",
           "epoch",
           [failure(1)],
-          () => undefined
+          () => Effect.sync(() => undefined)
         )
       ).toBeUndefined()
       expect(yield* f.recovery.get("root")).toBeUndefined()
@@ -99,7 +104,7 @@ it.effect(
         "epoch",
         "epoch",
         [failure(1), failure(2), failure(3)],
-        () => "epoch"
+        () => Effect.sync(() => "epoch")
       )
       expect(state?.view?.phase).toBe("recovering")
       expect(
@@ -119,7 +124,7 @@ it.effect(
         "new epoch",
         "old epoch",
         observations,
-        () => "stale-request"
+        () => Effect.sync(() => "stale-request")
       )
       expect(stale?.view).toBeNull()
       expect(stale?.buckets).toEqual([])
@@ -129,7 +134,7 @@ it.effect(
         "new epoch",
         "old epoch",
         [{ ...failure(4), outcome: "denied" }],
-        () => "stale-request"
+        () => Effect.sync(() => "stale-request")
       )
       expect(denied?.view).toMatchObject({ phase: "blocked", reason: "denied" })
     })
@@ -161,7 +166,8 @@ it.effect(
   () =>
     Effect.gen(function* () {
       const f = fixture()
-      f.db.run(
+      corrupt(
+        f.db,
         "UPDATE chat_turns SET recovery=? WHERE id='root'",
         JSON.stringify({
           ...initialRecovery("legacy epoch"),
@@ -181,7 +187,8 @@ it.effect(
           buckets: [{ fingerprint: "hash", count: "bad" }],
         },
       ]) {
-        f.db.run(
+        corrupt(
+          f.db,
           "UPDATE chat_turns SET recovery=? WHERE id='root'",
           JSON.stringify(bad)
         )
@@ -197,14 +204,14 @@ it.effect(
     Effect.gen(function* () {
       const f = fixture()
       const exit = yield* f.recovery
-        .observe("root", "session", "epoch", "epoch", [], () => {
-          throw new Error("guard bug")
-        })
+        .observe("root", "session", "epoch", "epoch", [], () =>
+          Effect.sync(() => {
+            throw new Error("guard bug")
+          })
+        )
         .pipe(Effect.exit)
       expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)
-      f.db.all = () => {
-        throw new Error("driver unavailable")
-      }
+      f.db.run("DROP TABLE chat_turns")
       expect(yield* f.recovery.get("root").pipe(Effect.result)).toMatchObject({
         _tag: "Failure",
         failure: { _tag: "ConversationStorageError" },

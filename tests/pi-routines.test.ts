@@ -25,7 +25,7 @@ it("requires durable approval to arm a native Pi routine and replays it once aft
     path = join(directory, "pi.sqlite")
   const db = database(),
     routines = routineFixture(db, () => true)
-  let store = new AccessStore(db, () => builtInTools)
+  let store = new AccessStore(db, () => Effect.succeed(builtInTools))
   const turnId = crypto.randomUUID(),
     id = crypto.randomUUID()
   let approvalReady!: () => void
@@ -56,12 +56,12 @@ it("requires durable approval to arm a native Pi routine and replays it once aft
   function options() {
     const gate = new AccessGate(
       store,
-      () => true,
+      () => Effect.succeed(true),
       () => {
         if (
-          store
-            .pending()
-            .some((op) => op.tool === "save_routine" && op.status === "pending")
+          Effect.runSync(store.pending()).some(
+            (op) => op.tool === "save_routine" && op.status === "pending"
+          )
         )
           approvalReady()
       }
@@ -98,11 +98,11 @@ it("requires durable approval to arm a native Pi routine and replays it once aft
     const first = await conversation.submit(command, ctx)
     await waiting
     expect(routines.list()).toHaveLength(0)
-    const approval = store.pending()[0]!
+    const approval = Effect.runSync(store.pending())[0]!
     expect(approval.tool).toBe("save_routine")
     await harness.close(ctx)
-    store = new AccessStore(db, () => builtInTools)
-    store.decide(approval.id, true, approval.revision)
+    store = new AccessStore(db, () => Effect.succeed(builtInTools))
+    await Effect.runPromise(store.decide(approval.id, true, approval.revision))
     harness = await Harness.open(
       await openNodeSqliteStorage(path),
       options(),

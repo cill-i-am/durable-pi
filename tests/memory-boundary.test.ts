@@ -1,7 +1,7 @@
 import { TestClock } from "effect/testing"
 import { expect, it } from "@effect/vitest"
 import { Cause, Effect, Exit, Schema } from "effect"
-import { database } from "./database"
+import { database, corrupt } from "./database"
 import {
   makeSqliteMemory,
   sqliteMemoryLayer,
@@ -33,7 +33,7 @@ it.effect(
         memory = makeMemoryRepository(ledger)
       yield* TestClock.setTime(100)
       const operation = memory.append("source", "user", "Text")
-      expect(ledger.total()).toBe(0)
+      expect(yield* ledger.total()).toBe(0)
       yield* TestClock.setTime(200)
       const saved = yield* operation
       expect(saved.date).toBe(new Date(200).toISOString())
@@ -145,7 +145,7 @@ it.effect(
         yield* memory.saveNode({ start: 0, count: 1 }, "Summary")
         yield* memory.failNode({ start: 0, count: 1 }, 10000)
         yield* memory.writeNote("notes.md", "Decision", 0)
-        db.run(mutation.sql)
+        corrupt(db, mutation.sql)
         const exit = yield* mutation.read(memory).pipe(Effect.exit)
         expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)
         expect(Exit.isFailure(exit) && Cause.hasFails(exit.cause)).toBe(false)
@@ -158,7 +158,7 @@ it.effect(
     Effect.gen(function* () {
       const db = database(),
         memory = yield* makeSqliteMemory(db)
-      db.run("UPDATE memory_view_state SET compacting=2")
+      corrupt(db, "UPDATE memory_view_state SET compacting=2")
       const exit = yield* memory
         .append("source", "user", "Text")
         .pipe(Effect.exit)

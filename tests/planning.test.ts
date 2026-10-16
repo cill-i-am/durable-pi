@@ -105,9 +105,12 @@ it("persists atomic plans, revisions, root bindings and replay receipts across r
     writable = true,
     valid = true
   const authority: PlanAuthority = {
-    current: (id) => (writable && id === origin.turnId ? origin : undefined),
-    cancelled: () => false,
-    receipts: () => [],
+    current: (id) =>
+      Effect.sync(() =>
+        writable && id === origin.turnId ? origin : undefined
+      ),
+    cancelled: () => Effect.sync(() => false),
+    receipts: () => Effect.sync(() => []),
     evidence: (ref) =>
       Effect.succeed({
         ...ref,
@@ -296,9 +299,9 @@ it("does not let cancellation before plan creation or changed requirements retai
   )
   let origin = source()
   const plans = piPlans(async () => harness, {
-    current: () => origin,
-    cancelled: () => false,
-    receipts: () => [],
+    current: () => Effect.sync(() => origin),
+    cancelled: () => Effect.sync(() => false),
+    receipts: () => Effect.sync(() => []),
     evidence: (ref) =>
       Effect.succeed({ ...ref, state: "valid", detail: "Recorded source" }),
   })
@@ -353,23 +356,25 @@ it("uses native tools in a multi-step run, injects one fresh context per request
   }
   let origin = source(),
     actions = 0
-  const access = new AccessStore(database(), () => [
-    ...builtInTools,
-    { name: "save_draft", description: "fixture", mode: "allow" },
-  ])
+  const access = new AccessStore(database(), () =>
+    Effect.sync(() => [
+      ...builtInTools,
+      { name: "save_draft", description: "fixture", mode: "allow" },
+    ])
+  )
   const plans = piPlans(async () => harness, {
-    current: () => origin,
-    cancelled: () => false,
-    receipts: () => [],
+    current: () => Effect.sync(() => origin),
+    cancelled: () => Effect.sync(() => false),
+    receipts: () => Effect.sync(() => []),
     evidence: (ref) =>
       Effect.succeed({ ...ref, state: "valid", detail: "Saved" }),
   })
   const registry = createRegistry()
   registry.install({
     name: "planning",
-    hooks: [planContextHook(plans, () => origin)],
+    hooks: [planContextHook(plans, () => Effect.sync(() => origin))],
     tools: [
-      ...planTools(plans, () => origin),
+      ...planTools(plans, () => Effect.sync(() => origin)),
       defineTool({
         name: "save_draft",
         description: "Fixture action",
@@ -388,7 +393,7 @@ it("uses native tools in a multi-step run, injects one fresh context per request
       }),
     ].map(
       guardedTools(
-        new AccessGate(access, () => true),
+        new AccessGate(access, () => Effect.sync(() => true)),
         () => Effect.succeed(origin.turnId),
         recoverablePlanTools
       )
@@ -471,7 +476,7 @@ it("uses native tools in a multi-step run, injects one fresh context per request
     ).wait(ctx)
     await conversation.waitForIdle(ctx)
     expect(actions).toBe(1)
-    expect(access.pending()).toHaveLength(0)
+    expect(Effect.runSync(access.pending())).toHaveLength(0)
     expect((await run(plans.read(id))).plan.blocker).toContain(
       "browser support"
     )
@@ -515,7 +520,7 @@ it("uses native tools in a multi-step run, injects one fresh context per request
     expect(await run(plans.list())).toHaveLength(1)
     expect(actions).toBe(1)
     expect(requests).toHaveLength(5)
-    expect(access.pending()).toHaveLength(0)
+    expect(Effect.runSync(access.pending())).toHaveLength(0)
   } finally {
     await harness.close(ctx)
     await rm(directory, { recursive: true, force: true })
@@ -547,11 +552,11 @@ it.each([
     }
     origin.inputIds.push(...origin.steering!.map((input) => input.id))
     const plans = piPlans(async () => harness, {
-      current: () => origin,
-      cancelled: () => false,
+      current: () => Effect.sync(() => origin),
+      cancelled: () => Effect.sync(() => false),
       evidence: (ref) =>
         Effect.succeed({ ...ref, state: "valid", detail: "saved" }),
-      receipts: () => [],
+      receipts: () => Effect.sync(() => []),
     })
     const registry = createRegistry()
     registry.install({
@@ -559,11 +564,11 @@ it.each([
       hooks: [
         planContextHook(
           plans,
-          () => origin,
-          () => budget
+          () => Effect.sync(() => origin),
+          () => Effect.sync(() => budget)
         ),
       ],
-      tools: planTools(plans, () => origin),
+      tools: planTools(plans, () => Effect.sync(() => origin)),
     })
     const harness: Harness = await Harness.open(
       await openNodeSqliteStorage(join(directory, "pi.sqlite")),
@@ -633,16 +638,17 @@ it("inspects the bound blocker after native restart without revalidating evidenc
   const origin = source()
   let authorityReads = 0
   const authority: PlanAuthority = {
-    current: () => origin,
-    cancelled: () => {
-      authorityReads++
-      return false
-    },
+    current: () => Effect.sync(() => origin),
+    cancelled: () =>
+      Effect.sync(() => {
+        authorityReads++
+        return false
+      }),
     evidence: (ref) => {
       authorityReads++
       return Effect.succeed({ ...ref, state: "valid", detail: "Saved" })
     },
-    receipts: () => [],
+    receipts: () => Effect.sync(() => []),
   }
   let plans = piPlans(async () => harness, authority)
   const initial = update(1, origin)

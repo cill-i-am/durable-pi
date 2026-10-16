@@ -10,14 +10,8 @@ import {
   Schema,
 } from "effect"
 import { orDieAll, preserveFatal } from "../shared/effect"
-import {
-  CodeOutput,
-  ExecutionFailure,
-  ExecutionStorageError,
-  RunId,
-  RunInput,
-  type CodeRun,
-} from "./contracts"
+import { CodeOutput, ExecutionFailure, RunId, RunInput } from "./contracts"
+import type { CodeRun, ExecutionStorageError } from "./contracts"
 import { ExecutorUnavailable, type CodeExecutor } from "./executor"
 import type { ExecutionLedger } from "./ledger"
 import type { ExecutionOperations, ExecutionTask } from "./execution"
@@ -28,18 +22,6 @@ export class Executions extends Context.Service<
   ExecutionOperations
 >()("durable-pi/execution/Executions") {}
 
-const storage = <T>(body: () => T) =>
-  Effect.try({
-    try: body,
-    catch: (cause) => {
-      const executionStorageError = Schema.decodeUnknownOption(
-        ExecutionStorageError
-      )(cause)
-      if (executionStorageError._tag === "Some")
-        return executionStorageError.value
-      throw cause
-    },
-  })
 const decode = <T>(schema: Schema.ConstraintDecoder<T>, input: unknown) =>
   Schema.decodeUnknownEffect(schema)(input).pipe(
     Effect.mapError(
@@ -50,7 +32,7 @@ const decode = <T>(schema: Schema.ConstraintDecoder<T>, input: unknown) =>
 export const makeExecutions = (
   ledger: ExecutionLedger,
   executor: CodeExecutor,
-  writable: () => boolean
+  writable: () => Effect.Effect<boolean, ExecutionStorageError>
 ) =>
   Effect.gen(function* () {
     const scope = yield* Effect.scope
@@ -75,12 +57,12 @@ export const makeExecutions = (
     ) =>
       Effect.gen(function* () {
         const now = yield* Clock.currentTimeMillis
-        return yield* storage(() =>
-          ledger.atomic(() => {
-            const run = ledger.get(id)
+        return yield* ledger.atomic(() =>
+          Effect.gen(function* () {
+            const run = yield* ledger.get(id)
             if (!run) throw new Error("An admitted execution disappeared")
             const next = finishExecution(run, status, output, now)
-            if (next !== run) ledger.put(next)
+            if (next !== run) yield* ledger.put(next)
             return next
           })
         )
@@ -97,12 +79,13 @@ export const makeExecutions = (
             !Cause.hasDies(exit.cause) &&
             !Cause.hasFails(exit.cause)
           )
-            return storage(() => {
-              const saved = ledger.get(id)
-              if (!saved || saved.status === "running")
-                throw new Error("Interrupted execution was not sealed")
-              return saved
-            })
+            return ledger.get(id).pipe(
+              Effect.map((saved) => {
+                if (!saved || saved.status === "running")
+                  throw new Error("Interrupted execution was not sealed")
+                return saved
+              })
+            )
           return Effect.failCause(exit.cause)
         })
       )
@@ -117,18 +100,21 @@ export const makeExecutions = (
               })
             if (fatal) return yield* Effect.failCause(fatal)
             const now = yield* Clock.currentTimeMillis
-            const admission = yield* storage(() =>
-              ledger.atomic(() => {
+            const admission = yield* ledger.atomic(() =>
+              Effect.gen(function* () {
+                const previous = yield* ledger.get(input.id)
+                const counts = yield* ledger.counts()
+                const allowed = yield* writable()
                 const result = admitExecution(
                   input,
-                  ledger.get(input.id),
-                  ledger.counts(),
-                  writable(),
+                  previous,
+                  counts,
+                  allowed,
                   active.size > 0,
                   now
                 )
                 if (result._tag === "Success" && result.success.fresh)
-                  ledger.put(result.success.run)
+                  yield* ledger.put(result.success.run)
                 return result
               })
             )
@@ -139,7 +125,8 @@ export const makeExecutions = (
             const begin = yield* Deferred.make<void>()
             const perform = Effect.gen(function* () {
               yield* Deferred.await(begin)
-              if (!writable()) return yield* finish(run.id, "cancelled", null)
+              if (!(yield* writable()))
+                return yield* finish(run.id, "cancelled", null)
               const output = yield* executor.run(run.input).pipe(
                 Effect.flatMap((value) =>
                   Schema.decodeUnknownEffect(CodeOutput)(value).pipe(
@@ -190,7 +177,7 @@ export const makeExecutions = (
         const id = yield* decode(RunId, raw)
         return yield* Effect.uninterruptible(
           Effect.gen(function* () {
-            const found = yield* storage(() => ledger.get(id))
+            const found = yield* ledger.get(id)
             if (!found)
               return yield* new ExecutionFailure({ message: "Run not found." })
             const saved = yield* finish(id, "cancelled", null)
@@ -205,10 +192,8 @@ export const makeExecutions = (
       })
     )
     return {
-      list: Effect.fn("Execution.list")(() => storage(() => ledger.list())),
-      get: Effect.fn("Execution.get")((id: string) =>
-        storage(() => ledger.get(id))
-      ),
+      list: Effect.fn("Execution.list")(() => ledger.list()),
+      get: Effect.fn("Execution.get")((id: string) => ledger.get(id)),
       start,
       cancel,
       // 4.0.1 attaches RunOptions.signal after initial evaluation. Yield before
@@ -234,10 +219,12 @@ export const makeExecutions = (
               message: "Wait for the current run before recovery.",
             })
           const now = yield* Clock.currentTimeMillis
-          yield* storage(() =>
-            ledger.atomic(() => {
-              for (const run of ledger.running())
-                ledger.put(finishExecution(run, "interrupted", null, now))
+          yield* ledger.atomic(() =>
+            Effect.gen(function* () {
+              for (const run of yield* ledger.running())
+                yield* ledger.put(
+                  finishExecution(run, "interrupted", null, now)
+                )
             })
           )
         })
@@ -248,5 +235,5 @@ export const makeExecutions = (
 export const executionApplication = (
   ledger: ExecutionLedger,
   executor: CodeExecutor,
-  writable: () => boolean
+  writable: () => Effect.Effect<boolean, ExecutionStorageError>
 ) => Layer.effect(Executions, makeExecutions(ledger, executor, writable))

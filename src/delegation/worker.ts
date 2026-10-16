@@ -1,3 +1,12 @@
+import {
+  Scheduler,
+  Effect,
+  Exit,
+  Layer,
+  ManagedRuntime,
+  Schema,
+  Scope,
+} from "effect"
 import { preserveFatal } from "../shared/effect"
 import "../observability/lifecycle"
 import { reportInference, reportHarness } from "../observability/events"
@@ -5,7 +14,6 @@ import { DurableObject } from "cloudflare:workers"
 import { Lifecycle, LifecycleCapability } from "agents/lifecycle"
 import { PiHarness } from "agents/harness/pi"
 import { Harness, createRegistry } from "@earendil-works/pi-durable"
-import { Effect, Exit, Layer, ManagedRuntime, Schema } from "effect"
 import type { PersonalAgent } from "../agent/worker"
 import type { Group, Transcript, DelegationFailure } from "./contracts"
 import type { AgentEnv } from "../../alchemy.run"
@@ -20,7 +28,8 @@ import {
   piModelStreamsLayer,
   modelCallback,
 } from "../inference/adapters/streams-pi"
-import type { Sqlite } from "../storage/sqlite"
+import { makeDurableObjectSqlite } from "../storage/durable-object"
+import { migrateSqlite } from "../storage/migrations"
 import { BackgroundHandoff, backgroundObjectName } from "./background"
 import {
   piBackgroundLedger,
@@ -62,7 +71,10 @@ class BackgroundServices extends LifecycleCapability {
       this.owner.runtime
         .runSync(PiModelStreams)
         .shutdown()
-        .pipe(Effect.ensuring(this.owner.runtime.disposeEffect))
+        .pipe(
+          Effect.ensuring(this.owner.runtime.disposeEffect),
+          Effect.ensuring(Scope.close(this.owner.databaseScope, Exit.void))
+        )
     )
   }
 }
@@ -72,14 +84,17 @@ export class BackgroundGroup
   implements BackgroundGroupRPC
 {
   private pin?: BackgroundHandoff
-  readonly db: Sqlite = {
-    all: <T>(query: string, ...bindings: (string | number | null)[]) =>
-      this.ctx.storage.sql.exec(query, ...bindings).toArray() as T[],
-    run: (query, ...bindings) => {
-      this.ctx.storage.sql.exec(query, ...bindings)
-    },
-    transaction: (body) => this.ctx.storage.transactionSync(body),
-  }
+  readonly databaseScope = Scope.makeUnsafe()
+  readonly db = Effect.runSync(
+    Effect.gen({ self: this }, function* () {
+      const db = yield* makeDurableObjectSqlite(this.ctx.storage)
+      yield* migrateSqlite(db)
+      return db
+    }).pipe(
+      Effect.provideService(Scope.Scope, this.databaseScope),
+      Effect.provideService(Scheduler.PreventSchedulerYield, true)
+    )
+  )
   readonly runtime = ManagedRuntime.make(
     Layer.mergeAll(
       usageApplication(new SqliteUsage(this.db), () => crypto.randomUUID()),
@@ -109,7 +124,7 @@ export class BackgroundGroup
   readonly usage = this.runtime.runSync(InferenceUsage)
   readonly observeInference = piUsage(
     this.usage,
-    (work) => this.runtime.runSync(work),
+    (work) => modelCallback(this.runtime.runPromiseExit(work)),
     (attempt) =>
       reportInference(attempt, this.pin?.parentObject ?? this.ctx.id.toString())
   )
@@ -155,6 +170,7 @@ export class BackgroundGroup
     }
   )
   readonly harness = new PiHarness({
+    coordinateStorage: this.db.coordinatePi,
     harness: async ({ storage, context }) => {
       const h = await Harness.open(
         storage,

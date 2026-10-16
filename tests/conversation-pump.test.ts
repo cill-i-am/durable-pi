@@ -12,21 +12,25 @@ it.effect(
   () =>
     Effect.gen(function* () {
       const f = yield* conversationFixture()
-      const root = f.store.admit({ operationId: "root", text: "hello" }).turn
+      const root = Effect.runSync(
+        f.store.admit({ operationId: "root", text: "hello" })
+      ).turn
       f.execution.configure = () =>
         Effect.sync(() => {
           expect(
-            f.store.finish(
-              f.store.get(root.id)!,
-              [{ id: root.id, delivery: "answered" }],
-              "already done",
-              null
+            Effect.runSync(
+              f.store.finish(
+                Effect.runSync(f.store.get(root.id))!,
+                [{ id: root.id, delivery: "answered" }],
+                "already done",
+                null
+              )
             )
           ).toBe(true)
         })
       yield* pump(f).run()
       expect(f.events).not.toContain("submit")
-      expect(f.store.get(root.id)).toMatchObject({
+      expect(Effect.runSync(f.store.get(root.id))).toMatchObject({
         status: "done",
         answer: "already done",
       })
@@ -37,11 +41,13 @@ it.effect(
   () =>
     Effect.gen(function* () {
       const f = yield* conversationFixture()
-      const root = f.store.admit({ operationId: "root", text: "hello" }).turn
+      const root = Effect.runSync(
+        f.store.admit({ operationId: "root", text: "hello" })
+      ).turn
       const now = yield* Clock.currentTimeMillis
       f.execution.submit = (_session, turn) =>
         Effect.sync(() => {
-          const saved = f.store.get(turn.id)!
+          const saved = Effect.runSync(f.store.get(turn.id))!
           expect(saved.session_id).toBe("session")
           expect(saved.prompt).toBe(turn.prompt)
           expect(saved.status).toBe("preparing")
@@ -49,7 +55,7 @@ it.effect(
         })
       expect(yield* pump(f).run()).toBe(now + 100)
       expect(f.events).toEqual(["create", "configure", "compaction", "submit"])
-      expect(f.store.get(root.id)?.status).toBe("running")
+      expect(Effect.runSync(f.store.get(root.id))?.status).toBe("running")
       expect(yield* pump(f).run()).toBe(now + 10)
       expect(f.events.slice(4)).toEqual([
         "delegate.reconcile",
@@ -60,7 +66,7 @@ it.effect(
         "compaction",
         "backup",
       ])
-      expect(f.store.get(root.id)).toMatchObject({
+      expect(Effect.runSync(f.store.get(root.id))).toMatchObject({
         status: "done",
         answer: "Answer",
       })
@@ -71,7 +77,9 @@ it.effect(
   () =>
     Effect.gen(function* () {
       const f = yield* conversationFixture()
-      const root = f.store.admit({ operationId: "root", text: "hello" }).turn
+      const root = Effect.runSync(
+        f.store.admit({ operationId: "root", text: "hello" })
+      ).turn
       const attempts: { id: string; session: string; prompt: string | null }[] =
         []
       f.execution.submit = (session, turn) =>
@@ -93,7 +101,7 @@ it.effect(
         _tag: "Failure",
         failure: { _tag: "ConversationExecutionError" },
       })
-      expect(f.store.get(root.id)?.status).toBe("preparing")
+      expect(Effect.runSync(f.store.get(root.id))?.status).toBe("preparing")
       // The new input temporarily makes Memory unsettled; finish its summary.
       yield* f.memory.saveNode({ start: 0, count: 1 }, "hello")
       yield* pump(f).run()
@@ -108,16 +116,18 @@ it.effect(
   () =>
     Effect.gen(function* () {
       const f = yield* conversationFixture()
-      const root = f.store.admit({ operationId: "root", text: "hello" }).turn
+      const root = Effect.runSync(
+        f.store.admit({ operationId: "root", text: "hello" })
+      ).turn
       f.execution.configure = () =>
         Effect.sync(() => {
-          f.store.requestStop(root.id)
+          Effect.runSync(f.store.requestStop(root.id))
           f.events.push("configure")
         })
       const now = yield* Clock.currentTimeMillis
       expect(yield* pump(f).run()).toBe(now + 10)
       expect(f.events).not.toContain("submit")
-      expect(f.store.get(root.id)?.status).toBe("stopping")
+      expect(Effect.runSync(f.store.get(root.id))?.status).toBe("stopping")
     })
 )
 it.effect(
@@ -125,7 +135,9 @@ it.effect(
   () =>
     Effect.gen(function* () {
       const f = yield* conversationFixture()
-      const root = f.store.admit({ operationId: "root", text: "hello" }).turn
+      const root = Effect.runSync(
+        f.store.admit({ operationId: "root", text: "hello" })
+      ).turn
       let allowed = true
       f.host.canRun = () => Effect.sync(() => allowed)
       f.host.wakeCompaction = () =>
@@ -134,7 +146,7 @@ it.effect(
         })
       yield* pump(f).run()
       expect(f.events).not.toContain("submit")
-      expect(f.store.get(root.id)?.status).toBe("stopping")
+      expect(Effect.runSync(f.store.get(root.id))?.status).toBe("stopping")
     })
 )
 it.effect(
@@ -142,8 +154,8 @@ it.effect(
   () =>
     Effect.gen(function* () {
       const f = yield* conversationFixture()
-      f.store.admit({ operationId: "root", text: "hello" })
-      f.store.submitted("root", "session")
+      Effect.runSync(f.store.admit({ operationId: "root", text: "hello" }))
+      Effect.runSync(f.store.submitted("root", "session"))
       f.host.awaitingAccess = () => Effect.succeed(true)
       const observe = f.execution.observe
       f.execution.observe = (root, members) =>
@@ -152,7 +164,7 @@ it.effect(
         )
       const now = yield* Clock.currentTimeMillis
       expect(yield* pump(f).run()).toBe(now + 30_000)
-      expect(f.store.get("root")?.status).toBe("running")
+      expect(Effect.runSync(f.store.get("root"))?.status).toBe("running")
       expect(f.events).not.toContain("completed")
     })
 )
@@ -161,25 +173,27 @@ it.effect(
   () =>
     Effect.gen(function* () {
       const f = yield* conversationFixture()
-      f.store.admit({ operationId: "root", text: "hello" })
-      f.store.submitted("root", "session")
+      Effect.runSync(f.store.admit({ operationId: "root", text: "hello" }))
+      Effect.runSync(f.store.submitted("root", "session"))
       const observe = f.execution.observe
       f.execution.observe = (root, members) =>
         observe(root, members).pipe(
           Effect.tap(() =>
             Effect.sync(() => {
-              f.store.admit({
-                operationId: "steer",
-                text: "use blue",
-                mode: "steer",
-              })
+              Effect.runSync(
+                f.store.admit({
+                  operationId: "steer",
+                  text: "use blue",
+                  mode: "steer",
+                })
+              )
             })
           )
         )
       const now = yield* Clock.currentTimeMillis
       expect(yield* pump(f).run()).toBe(now + 10)
-      expect(f.store.get("root")?.status).toBe("running")
-      expect(f.store.get("steer")?.status).toBe("queued")
+      expect(Effect.runSync(f.store.get("root"))?.status).toBe("running")
+      expect(Effect.runSync(f.store.get("steer"))?.status).toBe("queued")
       expect(yield* f.memory.total()).toBe(0)
       expect(f.events).not.toContain("completed")
     })
@@ -189,10 +203,12 @@ it.effect(
   () =>
     Effect.gen(function* () {
       const f = yield* conversationFixture()
-      f.store.admit({ operationId: "root", text: "hello" })
-      f.store.submitted("root", "session")
-      f.store.admit({ operationId: "steer", text: "use blue", mode: "steer" })
-      f.store.requestStop("root")
+      Effect.runSync(f.store.admit({ operationId: "root", text: "hello" }))
+      Effect.runSync(f.store.submitted("root", "session"))
+      Effect.runSync(
+        f.store.admit({ operationId: "steer", text: "use blue", mode: "steer" })
+      )
+      Effect.runSync(f.store.requestStop("root"))
       yield* pump(f).run()
       expect(f.events.slice(0, 3)).toEqual([
         "access.cancel",
@@ -200,8 +216,8 @@ it.effect(
         "plan.cancel",
       ])
       expect(f.events.some((event) => event.startsWith("steer:"))).toBe(false)
-      expect(f.store.get("root")?.status).toBe("cancelled")
-      expect(f.store.get("steer")?.status).toBe("done")
+      expect(Effect.runSync(f.store.get("root"))?.status).toBe("cancelled")
+      expect(Effect.runSync(f.store.get("steer"))?.status).toBe("done")
     })
 )
 it.effect(
@@ -209,17 +225,19 @@ it.effect(
   () =>
     Effect.gen(function* () {
       const f = yield* conversationFixture()
-      const root = f.store.admit({ operationId: "root", text: "hello" }).turn
+      const root = Effect.runSync(
+        f.store.admit({ operationId: "root", text: "hello" })
+      ).turn
       f.memory.settled = () => Effect.succeed(false)
       f.memory.blocked = () => Effect.succeed(true)
       f.host.wakeBackground = () =>
         Effect.sync(() => {
-          expect(f.store.get(root.id)?.status).toBe("failed")
+          expect(Effect.runSync(f.store.get(root.id))?.status).toBe("failed")
           f.events.push("background")
         })
       yield* pump(f).run()
       expect(f.events).toEqual(["background", "notify"])
-      expect(f.store.get(root.id)?.error).toContain(
+      expect(Effect.runSync(f.store.get(root.id))?.error).toContain(
         "Memory summaries are paused"
       )
     })
@@ -232,7 +250,9 @@ it.effect(
   () =>
     Effect.gen(function* () {
       const f = yield* conversationFixture()
-      const root = f.store.admit({ operationId: "root", text: "hello" }).turn
+      const root = Effect.runSync(
+        f.store.admit({ operationId: "root", text: "hello" })
+      ).turn
       const core = conversationPump<string, Caller>(
         f.conversations,
         f.memory,
@@ -259,13 +279,15 @@ it.effect(
           )
       ).toMatchObject({ _tag: "Failure", failure: "missing instructions" })
       expect(yield* f.memory.total()).toBe(0)
-      expect(f.store.get(root.id)?.prompt).toBeNull()
+      expect(Effect.runSync(f.store.get(root.id))?.prompt).toBeNull()
       yield* core
         .run()
         .pipe(
           Effect.provideService(Caller, { instructions: "caller instructions" })
         )
-      expect(f.store.get(root.id)?.prompt).toContain("caller instructions")
+      expect(Effect.runSync(f.store.get(root.id))?.prompt).toContain(
+        "caller instructions"
+      )
     })
 )
 
@@ -273,7 +295,9 @@ nativeIt(
   "binds a late native session before interruption ends, then skips configure and submit",
   async () => {
     const f = await Effect.runPromise(conversationFixture())
-    const root = f.store.admit({ operationId: "root", text: "hello" }).turn
+    const root = Effect.runSync(
+      f.store.admit({ operationId: "root", text: "hello" })
+    ).turn
     let started!: () => void, release!: () => void
     const entered = new Promise<void>((resolve) => {
       started = resolve
@@ -301,8 +325,10 @@ nativeIt(
     release()
     const exit = await pending
     expect(Exit.isFailure(exit) && Cause.hasInterrupts(exit.cause)).toBe(true)
-    expect(f.store.get(root.id)?.session_id).toBe("late-session")
-    expect(f.store.get(root.id)?.status).toBe("preparing")
+    expect(Effect.runSync(f.store.get(root.id))?.session_id).toBe(
+      "late-session"
+    )
+    expect(Effect.runSync(f.store.get(root.id))?.status).toBe("preparing")
     expect(f.events).not.toContain("configure")
     expect(f.events).not.toContain("submit")
   }
@@ -312,7 +338,9 @@ nativeIt(
   "uses the committed session when concurrent native acquisitions race",
   async () => {
     const f = await Effect.runPromise(conversationFixture())
-    const root = f.store.admit({ operationId: "root", text: "hello" }).turn
+    const root = Effect.runSync(
+      f.store.admit({ operationId: "root", text: "hello" })
+    ).turn
     let started!: () => void, release!: () => void
     const entered = new Promise<void>((resolve) => {
       started = resolve
@@ -341,7 +369,9 @@ nativeIt(
     await Effect.runPromise(pump(f).run())
     release()
     await first
-    expect(f.store.get(root.id)?.session_id).toBe("committed-session")
+    expect(Effect.runSync(f.store.get(root.id))?.session_id).toBe(
+      "committed-session"
+    )
     expect(configured).toEqual(["committed-session", "committed-session"])
     expect(await Effect.runPromise(f.memory.total())).toBe(1)
   }

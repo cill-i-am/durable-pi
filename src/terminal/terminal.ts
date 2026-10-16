@@ -137,40 +137,44 @@ export class Terminal implements TerminalOperations {
       this.closed = true
     }).pipe(Effect.andThen(FiberSet.clear(this.tasks)))
   )
-  get = Effect.fn("Terminal.get")((id: string) =>
-    attempt(() => this.repository.get(id))
-  )
+  get = Effect.fn("Terminal.get")((id: string) => this.repository.get(id))
   configure = Effect.fn("Terminal.configure")(
     (
       revision: number,
       active: boolean,
       revokeThrough = active ? -1 : revision
     ) =>
-      attempt(() => {
-        this.repository.configure(revision, active, revokeThrough)
-        if (
-          this.active &&
-          !this.repository.authorized(this.repository.get(this.active.id)!)
-        ) {
-          this.repository.finish(this.active.id, {
-            status: "cancelled",
-            exitCode: null,
-            error:
-              "Bot archived. Workspace recovery uses the last saved checkpoint.",
-          })
-          this.active.controller.abort()
+      Effect.gen({ self: this }, function* () {
+        yield* this.repository.configure(revision, active, revokeThrough)
+        const pending = this.active
+        if (pending) {
+          const run = yield* this.repository.get(pending.id)
+          if (run && !(yield* this.repository.authorized(run))) {
+            yield* this.repository.finish(pending.id, {
+              status: "cancelled",
+              exitCode: null,
+              error:
+                "Bot archived. Workspace recovery uses the last saved checkpoint.",
+            })
+            pending.controller.abort()
+          }
         }
       })
   )
   state = Effect.fn("Terminal.state")(() =>
-    attempt(() => ({
-      networkPolicy: this.repository.networkPolicy(),
-      runs: this.repository.list(),
-      savedAt: this.repository.checkpoint()?.savedAt ?? null,
-      busy: !!this.active || !!this.recovery,
-      cleanupError: this.cleanupError,
-      session: this.active?.session?.state() ?? null,
-    }))
+    Effect.gen({ self: this }, function* () {
+      const networkPolicy = yield* this.repository.networkPolicy()
+      const runs = yield* this.repository.list()
+      const checkpoint = yield* this.repository.checkpoint()
+      return {
+        networkPolicy,
+        runs,
+        savedAt: checkpoint?.savedAt ?? null,
+        busy: !!this.active || !!this.recovery,
+        cleanupError: this.cleanupError,
+        session: this.active?.session?.state() ?? null,
+      }
+    })
   )
   configureNetwork = Effect.fn("Terminal.configureNetwork")(
     (input: TerminalNetworkPolicy) =>
@@ -181,10 +185,10 @@ export class Terminal implements TerminalOperations {
               message:
                 "Stop or save the active terminal session and wait for cleanup before changing internet access.",
             })
-          this.repository.configureNetwork(
-            Schema.decodeUnknownSync(TerminalNetworkPolicy)(input)
-          )
         })
+        yield* this.repository.configureNetwork(
+          Schema.decodeUnknownSync(TerminalNetworkPolicy)(input)
+        )
         return yield* this.state()
       })
   )
@@ -201,9 +205,9 @@ export class Terminal implements TerminalOperations {
             throw new TerminalFailure({
               message: "Stop the active command before retrying cleanup.",
             })
-          this.repository.recover()
-          this.cleanupError = null
         })
+        yield* this.repository.recover()
+        this.cleanupError = null
         const begin = yield* Deferred.make<void>()
         const work = Deferred.await(begin).pipe(
           Effect.andThen(this.options.runtime.close()),
@@ -286,11 +290,11 @@ export class Terminal implements TerminalOperations {
   )
   exportedFile = Effect.fn("Terminal.exportedFile")((id: string) =>
     Effect.gen({ self: this }, function* () {
-      const record = yield* attempt(() => this.repository.exported(id))
+      const record = yield* this.repository.exported(id)
       if (
         !record ||
         !this.options.exports ||
-        this.repository.get(id)?.status !== "succeeded"
+        (yield* this.repository.get(id))?.status !== "succeeded"
       )
         return yield* new TerminalFailure({
           message: "The exported file is not ready.",
@@ -331,13 +335,15 @@ export class Terminal implements TerminalOperations {
             return yield* new TerminalFailure({
               message: "The terminal host has stopped.",
             })
-          const existing = yield* attempt(() => this.repository.get(decoded.id))
+          const existing = yield* this.repository.get(decoded.id)
           if (!existing && (this.active || this.recovery || this.cleanupError))
             return yield* new TerminalFailure({
               message: "Wait for the active command and its cleanup to finish.",
             })
-          const run = yield* attempt(() =>
-            this.repository.admit(decoded, kind, transfer?.plan)
+          const run = yield* this.repository.admit(
+            decoded,
+            kind,
+            transfer?.plan
           )
           if (existing || run.status !== "running")
             return {
@@ -381,9 +387,9 @@ export class Terminal implements TerminalOperations {
       )
   )
   cancel = Effect.fn("Terminal.cancel")((id: string) =>
-    attempt(() => {
+    Effect.gen({ self: this }, function* () {
       Schema.decodeUnknownSync(CommandInput.fields.id)(id)
-      const run = this.repository.cancel(id)
+      const run = yield* this.repository.cancel(id)
       if (this.active?.id === id) this.active.controller.abort()
       return run
     })
@@ -396,12 +402,25 @@ export class Terminal implements TerminalOperations {
   ) {
     const { runtime, backups, exports: exportStorage } = this.options
     let output = "",
-      lastFlush = 0
+      publishedOutput = ""
     const now = () => this.clock.currentTimeMillisUnsafe()
-    const flush = () => {
-      this.repository.progress(run.id, output)
-      lastFlush = now()
-    }
+    const flush = () =>
+      Effect.suspend(() => {
+        const next = output
+        if (next === publishedOutput) return Effect.void
+        return this.repository.progress(run.id, next).pipe(
+          Effect.tap(() =>
+            Effect.sync(() => {
+              publishedOutput = next
+            })
+          )
+        )
+      })
+    // Native stream callbacks only buffer. This owned Effect publishes progress;
+    // its failure is raced with command work and joined before final publication.
+    const publishOutput = Effect.forever(
+      Effect.sleep(250).pipe(Effect.andThen(flush))
+    )
     const live = () => {
       if (controller.signal.aborted)
         throw new TerminalFailure({ message: "Stopped or timed out" })
@@ -409,7 +428,6 @@ export class Terminal implements TerminalOperations {
     const append = (text: string) => {
       live()
       output += text.slice(0, MAX_OUTPUT - output.length)
-      if (now() - lastFlush > 250) flush()
       if (output.length >= MAX_OUTPUT)
         throw new TerminalFailure({ message: "Output limit" })
     }
@@ -453,7 +471,7 @@ export class Terminal implements TerminalOperations {
       yield* attempt(live)
       yield* runtime.close()
       yield* attempt(live)
-      const previous = yield* attempt(() => this.repository.checkpoint())
+      const previous = yield* this.repository.checkpoint()
       const bytes = previous ? yield* backups.read(previous) : null
       yield* attempt(() => {
         live()
@@ -521,10 +539,10 @@ export class Terminal implements TerminalOperations {
       return { exitCode, saved, exported: undefined }
     })
     const failure = () =>
-      attempt(() => {
+      Effect.gen({ self: this }, function* () {
         controller.abort()
-        flush()
-        this.repository.finish(run.id, {
+        yield* flush()
+        yield* this.repository.finish(run.id, {
           status: "failed",
           exitCode: null,
           error: run.transfer
@@ -556,22 +574,23 @@ export class Terminal implements TerminalOperations {
             yield* Effect.forkScoped(timer)
             if (session) yield* Effect.forkScoped(session.watchLease())
             const result = yield* observeCleanup(work, (observed) =>
-              Effect.raceFirst(observed, stopped)
-            )
-            yield* attempt(() => {
-              live()
-              flush()
-              this.repository.finish(
-                run.id,
-                {
-                  status: result.exitCode === 0 ? "succeeded" : "failed",
-                  exitCode: result.exitCode,
-                  error: null,
-                },
-                result.saved,
-                result.exported
+              Effect.raceFirst(
+                Effect.raceFirst(observed, stopped),
+                publishOutput
               )
-            })
+            )
+            yield* attempt(live)
+            yield* flush()
+            yield* this.repository.finish(
+              run.id,
+              {
+                status: result.exitCode === 0 ? "succeeded" : "failed",
+                exitCode: result.exitCode,
+                error: null,
+              },
+              result.saved,
+              result.exported
+            )
           })
         ).pipe(
           preserveFatal,

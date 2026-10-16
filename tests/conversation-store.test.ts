@@ -1,3 +1,4 @@
+import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import {
@@ -5,6 +6,7 @@ import {
   ConversationFull,
 } from "../src/conversations/turns"
 import { database } from "./database"
+import { migrateSqlite } from "../src/storage/migrations"
 
 const defaults = { model: "test-model", thinking: "medium" as const }
 const input = (text = "hello", mode: "followUp" | "steer" = "followUp") => ({
@@ -13,133 +15,156 @@ const input = (text = "hello", mode: "followUp" | "steer" = "followUp") => ({
   mode,
 })
 describe("durable reply admission", () => {
-  it("preserves the legacy table and joins steers while keeping follow-ups fresh", () => {
+  it("reopens saved turns and joins steers while keeping follow-ups fresh", () => {
     const db = database()
-    db.run(
-      "CREATE TABLE chat_turns (id TEXT PRIMARY KEY,text TEXT NOT NULL,status TEXT NOT NULL,answer TEXT NOT NULL DEFAULT '',error TEXT,created_at TEXT NOT NULL,session_id TEXT,prompt TEXT)"
-    )
     db.run(
       "INSERT INTO chat_turns(id,text,status,created_at) VALUES ('legacy','existing','done','2026-10-10')"
     )
+    Effect.runSync(migrateSqlite(db))
     const store = new ConversationStore(db, defaults)
-    expect(store.recent()[0]?.text).toBe("existing")
-    const root = store.admit(input()).turn
-    const steer = store.admit(
-      input("actually, use the other file", "steer")
+    expect(Effect.runSync(store.recent())[0]?.text).toBe("existing")
+    const root = Effect.runSync(store.admit(input())).turn
+    const steer = Effect.runSync(
+      store.admit(input("actually, use the other file", "steer"))
     ).turn
-    const queued = store.admit(input("next task")).turn
+    const queued = Effect.runSync(store.admit(input("next task"))).turn
     expect(steer.parent_id).toBe(root.id)
     expect(queued.parent_id).toBeNull()
-    expect(store.active()?.id).toBe(root.id)
-    expect(store.recent().map((turn) => turn.id)).toEqual([
+    expect(Effect.runSync(store.active())?.id).toBe(root.id)
+    expect(Effect.runSync(store.recent()).map((turn) => turn.id)).toEqual([
       "legacy",
       root.id,
       queued.id,
     ])
-    expect(new ConversationStore(db, defaults).members(root.id)).toHaveLength(2)
+    expect(
+      Effect.runSync(new ConversationStore(db, defaults).members(root.id))
+    ).toHaveLength(2)
   })
   it("deduplicates retries and rejects operation-key reuse with different semantics", () => {
     const store = new ConversationStore(database(), defaults)
     const command = input()
-    expect(store.admit(command).accepted).toBe(true)
-    store.setSettings({ model: "another", thinking: "low" })
-    expect(store.admit(command).accepted).toBe(false)
-    expect(() => store.admit({ ...command, mode: "steer" })).toThrow(
-      ConversationConflict
+    expect(Effect.runSync(store.admit(command)).accepted).toBe(true)
+    Effect.runSync(store.setSettings({ model: "another", thinking: "low" }))
+    expect(Effect.runSync(store.admit(command)).accepted).toBe(false)
+    expect(() =>
+      Effect.runSync(store.admit({ ...command, mode: "steer" }))
+    ).toThrow(ConversationConflict)
+    expect(() =>
+      Effect.runSync(store.admit({ ...command, text: "different" }))
+    ).toThrow(ConversationConflict)
+    expect(Effect.runSync(store.get(command.operationId))?.model).toBe(
+      "test-model"
     )
-    expect(() => store.admit({ ...command, text: "different" })).toThrow(
-      ConversationConflict
-    )
-    expect(store.get(command.operationId)?.model).toBe("test-model")
   })
   it("does not lose a steer admitted while completion was awaiting Pi", () => {
     const store = new ConversationStore(database(), defaults)
-    const root = store.admit(input()).turn
-    store.prepare(root.id)
-    store.submitted(root.id, "session")
-    const completing = store.get(root.id)!
-    const steer = store.admit(input("one more detail", "steer")).turn
+    const root = Effect.runSync(store.admit(input())).turn
+    Effect.runSync(store.prepare(root.id))
+    Effect.runSync(store.submitted(root.id, "session"))
+    const completing = Effect.runSync(store.get(root.id))!
+    const steer = Effect.runSync(
+      store.admit(input("one more detail", "steer"))
+    ).turn
     expect(
-      store.finish(
-        completing,
-        [{ id: root.id, delivery: "answered" }],
-        "answer",
-        null
+      Effect.runSync(
+        store.finish(
+          completing,
+          [{ id: root.id, delivery: "answered" }],
+          "answer",
+          null
+        )
       )
     ).toBe(false)
-    store.submitted(steer.id, "session")
-    store.consumed(steer.id)
-    const current = store.get(root.id)!
+    Effect.runSync(store.submitted(steer.id, "session"))
+    Effect.runSync(store.consumed(steer.id))
+    const current = Effect.runSync(store.get(root.id))!
     expect(
-      store.finish(
-        current,
-        [
-          { id: root.id, delivery: "answered" },
-          { id: steer.id, delivery: "answered" },
-        ],
-        "revised answer",
-        null
+      Effect.runSync(
+        store.finish(
+          current,
+          [
+            { id: root.id, delivery: "answered" },
+            { id: steer.id, delivery: "answered" },
+          ],
+          "revised answer",
+          null
+        )
       )
     ).toBe(true)
-    const late = store.admit(input("arrives after close", "steer")).turn
+    const late = Effect.runSync(
+      store.admit(input("arrives after close", "steer"))
+    ).turn
     expect(late.parent_id).toBeNull()
   })
   it("keeps stop durable across restart and does not let submission overwrite it", () => {
     const db = database()
     const store = new ConversationStore(db, defaults)
-    const root = store.admit(input()).turn
-    const child = store.admit(input("additional input", "steer")).turn
-    store.requestStop(child.id)
-    store.submitted(root.id, "session")
+    const root = Effect.runSync(store.admit(input())).turn
+    const child = Effect.runSync(
+      store.admit(input("additional input", "steer"))
+    ).turn
+    Effect.runSync(store.requestStop(child.id))
+    Effect.runSync(store.submitted(root.id, "session"))
     const restored = new ConversationStore(db, defaults)
-    expect(restored.active()?.status).toBe("stopping")
+    expect(Effect.runSync(restored.active())?.status).toBe("stopping")
     expect(
-      restored.finish(
-        restored.get(root.id)!,
-        [
-          { id: root.id, delivery: "unanswered" },
-          { id: child.id, delivery: "unanswered" },
-        ],
-        "partial",
-        null
+      Effect.runSync(
+        restored.finish(
+          Effect.runSync(restored.get(root.id))!,
+          [
+            { id: root.id, delivery: "unanswered" },
+            { id: child.id, delivery: "unanswered" },
+          ],
+          "partial",
+          null
+        )
       )
     ).toBe(true)
-    expect(restored.get(root.id)?.status).toBe("cancelled")
-    expect(restored.get(child.id)?.delivery).toBe("unanswered")
-    expect(restored.active()).toBeUndefined()
+    expect(Effect.runSync(restored.get(root.id))?.status).toBe("cancelled")
+    expect(Effect.runSync(restored.get(child.id))?.delivery).toBe("unanswered")
+    expect(Effect.runSync(restored.active())).toBeUndefined()
   })
   it("caps pending work and rejects retrying a still-running reply", () => {
     const store = new ConversationStore(database(), defaults)
-    const root = store.admit(input()).turn
-    expect(() => store.admit({ ...input(), retryOf: root.id })).toThrow(
-      ConversationConflict
-    )
-    for (let i = 0; i < 9; i++) store.admit(input(String(i), "steer"))
-    expect(() => store.admit(input())).toThrow(ConversationFull)
+    const root = Effect.runSync(store.admit(input())).turn
+    expect(() =>
+      Effect.runSync(store.admit({ ...input(), retryOf: root.id }))
+    ).toThrow(ConversationConflict)
+    for (let i = 0; i < 9; i++)
+      Effect.runSync(store.admit(input(String(i), "steer")))
+    expect(() => Effect.runSync(store.admit(input()))).toThrow(ConversationFull)
   })
   it("never silently queues steering when stop wins admission, including after restart", () => {
     const db = database()
     const store = new ConversationStore(db, defaults)
-    const root = store.admit(input()).turn
+    const root = Effect.runSync(store.admit(input())).turn
     const acceptedInput = input("earlier correction", "steer")
-    const accepted = store.admit(acceptedInput).turn
-    store.requestStop(root.id)
+    const accepted = Effect.runSync(store.admit(acceptedInput)).turn
+    Effect.runSync(store.requestStop(root.id))
     const restored = new ConversationStore(db, defaults)
-    expect(restored.admit(acceptedInput)).toMatchObject({ accepted: false })
+    expect(Effect.runSync(restored.admit(acceptedInput))).toMatchObject({
+      accepted: false,
+    })
     const next = input("new correction", "steer")
-    expect(() => restored.admit(next)).toThrow("This reply is stopping")
-    expect(restored.get(next.operationId)).toBeUndefined()
-    const queued = restored.admit(input("next task", "followUp")).turn
-    expect(queued.parent_id).toBeNull()
-    restored.finish(
-      restored.get(root.id)!,
-      [
-        { id: root.id, delivery: "unanswered" },
-        { id: accepted.id, delivery: "unanswered" },
-      ],
-      "partial",
-      null
+    expect(() => Effect.runSync(restored.admit(next))).toThrow(
+      "This reply is stopping"
     )
-    expect(restored.admit(next).turn.parent_id).toBe(queued.id)
+    expect(Effect.runSync(restored.get(next.operationId))).toBeUndefined()
+    const queued = Effect.runSync(
+      restored.admit(input("next task", "followUp"))
+    ).turn
+    expect(queued.parent_id).toBeNull()
+    Effect.runSync(
+      restored.finish(
+        Effect.runSync(restored.get(root.id))!,
+        [
+          { id: root.id, delivery: "unanswered" },
+          { id: accepted.id, delivery: "unanswered" },
+        ],
+        "partial",
+        null
+      )
+    )
+    expect(Effect.runSync(restored.admit(next)).turn.parent_id).toBe(queued.id)
   })
 })

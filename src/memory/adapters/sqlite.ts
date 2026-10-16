@@ -1,5 +1,32 @@
+import {
+  and,
+  asc,
+  count as countRows,
+  desc,
+  eq,
+  getTableColumns,
+  gt,
+  gte,
+  isNull,
+  lt,
+  lte,
+  max,
+  or,
+} from "drizzle-orm"
+import { alias } from "drizzle-orm/sqlite-core"
 import { Effect, Layer, Schema } from "effect"
-import type { Sqlite } from "../../storage/sqlite"
+import {
+  mapSqliteError,
+  type Sqlite,
+  type SqliteOrm,
+} from "../../storage/sqlite"
+import {
+  containsText,
+  divide,
+  increment,
+  multiply,
+  remainder,
+} from "../../storage/expressions"
 import { makeMemoryRepository, memoryApplication } from "../service"
 import * as Policy from "../policy"
 import { MemoryTransaction, type MemoryLedger } from "../ledger"
@@ -7,29 +34,45 @@ import {
   nodeKey,
   VIEW_BYTES,
   InvalidMemory,
+  MemoryNotReady,
   MemoryStorageError,
   LogEntry,
   type LogKind,
   type MemoryNode,
   type Part,
-  type SummaryJob,
 } from "../domain"
 import {
   type ArchiveRecord,
-  type MessageRecord,
-  type NodeRecord,
-  type NoteRecord,
   type Watermark,
+  StoredViewState,
   StoredPart,
   StoredNode,
   StoredFailure,
   StoredMerge,
-  StoredCount,
-  StoredViewState,
   StoredNote,
   StoredIssue,
   StoredArchiveRecord,
 } from "../records"
+import * as t from "./schema"
+
+const attempt = <TValue>(body: () => TValue) =>
+  Effect.try({
+    try: body,
+    catch: (cause) => {
+      const known = Schema.decodeUnknownOption(
+        Schema.Union([InvalidMemory, MemoryNotReady, MemoryStorageError])
+      )(cause)
+      if (known._tag === "Some") return known.value
+      throw cause
+    },
+  })
+const key = (part: Part) =>
+  and(eq(t.memoryNodes.start, part.start), eq(t.memoryNodes.count, part.count))
+const failureKey = (part: Part) =>
+  and(
+    eq(t.memoryFailures.start, part.start),
+    eq(t.memoryFailures.count, part.count)
+  )
 
 class SqliteMemory implements MemoryLedger {
   readonly transactionGroup: object
@@ -38,495 +81,799 @@ class SqliteMemory implements MemoryLedger {
     readonly budget = VIEW_BYTES
   ) {
     this.transactionGroup = db
-    const nativeDb = db
-    const storage = <T>(operation: string, body: () => T): T => {
-      try {
-        return body()
-      } catch {
-        throw new MemoryStorageError({ operation })
-      }
-    }
-    this.db = db = {
-      all: (query, ...bindings) =>
-        storage("read", () => nativeDb.all(query, ...bindings)),
-      run: (query, ...bindings) =>
-        storage("write", () => nativeDb.run(query, ...bindings)),
-      transaction: (body) => {
-        const callback: { failed: boolean; cause?: unknown } = { failed: false }
-        try {
-          return nativeDb.transaction(() => {
-            try {
-              return body()
-            } catch (cause) {
-              callback.failed = true
-              callback.cause = cause
-              throw cause
-            }
-          })
-        } catch (cause) {
-          if (callback.failed && cause === callback.cause) throw cause
-          throw new MemoryStorageError({ operation: "transaction" })
-        }
-      },
-    }
-    db.run(
-      `CREATE TABLE IF NOT EXISTS memory_log (id INTEGER PRIMARY KEY, source TEXT NOT NULL UNIQUE, kind TEXT NOT NULL, text TEXT NOT NULL, date TEXT NOT NULL)`
-    )
-    db.run(
-      `CREATE TABLE IF NOT EXISTS memory_nodes (start INTEGER NOT NULL, count INTEGER NOT NULL, text TEXT NOT NULL, bytes INTEGER NOT NULL, PRIMARY KEY(start,count))`
-    )
-    db.run(
-      `CREATE TABLE IF NOT EXISTS memory_view (start INTEGER PRIMARY KEY, count INTEGER NOT NULL)`
-    )
-    db.run(
-      `CREATE TABLE IF NOT EXISTS memory_failures (start INTEGER NOT NULL, count INTEGER NOT NULL, retry_at INTEGER NOT NULL, PRIMARY KEY(start,count))`
-    )
-    if (
-      !db
-        .all<{ name: string }>("PRAGMA table_info(memory_failures)")
-        .some((column) => column.name === "attempts")
-    )
-      db.run(
-        "ALTER TABLE memory_failures ADD COLUMN attempts INTEGER NOT NULL DEFAULT 1"
-      )
-    db.run(
-      `CREATE TABLE IF NOT EXISTS memory_notes (path TEXT PRIMARY KEY, body TEXT NOT NULL, source_id INTEGER NOT NULL, updated_at TEXT NOT NULL, FOREIGN KEY(source_id) REFERENCES memory_log(id))`
-    )
-    db.run(
-      `CREATE TABLE IF NOT EXISTS memory_note_history (id INTEGER PRIMARY KEY, path TEXT NOT NULL, body TEXT NOT NULL, source_id INTEGER NOT NULL, date TEXT NOT NULL)`
-    )
-
-    db.run(
-      "CREATE TABLE IF NOT EXISTS memory_view_state (id INTEGER PRIMARY KEY, compacting INTEGER NOT NULL)"
-    )
-    db.run("INSERT OR IGNORE INTO memory_view_state VALUES (1,0)")
-    db.run(
-      "CREATE TABLE IF NOT EXISTS memory_compaction_view (start INTEGER PRIMARY KEY, count INTEGER NOT NULL)"
-    )
-    db.run(
-      "CREATE TABLE IF NOT EXISTS memory_ready (start INTEGER NOT NULL, count INTEGER NOT NULL, PRIMARY KEY(count,start))"
-    )
-    db.run(
-      "CREATE TABLE IF NOT EXISTS memory_migrations (name TEXT PRIMARY KEY)"
-    )
-    db.transaction(() => {
-      if (
-        db.all("SELECT 1 FROM memory_migrations WHERE name='effect-memory-v1'")
-          .length
-      )
-        return
-      db.run(
-        "INSERT OR IGNORE INTO memory_ready SELECT l.id,1 FROM memory_log l LEFT JOIN memory_nodes n ON n.start=l.id AND n.count=1 WHERE n.start IS NULL"
-      )
-      db.run(
-        "INSERT OR IGNORE INTO memory_ready SELECT a.start,a.count*2 FROM memory_nodes a JOIN memory_nodes b ON b.start=a.start+a.count AND b.count=a.count LEFT JOIN memory_nodes p ON p.start=a.start AND p.count=a.count*2 WHERE a.start%(a.count*2)=0 AND p.start IS NULL"
-      )
-      db.run("INSERT INTO memory_compaction_view SELECT * FROM memory_view")
-      db.run("INSERT OR IGNORE INTO memory_view_state VALUES (2,1)")
-      db.run("INSERT INTO memory_migrations VALUES ('effect-memory-v1')")
-    })
   }
-
-  private rows<T>(
+  private query<TValue, TError, TRequirements>(
+    body: (orm: SqliteOrm) => Effect.Effect<TValue, TError, TRequirements>
+  ) {
+    return mapSqliteError(
+      this.db.use(body),
+      () => new MemoryStorageError({ operation: "query" })
+    )
+  }
+  atomic<TValue, TError, TRequirements>(
+    body: () => Effect.Effect<TValue, TError, TRequirements>
+  ) {
+    return mapSqliteError(
+      this.db.transaction(body),
+      () => new MemoryStorageError({ operation: "transaction" })
+    )
+  }
+  private rows<TValue, TError, TRequirements, T>(
     schema: Schema.ConstraintDecoder<T, never>,
-    query: string,
-    ...bindings: (string | number | null)[]
-  ): T[] {
-    return this.db
-      .all<unknown>(query, ...bindings)
-      .map((row) => Schema.decodeUnknownSync(schema)(row))
-  }
-  private row<T>(
-    schema: Schema.ConstraintDecoder<T, never>,
-    query: string,
-    ...bindings: (string | number | null)[]
-  ): T | undefined {
-    return this.rows(schema, query, ...bindings)[0]
-  }
-  atomic<T>(body: () => T): T {
-    return this.db.transaction(body)
-  }
-  append(source: string, kind: LogKind, text: string, date: string): LogEntry {
-    return this.db.transaction(() => {
-      const prior = this.row(
-        LogEntry,
-        "SELECT * FROM memory_log WHERE source = ?",
-        source
+    body: (orm: SqliteOrm) => Effect.Effect<TValue[], TError, TRequirements>
+  ) {
+    return this.query(body).pipe(
+      Effect.map((rows) =>
+        rows.map((row) => Schema.decodeUnknownSync(schema)(row))
       )
-      if (prior) return prior
-      const id = this.total()
-      const entry = Schema.decodeUnknownSync(LogEntry)({
-        id,
-        source,
-        kind,
-        text,
-        date,
+    )
+  }
+  initialize() {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        yield* this.query((orm) =>
+          orm
+            .insert(t.memoryViewState)
+            .values({ id: 1, compacting: 0 })
+            .onConflictDoNothing()
+        )
+        const applied = yield* this.query((orm) =>
+          orm
+            .select()
+            .from(t.memoryMigrations)
+            .where(eq(t.memoryMigrations.name, "effect-memory-v1"))
+            .limit(1)
+        )
+        if (applied.length) return
+        yield* this.readyLeaves()
+        yield* this.readyParents()
+        const view = yield* this.query((orm) => orm.select().from(t.memoryView))
+        if (view.length)
+          yield* this.query((orm) =>
+            orm.insert(t.memoryCompactionView).values(view)
+          )
+        yield* this.query((orm) =>
+          orm
+            .insert(t.memoryViewState)
+            .values({ id: 2, compacting: 1 })
+            .onConflictDoNothing()
+        )
+        yield* this.query((orm) =>
+          orm.insert(t.memoryMigrations).values({ name: "effect-memory-v1" })
+        )
       })
-      this.db.run(
-        "INSERT INTO memory_log VALUES (?,?,?,?,?)",
-        id,
-        source,
-        kind,
-        text,
-        date
+    )
+  }
+  private readyLeaves() {
+    return Effect.gen({ self: this }, function* () {
+      const missing = yield* this.query((orm) =>
+        orm
+          .select({ start: t.memoryLog.id })
+          .from(t.memoryLog)
+          .leftJoin(
+            t.memoryNodes,
+            and(
+              eq(t.memoryNodes.start, t.memoryLog.id),
+              eq(t.memoryNodes.count, 1)
+            )
+          )
+          .where(isNull(t.memoryNodes.start))
       )
-      this.db.run("INSERT INTO memory_view VALUES (?,1)", id)
-      this.db.run("INSERT INTO memory_compaction_view VALUES (?,1)", id)
-      this.db.run("INSERT INTO memory_ready VALUES (?,1)", id)
-      this.fitViews()
-      return entry
+      if (missing.length)
+        yield* this.query((orm) =>
+          orm
+            .insert(t.memoryReady)
+            .values(missing.map((row) => ({ start: row.start, count: 1 })))
+            .onConflictDoNothing()
+        )
     })
   }
-  total() {
-    return this.row(
-      StoredCount,
-      "SELECT coalesce(max(id)+1,0) AS n FROM memory_log"
-    )!.n
-  }
-  parts() {
-    return this.rows(StoredPart, "SELECT * FROM memory_view ORDER BY start")
-  }
-  node(part: Part) {
-    return this.row(
-      StoredNode,
-      "SELECT * FROM memory_nodes WHERE start=? AND count=?",
-      part.start,
-      part.count
+  private rebuildReady() {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        yield* this.query((orm) => orm.delete(t.memoryReady))
+        const missing = yield* this.query((orm) =>
+          orm
+            .select({ start: t.memoryLog.id })
+            .from(t.memoryLog)
+            .leftJoin(
+              t.memoryNodes,
+              and(
+                eq(t.memoryNodes.start, t.memoryLog.id),
+                eq(t.memoryNodes.count, 1)
+              )
+            )
+            .where(isNull(t.memoryNodes.start))
+        )
+        if (missing.length)
+          yield* this.query((orm) =>
+            orm
+              .insert(t.memoryReady)
+              .values(missing.map((row) => ({ start: row.start, count: 1 })))
+              .onConflictDoNothing()
+          )
+        yield* this.readyParents()
+      })
     )
   }
-  nodeCount() {
-    return this.row(StoredCount, "SELECT count(*) AS n FROM memory_nodes")!.n
-  }
-  viewNodes() {
-    return this.rows(
-      StoredNode,
-      "SELECT n.* FROM memory_view v JOIN memory_nodes n ON n.start=v.start AND n.count=v.count ORDER BY v.start"
-    )
-  }
-  entry(id: number) {
-    return this.row(LogEntry, "SELECT * FROM memory_log WHERE id = ?", id)
-  }
-  fitViews() {
-    const changed = this.fit("memory_view", 1, this.budget)
-    if (changed) {
-      this.db.run("DELETE FROM memory_compaction_view")
-      this.db.run(
-        "INSERT INTO memory_compaction_view SELECT * FROM memory_view"
+  private readyParents() {
+    return Effect.gen({ self: this }, function* () {
+      const a = alias(t.memoryNodes, "ready_left"),
+        b = alias(t.memoryNodes, "ready_right"),
+        p = alias(t.memoryNodes, "ready_parent")
+      const candidates = yield* this.query((orm) =>
+        orm
+          .select({ start: a.start, count: multiply(a.count, 2) })
+          .from(a)
+          .innerJoin(
+            b,
+            and(eq(b.start, increment(a.start, a.count)), eq(b.count, a.count))
+          )
+          .leftJoin(
+            p,
+            and(eq(p.start, a.start), eq(p.count, multiply(a.count, 2)))
+          )
+          .where(
+            and(
+              eq(remainder(a.start, multiply(a.count, 2)), 0),
+              isNull(p.start)
+            )
+          )
       )
-      this.db.run("UPDATE memory_view_state SET compacting=1 WHERE id=2")
-    }
-    this.fit("memory_compaction_view", 2, this.budget / 4)
+      if (candidates.length)
+        yield* this.query((orm) =>
+          orm.insert(t.memoryReady).values(candidates).onConflictDoNothing()
+        )
+    })
   }
-  fit(
-    table: "memory_view" | "memory_compaction_view",
+  append(
+    source: string,
+    kind: LogKind,
+    text: string,
+    date: string
+  ): ReturnType<MemoryLedger["append"]> {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const prior = yield* this.rows(LogEntry, (orm) =>
+          orm
+            .select()
+            .from(t.memoryLog)
+            .where(eq(t.memoryLog.source, source))
+            .limit(1)
+        )
+        if (prior[0]) return prior[0]
+        const id = yield* this.total(),
+          entry = Schema.decodeUnknownSync(LogEntry)({
+            id,
+            source,
+            kind,
+            text,
+            date,
+          })
+        yield* this.query((orm) => orm.insert(t.memoryLog).values(entry))
+        yield* this.query((orm) =>
+          orm.insert(t.memoryView).values({ start: id, count: 1 })
+        )
+        yield* this.query((orm) =>
+          orm.insert(t.memoryCompactionView).values({ start: id, count: 1 })
+        )
+        yield* this.query((orm) =>
+          orm.insert(t.memoryReady).values({ start: id, count: 1 })
+        )
+        yield* this.fitViews()
+        return entry
+      })
+    )
+  }
+  total(): ReturnType<MemoryLedger["total"]> {
+    return this.query((orm) =>
+      orm.select({ n: max(t.memoryLog.id) }).from(t.memoryLog)
+    ).pipe(Effect.map((rows) => (rows[0]?.n ?? -1) + 1))
+  }
+  parts(): ReturnType<MemoryLedger["parts"]> {
+    return this.rows(StoredPart, (orm) =>
+      orm.select().from(t.memoryView).orderBy(asc(t.memoryView.start))
+    )
+  }
+  node(part: Part): ReturnType<MemoryLedger["node"]> {
+    return this.rows(StoredNode, (orm) =>
+      orm.select().from(t.memoryNodes).where(key(part)).limit(1)
+    ).pipe(Effect.map((rows) => rows[0]))
+  }
+  nodeCount(): ReturnType<MemoryLedger["nodeCount"]> {
+    return this.query((orm) =>
+      orm.select({ n: countRows() }).from(t.memoryNodes)
+    ).pipe(Effect.map((rows) => rows[0]!.n))
+  }
+  private viewNodes(
+    table: typeof t.memoryView | typeof t.memoryCompactionView = t.memoryView
+  ) {
+    return this.rows(StoredNode, (orm) =>
+      orm
+        .select(getTableColumns(t.memoryNodes))
+        .from(table)
+        .innerJoin(
+          t.memoryNodes,
+          and(
+            eq(t.memoryNodes.start, table.start),
+            eq(t.memoryNodes.count, table.count)
+          )
+        )
+        .orderBy(asc(table.start))
+    )
+  }
+  entry(id: number): ReturnType<MemoryLedger["entry"]> {
+    return this.rows(LogEntry, (orm) =>
+      orm.select().from(t.memoryLog).where(eq(t.memoryLog.id, id)).limit(1)
+    ).pipe(Effect.map((rows) => rows[0]))
+  }
+  private fitViews() {
+    return Effect.gen({ self: this }, function* () {
+      const changed = yield* this.fit(t.memoryView, 1, this.budget)
+      if (changed) {
+        yield* this.query((orm) => orm.delete(t.memoryCompactionView))
+        const view = yield* this.query((orm) => orm.select().from(t.memoryView))
+        if (view.length)
+          yield* this.query((orm) =>
+            orm.insert(t.memoryCompactionView).values(view)
+          )
+        yield* this.query((orm) =>
+          orm
+            .update(t.memoryViewState)
+            .set({ compacting: 1 })
+            .where(eq(t.memoryViewState.id, 2))
+        )
+      }
+      yield* this.fit(t.memoryCompactionView, 2, this.budget / 4)
+    })
+  }
+  private fit(
+    table: typeof t.memoryView | typeof t.memoryCompactionView,
     stateId: number,
     budget: number
   ) {
-    const parts = this.rows(
-        StoredPart,
-        `SELECT * FROM ${table} ORDER BY start`
-      ),
-      total = this.total(),
-      nodes = new Map<string, MemoryNode>()
-    for (const node of this.rows(
-      StoredNode,
-      `SELECT n.* FROM ${table} v JOIN memory_nodes n ON n.start=v.start AND n.count=v.count`
-    ))
-      nodes.set(nodeKey(node), node)
-    const compacting =
-      this.row(
-        StoredViewState,
-        "SELECT compacting FROM memory_view_state WHERE id=?",
-        stateId
-      )?.compacting === 1
-    if (!Policy.shouldFitMemory(parts, nodes, compacting, budget)) return false
-    for (const part of Policy.memoryAncestors(parts, total)) {
-      if (nodes.has(nodeKey(part))) continue
-      const node = this.node(part)
-      if (node) nodes.set(nodeKey(part), node)
-    }
-    const plan = Policy.fitMemory(parts, total, nodes, budget)
-    this.db.run(
-      "UPDATE memory_view_state SET compacting=? WHERE id=?",
-      plan.compacting ? 1 : 0,
-      stateId
-    )
-    if (!plan.changed) return false
-    this.db.run(`DELETE FROM ${table}`)
-    for (const part of plan.view)
-      this.db.run(`INSERT INTO ${table} VALUES (?,?)`, part.start, part.count)
-    return true
-  }
-  saveNode(part: Part, text: string) {
-    this.db.transaction(() => {
-      const plan = Policy.summarySavePlan(part, text, this.total())
-      Policy.requireSummaryChildren(
-        plan.children.map((child) => this.node(child))
-      )
-      this.db.run(
-        "INSERT OR IGNORE INTO memory_nodes VALUES (?,?,?,?)",
-        part.start,
-        part.count,
-        text,
-        plan.bytes
-      )
-      this.db.run(
-        "DELETE FROM memory_ready WHERE start=? AND count=?",
-        part.start,
-        part.count
+    return Effect.gen({ self: this }, function* () {
+      const parts = yield* this.rows(StoredPart, (orm) =>
+          orm.select().from(table).orderBy(asc(table.start))
+        ),
+        total = yield* this.total(),
+        nodes = new Map<string, MemoryNode>()
+      for (const node of yield* this.viewNodes(table))
+        nodes.set(nodeKey(node), node)
+      const state = yield* this.rows(StoredViewState, (orm) =>
+        orm
+          .select({ compacting: t.memoryViewState.compacting })
+          .from(t.memoryViewState)
+          .where(eq(t.memoryViewState.id, stateId))
+          .limit(1)
       )
       if (
-        Policy.parentReady(
-          !!this.node(plan.parent),
-          Policy.summaryChildren(plan.parent).map((child) => this.node(child))
+        !Policy.shouldFitMemory(
+          parts,
+          nodes,
+          state[0]!.compacting === 1,
+          budget
         )
       )
-        this.db.run(
-          "INSERT OR IGNORE INTO memory_ready VALUES (?,?)",
-          plan.parent.start,
-          plan.parent.count
-        )
-      this.fitViews()
-      this.db.run(
-        "DELETE FROM memory_failures WHERE start=? AND count=?",
-        part.start,
-        part.count
+        return false
+      for (const part of Policy.memoryAncestors(parts, total)) {
+        if (nodes.has(nodeKey(part))) continue
+        const node = yield* this.node(part)
+        if (node) nodes.set(nodeKey(part), node)
+      }
+      const plan = Policy.fitMemory(parts, total, nodes, budget)
+      yield* this.query((orm) =>
+        orm
+          .update(t.memoryViewState)
+          .set({ compacting: plan.compacting ? 1 : 0 })
+          .where(eq(t.memoryViewState.id, stateId))
       )
+      if (!plan.changed) return false
+      yield* this.query((orm) => orm.delete(table))
+      if (plan.view.length)
+        yield* this.query((orm) => orm.insert(table).values(plan.view))
+      return true
     })
+  }
+  saveNode(part: Part, text: string): ReturnType<MemoryLedger["saveNode"]> {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const total = yield* this.total(),
+          plan = yield* attempt(() => Policy.summarySavePlan(part, text, total))
+        const children = yield* Effect.forEach(plan.children, (child) =>
+          this.node(child)
+        )
+        yield* attempt(() => Policy.requireSummaryChildren(children))
+        yield* this.query((orm) =>
+          orm
+            .insert(t.memoryNodes)
+            .values({ ...part, text, bytes: plan.bytes })
+            .onConflictDoNothing()
+        )
+        yield* this.query((orm) =>
+          orm
+            .delete(t.memoryReady)
+            .where(
+              and(
+                eq(t.memoryReady.start, part.start),
+                eq(t.memoryReady.count, part.count)
+              )
+            )
+        )
+        const parent = yield* this.node(plan.parent),
+          siblings = yield* Effect.forEach(
+            Policy.summaryChildren(plan.parent),
+            (child) => this.node(child)
+          )
+        if (Policy.parentReady(!!parent, siblings))
+          yield* this.query((orm) =>
+            orm.insert(t.memoryReady).values(plan.parent).onConflictDoNothing()
+          )
+        yield* this.fitViews()
+        yield* this.query((orm) =>
+          orm.delete(t.memoryFailures).where(failureKey(part))
+        )
+      })
+    ).pipe(Effect.asVoid)
   }
   private failure(part: Part) {
-    return this.row(
-      StoredFailure,
-      "SELECT start,count,attempts,retry_at FROM memory_failures WHERE start=? AND count=?",
-      part.start,
-      part.count
+    return this.rows(StoredFailure, (orm) =>
+      orm.select().from(t.memoryFailures).where(failureKey(part)).limit(1)
+    ).pipe(Effect.map((rows) => rows[0]))
+  }
+  failNode(part: Part, retryAt: number): ReturnType<MemoryLedger["failNode"]> {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const before = yield* this.failure(part),
+          plan = Policy.summaryFailure(before?.attempts, retryAt)
+        yield* this.query((orm) =>
+          orm
+            .insert(t.memoryFailures)
+            .values({
+              ...part,
+              retry_at: plan.retryAt,
+              attempts: plan.attempts,
+            })
+            .onConflictDoUpdate({
+              target: [t.memoryFailures.start, t.memoryFailures.count],
+              set: { retry_at: plan.retryAt, attempts: plan.attempts },
+            })
+        )
+        return plan.first
+      })
     )
   }
-  failNode(part: Part, retryAt: number) {
-    return this.db.transaction(() => {
-      const plan = Policy.summaryFailure(this.failure(part)?.attempts, retryAt)
-      this.db.run(
-        "INSERT INTO memory_failures(start,count,retry_at,attempts) VALUES (?,?,?,?) ON CONFLICT(start,count) DO UPDATE SET retry_at=excluded.retry_at,attempts=excluded.attempts",
-        part.start,
-        part.count,
-        plan.retryAt,
-        plan.attempts
+  retryAt(): ReturnType<MemoryLedger["retryAt"]> {
+    return this.rows(StoredFailure, (orm) =>
+      orm
+        .select()
+        .from(t.memoryFailures)
+        .where(lt(t.memoryFailures.attempts, Policy.SUMMARY_FAILURES))
+        .orderBy(asc(t.memoryFailures.retry_at))
+        .limit(1)
+    ).pipe(Effect.map((rows) => rows[0]?.retry_at))
+  }
+  issues(): ReturnType<MemoryLedger["issues"]> {
+    return this.query((orm) =>
+      orm
+        .select()
+        .from(t.memoryFailures)
+        .orderBy(asc(t.memoryFailures.start), asc(t.memoryFailures.count))
+        .limit(100)
+    ).pipe(
+      Effect.map((rows) =>
+        rows.map((row) =>
+          Schema.decodeUnknownSync(StoredIssue)({
+            ...row,
+            retryAt:
+              row.attempts < Policy.SUMMARY_FAILURES ? row.retry_at : null,
+          })
+        )
       )
-      return plan.first
-    })
-  }
-  retryAt() {
-    return this.row(
-      StoredFailure,
-      "SELECT start,count,attempts,retry_at FROM memory_failures WHERE attempts<? ORDER BY retry_at LIMIT 1",
-      Policy.SUMMARY_FAILURES
-    )?.retry_at
-  }
-  issues() {
-    return this.rows(
-      StoredIssue,
-      "SELECT start,count,attempts,CASE WHEN attempts<? THEN retry_at ELSE NULL END AS retryAt FROM memory_failures ORDER BY start,count LIMIT 100",
-      Policy.SUMMARY_FAILURES
     )
   }
-  paused(part: Part) {
-    return (this.failure(part)?.attempts ?? 0) >= Policy.SUMMARY_FAILURES
-  }
-  retrySummary(part: Part) {
-    if (!this.paused(part)) return false
-    this.db.run(
-      "DELETE FROM memory_failures WHERE start=? AND count=?",
-      part.start,
-      part.count
-    )
-    return true
-  }
-  next(busy: Set<string>, now: number): SummaryJob | undefined {
-    const view = this.rows(
-      StoredNode,
-      "SELECT n.* FROM memory_compaction_view v JOIN memory_nodes n ON n.start=v.start AND n.count=v.count ORDER BY v.start"
-    )
-    const first =
-      this.row(
-        StoredPart,
-        "SELECT v.start,v.count FROM memory_view v LEFT JOIN memory_nodes n ON n.start=v.start AND n.count=v.count WHERE n.start IS NULL ORDER BY v.start LIMIT 1"
-      )?.start ?? this.total()
-    const leaves = this.rows(
-      LogEntry,
-      "SELECT l.* FROM memory_ready q JOIN memory_log l ON l.id=q.start LEFT JOIN memory_failures f ON f.start=q.start AND f.count=q.count WHERE q.count=1 AND q.start<=? AND (f.start IS NULL OR (f.attempts<? AND f.retry_at<=?)) ORDER BY q.start LIMIT 1",
-      first,
-      Policy.SUMMARY_FAILURES,
-      now
-    )
-    const parents = this.rows(
-      StoredMerge,
-      "SELECT q.start,q.count,a.text AS left_text,b.text AS right_text FROM memory_ready q JOIN memory_nodes a ON a.start=q.start AND a.count=q.count/2 JOIN memory_nodes b ON b.start=q.start+q.count/2 AND b.count=q.count/2 LEFT JOIN memory_failures f ON f.start=q.start AND f.count=q.count WHERE q.count>1 AND q.start+q.count<=? AND (f.start IS NULL OR (f.attempts<? AND f.retry_at<=?)) ORDER BY q.count,q.start LIMIT ?",
-      first,
-      Policy.SUMMARY_FAILURES,
-      now,
-      busy.size + 1
-    )
-    return Policy.summaryJob(leaves, parents, busy, view)
-  }
-  blocked() {
-    return !!this.row(
-      StoredFailure,
-      "SELECT f.start,f.count,f.attempts,f.retry_at FROM memory_view v JOIN memory_failures f ON f.start=v.start AND f.count=v.count LEFT JOIN memory_nodes n ON n.start=v.start AND n.count=v.count WHERE f.attempts>=? AND n.start IS NULL LIMIT 1",
-      Policy.SUMMARY_FAILURES
+  paused(part: Part): ReturnType<MemoryLedger["paused"]> {
+    return this.failure(part).pipe(
+      Effect.map((row) => (row?.attempts ?? 0) >= Policy.SUMMARY_FAILURES)
     )
   }
-  settled() {
-    return this.parts().length === this.viewNodes().length
-  }
-  render() {
-    return Policy.renderMemory(this.viewNodes(), this.parts().length)
-  }
-  zoom(start: number, count: number): string {
-    const part = { start, count }
-    Policy.requireMemoryRange(part, this.total())
-    return Policy.zoomMemory(
-      part,
-      count === 1 ? this.entry(start) : undefined,
-      Policy.summaryChildren(part).map((child) => this.node(child))
-    )
-  }
-  search(query: string) {
-    return this.rows(
-      LogEntry,
-      "SELECT * FROM memory_log WHERE instr(lower(text),lower(?)) > 0 ORDER BY id DESC LIMIT 30",
-      query
-    )
-  }
-  notes() {
-    return this.rows(StoredNote, "SELECT * FROM memory_notes ORDER BY path")
-  }
-  writeNote(path: string, body: string, sourceId: number, date: string) {
-    Policy.requireMemoryNote(path, body, true)
-    this.db.transaction(() => {
-      Policy.requireMemoryNote(path, body, !!this.entry(sourceId))
-      this.db.run(
-        "INSERT INTO memory_note_history(path,body,source_id,date) VALUES (?,?,?,?)",
-        path,
-        body,
-        sourceId,
-        date
-      )
-      this.db.run(
-        "INSERT INTO memory_notes VALUES (?,?,?,?) ON CONFLICT(path) DO UPDATE SET body=excluded.body,source_id=excluded.source_id,updated_at=excluded.updated_at",
-        path,
-        body,
-        sourceId,
-        date
-      )
-    })
-  }
-  watermark(): Watermark {
-    return {
-      messages: this.total(),
-      nodes: this.row(
-        StoredCount,
-        "SELECT coalesce(max(rowid),0) AS n FROM memory_nodes"
-      )!.n,
-      notes: this.row(
-        StoredCount,
-        "SELECT coalesce(max(id),0) AS n FROM memory_note_history"
-      )!.n,
-    }
-  }
-  archivePage(after: Watermark, until: Watermark, limit = 32): ArchiveRecord[] {
-    const messages = this.db.all<typeof MessageRecord.Type>(
-      "SELECT 'message' AS type,* FROM memory_log WHERE id>=? AND id<? ORDER BY id LIMIT ?",
-      after.messages,
-      until.messages,
-      limit
-    )
-    const nodes = this.db.all<typeof NodeRecord.Type>(
-      "SELECT 'node' AS type,rowid AS seq,* FROM memory_nodes WHERE rowid>? AND rowid<=? ORDER BY rowid LIMIT ?",
-      after.nodes,
-      until.nodes,
-      limit - messages.length
-    )
-    const notes = this.db.all<typeof NoteRecord.Type>(
-      "SELECT 'note' AS type,* FROM memory_note_history WHERE id>? AND id<=? ORDER BY id LIMIT ?",
-      after.notes,
-      until.notes,
-      limit - messages.length - nodes.length
-    )
-    return [...messages, ...nodes, ...notes].map((record) =>
-      Schema.decodeUnknownSync(StoredArchiveRecord)(record)
-    )
-  }
-  restore(records: readonly ArchiveRecord[], parts: readonly Part[]) {
-    this.db.transaction(() => {
-      if (this.total() || this.nodeCount() || this.notes().length)
-        throw new InvalidMemory({
-          message: "Restore requires an empty memory store",
-        })
-      const plan = Policy.memoryRestorePlan(records, parts)
-      for (const record of plan.messages)
-        this.append(record.source, record.kind, record.text, record.date)
-      for (const record of plan.nodes)
-        this.db.run(
-          "INSERT INTO memory_nodes(rowid,start,count,text,bytes) VALUES (?,?,?,?,?)",
-          record.seq,
-          record.start,
-          record.count,
-          record.text,
-          record.bytes
+  retrySummary(part: Part): ReturnType<MemoryLedger["retrySummary"]> {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        if (!(yield* this.paused(part))) return false
+        yield* this.query((orm) =>
+          orm.delete(t.memoryFailures).where(failureKey(part))
         )
-      for (const record of plan.notes) {
-        this.writeNote(record.path, record.body, record.source_id, record.date)
-        this.db.run(
-          "UPDATE memory_note_history SET id=? WHERE id=(SELECT max(id) FROM memory_note_history)",
-          record.id
-        )
-        this.db.run(
-          "UPDATE memory_note_history SET date=? WHERE id=(SELECT max(id) FROM memory_note_history)",
-          record.date
-        )
-        this.db.run(
-          "UPDATE memory_notes SET updated_at=? WHERE path=?",
-          record.date,
-          record.path
-        )
-      }
-      this.db.run("DELETE FROM memory_ready")
-      this.db.run(
-        "INSERT OR IGNORE INTO memory_ready SELECT l.id,1 FROM memory_log l LEFT JOIN memory_nodes n ON n.start=l.id AND n.count=1 WHERE n.start IS NULL"
-      )
-      this.db.run(
-        "INSERT OR IGNORE INTO memory_ready SELECT a.start,a.count*2 FROM memory_nodes a JOIN memory_nodes b ON b.start=a.start+a.count AND b.count=a.count LEFT JOIN memory_nodes p ON p.start=a.start AND p.count=a.count*2 WHERE a.start%(a.count*2)=0 AND p.start IS NULL"
-      )
-      this.db.run("DELETE FROM memory_compaction_view")
-      this.db.run("UPDATE memory_view_state SET compacting=0 WHERE id=1")
-      this.db.run("UPDATE memory_view_state SET compacting=1 WHERE id=2")
-      for (const part of parts)
-        this.db.run(
-          "INSERT INTO memory_compaction_view VALUES (?,?)",
-          part.start,
-          part.count
-        )
-      this.db.run("DELETE FROM memory_view")
-      for (const part of parts)
-        this.db.run(
-          "INSERT INTO memory_view VALUES (?,?)",
-          part.start,
-          part.count
-        )
-    })
+        return true
+      })
+    )
   }
-
+  next(busy: Set<string>, now: number): ReturnType<MemoryLedger["next"]> {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const view = yield* this.viewNodes(t.memoryCompactionView)
+        const missing = yield* this.query((orm) =>
+          orm
+            .select({ start: t.memoryView.start })
+            .from(t.memoryView)
+            .leftJoin(
+              t.memoryNodes,
+              and(
+                eq(t.memoryNodes.start, t.memoryView.start),
+                eq(t.memoryNodes.count, t.memoryView.count)
+              )
+            )
+            .where(isNull(t.memoryNodes.start))
+            .orderBy(asc(t.memoryView.start))
+            .limit(1)
+        )
+        const first = missing[0]?.start ?? (yield* this.total())
+        const eligible = or(
+          isNull(t.memoryFailures.start),
+          and(
+            lt(t.memoryFailures.attempts, Policy.SUMMARY_FAILURES),
+            lte(t.memoryFailures.retry_at, now)
+          )
+        )
+        const leaves = yield* this.rows(LogEntry, (orm) =>
+          orm
+            .select(getTableColumns(t.memoryLog))
+            .from(t.memoryReady)
+            .innerJoin(t.memoryLog, eq(t.memoryLog.id, t.memoryReady.start))
+            .leftJoin(
+              t.memoryFailures,
+              and(
+                eq(t.memoryFailures.start, t.memoryReady.start),
+                eq(t.memoryFailures.count, t.memoryReady.count)
+              )
+            )
+            .where(
+              and(
+                eq(t.memoryReady.count, 1),
+                lte(t.memoryReady.start, first),
+                eligible
+              )
+            )
+            .orderBy(asc(t.memoryReady.start))
+            .limit(1)
+        )
+        const a = alias(t.memoryNodes, "summary_left"),
+          b = alias(t.memoryNodes, "summary_right")
+        const parents = yield* this.rows(StoredMerge, (orm) =>
+          orm
+            .select({
+              start: t.memoryReady.start,
+              count: t.memoryReady.count,
+              left_text: a.text,
+              right_text: b.text,
+            })
+            .from(t.memoryReady)
+            .innerJoin(
+              a,
+              and(
+                eq(a.start, t.memoryReady.start),
+                eq(a.count, divide(t.memoryReady.count, 2))
+              )
+            )
+            .innerJoin(
+              b,
+              and(
+                eq(
+                  b.start,
+                  increment(t.memoryReady.start, divide(t.memoryReady.count, 2))
+                ),
+                eq(b.count, divide(t.memoryReady.count, 2))
+              )
+            )
+            .leftJoin(
+              t.memoryFailures,
+              and(
+                eq(t.memoryFailures.start, t.memoryReady.start),
+                eq(t.memoryFailures.count, t.memoryReady.count)
+              )
+            )
+            .where(
+              and(
+                gt(t.memoryReady.count, 1),
+                lte(increment(t.memoryReady.start, t.memoryReady.count), first),
+                eligible
+              )
+            )
+            .orderBy(asc(t.memoryReady.count), asc(t.memoryReady.start))
+            .limit(busy.size + 1)
+        )
+        return Policy.summaryJob(leaves, parents, busy, view)
+      })
+    )
+  }
+  blocked(): ReturnType<MemoryLedger["blocked"]> {
+    return this.query((orm) =>
+      orm
+        .select({ start: t.memoryFailures.start })
+        .from(t.memoryView)
+        .innerJoin(
+          t.memoryFailures,
+          and(
+            eq(t.memoryFailures.start, t.memoryView.start),
+            eq(t.memoryFailures.count, t.memoryView.count)
+          )
+        )
+        .leftJoin(
+          t.memoryNodes,
+          and(
+            eq(t.memoryNodes.start, t.memoryView.start),
+            eq(t.memoryNodes.count, t.memoryView.count)
+          )
+        )
+        .where(
+          and(
+            gte(t.memoryFailures.attempts, Policy.SUMMARY_FAILURES),
+            isNull(t.memoryNodes.start)
+          )
+        )
+        .limit(1)
+    ).pipe(Effect.map((rows) => rows.length > 0))
+  }
+  settled(): ReturnType<MemoryLedger["settled"]> {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        return (yield* this.parts()).length === (yield* this.viewNodes()).length
+      })
+    )
+  }
+  render(): ReturnType<MemoryLedger["render"]> {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        return Policy.renderMemory(
+          yield* this.viewNodes(),
+          (yield* this.parts()).length
+        )
+      })
+    )
+  }
+  zoom(start: number, count: number): ReturnType<MemoryLedger["zoom"]> {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const part = { start, count },
+          total = yield* this.total()
+        yield* attempt(() => Policy.requireMemoryRange(part, total))
+        const entry = count === 1 ? yield* this.entry(start) : undefined,
+          children = yield* Effect.forEach(
+            Policy.summaryChildren(part),
+            (child) => this.node(child)
+          )
+        return yield* attempt(() => Policy.zoomMemory(part, entry, children))
+      })
+    )
+  }
+  search(query: string): ReturnType<MemoryLedger["search"]> {
+    return this.rows(LogEntry, (orm) =>
+      orm
+        .select()
+        .from(t.memoryLog)
+        .where(containsText(t.memoryLog.text, query))
+        .orderBy(desc(t.memoryLog.id))
+        .limit(30)
+    )
+  }
+  notes(): ReturnType<MemoryLedger["notes"]> {
+    return this.rows(StoredNote, (orm) =>
+      orm.select().from(t.memoryNotes).orderBy(asc(t.memoryNotes.path))
+    )
+  }
+  writeNote(
+    path: string,
+    body: string,
+    sourceId: number,
+    date: string
+  ): ReturnType<MemoryLedger["writeNote"]> {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        yield* attempt(() => Policy.requireMemoryNote(path, body, true))
+        const entry = yield* this.entry(sourceId)
+        yield* attempt(() => Policy.requireMemoryNote(path, body, !!entry))
+        yield* this.query((orm) =>
+          orm
+            .insert(t.memoryNoteHistory)
+            .values({ path, body, source_id: sourceId, date })
+        )
+        yield* this.query((orm) =>
+          orm
+            .insert(t.memoryNotes)
+            .values({ path, body, source_id: sourceId, updated_at: date })
+            .onConflictDoUpdate({
+              target: t.memoryNotes.path,
+              set: { body, source_id: sourceId, updated_at: date },
+            })
+        )
+      })
+    ).pipe(Effect.asVoid)
+  }
+  watermark(): ReturnType<MemoryLedger["watermark"]> {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const messages = yield* this.total(),
+          nodes = yield* this.query((orm) =>
+            orm.select({ n: max(t.memoryNodes.sequence) }).from(t.memoryNodes)
+          ),
+          notes = yield* this.query((orm) =>
+            orm
+              .select({ n: max(t.memoryNoteHistory.id) })
+              .from(t.memoryNoteHistory)
+          )
+        return {
+          messages,
+          nodes: Number(nodes[0]?.n ?? 0),
+          notes: notes[0]?.n ?? 0,
+        }
+      })
+    )
+  }
+  archivePage(
+    after: Watermark,
+    until: Watermark,
+    limit = 32
+  ): ReturnType<MemoryLedger["archivePage"]> {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const messages = yield* this.query((orm) =>
+          orm
+            .select()
+            .from(t.memoryLog)
+            .where(
+              and(
+                gte(t.memoryLog.id, after.messages),
+                lt(t.memoryLog.id, until.messages)
+              )
+            )
+            .orderBy(asc(t.memoryLog.id))
+            .limit(limit)
+        )
+        const nodes = yield* this.query((orm) =>
+          orm
+            .select({
+              seq: t.memoryNodes.sequence,
+              start: t.memoryNodes.start,
+              count: t.memoryNodes.count,
+              text: t.memoryNodes.text,
+              bytes: t.memoryNodes.bytes,
+            })
+            .from(t.memoryNodes)
+            .where(
+              and(
+                gt(t.memoryNodes.sequence, after.nodes),
+                lte(t.memoryNodes.sequence, until.nodes)
+              )
+            )
+            .orderBy(asc(t.memoryNodes.sequence))
+            .limit(limit - messages.length)
+        )
+        const notes = yield* this.query((orm) =>
+          orm
+            .select()
+            .from(t.memoryNoteHistory)
+            .where(
+              and(
+                gt(t.memoryNoteHistory.id, after.notes),
+                lte(t.memoryNoteHistory.id, until.notes)
+              )
+            )
+            .orderBy(asc(t.memoryNoteHistory.id))
+            .limit(limit - messages.length - nodes.length)
+        )
+        return [
+          ...messages.map((row) => ({ ...row, type: "message" })),
+          ...nodes.map((row) => ({ ...row, type: "node" })),
+          ...notes.map((row) => ({ ...row, type: "note" })),
+        ].map((row) => Schema.decodeUnknownSync(StoredArchiveRecord)(row))
+      })
+    )
+  }
+  restore(
+    records: readonly ArchiveRecord[],
+    parts: readonly Part[]
+  ): ReturnType<MemoryLedger["restore"]> {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        if (
+          (yield* this.total()) ||
+          (yield* this.nodeCount()) ||
+          (yield* this.notes()).length
+        )
+          return yield* new InvalidMemory({
+            message: "Restore requires an empty memory store",
+          })
+        const plan = yield* attempt(() =>
+          Policy.memoryRestorePlan(records, parts)
+        )
+        for (const record of plan.messages)
+          yield* this.append(
+            record.source,
+            record.kind,
+            record.text,
+            record.date
+          )
+        for (const record of plan.nodes)
+          yield* this.query((orm) =>
+            orm.insert(t.memoryNodes).values({
+              sequence: record.seq,
+              start: record.start,
+              count: record.count,
+              text: record.text,
+              bytes: record.bytes,
+            })
+          )
+        for (const record of plan.notes) {
+          const entry = yield* this.entry(record.source_id)
+          yield* attempt(() =>
+            Policy.requireMemoryNote(record.path, record.body, !!entry)
+          )
+          yield* this.query((orm) =>
+            orm.insert(t.memoryNoteHistory).values({
+              id: record.id,
+              path: record.path,
+              body: record.body,
+              source_id: record.source_id,
+              date: record.date,
+            })
+          )
+          yield* this.query((orm) =>
+            orm
+              .insert(t.memoryNotes)
+              .values({
+                path: record.path,
+                body: record.body,
+                source_id: record.source_id,
+                updated_at: record.date,
+              })
+              .onConflictDoUpdate({
+                target: t.memoryNotes.path,
+                set: {
+                  body: record.body,
+                  source_id: record.source_id,
+                  updated_at: record.date,
+                },
+              })
+          )
+        }
+        yield* this.rebuildReady()
+        yield* this.query((orm) => orm.delete(t.memoryCompactionView))
+        yield* this.query((orm) => orm.delete(t.memoryView))
+        yield* this.query((orm) =>
+          orm
+            .update(t.memoryViewState)
+            .set({ compacting: 0 })
+            .where(eq(t.memoryViewState.id, 1))
+        )
+        yield* this.query((orm) =>
+          orm
+            .update(t.memoryViewState)
+            .set({ compacting: 1 })
+            .where(eq(t.memoryViewState.id, 2))
+        )
+        if (parts.length) {
+          yield* this.query((orm) =>
+            orm.insert(t.memoryCompactionView).values([...parts])
+          )
+          yield* this.query((orm) =>
+            orm.insert(t.memoryView).values([...parts])
+          )
+        }
+      })
+    ).pipe(Effect.asVoid)
+  }
   importEntries(
     id: string,
     records: readonly { kind: LogKind; text: string; date: string }[]
-  ) {
-    return this.db.transaction(() => {
-      const before = this.total()
-      records.forEach((r, i) =>
-        this.append(`import:${id}:${i}`, r.kind, r.text, r.date)
-      )
-      return this.total() - before
-    })
+  ): ReturnType<MemoryLedger["importEntries"]> {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const before = yield* this.total()
+        for (const [i, r] of records.entries())
+          yield* this.append(`import:${id}:${i}`, r.kind, r.text, r.date)
+        return (yield* this.total()) - before
+      })
+    )
   }
 }
 
@@ -534,16 +881,8 @@ const openSqliteMemory = Effect.fn("Memory.sqlite.open")(function* (
   db: Sqlite,
   budget = VIEW_BYTES
 ) {
-  const storage = yield* Effect.try({
-    try: () => new SqliteMemory(db, budget),
-    catch: (cause) => {
-      const memoryStorageError =
-        Schema.decodeUnknownOption(MemoryStorageError)(cause)
-      if (memoryStorageError._tag === "Some")
-        return new MemoryStorageError({ operation: "open" })
-      throw cause
-    },
-  })
+  const storage = new SqliteMemory(db, budget)
+  yield* storage.initialize()
   return storage
 })
 export const makeSqliteMemory = (db: Sqlite, budget = VIEW_BYTES) =>

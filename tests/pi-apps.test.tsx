@@ -32,8 +32,8 @@ it("saves a native Pi app, resumes publication approval after restart and render
   const directory = await mkdtemp(join(tmpdir(), "pi-app-")),
     path = join(directory, "pi.sqlite")
   const db = database(),
-    apps = new AppStore(db, () => true)
-  let store = new AccessStore(db, () => builtInTools)
+    apps = new AppStore(db, () => Effect.sync(() => true))
+  let store = new AccessStore(db, () => Effect.succeed(builtInTools))
   const turnId = crypto.randomUUID(),
     appId = crypto.randomUUID()
   let approvalReady!: () => void
@@ -80,16 +80,13 @@ it("saves a native Pi app, resumes publication approval after restart and render
   function options() {
     const gate = new AccessGate(
       store,
-      () => true,
+      () => Effect.succeed(true),
       () => {
         if (
-          store
-            .pending()
-            .some(
-              (operation) =>
-                operation.tool === "publish_app" &&
-                operation.status === "pending"
-            )
+          Effect.runSync(store.pending()).some(
+            (operation) =>
+              operation.tool === "publish_app" && operation.status === "pending"
+          )
         )
           approvalReady()
       }
@@ -125,13 +122,13 @@ it("saves a native Pi app, resumes publication approval after restart and render
     }
     const first = await conversation.submit(command, ctx)
     await waiting
-    expect(apps.get(appId)?.publishedVersion).toBeNull()
-    expect(apps.detail(appId).versions).toHaveLength(1)
-    const approval = store.pending()[0]!
+    expect(Effect.runSync(apps.get(appId))?.publishedVersion).toBeNull()
+    expect(Effect.runSync(apps.detail(appId)).versions).toHaveLength(1)
+    const approval = Effect.runSync(store.pending())[0]!
     expect(approval.tool).toBe("publish_app")
     await harness.close(ctx)
-    store = new AccessStore(db, () => builtInTools)
-    store.decide(approval.id, true, approval.revision)
+    store = new AccessStore(db, () => Effect.succeed(builtInTools))
+    await Effect.runPromise(store.decide(approval.id, true, approval.revision))
     harness = await Harness.open(
       await openNodeSqliteStorage(path),
       options(),
@@ -142,8 +139,8 @@ it("saves a native Pi app, resumes publication approval after restart and render
     expect(replay.id).toBe(first.id)
     await replay.wait(ctx)
     await conversation.waitForIdle(ctx)
-    expect(apps.get(appId)?.publishedVersion).toBe(1)
-    expect(apps.detail(appId).versions).toHaveLength(1)
+    expect(Effect.runSync(apps.get(appId))?.publishedVersion).toBe(1)
+    expect(Effect.runSync(apps.detail(appId)).versions).toHaveLength(1)
     const events = await watchEvents(harness, conversation.id, ctx)
     const activity = piTimeline(events.snapshot.entries)
     expect(

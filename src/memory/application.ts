@@ -1,3 +1,4 @@
+import type { MemoryStorageError } from "./domain"
 import { preserveFatal } from "../shared/effect"
 import { Clock, Effect, Schema } from "effect"
 import { MemoryRepository } from "./repository"
@@ -5,7 +6,6 @@ import { MemoryBackupStatus } from "./backup-status"
 import { backupMemory } from "./backup"
 import { pumpSummaries } from "./compaction"
 import { prepareHistory } from "./import"
-import { InvalidMemory, MemoryStorageError } from "./domain"
 import type { MemoryLedger } from "./ledger"
 
 export class MemoryImportBusy extends Schema.TaggedError<MemoryImportBusy>()(
@@ -29,7 +29,7 @@ export interface MemoryHost<TError, TRequirements = never> {
 }
 export interface MemoryImportAuthority {
   readonly transactionGroup: object
-  active: () => boolean
+  active: () => Effect.Effect<boolean, MemoryStorageError>
 }
 
 export const memoryReport = Effect.fn("Memory.report")(function* () {
@@ -152,33 +152,14 @@ export function memoryImport<TError, TRequirements>(
     id: string,
     records: Parameters<MemoryLedger["importEntries"]>[1]
   ) =>
-    Effect.try({
-      try: () =>
-        ledger.atomic(() => {
-          if (authority.active()) throw new MemoryImportBusy()
-          return ledger.importEntries(id, records)
-        }),
-      catch: (cause) => {
-        const knownFailure = Schema.decodeUnknownOption(
-          Schema.Union([MemoryImportBusy, InvalidMemory, MemoryStorageError])
-        )(cause)
-        if (knownFailure._tag === "Some") return knownFailure.value
-        throw cause
-      },
-    })
+    ledger.atomic(() =>
+      Effect.gen(function* () {
+        if (yield* authority.active()) return yield* new MemoryImportBusy()
+        return yield* ledger.importEntries(id, records)
+      })
+    )
   return Effect.fn("Memory.importCommand")(function* (jsonl: string) {
-    yield* Effect.try({
-      try: () => {
-        if (authority.active()) throw new MemoryImportBusy()
-      },
-      catch: (cause) => {
-        const knownFailure2 = Schema.decodeUnknownOption(
-          Schema.Union([MemoryImportBusy, MemoryStorageError])
-        )(cause)
-        if (knownFailure2._tag === "Some") return knownFailure2.value
-        throw cause
-      },
-    })
+    if (yield* authority.active()) return yield* new MemoryImportBusy()
     const prepared = yield* prepareHistory(jsonl)
     return yield* Effect.uninterruptible(
       Effect.gen(function* () {

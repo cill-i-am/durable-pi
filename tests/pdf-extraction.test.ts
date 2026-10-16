@@ -39,7 +39,7 @@ function fixture(canWrite = () => true) {
   }
   const db = database()
   let runtime = ManagedRuntime.make(
-    workspaceLayer(db, bucket, "test", canWrite, extractPdf)
+    workspaceLayer(db, bucket, "test", () => Effect.sync(canWrite), extractPdf)
   )
   return {
     db,
@@ -50,7 +50,13 @@ function fixture(canWrite = () => true) {
     async restart() {
       await runtime.dispose()
       runtime = ManagedRuntime.make(
-        workspaceLayer(db, bucket, "test", canWrite, extractPdf)
+        workspaceLayer(
+          db,
+          bucket,
+          "test",
+          () => Effect.sync(canWrite),
+          extractPdf
+        )
       )
     },
     close: () => runtime.dispose(),

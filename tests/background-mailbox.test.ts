@@ -7,7 +7,7 @@ import { SqliteBackgroundMailbox } from "../src/delegation/adapters/background-m
 import { makeBackgroundMailbox } from "../src/delegation/background-mailbox"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import { ConversationFull } from "../src/conversations/turns"
-import { database } from "./database"
+import { database, corrupt } from "./database"
 import { resolveRoute } from "../src/inference/policy"
 import { archiveEntries } from "../src/conversations/adapters/pi-reply"
 import { DelegationFailure, type Group } from "../src/delegation/contracts"
@@ -44,7 +44,7 @@ function fixture() {
     conversations = new ConversationStore(db, route)
   let status: "active" | "done" | "cancelled" = "active",
     time = 1000
-  const authority = () => status,
+  const authority = () => Effect.sync(() => status),
     now = () => time
   const mailbox = makeBackgroundMailbox(
     new SqliteBackgroundMailbox(db),
@@ -107,20 +107,20 @@ function fixture() {
     },
     admission: {
       transactionGroup: db,
-      stop: (id: string) => {
-        conversations.requestStop(id)
-      },
+      stop: (id: string) => conversations.requestStop(id).pipe(Effect.asVoid),
       admit: (h: typeof handoff, text: string) =>
-        conversations.admit(
-          {
-            operationId: h.reportId,
-            text,
-            origin: { kind: "background", groupId: h.id, turnId: h.turnId },
-          },
-          undefined,
-          [],
-          h.route
-        ).turn.id,
+        conversations
+          .admit(
+            {
+              operationId: h.reportId,
+              text,
+              origin: { kind: "background", groupId: h.id, turnId: h.turnId },
+            },
+            undefined,
+            [],
+            h.route
+          )
+          .pipe(Effect.map((admission) => admission.turn.id)),
     },
     admit: (h: typeof handoff, text: string) =>
       conversations.admit(
@@ -149,10 +149,12 @@ it("persists handoff and admits its report once with the original model and even
   Effect.runSync(f.mailbox.observed(19, f.result))
   expect(Effect.runSync(f.mailbox.deliver(f.admission))).toBe(false)
   f.status("done")
-  f.conversations.setSettings({ model: "gpt-6-astra", thinking: "high" })
+  Effect.runSync(
+    f.conversations.setSettings({ model: "gpt-6-astra", thinking: "high" })
+  )
   expect(Effect.runSync(f.reopen().deliver(f.admission))).toBe(true)
   expect(Effect.runSync(f.reopen().deliver(f.admission))).toBe(false)
-  const turns = f.conversations.recent()
+  const turns = Effect.runSync(f.conversations.recent())
   expect(turns).toHaveLength(1)
   expect(turns[0]!.routing).toEqual(route)
   expect(turns[0]!.origin).toEqual({
@@ -171,14 +173,14 @@ it("rolls back report acknowledgement and conversation admission together", () =
     Effect.runSync(
       f.mailbox.deliver({
         ...f.admission,
-        admit: (h, text) => {
-          f.admit(h, text)
-          throw new Error("crash")
-        },
+        admit: (h, text) =>
+          f
+            .admit(h, text)
+            .pipe(Effect.andThen(() => Effect.die(new Error("crash")))),
       })
     )
   ).toThrow("crash")
-  expect(f.conversations.recent()).toHaveLength(0)
+  expect(Effect.runSync(f.conversations.recent())).toHaveLength(0)
   expect(Effect.runSync(f.mailbox.get(19))!.status).toBe("ready")
   expect(Effect.runSync(f.reopen().deliver(f.admission))).toBe(true)
 })
@@ -188,19 +190,23 @@ it("repeated report retries preserve trusted provenance and archive as events", 
   f.status("done")
   Effect.runSync(f.mailbox.observed(19, f.result))
   Effect.runSync(f.mailbox.deliver(f.admission))
-  let turn = f.conversations.get(f.handoff.reportId)!
+  let turn = Effect.runSync(f.conversations.get(f.handoff.reportId))!
   for (let n = 0; n < 2; n++) {
-    f.conversations.finish(
-      turn,
-      [{ id: turn.id, delivery: "unanswered" }],
-      "",
-      "Interrupted"
+    Effect.runSync(
+      f.conversations.finish(
+        turn,
+        [{ id: turn.id, delivery: "unanswered" }],
+        "",
+        "Interrupted"
+      )
     )
-    turn = f.conversations.admit({
-      operationId: crypto.randomUUID(),
-      text: turn.text,
-      retryOf: turn.id,
-    }).turn
+    turn = Effect.runSync(
+      f.conversations.admit({
+        operationId: crypto.randomUUID(),
+        text: turn.text,
+        retryOf: turn.id,
+      })
+    ).turn
     expect(turn.origin).toEqual({
       kind: "background",
       groupId: 19,
@@ -269,7 +275,7 @@ it("isolates bots, validates report ownership and limits unfinished groups", () 
   const f = fixture(),
     other = makeBackgroundMailbox(
       new SqliteBackgroundMailbox(database()),
-      () => "done",
+      () => Effect.sync(() => "done"),
       "other",
       () => crypto.randomUUID()
     )
@@ -334,16 +340,18 @@ it.each(["storage", "identity"])(
       f.mailbox.deliver({
         ...f.admission,
         transactionGroup: mode === "storage" ? {} : f.db,
-        admit: (h, report) => {
-          called = true
-          f.admission.admit(h, report)
-          return "wrong-identity"
-        },
+        admit: (h, report) =>
+          Effect.sync(() => {
+            called = true
+          }).pipe(
+            Effect.andThen(() => f.admission.admit(h, report)),
+            Effect.as("wrong-identity")
+          ),
       })
     )
     expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)
     expect(called).toBe(mode === "identity")
-    expect(f.conversations.recent()).toEqual([])
+    expect(Effect.runSync(f.conversations.recent())).toEqual([])
     expect(Effect.runSync(f.mailbox.get(19))?.status).toBe("ready")
   }
 )
@@ -365,7 +373,9 @@ it("rolls back a retry receipt when the same native transaction cannot resume th
           reason.error._tag === "BackgroundStorageError"
       )
   ).toBe(true)
-  expect(new SqliteBackgroundMailbox(f.db).retry(operation)).toBeUndefined()
+  expect(
+    Effect.runSync(new SqliteBackgroundMailbox(f.db).retry(operation))
+  ).toBeUndefined()
   expect(Effect.runSync(f.mailbox.get(19))?.status).toBe("paused")
 })
 
@@ -374,14 +384,15 @@ it.each(["invalid-json", "wrong-id", "missing-report"])(
   async (mode) => {
     const f = fixture()
     if (mode === "invalid-json")
-      f.db.run("UPDATE background_handoffs SET handoff='corrupt'")
+      corrupt(f.db, "UPDATE background_handoffs SET handoff='corrupt'")
     if (mode === "wrong-id")
-      f.db.run(
+      corrupt(
+        f.db,
         "UPDATE background_handoffs SET handoff=?",
         JSON.stringify({ ...f.handoff, id: 20 })
       )
     if (mode === "missing-report")
-      f.db.run("UPDATE background_handoffs SET status='ready',report=NULL")
+      corrupt(f.db, "UPDATE background_handoffs SET status='ready',report=NULL")
     let calls = 0
     const exit = await Effect.runPromiseExit(
       application(f, {
@@ -443,7 +454,7 @@ effectIt.effect(
       const f = fixture()
       const mailbox = makeBackgroundMailbox(
         new SqliteBackgroundMailbox(database()),
-        () => "active",
+        () => Effect.sync(() => "active"),
         "owner-bot",
         () => crypto.randomUUID()
       )
@@ -551,15 +562,11 @@ it("shows a Stop committed while a native read was in flight", async () => {
 
 it("redacts native storage failures at the background HTTP boundary", async () => {
   const f = fixture()
-  const records = new SqliteBackgroundMailbox({
-    ...f.db,
-    all: () => {
-      throw new Error("private database details")
-    },
-  })
+  f.db.run("DROP TABLE background_handoffs")
+  const records = new SqliteBackgroundMailbox(f.db)
   const mailbox = makeBackgroundMailbox(
     records,
-    () => "active",
+    () => Effect.sync(() => "active"),
     "owner-bot",
     () => crypto.randomUUID()
   )
@@ -819,9 +826,7 @@ it("retains a typed conversation rejection without requiring its class prototype
   const exit = await Effect.runPromiseExit(
     f.mailbox.deliver({
       ...f.admission,
-      admit: () => {
-        throw error
-      },
+      admit: () => Effect.fail(error),
     })
   )
   expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(false)
@@ -840,18 +845,24 @@ it("rolls back report Stop when its shared native transaction fails", async () =
   f.status("done")
   Effect.runSync(f.mailbox.observed(19, f.result))
   Effect.runSync(f.mailbox.deliver(f.admission))
-  const before = f.conversations.get(f.handoff.reportId)
+  const before = Effect.runSync(f.conversations.get(f.handoff.reportId))
   const exit = await Effect.runPromiseExit(
     f.mailbox.cancel(19, {
       ...f.admission,
-      stop: (id) => {
-        f.admission.stop(id)
-        throw new Error("Stop transaction failed")
-      },
+      stop: (id) =>
+        f.admission
+          .stop(id)
+          .pipe(
+            Effect.andThen(() =>
+              Effect.die(new Error("Stop transaction failed"))
+            )
+          ),
     })
   )
   expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)
-  expect(f.conversations.get(f.handoff.reportId)).toEqual(before)
+  expect(Effect.runSync(f.conversations.get(f.handoff.reportId))).toEqual(
+    before
+  )
   expect(Effect.runSync(f.mailbox.get(19))?.status).toBe("delivered")
 })
 
@@ -862,19 +873,21 @@ it("bounds historical listing to two concurrent remote reads", async () => {
     reply = gate<void>()
   const row = Effect.runSync(f.mailbox.get(19))!
   for (let id = 100; id < 120; id++)
-    records.put({
-      ...row,
-      id,
-      turn_id: `parent-${id}`,
-      status: "delivered",
-      report: "Historical report",
-      handoff: {
-        ...row.handoff,
+    Effect.runSync(
+      records.put({
+        ...row,
         id,
-        turnId: `parent-${id}`,
-        reportId: crypto.randomUUID(),
-      },
-    })
+        turn_id: `parent-${id}`,
+        status: "delivered",
+        report: "Historical report",
+        handoff: {
+          ...row.handoff,
+          id,
+          turnId: `parent-${id}`,
+          reportId: crypto.randomUUID(),
+        },
+      })
+    )
   let active = 0,
     maximum = 0,
     calls = 0
@@ -887,7 +900,11 @@ it("bounds historical listing to two concurrent remote reads", async () => {
         if (calls === 2) entered.release()
         try {
           await reply.promise
-          return { ...f.result, id, turnId: records.get(id)!.turn_id }
+          return {
+            ...f.result,
+            id,
+            turnId: Effect.runSync(records.get(id))!.turn_id,
+          }
         } finally {
           active--
         }

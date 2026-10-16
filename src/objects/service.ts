@@ -46,11 +46,20 @@ const decision = <T>(body: () => T) =>
 
 export function makeWorkingObjects(
   ledger: ObjectLedger,
-  canWrite: (source: ChangeSource) => boolean,
+  canWrite: (
+    source: ChangeSource
+  ) => boolean | Effect.Effect<boolean, ObjectFailure>,
   digest: ObjectDigest
 ): WorkingObjects {
   const writable = (source: ChangeSource) =>
-    requireObjectWritable(canWrite, source)
+    Effect.suspend(() => {
+      const value = canWrite(source)
+      return Effect.isEffect(value) ? value : Effect.succeed(value)
+    }).pipe(
+      Effect.flatMap((allowed) =>
+        decision(() => requireObjectWritable(() => allowed, source))
+      )
+    )
   const context = Effect.fn("Objects.context")(() =>
     ledger.atomic((tx) =>
       Effect.gen(function* () {
@@ -99,7 +108,7 @@ export function makeWorkingObjects(
       const fingerprint = yield* digest({ input, source })
       return yield* ledger.atomic((tx) =>
         Effect.gen(function* () {
-          yield* decision(() => writable(source))
+          yield* writable(source)
           const operation = yield* tx.operation(input.operationId)
           const replay = yield* decision(() =>
             objectReplay(operation, fingerprint)
@@ -128,8 +137,8 @@ export function makeWorkingObjects(
           const event = changes.length ? yield* tx.event(id) : null
           // All native document reads finish before the final authority check and
           // synchronous publication into the single commit's mutable views.
+          yield* writable(source)
           return yield* decision(() => {
-            writable(source)
             if (event) {
               event.value = {
                 id,
@@ -167,14 +176,13 @@ export function makeWorkingObjects(
             turnId: null,
             toolCallId: null,
           }
-          yield* decision(() => writable(source))
+          yield* writable(source)
           const operation = yield* tx.operation(id)
           const catalog = yield* tx.catalog()
           if (operation.receipt) return { applied: true }
           return yield* decision(() => {
             if (!operation.cancelled) {
               requireObjectCancellationCapacity(catalog.operations)
-              writable(source)
               operation.cancelled = true
               catalog.operations++
             }
@@ -201,6 +209,8 @@ export function makeWorkingObjects(
 }
 export const objectApplication = (
   ledger: ObjectLedger,
-  canWrite: (source: ChangeSource) => boolean,
+  canWrite: (
+    source: ChangeSource
+  ) => boolean | Effect.Effect<boolean, ObjectFailure>,
   digest: ObjectDigest
 ) => Layer.succeed(Objects, makeWorkingObjects(ledger, canWrite, digest))

@@ -18,7 +18,7 @@ const fixture = () => {
   const host = {
     wake: () =>
       Effect.sync(() => {
-        events.push(`wake:${ledger.active()?.status}`)
+        events.push(`wake:${Effect.runSync(ledger.active())?.status}`)
       }),
     wakeBackground: () =>
       Effect.sync(() => {
@@ -29,10 +29,12 @@ const fixture = () => {
         events.push("notify")
       }),
   }
-  const root = ledger.admit({
-    operationId: crypto.randomUUID(),
-    text: "Original",
-  }).turn
+  const root = Effect.runSync(
+    ledger.admit({
+      operationId: crypto.randomUUID(),
+      text: "Original",
+    })
+  ).turn
   return { db, ledger, conversations, events, host, root }
 }
 it.effect(
@@ -40,13 +42,15 @@ it.effect(
   () =>
     Effect.gen(function* () {
       const f = fixture(),
-        child = f.ledger.admit({
-          operationId: crypto.randomUUID(),
-          text: "Steer",
-          mode: "steer",
-        }).turn
+        child = Effect.runSync(
+          f.ledger.admit({
+            operationId: crypto.randomUUID(),
+            text: "Steer",
+            mode: "steer",
+          })
+        ).turn
       yield* stopConversation(f.conversations, f.host)(child.id)
-      expect(f.ledger.get(f.root.id)?.status).toBe("stopping")
+      expect(Effect.runSync(f.ledger.get(f.root.id))?.status).toBe("stopping")
       expect(f.events).toEqual(["wake:stopping", "background", "notify"])
     })
 )
@@ -65,7 +69,7 @@ it.effect("a failed stop write never schedules or notifies", () =>
       _tag: "Failure",
       failure: { _tag: "ConversationStorageError" },
     })
-    expect(f.ledger.get(f.root.id)?.status).toBe("queued")
+    expect(Effect.runSync(f.ledger.get(f.root.id))?.status).toBe("queued")
     expect(f.events).toEqual([])
   })
 )
@@ -88,7 +92,7 @@ it.effect(
         _tag: "Failure",
         failure: { _tag: "WakeFailure" },
       })
-      expect(f.ledger.get(f.root.id)?.status).toBe("stopping")
+      expect(Effect.runSync(f.ledger.get(f.root.id))?.status).toBe("stopping")
       yield* stop(f.root.id)
       expect(attempts).toBe(2)
       expect(f.events).toEqual(["wake:stopping", "background", "notify"])
@@ -120,7 +124,7 @@ it.effect("interrupting stop waits for the doorbells after persistence", () =>
     const interruption = yield* Fiber.interrupt(pending).pipe(Effect.forkChild)
     yield* Effect.yieldNow
     expect(settled).toBe(false)
-    expect(f.ledger.get(f.root.id)?.status).toBe("stopping")
+    expect(Effect.runSync(f.ledger.get(f.root.id))?.status).toBe("stopping")
     yield* Deferred.succeed(release, undefined)
     yield* Fiber.join(interruption)
     const exit = yield* Fiber.await(pending)
@@ -143,15 +147,19 @@ it.effect(
           status: "ready" as const,
           trashed: false,
         }
-      f.ledger.finish(
-        f.root,
-        [{ id: f.root.id, delivery: "answered" }],
-        "Done",
-        null
+      Effect.runSync(
+        f.ledger.finish(
+          f.root,
+          [{ id: f.root.id, delivery: "answered" }],
+          "Done",
+          null
+        )
       )
-      const source = f.ledger.admit(
-        { operationId: crypto.randomUUID(), text: "Retry this" },
-        { files: [file], content: [{ type: "text", text: "Notes" }] }
+      const source = Effect.runSync(
+        f.ledger.admit(
+          { operationId: crypto.randomUUID(), text: "Retry this" },
+          { files: [file], content: [{ type: "text", text: "Notes" }] }
+        )
       ).turn
       let captured: Submission | undefined
       const retry = retryMessage(f.conversations, (input) =>

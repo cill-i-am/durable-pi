@@ -84,10 +84,15 @@ it.effect(
       const f = yield* fixture
       f.inputs.catalog = () =>
         Effect.sync(() => {
-          f.ledger.replace(
-            job,
-            "newer",
-            resolveRoute("memory", { model: "gpt-6.1-sol", thinking: "medium" })
+          Effect.runSync(
+            f.ledger.replace(
+              job,
+              "newer",
+              resolveRoute("memory", {
+                model: "gpt-6.1-sol",
+                thinking: "medium",
+              })
+            )
           )
           return catalog
         })
@@ -95,7 +100,9 @@ it.effect(
         yield* f.model.complete([], job).pipe(Effect.result)
       ).toMatchObject({ _tag: "Failure", failure: { _tag: "InvalidMemory" } })
       expect(f.requests()).toEqual([0, 0])
-      expect(f.ledger.current(job)?.contextWindow).toBeUndefined()
+      expect(
+        Effect.runSync(f.ledger.current(job))?.contextWindow
+      ).toBeUndefined()
       expect(f.dispatched).toEqual([])
     })
 )
@@ -107,7 +114,9 @@ it.effect(
         prepare = f.provider.prepare
       f.provider.prepare = (route, part) =>
         Effect.sync(() => {
-          f.ledger.replace(part, "newer", resolveRoute("memory"))
+          Effect.runSync(
+            f.ledger.replace(part, "newer", resolveRoute("memory"))
+          )
         }).pipe(Effect.andThen(prepare(route, part)))
       expect(
         yield* f.model.complete([], job).pipe(Effect.result)

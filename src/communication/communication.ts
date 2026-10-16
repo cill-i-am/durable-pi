@@ -26,10 +26,12 @@ export type Host = {
   readonly transactionGroup: object
   contacts: () => Effect.Effect<readonly Contact[], CommunicationError>
   prepare: (id: AgentId) => Effect.Effect<void, CommunicationError>
-  current: (turn: string) => "active" | "done" | "cancelled"
+  current: (
+    turn: string
+  ) => Effect.Effect<"active" | "done" | "cancelled", CommunicationError>
   wake: () => Effect.Effect<void, CommunicationError>
   wakeConversation: () => Effect.Effect<void, CommunicationError>
-  idle: () => boolean
+  idle: () => Effect.Effect<boolean, CommunicationError>
   resume: (
     task: Task,
     operationId: string
@@ -60,7 +62,7 @@ export const makeCommunication = (host: Host) =>
       const input = yield* Schema.decodeUnknownEffect(DelegateInput)(raw).pipe(
         Effect.mapError(() => failure("invalid", "Invalid bot task brief."))
       )
-      if (host.current(source.turnId) === "cancelled")
+      if ((yield* host.current(source.turnId)) === "cancelled")
         return yield* Effect.fail(
           failure("forbidden", "The originating request has stopped.")
         )
@@ -110,7 +112,7 @@ export const makeCommunication = (host: Host) =>
       }
       yield* host.prepare(input.to)
       yield* host.wake()
-      if (host.current(source.turnId) === "cancelled")
+      if ((yield* host.current(source.turnId)) === "cancelled")
         return yield* Effect.fail(
           failure(
             "forbidden",
@@ -136,7 +138,7 @@ export const makeCommunication = (host: Host) =>
         if (
           t.direction === "outgoing" &&
           !terminal(t) &&
-          host.current(t.request.correlationId) === "cancelled"
+          (yield* host.current(t.request.correlationId)) === "cancelled"
         )
           yield* mailbox.cancel(t.id, yield* Clock.currentTimeMillis)
       }
@@ -170,11 +172,11 @@ export const makeCommunication = (host: Host) =>
       for (const t of remaining) {
         if (t.direction !== "outgoing" || !terminal(t)) continue
         if (
-          host.current(t.request.correlationId) === "cancelled" ||
+          (yield* host.current(t.request.correlationId)) === "cancelled" ||
           t.cancelRequested
         ) {
           yield* mailbox.discard(t.id)
-        } else if (host.idle()) {
+        } else if (yield* host.idle()) {
           const operation = yield* continuationIdentity.derive(t.id)
           yield* host.wakeConversation()
           yield* mailbox.resume(t.id, {

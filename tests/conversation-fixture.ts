@@ -1,5 +1,4 @@
 import { Effect } from "effect"
-import type { Sqlite } from "../src/storage/sqlite"
 import { MemoryRepository } from "../src/memory/repository"
 import { MemoryTransaction } from "../src/memory/ledger"
 import { sqliteMemoryLayer } from "../src/memory/adapters/sqlite"
@@ -12,10 +11,10 @@ import type {
   ConversationObservation,
 } from "../src/conversations/execution"
 import type { ConversationPumpHost } from "../src/conversations/pump"
-import { database } from "./database"
+import { database, type TestSqlite } from "./database"
 
 export const conversationFixture = Effect.fn("Test.conversationFixture")(
-  function* (db: Sqlite = database()) {
+  function* (db: TestSqlite = database()) {
     // This Layer owns only values over the test's native database, no live handles.
     const { memory, memoryLedger } = yield* Effect.gen(function* () {
       return {
@@ -79,7 +78,7 @@ export const conversationFixture = Effect.fn("Test.conversationFixture")(
         Effect.sync(() => {
           if (
             !["done", "failed", "cancelled"].includes(
-              store.get(turn.id)!.status
+              Effect.runSync(store.get(turn.id))!.status
             )
           )
             throw new Error("Notification preceded completion commit")

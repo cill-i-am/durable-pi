@@ -1,3 +1,4 @@
+import { migrateSqlite } from "../src/storage/migrations"
 import { Effect } from "effect"
 import { makeSqliteMemory } from "../src/memory/adapters/sqlite"
 import { database } from "./database"
@@ -189,7 +190,7 @@ it("resumes an unfinished batch after restart even below its high watermark", ()
   expect(Effect.runSync(reopened.parts())).toHaveLength(4)
 })
 
-it("upgrades the ready queue once without rewriting a persisted view", () => {
+it("rebuilds derived queues without rewriting a persisted view", () => {
   const db = database(),
     memory = Effect.runSync(makeSqliteMemory(db, 128))
   for (let i = 0; i < 4; i++) {
@@ -203,7 +204,8 @@ it("upgrades the ready queue once without rewriting a persisted view", () => {
     "memory_compaction_view",
     "memory_view_state",
   ])
-    db.run(`DROP TABLE ${table}`)
+    db.run(`DELETE FROM ${table}`)
+  Effect.runSync(migrateSqlite(db))
   const upgraded = Effect.runSync(makeSqliteMemory(db, 128))
   expect(Effect.runSync(upgraded.parts())).toEqual(before)
   expect(Effect.runSync(upgraded.next())).toMatchObject({ start: 0, count: 2 })
@@ -219,17 +221,11 @@ it("keeps Effects lazy and returns a typed storage error without exposing driver
   expect(Effect.runSync(memory.total())).toBe(0)
   Effect.runSync(append)
   expect(Effect.runSync(memory.total())).toBe(1)
-  const failing = Effect.runSync(
-    makeSqliteMemory({
-      ...db,
-      all: () => {
-        throw new Error("private driver payload")
-      },
-    }).pipe(Effect.flip)
-  )
+  db.run("DROP TABLE memory_view_state")
+  const failing = Effect.runSync(makeSqliteMemory(db).pipe(Effect.flip))
   expect(failing).toMatchObject({
     _tag: "MemoryStorageError",
-    operation: "open",
+    operation: "query",
   })
   expect(JSON.stringify(failing)).not.toContain("private driver payload")
 })

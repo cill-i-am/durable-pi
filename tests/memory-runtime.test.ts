@@ -44,17 +44,21 @@ it("supports synchronous host transactions and disposes active model requests", 
   try {
     const memory = runtime.runSync(MemoryRepository)
     const ledger = runtime.runSync(MemoryTransaction)
-    expect(() =>
-      ledger.atomic(() => {
-        ledger.append(
-          "rolled-back",
-          "user",
-          "must roll back",
-          "2026-09-01T00:00:00.000Z"
+    await expect(
+      runtime.runPromise(
+        ledger.atomic(() =>
+          Effect.gen(function* () {
+            yield* ledger.append(
+              "rolled-back",
+              "user",
+              "must roll back",
+              "2026-09-01T00:00:00.000Z"
+            )
+            throw new Error("conversation admission failed")
+          })
         )
-        throw new Error("conversation admission failed")
-      })
-    ).toThrow("admission failed")
+      )
+    ).rejects.toThrow("admission failed")
     expect(runtime.runSync(memory.total())).toBe(0)
     expect(db.all("SELECT * FROM memory_ready")).toHaveLength(0)
     runtime.runSync(memory.append("a", "user", "x".repeat(600)))

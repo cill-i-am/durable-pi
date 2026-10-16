@@ -1,3 +1,4 @@
+import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import {
   initialRecovery,
@@ -145,33 +146,42 @@ describe("run recovery persistence and ownership", () => {
       thinking: "off",
     })
     const id = crypto.randomUUID()
-    turns.admit({ operationId: id, text: "Synthetic task" })
-    turns.saveSession(id, "7")
+    Effect.runSync(turns.admit({ operationId: id, text: "Synthetic task" }))
+    Effect.runSync(turns.saveSession(id, "7"))
     db.run("UPDATE chat_turns SET status='running' WHERE id=?", id)
     return { db, turns, id, store: new RunRecoveryStore(db) }
   }
   it("reopens without recounting committed results; isolates task, session and bot", () => {
     const { db, id, store, turns } = setup()
-    store.observe(id, "7", "a", "a", [call(1), call(2), call(3)])
-    const reopened = new RunRecoveryStore(db)
-    expect(reopened.observe(id, "7", "a", "a", [call(3)])?.view?.failures).toBe(
-      3
+    Effect.runSync(
+      store.observe(id, "7", "a", "a", [call(1), call(2), call(3)])
     )
+    const reopened = new RunRecoveryStore(db)
     expect(
-      reopened.observe(id, "other-session", "a", "a", [call(4)])
+      Effect.runSync(reopened.observe(id, "7", "a", "a", [call(3)]))?.view
+        ?.failures
+    ).toBe(3)
+    expect(
+      Effect.runSync(reopened.observe(id, "other-session", "a", "a", [call(4)]))
     ).toBeUndefined()
     const second = crypto.randomUUID()
-    turns.admit({ operationId: second, text: "Different request" })
-    expect(reopened.get(second)).toBeUndefined()
-    expect(setup().store.get(id)).toBeUndefined()
+    Effect.runSync(
+      turns.admit({ operationId: second, text: "Different request" })
+    )
+    expect(Effect.runSync(reopened.get(second))).toBeUndefined()
+    expect(Effect.runSync(setup().store.get(id))).toBeUndefined()
   })
   it("cancellation and a completed run reject observations without reopening", () => {
     const { db, id, store } = setup()
-    store.observe(id, "7", "a", "a", [call(1), call(2), call(3)])
+    Effect.runSync(
+      store.observe(id, "7", "a", "a", [call(1), call(2), call(3)])
+    )
     for (const status of ["stopping", "cancelled", "done", "failed"]) {
       db.run("UPDATE chat_turns SET status=? WHERE id=?", status, id)
-      expect(store.observe(id, "7", "a", "a", [call(4)])).toBeUndefined()
-      expect(store.get(id)?.view?.failures).toBe(3)
+      expect(
+        Effect.runSync(store.observe(id, "7", "a", "a", [call(4)]))
+      ).toBeUndefined()
+      expect(Effect.runSync(store.get(id))?.view?.failures).toBe(3)
     }
   })
   it("rejects invalid policy configuration", () => {

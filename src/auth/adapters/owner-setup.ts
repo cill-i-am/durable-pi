@@ -1,4 +1,5 @@
 import { isAPIError } from "better-auth/api"
+import type { AuthStorageError } from "./accounts"
 import { Cause, Effect, Exit, Schema } from "effect"
 import { matchesSecret, sameOrigin } from "../server"
 import { jsonRequest } from "../../shared/http"
@@ -30,7 +31,7 @@ export interface OwnerSetupBindings {
   readonly appUrl: string
   readonly ownerEmail: string
   readonly secret: string
-  readonly registered: () => Promise<boolean>
+  readonly registered: () => Effect.Effect<boolean, AuthStorageError>
   readonly signUp: (
     body: typeof Setup.Type & { email: string }
   ) => Promise<void>
@@ -106,7 +107,17 @@ export async function ownerSetup(
           }
         )
         if (!authorized) return yield* rejected("unauthorized")
-        if (yield* native(bindings.registered))
+        if (
+          yield* bindings
+            .registered()
+            .pipe(
+              Effect.catchCause((cause) =>
+                Effect.failCause(
+                  Cause.map(cause, () => rejected("unavailable"))
+                )
+              )
+            )
+        )
           return yield* rejected("registered")
         const body = yield* jsonRequest(request, Setup, 16_384, () =>
           rejected("invalid")

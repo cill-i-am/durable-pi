@@ -1,3 +1,4 @@
+import { Effect } from "effect"
 import { describe, it, expect } from "vitest"
 import {
   auth,
@@ -40,7 +41,9 @@ async function fixture() {
       new Map([...values].filter(([key]) => key.startsWith(prefix))),
   } as unknown as DurableObjectStorage
   const store = new ConnectionStore(database())
-  store.add({ id: connectionId, name: "Synthetic", url: serverUrl })
+  Effect.runSync(
+    store.add({ id: connectionId, name: "Synthetic", url: serverUrl })
+  )
   const provider = new ConnectionOAuthProvider(
     storage,
     store,
@@ -192,7 +195,7 @@ describe("native MCP OAuth concurrency regression", () => {
       })
       .catch(() => {})
     await refreshing
-    store.change(connectionId, 1, false)
+    Effect.runSync(store.change(connectionId, 1, false))
     await transport.close()
     await provider.clearServerStorage()
     release()
@@ -203,7 +206,7 @@ describe("native MCP OAuth concurrency regression", () => {
           typeof value === "object" && value !== null && "access_token" in value
       )
     ).toBe(false)
-    store.change(connectionId, 2, true)
+    Effect.runSync(store.change(connectionId, 2, true))
     const next = new ConnectionOAuthProvider(
       storage,
       store,

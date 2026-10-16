@@ -8,6 +8,7 @@ import { SaveSkill, SkillDocument, skillContext } from "../src/skills/contracts"
 import { SkillStore } from "../src/skills/adapters/sqlite"
 import { connectionFixture } from "./connection-fixture"
 import { ConnectionStore } from "../src/access/adapters/connections"
+import { migrateSqlite } from "../src/storage/migrations"
 import { database } from "./database"
 
 const skill: HostedSkill = {
@@ -27,11 +28,13 @@ const document = {
 }
 function fixture() {
   const store = new ConnectionStore(database())
-  const connection = store.add({
-    id: `mcp-${"a".repeat(32)}`,
-    name: "Test provider",
-    url: "https://mcp.example.com/mcp",
-  })
+  const connection = Effect.runSync(
+    store.add({
+      id: `mcp-${"a".repeat(32)}`,
+      name: "Test provider",
+      url: "https://mcp.example.com/mcp",
+    })
+  )
   const call = vi.fn(
     async (input: {
       arguments: Record<string, unknown>
@@ -106,7 +109,7 @@ describe("hosted skill import", () => {
       { app: skill.app.slug },
       { ...hostedSkillQuery(skill), file: "SKILL.md" },
     ])
-    expect(f.store.selection().tools).toEqual([])
+    expect(Effect.runSync(f.store.selection()).tools).toEqual([])
   })
   it("never dispatches arbitrary remote tools from the import route", async () => {
     const f = fixture()
@@ -165,7 +168,7 @@ describe("hosted skill import", () => {
     ).toBe(409)
     const oldName = (await Effect.runPromise(f.provider.list()))[0]!.tools[0]!
       .name
-    f.store.change(f.connection.id, 1, true)
+    Effect.runSync(f.store.change(f.connection.id, 1, true))
     f.call.mockClear()
     expect((await f.request("read", { toolName: oldName, skill })).status).toBe(
       409
@@ -175,7 +178,7 @@ describe("hosted skill import", () => {
   it("rejects a result returned after the owner disconnected", async () => {
     const f = fixture()
     f.call.mockImplementation(async () => {
-      f.store.change(f.connection.id, 1, false)
+      Effect.runSync(f.store.change(f.connection.id, 1, false))
       return { content: [{ type: "text", text: JSON.stringify(document) }] }
     })
     expect((await f.request("read")).status).toBe(409)
@@ -253,27 +256,28 @@ describe("hosted skill import", () => {
     expect(response.status).toBe(409)
     expect(await response.text()).toContain("16 KB")
   })
-  it("migrates existing skills and preserves source through immutable library revisions, bot pins, and conversation context", async () => {
+  it("preserves source through immutable library revisions, bot pins, and conversation context", async () => {
     const db = database()
-    db.run(
-      "CREATE TABLE workspace_skills (id TEXT PRIMARY KEY,revision INTEGER NOT NULL,archived INTEGER NOT NULL DEFAULT 0)"
-    )
-    db.run(
-      "CREATE TABLE workspace_skill_versions (id TEXT NOT NULL,revision INTEGER NOT NULL,name TEXT NOT NULL,body TEXT NOT NULL,createdAt TEXT NOT NULL,PRIMARY KEY(id,revision))"
-    )
+
     const legacyId = crypto.randomUUID()
-    db.run("INSERT INTO workspace_skills VALUES (?,1,0)", legacyId)
     db.run(
-      "INSERT INTO workspace_skill_versions VALUES (?,1,'Old skill','Retained instructions','2026-10-01')",
+      "INSERT INTO workspace_skills(id,revision,archived) VALUES (?,1,0)",
       legacyId
     )
+    db.run(
+      "INSERT INTO workspace_skill_versions(id,revision,name,body,createdAt) VALUES (?,1,'Old skill','Retained instructions','2026-10-01')",
+      legacyId
+    )
+    Effect.runSync(migrateSqlite(db))
     const store = new SkillStore(db)
-    expect(store.list()[0]).toMatchObject({
+    expect(Effect.runSync(store.list())[0]).toMatchObject({
       name: "Old skill",
       body: "Retained instructions",
       stateRevision: 1,
     })
-    expect(store.versions(legacyId)[0]).not.toHaveProperty("source")
+    expect(Effect.runSync(store.versions(legacyId))[0]).not.toHaveProperty(
+      "source"
+    )
     const preview = await (
       await fixture().request("read")
     ).json<Record<string, unknown>>()
@@ -282,23 +286,38 @@ describe("hosted skill import", () => {
       id: crypto.randomUUID(),
       expectedRevision: 0,
     })
-    const one = store.save(input)
-    expect(store.save(input)).toEqual(one)
+    const one = Effect.runSync(store.save(input))
+    expect(Effect.runSync(store.save(input))).toEqual(one)
     const pinned = new SkillStore(database())
-    pinned.select(0, store.resolve([{ id: one.id, revision: 1 }]))
-    store.save({ ...input, expectedRevision: 1, body: "Locally edited" })
-    expect(pinned.selection().skills[0]?.body).toBe(document.content)
-    expect(pinned.selection().skills[0]?.source).toEqual(input.source)
-    const restored = store.save({ ...input, expectedRevision: 2 })
+    Effect.runSync(
+      pinned.select(
+        0,
+        Effect.runSync(store.resolve([{ id: one.id, revision: 1 }]))
+      )
+    )
+    Effect.runSync(
+      store.save({ ...input, expectedRevision: 1, body: "Locally edited" })
+    )
+    expect(Effect.runSync(pinned.selection()).skills[0]?.body).toBe(
+      document.content
+    )
+    expect(Effect.runSync(pinned.selection()).skills[0]?.source).toEqual(
+      input.source
+    )
+    const restored = Effect.runSync(
+      store.save({ ...input, expectedRevision: 2 })
+    )
     expect(restored.source).toEqual(input.source)
-    expect(new SkillStore(db).versions(one.id)).toHaveLength(3)
+    expect(Effect.runSync(new SkillStore(db).versions(one.id))).toHaveLength(3)
     expect(Schema.decodeUnknownSync(SkillDocument)(restored).source).toEqual(
       input.source
     )
     expect(skillContext([restored])).toContain("references/examples.md")
     expect(skillContext([restored])).toContain("not loaded content")
     expect(
-      store.save({ ...input, expectedRevision: 3, source: undefined }).revision
+      Effect.runSync(
+        store.save({ ...input, expectedRevision: 3, source: undefined })
+      ).revision
     ).toBe(4)
   })
 })

@@ -1,8 +1,8 @@
-import { Effect } from "effect"
+import { Cause, Effect } from "effect"
+import { fatalCause } from "../../shared/effect"
 import { PiModelRequest } from "./streams-pi"
 import { workerChatGPTAuth } from "./credentials-pi"
 import { runObserved } from "../../observability/worker"
-import { OperationalLogger } from "../../observability/logger"
 import { validateRoute, type ModelCatalog } from "../policy"
 import type { ThinkingLevel } from "../selection"
 import type { NativeInferenceObservation } from "./usage-pi"
@@ -14,6 +14,16 @@ import { openaiProvider } from "@earendil-works/pi-ai/providers/openai"
 import type { CredentialStore } from "@earendil-works/pi-ai"
 import { memoryPayload } from "./payload-openai"
 import { providerUsage } from "./usage-openai"
+
+/** Usage persistence is part of the owned stream settlement. Expected failures
+ * cross the SDK's untyped Promise interface without losing their complete Cause. */
+async function persistUsage<T>(operation: () => T | Promise<T>): Promise<T> {
+  try {
+    return await operation()
+  } catch (cause) {
+    throw fatalCause(Cause.isCause(cause) ? cause : Cause.die(cause))
+  }
+}
 
 export function createAgentModels(
   credentials: CredentialStore,
@@ -29,7 +39,7 @@ export function createAgentModels(
       thinking: ThinkingLevel,
       purpose: "conversation" | "compaction" | "memory",
       sessionId?: string
-    ) => NativeInferenceObservation
+    ) => NativeInferenceObservation | Promise<NativeInferenceObservation>
     botId?: () => string
     waitUntil?: (work: Promise<unknown>) => void
   }
@@ -129,54 +139,42 @@ export function createAgentModels(
   models.setProvider(configured)
   const nativeStream = models.streamSimple.bind(models)
   models.streamSimple = (model, context, request) => {
-    const observation = options.onAttempt?.(
-      model.id,
-      request?.reasoning ?? "off",
-      request?.sessionId === "memory"
-        ? "memory"
-        : request?.cacheRetention === "none"
-          ? "compaction"
-          : "conversation",
-      request?.sessionId
-    )
+    let observation: NativeInferenceObservation | undefined
     let incomplete = false
-
-    const telemetry = runObserved(
-      Effect.annotateCurrentSpan({
-        "inference.model": model.id,
-        "inference.purpose":
-          request?.sessionId === "memory"
-            ? "memory"
-            : request?.cacheRetention === "none"
-              ? "compaction"
-              : "conversation",
-        "inference.context_window": model.contextWindow,
-        "inference.attempt_id": observation?.id ?? "unrecorded",
-        "run.id": observation?.turnId ?? "",
-        "bot.id": options.botId?.() ?? "",
-      }).pipe(Effect.withSpan("Inference.dispatch"))
-    ).catch(() => {})
-    try {
-      options.waitUntil?.(telemetry)
-    } catch {}
-    const record = (operation: () => void) => {
-      try {
-        operation()
-      } catch {
-        Effect.runSync(
-          Effect.logError("Inference.activityPersistenceFailed").pipe(
-            Effect.annotateLogs({
-              event: "inference.persistence_failed",
-              model: model.id,
-            }),
-            Effect.provide(OperationalLogger)
-          )
-        )
-      }
-    }
     const owned = new PiModelRequest(
       model,
-      (current) => {
+      async (current) => {
+        observation = await persistUsage(() =>
+          options.onAttempt?.(
+            model.id,
+            request?.reasoning ?? "off",
+            request?.sessionId === "memory"
+              ? "memory"
+              : request?.cacheRetention === "none"
+                ? "compaction"
+                : "conversation",
+            request?.sessionId
+          )
+        )
+        current.signal.throwIfAborted()
+        const telemetry = runObserved(
+          Effect.annotateCurrentSpan({
+            "inference.model": model.id,
+            "inference.purpose":
+              request?.sessionId === "memory"
+                ? "memory"
+                : request?.cacheRetention === "none"
+                  ? "compaction"
+                  : "conversation",
+            "inference.context_window": model.contextWindow,
+            "inference.attempt_id": observation?.id ?? "unrecorded",
+            "run.id": observation?.turnId ?? "",
+            "bot.id": options.botId?.() ?? "",
+          }).pipe(Effect.withSpan("Inference.dispatch"))
+        ).catch(() => {})
+        try {
+          options.waitUntil?.(telemetry)
+        } catch {}
         sessions.set(current.signal, current)
         void current.settled.then(() => sessions.delete(current.signal))
         return nativeStream(model, context, {
@@ -196,7 +194,7 @@ export function createAgentModels(
           onProviderStreamEvent: (event, selected) =>
             current.callback(async () => {
               const usage = providerUsage(event)
-              if (usage) observation?.usage(usage)
+              if (usage) await persistUsage(() => observation?.usage(usage))
               if (
                 typeof event === "object" &&
                 event !== null &&
@@ -212,18 +210,16 @@ export function createAgentModels(
             }),
         })
       },
-      (event) => {
-        if (event.type === "done") record(() => observation?.end("completed"))
+      async (event) => {
+        if (event.type === "done") await observation?.end("completed")
         else
-          record(() =>
-            observation?.end(
-              incomplete
-                ? "incomplete"
-                : event.reason === "aborted"
-                  ? "cancelled"
-                  : "failed",
-              safeInferenceError(event.error.errorMessage ?? "")
-            )
+          await observation?.end(
+            incomplete
+              ? "incomplete"
+              : event.reason === "aborted"
+                ? "cancelled"
+                : "failed",
+            safeInferenceError(event.error.errorMessage ?? "")
           )
       },
       request?.signal

@@ -1,33 +1,43 @@
-import { Context, Schema } from "effect"
+import { Context, Schema, type Effect } from "effect"
 import type { Routine, RoutineRun } from "./contracts"
 
 export class RoutineStorageError extends Schema.TaggedError<RoutineStorageError>()(
   "RoutineStorageError",
   { operation: Schema.String, cause: Schema.Unknown }
 ) {}
-
 export type OperationReceipt = { input: string; result: string }
 
-/**
- * Synchronous transaction capability, deliberately narrower than a SQL client.
- * atomic must roll back all writes (including admission writes on the same
- * transactionGroup) when body throws. No Promise, fiber or external I/O may escape
- * body. Receipt retention is permanent; pruning run history never prunes receipts.
- */
+/** Receipt retention is permanent; atomic joins admission writes on the same actor. */
 export class RoutinePersistence extends Context.Service<
   RoutinePersistence,
   {
     readonly transactionGroup: object
-    readonly atomic: <TResult>(body: () => TResult) => TResult
-    readonly list: () => Routine[]
-    readonly get: (id: string) => Routine | undefined
-    readonly runs: () => RoutineRun[]
-    readonly inFlight: () => RoutineRun | undefined
-    readonly put: (routine: Routine) => Routine
-    readonly putRun: (run: RoutineRun) => RoutineRun
-    readonly operation: (id: string) => OperationReceipt | undefined
-    readonly operationCount: () => number
-    readonly putOperation: (id: string, receipt: OperationReceipt) => void
-    readonly pruneRuns: () => void
+    readonly atomic: <TValue, TError, TRequirements>(
+      body: () => Effect.Effect<TValue, TError, TRequirements>
+    ) => Effect.Effect<TValue, TError | RoutineStorageError, TRequirements>
+    readonly list: () => Effect.Effect<Routine[], RoutineStorageError>
+    readonly get: (
+      id: string
+    ) => Effect.Effect<Routine | undefined, RoutineStorageError>
+    readonly runs: () => Effect.Effect<RoutineRun[], RoutineStorageError>
+    readonly inFlight: () => Effect.Effect<
+      RoutineRun | undefined,
+      RoutineStorageError
+    >
+    readonly put: (
+      routine: Routine
+    ) => Effect.Effect<Routine, RoutineStorageError>
+    readonly putRun: (
+      run: RoutineRun
+    ) => Effect.Effect<RoutineRun, RoutineStorageError>
+    readonly operation: (
+      id: string
+    ) => Effect.Effect<OperationReceipt | undefined, RoutineStorageError>
+    readonly operationCount: () => Effect.Effect<number, RoutineStorageError>
+    readonly putOperation: (
+      id: string,
+      receipt: OperationReceipt
+    ) => Effect.Effect<void, RoutineStorageError>
+    readonly pruneRuns: () => Effect.Effect<void, RoutineStorageError>
   }
 >()("durable-pi/routines/Persistence") {}

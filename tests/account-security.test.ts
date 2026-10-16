@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest"
+import { Effect } from "effect"
 import { createHmac } from "node:crypto"
 import { DatabaseSync } from "node:sqlite"
 import { readFileSync, readdirSync } from "node:fs"
@@ -160,8 +161,16 @@ describe("native Better Auth account security", () => {
       appUrl: origin,
       ownerEmail: email,
       secret: "isolated-owner-setup-secret",
-      registered: async () =>
-        Boolean(f.sql.prepare('SELECT id FROM "user" LIMIT 1').get()),
+      registered: () =>
+        Effect.sync(() =>
+          Boolean(
+            drizzle({ client: f.sql })
+              .select({ id: schema.user.id })
+              .from(schema.user)
+              .limit(1)
+              .get()
+          )
+        ),
       signUp: (body) => f.auth.api.signUpEmail({ body }).then(() => undefined),
       own: (work) => {
         pending.push(work)
@@ -188,7 +197,7 @@ describe("native Better Auth account security", () => {
       (
         await ownerSetup(setup(), {
           ...bindings,
-          registered: async () => false,
+          registered: () => Effect.succeed(false),
         })
       ).status
     ).toBe(400)

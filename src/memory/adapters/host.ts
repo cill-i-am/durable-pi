@@ -1,7 +1,7 @@
-import { Schema } from "effect"
-import { nativeOperation } from "../../shared/interop"
-import { ConversationStorageError } from "../../conversations/turns"
+import type { ConversationError } from "../../conversations/service"
 import { MemoryStorageError } from "../domain"
+import { Effect, Schema } from "effect"
+import { nativeOperation } from "../../shared/interop"
 import {
   MemorySchedulingError,
   type MemoryImportAuthority,
@@ -9,22 +9,16 @@ import {
 
 export function memoryImportAuthority(
   transactionGroup: object,
-  active: () => boolean
+  active: () => Effect.Effect<boolean, ConversationError>
 ): MemoryImportAuthority {
   return {
     transactionGroup,
-    active: () => {
-      try {
-        return active()
-      } catch (cause) {
-        const conversationStorageError = Schema.decodeUnknownOption(
-          ConversationStorageError
-        )(cause)
-        if (conversationStorageError._tag === "Some")
-          throw new MemoryStorageError({ operation: "read import authority" })
-        throw cause
-      }
-    },
+    active: () =>
+      active().pipe(
+        Effect.mapError(
+          () => new MemoryStorageError({ operation: "read import authority" })
+        )
+      ),
   }
 }
 /** Lifecycle wake is a native foreign callback. Join its actual acknowledgment. */

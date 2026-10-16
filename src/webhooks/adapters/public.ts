@@ -1,4 +1,5 @@
-import { Effect, Exit, Schema } from "effect"
+import { Cause, Effect, Exit, Schema } from "effect"
+import type { AuthStorageError } from "../../auth/adapters/accounts"
 import { AgentId } from "../../agents/domain"
 import { RoutineId } from "../../routines/contracts"
 import { EventId, MAX_EVENT_BYTES } from "../contracts"
@@ -23,12 +24,7 @@ const native = <T>(start: (signal: AbortSignal) => Promise<T>) =>
 
 /** Only the native operations used by public ingress, without unrelated bindings. */
 export interface WebhookIngressBindings {
-  OWNER_EMAIL: string
-  DB: {
-    prepare: (query: string) => {
-      bind: (email: string) => { first: (column: "id") => Promise<unknown> }
-    }
-  }
+  owner: () => Effect.Effect<unknown, AuthStorageError>
   AGENT_SERVICE: { fetch: (request: Request) => Promise<Response> }
 }
 export async function receiveWebhook(
@@ -68,11 +64,15 @@ export async function receiveWebhook(
       MAX_EVENT_BYTES,
       () => new WebhookBodyInvalid()
     )
-    const owner = yield* native(() =>
-      env.DB.prepare("SELECT id FROM user WHERE lower(email)=lower(?) LIMIT 1")
-        .bind(env.OWNER_EMAIL)
-        .first("id")
-    )
+    const owner = yield* env
+      .owner()
+      .pipe(
+        Effect.catchCause((cause) =>
+          Effect.failCause(
+            Cause.map(cause, () => new WebhookIngressUnavailable())
+          )
+        )
+      )
     const ownerId = yield* Schema.decodeUnknownEffect(
       Schema.NullOr(Schema.String)
     )(owner).pipe(Effect.orDie)

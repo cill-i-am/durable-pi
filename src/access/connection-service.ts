@@ -133,7 +133,7 @@ export const connectionApplication = (
         })
       )
       const list = Effect.fn("Connections.list")(function* () {
-        const records = yield* attempt(() => store.list())
+        const records = yield* store.list()
         return yield* Effect.forEach(
           records,
           (record) =>
@@ -169,11 +169,8 @@ export const connectionApplication = (
           (input: NewConnection, origin: string) =>
             mutate(
               Effect.gen(function* () {
-                const record = yield* attempt(() => {
-                  const saved = store.add(input)
-                  requireActiveConnection(saved)
-                  return saved
-                })
+                const record = yield* store.add(input)
+                yield* attempt(() => requireActiveConnection(record))
                 if ((yield* client.inspect(record.id)).registered) return
                 yield* client.connect(record, origin)
               })
@@ -183,7 +180,7 @@ export const connectionApplication = (
           (id: string, revision: number) =>
             mutate(
               Effect.gen(function* () {
-                yield* attempt(() => store.change(id, revision, false))
+                yield* store.change(id, revision, false)
                 yield* client.remove(id)
               })
             )
@@ -192,10 +189,8 @@ export const connectionApplication = (
           (id: string, revision: number, origin: string) =>
             mutate(
               Effect.gen(function* () {
-                const { replay, record } = yield* attempt(() => ({
-                  replay: store.get(id)?.revision === revision + 1,
-                  record: store.change(id, revision, true),
-                }))
+                const replay = (yield* store.get(id))?.revision === revision + 1
+                const record = yield* store.change(id, revision, true)
                 if (replay && (yield* client.inspect(id)).registered) return
                 yield* client.remove(id)
                 yield* client.connect(record, origin)
@@ -205,7 +200,8 @@ export const connectionApplication = (
         refresh: Effect.fn("Connections.refresh")((id: string) =>
           mutate(
             Effect.gen(function* () {
-              yield* attempt(() => requireActiveConnection(store.get(id)))
+              const record = yield* store.get(id)
+              yield* attempt(() => requireActiveConnection(record))
               yield* client.discover(id)
             })
           )
@@ -223,9 +219,8 @@ export const connectionApplication = (
                 return yield* new ConnectionError({
                   message: "Authorization failed.",
                 })
-              yield* attempt(() =>
-                requireActiveConnection(store.get(connectionId))
-              )
+              const record = yield* store.get(connectionId)
+              yield* attempt(() => requireActiveConnection(record))
               yield* client.establish(connectionId)
             })
           )
@@ -237,9 +232,8 @@ export const connectionApplication = (
               Effect.gen(function* () {
                 const tools = yield* resolve([name])
                 const tool = tools[0]!
-                yield* attempt(() =>
-                  requireToolGeneration(store.get(tool.connectionId), tool)
-                )
+                const record = yield* store.get(tool.connectionId)
+                yield* attempt(() => requireToolGeneration(record, tool))
                 return yield* client.call(tool, input)
               }).pipe(
                 preserveFatal,

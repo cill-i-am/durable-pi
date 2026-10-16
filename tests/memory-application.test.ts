@@ -129,20 +129,26 @@ it.effect(
   () =>
     Effect.gen(function* () {
       const f = yield* fixture
-      f.status.record({ date: "2020-01-01", watermark: "old", error: null })
-      f.status.record({
-        date: null,
-        watermark: "",
-        error: "Backup in progress",
-      })
-      expect(f.status.read()).toEqual({
+      Effect.runSync(
+        f.status.record({ date: "2020-01-01", watermark: "old", error: null })
+      )
+      Effect.runSync(
+        f.status.record({
+          date: null,
+          watermark: "",
+          error: "Backup in progress",
+        })
+      )
+      expect(Effect.runSync(f.status.read())).toEqual({
         date: "2020-01-01",
         watermark: "",
         error: "Backup in progress",
       })
-      f.status.record({ date: "2020-01-02", watermark: "new", error: null })
-      f.status.fail("Backup pending; retrying")
-      expect(new SqliteBackupStatus(f.db).read()).toEqual({
+      Effect.runSync(
+        f.status.record({ date: "2020-01-02", watermark: "new", error: null })
+      )
+      Effect.runSync(f.status.fail("Backup pending; retrying"))
+      expect(yield* new SqliteBackupStatus(f.db).read()).toEqual({
         date: "2020-01-02",
         watermark: "new",
         error: "Backup pending; retrying",
@@ -165,9 +171,11 @@ it.effect(
         _tag: "Failure",
         failure: { _tag: "MemoryStorageError" },
       })
-      expect(f.status.read()).toBeUndefined()
+      expect(Effect.runSync(f.status.read())).toBeUndefined()
       f.db.run("DROP TRIGGER reject_status")
-      f.status.record({ date: null, watermark: "", error: null })
+      Effect.runSync(
+        f.status.record({ date: null, watermark: "", error: null })
+      )
       f.db.run("UPDATE memory_backup_status SET date=x'ff'")
       const exit = yield* Effect.flatMap(MemoryBackupStatus, (status) =>
         status.read()
@@ -186,7 +194,7 @@ it.effect(
       expect(
         yield* runMemoryBackup("p").pipe(Effect.provide(f.layer))
       ).toBeUndefined()
-      expect(f.status.read()).toEqual({
+      expect(Effect.runSync(f.status.read())).toEqual({
         date: "1970-01-01T00:00:35.000Z",
         watermark: JSON.stringify(yield* f.memory.watermark()),
         error: null,
@@ -234,14 +242,14 @@ it.effect(
       yield* TestClock.setTime(35000)
       yield* f.memory.append("source", "user", "original")
       yield* runMemoryBackup("p").pipe(Effect.provide(f.layer))
-      const prior = f.status.read(),
+      const prior = Effect.runSync(f.status.read()),
         head = f.bucket.objects.get("p/latest.json")
       yield* f.memory.append("new", "user", "new original")
       f.bucket.fail = true
       expect(yield* runMemoryBackup("p").pipe(Effect.provide(f.layer))).toBe(
         45000
       )
-      expect(f.status.read()).toEqual({
+      expect(Effect.runSync(f.status.read())).toEqual({
         ...prior,
         error: "Backup pending; retrying",
       })
@@ -263,7 +271,7 @@ it.effect(
         _tag: "Failure",
         failure: { _tag: "MemoryStorageError" },
       })
-      expect(f.status.read()).toBeUndefined()
+      expect(Effect.runSync(f.status.read())).toBeUndefined()
       const batches = f.bucket.writes.filter((key) => key.includes("/batches/"))
       expect(batches).toHaveLength(1)
       f.db.run("DROP TRIGGER reject_status")
@@ -271,7 +279,7 @@ it.effect(
       expect(
         f.bucket.writes.filter((key) => key.includes("/batches/"))
       ).toEqual(batches)
-      expect(f.status.read()?.error).toBeNull()
+      expect(Effect.runSync(f.status.read())?.error).toBeNull()
     })
 )
 it.effect(
@@ -284,12 +292,14 @@ it.effect(
       const before = JSON.stringify(yield* f.memory.watermark())
       f.bucket.onWrite = (key) => {
         if (key === "p/latest.json")
-          f.ledger.append("new", "user", "new original", "2020-01-01")
+          Effect.runSync(
+            f.ledger.append("new", "user", "new original", "2020-01-01")
+          )
       }
       expect(yield* runMemoryBackup("p").pipe(Effect.provide(f.layer))).toBe(
         35100
       )
-      expect(f.status.read()?.watermark).toBe(before)
+      expect(Effect.runSync(f.status.read())?.watermark).toBe(before)
       expect(JSON.stringify(yield* f.memory.watermark())).not.toBe(before)
     })
 )
@@ -375,7 +385,7 @@ it.effect(
       let active = false
       const command = memoryImport(
         f.ledger,
-        { transactionGroup: f.db, active: () => active },
+        { transactionGroup: f.db, active: () => Effect.succeed(active) },
         wakeHost(events)
       )
       const digest = Layer.succeed(
@@ -412,7 +422,7 @@ it.effect(
       )
       const command = memoryImport(
         f.ledger,
-        { transactionGroup: f.db, active: () => false },
+        { transactionGroup: f.db, active: () => Effect.succeed(false) },
         wakeHost(events)
       )
       expect(
@@ -436,7 +446,7 @@ it.effect(
         release = yield* Deferred.make<void>()
       const command = memoryImport(
         f.ledger,
-        { transactionGroup: f.db, active: () => false },
+        { transactionGroup: f.db, active: () => Effect.succeed(false) },
         {
           wakeCompactor: () =>
             Deferred.succeed(entered, undefined).pipe(
@@ -480,7 +490,7 @@ it.effect(
       let fail = true
       const command = memoryImport(
         f.ledger,
-        { transactionGroup: f.db, active: () => false },
+        { transactionGroup: f.db, active: () => Effect.succeed(false) },
         {
           ...host,
           wakeCompactor: () =>
@@ -514,13 +524,13 @@ it.effect(
       expect(() =>
         memoryImport(
           f.ledger,
-          { transactionGroup: {}, active: () => false },
+          { transactionGroup: {}, active: () => Effect.succeed(false) },
           host
         )
       ).toThrow("transaction group")
       const command = memoryImport(
         f.ledger,
-        { transactionGroup: f.db, active: () => true },
+        { transactionGroup: f.db, active: () => Effect.succeed(true) },
         host
       )
       const response = yield* memoryImportResponse(
@@ -530,12 +540,14 @@ it.effect(
       expect(yield* Effect.promise(() => response.json())).toEqual({
         error: "Wait for the current reply before importing history.",
       })
-      const authority = memoryImportAuthority(f.db, () => {
-        throw new ConversationStorageError({
-          operation: "private",
-          cause: "private",
-        })
-      })
+      const authority = memoryImportAuthority(f.db, () =>
+        Effect.fail(
+          new ConversationStorageError({
+            operation: "private",
+            cause: "private",
+          })
+        )
+      )
       expect(
         yield* memoryImport(
           f.ledger,
@@ -590,7 +602,7 @@ it.effect(
       const f = yield* fixture,
         cleanup = new Error("Private backup cleanup failure")
       const prior = { date: "2020-01-01", watermark: "retained", error: null }
-      f.status.record(prior)
+      Effect.runSync(f.status.record(prior))
       const exit = yield* runMemoryBackup("private").pipe(
         Effect.provideService(BackupStore, {
           get: () =>
@@ -608,6 +620,6 @@ it.effect(
             (reason) => reason._tag === "Die" && reason.defect === cleanup
           )
       ).toBe(true)
-      expect(f.status.read()).toEqual(prior)
+      expect(Effect.runSync(f.status.read())).toEqual(prior)
     })
 )

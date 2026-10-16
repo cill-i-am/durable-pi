@@ -1,7 +1,19 @@
-import { Schema } from "effect"
-import type { Sqlite } from "../../storage/sqlite"
+import { and, desc, eq, max } from "drizzle-orm"
+import { Effect, Schema } from "effect"
+import {
+  mapSqliteError,
+  type Sqlite,
+  type SqliteOrm,
+} from "../../storage/sqlite"
+import { increment } from "../../storage/expressions"
+import type { EffectDrizzleQueryError } from "drizzle-orm/effect-core"
 import { ResolvedRoute } from "../../inference/policy"
-import { MemoryStorageError, NonNegativeInteger, Part } from "../domain"
+import {
+  InvalidMemory,
+  MemoryStorageError,
+  NonNegativeInteger,
+  Part,
+} from "../domain"
 import {
   SummaryRouteRecord,
   summaryOperationApplied,
@@ -10,150 +22,214 @@ import {
   requireSummaryRevision,
   type SummaryRouteLedger,
 } from "../routing"
+import { summaryRoutes } from "./schema"
 
+const attempt = <T>(body: () => T) =>
+  Effect.try({
+    try: body,
+    catch: (cause) => {
+      if (cause instanceof InvalidMemory) return cause
+      throw cause
+    },
+  })
 export class SummaryRoutes implements SummaryRouteLedger {
   readonly transactionGroup: object
   constructor(private readonly db: Sqlite) {
     this.transactionGroup = db
-    const native = db
-    const storage = <T>(operation: string, body: () => T): T => {
-      try {
-        return body()
-      } catch {
-        throw new MemoryStorageError({ operation })
-      }
-    }
-    this.db = db = {
-      all: (query, ...bindings) =>
-        storage("read summary route", () => native.all(query, ...bindings)),
-      run: (query, ...bindings) =>
-        storage("write summary route", () => native.run(query, ...bindings)),
-      transaction: (body) => {
-        const callback: { failed: boolean; cause?: unknown } = { failed: false }
-        try {
-          return native.transaction(() => {
-            try {
-              return body()
-            } catch (cause) {
-              callback.failed = true
-              callback.cause = cause
-              throw cause
-            }
-          })
-        } catch (cause) {
-          if (callback.failed && cause === callback.cause) throw cause
-          throw new MemoryStorageError({
-            operation: "summary route transaction",
-          })
+  }
+  private query<T>(
+    body: (orm: SqliteOrm) => Effect.Effect<T, EffectDrizzleQueryError>
+  ) {
+    return mapSqliteError(
+      this.db.use(body),
+      () => new MemoryStorageError({ operation: "summary route" })
+    )
+  }
+  atomic<T, TError, TRequirements>(
+    body: () => Effect.Effect<T, TError, TRequirements>
+  ) {
+    return mapSqliteError(
+      this.db.transaction(body),
+      () => new MemoryStorageError({ operation: "summary route transaction" })
+    )
+  }
+  private record(part: Part) {
+    return this.query((orm) =>
+      orm
+        .select()
+        .from(summaryRoutes)
+        .where(
+          and(
+            eq(summaryRoutes.start, part.start),
+            eq(summaryRoutes.count, part.count)
+          )
+        )
+        .orderBy(desc(summaryRoutes.revision))
+        .limit(1)
+    ).pipe(
+      Effect.map((rows) => {
+        const row = rows[0]
+        if (!row) return undefined
+        const rawRoute = Schema.decodeUnknownSync(
+          Schema.Record(Schema.String, Schema.Unknown)
+        )(JSON.parse(row.route))
+        return {
+          ...Schema.decodeUnknownSync(SummaryRouteRecord)({
+            ...row,
+            route: rawRoute,
+          }),
+          rawRoute,
         }
-      },
-    }
-    db.run(
-      "CREATE TABLE IF NOT EXISTS summary_routes (start INTEGER NOT NULL,count INTEGER NOT NULL,revision INTEGER NOT NULL,operation TEXT NOT NULL UNIQUE,route TEXT NOT NULL,PRIMARY KEY(start,count,revision))"
-    )
-    if (
-      !db
-        .all<{ name: string }>("PRAGMA table_info(summary_routes)")
-        .some((column) => column.name === "requests")
-    )
-      db.run(
-        "ALTER TABLE summary_routes ADD COLUMN requests INTEGER NOT NULL DEFAULT 0"
-      )
-  }
-  atomic<T>(body: () => T): T {
-    return this.db.transaction(body)
-  }
-  private record(part: Part): SummaryRouteRecord | undefined {
-    const row = this.db.all<
-      Omit<SummaryRouteRecord, "route"> & { route: string }
-    >(
-      "SELECT * FROM summary_routes WHERE start=? AND count=? ORDER BY revision DESC LIMIT 1",
-      part.start,
-      part.count
-    )[0]
-    return row
-      ? Schema.decodeUnknownSync(SummaryRouteRecord)({
-          ...row,
-          route: JSON.parse(row.route),
-        })
-      : undefined
-  }
-  revision(part: Part): number {
-    const row = this.db.all<{ revision: number }>(
-      "SELECT coalesce(max(revision),0) AS revision FROM summary_routes WHERE start=? AND count=?",
-      part.start,
-      part.count
-    )[0]!
-    return Schema.decodeUnknownSync(NonNegativeInteger)(row.revision)
-  }
-  current(part: Part): ResolvedRoute | undefined {
-    return this.record(part)?.route
-  }
-  applied(operation: string, part: Part) {
-    const row = this.db.all<{ start: number; count: number }>(
-      "SELECT start,count FROM summary_routes WHERE operation=?",
-      operation
-    )[0]
-    return summaryOperationApplied(
-      row ? Schema.decodeUnknownSync(Part)(row) : undefined,
-      part
+      })
     )
   }
-  pin(part: Part, candidate: ResolvedRoute) {
-    return this.db.transaction(
-      () =>
-        this.current(part) ?? this.replace(part, crypto.randomUUID(), candidate)
+  revision(part: Part): ReturnType<SummaryRouteLedger["revision"]> {
+    return this.query((orm) =>
+      orm
+        .select({ revision: max(summaryRoutes.revision) })
+        .from(summaryRoutes)
+        .where(
+          and(
+            eq(summaryRoutes.start, part.start),
+            eq(summaryRoutes.count, part.count)
+          )
+        )
+    ).pipe(
+      Effect.map((rows) =>
+        Schema.decodeUnknownSync(NonNegativeInteger)(rows[0]?.revision ?? 0)
+      )
     )
   }
-  budget(part: Part, contextWindow: number, expectedRevision?: number) {
-    return this.db.transaction(() => {
-      const current = this.record(part)
-      requireSummaryRevision(current?.revision, expectedRevision)
-      const budgeted = summaryBudget(current?.route, contextWindow)
-      if (budgeted === current?.route) return budgeted
-      this.db.run(
-        "UPDATE summary_routes SET route=json_set(route,'$.contextWindow',?) WHERE start=? AND count=? AND revision=? AND json_extract(route,'$.contextWindow') IS NULL",
-        contextWindow,
-        part.start,
-        part.count,
-        current!.revision
-      )
-      return this.current(part)!
-    })
+  current(part: Part): ReturnType<SummaryRouteLedger["current"]> {
+    return this.record(part).pipe(Effect.map((record) => record?.route))
   }
-  beginRequest(part: Part, expectedRevision?: number) {
-    return this.db.transaction(() => {
-      const record = this.record(part)
-      requireSummaryRevision(record?.revision, expectedRevision)
-      if (!summaryRequestAllowed(record)) return false
-      this.db.run(
-        "UPDATE summary_routes SET requests=requests+1 WHERE start=? AND count=? AND revision=?",
-        part.start,
-        part.count,
-        record!.revision
+  applied(
+    operation: string,
+    part: Part
+  ): ReturnType<SummaryRouteLedger["applied"]> {
+    return this.query((orm) =>
+      orm
+        .select({ start: summaryRoutes.start, count: summaryRoutes.count })
+        .from(summaryRoutes)
+        .where(eq(summaryRoutes.operation, operation))
+        .limit(1)
+    ).pipe(
+      Effect.flatMap((rows) =>
+        attempt(() =>
+          summaryOperationApplied(
+            rows[0] ? Schema.decodeUnknownSync(Part)(rows[0]) : undefined,
+            part
+          )
+        )
       )
-      return true
-    })
+    )
   }
-  replace(part: Part, operation: string, candidate: ResolvedRoute) {
-    return this.db.transaction(() => {
-      this.applied(operation, part)
-      const prior = this.db.all<{ route: string }>(
-        "SELECT route FROM summary_routes WHERE operation=?",
-        operation
-      )[0]
-      if (prior)
-        return Schema.decodeUnknownSync(ResolvedRoute)(JSON.parse(prior.route))
-      this.db.run(
-        "INSERT INTO summary_routes(start,count,revision,operation,route) SELECT ?,?,coalesce(max(revision),0)+1,?,? FROM summary_routes WHERE start=? AND count=?",
-        part.start,
-        part.count,
-        operation,
-        JSON.stringify(candidate),
-        part.start,
-        part.count
-      )
-      return candidate
-    })
+  pin(
+    part: Part,
+    candidate: ResolvedRoute
+  ): ReturnType<SummaryRouteLedger["pin"]> {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        return (
+          (yield* this.current(part)) ??
+          (yield* this.replace(part, crypto.randomUUID(), candidate))
+        )
+      })
+    )
+  }
+  budget(
+    part: Part,
+    contextWindow: number,
+    expectedRevision?: number
+  ): ReturnType<SummaryRouteLedger["budget"]> {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const current = yield* this.record(part)
+        yield* attempt(() =>
+          requireSummaryRevision(current?.revision, expectedRevision)
+        )
+        const budgeted = yield* attempt(() =>
+          summaryBudget(current?.route, contextWindow)
+        )
+        if (budgeted === current?.route) return budgeted
+        yield* this.query((orm) =>
+          orm
+            .update(summaryRoutes)
+            .set({
+              route: JSON.stringify({
+                ...current!.rawRoute,
+                contextWindow: budgeted.contextWindow,
+              }),
+            })
+            .where(
+              and(
+                eq(summaryRoutes.start, part.start),
+                eq(summaryRoutes.count, part.count),
+                eq(summaryRoutes.revision, current!.revision)
+              )
+            )
+        )
+        return (yield* this.current(part))!
+      })
+    )
+  }
+  beginRequest(
+    part: Part,
+    expectedRevision?: number
+  ): ReturnType<SummaryRouteLedger["beginRequest"]> {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const record = yield* this.record(part)
+        yield* attempt(() =>
+          requireSummaryRevision(record?.revision, expectedRevision)
+        )
+        if (!summaryRequestAllowed(record)) return false
+        yield* this.query((orm) =>
+          orm
+            .update(summaryRoutes)
+            .set({ requests: increment(summaryRoutes.requests) })
+            .where(
+              and(
+                eq(summaryRoutes.start, part.start),
+                eq(summaryRoutes.count, part.count),
+                eq(summaryRoutes.revision, record!.revision)
+              )
+            )
+        )
+        return true
+      })
+    )
+  }
+  replace(
+    part: Part,
+    operation: string,
+    candidate: ResolvedRoute
+  ): ReturnType<SummaryRouteLedger["replace"]> {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        yield* this.applied(operation, part)
+        const prior = yield* this.query((orm) =>
+          orm
+            .select({ route: summaryRoutes.route })
+            .from(summaryRoutes)
+            .where(eq(summaryRoutes.operation, operation))
+            .limit(1)
+        )
+        if (prior[0])
+          return Schema.decodeUnknownSync(ResolvedRoute)(
+            JSON.parse(prior[0].route)
+          )
+        const revision = (yield* this.revision(part)) + 1
+        yield* this.query((orm) =>
+          orm.insert(summaryRoutes).values({
+            ...part,
+            revision,
+            operation,
+            route: JSON.stringify(candidate),
+          })
+        )
+        return candidate
+      })
+    )
   }
 }

@@ -1,5 +1,5 @@
 import type { Context } from "@earendil-works/chord"
-import { Schema, Effect } from "effect"
+import { Cause, Effect } from "effect"
 import {
   GenerationTask,
   hook,
@@ -7,8 +7,8 @@ import {
   type Storage,
 } from "@earendil-works/pi-durable"
 import type { AccessLedger } from "../../access/ledger"
-import { AgentStorageError } from "../../agents/domain"
-import { RoutineStorageError } from "../../routines/persistence"
+import type { AgentStorageError } from "../../agents/domain"
+import type { RoutineStorageError } from "../../routines/persistence"
 import { ConversationStorageError } from "../turns"
 import {
   recoveryOutcome,
@@ -33,27 +33,31 @@ export function runRecoveryHook(options: {
     options?: { signal?: AbortSignal }
   ) => Promise<TValue>
   access: Pick<AccessLedger, "get" | "policies">
-  source: (api: HookApi) => RecoverySource | undefined
+  source: (
+    api: HookApi
+  ) => Effect.Effect<
+    RecoverySource | undefined,
+    AgentStorageError | RoutineStorageError | ConversationStorageError
+  >
   stop: (api: HookApi, context: Context) => Promise<void>
   observed?: (turnId: string, view: RecoveryView) => void
   changed?: () => void
 }) {
   const { storage, store, access } = options
-  const source = (api: HookApi) => {
-    try {
-      return options.source(api)
-    } catch (cause) {
-      const knownFailure = Schema.decodeUnknownOption(
-        Schema.Union([AgentStorageError, RoutineStorageError])
-      )(cause)
-      if (knownFailure._tag === "Some")
-        throw new ConversationStorageError({
-          operation: "read recovery authority",
-          cause: knownFailure.value,
-        })
-      throw cause
-    }
-  }
+  const checked = <TValue, TError>(
+    operation: string,
+    work: Effect.Effect<TValue, TError>
+  ) =>
+    Effect.catchCause(work, (cause) =>
+      Effect.failCause(
+        Cause.map(
+          cause,
+          (error) => new ConversationStorageError({ operation, cause: error })
+        )
+      )
+    )
+  const source = (api: HookApi) =>
+    checked("read recovery authority", options.source(api))
   const app =
     options.application ?? makeRunRecovery(store, webCryptoRecoveryFingerprint)
   const run = options.run ?? Effect.runPromise
@@ -61,12 +65,20 @@ export function runRecoveryHook(options: {
     run(app.epoch(value), { signal: context.abortSignal })
   return hook(GenerationTask, {
     beforeRequest: async ({ messages }, api, context) => {
-      const origin = source(api)
+      const origin = await run(source(api), { signal: context.abortSignal })
       if (!origin) return { messages }
       const epoch = await fingerprint(origin.steeringKey, context)
-      if (source(api)?.steeringKey !== origin.steeringKey) return { messages }
+      if (
+        (await run(source(api), { signal: context.abortSignal }))
+          ?.steeringKey !== origin.steeringKey
+      )
+        return { messages }
       await api.memo("recovery:epoch", epoch, context)
-      if (source(api)?.steeringKey !== origin.steeringKey) return { messages }
+      if (
+        (await run(source(api), { signal: context.abortSignal }))
+          ?.steeringKey !== origin.steeringKey
+      )
+        return { messages }
       const state = await run(
         app.observe(
           origin.turnId,
@@ -74,13 +86,15 @@ export function runRecoveryHook(options: {
           epoch,
           epoch,
           [],
-          () => {
-            const current = source(api)
-            return current?.turnId === origin.turnId &&
-              current.steeringKey === origin.steeringKey
-              ? epoch
-              : undefined
-          }
+          () =>
+            source(api).pipe(
+              Effect.map((current) =>
+                current?.turnId === origin.turnId &&
+                current.steeringKey === origin.steeringKey
+                  ? epoch
+                  : undefined
+              )
+            )
         ),
         { signal: context.abortSignal }
       )
@@ -102,7 +116,7 @@ export function runRecoveryHook(options: {
       }
     },
     afterTools: async (assistantId, results, api, context) => {
-      const origin = source(api)
+      const origin = await run(source(api), { signal: context.abortSignal })
       if (!origin) return
       const assistant = (
         await storage.entry(api.conversationId, assistantId, context)
@@ -125,7 +139,13 @@ export function runRecoveryHook(options: {
         const receipt =
           entry.byTaskId === undefined
             ? undefined
-            : access.get(String(entry.byTaskId))
+            : await run(
+                checked(
+                  "read recovery receipt",
+                  access.get(String(entry.byTaskId))
+                ),
+                { signal: context.abortSignal }
+              )
         if (
           receipt &&
           (receipt.turnId !== origin.turnId || receipt.tool !== call.name)
@@ -155,11 +175,13 @@ export function runRecoveryHook(options: {
           deniedPolicy:
             !receipt &&
             result.isError &&
-            access
-              .policies()
-              .some(
-                (policy) => policy.name === call.name && policy.mode === "deny"
-              ),
+            (
+              await run(checked("read recovery policy", access.policies()), {
+                signal: context.abortSignal,
+              })
+            ).some(
+              (policy) => policy.name === call.name && policy.mode === "deny"
+            ),
         })
         observations.push({
           resultId: Number(id),
@@ -184,7 +206,7 @@ export function runRecoveryHook(options: {
       }
       const epoch = await fingerprint(origin.steeringKey, context)
       const requestEpoch = await api.memo<string>("recovery:epoch", context)
-      const current = source(api)
+      const current = await run(source(api), { signal: context.abortSignal })
       if (!current || current.turnId !== origin.turnId) return
       const previousPhase = (
         await run(app.get(origin.turnId), { signal: context.abortSignal })
@@ -196,14 +218,16 @@ export function runRecoveryHook(options: {
           epoch,
           requestEpoch ?? epoch,
           observations,
-          () => {
-            const latest = source(api)
-            return latest?.turnId === origin.turnId
-              ? latest.steeringKey !== origin.steeringKey
-                ? "stale-request"
-                : (requestEpoch ?? epoch)
-              : undefined
-          }
+          () =>
+            source(api).pipe(
+              Effect.map((latest) =>
+                latest?.turnId === origin.turnId
+                  ? latest.steeringKey !== origin.steeringKey
+                    ? "stale-request"
+                    : (requestEpoch ?? epoch)
+                  : undefined
+              )
+            )
         ),
         { signal: context.abortSignal }
       )

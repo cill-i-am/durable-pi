@@ -1,11 +1,7 @@
 import { Context, Effect, Layer, Schema } from "effect"
 import { ResolvedRoute } from "../inference/policy"
-import {
-  InvalidMemory,
-  MemoryStorageError,
-  NonNegativeInteger,
-  Part,
-} from "./domain"
+import type { MemoryStorageError } from "./domain"
+import { InvalidMemory, NonNegativeInteger, Part } from "./domain"
 
 export const SUMMARY_REQUESTS = 15
 export const SummaryRouteRecord = Schema.Struct({
@@ -18,22 +14,35 @@ export const SummaryRouteRecord = Schema.Struct({
 export type SummaryRouteRecord = typeof SummaryRouteRecord.Type
 export interface SummaryRouteLedger {
   readonly transactionGroup: object
-  atomic: <T>(body: () => T) => T
-  revision: (part: Part) => number
-  current: (part: Part) => ResolvedRoute | undefined
-  applied: (operation: string, part: Part) => boolean
-  pin: (part: Part, candidate: ResolvedRoute) => ResolvedRoute
+  atomic: <TValue, TError, TRequirements>(
+    body: () => Effect.Effect<TValue, TError, TRequirements>
+  ) => Effect.Effect<TValue, TError | MemoryStorageError, TRequirements>
+  revision: (part: Part) => Effect.Effect<number, MemoryStorageError>
+  current: (
+    part: Part
+  ) => Effect.Effect<ResolvedRoute | undefined, MemoryStorageError>
+  applied: (
+    operation: string,
+    part: Part
+  ) => Effect.Effect<boolean, InvalidMemory | MemoryStorageError>
+  pin: (
+    part: Part,
+    candidate: ResolvedRoute
+  ) => Effect.Effect<ResolvedRoute, InvalidMemory | MemoryStorageError>
   budget: (
     part: Part,
     contextWindow: number,
     expectedRevision?: number
-  ) => ResolvedRoute
-  beginRequest: (part: Part, expectedRevision?: number) => boolean
+  ) => Effect.Effect<ResolvedRoute, InvalidMemory | MemoryStorageError>
+  beginRequest: (
+    part: Part,
+    expectedRevision?: number
+  ) => Effect.Effect<boolean, InvalidMemory | MemoryStorageError>
   replace: (
     part: Part,
     operation: string,
     candidate: ResolvedRoute
-  ) => ResolvedRoute
+  ) => Effect.Effect<ResolvedRoute, InvalidMemory | MemoryStorageError>
 }
 export function summaryOperationApplied(prior: Part | undefined, part: Part) {
   if (prior && (prior.start !== part.start || prior.count !== part.count))
@@ -86,15 +95,7 @@ export function summaryRetryTransition(facts: {
     })
   return "retry" as const
 }
-type Operations = {
-  [
-    K in Exclude<keyof SummaryRouteLedger, "transactionGroup" | "atomic">
-  ]: SummaryRouteLedger[K] extends (...args: infer TArgs) => infer TValue
-    ? (
-        ...args: TArgs
-      ) => Effect.Effect<TValue, InvalidMemory | MemoryStorageError>
-    : never
-}
+type Operations = Omit<SummaryRouteLedger, "transactionGroup" | "atomic">
 export class SummaryRouting extends Context.Service<
   SummaryRouting,
   Operations & {
@@ -107,57 +108,26 @@ export class SummaryRouting extends Context.Service<
     >
   }
 >()("durable-pi/memory/SummaryRouting") {}
-const call = <TArgs extends readonly unknown[], TValue>(
-  name: string,
-  body: (...args: TArgs) => TValue
-) =>
-  Effect.fn(name)((...args: TArgs) =>
-    Effect.try({
-      try: () => body(...args),
-      catch: (cause) => {
-        const knownFailure = Schema.decodeUnknownOption(
-          Schema.Union([InvalidMemory, MemoryStorageError])
-        )(cause)
-        if (knownFailure._tag === "Some") return knownFailure.value
-        throw cause
-      },
-    })
-  )
 export const summaryRoutingApplication = (ledger: SummaryRouteLedger) =>
   Layer.succeed(SummaryRouting, {
-    capture: call(
-      "Memory.captureSummaryRoute",
+    capture: Effect.fn("Memory.captureSummaryRoute")(
       (part: Part, candidate: ResolvedRoute) =>
-        ledger.atomic(() => ({
-          route: ledger.pin(part, candidate),
-          revision: ledger.revision(part),
-        }))
+        ledger.atomic(() =>
+          Effect.gen(function* () {
+            return {
+              route: yield* ledger.pin(part, candidate),
+              revision: yield* ledger.revision(part),
+            }
+          })
+        )
     ),
-    revision: call("Memory.summaryRevision", (part: Part) =>
-      ledger.revision(part)
-    ),
-    current: call("Memory.summaryRoute", (part: Part) => ledger.current(part)),
-    applied: call(
-      "Memory.summaryRetryApplied",
-      (operation: string, part: Part) => ledger.applied(operation, part)
-    ),
-    pin: call(
-      "Memory.pinSummaryRoute",
-      (part: Part, candidate: ResolvedRoute) => ledger.pin(part, candidate)
-    ),
-    budget: call(
-      "Memory.pinSummaryBudget",
-      (part: Part, contextWindow: number, expectedRevision?: number) =>
-        ledger.budget(part, contextWindow, expectedRevision)
-    ),
-    beginRequest: call(
-      "Memory.beginSummaryRequest",
-      (part: Part, expectedRevision?: number) =>
-        ledger.beginRequest(part, expectedRevision)
-    ),
-    replace: call(
-      "Memory.replaceSummaryRoute",
-      (part: Part, operation: string, candidate: ResolvedRoute) =>
-        ledger.replace(part, operation, candidate)
-    ),
+    revision: (part) => ledger.revision(part),
+    current: (part) => ledger.current(part),
+    applied: (operation, part) => ledger.applied(operation, part),
+    pin: (part, candidate) => ledger.pin(part, candidate),
+    budget: (part, contextWindow, revision) =>
+      ledger.budget(part, contextWindow, revision),
+    beginRequest: (part, revision) => ledger.beginRequest(part, revision),
+    replace: (part, operation, candidate) =>
+      ledger.replace(part, operation, candidate),
   })

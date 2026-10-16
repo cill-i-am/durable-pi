@@ -50,13 +50,35 @@ export function makeDelegations(
   authority: DelegationAuthority,
   clock: Effect.Effect<number> = Clock.currentTimeMillis
 ): Delegations {
+  const read = <TValue>(
+    body: () => TValue | Effect.Effect<TValue, DelegationFailure>
+  ) =>
+    Effect.suspend(() => {
+      const value = body()
+      return Effect.isEffect(value) ? value : Effect.succeed(value)
+    })
+  const snapshot = (group: SavedGroup) =>
+    Effect.gen(function* () {
+      const current = yield* read(() =>
+        authority.current(group.turnId, group.conversationId)
+      )
+      const cancelled = yield* read(() => authority.cancelled(group.turnId))
+      return { current: () => current, cancelled: () => cancelled }
+    })
   const current = (group: SavedGroup) =>
-    decision(() => requireCurrent(group, authority))
+    Effect.flatMap(snapshot(group), (facts) =>
+      decision(() => requireCurrent(group, facts))
+    )
   const project = (group: SavedGroup) =>
     Effect.gen(function* () {
       const facts = yield* ledger.facts(group)
       const now = yield* clock
-      return projectGroup(group, facts, authority.cancelled(group.turnId), now)
+      return projectGroup(
+        group,
+        facts,
+        yield* read(() => authority.cancelled(group.turnId)),
+        now
+      )
     })
   const deliverOne = Effect.fn("Delegation.deliverControl")(function* (
     input: Control
@@ -98,7 +120,10 @@ export function makeDelegations(
     })
   const reconcile = (group: SavedGroup) =>
     Effect.gen(function* () {
-      if (authority.cancelled(group.turnId) || (yield* clock) >= group.deadline)
+      if (
+        (yield* read(() => authority.cancelled(group.turnId))) ||
+        (yield* clock) >= group.deadline
+      )
         for (const child of group.children) yield* ledger.abort(child.id)
       else for (const control of group.controls) yield* deliver(control)
     })
@@ -281,8 +306,9 @@ export function makeDelegations(
           if (!document.value) return yield* missing()
           const now = yield* clock
           const group = document.value
+          const facts = yield* snapshot(group)
           const next = yield* decision(() =>
-            acceptControl(group, input, now, authority)
+            acceptControl(group, input, now, facts)
           )
           operation.input = serialized
           document.value = next
@@ -292,7 +318,9 @@ export function makeDelegations(
       const group = yield* ledger.group(input.groupId)
       if (
         !group.closed &&
-        authority.current(group.turnId, group.conversationId)
+        (yield* read(() =>
+          authority.current(group.turnId, group.conversationId)
+        ))
       )
         yield* deliver(input)
       return { accepted }
@@ -336,8 +364,9 @@ export function makeDelegations(
           if (!document.value) return yield* missing()
           const group = document.value
           const now = yield* clock
+          const facts = yield* snapshot(group)
           document.value = yield* decision(() =>
-            consumeRequest(group, binding.child, now, authority)
+            consumeRequest(group, binding.child, now, facts)
           )
         })
       )

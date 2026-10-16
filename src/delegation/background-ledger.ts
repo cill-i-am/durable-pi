@@ -1,3 +1,4 @@
+import type { Effect } from "effect"
 import { Schema } from "effect"
 import type { Handoff } from "./background-domain"
 
@@ -6,16 +7,28 @@ export class BackgroundStorageError extends Schema.TaggedError<BackgroundStorage
   { operation: Schema.String, cause: Schema.Unknown }
 ) {}
 
-/** Callbacks finish synchronously in the same native transaction. No Effect
- * runner, Promise or external I/O belongs inside atomic. */
+/** Effects compose in the same database coordinator and transaction. */
 export interface BackgroundLedger {
   readonly transactionGroup: object
-  readonly atomic: <T>(body: () => T) => T
-  readonly get: (id: number) => Handoff | undefined
-  readonly list: (offset: number) => Handoff[]
-  readonly unfinished: () => Handoff[]
-  readonly hasTurn: (turnId: string) => boolean
-  readonly put: (row: Handoff) => void
-  readonly retry: (operationId: string) => number | undefined
-  readonly putRetry: (operationId: string, groupId: number) => void
+  readonly atomic: <TValue, TError, TRequirements>(
+    body: () => Effect.Effect<TValue, TError, TRequirements>
+  ) => Effect.Effect<TValue, TError | BackgroundStorageError, TRequirements>
+  readonly get: (
+    id: number
+  ) => Effect.Effect<Handoff | undefined, BackgroundStorageError>
+  readonly list: (
+    offset: number
+  ) => Effect.Effect<Handoff[], BackgroundStorageError>
+  readonly unfinished: () => Effect.Effect<Handoff[], BackgroundStorageError>
+  readonly hasTurn: (
+    turnId: string
+  ) => Effect.Effect<boolean, BackgroundStorageError>
+  readonly put: (row: Handoff) => Effect.Effect<void, BackgroundStorageError>
+  readonly retry: (
+    operationId: string
+  ) => Effect.Effect<number | undefined, BackgroundStorageError>
+  readonly putRetry: (
+    operationId: string,
+    groupId: number
+  ) => Effect.Effect<void, BackgroundStorageError>
 }

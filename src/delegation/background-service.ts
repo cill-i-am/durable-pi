@@ -7,11 +7,16 @@ import {
   requireReportOwner,
   type BackgroundAuthority,
 } from "./background-domain"
-import type { BackgroundLedger } from "./background-ledger"
+import type { ConversationFailure } from "../conversations/turns"
+import type {
+  BackgroundStorageError,
+  BackgroundLedger,
+} from "./background-ledger"
 import {
   BackgroundMailbox,
   makeBackgroundMailbox,
   type BackgroundAdmission,
+  type BackgroundError,
   type BackgroundMailboxService,
 } from "./background-mailbox"
 import {
@@ -36,8 +41,8 @@ export interface BackgroundRemote {
   ) => Effect.Effect<Transcript, DelegationFailure>
 }
 export interface BackgroundHost {
-  readonly active: () => Effect.Effect<boolean>
-  readonly backgroundActive: () => Effect.Effect<boolean>
+  readonly active: () => Effect.Effect<boolean, BackgroundError>
+  readonly backgroundActive: () => Effect.Effect<boolean, BackgroundError>
   readonly wakeConversation: () => Effect.Effect<void, DelegationFailure>
   readonly wakeBackground: () => Effect.Effect<void, DelegationFailure>
   readonly notify: () => Effect.Effect<void>
@@ -172,10 +177,17 @@ export function makeBackgroundDelegation(
         // ownership, defects and cancellation must not become retries.
         const group = yield* remote.start(row.id).pipe(
           preserveFatal,
-          Effect.catchTag("DelegationFailure", (error) =>
-            error.code === "unavailable"
-              ? mailbox.failed(row.id).pipe(Effect.as(undefined))
-              : Effect.fail(error)
+          Effect.catchTag(
+            "DelegationFailure",
+            (
+              error
+            ): Effect.Effect<
+              Group | undefined,
+              DelegationFailure | BackgroundStorageError | ConversationFailure
+            > =>
+              error.code === "unavailable"
+                ? mailbox.failed(row.id).pipe(Effect.as(undefined))
+                : Effect.fail(error)
           )
         )
         if (group) yield* mailbox.observed(row.id, group)
@@ -192,7 +204,9 @@ export function makeBackgroundDelegation(
 
 export const backgroundApplication = (
   records: BackgroundLedger,
-  authority: (turnId: string) => BackgroundAuthority,
+  authority: (
+    turnId: string
+  ) => Effect.Effect<BackgroundAuthority, ConversationFailure>,
   parentObject: string,
   uuid: () => string,
   remote: BackgroundRemote,

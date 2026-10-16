@@ -8,9 +8,18 @@ import type {
 } from "./contracts"
 import type { DelegationSource } from "./delegation"
 
-export type DelegationAuthority = {
+export type DelegationFacts = {
   current: (turnId: string, conversationId: number) => boolean
   cancelled: (turnId: string) => boolean
+}
+export type DelegationAuthority = {
+  current: (
+    turnId: string,
+    conversationId: number
+  ) => boolean | Effect.Effect<boolean, DelegationFailure>
+  cancelled: (
+    turnId: string
+  ) => boolean | Effect.Effect<boolean, DelegationFailure>
 }
 export type DelegationQueries<TError = DelegationFailure> = {
   list: (offset?: number) => Effect.Effect<Group[], TError>

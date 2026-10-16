@@ -567,3 +567,80 @@ effectIt.effect(
       expect(result.errorMessage).toContain("timed out")
     }).pipe(Effect.provide(piModelStreamsLayer))
 )
+
+it("awaits durable attempt admission before dispatch and observer settlement before result or shutdown", async () => {
+  const admitting = gate(),
+    admitted = gate(),
+    finishing = gate(),
+    finished = gate()
+  const owner = fixture({
+    onAttempt: async () => {
+      admitting.resolve()
+      await admitted.promise
+      return {
+        id: "durable-attempt",
+        turnId: "turn",
+        usage: async () => {},
+        end: async () => {
+          finishing.resolve()
+          await finished.promise
+        },
+      }
+    },
+  })
+  const fetcher = vi.fn(async () => response(owner.model.id))
+  let completed = false,
+    disposed = false
+  const result = owner.models
+    .completeSimple(owner.model, context, {
+      reasoning: "medium",
+      fetch: fetcher,
+    })
+    .then((value) => {
+      completed = true
+      return value
+    })
+  await admitting.promise
+  expect(fetcher).not.toHaveBeenCalled()
+  admitted.resolve()
+  await finishing.promise
+  const shutdown = owner.runtime
+    .runPromise(owner.streams.shutdown())
+    .then(() => {
+      disposed = true
+    })
+  await Promise.resolve()
+  expect(completed).toBe(false)
+  expect(disposed).toBe(false)
+  finished.resolve()
+  await result
+  await shutdown
+  expect(completed).toBe(true)
+  expect(disposed).toBe(true)
+  expect(fetcher).toHaveBeenCalledOnce()
+})
+
+it("retains observer completion defects in both stream settlement and owner disposal", async () => {
+  const defect = new Error("Durable usage completion failed")
+  const owner = fixture({
+    onAttempt: async () => ({
+      id: "durable-attempt",
+      turnId: null,
+      usage: async () => {},
+      end: async () => {
+        throw defect
+      },
+    }),
+  })
+  owner.expectedDefect = defect
+  const failure = await owner.models
+    .completeSimple(owner.model, context, {
+      reasoning: "medium",
+      fetch: async () => response(owner.model.id),
+    })
+    .then(
+      () => undefined,
+      (cause) => cause
+    )
+  expect(hasDefect(failure, defect)).toBe(true)
+})

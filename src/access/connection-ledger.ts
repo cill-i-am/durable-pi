@@ -9,19 +9,24 @@ import type {
 } from "./connections"
 
 export interface ConnectionLedger {
-  list: () => SavedConnection[]
-  get: (id: string) => SavedConnection | undefined
-  add: (input: NewConnection) => SavedConnection
+  list: () => Effect.Effect<SavedConnection[], ConnectionFailure>
+  get: (
+    id: string
+  ) => Effect.Effect<SavedConnection | undefined, ConnectionFailure>
+  add: (
+    input: NewConnection
+  ) => Effect.Effect<SavedConnection, ConnectionFailure>
   change: (
     id: string,
     expectedRevision: number,
     active: boolean
-  ) => SavedConnection
-  selection: () => ToolSelection
+  ) => Effect.Effect<SavedConnection, ConnectionFailure>
+  selection: () => Effect.Effect<ToolSelection, ConnectionFailure>
   select: (
     expectedRevision: number,
-    tools: readonly RemoteTool[]
-  ) => ToolSelection
+    tools: readonly RemoteTool[],
+    canWrite?: () => Effect.Effect<boolean, ConnectionFailure>
+  ) => Effect.Effect<ToolSelection, ConnectionFailure>
 }
 export type ConnectionFailure = ConnectionError | ConnectionStorageError
 export type RemoteToolResolution = { tools: RemoteTool[]; error: string | null }
@@ -30,6 +35,6 @@ export interface RemoteSelectionRepository {
   select: (
     expectedRevision: number,
     tools: readonly RemoteTool[],
-    canWrite: () => boolean
+    canWrite: () => Effect.Effect<boolean, ConnectionFailure>
   ) => Effect.Effect<ToolSelection, ConnectionFailure>
 }

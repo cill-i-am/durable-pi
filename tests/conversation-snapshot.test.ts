@@ -1,3 +1,4 @@
+import { corrupt } from "./database"
 import { expect, it } from "@effect/vitest"
 import { Cause, Context, Effect, Exit } from "effect"
 import {
@@ -16,9 +17,11 @@ it.effect(
   () =>
     Effect.gen(function* () {
       const f = yield* conversationFixture()
-      f.store.admit({ operationId: "root", text: "hello" })
-      f.store.submitted("root", "session")
-      f.store.admit({ operationId: "steer", text: "use blue", mode: "steer" })
+      Effect.runSync(f.store.admit({ operationId: "root", text: "hello" }))
+      Effect.runSync(f.store.submitted("root", "session"))
+      Effect.runSync(
+        f.store.admit({ operationId: "steer", text: "use blue", mode: "steer" })
+      )
       const observe = f.execution.observe
       f.execution.observe = (root, members) =>
         observe(root, members).pipe(
@@ -42,20 +45,22 @@ it.effect(
         { id: "live", type: "text", text: "Live answer" },
       ])
       expect(live.turns[0]?.steering[0]?.id).toBe("steer")
-      expect(f.store.get("root")?.answer).toBe("")
+      expect(Effect.runSync(f.store.get("root"))?.answer).toBe("")
       f.db.run(
         "INSERT INTO chat_activity VALUES ('root',?)",
         JSON.stringify([{ id: "saved", type: "text", text: "Saved answer" }])
       )
       expect(
-        f.store.finish(
-          f.store.get("root")!,
-          [
-            { id: "root", delivery: "answered" },
-            { id: "steer", delivery: "answered" },
-          ],
-          "Saved answer",
-          null
+        Effect.runSync(
+          f.store.finish(
+            Effect.runSync(f.store.get("root"))!,
+            [
+              { id: "root", delivery: "answered" },
+              { id: "steer", delivery: "answered" },
+            ],
+            "Saved answer",
+            null
+          )
         )
       ).toBe(true)
       const saved = yield* snapshot()
@@ -73,7 +78,7 @@ it.effect(
   () =>
     Effect.gen(function* () {
       const f = yield* conversationFixture()
-      f.store.admit({ operationId: "root", text: "hello" })
+      Effect.runSync(f.store.admit({ operationId: "root", text: "hello" }))
       const snapshot = conversationSnapshot(
         f.conversations,
         f.execution,
@@ -93,7 +98,7 @@ it.effect(
           Effect.result
         )
       ).toMatchObject({ _tag: "Failure", failure: "metadata unavailable" })
-      f.db.run("INSERT INTO chat_activity VALUES ('root','not JSON')")
+      corrupt(f.db, "INSERT INTO chat_activity VALUES ('root','not JSON')")
       const exit = yield* snapshot().pipe(
         Effect.provideService(Caller, { connected: true }),
         Effect.exit
@@ -107,12 +112,16 @@ it.effect(
   () =>
     Effect.gen(function* () {
       const f = yield* conversationFixture()
-      const root = f.store.admit({ operationId: "root", text: "hello" }).turn
-      f.store.finish(
-        root,
-        [{ id: root.id, delivery: "answered" }],
-        "done",
-        null
+      const root = Effect.runSync(
+        f.store.admit({ operationId: "root", text: "hello" })
+      ).turn
+      Effect.runSync(
+        f.store.finish(
+          root,
+          [{ id: root.id, delivery: "answered" }],
+          "done",
+          null
+        )
       )
       let admit = true
       const status = runtimeStatusEffect(f.conversations, {
@@ -120,16 +129,21 @@ it.effect(
         awaitingApproval: () => Effect.succeed(false),
         planBlocked: () =>
           Effect.sync(() => {
-            if (admit) f.store.admit({ operationId: "next", text: "next" })
+            if (admit)
+              Effect.runSync(
+                f.store.admit({ operationId: "next", text: "next" })
+              )
             return undefined
           }),
       })
       expect(yield* status()).toEqual({ state: "working", turnId: "next" })
-      f.store.finish(
-        f.store.get("next")!,
-        [{ id: "next", delivery: "answered" }],
-        "done",
-        null
+      Effect.runSync(
+        f.store.finish(
+          Effect.runSync(f.store.get("next"))!,
+          [{ id: "next", delivery: "answered" }],
+          "done",
+          null
+        )
       )
       admit = false
       expect(yield* status()).toEqual({ state: "unavailable", turnId: "next" })

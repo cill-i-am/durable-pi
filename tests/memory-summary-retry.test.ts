@@ -1,11 +1,13 @@
 import { summaryRetryAuthority } from "../src/memory/adapters/retry-authority"
 import { expect, it } from "@effect/vitest"
 import { Cause, Context, Deferred, Effect, Exit, Fiber } from "effect"
-import { database } from "./database"
+import { database, type TestSqlite, corrupt } from "./database"
+import { migrateSqlite } from "../src/storage/migrations"
+import { SqlError, UnknownError } from "effect/sql/SqlError"
 import { catalog } from "./inference-fixture"
-import type { Sqlite } from "../src/storage/sqlite"
 import { BotConfigurationStore } from "../src/agents/adapters/configuration"
-import { homeAgentId } from "../src/agents/domain"
+import { homeAgentId, type AgentError } from "../src/agents/domain"
+import type { MemoryError } from "../src/memory/domain"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import { makeConversations } from "../src/conversations/service"
 import { resolveRoute, type ModelCatalog } from "../src/inference/policy"
@@ -32,7 +34,7 @@ const profile = {
   updatedAt: "legacy",
 }
 type WakeFailure = { _tag: "WakeFailure" }
-const fixture = (db: Sqlite = database()) =>
+const fixture = (db: TestSqlite = database()) =>
   Effect.gen(function* () {
     const { memory, ledger } = yield* Effect.gen(function* () {
       return {
@@ -45,15 +47,18 @@ const fixture = (db: Sqlite = database()) =>
       conversations = makeConversations(
         new ConversationStore(db, { model: "gpt-6.1-sol", thinking: "medium" })
       )
-    configuration.configure("owner", profile)
+    yield* configuration.configure("owner", profile)
     const entry = yield* memory.append("source", "user", "Retain this source"),
       part = { start: entry.id, count: 1 }
-    routes.pin(part, resolveRoute("memory"))
+    yield* routes.pin(part, resolveRoute("memory"))
     for (let n = 0; n < 3; n++) yield* memory.failNode(part, 10000)
     let wakes = 0,
       notifications = 0
     const host: {
-      catalog: () => Effect.Effect<ModelCatalog, WakeFailure>
+      catalog: () => Effect.Effect<
+        ModelCatalog,
+        WakeFailure | AgentError | MemoryError
+      >
       wake: () => Effect.Effect<void, WakeFailure>
       notify: () => Effect.Effect<void, WakeFailure>
     } = {
@@ -141,41 +146,69 @@ it.effect(
       expect(yield* f.retry(f.input).pipe(Effect.result)).toMatchObject(
         failed("MemoryStorageError")
       )
-      expect(f.ledger.paused(f.part)).toBe(true)
-      expect(f.routes.revision(f.part)).toBe(1)
-      expect(f.routes.applied(f.input.operationId, f.part)).toBe(false)
+      expect(yield* f.ledger.paused(f.part)).toBe(true)
+      expect(yield* f.routes.revision(f.part)).toBe(1)
+      expect(yield* f.routes.applied(f.input.operationId, f.part)).toBe(false)
       expect(f.counters()).toEqual({ wakes: 0, notifications: 0 })
     })
 )
 it.effect(
-  "a native outer commit failure rolls the route and retry intent back",
+  "an outer completion failure rolls back the written route and retry intent",
   () =>
     Effect.gen(function* () {
       const native = database()
       let fail = false,
-        depth = 0
-      const db = {
+        depth = 0,
+        wrote = false,
+        replacements = 0
+      const db: TestSqlite = {
         ...native,
-        transaction: <T>(body: () => T): T =>
-          native.transaction(() => {
-            depth++
-            try {
-              const result = body()
-              if (fail && depth === 1) throw new Error("private commit failure")
-              return result
-            } finally {
-              depth--
-            }
-          }),
+        transaction: (body) =>
+          native.transaction(() =>
+            Effect.suspend(() => {
+              depth++
+              if (depth === 1) wrote = false
+              return Effect.gen(function* () {
+                const result = yield* body()
+                if (fail && depth === 1 && wrote)
+                  return yield* Effect.fail(
+                    new SqlError({
+                      reason: new UnknownError({
+                        cause: new Error("private commit failure"),
+                        message: "commit failed",
+                      }),
+                    })
+                  )
+                return result
+              }).pipe(
+                Effect.ensuring(
+                  Effect.sync(() => {
+                    depth--
+                  })
+                )
+              )
+            })
+          ),
       }
       const f = yield* fixture(db)
+      const replace = f.routes.replace.bind(f.routes)
+      f.routes.replace = (part, operation, candidate) =>
+        replace(part, operation, candidate).pipe(
+          Effect.tap(() =>
+            Effect.sync(() => {
+              wrote = true
+              replacements++
+            })
+          )
+        )
       fail = true
       expect(yield* f.retry(f.input).pipe(Effect.result)).toMatchObject(
         failed("MemoryStorageError")
       )
       fail = false
-      expect(f.ledger.paused(f.part)).toBe(true)
-      expect(f.routes.revision(f.part)).toBe(1)
+      expect(replacements).toBe(1)
+      expect(yield* f.ledger.paused(f.part)).toBe(true)
+      expect(yield* f.routes.revision(f.part)).toBe(1)
       expect(f.counters()).toEqual({ wakes: 0, notifications: 0 })
     })
 )
@@ -185,8 +218,8 @@ it.effect(
     Effect.gen(function* () {
       const f = yield* fixture()
       f.host.catalog = () =>
-        Effect.sync(() => {
-          f.configuration.configure("owner", {
+        Effect.gen(function* () {
+          yield* f.configuration.configure("owner", {
             ...profile,
             revision: 1,
             status: "archived",
@@ -196,8 +229,8 @@ it.effect(
       expect(yield* f.retry(f.input).pipe(Effect.result)).toMatchObject(
         failed("InvalidMemory")
       )
-      expect(f.ledger.paused(f.part)).toBe(true)
-      expect(f.routes.revision(f.part)).toBe(1)
+      expect(yield* f.ledger.paused(f.part)).toBe(true)
+      expect(yield* f.routes.revision(f.part)).toBe(1)
       expect(f.counters().wakes).toBe(0)
     })
 )
@@ -207,8 +240,8 @@ it.effect(
     Effect.gen(function* () {
       const f = yield* fixture()
       f.host.catalog = () =>
-        Effect.sync(() => {
-          f.routes.replace(
+        Effect.gen(function* () {
+          yield* f.routes.replace(
             f.part,
             "newer",
             resolveRoute("memory", { model: "gpt-6.1-sol", thinking: "medium" })
@@ -222,8 +255,8 @@ it.effect(
           message: "This summary has a newer retry. Refresh its status.",
         },
       })
-      expect(f.ledger.paused(f.part)).toBe(true)
-      expect(f.routes.revision(f.part)).toBe(2)
+      expect(yield* f.ledger.paused(f.part)).toBe(true)
+      expect(yield* f.routes.revision(f.part)).toBe(2)
       expect(f.counters().wakes).toBe(0)
     })
 )
@@ -238,16 +271,16 @@ it.effect(
       expect(yield* f.retry(f.input).pipe(Effect.result)).toMatchObject(
         failed("WakeFailure")
       )
-      expect(f.ledger.paused(f.part)).toBe(false)
-      expect(f.routes.revision(f.part)).toBe(2)
-      f.configuration.configure("owner", {
+      expect(yield* f.ledger.paused(f.part)).toBe(false)
+      expect(yield* f.routes.revision(f.part)).toBe(2)
+      yield* f.configuration.configure("owner", {
         ...profile,
         revision: 1,
         status: "archived",
       })
       f.host.catalog = () => Effect.die("Replay must not discover models")
       yield* f.retry(f.input)
-      expect(f.routes.revision(f.part)).toBe(2)
+      expect(yield* f.routes.revision(f.part)).toBe(2)
       expect(attempts).toBe(2)
     })
 )
@@ -257,16 +290,18 @@ it.effect(
     Effect.gen(function* () {
       const f = yield* fixture()
       f.host.catalog = () =>
-        Effect.sync(() => {
-          f.ledger.atomic(() => {
-            f.ledger.retrySummary(f.part)
-            f.routes.replace(
-              f.part,
-              f.input.operationId,
-              resolveRoute("memory")
-            )
-          })
-          f.configuration.configure("owner", {
+        Effect.gen(function* () {
+          yield* f.ledger.atomic(() =>
+            Effect.gen(function* () {
+              yield* f.ledger.retrySummary(f.part)
+              yield* f.routes.replace(
+                f.part,
+                f.input.operationId,
+                resolveRoute("memory")
+              )
+            })
+          )
+          yield* f.configuration.configure("owner", {
             ...profile,
             revision: 1,
             status: "archived",
@@ -274,7 +309,7 @@ it.effect(
           return { ...catalog, models: [] }
         })
       yield* f.retry(f.input)
-      expect(f.routes.revision(f.part)).toBe(2)
+      expect(yield* f.routes.revision(f.part)).toBe(2)
       expect(f.counters().wakes).toBe(1)
     })
 )
@@ -301,7 +336,7 @@ it.effect(
       expect(yield* retry(f.input).pipe(Effect.result)).toMatchObject(
         failed("InvalidMemory")
       )
-      expect(f.ledger.paused(f.part)).toBe(true)
+      expect(yield* f.ledger.paused(f.part)).toBe(true)
       expect(f.counters().wakes).toBe(0)
     })
 )
@@ -318,8 +353,8 @@ it.effect("interruption during discovery leaves the paused source intact", () =>
     const pending = yield* f.retry(f.input).pipe(Effect.forkChild)
     yield* Deferred.await(entered)
     yield* Fiber.interrupt(pending)
-    expect(f.ledger.paused(f.part)).toBe(true)
-    expect(f.routes.revision(f.part)).toBe(1)
+    expect(yield* f.ledger.paused(f.part)).toBe(true)
+    expect(yield* f.routes.revision(f.part)).toBe(1)
     expect(f.counters().wakes).toBe(0)
   })
 )
@@ -348,8 +383,8 @@ it.effect(
         Effect.forkChild
       )
       yield* Effect.yieldNow
-      expect(f.ledger.paused(f.part)).toBe(false)
-      expect(f.routes.revision(f.part)).toBe(2)
+      expect(yield* f.ledger.paused(f.part)).toBe(false)
+      expect(yield* f.routes.revision(f.part)).toBe(2)
       expect(settled).toBe(false)
       yield* Deferred.succeed(release, undefined)
       yield* Fiber.join(interrupting)
@@ -393,25 +428,23 @@ it.effect("discovery retains caller Context and typed failures", () =>
       _tag: "Failure",
       failure: { _tag: "DiscoveryFailure", id: "this invocation" },
     })
-    expect(f.ledger.paused(f.part)).toBe(true)
+    expect(yield* f.ledger.paused(f.part)).toBe(true)
   })
 )
 it.effect(
-  "legacy routes gain request counters and keep unknown route metadata when a budget pins",
+  "route request counters start at zero and budget pinning preserves unknown metadata",
   () =>
     Effect.gen(function* () {
       const db = database(),
         part = { start: 0, count: 1 }
       db.run(
-        "CREATE TABLE summary_routes (start INTEGER NOT NULL,count INTEGER NOT NULL,revision INTEGER NOT NULL,operation TEXT NOT NULL UNIQUE,route TEXT NOT NULL,PRIMARY KEY(start,count,revision))"
-      )
-      db.run(
-        "INSERT INTO summary_routes VALUES (0,1,1,'legacy',?)",
+        "INSERT INTO summary_routes(start,count,revision,operation,route) VALUES (0,1,1,'legacy',?)",
         JSON.stringify({
           ...resolveRoute("memory"),
           nativeMetadata: { retained: true },
         })
       )
+      yield* migrateSqlite(db)
       const routes = new SummaryRoutes(db),
         routing = yield* SummaryRouting.pipe(
           Effect.provide(summaryRoutingApplication(routes))
@@ -429,7 +462,7 @@ it.effect(
       for (let n = 0; n < 15; n++)
         expect(yield* routing.beginRequest(part)).toBe(true)
       expect(yield* routing.beginRequest(part)).toBe(false)
-      expect(new SummaryRoutes(db).beginRequest(part)).toBe(false)
+      expect(yield* new SummaryRoutes(db).beginRequest(part)).toBe(false)
     })
 )
 it.effect(
@@ -440,16 +473,14 @@ it.effect(
         routing = yield* SummaryRouting.pipe(
           Effect.provide(summaryRoutingApplication(f.routes))
         )
-      f.db.run("UPDATE summary_routes SET requests=-1")
+      corrupt(f.db, "UPDATE summary_routes SET requests=-1")
       const exit = yield* routing.current(f.part).pipe(Effect.exit)
       expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)
       expect(Exit.isFailure(exit) && Cause.hasFails(exit.cause)).toBe(false)
-      f.db.all = () => {
-        throw new Error("private driver information")
-      }
+      f.db.run("ALTER TABLE summary_routes RENAME TO unavailable_routes")
       const result = yield* routing.current(f.part).pipe(Effect.result)
       expect(result).toMatchObject(failed("MemoryStorageError"))
-      expect(JSON.stringify(result)).not.toContain("private driver information")
+      expect(JSON.stringify(result)).not.toContain("no such table")
     })
 )
 
@@ -457,13 +488,10 @@ it.effect(
   "retry authority translates configuration storage failure while preserving a corrupt status defect",
   () =>
     Effect.gen(function* () {
-      const f = yield* fixture(),
-        all = f.db.all
-      f.db.all = (query, ...bindings) => {
-        if (query.includes("FROM bot_configuration"))
-          throw new Error("private configuration data")
-        return all(query, ...bindings)
-      }
+      const f = yield* fixture()
+      f.db.run(
+        "ALTER TABLE bot_configuration RENAME TO unavailable_configuration"
+      )
       const result = yield* f.retry(f.input).pipe(Effect.result)
       expect(result).toMatchObject({
         _tag: "Failure",
@@ -473,13 +501,15 @@ it.effect(
         },
       })
       expect(JSON.stringify(result)).not.toContain("private configuration data")
-      f.db.all = all
-      f.db.run("UPDATE bot_admission SET status='corrupt'")
+      f.db.run(
+        "ALTER TABLE unavailable_configuration RENAME TO bot_configuration"
+      )
+      corrupt(f.db, "UPDATE bot_admission SET status='corrupt'")
       const exit = yield* f.retry(f.input).pipe(Effect.exit)
       expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)
       expect(Exit.isFailure(exit) && Cause.hasFails(exit.cause)).toBe(false)
-      expect(f.ledger.paused(f.part)).toBe(true)
-      expect(f.routes.revision(f.part)).toBe(1)
+      expect(yield* f.ledger.paused(f.part)).toBe(true)
+      expect(yield* f.routes.revision(f.part)).toBe(1)
       expect(f.counters()).toEqual({ wakes: 0, notifications: 0 })
     })
 )

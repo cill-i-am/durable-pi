@@ -1,3 +1,4 @@
+import { sqliteFailure } from "./sqlite-fault"
 import { expect, it } from "@effect/vitest"
 import { it as test } from "vitest"
 import {
@@ -183,19 +184,11 @@ it.effect(
 
 test("a failed intent commit rolls back and dispatches no refresh", async () => {
   const db = database()
-  let fail = true,
-    calls = 0
-  const ledger = new SqliteCredentials(
-    {
-      ...db,
-      run: (sql, ...bindings) => {
-        if (fail && sql.startsWith("INSERT INTO model_credential_refresh"))
-          throw new Error("private storage failure")
-        db.run(sql, ...bindings)
-      },
-    },
-    Redacted.make(JSON.stringify(plain))
+  let calls = 0
+  db.run(
+    "CREATE TRIGGER fail_credential_intent BEFORE INSERT ON model_credential_refresh BEGIN SELECT RAISE(ABORT,'private storage failure'); END"
   )
+  const ledger = new SqliteCredentials(db, Redacted.make(JSON.stringify(plain)))
   const runtime = ManagedRuntime.make(
     credentialApplication(ledger, () => {
       calls++
@@ -213,7 +206,7 @@ test("a failed intent commit rolls back and dispatches no refresh", async () => 
     })
     expect(calls).toBe(0)
     expect(db.all("SELECT 1 FROM model_credential_refresh")).toHaveLength(0)
-    fail = false
+    db.run("DROP TRIGGER fail_credential_intent")
     expect(await runtime.runPromise(service.resolve("openai"))).toBeDefined()
     expect(calls).toBe(1)
   } finally {
@@ -230,11 +223,15 @@ test("a failed rotation commit preserves the claim and cannot repeat the POST", 
     {
       ...db,
       transaction: (body) =>
-        db.transaction(() => {
-          const result = body()
-          if (fail) throw new Error("failed commit")
-          return result
-        }),
+        db.transaction(() =>
+          body().pipe(
+            Effect.flatMap((result) =>
+              fail
+                ? Effect.fail(sqliteFailure("failed commit"))
+                : Effect.succeed(result)
+            )
+          )
+        ),
     },
     Redacted.make(JSON.stringify(plain))
   )

@@ -1,86 +1,90 @@
-import { Schema } from "effect"
-import type { Sqlite } from "../../storage/sqlite"
+import { count, desc, eq } from "drizzle-orm"
+import { Effect, Schema } from "effect"
+import {
+  mapSqliteError,
+  type Sqlite,
+  type EffectSqliteDatabase,
+} from "../../storage/sqlite"
+import { jsonField } from "../../storage/expressions"
 import type { ExecutionLedger } from "../ledger"
 import { CodeRun, ExecutionStorageError, RunSummary } from "../contracts"
+import { codeRuns } from "./schema"
 
-const Record = Schema.Struct({ record: Schema.String })
-const Counts = Schema.Struct({ total: Schema.Int, running: Schema.Int })
-
+const decode = (row: { record: string }) =>
+  Schema.decodeUnknownSync(Schema.fromJsonString(CodeRun))(row.record)
 export class ExecutionStore implements ExecutionLedger {
-  constructor(private readonly db: Sqlite) {
-    this.native(() =>
-      db.run(
-        "CREATE TABLE IF NOT EXISTS code_runs (id TEXT PRIMARY KEY,created INTEGER NOT NULL,record TEXT NOT NULL)"
-      )
+  constructor(private readonly db: Sqlite) {}
+  private query<TValue, TError, TRequirements>(
+    body: (
+      orm: EffectSqliteDatabase
+    ) => Effect.Effect<TValue, TError, TRequirements>
+  ) {
+    return mapSqliteError(this.db.use(body), () => new ExecutionStorageError())
+  }
+  atomic<TValue, TError, TRequirements>(
+    body: () => Effect.Effect<TValue, TError, TRequirements>
+  ) {
+    return mapSqliteError(
+      this.db.transaction(body),
+      () => new ExecutionStorageError()
     )
   }
-  private native<T>(body: () => T): T {
-    try {
-      return body()
-    } catch {
-      throw new ExecutionStorageError()
-    }
-  }
-  atomic<T>(body: () => T): T {
-    const callback: { failed: boolean; cause?: unknown } = { failed: false }
-    try {
-      return this.db.transaction(() => {
-        try {
-          return body()
-        } catch (cause) {
-          callback.failed = true
-          callback.cause = cause
-          throw cause
-        }
-      })
-    } catch (cause) {
-      if (callback.failed && cause === callback.cause) throw cause
-      throw new ExecutionStorageError()
-    }
-  }
-  private decode(row: unknown): CodeRun {
-    return Schema.decodeUnknownSync(Schema.fromJsonString(CodeRun))(
-      Schema.decodeUnknownSync(Record)(row).record
-    )
-  }
-  get(id: string): CodeRun | undefined {
-    const row = this.native(() =>
-      this.db.all<unknown>("SELECT record FROM code_runs WHERE id=?", id)
-    )[0]
-    return row === undefined ? undefined : this.decode(row)
+  get(id: string) {
+    return this.query((orm) =>
+      orm
+        .select({ record: codeRuns.record })
+        .from(codeRuns)
+        .where(eq(codeRuns.id, id))
+    ).pipe(Effect.map((rows) => (rows[0] ? decode(rows[0]) : undefined)))
   }
   list() {
-    return this.native(() =>
-      this.db.all<unknown>(
-        `SELECT id, json_extract(record,'$.label') AS label, json_extract(record,'$.status') AS status, created AS createdAt, json_extract(record,'$.finishedAt') AS finishedAt FROM code_runs ORDER BY created DESC,id DESC LIMIT 50`
+    return this.query((orm) =>
+      orm
+        .select({ record: codeRuns.record })
+        .from(codeRuns)
+        .orderBy(desc(codeRuns.created), desc(codeRuns.id))
+        .limit(50)
+    ).pipe(
+      Effect.map((rows) =>
+        rows.map((row) => Schema.decodeUnknownSync(RunSummary)(decode(row)))
       )
-    ).map((row) => Schema.decodeUnknownSync(RunSummary)(row))
+    )
   }
   counts() {
-    return Schema.decodeUnknownSync(Counts)(
-      this.native(() =>
-        this.db.all<unknown>(
-          "SELECT count(*) AS total,coalesce(sum(json_extract(record,'$.status')='running'),0) AS running FROM code_runs"
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const totals = yield* this.query((orm) =>
+          orm.select({ n: count() }).from(codeRuns)
         )
-      )[0]
+        const running = yield* this.query((orm) =>
+          orm
+            .select({ n: count() })
+            .from(codeRuns)
+            .where(
+              eq(jsonField<string>(codeRuns.record, "$.status"), "running")
+            )
+        )
+        return { total: totals[0]!.n, running: running[0]!.n }
+      })
     )
   }
   running() {
-    return this.native(() =>
-      this.db.all<unknown>(
-        "SELECT record FROM code_runs WHERE json_extract(record,'$.status')='running'"
-      )
-    ).map((row) => this.decode(row))
+    return this.query((orm) =>
+      orm
+        .select({ record: codeRuns.record })
+        .from(codeRuns)
+        .where(eq(jsonField<string>(codeRuns.record, "$.status"), "running"))
+    ).pipe(Effect.map((rows) => rows.map(decode)))
   }
   put(run: CodeRun) {
-    const record = Schema.encodeSync(Schema.fromJsonString(CodeRun))(run)
-    this.native(() =>
-      this.db.run(
-        "INSERT INTO code_runs VALUES (?,?,?) ON CONFLICT(id) DO UPDATE SET record=excluded.record",
-        run.id,
-        run.createdAt,
-        record
-      )
-    )
+    return Effect.suspend(() => {
+      const record = Schema.encodeSync(Schema.fromJsonString(CodeRun))(run)
+      return this.query((orm) =>
+        orm
+          .insert(codeRuns)
+          .values({ id: run.id, created: run.createdAt, record })
+          .onConflictDoUpdate({ target: codeRuns.id, set: { record } })
+      ).pipe(Effect.asVoid)
+    })
   }
 }

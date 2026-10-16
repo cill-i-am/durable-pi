@@ -1,3 +1,4 @@
+import { Effect } from "effect"
 import { expect, it } from "vitest"
 import { mkdtemp, rm } from "node:fs/promises"
 import { join } from "node:path"
@@ -6,7 +7,7 @@ import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context"
 import { Harness, createRegistry, defineTool } from "@earendil-works/pi-durable"
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
 import { Type } from "@earendil-works/pi-ai"
-import { createAgentModels } from "./models-fixture"
+import { createAgentModels, expectModelDefect } from "./models-fixture"
 import { accountCredentials } from "../src/inference/adapters/credentials-pi"
 import { usageFixture } from "./usage-fixture"
 import { resolveRoute } from "../src/inference/policy"
@@ -35,7 +36,7 @@ it("carries a composer override into native Pi Responses and preserves selection
     ...resolveRoute("conversation", undefined, command.profile),
     contextWindow: 272000,
   }
-  const turn = store.admit(command, undefined, [], route).turn
+  const turn = Effect.runSync(store.admit(command, undefined, [], route)).turn
   const payloads: Record<string, unknown>[] = []
   const telemetry: Promise<unknown>[] = []
   let toolCalls = 0,
@@ -127,7 +128,7 @@ it("carries a composer override into native Pi Responses and preserves selection
       ctx
     )
     await atSecondRequest
-    store.setSettings({ model: "gpt-6-luna", thinking: "low" })
+    Effect.runSync(store.setSettings({ model: "gpt-6-luna", thinking: "low" }))
     await harness.close(ctx)
     recovering = true
     harness = await Harness.open(
@@ -147,8 +148,10 @@ it("carries a composer override into native Pi Responses and preserves selection
     expect(telemetry).toHaveLength(payloads.length * 2)
     await Promise.all(telemetry)
     expect(
-      new ConversationStore(db, { model: "gpt-6-luna", thinking: "low" }).get(
-        turn.id
+      Effect.runSync(
+        new ConversationStore(db, { model: "gpt-6-luna", thinking: "low" }).get(
+          turn.id
+        )
       )?.routing
     ).toEqual(route)
     expect(usage.recent()[0]).toMatchObject({
@@ -240,6 +243,7 @@ it("records an auth failure before provider dispatch and never hangs on a failed
     turnId: "queued-turn",
     input: null,
   })
+  const defect = new Error("Synthetic SQLite failure")
   const models = createAgentModels(
     accountCredentials(async () => credential),
     {
@@ -248,15 +252,21 @@ it("records an auth failure before provider dispatch and never hangs on a failed
         turnId: null,
         usage: () => {},
         end: () => {
-          throw new Error("Synthetic SQLite failure")
+          throw defect
         },
       }),
     }
   )
-  const completed = await models.completeSimple(
-    models.getModel("openai", route.model)!,
-    { messages: [{ role: "user", content: "hello", timestamp: 0 }] },
-    { reasoning: "medium", fetch: async () => response(route.model) }
-  )
-  expect(completed.stopReason).toBe("stop")
+  expectModelDefect(models, defect)
+  await expect(
+    models.completeSimple(
+      models.getModel("openai", route.model)!,
+      { messages: [{ role: "user", content: "hello", timestamp: 0 }] },
+      { reasoning: "medium", fetch: async () => response(route.model) }
+    )
+  ).rejects.toMatchObject({
+    reasons: expect.arrayContaining([
+      expect.objectContaining({ _tag: "Die", defect }),
+    ]),
+  })
 }, 2000)

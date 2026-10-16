@@ -6,14 +6,14 @@ import {
   DecideApproval,
   UpdatePolicy,
 } from "../contracts"
-import type { AccessGate } from "../gate"
+import type { AccessError, AccessGate } from "../gate"
 import { jsonRequest } from "../../shared/http"
 
 export function accessRequest(
   gate: AccessGate,
   request: Request,
   path: string,
-  canWrite: () => boolean
+  canWrite: () => Effect.Effect<boolean, AccessError>
 ) {
   return Effect.gen(function* () {
     if (request.method === "GET" && path === "access")
@@ -32,7 +32,7 @@ export function accessRequest(
             "The access request could not be completed. Refresh and try again.",
         })
     )
-    if (!canWrite())
+    if (!(yield* canWrite()))
       return yield* new AccessDenied({
         message: "Restore this bot before changing its access.",
       })

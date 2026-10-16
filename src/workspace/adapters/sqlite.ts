@@ -1,5 +1,20 @@
-import { Schema } from "effect"
-import type { Sqlite } from "../../storage/sqlite"
+import { Effect, Schema } from "effect"
+import { mapSqliteError, type Sqlite } from "../../storage/sqlite"
+import type { EffectDrizzleQueryError } from "drizzle-orm/effect-core/errors"
+import {
+  and,
+  count,
+  desc,
+  eq,
+  getTableColumns,
+  inArray,
+  sum,
+} from "drizzle-orm"
+import {
+  workspaceFiles as files,
+  workspaceExtractions as docs,
+  workspaceVideoPreparations as videos,
+} from "./schema"
 import {
   FileInfo,
   FileId,
@@ -31,255 +46,294 @@ const VideoRecord = Schema.Struct({
   attempts: Revision,
   retryAt: Revision,
 })
-type Row = Omit<WorkspaceFile, "trashed"> & { trashed: number }
-type DocumentRow = Omit<DocumentJob, "truncated"> & { truncated: number }
-type VideoRow = Omit<VideoJob, "captions" | "retryAt"> & {
-  captions: number
-  retry_at: number
-}
-
 export class SqliteWorkspace implements WorkspaceLedger {
   readonly transactionGroup: object
   constructor(private readonly db: Sqlite) {
     this.transactionGroup = db
-    this.native(() => {
-      db.run(
-        "CREATE TABLE IF NOT EXISTS workspace_files (id TEXT PRIMARY KEY,name TEXT NOT NULL,mime TEXT NOT NULL,kind TEXT NOT NULL,size INTEGER NOT NULL,createdAt TEXT NOT NULL,status TEXT NOT NULL,trashed INTEGER NOT NULL DEFAULT 0,hash TEXT NOT NULL,visionHash TEXT)"
-      )
-      db.run(
-        "CREATE TABLE IF NOT EXISTS workspace_extractions (id TEXT PRIMARY KEY,status TEXT NOT NULL DEFAULT 'pending',attempts INTEGER NOT NULL DEFAULT 0,pages INTEGER NOT NULL DEFAULT 0,readPages INTEGER NOT NULL DEFAULT 0,characters INTEGER NOT NULL DEFAULT 0,truncated INTEGER NOT NULL DEFAULT 0,error TEXT)"
-      )
-      db.run(
-        "CREATE TABLE IF NOT EXISTS workspace_video_preparations (id TEXT PRIMARY KEY,status TEXT NOT NULL DEFAULT 'pending',attempts INTEGER NOT NULL DEFAULT 0,duration REAL NOT NULL DEFAULT 0,frames INTEGER NOT NULL DEFAULT 0,captions INTEGER NOT NULL DEFAULT 0,error TEXT)"
-      )
-      if (
-        !db
-          .all<{ name: string }>(
-            "PRAGMA table_info(workspace_video_preparations)"
-          )
-          .some((column) => column.name === "retry_at")
-      )
-        db.run(
-          "ALTER TABLE workspace_video_preparations ADD COLUMN retry_at INTEGER NOT NULL DEFAULT 0"
-        )
-    })
   }
-  private native<T>(body: () => T): T {
-    try {
-      return body()
-    } catch {
-      throw new WorkspaceUnavailable()
-    }
+  atomic<TValue, TError, TRequirements>(
+    body: () => Effect.Effect<TValue, TError, TRequirements>
+  ) {
+    return mapSqliteError(
+      this.db.transaction(body),
+      () => new WorkspaceUnavailable()
+    )
   }
-  atomic<T>(change: () => T): T {
-    const callback: { failed: boolean; cause?: unknown } = { failed: false }
-    try {
-      return this.db.transaction(() => {
-        try {
-          return change()
-        } catch (cause) {
-          callback.failed = true
-          callback.cause = cause
-          throw cause
-        }
-      })
-    } catch (cause) {
-      if (callback.failed && cause === callback.cause) throw cause
-      throw new WorkspaceUnavailable()
-    }
+  private query<TValue>(
+    effect: Effect.Effect<TValue, EffectDrizzleQueryError>
+  ) {
+    return mapSqliteError(effect, () => new WorkspaceUnavailable())
   }
-  private file(row: Row): WorkspaceFile {
-    return Schema.decodeUnknownSync(FileRecord)({
-      ...row,
-      trashed: !!row.trashed,
-    })
+  private file(row: unknown) {
+    return Schema.decodeUnknownSync(FileRecord)(row)
+  }
+  private doc(row: unknown) {
+    return Schema.decodeUnknownSync(DocumentRecord)(row)
+  }
+  private vid(row: unknown) {
+    return Schema.decodeUnknownSync(VideoRecord)(row)
   }
   read(id: string) {
-    const row = this.native(
-      () => this.db.all<Row>("SELECT * FROM workspace_files WHERE id=?", id)[0]
-    )
-    return row ? this.file(row) : undefined
+    return this.db
+      .use((orm) =>
+        this.query(orm.select().from(files).where(eq(files.id, id)))
+      )
+      .pipe(
+        Effect.map(([row]) =>
+          row ? this.file({ ...row, trashed: !!row.trashed }) : undefined
+        )
+      )
   }
   list() {
-    return this.native(() =>
-      this.db.all<Row>(
-        "SELECT * FROM workspace_files ORDER BY createdAt DESC,id"
+    return this.db
+      .use((orm) =>
+        this.query(
+          orm.select().from(files).orderBy(desc(files.createdAt), files.id)
+        )
       )
-    ).map((row) => this.file(row))
+      .pipe(
+        Effect.map((rows) =>
+          rows.map((row) => this.file({ ...row, trashed: !!row.trashed }))
+        )
+      )
   }
   usage() {
-    return this.native(
-      () =>
-        this.db.all<{ bytes: number; count: number }>(
-          "SELECT coalesce(sum(size),0) AS bytes,count(*) AS count FROM workspace_files"
-        )[0]!
-    )
+    return this.db
+      .use((orm) =>
+        this.query(
+          orm.select({ bytes: sum(files.size), count: count() }).from(files)
+        )
+      )
+      .pipe(
+        Effect.map(([row]) => ({
+          bytes: Number(row?.bytes ?? 0),
+          count: row?.count ?? 0,
+        }))
+      )
   }
   insert(file: WorkspaceFile) {
-    this.native(() =>
-      this.db.run(
-        "INSERT INTO workspace_files VALUES (?,?,?,?,?,?,?,?,?,?)",
-        file.id,
-        file.name,
-        file.mime,
-        file.kind,
-        file.size,
-        file.createdAt,
-        file.status,
-        file.trashed ? 1 : 0,
-        file.hash,
-        file.visionHash
+    return this.db
+      .use((orm) =>
+        this.query(
+          orm.insert(files).values({ ...file, trashed: file.trashed ? 1 : 0 })
+        )
       )
-    )
+      .pipe(Effect.asVoid)
   }
   promotePdf(id: string) {
-    this.native(() =>
-      this.db.run(
-        "UPDATE workspace_files SET mime='application/pdf' WHERE id=?",
-        id
+    return this.db
+      .use((orm) =>
+        this.query(
+          orm
+            .update(files)
+            .set({ mime: "application/pdf" })
+            .where(eq(files.id, id))
+        )
       )
-    )
+      .pipe(Effect.asVoid)
   }
   ready(id: string) {
-    this.native(() =>
-      this.db.run("UPDATE workspace_files SET status='ready' WHERE id=?", id)
-    )
+    return this.db
+      .use((orm) =>
+        this.query(
+          orm.update(files).set({ status: "ready" }).where(eq(files.id, id))
+        )
+      )
+      .pipe(Effect.asVoid)
   }
   rename(id: string, name: string) {
-    this.native(() =>
-      this.db.run("UPDATE workspace_files SET name=? WHERE id=?", name, id)
-    )
+    return this.db
+      .use((orm) =>
+        this.query(orm.update(files).set({ name }).where(eq(files.id, id)))
+      )
+      .pipe(Effect.asVoid)
   }
   trash(id: string, trashed: boolean) {
-    this.native(() =>
-      this.db.run(
-        "UPDATE workspace_files SET trashed=? WHERE id=?",
-        trashed ? 1 : 0,
-        id
+    return this.db
+      .use((orm) =>
+        this.query(
+          orm
+            .update(files)
+            .set({ trashed: trashed ? 1 : 0 })
+            .where(eq(files.id, id))
+        )
       )
-    )
-  }
-  private documentRecord(row: DocumentRow) {
-    return Schema.decodeUnknownSync(DocumentRecord)({
-      ...row,
-      truncated: !!row.truncated,
-    })
-  }
-  private videoRecord(row: VideoRow) {
-    return Schema.decodeUnknownSync(VideoRecord)({
-      ...row,
-      captions: !!row.captions,
-      retryAt: row.retry_at,
-    })
+      .pipe(Effect.asVoid)
   }
   document(id: string) {
-    const row = this.native(
-      () =>
-        this.db.all<DocumentRow>(
-          "SELECT * FROM workspace_extractions WHERE id=?",
-          id
-        )[0]
-    )
-    return row ? this.documentRecord(row) : undefined
+    return this.db
+      .use((orm) => this.query(orm.select().from(docs).where(eq(docs.id, id))))
+      .pipe(
+        Effect.map(([row]) =>
+          row ? this.doc({ ...row, truncated: !!row.truncated }) : undefined
+        )
+      )
   }
   video(id: string) {
-    const row = this.native(
-      () =>
-        this.db.all<VideoRow>(
-          "SELECT * FROM workspace_video_preparations WHERE id=?",
-          id
-        )[0]
-    )
-    return row ? this.videoRecord(row) : undefined
+    return this.db
+      .use((orm) =>
+        this.query(orm.select().from(videos).where(eq(videos.id, id)))
+      )
+      .pipe(
+        Effect.map(([row]) =>
+          row
+            ? this.vid({
+                ...row,
+                captions: !!row.captions,
+                retryAt: row.retry_at,
+              })
+            : undefined
+        )
+      )
   }
   pendingDocument() {
-    const row = this.native(
-      () =>
-        this.db.all<DocumentRow>(
-          "SELECT e.* FROM workspace_extractions e JOIN workspace_files f ON f.id=e.id WHERE e.status IN ('pending','running') AND f.status='ready' AND f.trashed=0 ORDER BY f.createdAt,e.id LIMIT 1"
-        )[0]
-    )
-    return row ? this.documentRecord(row) : undefined
+    return this.db
+      .use((orm) =>
+        this.query(
+          orm
+            .select(getTableColumns(docs))
+            .from(docs)
+            .innerJoin(files, eq(docs.id, files.id))
+            .where(
+              and(
+                inArray(docs.status, ["pending", "running"]),
+                eq(files.status, "ready"),
+                eq(files.trashed, 0)
+              )
+            )
+            .orderBy(files.createdAt, docs.id)
+            .limit(1)
+        )
+      )
+      .pipe(
+        Effect.map(([row]) =>
+          row ? this.doc({ ...row, truncated: !!row.truncated }) : undefined
+        )
+      )
   }
   pendingVideo() {
-    const row = this.native(
-      () =>
-        this.db.all<VideoRow>(
-          "SELECT v.* FROM workspace_video_preparations v JOIN workspace_files f ON f.id=v.id WHERE v.status IN ('pending','running') AND f.status='ready' AND f.trashed=0 ORDER BY f.createdAt,v.id LIMIT 1"
-        )[0]
-    )
-    return row ? this.videoRecord(row) : undefined
+    return this.db
+      .use((orm) =>
+        this.query(
+          orm
+            .select(getTableColumns(videos))
+            .from(videos)
+            .innerJoin(files, eq(videos.id, files.id))
+            .where(
+              and(
+                inArray(videos.status, ["pending", "running"]),
+                eq(files.status, "ready"),
+                eq(files.trashed, 0)
+              )
+            )
+            .orderBy(files.createdAt, videos.id)
+            .limit(1)
+        )
+      )
+      .pipe(
+        Effect.map(([row]) =>
+          row
+            ? this.vid({
+                ...row,
+                captions: !!row.captions,
+                retryAt: row.retry_at,
+              })
+            : undefined
+        )
+      )
   }
   enqueueDocument(id: string) {
-    this.native(() =>
-      this.db.run(
-        "INSERT OR IGNORE INTO workspace_extractions(id) VALUES (?)",
-        id
+    return this.db
+      .use((orm) =>
+        this.query(orm.insert(docs).values({ id }).onConflictDoNothing())
       )
-    )
+      .pipe(Effect.asVoid)
   }
   enqueueVideo(id: string) {
-    this.native(() =>
-      this.db.run(
-        "INSERT OR IGNORE INTO workspace_video_preparations(id) VALUES (?)",
-        id
+    return this.db
+      .use((orm) =>
+        this.query(orm.insert(videos).values({ id }).onConflictDoNothing())
       )
-    )
+      .pipe(Effect.asVoid)
   }
   claimDocument(job: DocumentJob) {
-    return this.native(
-      () =>
-        this.db.all(
-          "UPDATE workspace_extractions SET status='running',attempts=? WHERE id=? AND attempts=? AND status IN ('pending','running') RETURNING id",
-          job.attempts,
-          job.id,
-          job.attempts - 1
-        ).length > 0
-    )
+    return this.db
+      .use((orm) =>
+        this.query(
+          orm
+            .update(docs)
+            .set({ status: "running", attempts: job.attempts })
+            .where(
+              and(
+                eq(docs.id, job.id),
+                eq(docs.attempts, job.attempts - 1),
+                inArray(docs.status, ["pending", "running"])
+              )
+            )
+            .returning({ id: docs.id })
+        )
+      )
+      .pipe(Effect.map((rows) => rows.length > 0))
   }
   claimVideo(job: VideoJob) {
-    return this.native(
-      () =>
-        this.db.all(
-          "UPDATE workspace_video_preparations SET status='running',attempts=? WHERE id=? AND attempts=? AND status IN ('pending','running') RETURNING id",
-          job.attempts,
-          job.id,
-          job.attempts - 1
-        ).length > 0
-    )
+    return this.db
+      .use((orm) =>
+        this.query(
+          orm
+            .update(videos)
+            .set({ status: "running", attempts: job.attempts })
+            .where(
+              and(
+                eq(videos.id, job.id),
+                eq(videos.attempts, job.attempts - 1),
+                inArray(videos.status, ["pending", "running"])
+              )
+            )
+            .returning({ id: videos.id })
+        )
+      )
+      .pipe(Effect.map((rows) => rows.length > 0))
   }
   saveDocument(job: DocumentJob, expectedAttempts?: number) {
-    this.native(() =>
-      this.db.run(
-        "UPDATE workspace_extractions SET status=?,attempts=?,pages=?,readPages=?,characters=?,truncated=?,error=? WHERE id=? AND (? IS NULL OR attempts=?)",
-        job.status,
-        job.attempts,
-        job.pages,
-        job.readPages,
-        job.characters,
-        job.truncated ? 1 : 0,
-        job.error,
-        job.id,
-        expectedAttempts ?? null,
-        expectedAttempts ?? null
+    return this.db
+      .use((orm) =>
+        this.query(
+          orm
+            .update(docs)
+            .set({ ...job, truncated: job.truncated ? 1 : 0 })
+            .where(
+              and(
+                eq(docs.id, job.id),
+                expectedAttempts === undefined
+                  ? undefined
+                  : eq(docs.attempts, expectedAttempts)
+              )
+            )
+        )
       )
-    )
+      .pipe(Effect.asVoid)
   }
   saveVideo(job: VideoJob, expectedAttempts?: number) {
-    this.native(() =>
-      this.db.run(
-        "UPDATE workspace_video_preparations SET status=?,attempts=?,duration=?,frames=?,captions=?,error=?,retry_at=? WHERE id=? AND (? IS NULL OR attempts=?)",
-        job.status,
-        job.attempts,
-        job.duration,
-        job.frames,
-        job.captions ? 1 : 0,
-        job.error,
-        job.retryAt,
-        job.id,
-        expectedAttempts ?? null,
-        expectedAttempts ?? null
+    return this.db
+      .use((orm) =>
+        this.query(
+          orm
+            .update(videos)
+            .set({
+              ...job,
+              captions: job.captions ? 1 : 0,
+              retry_at: job.retryAt,
+            })
+            .where(
+              and(
+                eq(videos.id, job.id),
+                expectedAttempts === undefined
+                  ? undefined
+                  : eq(videos.attempts, expectedAttempts)
+              )
+            )
+        )
       )
-    )
+      .pipe(Effect.asVoid)
   }
 }

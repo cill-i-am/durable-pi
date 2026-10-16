@@ -205,7 +205,7 @@ it("interrupts multipart ingress without admitting a file and joins reader cance
   const workspace = makeWorkspace(
     ledger,
     assets,
-    () => true,
+    () => Effect.sync(() => true),
     () => Effect.fail(new WorkspaceUnavailable()),
     () => Effect.fail(new WorkspaceUnavailable())
   )
@@ -232,7 +232,7 @@ it("interrupts multipart ingress without admitting a file and joins reader cance
   close.release()
   const exit = await work
   expect(Exit.isFailure(exit) && Cause.hasInterrupts(exit.cause)).toBe(true)
-  expect(ledger.list()).toEqual([])
+  expect(Effect.runSync(ledger.list())).toEqual([])
   expect(body.locked).toBe(false)
 })
 
@@ -259,7 +259,7 @@ it("does not turn oversized input plus failed reader cancellation into an ordina
   const workspace = makeWorkspace(
     ledger,
     assets,
-    () => true,
+    () => Effect.sync(() => true),
     () => Effect.fail(new WorkspaceUnavailable()),
     () => Effect.fail(new WorkspaceUnavailable())
   )
@@ -278,6 +278,6 @@ it("does not turn oversized input plus failed reader cancellation into an ordina
         (reason) => reason._tag === "Die" && reason.defect === cleanup
       )
   ).toBe(true)
-  expect(ledger.list()).toEqual([])
+  expect(Effect.runSync(ledger.list())).toEqual([])
   expect(body.locked).toBe(false)
 })

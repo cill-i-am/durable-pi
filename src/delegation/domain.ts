@@ -9,7 +9,7 @@ import {
 } from "./contracts"
 import { ResolvedRoute } from "../inference/policy"
 import { REPORT_BYTES, REQUEST_LIMIT } from "./delegation"
-import type { DelegationAuthority } from "./delegations"
+import type { DelegationFacts } from "./delegations"
 
 export const SavedGroup = Schema.Struct({
   id: NativeId,
@@ -41,10 +41,7 @@ export const requestId = (group: SavedGroup, child: number) =>
   `delegation:${group.id}:${child}`
 export const controlId = (control: Control) =>
   `delegation-control:${control.operationId}`
-export function requireCurrent(
-  group: SavedGroup,
-  authority: DelegationAuthority
-) {
+export function requireCurrent(group: SavedGroup, authority: DelegationFacts) {
   if (!authority.current(group.turnId, group.conversationId) || group.closed)
     throw failure(
       "cancelled",
@@ -62,7 +59,7 @@ export function acceptControl(
   group: SavedGroup,
   input: Control,
   now: number,
-  authority: DelegationAuthority
+  authority: DelegationFacts
 ): SavedGroup {
   requireCurrent(group, authority)
   const child = requireChild(group, input.childId, now)
@@ -91,7 +88,7 @@ export function consumeRequest(
   group: SavedGroup,
   childId: number,
   now: number,
-  authority: DelegationAuthority
+  authority: DelegationFacts
 ): SavedGroup {
   requireCurrent(group, authority)
   const child = group.children.find((value) => value.id === childId)

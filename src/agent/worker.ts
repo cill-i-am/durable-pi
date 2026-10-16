@@ -1,3 +1,14 @@
+import {
+  Scheduler,
+  Cause,
+  Exit,
+  Layer,
+  ManagedRuntime,
+  Redacted,
+  Semaphore,
+  Scope,
+} from "effect"
+import type { ConversationError } from "../conversations/service"
 import { AgentCatalogHttp, agentCatalogHttp } from "../agents/adapters/http-api"
 import { preserveFatal } from "../shared/effect"
 import { remoteToolResolution } from "../access/adapters/resolution"
@@ -68,7 +79,6 @@ import {
   BackgroundDelegation,
   backgroundApplication,
 } from "../delegation/background-service"
-import type { BackgroundAuthority } from "../delegation/background-domain"
 import { backgroundRemote } from "../delegation/adapters/background-rpc"
 import { backgroundNative } from "../delegation/adapters/interop"
 import { backgroundRequest } from "../delegation/adapters/background-http"
@@ -165,7 +175,6 @@ import { agentSettings, contextProjectionBytes } from "./compaction"
 import * as Schema from "effect/Schema"
 import * as Effect from "effect/Effect"
 import type { AgentEnv } from "../../alchemy.run"
-import { Cause, Exit, Layer, ManagedRuntime, Redacted, Semaphore } from "effect"
 import { videoService } from "../workspace/adapters/video-service"
 import { documentService } from "../workspace/adapters/document-service"
 import { workspaceLayer } from "../workspace/adapters/storage"
@@ -178,7 +187,8 @@ import {
 } from "../workspace/application"
 import { WorkspaceAdmission } from "../workspace/admission"
 import { WorkspaceUnavailable, messageArchiveText } from "../workspace/files"
-import type { Sqlite } from "../storage/sqlite"
+import { makeDurableObjectSqlite } from "../storage/durable-object"
+import { migrateSqlite } from "../storage/migrations"
 import { MemoryRepository } from "../memory/repository"
 import { sqliteMemoryLayer } from "../memory/adapters/sqlite"
 import { bucketLayer } from "../memory/adapters/bucket"
@@ -228,6 +238,7 @@ import {
   ConversationStorageError,
   ModelSettings,
   type Submission,
+  type Turn,
 } from "../conversations/turns"
 import {
   ConversationCheckpoint,
@@ -236,7 +247,7 @@ import {
 import { selectBotSkills } from "../skills/selection"
 import { AccessStore } from "../access/adapters/sqlite"
 import { AccessGate, type AccessError } from "../access/gate"
-import { builtInTools } from "../access/contracts"
+import { builtInTools, AccessStorageError } from "../access/contracts"
 import { guardedTools } from "../access/adapters/pi"
 import { piRemoteResult } from "../access/adapters/receipt"
 import { appEventPump } from "../apps/pump"
@@ -299,6 +310,9 @@ import { AppStore } from "../apps/adapters/sqlite"
 import { Apps, appApplication } from "../apps/service"
 import { AppStorageError } from "../apps/contracts"
 import { RoutineStorageError } from "../routines/persistence"
+import { WebhookStorageError } from "../webhooks/persistence"
+import { BrowserStorageError } from "../browser/repository"
+import { ExecutionStorageError } from "../execution/contracts"
 import { appsRequest } from "../apps/adapters/http"
 import { WebApps } from "../apps/web"
 import { webExecutor } from "../apps/adapters/code"
@@ -495,8 +509,10 @@ class RoutineRunner extends TurnRunner {
     )
     return next === undefined ? undefined : { rescheduleAt: next }
   }
-  onJobError(): LifecycleJobOutcome {
-    const next = this.owner.actorRuntime.runSync(this.owner.routinePump.retry())
+  async onJobError(): Promise<LifecycleJobOutcome> {
+    const next = await this.owner.actorRuntime.runPromise(
+      this.owner.routinePump.retry()
+    )
     return next === undefined ? undefined : { rescheduleAt: next }
   }
 }
@@ -542,7 +558,8 @@ class ActorServices extends LifecycleCapability {
             return Effect.void
           }),
           Effect.ensuring(this.owner.communication.runtime.disposeEffect),
-          Effect.ensuring(this.owner.actorRuntime.disposeEffect)
+          Effect.ensuring(this.owner.actorRuntime.disposeEffect),
+          Effect.ensuring(Scope.close(this.owner.storageScope, Exit.void))
         )
     )
   }
@@ -608,13 +625,23 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   get backupBucket() {
     return this.env.MEMORY_BACKUPS
   }
-  readonly db: Sqlite = {
-    all: <T>(query: string, ...bindings: (string | number | null)[]) =>
-      this.ctx.storage.sql.exec(query, ...bindings).toArray() as T[],
-    run: (query, ...bindings) => {
-      this.ctx.storage.sql.exec(query, ...bindings)
-    },
-    transaction: (body) => this.ctx.storage.transactionSync(body),
+  readonly storageScope = Effect.runSync(Scope.make())
+  readonly db = Effect.runSync(
+    Effect.gen({ self: this }, function* () {
+      const db = yield* makeDurableObjectSqlite(this.ctx.storage)
+      yield* migrateSqlite(db)
+      return db
+    }).pipe(
+      Effect.provideService(Scope.Scope, this.storageScope),
+      Effect.provideService(Scheduler.PreventSchedulerYield, true)
+    )
+  )
+  private foregroundSizing: Turn | undefined
+  private writable<TError>(failure: (cause: unknown) => TError) {
+    return this.botConfiguration.read().pipe(
+      Effect.map((configuration) => configuration?.status !== "archived"),
+      Effect.mapError(failure)
+    )
   }
   readonly conversations = new ConversationStore(this.db, {
     model: this.env.MODEL_ID,
@@ -646,27 +673,41 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   })
   readonly connectionClient = mcpConnectionClient(this.mcp)
   readonly remoteSelection = sqliteRemoteSelection(this.connectionStore)
-  readonly accessStore = new AccessStore(this.db, () => [
-    ...builtInTools,
-    ...this.connectionStore.selection().tools.map((tool) => ({
-      name: tool.name,
-      title: `${tool.connectionName} / ${tool.remoteName}`,
-      description: tool.description,
-      mode: "ask" as const,
-    })),
-  ])
+  readonly accessStore = new AccessStore(this.db, () =>
+    this.connectionStore.selection().pipe(
+      Effect.map((selection) => [
+        ...builtInTools,
+        ...selection.tools.map((tool) => ({
+          name: tool.name,
+          title: `${tool.connectionName} / ${tool.remoteName}`,
+          description: tool.description,
+          mode: "ask" as const,
+        })),
+      ]),
+      Effect.mapError(
+        (cause) =>
+          new AccessStorageError({ operation: "read tool catalog", cause })
+      )
+    )
+  )
   readonly access = new AccessGate(
     this.accessStore,
-    (turnId) => {
-      const turn = this.conversations.get(turnId)
-      return (
-        !!turn &&
-        ["queued", "preparing", "running"].includes(turn.status) &&
-        this.recovery.get(turnId)?.view?.phase !== "blocked" &&
-        this.routineAuthority.canRun(turnId) &&
-        this.botConfiguration.read()?.status !== "archived"
-      )
-    },
+    (turnId) =>
+      Effect.gen({ self: this }, function* () {
+        const turn = yield* this.conversations.get(turnId)
+        return (
+          !!turn &&
+          ["queued", "preparing", "running"].includes(turn.status) &&
+          (yield* this.recovery.get(turnId))?.view?.phase !== "blocked" &&
+          (yield* this.routineAuthority.canRun(turnId)) &&
+          (yield* this.botConfiguration.read())?.status !== "archived"
+        )
+      }).pipe(
+        Effect.mapError(
+          (cause) =>
+            new AccessStorageError({ operation: "read tool authority", cause })
+        )
+      ),
     () => this.notifyConversation(),
     () => this.ctx.id.toString()
   )
@@ -674,13 +715,15 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     this.access,
     (api) =>
       this.delegations.root(Number(api.conversationId)).pipe(
-        Effect.map((root) => {
-          if (root) return root
-          const turn = this.active()
-          return turn?.session_id === String(api.conversationId)
-            ? turn.id
-            : undefined
-        })
+        Effect.flatMap((root) =>
+          Effect.gen({ self: this }, function* () {
+            if (root) return root
+            const turn = yield* this.active()
+            return turn?.session_id === String(api.conversationId)
+              ? turn.id
+              : undefined
+          })
+        )
       ),
     new Set([
       ...recoverableObjectTools,
@@ -697,9 +740,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   )
   readonly skills = new SkillStore(this.db)
   readonly botConfiguration = new BotConfigurationStore(this.db)
-  readonly apps = new AppStore(
-    this.db,
-    () => this.botConfiguration.read()?.status !== "archived"
+  readonly apps = new AppStore(this.db, () =>
+    this.writable(
+      (cause) => new AppStorageError({ operation: "read app authority", cause })
+    )
   )
   readonly summaryRoutes = new SummaryRoutes(this.db)
   readonly summaryRoutingLayer = summaryRoutingApplication(this.summaryRoutes)
@@ -746,17 +790,28 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       ),
       backgroundApplication(
         new SqliteBackgroundMailbox(this.db),
-        (id): BackgroundAuthority => {
-          const turn = this.conversations.get(id)
-          if (
-            !turn ||
-            this.botConfiguration.read()?.status === "archived" ||
-            ["failed", "cancelled", "stopping"].includes(turn.status) ||
-            !this.routineAuthority.canRun(id)
-          )
-            return "cancelled"
-          return turn.status === "done" ? "done" : "active"
-        },
+        (id) =>
+          Effect.gen({ self: this }, function* () {
+            const turn = yield* this.conversations.get(id)
+            if (
+              !turn ||
+              (yield* this.botConfiguration.read())?.status === "archived" ||
+              ["failed", "cancelled", "stopping"].includes(turn.status) ||
+              !(yield* this.routineAuthority.canRun(id))
+            )
+              return "cancelled" as const
+            return turn.status === "done"
+              ? ("done" as const)
+              : ("active" as const)
+          }).pipe(
+            Effect.mapError(
+              (cause) =>
+                new ConversationStorageError({
+                  operation: "read background authority",
+                  cause,
+                })
+            )
+          ),
         this.ctx.id.toString(),
         () => crypto.randomUUID(),
         backgroundRemote(this.ctx.id.toString(), (id) =>
@@ -765,8 +820,9 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           )
         ),
         {
-          active: () => Effect.sync(() => !!this.active()),
-          backgroundActive: () => Effect.sync(() => !!this.active()?.origin),
+          active: () => this.active().pipe(Effect.map((turn) => !!turn)),
+          backgroundActive: () =>
+            this.active().pipe(Effect.map((turn) => !!turn?.origin)),
           wakeConversation: () => backgroundNative(() => this.runner.wake()),
           wakeBackground: () =>
             backgroundNative(() => this.backgroundRunner.wake()),
@@ -774,23 +830,24 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           admission: {
             transactionGroup: this.db,
             admit: (handoff, report) =>
-              this.conversations.admit(
-                {
-                  operationId: handoff.reportId,
-                  text: report,
-                  origin: {
-                    kind: "background",
-                    groupId: handoff.id,
-                    turnId: handoff.turnId,
+              this.conversations
+                .admit(
+                  {
+                    operationId: handoff.reportId,
+                    text: report,
+                    origin: {
+                      kind: "background",
+                      groupId: handoff.id,
+                      turnId: handoff.turnId,
+                    },
                   },
-                },
-                undefined,
-                [],
-                handoff.route
-              ).turn.id,
-            stop: (reportId) => {
-              this.conversations.requestStop(reportId)
-            },
+                  undefined,
+                  [],
+                  handoff.route
+                )
+                .pipe(Effect.map((admission) => admission.turn.id)),
+            stop: (reportId) =>
+              this.conversations.requestStop(reportId).pipe(Effect.asVoid),
           },
         }
       ),
@@ -802,19 +859,41 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             this.registry.snapshot().extension("delegated-reader")?.tools ?? []
         ),
         {
-          current: (id, conversationId): boolean => {
-            const turn = this.conversations.get(id)
-            return (
-              turn?.status === "running" &&
-              turn.session_id === String(conversationId) &&
-              this.routineAuthority.canRun(id) &&
-              this.botConfiguration.read()?.status !== "archived"
-            )
-          },
-          cancelled: (id): boolean =>
-            ["stopping", "cancelled", "failed"].includes(
-              this.conversations.get(id)?.status ?? "cancelled"
-            ) || this.botConfiguration.read()?.status === "archived",
+          current: (id, conversationId) =>
+            Effect.gen({ self: this }, function* () {
+              const turn = yield* this.conversations.get(id)
+              return (
+                turn?.status === "running" &&
+                turn.session_id === String(conversationId) &&
+                (yield* this.routineAuthority.canRun(id)) &&
+                (yield* this.botConfiguration.read())?.status !== "archived"
+              )
+            }).pipe(
+              Effect.mapError(
+                () =>
+                  new DelegationFailure({
+                    code: "unavailable",
+                    message: "Could not confirm the parent request.",
+                  })
+              )
+            ),
+          cancelled: (id) =>
+            Effect.gen({ self: this }, function* () {
+              return (
+                ["stopping", "cancelled", "failed"].includes(
+                  (yield* this.conversations.get(id))?.status ?? "cancelled"
+                ) ||
+                (yield* this.botConfiguration.read())?.status === "archived"
+              )
+            }).pipe(
+              Effect.mapError(
+                () =>
+                  new DelegationFailure({
+                    code: "unavailable",
+                    message: "Could not confirm the parent request.",
+                  })
+              )
+            ),
         }
       ),
       credentialApplication(
@@ -851,12 +930,12 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       executionApplication(
         new ExecutionStore(this.db),
         codeService(this.env.EXECUTION_SERVICE),
-        () => this.botConfiguration.read()?.status !== "archived"
+        () => this.writable(() => new ExecutionStorageError())
       ),
       sqliteBrowserLayer(
         this.db,
         new CloudflareBrowser(this.env.BROWSER),
-        () => this.botConfiguration.read()?.status !== "archived",
+        () => this.writable(() => new BrowserStorageError()),
         browserWake(() => this.browserCleanup.wake())
       ),
       backupStatusApplication(this.backupStatusLedger),
@@ -870,7 +949,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         this.db,
         this.env.WORKSPACE_ASSETS,
         `files/${this.ctx.id.toString()}`,
-        () => this.botConfiguration.read()?.status !== "archived",
+        () => this.writable(() => new WorkspaceUnavailable()),
         documentService(this.env.DOCUMENT_SERVICE),
         videoService(this.env.TERMINAL_SERVICE, this.ctx.id.toString())
       ),
@@ -905,13 +984,26 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         (source) => this.canChangeObject(source),
         objectDigest
       ),
-      webhookApplication(
-        () => this.botConfiguration.read()?.status !== "archived"
+      webhookApplication(() =>
+        this.writable(
+          (cause) =>
+            new WebhookStorageError({
+              operation: "read webhook authority",
+              cause,
+            })
+        )
       ).pipe(
         Layer.provide(sqliteWebhookPersistence(this.db)),
         Layer.provideMerge(
           routineApplication(
-            () => this.botConfiguration.read()?.status !== "archived",
+            () =>
+              this.writable(
+                (cause) =>
+                  new RoutineStorageError({
+                    operation: "read routine authority",
+                    cause,
+                  })
+              ),
             () => crypto.randomUUID()
           ).pipe(Layer.provide(sqliteRoutinePersistence(this.db)))
         )
@@ -920,12 +1012,16 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   )
   readonly credentialService: typeof ModelCredentials.Service =
     this.actorRuntime.runSync(ModelCredentials)
-  readonly workspaceService = this.actorRuntime.runSync(Workspace)
+  readonly workspaceService: typeof Workspace.Service =
+    this.actorRuntime.runSync(Workspace)
   readonly configurationService: typeof BotConfiguration.Service =
     this.actorRuntime.runSync(BotConfiguration)
-  readonly recoveryService = this.actorRuntime.runSync(RunRecovery)
-  readonly memory = this.actorRuntime.runSync(MemoryRepository)
-  readonly backupStatus = this.actorRuntime.runSync(MemoryBackupStatus)
+  readonly recoveryService: typeof RunRecovery.Service =
+    this.actorRuntime.runSync(RunRecovery)
+  readonly memory: typeof MemoryRepository.Service =
+    this.actorRuntime.runSync(MemoryRepository)
+  readonly backupStatus: typeof MemoryBackupStatus.Service =
+    this.actorRuntime.runSync(MemoryBackupStatus)
   readonly memoryHost: MemoryHost<
     | MemorySchedulingError
     | Effect.Error<ReturnType<typeof this.conversationService.active>>
@@ -942,44 +1038,69 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   readonly memoryMaintenance = memoryMaintenance(this.memoryHost)
   readonly importMemory = memoryImport(
     this.actorRuntime.runSync(MemoryTransaction),
-    memoryImportAuthority(this.db, () => !!this.conversations.active()),
+    memoryImportAuthority(this.db, () =>
+      this.conversations.active().pipe(Effect.map((turn) => !!turn))
+    ),
     this.memoryHost
   )
   readonly memoryTools = memoryTools(this.memory, (program, signal) =>
     this.run(program, { signal })
   )
-  readonly summaryRouting = this.actorRuntime.runSync(SummaryRouting)
-  readonly summaryModel = this.actorRuntime.runSync(SummaryModel)
-  readonly skillService = this.actorRuntime.runSync(Skills)
-  readonly conversationService = this.actorRuntime.runSync(Conversations)
+  readonly summaryRouting: typeof SummaryRouting.Service =
+    this.actorRuntime.runSync(SummaryRouting)
+  readonly summaryModel: typeof SummaryModel.Service =
+    this.actorRuntime.runSync(SummaryModel)
+  readonly skillService: typeof Skills.Service =
+    this.actorRuntime.runSync(Skills)
+  readonly conversationService: typeof Conversations.Service =
+    this.actorRuntime.runSync(Conversations)
   readonly conversationExecution = this.actorRuntime.runSync(
     ConversationExecution
   )
-  readonly conversationJournal = this.actorRuntime.runSync(ConversationJournal)
-  readonly connections = this.actorRuntime.runSync(RemoteConnections)
-  readonly appService = this.actorRuntime.runSync(Apps)
+  readonly conversationJournal: typeof ConversationJournal.Service =
+    this.actorRuntime.runSync(ConversationJournal)
+  readonly connections: typeof RemoteConnections.Service =
+    this.actorRuntime.runSync(RemoteConnections)
+  readonly appService: typeof Apps.Service = this.actorRuntime.runSync(Apps)
   readonly appPump = appEventPump<
     | Effect.Error<ReturnType<PersonalAgent["modelConnectedProgram"]>>
     | AgentSynchronizationError,
     never
   >(this.appService, {
-    active: () => this.botConfiguration.read()?.status !== "archived",
+    active: () =>
+      this.configurationService
+        .read()
+        .pipe(
+          Effect.map((configuration) => configuration?.status !== "archived")
+        ),
     modelConnected: () => this.modelConnectedProgram(),
     wakeConversation: () =>
       agentNativeOperation("wake conversation", () => this.runner.wake()),
     admission: {
       transactionGroup: this.db,
       admit: (event) =>
-        this.conversations.admit(
-          { operationId: event.turnId, text: event.text },
-          undefined,
-          this.skills.selection().skills
-        ).turn.id,
+        Effect.gen({ self: this }, function* () {
+          return (yield* this.conversations.admit(
+            { operationId: event.turnId, text: event.text },
+            undefined,
+            (yield* this.skills.selection().pipe(
+              Effect.mapError(
+                (cause) =>
+                  new ConversationStorageError({
+                    operation: "read admission skills",
+                    cause,
+                  })
+              )
+            )).skills
+          )).turn.id
+        }),
     },
     notify: () => Effect.sync(() => this.notifyConversation()),
   })
-  readonly catalog = this.actorRuntime.runSync(AgentCatalog)
-  readonly catalogHttp = this.actorRuntime.runSync(AgentCatalogHttp)
+  readonly catalog: typeof AgentCatalog.Service =
+    this.actorRuntime.runSync(AgentCatalog)
+  readonly catalogHttp: typeof AgentCatalogHttp.Service =
+    this.actorRuntime.runSync(AgentCatalogHttp)
   readonly terminalAuthoritySync = this.actorRuntime.runSync(
     TerminalAuthoritySync
   )
@@ -1031,9 +1152,12 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       )
     )
   )
-  readonly routines = this.actorRuntime.runSync(Routines)
-  readonly routineAuthority = this.actorRuntime.runSync(RoutineAuthority)
-  readonly webhooks = this.actorRuntime.runSync(Webhooks)
+  readonly routines: typeof Routines.Service =
+    this.actorRuntime.runSync(Routines)
+  readonly routineAuthority: typeof RoutineAuthority.Service =
+    this.actorRuntime.runSync(RoutineAuthority)
+  readonly webhooks: typeof Webhooks.Service =
+    this.actorRuntime.runSync(Webhooks)
   readonly messageCommit = guardedMessageAdmission(
     this.conversations,
     this.botConfiguration,
@@ -1122,88 +1246,152 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   readonly routinePump = routinePump<
     | Effect.Error<ReturnType<PersonalAgent["modelConnectedProgram"]>>
     | AgentSynchronizationError
+    | ConversationError
+    | AccessError
   >(this.routines, {
-    getTurn: (id) => Effect.sync(() => this.conversations.get(id)),
+    getTurn: (id) => this.conversations.get(id),
     modelConnected: () => this.modelConnectedProgram(),
     wakeConversation: () =>
       agentNativeOperation("wake conversation", () => this.runner.wake()),
     admission: {
       transactionGroup: this.db,
       admit: (run) =>
-        this.conversations.admit(
-          {
-            operationId: run.turnId,
-            text: `Routine: ${run.title}\n${run.trigger === "manual" ? "Requested now" : run.trigger === "webhook" ? "Triggered by an external event" : "Scheduled for " + new Date(run.scheduledAt).toISOString()}\n\n${run.prompt}\n\nThis run has a ten-minute budget. Follow the bot's current tool permissions; wait for any required approval. Report the useful result or a concrete failure in this conversation.`,
-          },
-          undefined,
-          this.skills.selection().skills
-        ).turn.id,
+        Effect.gen({ self: this }, function* () {
+          return (yield* this.conversations.admit(
+            {
+              operationId: run.turnId,
+              text: `Routine: ${run.title}\n${run.trigger === "manual" ? "Requested now" : run.trigger === "webhook" ? "Triggered by an external event" : "Scheduled for " + new Date(run.scheduledAt).toISOString()}\n\n${run.prompt}\n\nThis run has a ten-minute budget. Follow the bot's current tool permissions; wait for any required approval. Report the useful result or a concrete failure in this conversation.`,
+            },
+            undefined,
+            (yield* this.skills.selection().pipe(
+              Effect.mapError(
+                (cause) =>
+                  new ConversationStorageError({
+                    operation: "read admission skills",
+                    cause,
+                  })
+              )
+            )).skills
+          )).turn.id
+        }),
     },
     stop: (id) =>
-      Effect.sync(() => {
-        this.conversations.requestStop(id)
-        this.accessStore.cancel(id)
+      Effect.gen({ self: this }, function* () {
+        yield* this.conversations.requestStop(id)
+        yield* this.accessStore.cancel(id)
         this.access.notify()
       }),
     notify: () => Effect.sync(() => this.notifyConversation()),
   })
-  readonly objects = this.actorRuntime.runSync(Objects)
-  canChangeObject(source: ChangeSource): boolean {
-    if (this.botConfiguration.read()?.status === "archived") return false
-    if (source.actor === "user") return true
-    const turn = source.turnId
-      ? this.conversations.get(source.turnId)
-      : undefined
-    return (
-      !!turn &&
-      this.active()?.id === turn.id &&
-      ["preparing", "running"].includes(turn.status) &&
-      this.routineAuthority.canRun(turn.id)
+  readonly objects: typeof Objects.Service = this.actorRuntime.runSync(Objects)
+  canChangeObject(source: ChangeSource) {
+    return Effect.gen({ self: this }, function* () {
+      if ((yield* this.botConfiguration.read())?.status === "archived")
+        return false
+      if (source.actor === "user") return true
+      const turn = source.turnId
+        ? yield* this.conversations.get(source.turnId)
+        : undefined
+      return (
+        !!turn &&
+        (yield* this.active())?.id === turn.id &&
+        ["preparing", "running"].includes(turn.status) &&
+        (yield* this.routineAuthority.canRun(turn.id))
+      )
+    }).pipe(
+      Effect.mapError(
+        () =>
+          new ObjectFailure({
+            code: "unavailable",
+            message: "Could not confirm the current request.",
+          })
+      )
     )
   }
-  readonly executions = this.actorRuntime.runSync(Executions)
-  planSource(turnId: string): PlanSource | undefined {
-    const turn = this.conversations.get(turnId)
-    if (
-      !turn ||
-      turn.parent_id ||
-      this.active()?.id !== turn.id ||
-      !["preparing", "running"].includes(turn.status) ||
-      this.botConfiguration.read()?.status === "archived" ||
-      !this.routineAuthority.canRun(turn.id)
-    )
-      return undefined
-    const members = this.conversations.members(turnId, false)
-    return planningInputSource(
-      turnId,
-      turn.revision,
-      members.map((member) => ({
-        id: member.id,
-        steering: !!member.parent_id,
-        text: member.text,
-        hasAttachments: member.attachments.length > 0,
-        delivery: member.delivery,
-      }))
+  planSource(
+    turnId: string
+  ): Effect.Effect<PlanSource | undefined, PlanFailure> {
+    return Effect.gen({ self: this }, function* () {
+      const turn = yield* this.conversations.get(turnId)
+      if (
+        !turn ||
+        turn.parent_id ||
+        (yield* this.active())?.id !== turn.id ||
+        !["preparing", "running"].includes(turn.status) ||
+        (yield* this.botConfiguration.read())?.status === "archived" ||
+        !(yield* this.routineAuthority.canRun(turn.id))
+      )
+        return
+      const members = yield* this.conversations.members(turnId, false)
+      return planningInputSource(
+        turnId,
+        turn.revision,
+        members.map((member) => ({
+          id: member.id,
+          steering: !!member.parent_id,
+          text: member.text,
+          hasAttachments: member.attachments.length > 0,
+          delivery: member.delivery,
+        }))
+      )
+    }).pipe(
+      Effect.mapError(
+        () =>
+          new PlanFailure({
+            code: "unavailable",
+            message: "Could not confirm the current request.",
+          })
+      )
     )
   }
   planningSource(conversationId: string) {
-    const turn = this.active()
-    return turn?.session_id === conversationId
-      ? this.planSource(turn.id)
-      : undefined
+    return this.active().pipe(
+      Effect.mapError(
+        () =>
+          new PlanFailure({
+            code: "unavailable",
+            message: "Could not confirm the current request.",
+          })
+      ),
+      Effect.flatMap((turn) =>
+        turn?.session_id === conversationId
+          ? this.planSource(turn.id)
+          : Effect.succeed(undefined)
+      )
+    )
   }
-  readonly plans = this.actorRuntime.runSync(Planning)
+  readonly executions: typeof Executions.Service =
+    this.actorRuntime.runSync(Executions)
+  readonly plans: typeof Planning.Service = this.actorRuntime.runSync(Planning)
   createPlanAuthority(): PlanControl {
     return {
       current: (id) => this.planSource(id),
       cancelled: (id) =>
-        ["stopping", "cancelled"].includes(
-          this.conversations.get(id)?.status ?? ""
+        this.conversations.get(id).pipe(
+          Effect.map((turn) =>
+            ["stopping", "cancelled"].includes(turn?.status ?? "")
+          ),
+          Effect.mapError(
+            () =>
+              new PlanFailure({
+                code: "unavailable",
+                message: "Could not confirm the current request.",
+              })
+          )
         ),
       receipts: (roots) =>
-        this.accessStore
-          .receipts(roots)
-          .map((ref) => ({ ...ref, kind: "receipt" as const })),
+        this.accessStore.receipts(roots).pipe(
+          Effect.map((refs) =>
+            refs.map((ref) => ({ ...ref, kind: "receipt" as const }))
+          ),
+          Effect.mapError(
+            () =>
+              new PlanFailure({
+                code: "unavailable",
+                message: "Could not read execution receipts.",
+              })
+          )
+        ),
     }
   }
   transactionPlanEvidence(tx: Tx): PlanEvidence {
@@ -1215,38 +1403,55 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       files: () => this.workspaceService.list(),
     })
   }
-  delegationSource(api: ToolExecutionApi): DelegationSource {
-    const receipt = this.accessStore.get(String(api.taskId))
-    const turn = receipt ? this.conversations.get(receipt.turnId) : undefined
-    if (
-      !turn?.routing ||
-      turn.origin ||
-      turn.session_id !== String(api.conversationId)
+  delegationSource(
+    api: ToolExecutionApi
+  ): Effect.Effect<DelegationSource, DelegationFailure> {
+    return Effect.gen({ self: this }, function* () {
+      const receipt = yield* this.accessStore.get(String(api.taskId)),
+        turn = receipt
+          ? yield* this.conversations.get(receipt.turnId)
+          : undefined
+      if (
+        !turn?.routing ||
+        turn.origin ||
+        turn.session_id !== String(api.conversationId)
+      )
+        return yield* new DelegationFailure({
+          code: "cancelled",
+          message:
+            "Delegation must belong to an original active request, not a background report.",
+        })
+      return {
+        turnId: turn.id,
+        conversationId: Number(api.conversationId),
+        taskId: Number(api.taskId),
+        route: turn.routing,
+        memory:
+          sharedReference(turn.prompt ?? "") +
+          "\n" +
+          messageArchiveText("", turn.attachments),
+      }
+    }).pipe(
+      Effect.mapError((cause) =>
+        cause instanceof DelegationFailure
+          ? cause
+          : new DelegationFailure({
+              code: "unavailable",
+              message: "Could not confirm the current request.",
+            })
+      )
     )
-      throw new DelegationFailure({
-        code: "cancelled",
-        message:
-          "Delegation must belong to an original active request, not a background report.",
-      })
-    return {
-      turnId: turn.id,
-      conversationId: Number(api.conversationId),
-      taskId: Number(api.taskId),
-      route: turn.routing,
-      memory:
-        sharedReference(turn.prompt ?? "") +
-        "\n" +
-        messageArchiveText("", turn.attachments),
-    }
   }
   readonly communication = personalCommunication(this, this.env.AGENT)
-  readonly backgroundMailbox = this.actorRuntime.runSync(BackgroundMailbox)
-  readonly background = this.actorRuntime.runSync(BackgroundDelegation)
-  backgroundAuthorized(id: number): boolean {
-    return this.actorRuntime.runSync(this.background.authorized(id))
+  readonly backgroundMailbox: typeof BackgroundMailbox.Service =
+    this.actorRuntime.runSync(BackgroundMailbox)
+  readonly background: typeof BackgroundDelegation.Service =
+    this.actorRuntime.runSync(BackgroundDelegation)
+  backgroundAuthorized(id: number): Promise<boolean> {
+    return this.run(this.background.authorized(id))
   }
-  backgroundHandoff(id: number): BackgroundHandoff {
-    return this.actorRuntime.runSync(this.background.handoff(id))
+  backgroundHandoff(id: number): Promise<BackgroundHandoff> {
+    return this.run(this.background.handoff(id))
   }
   async backgroundCredential(
     id: number,
@@ -1297,9 +1502,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   async stepBackground() {
     return this.run(this.background.step())
   }
-  readonly delegations = this.actorRuntime.runSync(Delegation)
+  readonly delegations: typeof Delegation.Service =
+    this.actorRuntime.runSync(Delegation)
 
-  readonly browser = this.actorRuntime.runSync(Browser)
+  readonly browser: typeof Browser.Service = this.actorRuntime.runSync(Browser)
   readonly copyWorkspaceFile = workspaceFileImport(
     this.workspaceService,
     terminalImports(this.env.TERMINAL_SERVICE, this.ctx.id.toString()),
@@ -1318,13 +1524,15 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   )
   readonly uploadLock = Semaphore.makeUnsafe(1)
   readonly downloadLock = Semaphore.makeUnsafe(4)
-  readonly inferenceUsage = this.actorRuntime.runSync(InferenceUsage)
+  readonly inferenceUsage: typeof InferenceUsage.Service =
+    this.actorRuntime.runSync(InferenceUsage)
   readonly observeInference = piUsage(
     this.inferenceUsage,
-    (work) => this.actorRuntime.runSync(work),
+    (work) => modelCallback(this.actorRuntime.runPromiseExit(work)),
     (attempt) => reportInference(attempt, this.ctx.id.toString())
   )
-  readonly catalogService = this.actorRuntime.runSync(ModelCatalogReader)
+  readonly catalogService: typeof ModelCatalogReader.Service =
+    this.actorRuntime.runSync(ModelCatalogReader)
   protected catalogProgram() {
     return this.catalogService.read()
   }
@@ -1377,12 +1585,12 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     const windows = pins
       .map((pin) => pin.route.contextWindow)
       .filter((window): window is number => window !== undefined)
-    const foreground = this.active()?.routing?.contextWindow
+    const foreground = this.foregroundSizing?.routing?.contextWindow
     if (foreground !== undefined) windows.push(foreground)
     return windows.length ? Math.min(...windows) : undefined
   }
   contextProjectionBytes() {
-    const turn = this.active()
+    const turn = this.foregroundSizing
     const model = this.models.getModel(
       "openai",
       turn?.model ?? this.env.MODEL_ID
@@ -1419,10 +1627,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       ),
     workingContextFloor: () => this.communicationFloor(),
     contextWindow: (model) => {
-      const turn = this.active()
+      const turn = this.foregroundSizing
       return turn?.model === model ? turn.routing?.contextWindow : undefined
     },
-    onAttempt: (model, thinking, purpose, provider) => {
+    onAttempt: async (model, thinking, purpose, provider) => {
       const pin = this.communication.pi.pin(provider)
       if (pin)
         return this.observeInference(
@@ -1430,7 +1638,8 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           null,
           `bot task ${pin.taskId} (${purpose})`
         )
-      const turn = purpose === "memory" ? undefined : this.active()
+      const turn =
+        purpose === "memory" ? undefined : await this.run(this.active())
       const route =
         turn?.routing ??
         resolveRoute(purpose === "memory" ? "memory" : "conversation", {
@@ -1487,9 +1696,13 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   readonly registry = createRegistry()
   private piStorage?: Storage
   readonly harness: PiHarness = new PiHarness({
+    coordinateStorage: this.db.coordinatePi,
     harness: async ({ storage, context }) => {
       this.piStorage = storage
-      this.installRemoteTools()
+      await this.run(this.active())
+      this.installRemoteTools(
+        (await this.run(this.connectionStore.selection())).tools
+      )
       this.registry.install({
         name: "personal",
         hooks: [
@@ -1499,23 +1712,35 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             application: this.recoveryService,
             run: (program, options) => this.run(program, options),
             access: this.accessStore,
-            source: (api) => {
-              const turn = this.active()
-              if (
-                !turn ||
-                turn.session_id !== String(api.conversationId) ||
-                !this.planSource(turn.id)
-              )
-                return undefined
-              const input = this.conversations.members(turn.id, false).at(-1)!
-              return {
-                turnId: turn.id,
-                steeringKey: JSON.stringify({
-                  text: input.text.trim().replace(/\s+/g, " "),
-                  files: input.attachments.map((file) => file.id),
-                }),
-              }
-            },
+            source: (api) =>
+              Effect.gen({ self: this }, function* () {
+                const turn = yield* this.active()
+                if (
+                  !turn ||
+                  turn.session_id !== String(api.conversationId) ||
+                  !(yield* this.planSource(turn.id))
+                )
+                  return
+                const input = (yield* this.conversations.members(
+                  turn.id,
+                  false
+                )).at(-1)!
+                return {
+                  turnId: turn.id,
+                  steeringKey: JSON.stringify({
+                    text: input.text.trim().replace(/\s+/g, " "),
+                    files: input.attachments.map((file) => file.id),
+                  }),
+                }
+              }).pipe(
+                Effect.mapError(
+                  (cause) =>
+                    new ConversationStorageError({
+                      operation: "read recovery authority",
+                      cause,
+                    })
+                )
+              ),
             stop: async (api, callContext) => {
               const pi = await this.harness.pi()
               const conversation = await pi.conversation(
@@ -1536,7 +1761,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           planContextHook(
             this.plans,
             (api) => this.planningSource(String(api.conversationId)),
-            () => this.contextProjectionBytes(),
+            () => Effect.sync(() => this.contextProjectionBytes()),
             (operation, signal) => this.run(operation, { signal })
           ),
         ],
@@ -1558,24 +1783,19 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           ...communicationTools(
             this.communication.runtime.runSync(Communication),
             (api) => {
-              const source = this.delegationSource(api)
-              return { turnId: source.turnId, toolId: String(api.taskId) }
+              return this.delegationSource(api).pipe(
+                Effect.map((source) => ({
+                  turnId: source.turnId,
+                  toolId: String(api.taskId),
+                }))
+              )
             },
             (operation, signal) =>
               this.communication.runtime.runPromise(operation, { signal })
           ),
           backgroundTool(
             (input, api) =>
-              Effect.try({
-                try: () => this.delegationSource(api),
-                catch: (cause) => {
-                  const delegationFailure =
-                    Schema.decodeUnknownOption(DelegationFailure)(cause)
-                  if (delegationFailure._tag === "Some")
-                    return delegationFailure.value
-                  throw cause
-                },
-              }).pipe(
+              this.delegationSource(api).pipe(
                 Effect.flatMap((source) =>
                   this.background.create(input, source)
                 )
@@ -1589,42 +1809,64 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           ),
           ...planTools(
             this.plans,
-            (api) => {
-              const receipt = this.accessStore.get(String(api.taskId))
-              const source = receipt
-                ? this.planSource(receipt.turnId)
-                : undefined
-              if (
-                !source ||
-                this.conversations.get(source.turnId)?.session_id !==
-                  String(api.conversationId)
-              )
-                throw new PlanFailure({
-                  code: "cancelled",
-                  message: "This tool no longer belongs to an active run.",
-                })
-              return source
-            },
+            (api) =>
+              Effect.gen({ self: this }, function* () {
+                const receipt = yield* this.accessStore.get(String(api.taskId)),
+                  source = receipt
+                    ? yield* this.planSource(receipt.turnId)
+                    : undefined
+                if (
+                  !source ||
+                  (yield* this.conversations.get(source.turnId))?.session_id !==
+                    String(api.conversationId)
+                )
+                  return yield* new PlanFailure({
+                    code: "cancelled",
+                    message: "This tool no longer belongs to an active run.",
+                  })
+                return source
+              }).pipe(
+                Effect.mapError((cause) =>
+                  cause instanceof PlanFailure
+                    ? cause
+                    : new PlanFailure({
+                        code: "unavailable",
+                        message: "Could not confirm the current request.",
+                      })
+                )
+              ),
             (operation, signal) => this.run(operation, { signal })
           ),
           ...objectTools(
             this.objects,
-            (api) => {
-              const turnId = this.accessStore.get(String(api.taskId))?.turnId
-              const turn = turnId ? this.conversations.get(turnId) : undefined
-              if (!turn || turn.session_id !== String(api.conversationId))
-                throw new ObjectFailure({
-                  code: "read_only",
-                  message:
-                    "This tool no longer belongs to the active conversation.",
-                })
-              return {
-                actor: "agent",
-                surface: "tool",
-                turnId: turn.id,
-                toolCallId: api.callId,
-              }
-            },
+            (api) =>
+              Effect.gen({ self: this }, function* () {
+                const receipt = yield* this.accessStore.get(String(api.taskId)),
+                  turn = receipt
+                    ? yield* this.conversations.get(receipt.turnId)
+                    : undefined
+                if (!turn || turn.session_id !== String(api.conversationId))
+                  return yield* new ObjectFailure({
+                    code: "read_only",
+                    message:
+                      "This tool no longer belongs to the active conversation.",
+                  })
+                return {
+                  actor: "agent" as const,
+                  surface: "tool" as const,
+                  turnId: turn.id,
+                  toolCallId: api.callId,
+                }
+              }).pipe(
+                Effect.mapError((cause) =>
+                  cause instanceof ObjectFailure
+                    ? cause
+                    : new ObjectFailure({
+                        code: "unavailable",
+                        message: "Could not confirm the current request.",
+                      })
+                )
+              ),
             (operation, signal) => this.run(operation, { signal })
           ),
           ...appTools(this.appService, (operation, signal) =>
@@ -1663,15 +1905,25 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           childSteeringHook(
             this.delegations,
             (id) =>
-              this.conversations
-                .members(id)
-                .filter((member) => member.parent_id)
-                .map((member) => ({
-                  id: member.id,
-                  text:
-                    member.text ||
-                    "New attachments were supplied to the parent. Do not infer their contents; the parent must reconcile them.",
-                })),
+              this.conversations.members(id).pipe(
+                Effect.map((members) =>
+                  members
+                    .filter((member) => member.parent_id)
+                    .map((member) => ({
+                      id: member.id,
+                      text:
+                        member.text ||
+                        "New attachments were supplied to the parent. Do not infer their contents; the parent must reconcile them.",
+                    }))
+                ),
+                Effect.mapError(
+                  () =>
+                    new DelegationFailure({
+                      code: "unavailable",
+                      message: "Could not read parent steering.",
+                    })
+                )
+              ),
             (work, signal) => this.run(work, { signal })
           ),
         ],
@@ -1686,7 +1938,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           models: this.models,
           registry: this.registry,
           settings: agentSettings(() => {
-            const turn = this.active()
+            const turn = this.foregroundSizing
             const model = this.models.getModel(
               "openai",
               turn?.model ?? this.env.MODEL_ID
@@ -1812,7 +2064,14 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     planBlocked: (id) =>
       planBlockerStatus(
         () => this.piStorage,
-        () => openPiSessionStore(this.ctx.storage),
+        async () =>
+          this.db.coordinatePi(
+            await this.run(
+              this.db.use(() =>
+                Effect.promise(() => openPiSessionStore(this.ctx.storage))
+              )
+            )
+          ),
         id
       ).pipe(
         preserveFatal,
@@ -1864,20 +2123,17 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     if ((await this.run(this.communication.mailbox.nextWake())) !== undefined)
       await this.communicationRunner.wake()
     await this.backgroundRunner.wake()
-    if (this.routineAuthority.nextWake() !== undefined)
+    if ((await this.run(this.routineAuthority.nextWake())) !== undefined)
       await this.routineRunner.wake()
-    if (this.apps.pending().length) await this.appEvents.wake()
+    if ((await this.run(this.apps.pending())).length)
+      await this.appEvents.wake()
     await this.run(this.executions.recover())
     await this.run(this.browser.recover())
     if (await this.run(this.browser.maintenancePending()))
       await this.browserCleanup.wake()
-    if (
-      this.actorRuntime.runSync(
-        Effect.flatMap(Workspace, (workspace) => workspace.extractionPending())
-      )
-    )
+    if (await this.run(this.workspaceService.extractionPending()))
       await this.extraction.wake()
-    if (this.active()) await this.runner.wake()
+    if (await this.run(this.active())) await this.runner.wake()
     await this.actorRuntime.runPromise(
       this.memoryMaintenance.recover().pipe(Effect.provide(WorkerTelemetry))
     )
@@ -1886,11 +2142,15 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     return `memory/${this.ctx.id.toString()}`
   }
   active() {
-    return this.conversations.active()
+    return this.conversations.active().pipe(
+      Effect.tap((turn) =>
+        Effect.sync(() => {
+          this.foregroundSizing = turn
+        })
+      )
+    )
   }
-  installRemoteTools(
-    tools: readonly RemoteTool[] = this.connectionStore.selection().tools
-  ) {
+  installRemoteTools(tools: readonly RemoteTool[]) {
     this.registry.install({
       name: "connections",
       tools: tools.map((tool) =>
@@ -1999,7 +2259,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     return SkillOutcome.encode(exit)
   }
   current(id: string) {
-    return this.conversations.get(id)!
+    return this.conversations.get(id)
   }
 
   async acceptMessage(input: Submission) {
@@ -2022,7 +2282,8 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     )
     return refreshed
   }
-  readonly activity = this.actorRuntime.runSync(Activity)
+  readonly activity: typeof Activity.Service =
+    this.actorRuntime.runSync(Activity)
   async activityV1(raw: unknown): Promise<Schema.Json> {
     const work = this.actorRuntime.runPromiseExit(
       Effect.gen({ self: this }, function* () {
@@ -2318,7 +2579,13 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
                       )
                     )
                   : remoteToolResolution(this.connections.resolve(names)),
-              () => this.botConfiguration.read()?.status !== "archived"
+              () =>
+                this.writable(
+                  () =>
+                    new ConnectionError({
+                      message: "Could not confirm bot authority.",
+                    })
+                )
             )
             for (const tool of previous.tools)
               if (!saved.tools.some((value) => value.name === tool.name))
@@ -2347,11 +2614,14 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         )
       }
       if (path === "access" || path.startsWith("access/")) {
-        const response = yield* accessRequest(
-          this.access,
-          request,
-          path,
-          () => this.botConfiguration.read()?.status !== "archived"
+        const response = yield* accessRequest(this.access, request, path, () =>
+          this.writable(
+            (cause) =>
+              new AccessStorageError({
+                operation: "read access authority",
+                cause,
+              })
+          )
         )
         if (response.ok && request.method !== "GET")
           yield* agentNative("wake conversation", () => this.runner.wake())
@@ -2418,17 +2688,28 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       if (path === "plans" || path.startsWith("plans/"))
         return yield* plansRequest(this.plans, request, path)
       if (path === "objects" || path.startsWith("objects/"))
-        return yield* objectsRequest(this.objects, request, path, (id) => {
-          const turn = this.conversations.get(id)
-          return turn
-            ? {
-                id: turn.id,
-                text: turn.text,
-                answer: turn.answer,
-                createdAt: turn.created_at,
-              }
-            : undefined
-        })
+        return yield* objectsRequest(this.objects, request, path, (id) =>
+          this.conversations.get(id).pipe(
+            Effect.map((turn) =>
+              turn
+                ? {
+                    id: turn.id,
+                    text: turn.text,
+                    answer: turn.answer,
+                    createdAt: turn.created_at,
+                  }
+                : undefined
+            ),
+            Effect.mapError(
+              () =>
+                new ObjectFailure({
+                  code: "unavailable",
+                  message: "Could not read the origin request.",
+                })
+            )
+          )
+        )
+
       if (path === "apps" || path.startsWith("apps/"))
         return yield* appsRequest(
           this.appService,
@@ -2487,7 +2768,13 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
                       )
                     )
                   : skillResolution(this.skillService.resolve(references)),
-              () => this.botConfiguration.read()?.status !== "archived"
+              () =>
+                this.writable(
+                  () =>
+                    new SkillConflict({
+                      message: "Could not confirm bot authority.",
+                    })
+                )
             )
           }).pipe(
             preserveFatal,
@@ -2744,7 +3031,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   }
   async step(): Promise<LifecycleJobOutcome> {
     const next = await this.actorRuntime.runPromise(
-      this.conversationPump.run().pipe(Effect.provide(WorkerTelemetry))
+      this.active().pipe(
+        Effect.andThen(this.conversationPump.run()),
+        Effect.provide(WorkerTelemetry)
+      )
     )
     return next === undefined ? undefined : { rescheduleAt: next }
   }

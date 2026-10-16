@@ -1,5 +1,6 @@
 import type { Clock } from "effect"
 import { Cause, Context, Effect, Exit } from "effect"
+import type { ConversationFailure } from "../src/conversations/turns"
 import type { Sqlite } from "../src/storage/sqlite"
 import { SqliteRoutinePersistence } from "../src/routines/adapters/sqlite"
 import {
@@ -36,7 +37,7 @@ export function routineFixture(
 ) {
   const context = makeRoutineApplication(
     new SqliteRoutinePersistence(db),
-    active,
+    () => Effect.sync(active),
     now,
     () => crypto.randomUUID()
   )
@@ -54,14 +55,21 @@ export function routineFixture(
     runNow: (input: RunRoutineNow) => run(service.runNow(input)),
     cancelOperation: (id: string) => run(service.cancelOperation(id)),
     claimDue: () => run(service.claimDue()),
-    deliver: (admit: (value: RoutineRun) => void) =>
+    deliver: (
+      admit: (
+        value: RoutineRun
+      ) => void | Effect.Effect<unknown, ConversationFailure>
+    ) =>
       run(
         service.deliver({
           transactionGroup: db,
-          admit: (value) => {
-            admit(value)
-            return value.turnId
-          },
+          admit: (value) =>
+            Effect.suspend(() => {
+              const work = admit(value)
+              return Effect.isEffect(work)
+                ? work.pipe(Effect.as(value.turnId))
+                : Effect.succeed(value.turnId)
+            }),
         })
       ),
     finish: (
@@ -83,7 +91,7 @@ export function webhookFixture(
   const service = makeWebhooks(
     new SqliteWebhookPersistence(db),
     routines.admissionState,
-    active
+    () => Effect.sync(active)
   )
   return {
     service,

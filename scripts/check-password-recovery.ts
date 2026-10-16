@@ -1,6 +1,9 @@
 import assert from "node:assert/strict"
 import { chmod, readdir, readFile } from "node:fs/promises"
-import { DatabaseSync } from "node:sqlite"
+import { Effect, Exit, Scope } from "effect"
+import { eq } from "drizzle-orm"
+import { makeNodeSqlite } from "../src/storage/node"
+import { user, verification } from "../src/auth/schema"
 
 const origin = "http://localhost:1337"
 const owner = "workspace-test@example.com"
@@ -14,12 +17,16 @@ const dbName = (await readdir(dbDirectory)).find((name) =>
   /^[a-f0-9]{64}\.sqlite$/.test(name)
 )
 assert.ok(dbName, "local auth database")
-const db = new DatabaseSync(`${dbDirectory}/${dbName}`)
-assert.equal(
-  (db.prepare('SELECT email FROM "user" LIMIT 1').get() as { email: string })
-    .email,
-  owner
+const scope = Scope.makeUnsafe()
+const db = await Effect.runPromise(
+  makeNodeSqlite({ filename: `${dbDirectory}/${dbName}` }).pipe(
+    Effect.provideService(Scope.Scope, scope)
+  )
 )
+const users = await Effect.runPromise(
+  db.use((orm) => orm.select({ email: user.email }).from(user).limit(1))
+)
+assert.equal(users[0]?.email, owner)
 let sequence = 1
 const ipPrefix = `192.0.${Math.floor(Math.random() * 250) + 1}`
 async function post(
@@ -58,12 +65,20 @@ async function resetToken() {
       assert.equal(link.search, "", "no token in HTTP query")
       const token = new URLSearchParams(link.hash.slice(1)).get("token")!
       assert.ok(token)
-      const record = db
-        .prepare("SELECT expiresAt FROM verification WHERE identifier = ?")
-        .get(`reset-password:${token}`) as { expiresAt: number }
+      const record = (
+        await Effect.runPromise(
+          db.use((orm) =>
+            orm
+              .select({ expiresAt: verification.expiresAt })
+              .from(verification)
+              .where(eq(verification.identifier, `reset-password:${token}`))
+              .limit(1)
+          )
+        )
+      )[0]!
       assert.ok(
-        record.expiresAt > Date.now() + 14 * 60_000 &&
-          record.expiresAt <= Date.now() + 15 * 60_000,
+        record.expiresAt.getTime() > Date.now() + 14 * 60_000 &&
+          record.expiresAt.getTime() <= Date.now() + 15 * 60_000,
         "15 minute expiry"
       )
       return { token, response: await response.json() }
@@ -159,10 +174,15 @@ const newLogin = await post("/api/auth/sign-in/email", {
 })
 assert.equal(newLogin.status, 200, "replacement credentials work")
 const expired = await resetToken()
-db.prepare("UPDATE verification SET expiresAt = ? WHERE identifier = ?").run(
-  Date.now() - 1000,
-  `reset-password:${expired.token}`
+await Effect.runPromise(
+  db.use((orm) =>
+    orm
+      .update(verification)
+      .set({ expiresAt: new Date(Date.now() - 1000) })
+      .where(eq(verification.identifier, `reset-password:${expired.token}`))
+  )
 )
+
 assert.equal(
   (
     await post("/api/auth/reset-password", {
@@ -206,7 +226,7 @@ for (const expected of [200, 200, 200, 429])
     expected,
     "reset request rate limit"
   )
-db.close()
+await Effect.runPromise(Scope.close(scope, Exit.void))
 console.log(
   "Password recovery workerd E2E passed: local email, private canonical link, anti-enumeration, CSRF/callback policy, expiry, concurrent single use, password change, session revocation, and rate limit."
 )

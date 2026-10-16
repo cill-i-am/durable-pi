@@ -1,4 +1,9 @@
-import type { FileInfo, DocumentExtraction } from "./files"
+import type { Effect } from "effect"
+import type {
+  WorkspaceUnavailable,
+  FileInfo,
+  DocumentExtraction,
+} from "./files"
 import type { VideoPreparation } from "./video"
 
 export type WorkspaceFile = Omit<FileInfo, "extraction" | "video"> & {
@@ -13,23 +18,51 @@ export type VideoJob = VideoPreparation & {
 }
 export interface WorkspaceLedger {
   readonly transactionGroup: object
-  atomic: <T>(change: () => T) => T
-  read: (id: string) => WorkspaceFile | undefined
-  list: () => WorkspaceFile[]
-  usage: () => { bytes: number; count: number }
-  insert: (file: WorkspaceFile) => void
-  promotePdf: (id: string) => void
-  ready: (id: string) => void
-  rename: (id: string, name: string) => void
-  trash: (id: string, trashed: boolean) => void
-  document: (id: string) => DocumentJob | undefined
-  video: (id: string) => VideoJob | undefined
-  pendingDocument: () => DocumentJob | undefined
-  pendingVideo: () => VideoJob | undefined
-  enqueueDocument: (id: string) => void
-  enqueueVideo: (id: string) => void
-  claimDocument: (job: DocumentJob) => boolean
-  claimVideo: (job: VideoJob) => boolean
-  saveDocument: (job: DocumentJob, expectedAttempts?: number) => void
-  saveVideo: (job: VideoJob, expectedAttempts?: number) => void
+  atomic: <TValue, TError, TRequirements>(
+    change: () => Effect.Effect<TValue, TError, TRequirements>
+  ) => Effect.Effect<TValue, TError | WorkspaceUnavailable, TRequirements>
+  read: (
+    id: string
+  ) => Effect.Effect<WorkspaceFile | undefined, WorkspaceUnavailable>
+  list: () => Effect.Effect<WorkspaceFile[], WorkspaceUnavailable>
+  usage: () => Effect.Effect<
+    { bytes: number; count: number },
+    WorkspaceUnavailable
+  >
+  insert: (file: WorkspaceFile) => Effect.Effect<void, WorkspaceUnavailable>
+  promotePdf: (id: string) => Effect.Effect<void, WorkspaceUnavailable>
+  ready: (id: string) => Effect.Effect<void, WorkspaceUnavailable>
+  rename: (
+    id: string,
+    name: string
+  ) => Effect.Effect<void, WorkspaceUnavailable>
+  trash: (
+    id: string,
+    trashed: boolean
+  ) => Effect.Effect<void, WorkspaceUnavailable>
+  document: (
+    id: string
+  ) => Effect.Effect<DocumentJob | undefined, WorkspaceUnavailable>
+  video: (
+    id: string
+  ) => Effect.Effect<VideoJob | undefined, WorkspaceUnavailable>
+  pendingDocument: () => Effect.Effect<
+    DocumentJob | undefined,
+    WorkspaceUnavailable
+  >
+  pendingVideo: () => Effect.Effect<VideoJob | undefined, WorkspaceUnavailable>
+  enqueueDocument: (id: string) => Effect.Effect<void, WorkspaceUnavailable>
+  enqueueVideo: (id: string) => Effect.Effect<void, WorkspaceUnavailable>
+  claimDocument: (
+    job: DocumentJob
+  ) => Effect.Effect<boolean, WorkspaceUnavailable>
+  claimVideo: (job: VideoJob) => Effect.Effect<boolean, WorkspaceUnavailable>
+  saveDocument: (
+    job: DocumentJob,
+    expectedAttempts?: number
+  ) => Effect.Effect<void, WorkspaceUnavailable>
+  saveVideo: (
+    job: VideoJob,
+    expectedAttempts?: number
+  ) => Effect.Effect<void, WorkspaceUnavailable>
 }
