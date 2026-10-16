@@ -322,3 +322,32 @@ it("fences late native starts and retains its capability when container destruct
   await owner.close()
   expect(release).toHaveBeenCalledWith(targetOwner, 1)
 })
+
+it("seals a drained source before awaiting remote page writes", async () => {
+  const f = await fixture()
+  let held: (() => void) | undefined
+  let reached: (() => void) | undefined
+  const exporting = new Promise<void>((resolve) => {
+    reached = resolve
+  })
+  const resume = new Promise<void>((resolve) => {
+    held = resolve
+  })
+  const original = f.blobs.port.put
+  f.blobs.port.put = async (key, bytes) => {
+    reached!()
+    await resume
+    return original(key, bytes)
+  }
+  const snapshot = f.old.snapshot("pi-synthetic", async () => {
+    expect(() => f.old.assertCancellationAllowed()).not.toThrow()
+  })
+  await exporting
+  expect(f.old.status()).toBe("sealed")
+  expect(() => f.old.assertWritable()).toThrow("migration")
+  expect(() => f.old.assertCancellationAllowed()).toThrow("migration")
+  held!()
+  const receipt = await snapshot
+  expect((await f.next().import(receipt)).counts.terminal_runs).toBe(33)
+  expect(() => f.next().assertCancellationAllowed()).not.toThrow()
+})

@@ -106,8 +106,11 @@ export class LinuxSandboxV1 extends DurableObject<NativeTerminalEnv> {
   )
   private readonly terminalRuntime = ManagedRuntime.make(
     terminalLayer({
-      repository: new TerminalStore(this.db, reportTerminal, () =>
-        this.migration.assertWritable()
+      repository: new TerminalStore(
+        this.db,
+        reportTerminal,
+        () => this.migration.assertWritable(),
+        () => this.migration.assertCancellationAllowed()
       ),
       runtime: effectTerminalRuntime(
         nativeSandboxRuntime(

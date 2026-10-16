@@ -59,7 +59,7 @@ interface Manifest {
   counts: Record<Table, number>
 }
 export interface MigrationMarker {
-  phase: "frozen" | "snapshot" | "copying" | "done" | "moved"
+  phase: "frozen" | "sealed" | "snapshot" | "copying" | "done" | "moved"
   id?: string
   name?: string
   receipt?: MigrationReceipt
@@ -143,6 +143,13 @@ export class TerminalMigration {
         message: "Terminal migration is in progress. Try again shortly.",
       })
   }
+  assertCancellationAllowed() {
+    const phase = this.markers.get()?.phase
+    if (phase && phase !== "frozen" && phase !== "done")
+      throw new TerminalFailure({
+        message: "Terminal migration is in progress. Try again shortly.",
+      })
+  }
   status() {
     return this.markers.get()?.phase ?? "original"
   }
@@ -194,6 +201,7 @@ export class TerminalMigration {
     const id = previous?.id ?? crypto.randomUUID()
     this.markers.put({ phase: "frozen", name, id })
     await drain()
+    this.markers.put({ phase: "sealed", name, id })
     const prefix = "terminal-migration/" + this.owner + "/" + id + "/"
     const pages: Page[] = []
     const counts = Object.fromEntries(

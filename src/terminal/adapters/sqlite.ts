@@ -40,7 +40,8 @@ export class TerminalStore implements TerminalLedger {
   constructor(
     private readonly db: Sqlite,
     private readonly onFinished?: (run: CommandRun) => void,
-    private readonly writable?: () => void
+    private readonly writable?: () => void,
+    private readonly cancellationAllowed?: () => void
   ) {}
   private query<TValue, TError, TRequirements>(
     body: (
@@ -117,8 +118,16 @@ export class TerminalStore implements TerminalLedger {
     // publication must retain that fence, and observers run after its own commit.
     return this.db.use(() =>
       Effect.gen({ self: this }, function* () {
-        yield* this.query((orm) =>
-          orm.insert(terminalCancellations).values({ id }).onConflictDoNothing()
+        yield* this.atomic(() =>
+          Effect.gen({ self: this }, function* () {
+            yield* decision(() => this.cancellationAllowed?.())
+            yield* this.query((orm) =>
+              orm
+                .insert(terminalCancellations)
+                .values({ id })
+                .onConflictDoNothing()
+            )
+          })
         )
         return (yield* this.get(id))
           ? yield* this.finish(id, {

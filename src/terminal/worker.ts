@@ -88,13 +88,18 @@ export class LinuxSandbox extends BaseSandbox<TerminalEnv> {
   )
   private readonly terminalRuntime = ManagedRuntime.make(
     terminalLayer({
-      repository: new TerminalStore(this.db, reportTerminal, () => {
-        if (this.env.LEGACY_FROZEN)
-          throw new TerminalFailure({
-            message: "Terminal migration is in progress. Try again shortly.",
-          })
-        this.migration.assertWritable()
-      }),
+      repository: new TerminalStore(
+        this.db,
+        reportTerminal,
+        () => {
+          if (this.env.LEGACY_FROZEN)
+            throw new TerminalFailure({
+              message: "Terminal migration is in progress. Try again shortly.",
+            })
+          this.migration.assertWritable()
+        },
+        () => this.migration.assertCancellationAllowed()
+      ),
       runtime: effectTerminalRuntime(sandboxRuntime(this)),
       backups: checkpointStorage(this.env.BACKUPS, this.ctx.id.toString()),
       exports: checkpointStorage(
