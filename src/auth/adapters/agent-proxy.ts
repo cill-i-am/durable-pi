@@ -9,6 +9,7 @@ import {
 import { sessionSocketResponse, type SessionSocket } from "./session-socket"
 import { WorkerTelemetry } from "../../observability/worker"
 import { reportService } from "../../observability/events"
+import { encodeEventStream } from "./event-stream-encoding"
 
 export interface AgentProxyBindings {
   readonly appUrl: string
@@ -50,19 +51,25 @@ export async function agentProxy(
   bindings: AgentProxyBindings
 ): Promise<Response> {
   let acquired: Response | undefined
+  let outgoing: Response | undefined
   let session: SessionSocket | undefined
   const release = () =>
     Effect.gen(function* () {
       const response = acquired,
+        encoded = outgoing,
         active = session
       acquired = undefined
+      outgoing = undefined
       session = undefined
-      if (!active)
-        return response ? yield* releaseForwardedResponse(response) : undefined
       const failures: Cause.Reason<never>[] = []
       for (const work of [
-        cleanup(active.close),
-        response ? releaseUnreadResponse(response) : Effect.void,
+        active ? cleanup(active.close) : Effect.void,
+        encoded ? releaseUnreadResponse(encoded) : Effect.void,
+        response
+          ? active
+            ? releaseUnreadResponse(response)
+            : releaseForwardedResponse(response)
+          : Effect.void,
       ]) {
         yield* work.pipe(
           Effect.catchCause((cause) =>
@@ -161,7 +168,10 @@ export async function agentProxy(
         }
       )
     }
-    return privateResponse(response)
+    // Retain both until handoff: encoding owns and locks the original body.
+    // A late host registration failure must cancel the returned body too.
+    outgoing = yield* encodeEventStream(request, privateResponse(response))
+    return outgoing
   }).pipe(
     Effect.scoped,
     Effect.onExit((exit) =>

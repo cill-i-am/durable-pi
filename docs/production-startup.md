@@ -1,5 +1,7 @@
 # Production startup
 
+The next increment is documented in [startup stream compression](startup-stream.md), with a fresh production baseline, matched before/after measurements and the Effect/Alchemy review.
+
 **16 October fixture correction:** [The unified-startup investigation](unified-startup.md#fixture-correction) found incomplete utility CSS in the local fixture and corrected its source scanning. The historical synthetic timing numbers below are diagnostic records of that older fixture, not measurements of the fully styled application. Production browser cohorts are separate and unaffected.
 
 Baseline: main `5df056f814564e5b4f97d5c3629addd0eb2652ea`, 15 October 2026. The original 5.7–17.3-second range mixed isolated observations; it is not a reliable before/after distribution.

@@ -117,7 +117,10 @@ export const Website = Cloudflare.Website.Vite(
         SETUP_TOKEN: Config.Redacted("SETUP_TOKEN"),
         APP_URL: Cloudflare.Worker.URL,
       },
-      compatibility: { date: "2026-09-25", flags: ["nodejs_compat"] },
+      compatibility: {
+        date: "2026-09-25",
+        flags: ["nodejs_compat", "enable_request_signal"],
+      },
     }
   })
 )

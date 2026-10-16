@@ -1,4 +1,5 @@
 import { SqlitePilot } from "./sqlite-worker"
+import { eventStreamProbe } from "./event-stream-worker"
 import { agentProxy } from "../../src/auth/adapters/agent-proxy"
 import { agentGateway } from "../../src/agent/adapters/gateway"
 import { runObserved } from "../../src/observability/worker"
@@ -331,6 +332,8 @@ let websiteSessionReads = 0
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext) {
     const url = new URL(request.url)
+    if (url.pathname.startsWith("/encoding/"))
+      return eventStreamProbe(request, ctx)
     if (url.pathname.startsWith("/sql-pilot/"))
       return env.SQL_PILOT.getByName(url.pathname.split("/")[2]!).fetch(request)
     if (url.pathname === "/website-session") {
