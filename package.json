@@ -25,13 +25,16 @@
     "test:drizzle-runtime": "node scripts/test-drizzle-runtime.mjs",
     "test:browser": "playwright test",
     "verify:browser": "pnpm test:browser",
-    "verify:container": "docker build --platform linux/amd64 --tag durable-pi-ci:terminal containers/terminal"
+    "verify:container": "docker build --platform linux/amd64 --tag durable-pi-ci:terminal containers/terminal && docker build --platform linux/amd64 --tag durable-pi-ci:terminal-native containers/terminal-native",
+    "dev:sandbox": "alchemy dev stacks/sandbox-rehearsal.ts --stage sandbox-rehearsal --profile default",
+    "test:sandbox": "node scripts/check-native-sandbox.mjs"
   },
   "dependencies": {
     "@alchemy.run/frontend-frameworks": "2.0.0-beta.83",
     "@base-ui/react": "^1.9.0",
     "@cloudflare/puppeteer": "1.4.0",
-    "@cloudflare/sandbox": "0.12.10",
+    "@cloudflare/sandbox": "1.0.1",
+    "@cloudflare/sandbox-v0": "npm:@cloudflare/sandbox@0.12.10",
     "@earendil-works/chord": "1.3.0",
     "@earendil-works/pi-ai": "1.3.0",
     "@earendil-works/pi-durable": "1.3.0",

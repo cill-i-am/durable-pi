@@ -1,4 +1,3 @@
-import type { Sandbox } from "@cloudflare/sandbox"
 import { MAX_TRANSFER_BYTES } from "../transfers"
 import { readBounded } from "./stream"
 
@@ -35,7 +34,16 @@ finally: os.close(directory)
 `
 const quote = (value: string) => "'" + value.replaceAll("'", "'\\''") + "'"
 export function sandboxTransfers(
-  sandbox: Sandbox,
+  sandbox: {
+    writeFile: (
+      path: string,
+      body: ReadableStream<Uint8Array>
+    ) => Promise<unknown>
+    readFile: (
+      path: string,
+      options: { encoding: "none" }
+    ) => Promise<{ content: ReadableStream<Uint8Array> }>
+  },
   internal: (command: string, signal: AbortSignal) => Promise<void>
 ) {
   return {

@@ -117,13 +117,12 @@ export class TerminalProbe extends DurableObject<unknown> {
     destroy: async () => {
       this.videoCloses++
     },
-    startAndWaitForPorts: async () => {},
+    start: async () => {},
     mkdir: async () => {},
     writeFile: async (_path, body) => {
       await new Response(body).arrayBuffer()
     },
-    execStream: async () =>
-      new Response('data: {"type":"complete","exitCode":0}\n\n').body!,
+    execute: async () => 0,
     readFile: async (path) => ({
       content: path.endsWith("json")
         ? new Response(

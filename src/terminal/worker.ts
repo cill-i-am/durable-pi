@@ -2,14 +2,14 @@ import { Scheduler, Effect, Exit, Layer, ManagedRuntime, Scope } from "effect"
 import { relayTerminal } from "./adapters/socket"
 import { reportTerminal } from "../observability/events"
 import { WorkerTelemetry } from "../observability/worker"
-import { Sandbox as BaseSandbox, getSandbox } from "@cloudflare/sandbox"
+import { Sandbox as BaseSandbox, getSandbox } from "@cloudflare/sandbox-v0"
 import type { TerminalEnv } from "../../alchemy.run"
 import { makeDurableObjectSqlite } from "../storage/durable-object"
 import { migrateSqlite } from "../storage/migrations"
 import { TerminalService, terminalLayer } from "./terminal"
 import { effectTerminalRuntime, terminalFileDigest } from "./adapters/interop"
 import { TerminalStore } from "./adapters/sqlite"
-import { sandboxRuntime } from "./adapters/sandbox"
+import { sandboxRuntime, legacyVideoRuntime } from "./adapters/sandbox"
 import { checkpointStorage } from "./adapters/r2"
 import { extractVideoRequest, sandboxVideo } from "./adapters/video"
 import { terminalRequest } from "./adapters/http"
@@ -58,7 +58,7 @@ export class LinuxSandbox extends BaseSandbox<TerminalEnv> {
     this.ctx.waitUntil(this.terminalRuntime.runPromise(this.terminal.recover()))
   }
   private videoBusy = false
-  private readonly extractVideo = sandboxVideo(this)
+  private readonly extractVideo = sandboxVideo(legacyVideoRuntime(this))
   override async fetch(request: Request): Promise<Response> {
     const path = new URL(request.url).pathname
     if (path === "/video" && request.method === "POST") {

@@ -1,5 +1,4 @@
 import { Effect, Schema } from "effect"
-import { readCommand } from "./sandbox"
 import { readBounded } from "./stream"
 import { nativeOperation } from "../../shared/interop"
 import { nativeBytes } from "../../shared/stream"
@@ -44,22 +43,13 @@ export type ExtractSandboxVideo = (
  * final destroy settle. It shares no workspace or interactive-session state. */
 export interface VideoSandbox {
   destroy: () => Promise<void>
-  startAndWaitForPorts: (options: {
-    ports: number
-    cancellationOptions: {
-      instanceGetTimeoutMS: number
-      portReadyTimeoutMS: number
-    }
-  }) => Promise<unknown>
+  start: () => Promise<unknown>
   mkdir: (path: string, options: { recursive: boolean }) => Promise<unknown>
   writeFile: (
     path: string,
     body: ReadableStream<Uint8Array>
   ) => Promise<unknown>
-  execStream: (
-    command: string,
-    options: { timeout: number; signal: AbortSignal }
-  ) => Promise<ReadableStream<Uint8Array>>
+  execute: (command: string, signal: AbortSignal) => Promise<number>
   readFile: (
     path: string,
     options: { encoding: "none" }
@@ -79,14 +69,7 @@ export function sandboxVideo(sandbox: VideoSandbox): ExtractSandboxVideo {
       const bytes = input.slice()
       yield* close()
       yield* nativeOperation(
-        () =>
-          sandbox.startAndWaitForPorts({
-            ports: 3000,
-            cancellationOptions: {
-              instanceGetTimeoutMS: 15000,
-              portReadyTimeoutMS: 15000,
-            },
-          }),
+        () => sandbox.start(),
         failed("start video container")
       )
       yield* nativeOperation(
@@ -102,11 +85,10 @@ export function sandboxVideo(sandbox: VideoSandbox): ExtractSandboxVideo {
         failed("write video source")
       )
       const code = yield* nativeOperation(async (signal) => {
-        const stream = await sandbox.execStream(
+        return sandbox.execute(
           "/usr/bin/python3 /usr/local/bin/pi-video.py",
-          { timeout: 30000, signal }
+          signal
         )
-        return readCommand(stream, () => {}, signal)
       }, failed("run video extractor"))
       if (code !== 0) return yield* new VideoUnreadable()
       const metadata = yield* decode(

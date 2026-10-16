@@ -57,6 +57,11 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
   container:
+    name: container (${{ matrix.image }})
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [terminal, terminal-native]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -67,8 +72,9 @@ jobs:
         id: changes
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          CONTAINER_IMAGE: ${{ matrix.image }}
         run: |
-          if [ "$GITHUB_EVENT_NAME" = pull_request ] && git diff --quiet "$BASE_SHA" HEAD -- containers/terminal .github/workflows/check.yml; then
+          if [ "$GITHUB_EVENT_NAME" = pull_request ] && git diff --quiet "$BASE_SHA" HEAD -- "containers/$CONTAINER_IMAGE" .github/workflows/check.yml; then
             echo "build=false" >> "$GITHUB_OUTPUT"
           else
             echo "build=true" >> "$GITHUB_OUTPUT"
@@ -80,11 +86,11 @@ jobs:
         if: steps.changes.outputs.build == 'true'
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
-          context: containers/terminal
+          context: containers/${{ matrix.image }}
           platforms: linux/amd64
           push: false
-          cache-from: type=gha,scope=terminal-linux-amd64
-          cache-to: type=gha,mode=max,scope=terminal-linux-amd64
+          cache-from: type=gha,scope=${{ matrix.image }}-linux-amd64
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}-linux-amd64
   check:
     if: ${{ always() }}
     needs: [verify, container]

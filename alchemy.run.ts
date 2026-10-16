@@ -7,6 +7,7 @@ import { PASSWORD_EMAIL_FROM } from "./src/auth/password-email"
 import type { PersonalAgent } from "./src/agent/worker"
 import type { BackgroundGroupRPC } from "./src/delegation/worker"
 import type { LinuxSandbox } from "./src/terminal/worker"
+import type { LinuxSandboxV1 } from "./src/terminal/adapters/native-worker"
 
 const observability = {
   enabled: true,
@@ -67,6 +68,30 @@ export const TerminalWorker = Cloudflare.Worker("TerminalWorkerDrizzleV1", {
   },
 })
 export type TerminalEnv = Cloudflare.InferEnv<typeof TerminalWorker>
+// Rehearsed separately; production continues to use TerminalWorker above.
+const TerminalImage = Cloudflare.Container("TerminalImage", {
+  schedulingPolicy: "durable_object",
+  context: "./containers/terminal-native",
+  observability: { logs: { enabled: false } },
+})
+export const NativeTerminalWorker = Cloudflare.Worker(
+  "TerminalWorkerSandboxV1",
+  {
+    main: "./src/terminal/adapters/native-worker.ts",
+    dev: { port: 1342, strictPort: true },
+    workersDev: { enabled: false, previewsEnabled: false },
+    compatibility: { date: "2026-10-02", flags: ["nodejs_compat"] },
+    observability,
+    env: {
+      SANDBOX: Cloudflare.DurableObject<LinuxSandboxV1>("LinuxSandboxV1", {
+        containers: [TerminalImage],
+      }),
+      BACKUPS: WorkspaceAssets,
+    },
+  }
+)
+export type NativeTerminalEnv = Cloudflare.InferEnv<typeof NativeTerminalWorker>
+
 export const BackgroundGroups: Cloudflare.DurableObjectLike<BackgroundGroupRPC> =
   Cloudflare.DurableObject<BackgroundGroupRPC>("BackgroundGroup")
 export const AgentWorker = Cloudflare.Worker("AgentWorkerDrizzleV1", {
