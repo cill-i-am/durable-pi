@@ -388,7 +388,7 @@ it("uses native tools in a multi-step run, injects one fresh context per request
             inputIds: [...origin.inputIds, steer],
             steering: [{ id: steer, text: "Use metric units." }],
           }
-          return { content: [{ type: "text", text: "Saved the draft." }] }
+          return { output: [{ type: "text", text: "Saved the draft." }] }
         },
       }),
     ].map(

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 import { Effect, Schema } from "effect"
-import type { ToolExecutionResult } from "@earendil-works/pi-durable"
+import type { RemoteToolResult } from "../src/access/connections"
 import type { MCPClientManager } from "agents/mcp/client"
 import { importSkillsRequest } from "../src/skills/adapters/hosted"
 import { type HostedSkill, hostedSkillQuery } from "../src/skills/source"
@@ -215,7 +215,7 @@ describe("hosted skill import", () => {
           },
         ],
       },
-    ] satisfies ToolExecutionResult[]) {
+    ] satisfies RemoteToolResult[]) {
       const provider = {
         resolve: f.provider.resolve.bind(f.provider),
         call: () => Effect.succeed(result),

@@ -26,16 +26,16 @@ export function scopedReceiptFact(
     return undefined
   return receiptFact(operation)
 }
+const Output = Schema.Array(
+  Schema.Struct({
+    type: Schema.String,
+    text: Schema.optional(Schema.String),
+  })
+)
 const Result = Schema.Struct({
   isError: Schema.optional(Schema.Boolean),
-  content: Schema.optional(
-    Schema.Array(
-      Schema.Struct({
-        type: Schema.String,
-        text: Schema.optional(Schema.String),
-      })
-    )
-  ),
+  content: Schema.optional(Output),
+  output: Schema.optional(Output),
 })
 const ExecutionOutcome = Schema.Struct({
   status: Schema.optional(Schema.String),
@@ -63,7 +63,9 @@ export function receiptFact(
   const result = Schema.decodeUnknownSync(Result)(JSON.parse(operation.result))
   let failed = !!result.isError
   if (["run_code", "run_command"].includes(tool)) {
-    const text = result.content?.find((block) => block.type === "text")?.text
+    const text = (result.output ?? result.content)?.find(
+      (block) => block.type === "text"
+    )?.text
     const outcome = text
       ? Schema.decodeUnknownSync(ExecutionOutcome)(JSON.parse(text))
       : undefined

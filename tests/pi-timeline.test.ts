@@ -78,6 +78,7 @@ describe("Pi display projection", () => {
   it("shows in-flight provider text and limits tool previews", () => {
     const snapshot: SnapshotEvent = {
       type: "snapshot",
+      nestedTools: [],
       entries: [],
       compactions: [],
       inbox: [],
@@ -107,6 +108,7 @@ describe("Pi display projection", () => {
   it("preserves disclosure identities when partial output commits", () => {
     const live: SnapshotEvent = {
       type: "snapshot",
+      nestedTools: [],
       entries: [],
       generation: { attempt: 1, message: assistant },
       tools: [],

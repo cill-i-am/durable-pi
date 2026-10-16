@@ -107,15 +107,17 @@ export function guardedTools<TError>(
           const turnId = previous?.turnId ?? resolved
           if (!turnId)
             return yield* new AccessDenied({ message: "The reply has ended." })
-          return yield* gate.run(
-            { id, turnId, tool: tool.name, input: JSON.stringify(args) },
-            nativeOperation(
-              (signal) =>
-                tool.execute(args, api, { ...context, abortSignal: signal }),
-              (cause) => cause
-            ).pipe(Effect.map(toolReceipt)),
-            recoverableTools.has(tool.name)
-          )
+          return yield* gate
+            .run(
+              { id, turnId, tool: tool.name, input: JSON.stringify(args) },
+              nativeOperation(
+                (signal) =>
+                  tool.execute(args, api, { ...context, abortSignal: signal }),
+                (cause) => cause
+              ).pipe(Effect.map(toolReceipt)),
+              recoverableTools.has(tool.name)
+            )
+            .pipe(Effect.map(toolReceipt))
         }),
         { signal: context.abortSignal }
       ).then((exit) => {

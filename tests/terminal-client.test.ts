@@ -375,7 +375,7 @@ it("projects safe expected tool failures and marks unconfirmed cleanup as an err
           Effect.fail(new TerminalFailure({ message: "Inspect Terminal." }))
         )
       )
-    ).content[0]?.text
+    ).output[0]?.text
   ).toBe("Inspect Terminal.")
   const cleanup = await Effect.runPromise(
     terminalToolResult(

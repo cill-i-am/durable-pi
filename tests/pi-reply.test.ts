@@ -22,6 +22,7 @@ const entry = (id: number): EntryRecord => ({
 })
 const snapshot = (ids: number[]): SnapshotEvent => ({
   type: "snapshot",
+  nestedTools: [],
   entries: ids.map(entry),
   tools: [],
   inbox: [],

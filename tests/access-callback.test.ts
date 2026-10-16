@@ -48,6 +48,10 @@ async function fixture(
     active?: (turn: string) => Effect.Effect<string | undefined>
     execute?: () => Promise<ToolExecutionResult>
     release?: () => void
+    legacyReceipt?: {
+      content: { type: "text"; text: string }[]
+      isError: boolean
+    }
   } = {}
 ) {
   const directory = await mkdtemp(join(tmpdir(), "access-callback-"))
@@ -64,7 +68,7 @@ async function fixture(
   )
   const execute = vi.fn(
     options.execute ??
-      (async () => ({ content: [{ type: "text" as const, text: "done" }] }))
+      (async () => ({ output: [{ type: "text" as const, text: "done" }] }))
   )
   const checked = guardedTools(
     gate,
@@ -90,7 +94,19 @@ async function fixture(
         name: "driver",
         description: "Call with a real invocation API",
         parameters: Type.Object({}),
-        execute: (_args, api, context) => {
+        execute: async (_args, api, context) => {
+          if (options.legacyReceipt)
+            await Effect.runPromise(
+              gate.run(
+                {
+                  id: String(api.taskId),
+                  turnId: turn,
+                  tool: "checked",
+                  input: "{}",
+                },
+                Effect.succeed(options.legacyReceipt)
+              )
+            )
           const work = checked.execute({}, api, {
             ...context,
             abortSignal: controller.signal,
@@ -196,7 +212,7 @@ it("joins a non-cooperative tool, shares its pending invocation and retains the 
       entered.resolve()
       return pending.promise
     },
-    release: () => pending.resolve({ content: [] }),
+    release: () => pending.resolve({ output: [] }),
   })
   await entered.promise
   expect(f.retry()).toBe(f.work)
@@ -209,7 +225,7 @@ it("joins a non-cooperative tool, shares its pending invocation and retains the 
   await Promise.resolve()
   expect(settled).toBe(false)
   expect(Effect.runSync(f.store.get(f.id))?.status).toBe("running")
-  pending.resolve({ content: [{ type: "text", text: "late result" }] })
+  pending.resolve({ output: [{ type: "text", text: "late result" }] })
   expect(tags(await observed)).toContain("Interrupt")
   await expect(f.retry()).rejects.toSatisfy((cause: unknown) =>
     tags(cause).includes("Fail")
@@ -225,7 +241,7 @@ it("retains a late tool defect after cancellation and never records a successful
       entered.resolve()
       return pending.promise
     },
-    release: () => pending.resolve({ content: [] }),
+    release: () => pending.resolve({ output: [] }),
   })
   const observed = f.work.catch((cause: unknown) => cause)
   await entered.promise
@@ -265,4 +281,21 @@ it("keeps private storage diagnostics out of Pi's native error rendering", async
       error: { _tag: "ConnectionStorageError", operation: "read owner tool" },
     },
   ])
+})
+
+it("replays a completed Pi 1.0 receipt through the current harness without repeating the tool", async () => {
+  const legacyReceipt = {
+    content: [{ type: "text" as const, text: "Recorded before the upgrade." }],
+    isError: false,
+  }
+  const f = await fixture({ legacyReceipt })
+  await expect(f.work).resolves.toEqual({
+    output: legacyReceipt.content,
+    isError: false,
+  })
+  await f.idle
+  expect(f.execute).not.toHaveBeenCalled()
+  expect(JSON.parse(Effect.runSync(f.store.get(f.id))!.result!)).toEqual(
+    legacyReceipt
+  )
 })

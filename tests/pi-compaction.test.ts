@@ -200,7 +200,7 @@ it.each(["continue", "restart", "cancel"])(
             execute: async () => {
               mutations++
               return {
-                content: [
+                output: [
                   {
                     type: "text",
                     text:
@@ -225,7 +225,7 @@ it.each(["continue", "restart", "cancel"])(
                 await releaseTool.promise
               }
               return {
-                content: [
+                output: [
                   {
                     type: "text",
                     text:

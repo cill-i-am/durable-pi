@@ -1,8 +1,11 @@
 diff --git a/dist/index.cjs b/dist/index.cjs
-index 635f1c0134274c89e7efbcae2adf3d9ecba575ee..50d8c0547485130dd543638de83f172e9a8a2c27 100644
+index 71cf630..d1baa51 100644
 --- a/dist/index.cjs
 +++ b/dist/index.cjs
-@@ -613,4 +613,22 @@ async function parseErrorResponse(input) {
+@@ -642,7 +642,25 @@ function warnCredentialInvalidation(provider, error, invalidated) {
+ * This can be used as a single entry point for all authorization functionality,
+ * instead of linking together the other lower-level functions in this module.
+ */
 +const durablePiAuthFlows = new WeakMap();
  async function auth(provider, options) {
 +	const key = JSON.stringify([String(options.serverUrl), options.authorizationCode, options.iss, options.scope, String(options.resourceMetadataUrl ?? ""), options.skipIssuerMetadataValidation, options.forceReauthorization]);
@@ -26,10 +29,13 @@ index 635f1c0134274c89e7efbcae2adf3d9ecba575ee..50d8c0547485130dd543638de83f172e
  		return await authInternal(provider, options);
  	} catch (error) {
 diff --git a/dist/index.mjs b/dist/index.mjs
-index f02ce3ca394e826fc27c9848dbe9a214bf6ba7a9..1a76a5561e4e2fcb30aef23433cbd04b9fbcb5b0 100644
+index c1a09a8..261afdd 100644
 --- a/dist/index.mjs
 +++ b/dist/index.mjs
-@@ -610,4 +610,22 @@ async function parseErrorResponse(input) {
+@@ -639,7 +639,25 @@ function warnCredentialInvalidation(provider, error, invalidated) {
+ * This can be used as a single entry point for all authorization functionality,
+ * instead of linking together the other lower-level functions in this module.
+ */
 +const durablePiAuthFlows = new WeakMap();
  async function auth(provider, options) {
 +	const key = JSON.stringify([String(options.serverUrl), options.authorizationCode, options.iss, options.scope, String(options.resourceMetadataUrl ?? ""), options.skipIssuerMetadataValidation, options.forceReauthorization]);

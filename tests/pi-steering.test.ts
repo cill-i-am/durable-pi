@@ -77,7 +77,7 @@ describe("native Pi steering with SQLite persistence", () => {
                     })
                 }),
               ])
-              return { content: [{ type: "text", text: "tool result" }] }
+              return { output: [{ type: "text", text: "tool result" }] }
             },
           }),
         ],

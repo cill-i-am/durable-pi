@@ -60,10 +60,10 @@ const draft = Type.Object({
   complete: Type.Boolean(),
 })
 const toolPageFits = (value: ReturnType<typeof result>) =>
-  new TextEncoder().encode(value.content[0]!.text).byteLength <= 40000
+  new TextEncoder().encode(value.output[0]!.text).byteLength <= 40000
 
 const result = (value: unknown) => ({
-  content: [{ type: "text" as const, text: JSON.stringify(value) }],
+  output: [{ type: "text" as const, text: JSON.stringify(value) }],
 })
 export function planTools(
   plans: Plans,

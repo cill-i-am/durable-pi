@@ -22,7 +22,7 @@ Pi Durable session-scoped document families persist the catalog, checklist state
 
 ## Run it
 
-Requires Node 24+ and pnpm 12.4.2. Install with `pnpm install --frozen-lockfile`.
+Requires Node 24+ and pnpm 12.14.0. Install with `pnpm install --frozen-lockfile`. Type checks use TypeScript 7's native Go compiler. The `typescript` package name points to Microsoft's TypeScript 6 compatibility package for tools that still need its compiler API; `@typescript/native` supplies the TypeScript 7 `tsc` command.
 
 1. Copy `.env.example` to `.env`. Set `OWNER_EMAIL`, and generate separate random values of at least 32 bytes for `BETTER_AUTH_SECRET` and `SETUP_TOKEN`. Keep `.env` private.
 2. Run `pnpm model:login`. Complete the official ChatGPT login in your browser. The script writes the credential to `.env` with mode `0600`; it never prints tokens.
@@ -39,7 +39,7 @@ CI runs the verification suites in parallel and requires the aggregate `check` r
 
 Production uses the dedicated `durable-pi` Alchemy profile. Configure it with `pnpm exec alchemy profile create durable-pi` and `pnpm exec alchemy profile edit --profile durable-pi`, selecting Workers scripts read/write, D1 read/write, Workers R2 Storage read/write, account settings read, memberships read, and user details read. OAuth adds offline refresh access. A fresh machine also needs Secrets Store read/write to retrieve remote-state credentials; an existing trusted state-credential cache avoids that additional local permission.
 
-The compatibility date matches Alchemy beta.81's bundled local workerd (`2026-09-25`). Local development keeps infrastructure state under ignored `.alchemy/state`; deployments share the encrypted Cloudflare state service. Use a separate ChatGPT login for independently running deployments: OAuth refresh tokens rotate.
+Workers use the `2026-09-25` compatibility date. Alchemy beta.83 bundles local workerd `2026-10-02`. Local development keeps infrastructure state under ignored `.alchemy/state`; deployments share the encrypted Cloudflare state service. Use a separate ChatGPT login for independently running deployments: OAuth refresh tokens rotate.
 
 ## Account security
 

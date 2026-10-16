@@ -605,7 +605,7 @@ it("keeps large valid object reads parseable through the receipt boundary with c
       const bounded = toolReceipt(raw)
       expect(JSON.stringify(raw).length).toBeLessThanOrEqual(64_000)
       expect(bounded).toEqual(raw)
-      const block = bounded.content![0]!
+      const block = bounded.output![0]!
       if (block.type !== "text") throw new Error("Expected JSON text")
       const page: { object: Checklist; nextTaskOffset: number | null } =
         JSON.parse(block.text)

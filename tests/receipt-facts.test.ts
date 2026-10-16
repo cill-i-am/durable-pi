@@ -41,27 +41,52 @@ it("checks task and revision ownership before decoding a historical receipt", ()
   ).toThrow()
 })
 
-it("normalizes transport and legacy execution failures without exposing result bytes", () => {
-  for (const tool of ["run_code", "run_command"]) {
-    const result = JSON.stringify({
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify({
-            status: "succeeded",
-            exitCode: 2,
-            output: { error: "private failure" },
-          }),
-        },
-      ],
+it.each(["content", "output"])(
+  "normalizes %s execution failures without exposing result bytes",
+  (channel) => {
+    for (const tool of ["run_code", "run_command"]) {
+      const result = JSON.stringify({
+        [channel]: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              status: "succeeded",
+              exitCode: 2,
+              output: { error: "private failure" },
+            }),
+          },
+        ],
+      })
+      expect(receiptFact({ ...operation, tool, result })?.outcome).toBe(
+        "failed"
+      )
+    }
+    const fact = receiptFact({
+      ...operation,
+      result: '{"isError":true,"content":[]}',
     })
-    expect(receiptFact({ ...operation, tool, result })?.outcome).toBe("failed")
+    expect(fact?.outcome).toBe("failed")
+    expect(fact).not.toHaveProperty("result")
+    expect(receiptFact(operation)?.outcome).toBe("succeeded")
   }
-  const fact = receiptFact({
-    ...operation,
-    result: '{"isError":true,"content":[]}',
-  })
-  expect(fact?.outcome).toBe("failed")
-  expect(fact).not.toHaveProperty("result")
-  expect(receiptFact(operation)?.outcome).toBe("succeeded")
-})
+)
+
+it.each(["content", "output"])(
+  "recognizes successful %s command receipts",
+  (channel) => {
+    expect(
+      receiptFact({
+        ...operation,
+        tool: "run_command",
+        result: JSON.stringify({
+          [channel]: [
+            {
+              type: "text",
+              text: JSON.stringify({ status: "succeeded", exitCode: 0 }),
+            },
+          ],
+        }),
+      })?.outcome
+    ).toBe("succeeded")
+  }
+)

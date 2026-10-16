@@ -207,7 +207,7 @@ export function mcpConnectionClient(mcp: McpManager): ConnectionClient {
         )
       ).pipe(
         Effect.map((result): RemoteToolResult => {
-          const content: NonNullable<ToolExecutionResult["content"]>[number][] =
+          const content: NonNullable<ToolExecutionResult["output"]>[number][] =
             []
           for (const block of result.content) {
             if (block.type === "text")
@@ -229,9 +229,12 @@ export function mcpConnectionClient(mcp: McpManager): ConnectionClient {
               type: "text",
               text: JSON.stringify(result.structuredContent),
             })
-          const bounded = toolReceipt({ content, isError: result.isError })
+          const bounded = toolReceipt({
+            output: content,
+            isError: result.isError,
+          })
           return {
-            content: bounded.content ?? [],
+            content: bounded.output ?? [],
             isError: bounded.isError,
             ...(bounded.diagnostics
               ? { diagnostics: bounded.diagnostics }

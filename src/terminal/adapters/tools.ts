@@ -7,7 +7,7 @@ import type { TerminalRuntimeError } from "../runtime"
 
 const text = (value: string) => ({
   isError: true,
-  content: [{ type: "text" as const, text: value }],
+  output: [{ type: "text" as const, text: value }],
 })
 export function terminalToolResult<TRequirements>(
   operation: Effect.Effect<
@@ -19,7 +19,7 @@ export function terminalToolResult<TRequirements>(
   return operation.pipe(
     Effect.map((run) => ({
       isError: run.status !== "succeeded" || run.error !== null,
-      content: [{ type: "text" as const, text: JSON.stringify(run) }],
+      output: [{ type: "text" as const, text: JSON.stringify(run) }],
     })),
     preserveFatal,
     Effect.catchTags({

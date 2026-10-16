@@ -29,7 +29,7 @@ async function operationId(task: string) {
   return `${hash.slice(0, 8)}-${hash.slice(8, 12)}-${hash.slice(12, 16)}-${hash.slice(16, 20)}-${hash.slice(20)}`
 }
 const result = (value: unknown) => ({
-  content: [{ type: "text" as const, text: JSON.stringify(value) }],
+  output: [{ type: "text" as const, text: JSON.stringify(value) }],
 })
 const summary = ({
   id,
