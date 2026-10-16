@@ -1211,6 +1211,7 @@ export class PersonalAgentProbe extends PersonalAgent {
             context.messages.some(
               (message) =>
                 message.role === "system" &&
+                typeof message.content === "string" &&
                 message.content.startsWith(
                   "You are a context summarization assistant."
                 )
@@ -1415,6 +1416,7 @@ export class PersonalAgentProbe extends PersonalAgent {
             context.messages.some(
               (message) =>
                 message.role === "system" &&
+                typeof message.content === "string" &&
                 message.content.startsWith(
                   "You are a context summarization assistant."
                 )
@@ -1657,6 +1659,7 @@ export class PersonalAgentProbe extends PersonalAgent {
             context.messages.some(
               (message) =>
                 message.role === "system" &&
+                typeof message.content === "string" &&
                 message.content.startsWith(
                   "You are a context summarization assistant."
                 )
