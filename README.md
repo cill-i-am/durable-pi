@@ -64,6 +64,10 @@ Workers use the `2026-09-25` compatibility date. Alchemy beta.83 bundles local w
 
 ## Account security
 
+In **Settings → General → Your profile photo**, choose a JPEG, PNG or WebP up to 10 MB. The browser crops the centre to a 512-pixel square and re-encodes it to strip metadata. Your photo appears in the personal workspace menus immediately and persists across sign-ins. Choose **Remove photo** to return to initials.
+
+Better Auth owns the existing user image field. Photos live in the private `UserAvatars` R2 bucket, bound only to the website as `USER_AVATARS`; `/api/account/avatar` checks the owner session for every read and write. Uploads are limited to 1 MB after resizing, and mutations require the app’s origin. Alchemy provisions the bucket with the next deployment; no database migration is needed.
+
 Open **Personal → Account security → Set up two-factor**. Confirm your current password, scan the QR code with your authenticator, and enter its six-digit code. Protection turns on only after verification. Save the recovery codes somewhere private; each code works once if you lose access to your authenticator.
 
 The same panel lists your browser sessions and marks **This browser**. Sign out a specific session or all other browsers. Device names are inferred from the browser, so entries represent sessions rather than guaranteed physical machines. Revoked browsers lose access to new requests immediately; open connections close within one minute. Your agents and saved work keep running.

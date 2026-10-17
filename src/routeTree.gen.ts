@@ -18,6 +18,7 @@ import { Route as ApiSetupRouteImport } from './routes/api.setup'
 import { Route as WorkspaceAgentsIndexRouteImport } from './routes/_workspace.agents.index'
 import { Route as WorkspaceAgentsArchivedRouteImport } from './routes/_workspace.agents.archived'
 import { Route as WorkspaceAgentsNewRouteImport } from './routes/_workspace.agents.new'
+import { Route as ApiAccountAvatarRouteImport } from './routes/api.account.avatar'
 import { Route as ApiAgentSplatRouteImport } from './routes/api.agent.$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api.auth.$'
 import { Route as WorkspaceAgentsAgentIdIndexRouteImport } from './routes/_workspace.agents.$agentId.index'
@@ -71,6 +72,11 @@ const WorkspaceAgentsNewRoute = WorkspaceAgentsNewRouteImport.update({
   id: '/agents/new',
   path: '/agents/new',
   getParentRoute: () => WorkspaceRoute,
+} as any)
+const ApiAccountAvatarRoute = ApiAccountAvatarRouteImport.update({
+  id: '/api/account/avatar',
+  path: '/api/account/avatar',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAgentSplatRoute = ApiAgentSplatRouteImport.update({
   id: '/api/agent/$',
@@ -132,6 +138,7 @@ export interface FileRoutesByFullPath {
   '/api/setup': typeof ApiSetupRoute
   '/agents/archived': typeof WorkspaceAgentsArchivedRoute
   '/agents/new': typeof WorkspaceAgentsNewRoute
+  '/api/account/avatar': typeof ApiAccountAvatarRoute
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/agents/': typeof WorkspaceAgentsIndexRoute
@@ -151,6 +158,7 @@ export interface FileRoutesByTo {
   '/': typeof WorkspaceIndexRoute
   '/agents/archived': typeof WorkspaceAgentsArchivedRoute
   '/agents/new': typeof WorkspaceAgentsNewRoute
+  '/api/account/avatar': typeof ApiAccountAvatarRoute
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/agents': typeof WorkspaceAgentsIndexRoute
@@ -172,6 +180,7 @@ export interface FileRoutesById {
   '/_workspace/': typeof WorkspaceIndexRoute
   '/_workspace/agents/archived': typeof WorkspaceAgentsArchivedRoute
   '/_workspace/agents/new': typeof WorkspaceAgentsNewRoute
+  '/api/account/avatar': typeof ApiAccountAvatarRoute
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/_workspace/agents/': typeof WorkspaceAgentsIndexRoute
@@ -193,6 +202,7 @@ export interface FileRouteTypes {
     | '/api/setup'
     | '/agents/archived'
     | '/agents/new'
+    | '/api/account/avatar'
     | '/api/agent/$'
     | '/api/auth/$'
     | '/agents/'
@@ -212,6 +222,7 @@ export interface FileRouteTypes {
     | '/'
     | '/agents/archived'
     | '/agents/new'
+    | '/api/account/avatar'
     | '/api/agent/$'
     | '/api/auth/$'
     | '/agents'
@@ -232,6 +243,7 @@ export interface FileRouteTypes {
     | '/_workspace/'
     | '/_workspace/agents/archived'
     | '/_workspace/agents/new'
+    | '/api/account/avatar'
     | '/api/agent/$'
     | '/api/auth/$'
     | '/_workspace/agents/'
@@ -250,6 +262,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   TwoFactorRoute: typeof TwoFactorRoute
   ApiSetupRoute: typeof ApiSetupRoute
+  ApiAccountAvatarRoute: typeof ApiAccountAvatarRoute
   ApiAgentSplatRoute: typeof ApiAgentSplatRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiHooksAgentRoutineRoute: typeof ApiHooksAgentRoutineRoute
@@ -319,6 +332,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/agents/new'
       preLoaderRoute: typeof WorkspaceAgentsNewRouteImport
       parentRoute: typeof WorkspaceRoute
+    }
+    '/api/account/avatar': {
+      id: '/api/account/avatar'
+      path: '/api/account/avatar'
+      fullPath: '/api/account/avatar'
+      preLoaderRoute: typeof ApiAccountAvatarRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/agent/$': {
       id: '/api/agent/$'
@@ -425,6 +445,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   TwoFactorRoute: TwoFactorRoute,
   ApiSetupRoute: ApiSetupRoute,
+  ApiAccountAvatarRoute: ApiAccountAvatarRoute,
   ApiAgentSplatRoute: ApiAgentSplatRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiHooksAgentRoutineRoute: ApiHooksAgentRoutineRoute,
@@ -432,3 +453,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

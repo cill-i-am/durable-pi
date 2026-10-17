@@ -19,11 +19,13 @@ import type { AgentProfile } from "@/agents/contracts"
 import { AgentMark, agentTone } from "@/components/agent-mark"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { Separator } from "@/components/ui/separator"
 import { useSidebar } from "@/components/ui/sidebar"
 import { Switch } from "@/components/ui/switch"
 import { AccessPanel } from "@/features/access"
 import { AppearanceSettings } from "@/features/appearance/appearance-settings"
 import { AccountSecurity } from "@/features/auth/account-security"
+import { ProfilePhoto } from "@/features/auth/profile-photo"
 import { ConnectionsPanel } from "@/features/connections"
 import type { useConversation } from "@/features/conversation"
 import { MessageDeliverySettings } from "@/features/conversation"
@@ -99,6 +101,7 @@ export function WorkspaceSettings({
 }) {
   const location = useWorkspaceLocation()
   const [securityPending, setSecurityPending] = useState(false)
+  const [profilePending, setProfilePending] = useState(false)
   const [modelsPending, setModelsPending] = useState(false)
   const [accessPending, setAccessPending] = useState(false)
   const [connectionsPending, setConnectionsPending] = useState(false)
@@ -118,6 +121,7 @@ export function WorkspaceSettings({
     skillsPending ||
     emailPending ||
     whatsappPending ||
+    profilePending ||
     securityPending
   useEffect(() => {
     onPendingChange(locked)
@@ -264,6 +268,8 @@ export function WorkspaceSettings({
                 <h2>General</h2>
               </header>
               <div className="settings-section-body">
+                <ProfilePhoto onPendingChange={setProfilePending} />
+                <Separator />
                 <div className="settings-preference">
                   <div>
                     <h3>{agent.name}</h3>

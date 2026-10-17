@@ -5,6 +5,8 @@ import { workspaceReturnPath } from "@/navigation/workspace"
 
 import { sessionFetch } from "./session-fetch"
 
+export const authFetch = sessionFetch((...args) => fetch(...args))
+
 export const authClient = createAuthClient({
   plugins: [
     twoFactorClient({
@@ -19,5 +21,5 @@ export const authClient = createAuthClient({
     }),
   ],
   sessionOptions: { refetchInterval: 30, refetchOnWindowFocus: true },
-  fetchOptions: { customFetchImpl: sessionFetch((...args) => fetch(...args)) },
+  fetchOptions: { customFetchImpl: authFetch },
 })

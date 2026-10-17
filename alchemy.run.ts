@@ -33,6 +33,9 @@ export const MemoryBackups = Cloudflare.R2.Bucket("MemoryBackups", {
 export const WorkspaceAssets = Cloudflare.R2.Bucket("WorkspaceAssets", {
   publicAccess: false,
 })
+export const UserAvatars = Cloudflare.R2.Bucket("UserAvatars", {
+  publicAccess: false,
+})
 export const DocumentWorker = Cloudflare.Worker("DocumentWorker", {
   main: "./src/workspace/adapters/document-worker.ts",
   dev: { port: 1339, strictPort: true },
@@ -225,6 +228,7 @@ export const Website = Cloudflare.Website.Vite(
           : undefined,
       env: {
         DB: AuthDatabase,
+        USER_AVATARS: UserAvatars,
         AGENT_SERVICE: AgentWorker,
         BETTER_AUTH_SECRET: Config.Redacted("BETTER_AUTH_SECRET"),
         OWNER_EMAIL: owner,

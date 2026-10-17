@@ -96,10 +96,19 @@ export function ChatApp() {
       key={session.user.id}
       ownerId={session.user.id}
       name={session.user.name}
+      image={session.user.image}
     />
   )
 }
-function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
+function Workspace({
+  ownerId,
+  name,
+  image,
+}: {
+  ownerId: string
+  name: string
+  image?: string | null
+}) {
   const location = useWorkspaceLocation()
   const catalog = useAgentCatalog(ownerId, location.agentId)
   const {
@@ -247,6 +256,7 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
       >
         <WorkspaceNavigation
           name={name}
+          image={image}
           agents={catalog.agents}
           selected={catalog.selected}
           locked={navigationLocked}
@@ -268,6 +278,7 @@ function Workspace({ ownerId, name }: { ownerId: string; name: string }) {
             statuses={runtime.statuses}
             selected={catalog.selected}
             name={name}
+            image={image}
             onSettings={() => act("settings")}
             onActivity={() => act("activity")}
             onMemory={() => act("memory")}

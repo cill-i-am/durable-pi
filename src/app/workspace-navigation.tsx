@@ -57,6 +57,7 @@ import {
   MenubarSeparator,
 } from "@/components/ui/menubar"
 import { useSidebar } from "@/components/ui/sidebar"
+import { UserAvatar } from "@/components/user-avatar"
 import type { Workbench } from "@/navigation/workspace"
 
 export type { Workbench } from "@/navigation/workspace"
@@ -84,6 +85,7 @@ const destinations = [
 
 export function WorkspaceNavigation({
   name,
+  image,
   agents,
   selected,
   locked,
@@ -92,6 +94,7 @@ export function WorkspaceNavigation({
   onSelect,
 }: {
   name: string
+  image?: string | null
   agents: readonly AgentProfile[]
   selected?: AgentProfile
   locked: boolean
@@ -154,7 +157,7 @@ export function WorkspaceNavigation({
                 <Button variant="ghost" className="workspace-brand-button" />
               }
             >
-              <AgentMark />
+              <UserAvatar name={name} image={image} />
               <strong>Pi</strong>
               <span>/ Personal</span>
               <ChevronDown />
@@ -162,7 +165,7 @@ export function WorkspaceNavigation({
             <DropdownMenuContent align="start" className="w-68">
               <DropdownMenuGroup>
                 <DropdownMenuLabel className="flex items-center gap-3 py-3">
-                  <AgentMark />
+                  <UserAvatar name={name} image={image} />
                   <span>
                     Personal workspace
                     <span className="block text-xs font-normal text-muted-foreground">
