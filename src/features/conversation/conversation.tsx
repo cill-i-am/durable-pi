@@ -361,9 +361,11 @@ export function Conversation({
                         >
                           <BubbleContent className="message-text">
                             {turn.origin
-                              ? turn.origin.kind === "communication"
-                                ? "Bot task result"
-                                : `Background findings · group ${turn.origin.groupId}`
+                              ? turn.origin.kind === "email"
+                                ? `Email · ${turn.text}`
+                                : turn.origin.kind === "communication"
+                                  ? "Bot task result"
+                                  : `Background findings · group ${turn.origin.groupId}`
                               : turn.text}
                             <FileAttachments
                               files={turn.attachments ?? []}

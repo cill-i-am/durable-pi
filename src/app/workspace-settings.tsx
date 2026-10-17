@@ -28,6 +28,7 @@ import { ConnectionsPanel } from "@/features/connections"
 import type { useConversation } from "@/features/conversation"
 import { MessageDeliverySettings } from "@/features/conversation"
 import { ModelDefaults } from "@/features/conversation/model-defaults"
+import { EmailSettings } from "@/features/email"
 import { SkillsPanel } from "@/features/skills"
 import { useInteractionSoundPreference } from "@/hooks/interaction-sound-preference"
 import { useInteractionSound } from "@/hooks/use-interaction-sound"
@@ -101,6 +102,7 @@ export function WorkspaceSettings({
   const [accessPending, setAccessPending] = useState(false)
   const [connectionsPending, setConnectionsPending] = useState(false)
   const [skillsPending, setSkillsPending] = useState(false)
+  const [emailPending, setEmailPending] = useState(false)
   const mobileDetail = location.search.settingsView !== "sections"
   const setMobileDetail = (detail: boolean) =>
     location.update({ settingsView: detail ? undefined : "sections" })
@@ -112,6 +114,7 @@ export function WorkspaceSettings({
     accessPending ||
     connectionsPending ||
     skillsPending ||
+    emailPending ||
     securityPending
   useEffect(() => {
     onPendingChange(locked)
@@ -273,6 +276,12 @@ export function WorkspaceSettings({
                 </div>
                 <AppearanceSettings />
                 <MessageDeliverySettings />
+                <EmailSettings
+                  key={agent.id}
+                  agentId={agent.id}
+                  archived={agent.status === "archived"}
+                  onPendingChange={setEmailPending}
+                />
                 <div className="settings-preference">
                   <Volume2 />
                   <div>

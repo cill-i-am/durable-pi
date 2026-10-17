@@ -151,6 +151,9 @@ jobs:
           BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
           SETUP_TOKEN: ${{ secrets.SETUP_TOKEN }}
           OWNER_EMAIL: ${{ secrets.OWNER_EMAIL }}
+          AGENT_EMAIL_DOMAIN: ${{ vars.AGENT_EMAIL_DOMAIN }}
+          EMAIL_ADDRESS_SECRET: ${{ secrets.EMAIL_ADDRESS_SECRET }}
+          EMAIL_REVIEW_URL: ${{ vars.EMAIL_REVIEW_URL }}
           OPENAI_CREDENTIAL: ${{ secrets.OPENAI_CREDENTIAL }}
       - name: Configure native issue detection
         run: node --import tsx scripts/configure-observability.ts

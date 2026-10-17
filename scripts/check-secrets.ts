@@ -18,6 +18,7 @@ const values = [
   process.env.BETTER_AUTH_SECRET,
   process.env.SETUP_TOKEN,
   process.env.OWNER_EMAIL,
+  process.env.EMAIL_ADDRESS_SECRET,
 ]
 if (process.env.OPENAI_CREDENTIAL) {
   try {

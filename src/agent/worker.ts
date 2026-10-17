@@ -229,6 +229,22 @@ import { DelegationFailure, ReadTool } from "../delegation/contracts"
 import type { DelegationSource } from "../delegation/delegation"
 import { sharedReference } from "../delegation/delegation"
 import { Delegation, delegationApplication } from "../delegation/service"
+import {
+  emailAddress,
+  emailConfigured,
+  sameAddress,
+} from "../email/adapters/address"
+import { emailRequest } from "../email/adapters/http"
+import { sendEmailReply } from "../email/adapters/sending"
+import { EmailStore } from "../email/adapters/sqlite"
+import {
+  EmailRejected,
+  EmailUnavailable,
+  EmailStorageError,
+  type IncomingEmail,
+  type ConfigureEmail,
+} from "../email/contracts"
+import { emailPump } from "../email/pump"
 import { executionRequest } from "../execution/adapters/http"
 import { codeService } from "../execution/adapters/service"
 import { ExecutionStore } from "../execution/adapters/sqlite"
@@ -514,6 +530,15 @@ class RoutineRunner extends TurnRunner {
       this.owner.routinePump.retry()
     )
     return next === undefined ? undefined : { rescheduleAt: next }
+  }
+}
+
+class EmailRunner extends TurnRunner {
+  constructor(owner: PersonalAgent) {
+    super(owner, "email")
+  }
+  async onJob(): Promise<LifecycleJobOutcome> {
+    return this.owner.stepEmail()
   }
 }
 
@@ -1198,6 +1223,146 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       ),
     notify: () => Effect.sync(() => this.notifyConversation()),
   })
+  readonly emailStore = new EmailStore(this.db)
+  readonly emailPump = emailPump(this.emailStore, {
+    active: () =>
+      this.configurationService.read().pipe(
+        Effect.map(
+          (configuration) =>
+            this.emailReady() && configuration?.status === "active"
+        ),
+        Effect.mapError(
+          () => new EmailStorageError({ operation: "read agent" })
+        )
+      ),
+    admit: (input) =>
+      this.messageAdmission(input).pipe(
+        Effect.mapError(() => new EmailUnavailable())
+      ),
+    turn: (id) =>
+      this.conversations
+        .get(id)
+        .pipe(
+          Effect.mapError(
+            () => new EmailStorageError({ operation: "read conversation" })
+          )
+        ),
+    send: (record, reply) =>
+      sendEmailReply(this.env.AGENT_EMAIL, record, reply),
+    reviewUrl: `${this.env.EMAIL_REVIEW_URL}/agents`,
+  })
+  private emailReady() {
+    return emailConfigured(
+      this.env.AGENT_EMAIL_DOMAIN,
+      this.env.EMAIL_ADDRESS_SECRET
+    )
+  }
+  private emailView(owner: string, id: AgentId) {
+    return Effect.gen({ self: this }, function* () {
+      const settings = yield* this.emailStore.settings()
+      const configured = this.emailReady()
+      const address =
+        configured && settings.enabled
+          ? yield* Effect.promise(() =>
+              emailAddress(
+                this.env.EMAIL_ADDRESS_SECRET,
+                this.env.AGENT_EMAIL_DOMAIN,
+                owner,
+                id,
+                settings.generation
+              )
+            )
+          : null
+      const messages = (yield* this.emailStore.list()).map(
+        ({ id, subject, state, error, createdAt }) => ({
+          id,
+          subject,
+          state,
+          error,
+          createdAt,
+        })
+      )
+      return {
+        configured,
+        enabled: settings.enabled,
+        revision: settings.revision,
+        address,
+        messages,
+      }
+    })
+  }
+  private configureEmail(input: ConfigureEmail) {
+    return Effect.gen({ self: this }, function* () {
+      if (input.enabled && !this.emailReady())
+        return yield* new EmailUnavailable()
+      if (
+        input.enabled &&
+        (yield* this.configurationService.read())?.status !== "active"
+      )
+        return yield* new EmailRejected({
+          message: "Restore this agent before enabling email.",
+        })
+      yield* this.emailStore.configure(input)
+    }).pipe(
+      Effect.mapError((error) =>
+        error._tag === "AgentStorageError" || error._tag === "AgentConflict"
+          ? new EmailStorageError({ operation: "read agent" })
+          : error
+      )
+    )
+  }
+  private receiveEmail(owner: string, id: AgentId, email: IncomingEmail) {
+    return Effect.gen({ self: this }, function* () {
+      if (
+        !this.emailReady() ||
+        !this.ctx.id.equals(
+          this.env.AGENT.idFromName(agentObjectName(owner, id))
+        )
+      )
+        return yield* new EmailRejected({
+          message: "Unknown agent email address.",
+        })
+      if (
+        email.sender.toLowerCase() !== this.env.OWNER_EMAIL.toLowerCase() ||
+        (yield* this.configurationService.read())?.status !== "active"
+      )
+        return yield* new EmailRejected({
+          message: "This agent cannot accept email.",
+        })
+      const settings = yield* this.emailStore.settings()
+      const expected = yield* Effect.promise(() =>
+        emailAddress(
+          this.env.EMAIL_ADDRESS_SECRET,
+          this.env.AGENT_EMAIL_DOMAIN,
+          owner,
+          id,
+          settings.generation
+        )
+      )
+      if (!sameAddress(email.recipient, expected))
+        return yield* new EmailRejected({
+          message: "Unknown or revoked agent email address.",
+        })
+      const accepted = yield* this.emailStore.receive(
+        email,
+        settings.generation
+      )
+      yield* agentNative("wake email", () => this.emailRunner.wake()).pipe(
+        Effect.mapError(() => new EmailUnavailable())
+      )
+      return accepted
+    }).pipe(
+      Effect.mapError((error) =>
+        error._tag === "AgentStorageError" || error._tag === "AgentConflict"
+          ? new EmailStorageError({ operation: "read agent" })
+          : error
+      )
+    )
+  }
+  async stepEmail(): Promise<LifecycleJobOutcome> {
+    const next = await this.run(this.emailPump())
+    return next === undefined ? undefined : { rescheduleAt: next }
+  }
   readonly retrySummary = memorySummaryRetry(
     this.actorRuntime.runSync(MemoryTransaction),
     summaryRetryAuthority(this.botConfiguration),
@@ -2098,6 +2263,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   )
   readonly appEvents = new AppEventRunner(this)
   readonly routineRunner = new RoutineRunner(this)
+  readonly emailRunner = new EmailRunner(this)
   readonly actorServices = new ActorServices(this)
   readonly lifecycle = Lifecycle.install(this)
     .use(this.mcp)
@@ -2111,6 +2277,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     .use(this.browserCleanup)
     .use(this.appEvents)
     .use(this.routineRunner)
+    .use(this.emailRunner)
     .use(this.actorServices)
 
   private readonly conversationCheckpoint = new ConversationCheckpoint()
@@ -2120,6 +2287,9 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   }
 
   async onStart() {
+    await this.run(this.emailStore.recover())
+    if ((await this.run(this.emailStore.pending())).length)
+      await this.emailRunner.wake()
     if ((await this.run(this.communication.mailbox.nextWake())) !== undefined)
       await this.communicationRunner.wake()
     await this.backgroundRunner.wake()
@@ -2541,6 +2711,31 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       const url = new URL(request.url)
       const path = url.pathname.replace("/api/agent/", "")
       const base = path.split("/")[0]
+      if (base === "email") {
+        const owner = request.headers.get("x-owner-id") ?? ""
+        const id = Schema.decodeUnknownSync(AgentId)(
+          url.searchParams.get("agent") ?? homeAgentId
+        )
+        return yield* emailRequest(request, path, {
+          view: () => this.emailView(owner, id),
+          receive: (input) => this.receiveEmail(owner, id, input),
+          configure: (input) => this.configureEmail(input),
+          retry: (input) =>
+            this.emailStore
+              .retry(
+                input.id,
+                input.acknowledgeDuplicateRisk,
+                input.operationId
+              )
+              .pipe(
+                Effect.andThen(
+                  agentNative("wake email", () => this.emailRunner.wake()).pipe(
+                    Effect.mapError(() => new EmailUnavailable())
+                  )
+                )
+              ),
+        })
+      }
       if (
         [
           "communication",

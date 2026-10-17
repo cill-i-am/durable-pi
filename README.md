@@ -10,6 +10,25 @@ TanStack AI's React client owns the browser's conversation messages and processe
 
 Browse the current product in the [feature map](FEATURES.md). Implementation progress, acceptance criteria and architecture are tracked in [BUILD.md](BUILD.md).
 
+## Email an agent
+
+After deployment and email activation, open an agent's **Settings → General → Email this agent** and select **Enable email**. Copy its private address and send a text email from your enrolled owner address. The request appears in the agent's conversation, and its completed answer returns to your inbox in the same email thread. Tool approvals remain in the authenticated app. Emails wait in durable storage while the model is disconnected.
+
+Keep the address private: it contains a routing capability. **Disable email** revokes incoming access and cancels unsent replies. Re-enabling creates a new address. An already started provider send can still finish. Disabling email does not stop an admitted conversation; use the conversation's Stop control for that.
+
+**Recent email** shows reply delivery state. A provider acceptance is shown as **Sent**, not proof of inbox placement. A crash or uncertain provider response produces **Delivery unconfirmed** without automatic resend. Check your inbox before selecting **Retry reply → Send again**. Retrying a lost settings or retry acknowledgement uses **Retry same request** with the saved operation ID.
+
+The slice accepts plain text and HTML-only messages, converting HTML to text. It rejects attachments, automated mail, and mailing-list traffic explicitly. Limits are 256 KiB raw MIME, 25,000 body characters, 20 pending emails, 2,000 retained receipts per agent, and 100 explicit retries per reply. Settings list the latest 30 receipts. Replies go only to `OWNER_EMAIL`; general outbound email and proactive notifications are outside this slice.
+
+### Activate email delivery
+
+1. Configure a mail subdomain, such as `agents.example.com`, in [Cloudflare Email Service](https://developers.cloudflare.com/email-service/configuration/subdomains/). Configure routing and sending for that subdomain, including its provided MX, SPF, and DKIM records. Keep the existing apex-domain mail configuration. Verify the owner destination address or enable Email Sending for the subdomain.
+2. Set `AGENT_EMAIL_DOMAIN` to that subdomain and `EMAIL_ADDRESS_SECRET` to an independently generated secret of at least 32 characters. Use `.env` for local configuration. For CI, use the production GitHub environment variable `AGENT_EMAIL_DOMAIN` and secret `EMAIL_ADDRESS_SECRET`. The optional environment variable `EMAIL_REVIEW_URL` defaults to the production app origin. Keep secrets out of source, logs, and screenshots.
+3. Deploy through the existing Alchemy workflow. The stack includes `EmailWorker`, with public HTTP disabled and invocation logging off. Route incoming mail for the chosen subdomain to this Worker. Match the original recipient including its `+` suffix; do not configure a rule that strips the private token. Configure a subdomain catch-all, then verify that the full address reaches the Worker.
+4. Enable email for one agent. Send a real email from the enrolled inbox, receive a reply, and reply again. Verify the conversation in Pi and the `In-Reply-To`/`References` headers in the inbox. Repeat the same inbound message and confirm that it creates one task.
+
+The application starts with email unavailable when the domain or secret is missing, and each agent starts disabled. Creating the Worker does not establish domain readiness or verify inbox delivery. Local tests use synthetic mail, models, and provider responses; `pnpm test:communication-runtime` also kills a native worker during a send and checks recovery without resend.
+
 ## Persistent working objects
 
 A working object is structured information you and your bot maintain together beyond a conversation. The first type is a **project checklist**, with tasks, To do / In progress / Blocked / Done statuses, optional due dates, and supporting notes. Ask the bot to create one, or open **Workbench → More workbench tools (⋯) → Checklists → New checklist**. A bot-created checklist appears as a live editable chat card and in the full workbench. Both surfaces read the same saved object. History identifies your edits and the agent's edits; the originating conversation remains available from the object.
