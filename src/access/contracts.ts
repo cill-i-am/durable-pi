@@ -241,6 +241,20 @@ export const builtInTools = [
     mode: "allow",
   },
   {
+    name: "read_passkeys",
+    title: "Read your passkeys",
+    description:
+      "Read your own saved passkey names and dates without exposing credentials.",
+    mode: "allow",
+  },
+  {
+    name: "manage_passkeys",
+    title: "Manage your passkeys",
+    description:
+      "Rename or remove your own passkey, or open setup for device confirmation.",
+    mode: "ask",
+  },
+  {
     name: "manage_family",
     title: "Manage family access",
     description:

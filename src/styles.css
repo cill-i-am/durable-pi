@@ -1897,6 +1897,9 @@ body {
     padding-bottom: 20px;
   }
 }
+.passkey-settings [data-slot="button"] {
+  min-height: 44px;
+}
 @media (max-width: 639px) {
   .account-security [data-slot="button"],
   .account-security [data-slot="dialog-close"] {

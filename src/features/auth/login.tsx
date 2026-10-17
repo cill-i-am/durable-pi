@@ -15,6 +15,7 @@ import { errorMessage } from "@/http/client"
 import { workspaceReturnPath } from "@/navigation/workspace"
 
 import { AuthFrame } from "./auth-frame"
+import { PasskeySignIn } from "./passkey-sign-in"
 import { PasswordInput } from "./password-input"
 
 export function Login({ sessionError }: { sessionError?: string }) {
@@ -159,6 +160,7 @@ export function Login({ sessionError }: { sessionError?: string }) {
           </Button>
         </FieldGroup>
       </form>
+      {!setup && <PasskeySignIn disabled={pending} onBusyChange={setPending} />}
       <Button
         variant="link"
         size="sm"

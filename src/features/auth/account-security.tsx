@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog"
 
 import { FactorSettings } from "./factor-settings"
+import { PasskeySettings } from "./passkey-settings"
 import { securityError } from "./security-errors"
 import { sessionLabel } from "./session-label"
 
@@ -32,6 +33,7 @@ export function AccountSecurity({
   const [loading, setLoading] = useState(true)
   const [pending, setPending] = useState(false)
   const [factorLocked, setFactorLocked] = useState(false)
+  const [passkeyLocked, setPasskeyLocked] = useState(false)
   const [factorView, setFactorView] = useState(false)
   const [error, setError] = useState("")
   const [freshSignIn, setFreshSignIn] = useState(false)
@@ -70,7 +72,7 @@ export function AccountSecurity({
     }
   }, [refresh, current?.session.id])
   async function revoke() {
-    if (!confirm || pending) return
+    if (!confirm || locked) return
     setPending(true)
     setError("")
     setNotice("")
@@ -96,14 +98,14 @@ export function AccountSecurity({
     }
   }
   useEffect(() => {
-    onPendingChange?.(pending || factorLocked)
+    onPendingChange?.(pending || factorLocked || passkeyLocked)
     return () => onPendingChange?.(false)
-  }, [pending, factorLocked, onPendingChange])
+  }, [pending, factorLocked, passkeyLocked, onPendingChange])
   const others = sessions.filter(
     (session) => session.id !== current?.session.id
   )
   const twoFactorEnabled = !!current?.user.twoFactorEnabled
-  const locked = pending || factorLocked
+  const locked = pending || factorLocked || passkeyLocked
   return (
     <Dialog
       open
@@ -136,8 +138,12 @@ export function AccountSecurity({
           <>
             <TwoFactorCard
               enabled={twoFactorEnabled}
-              pending={pending}
+              pending={locked}
               onManage={() => setFactorView(true)}
+            />
+            <PasskeySettings
+              disabled={pending || factorLocked}
+              onBusyChange={setPasskeyLocked}
             />
             <section
               className="space-y-4"
@@ -151,7 +157,7 @@ export function AccountSecurity({
                   </h2>
                   <Button
                     variant="ghost"
-                    disabled={loading || pending}
+                    disabled={loading || locked}
                     onClick={() => void refresh()}
                   >
                     Refresh
@@ -198,7 +204,7 @@ export function AccountSecurity({
                         ) : (
                           <Button
                             variant="outline"
-                            disabled={pending}
+                            disabled={locked}
                             aria-label={`Sign out ${sessionLabel(session.userAgent)}`}
                             onClick={() => {
                               setError("")
@@ -237,14 +243,14 @@ export function AccountSecurity({
                 <div className="flex justify-end gap-2">
                   <Button
                     variant="outline"
-                    disabled={pending}
+                    disabled={locked}
                     onClick={() => setConfirm(null)}
                   >
                     Cancel
                   </Button>
                   <Button
                     variant="destructive"
-                    disabled={pending}
+                    disabled={locked}
                     onClick={() => void revoke()}
                   >
                     {pending ? "Signing out…" : "Sign out browser"}
@@ -279,7 +285,7 @@ export function AccountSecurity({
               <div className="flex flex-wrap gap-2">
                 <Button
                   variant="outline"
-                  disabled={pending || loading || !others.length}
+                  disabled={locked || loading || !others.length}
                   onClick={() => {
                     setError("")
                     setConfirm({ kind: "others" })
@@ -287,7 +293,7 @@ export function AccountSecurity({
                 >
                   Sign out other browsers
                 </Button>
-                <Button disabled={pending} onClick={onClose}>
+                <Button variant="outline" disabled={locked} onClick={onClose}>
                   Done
                 </Button>
               </div>
@@ -320,7 +326,7 @@ function TwoFactorCard({
         </h2>
         <p className="text-sm leading-6 text-muted-foreground">
           {enabled
-            ? "On · Your authenticator protects sign-ins."
+            ? "On · Your authenticator protects password sign-ins."
             : "Off · Add an authenticator for an extra layer of protection."}
         </p>
       </div>

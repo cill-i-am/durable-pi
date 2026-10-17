@@ -26,7 +26,7 @@
     "db:check:agent": "node scripts/generate-agent-migration-manifest.mjs --check",
     "test:drizzle-runtime": "node scripts/test-drizzle-runtime.mjs",
     "test:browser": "playwright test",
-    "verify:browser": "pnpm test:browser",
+    "verify:browser": "pnpm build && pnpm test:browser && node --import tsx scripts/check-passkeys.mjs",
     "verify:container": "docker build --platform linux/amd64 --tag durable-pi-ci:terminal containers/terminal && docker build --platform linux/amd64 --tag durable-pi-ci:terminal-native containers/terminal-native",
     "dev:sandbox": "alchemy dev stacks/sandbox-rehearsal.ts --stage sandbox-rehearsal --profile default",
     "test:sandbox": "node scripts/check-native-sandbox.mjs",
@@ -37,6 +37,7 @@
   "dependencies": {
     "@alchemy.run/frontend-frameworks": "2.0.0-beta.83",
     "@base-ui/react": "^1.9.0",
+    "@better-auth/passkey": "1.7.10",
     "@chat-adapter/whatsapp": "4.42.0",
     "@cloudflare/puppeteer": "1.4.0",
     "@cloudflare/sandbox": "1.0.1",
