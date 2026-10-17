@@ -156,7 +156,7 @@ export function agentGatewayProgram(
       )
     }
     if (
-      ["bots", "skills", "connections", "whatsapp"].some(
+      ["bots", "skills", "connections", "whatsapp", "model-account"].some(
         (base) => path === base || path.startsWith(`${base}/`)
       )
     )

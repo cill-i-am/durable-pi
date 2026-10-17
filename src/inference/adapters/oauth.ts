@@ -72,7 +72,7 @@ export const refreshOAuth = Effect.fn("Inference.refreshOAuth")(
             return yield* new CredentialRefreshError({
               reason: confirmed ? "rejected" : "unavailable",
               message:
-                "ChatGPT authorization expired. Reconnect with pnpm model:login.",
+                "ChatGPT authorization expired. Open Model access in Settings to reconnect.",
             })
           }
           if (!response.body) return yield* uncertain()
@@ -104,6 +104,7 @@ export const refreshOAuth = Effect.fn("Inference.refreshOAuth")(
                 "ChatGPT grant does not permit model requests. Reconnect the account.",
             })
           const next = {
+            ...credential,
             type: "oauth" as const,
             clientId: credential.clientId,
             access: token.access_token,

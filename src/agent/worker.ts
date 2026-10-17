@@ -296,6 +296,10 @@ import {
   accountToken,
   nativeAccountToken,
 } from "../inference/adapters/account-rpc"
+import {
+  ChatGPTSignIn,
+  chatGPTSignInRequest,
+} from "../inference/adapters/chatgpt-sign-in"
 import { SqliteCredentials } from "../inference/adapters/credential-sqlite"
 import {
   accountCredentials,
@@ -1097,6 +1101,12 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   )
   readonly credentialService: typeof ModelCredentials.Service =
     this.actorRuntime.runSync(ModelCredentials)
+  readonly chatGPTSignIn = new ChatGPTSignIn(
+    this.ctx.storage,
+    this.credentialLedger,
+    this.credentialService,
+    () => this.modelAdminProgram()
+  )
   readonly workspaceService: typeof Workspace.Service =
     this.actorRuntime.runSync(Workspace)
   readonly configurationService: typeof BotConfiguration.Service =
@@ -2114,6 +2124,24 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       return access.modelOwner
     })
   }
+  protected modelAdminProgram() {
+    return this.familyStateProgram().pipe(
+      Effect.flatMap((access) =>
+        access &&
+        access.owner === access.modelOwner &&
+        this.ctx.id.equals(this.env.AGENT.idFromName(access.owner))
+          ? Effect.succeed({
+              owner: access.owner,
+              membershipId: access.membershipId,
+            })
+          : Effect.fail(
+              new CredentialUnavailable({
+                message: "Only the family admin can reconnect ChatGPT.",
+              })
+            )
+      )
+    )
+  }
   async accountModelCatalog(): Promise<ModelCatalog> {
     return this.run(this.catalogProgram())
   }
@@ -2381,7 +2409,8 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           ...passkeyTools((input, signal) => this.passkeyAction(input, signal)),
           ...familyTools(
             (input, signal) => this.familyAction(input, signal),
-            (input, signal) => this.modelSettingsAction(input, signal)
+            (input, signal) => this.modelSettingsAction(input, signal),
+            (signal) => this.reconnectChatGPTAction(signal)
           ),
           ...richResultTools(),
           ...communicationTools(
@@ -3199,6 +3228,15 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       const url = new URL(request.url)
       const path = url.pathname.replace("/api/agent/", "")
       const base = path.split("/")[0]
+      if (path === "model-account") {
+        const principal = request.headers.get("x-owner-id")
+        if (
+          !principal ||
+          !this.ctx.id.equals(this.env.AGENT.idFromName(principal))
+        )
+          return new Response("Forbidden", { status: 403 })
+        return yield* chatGPTSignInRequest(this.chatGPTSignIn, request)
+      }
       if (base === "whatsapp") {
         const owner = request.headers.get("x-owner-id") ?? ""
         const id = Schema.decodeUnknownSync(AgentId)(
@@ -3749,6 +3787,23 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           Effect.succeed({ error: error.message })
         )
       ),
+      { signal }
+    )
+  }
+  async reconnectChatGPTAction(signal?: AbortSignal) {
+    const access = await this.familyAdmission()
+    if (!access || access.owner !== access.modelOwner)
+      return { error: "Only the family admin can reconnect ChatGPT." }
+    return this.run(
+      Effect.succeed({
+        status: "sign_in_required",
+        url: new URL(
+          "/agents/home/settings/model-access",
+          this.env.EMAIL_REVIEW_URL
+        ).href,
+        instructions:
+          "Open Model access, sign in with ChatGPT, then paste the final return address into the secure field there. Never paste it into chat. Completing this restores the family connection; this link has not reconnected it yet.",
+      }),
       { signal }
     )
   }

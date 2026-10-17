@@ -77,6 +77,21 @@ it("refuses a pre-aborted request before namespace lookup or configuration", asy
   expect(f.getByName).not.toHaveBeenCalled()
   expect(f.target.configureBot).not.toHaveBeenCalled()
 })
+it("routes model reconnection to the current person's root even when a private agent is selected", async () => {
+  const f = fixture()
+  const response = await agentGateway(
+    f.request(undefined, "model-account"),
+    f.env,
+    f.ctx
+  )
+  expect(response.status).toBe(200)
+  expect(f.root.fetch).toHaveBeenCalledTimes(1)
+  expect(f.root.agentProfile).not.toHaveBeenCalled()
+  expect(f.target.fetch).not.toHaveBeenCalled()
+  expect(f.root.fetch.mock.calls[0]?.[0].headers.get("x-owner-id")).toBe(
+    "owner"
+  )
+})
 it("retains original native response, headers and upgrade metadata after successful forwarding", async () => {
   const f = fixture(),
     socket = { readyState: 1, accept: vi.fn(), close: vi.fn() }

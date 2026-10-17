@@ -1,3 +1,5 @@
+import { mkdir } from "node:fs/promises"
+
 import { expect, test, type Page } from "@playwright/test"
 
 const owner = {
@@ -297,4 +299,170 @@ test("expired verification can be resent without losing a valid family invitatio
   )
   expect(sent).toBe(true)
   await expect(page).not.toHaveURL(/token=/)
+})
+
+test("admin reconnects ChatGPT in Settings with a private return-address field and recovery", async ({
+  page,
+  context,
+}, info) => {
+  const capture = ".impeccable/review/chatgpt-reconnect"
+  await mkdir(capture, { recursive: true })
+  const attempt = {
+    id: "synthetic-attempt",
+    email: owner.email,
+    expiresAt: Date.now() + 600_000,
+    authorizationUrl:
+      "https://auth.openai.com/api/accounts/authorize?client_id=oaiapp_synthetic",
+  }
+  let pending: typeof attempt | null = null
+  let completed = false
+  let catalogUnavailable = false
+  await page.route("**/api/agent/models?*", (route) =>
+    route.fulfill(
+      completed && catalogUnavailable
+        ? {
+            status: 503,
+            json: { error: "Synthetic temporary catalog outage" },
+          }
+        : {
+            json: {
+              models: [],
+              checkedAt: completed ? new Date().toISOString() : null,
+              error: completed ? null : "Synthetic disconnected account",
+              usage: "ChatGPT plan usage",
+              selection: {
+                model: "test",
+                thinking: "medium",
+                settingsRevision: 0,
+              },
+              assignments: {},
+            },
+          }
+    )
+  )
+  await page.route("**/api/family", (route) => route.fulfill({ json: family }))
+  await context.route("https://auth.openai.com/**", (route) =>
+    route.fulfill({
+      contentType: "text/plain",
+      body: "Synthetic provider sign-in for browser regression test.",
+    })
+  )
+  await page.route("**/api/agent/model-account?*", async (route) => {
+    if (route.request().method() === "GET")
+      return route.fulfill({ json: { pending } })
+    const input = route.request().postDataJSON()
+    if (input.action === "start") {
+      expect(input.email).toBe(owner.email)
+      pending = attempt
+      return route.fulfill({ json: pending })
+    }
+    expect(input.action).toBe("finish")
+    expect(input.id).toBe(attempt.id)
+    if (!input.address.includes("code=synthetic-code"))
+      return route.fulfill({
+        status: 400,
+        json: {
+          error:
+            "Paste the full return address from the ChatGPT sign-in you just opened.",
+        },
+      })
+    completed = true
+    pending = null
+    await page.request.post("/api/fixture/model-connection", {
+      data: { connected: true },
+    })
+    return route.fulfill({ json: { status: "connected", email: owner.email } })
+  })
+  await signIn(page)
+  await page.goto("/agents/home/settings/model-access")
+  await expect(page.getByLabel("ChatGPT email", { exact: true })).toHaveValue(
+    owner.email
+  )
+  const start = page.getByRole("button", {
+    name: "Sign in with ChatGPT",
+    exact: true,
+  })
+  await expect(start).toBeEnabled()
+  await assertFits(page)
+  await page.screenshot({
+    path: `${capture}/build-${info.project.name}-start.png`,
+    fullPage: true,
+  })
+  const popupEvent = context.waitForEvent("page")
+  await start.click()
+  const popup = await popupEvent
+  await expect(popup).toHaveURL(attempt.authorizationUrl)
+  await popup.close()
+  const field = page.getByLabel("Return address", { exact: true })
+  await expect(field).toBeFocused()
+  await expect(
+    page.getByText("the last page may say it can’t connect", { exact: false })
+  ).toBeVisible()
+  await assertFits(page)
+  await page.screenshot({
+    path: `${capture}/build-${info.project.name}-finish.png`,
+    fullPage: true,
+  })
+  await page.reload()
+  await expect(field).toBeVisible()
+  await field.fill("http://127.0.0.1:53000/auth/callback?code=wrong")
+  await page
+    .getByRole("button", { name: "Finish connection", exact: true })
+    .click()
+  await expect(
+    page.getByRole("alert").filter({ hasText: "Paste the full return address" })
+  ).toBeVisible()
+  await expect(field).toHaveValue("")
+  await expect(field).toBeFocused()
+  await page.screenshot({
+    path: `${capture}/build-${info.project.name}-retry.png`,
+    fullPage: true,
+  })
+  await field.fill(
+    "http://127.0.0.1:53000/auth/callback?code=synthetic-code&state=synthetic-state"
+  )
+  catalogUnavailable = true
+  await field.press("Enter")
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: `ChatGPT connected as ${owner.email}` })
+  ).toBeVisible()
+  expect(completed).toBe(true)
+  await expect(
+    page.getByText("Check unavailable", { exact: true })
+  ).toBeVisible()
+  await expect(
+    page
+      .getByRole("alert")
+      .filter({
+        hasText: "Could not verify model availability. Refresh to retry.",
+      })
+  ).toBeVisible()
+  await expect(
+    page.getByText("Sign in above to restore access for the family.", {
+      exact: false,
+    })
+  ).toHaveCount(0)
+  await page.screenshot({
+    path: `${capture}/build-${info.project.name}-catalog-unavailable.png`,
+    fullPage: true,
+  })
+  catalogUnavailable = false
+  await page
+    .getByRole("button", { name: "Refresh connection", exact: true })
+    .click()
+  await expect(page.getByText("Connected", { exact: true })).toBeVisible()
+  await expect(
+    page.getByRole("link", { name: "Back to chat", exact: true })
+  ).toBeEnabled()
+  await expect(field).toHaveCount(0)
+  await assertFits(page)
+  expect(await page.evaluate(() => JSON.stringify(localStorage))).not.toContain(
+    "synthetic-code"
+  )
+  await page.screenshot({
+    path: `${capture}/build-${info.project.name}-restored.png`,
+    fullPage: true,
+  })
 })

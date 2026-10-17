@@ -1726,7 +1726,7 @@ export class PersonalAgentProbe extends PersonalAgent {
   ): Promise<Response | undefined> {
     if (action === "background-held-start") {
       this.fixtureRun(
-        "INSERT INTO model_credentials VALUES (?,?,?) ON CONFLICT(provider) DO UPDATE SET value=excluded.value",
+        "INSERT INTO model_credentials(provider,value,seed) VALUES (?,?,?) ON CONFLICT(provider) DO UPDATE SET value=excluded.value",
         "openai",
         JSON.stringify({
           type: "oauth",
@@ -2339,7 +2339,7 @@ export class PersonalAgentProbe extends PersonalAgent {
     if (action === "credential-start") {
       await this.lifecycle.start()
       this.fixtureRun(
-        "INSERT INTO model_credentials VALUES (?,?,?)",
+        "INSERT INTO model_credentials(provider,value,seed) VALUES (?,?,?)",
         "openai",
         JSON.stringify({
           type: "oauth",

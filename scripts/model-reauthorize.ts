@@ -8,7 +8,7 @@ import {
   returningSignInCallback,
   returningSignInUrl,
   type ReturningSignIn,
-} from "./lib/model-reauthorization"
+} from "../src/inference/adapters/sign-in-protocol"
 
 const { values } = parseArgs({
   options: {

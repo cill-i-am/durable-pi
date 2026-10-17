@@ -8,9 +8,23 @@ const result = (value: unknown) => ({
 })
 export function familyTools(
   run: (input: unknown, signal?: AbortSignal) => Promise<unknown>,
-  settings: (input: unknown, signal?: AbortSignal) => Promise<unknown>
+  settings: (input: unknown, signal?: AbortSignal) => Promise<unknown>,
+  reconnect?: (signal?: AbortSignal) => Promise<unknown>
 ) {
   return [
+    ...(reconnect
+      ? [
+          defineTool({
+            name: "reconnect_chatgpt",
+            description:
+              "On the family admin's request, open the authenticated ChatGPT reconnection flow. Returns a secure settings link; the admin must sign in and complete it there. This does not reconnect by itself. Never request authorization codes, return addresses, access tokens or refresh tokens in chat. Only the family admin can reconnect; everyone uses the resulting connection.",
+            parameters: Type.Object({}),
+            replay: "safe",
+            execute: (_args, _api, context) =>
+              reconnect(context.abortSignal).then(result),
+          }),
+        ]
+      : []),
     defineTool({
       name: "read_family",
       description:
