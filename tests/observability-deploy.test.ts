@@ -16,6 +16,7 @@ const productionScripts = [
   deployed("website-script", "Website"),
   deployed("document-script", "DocumentWorker"),
   deployed("execution-script", "ExecutionWorker"),
+  deployed("native-terminal-script", "TerminalWorkerSandboxV1"),
   deployed("shortened-terminal-script", "TerminalWorkerDrizzleV1"),
 ]
 
@@ -93,7 +94,7 @@ it("updates script-level Issues without reconciling Durable Object exports or ch
       )
     )
   )
-  expect(network).toHaveBeenCalledTimes(16)
+  expect(network).toHaveBeenCalledTimes(19)
 })
 it("rejects a non-main invocation before contacting Cloudflare", async () => {
   vi.stubEnv("GITHUB_REF", "refs/heads/topic")

@@ -1,5 +1,13 @@
 import { Sandbox as BaseSandbox, getSandbox } from "@cloudflare/sandbox-v0"
-import { Scheduler, Effect, Exit, Layer, ManagedRuntime, Scope } from "effect"
+import {
+  Scheduler,
+  Effect,
+  Exit,
+  Layer,
+  ManagedRuntime,
+  Schema,
+  Scope,
+} from "effect"
 
 import type { TerminalEnv } from "../../alchemy.run"
 import { reportTerminal } from "../observability/events"
@@ -8,14 +16,72 @@ import { makeDurableObjectSqlite } from "../storage/durable-object"
 import { migrateSqlite } from "../storage/migrations"
 import { terminalRequest } from "./adapters/http"
 import { effectTerminalRuntime, terminalFileDigest } from "./adapters/interop"
+import {
+  TerminalMigration,
+  migrationDatabase,
+  type MigrationMarker,
+  MigrationReceipt,
+} from "./adapters/migration"
 import { checkpointStorage } from "./adapters/r2"
 import { sandboxRuntime, legacyVideoRuntime } from "./adapters/sandbox"
 import { relayTerminal } from "./adapters/socket"
 import { TerminalStore } from "./adapters/sqlite"
+import { readBounded } from "./adapters/stream"
 import { extractVideoRequest, sandboxVideo } from "./adapters/video"
+import { TerminalFailure } from "./contracts"
 import { TerminalService, terminalLayer } from "./terminal"
 
 export class LinuxSandbox extends BaseSandbox<TerminalEnv> {
+  private readonly migration = new TerminalMigration(
+    this.ctx.id.toString(),
+    migrationDatabase(this.ctx.storage),
+    this.env.BACKUPS,
+    {
+      get: () => this.ctx.storage.kv.get<MigrationMarker>("terminal:migration"),
+      put: (marker) => this.ctx.storage.kv.put("terminal:migration", marker),
+    }
+  )
+  private snapshotting: Promise<MigrationReceipt> | undefined
+  async prepareMigration(name: string): Promise<MigrationReceipt> {
+    if (this.env.SANDBOX.idFromName(name).toString() !== this.ctx.id.toString())
+      throw new Error("Legacy migration identity mismatch")
+    this.snapshotting ??= this.migration
+      .snapshot(name, async () => {
+        const deadline = Date.now() + 60000
+        for (;;) {
+          const state = await this.terminalRuntime.runPromise(
+            this.terminal.state()
+          )
+          if (state.session)
+            await this.terminalRuntime.runPromise(
+              this.terminal.cancel(state.session.id)
+            )
+          if (!state.busy && !this.videoBusy) break
+          if (Date.now() >= deadline)
+            throw new Error("Legacy terminal did not drain")
+          await new Promise((resolve) => setTimeout(resolve, 250))
+        }
+        await this.terminalRuntime.runPromise(this.terminal.recover())
+        const state = await this.terminalRuntime.runPromise(
+          this.terminal.state()
+        )
+        if (state.cleanupError || this.ctx.container?.running)
+          throw new Error("Legacy teardown is unconfirmed")
+      })
+      .finally(() => {
+        this.snapshotting = undefined
+      })
+    return this.snapshotting
+  }
+  commitMigration(receipt: MigrationReceipt) {
+    this.migration.commitSource(receipt)
+  }
+  migrationStatus() {
+    return {
+      phase: this.migration.status(),
+      running: this.ctx.container?.running ?? false,
+    }
+  }
   override enableInternet = false
   override sleepAfter = "60s"
   private readonly databaseScope = Scope.makeUnsafe()
@@ -31,7 +97,18 @@ export class LinuxSandbox extends BaseSandbox<TerminalEnv> {
   )
   private readonly terminalRuntime = ManagedRuntime.make(
     terminalLayer({
-      repository: new TerminalStore(this.db, reportTerminal),
+      repository: new TerminalStore(
+        this.db,
+        reportTerminal,
+        () => {
+          if (this.env.LEGACY_FROZEN)
+            throw new TerminalFailure({
+              message: "Terminal migration is in progress. Try again shortly.",
+            })
+          this.migration.assertWritable()
+        },
+        () => this.migration.assertCancellationAllowed()
+      ),
       runtime: effectTerminalRuntime(sandboxRuntime(this)),
       backups: checkpointStorage(this.env.BACKUPS, this.ctx.id.toString()),
       exports: checkpointStorage(
@@ -104,9 +181,39 @@ export default {
     if (
       !identity ||
       !/^[a-f0-9]{64}$/.test(identity) ||
-      !["terminal", "authority", "video"].includes(rest[0] ?? "")
+      !["terminal", "authority", "video", "migration"].includes(rest[0] ?? "")
     )
       return new Response("Not found", { status: 404 })
+    const name =
+      (rest[0] === "video" ? "video" : "pi") +
+      "-" +
+      BigInt("0x" + identity).toString(36)
+    const actor = env.SANDBOX.getByName(name)
+    if (rest[0] === "migration") {
+      if (rest[1] === "snapshot" && request.method === "POST")
+        return Response.json(await actor.prepareMigration(name))
+      if (rest[1] === "commit" && request.method === "POST") {
+        if (Number(request.headers.get("content-length") ?? 0) > 8192)
+          return new Response("Too large", { status: 413 })
+        await actor.commitMigration(
+          Schema.decodeUnknownSync(MigrationReceipt)(
+            JSON.parse(
+              new TextDecoder().decode(
+                await readBounded(request.body!, 8192, request.signal)
+              )
+            )
+          )
+        )
+        return Response.json({ moved: true })
+      }
+      if (rest[1] === "status")
+        return Response.json(await actor.migrationStatus())
+      return new Response("Not found", { status: 404 })
+    }
+    const status = await actor.migrationStatus()
+    if (status.phase === "moved") return env.NATIVE_SERVICE.fetch(request)
+    if (env.LEGACY_FROZEN || status.phase !== "original")
+      return new Response("Terminal migration is in progress", { status: 503 })
     const sandbox = getSandbox(
       env.SANDBOX,
       `${rest[0] === "video" ? "video" : "pi"}-${BigInt(`0x${identity}`).toString(36)}`,

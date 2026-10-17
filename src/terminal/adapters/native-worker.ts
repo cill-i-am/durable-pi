@@ -1,6 +1,14 @@
 import { Files } from "@cloudflare/sandbox"
 import { DurableObject } from "cloudflare:workers"
-import { Scheduler, Effect, Exit, Layer, ManagedRuntime, Scope } from "effect"
+import {
+  Scheduler,
+  Effect,
+  Exit,
+  Layer,
+  ManagedRuntime,
+  Schema,
+  Scope,
+} from "effect"
 
 import type { NativeTerminalEnv } from "../../../alchemy.run"
 import { reportTerminal } from "../../observability/events"
@@ -8,13 +16,25 @@ import { WorkerTelemetry } from "../../observability/worker"
 import { makeDurableObjectSqlite } from "../../storage/durable-object"
 import { migrateSqlite } from "../../storage/migrations"
 import { TerminalService, terminalLayer } from "../terminal"
+import {
+  NativeContainerOwner,
+  TerminalCapacityPool,
+  type CapacityState,
+} from "./capacity"
 import { terminalRequest } from "./http"
 import { effectTerminalRuntime, terminalFileDigest } from "./interop"
-import { nativeCommand, startNativeContainer } from "./native-process"
+import {
+  TerminalMigration,
+  migrationDatabase,
+  type MigrationMarker,
+  MigrationReceipt,
+} from "./migration"
+import { nativeCommand } from "./native-process"
 import { nativeSandboxRuntime } from "./native-sandbox"
 import { checkpointStorage } from "./r2"
 import { relayTerminal } from "./socket"
 import { TerminalStore } from "./sqlite"
+import { readBounded } from "./stream"
 import { extractVideoRequest, sandboxVideo } from "./video"
 
 export class LinuxSandboxV1 extends DurableObject<NativeTerminalEnv> {
@@ -22,6 +42,64 @@ export class LinuxSandboxV1 extends DurableObject<NativeTerminalEnv> {
     const container = this.ctx.container
     if (!container) throw new Error("Native container binding is missing")
     return container
+  }
+  private readonly migration = new TerminalMigration(
+    this.ctx.id.toString(),
+    migrationDatabase(this.ctx.storage),
+    this.env.BACKUPS,
+    {
+      get: () => this.ctx.storage.kv.get<MigrationMarker>("terminal:migration"),
+      put: (marker) => this.ctx.storage.kv.put("terminal:migration", marker),
+    }
+  )
+  private importing:
+    | {
+        owner: string
+        sha256: string
+        work: Promise<{
+          verified: boolean
+          sha256: string
+          counts: Record<string, number>
+        }>
+      }
+    | undefined
+  async importMigration(receipt: MigrationReceipt) {
+    if (
+      this.env.SANDBOX.idFromName(receipt.name).toString() !==
+      this.ctx.id.toString()
+    )
+      throw new Error("Native migration identity mismatch")
+    if (
+      this.importing &&
+      (this.importing.owner !== receipt.owner ||
+        this.importing.sha256 !== receipt.sha256)
+    )
+      throw new Error("Conflicting terminal migration")
+    this.importing ??= {
+      owner: receipt.owner,
+      sha256: receipt.sha256,
+      work: this.migration.import(receipt).finally(() => {
+        this.importing = undefined
+      }),
+    }
+    return this.importing.work
+  }
+  private readonly capacityOwner = new NativeContainerOwner(
+    this.ctx.id.toString(),
+    this.container,
+    this.env.CAPACITY.getByName("terminal-fleet"),
+    {
+      token: () => this.ctx.storage.kv.get<number>("capacity:token"),
+      setToken: (epoch) => {
+        if (epoch === undefined) this.ctx.storage.kv.delete("capacity:token")
+        else this.ctx.storage.kv.put("capacity:token", epoch)
+      },
+      fence: () => this.ctx.storage.kv.get<number>("capacity:fence") ?? 0,
+      setFence: (epoch) => this.ctx.storage.kv.put("capacity:fence", epoch),
+    }
+  )
+  retireCapacity(epoch: number) {
+    return this.capacityOwner.retireIdle(epoch)
   }
   private readonly files = new Files(this.container)
   private readonly databaseScope = Scope.makeUnsafe()
@@ -37,10 +115,22 @@ export class LinuxSandboxV1 extends DurableObject<NativeTerminalEnv> {
   )
   private readonly terminalRuntime = ManagedRuntime.make(
     terminalLayer({
-      repository: new TerminalStore(this.db, reportTerminal),
+      repository: new TerminalStore(
+        this.db,
+        reportTerminal,
+        () => this.migration.assertWritable(),
+        () => this.migration.assertCancellationAllowed()
+      ),
       runtime: effectTerminalRuntime(
-        nativeSandboxRuntime(this.container, this.files, (task) =>
-          this.ctx.waitUntil(task)
+        nativeSandboxRuntime(
+          this.container,
+          this.files,
+          (task) => this.ctx.waitUntil(task),
+          {
+            start: (unrestricted, signal) =>
+              this.capacityOwner.start(unrestricted, signal),
+            close: () => this.capacityOwner.close(),
+          }
         )
       ),
       backups: checkpointStorage(this.env.BACKUPS, this.ctx.id.toString()),
@@ -65,12 +155,14 @@ export class LinuxSandboxV1 extends DurableObject<NativeTerminalEnv> {
     super(ctx, env)
     if (this.container.running)
       this.ctx.waitUntil(this.container.setInactivityTimeout(60000))
-    this.ctx.waitUntil(this.terminalRuntime.runPromise(this.terminal.recover()))
+    void this.ctx.blockConcurrencyWhile(() =>
+      this.terminalRuntime.runPromise(this.terminal.recover())
+    )
   }
   private videoBusy = false
   private readonly extractVideo = sandboxVideo({
-    destroy: () => this.container.destroy(),
-    start: () => startNativeContainer(this.container),
+    destroy: () => this.capacityOwner.close(),
+    start: () => this.capacityOwner.start(),
     mkdir: (path, options) => this.files.mkdir(path, options),
     writeFile: (path, body) => this.files.writeFile(path, body),
     execute: (command, signal) =>
@@ -119,18 +211,63 @@ export class LinuxSandboxV1 extends DurableObject<NativeTerminalEnv> {
     )
   }
 }
+export class NativeTerminalCapacity extends DurableObject<NativeTerminalEnv> {
+  private readonly pool = new TerminalCapacityPool(
+    {
+      get: () => this.ctx.storage.kv.get<CapacityState>("terminal-capacity"),
+      put: (state) => this.ctx.storage.kv.put("terminal-capacity", state),
+      atomic: (body) => this.ctx.storage.transactionSync(body),
+    },
+    async (lease) => {
+      const stub = this.env.SANDBOX.get(
+        this.env.SANDBOX.idFromString(lease.owner)
+      )
+      // Unreachable or failed teardown retains the slot.
+      return stub.retireCapacity(lease.epoch).catch(() => false)
+    }
+  )
+  acquire(owner: string) {
+    return this.pool.acquire(owner)
+  }
+  release(owner: string, epoch: number) {
+    return this.pool.release(owner, epoch)
+  }
+  status() {
+    return this.pool.status()
+  }
+}
 export default {
   async fetch(request: Request, env: NativeTerminalEnv) {
+    if (new URL(request.url).pathname === "/capacity")
+      return Response.json(
+        await env.CAPACITY.getByName("terminal-fleet").status()
+      )
     const [, identity, ...rest] = new URL(request.url).pathname.split("/")
     if (
       !identity ||
       !/^[a-f0-9]{64}$/.test(identity) ||
-      !["terminal", "authority", "video"].includes(rest[0] ?? "")
+      !["terminal", "authority", "video", "migration"].includes(rest[0] ?? "")
     )
       return new Response("Not found", { status: 404 })
     const sandbox = env.SANDBOX.getByName(
       `${rest[0] === "video" ? "video" : "pi"}-${BigInt(`0x${identity}`).toString(36)}`
     )
+    if (
+      rest[0] === "migration" &&
+      rest[1] === "import" &&
+      request.method === "POST"
+    )
+      return Response.json(
+        await sandbox.importMigration(
+          Schema.decodeUnknownSync(MigrationReceipt)(
+            JSON.parse(
+              new TextDecoder().decode(
+                await readBounded(request.body!, 8192, request.signal)
+              )
+            )
+          )
+        )
+      )
     return sandbox.fetch(
       new Request(`https://terminal.internal/${rest.join("/")}`, request)
     )

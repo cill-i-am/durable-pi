@@ -2,7 +2,7 @@ import type { Files } from "@cloudflare/sandbox"
 
 import { MAX_CHECKPOINT } from "../contracts"
 import type { ForeignTerminalRuntime } from "./interop"
-import { nativeCommand, startNativeContainer } from "./native-process"
+import { nativeCommand } from "./native-process"
 import { nativeTerminal } from "./native-terminal"
 import { readBounded } from "./stream"
 import { sandboxTransfers } from "./transfer-files"
@@ -10,7 +10,11 @@ import { sandboxTransfers } from "./transfer-files"
 export function nativeSandboxRuntime(
   container: Container,
   files: Files,
-  hold: (task: Promise<unknown>) => void
+  hold: (task: Promise<unknown>) => void,
+  lifecycle: {
+    start: (unrestricted: boolean, signal: AbortSignal) => Promise<void>
+    close: () => Promise<void>
+  }
 ): ForeignTerminalRuntime {
   const execute = (
     command: string,
@@ -34,11 +38,11 @@ export function nativeSandboxRuntime(
       },
       internal
     ),
-    close: () => container.destroy(),
+    close: () => lifecycle.close(),
     execute,
     restore: async (bytes, signal, unrestricted = false) => {
       signal.throwIfAborted()
-      await startNativeContainer(container, unrestricted)
+      await lifecycle.start(unrestricted, signal)
       signal.throwIfAborted()
       await files.mkdir("/workspace", { recursive: true, signal })
       if (bytes) {

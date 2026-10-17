@@ -114,9 +114,9 @@ function LiveTerminal({
     void Promise.all([
       import("@xterm/xterm"),
       import("@xterm/addon-fit"),
-      import("@cloudflare/sandbox-v0/xterm"),
+      import("./native-terminal-addon"),
     ])
-      .then(([{ Terminal }, { FitAddon }, { SandboxAddon }]) => {
+      .then(([{ Terminal }, { FitAddon }, { NativeTerminalAddon }]) => {
         if (disposed) return
         const style = getComputedStyle(element)
         const terminal = new Terminal({
@@ -129,15 +129,14 @@ function LiveTerminal({
           fontFamily: style.fontFamily,
         })
         const fit = new FitAddon()
-        const addon = new SandboxAddon({
-          reconnect: true,
-          getWebSocketUrl: ({ origin }) =>
-            origin +
+        const addon = new NativeTerminalAddon(
+          () =>
+            location.origin +
             agentUrl(
               agentId,
-              `terminal/session/${encodeURIComponent(session.id)}/socket`
+              "terminal/session/" + encodeURIComponent(session.id) + "/socket"
             ),
-          onStateChange: (state) => {
+          (state) => {
             if (!disposed)
               setStatus(
                 state === "connected"
@@ -146,8 +145,8 @@ function LiveTerminal({
                     ? "Connecting"
                     : "Disconnected"
               )
-          },
-        })
+          }
+        )
         terminal.loadAddon(fit)
         terminal.loadAddon(addon)
         terminal.open(element)
@@ -157,7 +156,7 @@ function LiveTerminal({
         resize()
         const observer = new ResizeObserver(resize)
         observer.observe(element)
-        addon.connect({ sandboxId: session.id })
+        addon.connect()
         destroy = () => {
           observer.disconnect()
           addon.disconnect()

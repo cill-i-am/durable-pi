@@ -7,6 +7,7 @@ import * as Layer from "effect/Layer"
 import type { PersonalAgent } from "./src/agent/worker"
 import { PASSWORD_EMAIL_FROM } from "./src/auth/password-email"
 import type { BackgroundGroupRPC } from "./src/delegation/worker"
+import type { NativeCapacityRPC } from "./src/terminal/adapters/capacity"
 import type { LinuxSandboxV1 } from "./src/terminal/adapters/native-worker"
 import type { LinuxSandbox } from "./src/terminal/worker"
 
@@ -49,32 +50,14 @@ export const ExecutionWorker = Cloudflare.Worker("ExecutionWorker", {
   env: { LOADER: Cloudflare.WorkerLoader() },
 })
 export type ExecutionEnv = Cloudflare.InferEnv<typeof ExecutionWorker>
-export const TerminalWorker = Cloudflare.Worker("TerminalWorkerDrizzleV1", {
-  main: "./src/terminal/worker.ts",
-  dev: { port: 1341, strictPort: true },
-  workersDev: { enabled: false, previewsEnabled: false },
-  compatibility: { date: "2026-09-25", flags: ["nodejs_compat"] },
-  observability,
-  env: {
-    SANDBOX: Cloudflare.Container<LinuxSandbox>("LinuxSandboxDrizzleV1", {
-      className: "LinuxSandbox",
-      context: "./containers/terminal",
-      instanceType: "basic",
-      maxInstances: 4,
-      observability: { logs: { enabled: false } },
-    }),
-    BACKUPS: WorkspaceAssets,
-    SANDBOX_LOG_LEVEL: "error",
-    SANDBOX_TRANSPORT: "rpc",
-  },
-})
-export type TerminalEnv = Cloudflare.InferEnv<typeof TerminalWorker>
-// Rehearsed separately; production continues to use TerminalWorker above.
+// Separate native namespace preserves the legacy namespace during cutover.
 const TerminalImage = Cloudflare.Container("TerminalImage", {
   schedulingPolicy: "durable_object",
   context: "./containers/terminal-native",
   observability: { logs: { enabled: false } },
 })
+const NativeCapacity: Cloudflare.DurableObjectLike<NativeCapacityRPC> =
+  Cloudflare.DurableObject("NativeTerminalCapacity")
 export const NativeTerminalWorker = Cloudflare.Worker(
   "TerminalWorkerSandboxV1",
   {
@@ -88,10 +71,39 @@ export const NativeTerminalWorker = Cloudflare.Worker(
         containers: [TerminalImage],
       }),
       BACKUPS: WorkspaceAssets,
+      CAPACITY: NativeCapacity,
     },
   }
 )
 export type NativeTerminalEnv = Cloudflare.InferEnv<typeof NativeTerminalWorker>
+export const TerminalWorker = Cloudflare.Worker(
+  "TerminalWorkerDrizzleV1",
+  Effect.gen(function* () {
+    const stage = yield* Alchemy.Stage
+    return {
+      main: "./src/terminal/worker.ts",
+      dev: { port: 1341, strictPort: true },
+      workersDev: { enabled: false, previewsEnabled: false },
+      compatibility: { date: "2026-09-25", flags: ["nodejs_compat"] },
+      observability,
+      env: {
+        SANDBOX: Cloudflare.Container<LinuxSandbox>("LinuxSandboxDrizzleV1", {
+          className: "LinuxSandbox",
+          context: "./containers/terminal",
+          instanceType: "basic",
+          maxInstances: 4,
+          observability: { logs: { enabled: false } },
+        }),
+        BACKUPS: WorkspaceAssets,
+        LEGACY_FROZEN: stage === "production",
+        NATIVE_SERVICE: NativeTerminalWorker,
+        SANDBOX_LOG_LEVEL: "error",
+        SANDBOX_TRANSPORT: "rpc",
+      },
+    }
+  })
+)
+export type TerminalEnv = Cloudflare.InferEnv<typeof TerminalWorker>
 
 export const BackgroundGroups: Cloudflare.DurableObjectLike<BackgroundGroupRPC> =
   Cloudflare.DurableObject<BackgroundGroupRPC>("BackgroundGroup")

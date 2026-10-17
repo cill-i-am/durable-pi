@@ -3,12 +3,15 @@ import { spawnSync } from "node:child_process"
 import { randomBytes, randomUUID } from "node:crypto"
 
 const origin = process.env.NATIVE_SANDBOX_URL ?? "http://localhost:1342"
+const headers = process.env.SANDBOX_REHEARSAL_TOKEN
+  ? { authorization: "Bearer " + process.env.SANDBOX_REHEARSAL_TOKEN }
+  : {}
 const identity = randomBytes(32).toString("hex")
 const sibling = randomBytes(32).toString("hex")
 const call = async (path, body, owner = identity) => {
   const response = await fetch(`${origin}/${owner}/${path}`, {
     method: body === undefined ? "GET" : "POST",
-    headers: { "content-type": "application/json" },
+    headers: { ...headers, "content-type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),
     signal: AbortSignal.timeout(45000),
   })
@@ -77,7 +80,8 @@ for (let n = 0; n < 100; n++) {
 }
 async function openTerminal(sessionId = session) {
   const socket = new WebSocket(
-    `${origin.replace(/^http/, "ws")}/${identity}/terminal/session/${sessionId}/socket`
+    `${origin.replace(/^http/, "ws")}/${identity}/terminal/session/${sessionId}/socket`,
+    { headers }
   )
   socket.binaryType = "arraybuffer"
   let text = "",
@@ -199,6 +203,7 @@ const fixture = spawnSync(
 assert.equal(fixture.status, 0, fixture.stderr.toString())
 const videoResponse = await fetch(`${origin}/${identity}/video`, {
   method: "POST",
+  headers,
   body: fixture.stdout,
   signal: AbortSignal.timeout(45000),
 })
