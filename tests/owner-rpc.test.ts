@@ -99,17 +99,20 @@ function fixture(
   const host: PersonalAgent = Object.create(PersonalAgent.prototype)
   const resolve = vi.fn(options.tools ?? (() => Effect.succeed([tool])))
   const call = vi.fn(options.call ?? (() => Effect.succeed(result)))
+  const defaults = vi.fn(options.tools ?? (() => Effect.succeed([tool])))
   const skills = vi.fn(options.skills ?? (() => Effect.succeed([skill])))
   const waitUntil = vi.fn<(work: Promise<unknown>) => void>()
   Object.assign(host, {
     actorRuntime: runtime,
     lifecycle: { start: async () => {} },
     ctx: { waitUntil },
-    connections: { resolve, call },
+    connections: { resolve, call, defaults },
     skillService: { resolve: skills },
   })
   return {
     host,
+    runtime,
+    defaults,
     resolve,
     call,
     skills,
@@ -120,6 +123,61 @@ function fixture(
 }
 const tags = <T, TError>(exit: Exit.Exit<T, TError>) =>
   Exit.isFailure(exit) ? exit.cause.reasons.map((reason) => reason._tag) : []
+
+it("treats a previous-version owner as having no defaults while its actor drains", async () => {
+  const previousRequest = Schema.Struct({
+    _tag: Schema.Literal("Resolve"),
+    names: Schema.Array(Schema.String),
+  })
+  const previous = connectionRpc({
+    connectionsV1: async (raw) => {
+      const decoded = Schema.decodeUnknownSync(previousRequest)(raw)
+      expect(decoded).toEqual({ _tag: "Resolve", names: [] })
+      return ConnectionOutcome.encode(Exit.succeed([]))
+    },
+  })
+  expect(await previous.defaults()).toEqual([])
+})
+
+it("installs workspace defaults through the real owner RPC for existing and new agents, then removes disconnected defaults", async () => {
+  const inherited = { ...tool, remoteName: "search" }
+  const f = fixture({ tools: () => Effect.succeed([inherited]) })
+  for (const selected of [
+    [],
+    [{ ...tool, name: `mcp_${"c".repeat(40)}` }],
+  ] as RemoteTool[][]) {
+    const child: PersonalAgent = Object.create(PersonalAgent.prototype)
+    const install = vi.fn()
+    Object.assign(child, {
+      actorRuntime: f.runtime,
+      configurationService: {
+        read: () => Effect.succeed({ owner: "synthetic-owner" }),
+      },
+      remoteSelection: {
+        selection: () =>
+          Effect.succeed({ revision: selected.length, tools: selected }),
+      },
+      env: {
+        AGENT: {
+          getByName: (owner: string) => {
+            expect(owner).toBe("synthetic-owner")
+            return f.host
+          },
+        },
+      },
+      installRemoteTools: install,
+      active: () => Effect.succeed(undefined),
+      conversationPump: { run: () => Effect.succeed(undefined) },
+    })
+    await child.step()
+    expect(install).toHaveBeenLastCalledWith([inherited, ...selected])
+    f.defaults.mockImplementation(() => Effect.succeed([]))
+    await child.step()
+    expect(install).toHaveBeenLastCalledWith(selected)
+    f.defaults.mockImplementation(() => Effect.succeed([inherited]))
+  }
+  expect(f.defaults).toHaveBeenCalledTimes(4)
+})
 
 it("uses the actual owner handlers for tool definitions, arguments, results and pinned skill versions", async () => {
   const f = fixture()

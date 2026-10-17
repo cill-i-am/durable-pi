@@ -17,10 +17,12 @@ import {
   type RemoteTool,
   type RemoteToolResult,
 } from "./connections"
+import { executorDefaultTools } from "./executor"
 
 type OperationError = ConnectionFailure | ConnectionTransportError
 export interface RemoteConnectionOperations {
   list: () => Effect.Effect<ConnectionInfo[], OperationError>
+  defaults: () => Effect.Effect<RemoteTool[], OperationError>
   connect: (
     input: NewConnection,
     origin: string
@@ -166,6 +168,12 @@ export const connectionApplication = (
       })
       return {
         list: () => operation(list()),
+        defaults: () =>
+          operation(
+            client
+              .ready()
+              .pipe(Effect.andThen(list()), Effect.map(executorDefaultTools))
+          ),
         connect: Effect.fn("Connections.connect")(
           (input: NewConnection, origin: string) =>
             mutate(

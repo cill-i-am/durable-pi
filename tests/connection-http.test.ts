@@ -80,6 +80,7 @@ it("rejects malformed, oversized and invalid connection input before invoking op
   const unexpected = () =>
     Effect.die(new Error("Unexpected connection operation"))
   const connections: RemoteConnectionOperations = {
+    defaults: () => Effect.succeed([]),
     list: unexpected,
     connect: unexpected,
     disconnect: unexpected,

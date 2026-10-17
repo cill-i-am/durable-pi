@@ -1,6 +1,11 @@
 import { ArrowUpRight, Plug, RefreshCw, X } from "lucide-react"
 import { useEffect, useState } from "react"
 
+import {
+  executorDefaultTools,
+  executorUrl,
+  isExecutorConnection,
+} from "@/access/executor"
 import { SettingsSection } from "@/components/settings-section"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -57,6 +62,7 @@ export function ConnectionsPanel({
   const [draft, setDraft] = useState<ReturnType<typeof newDraft> | null>(null)
   const [callback, setCallback] = useState("")
   const disabled = state.busy || state.loading || !state.ready
+  const defaults = executorDefaultTools(state.connections)
   useEffect(() => {
     const result = callbackResult
     if (!result) return
@@ -101,6 +107,30 @@ export function ConnectionsPanel({
             <AlertDescription>{state.error || callback}</AlertDescription>
           </Alert>
         )}
+        <section className="flex flex-col gap-2" aria-label="Executor defaults">
+          <h3 className="text-xs font-medium text-muted-foreground">
+            EXECUTOR · EVERY AGENT
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            {defaults.length
+              ? `${defaults.length} Executor tools are included automatically. Executor handles approvals in your browser. You can restrict individual tools in Agents & tools.`
+              : "Connect Executor once to make its tools available to every agent. Executor handles approvals in your browser."}
+          </p>
+          {!state.connections.some((connection) =>
+            isExecutorConnection(connection.url)
+          ) && (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={disabled}
+              onClick={() =>
+                setDraft({ ...newDraft(), name: "Executor", url: executorUrl })
+              }
+            >
+              Connect Executor
+            </Button>
+          )}
+        </section>
         <section
           className="flex flex-col gap-2"
           aria-label="Selected connected tools"
@@ -110,8 +140,8 @@ export function ConnectionsPanel({
           </h3>
           {!state.selection.tools.length && (
             <p className="text-sm text-muted-foreground">
-              No external tools selected. New selections ask for approval before
-              each call.
+              No additional external tools selected. New selections ask for
+              approval before each call.
             </p>
           )}
           {state.selection.tools.map((tool) => {
@@ -220,8 +250,9 @@ export function ConnectionsPanel({
               </div>
               {connection.active && (
                 <p className="text-xs text-muted-foreground">
-                  Disconnect stops new calls for all bots. Reconnecting requires
-                  selecting tools again; actions already sent may finish.
+                  {isExecutorConnection(connection.url)
+                    ? "Disconnect stops new calls for all agents. Executor defaults refresh after reconnection; actions already sent may finish."
+                    : "Disconnect stops new calls for all bots. Reconnecting requires selecting tools again; actions already sent may finish."}
                 </p>
               )}
               {!!connection.tools.length && (
@@ -231,9 +262,10 @@ export function ConnectionsPanel({
                   </summary>
                   <div className="mt-3 flex flex-col gap-3">
                     {connection.tools.map((tool) => {
-                      const selected = state.selection.tools.some(
-                        (value) => value.name === tool.name
-                      )
+                      const selected =
+                        state.selection.tools.some(
+                          (value) => value.name === tool.name
+                        ) || defaults.some((value) => value.name === tool.name)
                       return (
                         <div
                           key={tool.name}
@@ -364,9 +396,9 @@ export function ConnectionsPanel({
         )}
       </div>
       <p className="border-t p-4 text-xs text-muted-foreground">
-        Manage per-tool approval in Tools. Connecting a server does not give
-        every bot access. Only the first 100 supported tools per connection are
-        listed.
+        Executor is included for every agent. Other connected tools need a
+        selection for each agent. Manage per-tool restrictions in Agents &
+        tools. Only the first 100 supported tools per connection are listed.
       </p>
     </SettingsSection>
   )

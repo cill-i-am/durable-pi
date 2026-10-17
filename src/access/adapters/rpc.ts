@@ -20,6 +20,7 @@ export const ConnectionRequest = Schema.Union([
   Schema.Struct({
     _tag: Schema.Literal("Resolve"),
     names: SelectRemoteTools.fields.names,
+    executorDefaults: Schema.optionalKey(Schema.Boolean),
   }),
   Schema.Struct({
     _tag: Schema.Literal("Call"),
@@ -72,6 +73,10 @@ export function connectionRpc(stub: {
   connectionsV1: (input: typeof ConnectionRequest.Type) => Promise<unknown>
 }) {
   return {
+    defaults: () =>
+      stub
+        .connectionsV1({ _tag: "Resolve", names: [], executorDefaults: true })
+        .then((raw) => [...ConnectionOutcome.unwrap(raw, ResolvedTools)]),
     resolve: (names: (typeof SelectRemoteTools.Type)["names"]) =>
       stub
         .connectionsV1({ _tag: "Resolve", names })

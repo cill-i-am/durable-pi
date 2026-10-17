@@ -1,5 +1,15 @@
 # Durable Pi — build tracker
 
+## Executor defaults and ChatGPT reconnection — 17 October 2026
+
+- [x] Existing/new agents inherit the shared Executor MCP entry points, with browser approvals in Executor and per-agent Ask/Deny overrides.
+- [x] Local checks: 1,680 unit tests, app/Worker bundles, native communication/recovery and Drizzle suites, four desktop/mobile browser journeys.
+- [x] Returning ChatGPT sign-in helper reuses the saved Pi registration and validates callback state, signed identity, nonce and model scope before atomically saving credentials.
+- [ ] PR checks, production deployment and Chrome Executor acceptance. Main currently requires a PR and passing aggregate check; branch protection is preserved.
+- [ ] Restore the model connection and finish the queued email round trip. Both saved registrations still encountered OpenAI consent timeouts; no fresh credential is deployed.
+
+The [decision log](docs/decisions/executor-defaults.md) records the authorization boundaries, live findings, verification and release evidence.
+
 ## Agent email slice — 17 October 2026
 
 Built from `origin/main` at `9aa3d48`. Email enters a separate Worker, resolves the enrolled owner, and reaches the existing agent gateway over a private service binding. Each enabled agent has a private address with an owner-, agent-, domain-, and generation-bound capability. The ordinary conversation admission, Pi harness, archive, and tool approvals own model work.

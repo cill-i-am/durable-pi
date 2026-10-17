@@ -66,6 +66,7 @@ import {
   type RemoteTool,
 } from "../access/connections"
 import { builtInTools, AccessStorageError } from "../access/contracts"
+import { connectedTools, connectedToolPolicies } from "../access/executor"
 import { AccessGate, type AccessError } from "../access/gate"
 import { selectRemoteTools } from "../access/remote-selection"
 import {
@@ -698,16 +699,12 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   })
   readonly connectionClient = mcpConnectionClient(this.mcp)
   readonly remoteSelection = sqliteRemoteSelection(this.connectionStore)
+  private executorDefaults: RemoteTool[] = []
   readonly accessStore = new AccessStore(this.db, () =>
     this.connectionStore.selection().pipe(
       Effect.map((selection) => [
         ...builtInTools,
-        ...selection.tools.map((tool) => ({
-          name: tool.name,
-          title: `${tool.connectionName} / ${tool.remoteName}`,
-          description: tool.description,
-          mode: "ask" as const,
-        })),
+        ...connectedToolPolicies(selection.tools, this.executorDefaults),
       ]),
       Effect.mapError(
         (cause) =>
@@ -1866,7 +1863,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       this.piStorage = storage
       await this.run(this.active())
       this.installRemoteTools(
-        (await this.run(this.connectionStore.selection())).tools
+        connectedTools(
+          (await this.run(this.connectionStore.selection())).tools,
+          this.executorDefaults
+        )
       )
       this.registry.install({
         name: "personal",
@@ -2320,6 +2320,21 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       )
     )
   }
+  private refreshRemoteTools() {
+    return Effect.gen({ self: this }, function* () {
+      const owner = (yield* this.configurationService.read())?.owner
+      const defaults = yield* remoteToolResolution(
+        owner
+          ? connectionNative(() =>
+              connectionRpc(this.env.AGENT.getByName(owner)).defaults()
+            )
+          : this.connections.defaults()
+      )
+      this.executorDefaults = defaults.tools
+      const selected = yield* this.remoteSelection.selection()
+      return connectedTools(selected.tools, this.executorDefaults)
+    })
+  }
   installRemoteTools(tools: readonly RemoteTool[]) {
     this.registry.install({
       name: "connections",
@@ -2336,9 +2351,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
                   Effect.gen({ self: this }, function* () {
                     yield* Effect.yieldNow
                     if (
-                      !(yield* this.remoteSelection.selection()).tools.some(
-                        (value) => value.name === tool.name
-                      )
+                      !connectedTools(
+                        (yield* this.remoteSelection.selection()).tools,
+                        this.executorDefaults
+                      ).some((value) => value.name === tool.name)
                     )
                       return yield* new ConnectionError({
                         message:
@@ -2383,7 +2399,9 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         yield* connectionNative(() => this.lifecycle.start())
         switch (request._tag) {
           case "Resolve":
-            return yield* this.connections.resolve(request.names)
+            return yield* request.executorDefaults
+              ? this.connections.defaults()
+              : this.connections.resolve(request.names)
           case "Call": {
             const input = yield* Schema.decodeUnknownEffect(
               Schema.fromJsonString(RemoteToolArguments)
@@ -2770,6 +2788,8 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   private authorityHttpProgram(request: Request, path: string) {
     return Effect.gen({ self: this }, function* () {
       const base = path.split("/")[0]
+      if (base === "access")
+        this.installRemoteTools(yield* this.refreshRemoteTools())
 
       if (base === "communication") {
         const context = yield* this.communication.runtime.contextEffect
@@ -2819,9 +2839,15 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
                 )
             )
             for (const tool of previous.tools)
-              if (!saved.tools.some((value) => value.name === tool.name))
+              if (
+                !connectedTools(saved.tools, this.executorDefaults).some(
+                  (value) => value.name === tool.name
+                )
+              )
                 yield* this.access.revoke(tool.name)
-            this.installRemoteTools(saved.tools)
+            this.installRemoteTools(
+              connectedTools(saved.tools, this.executorDefaults)
+            )
             this.access.notify()
             return saved
           }).pipe(
@@ -3277,6 +3303,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     return this.run(this.snapshotProgram())
   }
   async step(): Promise<LifecycleJobOutcome> {
+    this.installRemoteTools(await this.run(this.refreshRemoteTools()))
     const next = await this.actorRuntime.runPromise(
       this.active().pipe(
         Effect.andThen(this.conversationPump.run()),

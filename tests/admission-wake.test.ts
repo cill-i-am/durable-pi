@@ -110,6 +110,12 @@ function fixture() {
     actorRuntime: runtime,
     ctx: { waitUntil: vi.fn() },
     conversationService: runtime.runSync(Conversations),
+    configurationService: { read: () => Effect.succeed(undefined) },
+    connections: { defaults: () => Effect.succeed([]) },
+    remoteSelection: {
+      selection: () => Effect.succeed({ revision: 0, tools: [] }),
+    },
+    installRemoteTools: vi.fn(),
 
     botConfiguration,
     skills,
