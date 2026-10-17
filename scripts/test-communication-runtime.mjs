@@ -93,6 +93,15 @@ try {
     "..",
     "workerd.capnp"
   )
+  await build({
+    entryPoints: [resolve("tests/runtime/chatgpt-provider-worker.ts")],
+    outfile: join(dir, "chatgpt-provider.mjs"),
+    bundle: true,
+    platform: "node",
+    format: "esm",
+    external: ["node:*"],
+    logLevel: "error",
+  })
   await writeFile(
     join(dir, "fixture.capnp"),
     `using Workerd = import ${JSON.stringify(schema)};
@@ -101,9 +110,14 @@ const config :Workerd.Config = (
     (name = "fixture", worker = (
       compatibilityDate = ${JSON.stringify(workerd.compatibilityDate)}, compatibilityFlags = ["nodejs_compat", "enable_request_signal"],
       modules = [(name = "worker.mjs", esModule = embed "worker.mjs")],
+      globalOutbound = "chatgpt-provider",
       bindings = [(name = "WHATSAPP", durableObjectNamespace = (className = "WhatsAppSink")), (name = "SQL_PILOT", durableObjectNamespace = (className = "SqlitePilot")), (name = "LEGACY", durableObjectNamespace = (className = "LegacyAgentProbe")), (name = "TERMINALS", durableObjectNamespace = (className = "TerminalProbe")), (name = "BACKGROUND", durableObjectNamespace = (className = "BackgroundGroupProbe")), (name = "LOADER", workerLoader = (id = "native-code-local")), (name = "BROWSERS", durableObjectNamespace = (className = "BrowserRecoveryBot")), (name = "BOTS", durableObjectNamespace = (className = "MailboxBot")), (name = "LOOPS", durableObjectNamespace = (className = "LoopBot")), (name = "PERSONAL", durableObjectNamespace = (className = "PersonalAgentProbe"))],
       durableObjectNamespaces = [(className = "WhatsAppSink", uniqueKey = "whatsapp-sink-local-test", enableSql = true), (className = "SqlitePilot", uniqueKey = "sqlite-pilot-local-test", enableSql = true), (className = "LegacyAgentProbe", uniqueKey = "legacy-agent-local-test", enableSql = true), (className = "TerminalProbe", uniqueKey = "terminal-local-test", enableSql = true), (className = "BackgroundGroupProbe", uniqueKey = "background-local-test", enableSql = true), (className = "BrowserRecoveryBot", uniqueKey = "browser-local-test", enableSql = true), (className = "MailboxBot", uniqueKey = "mailbox-local-test", enableSql = true), (className = "LoopBot", uniqueKey = "loops-local-test", enableSql = true), (className = "PersonalAgentProbe", uniqueKey = "personal-local-test", enableSql = true)],
       durableObjectStorage = (localDisk = "storage")
+    )),
+    (name = "chatgpt-provider", worker = (
+      compatibilityDate = ${JSON.stringify(workerd.compatibilityDate)}, compatibilityFlags = ["nodejs_compat"],
+      modules = [(name = "chatgpt-provider.mjs", esModule = embed "chatgpt-provider.mjs")]
     )),
     (name = "storage", disk = (path = "storage", writable = true))
   ],
@@ -111,6 +125,25 @@ const config :Workerd.Config = (
 );`
   )
   await start()
+  const nativeSignIn = await call("personal-chatgpt/chatgpt-native", {})
+  assert.deepEqual(nativeSignIn, {
+    status: 200,
+    replay: 400,
+    installed: true,
+    consumed: true,
+    provider: { exchanges: 1, unexpected: 0 },
+  })
+  assert.deepEqual(
+    await call("personal-chatgpt/chatgpt-native?mode=redirect", {}),
+    {
+      ...nativeSignIn,
+      status: 400,
+      provider: { exchanges: 2, unexpected: 0 },
+    }
+  )
+  console.log(
+    "PASS native ChatGPT sign-in: default Workers fetch, PKCE exchange, remote JWKS identity validation, durable credential install, one-use replay and refused redirects."
+  )
   const whatsappTimestamp = Date.now()
   assert.equal((await call("whatsapp/setup", {})).status, 200)
   assert.equal(
@@ -217,6 +250,10 @@ const config :Workerd.Config = (
   await stop()
   await start()
   assert.deepEqual(await call("email/inspect", emailIdentity), email)
+  assert.equal(
+    (await call("personal-chatgpt/chatgpt-native?mode=inspect", {})).installed,
+    true
+  )
   assert.equal(
     (
       await call(

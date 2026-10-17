@@ -82,6 +82,7 @@ function fixture() {
   const transport = vi.fn(
     async (_url: string | URL | Request, init?: RequestInit) => {
       expect(saved.has(pendingKey)).toBe(false)
+      expect(init?.redirect).toBe("manual")
       const params = new URLSearchParams(init?.body as string)
       const url = new URL(started.authorizationUrl)
       expect(params.get("client_id")).toBe("oaiapp_synthetic")
@@ -251,6 +252,20 @@ it("does not replace the existing grant after an uncertain exchange or repeat it
   expect(f.current()).toMatchObject({
     value: { access: Redacted.make("old-access") },
   })
+})
+it("rejects a token endpoint redirect without installing credentials or replaying the code", async () => {
+  const f = fixture()
+  await f.start()
+  f.transport.mockResolvedValueOnce(
+    new Response(null, {
+      status: 302,
+      headers: { location: "https://unexpected.invalid/token" },
+    })
+  )
+  await expect(f.finish()).rejects.toThrow("existing connection has been kept")
+  await expect(f.finish()).rejects.toThrow("already used")
+  expect(f.transport).toHaveBeenCalledTimes(1)
+  expect(f.current()).toBeUndefined()
 })
 it.each([
   { nonce: "other" },
