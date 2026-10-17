@@ -389,8 +389,8 @@ importers:
         specifier: 0.29.0
         version: 0.29.0(effect@4.0.5)
       oxlint-plugin-react-doctor:
-        specifier: 0.9.16
-        version: 0.9.16
+        specifier: 0.9.18
+        version: 0.9.18
       oxlint-tsgolint:
         specifier: 7.0.2004
         version: 7.0.2004
@@ -6003,8 +6003,8 @@ packages:
     peerDependencies:
       effect: '>=4.0.0 <5'
 
-  oxlint-plugin-react-doctor@0.9.16:
-    resolution: {integrity: sha512-CCmccua6irEeMXHKkD9KB92We2dZLGN4S6juGb4NkDgfKFbBz/Rpk9Bfwf7EC3TEVspagyY0pMnCVdfiv9n2xw==}
+  oxlint-plugin-react-doctor@0.9.18:
+    resolution: {integrity: sha512-1mfeb/jzXnduWOZJxrvdJjvKT0pFNKrNFYcPO4ncpFAnfW41M0mLz/23lAFzHb0knNLYayEgIQ5DjI4ZfFe+DQ==}
     engines: {node: ^20.19.0 || >=22.13.0}
 
   oxlint-tsgolint@7.0.2004:
@@ -12398,7 +12398,7 @@ snapshots:
       '@oxlint/plugins': 1.88.0
       effect: 4.0.5
 
-  oxlint-plugin-react-doctor@0.9.16:
+  oxlint-plugin-react-doctor@0.9.18:
     dependencies:
       '@shaderfrog/glsl-parser': 7.0.1
       '@typescript-eslint/types': 8.71.2
