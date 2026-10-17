@@ -814,6 +814,16 @@ export class PersonalAgentProbe extends PersonalAgent {
   protected override modelConnectedProgram() {
     return Effect.succeed(true)
   }
+  protected override familyStateProgram() {
+    // This harness exercises actor transactions with synthetic providers. Live
+    // family membership and model authority have their own integration tests.
+    return Effect.succeed({
+      owner: "personal-owner",
+      modelOwner: undefined,
+      membershipId: "fixture",
+      joinedAt: 1,
+    })
+  }
   protected override accountConnectedProgram(): Effect.Effect<
     boolean,
     CredentialStorageError

@@ -58,6 +58,17 @@ vi.mock("agents/lifecycle", () => ({
 vi.mock("agents/harness/pi", () => ({ PiHarness: class {} }))
 
 class PersonalAgentTest extends PersonalAgent {
+  override async familyAdmission() {
+    return {
+      owner: "fixture",
+      modelOwner: undefined,
+      membershipId: "fixture",
+      joinedAt: 1,
+    }
+  }
+  protected override familyModelOwnerProgram() {
+    return Effect.succeed(undefined)
+  }
   summaryProviderForTest() {
     return this.createSummaryProvider()
   }

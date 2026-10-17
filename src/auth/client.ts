@@ -1,4 +1,4 @@
-import { twoFactorClient } from "better-auth/client/plugins"
+import { organizationClient, twoFactorClient } from "better-auth/client/plugins"
 import { createAuthClient } from "better-auth/react"
 
 import { workspaceReturnPath } from "@/navigation/workspace"
@@ -9,11 +9,15 @@ export const authFetch = sessionFetch((...args) => fetch(...args))
 
 export const authClient = createAuthClient({
   plugins: [
+    organizationClient(),
     twoFactorClient({
       onTwoFactorRedirect: () => {
-        const returnTo = workspaceReturnPath(
-          window.location.pathname + window.location.search
-        )
+        const returnTo =
+          window.location.pathname === "/join"
+            ? "/join"
+            : workspaceReturnPath(
+                window.location.pathname + window.location.search
+              )
         window.location.assign(
           `/two-factor?returnTo=${encodeURIComponent(returnTo)}`
         )

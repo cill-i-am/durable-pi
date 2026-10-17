@@ -62,8 +62,14 @@ function fixture(
   const host: PersonalAgent = Object.create(PersonalAgent.prototype)
   Object.assign(host, {
     actorRuntime: runtime,
+    familyModelOwnerProgram: () => Effect.succeed(options.owner),
     lifecycle: { start: async () => {} },
-    ctx: { waitUntil: vi.fn() },
+    ctx: {
+      waitUntil: vi.fn(),
+      id: {
+        equals: (name: string) => !options.remote && name === options.owner,
+      },
+    },
     configurationService: {
       read: () => Effect.succeed({ owner: options.owner }),
     },
@@ -78,6 +84,7 @@ function fixture(
     },
     env: {
       AGENT: {
+        idFromName: (name: string) => name,
         getByName: (owner: string) => {
           expect(owner).toBe(options.owner)
           return options.remote

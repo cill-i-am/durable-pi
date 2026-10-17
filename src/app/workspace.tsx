@@ -19,6 +19,7 @@ import {
 import { AgentCollection } from "@/features/agents/agent-collection"
 import { useAgentStatuses } from "@/features/agents/use-agent-statuses"
 import { Conversation, useConversation } from "@/features/conversation"
+import { FamilyWorkspace } from "@/features/family/context"
 import { useFiles } from "@/features/files/use-files"
 import { ObjectsProvider } from "@/features/objects/context"
 import { markReady } from "@/features/performance"
@@ -92,12 +93,14 @@ export function ChatApp() {
       </Suspense>
     )
   return (
-    <Workspace
-      key={session.user.id}
-      ownerId={session.user.id}
-      name={session.user.name}
-      image={session.user.image}
-    />
+    <FamilyWorkspace key={session.user.id}>
+      <Workspace
+        key={session.user.id}
+        ownerId={session.user.id}
+        name={session.user.name}
+        image={session.user.image}
+      />
+    </FamilyWorkspace>
   )
 }
 function Workspace({

@@ -208,6 +208,8 @@ server.listen(Number(process.argv[2] ?? 4397), "127.0.0.1", () =>
 )
 
 async function journeyPost(req, res, path, sessionId, session) {
+  if (path === "/api/fixture/model-connection")
+    return fixtureModelConnection(req, res, session)
   if (path === "/api/agent/files/upload" && session) {
     const chunks = []
     for await (const chunk of req) chunks.push(chunk)
@@ -322,6 +324,23 @@ async function fixtureGet(req, res, path, session) {
   if (path === "/api/auth/get-session") {
     return fixtureSession(res, session)
   }
+  if (path === "/api/family")
+    return sendJson(res, {
+      id: "family",
+      name: "Fixture family",
+      role: "owner",
+      ownerName: "Browser fixture",
+      members: [
+        {
+          id: "family-owner",
+          userId: "fixture-owner",
+          name: "Browser fixture",
+          email: fixtureEmail,
+          role: "owner",
+        },
+      ],
+      invitations: [],
+    })
   if (path === "/api/agent/bots") {
     await wait(startupCase === "catalog-slow" ? 2200 : 500)
     return sendJson(res, { agents: [profile] })
@@ -362,7 +381,7 @@ async function fixtureGet(req, res, path, session) {
           if (cancelled) return
           controller.enqueue(
             bytes.encode(
-              `data: ${JSON.stringify({ type: "CUSTOM", name: "durable-pi.metadata", value: metadata })}\n\n`
+              `data: ${JSON.stringify({ type: "CUSTOM", name: "durable-pi.metadata", value: { ...metadata, connected: session?.modelConnected ?? metadata.connected } })}\n\n`
             )
           )
           if (session) {
@@ -374,7 +393,7 @@ async function fixtureGet(req, res, path, session) {
               )
               controller.enqueue(
                 bytes.encode(
-                  `data: ${JSON.stringify({ type: "CUSTOM", name: "durable-pi.metadata", value: metadata })}\n\n`
+                  `data: ${JSON.stringify({ type: "CUSTOM", name: "durable-pi.metadata", value: { ...metadata, connected: session?.modelConnected ?? metadata.connected } })}\n\n`
                 )
               )
             }
@@ -471,4 +490,20 @@ async function fixtureSession(res, session) {
       updatedAt: "2026-10-15",
     },
   })
+}
+
+async function fixtureModelConnection(req, res, session) {
+  if (!session) {
+    res.writeHead(401)
+    res.end()
+    return true
+  }
+  const chunks = []
+  for await (const chunk of req) chunks.push(chunk)
+  session.modelConnected = JSON.parse(
+    Buffer.concat(chunks).toString()
+  ).connected
+  for (const publish of session.subscribers) publish()
+  sendJson(res, { ok: true })
+  return true
 }

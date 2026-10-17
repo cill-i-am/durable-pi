@@ -196,6 +196,20 @@ export class ConversationStore implements ConversationLedger {
         .limit(1)
     ).pipe(Effect.map((rows) => (rows[0] ? restore(rows[0]) : undefined)))
   }
+  unfinished() {
+    return this.query((orm) =>
+      orm
+        .select()
+        .from(chatTurns)
+        .where(
+          and(
+            isNull(chatTurns.parent_id),
+            inArray(chatTurns.status, activeStatuses)
+          )
+        )
+        .orderBy(asc(chatTurns.sequence))
+    ).pipe(Effect.map((rows) => rows.map(restore)))
+  }
   recent(): ReturnType<ConversationLedger["recent"]> {
     return this.query((orm) =>
       orm

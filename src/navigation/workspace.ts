@@ -20,6 +20,8 @@ export const Workbench = Schema.Literals([
 ])
 export type Workbench = typeof Workbench.Type
 export const SettingsCategory = Schema.Literals([
+  "family",
+  "model-access",
   "general",
   "models",
   "access",
@@ -29,6 +31,8 @@ export const SettingsCategory = Schema.Literals([
 ])
 export type SettingsCategory = typeof SettingsCategory.Type
 export const SettingsSection = Schema.Literals([
+  "family",
+  "model-access",
   "general",
   "models",
   "access",
@@ -241,8 +245,11 @@ const decodeAuthSearch = Schema.decodeUnknownSync(AuthSearch)
 export function validateAuthSearch(input: unknown): { returnTo?: string } {
   const value = decodeAuthSearch(input)
   return {
-    returnTo: value.returnTo ? workspaceReturnPath(value.returnTo) : undefined,
+    returnTo: value.returnTo ? authReturnPath(value.returnTo) : undefined,
   }
+}
+export function authReturnPath(value: string) {
+  return value === "/join" ? "/join" : workspaceReturnPath(value)
 }
 export function workspaceReturnLink(value: string) {
   const url = new URL(workspaceReturnPath(value), "https://workspace.invalid")

@@ -15,6 +15,7 @@ import {
   SelectItem,
 } from "@/components/ui/select"
 import { ModelSelection, type ModelSettings } from "@/conversations/turns"
+import { useFamily } from "@/features/family/context"
 import { agentApi } from "@/http/client"
 import { resolveRoute, type JobType } from "@/inference/policy"
 
@@ -41,6 +42,7 @@ export function ModelDefaults({
   onPendingChange: (pending: boolean) => void
 }) {
   const labels = useId()
+  const { family } = useFamily()
   const { model, thinking } = selection
   const [error, setError] = useState("")
   const { catalog, refresh, unavailable, setCatalog, requestSequence } =
@@ -120,21 +122,24 @@ export function ModelDefaults({
             </Badge>
           </div>
           <p>
-            Uses your ChatGPT subscription. Model availability comes from this
-            connection.
+            Uses the family’s ChatGPT connection, provided by{" "}
+            {{ owner: "you", member: family.ownerName }[family.role]}. Your
+            model choices stay personal.
           </p>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={saving}
-            onClick={() => {
-              setError("")
-              void refresh()
-            }}
-          >
-            <RefreshCw />
-            Refresh connection
-          </Button>
+          {family.role === "owner" && (
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={saving}
+              onClick={() => {
+                setError("")
+                void refresh()
+              }}
+            >
+              <RefreshCw />
+              Refresh connection
+            </Button>
+          )}
         </div>
         {(error || catalog?.error) && (
           <Alert>

@@ -3,20 +3,52 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle"
 import { APIError, createAuthMiddleware, isAPIError } from "better-auth/api"
 import { twoFactor } from "better-auth/plugins"
 import { drizzle } from "drizzle-orm/d1"
-import { Schema } from "effect"
+import { Effect, Schema } from "effect"
 
 import type { WebsiteEnv } from "../../alchemy.run"
-import { ownerSession } from "./owner-session"
+import { familyOrganization, guardFamilyAuth } from "../family/adapters/auth"
+import {
+  familyDirectory,
+  type FamilyDirectory,
+} from "../family/adapters/directory"
+import { verificationEmail } from "../family/adapters/mail"
+import { nativeOperation } from "../shared/interop"
+import { OwnerSessionUnavailable, ownerSession } from "./owner-session"
 import { passwordResetEmail, PASSWORD_RESET_SECONDS } from "./password-email"
 import * as schema from "./schema"
 
+export type AuthEnv = Pick<
+  WebsiteEnv,
+  "DB" | "BETTER_AUTH_SECRET" | "APP_URL" | "OWNER_EMAIL" | "AUTH_EMAIL"
+> & { AGENT_SERVICE?: { fetch: (request: Request) => Promise<Response> } }
+export type AgentPrincipal = typeof schema.user.$inferSelect
+
 export function createAuth(
-  env: WebsiteEnv,
+  env: AuthEnv,
   allowOwnerSetup = false,
-  backgroundTask?: (task: Promise<unknown>) => void
+  backgroundTask?: (task: Promise<unknown>) => void,
+  principal?: AgentPrincipal
 ) {
   return betterAuth({
-    ...authOptions(env, allowOwnerSetup, backgroundTask),
+    ...authOptions(
+      env,
+      allowOwnerSetup,
+      backgroundTask,
+      familyDirectory(env.DB, env.OWNER_EMAIL),
+      async (id) => {
+        if (!env.AGENT_SERVICE) return
+        const response = await env.AGENT_SERVICE.fetch(
+          new Request("https://agent.internal/api/agent/family/suspend", {
+            method: "POST",
+            headers: { "x-owner-id": id },
+          })
+        )
+        await response.body?.cancel()
+        if (!response.ok)
+          throw new Error("Family suspension notification failed")
+      },
+      principal
+    ),
     database: drizzleAdapter(drizzle(env.DB), { provider: "sqlite", schema }),
   })
 }
@@ -27,14 +59,23 @@ export function authOptions(
     "BETTER_AUTH_SECRET" | "APP_URL" | "OWNER_EMAIL" | "AUTH_EMAIL"
   >,
   allowOwnerSetup = false,
-  backgroundTask?: (task: Promise<unknown>) => void
+  backgroundTask?: (task: Promise<unknown>) => void,
+  family?: FamilyDirectory,
+  onMemberRemoved?: (id: string) => Promise<void>,
+  principal?: AgentPrincipal
 ) {
+  const verificationDeliveryFailures = new Set<string>()
+  const invitationDeliveryFailures = new Set<string>()
   return {
     appName: "Durable Pi",
     secret: env.BETTER_AUTH_SECRET,
     baseURL: env.APP_URL,
     trustedOrigins: [env.APP_URL],
     plugins: [
+      familyOrganization(env, family, onMemberRemoved, (id, delivery) => {
+        if (delivery === "failed") invitationDeliveryFailures.add(id)
+        else invitationDeliveryFailures.delete(id)
+      }),
       twoFactor({
         issuer: "Durable Pi",
         backupCodeOptions: { storeBackupCodes: "encrypted" },
@@ -42,6 +83,27 @@ export function authOptions(
     ],
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
+        // Only a server-side API invocation can use an actor principal. HTTP
+        // requests always carry Request and must authenticate their own session.
+        if (principal && !ctx.request) {
+          const now = new Date()
+          ctx.context.session = {
+            user: principal,
+            session: {
+              id: "agent-action",
+              userId: principal.id,
+              token: "internal-agent-action",
+              expiresAt: new Date(now.getTime() + 60_000),
+              createdAt: now,
+              updatedAt: now,
+            },
+          }
+        }
+        if (family) await guardFamilyAuth(ctx, family)
+        else if (ctx.path.startsWith("/organization/"))
+          throw new APIError("FORBIDDEN", {
+            message: "Family access is unavailable.",
+          })
         if (
           ctx.path.startsWith("/two-factor/") &&
           Schema.is(Schema.Struct({ trustDevice: Schema.Literal(true) }))(
@@ -54,6 +116,34 @@ export function authOptions(
           })
       }),
       after: createAuthMiddleware(async (ctx) => {
+        if (ctx.path === "/send-verification-email") {
+          const body = Schema.decodeUnknownOption(
+            Schema.Struct({ email: Schema.String })
+          )(ctx.body)
+          if (
+            body._tag === "Some" &&
+            verificationDeliveryFailures.has(body.value.email.toLowerCase())
+          )
+            throw new APIError("BAD_GATEWAY", {
+              message:
+                "The verification email couldn’t be delivered. Please try again.",
+            })
+        }
+        if (ctx.path === "/organization/invite-member" && family) {
+          const result = Schema.decodeUnknownOption(
+            Schema.Struct({ id: Schema.String })
+          )(ctx.context.returned)
+          if (
+            result._tag === "Some" &&
+            (invitationDeliveryFailures.has(result.value.id) ||
+              (await family.deliveryFailed(result.value.id)))
+          )
+            throw new APIError("BAD_GATEWAY", {
+              code: "INVITATION_EMAIL_FAILED",
+              message:
+                "The invitation was saved, but the email couldn’t be delivered. Use Resend in Family settings to try again.",
+            })
+        }
         if (
           (ctx.path === "/two-factor/verify-totp" ||
             ctx.path === "/two-factor/disable") &&
@@ -76,18 +166,40 @@ export function authOptions(
     },
     emailAndPassword: {
       enabled: true,
-      disableSignUp: !allowOwnerSetup,
+      disableSignUp: !allowOwnerSetup && !family,
       minPasswordLength: 12,
       resetPasswordTokenExpiresIn: PASSWORD_RESET_SECONDS,
       revokeSessionsOnPasswordReset: true,
       sendResetPassword: async ({ user, token }) => {
-        if (user.email.toLowerCase() !== env.OWNER_EMAIL.toLowerCase()) return
+        if (
+          user.email.toLowerCase() !== env.OWNER_EMAIL.toLowerCase() &&
+          !(await family?.access(user.id)) &&
+          !(await family?.recoverable(user.email))
+        )
+          return
         try {
           await env.AUTH_EMAIL.send(
-            passwordResetEmail(env.APP_URL, token, env.OWNER_EMAIL)
+            passwordResetEmail(env.APP_URL, token, user.email)
           )
         } catch {
           console.error("Password reset email delivery failed")
+        }
+      },
+    },
+    emailVerification: {
+      sendOnSignUp: !!family,
+      expiresIn: 60 * 60,
+      sendVerificationEmail: async ({ user, token }, request) => {
+        if (user.email.toLowerCase() === env.OWNER_EMAIL.toLowerCase()) return
+        const id = request?.headers.get("x-family-invitation") ?? undefined
+        if (!family || !id || !(await family.pending(id, user.email))) return
+        try {
+          await env.AUTH_EMAIL.send(
+            verificationEmail(env.APP_URL, token, user.email, id)
+          )
+          verificationDeliveryFailures.delete(user.email.toLowerCase())
+        } catch {
+          verificationDeliveryFailures.add(user.email.toLowerCase())
         }
       },
     },
@@ -100,6 +212,9 @@ export function authOptions(
         "/get-session": { window: 60, max: 120 },
         "/request-password-reset": { window: 600, max: 3 },
         "/reset-password": { window: 600, max: 10 },
+        "/sign-up/email": { window: 600, max: 5 },
+        "/send-verification-email": { window: 600, max: 3 },
+        "/organization/invite-member": { window: 600, max: 20 },
       },
     },
     session: {
@@ -116,20 +231,27 @@ export function authOptions(
           ? ["cf-connecting-ip"]
           : ["x-forwarded-for"],
       },
-      ...(backgroundTask
+      ...(backgroundTask && !family
         ? { backgroundTasks: { handler: backgroundTask } }
         : {}),
     },
     databaseHooks: {
       user: {
         create: {
-          before: async (data) => {
+          before: async (data, ctx) => {
+            const owner =
+              allowOwnerSetup &&
+              data.email.toLowerCase() === env.OWNER_EMAIL.toLowerCase()
+            const id = ctx?.headers?.get("x-family-invitation")
             if (
-              !allowOwnerSetup ||
-              data.email.toLowerCase() !== env.OWNER_EMAIL.toLowerCase()
+              !owner &&
+              !(family && id && (await family.pending(id, data.email)))
             )
               return false
             return { data }
+          },
+          after: async (data) => {
+            await family?.bootstrap(data.id, data.email)
           },
         },
       },
@@ -146,6 +268,21 @@ export function authorizedOwner(request: Request, env: WebsiteEnv) {
       }),
     env.OWNER_EMAIL
   )
+}
+export function authorizedMember(request: Request, env: WebsiteEnv) {
+  return nativeOperation(
+    async () => {
+      const session = await createAuth(env).api.getSession({
+        headers: request.headers,
+        query: { disableCookieCache: true, disableRefresh: true },
+      })
+      if (!session) return null
+      const family = familyDirectory(env.DB, env.OWNER_EMAIL)
+      await family.bootstrap(session.user.id, session.user.email)
+      return (await family.access(session.user.id)) ? session.user : null
+    },
+    (cause) => new OwnerSessionUnavailable({ cause })
+  ).pipe(Effect.withSpan("Identity.familySession"))
 }
 export function sameOrigin(request: Request, appUrl: string) {
   return request.headers.get("origin") === new URL(appUrl).origin

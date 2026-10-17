@@ -111,6 +111,8 @@ function fixture() {
   const waitUntil = vi.fn<(work: Promise<unknown>) => void>()
   Object.assign(host, {
     actorRuntime: runtime,
+    familyModelOwnerProgram: () =>
+      configuration.read().pipe(Effect.map((value) => value?.owner)),
     configurationService: configuration,
     catalog,
     credentialService: { list },
@@ -321,7 +323,7 @@ it("resolves an account's own connection locally even when its configuration nam
   const f = fixture()
   Effect.runSync(f.store.configure("account", profile))
   expect(await f.host.modelConnected()).toBe(true)
-  expect(f.lookup).toHaveBeenCalledOnce()
+  expect(f.lookup).not.toHaveBeenCalled()
   expect(f.list).toHaveBeenCalledOnce()
 })
 it("falls back to validated legacy reads and idempotent configuration when the new native method is unavailable", async () => {

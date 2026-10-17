@@ -104,6 +104,11 @@ function fixture(
   const waitUntil = vi.fn<(work: Promise<unknown>) => void>()
   Object.assign(host, {
     actorRuntime: runtime,
+    familyAdmission: async () => ({
+      owner: "fixture",
+      modelOwner: "fixture",
+      joinedAt: 1,
+    }),
     lifecycle: { start: async () => {} },
     ctx: { waitUntil },
     connections: { resolve, call, defaults },
@@ -149,6 +154,11 @@ it("installs workspace defaults through the real owner RPC for existing and new 
     const child: PersonalAgent = Object.create(PersonalAgent.prototype)
     const install = vi.fn()
     Object.assign(child, {
+      familyAdmission: async () => ({
+        owner: "synthetic-owner",
+        modelOwner: "synthetic-owner",
+        joinedAt: 1,
+      }),
       actorRuntime: f.runtime,
       configurationService: {
         read: () => Effect.succeed({ owner: "synthetic-owner" }),
