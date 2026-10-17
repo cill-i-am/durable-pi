@@ -64,6 +64,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { Textarea } from "@/components/ui/textarea"
+import { UserAvatar } from "@/components/user-avatar"
 import type { RuntimeStatus } from "@/conversations/status"
 import { markReady } from "@/features/performance"
 import { api } from "@/http/client"
@@ -147,6 +148,7 @@ export function AgentSidebar({
   onMemory,
   onSettings,
   name,
+  image,
 }: {
   disabled?: boolean
   agents: AgentProfile[]
@@ -163,6 +165,7 @@ export function AgentSidebar({
   onMemory: () => void
   onSettings: () => void
   name: string
+  image?: string | null
 }) {
   const { setOpenMobile, isMobile } = useSidebar()
   const shown = agents.filter(
@@ -364,13 +367,7 @@ export function AgentSidebar({
                 }
                 aria-label={`Settings for ${name}`}
               >
-                <span className="account-avatar" aria-hidden="true">
-                  {name
-                    .split(/\s+/)
-                    .slice(0, 2)
-                    .map((part) => part[0])
-                    .join("")}
-                </span>
+                <UserAvatar name={name} image={image} />
                 <span className="min-w-0 flex-1 text-left">
                   <span className="block truncate text-sm font-medium">
                     {name}

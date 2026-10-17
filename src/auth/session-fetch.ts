@@ -1,3 +1,5 @@
+import { AVATAR_PATH } from "./avatar"
+
 export function sessionFetch(fetcher: typeof fetch): typeof fetch {
   let rotation: Promise<void> | undefined
   const reads = new Map<string, Promise<Response>>()
@@ -57,7 +59,10 @@ export function sessionFetch(fetcher: typeof fetch): typeof fetch {
       }
       return (await abortable(read, callerSignal)).clone()
     }
-    if (url.pathname.startsWith("/api/auth/") && method !== "GET") {
+    if (
+      (url.pathname.startsWith("/api/auth/") || url.pathname === AVATAR_PATH) &&
+      method !== "GET"
+    ) {
       const previous = rotation
       let release!: () => void
       const current = new Promise<void>((resolve) => {

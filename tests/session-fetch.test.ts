@@ -125,3 +125,36 @@ it("holds new reads during sign-out as well as factor rotation", async () => {
   await changing
   expect(await (await read).json()).toBeNull()
 })
+
+it.each(["POST", "DELETE"])(
+  "orders avatar %s before fresh profile reads so polling cannot restore the old image",
+  async (method) => {
+    const previous = deferred<Response>()
+    const mutation = deferred<Response>()
+    let image: string | null = "old-photo"
+    const native = vi
+      .fn<typeof globalThis.fetch>()
+      .mockImplementation(async (input) => {
+        if (native.mock.calls.length === 1) return previous.promise
+        if (String(input) === "/api/account/avatar") {
+          await mutation.promise
+          image = method === "POST" ? "new-photo" : null
+          return Response.json({ image })
+        }
+        return Response.json({ image })
+      })
+    const fetch = sessionFetch(native)
+    const before = fetch("/api/auth/get-session")
+    const save = fetch("/api/account/avatar", { method })
+    const during = fetch("/api/auth/get-session")
+    expect(native).toHaveBeenCalledTimes(1)
+    previous.resolve(Response.json({ image: "old-photo" }))
+    await before
+    await vi.waitFor(() => expect(native).toHaveBeenCalledTimes(2))
+    mutation.resolve(new Response())
+    await save
+    expect(await (await during).json()).toEqual({
+      image: method === "POST" ? "new-photo" : null,
+    })
+  }
+)
