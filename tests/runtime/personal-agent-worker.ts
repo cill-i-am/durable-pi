@@ -24,6 +24,8 @@ import { backgroundNative } from "../../src/delegation/adapters/interop"
 import { piDelegationLedger } from "../../src/delegation/adapters/pi"
 import { backgroundObjectName } from "../../src/delegation/background"
 import { DelegationFailure } from "../../src/delegation/contracts"
+import { parseEmail } from "../../src/email/adapters/incoming"
+import { EmailView } from "../../src/email/contracts"
 import { executionWorkerRequest } from "../../src/execution/worker"
 import {
   toNativeCredential,
@@ -365,8 +367,33 @@ export class PersonalAgentProbe extends PersonalAgent {
       BROWSER: { fetch: unexpected },
       OPENAI_CREDENTIAL: "",
       MODEL_ID: "gpt-6-luna",
+      OWNER_EMAIL: "owner@example.com",
+      AGENT_EMAIL_DOMAIN: "agents.example.com",
+      EMAIL_ADDRESS_SECRET: "synthetic-email-address-secret-32-characters",
+      EMAIL_REVIEW_URL: "https://pi.example.com",
+      AGENT_EMAIL: {
+        send: async (message: EmailMessageBuilder) => {
+          ctx.storage.sql.exec(
+            "INSERT INTO personal_probe_email_sends (body) VALUES (?)",
+            message.text ?? ""
+          )
+          const held = ctx.storage.sql
+            .exec<{ held: number }>(
+              "SELECT held FROM personal_probe_email_control WHERE id=1"
+            )
+            .toArray()[0]?.held
+          if (held) return new Promise<EmailSendResult>(() => {})
+          return { messageId: "<native-email@example.com>" }
+        },
+      },
     } as unknown as AgentEnv)
     this.externalCalls = calls
+    this.fixtureRun(
+      "CREATE TABLE IF NOT EXISTS personal_probe_email_sends (body TEXT NOT NULL)"
+    )
+    this.fixtureRun(
+      "CREATE TABLE IF NOT EXISTS personal_probe_email_control (id INTEGER PRIMARY KEY,held INTEGER NOT NULL)"
+    )
     this.codeProbe = code
     this.terminalProbe = terminal
     this.terminalNamespace = env.TERMINALS
@@ -887,6 +914,11 @@ export class PersonalAgentProbe extends PersonalAgent {
 
   override async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url)
+    if (
+      url.pathname.startsWith("/email/") ||
+      url.pathname.startsWith("/email-held/")
+    )
+      return this.emailProbe(request)
     if (url.pathname.startsWith("/api/agent/")) return super.fetch(request)
     if (url.pathname === "/personal-terminal/setup") {
       await this.actorRuntime.runPromise(
@@ -1015,6 +1047,75 @@ export class PersonalAgentProbe extends PersonalAgent {
         ).length > 0,
       observationInterrupted: this.observationInterrupted,
       events: this.events,
+    })
+  }
+
+  private async emailProbe(request: Request): Promise<Response> {
+    await this.lifecycle.start()
+    const url = new URL(request.url),
+      action = url.pathname.split("/").at(-1)
+    const owner = url.pathname.startsWith("/email-held/")
+      ? "email-held-owner"
+      : "email-owner"
+    const call = (path: string, body?: unknown) =>
+      super.fetch(
+        new Request(`https://internal/api/agent/${path}?agent=home`, {
+          method: body ? "POST" : "GET",
+          headers: { "x-owner-id": owner, "content-type": "application/json" },
+          body: body ? JSON.stringify(body) : undefined,
+        })
+      )
+    if (action === "setup") {
+      const response = await call("email/configure", {
+        operationId: crypto.randomUUID(),
+        revision: 0,
+        enabled: true,
+      })
+      return Response.json({ status: response.status })
+    }
+    if (action === "hold")
+      this.fixtureRun(
+        "INSERT INTO personal_probe_email_control VALUES (1,1) ON CONFLICT(id) DO UPDATE SET held=1"
+      )
+    if (action === "receive" || action === "invalid") {
+      const view = Schema.decodeUnknownSync(EmailView)(
+        await (await call("email")).json()
+      )
+      const address =
+        action === "invalid" ? view.address!.replace("+", "+a") : view.address!
+      const raw = `From: owner@example.com\r\nTo: ${address}\r\nMessage-ID: <native-email-request@example.com>\r\nSubject: Native email\r\nContent-Type: text/plain\r\n\r\nGive the synthetic answer.`
+      const bytes = new TextEncoder().encode(raw)
+      const input = await parseEmail(
+        {
+          from: "owner@example.com",
+          to: address,
+          rawSize: bytes.length,
+          headers: new Headers(),
+          raw: new ReadableStream({
+            start(controller) {
+              controller.enqueue(bytes)
+              controller.close()
+            },
+          }),
+        },
+        "owner@example.com"
+      )
+      const response = await call("email/incoming", input)
+      await response.body?.cancel()
+      return Response.json({ status: response.status })
+    }
+    const rows = await this.actorRuntime.runPromise(this.emailStore.list())
+    const turns = await this.actorRuntime.runPromise(
+      this.conversations.recent()
+    )
+    return Response.json({
+      states: rows.map((row) => row.state),
+      sends: this.fixtureRows("SELECT body FROM personal_probe_email_sends"),
+      turns: turns.map((turn) => ({
+        status: turn.status,
+        origin: turn.origin,
+        answer: turn.answer,
+      })),
     })
   }
   private async nativeCommitProbe(

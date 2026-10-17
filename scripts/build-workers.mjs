@@ -8,6 +8,7 @@ const { build } = requireAlchemy("esbuild")
 await build({
   entryPoints: [
     "src/agent/worker.ts",
+    "src/email/worker.ts",
     "src/execution/worker.ts",
     "src/terminal/worker.ts",
     "src/terminal/adapters/native-worker.ts",

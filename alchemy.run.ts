@@ -126,8 +126,41 @@ export const AgentWorker = Cloudflare.Worker("AgentWorkerDrizzleV1", {
       Config.withDefault("")
     ),
     MODEL_ID: Config.String("MODEL_ID").pipe(Config.withDefault("gpt-6.1-sol")),
+    OWNER_EMAIL: Config.String("OWNER_EMAIL"),
+    AGENT_EMAIL_DOMAIN: Config.String("AGENT_EMAIL_DOMAIN").pipe(
+      Config.withDefault("")
+    ),
+    EMAIL_ADDRESS_SECRET: Config.Redacted("EMAIL_ADDRESS_SECRET").pipe(
+      Config.withDefault("")
+    ),
+    EMAIL_REVIEW_URL: Config.String("EMAIL_REVIEW_URL").pipe(
+      Config.withDefault("https://bot.cill-i-am.com"),
+      Config.map((value) => value || "https://bot.cill-i-am.com")
+    ),
+    AGENT_EMAIL: Effect.gen(function* () {
+      const owner = yield* Config.String("OWNER_EMAIL")
+      return yield* Cloudflare.Email.SendEmail("AgentEmail", {
+        allowedDestinationAddresses: [owner],
+      })
+    }),
   },
 })
+export const EmailWorker = Cloudflare.Worker("EmailWorker", {
+  main: "./src/email/worker.ts",
+  dev: { port: 1343, strictPort: true },
+  workersDev: { enabled: false, previewsEnabled: false },
+  compatibility: { date: "2026-10-17", flags: ["nodejs_compat"] },
+  observability: { enabled: false },
+  env: {
+    AUTH_DB: AuthDatabase,
+    AGENT_SERVICE: AgentWorker,
+    OWNER_EMAIL: Config.String("OWNER_EMAIL"),
+    AGENT_EMAIL_DOMAIN: Config.String("AGENT_EMAIL_DOMAIN").pipe(
+      Config.withDefault("")
+    ),
+  },
+})
+export type EmailEnv = Cloudflare.InferEnv<typeof EmailWorker>
 export const Website = Cloudflare.Website.Vite(
   "Website",
   Effect.gen(function* () {
@@ -177,6 +210,7 @@ export default Alchemy.Stack(
   },
   Effect.gen(function* () {
     const website = yield* Website
+    yield* EmailWorker
     return { url: website.url }
   })
 )

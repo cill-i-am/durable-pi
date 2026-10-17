@@ -29,6 +29,7 @@ const paths = [
   "/agents",
   "/agents/archived",
   "/agents/$agentId",
+  "/agents/$agentId/settings/$section",
   "/agents/$agentId/$panel",
   "/agents/$agentId/$panel/$itemId",
 ] as const

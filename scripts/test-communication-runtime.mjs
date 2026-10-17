@@ -105,6 +105,50 @@ const config :Workerd.Config = (
 );`
   )
   await start()
+  const emailIdentity = { owner: "synthetic-email", bot: "home" }
+  assert.equal((await call("email/setup", emailIdentity)).status, 200)
+  assert.equal((await call("email/invalid", emailIdentity)).status, 409)
+  assert.equal((await call("email/receive", emailIdentity)).status, 202)
+  assert.equal((await call("email/receive", emailIdentity)).status, 202)
+  let email
+  for (let n = 0; n < 120; n++) {
+    email = await call("email/inspect", emailIdentity)
+    if (email.states[0] === "sent") break
+    await sleep(100)
+  }
+  assert.deepEqual(email.states, ["sent"])
+  assert.equal(email.turns.length, 1)
+  assert.equal(email.turns[0].origin.kind, "email")
+  assert.equal(email.turns[0].answer, "Native actor answer")
+  assert.equal(email.sends.length, 1)
+  assert.match(email.sends[0].body, /Native actor answer/)
+  await stop()
+  await start()
+  assert.deepEqual(await call("email/inspect", emailIdentity), email)
+  assert.equal((await call("email-held/setup", emailIdentity)).status, 200)
+  await call("email-held/hold", emailIdentity)
+  await call("email-held/receive", emailIdentity)
+  let heldEmail
+  for (let n = 0; n < 120; n++) {
+    heldEmail = await call("email-held/inspect", emailIdentity)
+    if (heldEmail.states[0] === "sending") break
+    await sleep(100)
+  }
+  assert.deepEqual(heldEmail.states, ["sending"])
+  assert.equal(heldEmail.sends.length, 1)
+  await stop()
+  await start()
+  const recoveredEmail = await call("email-held/inspect", emailIdentity)
+  assert.deepEqual(recoveredEmail.states, ["uncertain"])
+  assert.equal(recoveredEmail.sends.length, 1)
+  assert.equal((await call("email-held/receive", emailIdentity)).status, 202)
+  assert.equal(
+    (await call("email-held/inspect", emailIdentity)).sends.length,
+    1
+  )
+  console.log(
+    "PASS native email: MIME to production actor, one Pi reply, webhook dedupe, sent restart, and SIGKILL during provider send without resend."
+  )
   // Chunk boundaries are transport details (including empty gzip chunks).
   const nextFrame = (reader) => {
     let pending = ""

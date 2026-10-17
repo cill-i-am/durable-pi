@@ -86,6 +86,18 @@ export const agentMigrationManifest = {
         "CREATE INDEX `workspace_files_created_id` ON `workspace_files` (`createdAt`,`id`);",
       ],
     },
+    {
+      id: "20261017113116_agent_email",
+      checksum:
+        "a7cff43d112909f8af9a87a5e0038bd03a30826cf98c275b7a2c55e32992a96f",
+      statements: [
+        "CREATE TABLE `email_messages` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`fingerprint` text NOT NULL,\n\t`message_id` text NOT NULL,\n\t`sender` text NOT NULL,\n\t`recipient` text NOT NULL,\n\t`subject` text NOT NULL,\n\t`body` text NOT NULL,\n\t`references` text NOT NULL,\n\t`state` text NOT NULL,\n\t`reply` text DEFAULT '' NOT NULL,\n\t`provider_id` text,\n\t`error` text,\n\t`created_at` integer NOT NULL,\n\tCONSTRAINT \"email_messages_state\" CHECK(\"state\" in ('queued','waiting','sending','sent','failed','uncertain','cancelled'))\n);",
+        'CREATE TABLE `email_retries` (\n\t`operation_id` text PRIMARY KEY NOT NULL,\n\t`email_id` text NOT NULL,\n\t`acknowledge_duplicate_risk` integer NOT NULL,\n\tCONSTRAINT `fk_email_retries_email_id_email_messages_id_fk` FOREIGN KEY (`email_id`) REFERENCES `email_messages`(`id`),\n\tCONSTRAINT "email_retries_acknowledgement" CHECK("acknowledge_duplicate_risk" in (0,1))\n);',
+        'CREATE TABLE `email_settings` (\n\t`id` integer PRIMARY KEY,\n\t`enabled` integer NOT NULL,\n\t`revision` integer NOT NULL,\n\t`generation` integer NOT NULL,\n\t`operation_id` text NOT NULL,\n\tCONSTRAINT "email_settings_singleton" CHECK("id" = 1),\n\tCONSTRAINT "email_settings_enabled" CHECK("enabled" in (0,1)),\n\tCONSTRAINT "email_settings_revision" CHECK("revision" >= 0),\n\tCONSTRAINT "email_settings_generation" CHECK("generation" >= 0)\n);',
+        "CREATE INDEX `email_messages_state_created` ON `email_messages` (`state`,`created_at`);",
+        "CREATE INDEX `email_retries_email` ON `email_retries` (`email_id`);",
+      ],
+    },
   ],
   schema: [
     {
@@ -217,6 +229,31 @@ export const agentMigrationManifest = {
       type: "index",
       name: "communication_tasks_direction_status_sequence",
       sql: "CREATE INDEX `communication_tasks_direction_status_sequence` ON `communication_tasks` (`direction`,`status`,`sequence`)",
+    },
+    {
+      type: "table",
+      name: "email_messages",
+      sql: "CREATE TABLE `email_messages` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`fingerprint` text NOT NULL,\n\t`message_id` text NOT NULL,\n\t`sender` text NOT NULL,\n\t`recipient` text NOT NULL,\n\t`subject` text NOT NULL,\n\t`body` text NOT NULL,\n\t`references` text NOT NULL,\n\t`state` text NOT NULL,\n\t`reply` text DEFAULT '' NOT NULL,\n\t`provider_id` text,\n\t`error` text,\n\t`created_at` integer NOT NULL,\n\tCONSTRAINT \"email_messages_state\" CHECK(\"state\" in ('queued','waiting','sending','sent','failed','uncertain','cancelled'))\n)",
+    },
+    {
+      type: "index",
+      name: "email_messages_state_created",
+      sql: "CREATE INDEX `email_messages_state_created` ON `email_messages` (`state`,`created_at`)",
+    },
+    {
+      type: "table",
+      name: "email_retries",
+      sql: 'CREATE TABLE `email_retries` (\n\t`operation_id` text PRIMARY KEY NOT NULL,\n\t`email_id` text NOT NULL,\n\t`acknowledge_duplicate_risk` integer NOT NULL,\n\tCONSTRAINT `fk_email_retries_email_id_email_messages_id_fk` FOREIGN KEY (`email_id`) REFERENCES `email_messages`(`id`),\n\tCONSTRAINT "email_retries_acknowledgement" CHECK("acknowledge_duplicate_risk" in (0,1))\n)',
+    },
+    {
+      type: "index",
+      name: "email_retries_email",
+      sql: "CREATE INDEX `email_retries_email` ON `email_retries` (`email_id`)",
+    },
+    {
+      type: "table",
+      name: "email_settings",
+      sql: 'CREATE TABLE `email_settings` (\n\t`id` integer PRIMARY KEY,\n\t`enabled` integer NOT NULL,\n\t`revision` integer NOT NULL,\n\t`generation` integer NOT NULL,\n\t`operation_id` text NOT NULL,\n\tCONSTRAINT "email_settings_singleton" CHECK("id" = 1),\n\tCONSTRAINT "email_settings_enabled" CHECK("enabled" in (0,1)),\n\tCONSTRAINT "email_settings_revision" CHECK("revision" >= 0),\n\tCONSTRAINT "email_settings_generation" CHECK("generation" >= 0)\n)',
     },
     {
       type: "table",

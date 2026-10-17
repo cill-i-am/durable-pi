@@ -1,5 +1,21 @@
 # Durable Pi — build tracker
 
+## Agent email slice — 17 October 2026
+
+Built from `origin/main` at `9aa3d48`. Email enters a separate Worker, resolves the enrolled owner, and reaches the existing agent gateway over a private service binding. Each enabled agent has a private address with an owner-, agent-, domain-, and generation-bound capability. The ordinary conversation admission, Pi harness, archive, and tool approvals own model work.
+
+Generated Drizzle tables retain inbound identity/content receipts and reply intents. Repeated delivery reuses the same conversation operation. Disabled or archived agents cannot start a new reply send; the final authority check and intent share one transaction. Interrupted provider sends recover as uncertain without resend. Settings expose address revocation, delivery status, and explicit retry with duplicate-risk acknowledgement.
+
+- [x] Text/HTML ingestion, owner checks, capability routing, thread headers, loop rejection, and explicit attachment rejection.
+- [x] Durable inbox and outbox, disconnected-model waiting, receipt conflicts, replay-safe settings/retries, and restart recovery.
+- [x] Native workerd test through production PersonalAgent and Pi: one answer, duplicate delivery, sent-state restart, and SIGKILL during a held provider send.
+- [x] Local static checks, 1,668 unit tests, production app/Worker bundles, native runtime suites, and four desktop/mobile browser journeys. The browser checks also exercise explicit resend confirmation and reject page errors or horizontal overflow.
+- [ ] Production subdomain/routing activation, live sender/destination verification, deployment, and real inbox round trip. These require separate delivery evidence.
+
+See [Email an agent](README.md#email-an-agent) for controls, limits, and activation. No provider onboarding, DNS change, or real email send is claimed by the local tests.
+
+The ongoing [email decision log](docs/decisions/agent-email.md) records choices, reasons, verification boundaries, and open activation decisions. [Draft PR #124](https://github.com/cill-i-am/durable-pi/pull/124) contains the implementation; CI and production activation are separate release evidence.
+
 ## Source-link favicons — 13 October 2026
 
 Activity source chips now show the site's standard favicon beside its recorded title, including existing saved browser results and the additional page links in expanded tool details. A missing or failed image falls back to a globe in the same fixed-width slot. The text remains the accessible link name; icons are decorative.

@@ -18,7 +18,7 @@ it("creates the declared schema once and preserves rows on reactivation", () => 
   const before = db.all(
     "SELECT name FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
   )
-  expect(before).toHaveLength(62)
+  expect(before).toHaveLength(65)
   db.run("INSERT INTO tool_grants(name,mode,revision) VALUES ('keep','ask',0)")
   Effect.runSync(migrateSqlite(db))
   expect(
@@ -26,7 +26,7 @@ it("creates the declared schema once and preserves rows on reactivation", () => 
       "SELECT name FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
     )
   ).toEqual(before)
-  expect(db.all("SELECT * FROM __durable_pi_migrations")).toHaveLength(1)
+  expect(db.all("SELECT * FROM __durable_pi_migrations")).toHaveLength(2)
   expect(db.all("SELECT * FROM tool_grants")).toEqual([
     { name: "keep", mode: "ask", revision: 0 },
   ])

@@ -339,6 +339,14 @@ export class MailboxBot extends DurableObject<Env> {
     return response
   }
 }
+const personalProbeOwners = new Map([
+  ["email", "email-owner"],
+  ["email-held", "email-held-owner"],
+  ["personal-credential", "personal-credential-owner"],
+  ["personal-code", "personal-code-owner"],
+  ["personal-terminal", "personal-terminal-owner"],
+  ["personal", "personal-owner"],
+])
 let websiteSessionValid = true
 let websiteSessionReads = 0
 export default {
@@ -415,14 +423,11 @@ export default {
       return env.BROWSERS.getByName(url.pathname).fetch(request)
     if (url.pathname.startsWith("/loops/"))
       return env.LOOPS.getByName("loop-test").fetch(request)
-    if (url.pathname.startsWith("/personal-credential/"))
-      return env.PERSONAL.getByName("personal-credential-owner").fetch(request)
-    if (url.pathname.startsWith("/personal-code/"))
-      return env.PERSONAL.getByName("personal-code-owner").fetch(request)
-    if (url.pathname.startsWith("/personal-terminal/"))
-      return env.PERSONAL.getByName("personal-terminal-owner").fetch(request)
-    if (url.pathname.startsWith("/personal/"))
-      return env.PERSONAL.getByName("personal-owner").fetch(request)
+    const personalOwner = personalProbeOwners.get(
+      url.pathname.split("/")[1] ?? ""
+    )
+    if (personalOwner)
+      return env.PERSONAL.getByName(personalOwner).fetch(request)
     if (url.pathname === "/health") return new Response("local fixture")
     if (url.pathname === "/telemetry")
       return runObserved(
