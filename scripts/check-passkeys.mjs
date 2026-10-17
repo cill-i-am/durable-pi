@@ -20,8 +20,20 @@ const screenshots = resolve(".impeccable/review")
 await mkdir(screenshots, { recursive: true })
 const assets = resolve("dist/client")
 let website
+const serverErrors = []
 const server = createServer((req, res) => {
-  void serve(req, res).catch(() => {
+  void serve(req, res).catch((error) => {
+    // Reloading cancels in-flight response streams. pipeline() already tears
+    // down the response; writing another status here races Node's headers.
+    const cancelled =
+      error.code === "ERR_STREAM_PREMATURE_CLOSE" ||
+      error.code === "ECONNRESET" ||
+      error.name === "AbortError"
+    if (!cancelled) serverErrors.push(error.message)
+    if (cancelled || res.headersSent || res.destroyed) {
+      res.destroy()
+      return
+    }
     res.writeHead(500)
     res.end("Synthetic passkey server failed")
   })
@@ -369,6 +381,7 @@ try {
   )
   assert.notEqual(await session(page), null)
   assert.deepEqual(errors, [])
+  assert.deepEqual(serverErrors, [])
   console.log(
     "Built website passkeys passed: registration, password-free sign-in, device proof, origin, replay, freshness, rename, removal and private native auth."
   )
