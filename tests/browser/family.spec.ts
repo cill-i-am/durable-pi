@@ -433,11 +433,9 @@ test("admin reconnects ChatGPT in Settings with a private return-address field a
     page.getByText("Check unavailable", { exact: true })
   ).toBeVisible()
   await expect(
-    page
-      .getByRole("alert")
-      .filter({
-        hasText: "Could not verify model availability. Refresh to retry.",
-      })
+    page.getByRole("alert").filter({
+      hasText: "Could not verify model availability. Refresh to retry.",
+    })
   ).toBeVisible()
   await expect(
     page.getByText("Sign in above to restore access for the family.", {
