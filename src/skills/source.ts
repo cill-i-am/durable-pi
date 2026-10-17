@@ -54,9 +54,9 @@ export const ReadHostedSkill = Schema.Struct({
 
 export function hostedSkillQuery(skill: HostedSkill) {
   return {
-    app: skill.app.id,
+    app: skill.app.slug,
     name: skill.name,
-    deployment: skill.deployment,
+    version: skill.deployment,
     revision: skill.revision,
     ...(skill.profile ? { profile: skill.profile } : {}),
     ...(skill.profileRevision

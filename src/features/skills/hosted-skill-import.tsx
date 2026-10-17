@@ -157,7 +157,7 @@ export function HostedSkillImport({
               </div>
             </Field>
             <Field>
-              <FieldLabel htmlFor="skill-source-app">App slug or ID</FieldLabel>
+              <FieldLabel htmlFor="skill-source-app">App slug</FieldLabel>
               <Input
                 id="skill-source-app"
                 value={app}
