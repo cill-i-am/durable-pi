@@ -5,7 +5,7 @@ import {
 } from "@earendil-works/pi-ai"
 import * as SqliteDriver from "@effect/sql-sqlite-do/SqliteClient"
 import { getAgentByName } from "agents"
-import { Cause, Effect, Exit, Schema } from "effect"
+import { Cause, Effect, Exit, Redacted, Schema } from "effect"
 import { SqlClient } from "effect/sql"
 
 import type { AgentEnv } from "../../alchemy.run"
@@ -28,6 +28,10 @@ import { DelegationFailure } from "../../src/delegation/contracts"
 import { parseEmail } from "../../src/email/adapters/incoming"
 import { EmailView } from "../../src/email/contracts"
 import { executionWorkerRequest } from "../../src/execution/worker"
+import {
+  ChatGPTSignIn,
+  chatGPTSignInRequest,
+} from "../../src/inference/adapters/chatgpt-sign-in"
 import {
   toNativeCredential,
   accountCredentials,
@@ -1006,8 +1010,91 @@ export class PersonalAgentProbe extends PersonalAgent {
     )
   }
 
+  private async chatGPTNativeProbe(mode: string | null) {
+    const saved = await this.actorRuntime.runPromise(
+      this.credentialLedger.read("openai")
+    )
+    if (!saved)
+      await this.actorRuntime.runPromise(
+        this.credentialLedger.atomic(() =>
+          this.credentialLedger.install(
+            "openai",
+            Schema.decodeUnknownSync(OAuthCredential)({
+              type: "oauth",
+              clientId: "native-chatgpt-client",
+              access: "native-old-access",
+              refresh: "native-old-refresh",
+              expires: Date.now() + 3_600_000,
+            })
+          )
+        )
+      )
+    const signIn = new ChatGPTSignIn(
+      this.ctx.storage,
+      this.credentialLedger,
+      this.credentialService,
+      () => Effect.succeed({ owner: "native-admin", membershipId: "native" })
+    )
+    let status = 200,
+      replay = 400
+    if (mode !== "inspect") {
+      const pending = await this.actorRuntime.runPromise(
+        signIn.start("native@example.invalid")
+      )
+      const authorization = new URL(pending.authorizationUrl)
+      const callback = new URL(authorization.searchParams.get("redirect_uri")!)
+      callback.searchParams.set(
+        "state",
+        authorization.searchParams.get("state")!
+      )
+      callback.searchParams.set(
+        "code",
+        JSON.stringify({
+          nonce: authorization.searchParams.get("nonce"),
+          challenge: authorization.searchParams.get("code_challenge"),
+          redirect: mode === "redirect",
+        })
+      )
+      const finish = () =>
+        this.actorRuntime.runPromise(
+          chatGPTSignInRequest(
+            signIn,
+            new Request("https://native.internal/api/agent/model-account", {
+              method: "POST",
+              body: JSON.stringify({
+                action: "finish",
+                id: pending.id,
+                address: callback.href,
+              }),
+            })
+          )
+        )
+      status = (await finish()).status
+      replay = (await finish()).status
+    }
+    const row = await this.actorRuntime.runPromise(
+      this.credentialLedger.read("openai")
+    )
+    return Response.json({
+      status,
+      replay,
+      installed:
+        row?.seedCurrent &&
+        row.value.type === "oauth" &&
+        Redacted.value(row.value.access) === "native-chatgpt-access" &&
+        row.value.identity?.subject === "native-chatgpt-owner",
+      consumed:
+        (await this.actorRuntime.runPromise(signIn.status())).pending === null,
+      provider: await (
+        await fetch("https://auth.openai.com/native-probe/inspect")
+      ).json(),
+    })
+  }
+
   override async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url)
+    if (url.pathname.endsWith("/chatgpt-native"))
+      return this.chatGPTNativeProbe(url.searchParams.get("mode"))
     if (
       url.pathname.startsWith("/whatsapp/") ||
       url.pathname.startsWith("/whatsapp-images/") ||

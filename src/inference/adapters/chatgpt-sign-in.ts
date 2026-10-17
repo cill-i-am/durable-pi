@@ -190,7 +190,7 @@ export class ChatGPTSignIn {
               (signal) =>
                 transport("https://auth.openai.com/api/accounts/oauth/token", {
                   method: "POST",
-                  redirect: "error",
+                  redirect: "manual",
                   signal,
                   headers: {
                     "content-type": "application/x-www-form-urlencoded",

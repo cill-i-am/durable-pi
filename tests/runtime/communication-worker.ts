@@ -349,6 +349,7 @@ const personalProbeOwners = new Map([
   ["email", "email-owner"],
   ["email-held", "email-held-owner"],
   ["personal-credential", "personal-credential-owner"],
+  ["personal-chatgpt", "personal-chatgpt-owner"],
   ["personal-code", "personal-code-owner"],
   ["personal-terminal", "personal-terminal-owner"],
   ["personal", "personal-owner"],
