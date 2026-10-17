@@ -5,6 +5,26 @@ import { createRemoteJWKSet, jwtVerify, type JWTVerifyGetKey } from "jose"
 const issuer = "https://auth.openai.com"
 const keys = createRemoteJWKSet(new URL(`${issuer}/.well-known/jwks.json`))
 
+export class ReturningCredentialError extends Error {
+  constructor(
+    readonly reason:
+      | "incomplete_token"
+      | "nonce_mismatch"
+      | "email_mismatch"
+      | "email_unverified"
+      | "subject_mismatch"
+      | "model_permission_missing"
+  ) {
+    super(
+      reason === "incomplete_token"
+        ? "ChatGPT returned an incomplete credential."
+        : reason === "model_permission_missing"
+          ? "ChatGPT did not grant model access."
+          : "ChatGPT identity does not match the selected Pi owner."
+    )
+  }
+}
+
 export interface ReturningSignIn {
   clientId: string
   hostId: string
@@ -89,25 +109,30 @@ export async function returningCredential(
     !Number.isFinite(token.expires_in) ||
     token.expires_in <= 180
   )
-    throw new Error("ChatGPT returned an incomplete credential.")
+    throw new ReturningCredentialError("incomplete_token")
   const { payload } = await jwtVerify(token.id_token, verificationKey, {
     issuer,
     audience: input.clientId,
     algorithms: ["RS256"],
     requiredClaims: ["sub", "exp", "iat", "nonce", "email"],
   })
+  if (payload.nonce !== input.nonce)
+    throw new ReturningCredentialError("nonce_mismatch")
   if (
-    payload.nonce !== input.nonce ||
     typeof payload.email !== "string" ||
-    payload.email.toLowerCase() !== input.expectedEmail.toLowerCase() ||
-    payload.email_verified !== true ||
-    (input.expectedSubject !== undefined &&
-      payload.sub !== input.expectedSubject)
+    payload.email.toLowerCase() !== input.expectedEmail.toLowerCase()
   )
-    throw new Error("ChatGPT identity does not match the selected Pi owner.")
+    throw new ReturningCredentialError("email_mismatch")
+  if (payload.email_verified !== true)
+    throw new ReturningCredentialError("email_unverified")
+  if (
+    input.expectedSubject !== undefined &&
+    payload.sub !== input.expectedSubject
+  )
+    throw new ReturningCredentialError("subject_mismatch")
   const scopes = token.scope.trim().split(/\s+/)
   if (!scopes.includes("chatgpt.tokens.use.direct"))
-    throw new Error("ChatGPT did not grant model access.")
+    throw new ReturningCredentialError("model_permission_missing")
   return {
     type: "oauth" as const,
     clientId: input.clientId,
