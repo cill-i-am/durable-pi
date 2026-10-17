@@ -1,4 +1,5 @@
 import { Option, Schema } from "effect"
+
 import type { UsageReport } from "../usage-domain"
 
 const Tokens = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0))

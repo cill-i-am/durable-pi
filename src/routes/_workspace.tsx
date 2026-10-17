@@ -1,4 +1,5 @@
 import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router"
+
 import { ChatApp } from "@/app/workspace"
 import { WorkspaceLinkError } from "@/app/workspace-link-error"
 

@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react"
 import { Schema } from "effect"
+import { useCallback, useEffect, useRef, useState } from "react"
+
 import { AppDetail, AppDocument } from "@/apps/contracts"
 import { agentApi } from "@/http/client"
 import { poll } from "@/http/poll"
@@ -59,6 +60,7 @@ export function useApp(agentId: string, id: string) {
     )
     return () => {
       stop()
+      // oxlint-disable-next-line react/exhaustive-deps -- Advance the live request generation so all pending responses become stale.
       sequence.current++
     }
   }, [refresh])

@@ -1,26 +1,35 @@
-import { readBounded } from "./adapters/stream"
-import { TerminalFailure } from "./contracts"
-import { Scheduler, Effect, Exit, Layer, ManagedRuntime, Scope } from "effect"
-import { relayTerminal } from "./adapters/socket"
+import { Sandbox as BaseSandbox, getSandbox } from "@cloudflare/sandbox-v0"
+import {
+  Scheduler,
+  Effect,
+  Exit,
+  Layer,
+  ManagedRuntime,
+  Schema,
+  Scope,
+} from "effect"
+
+import type { TerminalEnv } from "../../alchemy.run"
 import { reportTerminal } from "../observability/events"
 import { WorkerTelemetry } from "../observability/worker"
-import { Sandbox as BaseSandbox, getSandbox } from "@cloudflare/sandbox-v0"
-import type { TerminalEnv } from "../../alchemy.run"
 import { makeDurableObjectSqlite } from "../storage/durable-object"
 import { migrateSqlite } from "../storage/migrations"
-import { TerminalService, terminalLayer } from "./terminal"
+import { terminalRequest } from "./adapters/http"
 import { effectTerminalRuntime, terminalFileDigest } from "./adapters/interop"
-import { TerminalStore } from "./adapters/sqlite"
-import { sandboxRuntime, legacyVideoRuntime } from "./adapters/sandbox"
-import { checkpointStorage } from "./adapters/r2"
 import {
   TerminalMigration,
   migrationDatabase,
   type MigrationMarker,
-  type MigrationReceipt,
+  MigrationReceipt,
 } from "./adapters/migration"
+import { checkpointStorage } from "./adapters/r2"
+import { sandboxRuntime, legacyVideoRuntime } from "./adapters/sandbox"
+import { relayTerminal } from "./adapters/socket"
+import { TerminalStore } from "./adapters/sqlite"
+import { readBounded } from "./adapters/stream"
 import { extractVideoRequest, sandboxVideo } from "./adapters/video"
-import { terminalRequest } from "./adapters/http"
+import { TerminalFailure } from "./contracts"
+import { TerminalService, terminalLayer } from "./terminal"
 
 export class LinuxSandbox extends BaseSandbox<TerminalEnv> {
   private readonly migration = new TerminalMigration(
@@ -187,9 +196,11 @@ export default {
         if (Number(request.headers.get("content-length") ?? 0) > 8192)
           return new Response("Too large", { status: 413 })
         await actor.commitMigration(
-          JSON.parse(
-            new TextDecoder().decode(
-              await readBounded(request.body!, 8192, request.signal)
+          Schema.decodeUnknownSync(MigrationReceipt)(
+            JSON.parse(
+              new TextDecoder().decode(
+                await readBounded(request.body!, 8192, request.signal)
+              )
             )
           )
         )

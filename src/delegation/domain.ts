@@ -1,4 +1,6 @@
 import { Schema } from "effect"
+
+import { ResolvedRoute } from "../inference/policy"
 import {
   Control,
   DelegateInput,
@@ -7,7 +9,6 @@ import {
   TaskBrief,
   type Group,
 } from "./contracts"
-import { ResolvedRoute } from "../inference/policy"
 import { REPORT_BYTES, REQUEST_LIMIT } from "./delegation"
 import type { DelegationFacts } from "./delegations"
 
@@ -106,7 +107,8 @@ export function consumeRequest(
 }
 export interface ChildFacts {
   readonly inputs: readonly (
-    { readonly status: "queued" | "placed" | "done" | "unanswered" } | undefined
+    | { readonly status: "queued" | "placed" | "done" | "unanswered" }
+    | undefined
   )[]
   readonly answer: string
   readonly inputTokens: number | null

@@ -1,5 +1,6 @@
-import { expect, it, vi } from "vitest"
 import { Cause, Effect } from "effect"
+import { expect, it, vi } from "vitest"
+
 import { AuthStorageError } from "../src/auth/adapters/accounts"
 import {
   receiveWebhook,

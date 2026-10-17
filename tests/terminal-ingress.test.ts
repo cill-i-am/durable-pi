@@ -1,26 +1,23 @@
-import { expect, expectTypeOf, it, vi } from "vitest"
 import { it as effectIt } from "@effect/vitest"
 import { Cause, Effect, Exit, ManagedRuntime, Stream } from "effect"
 import { TestClock } from "effect/testing"
-import {
-  workspaceFileImport,
-  type TerminalImports,
-} from "../src/terminal/workspace-import"
-import { terminalImports } from "../src/terminal/adapters/import-service"
+import { expect, expectTypeOf, it, vi } from "vitest"
+
 import { importWorkspaceFile } from "../src/terminal/adapters/file-import"
+import { fileDigest } from "../src/terminal/adapters/files"
 import { terminalRequest } from "../src/terminal/adapters/http"
+import { terminalImports } from "../src/terminal/adapters/import-service"
+import { terminalFileDigest } from "../src/terminal/adapters/interop"
 import {
   checkpointStorage,
   type CheckpointBucket,
 } from "../src/terminal/adapters/r2"
-import { fileDigest } from "../src/terminal/adapters/files"
-import { terminalFileDigest } from "../src/terminal/adapters/interop"
+import { TerminalStore } from "../src/terminal/adapters/sqlite"
 import {
   type CommandRun,
   MAX_CHECKPOINT,
   TerminalFailure,
 } from "../src/terminal/contracts"
-import { MAX_TRANSFER_BYTES } from "../src/terminal/transfers"
 import {
   TerminalRuntimeError,
   type TerminalRuntime,
@@ -30,9 +27,13 @@ import {
   terminalLayer,
   type TerminalOperations,
 } from "../src/terminal/terminal"
+import { MAX_TRANSFER_BYTES } from "../src/terminal/transfers"
+import {
+  workspaceFileImport,
+  type TerminalImports,
+} from "../src/terminal/workspace-import"
 import type { FileContent, Workspace } from "../src/workspace/workspace"
 import { database } from "./database"
-import { TerminalStore } from "../src/terminal/adapters/sqlite"
 
 const id = "d04a5143-0a58-4bf1-8b48-3daacfb59b29"
 const fileId = "254b5eb0-3e6e-460f-afd1-ae754d977aae"

@@ -1,29 +1,30 @@
-import { releaseForwardedResponse } from "../../shared/adapters/response"
 import { Cause, Effect, Exit, Schema } from "effect"
-import { AgentId, agentObjectName, homeAgentId } from "../../agents/domain"
+
+import { activityRequest } from "../../activity/adapters/http"
+import {
+  activityDirectory,
+  type ActivityReadRpc,
+} from "../../activity/adapters/rpc"
 import {
   agentRpc,
   agentRpcNative,
   type AgentRpc,
 } from "../../agents/adapters/rpc"
-import { agentStatuses } from "../../agents/statuses"
 import { agentRuntimeReader } from "../../agents/adapters/statuses"
-import {
-  activityDirectory,
-  type ActivityReadRpc,
-} from "../../activity/adapters/rpc"
-import { activityRequest } from "../../activity/adapters/http"
+import { AgentId, agentObjectName, homeAgentId } from "../../agents/domain"
+import { agentStatuses } from "../../agents/statuses"
 import type { accountConnectionRpc } from "../../inference/adapters/account-rpc"
+import { reportService } from "../../observability/events"
+import { WorkerTelemetry } from "../../observability/worker"
+import { releaseForwardedResponse } from "../../shared/adapters/response"
+import { preserveFatal } from "../../shared/effect"
+import { nativeOperation } from "../../shared/interop"
 import {
   webhookAuthorizationRpc,
   WebhookAuthorizationFailure,
   type WebhookAuthorizationRpc,
 } from "../../webhooks/adapters/authorization-rpc"
 import { bearer } from "../../webhooks/adapters/crypto"
-import { nativeOperation } from "../../shared/interop"
-import { preserveFatal } from "../../shared/effect"
-import { WorkerTelemetry } from "../../observability/worker"
-import { reportService } from "../../observability/events"
 
 type Peer = AgentRpc &
   ActivityReadRpc &
@@ -126,12 +127,9 @@ export function agentGatewayProgram(
       )
     }
     if (
-      path === "bots" ||
-      path.startsWith("bots/") ||
-      path === "skills" ||
-      path.startsWith("skills/") ||
-      path === "connections" ||
-      path.startsWith("connections/")
+      ["bots", "skills", "connections"].some(
+        (base) => path === base || path.startsWith(`${base}/`)
+      )
     )
       return yield* forward(root, request)
     const agent = yield* agentRpcNative(() =>

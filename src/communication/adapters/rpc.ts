@@ -1,21 +1,22 @@
-import { preserveFatal, observeCleanup } from "../../shared/effect"
+import { bindEffectRpc, fromCloudflareFetcher } from "alchemy/Cloudflare/Bridge"
 import { Effect, Layer } from "effect"
 import { HttpEffect } from "effect/http"
 import { RpcSerialization, RpcServer } from "effect/rpc"
-import { bindEffectRpc, fromCloudflareFetcher } from "alchemy/Cloudflare/Bridge"
+import type { RpcClientError } from "effect/rpc/RpcClientError"
+
+import { agentObjectName } from "../../agents/domain"
+import { preserveFatal, observeCleanup } from "../../shared/effect"
 import {
   type CommunicationError,
   failure,
   type Envelope,
   type Receipt,
 } from "../contracts"
-import { MailboxRpc } from "./protocol"
-import { Mailbox, MailboxTransport } from "../mailbox"
 import { receive } from "../delivery"
-import { agentObjectName } from "../../agents/domain"
-import type { RpcClientError } from "effect/rpc/RpcClientError"
-import { communicationNative } from "./interop"
+import { Mailbox, MailboxTransport } from "../mailbox"
 import { boundedFrame } from "./input"
+import { communicationNative } from "./interop"
+import { MailboxRpc } from "./protocol"
 
 export { boundedFrame } from "./input"
 

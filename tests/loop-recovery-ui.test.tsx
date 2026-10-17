@@ -1,10 +1,11 @@
-import { expect, it } from "vitest"
 import { renderToStaticMarkup } from "react-dom/server"
-import { RecoveryNotice } from "../src/features/activity/activity-record"
+import { expect, it } from "vitest"
+
 import {
   recoveryDetail,
   type RecoveryView,
 } from "../src/conversations/recovery"
+import { RecoveryNotice } from "../src/features/activity/activity-record"
 
 const recovery: RecoveryView = {
   phase: "recovering",

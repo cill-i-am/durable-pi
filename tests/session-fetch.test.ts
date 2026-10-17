@@ -1,4 +1,5 @@
 import { expect, it, vi } from "vitest"
+
 import { sessionFetch } from "../src/auth/session-fetch"
 
 function deferred<T>() {

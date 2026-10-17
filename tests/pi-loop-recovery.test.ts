@@ -1,9 +1,15 @@
-import { Effect } from "effect"
-import { expect, it } from "vitest"
 import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+
 import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context"
+import {
+  Type,
+  createModels,
+  fauxProvider,
+  fauxAssistantMessage,
+  fauxToolCall,
+} from "@earendil-works/pi-ai"
 import {
   Harness,
   GenerationTask,
@@ -15,20 +21,16 @@ import {
   type Storage,
 } from "@earendil-works/pi-durable"
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
-import {
-  Type,
-  createModels,
-  fauxProvider,
-  fauxAssistantMessage,
-  fauxToolCall,
-} from "@earendil-works/pi-ai"
-import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
-import { RunRecoveryStore } from "../src/conversations/adapters/sqlite-recovery"
-import { runRecoveryHook } from "../src/conversations/adapters/pi-recovery"
+import { Effect } from "effect"
+import { expect, it } from "vitest"
+
+import { guardedTools } from "../src/access/adapters/pi"
 import { AccessStore } from "../src/access/adapters/sqlite"
 import { AccessStorageError } from "../src/access/contracts"
 import { AccessGate } from "../src/access/gate"
-import { guardedTools } from "../src/access/adapters/pi"
+import { runRecoveryHook } from "../src/conversations/adapters/pi-recovery"
+import { RunRecoveryStore } from "../src/conversations/adapters/sqlite-recovery"
+import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import { database } from "./database"
 
 it.each([
@@ -101,31 +103,35 @@ it.each([
       fauxAssistantMessage(fauxToolCall(name, { value }, { id: `call-${n}` }), {
         stopReason: "toolUse",
       })
-    const sequence =
-      scenario === "corrected"
-        ? [
-            toolCall(0),
-            toolCall(1),
-            toolCall(2),
-            toolCall(3, "fixed"),
-            fauxAssistantMessage("Finished."),
-          ]
-        : scenario === "poll"
+    const sequence = recoverySequence()
+    function recoverySequence() {
+      const sequence =
+        scenario === "corrected"
           ? [
               toolCall(0),
               toolCall(1),
               toolCall(2),
-              ...Array.from({ length: 6 }, (_, i) =>
-                toolCall(i + 3, "pending", "check_bot_task")
-              ),
-              toolCall(9, "fixed"),
+              toolCall(3, "fixed"),
               fauxAssistantMessage("Finished."),
             ]
-          : scenario === "approval-wait"
-            ? [toolCall(0, "fixed"), fauxAssistantMessage("Finished.")]
-            : Array.from({ length: 12 }, (_, i) =>
-                toolCall(i, scenario === "invalid" ? {} : "bad")
-              )
+          : scenario === "poll"
+            ? [
+                toolCall(0),
+                toolCall(1),
+                toolCall(2),
+                ...Array.from({ length: 6 }, (_, i) =>
+                  toolCall(i + 3, "pending", "check_bot_task")
+                ),
+                toolCall(9, "fixed"),
+                fauxAssistantMessage("Finished."),
+              ]
+            : scenario === "approval-wait"
+              ? [toolCall(0, "fixed"), fauxAssistantMessage("Finished.")]
+              : Array.from({ length: 12 }, (_, i) =>
+                  toolCall(i, scenario === "invalid" ? {} : "bad")
+                )
+      return sequence
+    }
     faux.setResponses(
       sequence.map((response) => (request) => {
         requests.push(JSON.stringify(request.messages))
@@ -317,44 +323,17 @@ it.each([
       }
       await (await conversation.submit(command, ctx)).wait(ctx)
       await conversation.waitForIdle(ctx)
-      const expected =
-        scenario === "invalid" ||
-        scenario === "denied" ||
-        scenario === "hook-denied"
-          ? 0
-          : scenario === "uncertain" || scenario === "approval-wait"
-            ? 1
-            : scenario === "corrected" || scenario === "poll"
-              ? 4
-              : scenario === "cancel"
-                ? 3
-                : scenario === "steer"
-                  ? 8
-                  : 5
-      expect(calls).toBe(expected)
+      const expected = recoveryExpectations[scenario]
+      expect(calls).toBe(expected.calls)
       expect(Effect.runSync(store.get(turnId))?.view?.phase).toBe(
-        scenario === "corrected" || scenario === "poll"
-          ? "recovered"
-          : scenario === "cancel"
-            ? "recovering"
-            : scenario === "approval-wait"
-              ? undefined
-              : "blocked"
+        expected.phase
       )
       const events = await watchEvents(harness, conversation.id, ctx)
       const entries = events.snapshot.entries
       expect(JSON.stringify(entries)).not.toContain("Run recovery:")
       const results = entries.filter((e) => e.kind === "pi.tool-result")
       expect(new Set(results.map((e) => e.id)).size).toBe(results.length)
-      expect(results.length).toBe(
-        scenario === "invalid"
-          ? 5
-          : scenario === "denied" || scenario === "hook-denied"
-            ? 1
-            : scenario === "poll"
-              ? 10
-              : expected
-      )
+      expect(results.length).toBe(expected.results)
       if (
         ["repeat", "invalid", "restart-warning", "restart-blocked"].includes(
           scenario
@@ -382,3 +361,18 @@ it.each([
   },
   15000
 )
+
+const recoveryExpectations = {
+  repeat: { calls: 5, phase: "blocked", results: 5 },
+  corrected: { calls: 4, phase: "recovered", results: 4 },
+  invalid: { calls: 0, phase: "blocked", results: 5 },
+  denied: { calls: 0, phase: "blocked", results: 1 },
+  "hook-denied": { calls: 0, phase: "blocked", results: 1 },
+  uncertain: { calls: 1, phase: "blocked", results: 1 },
+  "restart-warning": { calls: 5, phase: "blocked", results: 5 },
+  "restart-blocked": { calls: 5, phase: "blocked", results: 5 },
+  cancel: { calls: 3, phase: "recovering", results: 3 },
+  "approval-wait": { calls: 1, phase: undefined, results: 1 },
+  steer: { calls: 8, phase: "blocked", results: 8 },
+  poll: { calls: 4, phase: "recovered", results: 10 },
+} as const

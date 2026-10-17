@@ -1,7 +1,8 @@
 import { Effect, Schema } from "effect"
-import type { Conversations } from "./service"
+
 import type { ChatTurn } from "./contracts"
 import type { RecoveryView } from "./recovery"
+import type { Conversations } from "./service"
 
 export const RuntimeStatus = Schema.Struct({
   state: Schema.Literals([

@@ -1,23 +1,24 @@
 import { expect, it } from "@effect/vitest"
-import { it as test, vi } from "vitest"
 import { Cause, Effect, Exit, Fiber, ManagedRuntime } from "effect"
 import { TestClock } from "effect/testing"
+import { it as test, vi } from "vitest"
+
+import { webExecutor } from "../src/apps/adapters/code"
+import { AppStore } from "../src/apps/adapters/sqlite"
+import { makeApps } from "../src/apps/service"
+import { WebApps } from "../src/apps/web"
 import {
   executeCode,
   type ExecutionLoader,
 } from "../src/execution/adapters/dynamic-worker"
+import { executionRequest } from "../src/execution/adapters/http"
+import { executionJson } from "../src/execution/adapters/input"
 import { readOutput } from "../src/execution/adapters/output"
 import { codeService } from "../src/execution/adapters/service"
-import { executionJson } from "../src/execution/adapters/input"
-import { executionRequest } from "../src/execution/adapters/http"
-import { executionWorkerRequest } from "../src/execution/worker"
-import { executionApplication, Executions } from "../src/execution/service"
 import { ExecutionStore } from "../src/execution/adapters/sqlite"
 import { RunInput, type CodeOutput } from "../src/execution/contracts"
-import { AppStore } from "../src/apps/adapters/sqlite"
-import { makeApps } from "../src/apps/service"
-import { WebApps } from "../src/apps/web"
-import { webExecutor } from "../src/apps/adapters/code"
+import { executionApplication, Executions } from "../src/execution/service"
+import { executionWorkerRequest } from "../src/execution/worker"
 import { database } from "./database"
 
 const input = { id: "owned-native", code: "return 3", data: "null" }

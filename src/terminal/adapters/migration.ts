@@ -1,4 +1,5 @@
 import { Schema } from "effect"
+
 import {
   Checkpoint,
   CommandRun,
@@ -35,13 +36,14 @@ export interface MigrationBucket {
   } | null>
   put: (key: string, bytes: Uint8Array) => Promise<unknown>
 }
-export interface MigrationReceipt {
-  owner: string
-  name: string
-  key: string
-  sha256: string
-  size: number
-}
+export const MigrationReceipt = Schema.Struct({
+  owner: Schema.String,
+  name: Schema.String,
+  key: Schema.String,
+  sha256: Schema.String,
+  size: Schema.Number,
+})
+export type MigrationReceipt = typeof MigrationReceipt.Type
 interface Page {
   table: Table
   key: string
@@ -260,7 +262,7 @@ export class TerminalMigration {
     this.markers.put({ phase: "snapshot", id, name, receipt })
     return receipt
   }
-  async import(receipt: MigrationReceipt) {
+  private async readManifest(receipt: MigrationReceipt) {
     if (
       !validOwner(receipt.owner) ||
       !validName(receipt.name) ||
@@ -283,6 +285,10 @@ export class TerminalMigration {
       Object.keys(manifest.counts).join(",") !== keys.join(",")
     )
       throw new Error("Invalid migration manifest")
+    return manifest
+  }
+  async import(receipt: MigrationReceipt) {
+    const manifest = await this.readManifest(receipt)
     const previous = this.markers.get()
     if (
       previous?.receipt &&
@@ -307,78 +313,7 @@ export class TerminalMigration {
       index < manifest.pages.length;
       index++
     ) {
-      const page = manifest.pages[index]!
-      if (
-        !keys.includes(page.table) ||
-        !page.key.startsWith(
-          receipt.key.slice(0, receipt.key.lastIndexOf("/") + 1)
-        ) ||
-        !Number.isSafeInteger(page.rows) ||
-        page.rows < 1 ||
-        page.rows > 16
-      )
-        throw new Error("Invalid migration page")
-      const original = JSON.parse(
-        new TextDecoder().decode(
-          await this.read(page.key, page.size, page.sha256, 8 * 1024 * 1024)
-        )
-      ) as Row[]
-      if (!Array.isArray(original) || original.length !== page.rows)
-        throw new Error("Migration row count mismatch")
-      validateRows(page.table, original, receipt.owner)
-      const rows: Row[] = []
-      for (const row of original) {
-        const checkpoint = checkpointRow(page.table, row, receipt.owner)
-        if (!checkpoint) {
-          rows.push(row)
-          continue
-        }
-        const source = "terminal/" + receipt.owner + "/"
-        const key =
-          "terminal/" + this.owner + "/" + checkpoint.key.slice(source.length)
-        const content = await this.read(
-          checkpoint.key,
-          checkpoint.size,
-          checkpoint.sha256,
-          MAX_CHECKPOINT
-        )
-        await this.bucket.put(key, content)
-        await this.read(key, checkpoint.size, checkpoint.sha256, MAX_CHECKPOINT)
-        rows.push({
-          ...row,
-          record: JSON.stringify({ ...JSON.parse(String(row.record)), key }),
-        })
-      }
-      this.db.atomic(() => {
-        const columns = tables[page.table]
-        for (const row of rows) {
-          const existing = this.db.query(
-            "SELECT " +
-              columns.join(",") +
-              " FROM " +
-              page.table +
-              " WHERE id = ?",
-            row.id!
-          )
-          if (
-            existing.length &&
-            JSON.stringify(existing[0]) !== JSON.stringify(row)
-          )
-            throw new Error("Migration row conflicts with native state")
-          if (!existing.length)
-            this.db.query(
-              "INSERT INTO " +
-                page.table +
-                " (" +
-                columns.join(",") +
-                ") VALUES (" +
-                columns.map(() => "?").join(",") +
-                ")",
-              ...columns.map((column) => row[column]!)
-            )
-        }
-        this.markers.put({ phase: "copying", receipt, copied: index + 1 })
-      })
+      await this.importPage(receipt, manifest.pages[index]!, index)
     }
     const result = await this.verify(receipt)
     this.db.atomic(() =>
@@ -390,12 +325,85 @@ export class TerminalMigration {
     )
     return result
   }
-  async verify(receipt: MigrationReceipt) {
-    const manifest = JSON.parse(
+  private async importPage(
+    receipt: MigrationReceipt,
+    page: Page,
+    index: number
+  ) {
+    if (
+      !keys.includes(page.table) ||
+      !page.key.startsWith(
+        receipt.key.slice(0, receipt.key.lastIndexOf("/") + 1)
+      ) ||
+      !Number.isSafeInteger(page.rows) ||
+      page.rows < 1 ||
+      page.rows > 16
+    )
+      throw new Error("Invalid migration page")
+    const original = JSON.parse(
       new TextDecoder().decode(
-        await this.read(receipt.key, receipt.size, receipt.sha256, 1024 * 1024)
+        await this.read(page.key, page.size, page.sha256, 8 * 1024 * 1024)
       )
-    ) as Manifest
+    ) as Row[]
+    if (!Array.isArray(original) || original.length !== page.rows)
+      throw new Error("Migration row count mismatch")
+    validateRows(page.table, original, receipt.owner)
+    const rows: Row[] = []
+    for (const row of original) {
+      const checkpoint = checkpointRow(page.table, row, receipt.owner)
+      if (!checkpoint) {
+        rows.push(row)
+        continue
+      }
+      const source = "terminal/" + receipt.owner + "/"
+      const key =
+        "terminal/" + this.owner + "/" + checkpoint.key.slice(source.length)
+      const content = await this.read(
+        checkpoint.key,
+        checkpoint.size,
+        checkpoint.sha256,
+        MAX_CHECKPOINT
+      )
+      await this.bucket.put(key, content)
+      await this.read(key, checkpoint.size, checkpoint.sha256, MAX_CHECKPOINT)
+      rows.push({
+        ...row,
+        record: JSON.stringify({ ...JSON.parse(String(row.record)), key }),
+      })
+    }
+    this.db.atomic(() => {
+      const columns = tables[page.table]
+      for (const row of rows) {
+        const existing = this.db.query(
+          "SELECT " +
+            columns.join(",") +
+            " FROM " +
+            page.table +
+            " WHERE id = ?",
+          row.id!
+        )
+        if (
+          existing.length &&
+          JSON.stringify(existing[0]) !== JSON.stringify(row)
+        )
+          throw new Error("Migration row conflicts with native state")
+        if (!existing.length)
+          this.db.query(
+            "INSERT INTO " +
+              page.table +
+              " (" +
+              columns.join(",") +
+              ") VALUES (" +
+              columns.map(() => "?").join(",") +
+              ")",
+            ...columns.map((column) => row[column]!)
+          )
+      }
+      this.markers.put({ phase: "copying", receipt, copied: index + 1 })
+    })
+  }
+  async verify(receipt: MigrationReceipt) {
+    const manifest = await this.readManifest(receipt)
     for (const table of keys) {
       const count = this.db.query("SELECT count(*) AS n FROM " + table)[0]?.n
       if (count !== manifest.counts[table])

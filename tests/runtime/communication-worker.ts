@@ -1,42 +1,43 @@
-import { SqlitePilot } from "./sqlite-worker"
-import { eventStreamProbe } from "./event-stream-worker"
-import { agentProxy } from "../../src/auth/adapters/agent-proxy"
-import { agentGateway } from "../../src/agent/adapters/gateway"
-import { runObserved } from "../../src/observability/worker"
-import { BrowserRecoveryBot } from "./browser-worker"
-import { LoopBot } from "./loop-worker"
-import { executionWorkerRequest } from "../../src/execution/worker"
-import { PersonalAgentProbe } from "./personal-agent-worker"
-import { BackgroundGroupProbe } from "./background-worker"
-import { TerminalProbe } from "./terminal-worker"
-import { PiHarness } from "agents/harness/pi"
-import { Harness, createRegistry } from "@earendil-works/pi-durable"
 import {
   createModels,
   fauxProvider,
   fauxAssistantMessage,
 } from "@earendil-works/pi-ai"
-import { agentSettings } from "../../src/agent/compaction"
-import { piMailbox } from "../../src/communication/adapters/pi"
-import { resolveRoute } from "../../src/inference/policy"
-import { MailboxTransport, Mailbox } from "../../src/communication/mailbox"
-import { DurableObject } from "cloudflare:workers"
+import { Harness, createRegistry } from "@earendil-works/pi-durable"
+import { PiHarness } from "agents/harness/pi"
 import {
   Lifecycle,
   LifecycleCapability,
   type LifecycleJobOutcome,
 } from "agents/lifecycle"
+import { DurableObject } from "cloudflare:workers"
 import { Effect, Exit, Layer, Schema, Scope } from "effect"
-import { sqliteMailbox } from "../../src/communication/adapters/sqlite"
+
+import { agentGateway } from "../../src/agent/adapters/gateway"
+import { agentSettings } from "../../src/agent/compaction"
+import { agentObjectName } from "../../src/agents/domain"
+import { agentProxy } from "../../src/auth/adapters/agent-proxy"
+import { piMailbox } from "../../src/communication/adapters/pi"
 import {
   mailboxHandler,
   mailboxTransport,
   isMailboxRequest,
 } from "../../src/communication/adapters/rpc"
-import { deliverNext } from "../../src/communication/delivery"
+import { sqliteMailbox } from "../../src/communication/adapters/sqlite"
 import { Envelope, Identity, failure } from "../../src/communication/contracts"
-import { agentObjectName } from "../../src/agents/domain"
+import { deliverNext } from "../../src/communication/delivery"
+import { MailboxTransport, Mailbox } from "../../src/communication/mailbox"
+import { executionWorkerRequest } from "../../src/execution/worker"
+import { resolveRoute } from "../../src/inference/policy"
+import { runObserved } from "../../src/observability/worker"
+import { BackgroundGroupProbe } from "./background-worker"
+import { BrowserRecoveryBot } from "./browser-worker"
 import { nativeDatabase } from "./database"
+import { eventStreamProbe } from "./event-stream-worker"
+import { LoopBot } from "./loop-worker"
+import { PersonalAgentProbe } from "./personal-agent-worker"
+import { SqlitePilot } from "./sqlite-worker"
+import { TerminalProbe } from "./terminal-worker"
 
 export {
   LoopBot,
@@ -99,7 +100,9 @@ export class MailboxBot extends DurableObject<Env> {
     Effect.gen({ self: this }, function* () {
       const self = yield* this.mailbox.identity()
       if (self.owner !== e.owner || self.bot !== e.to)
-        yield* Effect.fail(failure("forbidden", "Owner or recipient mismatch."))
+        return yield* Effect.fail(
+          failure("forbidden", "Owner or recipient mismatch.")
+        )
     })
   )
   readonly services = Layer.merge(
@@ -440,45 +443,48 @@ export default {
       )
     if (request.method !== "POST")
       return new Response("Not found", { status: 404 })
-    const input = await request.json<{
-      identity: unknown
-      envelope: unknown
-      delay?: number
-      name?: string
-      value?: number
-    }>()
-    const identity = Schema.decodeUnknownSync(Identity)(input.identity)
-    const bot = env.BOTS.getByName(
-      agentObjectName(identity.owner, identity.bot)
-    )
-    if (url.pathname === "/configure") {
-      await bot.configure(identity)
-      return Response.json({ ok: true })
-    }
-    if (url.pathname === "/enqueue")
-      return Response.json(await bot.enqueue(input.envelope, input.delay ?? 0))
-    if (url.pathname === "/inspect") return Response.json(await bot.inspect())
-    if (url.pathname === "/fault") {
-      await bot.setFault(input.name!, input.value!)
-      return Response.json({ ok: true })
-    }
-    if (url.pathname === "/raw")
-      return bot.fetch(
-        new Request("http://alchemy-rpc/", {
-          method: "POST",
-          headers: { "content-type": "application/ndjson" },
-          body:
-            JSON.stringify({
-              _tag: "Request",
-              id: "test-rpc",
-              tag: "deliver",
-              payload: { envelope: input.envelope },
-              headers: [],
-            }) + "\n",
-        })
-      )
-    return new Response("Not found", { status: 404 })
+    return mailboxFixtureRequest(request, env)
   },
 }
 
 export { LegacyAgentProbe } from "./legacy-agent-worker"
+
+async function mailboxFixtureRequest(request: Request, env: Env) {
+  const url = new URL(request.url)
+  const input = await request.json<{
+    identity: unknown
+    envelope: unknown
+    delay?: number
+    name?: string
+    value?: number
+  }>()
+  const identity = Schema.decodeUnknownSync(Identity)(input.identity)
+  const bot = env.BOTS.getByName(agentObjectName(identity.owner, identity.bot))
+  if (url.pathname === "/configure") {
+    await bot.configure(identity)
+    return Response.json({ ok: true })
+  }
+  if (url.pathname === "/enqueue")
+    return Response.json(await bot.enqueue(input.envelope, input.delay ?? 0))
+  if (url.pathname === "/inspect") return Response.json(await bot.inspect())
+  if (url.pathname === "/fault") {
+    await bot.setFault(input.name!, input.value!)
+    return Response.json({ ok: true })
+  }
+  if (url.pathname === "/raw")
+    return bot.fetch(
+      new Request("http://alchemy-rpc/", {
+        method: "POST",
+        headers: { "content-type": "application/ndjson" },
+        body:
+          JSON.stringify({
+            _tag: "Request",
+            id: "test-rpc",
+            tag: "deliver",
+            payload: { envelope: input.envelope },
+            headers: [],
+          }) + "\n",
+      })
+    )
+  return new Response("Not found", { status: 404 })
+}

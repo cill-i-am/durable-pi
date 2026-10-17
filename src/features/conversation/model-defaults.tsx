@@ -1,12 +1,10 @@
-import { useEffect, useId, useState } from "react"
-import { Check, RefreshCw } from "lucide-react"
 import { Schema } from "effect"
-import { ModelSelection, type ModelSettings } from "@/conversations/turns"
-import { resolveRoute, type JobType } from "@/inference/policy"
-import { agentApi } from "@/http/client"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import { Check, RefreshCw } from "lucide-react"
+import { useEffect, useId, useState } from "react"
+
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import {
   Select,
@@ -16,6 +14,10 @@ import {
   SelectGroup,
   SelectItem,
 } from "@/components/ui/select"
+import { ModelSelection, type ModelSettings } from "@/conversations/turns"
+import { agentApi } from "@/http/client"
+import { resolveRoute, type JobType } from "@/inference/policy"
+
 import { useModelCatalog } from "./use-model-catalog"
 
 const settingsJobs = {
@@ -39,6 +41,7 @@ export function ModelDefaults({
   onPendingChange: (pending: boolean) => void
 }) {
   const labels = useId()
+  const { model, thinking } = selection
   const [error, setError] = useState("")
   const { catalog, refresh, unavailable, setCatalog, requestSequence } =
     useModelCatalog(agentId, selection.settingsRevision, setError)
@@ -52,18 +55,10 @@ export function ModelDefaults({
       setDraft(
         catalog?.assignments[settingsJob] ??
           (settingsJob === "conversation"
-            ? selection
+            ? { model, thinking }
             : resolveRoute(settingsJob))
       )
-  }, [
-    catalog,
-    settingsJob,
-    selection.model,
-    selection.thinking,
-    selection.settingsRevision,
-    dirty,
-    saving,
-  ])
+  }, [catalog, settingsJob, model, thinking, dirty, saving])
   useEffect(() => {
     onPendingChange(dirty || saving)
   }, [dirty, saving, onPendingChange])
@@ -106,7 +101,6 @@ export function ModelDefaults({
       setSaving(false)
     }
   }
-  const model = catalog?.models.find((m) => m.id === draft.model)
   return (
     <section className="settings-section" aria-label="Models">
       <header className="settings-section-heading">
@@ -181,70 +175,17 @@ export function ModelDefaults({
               </SelectContent>
             </Select>
           </Field>
-          <Field>
-            <FieldLabel htmlFor={`${labels}-model`}>Model</FieldLabel>
-            <Select
-              value={draft.model}
-              disabled={saving || !catalog}
-              onValueChange={(value) => {
-                if (value) {
-                  setDirty(true)
-                  setSaved(false)
-                  setDraft({ ...draft, model: value })
-                }
-              }}
-            >
-              <SelectTrigger id={`${labels}-model`} className="w-full">
-                <SelectValue>{model?.name ?? draft.model}</SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {catalog?.models.map((value) => (
-                    <SelectItem
-                      key={value.id}
-                      value={value.id}
-                      disabled={!!value.unavailable}
-                    >
-                      {value.name}
-                      {value.unavailable ? " · unavailable" : ""}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </Field>
-          <Field>
-            <FieldLabel htmlFor={`${labels}-effort`}>
-              Reasoning effort
-            </FieldLabel>
-            <Select
-              value={draft.thinking}
-              disabled={saving || !catalog}
-              onValueChange={(value) => {
-                if (value) {
-                  setDirty(true)
-                  setSaved(false)
-                  setDraft({
-                    ...draft,
-                    thinking: value,
-                  })
-                }
-              }}
-            >
-              <SelectTrigger id={`${labels}-effort`} className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {model?.thinking.map((value) => (
-                    <SelectItem key={value} value={value}>
-                      {value}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </Field>
+          <ModelChoices
+            labels={labels}
+            catalog={catalog}
+            draft={draft}
+            saving={saving}
+            onChange={(next) => {
+              setDirty(true)
+              setSaved(false)
+              setDraft(next)
+            }}
+          />
         </FieldGroup>
 
         {unavailable(draft) && (
@@ -282,5 +223,84 @@ export function ModelDefaults({
         </div>
       </div>
     </section>
+  )
+}
+
+function ModelChoices({
+  labels,
+  catalog,
+  draft,
+  saving,
+  onChange,
+}: {
+  labels: string
+  catalog: ReturnType<typeof useModelCatalog>["catalog"]
+  draft: ModelSettings
+  saving: boolean
+  onChange: (value: ModelSettings) => void
+}) {
+  const model = catalog?.models.find((m) => m.id === draft.model)
+  return (
+    <>
+      {" "}
+      <Field>
+        <FieldLabel htmlFor={`${labels}-model`}>Model</FieldLabel>
+        <Select
+          value={draft.model}
+          disabled={saving || !catalog}
+          onValueChange={(value) => {
+            if (value) {
+              onChange({ ...draft, model: value })
+            }
+          }}
+        >
+          <SelectTrigger id={`${labels}-model`} className="w-full">
+            <SelectValue>{model?.name ?? draft.model}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              {catalog?.models.map((value) => (
+                <SelectItem
+                  key={value.id}
+                  value={value.id}
+                  disabled={!!value.unavailable}
+                >
+                  {value.name}
+                  {value.unavailable ? " · unavailable" : ""}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+      </Field>
+      <Field>
+        <FieldLabel htmlFor={`${labels}-effort`}>Reasoning effort</FieldLabel>
+        <Select
+          value={draft.thinking}
+          disabled={saving || !catalog}
+          onValueChange={(value) => {
+            if (value) {
+              onChange({
+                ...draft,
+                thinking: value,
+              })
+            }
+          }}
+        >
+          <SelectTrigger id={`${labels}-effort`} className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              {model?.thinking.map((value) => (
+                <SelectItem key={value} value={value}>
+                  {value}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+      </Field>
+    </>
   )
 }

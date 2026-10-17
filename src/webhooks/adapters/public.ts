@@ -1,12 +1,13 @@
 import { Cause, Effect, Exit, Schema } from "effect"
-import type { AuthStorageError } from "../../auth/adapters/accounts"
+
 import { AgentId } from "../../agents/domain"
+import type { AuthStorageError } from "../../auth/adapters/accounts"
 import { RoutineId } from "../../routines/contracts"
+import { preserveFatal } from "../../shared/effect"
+import { requestBytes } from "../../shared/http"
+import { nativeOperation, releaseUnreadResponse } from "../../shared/interop"
 import { EventId, MAX_EVENT_BYTES } from "../contracts"
 import { bearer } from "./crypto"
-import { requestBytes } from "../../shared/http"
-import { preserveFatal } from "../../shared/effect"
-import { nativeOperation, releaseUnreadResponse } from "../../shared/interop"
 
 class WebhookBodyInvalid extends Schema.TaggedError<WebhookBodyInvalid>()(
   "WebhookBodyInvalid",

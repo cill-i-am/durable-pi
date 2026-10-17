@@ -1,10 +1,11 @@
-import { preserveFatal } from "../../shared/effect"
 import { Cause, Clock, Effect, Exit, Latch, Schema, Stream } from "effect"
-import { byteLength, type MemoryError } from "../domain"
-import { MemoryRepository } from "../repository"
-import { archive } from "../archive"
-import type { ArchiveRecord } from "../records"
+
+import { preserveFatal } from "../../shared/effect"
 import { memoryTree, MemoryImportBusy } from "../application"
+import { archive } from "../archive"
+import { byteLength, type MemoryError } from "../domain"
+import type { ArchiveRecord } from "../records"
+import { MemoryRepository } from "../repository"
 
 export const memoryReadRequest = (
   request: Request,
@@ -139,14 +140,16 @@ export const exportResponse = Effect.fn("Memory.export")(function* (
         yield `<p><a href="#${part.built ? `node-${part.start}-${part.count}` : `message-${part.start}`}">${part.start}+${part.count}</a> ${escapeHtml(part.text ?? "Not summarized yet")}</p>`
       yield "<h2>Messages, summaries and note revisions</h2>"
     } else
-      yield JSON.stringify({
-        type: "header",
-        format: "durable-pi-memory",
-        version: 1,
-        created,
-        parts,
-        until,
-      }) + "\n"
+      yield (
+        JSON.stringify({
+          type: "header",
+          format: "durable-pi-memory",
+          version: 1,
+          created,
+          parts,
+          until,
+        }) + "\n"
+      )
   }
   const renderRow = (row: ArchiveRecord): string => {
     if (!html) {

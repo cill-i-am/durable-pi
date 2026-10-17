@@ -1,12 +1,13 @@
 import { Cause, Exit, Schema } from "effect"
+
+import { nativeOperation } from "../../shared/interop"
+import { rpcOutcome } from "../../shared/rpc-outcome"
 import {
   SkillConflict,
   SkillStorageError,
   SkillDocument,
   SelectSkills,
 } from "../contracts"
-import { rpcOutcome } from "../../shared/rpc-outcome"
-import { nativeOperation } from "../../shared/interop"
 
 export const SkillReferences = SelectSkills.fields.skills
 export const ResolvedSkills = Schema.Array(SkillDocument)

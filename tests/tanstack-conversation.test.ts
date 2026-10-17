@@ -1,16 +1,17 @@
-import { Effect } from "effect"
-import { afterEach, describe, expect, it, vi } from "vitest"
 import { ChatClient, StreamProcessor } from "@tanstack/ai-client"
 import { EventType } from "@tanstack/ai/client"
+import { Effect } from "effect"
+import { afterEach, describe, expect, it, vi } from "vitest"
+
+import { conversationEvents } from "../src/conversations/adapters/events"
 import {
   chatMessages,
   conversationView,
   messageEvents,
 } from "../src/conversations/adapters/tanstack"
-import { conversationEvents } from "../src/conversations/adapters/events"
-import { conversationConnection } from "../src/features/conversation/connection"
-import { submissionAttempt } from "../src/features/conversation/commands"
 import type { ChatState } from "../src/conversations/contracts"
+import { submissionAttempt } from "../src/features/conversation/commands"
+import { conversationConnection } from "../src/features/conversation/connection"
 
 const metadata = {
   model: "test",

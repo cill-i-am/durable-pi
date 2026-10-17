@@ -1,37 +1,39 @@
-import { afterEach, expect, expectTypeOf, it, vi } from "vitest"
-import { it as effectIt } from "@effect/vitest"
-import { Cause, Context, Effect, Exit } from "effect"
-import { TestClock } from "effect/testing"
 import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+
 import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context"
+import { createModels } from "@earendil-works/pi-ai"
 import {
   Harness,
   createRegistry,
   defineDocFamily,
 } from "@earendil-works/pi-durable"
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
-import { createModels } from "@earendil-works/pi-ai"
+import { it as effectIt } from "@effect/vitest"
+import { Cause, Context, Effect, Exit } from "effect"
+import { TestClock } from "effect/testing"
+import { afterEach, expect, expectTypeOf, it, vi } from "vitest"
+
+import { plansRequest } from "../src/planning/adapters/http"
 import {
   piPlanLedger,
   planDigest,
   planNativeOperation,
   planBlockerStatus,
 } from "../src/planning/adapters/pi"
-import { makePlans } from "../src/planning/service"
-import { plansRequest } from "../src/planning/adapters/http"
 import {
   PlanFailure,
   type PlanUpdate,
   type PlanReceipt,
 } from "../src/planning/contracts"
+import { planningInputSource, type PlanningInput } from "../src/planning/domain"
 import type {
   PlanAuthority,
   PlanEvidence,
   PlanSource,
 } from "../src/planning/plans"
-import { planningInputSource, type PlanningInput } from "../src/planning/domain"
+import { makePlans } from "../src/planning/service"
 
 const cleanups: (() => Promise<void>)[] = []
 afterEach(async () => {

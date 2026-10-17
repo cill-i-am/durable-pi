@@ -1,10 +1,4 @@
-import type { WorkspaceQuery } from "@/navigation/workspace"
-import { useState } from "react"
-import { BotTasks } from "./bot-tasks"
-import { ActivityTimeline } from "./activity-timeline"
-import type { ActivityAgent } from "@/activity/contracts"
-import { DelegatedWork } from "./delegated-work"
-import { InferenceRuns } from "./inference-runs"
+import { Schema } from "effect"
 import {
   ArrowLeft,
   ArrowRight,
@@ -14,21 +8,25 @@ import {
   Clock3,
   ListChecks,
 } from "lucide-react"
-import { Schema } from "effect"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import { useState } from "react"
+
+import type { ActivityAgent } from "@/activity/contracts"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+} from "@/components/ui/collapsible"
 import {
   Empty,
   EmptyHeader,
   EmptyTitle,
   EmptyDescription,
 } from "@/components/ui/empty"
-import {
-  Collapsible,
-  CollapsibleTrigger,
-  CollapsibleContent,
-} from "@/components/ui/collapsible"
+import { Separator } from "@/components/ui/separator"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Trace,
   TraceLine,
@@ -39,12 +37,16 @@ import {
   TraceCollapsibleTrigger,
   TraceCollapsibleContent,
 } from "@/components/ui/trace"
-import { Separator } from "@/components/ui/separator"
-import { Skeleton } from "@/components/ui/skeleton"
-import { PlanDetail, type Plan, type PlanRevision } from "@/planning/contracts"
 import { agentApi } from "@/http/client"
-import { usePlans } from "./use-plans"
+import type { WorkspaceQuery } from "@/navigation/workspace"
+import { PlanDetail, type Plan, type PlanRevision } from "@/planning/contracts"
+
+import { ActivityTimeline } from "./activity-timeline"
+import { BotTasks } from "./bot-tasks"
+import { DelegatedWork } from "./delegated-work"
 import { historyPage } from "./history"
+import { InferenceRuns } from "./inference-runs"
+import { usePlans } from "./use-plans"
 
 export function ActivityWorkbench({
   agentId: initialId,
@@ -100,191 +102,111 @@ export function ActivityWorkbench({
       </Alert>
     )
   return (
-    <>
-      <div className="workbench-body">
-        {!showTimeline && (
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="workbench-title">Activity</h2>
-            <Badge variant="outline" className="max-w-[50%] min-w-0 shrink">
-              <span className="truncate">{agentName}</span>
-            </Badge>
-          </div>
-        )}
-        {showTimeline ? (
-          <ActivityTimeline
-            filters={filters}
-            onFiltersChange={onFiltersChange}
-            agent={
-              agents.find((value) => value.id === initialId) ?? {
-                id: initialId,
-                name: initialName,
-              }
+    <div className="workbench-body">
+      {!showTimeline && (
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="workbench-title">Activity</h2>
+          <Badge variant="outline" className="max-w-[50%] min-w-0 shrink">
+            <span className="truncate">{agentName}</span>
+          </Badge>
+        </div>
+      )}
+      {showTimeline ? (
+        <ActivityTimeline
+          filters={filters}
+          onFiltersChange={onFiltersChange}
+          agent={
+            agents.find((value) => value.id === initialId) ?? {
+              id: initialId,
+              name: initialName,
             }
-            agents={agents}
-            onOpenBot={onOpenBot}
-            onMemory={onMemory}
-            record={selected ? { agent: inspected, reference: selected } : null}
-            onRecordChange={(record) =>
-              onSelectionChange(
-                "timeline",
-                record?.agent.id ?? agentId,
-                record?.reference ?? null
-              )
-            }
-            onDetails={(agent) => {
-              onSelectionChange("tasks", agent.id, null)
-            }}
-          />
-        ) : (
-          <>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="self-start"
-              onClick={() => onSelectionChange("timeline", initialId, null)}
-            >
-              <ArrowLeft /> Activity timeline
-            </Button>
-            {!selected && (
-              <BotTasks
-                onOpenBot={onOpenBot}
-                key={`${agentId}:communication`}
-                agentId={agentId}
-                agents={agents}
-              />
-            )}
-            {!selected && <DelegatedWork key={agentId} agentId={agentId} />}
-            {!selected && (
-              <DelegatedWork
-                key={`${agentId}:background`}
-                agentId={agentId}
-                background
-              />
-            )}
-            {!selected && <InferenceRuns agentId={agentId} />}
-            {state.error && (
-              <Alert>
-                <AlertTitle>Updates interrupted</AlertTitle>
-                <AlertDescription>
-                  {state.error}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => void state.refresh()}
-                  >
-                    Reconnect
-                  </Button>
-                </AlertDescription>
-              </Alert>
-            )}
-            {!!state.approvals.length && (
-              <Alert>
-                <Clock3 />
-                <AlertTitle>Needs your approval</AlertTitle>
-                <AlertDescription>
-                  {state.approvals.length} tool{" "}
-                  {state.approvals.length === 1 ? "request is" : "requests are"}{" "}
-                  waiting. The plan grants no additional access.
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onOpenBot(agentId)}
-                  >
-                    Review in chat
-                  </Button>
-                </AlertDescription>
-              </Alert>
-            )}
-            {selected ? (
-              <>
+          }
+          agents={agents}
+          onOpenBot={onOpenBot}
+          onMemory={onMemory}
+          record={selected ? { agent: inspected, reference: selected } : null}
+          onRecordChange={(record) =>
+            onSelectionChange(
+              "timeline",
+              record?.agent.id ?? agentId,
+              record?.reference ?? null
+            )
+          }
+          onDetails={(agent) => {
+            onSelectionChange("tasks", agent.id, null)
+          }}
+        />
+      ) : (
+        <>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="self-start"
+            onClick={() => onSelectionChange("timeline", initialId, null)}
+          >
+            <ArrowLeft /> Activity timeline
+          </Button>
+          {!selected && (
+            <BotTasks
+              onOpenBot={onOpenBot}
+              key={`${agentId}:communication`}
+              agentId={agentId}
+              agents={agents}
+            />
+          )}
+          {!selected && <DelegatedWork key={agentId} agentId={agentId} />}
+          {!selected && (
+            <DelegatedWork
+              key={`${agentId}:background`}
+              agentId={agentId}
+              background
+            />
+          )}
+          {!selected && <InferenceRuns agentId={agentId} />}
+          {state.error && (
+            <Alert>
+              <AlertTitle>Updates interrupted</AlertTitle>
+              <AlertDescription>
+                {state.error}
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  className="self-start"
-                  onClick={() => setSelected(null)}
+                  onClick={() => void state.refresh()}
                 >
-                  <ArrowLeft data-icon="inline-start" /> All tasks
+                  Reconnect
                 </Button>
-                {state.detail ? (
-                  <PlanInspector
-                    key={selected}
-                    agentId={agentId}
-                    detail={state.detail}
-                  />
-                ) : state.loading ? (
-                  <Skeleton className="h-32 w-full" />
-                ) : null}
-              </>
-            ) : (
-              <>
-                {state.loading && <Skeleton className="h-24 w-full" />}
-                {!state.loading && !state.list.plans.length && (
-                  <Empty>
-                    <EmptyHeader>
-                      <EmptyTitle>No task plans yet</EmptyTitle>
-                      <EmptyDescription>
-                        Ask your agent for help with a project. It will keep
-                        track of substantial work here.
-                      </EmptyDescription>
-                    </EmptyHeader>
-                  </Empty>
-                )}
-                {state.list.plans.map((plan) => (
-                  <div key={plan.id} className="flex flex-col gap-3">
-                    <Button
-                      variant="ghost"
-                      className="h-auto w-full justify-start py-3 text-left whitespace-normal"
-                      onClick={() => setSelected(plan.id)}
-                    >
-                      <span className="flex min-w-0 flex-1 flex-col gap-2">
-                        <span>{plan.objective}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {plan.completed} of {plan.total} steps ·{" "}
-                          {plan.state === "open"
-                            ? "Open task"
-                            : plan.state === "completed"
-                              ? "Reported complete"
-                              : "Cancelled"}
-                        </span>
-                      </span>
-                      <ArrowRight data-icon="inline-end" />
-                    </Button>
-                    {plan.blocker && (
-                      <p className="px-3 text-sm text-muted-foreground">
-                        {plan.blocker}
-                      </p>
-                    )}
-                    <Separator />
-                  </div>
-                ))}
-                <div className="flex items-center justify-between">
-                  {offset > 0 ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setOffset(Math.max(0, offset - 20))}
-                    >
-                      Newer tasks
-                    </Button>
-                  ) : (
-                    <span />
-                  )}
-                  {state.list.nextOffset !== null && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setOffset(state.list.nextOffset!)}
-                    >
-                      Earlier tasks
-                    </Button>
-                  )}
-                </div>
-              </>
-            )}
-          </>
-        )}
-      </div>
-    </>
+              </AlertDescription>
+            </Alert>
+          )}
+          {!!state.approvals.length && (
+            <Alert>
+              <Clock3 />
+              <AlertTitle>Needs your approval</AlertTitle>
+              <AlertDescription>
+                {state.approvals.length} tool{" "}
+                {state.approvals.length === 1 ? "request is" : "requests are"}{" "}
+                waiting. The plan grants no additional access.
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onOpenBot(agentId)}
+                >
+                  Review in chat
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+          <PlanBrowser
+            selected={selected}
+            setSelected={setSelected}
+            state={state}
+            agentId={agentId}
+            offset={offset}
+            setOffset={setOffset}
+          />
+        </>
+      )}
+    </div>
   )
 }
 
@@ -543,6 +465,114 @@ function PlanInspector({
           )}
         </CollapsibleContent>
       </Collapsible>
+    </>
+  )
+}
+
+function PlanBrowser({
+  selected,
+  setSelected,
+  state,
+  agentId,
+  offset,
+  setOffset,
+}: {
+  selected: string | null
+  setSelected: (value: string | null) => void
+  state: ReturnType<typeof usePlans>
+  agentId: ActivityAgent["id"]
+  offset: number
+  setOffset: (value: number) => void
+}) {
+  return (
+    <>
+      {" "}
+      {selected ? (
+        <>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="self-start"
+            onClick={() => setSelected(null)}
+          >
+            <ArrowLeft data-icon="inline-start" /> All tasks
+          </Button>
+          {state.detail ? (
+            <PlanInspector
+              key={selected}
+              agentId={agentId}
+              detail={state.detail}
+            />
+          ) : state.loading ? (
+            <Skeleton className="h-32 w-full" />
+          ) : null}
+        </>
+      ) : (
+        <>
+          {state.loading && <Skeleton className="h-24 w-full" />}
+          {!state.loading && !state.list.plans.length && (
+            <Empty>
+              <EmptyHeader>
+                <EmptyTitle>No task plans yet</EmptyTitle>
+                <EmptyDescription>
+                  Ask your agent for help with a project. It will keep track of
+                  substantial work here.
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          )}
+          {state.list.plans.map((plan) => (
+            <div key={plan.id} className="flex flex-col gap-3">
+              <Button
+                variant="ghost"
+                className="h-auto w-full justify-start py-3 text-left whitespace-normal"
+                onClick={() => setSelected(plan.id)}
+              >
+                <span className="flex min-w-0 flex-1 flex-col gap-2">
+                  <span>{plan.objective}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {plan.completed} of {plan.total} steps ·{" "}
+                    {plan.state === "open"
+                      ? "Open task"
+                      : plan.state === "completed"
+                        ? "Reported complete"
+                        : "Cancelled"}
+                  </span>
+                </span>
+                <ArrowRight data-icon="inline-end" />
+              </Button>
+              {plan.blocker && (
+                <p className="px-3 text-sm text-muted-foreground">
+                  {plan.blocker}
+                </p>
+              )}
+              <Separator />
+            </div>
+          ))}
+          <div className="flex items-center justify-between">
+            {offset > 0 ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setOffset(Math.max(0, offset - 20))}
+              >
+                Newer tasks
+              </Button>
+            ) : (
+              <span />
+            )}
+            {state.list.nextOffset !== null && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setOffset(state.list.nextOffset!)}
+              >
+                Earlier tasks
+              </Button>
+            )}
+          </div>
+        </>
+      )}
     </>
   )
 }

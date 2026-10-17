@@ -1,23 +1,25 @@
-import { afterEach, expect, it } from "vitest"
-import { it as effectIt } from "@effect/vitest"
-import { Cause, Context, Effect, Exit } from "effect"
-import { TestClock } from "effect/testing"
 import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+
 import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context"
+import { createModels } from "@earendil-works/pi-ai"
 import { Harness, createRegistry } from "@earendil-works/pi-durable"
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
-import { createModels } from "@earendil-works/pi-ai"
-import { piObjectLedger, objectDigest } from "../src/objects/adapters/pi"
-import { makeWorkingObjects } from "../src/objects/service"
+import { it as effectIt } from "@effect/vitest"
+import { Cause, Context, Effect, Exit } from "effect"
+import { TestClock } from "effect/testing"
+import { afterEach, expect, it } from "vitest"
+
 import { objectsRequest } from "../src/objects/adapters/http"
-import type { ObjectLedger } from "../src/objects/ledger"
+import { piObjectLedger, objectDigest } from "../src/objects/adapters/pi"
 import type { ChangeSource, ObjectMutation } from "../src/objects/contracts"
 import {
   objectOfferedThrough,
   requireObjectCapacity,
 } from "../src/objects/domain"
+import type { ObjectLedger } from "../src/objects/ledger"
+import { makeWorkingObjects } from "../src/objects/service"
 
 const cleanups: (() => Promise<void>)[] = []
 afterEach(async () => {

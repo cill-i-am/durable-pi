@@ -1,5 +1,6 @@
+import { parseFragment, html, type DefaultTreeAdapterTypes } from "parse5"
+
 import { AppConflict } from "./contracts"
-import { parseFragment, type DefaultTreeAdapterTypes } from "parse5"
 
 const tags = new Set(
   "article section header footer main nav aside div span p h1 h2 h3 h4 h5 h6 ul ol li dl dt dd strong em b i small s sub sup br hr pre code blockquote table caption thead tbody tfoot tr th td form label input textarea select option optgroup button fieldset legend details summary progress meter".split(
@@ -36,7 +37,7 @@ export function appHtml(source: string) {
       return escape((node as DefaultTreeAdapterTypes.TextNode).value)
     if (
       !("tagName" in node) ||
-      node.namespaceURI !== "http://www.w3.org/1999/xhtml" ||
+      node.namespaceURI !== html.NS.HTML ||
       !tags.has(node.tagName)
     )
       return ""

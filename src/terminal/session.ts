@@ -1,14 +1,15 @@
 import { Cause, Deferred, Effect, Exit, Option, Schema } from "effect"
-import { orDieAll } from "../shared/effect"
 import type { Clock } from "effect"
+
+import { fatalCause, orDieAll } from "../shared/effect"
 import { TerminalFailure } from "./contracts"
+import type { InteractiveState } from "./contracts"
 import { SESSION_LIFETIME, sessionExpiry, sessionLive } from "./domain"
 import type {
   InteractiveRuntime,
   TerminalRuntimeError,
   TerminalSocket,
 } from "./runtime"
-import type { InteractiveState } from "./contracts"
 
 export { SESSION_LEASE, SESSION_LIFETIME } from "./domain"
 export type TerminalRelay = (
@@ -150,10 +151,10 @@ export class InteractiveSession implements TerminalSession {
       const failures = this.relayFailures.splice(0)
       const report = failures.length
         ? Effect.failCause(
-            Cause.fromReasons(
+            Cause.fromReasons<never>(
               failures.flatMap((cause) =>
                 Cause.isCause(cause)
-                  ? cause.reasons
+                  ? fatalCause(cause).reasons
                   : [Cause.makeDieReason(cause)]
               )
             )

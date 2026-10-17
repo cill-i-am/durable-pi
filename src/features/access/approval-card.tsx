@@ -1,16 +1,10 @@
-import { useId, useRef, useState } from "react"
-import { ShieldQuestion } from "lucide-react"
 import { Schema } from "effect"
+import { ShieldQuestion } from "lucide-react"
+import { useId, useRef, useState } from "react"
+
 import { AccessState, type Approval, type ToolPolicy } from "@/access/contracts"
-import { agentApi } from "@/http/client"
+import { CopyButton } from "@/components/copy-button"
 import { Button } from "@/components/ui/button"
-import {
-  Item,
-  ItemMedia,
-  ItemContent,
-  ItemTitle,
-  ItemActions,
-} from "@/components/ui/item"
 import {
   CodeBlock,
   CodeBlockHeader,
@@ -18,7 +12,15 @@ import {
   CodeBlockActions,
   CodeBlockContent,
 } from "@/components/ui/code-block"
-import { CopyButton } from "@/components/copy-button"
+import {
+  Item,
+  ItemMedia,
+  ItemContent,
+  ItemTitle,
+  ItemActions,
+} from "@/components/ui/item"
+import { agentApi } from "@/http/client"
+
 import { approvalDecision, type ConfirmedDecision } from "./decision"
 
 export function ApprovalCard({
@@ -84,24 +86,7 @@ export function ApprovalCard({
     }
   }
   const pending = approval.status === "pending" && decided === null
-  const heading =
-    approval.status === "pending"
-      ? decided === true
-        ? confirmed?.remember
-          ? "Tool allowed for this agent"
-          : "Approved for this action"
-        : decided === false
-          ? "Denied"
-          : "Your approval is needed"
-      : {
-          approved: "Approved",
-          running: "Approved · running",
-          done: "Action completed",
-          denied: "Denied",
-          cancelled: "Cancelled",
-          expired: "Approval expired",
-          interrupted: "Interrupted",
-        }[approval.status]
+  const heading = approvalHeading(approval, decided, confirmed)
   return (
     <Item
       variant="outline"
@@ -204,4 +189,28 @@ function formatInput(input: string) {
   } catch {
     return input
   }
+}
+
+function approvalHeading(
+  approval: Approval,
+  decided: boolean | null,
+  confirmed: ConfirmedDecision | null
+) {
+  return approval.status === "pending"
+    ? decided === true
+      ? confirmed?.remember
+        ? "Tool allowed for this agent"
+        : "Approved for this action"
+      : decided === false
+        ? "Denied"
+        : "Your approval is needed"
+    : {
+        approved: "Approved",
+        running: "Approved · running",
+        done: "Action completed",
+        denied: "Denied",
+        cancelled: "Cancelled",
+        expired: "Approval expired",
+        interrupted: "Interrupted",
+      }[approval.status]
 }

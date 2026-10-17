@@ -33,7 +33,7 @@ async function snapshot() {
   assert.equal(response.headers.get("content-type"), "text/event-stream")
   assert.equal(response.headers.get("cache-control"), "private, no-store")
   const reader = response.body!.getReader()
-  const chunk = await reader.read()
+  const chunk: ReadableStreamReadResult<Uint8Array> = await reader.read()
   const frame = JSON.parse(
     new TextDecoder().decode(chunk.value).split("\n\n")[0]!.slice(6)
   ) as { type: string; state: { turns: { id: string }[] } }

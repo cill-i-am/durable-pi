@@ -1,13 +1,14 @@
-import { Effect, Schema } from "effect"
 import { eq } from "drizzle-orm"
 import type { EffectDrizzleQueryError } from "drizzle-orm/effect-core/errors"
+import { Effect, Schema } from "effect"
+
 import { mapSqliteError, type Sqlite } from "../../storage/sqlite"
+import * as Domain from "../connection-domain"
 import type {
   ConnectionLedger,
   ConnectionFailure,
   RemoteSelectionRepository,
 } from "../connection-ledger"
-import * as Domain from "../connection-domain"
 import {
   ConnectionError,
   ConnectionStorageError,
@@ -140,7 +141,7 @@ export class ConnectionStore implements ConnectionLedger {
           row
             ? Schema.decodeUnknownSync(ToolSelection)({
                 revision: row.revision,
-                tools: JSON.parse(row.tools),
+                tools: JSON.parse(row.tools) as unknown,
               })
             : { revision: 0, tools: [] }
         )

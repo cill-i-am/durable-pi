@@ -1,11 +1,12 @@
 import { Effect, Schema } from "effect"
+
 import type { BackgroundRemote } from "../background-service"
 import { Group, Transcript } from "../contracts"
-import { backgroundNative } from "./interop"
 import {
   type BackgroundRequest,
   BackgroundOutcome,
 } from "./background-protocol"
+import { backgroundNative } from "./interop"
 
 /** Native DO RPC cannot cancel an admitted remote call. Join its local
  * settlement; the remote durable group remains fenced by parent authority. */

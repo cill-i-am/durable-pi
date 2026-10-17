@@ -1,17 +1,18 @@
-import { Cause, Effect, Stream } from "effect"
-import { nativeFailure, nativeOperation } from "./interop"
+import { Cause, Effect, Schema, Stream } from "effect"
+
 import { orDieAll } from "./effect"
+import { nativeFailure, nativeOperation } from "./interop"
 
 /** Own the reader and join read/cancel before releasing its lock. */
 export const nativeByteStream = <TError>(
-  open: () => ReadableStream<Uint8Array>,
+  open: () => ReadableStream<unknown>,
   onReadError: () => TError
 ) =>
   Stream.unwrap(
     Effect.gen(function* () {
       let ended = false
       let cancellation: Promise<void> | undefined
-      const cancel = (reader: ReadableStreamDefaultReader<Uint8Array>) =>
+      const cancel = (reader: ReadableStreamDefaultReader<unknown>) =>
         nativeOperation(
           () => (cancellation ??= reader.cancel()),
           (cause) => {
@@ -35,7 +36,11 @@ export const nativeByteStream = <TError>(
         work.then(
           (next) => {
             ended = next.done
-            resume(Effect.succeed(next))
+            if (next.done)
+              resume(Effect.succeed({ done: true, value: undefined }))
+            else if (Schema.is(Schema.Uint8Array)(next.value))
+              resume(Effect.succeed({ done: false, value: next.value }))
+            else resume(Effect.fail(onReadError()))
           },
           (cause) => {
             ended = true
@@ -81,7 +86,7 @@ export const nativeByteStream = <TError>(
   )
 
 export const nativeBytes = <TReadError, TLimitError>(
-  body: ReadableStream<Uint8Array>,
+  body: ReadableStream<unknown>,
   maximum: number,
   onReadError: () => TReadError,
   onTooLarge: () => TLimitError

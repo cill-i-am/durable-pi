@@ -1,7 +1,4 @@
 import { Link } from "@tanstack/react-router"
-import { useWorkspaceLocation } from "./use-workspace-location"
-import { workspaceDestination } from "@/navigation/workspace"
-import { useState, type ReactNode, type RefObject } from "react"
 import {
   Globe,
   TerminalSquare,
@@ -14,8 +11,17 @@ import {
   Clock3,
   X,
 } from "lucide-react"
-import type { Workbench } from "./workspace-navigation"
+import { useState, type ReactNode, type RefObject } from "react"
+
 import { Button, buttonVariants } from "@/components/ui/button"
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+} from "@/components/ui/select"
 import {
   Sheet,
   SheetContent,
@@ -28,14 +34,10 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip"
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-} from "@/components/ui/select"
+import { workspaceDestination } from "@/navigation/workspace"
+
+import { useWorkspaceLocation } from "./use-workspace-location"
+import type { Workbench } from "./workspace-navigation"
 
 const tools = [
   { id: "browser", label: "Browser", icon: Globe },

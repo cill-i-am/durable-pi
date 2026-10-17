@@ -8,6 +8,8 @@ import {
   Schema,
   Semaphore,
 } from "effect"
+
+import { orDieAll } from "../shared/effect"
 import {
   BrowserFailure,
   allowedBrowserUrl,
@@ -20,10 +22,9 @@ import {
   type BrowserInteraction,
   type BrowserCapture,
 } from "./contracts"
-import { BrowserStorageError, type BrowserRepository } from "./repository"
-import type { BrowserDriver, BrowserUnavailable } from "./driver"
-import { orDieAll } from "../shared/effect"
 import { requireBrowserGeneration } from "./domain"
+import type { BrowserDriver, BrowserUnavailable } from "./driver"
+import { BrowserStorageError, type BrowserRepository } from "./repository"
 
 export type { BrowserRepository } from "./repository"
 export type { BrowserDriver } from "./driver"

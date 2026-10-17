@@ -1,21 +1,22 @@
-import { describe, expect, it } from "vitest"
 import { Effect, ManagedRuntime, Schema } from "effect"
-import { database } from "./database"
+import { describe, expect, it } from "vitest"
+
+import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
+import { skillContext } from "../src/skills/contracts"
+import { SkillSource } from "../src/skills/source"
+import { filesRequest } from "../src/workspace/adapters/http"
 import {
   workspaceLayer,
   type AssetBucket,
 } from "../src/workspace/adapters/storage"
-import { Workspace } from "../src/workspace/workspace"
-import { filesRequest } from "../src/workspace/adapters/http"
 import {
   inspectFile,
   MAX_FILE_BYTES,
   MAX_VISION_BYTES,
   type Upload,
 } from "../src/workspace/files"
-import { skillContext } from "../src/skills/contracts"
-import { SkillSource } from "../src/skills/source"
-import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
+import { Workspace } from "../src/workspace/workspace"
+import { database } from "./database"
 
 const textUpload = (name = "notes.md", text = "private notes"): Upload => ({
   id: crypto.randomUUID(),

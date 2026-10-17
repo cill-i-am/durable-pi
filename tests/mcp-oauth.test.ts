@@ -1,12 +1,13 @@
-import { Effect } from "effect"
-import { describe, it, expect } from "vitest"
 import {
   auth,
   StreamableHTTPClientTransport,
   type AuthOptions,
 } from "@modelcontextprotocol/client"
-import { ConnectionOAuthProvider } from "../src/access/adapters/oauth"
+import { Effect } from "effect"
+import { describe, it, expect } from "vitest"
+
 import { ConnectionStore } from "../src/access/adapters/connections"
+import { ConnectionOAuthProvider } from "../src/access/adapters/oauth"
 import { database } from "./database"
 
 const connectionId = `mcp-${"a".repeat(32)}`

@@ -1,6 +1,5 @@
-import { Effect, Schema } from "effect"
-import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context"
 import type { Context } from "@earendil-works/chord"
+import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context"
 import {
   AssistantEntry,
   ProviderDoc,
@@ -11,7 +10,8 @@ import {
   type Harness,
   type EntryId,
 } from "@earendil-works/pi-durable"
-import type { BackgroundTaskLedger } from "../background-task-ledger"
+import { Effect, Schema } from "effect"
+
 import {
   BackgroundState,
   backgroundChildInstructions,
@@ -20,6 +20,7 @@ import {
   restoreBackgroundState,
   trimBackgroundText,
 } from "../background-task-domain"
+import type { BackgroundTaskLedger } from "../background-task-ledger"
 import { delegationCommit, delegationNative, backgroundNative } from "./interop"
 
 export const BackgroundDocument = defineDoc({
@@ -193,7 +194,11 @@ export function piBackgroundLedger(
                   totals = Object.values(usage?.models ?? {})
                 return Schema.decodeUnknownSync(Facts)({
                   inputs: records.map((record) =>
-                    record ? { status: record.status } : undefined
+                    record
+                      ? Schema.decodeUnknownSync(
+                          Schema.Struct({ status: Schema.String })
+                        )(record)
+                      : undefined
                   ),
                   answer: text,
                   inputTokens: totals.length

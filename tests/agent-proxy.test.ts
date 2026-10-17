@@ -1,11 +1,12 @@
-import { expect, it, vi } from "vitest"
 import { Cause, Effect } from "effect"
+import { expect, it, vi } from "vitest"
+
 import {
   agentProxy,
   type AgentProxyBindings,
 } from "../src/auth/adapters/agent-proxy"
-import { OwnerSessionUnavailable } from "../src/auth/owner-session"
 import type { sessionSocketResponse } from "../src/auth/adapters/session-socket"
+import { OwnerSessionUnavailable } from "../src/auth/owner-session"
 
 vi.mock("../src/observability/events", () => ({ reportService: vi.fn() }))
 const user = { id: "owner" }

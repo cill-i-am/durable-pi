@@ -1,7 +1,8 @@
-import { preserveFatal } from "../../shared/effect"
 import { Effect, Schema } from "effect"
-import { MailboxControl, MessageId, failure } from "../contracts"
+
+import { preserveFatal } from "../../shared/effect"
 import { Communication } from "../communication"
+import { MailboxControl, MessageId, failure } from "../contracts"
 import { boundedFrame } from "./input"
 
 export function communicationRequest(request: Request, path: string) {

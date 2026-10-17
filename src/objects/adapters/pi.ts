@@ -1,4 +1,3 @@
-import { Effect, Schema } from "effect"
 import { BACKGROUND_CONTEXT as context } from "@earendil-works/chord/context"
 import {
   defineDoc,
@@ -6,6 +5,10 @@ import {
   type Session,
   type Tx,
 } from "@earendil-works/pi-durable"
+import { Effect, Schema } from "effect"
+
+import { nativeCommit } from "../../shared/adapters/native-commit"
+import { nativeOperation } from "../../shared/interop"
 import {
   Checklist,
   ObjectEvent,
@@ -18,8 +21,6 @@ import {
   type ChangeSource,
 } from "../contracts"
 import type { ObjectLedger, ObjectTransaction } from "../ledger"
-import { nativeOperation } from "../../shared/interop"
-import { nativeCommit } from "../../shared/adapters/native-commit"
 import { makeWorkingObjects } from "../service"
 
 const Catalog = defineDoc({
@@ -40,7 +41,8 @@ const Objects = defineDocFamily({
   version: 1,
   initial: (_seed: null) => ({
     value: null as
-      (Omit<Checklist, "tasks"> & { tasks: ChecklistTask[] }) | null,
+      | (Omit<Checklist, "tasks"> & { tasks: ChecklistTask[] })
+      | null,
   }),
 })
 const Events = defineDocFamily({
@@ -50,7 +52,8 @@ const Events = defineDocFamily({
   version: 1,
   initial: (_seed: null) => ({
     value: null as
-      (Omit<ObjectEvent, "changes"> & { changes: FieldChange[] }) | null,
+      | (Omit<ObjectEvent, "changes"> & { changes: FieldChange[] })
+      | null,
   }),
 })
 const Operations = defineDocFamily({

@@ -1,4 +1,5 @@
 import { Context, Schema, type Effect } from "effect"
+
 import type { OperationReceipt } from "../routines/persistence"
 
 export type WebhookKeyRecord = { revision: number; hash: string | null }

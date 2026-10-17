@@ -1,6 +1,7 @@
-import { Cause, Effect, Exit, Schema } from "effect"
 import type { CredentialStore } from "@earendil-works/pi-ai"
 import { openaiProvider } from "@earendil-works/pi-ai/providers/openai"
+import { Cause, Effect, Exit, Schema } from "effect"
+
 import { createAgentModels } from "../../inference/adapters/models-pi"
 import type { ModelCatalog, ResolvedRoute } from "../../inference/policy"
 import {
@@ -10,8 +11,8 @@ import {
   type MemoryError,
   type SummaryJob,
 } from "../domain"
-import { SummaryFailure } from "../summary-model"
 import type { SummaryProvider } from "../summary-execution"
+import { SummaryFailure } from "../summary-model"
 import { piSummaryCompletion } from "./pi"
 
 type NativeContext = Parameters<
@@ -45,64 +46,68 @@ export function piModelSummaryProvider<TRequirements>(
           )
             throw new SummaryFailure({ reason: "unavailable" })
           return {
-            complete: Effect.fn("Memory.dispatchPiSummary")(
-              function* (messages, currentJob) {
-                const context = yield* Effect.context<TRequirements>()
-                let catalogCause:
-                  Cause.Cause<SummaryFailure | MemoryError> | undefined
-                const result = yield* piSummaryCompletion(
-                  (nativeMessages, signal) => {
-                    const models = createAgentModels(host.credentials(), {
-                      ...host.options(route, job),
-                      // Genuine SDK callback: reuse this invocation's services and
-                      // signal. Restore its Exit after the SDK reports completion.
-                      catalog: () =>
-                        Effect.runPromiseExitWith(context)(catalog(), {
-                          signal,
-                        }).then((exit) => {
-                          if (Exit.isSuccess(exit)) return exit.value
-                          catalogCause = catalogCause
-                            ? Cause.combine(catalogCause, exit.cause)
-                            : exit.cause
-                          throw new Error(
-                            "Summary model authority could not be read"
-                          )
-                        }),
-                    })
-                    const model = models.getModel("openai", route.model)
-                    if (!model)
-                      throw new SummaryFailure({ reason: "unavailable" })
-                    return models.completeSimple(
-                      model,
-                      {
-                        systemPrompt: host.systemPrompt,
-                        tools: host.tools(),
-                        messages: nativeMessages,
-                      },
-                      {
-                        reasoning:
-                          route.thinking === "off" ? undefined : route.thinking,
+            complete: Effect.fn("Memory.dispatchPiSummary")(function* (
+              messages: Parameters<
+                ReturnType<typeof piSummaryCompletion>["complete"]
+              >[0],
+              currentJob: SummaryJob
+            ) {
+              const context = yield* Effect.context<TRequirements>()
+              let catalogCause:
+                | Cause.Cause<SummaryFailure | MemoryError>
+                | undefined
+              const result = yield* piSummaryCompletion(
+                (nativeMessages, signal) => {
+                  const models = createAgentModels(host.credentials(), {
+                    ...host.options(route, job),
+                    // Genuine SDK callback: reuse this invocation's services and
+                    // signal. Restore its Exit after the SDK reports completion.
+                    catalog: () =>
+                      Effect.runPromiseExitWith(context)(catalog(), {
                         signal,
-                        cacheRetention: "short",
-                        sessionId: "memory",
-                      }
-                    )
-                  }
-                )
-                  .complete(messages, currentJob)
-                  .pipe(Effect.exit)
-                if (catalogCause) {
-                  if (
-                    Exit.isFailure(result) &&
-                    (Cause.hasDies(result.cause) ||
-                      Cause.hasInterrupts(result.cause))
+                      }).then((exit) => {
+                        if (Exit.isSuccess(exit)) return exit.value
+                        catalogCause = catalogCause
+                          ? Cause.combine(catalogCause, exit.cause)
+                          : exit.cause
+                        throw new Error(
+                          "Summary model authority could not be read"
+                        )
+                      }),
+                  })
+                  const model = models.getModel("openai", route.model)
+                  if (!model)
+                    throw new SummaryFailure({ reason: "unavailable" })
+                  return models.completeSimple(
+                    model,
+                    {
+                      systemPrompt: host.systemPrompt,
+                      tools: host.tools(),
+                      messages: nativeMessages,
+                    },
+                    {
+                      reasoning:
+                        route.thinking === "off" ? undefined : route.thinking,
+                      signal,
+                      cacheRetention: "short",
+                      sessionId: "memory",
+                    }
                   )
-                    catalogCause = Cause.combine(catalogCause, result.cause)
-                  return yield* Effect.failCause(catalogCause)
                 }
-                return yield* result
+              )
+                .complete(messages, currentJob)
+                .pipe(Effect.exit)
+              if (catalogCause) {
+                if (
+                  Exit.isFailure(result) &&
+                  (Cause.hasDies(result.cause) ||
+                    Cause.hasInterrupts(result.cause))
+                )
+                  catalogCause = Cause.combine(catalogCause, result.cause)
+                return yield* Effect.failCause(catalogCause)
               }
-            ),
+              return yield* result
+            }),
           }
         },
         catch: (cause) => {

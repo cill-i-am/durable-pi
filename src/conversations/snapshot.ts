@@ -1,9 +1,10 @@
 import { Effect } from "effect"
-import type { Conversations } from "./service"
+
+import { pinnedRoute } from "../inference/policy"
+import type { ChatState, TimelineItem } from "./contracts"
 import type { ConversationExecution } from "./execution"
 import type { ConversationJournal } from "./journal"
-import type { ChatState, TimelineItem } from "./contracts"
-import { pinnedRoute } from "../inference/policy"
+import type { Conversations } from "./service"
 
 export type SnapshotMetadata = Pick<
   ChatState,

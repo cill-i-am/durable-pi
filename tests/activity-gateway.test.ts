@@ -1,8 +1,9 @@
-import { expect, it, vi } from "vitest"
-import service from "../src/agent/worker"
-import type { AgentEnv } from "../alchemy.run"
-import { agentObjectName, AgentId } from "../src/agents/domain"
 import { Schema } from "effect"
+import { expect, it, vi } from "vitest"
+
+import type { AgentEnv } from "../alchemy.run"
+import service from "../src/agent/worker"
+import { agentObjectName, AgentId } from "../src/agents/domain"
 import { isMailboxRequest } from "../src/communication/adapters/rpc"
 
 vi.mock("cloudflare:workers", () => ({

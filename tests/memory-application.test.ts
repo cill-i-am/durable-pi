@@ -10,20 +10,17 @@ import {
   Layer,
 } from "effect"
 import { TestClock } from "effect/testing"
-import { database } from "./database"
-import { sqliteMemoryLayer } from "../src/memory/adapters/sqlite"
-import { MemoryRepository } from "../src/memory/repository"
-import { MemoryTransaction } from "../src/memory/ledger"
-import {
-  MemoryBackupStatus,
-  backupStatusApplication,
-} from "../src/memory/backup-status"
+
+import { ConversationStorageError } from "../src/conversations/turns"
 import { SqliteBackupStatus } from "../src/memory/adapters/backup-status"
 import { bucketLayer, type BackupBucket } from "../src/memory/adapters/bucket"
 import { webCryptoLayer } from "../src/memory/adapters/crypto"
-import { pumpSummaries } from "../src/memory/compaction"
-import { BackupStore, BackupFailure } from "../src/memory/backup-store"
-import { SummaryFailure, SummaryModel } from "../src/memory/summary-model"
+import { memoryImportAuthority, memoryWake } from "../src/memory/adapters/host"
+import {
+  memoryImportResponse,
+  memoryReadRequest,
+} from "../src/memory/adapters/http"
+import { sqliteMemoryLayer } from "../src/memory/adapters/sqlite"
 import {
   MemorySchedulingError,
   memoryImport,
@@ -34,11 +31,15 @@ import {
   type MemoryHost,
 } from "../src/memory/application"
 import {
-  memoryImportResponse,
-  memoryReadRequest,
-} from "../src/memory/adapters/http"
-import { memoryImportAuthority, memoryWake } from "../src/memory/adapters/host"
-import { ConversationStorageError } from "../src/conversations/turns"
+  MemoryBackupStatus,
+  backupStatusApplication,
+} from "../src/memory/backup-status"
+import { BackupStore, BackupFailure } from "../src/memory/backup-store"
+import { pumpSummaries } from "../src/memory/compaction"
+import { MemoryTransaction } from "../src/memory/ledger"
+import { MemoryRepository } from "../src/memory/repository"
+import { SummaryFailure, SummaryModel } from "../src/memory/summary-model"
+import { database } from "./database"
 
 class Bucket implements BackupBucket {
   objects = new Map<string, string>()

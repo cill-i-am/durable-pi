@@ -1,7 +1,8 @@
-import { Schema, Effect } from "effect"
-import { defineTool, type ToolExecutionApi } from "@earendil-works/pi-durable"
-import type { DelegationFailure } from "../../delegation/contracts"
 import { Type } from "@earendil-works/pi-ai"
+import { defineTool, type ToolExecutionApi } from "@earendil-works/pi-durable"
+import { Schema, Effect } from "effect"
+
+import type { DelegationFailure } from "../../delegation/contracts"
 import {
   DelegateInput,
   type Communication,

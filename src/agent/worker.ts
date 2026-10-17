@@ -1,3 +1,21 @@
+import type { Credential } from "@earendil-works/pi-ai"
+import { openaiProvider } from "@earendil-works/pi-ai/providers/openai"
+import {
+  createRegistry,
+  defineTool,
+  Harness,
+  type Storage,
+  type Tx,
+  type ToolExecutionApi,
+} from "@earendil-works/pi-durable"
+import { PiHarness, openPiSessionStore } from "agents/harness/pi"
+import {
+  Lifecycle,
+  LifecycleCapability,
+  type LifecycleJobOutcome,
+} from "agents/lifecycle"
+import { MCPClientManager } from "agents/mcp/client"
+import { DurableObject } from "cloudflare:workers"
 import {
   Scheduler,
   Cause,
@@ -8,9 +26,26 @@ import {
   Semaphore,
   Scope,
 } from "effect"
-import type { ConversationError } from "../conversations/service"
-import { AgentCatalogHttp, agentCatalogHttp } from "../agents/adapters/http-api"
-import { preserveFatal } from "../shared/effect"
+import * as Effect from "effect/Effect"
+import * as Schema from "effect/Schema"
+
+import "../observability/lifecycle"
+import type { AgentEnv } from "../../alchemy.run"
+import {
+  connectionRequest,
+  connectionResponse,
+  connectionJson,
+  connectionDecode,
+} from "../access/adapters/connection-http"
+import {
+  ConnectionStore,
+  sqliteRemoteSelection,
+} from "../access/adapters/connections"
+import { accessRequest } from "../access/adapters/http"
+import { mcpConnectionClient } from "../access/adapters/mcp"
+import { ConnectionOAuthProvider } from "../access/adapters/oauth"
+import { guardedTools } from "../access/adapters/pi"
+import { piRemoteResult } from "../access/adapters/receipt"
 import { remoteToolResolution } from "../access/adapters/resolution"
 import {
   ConnectionRequest,
@@ -19,39 +54,32 @@ import {
   connectionNative,
   connectionRpc,
 } from "../access/adapters/rpc"
+import { AccessStore } from "../access/adapters/sqlite"
 import {
-  SkillReferences,
-  ResolvedSkills,
-  SkillOutcome,
-  skillNative,
-  skillRpc,
-} from "../skills/adapters/rpc"
-import { skillResolution } from "../skills/adapters/resolution"
-import { agentJson, agentNative, agentResponse } from "./adapters/http"
-import { proxyTerminalRequest } from "./adapters/terminal"
-import "../observability/lifecycle"
+  RemoteConnections,
+  connectionApplication,
+} from "../access/connection-service"
 import {
-  reportInference,
-  reportHarness,
-  reportRecovery,
-} from "../observability/events"
-import { WorkerTelemetry } from "../observability/worker"
-import { agentGateway } from "./adapters/gateway"
-import { RunRecoveryStore } from "../conversations/adapters/sqlite-recovery"
+  SelectRemoteTools,
+  ConnectionError,
+  RemoteToolArguments,
+  type RemoteTool,
+} from "../access/connections"
+import { builtInTools, AccessStorageError } from "../access/contracts"
+import { AccessGate, type AccessError } from "../access/gate"
+import { selectRemoteTools } from "../access/remote-selection"
 import {
-  RunRecovery,
-  recoveryApplication,
-} from "../conversations/recovery-service"
-import { webCryptoRecoveryLayer } from "../conversations/adapters/crypto"
-import { runRecoveryHook } from "../conversations/adapters/pi-recovery"
-import { communicationRequest } from "../communication/adapters/http"
-import { personalCommunication } from "../communication/adapters/personal-agent"
-import { isMailboxRequest } from "../communication/adapters/rpc"
-import { Communication } from "../communication/communication"
-import {
-  communicationTools,
-  communicationInstructions,
-} from "../communication/adapters/tools"
+  ActivityRequest,
+  ActivityResult,
+  ActivityOutcome,
+} from "../activity/adapters/rpc"
+import { SqliteActivityRecords } from "../activity/adapters/sqlite"
+import type {
+  ActivityAgent,
+  ActivityQuery,
+  ActivitySnapshot,
+  ActivityConversation,
+} from "../activity/contracts"
 import type { RunCursor } from "../activity/run"
 import {
   Activity,
@@ -59,52 +87,154 @@ import {
   activitySource,
   type ActivitySources,
 } from "../activity/service"
-import { SqliteActivityRecords } from "../activity/adapters/sqlite"
+import { AgentCatalog, AgentId, agentObjectName, homeAgentId } from "../agents"
+import { BotConfigurationStore } from "../agents/adapters/configuration"
+import { agentCatalogRequest } from "../agents/adapters/http"
+import { AgentCatalogHttp, agentCatalogHttp } from "../agents/adapters/http-api"
 import {
-  ActivityRequest,
-  ActivityResult,
-  ActivityOutcome,
-} from "../activity/adapters/rpc"
-import type {
-  ActivityAgent,
-  ActivityQuery,
-  ActivitySnapshot,
-  ActivityConversation,
-} from "../activity/contracts"
-import type { BackgroundHandoff } from "../delegation/background"
-import { SqliteBackgroundMailbox } from "../delegation/adapters/background-mailbox"
-import { BackgroundMailbox } from "../delegation/background-mailbox"
-import { backgroundCredential } from "../delegation/background-credential"
+  AgentRequest,
+  AgentResult,
+  AgentOutcome,
+  type AgentFailure,
+  agentRpc,
+  agentRpcNative,
+} from "../agents/adapters/rpc"
+import { sqliteAgentCatalog } from "../agents/adapters/sqlite"
 import {
-  BackgroundDelegation,
-  backgroundApplication,
-} from "../delegation/background-service"
-import { backgroundRemote } from "../delegation/adapters/background-rpc"
-import { backgroundNative } from "../delegation/adapters/interop"
+  agentNativeOperation,
+  TerminalAuthoritySync,
+  terminalAuthoritySyncLayer,
+  type synchronizeTerminalAuthority,
+  configurationInput,
+} from "../agents/adapters/synchronization"
+import {
+  configureAgent,
+  archiveAgent,
+  type AgentConfigurationHost,
+} from "../agents/application"
+import {
+  BotConfiguration,
+  configurationApplication,
+} from "../agents/configuration"
+import { type AgentProfile } from "../agents/contracts"
+import {
+  AgentConflict,
+  type AgentStorageError,
+  AgentSynchronizationError,
+  AgentRuntimeUnavailable,
+} from "../agents/domain"
+import { webExecutor } from "../apps/adapters/code"
+import { appsRequest } from "../apps/adapters/http"
+import { appTools } from "../apps/adapters/pi"
+import { AppStore } from "../apps/adapters/sqlite"
+import { AppStorageError } from "../apps/contracts"
+import { appEventPump } from "../apps/pump"
+import { Apps, appApplication } from "../apps/service"
+import { WebApps } from "../apps/web"
+import { CloudflareBrowser } from "../browser/adapters/cloudflare"
+import { browserRequest } from "../browser/adapters/http"
+import { browserWake } from "../browser/adapters/interop"
+import { sqliteBrowserLayer } from "../browser/adapters/sqlite"
+import { browserTools } from "../browser/adapters/tools"
+import { Browser } from "../browser/browser"
+import { BrowserStorageError } from "../browser/repository"
+import { communicationRequest } from "../communication/adapters/http"
+import { personalCommunication } from "../communication/adapters/personal-agent"
+import { isMailboxRequest } from "../communication/adapters/rpc"
+import {
+  communicationTools,
+  communicationInstructions,
+} from "../communication/adapters/tools"
+import { Communication } from "../communication/communication"
+import { webCryptoRecoveryLayer } from "../conversations/adapters/crypto"
+import {
+  ConversationCheckpoint,
+  conversationEvents,
+} from "../conversations/adapters/events"
+import { admissionResponse } from "../conversations/adapters/http-admission"
+import {
+  piConversationLayer,
+  conversationNativeOperation,
+} from "../conversations/adapters/pi-execution"
+import { runRecoveryHook } from "../conversations/adapters/pi-recovery"
+import {
+  sqliteConversationJournal,
+  conversationTransactions,
+} from "../conversations/adapters/sqlite-journal"
+import { RunRecoveryStore } from "../conversations/adapters/sqlite-recovery"
+import { ConversationStore } from "../conversations/adapters/sqlite-turns"
+import {
+  guardedMessageAdmission,
+  messageAdmission,
+} from "../conversations/admission"
+import { retryMessage, stopConversation } from "../conversations/commands"
+import {
+  CancelInput,
+  SendInput,
+  type ChatState,
+} from "../conversations/contracts"
+import {
+  ConversationExecution,
+  ConversationExecutionError,
+} from "../conversations/execution"
+import { ConversationJournal } from "../conversations/journal"
+import { conversationPump } from "../conversations/pump"
+import {
+  RunRecovery,
+  recoveryApplication,
+} from "../conversations/recovery-service"
+import type { ConversationError } from "../conversations/service"
+import {
+  Conversations,
+  conversationApplication,
+} from "../conversations/service"
+import { conversationSnapshot } from "../conversations/snapshot"
+import {
+  runtimeStatusEffect,
+  type RuntimeStatus,
+} from "../conversations/status"
+import {
+  ConversationStorageError,
+  ModelSettings,
+  type Submission,
+  type Turn,
+} from "../conversations/turns"
 import { backgroundRequest } from "../delegation/adapters/background-http"
-import { backgroundObjectName } from "../delegation/background"
+import { SqliteBackgroundMailbox } from "../delegation/adapters/background-mailbox"
 import {
   BackgroundParentRequest,
   BackgroundParentResult,
   BackgroundParentOutcome,
 } from "../delegation/adapters/background-parent"
-import type { DelegationSource } from "../delegation/delegation"
-import type { Group } from "../delegation/contracts"
-import { sharedReference } from "../delegation/delegation"
+import { backgroundRemote } from "../delegation/adapters/background-rpc"
+import { delegationsRequest } from "../delegation/adapters/http"
+import { backgroundNative } from "../delegation/adapters/interop"
 import { piDelegationLedger } from "../delegation/adapters/pi"
-import { Delegation, delegationApplication } from "../delegation/service"
 import {
   delegationTool,
   backgroundTool,
   delegationInstructions,
   childSteeringHook,
 } from "../delegation/adapters/tools"
-import { delegationsRequest } from "../delegation/adapters/http"
+import type { BackgroundHandoff } from "../delegation/background"
+import { backgroundObjectName } from "../delegation/background"
+import { backgroundCredential } from "../delegation/background-credential"
+import { BackgroundMailbox } from "../delegation/background-mailbox"
+import {
+  BackgroundDelegation,
+  backgroundApplication,
+} from "../delegation/background-service"
+import type { Group } from "../delegation/contracts"
 import { DelegationFailure, ReadTool } from "../delegation/contracts"
-import { openaiProvider } from "@earendil-works/pi-ai/providers/openai"
-import { ModelCatalogReader, catalogApplication } from "../inference/catalog"
-import { openaiCatalogSource } from "../inference/adapters/openai-catalog"
-import { ownerCatalogSource } from "../inference/adapters/owner-catalog"
+import type { DelegationSource } from "../delegation/delegation"
+import { sharedReference } from "../delegation/delegation"
+import { Delegation, delegationApplication } from "../delegation/service"
+import { executionRequest } from "../execution/adapters/http"
+import { codeService } from "../execution/adapters/service"
+import { ExecutionStore } from "../execution/adapters/sqlite"
+import { executionTools } from "../execution/adapters/tools"
+import { ExecutionStorageError } from "../execution/contracts"
+import { Executions, executionApplication } from "../execution/service"
 import {
   AccountRequest,
   AccountResult,
@@ -116,17 +246,28 @@ import {
   accountToken,
   nativeAccountToken,
 } from "../inference/adapters/account-rpc"
+import { SqliteCredentials } from "../inference/adapters/credential-sqlite"
+import {
+  accountCredentials,
+  toNativeCredential,
+} from "../inference/adapters/credentials-pi"
+import { createAgentModels } from "../inference/adapters/models-pi"
+import { refreshOAuth } from "../inference/adapters/oauth"
+import { openaiCatalogSource } from "../inference/adapters/openai-catalog"
+import { ownerCatalogSource } from "../inference/adapters/owner-catalog"
+import {
+  PiModelStreams,
+  piModelStreamsLayer,
+  modelCallback,
+} from "../inference/adapters/streams-pi"
+import { piUsage } from "../inference/adapters/usage-pi"
+import { SqliteUsage } from "../inference/adapters/usage-sqlite"
+import { ModelCatalogReader, catalogApplication } from "../inference/catalog"
 import {
   ModelCredentials,
   credentialApplication,
   type CredentialRefresh,
 } from "../inference/credentials"
-import { SqliteCredentials } from "../inference/adapters/credential-sqlite"
-import { refreshOAuth } from "../inference/adapters/oauth"
-import {
-  accountCredentials,
-  toNativeCredential,
-} from "../inference/adapters/credentials-pi"
 import type { ModelCatalog } from "../inference/policy"
 import {
   ModelUnavailable,
@@ -136,245 +277,21 @@ import {
   validateRoute,
 } from "../inference/policy"
 import { InferenceUsage, usageApplication } from "../inference/usage"
-import { SqliteUsage } from "../inference/adapters/usage-sqlite"
-import { piUsage } from "../inference/adapters/usage-pi"
-import {
-  PiModelStreams,
-  piModelStreamsLayer,
-  modelCallback,
-} from "../inference/adapters/streams-pi"
-import { SummaryRoutes } from "../memory/adapters/model-routes"
-import { SummaryRouting, summaryRoutingApplication } from "../memory/routing"
-import { SummaryModel } from "../memory/summary-model"
-import {
-  summaryApplication,
-  type SummaryProvider,
-  type SummaryInputs,
-} from "../memory/summary-execution"
-import { summaryInput } from "../memory/adapters/summary-input"
-import { piModelSummaryProvider } from "../memory/adapters/pi-model"
-import { memorySummaryRetry } from "../memory/retry"
-import { summaryRetryAuthority } from "../memory/adapters/retry-authority"
-import { DurableObject } from "cloudflare:workers"
-import {
-  Lifecycle,
-  LifecycleCapability,
-  type LifecycleJobOutcome,
-} from "agents/lifecycle"
-import { PiHarness, openPiSessionStore } from "agents/harness/pi"
-import {
-  createRegistry,
-  defineTool,
-  Harness,
-  type Storage,
-  type Tx,
-  type ToolExecutionApi,
-} from "@earendil-works/pi-durable"
-import type { Credential } from "@earendil-works/pi-ai"
-import { agentSettings, contextProjectionBytes } from "./compaction"
-import * as Schema from "effect/Schema"
-import * as Effect from "effect/Effect"
-import type { AgentEnv } from "../../alchemy.run"
-import { videoService } from "../workspace/adapters/video-service"
-import { documentService } from "../workspace/adapters/document-service"
-import { workspaceLayer } from "../workspace/adapters/storage"
-import { filesRequest } from "../workspace/adapters/http"
-import { Workspace } from "../workspace/workspace"
-import { workspaceTools } from "../workspace/adapters/tools"
-import {
-  workspaceExtractionCycle,
-  workspaceExtractionFailure,
-} from "../workspace/application"
-import { WorkspaceAdmission } from "../workspace/admission"
-import { WorkspaceUnavailable, messageArchiveText } from "../workspace/files"
-import { makeDurableObjectSqlite } from "../storage/durable-object"
-import { migrateSqlite } from "../storage/migrations"
-import { MemoryRepository } from "../memory/repository"
-import { sqliteMemoryLayer } from "../memory/adapters/sqlite"
+import { SqliteBackupStatus } from "../memory/adapters/backup-status"
 import { bucketLayer } from "../memory/adapters/bucket"
 import { webCryptoLayer } from "../memory/adapters/crypto"
-import { createAgentModels } from "../inference/adapters/models-pi"
-import { ConversationStore } from "../conversations/adapters/sqlite-turns"
+import { memoryWake, memoryImportAuthority } from "../memory/adapters/host"
 import {
-  runtimeStatusEffect,
-  type RuntimeStatus,
-} from "../conversations/status"
-import { conversationSnapshot } from "../conversations/snapshot"
-import {
-  configureAgent,
-  archiveAgent,
-  type AgentConfigurationHost,
-} from "../agents/application"
-import { agentCatalogRequest } from "../agents/adapters/http"
-import {
-  agentNativeOperation,
-  TerminalAuthoritySync,
-  terminalAuthoritySyncLayer,
-  type synchronizeTerminalAuthority,
-  configurationInput,
-} from "../agents/adapters/synchronization"
-import {
-  piConversationLayer,
-  conversationNativeOperation,
-} from "../conversations/adapters/pi-execution"
-import {
-  ConversationExecution,
-  ConversationExecutionError,
-} from "../conversations/execution"
-import { ConversationJournal } from "../conversations/journal"
-import {
-  sqliteConversationJournal,
-  conversationTransactions,
-} from "../conversations/adapters/sqlite-journal"
-import {
-  guardedMessageAdmission,
-  messageAdmission,
-} from "../conversations/admission"
-import { admissionResponse } from "../conversations/adapters/http-admission"
-import { retryMessage, stopConversation } from "../conversations/commands"
-import { conversationPump } from "../conversations/pump"
-import { MemoryTransaction } from "../memory/ledger"
-import {
-  ConversationStorageError,
-  ModelSettings,
-  type Submission,
-  type Turn,
-} from "../conversations/turns"
-import {
-  ConversationCheckpoint,
-  conversationEvents,
-} from "../conversations/adapters/events"
-import { selectBotSkills } from "../skills/selection"
-import { AccessStore } from "../access/adapters/sqlite"
-import { AccessGate, type AccessError } from "../access/gate"
-import { builtInTools, AccessStorageError } from "../access/contracts"
-import { guardedTools } from "../access/adapters/pi"
-import { piRemoteResult } from "../access/adapters/receipt"
-import { appEventPump } from "../apps/pump"
-import {
-  Conversations,
-  conversationApplication,
-} from "../conversations/service"
-import { accessRequest } from "../access/adapters/http"
-import { MCPClientManager } from "agents/mcp/client"
-import {
-  ConnectionStore,
-  sqliteRemoteSelection,
-} from "../access/adapters/connections"
-import { ConnectionOAuthProvider } from "../access/adapters/oauth"
-import { mcpConnectionClient } from "../access/adapters/mcp"
-import {
-  RemoteConnections,
-  connectionApplication,
-} from "../access/connection-service"
-import {
-  connectionRequest,
-  connectionResponse,
-  connectionJson,
-  connectionDecode,
-} from "../access/adapters/connection-http"
-import {
-  SelectRemoteTools,
-  ConnectionError,
-  RemoteToolArguments,
-  type RemoteTool,
-} from "../access/connections"
-import { selectRemoteTools } from "../access/remote-selection"
-import { SkillStore } from "../skills/adapters/sqlite"
-import { Skills, skillApplication } from "../skills/service"
-import { SelectSkills, SkillConflict } from "../skills/contracts"
-import {
-  readSkillJson,
-  skillResponse,
-  skillsRequest,
-} from "../skills/adapters/http"
-import { importSkillsRequest } from "../skills/adapters/hosted"
-import { runCommand } from "../terminal/adapters/service"
-import { terminalTools } from "../terminal/adapters/tools"
-import { importWorkspaceFile } from "../terminal/adapters/file-import"
-import { workspaceFileImport } from "../terminal/workspace-import"
-import { terminalImports } from "../terminal/adapters/import-service"
-import { TerminalRuntimeError } from "../terminal/runtime"
-import { Executions, executionApplication } from "../execution/service"
-import { ExecutionStore } from "../execution/adapters/sqlite"
-import { codeService } from "../execution/adapters/service"
-import { executionRequest } from "../execution/adapters/http"
-import { executionTools } from "../execution/adapters/tools"
-import { Browser } from "../browser/browser"
-import { sqliteBrowserLayer } from "../browser/adapters/sqlite"
-import { browserWake } from "../browser/adapters/interop"
-import { CloudflareBrowser } from "../browser/adapters/cloudflare"
-import { browserTools } from "../browser/adapters/tools"
-import { browserRequest } from "../browser/adapters/http"
-import { AppStore } from "../apps/adapters/sqlite"
-import { Apps, appApplication } from "../apps/service"
-import { AppStorageError } from "../apps/contracts"
-import { RoutineStorageError } from "../routines/persistence"
-import { WebhookStorageError } from "../webhooks/persistence"
-import { BrowserStorageError } from "../browser/repository"
-import { ExecutionStorageError } from "../execution/contracts"
-import { appsRequest } from "../apps/adapters/http"
-import { WebApps } from "../apps/web"
-import { webExecutor } from "../apps/adapters/code"
-import { appTools } from "../apps/adapters/pi"
-import {
-  piObjectLedger,
-  objectDigest,
-  checklistInTransaction,
-} from "../objects/adapters/pi"
-import { Objects, objectApplication } from "../objects/service"
-import type { ChangeSource } from "../objects/contracts"
-import {
-  objectTools,
-  objectContextHook,
-  recoverableObjectTools,
-} from "../objects/adapters/tools"
-import { objectsRequest } from "../objects/adapters/http"
-import { ObjectFailure } from "../objects/contracts"
-import {
-  piPlanLedger,
-  planDigest,
-  planBlockerStatus,
-} from "../planning/adapters/pi"
-import { Planning, planningApplication } from "../planning/service"
-import { planningInputSource } from "../planning/domain"
-import { planEvidence } from "../planning/evidence"
-import {
-  planTools,
-  planContextHook,
-  planningInstructions,
-  recoverablePlanTools,
-} from "../planning/adapters/tools"
-import { plansRequest } from "../planning/adapters/http"
-import { PlanFailure } from "../planning/contracts"
-import type { PlanSource, PlanControl, PlanEvidence } from "../planning/plans"
-import { sqliteWebhookPersistence } from "../webhooks/adapters/sqlite"
-import { Webhooks, webhookApplication } from "../webhooks/service"
-import {
-  webhookIncoming,
-  webhookOwnerRequest,
-  webhookNative,
-} from "../webhooks/adapters/http"
-import { digest } from "../webhooks/adapters/crypto"
-import { WebhookKey } from "../webhooks/contracts"
-import {
-  WebhookAuthorizationRequest,
-  WebhookAuthorizationOutcome,
-} from "../webhooks/adapters/authorization-rpc"
-import { RoutineId } from "../routines/contracts"
-import { sqliteRoutinePersistence } from "../routines/adapters/sqlite"
-import {
-  Routines,
-  RoutineAuthority,
-  type RoutineError,
-  routineApplication,
-} from "../routines/service"
-import { routinePump } from "../routines/pump"
-import { routinesRequest } from "../routines/adapters/http"
-import { routineTools } from "../routines/adapters/pi"
-import { SYSTEM_PROMPT } from "./prompts"
-import { ImportInput } from "../memory/import"
-import { Part } from "../memory/domain"
+  exportResponse,
+  memoryReadRequest,
+  memoryImportResponse,
+} from "../memory/adapters/http"
+import { SummaryRoutes } from "../memory/adapters/model-routes"
+import { piModelSummaryProvider } from "../memory/adapters/pi-model"
+import { summaryRetryAuthority } from "../memory/adapters/retry-authority"
+import { sqliteMemoryLayer } from "../memory/adapters/sqlite"
+import { summaryInput } from "../memory/adapters/summary-input"
+import { memoryTools } from "../memory/adapters/tools"
 import {
   memoryMaintenance,
   memoryImport,
@@ -387,42 +304,125 @@ import {
   MemoryBackupStatus,
   backupStatusApplication,
 } from "../memory/backup-status"
-import { SqliteBackupStatus } from "../memory/adapters/backup-status"
-import { memoryWake, memoryImportAuthority } from "../memory/adapters/host"
-import { memoryTools } from "../memory/adapters/tools"
+import { Part } from "../memory/domain"
+import { ImportInput } from "../memory/import"
+import { MemoryTransaction } from "../memory/ledger"
+import { MemoryRepository } from "../memory/repository"
+import { memorySummaryRetry } from "../memory/retry"
+import { SummaryRouting, summaryRoutingApplication } from "../memory/routing"
 import {
-  exportResponse,
-  memoryReadRequest,
-  memoryImportResponse,
-} from "../memory/adapters/http"
+  summaryApplication,
+  type SummaryProvider,
+  type SummaryInputs,
+} from "../memory/summary-execution"
+import { SummaryModel } from "../memory/summary-model"
+import { objectsRequest } from "../objects/adapters/http"
 import {
-  CancelInput,
-  SendInput,
-  type ChatState,
-} from "../conversations/contracts"
-
-import { AgentCatalog, AgentId, agentObjectName, homeAgentId } from "../agents"
-import { sqliteAgentCatalog } from "../agents/adapters/sqlite"
-import { BotConfigurationStore } from "../agents/adapters/configuration"
+  piObjectLedger,
+  objectDigest,
+  checklistInTransaction,
+} from "../objects/adapters/pi"
 import {
-  BotConfiguration,
-  configurationApplication,
-} from "../agents/configuration"
+  objectTools,
+  objectContextHook,
+  recoverableObjectTools,
+} from "../objects/adapters/tools"
+import type { ChangeSource } from "../objects/contracts"
+import { ObjectFailure } from "../objects/contracts"
+import { Objects, objectApplication } from "../objects/service"
 import {
-  AgentConflict,
-  type AgentStorageError,
-  AgentSynchronizationError,
-  AgentRuntimeUnavailable,
-} from "../agents/domain"
+  reportInference,
+  reportHarness,
+  reportRecovery,
+} from "../observability/events"
+import { WorkerTelemetry } from "../observability/worker"
+import { plansRequest } from "../planning/adapters/http"
 import {
-  AgentRequest,
-  AgentResult,
-  AgentOutcome,
-  type AgentFailure,
-  agentRpc,
-  agentRpcNative,
-} from "../agents/adapters/rpc"
-import { type AgentProfile } from "../agents/contracts"
+  piPlanLedger,
+  planDigest,
+  planBlockerStatus,
+} from "../planning/adapters/pi"
+import {
+  planTools,
+  planContextHook,
+  planningInstructions,
+  recoverablePlanTools,
+} from "../planning/adapters/tools"
+import { PlanFailure } from "../planning/contracts"
+import { planningInputSource } from "../planning/domain"
+import { planEvidence } from "../planning/evidence"
+import type { PlanSource, PlanControl, PlanEvidence } from "../planning/plans"
+import { Planning, planningApplication } from "../planning/service"
+import { routinesRequest } from "../routines/adapters/http"
+import { routineTools } from "../routines/adapters/pi"
+import { sqliteRoutinePersistence } from "../routines/adapters/sqlite"
+import { RoutineId } from "../routines/contracts"
+import { RoutineStorageError } from "../routines/persistence"
+import { routinePump } from "../routines/pump"
+import {
+  Routines,
+  RoutineAuthority,
+  type RoutineError,
+  routineApplication,
+} from "../routines/service"
+import { preserveFatal } from "../shared/effect"
+import { importSkillsRequest } from "../skills/adapters/hosted"
+import {
+  readSkillJson,
+  skillResponse,
+  skillsRequest,
+} from "../skills/adapters/http"
+import { skillResolution } from "../skills/adapters/resolution"
+import {
+  SkillReferences,
+  ResolvedSkills,
+  SkillOutcome,
+  skillNative,
+  skillRpc,
+} from "../skills/adapters/rpc"
+import { SkillStore } from "../skills/adapters/sqlite"
+import { SelectSkills, SkillConflict } from "../skills/contracts"
+import { selectBotSkills } from "../skills/selection"
+import { Skills, skillApplication } from "../skills/service"
+import { makeDurableObjectSqlite } from "../storage/durable-object"
+import { migrateSqlite } from "../storage/migrations"
+import { importWorkspaceFile } from "../terminal/adapters/file-import"
+import { terminalImports } from "../terminal/adapters/import-service"
+import { runCommand } from "../terminal/adapters/service"
+import { terminalTools } from "../terminal/adapters/tools"
+import { TerminalRuntimeError } from "../terminal/runtime"
+import { workspaceFileImport } from "../terminal/workspace-import"
+import {
+  WebhookAuthorizationRequest,
+  WebhookAuthorizationOutcome,
+} from "../webhooks/adapters/authorization-rpc"
+import { digest } from "../webhooks/adapters/crypto"
+import {
+  webhookIncoming,
+  webhookOwnerRequest,
+  webhookNative,
+} from "../webhooks/adapters/http"
+import { sqliteWebhookPersistence } from "../webhooks/adapters/sqlite"
+import { WebhookKey } from "../webhooks/contracts"
+import { WebhookStorageError } from "../webhooks/persistence"
+import { Webhooks, webhookApplication } from "../webhooks/service"
+import { documentService } from "../workspace/adapters/document-service"
+import { filesRequest } from "../workspace/adapters/http"
+import { workspaceLayer } from "../workspace/adapters/storage"
+import { workspaceTools } from "../workspace/adapters/tools"
+import { videoService } from "../workspace/adapters/video-service"
+import { WorkspaceAdmission } from "../workspace/admission"
+import {
+  workspaceExtractionCycle,
+  workspaceExtractionFailure,
+} from "../workspace/application"
+import { WorkspaceUnavailable, messageArchiveText } from "../workspace/files"
+import { Workspace } from "../workspace/workspace"
+import { agentGateway } from "./adapters/gateway"
+import { agentJson, agentNative, agentResponse } from "./adapters/http"
+import { proxyTerminalRequest } from "./adapters/terminal"
+import { agentSettings, contextProjectionBytes } from "./compaction"
+import { SYSTEM_PROMPT } from "./prompts"
 
 export { BackgroundGroup } from "../delegation/worker"
 
@@ -2540,13 +2540,49 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       yield* Effect.yieldNow
       const url = new URL(request.url)
       const path = url.pathname.replace("/api/agent/", "")
-      if (path === "communication" || path.startsWith("communication/")) {
+      const base = path.split("/")[0]
+      if (
+        [
+          "communication",
+          "connections",
+          "remote-tools",
+          "access",
+          "skills",
+          "skill-selection",
+          "bots",
+        ].includes(base ?? "")
+      )
+        return yield* this.authorityHttpProgram(request, path)
+      if (
+        [
+          "webhooks",
+          "routines",
+          "background",
+          "delegations",
+          "plans",
+          "objects",
+          "apps",
+          "execution",
+          "terminal",
+          "browser",
+          "files",
+        ].includes(base ?? "")
+      )
+        return yield* this.workbenchHttpProgram(request, path)
+      return yield* this.conversationHttpProgram(request, path)
+    })
+  }
+  private authorityHttpProgram(request: Request, path: string) {
+    return Effect.gen({ self: this }, function* () {
+      const base = path.split("/")[0]
+
+      if (base === "communication") {
         const context = yield* this.communication.runtime.contextEffect
         return yield* communicationRequest(request, path).pipe(
           Effect.provideContext(context)
         )
       }
-      if (path === "connections" || path.startsWith("connections/"))
+      if (base === "connections")
         return yield* connectionRequest(
           this.connections,
           request,
@@ -2613,7 +2649,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           )
         )
       }
-      if (path === "access" || path.startsWith("access/")) {
+      if (base === "access") {
         const response = yield* accessRequest(this.access, request, path, () =>
           this.writable(
             (cause) =>
@@ -2627,124 +2663,9 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           yield* agentNative("wake conversation", () => this.runner.wake())
         return response
       }
-      if (path === "webhooks/incoming" && request.method === "POST")
-        return yield* webhookIncoming(this.webhooks, request, () =>
-          webhookNative(() => this.routineRunner.wake())
-        )
-      if (path === "webhooks" || path.startsWith("webhooks/"))
-        return yield* webhookOwnerRequest(this.webhooks, request, path)
-      if (path === "routines" || path.startsWith("routines/"))
-        return yield* routinesRequest(
-          this.routines,
-          request,
-          path,
-          () =>
-            agentNative("wake routines", () => this.routineRunner.wake()).pipe(
-              Effect.catchCause((cause) =>
-                Effect.failCause(
-                  Cause.map(
-                    cause,
-                    (error) =>
-                      new RoutineStorageError({
-                        operation: "wake routines",
-                        cause: error,
-                      })
-                  )
-                )
-              )
-            ),
-          (id) =>
-            Effect.gen({ self: this }, function* () {
-              yield* agentNative("wake conversation", () => this.runner.wake())
-              yield* agentNative("wake routines", () =>
-                this.routineRunner.wake()
-              )
-              const run = yield* this.routines.cancelPendingRun(id)
-              if (run?.status === "queued") {
-                yield* this.conversationService.requestStop(run.turnId)
-                yield* this.access.cancel(run.turnId)
-              }
-              this.notifyConversation()
-            }).pipe(
-              preserveFatal,
-              Effect.mapError((cause) => {
-                switch (cause._tag) {
-                  case "RoutineConflict":
-                  case "RoutineStorageError":
-                    return cause
-                  default:
-                    return new RoutineStorageError({
-                      operation: "stop routine",
-                      cause,
-                    })
-                }
-              })
-            )
-        )
-      if (path === "background" || path.startsWith("background/"))
-        return yield* backgroundRequest(this.background, request, path)
-      if (path === "delegations" || path.startsWith("delegations/"))
-        return yield* delegationsRequest(this.delegations, request, path)
-      if (path === "plans" || path.startsWith("plans/"))
-        return yield* plansRequest(this.plans, request, path)
-      if (path === "objects" || path.startsWith("objects/"))
-        return yield* objectsRequest(this.objects, request, path, (id) =>
-          this.conversations.get(id).pipe(
-            Effect.map((turn) =>
-              turn
-                ? {
-                    id: turn.id,
-                    text: turn.text,
-                    answer: turn.answer,
-                    createdAt: turn.created_at,
-                  }
-                : undefined
-            ),
-            Effect.mapError(
-              () =>
-                new ObjectFailure({
-                  code: "unavailable",
-                  message: "Could not read the origin request.",
-                })
-            )
-          )
-        )
-
-      if (path === "apps" || path.startsWith("apps/"))
-        return yield* appsRequest(
-          this.appService,
-          request,
-          path,
-          () =>
-            agentNative("wake app events", () => this.appEvents.wake()).pipe(
-              Effect.catchCause((cause) =>
-                Effect.failCause(
-                  Cause.map(
-                    cause,
-                    (error) =>
-                      new AppStorageError({
-                        operation: "wake app events",
-                        cause: error,
-                      })
-                  )
-                )
-              )
-            ),
-          this.webApps
-        )
-      if (path === "execution" || path.startsWith("execution/"))
-        return yield* executionRequest(this.executions, request, path, (task) =>
-          this.ctx.waitUntil(
-            modelCallback(this.actorRuntime.runPromiseExit(task))
-          )
-        )
-      if (path === "terminal/files/import" && request.method === "POST")
-        return yield* importWorkspaceFile(this.copyWorkspaceFile, request)
-      if (path === "browser" || path.startsWith("browser/"))
-        return yield* browserRequest(this.browser, request, path)
       if (path.startsWith("skills/import/"))
         return yield* importSkillsRequest(this.connections, request, path)
-      if (path === "skills" || path.startsWith("skills/"))
+      if (base === "skills")
         return yield* skillsRequest(this.skillService, request, path)
       if (path === "skill-selection") {
         if (request.method === "GET")
@@ -2793,43 +2714,6 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           )
         )
       }
-      if (path === "files" || path.startsWith("files/")) {
-        if (
-          request.method !== "GET" &&
-          (yield* this.configurationService.read())?.status === "archived"
-        )
-          return Response.json(
-            { error: "Restore this agent before changing its files." },
-            { status: 409 }
-          )
-        const operation = filesRequest(request, path, (program, options) =>
-          this.actorRuntime
-            .runPromiseExit(this.downloadLock.withPermits(1)(program), options)
-            .then((exit) =>
-              Exit.isFailure(exit)
-                ? Exit.failCause(
-                    Cause.map(exit.cause, (error) => {
-                      switch (error._tag) {
-                        case "FileRejected":
-                        case "FileNotFound":
-                        case "WorkspaceReadOnly":
-                        case "WorkspaceUnavailable":
-                          return error
-                        default:
-                          return new WorkspaceUnavailable()
-                      }
-                    })
-                  )
-                : Exit.succeed(exit.value)
-            )
-        )
-        const response = yield* path === "files/upload"
-          ? this.uploadLock.withPermits(1)(operation)
-          : operation
-        if (response.ok && request.method === "POST")
-          yield* agentNative("wake extraction", () => this.extraction.wake())
-        return response
-      }
       if (path === "bots" && request.method === "GET")
         return yield* this.catalogHttp.request(request)
       if (path.startsWith("bots/") && request.method === "POST")
@@ -2840,7 +2724,177 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           request.headers.get("x-owner-id")!,
           yield* agentJson(request, Schema.Unknown)
         )
-      if (request.method === "GET" && path === "export")
+
+      return new Response("Not found", { status: 404 })
+    })
+  }
+  private workbenchHttpProgram(request: Request, path: string) {
+    return Effect.gen({ self: this }, function* () {
+      const base = path.split("/")[0]
+
+      if (path === "webhooks/incoming" && request.method === "POST")
+        return yield* webhookIncoming(this.webhooks, request, () =>
+          webhookNative(() => this.routineRunner.wake())
+        )
+      if (base === "webhooks")
+        return yield* webhookOwnerRequest(this.webhooks, request, path)
+      if (base === "routines")
+        return yield* routinesRequest(
+          this.routines,
+          request,
+          path,
+          () =>
+            agentNative("wake routines", () => this.routineRunner.wake()).pipe(
+              Effect.catchCause((cause) =>
+                Effect.failCause(
+                  Cause.map(
+                    cause,
+                    (error) =>
+                      new RoutineStorageError({
+                        operation: "wake routines",
+                        cause: error,
+                      })
+                  )
+                )
+              )
+            ),
+          (id) =>
+            Effect.gen({ self: this }, function* () {
+              yield* agentNative("wake conversation", () => this.runner.wake())
+              yield* agentNative("wake routines", () =>
+                this.routineRunner.wake()
+              )
+              const run = yield* this.routines.cancelPendingRun(id)
+              if (run?.status === "queued") {
+                yield* this.conversationService.requestStop(run.turnId)
+                yield* this.access.cancel(run.turnId)
+              }
+              this.notifyConversation()
+            }).pipe(
+              preserveFatal,
+              Effect.mapError((cause) => {
+                switch (cause._tag) {
+                  case "RoutineConflict":
+                  case "RoutineStorageError":
+                    return cause
+                  default:
+                    return new RoutineStorageError({
+                      operation: "stop routine",
+                      cause,
+                    })
+                }
+              })
+            )
+        )
+      if (base === "background")
+        return yield* backgroundRequest(this.background, request, path)
+      if (base === "delegations")
+        return yield* delegationsRequest(this.delegations, request, path)
+      if (base === "plans")
+        return yield* plansRequest(this.plans, request, path)
+      if (base === "objects")
+        return yield* objectsRequest(this.objects, request, path, (id) =>
+          this.conversations.get(id).pipe(
+            Effect.map((turn) =>
+              turn
+                ? {
+                    id: turn.id,
+                    text: turn.text,
+                    answer: turn.answer,
+                    createdAt: turn.created_at,
+                  }
+                : undefined
+            ),
+            Effect.mapError(
+              () =>
+                new ObjectFailure({
+                  code: "unavailable",
+                  message: "Could not read the origin request.",
+                })
+            )
+          )
+        )
+
+      if (base === "apps")
+        return yield* appsRequest(
+          this.appService,
+          request,
+          path,
+          () =>
+            agentNative("wake app events", () => this.appEvents.wake()).pipe(
+              Effect.catchCause((cause) =>
+                Effect.failCause(
+                  Cause.map(
+                    cause,
+                    (error) =>
+                      new AppStorageError({
+                        operation: "wake app events",
+                        cause: error,
+                      })
+                  )
+                )
+              )
+            ),
+          this.webApps
+        )
+      if (base === "execution")
+        return yield* executionRequest(this.executions, request, path, (task) =>
+          this.ctx.waitUntil(
+            modelCallback(this.actorRuntime.runPromiseExit(task))
+          )
+        )
+      if (path === "terminal/files/import" && request.method === "POST")
+        return yield* importWorkspaceFile(this.copyWorkspaceFile, request)
+      if (base === "browser")
+        return yield* browserRequest(this.browser, request, path)
+      if (base === "files") return yield* this.filesHttpProgram(request, path)
+
+      return new Response("Not found", { status: 404 })
+    })
+  }
+  private filesHttpProgram(request: Request, path: string) {
+    return Effect.gen({ self: this }, function* () {
+      if (
+        request.method !== "GET" &&
+        (yield* this.configurationService.read())?.status === "archived"
+      )
+        return Response.json(
+          { error: "Restore this agent before changing its files." },
+          { status: 409 }
+        )
+      const operation = filesRequest(request, path, (program, options) =>
+        this.actorRuntime
+          .runPromiseExit(this.downloadLock.withPermits(1)(program), options)
+          .then((exit) =>
+            Exit.isFailure(exit)
+              ? Exit.failCause(
+                  Cause.map(exit.cause, (error) => {
+                    switch (error._tag) {
+                      case "FileRejected":
+                      case "FileNotFound":
+                      case "WorkspaceReadOnly":
+                      case "WorkspaceUnavailable":
+                        return error
+                      default:
+                        return new WorkspaceUnavailable()
+                    }
+                  })
+                )
+              : Exit.succeed(exit.value)
+          )
+      )
+      const response = yield* path === "files/upload"
+        ? this.uploadLock.withPermits(1)(operation)
+        : operation
+      if (response.ok && request.method === "POST")
+        yield* agentNative("wake extraction", () => this.extraction.wake())
+      return response
+    })
+  }
+  private conversationHttpProgram(request: Request, path: string) {
+    return Effect.gen({ self: this }, function* () {
+      const url = new URL(request.url)
+      if (`${request.method} ${path}` === "GET export")
         return yield* exportResponse(
           url.searchParams.get("format") === "html",
           {
@@ -2852,12 +2906,9 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
               ),
           }
         )
-      if (
-        request.method === "GET" &&
-        (path === "tree" || path === "search" || path === "zoom")
-      )
+      if (isMemoryRead(request, path))
         return yield* memoryReadRequest(request, path)
-      if (request.method === "GET" && path === "events")
+      if (`${request.method} ${path}` === "GET events")
         return conversationEvents(
           {
             snapshot: () => this.snapshotProgram(),
@@ -2883,9 +2934,9 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             after: url.searchParams.get("after"),
           }
         )
-      if (request.method === "GET" && path === "state")
+      if (`${request.method} ${path}` === "GET state")
         return Response.json(yield* this.snapshotProgram())
-      if (request.method === "POST" && path === "memory/retry") {
+      if (`${request.method} ${path}` === "POST memory/retry") {
         const input = yield* agentJson(
           request,
           Schema.Struct({
@@ -2896,13 +2947,13 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         yield* this.retrySummary(input)
         return Response.json({ ok: true })
       }
-      if (request.method === "POST" && path === "import") {
+      if (`${request.method} ${path}` === "POST import") {
         const input = yield* agentJson(request, ImportInput, 1_100_000)
         return yield* memoryImportResponse(this.importMemory(input.jsonl))
       }
-      if (request.method === "GET" && path === "inference")
+      if (`${request.method} ${path}` === "GET inference")
         return Response.json({ attempts: yield* this.inferenceUsage.recent() })
-      if (request.method === "GET" && path === "models") {
+      if (`${request.method} ${path}` === "GET models") {
         const catalog = yield* this.catalogProgram()
         const selection = yield* this.conversationService.selection()
         const assignments = yield* Effect.forEach(jobTypes, (job) =>
@@ -2920,7 +2971,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           assignments: Object.fromEntries(assignments),
         })
       }
-      if (request.method === "POST" && path === "settings") {
+      if (`${request.method} ${path}` === "POST settings") {
         const { job = "conversation", ...settings } = yield* agentJson(
           request,
           Schema.Struct({
@@ -2942,11 +2993,11 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         this.notifyConversation()
         return Response.json(selection)
       }
-      if (request.method === "POST" && path === "send")
+      if (`${request.method} ${path}` === "POST send")
         return yield* admissionResponse(
           this.messageAdmission(yield* agentJson(request, SendInput))
         )
-      if (request.method === "POST" && path === "retry") {
+      if (`${request.method} ${path}` === "POST retry") {
         const input = yield* agentJson(
           request,
           Schema.Struct({
@@ -2956,11 +3007,12 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         )
         return yield* admissionResponse(this.retryMessage(input))
       }
-      if (request.method === "POST" && path === "cancel") {
+      if (`${request.method} ${path}` === "POST cancel") {
         const input = yield* agentJson(request, CancelInput)
         yield* this.stopConversation(input.operationId)
         return Response.json({ ok: true }, { status: 202 })
       }
+
       return new Response("Not found", { status: 404 })
     })
   }
@@ -3041,3 +3093,13 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
 }
 
 export default { fetch: agentGateway }
+
+function isMemoryRead(
+  request: Request,
+  path: string
+): path is "tree" | "search" | "zoom" {
+  return (
+    request.method === "GET" &&
+    (path === "tree" || path === "search" || path === "zoom")
+  )
+}

@@ -1,5 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from "react"
 import { Schema } from "effect"
+import { useCallback, useEffect, useRef, useState } from "react"
+
+import { agentApi } from "@/http/client"
+import { poll } from "@/http/poll"
 import {
   RoutineList,
   RoutineChange,
@@ -7,8 +10,6 @@ import {
   type SetRoutineStatus,
   type RunRoutineNow,
 } from "@/routines/contracts"
-import { agentApi } from "@/http/client"
-import { poll } from "@/http/poll"
 
 type Change =
   | { path: "save"; body: SaveRoutine }
@@ -61,6 +62,7 @@ export function useRoutines(
     )
     return () => {
       stopPolling()
+      // oxlint-disable-next-line react/exhaustive-deps -- Advance the live request generation so all pending responses become stale.
       sequence.current++
     }
   }, [refresh])

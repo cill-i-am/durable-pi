@@ -1,5 +1,6 @@
-import { afterEach, expect, it, vi } from "vitest"
 import { Effect } from "effect"
+import { afterEach, expect, it, vi } from "vitest"
+
 import { configureObservability } from "../scripts/configure-observability"
 
 const deployed = (id: string, resource: string, stage = "production") => ({

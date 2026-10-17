@@ -1,9 +1,10 @@
-import { preserveFatal } from "../../shared/effect"
-import { runObserved } from "../../observability/worker"
 import { Effect } from "effect"
+
+import { runObserved } from "../../observability/worker"
+import { preserveFatal } from "../../shared/effect"
+import { DocumentUnreadable } from "../documents"
 import { MAX_FILE_BYTES } from "../files"
 import { workspaceRequestBytes } from "./http"
-import { DocumentUnreadable } from "../documents"
 import { extractPdf } from "./pdf"
 
 export default {

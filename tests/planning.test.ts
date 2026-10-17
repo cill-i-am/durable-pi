@@ -1,16 +1,8 @@
-import { expect, it, vi } from "vitest"
 import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { Effect } from "effect"
+
 import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context"
-import {
-  Harness,
-  createRegistry,
-  watchEvents,
-  defineTool,
-} from "@earendil-works/pi-durable"
-import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
 import {
   createModels,
   fauxProvider,
@@ -18,6 +10,21 @@ import {
   fauxToolCall,
   Type,
 } from "@earendil-works/pi-ai"
+import {
+  Harness,
+  createRegistry,
+  watchEvents,
+  defineTool,
+} from "@earendil-works/pi-durable"
+import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
+import { Effect } from "effect"
+import { expect, it, vi } from "vitest"
+
+import { guardedTools } from "../src/access/adapters/pi"
+import { AccessStore } from "../src/access/adapters/sqlite"
+import { builtInTools } from "../src/access/contracts"
+import { AccessGate } from "../src/access/gate"
+import { plansRequest } from "../src/planning/adapters/http"
 import {
   piPlans,
   savedPlanBlocked,
@@ -28,17 +35,12 @@ import {
   planContextHook,
   recoverablePlanTools,
 } from "../src/planning/adapters/tools"
-import { plansRequest } from "../src/planning/adapters/http"
 import type {
   PlanDraft,
   PlanFailure,
   PlanUpdate,
 } from "../src/planning/contracts"
 import type { PlanSource, PlanAuthority } from "../src/planning/plans"
-import { AccessStore } from "../src/access/adapters/sqlite"
-import { AccessGate } from "../src/access/gate"
-import { guardedTools } from "../src/access/adapters/pi"
-import { builtInTools } from "../src/access/contracts"
 import { database } from "./database"
 
 const run = <T>(value: Effect.Effect<T, PlanFailure>) =>

@@ -1,4 +1,3 @@
-import { useEffect, useRef, useState } from "react"
 import {
   Activity,
   Archive,
@@ -19,16 +18,12 @@ import {
   Settings2,
   TerminalSquare,
 } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+
 import type { AgentProfile } from "@/agents/contracts"
 import { homeAgentId } from "@/agents/contracts"
 import { AgentMark, agentTone } from "@/components/agent-mark"
 import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog"
 import {
   Command,
   CommandInput,
@@ -38,14 +33,11 @@ import {
   CommandItem,
 } from "@/components/ui/command"
 import {
-  Menubar,
-  MenubarMenu,
-  MenubarTrigger,
-  MenubarContent,
-  MenubarGroup,
-  MenubarItem,
-  MenubarSeparator,
-} from "@/components/ui/menubar"
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -55,8 +47,16 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
+import {
+  Menubar,
+  MenubarMenu,
+  MenubarTrigger,
+  MenubarContent,
+  MenubarGroup,
+  MenubarItem,
+  MenubarSeparator,
+} from "@/components/ui/menubar"
 import { useSidebar } from "@/components/ui/sidebar"
-
 import type { Workbench } from "@/navigation/workspace"
 
 export type { Workbench } from "@/navigation/workspace"
@@ -343,7 +343,7 @@ export function WorkspaceNavigation({
           </DialogTitle>
           <DialogDescription className="sr-only">
             Find an active agent or open a workspace tool. Conversations are
-            searchable in each agent's memory.
+            searchable in each agent&apos;s memory.
           </DialogDescription>
           <Command loop>
             <CommandInput

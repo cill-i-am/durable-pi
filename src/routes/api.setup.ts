@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { createAuth } from "../auth/server"
-import { ownerSetup } from "../auth/adapters/owner-setup"
+
 import { ownerAccounts } from "../auth/adapters/accounts"
+import { ownerSetup } from "../auth/adapters/owner-setup"
+import { createAuth } from "../auth/server"
 import { getEnv, runInBackground } from "../env"
 
 export const Route = createFileRoute("/api/setup")({

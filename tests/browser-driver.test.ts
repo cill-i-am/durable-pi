@@ -1,10 +1,11 @@
-import { nativeBrowserOperation } from "../src/browser/adapters/interop"
 import { runInNewContext } from "node:vm"
-import { beforeEach, expect, it, vi } from "vitest"
-import { Cause, Effect, Exit, Fiber, Layer, ManagedRuntime } from "effect"
-import { it as effectIt } from "@effect/vitest"
-import { TestClock } from "effect/testing"
+
 import { TimeoutError } from "@cloudflare/puppeteer"
+import { it as effectIt } from "@effect/vitest"
+import { Cause, Effect, Exit, Fiber, Layer, ManagedRuntime } from "effect"
+import { TestClock } from "effect/testing"
+import { beforeEach, expect, it, vi } from "vitest"
+
 import {
   CloudflareBrowser,
   PAGE_OBSERVATION,
@@ -13,11 +14,12 @@ import {
   MASK_FIELDS,
   UNMASK_FIELDS,
 } from "../src/browser/adapters/cloudflare"
+import { nativeBrowserOperation } from "../src/browser/adapters/interop"
 
 const provider = vi.hoisted(() => ({ launch: vi.fn(), connect: vi.fn() }))
 vi.mock("@cloudflare/puppeteer", async (importOriginal) => {
-  const actual = await importOriginal<{ TimeoutError: typeof TimeoutError }>()
-  return { default: provider, TimeoutError: actual.TimeoutError }
+  const actual = await importOriginal<typeof import("@cloudflare/puppeteer")>()
+  return { ...actual, default: provider }
 })
 const session = {
   id: "synthetic-session",
@@ -849,6 +851,31 @@ it.each(["navigate", "capture", "interact"])(
     })
     expect(f.page.goto).not.toHaveBeenCalled()
     expect(f.page.mouse.click).not.toHaveBeenCalled()
+    expect(f.browser.disconnect).toHaveBeenCalledOnce()
+  }
+)
+
+it.each(["timeout", "rejection"])(
+  "settles a click navigation watcher %s through the browser error channel",
+  async (mode) => {
+    const f = fixture()
+    f.page.waitForNavigation.mockRejectedValue(
+      mode === "timeout"
+        ? new TimeoutError("navigation timed out")
+        : new Error("Private navigation failure")
+    )
+    const work = driver.interact(
+      session,
+      { kind: "click", x: 1, y: 1 },
+      "https://example.com/",
+      ["example.com"],
+      "agent"
+    )
+    if (mode === "timeout")
+      await expect(work).resolves.toMatchObject({
+        page: { url: "https://example.com/" },
+      })
+    else await expect(work).rejects.toThrow()
     expect(f.browser.disconnect).toHaveBeenCalledOnce()
   }
 )

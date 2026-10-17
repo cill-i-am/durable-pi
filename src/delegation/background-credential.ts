@@ -1,6 +1,7 @@
 import { Effect } from "effect"
-import { DelegationFailure } from "./contracts"
+
 import type { BackgroundError } from "./background-mailbox"
+import { DelegationFailure } from "./contracts"
 
 /** A lookup can wait for account-owned rotation. A stopped group must not
  * receive the token when that lookup eventually settles. */

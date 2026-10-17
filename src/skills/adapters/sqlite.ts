@@ -1,6 +1,7 @@
-import { Effect, Schema } from "effect"
 import { and, desc, eq, getTableColumns } from "drizzle-orm"
 import type { EffectDrizzleQueryError } from "drizzle-orm/effect-core/errors"
+import { Effect, Schema } from "effect"
+
 import { mapSqliteError, type Sqlite } from "../../storage/sqlite"
 import {
   SkillConflict,
@@ -10,9 +11,9 @@ import {
   type SaveSkill,
   type SelectSkills,
 } from "../contracts"
-import { SkillSource } from "../source"
 import * as Domain from "../domain"
 import type { SkillError, SkillLedger } from "../repository"
+import { SkillSource } from "../source"
 import {
   workspaceSkills as skills,
   workspaceSkillVersions as versions,
@@ -209,7 +210,7 @@ export class SkillStore implements SkillLedger {
           row
             ? Schema.decodeUnknownSync(SkillSelection)({
                 revision: row.revision,
-                skills: JSON.parse(row.skills),
+                skills: JSON.parse(row.skills) as unknown,
               })
             : { revision: 0, skills: [] }
         )

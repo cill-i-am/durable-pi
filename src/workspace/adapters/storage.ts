@@ -1,11 +1,12 @@
 import { Effect } from "effect"
+
 import type { Sqlite } from "../../storage/sqlite"
+import type { ExtractDocument } from "../documents"
 import { WorkspaceUnavailable } from "../files"
 import { workspaceApplication } from "../service"
-import type { ExtractDocument } from "../documents"
 import type { ExtractVideo } from "../video"
-import { SqliteWorkspace } from "./sqlite"
 import { r2WorkspaceAssets, type AssetBucket } from "./r2"
+import { SqliteWorkspace } from "./sqlite"
 
 export type { AssetBucket } from "./r2"
 export function workspaceLayer(

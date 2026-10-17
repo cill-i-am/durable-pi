@@ -1,7 +1,7 @@
-import { messageArchiveText } from "../workspace/files"
 import type { MemoryNote } from "../memory/domain"
-import type { Turn, TurnOutcome } from "./turns"
+import { messageArchiveText } from "../workspace/files"
 import type { ConversationObservation } from "./execution"
+import type { Turn, TurnOutcome } from "./turns"
 
 export function conversationPrompt(
   turn: Turn,

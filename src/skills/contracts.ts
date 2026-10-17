@@ -1,4 +1,5 @@
 import { Schema } from "effect"
+
 import { SkillSource } from "./source"
 
 export const SkillId = Schema.String.check(Schema.isPattern(/^[a-f0-9-]{36}$/i))

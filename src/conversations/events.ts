@@ -1,5 +1,6 @@
-import { observeCleanup } from "../shared/effect"
 import { Deferred, Effect, Exit, Queue, Scope } from "effect"
+
+import { observeCleanup } from "../shared/effect"
 import type { ChatState } from "./contracts"
 
 export interface ConversationEventSource<TError, TRequirements = never> {

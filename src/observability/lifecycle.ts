@@ -1,5 +1,6 @@
 import { channels } from "agents/observability"
 import { Effect, Schema } from "effect"
+
 import { OperationalLogger } from "./logger"
 
 const Incident = Schema.Struct({

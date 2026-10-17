@@ -6,6 +6,19 @@ import {
 } from "./contracts"
 import type { PlanSource } from "./plans"
 
+function requirePlanRevision(previous: Plan | null, input: PlanUpdate) {
+  if (
+    (previous?.revision ?? 0) !== input.expectedRevision ||
+    (!previous && input.relation !== "new") ||
+    (previous && input.relation === "new")
+  )
+    throw new PlanFailure({
+      code: "conflict",
+      message:
+        "Read the current plan and reconcile its revision before updating.",
+    })
+}
+
 export function revisePlan(
   previous: Plan | null,
   input: PlanUpdate,
@@ -19,16 +32,7 @@ export function revisePlan(
       message:
         "This task was cancelled. Only a new user request can start a new task.",
     })
-  if (
-    (previous?.revision ?? 0) !== input.expectedRevision ||
-    (!previous && input.relation !== "new") ||
-    (previous && input.relation === "new")
-  )
-    throw new PlanFailure({
-      code: "conflict",
-      message:
-        "Read the current plan and reconcile its revision before updating.",
-    })
+  requirePlanRevision(previous, input)
   const requirementsChanged =
     !!previous &&
     (previous.objective !== input.draft.objective ||

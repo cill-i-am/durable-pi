@@ -1,4 +1,3 @@
-import { Effect, Schema } from "effect"
 import type { Context } from "@earendil-works/chord"
 import {
   AssistantEntry,
@@ -16,9 +15,11 @@ import {
   type ToolRegistration,
   type Tx,
 } from "@earendil-works/pi-durable"
+import { Effect, Schema } from "effect"
+
 import { NativeId } from "../contracts"
-import { SavedGroup, controlId, failure, missing, requestId } from "../domain"
 import type { DelegationAuthority } from "../delegations"
+import { SavedGroup, controlId, failure, missing, requestId } from "../domain"
 import type { DelegationLedger, DelegationTransaction } from "../ledger"
 import { makeDelegations } from "../service"
 import { delegationCommit, delegationNative } from "./interop"
@@ -317,7 +318,11 @@ export function piDelegationLedger(
                 const totals = Object.values(usage?.models ?? {})
                 return Schema.decodeUnknownSync(Facts)({
                   inputs: inputs.map((value) =>
-                    value ? { status: value.status } : undefined
+                    value
+                      ? Schema.decodeUnknownSync(
+                          Schema.Struct({ status: Schema.String })
+                        )(value)
+                      : undefined
                   ),
                   answer: text,
                   inputTokens: totals.length

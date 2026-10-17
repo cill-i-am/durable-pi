@@ -1,5 +1,5 @@
-import { DurableObject } from "cloudflare:workers"
 import * as Driver from "@effect/sql-sqlite-do/SqliteClient"
+import { DurableObject } from "cloudflare:workers"
 import {
   Deferred,
   Effect,
@@ -10,6 +10,7 @@ import {
   Schema,
 } from "effect"
 import { SqlClient } from "effect/sql"
+
 import { preserveFatal } from "../../src/shared/effect"
 
 class PilotRejected extends Schema.TaggedError<PilotRejected>()(

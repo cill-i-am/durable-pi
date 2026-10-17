@@ -1,6 +1,7 @@
 import { Context, Effect, Layer } from "effect"
-import { RoutineAdmissionState } from "../routines/service"
+
 import type { RoutineStorageError } from "../routines/persistence"
+import { RoutineAdmissionState } from "../routines/service"
 import { WebhookTransactions } from "./application"
 import type {
   WebhookRejected,
@@ -11,7 +12,9 @@ import type { WebhookStorageError } from "./persistence"
 import { WebhookPersistence } from "./persistence"
 
 export type WebhookError =
-  WebhookRejected | WebhookStorageError | RoutineStorageError
+  | WebhookRejected
+  | WebhookStorageError
+  | RoutineStorageError
 export type WebhookConfiguration = Omit<ConfigureWebhook, "key"> & {
   hash: string | null
 }

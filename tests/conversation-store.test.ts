@@ -1,12 +1,13 @@
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
+
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import {
   ConversationConflict,
   ConversationFull,
 } from "../src/conversations/turns"
-import { database } from "./database"
 import { migrateSqlite } from "../src/storage/migrations"
+import { database } from "./database"
 
 const defaults = { model: "test-model", thinking: "medium" as const }
 const input = (text = "hello", mode: "followUp" | "steer" = "followUp") => ({

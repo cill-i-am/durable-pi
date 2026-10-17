@@ -1,35 +1,5 @@
 import { Effect, Schema } from "effect"
-import { jsonRequest } from "../../shared/http"
-import { preserveFatal } from "../../shared/effect"
-import { nativeOperation } from "../../shared/interop"
-import { DelegationFailure } from "../../delegation/contracts"
-import { ModelUnavailable } from "../../inference/policy"
-import { UsageStorageError } from "../../inference/usage-domain"
-import {
-  FileNotFound,
-  FileRejected,
-  WorkspaceReadOnly,
-  WorkspaceUnavailable,
-} from "../../workspace/files"
-import {
-  ConversationConflict,
-  ConversationFull,
-  ConversationStorageError,
-} from "../../conversations/turns"
-import {
-  InvalidMemory,
-  MemoryNotReady,
-  MemoryStorageError,
-} from "../../memory/domain"
-import { MemorySchedulingError } from "../../memory/application"
-import {
-  AgentConflict,
-  AgentStorageError,
-  AgentNotFound,
-} from "../../agents/domain"
-import { SummaryFailure } from "../../memory/summary-model"
-import { ConversationExecutionError } from "../../conversations/execution"
-import { SkillConflict, SkillStorageError } from "../../skills/contracts"
+
 import {
   ConnectionError,
   ConnectionStorageError,
@@ -39,6 +9,37 @@ import {
   AccessDenied,
   AccessStorageError,
 } from "../../access/contracts"
+import {
+  AgentConflict,
+  AgentStorageError,
+  AgentNotFound,
+} from "../../agents/domain"
+import { ConversationExecutionError } from "../../conversations/execution"
+import {
+  ConversationConflict,
+  ConversationFull,
+  ConversationStorageError,
+} from "../../conversations/turns"
+import { DelegationFailure } from "../../delegation/contracts"
+import { ModelUnavailable } from "../../inference/policy"
+import { UsageStorageError } from "../../inference/usage-domain"
+import { MemorySchedulingError } from "../../memory/application"
+import {
+  InvalidMemory,
+  MemoryNotReady,
+  MemoryStorageError,
+} from "../../memory/domain"
+import { SummaryFailure } from "../../memory/summary-model"
+import { preserveFatal } from "../../shared/effect"
+import { jsonRequest } from "../../shared/http"
+import { nativeOperation } from "../../shared/interop"
+import { SkillConflict, SkillStorageError } from "../../skills/contracts"
+import {
+  FileNotFound,
+  FileRejected,
+  WorkspaceReadOnly,
+  WorkspaceUnavailable,
+} from "../../workspace/files"
 
 export class AgentRequestInvalid extends Schema.TaggedError<AgentRequestInvalid>()(
   "AgentRequestInvalid",
@@ -93,6 +94,28 @@ export const agentNative = <T>(
     if (channel === "failure" || Schema.isSchemaError(cause)) throw cause
     return new AgentRequestUnavailable({ operation })
   })
+
+const genericFailureStatuses = {
+  AgentStorageError: 400,
+  AgentNotFound: 400,
+  SkillConflict: 400,
+  SkillStorageError: 400,
+  ConnectionError: 400,
+  ConnectionStorageError: 400,
+  AccessConflict: 400,
+  AccessDenied: 400,
+  AccessStorageError: 400,
+  ConversationStorageError: 400,
+  ConversationExecutionError: 400,
+  MemoryStorageError: 400,
+  MemorySchedulingError: 400,
+  UsageStorageError: 400,
+  AgentConflict: 400,
+  AgentRequestInvalid: 400,
+  InvalidMemory: 400,
+  MemoryNotReady: 400,
+  SummaryFailure: 400,
+} as const
 
 const response = (error: typeof HttpFailure.Type): Response => {
   switch (error._tag) {
@@ -153,31 +176,13 @@ const response = (error: typeof HttpFailure.Type): Response => {
         },
         { status: 503 }
       )
-    case "AgentStorageError":
-    case "AgentNotFound":
-    case "SkillConflict":
-    case "SkillStorageError":
-    case "ConnectionError":
-    case "ConnectionStorageError":
-    case "AccessConflict":
-    case "AccessDenied":
-    case "AccessStorageError":
-    case "ConversationStorageError":
-    case "ConversationExecutionError":
-    case "MemoryStorageError":
-    case "MemorySchedulingError":
-    case "UsageStorageError":
-    case "AgentConflict":
-    case "AgentRequestInvalid":
-    case "InvalidMemory":
-    case "MemoryNotReady":
-    case "SummaryFailure":
+    default:
       return Response.json(
         {
           error:
             "The request could not be completed. Your saved messages are safe.",
         },
-        { status: 400 }
+        { status: genericFailureStatuses[error._tag] }
       )
   }
 }

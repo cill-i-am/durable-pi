@@ -1,18 +1,19 @@
-import { expect, it, vi } from "vitest"
 import { it as effectIt } from "@effect/vitest"
 import { Cause, Clock, Deferred, Effect, Exit, Fiber } from "effect"
 import { TestClock } from "effect/testing"
+import { expect, it, vi } from "vitest"
+
+import { effectInteractiveRuntime } from "../src/terminal/adapters/interop"
+import { runCommand } from "../src/terminal/adapters/service"
+import { terminalToolResult } from "../src/terminal/adapters/tools"
 import {
   completeCommand,
   type CommandClient,
 } from "../src/terminal/command-client"
-import { runCommand } from "../src/terminal/adapters/service"
-import { terminalToolResult } from "../src/terminal/adapters/tools"
 import { TerminalFailure } from "../src/terminal/contracts"
-import { TerminalRuntimeError } from "../src/terminal/runtime"
-import { effectInteractiveRuntime } from "../src/terminal/adapters/interop"
-import { InteractiveSession, type TerminalRelay } from "../src/terminal/session"
 import type { CommandRun } from "../src/terminal/contracts"
+import { TerminalRuntimeError } from "../src/terminal/runtime"
+import { InteractiveSession, type TerminalRelay } from "../src/terminal/session"
 
 const input = { id: "command:original", command: "printf hello" }
 const running: CommandRun = {

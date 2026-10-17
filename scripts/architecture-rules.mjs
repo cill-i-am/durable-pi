@@ -120,3 +120,8 @@ export const domainBoundaries = {
     }
   },
 }
+
+export default {
+  meta: { name: "architecture" },
+  rules: { boundaries: domainBoundaries },
+}

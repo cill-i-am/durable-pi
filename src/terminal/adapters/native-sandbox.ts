@@ -1,9 +1,10 @@
 import type { Files } from "@cloudflare/sandbox"
+
 import { MAX_CHECKPOINT } from "../contracts"
 import type { ForeignTerminalRuntime } from "./interop"
-import { readBounded } from "./stream"
 import { nativeCommand } from "./native-process"
 import { nativeTerminal } from "./native-terminal"
+import { readBounded } from "./stream"
 import { sandboxTransfers } from "./transfer-files"
 
 export function nativeSandboxRuntime(

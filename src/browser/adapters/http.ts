@@ -1,5 +1,8 @@
-import { orDieAll } from "../../shared/effect"
 import { Cause, Effect, Schema } from "effect"
+
+import { orDieAll } from "../../shared/effect"
+import { workspaceRequestBytes } from "../../workspace/adapters/http"
+import type { BrowserService } from "../browser"
 import {
   BrowserFailure,
   BrowserPolicy,
@@ -8,8 +11,6 @@ import {
   BrowserControl,
   BrowserInteraction,
 } from "../contracts"
-import type { BrowserService } from "../browser"
-import { workspaceRequestBytes } from "../../workspace/adapters/http"
 
 const invalidRequest = () =>
   new BrowserFailure({

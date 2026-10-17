@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm"
 import {
   check,
   foreignKey,
@@ -8,7 +9,6 @@ import {
   sqliteTable,
   text,
 } from "drizzle-orm/sqlite-core"
-import { sql } from "drizzle-orm"
 
 export const workspaceFiles = sqliteTable(
   "workspace_files",

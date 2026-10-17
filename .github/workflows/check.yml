@@ -46,6 +46,24 @@ jobs:
       - name: Install Chromium and system dependencies
         if: matrix.suite == 'browser'
         run: pnpm exec playwright install --with-deps chromium
+      - name: Install complexity reporter
+        if: matrix.suite == 'static'
+        uses: moznion/cccc-action@1d5313811f8451953e46a268c61791a01e40b7df # v1
+        with:
+          version: v1.8.3
+      - name: Report cognitive and cyclomatic complexity
+        if: matrix.suite == 'static'
+        run: |
+          pnpm --silent complexity:report > "$RUNNER_TEMP/complexity.json"
+          cccc --top-cognitive 25 --table src >> "$GITHUB_STEP_SUMMARY"
+      - name: Retain complexity report
+        if: matrix.suite == 'static'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: complexity-report
+          path: ${{ runner.temp }}/complexity.json
+          retention-days: 14
+          if-no-files-found: error
       - name: Run ${{ matrix.suite }} checks
         run: pnpm verify:${{ matrix.suite }}
       - name: Retain browser failure traces

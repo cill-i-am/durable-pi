@@ -1,12 +1,13 @@
-import { preserveFatal, observeCleanup } from "../shared/effect"
 import { Effect } from "effect"
-import type { ActivityUnavailable } from "./records"
+
+import { preserveFatal, observeCleanup } from "../shared/effect"
 import {
   activityPage,
   type ActivityAgent,
   type ActivityQuery,
   type ActivitySnapshot,
 } from "./contracts"
+import type { ActivityUnavailable } from "./records"
 
 export function activityFeed<TRequirements>(
   agents: readonly ActivityAgent[],

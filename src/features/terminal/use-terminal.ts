@@ -1,5 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from "react"
 import { Schema } from "effect"
+import { useCallback, useEffect, useRef, useState } from "react"
+
+import { agentApi } from "@/http/client"
+import { poll } from "@/http/poll"
 import {
   CommandRun,
   CommandInput,
@@ -8,8 +11,7 @@ import {
   type CommandSummary,
   type InteractiveState,
 } from "@/terminal/contracts"
-import { agentApi } from "@/http/client"
-import { poll } from "@/http/poll"
+
 import { maintainSessionLease, type LeaseState } from "./session-lease"
 
 export function useTerminal(
@@ -26,20 +28,22 @@ export function useTerminal(
   const [lease, setLease] = useState<LeaseState>({ ended: false, error: "" })
   const expiry = useRef(0)
   expiry.current = session?.expiresAt ?? 0
+  const sessionId = session?.id
+  const sessionPhase = session?.phase
   useEffect(() => {
     setLease({ ended: false, error: "" })
-    if (!session || session.phase !== "ready") return
+    if (!sessionId || sessionPhase !== "ready") return
     return maintainSessionLease(
       expiry.current,
       (signal) =>
         agentApi(agentId)(
-          `terminal/session/${encodeURIComponent(session.id)}/renew`,
+          `terminal/session/${encodeURIComponent(sessionId)}/renew`,
           {},
           signal
         ),
       setLease
     )
-  }, [agentId, session?.id, session?.phase])
+  }, [agentId, sessionId, sessionPhase])
   const [transferAttempt, setTransferAttempt] = useState<
     | { kind: "import"; input: { id: string; fileId: string } }
     | { kind: "export"; input: { id: string; path: string } }
@@ -96,6 +100,7 @@ export function useTerminal(
     )
     return () => {
       stop()
+      // oxlint-disable-next-line react/exhaustive-deps -- Advance the live request generation so all pending responses become stale.
       sequence.current++
     }
   }, [refresh])

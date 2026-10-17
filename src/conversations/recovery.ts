@@ -182,37 +182,9 @@ export function observeRound(
       recovered = true
       continue
     }
-    let bucket = state.buckets.find((b) => b.fingerprint === o.fingerprint)
-    if (!bucket) {
-      bucket = { fingerprint: o.fingerprint, count: 0 }
-      state.buckets.push(bucket)
-      if (state.buckets.length > 32) state.buckets.shift()
-    }
-    bucket.count = Math.min(policy.stopAfter, bucket.count + 1)
-    if (bucket.count >= policy.warnAfter) {
-      const view = {
-        phase: "recovering" as const,
-        reason: "repetition" as const,
-        tool: o.tool,
-        failures: bucket.count,
-        remaining: wasRecovering
-          ? state.view!.remaining
-          : policy.recoveryAttempts,
-        resultId: o.resultId,
-        receiptId: o.receiptId,
-      }
-      state.view = { ...view, detail: recoveryDetail(view) }
-      if (wasRecovering && bucket.count >= policy.stopAfter) {
-        state.view.phase = "blocked"
-        break
-      }
-    }
+    if (observeFailure(state, o, policy, wasRecovering)) break
   }
-  if (wasRecovering && state.view?.phase === "recovering") {
-    if (recovered) state.view.phase = "recovered"
-    else if (state.view.remaining === 0) state.view.phase = "blocked"
-  }
-  if (state.view) state.view.detail = recoveryDetail(state.view)
+  finalizeRecovery(state, wasRecovering, recovered)
   return state
 }
 
@@ -228,4 +200,50 @@ export function recoveryIdentity(value: unknown): string {
           )
         : v
   return JSON.stringify(canonical(value)) || ""
+}
+
+function observeFailure(
+  state: RecoveryState,
+  o: Observation,
+  policy: RecoveryPolicy,
+  wasRecovering: boolean
+) {
+  let bucket = state.buckets.find((b) => b.fingerprint === o.fingerprint)
+  if (!bucket) {
+    bucket = { fingerprint: o.fingerprint, count: 0 }
+    state.buckets.push(bucket)
+    if (state.buckets.length > 32) state.buckets.shift()
+  }
+  bucket.count = Math.min(policy.stopAfter, bucket.count + 1)
+  if (bucket.count >= policy.warnAfter) {
+    const view = {
+      phase: "recovering" as const,
+      reason: "repetition" as const,
+      tool: o.tool,
+      failures: bucket.count,
+      remaining: wasRecovering
+        ? state.view!.remaining
+        : policy.recoveryAttempts,
+      resultId: o.resultId,
+      receiptId: o.receiptId,
+    }
+    state.view = { ...view, detail: recoveryDetail(view) }
+    if (wasRecovering && bucket.count >= policy.stopAfter) {
+      state.view.phase = "blocked"
+      return true
+    }
+  }
+  return false
+}
+
+function finalizeRecovery(
+  state: RecoveryState,
+  wasRecovering: boolean,
+  recovered: boolean
+) {
+  if (wasRecovering && state.view?.phase === "recovering") {
+    if (recovered) state.view.phase = "recovered"
+    else if (state.view.remaining === 0) state.view.phase = "blocked"
+  }
+  if (state.view) state.view.detail = recoveryDetail(state.view)
 }

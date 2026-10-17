@@ -1,10 +1,12 @@
-import { markReady } from "@/features/performance"
-import { useCallback, useEffect, useMemo, useState } from "react"
 import { useChat } from "@tanstack/ai-react"
 import { Schema } from "effect"
-import { ConversationMetadata } from "@/conversations/contracts"
+import { useCallback, useEffect, useMemo, useState } from "react"
+
 import { conversationView } from "@/conversations/adapters/tanstack"
+import { ConversationMetadata } from "@/conversations/contracts"
 import type { Submission } from "@/conversations/turns"
+import { markReady } from "@/features/performance"
+
 import { conversationConnection } from "./connection"
 
 export function useConversation(agentId: string, enabled = true) {
@@ -12,6 +14,7 @@ export function useConversation(agentId: string, enabled = true) {
   const id = `${agentId}:${refresh}`
   const connection = useMemo(
     () => conversationConnection(agentId),
+    // oxlint-disable-next-line react/exhaustive-deps -- A reconnect generation deliberately creates a fresh transport and cursor.
     [agentId, refresh]
   )
   const [metadata, setMetadata] = useState<{

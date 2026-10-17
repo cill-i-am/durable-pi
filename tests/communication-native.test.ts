@@ -1,9 +1,13 @@
-import { expect, it } from "vitest"
 import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { Effect, Schema } from "effect"
+
 import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context"
+import {
+  createModels,
+  fauxProvider,
+  fauxAssistantMessage,
+} from "@earendil-works/pi-ai"
 import {
   Harness,
   UserEntry,
@@ -11,17 +15,15 @@ import {
   type ConversationId,
 } from "@earendil-works/pi-durable"
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
-import {
-  createModels,
-  fauxProvider,
-  fauxAssistantMessage,
-} from "@earendil-works/pi-ai"
-import { piMailbox } from "../src/communication/adapters/pi"
-import { sqliteMailbox } from "../src/communication/adapters/sqlite"
-import { resolveRoute } from "../src/inference/policy"
+import { Effect, Schema } from "effect"
+import { expect, it } from "vitest"
+
 import { agentSettings } from "../src/agent/compaction"
 import { AgentId } from "../src/agents/domain"
+import { piMailbox } from "../src/communication/adapters/pi"
+import { sqliteMailbox } from "../src/communication/adapters/sqlite"
 import type { Envelope } from "../src/communication/contracts"
+import { resolveRoute } from "../src/inference/policy"
 import { database } from "./database"
 
 const run = Effect.runPromise

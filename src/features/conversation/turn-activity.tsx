@@ -1,3 +1,5 @@
+import { Link } from "@tanstack/react-router"
+import { Option, Schema } from "effect"
 import {
   Brain,
   ChevronRight,
@@ -13,24 +15,17 @@ import {
   Wrench,
 } from "lucide-react"
 import { useState } from "react"
-import { Link } from "@tanstack/react-router"
-import { Option, Schema } from "effect"
+
 import { AgentId } from "@/agents/contracts"
-import { workspaceDestination } from "@/navigation/workspace"
 import { CopyButton } from "@/components/copy-button"
 import { Badge } from "@/components/ui/badge"
-import { InlineApp } from "@/features/apps/inline-app"
-import { InlineObject } from "@/features/objects/checklist"
-import { FileAttachments } from "@/features/files"
-import type { FileInfo } from "@/workspace/files"
-import type { ChatState, TimelineItem } from "../../conversations/contracts"
-import { Markdown } from "../../components/markdown"
 import {
-  Message,
-  MessageContent,
-  MessageFooter,
-} from "../../components/ui/message"
-import { Bubble, BubbleContent } from "../../components/ui/bubble"
+  CodeBlock,
+  CodeBlockHeader,
+  CodeBlockTitle,
+  CodeBlockActions,
+  CodeBlockContent,
+} from "@/components/ui/code-block"
 import {
   Trace,
   TraceLine,
@@ -41,13 +36,20 @@ import {
   TraceCollapsibleContent,
   TraceCollapsibleTrigger,
 } from "@/components/ui/trace"
+import { InlineApp } from "@/features/apps/inline-app"
+import { FileAttachments } from "@/features/files"
+import { InlineObject } from "@/features/objects/checklist"
+import { workspaceDestination } from "@/navigation/workspace"
+import type { FileInfo } from "@/workspace/files"
+
+import { Markdown } from "../../components/markdown"
+import { Bubble, BubbleContent } from "../../components/ui/bubble"
 import {
-  CodeBlock,
-  CodeBlockHeader,
-  CodeBlockTitle,
-  CodeBlockActions,
-  CodeBlockContent,
-} from "@/components/ui/code-block"
+  Message,
+  MessageContent,
+  MessageFooter,
+} from "../../components/ui/message"
+import type { ChatState, TimelineItem } from "../../conversations/contracts"
 import {
   activitySections,
   toolPresentation,
@@ -233,6 +235,7 @@ function SourceLink({
       target="_blank"
       rel="noreferrer noopener"
       title={source.href}
+      aria-label={source.label}
       className="flex min-h-11 max-w-full items-center rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring/50 md:min-h-6"
     >
       <TraceLine>
@@ -262,33 +265,21 @@ function SourceLink({
   )
 }
 
-function ToolActivity({
-  item,
-  title,
-  agentId,
-  runStatus,
-  waitingForApproval,
-}: {
-  item: ToolItem
-  title?: string
-  agentId?: string
-  runStatus: ChatState["turns"][number]["status"]
+const toolIcons: Partial<
+  Record<ReturnType<typeof toolPresentation>["kind"], typeof Wrench>
+> = {
+  browser: Globe,
+  search: Search,
+  terminal: Terminal,
+  code: CodeXml,
+  file: FileText,
+}
+
+function toolActivityLabel(
+  item: ToolItem,
+  runStatus: ChatState["turns"][number]["status"],
   waitingForApproval: boolean
-}) {
-  const view = toolPresentation(item)
-  const owner = Schema.decodeUnknownOption(AgentId)(agentId)
-  const Icon =
-    view.kind === "browser"
-      ? Globe
-      : view.kind === "search"
-        ? Search
-        : view.kind === "terminal"
-          ? Terminal
-          : view.kind === "code"
-            ? CodeXml
-            : view.kind === "file"
-              ? FileText
-              : Wrench
+) {
   const label =
     ["running", "pending"].includes(item.status) &&
     ["done", "failed", "cancelled", "stopping"].includes(runStatus)
@@ -308,6 +299,10 @@ function ToolActivity({
               : item.status === "pending"
                 ? "Queued"
                 : "Running"
+  return label
+}
+
+function toolTraceStatus(label: string) {
   const traceStatus =
     label === "Running"
       ? "running"
@@ -316,6 +311,27 @@ function ToolActivity({
         : label === "Failed" || label === "Interrupted"
           ? "error"
           : undefined
+  return traceStatus
+}
+
+function ToolActivity({
+  item,
+  title,
+  agentId,
+  runStatus,
+  waitingForApproval,
+}: {
+  item: ToolItem
+  title?: string
+  agentId?: string
+  runStatus: ChatState["turns"][number]["status"]
+  waitingForApproval: boolean
+}) {
+  const view = toolPresentation(item)
+  const owner = Schema.decodeUnknownOption(AgentId)(agentId)
+  const Icon = toolIcons[view.kind] ?? Wrench
+  const label = toolActivityLabel(item, runStatus, waitingForApproval)
+  const traceStatus = toolTraceStatus(label)
   return (
     <TraceCollapsible>
       <TraceCollapsibleTrigger>

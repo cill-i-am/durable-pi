@@ -1,8 +1,14 @@
 import assert from "node:assert/strict"
-import { WebSocket } from "ws"
+import { Buffer as NativeBuffer } from "node:buffer"
 import { request as httpRequest } from "node:http"
+
 import { Schema } from "effect"
+import { WebSocket } from "ws"
+
 import { CommandRun, TerminalState } from "../src/terminal/contracts"
+
+// Workers declares the Node export as any; use Node's published constructor contract.
+const Buffer = NativeBuffer as BufferConstructor
 
 const origin = "http://localhost:1337"
 assert.equal(process.env.OWNER_EMAIL, "workspace-test@example.com")
@@ -105,7 +111,11 @@ async function connect(id: string) {
     })
     socket.on("message", (data, binary) => {
       if (binary) output += data.toString()
-      else if (JSON.parse(data.toString()).type === "ready") {
+      else if (
+        Schema.decodeUnknownSync(Schema.Struct({ type: Schema.String }))(
+          JSON.parse(data.toString())
+        ).type === "ready"
+      ) {
         clearTimeout(timer)
         resolve()
       }

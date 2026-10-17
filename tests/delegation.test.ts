@@ -1,12 +1,13 @@
-import { expect, it } from "vitest"
-import { Effect } from "effect"
 import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context"
+import { createModels } from "@earendil-works/pi-ai"
 import { Harness, createRegistry } from "@earendil-works/pi-durable"
 import { MemoryStorage } from "@earendil-works/pi-durable/storage/memory"
-import { createModels } from "@earendil-works/pi-ai"
-import { sharedReference, validateBrief } from "../src/delegation/delegation"
-import { piDelegations } from "../src/delegation/adapters/pi"
+import { Effect } from "effect"
+import { expect, it } from "vitest"
+
 import { delegationsRequest } from "../src/delegation/adapters/http"
+import { piDelegations } from "../src/delegation/adapters/pi"
+import { sharedReference, validateBrief } from "../src/delegation/delegation"
 import {
   acknowledgeControl,
   confirmedRejection,

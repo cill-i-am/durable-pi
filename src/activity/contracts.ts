@@ -1,8 +1,9 @@
-import { RunActivity } from "./run"
-import { RecoveryView } from "../conversations/recovery"
 import { Schema } from "effect"
+
 import { AgentId, AgentName } from "../agents/domain"
 import { TimelineItem } from "../conversations/contracts"
+import { RecoveryView } from "../conversations/recovery"
+import { RunActivity } from "./run"
 
 export const ActivityFilter = Schema.Literals(["all", "attention", "running"])
 export type ActivityFilter = typeof ActivityFilter.Type

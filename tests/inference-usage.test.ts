@@ -1,16 +1,17 @@
-import { sqliteFailure } from "./sqlite-fault"
 import { expect, it } from "@effect/vitest"
-import { it as test, vi } from "vitest"
 import { Cause, Context, Effect, Exit, Layer, ManagedRuntime } from "effect"
 import { TestClock } from "effect/testing"
+import { it as test, vi } from "vitest"
+
+import { providerUsage } from "../src/inference/adapters/usage-openai"
+import { piUsage } from "../src/inference/adapters/usage-pi"
+import { SqliteUsage } from "../src/inference/adapters/usage-sqlite"
+import { resolveRoute } from "../src/inference/policy"
 import { InferenceUsage, usageApplication } from "../src/inference/usage"
 import { restartError } from "../src/inference/usage-domain"
-import { SqliteUsage } from "../src/inference/adapters/usage-sqlite"
-import { piUsage } from "../src/inference/adapters/usage-pi"
-import { providerUsage } from "../src/inference/adapters/usage-openai"
-import { resolveRoute } from "../src/inference/policy"
 import type { Sqlite } from "../src/storage/sqlite"
 import { database } from "./database"
+import { sqliteFailure } from "./sqlite-fault"
 import { usageFixture } from "./usage-fixture"
 
 const route = resolveRoute("conversation")

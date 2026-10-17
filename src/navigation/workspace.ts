@@ -2,8 +2,9 @@ import {
   defaultParseSearch,
   defaultStringifySearch,
 } from "@tanstack/react-router"
-import { ActivityFilter, ActivityCursor } from "@/activity/contracts"
 import { Schema } from "effect"
+
+import { ActivityFilter, ActivityCursor } from "@/activity/contracts"
 import { AgentId } from "@/agents/contracts"
 
 export const Workbench = Schema.Literals([
@@ -115,15 +116,15 @@ export function workspaceView(
     settings: params.section === "security" ? "general" : params.section,
     security: params.section === "security" || undefined,
   }
-  if (view.tab && (!view.panel || !tabs[view.panel].includes(view.tab)))
-    throw new Error("This tab does not belong to the selected workspace panel.")
-  if (
-    view.item &&
-    (!view.panel || view.panel === "browser" || view.panel === "memory")
-  )
-    throw new Error("This panel does not select a saved resource.")
-  if (view.activityAgent && view.panel !== "activity")
-    throw new Error("An activity agent requires the Activity panel.")
+  validatePanelSelection(view)
+  validateWorkspaceFilters(view, params)
+  return view
+}
+
+function validateWorkspaceFilters(
+  view: WorkspaceSearch,
+  params: WorkspaceParams
+) {
   if (view.connections && params.agentId && !params.section)
     throw new Error("Connection results belong to Settings.")
   if (view.settingsView && !params.section)
@@ -137,7 +138,18 @@ export function workspaceView(
     throw new Error("A file preview requires a selected file.")
   if (view.query && view.panel !== "memory")
     throw new Error("Archive search belongs to Memory.")
-  return view
+}
+
+function validatePanelSelection(view: WorkspaceSearch) {
+  if (view.tab && (!view.panel || !tabs[view.panel].includes(view.tab)))
+    throw new Error("This tab does not belong to the selected workspace panel.")
+  if (
+    view.item &&
+    (!view.panel || view.panel === "browser" || view.panel === "memory")
+  )
+    throw new Error("This panel does not select a saved resource.")
+  if (view.activityAgent && view.panel !== "activity")
+    throw new Error("An activity agent requires the Activity panel.")
 }
 
 export function workspaceDestination(
@@ -180,7 +192,6 @@ export function workspaceReturnPath(value: string, depth = 0): string {
       .filter(Boolean)
       .map(decodeURIComponent)
     const query = validateWorkspaceSearch(defaultParseSearch(url.search))
-    if (!parts.length) return "/"
     if (parts[0] !== "agents") return "/"
     if (parts.length === 1 || (parts.length === 2 && parts[1] === "archived")) {
       const q = defaultStringifySearch({ q: query.q })
@@ -200,21 +211,27 @@ export function workspaceReturnPath(value: string, depth = 0): string {
       workspaceView({ agentId, section: "general" }, query)
       return `/agents/${agentId}/settings/general${defaultStringifySearch(query)}`
     }
-    const params: WorkspaceParams =
-      parts[2] === "settings" && parts.length === 4
-        ? { agentId, section: parseSection(parts[3]) }
-        : parts.length >= 3
-          ? {
-              agentId,
-              panel: parsePanel(parts[2]),
-              itemId: parts[3] ? parseResourceId(parts[3]) : undefined,
-            }
-          : { agentId }
+    const params = agentWorkspaceParams(parts, agentId)
     workspaceView(params, query)
     return `${url.pathname}${defaultStringifySearch(query)}`
   } catch {
     return "/"
   }
+}
+
+function agentWorkspaceParams(
+  parts: string[],
+  agentId: AgentId
+): WorkspaceParams {
+  return parts[2] === "settings" && parts.length === 4
+    ? { agentId, section: parseSection(parts[3]) }
+    : parts.length >= 3
+      ? {
+          agentId,
+          panel: parsePanel(parts[2]),
+          itemId: parts[3] ? parseResourceId(parts[3]) : undefined,
+        }
+      : { agentId }
 }
 
 const AuthSearch = Schema.Struct({

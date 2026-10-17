@@ -6,9 +6,10 @@ import {
   HttpServerResponse,
 } from "effect/http"
 import { HttpApiBuilder } from "effect/http-api"
-import { AgentCatalog } from "../catalog"
-import { AgentCatalogReadRejected, AgentQueryApi } from "../api"
+
 import { orDieAll, preserveFatal } from "../../shared/effect"
+import { AgentCatalogReadRejected, AgentQueryApi } from "../api"
+import { AgentCatalog } from "../catalog"
 
 const rejected = Schema.decodeUnknownSync(AgentCatalogReadRejected)({
   error: "The request could not be completed. Your saved messages are safe.",

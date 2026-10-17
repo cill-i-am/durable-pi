@@ -1,23 +1,24 @@
 import type { EntryId, ConversationId } from "@earendil-works/pi-durable"
-import { expect, it } from "vitest"
-import { Cause, Context, Effect, Exit } from "effect"
 import { it as effectIt } from "@effect/vitest"
+import { Cause, Context, Effect, Exit } from "effect"
 import { TestClock } from "effect/testing"
-import { SqliteBackgroundMailbox } from "../src/delegation/adapters/background-mailbox"
-import { makeBackgroundMailbox } from "../src/delegation/background-mailbox"
+import { expect, it } from "vitest"
+
+import { archiveEntries } from "../src/conversations/adapters/pi-reply"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import { ConversationFull } from "../src/conversations/turns"
-import { database, corrupt } from "./database"
-import { resolveRoute } from "../src/inference/policy"
-import { archiveEntries } from "../src/conversations/adapters/pi-reply"
-import { DelegationFailure, type Group } from "../src/delegation/contracts"
+import { backgroundRequest } from "../src/delegation/adapters/background-http"
+import { SqliteBackgroundMailbox } from "../src/delegation/adapters/background-mailbox"
+import { backgroundNative } from "../src/delegation/adapters/interop"
+import { makeBackgroundMailbox } from "../src/delegation/background-mailbox"
 import {
   makeBackgroundDelegation,
   type BackgroundRemote,
   type BackgroundHost,
 } from "../src/delegation/background-service"
-import { backgroundNative } from "../src/delegation/adapters/interop"
-import { backgroundRequest } from "../src/delegation/adapters/background-http"
+import { DelegationFailure, type Group } from "../src/delegation/contracts"
+import { resolveRoute } from "../src/inference/policy"
+import { database, corrupt } from "./database"
 
 function gate<T>() {
   let release!: (value: T) => void

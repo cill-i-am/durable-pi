@@ -1,4 +1,3 @@
-import { expect, it } from "vitest"
 import {
   Cause,
   Context,
@@ -8,13 +7,15 @@ import {
   ManagedRuntime,
   Option,
 } from "effect"
-import { database } from "./database"
-import { MemoryRepository } from "../src/memory/repository"
-import { makeSqliteMemory } from "../src/memory/adapters/sqlite"
-import { exportResponse } from "../src/memory/adapters/http"
+import { expect, it } from "vitest"
+
 import { bucketLayer, type BackupBucket } from "../src/memory/adapters/bucket"
+import { exportResponse } from "../src/memory/adapters/http"
+import { makeSqliteMemory } from "../src/memory/adapters/sqlite"
 import { BackupStore } from "../src/memory/backup-store"
 import { MemoryStorageError } from "../src/memory/domain"
+import { MemoryRepository } from "../src/memory/repository"
+import { database } from "./database"
 
 function gate<T = void>() {
   let release!: (value: T) => void

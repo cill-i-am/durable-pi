@@ -1,18 +1,20 @@
-import { DatabaseSync } from "node:sqlite"
 import { readFileSync, readdirSync } from "node:fs"
+import { DatabaseSync } from "node:sqlite"
+
 import { expect, it, vi } from "vitest"
-import {
-  TerminalMigration,
-  type MigrationDatabase,
-  type MigrationMarker,
-  type MigrationBucket,
-} from "../src/terminal/adapters/migration"
+
 import {
   TerminalCapacityPool,
   NativeContainerOwner,
   type CapacityState,
   type CapacityLease,
 } from "../src/terminal/adapters/capacity"
+import {
+  TerminalMigration,
+  type MigrationDatabase,
+  type MigrationMarker,
+  type MigrationBucket,
+} from "../src/terminal/adapters/migration"
 
 const sourceOwner = "a".repeat(64),
   targetOwner = "b".repeat(64)

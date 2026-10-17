@@ -1,18 +1,19 @@
-import { nativeOperation } from "../src/shared/interop"
-import { describe, expect, it } from "vitest"
 import { Cause, Effect, Exit, Schema } from "effect"
+import { describe, expect, it } from "vitest"
+
+import { AppStore } from "../src/apps/adapters/sqlite"
 import {
   AppDefinition,
   type InteractApp,
   type WebResult,
 } from "../src/apps/contracts"
-import { AppStore } from "../src/apps/adapters/sqlite"
-import { makeApps } from "../src/apps/service"
-import type { CodeOutput } from "../src/execution/contracts"
 import { AppConflict } from "../src/apps/contracts"
-import { WebApps, type WebExecutor } from "../src/apps/web"
 import { appHtml } from "../src/apps/html"
+import { makeApps } from "../src/apps/service"
+import { WebApps, type WebExecutor } from "../src/apps/web"
+import type { CodeOutput } from "../src/execution/contracts"
 import { webFrame } from "../src/features/apps/web-frame"
+import { nativeOperation } from "../src/shared/interop"
 import { database } from "./database"
 
 const definition: AppDefinition = {

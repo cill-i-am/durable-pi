@@ -1,4 +1,5 @@
 import { Context, type Effect } from "effect"
+
 import type { AgentError, AgentId, AgentProfile } from "./domain"
 
 export type AgentDetails = Pick<AgentProfile, "id" | "name" | "instructions">

@@ -1,5 +1,6 @@
 import { lazy, Suspense, type ReactNode, type ComponentProps } from "react"
 import type { ThinkingOrb as NativeThinkingOrb } from "thinking-orbs"
+
 import { useActivityMotion } from "@/hooks/activity-motion"
 
 const ThinkingOrb = lazy(() =>

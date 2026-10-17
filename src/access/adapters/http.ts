@@ -1,5 +1,7 @@
-import { preserveFatal } from "../../shared/effect"
 import { Effect, Schema } from "effect"
+
+import { preserveFatal } from "../../shared/effect"
+import { jsonRequest } from "../../shared/http"
 import {
   AccessConflict,
   AccessDenied,
@@ -7,7 +9,6 @@ import {
   UpdatePolicy,
 } from "../contracts"
 import type { AccessError, AccessGate } from "../gate"
-import { jsonRequest } from "../../shared/http"
 
 export function accessRequest(
   gate: AccessGate,

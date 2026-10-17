@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from "react"
 import { Schema } from "effect"
-import { poll } from "@/http/poll"
-import { agentApi } from "@/http/client"
+import { useCallback, useEffect, useRef, useState } from "react"
+
 import { BrowserState } from "@/browser/contracts"
+import { agentApi } from "@/http/client"
+import { poll } from "@/http/poll"
 
 export function useBrowser(agentId: string) {
   const [state, setState] = useState<BrowserState | null>(null)
@@ -38,6 +39,7 @@ export function useBrowser(agentId: string) {
     )
     return () => {
       stop()
+      // oxlint-disable-next-line react/exhaustive-deps -- Advance the live request generation so all pending responses become stale.
       sequence.current++
     }
   }, [refresh])

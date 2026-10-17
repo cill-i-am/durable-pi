@@ -1,32 +1,41 @@
-import { readBounded } from "./stream"
-import { Scheduler, Effect, Exit, Layer, ManagedRuntime, Scope } from "effect"
-import { relayTerminal } from "./socket"
+import { Files } from "@cloudflare/sandbox"
+import { DurableObject } from "cloudflare:workers"
+import {
+  Scheduler,
+  Effect,
+  Exit,
+  Layer,
+  ManagedRuntime,
+  Schema,
+  Scope,
+} from "effect"
+
+import type { NativeTerminalEnv } from "../../../alchemy.run"
 import { reportTerminal } from "../../observability/events"
 import { WorkerTelemetry } from "../../observability/worker"
-import { DurableObject } from "cloudflare:workers"
-import { Files } from "@cloudflare/sandbox"
-import { nativeCommand } from "./native-process"
+import { makeDurableObjectSqlite } from "../../storage/durable-object"
+import { migrateSqlite } from "../../storage/migrations"
+import { TerminalService, terminalLayer } from "../terminal"
 import {
   NativeContainerOwner,
   TerminalCapacityPool,
   type CapacityState,
 } from "./capacity"
-import type { NativeTerminalEnv } from "../../../alchemy.run"
-import { makeDurableObjectSqlite } from "../../storage/durable-object"
-import { migrateSqlite } from "../../storage/migrations"
-import { TerminalService, terminalLayer } from "../terminal"
+import { terminalRequest } from "./http"
 import { effectTerminalRuntime, terminalFileDigest } from "./interop"
-import { TerminalStore } from "./sqlite"
-import { nativeSandboxRuntime } from "./native-sandbox"
-import { checkpointStorage } from "./r2"
 import {
   TerminalMigration,
   migrationDatabase,
   type MigrationMarker,
-  type MigrationReceipt,
+  MigrationReceipt,
 } from "./migration"
+import { nativeCommand } from "./native-process"
+import { nativeSandboxRuntime } from "./native-sandbox"
+import { checkpointStorage } from "./r2"
+import { relayTerminal } from "./socket"
+import { TerminalStore } from "./sqlite"
+import { readBounded } from "./stream"
 import { extractVideoRequest, sandboxVideo } from "./video"
-import { terminalRequest } from "./http"
 
 export class LinuxSandboxV1 extends DurableObject<NativeTerminalEnv> {
   private get container(): Container {
@@ -146,7 +155,7 @@ export class LinuxSandboxV1 extends DurableObject<NativeTerminalEnv> {
     super(ctx, env)
     if (this.container.running)
       this.ctx.waitUntil(this.container.setInactivityTimeout(60000))
-    this.ctx.blockConcurrencyWhile(() =>
+    void this.ctx.blockConcurrencyWhile(() =>
       this.terminalRuntime.runPromise(this.terminal.recover())
     )
   }
@@ -250,9 +259,11 @@ export default {
     )
       return Response.json(
         await sandbox.importMigration(
-          JSON.parse(
-            new TextDecoder().decode(
-              await readBounded(request.body!, 8192, request.signal)
+          Schema.decodeUnknownSync(MigrationReceipt)(
+            JSON.parse(
+              new TextDecoder().decode(
+                await readBounded(request.body!, 8192, request.signal)
+              )
             )
           )
         )

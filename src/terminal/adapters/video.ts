@@ -1,16 +1,17 @@
 import { Effect, Schema } from "effect"
-import { readBounded } from "./stream"
+
+import { observeCleanup, orDieAll, preserveFatal } from "../../shared/effect"
 import { nativeOperation } from "../../shared/interop"
 import { nativeBytes } from "../../shared/stream"
-import { observeCleanup, orDieAll, preserveFatal } from "../../shared/effect"
-import { TerminalRuntimeError } from "../runtime"
+import { MAX_FILE_BYTES, imageMime } from "../../workspace/files"
 import {
   VideoResult,
   VideoUnreadable,
   VIDEO_FRAME_BYTES,
   VIDEO_FRAME_LIMIT,
 } from "../../workspace/video"
-import { MAX_FILE_BYTES, imageMime } from "../../workspace/files"
+import { TerminalRuntimeError } from "../runtime"
+import { readBounded } from "./stream"
 
 const Metadata = Schema.Struct({
   duration: Schema.Number.check(Schema.isBetween({ minimum: 0, maximum: 600 })),
@@ -53,7 +54,7 @@ export interface VideoSandbox {
   readFile: (
     path: string,
     options: { encoding: "none" }
-  ) => Promise<{ content: ReadableStream<Uint8Array> }>
+  ) => Promise<{ content: ReadableStream<unknown> }>
 }
 export function sandboxVideo(sandbox: VideoSandbox): ExtractSandboxVideo {
   const close = () =>
@@ -78,10 +79,7 @@ export function sandboxVideo(sandbox: VideoSandbox): ExtractSandboxVideo {
       )
       yield* nativeOperation(
         () =>
-          sandbox.writeFile(
-            "/tmp/pi-video/input",
-            new Response(bytes.buffer).body!
-          ),
+          sandbox.writeFile("/tmp/pi-video/input", new Blob([bytes]).stream()),
         failed("write video source")
       )
       const code = yield* nativeOperation(async (signal) => {

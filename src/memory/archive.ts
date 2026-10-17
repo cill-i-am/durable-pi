@@ -1,6 +1,6 @@
 import { Effect, Option, Schema, Stream } from "effect"
+
 import { InvalidMemory, type Part } from "./domain"
-import { MemoryRepository } from "./repository"
 import {
   advance,
   ArchiveRecord,
@@ -9,6 +9,7 @@ import {
   WatermarkSchema,
 } from "./records"
 import type { Watermark } from "./records"
+import { MemoryRepository } from "./repository"
 
 export const archive = (until?: Watermark) =>
   Stream.unwrap(

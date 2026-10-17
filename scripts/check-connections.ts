@@ -1,4 +1,5 @@
 import assert from "node:assert/strict"
+
 import type { ConnectionInfo, ToolSelection } from "../src/access/connections"
 import type { AccessState } from "../src/access/contracts"
 

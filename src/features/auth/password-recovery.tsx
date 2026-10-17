@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react"
-import { workspaceReturnLink } from "@/navigation/workspace"
 import { Link, useSearch } from "@tanstack/react-router"
+import { useEffect, useRef, useState } from "react"
+
 import { authClient } from "@/auth/client"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button, buttonVariants } from "@/components/ui/button"
@@ -11,6 +11,8 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { workspaceReturnLink } from "@/navigation/workspace"
+
 import { AuthFrame } from "./auth-frame"
 import { PasswordInput } from "./password-input"
 
@@ -124,6 +126,7 @@ export function ResetPassword() {
     loadLink()
     window.addEventListener("hashchange", loadLink)
     return () => {
+      // oxlint-disable-next-line react/exhaustive-deps -- Advance the live request generation so all pending responses become stale.
       linkVersion.current++
       window.removeEventListener("hashchange", loadLink)
     }

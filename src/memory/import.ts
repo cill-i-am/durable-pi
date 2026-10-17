@@ -1,7 +1,8 @@
 import { Effect, Schema } from "effect"
+
+import { sha256 } from "./checksum"
 import { byteLength, InvalidMemory, LogKind } from "./domain"
 import { MemoryRepository } from "./repository"
-import { sha256 } from "./checksum"
 
 export const ImportMessage = Schema.Struct({
   kind: LogKind,

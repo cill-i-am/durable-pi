@@ -1,18 +1,19 @@
-import { useState } from "react"
 import { Schema } from "effect"
 import { ArrowUpRight, ChevronDown } from "lucide-react"
+import { useState } from "react"
+
 import { ActivityConversation } from "@/activity/contracts"
 import type { RunActivity, RunEvent } from "@/activity/run"
-import { agentApi } from "@/http/client"
 import { CopyButton } from "@/components/copy-button"
-import { Button, buttonVariants } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
+import { Button, buttonVariants } from "@/components/ui/button"
 import {
   Collapsible,
   CollapsibleTrigger,
   CollapsibleContent,
 } from "@/components/ui/collapsible"
+import { agentApi } from "@/http/client"
 
 const tracesUrl =
   "https://dash.cloudflare.com/862c7693f07f3e0cdca26eae399bf5e4/observability/traces"

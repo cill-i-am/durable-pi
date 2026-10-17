@@ -1,6 +1,6 @@
 import { Schema, Clock, Effect, Layer } from "effect"
+
 import { AgentCatalog } from "./catalog"
-import type { AgentCatalogLedger } from "./ledger"
 import {
   AgentConflict,
   AgentNotFound,
@@ -11,6 +11,7 @@ import {
   requireAgentCapacity,
   originalAgent,
 } from "./domain"
+import type { AgentCatalogLedger } from "./ledger"
 
 const attempt = <T>(body: () => T) =>
   Effect.try({

@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react"
 import { Schema } from "effect"
-import { PlanDetail, PlanList } from "@/planning/contracts"
+import { useCallback, useEffect, useRef, useState } from "react"
+
 import { AccessState, type Approval } from "@/access/contracts"
 import { agentApi } from "@/http/client"
 import { poll } from "@/http/poll"
+import { PlanDetail, PlanList } from "@/planning/contracts"
 
 export function usePlans(
   agentId: string,
@@ -75,6 +76,7 @@ export function usePlans(
     window.addEventListener("online", reconnect)
     return () => {
       stop()
+      // oxlint-disable-next-line react/exhaustive-deps -- Advance the live request generation so all pending responses become stale.
       sequence.current++
       window.removeEventListener("online", reconnect)
     }

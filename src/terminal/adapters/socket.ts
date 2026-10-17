@@ -1,4 +1,5 @@
 import { Option, Schema } from "effect"
+
 import type { TerminalSocket } from "../runtime"
 
 const Resize = Schema.fromJsonString(

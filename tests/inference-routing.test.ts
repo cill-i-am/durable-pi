@@ -1,7 +1,10 @@
-import { describe, expect, it } from "vitest"
-import { Effect } from "effect"
 import { createModels } from "@earendil-works/pi-ai/models"
 import { openaiProvider } from "@earendil-works/pi-ai/providers/openai"
+import { Effect } from "effect"
+import { describe, expect, it } from "vitest"
+
+import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
+import { submissionAttempt } from "../src/features/conversation/commands"
 import {
   catalogFromAccount,
   discoverCatalog,
@@ -11,10 +14,8 @@ import {
   validateRoute,
   ModelUnavailable,
 } from "../src/inference/policy"
-import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
-import { usageFixture } from "./usage-fixture"
-import { submissionAttempt } from "../src/features/conversation/commands"
 import { database } from "./database"
+import { usageFixture } from "./usage-fixture"
 
 export const account = {
   models: ["gpt-6-luna", "gpt-6.1-sol", "gpt-6-astra"].map((slug) => ({

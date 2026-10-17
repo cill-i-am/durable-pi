@@ -1,6 +1,7 @@
-import { Effect, Schema } from "effect"
 import { and, desc, eq, inArray, lte, notInArray } from "drizzle-orm"
 import type { EffectDrizzleQueryError } from "drizzle-orm/effect-core/errors"
+import { Effect, Schema } from "effect"
+
 import { mapSqliteError, type Sqlite } from "../../storage/sqlite"
 import {
   AccessStorageError,
@@ -10,9 +11,9 @@ import {
   type AccessMode,
   type ToolPolicy,
 } from "../contracts"
+import * as Domain from "../domain"
 import type { AccessError } from "../gate"
 import type { AccessLedger, ToolIntent, ToolOperation } from "../ledger"
-import * as Domain from "../domain"
 import {
   toolGrants as grants,
   toolOperations as operations,

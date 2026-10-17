@@ -1,8 +1,9 @@
 import { Effect } from "effect"
 import { expect, it } from "vitest"
-import { homeAgentId } from "./domain"
+
 import { database } from "../../tests/database"
 import { BotConfigurationStore } from "./adapters/configuration"
+import { homeAgentId } from "./domain"
 
 it("keeps archive admission closed across delayed routing, restart and out-of-order policy RPCs", () => {
   const db = database()

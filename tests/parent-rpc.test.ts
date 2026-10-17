@@ -1,5 +1,6 @@
-import { afterEach, expect, it, vi } from "vitest"
 import { Cause, Effect, Exit, Layer, ManagedRuntime, Schema } from "effect"
+import { afterEach, expect, it, vi } from "vitest"
+
 import { PersonalAgent } from "../src/agent/worker"
 import { backgroundParentRpc } from "../src/delegation/adapters/background-parent"
 import { backgroundNative } from "../src/delegation/adapters/interop"
@@ -14,11 +15,11 @@ import {
   CredentialUnavailable,
   OAuthCredential,
 } from "../src/inference/credentials"
-import { catalog, credential } from "./inference-fixture"
 import { reportHarness } from "../src/observability/events"
 import { skillResolution } from "../src/skills/adapters/resolution"
 import { skillRpc, skillNative } from "../src/skills/adapters/rpc"
 import { SkillConflict, SkillStorageError } from "../src/skills/contracts"
+import { catalog, credential } from "./inference-fixture"
 
 vi.mock("cloudflare:workers", () => ({
   DurableObject: class {},

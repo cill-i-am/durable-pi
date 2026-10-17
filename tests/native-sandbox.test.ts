@@ -1,5 +1,6 @@
-import { expect, it, vi } from "vitest"
 import { Cause } from "effect"
+import { expect, it, vi } from "vitest"
+
 import {
   nativeCommand,
   readNativeProcess,

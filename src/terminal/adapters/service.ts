@@ -1,13 +1,14 @@
 import { Cause, Effect, Schema } from "effect"
-import { nativeFailure, nativeOperation } from "../../shared/interop"
+
 import { orDieAll } from "../../shared/effect"
+import { nativeFailure, nativeOperation } from "../../shared/interop"
+import { completeCommand } from "../command-client"
 import {
   CommandRun,
   TerminalState,
   type CommandInput,
   type TerminalFailure,
 } from "../contracts"
-import { completeCommand } from "../command-client"
 import { TerminalRuntimeError } from "../runtime"
 import { readBounded } from "./stream"
 

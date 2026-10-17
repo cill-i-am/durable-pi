@@ -1,4 +1,6 @@
 import { Clock, Context, Effect, Layer, Schema } from "effect"
+
+import { changeChecklist } from "./checklist"
 import {
   ChangeSource,
   ObjectFailure,
@@ -9,9 +11,6 @@ import {
   objectSummary,
   type ObjectEvent,
 } from "./contracts"
-import type { WorkingObjects } from "./objects"
-import type { ObjectDigest, ObjectLedger } from "./ledger"
-import { changeChecklist } from "./checklist"
 import {
   objectEventId,
   objectOfferedThrough,
@@ -20,6 +19,8 @@ import {
   requireObjectCancellationCapacity,
   requireObjectWritable,
 } from "./domain"
+import type { ObjectDigest, ObjectLedger } from "./ledger"
+import type { WorkingObjects } from "./objects"
 
 export class Objects extends Context.Service<Objects, WorkingObjects>()(
   "durable-pi/objects/Objects"

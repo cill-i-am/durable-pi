@@ -1,4 +1,5 @@
 import { createMiddleware, createStart } from "@tanstack/react-start"
+
 import { canonicalOriginResponse } from "./auth/server"
 import { getEnv } from "./env"
 

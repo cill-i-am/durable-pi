@@ -1,3 +1,6 @@
+import type { Effect } from "effect"
+import { Context } from "effect"
+
 import type {
   MemoryError,
   MemoryStorageError,
@@ -9,8 +12,6 @@ import type {
   SummaryJob,
   SummaryIssue,
 } from "./domain"
-import type { Effect } from "effect"
-import { Context } from "effect"
 import type { ArchiveRecord, Watermark } from "./records"
 
 /** Effect persistence operations participate in one native transaction group. */

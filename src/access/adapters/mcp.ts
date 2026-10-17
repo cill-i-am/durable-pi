@@ -1,6 +1,9 @@
-import { preserveFatal } from "../../shared/effect"
-import { Schema, Effect } from "effect"
+import type { ToolExecutionResult } from "@earendil-works/pi-durable"
 import type { MCPClientManager } from "agents/mcp/client"
+import { Schema, Effect } from "effect"
+
+import { preserveFatal } from "../../shared/effect"
+import { nativeFailure, nativeOperation } from "../../shared/interop"
 import type { ConnectionClient } from "../connection-client"
 import {
   ConnectionError,
@@ -10,8 +13,6 @@ import {
   type RemoteToolResult,
 } from "../connections"
 import { toolReceipt } from "./receipt"
-import type { ToolExecutionResult } from "@earendil-works/pi-durable"
-import { nativeFailure, nativeOperation } from "../../shared/interop"
 
 export type McpManager = Pick<
   MCPClientManager,

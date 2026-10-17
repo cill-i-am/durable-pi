@@ -1,7 +1,6 @@
 import { Monitor, Moon, Sparkles, Sun } from "lucide-react"
-import { useAppTheme } from "@/hooks/use-app-theme"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { Switch } from "@/components/ui/switch"
+
+import { ActivityBorder, ActivityOrb } from "@/components/activity-visuals"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -12,8 +11,10 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu"
-import { ActivityBorder, ActivityOrb } from "@/components/activity-visuals"
+import { Switch } from "@/components/ui/switch"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useActivityMotion } from "@/hooks/activity-motion"
+import { useAppTheme } from "@/hooks/use-app-theme"
 
 const themes = [
   { value: "light", label: "Light", icon: Sun },

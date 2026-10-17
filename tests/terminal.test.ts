@@ -1,13 +1,14 @@
-import { relayTerminal } from "../src/terminal/adapters/socket"
-import { Cause, Effect, Exit, Fiber } from "effect"
 import type { Sandbox } from "@cloudflare/sandbox-v0"
+import { Cause, Effect, Exit, Fiber } from "effect"
 import { describe, expect, it, vi } from "vitest"
-import { readBounded } from "../src/terminal/adapters/stream"
-import { Terminal, type TerminalRuntime } from "./terminal-fixture"
-import { TerminalStore } from "../src/terminal/adapters/sqlite"
+
 import { readCommand, sandboxRuntime } from "../src/terminal/adapters/sandbox"
+import { relayTerminal } from "../src/terminal/adapters/socket"
+import { TerminalStore } from "../src/terminal/adapters/sqlite"
+import { readBounded } from "../src/terminal/adapters/stream"
 import { MAX_OUTPUT, TerminalFailure } from "../src/terminal/contracts"
 import { database } from "./database"
+import { Terminal, type TerminalRuntime } from "./terminal-fixture"
 
 const input = { id: "command", command: "printf hello" }
 const run = Effect.runPromise

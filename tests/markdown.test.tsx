@@ -1,10 +1,11 @@
-import { renderToStaticMarkup } from "react-dom/server"
-import { describe, expect, it } from "vitest"
 import {
   parseFragment,
   defaultTreeAdapter,
   type DefaultTreeAdapterTypes,
 } from "parse5"
+import { renderToStaticMarkup } from "react-dom/server"
+import { describe, expect, it } from "vitest"
+
 import { Markdown } from "../src/components/markdown"
 
 function codeBlocks(html: string) {

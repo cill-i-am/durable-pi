@@ -1,7 +1,8 @@
-import { expect, it } from "vitest"
 import { Cause, Context, Effect, Exit } from "effect"
-import { communicationNative } from "../src/communication/adapters/interop"
+import { expect, it } from "vitest"
+
 import { boundedFrame } from "../src/communication/adapters/input"
+import { communicationNative } from "../src/communication/adapters/interop"
 import { failure } from "../src/communication/contracts"
 
 function gate<T = void>() {

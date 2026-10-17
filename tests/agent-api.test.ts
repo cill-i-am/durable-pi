@@ -1,5 +1,3 @@
-import { nativeOperation } from "../src/shared/interop"
-import { afterEach, expect, it, vi } from "vitest"
 import {
   Cause,
   Context,
@@ -11,6 +9,13 @@ import {
 } from "effect"
 import { HttpServer } from "effect/http"
 import { HttpApiTest, OpenApi } from "effect/http-api"
+import { afterEach, expect, it, vi } from "vitest"
+
+import {
+  AgentCatalogHttp,
+  agentCatalogHttp,
+  agentQueryHandlers,
+} from "../src/agents/adapters/http-api"
 import { AgentQueryApi } from "../src/agents/api"
 import { AgentCatalog } from "../src/agents/catalog"
 import {
@@ -18,11 +23,7 @@ import {
   homeAgentId,
   type AgentProfile,
 } from "../src/agents/domain"
-import {
-  AgentCatalogHttp,
-  agentCatalogHttp,
-  agentQueryHandlers,
-} from "../src/agents/adapters/http-api"
+import { nativeOperation } from "../src/shared/interop"
 
 const profile: AgentProfile = {
   id: homeAgentId,

@@ -1,16 +1,8 @@
-import { describe, expect, it } from "vitest"
 import { mkdtemp, rm } from "node:fs/promises"
-import { join } from "node:path"
 import { tmpdir } from "node:os"
-import { Effect } from "effect"
+import { join } from "node:path"
+
 import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context"
-import {
-  Harness,
-  createRegistry,
-  defineTool,
-  watchEvents,
-} from "@earendil-works/pi-durable"
-import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
 import {
   Type,
   createModels,
@@ -18,15 +10,25 @@ import {
   fauxAssistantMessage,
   fauxToolCall,
 } from "@earendil-works/pi-ai"
-import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
+import {
+  Harness,
+  createRegistry,
+  defineTool,
+  watchEvents,
+} from "@earendil-works/pi-durable"
+import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
+import { Effect } from "effect"
+import { describe, expect, it } from "vitest"
+
 import { piConversationObserver } from "../src/conversations/adapters/pi-execution"
 import {
   archiveEntries,
   placedInputs,
   replySettled,
 } from "../src/conversations/adapters/pi-reply"
-import { database } from "./database"
+import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import { MAX_VISION_BYTES } from "../src/workspace/files"
+import { database } from "./database"
 
 function gate() {
   let resolve!: () => void

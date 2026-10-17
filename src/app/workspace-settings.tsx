@@ -1,7 +1,5 @@
 import { Link } from "@tanstack/react-router"
-import { useWorkspaceLocation } from "./use-workspace-location"
-import { workspaceDestination } from "@/navigation/workspace"
-import { useEffect, useState } from "react"
+import { Schema } from "effect"
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -15,26 +13,30 @@ import {
   Volume2,
   X,
 } from "lucide-react"
-import { Schema } from "effect"
-import { ThinkingLevel } from "@/inference/selection"
+import { useEffect, useState } from "react"
+
 import type { AgentProfile } from "@/agents/contracts"
-import type { useConversation } from "@/features/conversation"
-import { MessageDeliverySettings } from "@/features/conversation"
-import { AppearanceSettings } from "@/features/appearance/appearance-settings"
-import { AccessPanel } from "@/features/access"
-import { ConnectionsPanel } from "@/features/connections"
-import { SkillsPanel } from "@/features/skills"
-import { ModelDefaults } from "@/features/conversation/model-defaults"
 import { AgentMark, agentTone } from "@/components/agent-mark"
 import { Button, buttonVariants } from "@/components/ui/button"
-import { AccountSecurity } from "@/features/auth/account-security"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { useSidebar } from "@/components/ui/sidebar"
 import { Switch } from "@/components/ui/switch"
+import { AccessPanel } from "@/features/access"
+import { AppearanceSettings } from "@/features/appearance/appearance-settings"
+import { AccountSecurity } from "@/features/auth/account-security"
+import { ConnectionsPanel } from "@/features/connections"
+import type { useConversation } from "@/features/conversation"
+import { MessageDeliverySettings } from "@/features/conversation"
+import { ModelDefaults } from "@/features/conversation/model-defaults"
+import { SkillsPanel } from "@/features/skills"
 import { useInteractionSoundPreference } from "@/hooks/interaction-sound-preference"
 import { useInteractionSound } from "@/hooks/use-interaction-sound"
-import type { Workbench } from "./workspace-navigation"
+import { ThinkingLevel } from "@/inference/selection"
+import { workspaceDestination } from "@/navigation/workspace"
 import type { SettingsCategory } from "@/navigation/workspace"
+
+import { useWorkspaceLocation } from "./use-workspace-location"
+import type { Workbench } from "./workspace-navigation"
 
 const settingsSections = [
   {

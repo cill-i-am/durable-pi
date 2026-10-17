@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm"
 import {
   check,
   foreignKey,
@@ -8,7 +9,6 @@ import {
   text,
   unique,
 } from "drizzle-orm/sqlite-core"
-import { sql } from "drizzle-orm"
 
 export const memoryBackupStatus = sqliteTable(
   "memory_backup_status",

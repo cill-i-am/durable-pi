@@ -1,41 +1,43 @@
-import { expect, it } from "vitest"
 import { mkdtemp, rm } from "node:fs/promises"
-import { join } from "node:path"
 import { tmpdir } from "node:os"
-import { Effect } from "effect"
+import { join } from "node:path"
+
 import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context"
-import {
-  Harness,
-  createRegistry,
-  watchEvents,
-} from "@earendil-works/pi-durable"
-import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
 import {
   createModels,
   fauxProvider,
   fauxAssistantMessage,
   fauxToolCall,
 } from "@earendil-works/pi-ai"
+import {
+  Harness,
+  createRegistry,
+  watchEvents,
+} from "@earendil-works/pi-durable"
+import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
+import { Effect } from "effect"
+import { expect, it } from "vitest"
+
+import { guardedTools } from "../src/access/adapters/pi"
+import { toolReceipt } from "../src/access/adapters/receipt"
+import { AccessStore } from "../src/access/adapters/sqlite"
+import { builtInTools } from "../src/access/contracts"
+import { AccessGate } from "../src/access/gate"
+import { piTimeline } from "../src/conversations/adapters/pi-timeline"
+import { objectsRequest } from "../src/objects/adapters/http"
 import { piWorkingObjects } from "../src/objects/adapters/pi"
 import {
   objectTools,
   objectContextHook,
   recoverableObjectTools,
 } from "../src/objects/adapters/tools"
-import { toolReceipt } from "../src/access/adapters/receipt"
-import { objectsRequest } from "../src/objects/adapters/http"
 import type {
   ObjectFailure,
   ObjectMutation,
   ChangeSource,
   Checklist,
 } from "../src/objects/contracts"
-import { AccessStore } from "../src/access/adapters/sqlite"
-import { AccessGate } from "../src/access/gate"
-import { guardedTools } from "../src/access/adapters/pi"
-import { builtInTools } from "../src/access/contracts"
 import { database } from "./database"
-import { piTimeline } from "../src/conversations/adapters/pi-timeline"
 
 const user: ChangeSource = {
   actor: "user",

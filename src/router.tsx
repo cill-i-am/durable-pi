@@ -1,5 +1,6 @@
-import type {} from "@tanstack/react-start"
 import { createRouter as createTanStackRouter } from "@tanstack/react-router"
+import type {} from "@tanstack/react-start"
+
 import { routeTree } from "./routeTree.gen"
 
 export function getRouter() {

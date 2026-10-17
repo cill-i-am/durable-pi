@@ -1,6 +1,7 @@
 import { Schema } from "effect"
-import { CommunicationError, failure } from "../contracts"
+
 import { nativeOperation } from "../../shared/interop"
+import { CommunicationError, failure } from "../contracts"
 
 /** A local Effect failure must implement the declared contract. An opaque
  * foreign rejection can only confirm that native state is unavailable. */

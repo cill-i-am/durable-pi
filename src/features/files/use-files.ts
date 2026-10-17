@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react"
 import { Schema } from "effect"
+import { useCallback, useEffect, useRef, useState } from "react"
+
 import { agentApi } from "@/http/client"
-import { FileInfo, FileList, MAX_ATTACHMENTS } from "@/workspace/files"
 import { poll } from "@/http/poll"
+import { FileInfo, FileList, MAX_ATTACHMENTS } from "@/workspace/files"
+
 import { attachmentReady, preparingFile } from "./preparation"
 import { uploadFile, type UploadAttempt } from "./uploads"
 

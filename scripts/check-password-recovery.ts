@@ -1,9 +1,11 @@
 import assert from "node:assert/strict"
 import { chmod, readdir, readFile } from "node:fs/promises"
-import { Effect, Exit, Scope } from "effect"
+
 import { eq } from "drizzle-orm"
-import { makeNodeSqlite } from "../src/storage/node"
+import { Effect, Exit, Scope } from "effect"
+
 import { user, verification } from "../src/auth/schema"
+import { makeNodeSqlite } from "../src/storage/node"
 
 const origin = "http://localhost:1337"
 const owner = "workspace-test@example.com"

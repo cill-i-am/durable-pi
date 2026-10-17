@@ -1,7 +1,5 @@
 import { FileText, Film, X } from "lucide-react"
-import { fileDescription, preparingFile } from "./preparation"
-import type { FileInfo } from "@/workspace/files"
-import { agentUrl } from "@/http/client"
+
 import {
   Attachment,
   AttachmentMedia,
@@ -12,6 +10,10 @@ import {
   AttachmentAction,
   AttachmentTrigger,
 } from "@/components/ui/attachment"
+import { agentUrl } from "@/http/client"
+import type { FileInfo } from "@/workspace/files"
+
+import { fileDescription, preparingFile } from "./preparation"
 
 export function fileSize(size: number) {
   return size >= 1024 * 1024
@@ -68,6 +70,7 @@ export function FileAttachments({
           <AttachmentTrigger
             render={
               <a
+                aria-label={`Download ${file.name}`}
                 href={
                   agentUrl(agentId, `files/${file.id}/content`) + "&download=1"
                 }

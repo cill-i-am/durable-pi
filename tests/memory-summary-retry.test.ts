@@ -1,20 +1,18 @@
-import { summaryRetryAuthority } from "../src/memory/adapters/retry-authority"
 import { expect, it } from "@effect/vitest"
 import { Cause, Context, Deferred, Effect, Exit, Fiber } from "effect"
-import { database, type TestSqlite, corrupt } from "./database"
-import { migrateSqlite } from "../src/storage/migrations"
 import { SqlError, UnknownError } from "effect/sql/SqlError"
-import { catalog } from "./inference-fixture"
+
 import { BotConfigurationStore } from "../src/agents/adapters/configuration"
 import { homeAgentId, type AgentError } from "../src/agents/domain"
-import type { MemoryError } from "../src/memory/domain"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import { makeConversations } from "../src/conversations/service"
 import { resolveRoute, type ModelCatalog } from "../src/inference/policy"
-import { sqliteMemoryLayer } from "../src/memory/adapters/sqlite"
 import { SummaryRoutes } from "../src/memory/adapters/model-routes"
-import { MemoryRepository } from "../src/memory/repository"
+import { summaryRetryAuthority } from "../src/memory/adapters/retry-authority"
+import { sqliteMemoryLayer } from "../src/memory/adapters/sqlite"
+import type { MemoryError } from "../src/memory/domain"
 import { MemoryTransaction } from "../src/memory/ledger"
+import { MemoryRepository } from "../src/memory/repository"
 import { memorySummaryRetry } from "../src/memory/retry"
 import {
   SummaryRouting,
@@ -23,6 +21,9 @@ import {
   summaryRequestAllowed,
   summaryRetryTransition,
 } from "../src/memory/routing"
+import { migrateSqlite } from "../src/storage/migrations"
+import { database, type TestSqlite, corrupt } from "./database"
+import { catalog } from "./inference-fixture"
 
 const profile = {
   id: homeAgentId,

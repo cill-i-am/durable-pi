@@ -1,11 +1,12 @@
 import { eq } from "drizzle-orm"
 import { alias } from "drizzle-orm/sqlite-core"
 import { Effect, Schema } from "effect"
-import { mapSqliteError, type Sqlite } from "../../storage/sqlite"
-import { coalesce } from "../../storage/expressions"
-import { TimelineItem, TurnOrigin } from "../../conversations/contracts"
+
 import { chatActivity, chatTurns } from "../../conversations/adapters/schema"
+import { TimelineItem, TurnOrigin } from "../../conversations/contracts"
 import { RecoveryStateRecord } from "../../conversations/recovery"
+import { coalesce } from "../../storage/expressions"
+import { mapSqliteError, type Sqlite } from "../../storage/sqlite"
 import {
   ActivityStorageError,
   type ActivityRecords,

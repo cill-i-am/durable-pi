@@ -1,4 +1,5 @@
 import { Schema } from "effect"
+
 import { TransferPlan } from "./transfers"
 
 export const TerminalNetworkPolicy = Schema.Struct({

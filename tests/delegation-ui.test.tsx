@@ -1,8 +1,9 @@
 import { renderToStaticMarkup } from "react-dom/server"
 import { describe, expect, it } from "vitest"
+
 import type { Group } from "../src/delegation/contracts"
-import { resolveRoute } from "../src/inference/policy"
 import { DelegationGroup } from "../src/features/activity/delegated-work"
+import { resolveRoute } from "../src/inference/policy"
 
 const group: Group = {
   id: 1,

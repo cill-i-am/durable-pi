@@ -1,0 +1,3 @@
+languages = ["es"]
+exclude = ["**/*.gen.*", "**/*.generated.*"]
+# Report both metrics; Oxlint owns the blocking cyclomatic limit of 20.

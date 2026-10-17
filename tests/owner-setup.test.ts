@@ -1,7 +1,8 @@
 import { APIError } from "better-auth/api"
 import { Cause, Effect } from "effect"
-import { AuthStorageError } from "../src/auth/adapters/accounts"
 import { expect, it, vi } from "vitest"
+
+import { AuthStorageError } from "../src/auth/adapters/accounts"
 import {
   ownerSetup,
   OwnerSetupRejected,

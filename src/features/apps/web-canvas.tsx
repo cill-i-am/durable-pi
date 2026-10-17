@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Schema } from "effect"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+
 import { AppAction, WebPreview } from "@/apps/contracts"
-import { agentApi } from "@/http/client"
-import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { agentApi } from "@/http/client"
+
 import { webFrame } from "./web-frame"
 
 export function WebCanvas({
@@ -73,6 +75,7 @@ export function WebCanvas({
   useEffect(() => {
     void load()
     return () => {
+      // oxlint-disable-next-line react/exhaustive-deps -- Advance the live request generation so all pending responses become stale.
       sequence.current++
     }
   }, [load])
@@ -80,30 +83,39 @@ export function WebCanvas({
   const enabled = !disabled && !loading && !outdated && !acting
   useEffect(() => {
     if (!source) return
-    const receive = (event: MessageEvent) => {
+    const receive = (event: MessageEvent<unknown>) => {
+      const data = Schema.decodeUnknownOption(
+        Schema.Record(Schema.String, Schema.Unknown)
+      )(event.data)
+      if (data._tag !== "Some") return
+      const message = data.value
       const frameWindow = frame.current?.contentWindow
       if (
         !frameWindow ||
         event.source !== frameWindow ||
         event.origin !== "null" ||
-        event.data?.channel !== source.channel
+        message.channel !== source.channel
       )
         return
-      if (event.data.type === "height" && Number.isFinite(event.data.height))
-        setHeight(Math.max(240, Math.min(800, event.data.height)))
-      if (event.data.type === "ready")
+      if (
+        message.type === "height" &&
+        typeof message.height === "number" &&
+        Number.isFinite(message.height)
+      )
+        setHeight(Math.max(240, Math.min(800, message.height)))
+      if (message.type === "ready")
         frameWindow.postMessage(
           { channel: source.channel, type: "enabled", enabled },
           "*"
         )
-      if (event.data.type === "error")
+      if (message.type === "error")
         setError("Check the app's field names and limits before submitting.")
-      if (event.data.type !== "action" || !enabled || !preview) return
+      if (message.type !== "action" || !enabled || !preview) return
       const action = Schema.decodeUnknownOption(AppAction)({
         type: "web",
         blockId,
-        name: event.data.name,
-        values: event.data.values,
+        name: message.name,
+        values: message.values,
       })
       if (action._tag !== "Some") {
         setError("The app produced an invalid action.")

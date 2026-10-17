@@ -1,6 +1,3 @@
-import { Effect, Schema } from "effect"
-import { mapSqliteError, type Sqlite } from "../../storage/sqlite"
-import type { EffectDrizzleQueryError } from "drizzle-orm/effect-core/errors"
 import {
   and,
   count,
@@ -10,24 +7,28 @@ import {
   inArray,
   sum,
 } from "drizzle-orm"
-import {
-  workspaceFiles as files,
-  workspaceExtractions as docs,
-  workspaceVideoPreparations as videos,
-} from "./schema"
+import type { EffectDrizzleQueryError } from "drizzle-orm/effect-core/errors"
+import { Effect, Schema } from "effect"
+
+import { mapSqliteError, type Sqlite } from "../../storage/sqlite"
 import {
   FileInfo,
   FileId,
   DocumentExtraction,
   WorkspaceUnavailable,
 } from "../files"
-import { VideoPreparation } from "../video"
 import type {
   WorkspaceLedger,
   WorkspaceFile,
   DocumentJob,
   VideoJob,
 } from "../ledger"
+import { VideoPreparation } from "../video"
+import {
+  workspaceFiles as files,
+  workspaceExtractions as docs,
+  workspaceVideoPreparations as videos,
+} from "./schema"
 
 const Revision = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0))
 const FileRecord = Schema.Struct({

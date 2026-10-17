@@ -1,15 +1,16 @@
 import type { AgentEventStream } from "@earendil-works/pi-durable"
+import type { StreamChunk } from "@tanstack/ai/client"
 import { Cause, Effect, Exit, Schema } from "effect"
+
+import { orDieAll } from "../../shared/effect"
+import { nativeOperation } from "../../shared/interop"
 import {
   ConversationCursor,
   type ChatState,
   type ConversationFrame,
 } from "../contracts"
-import type { StreamChunk } from "@tanstack/ai/client"
-import { chatMessages, messageEvents } from "./tanstack"
 import { conversationEventPump } from "../events"
-import { nativeOperation } from "../../shared/interop"
-import { orDieAll } from "../../shared/effect"
+import { chatMessages, messageEvents } from "./tanstack"
 
 export class ConversationStreamError extends Schema.TaggedError<ConversationStreamError>()(
   "ConversationStreamError",

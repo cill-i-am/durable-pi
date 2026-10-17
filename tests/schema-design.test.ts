@@ -1,8 +1,9 @@
 import { eq, asc } from "drizzle-orm"
 import { Effect } from "effect"
 import { expect, it } from "vitest"
-import { database } from "./database"
+
 import { generatedAppEvents } from "../src/apps/adapters/schema"
+import { database } from "./database"
 
 it("declares non-null primary keys for every owned table", () => {
   const db = database()

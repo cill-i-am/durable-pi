@@ -1,5 +1,6 @@
 import { Cause } from "effect"
 import { afterEach, expect, it, vi } from "vitest"
+
 import {
   bindSessionSocket,
   sessionSocketResponse,

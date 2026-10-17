@@ -1,4 +1,5 @@
 import { Schema } from "effect"
+
 import { WebhookKey } from "../contracts"
 
 export async function digest(value: string) {

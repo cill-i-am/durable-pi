@@ -1,12 +1,13 @@
-import { describe, expect, it } from "vitest"
 import { it as effectIt } from "@effect/vitest"
 import { Clock, Effect } from "effect"
 import { TestClock } from "effect/testing"
-import { InteractiveSession } from "../src/terminal/session"
+import { describe, expect, it } from "vitest"
+
 import {
   validTerminalInput,
   relayTerminal,
 } from "../src/terminal/adapters/socket"
+import { InteractiveSession } from "../src/terminal/session"
 
 describe("terminal transport boundary", () => {
   it("accepts only bounded binary input and a bounded resize control", () => {

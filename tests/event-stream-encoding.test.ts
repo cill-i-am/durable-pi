@@ -1,5 +1,6 @@
 import { Effect } from "effect"
 import { expect, it, vi } from "vitest"
+
 import { encodeEventStream } from "../src/auth/adapters/event-stream-encoding"
 
 const encoder = new TextEncoder()

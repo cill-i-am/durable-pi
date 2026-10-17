@@ -1,16 +1,17 @@
 import { expect, it } from "@effect/vitest"
 import { Cause, Clock, Effect, Exit } from "effect"
+
+import { webCryptoRecoveryFingerprint } from "../src/conversations/adapters/crypto"
 import { RunRecoveryStore } from "../src/conversations/adapters/sqlite-recovery"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
-import { webCryptoRecoveryFingerprint } from "../src/conversations/adapters/crypto"
-import { makeRunRecovery } from "../src/conversations/recovery-service"
 import {
   recoveryOutcome,
   initialRecovery,
   type Observation,
 } from "../src/conversations/recovery"
-import { database, corrupt } from "./database"
+import { makeRunRecovery } from "../src/conversations/recovery-service"
 import { makeConversations } from "../src/conversations/service"
+import { database, corrupt } from "./database"
 
 const failure = (id: number): Observation => ({
   resultId: id,

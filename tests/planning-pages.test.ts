@@ -1,23 +1,25 @@
-import { expect, it } from "vitest"
 import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { Effect } from "effect"
+
 import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context"
-import { Harness, createRegistry } from "@earendil-works/pi-durable"
-import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
 import {
   createModels,
   fauxProvider,
   fauxAssistantMessage,
   fauxToolCall,
 } from "@earendil-works/pi-ai"
+import { Harness, createRegistry } from "@earendil-works/pi-durable"
+import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
+import { Effect } from "effect"
+import { expect, it } from "vitest"
+
+import { guardedTools } from "../src/access/adapters/pi"
+import { AccessStore } from "../src/access/adapters/sqlite"
+import { builtInTools } from "../src/access/contracts"
+import { AccessGate } from "../src/access/gate"
 import { piPlans } from "../src/planning/adapters/pi"
 import { planTools, recoverablePlanTools } from "../src/planning/adapters/tools"
-import { AccessStore } from "../src/access/adapters/sqlite"
-import { AccessGate } from "../src/access/gate"
-import { guardedTools } from "../src/access/adapters/pi"
-import { builtInTools } from "../src/access/contracts"
 import { database } from "./database"
 
 it("pages maximally escaped plan summaries through actual native tool and durable receipt boundaries without cutting JSON", async () => {

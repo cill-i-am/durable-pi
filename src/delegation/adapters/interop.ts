@@ -1,13 +1,14 @@
-import { Option, Schema, type Effect } from "effect"
+import type { Context } from "@earendil-works/chord"
 import {
   BACKGROUND_CONTEXT,
   withAbortSignal,
 } from "@earendil-works/chord/context"
-import type { Context } from "@earendil-works/chord"
 import type { Harness, Tx } from "@earendil-works/pi-durable"
-import { DelegationFailure } from "../contracts"
-import { nativeOperation } from "../../shared/interop"
+import { Option, Schema, type Effect } from "effect"
+
 import { nativeCommit } from "../../shared/adapters/native-commit"
+import { nativeOperation } from "../../shared/interop"
+import { DelegationFailure } from "../contracts"
 
 const decodeBackgroundFailure = Schema.decodeUnknownOption(DelegationFailure)
 

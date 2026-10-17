@@ -1,24 +1,25 @@
-import { expect, it } from "@effect/vitest"
-import { it as test } from "vitest"
-import { Cause, Clock, Context, Effect, Exit } from "effect"
-import { TestClock } from "effect/testing"
 import { BACKGROUND_CONTEXT as context } from "@earendil-works/chord/context"
+import { createModels } from "@earendil-works/pi-ai"
 import {
   Harness,
   createRegistry,
   type ConversationId,
 } from "@earendil-works/pi-durable"
 import { MemoryStorage } from "@earendil-works/pi-durable/storage/memory"
-import { createModels } from "@earendil-works/pi-ai"
+import { expect, it } from "@effect/vitest"
+import { Cause, Clock, Context, Effect, Exit } from "effect"
+import { TestClock } from "effect/testing"
+import { it as test } from "vitest"
+
 import {
   BackgroundDocument,
   piBackgroundLedger,
 } from "../src/delegation/adapters/background-pi"
-import { makeBackgroundTasks } from "../src/delegation/background-tasks"
 import {
   acceptBackgroundControl,
   backgroundControlId,
 } from "../src/delegation/background-task-domain"
+import { makeBackgroundTasks } from "../src/delegation/background-tasks"
 import { DelegationFailure, type Control } from "../src/delegation/contracts"
 import { resolveRoute } from "../src/inference/policy"
 

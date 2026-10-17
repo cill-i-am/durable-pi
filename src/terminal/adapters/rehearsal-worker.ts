@@ -1,4 +1,5 @@
 import { timingSafeEqual } from "node:crypto"
+
 import type { SandboxRehearsalEnv } from "../../../stacks/sandbox-hosted-rehearsal"
 
 export default {

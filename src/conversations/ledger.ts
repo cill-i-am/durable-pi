@@ -1,7 +1,8 @@
-import type { ConversationError } from "./service"
 import type { Effect } from "effect"
+
 import type { JobType, ResolvedRoute } from "../inference/policy"
 import type { SkillDocument } from "../skills/contracts"
+import type { ConversationError } from "./service"
 import type { StatusTurn } from "./status"
 import type {
   ModelSettings,

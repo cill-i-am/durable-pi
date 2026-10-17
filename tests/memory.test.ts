@@ -1,9 +1,10 @@
-import { migrateSqlite } from "../src/storage/migrations"
 import { Effect } from "effect"
-import { makeSqliteMemory } from "../src/memory/adapters/sqlite"
-import { database } from "./database"
 import { describe, expect, it } from "vitest"
+
+import { makeSqliteMemory } from "../src/memory/adapters/sqlite"
 import { byteLength, fitView, type MemoryNode } from "../src/memory/domain"
+import { migrateSqlite } from "../src/storage/migrations"
+import { database } from "./database"
 
 describe("lossless memory", () => {
   it("deduplicates durable appends and retrieves original Unicode text", () => {

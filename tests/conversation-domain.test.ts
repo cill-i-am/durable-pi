@@ -1,7 +1,8 @@
-import { expect, it } from "vitest"
 import { Cause, Effect, Exit } from "effect"
-import * as Domain from "../src/conversations/domain"
+import { expect, it } from "vitest"
+
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
+import * as Domain from "../src/conversations/domain"
 import { makeConversations } from "../src/conversations/service"
 import type { Turn } from "../src/conversations/turns"
 import { database, corrupt } from "./database"

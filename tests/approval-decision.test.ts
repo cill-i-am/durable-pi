@@ -1,6 +1,7 @@
 import { expect, it } from "vitest"
-import { approvalDecision } from "../src/features/access/decision"
+
 import type { Approval } from "../src/access/contracts"
+import { approvalDecision } from "../src/features/access/decision"
 
 it("keeps confirmed decisions through old snapshots but reopens a newer approval round", () => {
   const pending: Approval = {

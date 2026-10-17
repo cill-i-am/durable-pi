@@ -1,4 +1,5 @@
 import { expect, it, vi } from "vitest"
+
 import { poll } from "../src/http/poll"
 
 it("accepts slow polls before scheduling another and stops on unmount", async () => {

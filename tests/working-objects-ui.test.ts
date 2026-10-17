@@ -1,16 +1,18 @@
-import { expect, it } from "vitest"
 import { mkdtemp, rm } from "node:fs/promises"
-import { join } from "node:path"
 import { tmpdir } from "node:os"
-import { Effect, Schema } from "effect"
+import { join } from "node:path"
+
 import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context"
+import { createModels } from "@earendil-works/pi-ai"
 import { Harness, createRegistry } from "@earendil-works/pi-durable"
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
-import { createModels } from "@earendil-works/pi-ai"
+import { Effect, Schema } from "effect"
+import { expect, it } from "vitest"
+
 import { ObjectStore } from "../src/features/objects/store"
 import { ApiError } from "../src/http/client"
-import { piWorkingObjects } from "../src/objects/adapters/pi"
 import { objectsRequest } from "../src/objects/adapters/http"
+import { piWorkingObjects } from "../src/objects/adapters/pi"
 import { ObjectMutation, ObjectDetail } from "../src/objects/contracts"
 
 it("unchanged empty refreshes preserve the external-store snapshot and recover a read failure", async () => {

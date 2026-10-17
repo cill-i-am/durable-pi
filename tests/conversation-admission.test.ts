@@ -1,23 +1,24 @@
 import { expect, it } from "@effect/vitest"
 import { Cause, Context, Deferred, Effect, Exit, Fiber, Layer } from "effect"
-import { database, corrupt } from "./database"
-import { catalog } from "./inference-fixture"
+
 import { BotConfigurationStore } from "../src/agents/adapters/configuration"
 import { homeAgentId } from "../src/agents/domain"
-import { SkillStore } from "../src/skills/adapters/sqlite"
-import { workspaceLayer } from "../src/workspace/adapters/storage"
-import type { FileError } from "../src/workspace/files"
-import { Workspace } from "../src/workspace/workspace"
-import { WorkspaceAdmission } from "../src/workspace/admission"
-import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import { conversationTransactions } from "../src/conversations/adapters/sqlite-journal"
-import { makeConversations } from "../src/conversations/service"
+import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import {
   guardedMessageAdmission,
   messageAdmission,
   type MessageAdmissionHost,
 } from "../src/conversations/admission"
+import { makeConversations } from "../src/conversations/service"
 import { resolveRoute } from "../src/inference/policy"
+import { SkillStore } from "../src/skills/adapters/sqlite"
+import { workspaceLayer } from "../src/workspace/adapters/storage"
+import { WorkspaceAdmission } from "../src/workspace/admission"
+import type { FileError } from "../src/workspace/files"
+import { Workspace } from "../src/workspace/workspace"
+import { database, corrupt } from "./database"
+import { catalog } from "./inference-fixture"
 
 const profile = {
   id: homeAgentId,

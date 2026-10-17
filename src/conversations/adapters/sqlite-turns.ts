@@ -1,4 +1,3 @@
-import type { EffectDrizzleQueryError } from "drizzle-orm/effect-core/errors"
 import {
   and,
   asc,
@@ -10,20 +9,22 @@ import {
   isNull,
   or,
 } from "drizzle-orm"
+import type { EffectDrizzleQueryError } from "drizzle-orm/effect-core/errors"
 import { Effect, Schema } from "effect"
+
+import { ResolvedRoute, type JobType } from "../../inference/policy"
+import { SkillReference, type SkillDocument } from "../../skills/contracts"
+import { coalesce, increment, literal } from "../../storage/expressions"
 import {
   mapSqliteError,
   type Sqlite,
   type EffectSqliteDatabase,
 } from "../../storage/sqlite"
-import { coalesce, increment, literal } from "../../storage/expressions"
-import { ResolvedRoute, type JobType } from "../../inference/policy"
-import { SkillReference, type SkillDocument } from "../../skills/contracts"
 import { AttachmentContent, FileInfo } from "../../workspace/files"
 import { TurnOrigin } from "../contracts"
-import { RecoveryView } from "../recovery"
-import type { ConversationLedger } from "../ledger"
 import * as Domain from "../domain"
+import type { ConversationLedger } from "../ledger"
+import { RecoveryView } from "../recovery"
 import {
   ConversationStorageError,
   TurnRecord,
@@ -249,7 +250,17 @@ export class ConversationStore implements ConversationLedger {
             id: row.id,
             status: row.status,
             phase: row.recovery
-              ? (JSON.parse(row.recovery)?.view?.phase ?? null)
+              ? (Schema.decodeUnknownSync(
+                  Schema.fromJsonString(
+                    Schema.Struct({
+                      view: Schema.optional(
+                        Schema.NullOr(
+                          Schema.Struct({ phase: RecoveryView.fields.phase })
+                        )
+                      ),
+                    })
+                  )
+                )(row.recovery).view?.phase ?? null)
               : null,
           })
           return {

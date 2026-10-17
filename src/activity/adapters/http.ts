@@ -1,14 +1,15 @@
 import { Effect, Schema } from "effect"
+
 import type { AgentId } from "../../agents/domain"
+import { preserveFatal } from "../../shared/effect"
 import {
   ActivityFilter,
   ActivityCursor,
   type ActivityQuery,
 } from "../contracts"
-import { RunCursor } from "../run"
 import type { ActivityDirectory } from "../reader"
 import { activityOverview, activityRecord } from "../reader"
-import { preserveFatal } from "../../shared/effect"
+import { RunCursor } from "../run"
 
 class ActivityRequestInvalid extends Schema.TaggedError<ActivityRequestInvalid>()(
   "ActivityRequestInvalid",

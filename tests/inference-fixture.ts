@@ -1,5 +1,6 @@
 import { createModels } from "@earendil-works/pi-ai/models"
 import { openaiProvider } from "@earendil-works/pi-ai/providers/openai"
+
 import { catalogFromAccount } from "../src/inference/adapters/openai-catalog"
 
 export const account = {

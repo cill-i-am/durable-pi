@@ -1,14 +1,15 @@
 import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context"
-import type { PiHarness } from "agents/harness/pi"
 import type {
   Conversation,
   Storage,
   SnapshotEvent,
   SubmissionRecord,
 } from "@earendil-works/pi-durable"
+import type { PiHarness } from "agents/harness/pi"
 import { Cause, Effect, Layer, Schema } from "effect"
-import { nativeOperation } from "../../shared/interop"
+
 import { fatalCause } from "../../shared/effect"
+import { nativeOperation } from "../../shared/interop"
 import { AttachmentContent } from "../../workspace/files"
 import {
   ConversationExecution,

@@ -1,10 +1,9 @@
-import { Cause, Effect, Layer, Schema } from "effect"
 import { and, count, desc, eq, inArray, lte, or } from "drizzle-orm"
-import type { SQLiteTable } from "drizzle-orm/sqlite-core"
 import type { EffectDrizzleQueryError } from "drizzle-orm/effect-core/errors"
+import type { SQLiteTable } from "drizzle-orm/sqlite-core"
+import { Cause, Effect, Layer, Schema } from "effect"
+
 import { mapSqliteError, type Sqlite } from "../../storage/sqlite"
-import { Mailbox } from "../mailbox"
-import * as Domain from "../domain"
 import {
   CommunicationError,
   Delivery,
@@ -17,6 +16,8 @@ import {
   failure,
   isRequest,
 } from "../contracts"
+import * as Domain from "../domain"
+import { Mailbox } from "../mailbox"
 import {
   communicationIdentity as identities,
   communicationOutbox as outbox,

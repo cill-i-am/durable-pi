@@ -1,13 +1,14 @@
-import { Cause, Effect, Exit, Layer, Schema } from "effect"
-import { nativeOperation } from "../../shared/interop"
 import type { AssistantMessage, Message } from "@earendil-works/pi-ai"
-import { SummaryFailure, SummaryModel } from "../summary-model"
+import { Cause, Effect, Exit, Layer, Schema } from "effect"
+
+import { nativeOperation } from "../../shared/interop"
 import {
   InvalidMemory,
   MemoryNotReady,
   MemoryStorageError,
   type SummaryJob,
 } from "../domain"
+import { SummaryFailure, SummaryModel } from "../summary-model"
 
 const expected = Schema.decodeUnknownOption(
   Schema.Union([

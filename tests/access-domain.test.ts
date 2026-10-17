@@ -1,7 +1,8 @@
 import { expect, it } from "@effect/vitest"
 import { Effect, Schema } from "effect"
-import { claimOperation } from "../src/access/domain"
+
 import { AccessDenied } from "../src/access/contracts"
+import { claimOperation } from "../src/access/domain"
 import type { ToolOperation } from "../src/access/ledger"
 
 const revision = Schema.Number.check(

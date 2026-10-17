@@ -32,7 +32,7 @@ export function viewBlocks(text: string) {
 export function memoryPayload(payload: unknown) {
   const body = record(payload)
   const input = Array.isArray(body.input)
-    ? body.input.map((item) => {
+    ? body.input.map((item: unknown) => {
         if (
           !isRecord(item) ||
           item.role !== "user" ||
@@ -41,7 +41,7 @@ export function memoryPayload(payload: unknown) {
           return item
         return {
           ...item,
-          content: item.content.flatMap((part) => {
+          content: item.content.flatMap((part: unknown) => {
             if (
               !isRecord(part) ||
               part.type !== "input_text" ||

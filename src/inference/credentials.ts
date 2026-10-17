@@ -10,6 +10,7 @@ import {
   Layer,
   Schema,
 } from "effect"
+
 import { orDieAll, preserveFatal } from "../shared/effect"
 
 const Secret = Schema.RedactedFromValue(
@@ -120,7 +121,7 @@ export const makeModelCredentials = (
         Effect.gen(function* () {
           closed = true
           for (const fiber of active.values()) yield* Fiber.interrupt(fiber)
-          if (fatal) yield* Effect.failCause(fatal).pipe(orDieAll)
+          if (fatal) return yield* Effect.failCause(fatal).pipe(orDieAll)
         })
       )
     yield* Effect.addFinalizer(shutdown)

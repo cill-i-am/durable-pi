@@ -1,6 +1,7 @@
-import { validateAuthSearch } from "@/navigation/workspace"
 import { createFileRoute } from "@tanstack/react-router"
+
 import { TwoFactorChallenge } from "@/features/auth"
+import { validateAuthSearch } from "@/navigation/workspace"
 
 export const Route = createFileRoute("/two-factor")({
   validateSearch: validateAuthSearch,

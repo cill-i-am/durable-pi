@@ -1,4 +1,7 @@
 import { Clock, Effect, Schema } from "effect"
+
+import { BackupFailure, BackupStore } from "./backup-store"
+import { sha256 } from "./checksum"
 import {
   advance,
   ArchiveRecord,
@@ -8,8 +11,6 @@ import {
   type Watermark,
 } from "./records"
 import { MemoryRepository } from "./repository"
-import { BackupFailure, BackupStore } from "./backup-store"
-import { sha256 } from "./checksum"
 
 const ManifestSchema = Schema.Struct({
   version: Schema.Literal(1),

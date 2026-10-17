@@ -1,11 +1,12 @@
-import { preserveFatal } from "../../shared/effect"
-import { nativeOperation } from "../../shared/interop"
-import { jsonRequest, requestBytes } from "../../shared/http"
 import { Effect, Schema } from "effect"
+
 import { RoutineId } from "../../routines/contracts"
-import type { Webhooks } from "../service"
+import { preserveFatal } from "../../shared/effect"
+import { jsonRequest, requestBytes } from "../../shared/http"
+import { nativeOperation } from "../../shared/interop"
 import type { WebhookRejected } from "../contracts"
 import { ConfigureWebhook, EventId, MAX_EVENT_BYTES } from "../contracts"
+import type { Webhooks } from "../service"
 import { bearer, digest } from "./crypto"
 
 class WebhookHttpError extends Schema.TaggedError<WebhookHttpError>()(

@@ -1,12 +1,13 @@
-import { Clock, Effect, Schema } from "effect"
 import type { Credential, Model } from "@earendil-works/pi-ai"
 import { getSupportedThinkingLevels } from "@earendil-works/pi-ai/models"
+import { Clock, Effect, Schema } from "effect"
+
 import { observeCleanup } from "../../shared/effect"
-import { nativeBytes } from "../../shared/stream"
 import { nativeOperation, nativeResponse } from "../../shared/interop"
-import { ModelUnavailable } from "../policy"
+import { nativeBytes } from "../../shared/stream"
 import type { CatalogSource } from "../catalog"
 import { reconcileCatalog } from "../domain"
+import { ModelUnavailable } from "../policy"
 
 const AccountModels = Schema.Struct({
   models: Schema.Array(

@@ -1,21 +1,23 @@
-import { useCallback, useEffect, useRef, useState } from "react"
-import { Schema } from "effect"
-import { type AppDocument, AppList } from "@/apps/contracts"
-import { agentApi } from "@/http/client"
-import { poll } from "@/http/poll"
-import { AppView } from "./app-view"
-import { Button, buttonVariants } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Link } from "@tanstack/react-router"
-import { parseAgentId, workspaceDestination } from "@/navigation/workspace"
+import { Schema } from "effect"
+import { PanelsTopLeft, ListTodo } from "lucide-react"
+import { useCallback, useEffect, useRef, useState } from "react"
+
+import { type AppDocument, AppList } from "@/apps/contracts"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Button, buttonVariants } from "@/components/ui/button"
 import {
   Empty,
   EmptyHeader,
   EmptyTitle,
   EmptyDescription,
 } from "@/components/ui/empty"
-import { PanelsTopLeft, ListTodo } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
+import { agentApi } from "@/http/client"
+import { poll } from "@/http/poll"
+import { parseAgentId, workspaceDestination } from "@/navigation/workspace"
+
+import { AppView } from "./app-view"
 
 export function AppsWorkbench({
   agentId,
@@ -66,6 +68,7 @@ export function AppsWorkbench({
     )
     return () => {
       stop()
+      // oxlint-disable-next-line react/exhaustive-deps -- Advance the live request generation so all pending responses become stale.
       sequence.current++
     }
   }, [refresh])

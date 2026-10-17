@@ -1,5 +1,6 @@
-import { afterEach, expect, it, vi } from "vitest"
 import type { Terminal } from "@xterm/xterm"
+import { afterEach, expect, it, vi } from "vitest"
+
 import { NativeTerminalAddon } from "../src/features/terminal/native-terminal-addon"
 
 class Socket extends EventTarget {

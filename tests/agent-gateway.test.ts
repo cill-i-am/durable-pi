@@ -1,12 +1,13 @@
-import { reportService } from "../src/observability/events"
-import { WebhookAuthorizationOutcome } from "../src/webhooks/adapters/authorization-rpc"
-import { WebhookStorageError } from "../src/webhooks/persistence"
-import { expect, it, vi } from "vitest"
 import { Cause, Exit, Schema } from "effect"
+import { expect, it, vi } from "vitest"
+
 import { agentGateway } from "../src/agent/adapters/gateway"
 import { AgentOutcome } from "../src/agents/adapters/rpc"
 import { AgentId, AgentStorageError } from "../src/agents/domain"
 import type { AgentProfile } from "../src/agents/domain"
+import { reportService } from "../src/observability/events"
+import { WebhookAuthorizationOutcome } from "../src/webhooks/adapters/authorization-rpc"
+import { WebhookStorageError } from "../src/webhooks/persistence"
 
 vi.mock("../src/observability/events", () => ({ reportService: vi.fn() }))
 const profile: AgentProfile = {

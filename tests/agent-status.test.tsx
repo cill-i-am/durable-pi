@@ -1,25 +1,26 @@
-import { describe, expect, it } from "vitest"
 import { Effect, Schema } from "effect"
 import { renderToStaticMarkup } from "react-dom/server"
-import {
-  runtimeStatus,
-  RuntimeStatus,
-  type StatusTurn,
-} from "../src/conversations/status"
-import {
-  AgentStatus,
-  AgentStatusMarker,
-  agentStatusLabel,
-} from "../src/components/agent-status"
-import { agentStatuses } from "../src/agents/statuses"
-import { agentRuntimeReader } from "../src/agents/adapters/statuses"
-import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
+import { describe, expect, it } from "vitest"
+
 import { AccessStore } from "../src/access/adapters/sqlite"
+import { agentRuntimeReader } from "../src/agents/adapters/statuses"
 import {
   homeAgentId,
   AgentId,
   type AgentProfile,
 } from "../src/agents/contracts"
+import { agentStatuses } from "../src/agents/statuses"
+import {
+  AgentStatus,
+  AgentStatusMarker,
+  agentStatusLabel,
+} from "../src/components/agent-status"
+import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
+import {
+  runtimeStatus,
+  RuntimeStatus,
+  type StatusTurn,
+} from "../src/conversations/status"
 import { database } from "./database"
 
 const idle = { archived: false, needsApproval: false, planBlocked: false }

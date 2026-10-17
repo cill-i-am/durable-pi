@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from "react"
 import { Schema } from "effect"
+import { useEffect, useRef, useState } from "react"
+
+import { ConnectionList, type RemoteTool } from "@/access/connections"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { ConnectionList, type RemoteTool } from "@/access/connections"
 import { agentApi } from "@/http/client"
 import { SkillBody, SkillName, type SaveSkill } from "@/skills/contracts"
 import {
@@ -57,6 +58,7 @@ export function HostedSkillImport({
         if (version === request.current) setBusy(false)
       })
     return () => {
+      // oxlint-disable-next-line react/exhaustive-deps -- Advance the live request generation so all pending responses become stale.
       request.current++
     }
   }, [])

@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest"
 import { renderToStaticMarkup } from "react-dom/server"
-import { TurnReply } from "../src/features/conversation/turn-reply"
+import { describe, expect, it } from "vitest"
+
 import type { ChatState } from "../src/conversations/contracts"
+import { TurnReply } from "../src/features/conversation/turn-reply"
 
 const base = {
   id: "one",

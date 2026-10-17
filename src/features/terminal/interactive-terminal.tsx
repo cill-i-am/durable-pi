@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from "react"
-import type { InteractiveState } from "@/terminal/contracts"
-import { agentUrl } from "@/http/client"
-import type { LeaseState } from "./session-lease"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { agentUrl } from "@/http/client"
+import type { InteractiveState } from "@/terminal/contracts"
+
+import type { LeaseState } from "./session-lease"
+
 import "@xterm/xterm/css/xterm.css"
 
 type Session = typeof InteractiveState.Type

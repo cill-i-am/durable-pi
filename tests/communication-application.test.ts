@@ -1,29 +1,30 @@
+import { it as effectIt } from "@effect/vitest"
 import { sqliteTable, text } from "drizzle-orm/sqlite-core"
 import { Cause, Deferred, Effect, Exit, Fiber, Layer, Schema } from "effect"
-import { expect, it } from "vitest"
-import { it as effectIt } from "@effect/vitest"
 import { TestClock } from "effect/testing"
-import {
-  makeCommunication,
-  type Host,
-} from "../src/communication/communication"
+import { expect, it } from "vitest"
+
+import { AgentId } from "../src/agents/domain"
 import {
   continuationId,
   WebCryptoContinuationIdentity,
 } from "../src/communication/adapters/identity"
 import { sqliteMailbox } from "../src/communication/adapters/sqlite"
-import { Mailbox, MailboxTransport } from "../src/communication/mailbox"
+import {
+  makeCommunication,
+  type Host,
+} from "../src/communication/communication"
 import {
   failure,
   type Envelope,
   type CommunicationError,
 } from "../src/communication/contracts"
-import { AgentId } from "../src/agents/domain"
-import { database, corrupt } from "./database"
 import { deliverNext } from "../src/communication/delivery"
 import { TaskExecution } from "../src/communication/execution"
-import { ConversationStorageError } from "../src/conversations/turns"
+import { Mailbox, MailboxTransport } from "../src/communication/mailbox"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
+import { ConversationStorageError } from "../src/conversations/turns"
+import { database, corrupt } from "./database"
 
 const resumedTable = sqliteTable("resumed", {
   id: text("id").primaryKey(),

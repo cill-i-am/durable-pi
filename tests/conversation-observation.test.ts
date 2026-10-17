@@ -1,12 +1,13 @@
-import { expect, it, vi } from "vitest"
-import { Cause, Effect, Exit, Logger } from "effect"
-import type { PiHarness } from "agents/harness/pi"
+import { fauxAssistantMessage } from "@earendil-works/pi-ai"
 import type {
   EntryRecord,
   SnapshotEvent,
   SubmissionRecord,
 } from "@earendil-works/pi-durable"
-import { fauxAssistantMessage } from "@earendil-works/pi-ai"
+import type { PiHarness } from "agents/harness/pi"
+import { Cause, Effect, Exit, Logger } from "effect"
+import { expect, it, vi } from "vitest"
+
 import {
   normalizePiObservation,
   piConversationObserver,
@@ -14,8 +15,8 @@ import {
   conversationNativeOperation,
 } from "../src/conversations/adapters/pi-execution"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
-import { database } from "./database"
 import { ConversationExecution } from "../src/conversations/execution"
+import { database } from "./database"
 
 function deferred() {
   let resolve!: () => void

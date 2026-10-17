@@ -1,16 +1,17 @@
-import { Clock, Effect } from "effect"
+import { Type } from "@earendil-works/pi-ai"
 import {
   defineTool,
   hook,
   GenerationTask,
   type ToolExecutionApi,
 } from "@earendil-works/pi-durable"
-import { Type } from "@earendil-works/pi-ai"
-import type { Delegations } from "../delegations"
-import { type DelegationSource } from "../delegation"
+import { Clock, Effect } from "effect"
+
 import type { BackgroundInput } from "../background"
 import type { BackgroundError } from "../background-mailbox"
 import type { DelegationFailure } from "../contracts"
+import { type DelegationSource } from "../delegation"
+import type { Delegations } from "../delegations"
 
 export type DelegationRunner<TError = DelegationFailure> = <T>(
   work: Effect.Effect<T, TError>,

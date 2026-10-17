@@ -1,10 +1,10 @@
-import { SkillReference } from "../skills/contracts"
 import { Option, Schema } from "effect"
-import { TurnOrigin, type ChatTurn } from "./contracts"
-import { AttachmentContent, FileInfo } from "../workspace/files"
 
-import { ModelSettings, ThinkingLevel } from "../inference/selection"
 import { ResolvedRoute, type Profile, type JobType } from "../inference/policy"
+import { ModelSettings, ThinkingLevel } from "../inference/selection"
+import { SkillReference } from "../skills/contracts"
+import { AttachmentContent, FileInfo } from "../workspace/files"
+import { TurnOrigin, type ChatTurn } from "./contracts"
 
 export { ModelSettings, ThinkingLevel }
 export const ModelSelection = Schema.Struct({
@@ -14,7 +14,11 @@ export const ModelSelection = Schema.Struct({
 export type ModelSelection = typeof ModelSelection.Type
 export type SubmissionMode = "followUp" | "steer"
 export type Delivery =
-  "queued" | "accepted" | "consumed" | "answered" | "unanswered"
+  | "queued"
+  | "accepted"
+  | "consumed"
+  | "answered"
+  | "unanswered"
 export type Turn = ChatTurn & {
   origin?: TurnOrigin
   parent_id: string | null
@@ -101,7 +105,9 @@ export class ConversationStorageError extends Schema.TaggedError<ConversationSto
   { operation: Schema.String, cause: Schema.Unknown }
 ) {}
 export type ConversationFailure =
-  ConversationConflict | ConversationFull | ConversationStorageError
+  | ConversationConflict
+  | ConversationFull
+  | ConversationStorageError
 const ConversationFailureSchema = Schema.Union([
   ConversationConflict,
   ConversationFull,

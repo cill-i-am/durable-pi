@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react"
 import { Schema } from "effect"
-import { InferenceActivity, type Attempt } from "@/inference/usage-domain"
-import { agentApi } from "@/http/client"
-import { poll } from "@/http/poll"
+import { ChevronDown } from "lucide-react"
+import { useEffect, useState } from "react"
+
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -10,8 +10,9 @@ import {
   CollapsibleTrigger,
   CollapsibleContent,
 } from "@/components/ui/collapsible"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { ChevronDown } from "lucide-react"
+import { agentApi } from "@/http/client"
+import { poll } from "@/http/poll"
+import { InferenceActivity, type Attempt } from "@/inference/usage-domain"
 
 export function InferenceRuns({ agentId }: { agentId: string }) {
   const [attempts, setAttempts] = useState<readonly Attempt[]>([])

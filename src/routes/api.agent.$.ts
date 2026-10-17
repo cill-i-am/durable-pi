@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { authorizedOwner } from "../auth/server"
+
 import { agentProxy } from "../auth/adapters/agent-proxy"
+import { authorizedOwner } from "../auth/server"
 import { getEnv, runInBackground } from "../env"
 
 function handle(request: Request) {

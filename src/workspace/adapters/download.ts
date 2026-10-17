@@ -1,7 +1,8 @@
 import { Cause, Effect, Exit, Latch, Stream } from "effect"
+import type { Scope } from "effect"
+
 import type { FileError } from "../files"
 import type { FileContent } from "../workspace"
-import type { Scope } from "effect"
 
 export type FileBodyRunner = (
   work: Effect.Effect<void, FileError>,

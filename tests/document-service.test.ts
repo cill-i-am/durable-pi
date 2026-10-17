@@ -1,7 +1,8 @@
-import { expect, it } from "vitest"
 import { Cause, Effect, Exit } from "effect"
-import worker from "../src/workspace/adapters/document-worker"
+import { expect, it } from "vitest"
+
 import { documentService } from "../src/workspace/adapters/document-service"
+import worker from "../src/workspace/adapters/document-worker"
 import { pdfFixture } from "./pdf-fixture"
 
 it("crosses the parser service boundary without exposing raw exceptions", async () => {

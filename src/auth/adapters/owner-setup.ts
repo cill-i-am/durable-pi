@@ -1,12 +1,13 @@
 import { isAPIError } from "better-auth/api"
-import type { AuthStorageError } from "./accounts"
 import { Cause, Effect, Exit, Schema } from "effect"
-import { matchesSecret, sameOrigin } from "../server"
+
+import { reportService } from "../../observability/events"
+import { WorkerTelemetry } from "../../observability/worker"
+import { preserveFatal } from "../../shared/effect"
 import { jsonRequest } from "../../shared/http"
 import { nativeOperation } from "../../shared/interop"
-import { preserveFatal } from "../../shared/effect"
-import { WorkerTelemetry } from "../../observability/worker"
-import { reportService } from "../../observability/events"
+import { matchesSecret, sameOrigin } from "../server"
+import type { AuthStorageError } from "./accounts"
 
 const Setup = Schema.Struct({
   password: Schema.String.check(

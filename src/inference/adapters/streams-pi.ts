@@ -1,11 +1,12 @@
-import { Cause, Context, Effect, Exit, Fiber, Layer } from "effect"
-import { AssistantMessageEventStream } from "@earendil-works/pi-ai/utils/event-stream"
 import type {
   AssistantMessage,
   AssistantMessageEvent,
   Model,
   Api,
 } from "@earendil-works/pi-ai"
+import { AssistantMessageEventStream } from "@earendil-works/pi-ai/utils/event-stream"
+import { Cause, Context, Effect, Exit, Fiber, Layer } from "effect"
+
 import { fatalCause, orDieAll } from "../../shared/effect"
 
 export const MAX_PROVIDER_BYTES = 16 * 1024 * 1024
@@ -391,7 +392,7 @@ export const piModelStreamsLayer = Layer.effect(
               entry.fiber ? Fiber.interrupt(entry.fiber) : Effect.void,
             { concurrency: "unbounded" }
           )
-          if (fatal) yield* Effect.failCause(fatal)
+          if (fatal) return yield* Effect.failCause(fatal)
         })
       )
     yield* Effect.addFinalizer(shutdown)

@@ -1,11 +1,12 @@
 import { Cache, Context, Data, Effect, Exit, Layer, Schema } from "effect"
+
 import { nativeOperation, nativeResponse } from "../../shared/interop"
+import type { TerminalAuthorityProjection } from "../application"
 import {
   AgentConflict,
   AgentProfile,
   AgentSynchronizationError,
 } from "../domain"
-import type { TerminalAuthorityProjection } from "../application"
 
 const ConfigurationInput = Schema.Struct({
   owner: Schema.String,

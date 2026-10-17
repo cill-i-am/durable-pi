@@ -1,11 +1,13 @@
-import { describe, expect, it } from "vitest"
-import { renderToStaticMarkup } from "react-dom/server"
 import { StreamProcessor } from "@tanstack/ai-client"
+import { renderToStaticMarkup } from "react-dom/server"
+import { describe, expect, it } from "vitest"
+
 import {
   chatMessages,
   conversationView,
   messageEvents,
 } from "../src/conversations/adapters/tanstack"
+import type { ChatState, TimelineItem } from "../src/conversations/contracts"
 import {
   activitySections,
   activitySource,
@@ -14,7 +16,6 @@ import {
   type ToolItem,
 } from "../src/features/conversation/activity-presentation"
 import { TurnActivity } from "../src/features/conversation/turn-activity"
-import type { ChatState, TimelineItem } from "../src/conversations/contracts"
 import { parseAgentId, workspaceDestination } from "../src/navigation/workspace"
 
 const tool = (

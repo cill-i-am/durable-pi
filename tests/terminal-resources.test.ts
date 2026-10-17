@@ -1,7 +1,9 @@
-import { expect, it, vi } from "vitest"
+import type { Sandbox } from "@cloudflare/sandbox-v0"
 import { it as effectIt } from "@effect/vitest"
 import { Cause, Context, Deferred, Effect, Exit, Fiber } from "effect"
 import { TestClock } from "effect/testing"
+import { expect, it, vi } from "vitest"
+
 import { nativeOperation } from "../src/shared/interop"
 import {
   effectInteractiveRuntime,
@@ -14,10 +16,9 @@ import {
   sandboxVideo,
   type VideoSandbox,
 } from "../src/terminal/adapters/video"
-import { TerminalRuntimeError } from "../src/terminal/runtime"
 import { TerminalFailure } from "../src/terminal/contracts"
+import { TerminalRuntimeError } from "../src/terminal/runtime"
 import { MAX_FILE_BYTES } from "../src/workspace/files"
-import type { Sandbox } from "@cloudflare/sandbox-v0"
 
 function gate<T = void>() {
   let release!: (value: T) => void

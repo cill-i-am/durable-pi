@@ -1,13 +1,14 @@
 import { asc, count, eq } from "drizzle-orm"
 import { Effect, Schema } from "effect"
+
 import {
   mapSqliteError,
   type Sqlite,
   type EffectSqliteDatabase,
 } from "../../storage/sqlite"
+import { AgentProfile, AgentStorageError, type AgentId } from "../domain"
 import type { AgentCatalogLedger } from "../ledger"
 import { agentCatalogApplication } from "../service"
-import { AgentProfile, AgentStorageError, type AgentId } from "../domain"
 import { agentCatalog } from "./schema"
 
 export class SqliteAgentCatalog implements AgentCatalogLedger {

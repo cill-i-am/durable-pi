@@ -1,4 +1,5 @@
 import { Cause, Clock, Context, Effect, Layer } from "effect"
+
 import type { AgentProfile } from "../agents/domain"
 import type { UsageTotals } from "../inference/usage-domain"
 import type {

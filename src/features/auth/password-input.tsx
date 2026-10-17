@@ -1,12 +1,13 @@
-import { useState, type ComponentProps } from "react"
 import { Eye, EyeOff } from "lucide-react"
-import { useInteractionSound } from "@/hooks/use-interaction-sound"
+import { useState, type ComponentProps } from "react"
+
 import {
   InputGroup,
   InputGroupInput,
   InputGroupAddon,
   InputGroupButton,
 } from "@/components/ui/input-group"
+import { useInteractionSound } from "@/hooks/use-interaction-sound"
 
 export function PasswordInput(
   props: Omit<ComponentProps<typeof InputGroupInput>, "type">

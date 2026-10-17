@@ -1,5 +1,6 @@
-import { preserveFatal } from "../shared/effect"
 import { Crypto, Effect } from "effect"
+
+import { preserveFatal } from "../shared/effect"
 import { InvalidMemory } from "./domain"
 
 export const sha256 = Effect.fnUntraced(function* (text: string) {

@@ -1,13 +1,14 @@
 import { Cause, Effect, Exit } from "effect"
 import { expect, it } from "vitest"
-import { planNativeOperation } from "../src/planning/adapters/pi"
-import { PlanFailure } from "../src/planning/contracts"
-import { objectNativeOperation } from "../src/objects/adapters/pi"
-import { ObjectFailure } from "../src/objects/contracts"
+
+import { bucketLayer } from "../src/memory/adapters/bucket"
 import { memoryWake } from "../src/memory/adapters/host"
 import { MemorySchedulingError } from "../src/memory/application"
-import { bucketLayer } from "../src/memory/adapters/bucket"
 import { BackupFailure, BackupStore } from "../src/memory/backup-store"
+import { objectNativeOperation } from "../src/objects/adapters/pi"
+import { ObjectFailure } from "../src/objects/contracts"
+import { planNativeOperation } from "../src/planning/adapters/pi"
+import { PlanFailure } from "../src/planning/contracts"
 
 const cases: readonly {
   name: string

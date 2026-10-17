@@ -1,8 +1,9 @@
 import { Type } from "@earendil-works/pi-ai"
 import { defineTool } from "@earendil-works/pi-durable"
 import { Effect, Schema } from "effect"
-import { BrowserInteraction } from "../contracts"
+
 import type { BrowserService } from "../browser"
+import { BrowserInteraction } from "../contracts"
 import { browserToolResult } from "./pi"
 
 export function browserTools(

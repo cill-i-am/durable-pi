@@ -1,6 +1,8 @@
 import { execFileSync } from "node:child_process"
 import { readFileSync } from "node:fs"
 
+import { Schema } from "effect"
+
 const files = execFileSync("git", ["ls-files", "-z"], { encoding: "utf8" })
   .split("\0")
   .filter(Boolean)
@@ -19,7 +21,13 @@ const values = [
 ]
 if (process.env.OPENAI_CREDENTIAL) {
   try {
-    const c = JSON.parse(process.env.OPENAI_CREDENTIAL)
+    const c = Schema.decodeUnknownSync(
+      Schema.Struct({
+        access: Schema.optional(Schema.String),
+        refresh: Schema.optional(Schema.String),
+        key: Schema.optional(Schema.String),
+      })
+    )(JSON.parse(process.env.OPENAI_CREDENTIAL))
     values.push(c.access, c.refresh, c.key)
   } catch {
     throw new Error("Malformed credential in local scan environment")

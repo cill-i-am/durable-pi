@@ -1,19 +1,20 @@
-import { Cause, Effect } from "effect"
-import { fatalCause } from "../../shared/effect"
-import { PiModelRequest } from "./streams-pi"
-import { workerChatGPTAuth } from "./credentials-pi"
-import { runObserved } from "../../observability/worker"
-import { validateRoute, type ModelCatalog } from "../policy"
-import type { ThinkingLevel } from "../selection"
-import type { NativeInferenceObservation } from "./usage-pi"
+import type { CredentialStore } from "@earendil-works/pi-ai"
 import {
   createModels,
   getSupportedThinkingLevels,
 } from "@earendil-works/pi-ai/models"
 import { openaiProvider } from "@earendil-works/pi-ai/providers/openai"
-import type { CredentialStore } from "@earendil-works/pi-ai"
+import { Cause, Effect } from "effect"
+
+import { runObserved } from "../../observability/worker"
+import { fatalCause } from "../../shared/effect"
+import { validateRoute, type ModelCatalog } from "../policy"
+import type { ThinkingLevel } from "../selection"
+import { workerChatGPTAuth } from "./credentials-pi"
 import { memoryPayload } from "./payload-openai"
+import { PiModelRequest } from "./streams-pi"
 import { providerUsage } from "./usage-openai"
+import type { NativeInferenceObservation } from "./usage-pi"
 
 /** Usage persistence is part of the owned stream settlement. Expected failures
  * cross the SDK's untyped Promise interface without losing their complete Cause. */

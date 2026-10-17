@@ -1,18 +1,16 @@
-import { sqliteFailure } from "./sqlite-fault"
 import { mkdtemp, rm } from "node:fs/promises"
-import { join } from "node:path"
 import { tmpdir } from "node:os"
+import { join } from "node:path"
+
 import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context"
-import { Harness, createRegistry } from "@earendil-works/pi-durable"
-import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
 import {
   createModels,
   fauxProvider,
   fauxAssistantMessage,
   fauxToolCall,
 } from "@earendil-works/pi-ai"
-import { browserTools } from "../src/browser/adapters/tools"
-import { expect, it } from "vitest"
+import { Harness, createRegistry } from "@earendil-works/pi-durable"
+import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
 import { it as effectIt } from "@effect/vitest"
 import {
   Cause,
@@ -24,24 +22,28 @@ import {
   ManagedRuntime,
 } from "effect"
 import { TestClock } from "effect/testing"
-import { database } from "./database"
-import type { TestSqlite } from "./database"
-import {
-  Browser,
-  BrowserWorkspace,
-  browserApplication,
-} from "../src/browser/browser"
-import { BrowserStore } from "../src/browser/adapters/sqlite"
+import { expect, it } from "vitest"
+
+import { browserRequest } from "../src/browser/adapters/http"
 import {
   effectBrowserDriver,
   browserWake,
   type ForeignBrowserDriver,
 } from "../src/browser/adapters/interop"
-import { orDieAll } from "../src/shared/effect"
-import { browserRequest } from "../src/browser/adapters/http"
 import { browserToolResult } from "../src/browser/adapters/pi"
+import { BrowserStore } from "../src/browser/adapters/sqlite"
+import { browserTools } from "../src/browser/adapters/tools"
+import {
+  Browser,
+  BrowserWorkspace,
+  browserApplication,
+} from "../src/browser/browser"
 import { BrowserFailure } from "../src/browser/contracts"
 import { BrowserUnavailable, type BrowserDriver } from "../src/browser/driver"
+import { orDieAll } from "../src/shared/effect"
+import { database } from "./database"
+import type { TestSqlite } from "./database"
+import { sqliteFailure } from "./sqlite-fault"
 
 const capture = {
   page: {

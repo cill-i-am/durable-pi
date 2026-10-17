@@ -1,13 +1,14 @@
 import { Effect } from "effect"
+
 import { observeCleanup } from "../../shared/effect"
-import { ExecutorUnavailable } from "../executor"
-import { executionResponse, type ExecutionTransport } from "./interop"
-import { readOutput } from "./output"
 import {
   EXECUTION_CPU_MS,
   EXECUTION_TIMEOUT_MS,
   type CodeInput,
 } from "../contracts"
+import { ExecutorUnavailable } from "../executor"
+import { executionResponse, type ExecutionTransport } from "./interop"
+import { readOutput } from "./output"
 
 export const RUNNER_MODULE = `export default { async fetch(request) {
   let logs = '';

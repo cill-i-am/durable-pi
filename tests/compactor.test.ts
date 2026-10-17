@@ -1,18 +1,19 @@
-import { describe, expect, it } from "vitest"
 import { Cause, Deferred, Effect, Exit, Fiber, Queue } from "effect"
 import { TestClock } from "effect/testing"
-import { database } from "./database"
+import { describe, expect, it } from "vitest"
+
+import { piSummaryLayer } from "../src/memory/adapters/pi"
 import { makeSqliteMemory } from "../src/memory/adapters/sqlite"
-import { MemoryRepository } from "../src/memory/repository"
-import { byteLength, MemoryStorageError } from "../src/memory/domain"
-import { SummaryFailure, SummaryModel } from "../src/memory/summary-model"
 import {
   cutUtf8,
   pumpSummaries,
   summarize,
   SCALE,
 } from "../src/memory/compaction"
-import { piSummaryLayer } from "../src/memory/adapters/pi"
+import { byteLength, MemoryStorageError } from "../src/memory/domain"
+import { MemoryRepository } from "../src/memory/repository"
+import { SummaryFailure, SummaryModel } from "../src/memory/summary-model"
+import { database } from "./database"
 
 const long = {
   start: 0,

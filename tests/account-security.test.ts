@@ -1,17 +1,19 @@
-import { afterEach, describe, expect, it } from "vitest"
-import { Effect } from "effect"
 import { createHmac } from "node:crypto"
-import { DatabaseSync } from "node:sqlite"
 import { readFileSync, readdirSync } from "node:fs"
+import { DatabaseSync } from "node:sqlite"
+
 import { betterAuth } from "better-auth"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
 import { drizzle } from "drizzle-orm/node-sqlite"
-import { authOptions } from "../src/auth/server"
-import * as schema from "../src/auth/schema"
+import { Effect } from "effect"
+import { afterEach, describe, expect, it } from "vitest"
+
 import {
   ownerSetup,
   type OwnerSetupBindings,
 } from "../src/auth/adapters/owner-setup"
+import * as schema from "../src/auth/schema"
+import { authOptions } from "../src/auth/server"
 
 const origin = "http://localhost:1337"
 const password = "Only a disposable integration password 2026!"

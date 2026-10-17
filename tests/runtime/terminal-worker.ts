@@ -1,24 +1,25 @@
 import { DurableObject } from "cloudflare:workers"
 import { Effect, ManagedRuntime, Scope } from "effect"
-import { nativeDatabase } from "./database"
-import { TerminalStore } from "../../src/terminal/adapters/sqlite"
+
 import { terminalRequest } from "../../src/terminal/adapters/http"
 import {
   terminalFileDigest,
   effectInteractiveRuntime,
 } from "../../src/terminal/adapters/interop"
-import { relayTerminal } from "../../src/terminal/adapters/socket"
-import { runCommand } from "../../src/terminal/adapters/service"
 import {
   checkpointStorage,
   type CheckpointBucket,
 } from "../../src/terminal/adapters/r2"
-import { TerminalService, terminalLayer } from "../../src/terminal/terminal"
-import type { TerminalRuntime } from "../../src/terminal/runtime"
+import { runCommand } from "../../src/terminal/adapters/service"
+import { relayTerminal } from "../../src/terminal/adapters/socket"
+import { TerminalStore } from "../../src/terminal/adapters/sqlite"
 import {
   extractVideoRequest,
   sandboxVideo,
 } from "../../src/terminal/adapters/video"
+import type { TerminalRuntime } from "../../src/terminal/runtime"
+import { TerminalService, terminalLayer } from "../../src/terminal/terminal"
+import { nativeDatabase } from "./database"
 
 /** Native service/HTTP/SQLite/Layer ownership. The container and R2 binding
  * are synthetic; their bytes and invocation counts persist in local SQLite. */

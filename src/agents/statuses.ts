@@ -1,7 +1,8 @@
-import { preserveFatal, observeCleanup } from "../shared/effect"
 import { Effect } from "effect"
-import type { AgentRuntimeUnavailable, AgentProfile } from "./domain"
+
 import type { RuntimeStatus } from "../conversations/status"
+import { preserveFatal, observeCleanup } from "../shared/effect"
+import type { AgentRuntimeUnavailable, AgentProfile } from "./domain"
 
 export function agentStatuses<TRequirements>(
   agents: readonly AgentProfile[],

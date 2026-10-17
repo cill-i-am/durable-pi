@@ -1,4 +1,5 @@
 import { Effect, Schema } from "effect"
+
 import { observeCleanup, preserveFatal } from "../../shared/effect"
 import { nativeOperation } from "../../shared/interop"
 import type { CatalogSource } from "../catalog"

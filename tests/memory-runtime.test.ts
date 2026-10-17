@@ -1,22 +1,23 @@
-import { expect, it } from "vitest"
-import { Cause, Deferred, Effect, Exit, Layer, ManagedRuntime } from "effect"
 import {
   fauxAssistantMessage,
   type AssistantMessage,
 } from "@earendil-works/pi-ai"
-import { database } from "./database"
-import { MemoryRepository } from "../src/memory/repository"
-import { MemoryTransaction } from "../src/memory/ledger"
+import { Cause, Deferred, Effect, Exit, Layer, ManagedRuntime } from "effect"
+import { expect, it } from "vitest"
+
+import { bucketLayer } from "../src/memory/adapters/bucket"
+import { webCryptoLayer } from "../src/memory/adapters/crypto"
+import { piSummaryLayer } from "../src/memory/adapters/pi"
 import {
   sqliteMemoryLayer,
   makeSqliteMemory,
 } from "../src/memory/adapters/sqlite"
-import { piSummaryLayer } from "../src/memory/adapters/pi"
-import { bucketLayer } from "../src/memory/adapters/bucket"
-import { webCryptoLayer } from "../src/memory/adapters/crypto"
 import { pumpSummaries } from "../src/memory/compaction"
-import { SummaryModel } from "../src/memory/summary-model"
 import { MemoryStorageError } from "../src/memory/domain"
+import { MemoryTransaction } from "../src/memory/ledger"
+import { MemoryRepository } from "../src/memory/repository"
+import { SummaryModel } from "../src/memory/summary-model"
+import { database } from "./database"
 
 it("supports synchronous host transactions and disposes active model requests", async () => {
   const db = database(),

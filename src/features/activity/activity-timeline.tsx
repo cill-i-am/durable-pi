@@ -1,9 +1,7 @@
-import type { WorkspaceQuery } from "@/navigation/workspace"
-import { parseAgentId } from "@/navigation/workspace"
-import { AgentMark, agentTone } from "@/components/agent-mark"
-import { useEffect, useState } from "react"
 import { Schema } from "effect"
 import { ArrowRight, ChevronDown, Clock3, RefreshCw } from "lucide-react"
+import { useEffect, useState } from "react"
+
 import {
   ActivityFilter as importedFilter,
   ActivityPage,
@@ -11,11 +9,10 @@ import {
   type ActivityAgent,
   type ActivityEntry,
 } from "@/activity/contracts"
-import { agentApi } from "@/http/client"
-import { poll } from "@/http/poll"
-import { Button, buttonVariants } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import { AgentMark, agentTone } from "@/components/agent-mark"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
+import { Button, buttonVariants } from "@/components/ui/button"
 import {
   Select,
   SelectContent,
@@ -24,8 +21,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { agentApi } from "@/http/client"
+import { poll } from "@/http/poll"
+import type { WorkspaceQuery } from "@/navigation/workspace"
+import { parseAgentId } from "@/navigation/workspace"
+
 import { ActivityRecord } from "./activity-record"
 
 export function ActivityTimeline({
@@ -166,61 +168,12 @@ export function ActivityTimeline({
           Task details <ArrowRight />
         </Button>
       </div>
-      {error && (
-        <Alert>
-          <AlertTitle>Updates interrupted</AlertTitle>
-          <AlertDescription>
-            {error}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setRetry((value) => value + 1)}
-            >
-              <RefreshCw /> Reconnect
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
-      {!page && !error && <Skeleton className="h-32 w-full" />}
-      {!!page?.unavailable.length && (
-        <Alert>
-          <AlertTitle>Some agents could not be reached</AlertTitle>
-          <AlertDescription>
-            {page.unavailable.map((value) => value.name).join(", ")}. Their
-            activity may be missing. Reconnecting automatically.
-          </AlertDescription>
-        </Alert>
-      )}
-      {page?.issues.map((issue) => (
-        <Alert key={issue.key}>
-          <Clock3 />
-          <AlertTitle>
-            {issue.agent.name} · {issue.title}
-          </AlertTitle>
-          <AlertDescription>
-            {issue.detail}
-            {issue.target === "memory" ? (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onMemory(issue.agent.id)}
-              >
-                Open Memory
-              </Button>
-            ) : (
-              <a
-                href="https://github.com/cill-i-am/durable-pi#run-it"
-                target="_blank"
-                rel="noreferrer"
-                data-slot="button"
-                className={buttonVariants({ variant: "outline", size: "sm" })}
-              >
-                Connection setup
-              </a>
-            )}
-          </AlertDescription>
-        </Alert>
-      ))}
+      <TimelineAvailability
+        page={page}
+        error={error}
+        onRetry={() => setRetry((value) => value + 1)}
+        onMemory={onMemory}
+      />
       <section className="flex flex-col divide-y" aria-label="Recent activity">
         {page?.entries.map((entry) => (
           <button
@@ -312,6 +265,74 @@ export function ActivityTimeline({
           onOpenBot={() => onOpenBot(record.agent.id)}
         />
       )}
+    </>
+  )
+}
+
+function TimelineAvailability({
+  page,
+  error,
+  onRetry,
+  onMemory,
+}: {
+  page: ActivityPage | null
+  error: string
+  onRetry: () => void
+  onMemory: Parameters<typeof ActivityTimeline>[0]["onMemory"]
+}) {
+  return (
+    <>
+      {error && (
+        <Alert>
+          <AlertTitle>Updates interrupted</AlertTitle>
+          <AlertDescription>
+            {error}
+            <Button variant="outline" size="sm" onClick={onRetry}>
+              <RefreshCw /> Reconnect
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+      {!page && !error && <Skeleton className="h-32 w-full" />}
+      {!!page?.unavailable.length && (
+        <Alert>
+          <AlertTitle>Some agents could not be reached</AlertTitle>
+          <AlertDescription>
+            {page.unavailable.map((value) => value.name).join(", ")}. Their
+            activity may be missing. Reconnecting automatically.
+          </AlertDescription>
+        </Alert>
+      )}
+      {page?.issues.map((issue) => (
+        <Alert key={issue.key}>
+          <Clock3 />
+          <AlertTitle>
+            {issue.agent.name} · {issue.title}
+          </AlertTitle>
+          <AlertDescription>
+            {issue.detail}
+            {issue.target === "memory" ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onMemory(issue.agent.id)}
+              >
+                Open Memory
+              </Button>
+            ) : (
+              <a
+                href="https://github.com/cill-i-am/durable-pi#run-it"
+                target="_blank"
+                rel="noreferrer"
+                data-slot="button"
+                className={buttonVariants({ variant: "outline", size: "sm" })}
+              >
+                Connection setup
+              </a>
+            )}
+          </AlertDescription>
+        </Alert>
+      ))}
     </>
   )
 }

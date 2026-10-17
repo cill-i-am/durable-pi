@@ -1,4 +1,5 @@
 import { Check } from "lucide-react"
+
 import { AgentMark } from "@/components/agent-mark"
 import { InteractionSoundToggle } from "@/components/interaction-sound-toggle"
 import { ThemeMenu } from "@/features/appearance/appearance-settings"

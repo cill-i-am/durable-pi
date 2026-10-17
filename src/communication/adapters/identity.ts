@@ -1,6 +1,7 @@
 import { Effect, Layer } from "effect"
-import { ContinuationIdentity, continuationUuid } from "../identity"
+
 import { failure } from "../contracts"
+import { ContinuationIdentity, continuationUuid } from "../identity"
 
 export const continuationId = Effect.fn("Communication.continuationId")(
   (id: string) =>

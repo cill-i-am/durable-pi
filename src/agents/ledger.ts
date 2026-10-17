@@ -1,4 +1,5 @@
 import type { Effect } from "effect"
+
 import type { AgentId, AgentProfile, AgentStorageError } from "./domain"
 
 /** Catalog publication and replay checks share one actor database transaction. */

@@ -1,7 +1,8 @@
 import { Cause, Schema } from "effect"
+
 import { RoutineId } from "../../routines/contracts"
-import { WebhookKey } from "../contracts"
 import { rpcOutcome } from "../../shared/rpc-outcome"
+import { WebhookKey } from "../contracts"
 
 export const WebhookAuthorizationRequest = Schema.Struct({
   id: RoutineId,

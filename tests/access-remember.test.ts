@@ -1,11 +1,12 @@
-import { describe, expect, it } from "vitest"
 import { Effect } from "effect"
-import { migrateSqlite } from "../src/storage/migrations"
-import { database } from "./database"
+import { describe, expect, it } from "vitest"
+
+import { accessRequest } from "../src/access/adapters/http"
 import { AccessStore } from "../src/access/adapters/sqlite"
 import { AccessStorageError } from "../src/access/contracts"
 import { AccessGate } from "../src/access/gate"
-import { accessRequest } from "../src/access/adapters/http"
+import { migrateSqlite } from "../src/storage/migrations"
+import { database } from "./database"
 
 const catalog = () => [
   { name: "record", description: "Synthetic effect", mode: "ask" as const },

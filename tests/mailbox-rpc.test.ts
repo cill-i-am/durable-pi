@@ -1,12 +1,13 @@
-import { expect, it, vi } from "vitest"
 import { Cause, Effect, Exit, Layer, Schema } from "effect"
 import { HttpEffect } from "effect/http"
 import { RpcSerialization, RpcServer } from "effect/rpc"
-import { mailboxTransport } from "../src/communication/adapters/rpc"
-import { MailboxRpc } from "../src/communication/adapters/protocol"
-import { MailboxTransport } from "../src/communication/mailbox"
-import { failure, type Envelope } from "../src/communication/contracts"
+import { expect, it, vi } from "vitest"
+
 import { AgentId } from "../src/agents/domain"
+import { MailboxRpc } from "../src/communication/adapters/protocol"
+import { mailboxTransport } from "../src/communication/adapters/rpc"
+import { failure, type Envelope } from "../src/communication/contracts"
+import { MailboxTransport } from "../src/communication/mailbox"
 
 vi.mock("cloudflare:workers", () => ({
   DurableObject: class {},

@@ -1,6 +1,7 @@
-import { Effect } from "effect"
 import { Duplex } from "node:stream"
 import { constants, createGzip } from "node:zlib"
+
+import { Effect, Schema } from "effect"
 
 function acceptsGzip(value: string | null) {
   let wildcard = false
@@ -94,7 +95,12 @@ export const encodeEventStream = Effect.fn("Website.encodeEventStream")(
         async pull(controller) {
           const next = await reader.read()
           if (next.done) controller.close()
-          else controller.enqueue(new Uint8Array(next.value))
+          else
+            controller.enqueue(
+              new Uint8Array(
+                Schema.decodeUnknownSync(Schema.Uint8Array)(next.value)
+              )
+            )
         },
         cancel: stop,
       })

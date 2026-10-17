@@ -1,10 +1,9 @@
+import { ArrowLeft, ChevronDown, RefreshCw } from "lucide-react"
 import { useEffect, useState } from "react"
-import { AppCanvas } from "./app-canvas"
-import { useApp } from "./use-app"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Skeleton } from "@/components/ui/skeleton"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -12,7 +11,10 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"
-import { ArrowLeft, ChevronDown, RefreshCw } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
+
+import { AppCanvas } from "./app-canvas"
+import { useApp } from "./use-app"
 
 export function AppView({
   agentId,
@@ -30,6 +32,7 @@ export function AppView({
   onPendingChange?: (pending: boolean) => void
 }) {
   const app = useApp(agentId, id)
+  const busy = app.busy || !!app.attempt
   useEffect(() => {
     onPendingChange?.(app.busy || !!app.attempt)
     return () => onPendingChange?.(false)
@@ -52,7 +55,7 @@ export function AppView({
             variant="ghost"
             size="sm"
             className="self-start"
-            disabled={app.busy || !!app.attempt}
+            disabled={busy}
             onClick={onBack}
           >
             <ArrowLeft /> All apps
@@ -84,68 +87,18 @@ export function AppView({
         (selected ?? document.publishedVersion ?? document.version)
     ) ?? versions[0]!
   const published = version.version === document.publishedVersion
-  const editable = published && !document.archived && !app.busy && !app.attempt
-  const pending = events.filter((event) => event.delivery === "pending").length
+  const editable = published && !document.archived && !busy
   return (
     <section className="flex min-w-0 flex-col gap-4" aria-label="Private app">
-      <div className="app-view-toolbar">
-        {onBack && (
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label="All apps"
-            disabled={app.busy || !!app.attempt}
-            onClick={onBack}
-          >
-            <ArrowLeft />
-          </Button>
-        )}
-        <Badge variant="secondary">
-          {document.archived
-            ? "Archived"
-            : published
-              ? "Published"
-              : "Version preview"}
-        </Badge>
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <Button
-                variant="outline"
-                size="xs"
-                disabled={app.busy || !!app.attempt}
-              />
-            }
-          >
-            Version {version.version}
-            <ChevronDown data-icon="inline-end" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuGroup>
-              {versions.map((value) => (
-                <DropdownMenuItem
-                  key={value.version}
-                  onClick={() => setSelected(value.version)}
-                >
-                  Version {value.version}
-                  {value.version === document.publishedVersion
-                    ? " · published"
-                    : ""}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          aria-label="Refresh app"
-          disabled={app.busy}
-          onClick={() => void app.refresh()}
-        >
-          <RefreshCw />
-        </Button>
-      </div>
+      <AppToolbar
+        app={app}
+        document={document}
+        versions={versions}
+        version={version}
+        published={published}
+        onBack={onBack}
+        setSelected={setSelected}
+      />
       {app.error && (
         <Alert>
           <AlertDescription>{app.error}</AlertDescription>
@@ -204,33 +157,13 @@ export function AppView({
           })
         }
       />
-      {!published && !document.archived && (
-        <Button
-          disabled={app.busy || !!app.attempt}
-          onClick={() =>
-            void app.mutate("apps/publish", {
-              id,
-              version: version.version,
-              expectedRevision: document.revision,
-            })
-          }
-        >
-          Publish version {version.version}
-        </Button>
-      )}
-      {(document.archived || !published) && (
-        <p className="text-xs text-muted-foreground">
-          {document.archived
-            ? "Restore this app to use it."
-            : "Preview only. Publish this version to use its controls."}
-        </p>
-      )}
-      {pending > 0 && (
-        <p className="text-xs text-muted-foreground" role="status">
-          {pending} {pending === 1 ? "update is" : "updates are"} waiting for
-          the bot. They will be queued when its model connection is available.
-        </p>
-      )}
+      <AppPublication
+        app={app}
+        document={document}
+        version={version}
+        published={published}
+        id={id}
+      />
       {!compact && (
         <>
           <details>
@@ -256,7 +189,7 @@ export function AppView({
           <Button
             variant="ghost"
             size="sm"
-            disabled={app.busy || !!app.attempt}
+            disabled={busy}
             onClick={() =>
               void app.mutate("apps/archive", {
                 id,
@@ -270,5 +203,131 @@ export function AppView({
         </>
       )}
     </section>
+  )
+}
+
+function AppToolbar({
+  app,
+  document,
+  versions,
+  version,
+  published,
+  onBack,
+  setSelected,
+}: {
+  app: ReturnType<typeof useApp>
+  document: NonNullable<ReturnType<typeof useApp>["detail"]>["app"]
+  versions: NonNullable<ReturnType<typeof useApp>["detail"]>["versions"]
+  version: NonNullable<ReturnType<typeof useApp>["detail"]>["versions"][number]
+  published: boolean
+  onBack?: () => void
+  setSelected: (version: number) => void
+}) {
+  return (
+    <div className="app-view-toolbar">
+      {onBack && (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label="All apps"
+          disabled={app.busy || !!app.attempt}
+          onClick={onBack}
+        >
+          <ArrowLeft />
+        </Button>
+      )}
+      <Badge variant="secondary">
+        {document.archived
+          ? "Archived"
+          : published
+            ? "Published"
+            : "Version preview"}
+      </Badge>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              variant="outline"
+              size="xs"
+              disabled={app.busy || !!app.attempt}
+            />
+          }
+        >
+          Version {version.version}
+          <ChevronDown data-icon="inline-end" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuGroup>
+            {versions.map((value) => (
+              <DropdownMenuItem
+                key={value.version}
+                onClick={() => setSelected(value.version)}
+              >
+                Version {value.version}
+                {value.version === document.publishedVersion
+                  ? " · published"
+                  : ""}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <Button
+        variant="ghost"
+        size="icon-xs"
+        aria-label="Refresh app"
+        disabled={app.busy}
+        onClick={() => void app.refresh()}
+      >
+        <RefreshCw />
+      </Button>
+    </div>
+  )
+}
+
+function AppPublication({
+  app,
+  document,
+  version,
+  published,
+  id,
+}: Pick<
+  Parameters<typeof AppToolbar>[0],
+  "app" | "document" | "version" | "published"
+> & { id: string }) {
+  const busy = app.busy || !!app.attempt
+  const pending = app.detail!.events.filter(
+    (event) => event.delivery === "pending"
+  ).length
+  return (
+    <>
+      {!published && !document.archived && (
+        <Button
+          disabled={busy}
+          onClick={() =>
+            void app.mutate("apps/publish", {
+              id,
+              version: version.version,
+              expectedRevision: document.revision,
+            })
+          }
+        >
+          Publish version {version.version}
+        </Button>
+      )}
+      {(document.archived || !published) && (
+        <p className="text-xs text-muted-foreground">
+          {document.archived
+            ? "Restore this app to use it."
+            : "Preview only. Publish this version to use its controls."}
+        </p>
+      )}
+      {pending > 0 && (
+        <p className="text-xs text-muted-foreground" role="status">
+          {pending} {pending === 1 ? "update is" : "updates are"} waiting for
+          the bot. They will be queued when its model connection is available.
+        </p>
+      )}
+    </>
   )
 }

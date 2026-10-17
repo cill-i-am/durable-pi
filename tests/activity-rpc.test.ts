@@ -1,11 +1,6 @@
-import { AgentOutcome } from "../src/agents/adapters/rpc"
-import { AgentStorageError, homeAgentId } from "../src/agents/domain"
-import { AccountConnectionOutcome } from "../src/inference/adapters/account-rpc"
-import { CredentialStorageError } from "../src/inference/credentials"
-import { activitySource } from "../src/activity/service"
-import { afterEach, expect, it, vi } from "vitest"
 import { Cause, Effect, Exit, Layer, ManagedRuntime } from "effect"
-import { PersonalAgent } from "../src/agent/worker"
+import { afterEach, expect, it, vi } from "vitest"
+
 import {
   activityDirectory,
   ActivityOutcome,
@@ -20,6 +15,12 @@ import {
   ActivityStorageError,
   ActivityUnavailable,
 } from "../src/activity/records"
+import { activitySource } from "../src/activity/service"
+import { PersonalAgent } from "../src/agent/worker"
+import { AgentOutcome } from "../src/agents/adapters/rpc"
+import { AgentStorageError, homeAgentId } from "../src/agents/domain"
+import { AccountConnectionOutcome } from "../src/inference/adapters/account-rpc"
+import { CredentialStorageError } from "../src/inference/credentials"
 import {
   webhookAuthorizationRpc,
   WebhookAuthorizationOutcome,

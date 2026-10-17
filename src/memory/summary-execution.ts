@@ -1,4 +1,5 @@
 import { Schema, Effect, Layer } from "effect"
+
 import {
   ModelUnavailable,
   resolveRoute,
@@ -8,12 +9,12 @@ import {
 } from "../inference/policy"
 import type { ModelSettings } from "../inference/selection"
 import type { MemoryError, SummaryJob } from "./domain"
+import { SummaryRouting } from "./routing"
 import {
   SummaryFailure,
   SummaryModel,
   type SummaryMessage,
 } from "./summary-model"
-import { SummaryRouting } from "./routing"
 
 export type SummaryCompletion<TRequirements = never> = {
   complete: (

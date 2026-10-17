@@ -1,12 +1,13 @@
 import { expect, it } from "@effect/vitest"
 import { Cause, Clock, Effect, Exit } from "effect"
 import { SqlError, UnknownError } from "effect/sql/SqlError"
+
+import { sqliteConversationJournal } from "../src/conversations/adapters/sqlite-journal"
+import type { ConversationObservation } from "../src/conversations/execution"
 import {
   ConversationJournal,
   makeConversationJournal,
 } from "../src/conversations/journal"
-import { sqliteConversationJournal } from "../src/conversations/adapters/sqlite-journal"
-import type { ConversationObservation } from "../src/conversations/execution"
 import { conversationFixture } from "./conversation-fixture"
 import { database } from "./database"
 

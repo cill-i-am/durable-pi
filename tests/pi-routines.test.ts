@@ -1,24 +1,26 @@
-import { expect, it } from "vitest"
 import { mkdtemp, rm } from "node:fs/promises"
-import { join } from "node:path"
 import { tmpdir } from "node:os"
+import { join } from "node:path"
+
 import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context"
-import { Harness, createRegistry } from "@earendil-works/pi-durable"
-import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
 import {
   createModels,
   fauxProvider,
   fauxAssistantMessage,
   fauxToolCall,
 } from "@earendil-works/pi-ai"
-import { routineFixture } from "./routine-fixture"
+import { Harness, createRegistry } from "@earendil-works/pi-durable"
+import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
 import { Effect } from "effect"
-import { routineTools } from "../src/routines/adapters/pi"
-import { AccessStore } from "../src/access/adapters/sqlite"
-import { AccessGate } from "../src/access/gate"
+import { expect, it } from "vitest"
+
 import { guardedTools } from "../src/access/adapters/pi"
+import { AccessStore } from "../src/access/adapters/sqlite"
 import { builtInTools } from "../src/access/contracts"
+import { AccessGate } from "../src/access/gate"
+import { routineTools } from "../src/routines/adapters/pi"
 import { database } from "./database"
+import { routineFixture } from "./routine-fixture"
 
 it("requires durable approval to arm a native Pi routine and replays it once after restart", async () => {
   const directory = await mkdtemp(join(tmpdir(), "pi-routine-")),

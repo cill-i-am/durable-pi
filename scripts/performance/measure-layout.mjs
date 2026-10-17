@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises"
 import { dirname } from "node:path"
+
 import puppeteer from "@cloudflare/puppeteer"
 
 const [endpoint, origin, output, screenshots] = process.argv

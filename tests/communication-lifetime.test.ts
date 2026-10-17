@@ -1,9 +1,10 @@
-import { expect, it, vi } from "vitest"
-import { Cause, Effect, Exit, Layer, ManagedRuntime } from "effect"
 import type { Harness } from "@earendil-works/pi-durable"
+import { Cause, Effect, Exit, Layer, ManagedRuntime } from "effect"
+import { expect, it, vi } from "vitest"
+
 import { piMailbox } from "../src/communication/adapters/pi"
-import { TaskExecution } from "../src/communication/execution"
 import { sqliteMailbox } from "../src/communication/adapters/sqlite"
+import { TaskExecution } from "../src/communication/execution"
 import { database } from "./database"
 
 function deferred() {

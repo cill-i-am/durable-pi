@@ -1,7 +1,8 @@
-import { expect, it } from "vitest"
 import { renderToStaticMarkup } from "react-dom/server"
-import { historyPage } from "../src/features/activity/history"
+import { expect, it } from "vitest"
+
 import { PlanView } from "../src/features/activity/activity-workbench"
+import { historyPage } from "../src/features/activity/history"
 import type { Plan, PlanRevision } from "../src/planning/contracts"
 
 const plan: Plan = {

@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest"
-import type { EntryRecord, SnapshotEvent } from "@earendil-works/pi-durable"
 import type { AssistantMessage } from "@earendil-works/pi-ai"
+import type { EntryRecord, SnapshotEvent } from "@earendil-works/pi-durable"
+import { describe, expect, it } from "vitest"
+
 import {
   piTimeline,
   displayAnswer,

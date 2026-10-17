@@ -1,10 +1,11 @@
-import { useCallback, useMemo } from "react"
 import {
   useNavigate,
   useParams,
   useSearch,
   useLocation,
 } from "@tanstack/react-router"
+import { useCallback, useMemo } from "react"
+
 import type { AgentId } from "@/agents/contracts"
 import {
   workspaceDestination,

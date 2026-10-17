@@ -1,16 +1,10 @@
 import { Link } from "@tanstack/react-router"
-import { parseAgentId, workspaceDestination } from "@/navigation/workspace"
-import { useEffect, useRef, useState } from "react"
 import { Play, Square, RefreshCw, Settings2, X } from "lucide-react"
-import type { TerminalNetworkPolicy } from "@/terminal/contracts"
-import { Switch } from "@/components/ui/switch"
-import { FileTransfers, ExportedFile } from "./file-transfers"
-import { InteractiveTerminal } from "./interactive-terminal"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { useTerminal } from "./use-terminal"
-import { Button, buttonVariants } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
+import { useEffect, useRef, useState } from "react"
+
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
+import { Button, buttonVariants } from "@/components/ui/button"
 import {
   Field,
   FieldGroup,
@@ -18,7 +12,15 @@ import {
   FieldContent,
   FieldDescription,
 } from "@/components/ui/field"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Switch } from "@/components/ui/switch"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { Textarea } from "@/components/ui/textarea"
+import { parseAgentId, workspaceDestination } from "@/navigation/workspace"
+import type { TerminalNetworkPolicy } from "@/terminal/contracts"
+
+import { FileTransfers, ExportedFile } from "./file-transfers"
+import { InteractiveTerminal } from "./interactive-terminal"
+import { useTerminal } from "./use-terminal"
 
 export function TerminalWorkbench({
   onPendingChange,
@@ -56,51 +58,15 @@ export function TerminalWorkbench({
   const [command, setCommand] = useState(
     'printf "Hello from Linux\\n"\nls -la /workspace'
   )
-  const active = terminal.runs.find((run) => run.status === "running")
-  const detail = terminal.detail
   const content = (
     <>
-      <header className="workbench-heading-row">
-        <h2
-          className={
-            networkSettings ? "workbench-title" : "workbench-section-title"
-          }
-        >
-          {networkSettings ? "Terminal internet access" : "Terminal"}
-        </h2>
-        <div className="flex gap-1">
-          <Button
-            size="icon-sm"
-            variant="ghost"
-            ref={settingsTrigger}
-            aria-label={
-              networkSettings
-                ? "Close terminal settings"
-                : "Terminal internet settings"
-            }
-            disabled={pending || !terminal.networkPolicy}
-            onClick={() => {
-              if (terminal.networkPolicy)
-                setNetworkSettings(
-                  networkSettings ? null : terminal.networkPolicy
-                )
-            }}
-          >
-            {networkSettings ? <X /> : <Settings2 />}
-          </Button>
-          {!networkSettings && (
-            <Button
-              size="icon-sm"
-              variant="ghost"
-              aria-label="Refresh terminal"
-              disabled={terminal.busy}
-              onClick={() => void terminal.refresh()}
-            >
-              <RefreshCw />
-            </Button>
-          )}
-        </div>
-      </header>
+      <TerminalHeader
+        terminal={terminal}
+        networkSettings={networkSettings}
+        setNetworkSettings={setNetworkSettings}
+        settingsTrigger={settingsTrigger}
+        pending={pending}
+      />
       <div className="workbench-body terminal-workbench-body">
         {terminal.networkPolicy === null && (
           <p role="status" className="text-xs text-muted-foreground">
@@ -141,92 +107,20 @@ export function TerminalWorkbench({
             </Button>
           )}
         {networkSettings && (
-          <form
-            onSubmit={async (event) => {
-              event.preventDefault()
-              if (await terminal.configureNetwork(networkSettings))
-                setNetworkSettings(null)
-            }}
-          >
-            <FieldGroup>
-              <Field
-                orientation="horizontal"
-                data-disabled={terminal.busy || terminal.runtimeBusy}
-              >
-                <FieldContent>
-                  <FieldLabel htmlFor="terminal-internet">
-                    Unrestricted internet access
-                  </FieldLabel>
-                  <FieldDescription>
-                    Allow shell commands and the interactive terminal to reach
-                    the internet, including downloads and package installs. Tool
-                    permissions still apply; application and model credentials
-                    are not shared.
-                  </FieldDescription>
-                </FieldContent>
-                <Switch
-                  id="terminal-internet"
-                  checked={networkSettings.unrestricted}
-                  disabled={terminal.busy || terminal.runtimeBusy}
-                  onCheckedChange={(unrestricted) =>
-                    setNetworkSettings({ ...networkSettings, unrestricted })
-                  }
-                />
-              </Field>
-              {terminal.runtimeBusy && (
-                <p className="text-sm text-muted-foreground">
-                  Stop or save the active session and wait for cleanup before
-                  changing internet access.
-                </p>
-              )}
-              {networkSettings.revision !==
-                terminal.networkPolicy?.revision && (
-                <p className="text-sm text-destructive">
-                  Settings changed elsewhere. Cancel and reopen settings to
-                  review them.
-                </p>
-              )}
-              <div className="flex gap-2">
-                <Button
-                  type="submit"
-                  size="sm"
-                  disabled={
-                    terminal.busy ||
-                    terminal.runtimeBusy ||
-                    !!terminal.cleanupError ||
-                    networkSettings.revision !==
-                      terminal.networkPolicy?.revision
-                  }
-                >
-                  Save internet settings
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  disabled={terminal.busy}
-                  onClick={() => setNetworkSettings(null)}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </FieldGroup>
-          </form>
+          <TerminalNetworkSettings
+            terminal={terminal}
+            networkSettings={networkSettings}
+            setNetworkSettings={setNetworkSettings}
+          />
         )}
         <div hidden={!!networkSettings} className="terminal-main">
           <div className="terminal-context">
             <span>/workspace</span>
-            <span>
-              {terminal.networkPolicy?.unrestricted
-                ? "Internet enabled"
-                : terminal.networkPolicy
-                  ? "Internet off"
-                  : "Checking internet access…"}
-            </span>
+            <span>{terminalInternetLabel(terminal.networkPolicy)}</span>
           </div>
           <Tabs
             value={tab}
-            onValueChange={(value) => {
+            onValueChange={(value: unknown) => {
               if (
                 value === "commands" ||
                 value === "interactive" ||
@@ -281,134 +175,14 @@ export function TerminalWorkbench({
               />
             </TabsContent>
             <TabsContent value="commands">
-              <form
-                className="terminal-run-form"
-                onSubmit={(event) => {
-                  event.preventDefault()
-                  void terminal.start(command)
-                }}
-              >
-                <FieldGroup>
-                  <Field>
-                    <FieldLabel htmlFor="terminal-command">
-                      Shell command
-                    </FieldLabel>
-                    <Textarea
-                      id="terminal-command"
-                      className="terminal-command min-h-32 font-mono text-xs"
-                      spellCheck={false}
-                      maxLength={16000}
-                      value={terminal.attempt?.command ?? command}
-                      onChange={(event) => setCommand(event.target.value)}
-                      disabled={terminal.busy || !!terminal.attempt}
-                    />
-                  </Field>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      type="submit"
-                      size="sm"
-                      disabled={
-                        terminal.busy ||
-                        (!terminal.attempt &&
-                          (terminal.runtimeBusy || !!terminal.cleanupError)) ||
-                        !command.trim()
-                      }
-                    >
-                      <Play data-icon="inline-start" />
-                      {terminal.attempt ? "Retry same request" : "Run command"}
-                    </Button>
-                    {active && (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        disabled={terminal.busy}
-                        onClick={() => void terminal.cancel(active.id)}
-                      >
-                        <Square data-icon="inline-start" />
-                        Stop command
-                      </Button>
-                    )}
-                  </div>
-                  {terminal.runtimeBusy && !active && (
-                    <p className="text-xs text-muted-foreground">
-                      Cleaning up the previous container…
-                    </p>
-                  )}
-                  {terminal.attempt && !terminal.busy && (
-                    <p className="text-xs text-muted-foreground">
-                      The outcome is unconfirmed. Retry keeps the same command
-                      ID and cannot start a second run.
-                    </p>
-                  )}
-                </FieldGroup>
-              </form>
+              <CommandEditor
+                terminal={terminal}
+                command={command}
+                setCommand={setCommand}
+              />
             </TabsContent>
           </Tabs>
-          {terminal.selected && !detail && (
-            <p className="text-sm text-muted-foreground">Loading command…</p>
-          )}
-          {detail?.kind === "session" && detail.status !== "running" && (
-            <Alert>
-              <AlertDescription>
-                {detail.status === "succeeded"
-                  ? "Workspace saved. The terminal is closed."
-                  : detail.status === "cancelled"
-                    ? "Session discarded. The previous workspace checkpoint is unchanged."
-                    : "Workspace was not saved. " +
-                      (detail.error ??
-                        "The terminal was interrupted; the previous checkpoint will be restored.")}
-              </AlertDescription>
-            </Alert>
-          )}
-          {detail && detail.kind !== "session" && (
-            <section
-              aria-label="Command output"
-              className="flex min-w-0 flex-col gap-3 border-t pt-4"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <h3 className="text-sm font-medium">Output</h3>
-                <Badge variant="secondary">
-                  {detail.status}
-                  {detail.exitCode !== null ? ` · exit ${detail.exitCode}` : ""}
-                </Badge>
-              </div>
-              {detail.status === "running" && (
-                <p className="text-xs text-muted-foreground">
-                  Running… You can close this panel; output and status are
-                  saved.
-                </p>
-              )}
-              {detail.error && (
-                <Alert>
-                  <AlertDescription>{detail.error}</AlertDescription>
-                </Alert>
-              )}
-              {detail.transfer && (
-                <p className="text-xs break-all">{detail.transfer.path}</p>
-              )}
-              {detail.transfer?.kind === "import" &&
-                detail.status === "succeeded" && (
-                  <p className="text-xs text-muted-foreground">
-                    File copied and workspace saved.
-                  </p>
-                )}
-              <ExportedFile key={detail.id} agentId={agentId} run={detail} />
-              {!detail.transfer && (
-                <pre className="terminal-output">
-                  {detail.output || "No output yet."}
-                </pre>
-              )}
-              <details>
-                <summary className="cursor-pointer text-xs font-medium">
-                  Executed command
-                </summary>
-                <pre className="mt-2 max-h-40 overflow-auto text-xs break-words whitespace-pre-wrap">
-                  {detail.command}
-                </pre>
-              </details>
-            </section>
-          )}
+          <TerminalResult terminal={terminal} agentId={agentId} />
           <section
             aria-label="Workspace recovery"
             className="terminal-recovery"
@@ -476,4 +250,305 @@ export function TerminalWorkbench({
     </>
   )
   return content
+}
+
+type TerminalState = ReturnType<typeof useTerminal>
+
+function TerminalHeader({
+  terminal,
+  networkSettings,
+  setNetworkSettings,
+  settingsTrigger,
+  pending,
+}: {
+  terminal: TerminalState
+  networkSettings: TerminalNetworkPolicy | null
+  setNetworkSettings: (value: TerminalNetworkPolicy | null) => void
+  settingsTrigger: React.Ref<HTMLButtonElement>
+  pending: boolean
+}) {
+  return (
+    <header className="workbench-heading-row">
+      <h2
+        className={
+          networkSettings ? "workbench-title" : "workbench-section-title"
+        }
+      >
+        {networkSettings ? "Terminal internet access" : "Terminal"}
+      </h2>
+      <div className="flex gap-1">
+        <Button
+          size="icon-sm"
+          variant="ghost"
+          ref={settingsTrigger}
+          aria-label={
+            networkSettings
+              ? "Close terminal settings"
+              : "Terminal internet settings"
+          }
+          disabled={pending || !terminal.networkPolicy}
+          onClick={() => {
+            if (terminal.networkPolicy)
+              setNetworkSettings(
+                networkSettings ? null : terminal.networkPolicy
+              )
+          }}
+        >
+          {networkSettings ? <X /> : <Settings2 />}
+        </Button>
+        {!networkSettings && (
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            aria-label="Refresh terminal"
+            disabled={terminal.busy}
+            onClick={() => void terminal.refresh()}
+          >
+            <RefreshCw />
+          </Button>
+        )}
+      </div>
+    </header>
+  )
+}
+
+function TerminalNetworkSettings({
+  terminal,
+  networkSettings,
+  setNetworkSettings,
+}: {
+  terminal: TerminalState
+  networkSettings: TerminalNetworkPolicy
+  setNetworkSettings: (value: TerminalNetworkPolicy | null) => void
+}) {
+  return (
+    <form
+      onSubmit={async (event) => {
+        event.preventDefault()
+        if (await terminal.configureNetwork(networkSettings))
+          setNetworkSettings(null)
+      }}
+    >
+      <FieldGroup>
+        <Field
+          orientation="horizontal"
+          data-disabled={terminal.busy || terminal.runtimeBusy}
+        >
+          <FieldContent>
+            <FieldLabel htmlFor="terminal-internet">
+              Unrestricted internet access
+            </FieldLabel>
+            <FieldDescription>
+              Allow shell commands and the interactive terminal to reach the
+              internet, including downloads and package installs. Tool
+              permissions still apply; application and model credentials are not
+              shared.
+            </FieldDescription>
+          </FieldContent>
+          <Switch
+            id="terminal-internet"
+            checked={networkSettings.unrestricted}
+            disabled={terminal.busy || terminal.runtimeBusy}
+            onCheckedChange={(unrestricted) =>
+              setNetworkSettings({ ...networkSettings, unrestricted })
+            }
+          />
+        </Field>
+        {terminal.runtimeBusy && (
+          <p className="text-sm text-muted-foreground">
+            Stop or save the active session and wait for cleanup before changing
+            internet access.
+          </p>
+        )}
+        {networkSettings.revision !== terminal.networkPolicy?.revision && (
+          <p className="text-sm text-destructive">
+            Settings changed elsewhere. Cancel and reopen settings to review
+            them.
+          </p>
+        )}
+        <div className="flex gap-2">
+          <Button
+            type="submit"
+            size="sm"
+            disabled={
+              terminal.busy ||
+              terminal.runtimeBusy ||
+              !!terminal.cleanupError ||
+              networkSettings.revision !== terminal.networkPolicy?.revision
+            }
+          >
+            Save internet settings
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            disabled={terminal.busy}
+            onClick={() => setNetworkSettings(null)}
+          >
+            Cancel
+          </Button>
+        </div>
+      </FieldGroup>
+    </form>
+  )
+}
+
+function CommandEditor({
+  terminal,
+  command,
+  setCommand,
+}: {
+  terminal: TerminalState
+  command: string
+  setCommand: (command: string) => void
+}) {
+  const active = terminal.runs.find((run) => run.status === "running")
+  return (
+    <form
+      className="terminal-run-form"
+      onSubmit={(event) => {
+        event.preventDefault()
+        void terminal.start(command)
+      }}
+    >
+      <FieldGroup>
+        <Field>
+          <FieldLabel htmlFor="terminal-command">Shell command</FieldLabel>
+          <Textarea
+            id="terminal-command"
+            className="terminal-command min-h-32 font-mono text-xs"
+            spellCheck={false}
+            maxLength={16000}
+            value={terminal.attempt?.command ?? command}
+            onChange={(event) => setCommand(event.target.value)}
+            disabled={terminal.busy || !!terminal.attempt}
+          />
+        </Field>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="submit"
+            size="sm"
+            disabled={
+              terminal.busy ||
+              (!terminal.attempt &&
+                (terminal.runtimeBusy || !!terminal.cleanupError)) ||
+              !command.trim()
+            }
+          >
+            <Play data-icon="inline-start" />
+            {terminal.attempt ? "Retry same request" : "Run command"}
+          </Button>
+          {active && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={terminal.busy}
+              onClick={() => void terminal.cancel(active.id)}
+            >
+              <Square data-icon="inline-start" />
+              Stop command
+            </Button>
+          )}
+        </div>
+        {terminal.runtimeBusy && !active && (
+          <p className="text-xs text-muted-foreground">
+            Cleaning up the previous container…
+          </p>
+        )}
+        {terminal.attempt && !terminal.busy && (
+          <p className="text-xs text-muted-foreground">
+            The outcome is unconfirmed. Retry keeps the same command ID and
+            cannot start a second run.
+          </p>
+        )}
+      </FieldGroup>
+    </form>
+  )
+}
+
+function TerminalResult({
+  terminal,
+  agentId,
+}: {
+  terminal: TerminalState
+  agentId: string
+}) {
+  const detail = terminal.detail
+  return (
+    <>
+      {terminal.selected && !detail && (
+        <p className="text-sm text-muted-foreground">Loading command…</p>
+      )}
+      {detail?.kind === "session" && detail.status !== "running" && (
+        <Alert>
+          <AlertDescription>
+            {detail.status === "succeeded"
+              ? "Workspace saved. The terminal is closed."
+              : detail.status === "cancelled"
+                ? "Session discarded. The previous workspace checkpoint is unchanged."
+                : "Workspace was not saved. " +
+                  (detail.error ??
+                    "The terminal was interrupted; the previous checkpoint will be restored.")}
+          </AlertDescription>
+        </Alert>
+      )}
+      {detail && detail.kind !== "session" && (
+        <section
+          aria-label="Command output"
+          className="flex min-w-0 flex-col gap-3 border-t pt-4"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-sm font-medium">Output</h3>
+            <Badge variant="secondary">
+              {detail.status}
+              {detail.exitCode !== null ? ` · exit ${detail.exitCode}` : ""}
+            </Badge>
+          </div>
+          {detail.status === "running" && (
+            <p className="text-xs text-muted-foreground">
+              Running… You can close this panel; output and status are saved.
+            </p>
+          )}
+          {detail.error && (
+            <Alert>
+              <AlertDescription>{detail.error}</AlertDescription>
+            </Alert>
+          )}
+          {detail.transfer && (
+            <p className="text-xs break-all">{detail.transfer.path}</p>
+          )}
+          {detail.transfer?.kind === "import" &&
+            detail.status === "succeeded" && (
+              <p className="text-xs text-muted-foreground">
+                File copied and workspace saved.
+              </p>
+            )}
+          <ExportedFile key={detail.id} agentId={agentId} run={detail} />
+          {!detail.transfer && (
+            <pre className="terminal-output">
+              {detail.output || "No output yet."}
+            </pre>
+          )}
+          <details>
+            <summary className="cursor-pointer text-xs font-medium">
+              Executed command
+            </summary>
+            <pre className="mt-2 max-h-40 overflow-auto text-xs break-words whitespace-pre-wrap">
+              {detail.command}
+            </pre>
+          </details>
+        </section>
+      )}
+    </>
+  )
+}
+
+function terminalInternetLabel(policy: TerminalState["networkPolicy"]) {
+  return policy?.unrestricted
+    ? "Internet enabled"
+    : policy
+      ? "Internet off"
+      : "Checking internet access…"
 }

@@ -1,9 +1,10 @@
-import { Effect, Schema } from "effect"
 import type {
   Credential,
   CredentialStore,
   OAuthAuth,
 } from "@earendil-works/pi-ai"
+import { Effect, Schema } from "effect"
+
 import { runObserved } from "../../observability/worker"
 import {
   ModelCredential,

@@ -1,4 +1,5 @@
 import { Effect } from "effect"
+
 import { agentProxy } from "../../src/auth/adapters/agent-proxy"
 
 const cancellations = new Map<string, number>()

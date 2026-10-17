@@ -1,6 +1,8 @@
-import { useRef } from "react"
 import { Plus, Upload, X } from "lucide-react"
+import { useRef } from "react"
+
 import { Button } from "@/components/ui/button"
+
 import type { FilesState } from "./use-files"
 
 export function FilePicker({

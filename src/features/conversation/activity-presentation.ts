@@ -1,10 +1,11 @@
 import { Option, Schema } from "effect"
+
 import { BrowserPage, Hostname } from "@/browser/contracts"
-import { CommandRun } from "@/terminal/contracts"
-import { RunSummary } from "@/execution/contracts"
-import { FileInfo } from "@/workspace/files"
-import { ResourceId, type WorkspaceSearch } from "@/navigation/workspace"
 import type { ChatState, TimelineItem } from "@/conversations/contracts"
+import { RunSummary } from "@/execution/contracts"
+import { ResourceId, type WorkspaceSearch } from "@/navigation/workspace"
+import { CommandRun } from "@/terminal/contracts"
+import { FileInfo } from "@/workspace/files"
 
 export type ToolItem = Extract<TimelineItem, { type: "tool" }>
 export type WorkItem = Extract<TimelineItem, { type: "tool" | "thinking" }>
@@ -105,44 +106,14 @@ export type ToolPresentation = {
 }
 
 export function toolPresentation(item: ToolItem): ToolPresentation {
-  const kind: ToolPresentation["kind"] = item.name.startsWith("browser_")
-    ? "browser"
-    : item.name === "run_command"
-      ? "terminal"
-      : item.name === "run_code"
-        ? "code"
-        : item.name === "search_memory"
-          ? "search"
-          : item.name === "read_file"
-            ? "file"
-            : "tool"
+  const kind = toolKind(item.name)
   const result: ToolPresentation = { kind, sources: [] }
   if (!["done", "error"].includes(item.status)) return result
   if (
     ["browser_open", "browser_read", "browser_interact"].includes(item.name) &&
     item.status === "done"
   ) {
-    const page = Schema.decodeUnknownOption(
-      Schema.fromJsonString(BrowserResult)
-    )(item.output)
-    if (Option.isSome(page)) {
-      const source = activitySource(page.value.url, page.value.title)
-      if (source) {
-        result.sources = [source]
-        const seen = new Set([source.href])
-        for (const link of page.value.links) {
-          const next = activitySource(link.url, link.text)
-          if (next && !seen.has(next.href)) {
-            result.sources.push(next)
-            seen.add(next.href)
-          }
-        }
-        result.destination = {
-          label: "Open current browser",
-          view: { panel: "browser" },
-        }
-      }
-    }
+    browserPresentation(item, result)
   } else if (kind === "terminal" || kind === "code") {
     const receipt = Schema.decodeUnknownOption(
       Schema.fromJsonString(kind === "terminal" ? CommandResult : CodeResult)
@@ -203,32 +174,19 @@ export function workPresentation(
     last?.type === "tool" && ["running", "pending"].includes(last.status)
       ? toolPresentation(last).kind
       : "tool"
-  const label =
-    relevant && status === "stopping"
-      ? "Stopping…"
-      : relevant && status === "cancelled"
-        ? "Stopped"
-        : active && waitingForApproval
-          ? "Waiting for approval"
-          : active
-            ? kind === "browser"
-              ? "Browsing"
-              : kind === "search"
-                ? "Searching memory"
-                : kind === "terminal"
-                  ? "Running command"
-                  : kind === "code"
-                    ? "Running code"
-                    : last?.type === "thinking"
-                      ? "Thinking"
-                      : "Working"
-            : failed
-              ? `Activity · ${failed} failed`
-              : interrupted || unsettled || (current && status === "failed")
-                ? "Interrupted"
-                : tools.length
-                  ? "Completed tool calls"
-                  : "Thinking"
+  const label = workLabel({
+    relevant,
+    status,
+    active,
+    waitingForApproval,
+    kind,
+    last,
+    failed,
+    interrupted,
+    unsettled,
+    current,
+    count: tools.length,
+  })
   return {
     label,
     count: tools.length,
@@ -249,4 +207,103 @@ export function workPresentation(
       unsettled ||
       (current && status === "failed"),
   }
+}
+
+function toolKind(name: string) {
+  const kind: ToolPresentation["kind"] = name.startsWith("browser_")
+    ? "browser"
+    : name === "run_command"
+      ? "terminal"
+      : name === "run_code"
+        ? "code"
+        : name === "search_memory"
+          ? "search"
+          : name === "read_file"
+            ? "file"
+            : "tool"
+  return kind
+}
+
+function browserPresentation(item: ToolItem, result: ToolPresentation) {
+  const page = Schema.decodeUnknownOption(Schema.fromJsonString(BrowserResult))(
+    item.output
+  )
+  if (Option.isSome(page)) {
+    const source = activitySource(page.value.url, page.value.title)
+    if (source) {
+      result.sources = [source]
+      const seen = new Set([source.href])
+      for (const link of page.value.links) {
+        const next = activitySource(link.url, link.text)
+        if (next && !seen.has(next.href)) {
+          result.sources.push(next)
+          seen.add(next.href)
+        }
+      }
+      result.destination = {
+        label: "Open current browser",
+        view: { panel: "browser" },
+      }
+    }
+  }
+}
+
+function activeWorkLabel(
+  kind: ToolPresentation["kind"],
+  last: WorkItem | undefined
+) {
+  return kind === "browser"
+    ? "Browsing"
+    : kind === "search"
+      ? "Searching memory"
+      : kind === "terminal"
+        ? "Running command"
+        : kind === "code"
+          ? "Running code"
+          : last?.type === "thinking"
+            ? "Thinking"
+            : "Working"
+}
+function workLabel({
+  relevant,
+  status,
+  active,
+  waitingForApproval,
+  kind,
+  last,
+  failed,
+  interrupted,
+  unsettled,
+  current,
+  count,
+}: {
+  relevant: boolean
+  status: ChatState["turns"][number]["status"]
+  active: boolean
+  waitingForApproval: boolean
+  kind: ToolPresentation["kind"]
+  last: WorkItem | undefined
+  failed: number
+  interrupted: boolean
+  unsettled: boolean
+  current: boolean
+  count: number
+}) {
+  const label =
+    relevant && status === "stopping"
+      ? "Stopping…"
+      : relevant && status === "cancelled"
+        ? "Stopped"
+        : active && waitingForApproval
+          ? "Waiting for approval"
+          : active
+            ? activeWorkLabel(kind, last)
+            : failed
+              ? `Activity · ${failed} failed`
+              : interrupted || unsettled || (current && status === "failed")
+                ? "Interrupted"
+                : count
+                  ? "Completed tool calls"
+                  : "Thinking"
+  return label
 }

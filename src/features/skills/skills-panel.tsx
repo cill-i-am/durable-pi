@@ -1,22 +1,24 @@
-import { useEffect, useRef, useState } from "react"
 import { Plus, Upload, X, ArrowUpRight } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { SettingsSection } from "@/components/settings-section"
-import { Field, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useEffect, useRef, useState } from "react"
+
 import { Markdown } from "@/components/markdown"
-import type { SaveSkill, Skill, SkillDocument } from "@/skills/contracts"
-import { useSkills, type SkillsState } from "./use-skills"
-import { HostedSkillImport, SkillSourceLabel } from "./hosted-skill-import"
+import { SettingsSection } from "@/components/settings-section"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"
+import { Field, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Textarea } from "@/components/ui/textarea"
+import type { SaveSkill, Skill, SkillDocument } from "@/skills/contracts"
+
+import { HostedSkillImport, SkillSourceLabel } from "./hosted-skill-import"
+import { useSkills, type SkillsState } from "./use-skills"
 
 export function SkillsPanel({
   embedded = false,
@@ -34,9 +36,10 @@ export function SkillsPanel({
   onOpenChange: (open: boolean) => void
 }) {
   const state = useSkills(agentId)
+  const { refresh } = state
   useEffect(() => {
-    if (open) void state.refresh()
-  }, [open, state.refresh])
+    if (open) void refresh()
+  }, [open, refresh])
   const [tab, setTab] = useState("library")
   const [draft, setDraft] = useState<SaveSkill | null>(null)
   const [history, setHistory] = useState<{
@@ -49,13 +52,6 @@ export function SkillsPanel({
   const historyRequest = useRef(0)
   const [importing, setImporting] = useState(false)
   const [hostedImport, setHostedImport] = useState(false)
-  const currentDraft = draft
-    ? state.library.find((skill) => skill.id === draft.id)
-    : undefined
-  const conflict =
-    !!draft &&
-    !!currentDraft &&
-    currentDraft.revision !== draft.expectedRevision
   const cannotReplace =
     state.busy ||
     !state.ready ||
@@ -95,9 +91,10 @@ export function SkillsPanel({
       if (revision === historyRequest.current) setHistoryBusy(false)
     }
   }
+  const editing = draft !== null
   useEffect(() => {
-    onPendingChange?.(state.busy || !!draft || importing || hostedImport)
-  }, [state.busy, !!draft, importing, hostedImport, onPendingChange])
+    onPendingChange?.(state.busy || editing || importing || hostedImport)
+  }, [state.busy, editing, importing, hostedImport, onPendingChange])
   return (
     <SettingsSection
       embedded={embedded}
@@ -215,7 +212,7 @@ export function SkillsPanel({
                 disabled={state.busy}
                 onClick={() => {
                   setLocalError("")
-                  void state.refresh()
+                  void refresh()
                 }}
               >
                 Reload
@@ -300,137 +297,7 @@ export function SkillsPanel({
             }}
           />
         ) : draft ? (
-          <form
-            className="space-y-4 rounded-lg border p-4"
-            onSubmit={async (event) => {
-              event.preventDefault()
-              const saved = await state.save({
-                ...draft,
-                name: draft.name.trim(),
-                body: draft.body.trim(),
-              })
-              if (saved) setDraft(null)
-            }}
-          >
-            <h3 className="font-medium">
-              {draft.expectedRevision ? "Edit skill" : "New skill"}
-            </h3>
-            <SkillSourceLabel source={draft.source} />
-            {conflict && (
-              <Alert>
-                <AlertDescription>
-                  <p>
-                    A newer revision (v{currentDraft.revision}) is saved. Your
-                    draft is preserved below. Review the saved version before
-                    continuing.
-                  </p>
-                  <details className="my-2">
-                    <summary className="cursor-pointer">
-                      View saved instructions
-                    </summary>
-                    <pre className="mt-2 max-h-48 overflow-auto text-xs whitespace-pre-wrap">
-                      {currentDraft.body}
-                    </pre>
-                  </details>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      size="xs"
-                      variant="outline"
-                      disabled={state.busy || state.loading}
-                      onClick={() =>
-                        setDraft({
-                          ...draft,
-                          expectedRevision: currentDraft.revision,
-                        })
-                      }
-                    >
-                      Keep my draft
-                    </Button>
-                    <Button
-                      type="button"
-                      size="xs"
-                      variant="ghost"
-                      disabled={state.busy || state.loading}
-                      onClick={() =>
-                        setDraft({
-                          id: currentDraft.id,
-                          expectedRevision: currentDraft.revision,
-                          name: currentDraft.name,
-                          body: currentDraft.body,
-                          source: currentDraft.source,
-                        })
-                      }
-                    >
-                      Use saved version
-                    </Button>
-                  </div>
-                </AlertDescription>
-              </Alert>
-            )}
-            {currentDraft?.archived && (
-              <p className="text-sm text-destructive">
-                This skill is archived. Cancel editing and restore it from
-                Archived first.
-              </p>
-            )}
-            <Field>
-              <FieldLabel htmlFor="skill-name">Name</FieldLabel>
-              <Input
-                id="skill-name"
-                autoFocus
-                value={draft.name}
-                maxLength={80}
-                required
-                disabled={state.busy}
-                onChange={(event) =>
-                  setDraft({ ...draft, name: event.target.value })
-                }
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="skill-body">Instructions</FieldLabel>
-              <Textarea
-                id="skill-body"
-                className="min-h-56 font-mono text-sm"
-                value={draft.body}
-                maxLength={16_000}
-                required
-                disabled={state.busy}
-                onChange={(event) =>
-                  setDraft({ ...draft, body: event.target.value })
-                }
-              />
-            </Field>
-            <p className="text-xs text-muted-foreground">
-              {draft.body.length.toLocaleString()}/16,000 characters. Keep
-              secrets out of skills. Saving creates a revision; bots stay on
-              their selected versions.
-            </p>
-            <div className="flex gap-2">
-              <Button
-                type="submit"
-                size="sm"
-                disabled={
-                  state.busy ||
-                  !state.ready ||
-                  conflict ||
-                  currentDraft?.archived
-                }
-              >
-                {state.busy ? "Saving…" : "Save skill"}
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                disabled={state.busy}
-                onClick={() => setDraft(null)}
-              >
-                Cancel
-              </Button>
-            </div>
-          </form>
+          <SkillEditor state={state} draft={draft} setDraft={setDraft} />
         ) : history ? (
           <section className="space-y-4">
             <div className="flex items-center justify-between">
@@ -595,5 +462,148 @@ function SkillRow({
         </Button>
       </div>
     </article>
+  )
+}
+
+function SkillEditor({
+  state,
+  draft,
+  setDraft,
+}: {
+  state: ReturnType<typeof useSkills>
+  draft: SaveSkill
+  setDraft: (draft: SaveSkill | null) => void
+}) {
+  const currentDraft = draft
+    ? state.library.find((skill) => skill.id === draft.id)
+    : undefined
+  const conflict =
+    !!draft &&
+    !!currentDraft &&
+    currentDraft.revision !== draft.expectedRevision
+  return (
+    <form
+      className="space-y-4 rounded-lg border p-4"
+      onSubmit={async (event) => {
+        event.preventDefault()
+        const saved = await state.save({
+          ...draft,
+          name: draft.name.trim(),
+          body: draft.body.trim(),
+        })
+        if (saved) setDraft(null)
+      }}
+    >
+      <h3 className="font-medium">
+        {draft.expectedRevision ? "Edit skill" : "New skill"}
+      </h3>
+      <SkillSourceLabel source={draft.source} />
+      {conflict && (
+        <Alert>
+          <AlertDescription>
+            <p>
+              A newer revision (v{currentDraft.revision}) is saved. Your draft
+              is preserved below. Review the saved version before continuing.
+            </p>
+            <details className="my-2">
+              <summary className="cursor-pointer">
+                View saved instructions
+              </summary>
+              <pre className="mt-2 max-h-48 overflow-auto text-xs whitespace-pre-wrap">
+                {currentDraft.body}
+              </pre>
+            </details>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="xs"
+                variant="outline"
+                disabled={state.busy || state.loading}
+                onClick={() =>
+                  setDraft({
+                    ...draft,
+                    expectedRevision: currentDraft.revision,
+                  })
+                }
+              >
+                Keep my draft
+              </Button>
+              <Button
+                type="button"
+                size="xs"
+                variant="ghost"
+                disabled={state.busy || state.loading}
+                onClick={() =>
+                  setDraft({
+                    id: currentDraft.id,
+                    expectedRevision: currentDraft.revision,
+                    name: currentDraft.name,
+                    body: currentDraft.body,
+                    source: currentDraft.source,
+                  })
+                }
+              >
+                Use saved version
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+      {currentDraft?.archived && (
+        <p className="text-sm text-destructive">
+          This skill is archived. Cancel editing and restore it from Archived
+          first.
+        </p>
+      )}
+      <Field>
+        <FieldLabel htmlFor="skill-name">Name</FieldLabel>
+        <Input
+          id="skill-name"
+          autoFocus
+          value={draft.name}
+          maxLength={80}
+          required
+          disabled={state.busy}
+          onChange={(event) => setDraft({ ...draft, name: event.target.value })}
+        />
+      </Field>
+      <Field>
+        <FieldLabel htmlFor="skill-body">Instructions</FieldLabel>
+        <Textarea
+          id="skill-body"
+          className="min-h-56 font-mono text-sm"
+          value={draft.body}
+          maxLength={16_000}
+          required
+          disabled={state.busy}
+          onChange={(event) => setDraft({ ...draft, body: event.target.value })}
+        />
+      </Field>
+      <p className="text-xs text-muted-foreground">
+        {draft.body.length.toLocaleString()}/16,000 characters. Keep secrets out
+        of skills. Saving creates a revision; bots stay on their selected
+        versions.
+      </p>
+      <div className="flex gap-2">
+        <Button
+          type="submit"
+          size="sm"
+          disabled={
+            state.busy || !state.ready || conflict || currentDraft?.archived
+          }
+        >
+          {state.busy ? "Saving…" : "Save skill"}
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          disabled={state.busy}
+          onClick={() => setDraft(null)}
+        >
+          Cancel
+        </Button>
+      </div>
+    </form>
   )
 }

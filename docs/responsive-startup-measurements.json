@@ -1,40 +1,2634 @@
 {
   "baseCommit": "75f1dcbb7e7a38d6d5d4dd5236dfddda8b579a7e",
-  "protocol": {"cpuSlowdown": 4,"cache": "disabled","traffic": "synthetic read-only","stages": "hold session, catalog and history separately; metadata delayed 2200ms; settle fonts and 1000ms after models","cls": "maximum session window, gap <1000ms and length <5000ms; excludes recent input","panelFrames": "candidate native workbench rectangle sampled on animation frames; <=1 CSS px movement required"},
-  "boundsColumns": ["x","y","width","height"],
+  "protocol": {
+    "cpuSlowdown": 4,
+    "cache": "disabled",
+    "traffic": "synthetic read-only",
+    "stages": "hold session, catalog and history separately; metadata delayed 2200ms; settle fonts and 1000ms after models",
+    "cls": "maximum session window, gap <1000ms and length <5000ms; excludes recent input",
+    "panelFrames": "candidate native workbench rectangle sampled on animation frames; <=1 CSS px movement required"
+  },
+  "boundsColumns": ["x", "y", "width", "height"],
   "scope": "Fully styled synthetic CSR workspace; held auth, catalog and stream requests; metadata delayed 2200ms. Local Chrome, no field percentile or production latency claim. The baseline UI is archived from the base commit with the same fixture corrections. Root entry first returned a fixture 404; that failed attempt is excluded. Twelve valid non-root cases were retained and three final cases resumed after the root-path guard was corrected. One accepted run per viewport/route combination; no percentile estimate. The 640x450 DPR2 case approximates reflow at 200 percent zoom, without literal browser zoom.",
   "before": [
-    {"scenario":{"width":320,"height":900,"path":"/agents/home"},"timeOrigin":1792159435330,"cls":0,"loadingGeometry":{"bar":null,"sidebar":null,"header":[0,0,320,68],"composer":[24,780,272,96],"navigation":null,"workbench":null},"readyGeometry":{"bar":null,"sidebar":null,"header":[0,0,320,65],"composer":[16,715,288,120],"navigation":[0,845,320,55],"workbench":null},"stages":[{"stage":"session-pending","atMs":347.5,"startup":true,"missingRegions":["navigation"],"maxDeltaPx":65,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"catalog-pending","atMs":613.4,"startup":true,"missingRegions":["navigation"],"maxDeltaPx":65,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"history-pending","atMs":1163.2,"startup":true,"missingRegions":["navigation"],"maxDeltaPx":65,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"metadata-pending","atMs":1312.8,"startup":true,"missingRegions":["navigation"],"maxDeltaPx":65,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"ready","atMs":5263.7,"startup":false,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":0,"loadingFocusTargets":0,"loadingAnimations":0,"overflow":false}],"workbenchWidths":[],"responseControls":20,"composer":true},
-    {"scenario":{"width":320,"height":900,"path":"/agents/home/apps"},"timeOrigin":1792159440687.3,"cls":0,"loadingGeometry":{"bar":null,"sidebar":null,"header":[0,0,320,68],"composer":[24,780,272,96],"navigation":null,"workbench":null},"readyGeometry":{"bar":null,"sidebar":null,"header":[0,76,320,56],"composer":[16,715,288,120],"navigation":[0,845,320,55],"workbench":[0,48,320,852]},"stages":[{"stage":"session-pending","atMs":390.4,"startup":true,"missingRegions":["navigation","workbench"],"maxDeltaPx":76,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"catalog-pending","atMs":639.3,"startup":true,"missingRegions":["navigation","workbench"],"maxDeltaPx":76,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"history-pending","atMs":1189.3,"startup":true,"missingRegions":["navigation","workbench"],"maxDeltaPx":76,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"metadata-pending","atMs":1339.3,"startup":true,"missingRegions":["navigation","workbench"],"maxDeltaPx":76,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"ready","atMs":5372.6,"startup":false,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":0,"loadingFocusTargets":0,"loadingAnimations":0,"overflow":false}],"workbenchWidths":[0],"responseControls":20,"composer":true},
-    {"scenario":{"width":390,"height":900,"path":"/agents/home"},"timeOrigin":1792159446149.6,"cls":0,"loadingGeometry":{"bar":null,"sidebar":null,"header":[0,0,390,68],"composer":[24,780,342,96],"navigation":null,"workbench":null},"readyGeometry":{"bar":null,"sidebar":null,"header":[0,0,390,65],"composer":[16,715,358,120],"navigation":[0,845,390,55],"workbench":null},"stages":[{"stage":"session-pending","atMs":360.2,"startup":true,"missingRegions":["navigation"],"maxDeltaPx":65,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"catalog-pending","atMs":626.8,"startup":true,"missingRegions":["navigation"],"maxDeltaPx":65,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"history-pending","atMs":1177.5,"startup":true,"missingRegions":["navigation"],"maxDeltaPx":65,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"metadata-pending","atMs":1327.2,"startup":true,"missingRegions":["navigation"],"maxDeltaPx":65,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"ready","atMs":5275.3,"startup":false,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":0,"loadingFocusTargets":0,"loadingAnimations":0,"overflow":false}],"workbenchWidths":[],"responseControls":20,"composer":true},
-    {"scenario":{"width":390,"height":900,"path":"/agents/home/apps"},"timeOrigin":1792159451517.8,"cls":0,"loadingGeometry":{"bar":null,"sidebar":null,"header":[0,0,390,68],"composer":[24,780,342,96],"navigation":null,"workbench":null},"readyGeometry":{"bar":null,"sidebar":null,"header":[0,76,390,56],"composer":[16,715,358,120],"navigation":[0,845,390,55],"workbench":[0,48,390,852]},"stages":[{"stage":"session-pending","atMs":358.4,"startup":true,"missingRegions":["navigation","workbench"],"maxDeltaPx":76,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"catalog-pending","atMs":624.3,"startup":true,"missingRegions":["navigation","workbench"],"maxDeltaPx":76,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"history-pending","atMs":1173.7,"startup":true,"missingRegions":["navigation","workbench"],"maxDeltaPx":76,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"metadata-pending","atMs":1323,"startup":true,"missingRegions":["navigation","workbench"],"maxDeltaPx":76,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"ready","atMs":5308.1,"startup":false,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":0,"loadingFocusTargets":0,"loadingAnimations":0,"overflow":false}],"workbenchWidths":[0],"responseControls":20,"composer":true},
-    {"scenario":{"width":767,"height":900,"path":"/agents/home"},"timeOrigin":1792159456922.8,"cls":0,"loadingGeometry":{"bar":null,"sidebar":null,"header":[0,0,767,68],"composer":[24,780,719,96],"navigation":null,"workbench":null},"readyGeometry":{"bar":null,"sidebar":null,"header":[0,0,767,65],"composer":[16,715,735,120],"navigation":[0,845,767,55],"workbench":null},"stages":[{"stage":"session-pending","atMs":353.9,"startup":true,"missingRegions":["navigation"],"maxDeltaPx":65,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"catalog-pending","atMs":620,"startup":true,"missingRegions":["navigation"],"maxDeltaPx":65,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"history-pending","atMs":1169.5,"startup":true,"missingRegions":["navigation"],"maxDeltaPx":65,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"metadata-pending","atMs":1320.1,"startup":true,"missingRegions":["navigation"],"maxDeltaPx":65,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"ready","atMs":5236.8,"startup":false,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":0,"loadingFocusTargets":0,"loadingAnimations":0,"overflow":false}],"workbenchWidths":[],"responseControls":20,"composer":true},
-    {"scenario":{"width":767,"height":900,"path":"/agents/home/apps"},"timeOrigin":1792159462260.2,"cls":0,"loadingGeometry":{"bar":null,"sidebar":null,"header":[0,0,767,68],"composer":[24,780,719,96],"navigation":null,"workbench":null},"readyGeometry":{"bar":null,"sidebar":null,"header":[0,76,767,56],"composer":[16,715,735,120],"navigation":[0,845,767,55],"workbench":[0,48,767,852]},"stages":[{"stage":"session-pending","atMs":348.4,"startup":true,"missingRegions":["navigation","workbench"],"maxDeltaPx":76,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"catalog-pending","atMs":599.4,"startup":true,"missingRegions":["navigation","workbench"],"maxDeltaPx":76,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"history-pending","atMs":1149.3,"startup":true,"missingRegions":["navigation","workbench"],"maxDeltaPx":76,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"metadata-pending","atMs":1298.7,"startup":true,"missingRegions":["navigation","workbench"],"maxDeltaPx":76,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"ready","atMs":5282,"startup":false,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":0,"loadingFocusTargets":0,"loadingAnimations":0,"overflow":false}],"workbenchWidths":[0],"responseControls":20,"composer":true},
-    {"scenario":{"width":768,"height":900,"path":"/agents/home"},"timeOrigin":1792159467638.7,"cls":0,"loadingGeometry":{"bar":null,"sidebar":null,"header":[0,0,768,68],"composer":[24,780,720,96],"navigation":null,"workbench":null},"readyGeometry":{"bar":[0,0,768,48],"sidebar":[0,48,224,852],"header":[224,48,544,68],"composer":[244,774,504,112],"navigation":null,"workbench":null},"stages":[{"stage":"session-pending","atMs":352.9,"startup":true,"missingRegions":["bar","sidebar"],"maxDeltaPx":224,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"catalog-pending","atMs":621.4,"startup":true,"missingRegions":["bar","sidebar"],"maxDeltaPx":224,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"history-pending","atMs":1168.7,"startup":true,"missingRegions":["bar","sidebar"],"maxDeltaPx":224,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"metadata-pending","atMs":1320.1,"startup":true,"missingRegions":["bar","sidebar"],"maxDeltaPx":224,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"ready","atMs":5302.2,"startup":false,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":0,"loadingFocusTargets":0,"loadingAnimations":0,"overflow":false}],"workbenchWidths":[],"responseControls":20,"composer":true},
-    {"scenario":{"width":768,"height":900,"path":"/agents/home/apps"},"timeOrigin":1792159473046.8,"cls":0.130087,"loadingGeometry":{"bar":null,"sidebar":null,"header":[0,0,768,68],"composer":[24,780,720,96],"navigation":null,"workbench":null},"readyGeometry":{"bar":[0,0,768,48],"sidebar":[0,48,224,852],"header":[224,48,244.81,68],"composer":[244,774,204.81,112],"navigation":null,"workbench":[468.81,48,299.19,852]},"stages":[{"stage":"session-pending","atMs":345.4,"startup":true,"missingRegions":["bar","sidebar","workbench"],"maxDeltaPx":523.19,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"catalog-pending","atMs":627.5,"startup":true,"missingRegions":["bar","sidebar","workbench"],"maxDeltaPx":523.19,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"history-pending","atMs":1177.5,"startup":true,"missingRegions":["bar","sidebar","workbench"],"maxDeltaPx":523.19,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"metadata-pending","atMs":1326.8,"startup":true,"missingRegions":["bar","sidebar","workbench"],"maxDeltaPx":523.19,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"ready","atMs":5377.6,"startup":false,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0.130087,"loadingStatuses":0,"loadingFocusTargets":0,"loadingAnimations":0,"overflow":false}],"workbenchWidths":[1,299.19],"responseControls":20,"composer":true},
-    {"scenario":{"width":1024,"height":900,"path":"/agents/home"},"timeOrigin":1792159478521.4,"cls":0,"loadingGeometry":{"bar":null,"sidebar":null,"header":[0,0,1024,68],"composer":[111,780,802,96],"navigation":null,"workbench":null},"readyGeometry":{"bar":[0,0,1024,48],"sidebar":[0,48,224,852],"header":[224,48,800,68],"composer":[244,774,760,112],"navigation":null,"workbench":null},"stages":[{"stage":"session-pending","atMs":354.9,"startup":true,"missingRegions":["bar","sidebar"],"maxDeltaPx":224,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"catalog-pending","atMs":636.9,"startup":true,"missingRegions":["bar","sidebar"],"maxDeltaPx":224,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"history-pending","atMs":1187.6,"startup":true,"missingRegions":["bar","sidebar"],"maxDeltaPx":224,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"metadata-pending","atMs":1335.8,"startup":true,"missingRegions":["bar","sidebar"],"maxDeltaPx":224,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"ready","atMs":5318.8,"startup":false,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":0,"loadingFocusTargets":0,"loadingAnimations":0,"overflow":false}],"workbenchWidths":[],"responseControls":20,"composer":true},
-    {"scenario":{"width":1024,"height":900,"path":"/agents/home/apps"},"timeOrigin":1792159483962.3,"cls":0.1835838,"loadingGeometry":{"bar":null,"sidebar":null,"header":[0,0,1024,68],"composer":[111,780,802,96],"navigation":null,"workbench":null},"readyGeometry":{"bar":[0,0,1024,48],"sidebar":[0,48,224,852],"header":[224,48,360,68],"composer":[244,774,320,112],"navigation":null,"workbench":[584,48,440,852]},"stages":[{"stage":"session-pending","atMs":345.6,"startup":true,"missingRegions":["bar","sidebar","workbench"],"maxDeltaPx":664,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"catalog-pending","atMs":611.4,"startup":true,"missingRegions":["bar","sidebar","workbench"],"maxDeltaPx":664,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"history-pending","atMs":1161.9,"startup":true,"missingRegions":["bar","sidebar","workbench"],"maxDeltaPx":664,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"metadata-pending","atMs":1312.1,"startup":true,"missingRegions":["bar","sidebar","workbench"],"maxDeltaPx":664,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"ready","atMs":5345.9,"startup":false,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0.1835838,"loadingStatuses":0,"loadingFocusTargets":0,"loadingAnimations":0,"overflow":false}],"workbenchWidths":[1,440],"responseControls":20,"composer":true},
-    {"scenario":{"width":1440,"height":900,"path":"/agents/home"},"timeOrigin":1792159489419.8,"cls":0,"loadingGeometry":{"bar":null,"sidebar":null,"header":[0,0,1440,68],"composer":[319,780,802,96],"navigation":null,"workbench":null},"readyGeometry":{"bar":[0,0,1440,48],"sidebar":[0,48,224,852],"header":[224,48,1216,68],"composer":[442,774,780,112],"navigation":null,"workbench":null},"stages":[{"stage":"session-pending","atMs":353.9,"startup":true,"missingRegions":["bar","sidebar"],"maxDeltaPx":224,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"catalog-pending","atMs":638.5,"startup":true,"missingRegions":["bar","sidebar"],"maxDeltaPx":224,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"history-pending","atMs":1187.5,"startup":true,"missingRegions":["bar","sidebar"],"maxDeltaPx":224,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"metadata-pending","atMs":1336.5,"startup":true,"missingRegions":["bar","sidebar"],"maxDeltaPx":224,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"ready","atMs":5338.8,"startup":false,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":0,"loadingFocusTargets":0,"loadingAnimations":0,"overflow":false}],"workbenchWidths":[],"responseControls":20,"composer":true},
-    {"scenario":{"width":1440,"height":900,"path":"/agents/home/apps"},"timeOrigin":1792159494878.3,"cls":0.2324496,"loadingGeometry":{"bar":null,"sidebar":null,"header":[0,0,1440,68],"composer":[319,780,802,96],"navigation":null,"workbench":null},"readyGeometry":{"bar":[0,0,1440,48],"sidebar":[0,48,224,852],"header":[224,48,552,68],"composer":[244,774,512,112],"navigation":null,"workbench":[776,48,664,852]},"stages":[{"stage":"session-pending","atMs":345.9,"startup":true,"missingRegions":["bar","sidebar","workbench"],"maxDeltaPx":888,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"catalog-pending","atMs":629.5,"startup":true,"missingRegions":["bar","sidebar","workbench"],"maxDeltaPx":888,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"history-pending","atMs":1178,"startup":true,"missingRegions":["bar","sidebar","workbench"],"maxDeltaPx":888,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"metadata-pending","atMs":1328.9,"startup":true,"missingRegions":["bar","sidebar","workbench"],"maxDeltaPx":888,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"ready","atMs":5363.3,"startup":false,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0.2324496,"loadingStatuses":0,"loadingFocusTargets":0,"loadingAnimations":0,"overflow":false}],"workbenchWidths":[1,664],"responseControls":20,"composer":true},
-    {"scenario":{"width":1440,"height":900,"path":"/"},"timeOrigin":1792159572104.6,"cls":0.2324496,"loadingGeometry":{"bar":null,"sidebar":null,"header":[0,0,1440,68],"composer":[319,780,802,96],"navigation":null,"workbench":null},"readyGeometry":{"bar":[0,0,1440,48],"sidebar":[0,48,224,852],"header":[224,48,552,68],"composer":[244,774,512,112],"navigation":null,"workbench":[776,48,664,852]},"stages":[{"stage":"session-pending","atMs":362.5,"startup":true,"missingRegions":["bar","sidebar","workbench"],"maxDeltaPx":888,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"catalog-pending","atMs":629,"startup":true,"missingRegions":["bar","sidebar","workbench"],"maxDeltaPx":888,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"history-pending","atMs":1179.7,"startup":true,"missingRegions":["bar","sidebar","workbench"],"maxDeltaPx":888,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"metadata-pending","atMs":1329.8,"startup":true,"missingRegions":["bar","sidebar","workbench"],"maxDeltaPx":888,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"ready","atMs":5394.3,"startup":false,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0.2324496,"loadingStatuses":0,"loadingFocusTargets":0,"loadingAnimations":0,"overflow":false}],"workbenchWidths":[1,664],"responseControls":20,"composer":true},
-    {"scenario":{"width":640,"height":450,"path":"/agents/home","deviceScaleFactor":2},"timeOrigin":1792159577619.4,"cls":0,"loadingGeometry":{"bar":null,"sidebar":null,"header":[0,0,640,68],"composer":[24,330,592,96],"navigation":null,"workbench":null},"readyGeometry":{"bar":null,"sidebar":null,"header":[0,0,640,65],"composer":[16,265,608,120],"navigation":[0,395,640,55],"workbench":null},"stages":[{"stage":"session-pending","atMs":346.9,"startup":true,"missingRegions":["navigation"],"maxDeltaPx":65,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"catalog-pending","atMs":628.8,"startup":true,"missingRegions":["navigation"],"maxDeltaPx":65,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"history-pending","atMs":1180,"startup":true,"missingRegions":["navigation"],"maxDeltaPx":65,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"metadata-pending","atMs":1330.6,"startup":true,"missingRegions":["navigation"],"maxDeltaPx":65,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":7,"overflow":false},{"stage":"ready","atMs":5246.2,"startup":false,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":0,"loadingFocusTargets":0,"loadingAnimations":0,"overflow":false}],"workbenchWidths":[],"responseControls":20,"composer":true},
-    {"scenario":{"width":390,"height":844,"path":"/agents/home","reducedMotion":true,"dark":true},"timeOrigin":1792159582973.3,"cls":0,"loadingGeometry":{"bar":null,"sidebar":null,"header":[0,0,390,68],"composer":[24,724,342,96],"navigation":null,"workbench":null},"readyGeometry":{"bar":null,"sidebar":null,"header":[0,0,390,65],"composer":[16,659,358,120],"navigation":[0,789,390,55],"workbench":null},"stages":[{"stage":"session-pending","atMs":362.8,"startup":true,"missingRegions":["navigation"],"maxDeltaPx":65,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":0,"overflow":false},{"stage":"catalog-pending","atMs":625.5,"startup":true,"missingRegions":["navigation"],"maxDeltaPx":65,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":0,"overflow":false},{"stage":"history-pending","atMs":1176,"startup":true,"missingRegions":["navigation"],"maxDeltaPx":65,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":0,"overflow":false},{"stage":"metadata-pending","atMs":1326,"startup":true,"missingRegions":["navigation"],"maxDeltaPx":65,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":0,"overflow":false},{"stage":"ready","atMs":5241.6,"startup":false,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":0,"loadingFocusTargets":0,"loadingAnimations":0,"overflow":false}],"workbenchWidths":[],"responseControls":20,"composer":true}
+    {
+      "scenario": { "width": 320, "height": 900, "path": "/agents/home" },
+      "timeOrigin": 1792159435330,
+      "cls": 0,
+      "loadingGeometry": {
+        "bar": null,
+        "sidebar": null,
+        "header": [0, 0, 320, 68],
+        "composer": [24, 780, 272, 96],
+        "navigation": null,
+        "workbench": null
+      },
+      "readyGeometry": {
+        "bar": null,
+        "sidebar": null,
+        "header": [0, 0, 320, 65],
+        "composer": [16, 715, 288, 120],
+        "navigation": [0, 845, 320, 55],
+        "workbench": null
+      },
+      "stages": [
+        {
+          "stage": "session-pending",
+          "atMs": 347.5,
+          "startup": true,
+          "missingRegions": ["navigation"],
+          "maxDeltaPx": 65,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "catalog-pending",
+          "atMs": 613.4,
+          "startup": true,
+          "missingRegions": ["navigation"],
+          "maxDeltaPx": 65,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "history-pending",
+          "atMs": 1163.2,
+          "startup": true,
+          "missingRegions": ["navigation"],
+          "maxDeltaPx": 65,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "metadata-pending",
+          "atMs": 1312.8,
+          "startup": true,
+          "missingRegions": ["navigation"],
+          "maxDeltaPx": 65,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "ready",
+          "atMs": 5263.7,
+          "startup": false,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 0,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 0,
+          "overflow": false
+        }
+      ],
+      "workbenchWidths": [],
+      "responseControls": 20,
+      "composer": true
+    },
+    {
+      "scenario": { "width": 320, "height": 900, "path": "/agents/home/apps" },
+      "timeOrigin": 1792159440687.3,
+      "cls": 0,
+      "loadingGeometry": {
+        "bar": null,
+        "sidebar": null,
+        "header": [0, 0, 320, 68],
+        "composer": [24, 780, 272, 96],
+        "navigation": null,
+        "workbench": null
+      },
+      "readyGeometry": {
+        "bar": null,
+        "sidebar": null,
+        "header": [0, 76, 320, 56],
+        "composer": [16, 715, 288, 120],
+        "navigation": [0, 845, 320, 55],
+        "workbench": [0, 48, 320, 852]
+      },
+      "stages": [
+        {
+          "stage": "session-pending",
+          "atMs": 390.4,
+          "startup": true,
+          "missingRegions": ["navigation", "workbench"],
+          "maxDeltaPx": 76,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "catalog-pending",
+          "atMs": 639.3,
+          "startup": true,
+          "missingRegions": ["navigation", "workbench"],
+          "maxDeltaPx": 76,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "history-pending",
+          "atMs": 1189.3,
+          "startup": true,
+          "missingRegions": ["navigation", "workbench"],
+          "maxDeltaPx": 76,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "metadata-pending",
+          "atMs": 1339.3,
+          "startup": true,
+          "missingRegions": ["navigation", "workbench"],
+          "maxDeltaPx": 76,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "ready",
+          "atMs": 5372.6,
+          "startup": false,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 0,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 0,
+          "overflow": false
+        }
+      ],
+      "workbenchWidths": [0],
+      "responseControls": 20,
+      "composer": true
+    },
+    {
+      "scenario": { "width": 390, "height": 900, "path": "/agents/home" },
+      "timeOrigin": 1792159446149.6,
+      "cls": 0,
+      "loadingGeometry": {
+        "bar": null,
+        "sidebar": null,
+        "header": [0, 0, 390, 68],
+        "composer": [24, 780, 342, 96],
+        "navigation": null,
+        "workbench": null
+      },
+      "readyGeometry": {
+        "bar": null,
+        "sidebar": null,
+        "header": [0, 0, 390, 65],
+        "composer": [16, 715, 358, 120],
+        "navigation": [0, 845, 390, 55],
+        "workbench": null
+      },
+      "stages": [
+        {
+          "stage": "session-pending",
+          "atMs": 360.2,
+          "startup": true,
+          "missingRegions": ["navigation"],
+          "maxDeltaPx": 65,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "catalog-pending",
+          "atMs": 626.8,
+          "startup": true,
+          "missingRegions": ["navigation"],
+          "maxDeltaPx": 65,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "history-pending",
+          "atMs": 1177.5,
+          "startup": true,
+          "missingRegions": ["navigation"],
+          "maxDeltaPx": 65,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "metadata-pending",
+          "atMs": 1327.2,
+          "startup": true,
+          "missingRegions": ["navigation"],
+          "maxDeltaPx": 65,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "ready",
+          "atMs": 5275.3,
+          "startup": false,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 0,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 0,
+          "overflow": false
+        }
+      ],
+      "workbenchWidths": [],
+      "responseControls": 20,
+      "composer": true
+    },
+    {
+      "scenario": { "width": 390, "height": 900, "path": "/agents/home/apps" },
+      "timeOrigin": 1792159451517.8,
+      "cls": 0,
+      "loadingGeometry": {
+        "bar": null,
+        "sidebar": null,
+        "header": [0, 0, 390, 68],
+        "composer": [24, 780, 342, 96],
+        "navigation": null,
+        "workbench": null
+      },
+      "readyGeometry": {
+        "bar": null,
+        "sidebar": null,
+        "header": [0, 76, 390, 56],
+        "composer": [16, 715, 358, 120],
+        "navigation": [0, 845, 390, 55],
+        "workbench": [0, 48, 390, 852]
+      },
+      "stages": [
+        {
+          "stage": "session-pending",
+          "atMs": 358.4,
+          "startup": true,
+          "missingRegions": ["navigation", "workbench"],
+          "maxDeltaPx": 76,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "catalog-pending",
+          "atMs": 624.3,
+          "startup": true,
+          "missingRegions": ["navigation", "workbench"],
+          "maxDeltaPx": 76,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "history-pending",
+          "atMs": 1173.7,
+          "startup": true,
+          "missingRegions": ["navigation", "workbench"],
+          "maxDeltaPx": 76,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "metadata-pending",
+          "atMs": 1323,
+          "startup": true,
+          "missingRegions": ["navigation", "workbench"],
+          "maxDeltaPx": 76,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "ready",
+          "atMs": 5308.1,
+          "startup": false,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 0,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 0,
+          "overflow": false
+        }
+      ],
+      "workbenchWidths": [0],
+      "responseControls": 20,
+      "composer": true
+    },
+    {
+      "scenario": { "width": 767, "height": 900, "path": "/agents/home" },
+      "timeOrigin": 1792159456922.8,
+      "cls": 0,
+      "loadingGeometry": {
+        "bar": null,
+        "sidebar": null,
+        "header": [0, 0, 767, 68],
+        "composer": [24, 780, 719, 96],
+        "navigation": null,
+        "workbench": null
+      },
+      "readyGeometry": {
+        "bar": null,
+        "sidebar": null,
+        "header": [0, 0, 767, 65],
+        "composer": [16, 715, 735, 120],
+        "navigation": [0, 845, 767, 55],
+        "workbench": null
+      },
+      "stages": [
+        {
+          "stage": "session-pending",
+          "atMs": 353.9,
+          "startup": true,
+          "missingRegions": ["navigation"],
+          "maxDeltaPx": 65,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "catalog-pending",
+          "atMs": 620,
+          "startup": true,
+          "missingRegions": ["navigation"],
+          "maxDeltaPx": 65,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "history-pending",
+          "atMs": 1169.5,
+          "startup": true,
+          "missingRegions": ["navigation"],
+          "maxDeltaPx": 65,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "metadata-pending",
+          "atMs": 1320.1,
+          "startup": true,
+          "missingRegions": ["navigation"],
+          "maxDeltaPx": 65,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "ready",
+          "atMs": 5236.8,
+          "startup": false,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 0,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 0,
+          "overflow": false
+        }
+      ],
+      "workbenchWidths": [],
+      "responseControls": 20,
+      "composer": true
+    },
+    {
+      "scenario": { "width": 767, "height": 900, "path": "/agents/home/apps" },
+      "timeOrigin": 1792159462260.2,
+      "cls": 0,
+      "loadingGeometry": {
+        "bar": null,
+        "sidebar": null,
+        "header": [0, 0, 767, 68],
+        "composer": [24, 780, 719, 96],
+        "navigation": null,
+        "workbench": null
+      },
+      "readyGeometry": {
+        "bar": null,
+        "sidebar": null,
+        "header": [0, 76, 767, 56],
+        "composer": [16, 715, 735, 120],
+        "navigation": [0, 845, 767, 55],
+        "workbench": [0, 48, 767, 852]
+      },
+      "stages": [
+        {
+          "stage": "session-pending",
+          "atMs": 348.4,
+          "startup": true,
+          "missingRegions": ["navigation", "workbench"],
+          "maxDeltaPx": 76,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "catalog-pending",
+          "atMs": 599.4,
+          "startup": true,
+          "missingRegions": ["navigation", "workbench"],
+          "maxDeltaPx": 76,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "history-pending",
+          "atMs": 1149.3,
+          "startup": true,
+          "missingRegions": ["navigation", "workbench"],
+          "maxDeltaPx": 76,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "metadata-pending",
+          "atMs": 1298.7,
+          "startup": true,
+          "missingRegions": ["navigation", "workbench"],
+          "maxDeltaPx": 76,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "ready",
+          "atMs": 5282,
+          "startup": false,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 0,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 0,
+          "overflow": false
+        }
+      ],
+      "workbenchWidths": [0],
+      "responseControls": 20,
+      "composer": true
+    },
+    {
+      "scenario": { "width": 768, "height": 900, "path": "/agents/home" },
+      "timeOrigin": 1792159467638.7,
+      "cls": 0,
+      "loadingGeometry": {
+        "bar": null,
+        "sidebar": null,
+        "header": [0, 0, 768, 68],
+        "composer": [24, 780, 720, 96],
+        "navigation": null,
+        "workbench": null
+      },
+      "readyGeometry": {
+        "bar": [0, 0, 768, 48],
+        "sidebar": [0, 48, 224, 852],
+        "header": [224, 48, 544, 68],
+        "composer": [244, 774, 504, 112],
+        "navigation": null,
+        "workbench": null
+      },
+      "stages": [
+        {
+          "stage": "session-pending",
+          "atMs": 352.9,
+          "startup": true,
+          "missingRegions": ["bar", "sidebar"],
+          "maxDeltaPx": 224,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "catalog-pending",
+          "atMs": 621.4,
+          "startup": true,
+          "missingRegions": ["bar", "sidebar"],
+          "maxDeltaPx": 224,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "history-pending",
+          "atMs": 1168.7,
+          "startup": true,
+          "missingRegions": ["bar", "sidebar"],
+          "maxDeltaPx": 224,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "metadata-pending",
+          "atMs": 1320.1,
+          "startup": true,
+          "missingRegions": ["bar", "sidebar"],
+          "maxDeltaPx": 224,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "ready",
+          "atMs": 5302.2,
+          "startup": false,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 0,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 0,
+          "overflow": false
+        }
+      ],
+      "workbenchWidths": [],
+      "responseControls": 20,
+      "composer": true
+    },
+    {
+      "scenario": { "width": 768, "height": 900, "path": "/agents/home/apps" },
+      "timeOrigin": 1792159473046.8,
+      "cls": 0.130087,
+      "loadingGeometry": {
+        "bar": null,
+        "sidebar": null,
+        "header": [0, 0, 768, 68],
+        "composer": [24, 780, 720, 96],
+        "navigation": null,
+        "workbench": null
+      },
+      "readyGeometry": {
+        "bar": [0, 0, 768, 48],
+        "sidebar": [0, 48, 224, 852],
+        "header": [224, 48, 244.81, 68],
+        "composer": [244, 774, 204.81, 112],
+        "navigation": null,
+        "workbench": [468.81, 48, 299.19, 852]
+      },
+      "stages": [
+        {
+          "stage": "session-pending",
+          "atMs": 345.4,
+          "startup": true,
+          "missingRegions": ["bar", "sidebar", "workbench"],
+          "maxDeltaPx": 523.19,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "catalog-pending",
+          "atMs": 627.5,
+          "startup": true,
+          "missingRegions": ["bar", "sidebar", "workbench"],
+          "maxDeltaPx": 523.19,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "history-pending",
+          "atMs": 1177.5,
+          "startup": true,
+          "missingRegions": ["bar", "sidebar", "workbench"],
+          "maxDeltaPx": 523.19,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "metadata-pending",
+          "atMs": 1326.8,
+          "startup": true,
+          "missingRegions": ["bar", "sidebar", "workbench"],
+          "maxDeltaPx": 523.19,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "ready",
+          "atMs": 5377.6,
+          "startup": false,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0.130087,
+          "loadingStatuses": 0,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 0,
+          "overflow": false
+        }
+      ],
+      "workbenchWidths": [1, 299.19],
+      "responseControls": 20,
+      "composer": true
+    },
+    {
+      "scenario": { "width": 1024, "height": 900, "path": "/agents/home" },
+      "timeOrigin": 1792159478521.4,
+      "cls": 0,
+      "loadingGeometry": {
+        "bar": null,
+        "sidebar": null,
+        "header": [0, 0, 1024, 68],
+        "composer": [111, 780, 802, 96],
+        "navigation": null,
+        "workbench": null
+      },
+      "readyGeometry": {
+        "bar": [0, 0, 1024, 48],
+        "sidebar": [0, 48, 224, 852],
+        "header": [224, 48, 800, 68],
+        "composer": [244, 774, 760, 112],
+        "navigation": null,
+        "workbench": null
+      },
+      "stages": [
+        {
+          "stage": "session-pending",
+          "atMs": 354.9,
+          "startup": true,
+          "missingRegions": ["bar", "sidebar"],
+          "maxDeltaPx": 224,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "catalog-pending",
+          "atMs": 636.9,
+          "startup": true,
+          "missingRegions": ["bar", "sidebar"],
+          "maxDeltaPx": 224,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "history-pending",
+          "atMs": 1187.6,
+          "startup": true,
+          "missingRegions": ["bar", "sidebar"],
+          "maxDeltaPx": 224,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "metadata-pending",
+          "atMs": 1335.8,
+          "startup": true,
+          "missingRegions": ["bar", "sidebar"],
+          "maxDeltaPx": 224,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "ready",
+          "atMs": 5318.8,
+          "startup": false,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 0,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 0,
+          "overflow": false
+        }
+      ],
+      "workbenchWidths": [],
+      "responseControls": 20,
+      "composer": true
+    },
+    {
+      "scenario": { "width": 1024, "height": 900, "path": "/agents/home/apps" },
+      "timeOrigin": 1792159483962.3,
+      "cls": 0.1835838,
+      "loadingGeometry": {
+        "bar": null,
+        "sidebar": null,
+        "header": [0, 0, 1024, 68],
+        "composer": [111, 780, 802, 96],
+        "navigation": null,
+        "workbench": null
+      },
+      "readyGeometry": {
+        "bar": [0, 0, 1024, 48],
+        "sidebar": [0, 48, 224, 852],
+        "header": [224, 48, 360, 68],
+        "composer": [244, 774, 320, 112],
+        "navigation": null,
+        "workbench": [584, 48, 440, 852]
+      },
+      "stages": [
+        {
+          "stage": "session-pending",
+          "atMs": 345.6,
+          "startup": true,
+          "missingRegions": ["bar", "sidebar", "workbench"],
+          "maxDeltaPx": 664,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "catalog-pending",
+          "atMs": 611.4,
+          "startup": true,
+          "missingRegions": ["bar", "sidebar", "workbench"],
+          "maxDeltaPx": 664,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "history-pending",
+          "atMs": 1161.9,
+          "startup": true,
+          "missingRegions": ["bar", "sidebar", "workbench"],
+          "maxDeltaPx": 664,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "metadata-pending",
+          "atMs": 1312.1,
+          "startup": true,
+          "missingRegions": ["bar", "sidebar", "workbench"],
+          "maxDeltaPx": 664,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "ready",
+          "atMs": 5345.9,
+          "startup": false,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0.1835838,
+          "loadingStatuses": 0,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 0,
+          "overflow": false
+        }
+      ],
+      "workbenchWidths": [1, 440],
+      "responseControls": 20,
+      "composer": true
+    },
+    {
+      "scenario": { "width": 1440, "height": 900, "path": "/agents/home" },
+      "timeOrigin": 1792159489419.8,
+      "cls": 0,
+      "loadingGeometry": {
+        "bar": null,
+        "sidebar": null,
+        "header": [0, 0, 1440, 68],
+        "composer": [319, 780, 802, 96],
+        "navigation": null,
+        "workbench": null
+      },
+      "readyGeometry": {
+        "bar": [0, 0, 1440, 48],
+        "sidebar": [0, 48, 224, 852],
+        "header": [224, 48, 1216, 68],
+        "composer": [442, 774, 780, 112],
+        "navigation": null,
+        "workbench": null
+      },
+      "stages": [
+        {
+          "stage": "session-pending",
+          "atMs": 353.9,
+          "startup": true,
+          "missingRegions": ["bar", "sidebar"],
+          "maxDeltaPx": 224,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "catalog-pending",
+          "atMs": 638.5,
+          "startup": true,
+          "missingRegions": ["bar", "sidebar"],
+          "maxDeltaPx": 224,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "history-pending",
+          "atMs": 1187.5,
+          "startup": true,
+          "missingRegions": ["bar", "sidebar"],
+          "maxDeltaPx": 224,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "metadata-pending",
+          "atMs": 1336.5,
+          "startup": true,
+          "missingRegions": ["bar", "sidebar"],
+          "maxDeltaPx": 224,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "ready",
+          "atMs": 5338.8,
+          "startup": false,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 0,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 0,
+          "overflow": false
+        }
+      ],
+      "workbenchWidths": [],
+      "responseControls": 20,
+      "composer": true
+    },
+    {
+      "scenario": { "width": 1440, "height": 900, "path": "/agents/home/apps" },
+      "timeOrigin": 1792159494878.3,
+      "cls": 0.2324496,
+      "loadingGeometry": {
+        "bar": null,
+        "sidebar": null,
+        "header": [0, 0, 1440, 68],
+        "composer": [319, 780, 802, 96],
+        "navigation": null,
+        "workbench": null
+      },
+      "readyGeometry": {
+        "bar": [0, 0, 1440, 48],
+        "sidebar": [0, 48, 224, 852],
+        "header": [224, 48, 552, 68],
+        "composer": [244, 774, 512, 112],
+        "navigation": null,
+        "workbench": [776, 48, 664, 852]
+      },
+      "stages": [
+        {
+          "stage": "session-pending",
+          "atMs": 345.9,
+          "startup": true,
+          "missingRegions": ["bar", "sidebar", "workbench"],
+          "maxDeltaPx": 888,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "catalog-pending",
+          "atMs": 629.5,
+          "startup": true,
+          "missingRegions": ["bar", "sidebar", "workbench"],
+          "maxDeltaPx": 888,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "history-pending",
+          "atMs": 1178,
+          "startup": true,
+          "missingRegions": ["bar", "sidebar", "workbench"],
+          "maxDeltaPx": 888,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "metadata-pending",
+          "atMs": 1328.9,
+          "startup": true,
+          "missingRegions": ["bar", "sidebar", "workbench"],
+          "maxDeltaPx": 888,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "ready",
+          "atMs": 5363.3,
+          "startup": false,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0.2324496,
+          "loadingStatuses": 0,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 0,
+          "overflow": false
+        }
+      ],
+      "workbenchWidths": [1, 664],
+      "responseControls": 20,
+      "composer": true
+    },
+    {
+      "scenario": { "width": 1440, "height": 900, "path": "/" },
+      "timeOrigin": 1792159572104.6,
+      "cls": 0.2324496,
+      "loadingGeometry": {
+        "bar": null,
+        "sidebar": null,
+        "header": [0, 0, 1440, 68],
+        "composer": [319, 780, 802, 96],
+        "navigation": null,
+        "workbench": null
+      },
+      "readyGeometry": {
+        "bar": [0, 0, 1440, 48],
+        "sidebar": [0, 48, 224, 852],
+        "header": [224, 48, 552, 68],
+        "composer": [244, 774, 512, 112],
+        "navigation": null,
+        "workbench": [776, 48, 664, 852]
+      },
+      "stages": [
+        {
+          "stage": "session-pending",
+          "atMs": 362.5,
+          "startup": true,
+          "missingRegions": ["bar", "sidebar", "workbench"],
+          "maxDeltaPx": 888,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "catalog-pending",
+          "atMs": 629,
+          "startup": true,
+          "missingRegions": ["bar", "sidebar", "workbench"],
+          "maxDeltaPx": 888,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "history-pending",
+          "atMs": 1179.7,
+          "startup": true,
+          "missingRegions": ["bar", "sidebar", "workbench"],
+          "maxDeltaPx": 888,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "metadata-pending",
+          "atMs": 1329.8,
+          "startup": true,
+          "missingRegions": ["bar", "sidebar", "workbench"],
+          "maxDeltaPx": 888,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "ready",
+          "atMs": 5394.3,
+          "startup": false,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0.2324496,
+          "loadingStatuses": 0,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 0,
+          "overflow": false
+        }
+      ],
+      "workbenchWidths": [1, 664],
+      "responseControls": 20,
+      "composer": true
+    },
+    {
+      "scenario": {
+        "width": 640,
+        "height": 450,
+        "path": "/agents/home",
+        "deviceScaleFactor": 2
+      },
+      "timeOrigin": 1792159577619.4,
+      "cls": 0,
+      "loadingGeometry": {
+        "bar": null,
+        "sidebar": null,
+        "header": [0, 0, 640, 68],
+        "composer": [24, 330, 592, 96],
+        "navigation": null,
+        "workbench": null
+      },
+      "readyGeometry": {
+        "bar": null,
+        "sidebar": null,
+        "header": [0, 0, 640, 65],
+        "composer": [16, 265, 608, 120],
+        "navigation": [0, 395, 640, 55],
+        "workbench": null
+      },
+      "stages": [
+        {
+          "stage": "session-pending",
+          "atMs": 346.9,
+          "startup": true,
+          "missingRegions": ["navigation"],
+          "maxDeltaPx": 65,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "catalog-pending",
+          "atMs": 628.8,
+          "startup": true,
+          "missingRegions": ["navigation"],
+          "maxDeltaPx": 65,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "history-pending",
+          "atMs": 1180,
+          "startup": true,
+          "missingRegions": ["navigation"],
+          "maxDeltaPx": 65,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "metadata-pending",
+          "atMs": 1330.6,
+          "startup": true,
+          "missingRegions": ["navigation"],
+          "maxDeltaPx": 65,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 7,
+          "overflow": false
+        },
+        {
+          "stage": "ready",
+          "atMs": 5246.2,
+          "startup": false,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 0,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 0,
+          "overflow": false
+        }
+      ],
+      "workbenchWidths": [],
+      "responseControls": 20,
+      "composer": true
+    },
+    {
+      "scenario": {
+        "width": 390,
+        "height": 844,
+        "path": "/agents/home",
+        "reducedMotion": true,
+        "dark": true
+      },
+      "timeOrigin": 1792159582973.3,
+      "cls": 0,
+      "loadingGeometry": {
+        "bar": null,
+        "sidebar": null,
+        "header": [0, 0, 390, 68],
+        "composer": [24, 724, 342, 96],
+        "navigation": null,
+        "workbench": null
+      },
+      "readyGeometry": {
+        "bar": null,
+        "sidebar": null,
+        "header": [0, 0, 390, 65],
+        "composer": [16, 659, 358, 120],
+        "navigation": [0, 789, 390, 55],
+        "workbench": null
+      },
+      "stages": [
+        {
+          "stage": "session-pending",
+          "atMs": 362.8,
+          "startup": true,
+          "missingRegions": ["navigation"],
+          "maxDeltaPx": 65,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 0,
+          "overflow": false
+        },
+        {
+          "stage": "catalog-pending",
+          "atMs": 625.5,
+          "startup": true,
+          "missingRegions": ["navigation"],
+          "maxDeltaPx": 65,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 0,
+          "overflow": false
+        },
+        {
+          "stage": "history-pending",
+          "atMs": 1176,
+          "startup": true,
+          "missingRegions": ["navigation"],
+          "maxDeltaPx": 65,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 0,
+          "overflow": false
+        },
+        {
+          "stage": "metadata-pending",
+          "atMs": 1326,
+          "startup": true,
+          "missingRegions": ["navigation"],
+          "maxDeltaPx": 65,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 0,
+          "overflow": false
+        },
+        {
+          "stage": "ready",
+          "atMs": 5241.6,
+          "startup": false,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 0,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 0,
+          "overflow": false
+        }
+      ],
+      "workbenchWidths": [],
+      "responseControls": 20,
+      "composer": true
+    }
   ],
   "after": [
-    {"scenario":{"width":320,"height":900,"path":"/agents/home"},"timeOrigin":1792160057180,"cls":0,"loadingGeometry":{"bar":null,"sidebar":null,"header":[0,0,320,65],"composer":[16,715,288,120],"navigation":[0,845,320,55],"workbench":null},"readyGeometry":{"bar":null,"sidebar":null,"header":[0,0,320,65],"composer":[16,715,288,120],"navigation":[0,845,320,55],"workbench":null},"stages":[{"stage":"session-pending","atMs":365.8,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"catalog-pending","atMs":633.9,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"history-pending","atMs":1181.7,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"metadata-pending","atMs":1331.9,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"ready","atMs":5248.4,"startup":false,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":0,"loadingFocusTargets":0,"loadingAnimations":0,"overflow":false}],"workbenchWidths":[0],"responseControls":20,"composer":true,"panelFrames":[]},
-    {"scenario":{"width":320,"height":900,"path":"/agents/home/apps"},"timeOrigin":1792160062522.1,"cls":0,"loadingGeometry":{"bar":null,"sidebar":null,"header":[0,76,320,56],"composer":[16,715,288,120],"navigation":[0,845,320,55],"workbench":[0,48,320,852]},"readyGeometry":{"bar":null,"sidebar":null,"header":[0,76,320,56],"composer":[16,715,288,120],"navigation":[0,845,320,55],"workbench":[0,48,320,852]},"stages":[{"stage":"session-pending","atMs":372.9,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"catalog-pending","atMs":640.7,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"history-pending","atMs":1189.2,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"metadata-pending","atMs":1340.9,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"ready","atMs":5339.4,"startup":false,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":0,"loadingFocusTargets":0,"loadingAnimations":0,"overflow":false}],"workbenchWidths":[320,0],"responseControls":20,"composer":true,"panelFrames":[[0,48,320,852]]},
-    {"scenario":{"width":390,"height":900,"path":"/agents/home"},"timeOrigin":1792160067955.8,"cls":0,"loadingGeometry":{"bar":null,"sidebar":null,"header":[0,0,390,65],"composer":[16,715,358,120],"navigation":[0,845,390,55],"workbench":null},"readyGeometry":{"bar":null,"sidebar":null,"header":[0,0,390,65],"composer":[16,715,358,120],"navigation":[0,845,390,55],"workbench":null},"stages":[{"stage":"session-pending","atMs":356.5,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"catalog-pending","atMs":623.8,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"history-pending","atMs":1172.9,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"metadata-pending","atMs":1322.5,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"ready","atMs":5239.5,"startup":false,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":0,"loadingFocusTargets":0,"loadingAnimations":0,"overflow":false}],"workbenchWidths":[0],"responseControls":20,"composer":true,"panelFrames":[]},
-    {"scenario":{"width":390,"height":900,"path":"/agents/home/apps"},"timeOrigin":1792160073279.3,"cls":0,"loadingGeometry":{"bar":null,"sidebar":null,"header":[0,76,390,56],"composer":[16,715,358,120],"navigation":[0,845,390,55],"workbench":[0,48,390,852]},"readyGeometry":{"bar":null,"sidebar":null,"header":[0,76,390,56],"composer":[16,715,358,120],"navigation":[0,845,390,55],"workbench":[0,48,390,852]},"stages":[{"stage":"session-pending","atMs":367.6,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"catalog-pending","atMs":618,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"history-pending","atMs":1165.6,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"metadata-pending","atMs":1315.8,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"ready","atMs":5331.5,"startup":false,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":0,"loadingFocusTargets":0,"loadingAnimations":0,"overflow":false}],"workbenchWidths":[390,0],"responseControls":20,"composer":true,"panelFrames":[[0,48,390,852]]},
-    {"scenario":{"width":767,"height":900,"path":"/agents/home"},"timeOrigin":1792160078705.8,"cls":0,"loadingGeometry":{"bar":null,"sidebar":null,"header":[0,0,767,65],"composer":[16,715,735,120],"navigation":[0,845,767,55],"workbench":null},"readyGeometry":{"bar":null,"sidebar":null,"header":[0,0,767,65],"composer":[16,715,735,120],"navigation":[0,845,767,55],"workbench":null},"stages":[{"stage":"session-pending","atMs":356.7,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"catalog-pending","atMs":622.3,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"history-pending","atMs":1172,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"metadata-pending","atMs":1322.2,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"ready","atMs":5236.2,"startup":false,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":0,"loadingFocusTargets":0,"loadingAnimations":0,"overflow":false}],"workbenchWidths":[0],"responseControls":20,"composer":true,"panelFrames":[]},
-    {"scenario":{"width":767,"height":900,"path":"/agents/home/apps"},"timeOrigin":1792160084052.3,"cls":0,"loadingGeometry":{"bar":null,"sidebar":null,"header":[0,76,767,56],"composer":[16,715,735,120],"navigation":[0,845,767,55],"workbench":[0,48,767,852]},"readyGeometry":{"bar":null,"sidebar":null,"header":[0,76,767,56],"composer":[16,715,735,120],"navigation":[0,845,767,55],"workbench":[0,48,767,852]},"stages":[{"stage":"session-pending","atMs":359.9,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"catalog-pending","atMs":627.6,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"history-pending","atMs":1174.8,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"metadata-pending","atMs":1325.4,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"ready","atMs":5306.8,"startup":false,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":0,"loadingFocusTargets":0,"loadingAnimations":0,"overflow":false}],"workbenchWidths":[767,0],"responseControls":20,"composer":true,"panelFrames":[[0,48,767,852]]},
-    {"scenario":{"width":768,"height":900,"path":"/agents/home"},"timeOrigin":1792160089450.9,"cls":0,"loadingGeometry":{"bar":[0,0,768,48],"sidebar":[0,48,224,852],"header":[224,48,544,68],"composer":[244,774,504,112],"navigation":null,"workbench":null},"readyGeometry":{"bar":[0,0,768,48],"sidebar":[0,48,224,852],"header":[224,48,544,68],"composer":[244,774,504,112],"navigation":null,"workbench":null},"stages":[{"stage":"session-pending","atMs":360.3,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"catalog-pending","atMs":643.1,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"history-pending","atMs":1193.7,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"metadata-pending","atMs":1341.9,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"ready","atMs":5292.1,"startup":false,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":0,"loadingFocusTargets":0,"loadingAnimations":0,"overflow":false}],"workbenchWidths":[0],"responseControls":20,"composer":true,"panelFrames":[]},
-    {"scenario":{"width":768,"height":900,"path":"/agents/home/apps"},"timeOrigin":1792160094848.4,"cls":0,"loadingGeometry":{"bar":[0,0,768,48],"sidebar":[0,48,224,852],"header":[224,48,244.81,68],"composer":[244,774,204.81,112],"navigation":null,"workbench":[468.81,48,299.19,852]},"readyGeometry":{"bar":[0,0,768,48],"sidebar":[0,48,224,852],"header":[224,48,244.81,68],"composer":[244,774,204.81,112],"navigation":null,"workbench":[468.81,48,299.19,852]},"stages":[{"stage":"session-pending","atMs":378.9,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"catalog-pending","atMs":646.2,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"history-pending","atMs":1195.1,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"metadata-pending","atMs":1345.3,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"ready","atMs":5378.9,"startup":false,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":0,"loadingFocusTargets":0,"loadingAnimations":0,"overflow":false}],"workbenchWidths":[299.19],"responseControls":20,"composer":true,"panelFrames":[[468.81,48,299.19,852]]},
-    {"scenario":{"width":1024,"height":900,"path":"/agents/home"},"timeOrigin":1792160100322.4,"cls":0,"loadingGeometry":{"bar":[0,0,1024,48],"sidebar":[0,48,224,852],"header":[224,48,800,68],"composer":[244,774,760,112],"navigation":null,"workbench":null},"readyGeometry":{"bar":[0,0,1024,48],"sidebar":[0,48,224,852],"header":[224,48,800,68],"composer":[244,774,760,112],"navigation":null,"workbench":null},"stages":[{"stage":"session-pending","atMs":371.6,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"catalog-pending","atMs":639.2,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"history-pending","atMs":1187.1,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"metadata-pending","atMs":1337.7,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"ready","atMs":5321.1,"startup":false,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":0,"loadingFocusTargets":0,"loadingAnimations":0,"overflow":false}],"workbenchWidths":[0],"responseControls":20,"composer":true,"panelFrames":[]},
-    {"scenario":{"width":1024,"height":900,"path":"/agents/home/apps"},"timeOrigin":1792160105763.2,"cls":0,"loadingGeometry":{"bar":[0,0,1024,48],"sidebar":[0,48,224,852],"header":[224,48,360,68],"composer":[244,774,320,112],"navigation":null,"workbench":[584,48,440,852]},"readyGeometry":{"bar":[0,0,1024,48],"sidebar":[0,48,224,852],"header":[224,48,360,68],"composer":[244,774,320,112],"navigation":null,"workbench":[584,48,440,852]},"stages":[{"stage":"session-pending","atMs":363.8,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"catalog-pending","atMs":630.1,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"history-pending","atMs":1179.9,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"metadata-pending","atMs":1330.5,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"ready","atMs":5380,"startup":false,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":0,"loadingFocusTargets":0,"loadingAnimations":0,"overflow":false}],"workbenchWidths":[440],"responseControls":20,"composer":true,"panelFrames":[[584,48,440,852]]},
-    {"scenario":{"width":1440,"height":900,"path":"/agents/home"},"timeOrigin":1792160111250.8,"cls":0,"loadingGeometry":{"bar":[0,0,1440,48],"sidebar":[0,48,224,852],"header":[224,48,1216,68],"composer":[442,774,780,112],"navigation":null,"workbench":null},"readyGeometry":{"bar":[0,0,1440,48],"sidebar":[0,48,224,852],"header":[224,48,1216,68],"composer":[442,774,780,112],"navigation":null,"workbench":null},"stages":[{"stage":"session-pending","atMs":359.4,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"catalog-pending","atMs":641.9,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"history-pending","atMs":1190.2,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"metadata-pending","atMs":1340.8,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"ready","atMs":5273.5,"startup":false,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":0,"loadingFocusTargets":0,"loadingAnimations":0,"overflow":false}],"workbenchWidths":[0],"responseControls":20,"composer":true,"panelFrames":[]},
-    {"scenario":{"width":1440,"height":900,"path":"/agents/home/apps"},"timeOrigin":1792160116644.4,"cls":0,"loadingGeometry":{"bar":[0,0,1440,48],"sidebar":[0,48,224,852],"header":[224,48,552,68],"composer":[244,774,512,112],"navigation":null,"workbench":[776,48,664,852]},"readyGeometry":{"bar":[0,0,1440,48],"sidebar":[0,48,224,852],"header":[224,48,552,68],"composer":[244,774,512,112],"navigation":null,"workbench":[776,48,664,852]},"stages":[{"stage":"session-pending","atMs":365.1,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"catalog-pending","atMs":648.5,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"history-pending","atMs":1196.9,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"metadata-pending","atMs":1347.1,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"ready","atMs":5364.6,"startup":false,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":0,"loadingFocusTargets":0,"loadingAnimations":0,"overflow":false}],"workbenchWidths":[664],"responseControls":20,"composer":true,"panelFrames":[[776,48,664,852]]},
-    {"scenario":{"width":1440,"height":900,"path":"/"},"timeOrigin":1792160122126.9,"cls":0,"loadingGeometry":{"bar":[0,0,1440,48],"sidebar":[0,48,224,852],"header":[224,48,552,68],"composer":[244,774,512,112],"navigation":null,"workbench":[776,48,664,852]},"readyGeometry":{"bar":[0,0,1440,48],"sidebar":[0,48,224,852],"header":[224,48,552,68],"composer":[244,774,512,112],"navigation":null,"workbench":[776,48,664,852]},"stages":[{"stage":"session-pending","atMs":367.1,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"catalog-pending","atMs":634.3,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"history-pending","atMs":1181.2,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"metadata-pending","atMs":1332.9,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"ready","atMs":5346.5,"startup":false,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":0,"loadingFocusTargets":0,"loadingAnimations":0,"overflow":false}],"workbenchWidths":[664],"responseControls":20,"composer":true,"panelFrames":[[776,48,664,852]]},
-    {"scenario":{"width":640,"height":450,"path":"/agents/home","deviceScaleFactor":2},"timeOrigin":1792160127591.8,"cls":0,"loadingGeometry":{"bar":null,"sidebar":null,"header":[0,0,640,65],"composer":[16,265,608,120],"navigation":[0,395,640,55],"workbench":null},"readyGeometry":{"bar":null,"sidebar":null,"header":[0,0,640,65],"composer":[16,265,608,120],"navigation":[0,395,640,55],"workbench":null},"stages":[{"stage":"session-pending","atMs":365.8,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"catalog-pending","atMs":649.6,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"history-pending","atMs":1198.5,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"metadata-pending","atMs":1349.1,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":48,"overflow":false},{"stage":"ready","atMs":5249.3,"startup":false,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":0,"loadingFocusTargets":0,"loadingAnimations":0,"overflow":false}],"workbenchWidths":[0],"responseControls":20,"composer":true,"panelFrames":[]},
-    {"scenario":{"width":390,"height":844,"path":"/agents/home","reducedMotion":true,"dark":true},"timeOrigin":1792160132942.7,"cls":0,"loadingGeometry":{"bar":null,"sidebar":null,"header":[0,0,390,65],"composer":[16,659,358,120],"navigation":[0,789,390,55],"workbench":null},"readyGeometry":{"bar":null,"sidebar":null,"header":[0,0,390,65],"composer":[16,659,358,120],"navigation":[0,789,390,55],"workbench":null},"stages":[{"stage":"session-pending","atMs":384.7,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":0,"overflow":false},{"stage":"catalog-pending","atMs":633.2,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":0,"overflow":false},{"stage":"history-pending","atMs":1181.7,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":0,"overflow":false},{"stage":"metadata-pending","atMs":1330.3,"startup":true,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":1,"loadingFocusTargets":0,"loadingAnimations":0,"overflow":false},{"stage":"ready","atMs":5231,"startup":false,"missingRegions":[],"maxDeltaPx":0,"clsSoFar":0,"loadingStatuses":0,"loadingFocusTargets":0,"loadingAnimations":0,"overflow":false}],"workbenchWidths":[0],"responseControls":20,"composer":true,"panelFrames":[]}
+    {
+      "scenario": { "width": 320, "height": 900, "path": "/agents/home" },
+      "timeOrigin": 1792160057180,
+      "cls": 0,
+      "loadingGeometry": {
+        "bar": null,
+        "sidebar": null,
+        "header": [0, 0, 320, 65],
+        "composer": [16, 715, 288, 120],
+        "navigation": [0, 845, 320, 55],
+        "workbench": null
+      },
+      "readyGeometry": {
+        "bar": null,
+        "sidebar": null,
+        "header": [0, 0, 320, 65],
+        "composer": [16, 715, 288, 120],
+        "navigation": [0, 845, 320, 55],
+        "workbench": null
+      },
+      "stages": [
+        {
+          "stage": "session-pending",
+          "atMs": 365.8,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "catalog-pending",
+          "atMs": 633.9,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "history-pending",
+          "atMs": 1181.7,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "metadata-pending",
+          "atMs": 1331.9,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "ready",
+          "atMs": 5248.4,
+          "startup": false,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 0,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 0,
+          "overflow": false
+        }
+      ],
+      "workbenchWidths": [0],
+      "responseControls": 20,
+      "composer": true,
+      "panelFrames": []
+    },
+    {
+      "scenario": { "width": 320, "height": 900, "path": "/agents/home/apps" },
+      "timeOrigin": 1792160062522.1,
+      "cls": 0,
+      "loadingGeometry": {
+        "bar": null,
+        "sidebar": null,
+        "header": [0, 76, 320, 56],
+        "composer": [16, 715, 288, 120],
+        "navigation": [0, 845, 320, 55],
+        "workbench": [0, 48, 320, 852]
+      },
+      "readyGeometry": {
+        "bar": null,
+        "sidebar": null,
+        "header": [0, 76, 320, 56],
+        "composer": [16, 715, 288, 120],
+        "navigation": [0, 845, 320, 55],
+        "workbench": [0, 48, 320, 852]
+      },
+      "stages": [
+        {
+          "stage": "session-pending",
+          "atMs": 372.9,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "catalog-pending",
+          "atMs": 640.7,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "history-pending",
+          "atMs": 1189.2,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "metadata-pending",
+          "atMs": 1340.9,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "ready",
+          "atMs": 5339.4,
+          "startup": false,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 0,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 0,
+          "overflow": false
+        }
+      ],
+      "workbenchWidths": [320, 0],
+      "responseControls": 20,
+      "composer": true,
+      "panelFrames": [[0, 48, 320, 852]]
+    },
+    {
+      "scenario": { "width": 390, "height": 900, "path": "/agents/home" },
+      "timeOrigin": 1792160067955.8,
+      "cls": 0,
+      "loadingGeometry": {
+        "bar": null,
+        "sidebar": null,
+        "header": [0, 0, 390, 65],
+        "composer": [16, 715, 358, 120],
+        "navigation": [0, 845, 390, 55],
+        "workbench": null
+      },
+      "readyGeometry": {
+        "bar": null,
+        "sidebar": null,
+        "header": [0, 0, 390, 65],
+        "composer": [16, 715, 358, 120],
+        "navigation": [0, 845, 390, 55],
+        "workbench": null
+      },
+      "stages": [
+        {
+          "stage": "session-pending",
+          "atMs": 356.5,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "catalog-pending",
+          "atMs": 623.8,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "history-pending",
+          "atMs": 1172.9,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "metadata-pending",
+          "atMs": 1322.5,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "ready",
+          "atMs": 5239.5,
+          "startup": false,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 0,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 0,
+          "overflow": false
+        }
+      ],
+      "workbenchWidths": [0],
+      "responseControls": 20,
+      "composer": true,
+      "panelFrames": []
+    },
+    {
+      "scenario": { "width": 390, "height": 900, "path": "/agents/home/apps" },
+      "timeOrigin": 1792160073279.3,
+      "cls": 0,
+      "loadingGeometry": {
+        "bar": null,
+        "sidebar": null,
+        "header": [0, 76, 390, 56],
+        "composer": [16, 715, 358, 120],
+        "navigation": [0, 845, 390, 55],
+        "workbench": [0, 48, 390, 852]
+      },
+      "readyGeometry": {
+        "bar": null,
+        "sidebar": null,
+        "header": [0, 76, 390, 56],
+        "composer": [16, 715, 358, 120],
+        "navigation": [0, 845, 390, 55],
+        "workbench": [0, 48, 390, 852]
+      },
+      "stages": [
+        {
+          "stage": "session-pending",
+          "atMs": 367.6,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "catalog-pending",
+          "atMs": 618,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "history-pending",
+          "atMs": 1165.6,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "metadata-pending",
+          "atMs": 1315.8,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "ready",
+          "atMs": 5331.5,
+          "startup": false,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 0,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 0,
+          "overflow": false
+        }
+      ],
+      "workbenchWidths": [390, 0],
+      "responseControls": 20,
+      "composer": true,
+      "panelFrames": [[0, 48, 390, 852]]
+    },
+    {
+      "scenario": { "width": 767, "height": 900, "path": "/agents/home" },
+      "timeOrigin": 1792160078705.8,
+      "cls": 0,
+      "loadingGeometry": {
+        "bar": null,
+        "sidebar": null,
+        "header": [0, 0, 767, 65],
+        "composer": [16, 715, 735, 120],
+        "navigation": [0, 845, 767, 55],
+        "workbench": null
+      },
+      "readyGeometry": {
+        "bar": null,
+        "sidebar": null,
+        "header": [0, 0, 767, 65],
+        "composer": [16, 715, 735, 120],
+        "navigation": [0, 845, 767, 55],
+        "workbench": null
+      },
+      "stages": [
+        {
+          "stage": "session-pending",
+          "atMs": 356.7,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "catalog-pending",
+          "atMs": 622.3,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "history-pending",
+          "atMs": 1172,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "metadata-pending",
+          "atMs": 1322.2,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "ready",
+          "atMs": 5236.2,
+          "startup": false,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 0,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 0,
+          "overflow": false
+        }
+      ],
+      "workbenchWidths": [0],
+      "responseControls": 20,
+      "composer": true,
+      "panelFrames": []
+    },
+    {
+      "scenario": { "width": 767, "height": 900, "path": "/agents/home/apps" },
+      "timeOrigin": 1792160084052.3,
+      "cls": 0,
+      "loadingGeometry": {
+        "bar": null,
+        "sidebar": null,
+        "header": [0, 76, 767, 56],
+        "composer": [16, 715, 735, 120],
+        "navigation": [0, 845, 767, 55],
+        "workbench": [0, 48, 767, 852]
+      },
+      "readyGeometry": {
+        "bar": null,
+        "sidebar": null,
+        "header": [0, 76, 767, 56],
+        "composer": [16, 715, 735, 120],
+        "navigation": [0, 845, 767, 55],
+        "workbench": [0, 48, 767, 852]
+      },
+      "stages": [
+        {
+          "stage": "session-pending",
+          "atMs": 359.9,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "catalog-pending",
+          "atMs": 627.6,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "history-pending",
+          "atMs": 1174.8,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "metadata-pending",
+          "atMs": 1325.4,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "ready",
+          "atMs": 5306.8,
+          "startup": false,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 0,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 0,
+          "overflow": false
+        }
+      ],
+      "workbenchWidths": [767, 0],
+      "responseControls": 20,
+      "composer": true,
+      "panelFrames": [[0, 48, 767, 852]]
+    },
+    {
+      "scenario": { "width": 768, "height": 900, "path": "/agents/home" },
+      "timeOrigin": 1792160089450.9,
+      "cls": 0,
+      "loadingGeometry": {
+        "bar": [0, 0, 768, 48],
+        "sidebar": [0, 48, 224, 852],
+        "header": [224, 48, 544, 68],
+        "composer": [244, 774, 504, 112],
+        "navigation": null,
+        "workbench": null
+      },
+      "readyGeometry": {
+        "bar": [0, 0, 768, 48],
+        "sidebar": [0, 48, 224, 852],
+        "header": [224, 48, 544, 68],
+        "composer": [244, 774, 504, 112],
+        "navigation": null,
+        "workbench": null
+      },
+      "stages": [
+        {
+          "stage": "session-pending",
+          "atMs": 360.3,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "catalog-pending",
+          "atMs": 643.1,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "history-pending",
+          "atMs": 1193.7,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "metadata-pending",
+          "atMs": 1341.9,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "ready",
+          "atMs": 5292.1,
+          "startup": false,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 0,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 0,
+          "overflow": false
+        }
+      ],
+      "workbenchWidths": [0],
+      "responseControls": 20,
+      "composer": true,
+      "panelFrames": []
+    },
+    {
+      "scenario": { "width": 768, "height": 900, "path": "/agents/home/apps" },
+      "timeOrigin": 1792160094848.4,
+      "cls": 0,
+      "loadingGeometry": {
+        "bar": [0, 0, 768, 48],
+        "sidebar": [0, 48, 224, 852],
+        "header": [224, 48, 244.81, 68],
+        "composer": [244, 774, 204.81, 112],
+        "navigation": null,
+        "workbench": [468.81, 48, 299.19, 852]
+      },
+      "readyGeometry": {
+        "bar": [0, 0, 768, 48],
+        "sidebar": [0, 48, 224, 852],
+        "header": [224, 48, 244.81, 68],
+        "composer": [244, 774, 204.81, 112],
+        "navigation": null,
+        "workbench": [468.81, 48, 299.19, 852]
+      },
+      "stages": [
+        {
+          "stage": "session-pending",
+          "atMs": 378.9,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "catalog-pending",
+          "atMs": 646.2,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "history-pending",
+          "atMs": 1195.1,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "metadata-pending",
+          "atMs": 1345.3,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "ready",
+          "atMs": 5378.9,
+          "startup": false,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 0,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 0,
+          "overflow": false
+        }
+      ],
+      "workbenchWidths": [299.19],
+      "responseControls": 20,
+      "composer": true,
+      "panelFrames": [[468.81, 48, 299.19, 852]]
+    },
+    {
+      "scenario": { "width": 1024, "height": 900, "path": "/agents/home" },
+      "timeOrigin": 1792160100322.4,
+      "cls": 0,
+      "loadingGeometry": {
+        "bar": [0, 0, 1024, 48],
+        "sidebar": [0, 48, 224, 852],
+        "header": [224, 48, 800, 68],
+        "composer": [244, 774, 760, 112],
+        "navigation": null,
+        "workbench": null
+      },
+      "readyGeometry": {
+        "bar": [0, 0, 1024, 48],
+        "sidebar": [0, 48, 224, 852],
+        "header": [224, 48, 800, 68],
+        "composer": [244, 774, 760, 112],
+        "navigation": null,
+        "workbench": null
+      },
+      "stages": [
+        {
+          "stage": "session-pending",
+          "atMs": 371.6,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "catalog-pending",
+          "atMs": 639.2,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "history-pending",
+          "atMs": 1187.1,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "metadata-pending",
+          "atMs": 1337.7,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "ready",
+          "atMs": 5321.1,
+          "startup": false,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 0,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 0,
+          "overflow": false
+        }
+      ],
+      "workbenchWidths": [0],
+      "responseControls": 20,
+      "composer": true,
+      "panelFrames": []
+    },
+    {
+      "scenario": { "width": 1024, "height": 900, "path": "/agents/home/apps" },
+      "timeOrigin": 1792160105763.2,
+      "cls": 0,
+      "loadingGeometry": {
+        "bar": [0, 0, 1024, 48],
+        "sidebar": [0, 48, 224, 852],
+        "header": [224, 48, 360, 68],
+        "composer": [244, 774, 320, 112],
+        "navigation": null,
+        "workbench": [584, 48, 440, 852]
+      },
+      "readyGeometry": {
+        "bar": [0, 0, 1024, 48],
+        "sidebar": [0, 48, 224, 852],
+        "header": [224, 48, 360, 68],
+        "composer": [244, 774, 320, 112],
+        "navigation": null,
+        "workbench": [584, 48, 440, 852]
+      },
+      "stages": [
+        {
+          "stage": "session-pending",
+          "atMs": 363.8,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "catalog-pending",
+          "atMs": 630.1,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "history-pending",
+          "atMs": 1179.9,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "metadata-pending",
+          "atMs": 1330.5,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "ready",
+          "atMs": 5380,
+          "startup": false,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 0,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 0,
+          "overflow": false
+        }
+      ],
+      "workbenchWidths": [440],
+      "responseControls": 20,
+      "composer": true,
+      "panelFrames": [[584, 48, 440, 852]]
+    },
+    {
+      "scenario": { "width": 1440, "height": 900, "path": "/agents/home" },
+      "timeOrigin": 1792160111250.8,
+      "cls": 0,
+      "loadingGeometry": {
+        "bar": [0, 0, 1440, 48],
+        "sidebar": [0, 48, 224, 852],
+        "header": [224, 48, 1216, 68],
+        "composer": [442, 774, 780, 112],
+        "navigation": null,
+        "workbench": null
+      },
+      "readyGeometry": {
+        "bar": [0, 0, 1440, 48],
+        "sidebar": [0, 48, 224, 852],
+        "header": [224, 48, 1216, 68],
+        "composer": [442, 774, 780, 112],
+        "navigation": null,
+        "workbench": null
+      },
+      "stages": [
+        {
+          "stage": "session-pending",
+          "atMs": 359.4,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "catalog-pending",
+          "atMs": 641.9,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "history-pending",
+          "atMs": 1190.2,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "metadata-pending",
+          "atMs": 1340.8,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "ready",
+          "atMs": 5273.5,
+          "startup": false,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 0,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 0,
+          "overflow": false
+        }
+      ],
+      "workbenchWidths": [0],
+      "responseControls": 20,
+      "composer": true,
+      "panelFrames": []
+    },
+    {
+      "scenario": { "width": 1440, "height": 900, "path": "/agents/home/apps" },
+      "timeOrigin": 1792160116644.4,
+      "cls": 0,
+      "loadingGeometry": {
+        "bar": [0, 0, 1440, 48],
+        "sidebar": [0, 48, 224, 852],
+        "header": [224, 48, 552, 68],
+        "composer": [244, 774, 512, 112],
+        "navigation": null,
+        "workbench": [776, 48, 664, 852]
+      },
+      "readyGeometry": {
+        "bar": [0, 0, 1440, 48],
+        "sidebar": [0, 48, 224, 852],
+        "header": [224, 48, 552, 68],
+        "composer": [244, 774, 512, 112],
+        "navigation": null,
+        "workbench": [776, 48, 664, 852]
+      },
+      "stages": [
+        {
+          "stage": "session-pending",
+          "atMs": 365.1,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "catalog-pending",
+          "atMs": 648.5,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "history-pending",
+          "atMs": 1196.9,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "metadata-pending",
+          "atMs": 1347.1,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "ready",
+          "atMs": 5364.6,
+          "startup": false,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 0,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 0,
+          "overflow": false
+        }
+      ],
+      "workbenchWidths": [664],
+      "responseControls": 20,
+      "composer": true,
+      "panelFrames": [[776, 48, 664, 852]]
+    },
+    {
+      "scenario": { "width": 1440, "height": 900, "path": "/" },
+      "timeOrigin": 1792160122126.9,
+      "cls": 0,
+      "loadingGeometry": {
+        "bar": [0, 0, 1440, 48],
+        "sidebar": [0, 48, 224, 852],
+        "header": [224, 48, 552, 68],
+        "composer": [244, 774, 512, 112],
+        "navigation": null,
+        "workbench": [776, 48, 664, 852]
+      },
+      "readyGeometry": {
+        "bar": [0, 0, 1440, 48],
+        "sidebar": [0, 48, 224, 852],
+        "header": [224, 48, 552, 68],
+        "composer": [244, 774, 512, 112],
+        "navigation": null,
+        "workbench": [776, 48, 664, 852]
+      },
+      "stages": [
+        {
+          "stage": "session-pending",
+          "atMs": 367.1,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "catalog-pending",
+          "atMs": 634.3,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "history-pending",
+          "atMs": 1181.2,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "metadata-pending",
+          "atMs": 1332.9,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "ready",
+          "atMs": 5346.5,
+          "startup": false,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 0,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 0,
+          "overflow": false
+        }
+      ],
+      "workbenchWidths": [664],
+      "responseControls": 20,
+      "composer": true,
+      "panelFrames": [[776, 48, 664, 852]]
+    },
+    {
+      "scenario": {
+        "width": 640,
+        "height": 450,
+        "path": "/agents/home",
+        "deviceScaleFactor": 2
+      },
+      "timeOrigin": 1792160127591.8,
+      "cls": 0,
+      "loadingGeometry": {
+        "bar": null,
+        "sidebar": null,
+        "header": [0, 0, 640, 65],
+        "composer": [16, 265, 608, 120],
+        "navigation": [0, 395, 640, 55],
+        "workbench": null
+      },
+      "readyGeometry": {
+        "bar": null,
+        "sidebar": null,
+        "header": [0, 0, 640, 65],
+        "composer": [16, 265, 608, 120],
+        "navigation": [0, 395, 640, 55],
+        "workbench": null
+      },
+      "stages": [
+        {
+          "stage": "session-pending",
+          "atMs": 365.8,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "catalog-pending",
+          "atMs": 649.6,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "history-pending",
+          "atMs": 1198.5,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "metadata-pending",
+          "atMs": 1349.1,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 48,
+          "overflow": false
+        },
+        {
+          "stage": "ready",
+          "atMs": 5249.3,
+          "startup": false,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 0,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 0,
+          "overflow": false
+        }
+      ],
+      "workbenchWidths": [0],
+      "responseControls": 20,
+      "composer": true,
+      "panelFrames": []
+    },
+    {
+      "scenario": {
+        "width": 390,
+        "height": 844,
+        "path": "/agents/home",
+        "reducedMotion": true,
+        "dark": true
+      },
+      "timeOrigin": 1792160132942.7,
+      "cls": 0,
+      "loadingGeometry": {
+        "bar": null,
+        "sidebar": null,
+        "header": [0, 0, 390, 65],
+        "composer": [16, 659, 358, 120],
+        "navigation": [0, 789, 390, 55],
+        "workbench": null
+      },
+      "readyGeometry": {
+        "bar": null,
+        "sidebar": null,
+        "header": [0, 0, 390, 65],
+        "composer": [16, 659, 358, 120],
+        "navigation": [0, 789, 390, 55],
+        "workbench": null
+      },
+      "stages": [
+        {
+          "stage": "session-pending",
+          "atMs": 384.7,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 0,
+          "overflow": false
+        },
+        {
+          "stage": "catalog-pending",
+          "atMs": 633.2,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 0,
+          "overflow": false
+        },
+        {
+          "stage": "history-pending",
+          "atMs": 1181.7,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 0,
+          "overflow": false
+        },
+        {
+          "stage": "metadata-pending",
+          "atMs": 1330.3,
+          "startup": true,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 1,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 0,
+          "overflow": false
+        },
+        {
+          "stage": "ready",
+          "atMs": 5231,
+          "startup": false,
+          "missingRegions": [],
+          "maxDeltaPx": 0,
+          "clsSoFar": 0,
+          "loadingStatuses": 0,
+          "loadingFocusTargets": 0,
+          "loadingAnimations": 0,
+          "overflow": false
+        }
+      ],
+      "workbenchWidths": [0],
+      "responseControls": 20,
+      "composer": true,
+      "panelFrames": []
+    }
   ]
 }

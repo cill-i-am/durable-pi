@@ -1,7 +1,8 @@
 import { Effect, Schema } from "effect"
+
+import type { SubmissionReceipt } from "./admission"
 import type { Conversations } from "./service"
 import type { Submission } from "./turns"
-import type { SubmissionReceipt } from "./admission"
 
 export class ConversationNotFound extends Schema.TaggedError<ConversationNotFound>()(
   "ConversationNotFound",

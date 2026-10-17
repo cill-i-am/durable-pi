@@ -1,13 +1,15 @@
 import { Link } from "@tanstack/react-router"
-import { parseAgentId, workspaceDestination } from "@/navigation/workspace"
-import { useEffect, useState } from "react"
 import { Code2, Play, Square, RefreshCw } from "lucide-react"
-import { useExecution } from "./use-execution"
-import { Button, buttonVariants } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-import { Badge } from "@/components/ui/badge"
-import { Field, FieldLabel } from "@/components/ui/field"
+import { useEffect, useState } from "react"
+
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
+import { Button, buttonVariants } from "@/components/ui/button"
+import { Field, FieldLabel } from "@/components/ui/field"
+import { Textarea } from "@/components/ui/textarea"
+import { parseAgentId, workspaceDestination } from "@/navigation/workspace"
+
+import { useExecution } from "./use-execution"
 
 export function ExecutionWorkbench({
   onPendingChange,
@@ -30,7 +32,6 @@ export function ExecutionWorkbench({
     "console.log('Items:', input.length)\nreturn input.reduce((sum, n) => sum + n, 0)"
   )
   const [data, setData] = useState("[1, 2, 3]")
-  const active = execution.runs.find((run) => run.status === "running")
   const run = execution.detail
   const content = (
     <>
@@ -61,75 +62,13 @@ export function ExecutionWorkbench({
           Run calculations and transform JSON in a private sandbox. No network,
           files or app credentials. 1 second of CPU, 10 seconds elapsed.
         </p>
-        <form
-          className="flex flex-col gap-3"
-          onSubmit={(event) => {
-            event.preventDefault()
-            void execution.start(code, data)
-          }}
-        >
-          <Field>
-            <FieldLabel htmlFor="execution-code">JavaScript</FieldLabel>
-            <Textarea
-              id="execution-code"
-              className="min-h-40 font-mono text-xs"
-              spellCheck={false}
-              value={execution.attempt?.code ?? code}
-              onChange={(event) => setCode(event.target.value)}
-              maxLength={16384}
-              disabled={execution.busy || !!execution.attempt}
-            />
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="execution-data">Input JSON</FieldLabel>
-            <Textarea
-              id="execution-data"
-              className="min-h-16 font-mono text-xs"
-              spellCheck={false}
-              value={execution.attempt?.data ?? data}
-              onChange={(event) => setData(event.target.value)}
-              maxLength={32768}
-              disabled={execution.busy || !!execution.attempt}
-            />
-          </Field>
-          <p className="text-xs text-muted-foreground">
-            Use <code>input</code> for parsed JSON, <code>console.log</code> for
-            notes, and <code>return</code> for the result.
-          </p>
-          <div className="flex gap-2">
-            <Button
-              type="submit"
-              size="sm"
-              disabled={
-                execution.busy ||
-                (!execution.attempt && !!active) ||
-                !code.trim()
-              }
-            >
-              <Play />
-              {execution.attempt ? "Retry same request" : "Run code"}
-            </Button>
-            {(active || execution.attempt) && (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={execution.busy}
-                onClick={() =>
-                  void execution.cancel(execution.attempt?.id ?? active!.id)
-                }
-              >
-                <Square /> {execution.attempt ? "Cancel request" : "Cancel run"}
-              </Button>
-            )}
-          </div>
-          {execution.attempt && !execution.busy && (
-            <p className="text-xs text-muted-foreground">
-              The outcome is not confirmed. Retry sends the same saved request
-              ID and cannot create a second run.
-            </p>
-          )}
-        </form>
+        <ExecutionEditor
+          execution={execution}
+          code={code}
+          data={data}
+          onCodeChange={setCode}
+          onDataChange={setData}
+        />
         {execution.selected && !run && (
           <p className="text-sm text-muted-foreground">Loading run…</p>
         )}
@@ -232,4 +171,89 @@ export function ExecutionWorkbench({
     </>
   )
   return content
+}
+
+function ExecutionEditor({
+  execution,
+  code,
+  data,
+  onCodeChange,
+  onDataChange,
+}: {
+  execution: ReturnType<typeof useExecution>
+  code: string
+  data: string
+  onCodeChange: (value: string) => void
+  onDataChange: (value: string) => void
+}) {
+  const active = execution.runs.find((run) => run.status === "running")
+  return (
+    <form
+      className="flex flex-col gap-3"
+      onSubmit={(event) => {
+        event.preventDefault()
+        void execution.start(code, data)
+      }}
+    >
+      <Field>
+        <FieldLabel htmlFor="execution-code">JavaScript</FieldLabel>
+        <Textarea
+          id="execution-code"
+          className="min-h-40 font-mono text-xs"
+          spellCheck={false}
+          value={execution.attempt?.code ?? code}
+          onChange={(event) => onCodeChange(event.target.value)}
+          maxLength={16384}
+          disabled={execution.busy || !!execution.attempt}
+        />
+      </Field>
+      <Field>
+        <FieldLabel htmlFor="execution-data">Input JSON</FieldLabel>
+        <Textarea
+          id="execution-data"
+          className="min-h-16 font-mono text-xs"
+          spellCheck={false}
+          value={execution.attempt?.data ?? data}
+          onChange={(event) => onDataChange(event.target.value)}
+          maxLength={32768}
+          disabled={execution.busy || !!execution.attempt}
+        />
+      </Field>
+      <p className="text-xs text-muted-foreground">
+        Use <code>input</code> for parsed JSON, <code>console.log</code> for
+        notes, and <code>return</code> for the result.
+      </p>
+      <div className="flex gap-2">
+        <Button
+          type="submit"
+          size="sm"
+          disabled={
+            execution.busy || (!execution.attempt && !!active) || !code.trim()
+          }
+        >
+          <Play />
+          {execution.attempt ? "Retry same request" : "Run code"}
+        </Button>
+        {(active || execution.attempt) && (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={execution.busy}
+            onClick={() =>
+              void execution.cancel(execution.attempt?.id ?? active!.id)
+            }
+          >
+            <Square /> {execution.attempt ? "Cancel request" : "Cancel run"}
+          </Button>
+        )}
+      </div>
+      {execution.attempt && !execution.busy && (
+        <p className="text-xs text-muted-foreground">
+          The outcome is not confirmed. Retry sends the same saved request ID
+          and cannot create a second run.
+        </p>
+      )}
+    </form>
+  )
 }

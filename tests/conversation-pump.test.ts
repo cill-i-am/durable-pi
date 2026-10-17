@@ -1,8 +1,9 @@
 import { expect, it } from "@effect/vitest"
-import { it as nativeIt } from "vitest"
 import { Cause, Clock, Context, Effect, Exit } from "effect"
-import { conversationPump } from "../src/conversations/pump"
+import { it as nativeIt } from "vitest"
+
 import { ConversationExecutionError } from "../src/conversations/execution"
+import { conversationPump } from "../src/conversations/pump"
 import { conversationFixture } from "./conversation-fixture"
 
 const pump = (f: Effect.Success<ReturnType<typeof conversationFixture>>) =>

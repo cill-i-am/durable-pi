@@ -1,9 +1,10 @@
 import { Clock, Effect } from "effect"
+
+import { nativeOperation } from "../../shared/interop"
+import { nativeBytes } from "../../shared/stream"
 import { MAX_CHECKPOINT } from "../contracts"
 import type { CheckpointStorage } from "../runtime"
 import { TerminalRuntimeError } from "../runtime"
-import { nativeOperation } from "../../shared/interop"
-import { nativeBytes } from "../../shared/stream"
 import { fileDigest } from "./files"
 
 export interface CheckpointBucket {

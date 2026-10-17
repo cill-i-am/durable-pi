@@ -1,5 +1,7 @@
 import assert from "node:assert/strict"
+
 import { Schema } from "effect"
+
 import { AppDocument, AppDetail, WebPreview } from "../src/apps/contracts"
 
 const origin = "http://localhost:1337"

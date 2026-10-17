@@ -1,13 +1,14 @@
-import { Cause, Schema } from "effect"
 import type { Credential } from "@earendil-works/pi-ai"
+import { Cause, Schema } from "effect"
+
+import { nativeOperation } from "../../shared/interop"
+import { rpcOutcome } from "../../shared/rpc-outcome"
 import {
   CredentialStorageError,
   CredentialUnavailable,
   OAuthCredential,
 } from "../credentials"
 import { ModelCatalog, ModelUnavailable } from "../policy"
-import { rpcOutcome } from "../../shared/rpc-outcome"
-import { nativeOperation } from "../../shared/interop"
 
 /** Account refresh/persistence authority never leaves the owner. */
 export const AccountToken = Schema.Struct({

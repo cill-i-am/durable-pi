@@ -1,12 +1,13 @@
 import { expect, it } from "@effect/vitest"
 import { Effect, Schema } from "effect"
+
+import type { CommandRun } from "../src/terminal/contracts"
 import {
   authorized,
   finishCommand,
   SESSION_LIFETIME,
   sessionExpiry,
 } from "../src/terminal/domain"
-import type { CommandRun } from "../src/terminal/contracts"
 
 const revision = Schema.Number.check(
   Schema.isInt(),

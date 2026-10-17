@@ -1,28 +1,30 @@
-import { expect, it } from "vitest"
 import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { Cause, Effect, Exit } from "effect"
+
 import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context"
+import { createModels } from "@earendil-works/pi-ai"
 import { Harness, createRegistry, type Tx } from "@earendil-works/pi-durable"
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
-import { createModels } from "@earendil-works/pi-ai"
-import { scopedReceiptFact } from "../src/access/receipt"
+import { Cause, Effect, Exit } from "effect"
+import { expect, it } from "vitest"
+
 import { AccessStore } from "../src/access/adapters/sqlite"
-import { ExecutionStore } from "../src/execution/adapters/sqlite"
+import { scopedReceiptFact } from "../src/access/receipt"
 import { AppStore } from "../src/apps/adapters/sqlite"
+import { ExecutionStore } from "../src/execution/adapters/sqlite"
 import {
   piWorkingObjects,
   checklistInTransaction,
 } from "../src/objects/adapters/pi"
-import { piPlans } from "../src/planning/adapters/pi"
 import { ObjectFailure } from "../src/objects/contracts"
-import { planEvidence } from "../src/planning/evidence"
+import { piPlans } from "../src/planning/adapters/pi"
 import {
   PlanFailure,
   type PlanDraft,
   type EvidenceRef,
 } from "../src/planning/contracts"
+import { planEvidence } from "../src/planning/evidence"
 import { database } from "./database"
 
 it("checks real bot/task-owned receipts, legacy execution failures, stale evidence and cold checklist reads inside native commits", async () => {

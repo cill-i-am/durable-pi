@@ -1,7 +1,8 @@
 import { Clock, Effect, Layer } from "effect"
-import { MemoryRepository } from "./repository"
-import type { MemoryLedger } from "./ledger"
+
 import type { MemoryError } from "./domain"
+import type { MemoryLedger } from "./ledger"
+import { MemoryRepository } from "./repository"
 
 export function makeMemoryRepository(
   storage: MemoryLedger

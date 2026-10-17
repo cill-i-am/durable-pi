@@ -1,3 +1,4 @@
+import type { RemoteConnectionState } from "./connection-client"
 import {
   ConnectionError,
   connectionUrl,
@@ -7,7 +8,6 @@ import {
   type ToolSelection,
   type ConnectionInfo,
 } from "./connections"
-import type { RemoteConnectionState } from "./connection-client"
 
 export function addConnection(
   input: NewConnection,

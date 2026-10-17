@@ -1,11 +1,23 @@
-import { afterEach, expect, it, vi } from "vitest"
 import { Cause, Effect, Exit, Layer, ManagedRuntime, Schema } from "effect"
+import { afterEach, expect, it, vi } from "vitest"
+
 import { PersonalAgent } from "../src/agent/worker"
+import { BotConfigurationStore } from "../src/agents/adapters/configuration"
 import {
   AgentOutcome,
   agentRpc,
   agentRpcNative,
 } from "../src/agents/adapters/rpc"
+import { agentRuntimeReader } from "../src/agents/adapters/statuses"
+import { synchronizeTerminalAuthority } from "../src/agents/adapters/synchronization"
+import {
+  configureAgent,
+  type TerminalAuthorityProjection,
+} from "../src/agents/application"
+import {
+  BotConfiguration,
+  configurationApplication,
+} from "../src/agents/configuration"
 import {
   AgentId,
   AgentStorageError,
@@ -15,24 +27,13 @@ import {
   homeAgentId,
   type AgentProfile,
 } from "../src/agents/domain"
-import {
-  configureAgent,
-  type TerminalAuthorityProjection,
-} from "../src/agents/application"
-import {
-  BotConfiguration,
-  configurationApplication,
-} from "../src/agents/configuration"
-import { BotConfigurationStore } from "../src/agents/adapters/configuration"
+import { failure as communicationFailure } from "../src/communication/contracts"
 import {
   accountConnectionRpc,
   AccountConnectionOutcome,
   accountNative,
 } from "../src/inference/adapters/account-rpc"
 import { CredentialStorageError } from "../src/inference/credentials"
-import { agentRuntimeReader } from "../src/agents/adapters/statuses"
-import { synchronizeTerminalAuthority } from "../src/agents/adapters/synchronization"
-import { failure as communicationFailure } from "../src/communication/contracts"
 import { database } from "./database"
 
 vi.mock("cloudflare:workers", () => ({

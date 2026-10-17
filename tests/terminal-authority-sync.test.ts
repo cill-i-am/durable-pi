@@ -1,7 +1,8 @@
 import { expect, it } from "@effect/vitest"
-import { it as test } from "vitest"
 import { Effect, Fiber, ManagedRuntime } from "effect"
 import { TestClock } from "effect/testing"
+import { it as test } from "vitest"
+
 import {
   TerminalAuthoritySync,
   terminalAuthoritySyncLayer,

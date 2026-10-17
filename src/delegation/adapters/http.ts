@@ -1,9 +1,10 @@
-import { preserveFatal } from "../../shared/effect"
 import { Effect, Schema } from "effect"
+
+import { preserveFatal } from "../../shared/effect"
+import { nativeBytes } from "../../shared/stream"
+import type { BackgroundError } from "../background-mailbox"
 import { Control, DelegationFailure, NativeId } from "../contracts"
 import type { DelegationQueries } from "../delegations"
-import type { BackgroundError } from "../background-mailbox"
-import { nativeBytes } from "../../shared/stream"
 
 export function delegationsRequest(
   service: DelegationQueries<BackgroundError>,
