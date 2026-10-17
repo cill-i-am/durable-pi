@@ -6,6 +6,8 @@ import { familyRequest } from "../family/adapters/http"
 export const Route = createFileRoute("/api/family/$")({
   server: {
     handlers: {
+      GET: ({ request, params }) =>
+        familyRequest(request, getEnv(), params._splat ?? ""),
       POST: ({ request, params }) =>
         familyRequest(request, getEnv(), params._splat),
     },
