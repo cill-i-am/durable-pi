@@ -133,6 +133,41 @@ const config :Workerd.Config = (
   assert.equal(whatsapp.sends.length, 1)
   assert.match(whatsapp.sends[0].body, /Native actor answer/)
   const emailIdentity = { owner: "synthetic-email", bot: "home" }
+  assert.equal((await call("whatsapp-images/setup", {})).status, 200)
+  assert.equal(
+    (
+      await call(
+        "whatsapp-images/receive",
+        {},
+        { timestamp: whatsappTimestamp }
+      )
+    ).accepted,
+    true
+  )
+  let photos
+  for (let n = 0; n < 250; n++) {
+    photos = await call("whatsapp-images/inspect", {})
+    if (
+      photos.states.length === 2 &&
+      photos.states.every((state) => state === "sent")
+    )
+      break
+    await sleep(100)
+  }
+  assert.deepEqual(
+    photos.states,
+    ["sent", "sent"],
+    JSON.stringify(photos) + output.slice(-10000)
+  )
+  assert.equal(photos.turns.length, 1)
+  assert.equal(photos.turns[0].attachments, 1)
+  assert.equal(photos.images.length, 1)
+  assert.equal(photos.sends.length, 2)
+  assert.equal(photos.sends.filter((send) => send.image !== null).length, 1)
+  assert.equal(
+    JSON.parse(photos.sends.find((send) => send.image !== null).image).mime,
+    "image/jpeg"
+  )
   assert.equal((await call("email/setup", emailIdentity)).status, 200)
   assert.equal((await call("email/invalid", emailIdentity)).status, 409)
   assert.equal((await call("email/receive", emailIdentity)).status, 202)
@@ -152,6 +187,20 @@ const config :Workerd.Config = (
   await stop()
   await start()
   assert.deepEqual(await call("email/inspect", emailIdentity), email)
+  assert.equal(
+    (
+      await call(
+        "whatsapp-images/receive",
+        {},
+        { timestamp: whatsappTimestamp }
+      )
+    ).accepted,
+    false
+  )
+  assert.deepEqual(await call("whatsapp-images/inspect", {}), photos)
+  console.log(
+    "PASS native WhatsApp images: production workspace upload and vision admission, common share_image tool, one text and one private image send, dedupe and restart persistence."
+  )
   assert.equal(
     (await call("whatsapp/receive", {}, { timestamp: whatsappTimestamp }))
       .accepted,

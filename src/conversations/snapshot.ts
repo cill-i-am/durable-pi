@@ -1,6 +1,7 @@
 import { Effect } from "effect"
 
 import { pinnedRoute } from "../inference/policy"
+import type { FileInfo, FileError } from "../workspace/files"
 import type { ChatState, TimelineItem } from "./contracts"
 import type { ConversationExecution } from "./execution"
 import type { ConversationJournal } from "./journal"
@@ -14,7 +15,9 @@ export function conversationSnapshot<TError, TRequirements>(
   conversations: typeof Conversations.Service,
   execution: Pick<typeof ConversationExecution.Service, "observe">,
   journal: Pick<typeof ConversationJournal.Service, "activity">,
-  metadata: () => Effect.Effect<SnapshotMetadata, TError, TRequirements>
+  metadata: () => Effect.Effect<SnapshotMetadata, TError, TRequirements>,
+  images: (turnId: string) => Effect.Effect<FileInfo[], FileError> = () =>
+    Effect.succeed([])
 ) {
   return Effect.fn("Conversations.snapshot")(function* () {
     const turns = yield* conversations.recent()
@@ -45,6 +48,7 @@ export function conversationSnapshot<TError, TRequirements>(
           error: turn.error,
           created_at: turn.created_at,
           attachments: turn.attachments,
+          images: yield* images(turn.id),
           skills: turn.skills,
           routing: pinnedRoute(turn, settings),
           activity: saved,

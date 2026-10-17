@@ -240,6 +240,20 @@ export const builtInTools = [
     mode: "allow",
   },
   {
+    name: "share_image",
+    title: "Include image in reply",
+    description:
+      "Include an image from this agent's private files in its reply across connected surfaces.",
+    mode: "allow",
+  },
+  {
+    name: "view_image",
+    title: "Inspect image",
+    description:
+      "Inspect a bounded preview of an image in this agent's private files.",
+    mode: "allow",
+  },
+  {
     name: "zoom",
     description: "Read this bot's archived messages and summaries.",
     mode: "allow",

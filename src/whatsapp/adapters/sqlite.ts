@@ -9,6 +9,7 @@ import {
 } from "../../storage/sqlite"
 import {
   WhatsAppSettings,
+  whatsappIdentity,
   WhatsAppRecord,
   WhatsAppRejected,
   WhatsAppStorageError,
@@ -138,8 +139,11 @@ export class WhatsAppStore {
   receive(
     input: IncomingWhatsApp,
     agentId: AgentId,
-    reply = "",
-    route?: AgentId
+    {
+      reply = "",
+      route,
+      outboundImageId = null,
+    }: { reply?: string; route?: AgentId; outboundImageId?: string | null } = {}
   ) {
     return this.atomic(() =>
       Effect.gen({ self: this }, function* () {
@@ -189,6 +193,10 @@ export class WhatsAppStore {
         yield* this.query((orm) =>
           orm.insert(whatsappMessages).values({
             ...input,
+            image: input.image ?? null,
+            imageFileId: null,
+            outboundImageId,
+            imageAttempts: 0,
             agentId,
             generation: settings.generation,
             control: !!reply,
@@ -212,6 +220,8 @@ export class WhatsAppStore {
       reply?: string
       error?: string | null
       providerId?: string | null
+      imageFileId?: string
+      imageAttempts?: number
     } = {}
   ) {
     return this.query((orm) =>
@@ -268,6 +278,50 @@ export class WhatsAppStore {
         })
         .where(eq(whatsappMessages.state, "sending"))
     )
+  }
+  beginImage(id: string) {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const record = yield* this.get(id)
+        if (!record || record.state !== "queued") return false
+        if (record.imageAttempts >= 5) {
+          yield* this.update(id, "queued", "failed", {
+            error:
+              "The image could not be prepared after several attempts. Retry or send it again.",
+          })
+          return false
+        }
+        return yield* this.update(id, "queued", "queued", {
+          imageAttempts: record.imageAttempts + 1,
+        })
+      })
+    )
+  }
+  queueImage(record: WhatsAppRecord, fileId: string) {
+    return Effect.gen({ self: this }, function* () {
+      const identity = yield* Effect.promise(() =>
+        whatsappIdentity(`${record.id}:reply-image:${fileId}`)
+      )
+      // Hash before entering the native SQLite transaction: only synchronous
+      // database work may run while the Durable Object's input gate is held.
+      yield* this.atomic(() =>
+        Effect.gen({ self: this }, function* () {
+          const settings = yield* this.settings()
+          if (!settings.enabled || settings.generation !== record.generation)
+            return
+          yield* this.receive(
+            {
+              ...record,
+              ...identity,
+              image: null,
+              messageId: `image:${record.id}:${fileId}`,
+            },
+            record.agentId,
+            { reply: "Image included in this reply.", outboundImageId: fileId }
+          )
+        })
+      )
+    })
   }
   retry(id: string, acknowledgeDuplicateRisk: boolean, operationId: string) {
     return this.atomic(() =>
@@ -330,7 +384,7 @@ export class WhatsAppStore {
           id,
           row.state,
           row.control || row.reply ? "waiting" : "queued",
-          { error: null }
+          { error: null, imageAttempts: 0 }
         )
       })
     )

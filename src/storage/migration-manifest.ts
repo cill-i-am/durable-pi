@@ -110,6 +110,20 @@ export const agentMigrationManifest = {
         "CREATE INDEX `whatsapp_retries_message` ON `whatsapp_retries` (`message_id`);",
       ],
     },
+    {
+      id: "20261017182538_whatsapp_images",
+      checksum:
+        "59092216355b85c99c2955c2a1d296ed84807000e80f3ebd46a18c616d64af83",
+      statements: [
+        "CREATE TABLE `workspace_image_replies` (\n\t`operation_id` text PRIMARY KEY NOT NULL,\n\t`turn_id` text NOT NULL,\n\t`file_id` text NOT NULL,\n\tCONSTRAINT `fk_workspace_image_replies_file_id_workspace_files_id_fk` FOREIGN KEY (`file_id`) REFERENCES `workspace_files`(`id`)\n);",
+        "ALTER TABLE `whatsapp_messages` ADD `image` text;",
+        "ALTER TABLE `whatsapp_messages` ADD `image_file_id` text;",
+        "ALTER TABLE `whatsapp_messages` ADD `outbound_image_id` text;",
+        "ALTER TABLE `whatsapp_messages` ADD `image_attempts` integer DEFAULT 0 NOT NULL;",
+        "CREATE INDEX `workspace_image_replies_turn` ON `workspace_image_replies` (`turn_id`);",
+        "CREATE INDEX `workspace_image_replies_file` ON `workspace_image_replies` (`file_id`);",
+      ],
+    },
   ],
   schema: [
     {
@@ -500,7 +514,7 @@ export const agentMigrationManifest = {
     {
       type: "table",
       name: "whatsapp_messages",
-      sql: "CREATE TABLE `whatsapp_messages` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`fingerprint` text NOT NULL,\n\t`message_id` text NOT NULL,\n\t`thread_id` text NOT NULL,\n\t`sender` text NOT NULL,\n\t`body` text NOT NULL,\n\t`timestamp` integer NOT NULL,\n\t`agent_id` text NOT NULL,\n\t`generation` integer NOT NULL,\n\t`control` integer NOT NULL,\n\t`state` text NOT NULL,\n\t`reply` text DEFAULT '' NOT NULL,\n\t`provider_id` text,\n\t`error` text,\n\t`created_at` integer NOT NULL,\n\tCONSTRAINT \"whatsapp_messages_state\" CHECK(\"state\" in ('queued','waiting','sending','sent','failed','uncertain','cancelled','expired')),\n\tCONSTRAINT \"whatsapp_messages_control\" CHECK(\"control\" in (0,1))\n)",
+      sql: "CREATE TABLE `whatsapp_messages` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`fingerprint` text NOT NULL,\n\t`message_id` text NOT NULL,\n\t`thread_id` text NOT NULL,\n\t`sender` text NOT NULL,\n\t`body` text NOT NULL,\n\t`timestamp` integer NOT NULL,\n\t`agent_id` text NOT NULL,\n\t`generation` integer NOT NULL,\n\t`control` integer NOT NULL,\n\t`state` text NOT NULL,\n\t`reply` text DEFAULT '' NOT NULL,\n\t`provider_id` text,\n\t`error` text,\n\t`created_at` integer NOT NULL, `image` text, `image_file_id` text, `outbound_image_id` text, `image_attempts` integer DEFAULT 0 NOT NULL,\n\tCONSTRAINT \"whatsapp_messages_state\" CHECK(\"state\" in ('queued','waiting','sending','sent','failed','uncertain','cancelled','expired')),\n\tCONSTRAINT \"whatsapp_messages_control\" CHECK(\"control\" in (0,1))\n)",
     },
     {
       type: "index",
@@ -536,6 +550,21 @@ export const agentMigrationManifest = {
       type: "index",
       name: "workspace_files_created_id",
       sql: "CREATE INDEX `workspace_files_created_id` ON `workspace_files` (`createdAt`,`id`)",
+    },
+    {
+      type: "table",
+      name: "workspace_image_replies",
+      sql: "CREATE TABLE `workspace_image_replies` (\n\t`operation_id` text PRIMARY KEY NOT NULL,\n\t`turn_id` text NOT NULL,\n\t`file_id` text NOT NULL,\n\tCONSTRAINT `fk_workspace_image_replies_file_id_workspace_files_id_fk` FOREIGN KEY (`file_id`) REFERENCES `workspace_files`(`id`)\n)",
+    },
+    {
+      type: "index",
+      name: "workspace_image_replies_file",
+      sql: "CREATE INDEX `workspace_image_replies_file` ON `workspace_image_replies` (`file_id`)",
+    },
+    {
+      type: "index",
+      name: "workspace_image_replies_turn",
+      sql: "CREATE INDEX `workspace_image_replies_turn` ON `workspace_image_replies` (`turn_id`)",
     },
     {
       type: "table",

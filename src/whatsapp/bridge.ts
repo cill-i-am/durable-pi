@@ -5,7 +5,11 @@ import { Schema } from "effect"
 import type { AgentEnv } from "../../alchemy.run"
 import { whatsappChat, whatsappConfigured } from "./adapters/chat"
 import { whatsappRpc } from "./adapters/rpc"
-import { WhatsAppWebhook } from "./contracts"
+import {
+  WhatsAppWebhook,
+  WhatsAppImage,
+  WhatsAppImageExport,
+} from "./contracts"
 
 export { ChatSdkStateAgent } from "agents/chat-sdk"
 
@@ -27,9 +31,20 @@ export class WhatsAppBridge extends Agent<AgentEnv> {
       return { status: 503, body: "WhatsApp is not configured." }
     return this.chat().webhook(Schema.decodeUnknownSync(WhatsAppWebhook)(raw))
   }
-  async send(threadId: string, text: string) {
+  async downloadImage(raw: unknown) {
+    if (!whatsappConfigured(this.env))
+      return { ok: false as const, retryable: true }
+    return this.chat().downloadImage(
+      Schema.decodeUnknownSync(WhatsAppImage)(raw)
+    )
+  }
+  async send(threadId: string, text: string, raw?: unknown) {
     if (!whatsappConfigured(this.env))
       return { ok: false as const, uncertain: false }
-    return this.chat().send(threadId, text)
+    return this.chat().send(
+      threadId,
+      text,
+      raw ? Schema.decodeUnknownSync(WhatsAppImageExport)(raw) : undefined
+    )
   }
 }

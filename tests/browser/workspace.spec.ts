@@ -42,14 +42,42 @@ test("sign in, open an agent, receive a fixture reply and reload it", async ({
     exact: true,
   })
   await expect(composer).toBeEnabled()
+  await page.getByLabel("Choose files", { exact: true }).setInputFiles({
+    name: "fixture-photo.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l9sAAAAASUVORK5CYII=",
+      "base64"
+    ),
+  })
+  await expect(
+    page.getByRole("button", {
+      name: "Remove fixture-photo.png from message",
+      exact: true,
+    })
+  ).toBeVisible()
   await composer.fill("Please send the deterministic browser fixture reply.")
   await page.getByRole("button", { name: "Send message", exact: true }).click()
   await expect(
     page.getByText("Fixture reply received.", { exact: true })
   ).toBeVisible()
+  await expect(
+    page
+      .locator(".assistant-message")
+      .getByRole("link", { name: "Download fixture-photo.png", exact: true })
+  ).toBeVisible()
+  await expect(page.locator(".assistant-message img")).toHaveJSProperty(
+    "naturalWidth",
+    1
+  )
   await page.reload()
   await expect(
     page.getByText("Fixture reply received.", { exact: true })
+  ).toBeVisible()
+  await expect(
+    page
+      .locator(".assistant-message")
+      .getByRole("link", { name: "Download fixture-photo.png", exact: true })
   ).toBeVisible()
   await expect(
     page.getByRole("textbox", { name: "Message Navi", exact: true })

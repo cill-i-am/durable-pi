@@ -30,6 +30,7 @@ function fixture(
   canWrite = () => true
 ) {
   let fail = false
+  let preview: Uint8Array = new Uint8Array([255, 216, 255, 224])
   const bucket: AssetBucket = {
     async put(key, bytes) {
       if (fail) throw new Error("offline")
@@ -47,7 +48,15 @@ function fixture(
   }
   const db = database()
   const runtime = ManagedRuntime.make(
-    workspaceLayer(db, bucket, prefix, () => Effect.sync(canWrite))
+    workspaceLayer(
+      db,
+      bucket,
+      prefix,
+      () => Effect.sync(canWrite),
+      undefined,
+      undefined,
+      () => Effect.succeed(preview)
+    )
   )
   const run = <T, TError>(
     f: (workspace: Workspace["Service"]) => Effect.Effect<T, TError>
@@ -57,6 +66,9 @@ function fixture(
     run,
     runtime,
     objects,
+    preview: (bytes: Uint8Array) => {
+      preview = bytes
+    },
     fail: (value: boolean) => {
       fail = value
     },
@@ -234,13 +246,12 @@ describe("private workspace files", () => {
       name: "picture.jpg",
       mime: "image/jpeg",
       bytes: new Uint8Array([255, 216, 255, 224, 0, 16]),
-      vision: new Uint8Array([255, 216, 255, 224]),
     }
-    await expect(
-      f.run((w) =>
-        w.upload({ ...image, vision: new Uint8Array(MAX_VISION_BYTES + 1) })
-      )
-    ).rejects.toMatchObject({ _tag: "FileRejected" })
+    f.preview(new Uint8Array(MAX_VISION_BYTES + 1))
+    await expect(f.run((w) => w.upload(image))).rejects.toMatchObject({
+      _tag: "FileRejected",
+    })
+    f.preview(new Uint8Array([255, 216, 255, 224]))
     await f.run((w) => w.upload(image))
     expect((await f.run((w) => w.attach([image.id]))).content).toContainEqual({
       type: "image",

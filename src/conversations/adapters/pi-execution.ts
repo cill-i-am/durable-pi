@@ -214,7 +214,7 @@ export const piConversationLayer = (
                 modelId: turn.model ?? defaultModel(),
               },
               thinkingLevel: turn.thinking ?? "medium",
-              ...(turn.origin ? { tools: [] } : {}),
+              tools: null,
             },
             BACKGROUND_CONTEXT
           )

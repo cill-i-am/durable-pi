@@ -2,8 +2,11 @@ import { createWhatsAppAdapter, WhatsAppApiError } from "@chat-adapter/whatsapp"
 import { Chat, ConsoleLogger, type StateAdapter } from "chat"
 import { Schema } from "effect"
 
+import { imageMime, MAX_FILE_BYTES } from "../../workspace/files"
 import {
   IncomingWhatsApp,
+  WhatsAppImage,
+  type WhatsAppImageExport,
   WHATSAPP_WINDOW_MS,
   whatsappIdentity,
   type WhatsAppWebhook,
@@ -26,11 +29,18 @@ export function whatsappConfigured(env: WhatsAppConfiguration) {
     /^[A-Za-z0-9_.-]{1,128}$/.test(env.WHATSAPP_OWNER_ID)
   )
 }
-const RawText = Schema.Struct({
+const RawMessage = Schema.Struct({
   phoneNumberId: Schema.String,
   message: Schema.Struct({
-    type: Schema.Literal("text"),
+    type: Schema.Literals(["text", "image"]),
     timestamp: Schema.String,
+    image: Schema.optionalKey(
+      Schema.Struct({
+        id: Schema.String,
+        mime_type: Schema.String,
+        sha256: Schema.String,
+      })
+    ),
   }),
 })
 
@@ -65,25 +75,34 @@ export function whatsappChat(
     history: { thread: { maxMessages: 20, ttlMs: WHATSAPP_WINDOW_MS } },
   })
   bot.onDirectMessage(async (thread, message) => {
-    const raw = Schema.decodeUnknownOption(RawText)(message.raw)
+    const raw = Schema.decodeUnknownOption(RawMessage)(message.raw)
     if (
       message.author.userId !== env.WHATSAPP_OWNER_ID ||
       raw._tag === "None" ||
       raw.value.phoneNumberId !== env.WHATSAPP_PHONE_NUMBER_ID ||
-      message.attachments.length ||
-      !message.text.trim()
+      (raw.value.message.type === "text" &&
+        (message.attachments.length > 0 || !message.text.trim()))
     )
       return
     const identity = await whatsappIdentity(
       `${env.WHATSAPP_PHONE_NUMBER_ID}:${message.id}`
     )
+    const image =
+      raw.value.message.type === "image"
+        ? Schema.decodeUnknownSync(WhatsAppImage)({
+            id: raw.value.message.image?.id,
+            mime: raw.value.message.image?.mime_type,
+            sha256: raw.value.message.image?.sha256,
+          })
+        : undefined
     const body = {
       id: identity.id,
       messageId: message.id,
       threadId: thread.id,
       sender: message.author.userId,
-      body: message.text,
+      body: message.text.trim() || "Please inspect the attached image.",
       timestamp: Number(raw.value.message.timestamp) * 1000,
+      ...(image ? { image } : {}),
     }
     const fingerprint = await whatsappIdentity(JSON.stringify(body))
     await receive(
@@ -94,6 +113,33 @@ export function whatsappChat(
     )
   })
   return {
+    async downloadImage(image: WhatsAppImage) {
+      try {
+        const bytes = new Uint8Array(await adapter.downloadMedia(image.id))
+        if (bytes.length > MAX_FILE_BYTES || imageMime(bytes) !== image.mime)
+          return { ok: false as const, retryable: false }
+        const digest = new Uint8Array(
+          await crypto.subtle.digest("SHA-256", new Uint8Array(bytes))
+        )
+        const hex = Array.from(digest, (value) =>
+          value.toString(16).padStart(2, "0")
+        ).join("")
+        const base64 = btoa(String.fromCharCode(...digest))
+        if (image.sha256 !== base64 && image.sha256.toLowerCase() !== hex)
+          return { ok: false as const, retryable: false }
+        return { ok: true as const, bytes }
+      } catch (error) {
+        return {
+          ok: false as const,
+          retryable: !(
+            error instanceof WhatsAppApiError &&
+            [400, 401, 403, 404, 410].includes(error.status ?? 0)
+          ),
+        }
+      } finally {
+        await bot.shutdown()
+      }
+    },
     async webhook(input: WhatsAppWebhook) {
       const url = new URL("https://whatsapp.internal/webhook")
       if (input.method === "GET") {
@@ -134,18 +180,34 @@ export function whatsappChat(
         await bot.shutdown()
       }
     },
-    async send(threadId: string, text: string) {
+    async send(threadId: string, text: string, image?: WhatsAppImageExport) {
       try {
         const target = adapter.decodeThreadId(threadId)
         if (
           target.phoneNumberId !== env.WHATSAPP_PHONE_NUMBER_ID ||
           target.userWaId !== env.WHATSAPP_OWNER_ID ||
-          text.length > 3900
+          text.length > (image ? 700 : 3900)
         )
           return { ok: false as const, uncertain: false }
         await bot.initialize()
         // Plain text avoids markdown expansion and automatic multi-message sends.
-        const result = await adapter.postMessage(threadId, text)
+        const result = await adapter.postMessage(
+          threadId,
+          image
+            ? {
+                markdown: text,
+                files: [
+                  {
+                    filename: image.name,
+                    mimeType: image.mime,
+                    data: Uint8Array.from(atob(image.data), (value) =>
+                      value.charCodeAt(0)
+                    ).buffer,
+                  },
+                ],
+              }
+            : text
+        )
         return { ok: true as const, id: result.id }
       } catch (error) {
         return {

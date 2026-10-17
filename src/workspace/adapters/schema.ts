@@ -40,6 +40,22 @@ export const workspaceFiles = sqliteTable(
   ]
 )
 
+export const workspaceImageReplies = sqliteTable(
+  "workspace_image_replies",
+  {
+    operationId: text("operation_id").notNull(),
+    turnId: text("turn_id").notNull(),
+    fileId: text("file_id")
+      .notNull()
+      .references(() => workspaceFiles.id),
+  },
+  (t) => [
+    primaryKey({ columns: [t.operationId] }),
+    index("workspace_image_replies_turn").on(t.turnId),
+    index("workspace_image_replies_file").on(t.fileId),
+  ]
+)
+
 export const workspaceExtractions = sqliteTable(
   "workspace_extractions",
   {

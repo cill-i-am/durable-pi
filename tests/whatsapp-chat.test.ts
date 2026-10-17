@@ -1,6 +1,7 @@
 import { createHmac } from "node:crypto"
 
 import { createMemoryState } from "@chat-adapter/state-memory"
+import { WhatsAppAdapter } from "@chat-adapter/whatsapp"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import {
@@ -11,6 +12,7 @@ import type {
   IncomingWhatsApp,
   WhatsAppWebhook,
 } from "../src/whatsapp/contracts"
+import { imageBytes, imageMetadata } from "./image-fixture"
 
 const env: WhatsAppConfiguration = {
   WHATSAPP_ACCESS_TOKEN: "synthetic-whatsapp-token",
@@ -23,7 +25,8 @@ const env: WhatsAppConfiguration = {
 function event(
   sender = env.WHATSAPP_OWNER_ID,
   type = "text",
-  phone = env.WHATSAPP_PHONE_NUMBER_ID
+  phone = env.WHATSAPP_PHONE_NUMBER_ID,
+  caption = "Please inspect this image."
 ): WhatsAppWebhook {
   const body = JSON.stringify({
     object: "whatsapp_business_account",
@@ -52,9 +55,10 @@ function event(
                     ? { text: { body: "Help with dinner." } }
                     : {
                         image: {
-                          id: "synthetic-media",
-                          mime_type: "image/png",
-                          caption: "Caption is not a text request.",
+                          id: imageMetadata.id,
+                          mime_type: imageMetadata.mime,
+                          sha256: imageMetadata.sha256,
+                          caption,
                         },
                       }),
                 },
@@ -74,7 +78,10 @@ function event(
     challenge: "",
   }
 }
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => {
+  vi.unstubAllGlobals()
+  vi.restoreAllMocks()
+})
 describe("official WhatsApp Chat SDK transport", () => {
   it("verifies the Meta challenge and signature before delivering normalized text", async () => {
     const receive = vi.fn(async (_input: IncomingWhatsApp) => {})
@@ -113,7 +120,8 @@ describe("official WhatsApp Chat SDK transport", () => {
   })
   it.each([
     ["15550999999", "text", env.WHATSAPP_PHONE_NUMBER_ID],
-    [env.WHATSAPP_OWNER_ID, "image", env.WHATSAPP_PHONE_NUMBER_ID],
+    ["15550999999", "image", env.WHATSAPP_PHONE_NUMBER_ID],
+    [env.WHATSAPP_OWNER_ID, "audio", env.WHATSAPP_PHONE_NUMBER_ID],
     [env.WHATSAPP_OWNER_ID, "text", "999999"],
   ])(
     "never admits an unknown sender, media caption or foreign business number",
@@ -134,6 +142,76 @@ describe("official WhatsApp Chat SDK transport", () => {
       expect(network).not.toHaveBeenCalled()
     }
   )
+  it.each(["Please inspect this image.", ""])(
+    "admits signed image metadata and caption without downloading during webhook handling",
+    async (caption) => {
+      const receive = vi.fn(async (_input: IncomingWhatsApp) => {})
+      const download = vi.spyOn(WhatsAppAdapter.prototype, "downloadMedia")
+      expect(
+        (
+          await whatsappChat(env, createMemoryState(), receive).webhook(
+            event(
+              env.WHATSAPP_OWNER_ID,
+              "image",
+              env.WHATSAPP_PHONE_NUMBER_ID,
+              caption
+            )
+          )
+        ).status
+      ).toBe(200)
+      expect(receive).toHaveBeenCalledWith(
+        expect.objectContaining({
+          image: imageMetadata,
+          body: caption || "Please inspect the attached image.",
+        })
+      )
+      expect(download).not.toHaveBeenCalled()
+    }
+  )
+  it("validates downloaded image type and digest before exposing its bytes", async () => {
+    const download = vi
+      .spyOn(WhatsAppAdapter.prototype, "downloadMedia")
+      .mockResolvedValue(Buffer.from(imageBytes))
+    const chat = () => whatsappChat(env, createMemoryState(), async () => {})
+    expect(await chat().downloadImage(imageMetadata)).toEqual({
+      ok: true,
+      bytes: imageBytes,
+    })
+    expect(
+      await chat().downloadImage({ ...imageMetadata, sha256: "a".repeat(64) })
+    ).toEqual({ ok: false, retryable: false })
+    download.mockResolvedValueOnce(Buffer.from("not an image"))
+    expect(await chat().downloadImage(imageMetadata)).toEqual({
+      ok: false,
+      retryable: false,
+    })
+  })
+  it("uploads a private image and sends one captioned media message", async () => {
+    const fetch = vi.fn(async (input: string | URL | Request) =>
+      String(input).endsWith("/media")
+        ? Response.json({ id: "123999" })
+        : Response.json({ messages: [{ id: "wamid.photo-reply" }] })
+    )
+    vi.stubGlobal("fetch", fetch)
+    const thread = `whatsapp:${env.WHATSAPP_PHONE_NUMBER_ID}:${env.WHATSAPP_OWNER_ID}`
+    expect(
+      await whatsappChat(env, createMemoryState(), async () => {}).send(
+        thread,
+        "Here is your image.",
+        {
+          name: "photo.jpg",
+          mime: "image/jpeg",
+          data: Buffer.from(imageBytes).toString("base64"),
+        }
+      )
+    ).toEqual({ ok: true, id: "wamid.photo-reply" })
+    expect(fetch).toHaveBeenCalledTimes(2)
+    expect(fetch.mock.calls[0]?.[0]).toContain("/media")
+    const posts = fetch.mock.calls.filter((call) =>
+      String(call[0]).endsWith("/messages")
+    )
+    expect(posts).toHaveLength(1)
+  })
   it("propagates admission failure and processes the same provider ID on retry", async () => {
     const state = createMemoryState(),
       receive = vi.fn<(input: IncomingWhatsApp) => Promise<void>>()

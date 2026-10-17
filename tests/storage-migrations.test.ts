@@ -1,6 +1,7 @@
 import { Effect, Exit } from "effect"
 import { expect, it } from "vitest"
 
+import { agentMigrationManifest } from "../src/storage/migration-manifest"
 import { migrateSqlite } from "../src/storage/migrations"
 import { database } from "./database"
 import { sqliteFailure } from "./sqlite-fault"
@@ -13,12 +14,51 @@ const failureTag = (work: ReturnType<typeof migrateSqlite>) => {
     reason._tag === "Fail" ? [reason.error._tag] : []
   )
 }
+it("upgrades existing WhatsApp receipts and retry references without rebuilding them", () => {
+  const db = database({ migrate: false })
+  for (const version of agentMigrationManifest.versions.slice(0, -1)) {
+    for (const statement of version.statements) db.run(statement)
+    db.run(
+      "INSERT INTO __durable_pi_migrations VALUES (?,?)",
+      version.id,
+      version.checksum
+    )
+  }
+  db.run(
+    "INSERT INTO whatsapp_messages (id,fingerprint,message_id,thread_id,sender,body,timestamp,agent_id,generation,control,state,created_at) VALUES ('receipt','hash','provider','thread','owner','keep',1,'home',1,0,'uncertain',1)"
+  )
+  db.run("INSERT INTO whatsapp_retries VALUES ('retry','receipt',1)")
+  Effect.runSync(migrateSqlite(db, { audit: true }))
+  expect(
+    db.all(
+      "SELECT id,body,state,image,image_file_id,outbound_image_id,image_attempts FROM whatsapp_messages"
+    )
+  ).toEqual([
+    {
+      id: "receipt",
+      body: "keep",
+      state: "uncertain",
+      image: null,
+      image_file_id: null,
+      outbound_image_id: null,
+      image_attempts: 0,
+    },
+  ])
+  expect(db.all("SELECT * FROM whatsapp_retries")).toEqual([
+    {
+      operation_id: "retry",
+      message_id: "receipt",
+      acknowledge_duplicate_risk: 1,
+    },
+  ])
+  expect(db.all("PRAGMA foreign_key_check")).toEqual([])
+})
 it("creates the declared schema once and preserves rows on reactivation", () => {
   const db = database()
   const before = db.all(
     "SELECT name FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
   )
-  expect(before).toHaveLength(68)
+  expect(before).toHaveLength(69)
   db.run("INSERT INTO tool_grants(name,mode,revision) VALUES ('keep','ask',0)")
   Effect.runSync(migrateSqlite(db))
   expect(
@@ -26,7 +66,7 @@ it("creates the declared schema once and preserves rows on reactivation", () => 
       "SELECT name FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
     )
   ).toEqual(before)
-  expect(db.all("SELECT * FROM __durable_pi_migrations")).toHaveLength(3)
+  expect(db.all("SELECT * FROM __durable_pi_migrations")).toHaveLength(4)
   expect(db.all("SELECT * FROM tool_grants")).toEqual([
     { name: "keep", mode: "ask", revision: 0 },
   ])

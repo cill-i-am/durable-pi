@@ -16,6 +16,7 @@ import {
   FileId,
   DocumentExtraction,
   WorkspaceUnavailable,
+  ImageReply,
 } from "../files"
 import type {
   WorkspaceLedger,
@@ -26,6 +27,7 @@ import type {
 import { VideoPreparation } from "../video"
 import {
   workspaceFiles as files,
+  workspaceImageReplies as replies,
   workspaceExtractions as docs,
   workspaceVideoPreparations as videos,
 } from "./schema"
@@ -48,6 +50,41 @@ const VideoRecord = Schema.Struct({
   retryAt: Revision,
 })
 export class SqliteWorkspace implements WorkspaceLedger {
+  imageReply(operationId: string) {
+    return this.db
+      .use((orm) =>
+        this.query(
+          orm
+            .select()
+            .from(replies)
+            .where(eq(replies.operationId, operationId))
+            .get()
+        )
+      )
+      .pipe(
+        Effect.map((row) =>
+          row ? Schema.decodeUnknownSync(ImageReply)(row) : undefined
+        )
+      )
+  }
+  imageReplies(turnId: string) {
+    return this.db
+      .use((orm) =>
+        this.query(
+          orm
+            .select()
+            .from(replies)
+            .where(eq(replies.turnId, turnId))
+            .orderBy(replies.operationId)
+        )
+      )
+      .pipe(Effect.map(Schema.decodeUnknownSync(Schema.Array(ImageReply))))
+  }
+  replyImage(input: ImageReply) {
+    return this.db
+      .use((orm) => this.query(orm.insert(replies).values(input)))
+      .pipe(Effect.asVoid)
+  }
   readonly transactionGroup: object
   constructor(private readonly db: Sqlite) {
     this.transactionGroup = db
@@ -133,11 +170,17 @@ export class SqliteWorkspace implements WorkspaceLedger {
       )
       .pipe(Effect.asVoid)
   }
-  ready(id: string) {
+  ready(id: string, visionHash?: string | null) {
     return this.db
       .use((orm) =>
         this.query(
-          orm.update(files).set({ status: "ready" }).where(eq(files.id, id))
+          orm
+            .update(files)
+            .set({
+              status: "ready",
+              ...(visionHash === undefined ? {} : { visionHash }),
+            })
+            .where(eq(files.id, id))
         )
       )
       .pipe(Effect.asVoid)

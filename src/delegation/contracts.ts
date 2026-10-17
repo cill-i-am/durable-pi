@@ -14,6 +14,7 @@ export const ReadTool = Schema.Literals([
   "search_memory",
   "list_files",
   "read_file",
+  "view_image",
   "read_note",
 ])
 export type ReadTool = typeof ReadTool.Type
