@@ -57,6 +57,7 @@ import { SkillStorageError } from "../../src/skills/contracts"
 import { WebhookStorageError } from "../../src/webhooks/persistence"
 import { whatsappRpc } from "../../src/whatsapp/adapters/rpc"
 import { whatsappIdentity } from "../../src/whatsapp/contracts"
+import { transcript } from "../audio-fixture"
 import type { BackgroundGroupProbe } from "./background-worker"
 import type { TerminalProbe } from "./terminal-worker"
 import type { WhatsAppSink } from "./whatsapp-sink-worker"
@@ -141,7 +142,8 @@ export class PersonalAgentProbe extends PersonalAgent {
   private terminalNamespace: DurableObjectNamespace<TerminalProbe>
   private backgroundNamespace: DurableObjectNamespace<BackgroundGroupProbe>
   private whatsappNamespace: DurableObjectNamespace<WhatsAppSink>
-  private imageReply?: (id: string) => void
+  private fileReply: (id: string) => void
+  private voiceReply: () => void
   private commandProbe: {
     entered: boolean
     aborted: boolean
@@ -271,6 +273,15 @@ export class PersonalAgentProbe extends PersonalAgent {
       WHATSAPP_BUSINESS_NUMBER: "15550102020",
       MEMORY_BACKUPS: bucket,
       WORKSPACE_ASSETS: bucket,
+      AI: {
+        run: async (model: string) =>
+          model === "@cf/openai/whisper-large-v3-turbo"
+            ? {
+                text: transcript.text,
+                transcription_info: { duration: 0.2, language: "en" },
+              }
+            : Promise.reject(new Error(`Unexpected AI model: ${model}`)),
+      },
       IMAGES: {
         info: async () => ({
           format: "image/jpeg",
@@ -473,10 +484,10 @@ export class PersonalAgentProbe extends PersonalAgent {
     )
     this.models.setProvider(faux.provider)
     faux.setResponses([fauxAssistantMessage("Native actor answer")])
-    this.imageReply = (id) =>
+    this.fileReply = (id) =>
       faux.setResponses(
         Array.from({ length: 6 }, () => async (context) => {
-          const summary = "The image was shared in this reply."
+          const summary = "The media was included in this reply."
           if (
             context.messages.some(
               (message) =>
@@ -494,11 +505,27 @@ export class PersonalAgentProbe extends PersonalAgent {
           )
             return fauxAssistantMessage("Native image answer")
           return fauxAssistantMessage(
-            fauxToolCall("share_image", { id }, { id: "native-share-image" }),
+            fauxToolCall(
+              "share_image",
+              { id },
+              {
+                id: "native-share-image",
+              }
+            ),
             { stopReason: "toolUse" }
           )
         })
       )
+    this.voiceReply = () =>
+      faux.setResponses([
+        async (context) => {
+          if (!JSON.stringify(context.messages).includes(transcript.text))
+            throw new Error(
+              "The voice request transcript was missing from the agent input."
+            )
+          return fauxAssistantMessage("Native voice answer")
+        },
+      ])
     const settle = this.connectionClient.settle.bind(this.connectionClient)
     this.connectionClient.settle = () =>
       Effect.sync(() => {
@@ -983,7 +1010,8 @@ export class PersonalAgentProbe extends PersonalAgent {
     const url = new URL(request.url)
     if (
       url.pathname.startsWith("/whatsapp/") ||
-      url.pathname.startsWith("/whatsapp-images/")
+      url.pathname.startsWith("/whatsapp-images/") ||
+      url.pathname.startsWith("/whatsapp-audio/")
     )
       return this.whatsappProbe(request)
     if (
@@ -1126,13 +1154,24 @@ export class PersonalAgentProbe extends PersonalAgent {
     await this.lifecycle.start()
     const action = new URL(request.url).pathname.split("/").at(-1)
     const photo = new URL(request.url).pathname.startsWith("/whatsapp-images/")
-    const owner = photo ? "whatsapp-images-owner" : "whatsapp-owner"
+    const voice = new URL(request.url).pathname.startsWith("/whatsapp-audio/")
+    const withMedia = photo || voice
+    const owner = voice
+      ? "whatsapp-audio-owner"
+      : photo
+        ? "whatsapp-images-owner"
+        : "whatsapp-owner"
     const receipt = await whatsappIdentity(
-      photo ? "wamid.native-image-request" : "wamid.native-request"
+      voice
+        ? "wamid.native-audio-request"
+        : photo
+          ? "wamid.native-image-request"
+          : "wamid.native-request"
     )
     if (action === "setup") {
+      if (voice) this.voiceReply()
       if (photo)
-        this.imageReply?.((await whatsappIdentity(`${receipt.id}:image`)).id)
+        this.fileReply((await whatsappIdentity(`${receipt.id}:image`)).id)
       const response = await super.fetch(
         new Request(
           "https://internal/api/agent/whatsapp/configure?agent=home",
@@ -1156,18 +1195,20 @@ export class PersonalAgentProbe extends PersonalAgent {
       const { timestamp } = await request.json<{ timestamp: number }>()
       const accepted = await whatsappRpc(this).receive(owner, {
         ...receipt,
-        messageId: photo
-          ? "wamid.native-image-request"
-          : "wamid.native-request",
+        messageId: voice
+          ? "wamid.native-audio-request"
+          : photo
+            ? "wamid.native-image-request"
+            : "wamid.native-request",
         threadId: "whatsapp:123456:15550101010",
         sender: "15550101010",
         body: "Give the synthetic answer.",
         timestamp,
-        ...(photo
+        ...(withMedia
           ? {
-              image: {
-                id: "123456789",
-                mime: "image/jpeg" as const,
+              media: {
+                id: voice ? "987654321" : "123456789",
+                mime: voice ? ("audio/ogg" as const) : ("image/jpeg" as const),
                 sha256: "a".repeat(64),
               },
             }
@@ -1185,7 +1226,7 @@ export class PersonalAgentProbe extends PersonalAgent {
       turns: turns.map((turn) => ({
         status: turn.status,
         origin: turn.origin,
-        ...(photo
+        ...(withMedia
           ? {
               attachments: turn.attachments.length,
               answer: turn.answer,
@@ -1194,15 +1235,15 @@ export class PersonalAgentProbe extends PersonalAgent {
           : {}),
       })),
       sends: await sink.inspect(),
-      ...(photo
+      ...(withMedia
         ? {
             activity: turns[0]
               ? await this.actorRuntime.runPromise(
                   this.conversationJournal.activity(turns[0].id)
                 )
               : [],
-            images: await this.actorRuntime.runPromise(
-              this.workspaceService.imageReplies(turns[0]?.id ?? "")
+            replyFiles: await this.actorRuntime.runPromise(
+              this.workspaceService.replyFiles(turns[0]?.id ?? "")
             ),
           }
         : {}),

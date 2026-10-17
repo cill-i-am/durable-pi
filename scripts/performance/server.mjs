@@ -228,11 +228,22 @@ async function journeyPost(req, res, path, sessionId, session) {
       id: form.get("id"),
       name: file.name,
       mime: file.type,
-      kind: "image",
+      kind: file.type.startsWith("audio/") ? "audio" : "image",
       size: file.size,
       createdAt: new Date().toISOString(),
       status: "ready",
       trashed: false,
+      ...(file.type.startsWith("audio/")
+        ? {
+            audio: {
+              duration: 0.2,
+              language: "en",
+              characters: 22,
+              source: "transcribed",
+              truncated: false,
+            },
+          }
+        : {}),
     }
     session.files.set(info.id, {
       info,
@@ -293,7 +304,7 @@ async function journeyPost(req, res, path, sessionId, session) {
             error: null,
             created_at: new Date().toISOString(),
             attachments: images,
-            images,
+            replyFiles: images.filter((file) => file.kind === "image"),
           },
         ])
       )
@@ -452,6 +463,9 @@ async function fixtureGet(req, res, path, session) {
 }
 
 function fixtureFiles(res, path, session) {
+  const transcript = path.match(/^\/api\/agent\/files\/([^/]+)\/text$/)
+  if (transcript && session?.files.has(transcript[1]))
+    return sendJson(res, { text: "Fixture voice request.", next: null })
   if (path === "/api/agent/files")
     return sendJson(res, {
       files: [...(session?.files.values() ?? [])].map((file) => file.info),

@@ -11,12 +11,13 @@ import type { EffectDrizzleQueryError } from "drizzle-orm/effect-core/errors"
 import { Effect, Schema } from "effect"
 
 import { mapSqliteError, type Sqlite } from "../../storage/sqlite"
+import { StoredAudio } from "../audio"
 import {
   FileInfo,
   FileId,
   DocumentExtraction,
   WorkspaceUnavailable,
-  ImageReply,
+  FileReply,
 } from "../files"
 import type {
   WorkspaceLedger,
@@ -27,7 +28,7 @@ import type {
 import { VideoPreparation } from "../video"
 import {
   workspaceFiles as files,
-  workspaceImageReplies as replies,
+  workspaceReplyFiles as replies,
   workspaceExtractions as docs,
   workspaceVideoPreparations as videos,
 } from "./schema"
@@ -35,6 +36,7 @@ import {
 const Revision = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0))
 const FileRecord = Schema.Struct({
   ...FileInfo.fields,
+  audio: Schema.NullOr(StoredAudio),
   hash: Schema.String,
   visionHash: Schema.NullOr(Schema.String),
 })
@@ -50,7 +52,7 @@ const VideoRecord = Schema.Struct({
   retryAt: Revision,
 })
 export class SqliteWorkspace implements WorkspaceLedger {
-  imageReply(operationId: string) {
+  fileReply(operationId: string) {
     return this.db
       .use((orm) =>
         this.query(
@@ -63,11 +65,11 @@ export class SqliteWorkspace implements WorkspaceLedger {
       )
       .pipe(
         Effect.map((row) =>
-          row ? Schema.decodeUnknownSync(ImageReply)(row) : undefined
+          row ? Schema.decodeUnknownSync(FileReply)(row) : undefined
         )
       )
   }
-  imageReplies(turnId: string) {
+  replyFiles(turnId: string) {
     return this.db
       .use((orm) =>
         this.query(
@@ -78,9 +80,9 @@ export class SqliteWorkspace implements WorkspaceLedger {
             .orderBy(replies.operationId)
         )
       )
-      .pipe(Effect.map(Schema.decodeUnknownSync(Schema.Array(ImageReply))))
+      .pipe(Effect.map(Schema.decodeUnknownSync(Schema.Array(FileReply))))
   }
-  replyImage(input: ImageReply) {
+  replyFile(input: FileReply) {
     return this.db
       .use((orm) => this.query(orm.insert(replies).values(input)))
       .pipe(Effect.asVoid)
@@ -103,7 +105,14 @@ export class SqliteWorkspace implements WorkspaceLedger {
     return mapSqliteError(effect, () => new WorkspaceUnavailable())
   }
   private file(row: unknown) {
-    return Schema.decodeUnknownSync(FileRecord)(row)
+    const file = Schema.decodeUnknownSync(FileRecord)(row)
+    // The physical CHECK predates audio. Keep live file/FK identities intact;
+    // only this adapter translates its generic document bucket to domain audio.
+    return {
+      ...file,
+      kind: file.mime.startsWith("audio/") ? ("audio" as const) : file.kind,
+      audio: file.audio ?? undefined,
+    }
   }
   private doc(row: unknown) {
     return Schema.decodeUnknownSync(DocumentRecord)(row)
@@ -153,7 +162,12 @@ export class SqliteWorkspace implements WorkspaceLedger {
     return this.db
       .use((orm) =>
         this.query(
-          orm.insert(files).values({ ...file, trashed: file.trashed ? 1 : 0 })
+          orm.insert(files).values({
+            ...file,
+            kind: file.kind === "audio" ? "document" : file.kind,
+            audio: file.audio ?? null,
+            trashed: file.trashed ? 1 : 0,
+          })
         )
       )
       .pipe(Effect.asVoid)
@@ -170,7 +184,11 @@ export class SqliteWorkspace implements WorkspaceLedger {
       )
       .pipe(Effect.asVoid)
   }
-  ready(id: string, visionHash?: string | null) {
+  ready(
+    id: string,
+    visionHash?: string | null,
+    audio?: typeof StoredAudio.Type
+  ) {
     return this.db
       .use((orm) =>
         this.query(
@@ -179,6 +197,7 @@ export class SqliteWorkspace implements WorkspaceLedger {
             .set({
               status: "ready",
               ...(visionHash === undefined ? {} : { visionHash }),
+              ...(audio ? { audio } : {}),
             })
             .where(eq(files.id, id))
         )

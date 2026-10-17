@@ -192,25 +192,21 @@ describe("shared image processing", () => {
       turnId: "conversation",
       fileId: id,
     }
-    await run(f.workspace.replyImage(reply))
-    await run(f.workspace.replyImage(reply))
+    await run(f.workspace.replyFile(reply))
+    await run(f.workspace.replyFile(reply))
     expect(
-      (await run(f.workspace.imageReplies("conversation"))).map(
-        (file) => file.id
-      )
+      (await run(f.workspace.replyFiles("conversation"))).map((file) => file.id)
     ).toEqual([id])
-    expect(await run(f.workspace.imageReplies("other-conversation"))).toEqual(
-      []
-    )
+    expect(await run(f.workspace.replyFiles("other-conversation"))).toEqual([])
     await expect(
-      run(f.workspace.replyImage({ ...reply, turnId: "other-conversation" }))
+      run(f.workspace.replyFile({ ...reply, turnId: "other-conversation" }))
     ).rejects.toMatchObject({ _tag: "FileRejected" })
     f.state.writable = false
     await expect(
-      run(f.workspace.replyImage({ ...reply, operationId: "tool:new" }))
+      run(f.workspace.replyFile({ ...reply, operationId: "tool:new" }))
     ).rejects.toMatchObject({ _tag: "WorkspaceReadOnly" })
     f.state.writable = true
     await run(f.workspace.trash(id, true))
-    expect(await run(f.workspace.imageReplies("conversation"))).toEqual([])
+    expect(await run(f.workspace.replyFiles("conversation"))).toEqual([])
   })
 })

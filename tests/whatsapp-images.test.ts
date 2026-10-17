@@ -2,16 +2,16 @@ import { Effect, Schema } from "effect"
 import { describe, expect, it } from "vitest"
 
 import { AgentId, homeAgentId } from "../src/agents/domain"
-import { exportWhatsAppImage } from "../src/whatsapp/adapters/images"
+import { exportWhatsAppMedia } from "../src/whatsapp/adapters/media"
 import { WhatsAppStore } from "../src/whatsapp/adapters/sqlite"
 import {
   whatsappIdentity,
   WhatsAppRejected,
   WhatsAppUnavailable,
   type WhatsAppRecord,
-  type WhatsAppImage,
+  type WhatsAppMedia,
 } from "../src/whatsapp/contracts"
-import { importWhatsAppImage } from "../src/whatsapp/images"
+import { importWhatsAppMedia } from "../src/whatsapp/media"
 import { WhatsAppSendFailed } from "../src/whatsapp/pump"
 import { whatsappApplication } from "../src/whatsapp/service"
 import { imageBytes, imageMetadata, imageWorkspace } from "./image-fixture"
@@ -28,7 +28,7 @@ async function imageReceipt(
     threadId: "whatsapp:123456:15550101010",
     sender: "15550101010",
     timestamp: Date.now(),
-    image: imageMetadata,
+    media: imageMetadata,
   }
 }
 async function fixture() {
@@ -45,9 +45,9 @@ async function fixture() {
     rejected: false,
     uncertain: false,
   }
-  const importer = importWhatsAppImage(
+  const importer = importWhatsAppMedia(
     files.workspace,
-    (_image: WhatsAppImage) =>
+    (_image: WhatsAppMedia) =>
       Effect.suspend(
         (): Effect.Effect<
           Uint8Array,
@@ -72,7 +72,7 @@ async function fixture() {
     active: () => Effect.succeed(true),
     name: () => Effect.succeed("Home"),
     reviewUrl: () => "https://pi.example/agents/home",
-    image: (record) => importer(record.id, record.image!),
+    media: (record) => importer(record.id, record.media!),
     admit: (agentId, input) =>
       Effect.gen(function* () {
         const prepared = yield* files.workspace.attach(input.files ?? [])
@@ -86,12 +86,12 @@ async function fixture() {
         status: state.finished ? "done" : "running",
         answer: state.answer,
         needsApproval: false,
-        images: state.images,
+        files: state.images,
       }),
     send: (record) =>
       Effect.suspend(() => {
         sends.push(record)
-        return state.uncertain && record.outboundImageId
+        return state.uncertain && record.outboundFileId
           ? Effect.fail(new WhatsAppSendFailed({ uncertain: true }))
           : Effect.succeed(`wamid.send-${sends.length}`)
       }),
@@ -115,7 +115,7 @@ describe("images through the shared workspace and WhatsApp", () => {
     expect(f.state.downloaded).toBe(1)
     expect(f.admitted).toHaveLength(1)
     expect(f.admitted[0]!.agentId).toBe(homeAgentId)
-    expect((await run(f.store.get(input.id)))?.imageFileId).toBe(
+    expect((await run(f.store.get(input.id)))?.fileId).toBe(
       f.admitted[0]!.files[0]
     )
     expect((await run(f.workspace.list()))[0]?.kind).toBe("image")
@@ -130,7 +130,7 @@ describe("images through the shared workspace and WhatsApp", () => {
       input = await imageReceipt()
     await run(f.app.receive(input))
     const id = await run(f.importer(input.id, imageMetadata))
-    expect((await run(f.store.get(input.id)))?.imageFileId).toBeNull()
+    expect((await run(f.store.get(input.id)))?.fileId).toBeNull()
     await run(f.app.pump())
     expect(f.admitted[0]!.files).toEqual([id])
     expect(f.state.downloaded).toBe(1)
@@ -196,14 +196,14 @@ describe("images through the shared workspace and WhatsApp", () => {
     f.state.answer = ""
     await run(f.app.pump())
     expect((await run(f.store.get(input.id)))?.reply).toContain(
-      "Images attached."
+      "Attachments included."
     )
     f.state.uncertain = true
     await run(f.app.pump())
     await run(f.app.pump())
     expect(f.sends).toHaveLength(2)
     const image = (await run(f.store.list())).find(
-      (record) => record.outboundImageId
+      (record) => record.outboundFileId
     )!
     expect(image.state).toBe("uncertain")
     await expect(
@@ -212,22 +212,22 @@ describe("images through the shared workspace and WhatsApp", () => {
     f.state.uncertain = false
     await run(f.store.retry(image.id, true, crypto.randomUUID()))
     await run(f.app.pump())
-    expect(f.sends.filter((record) => !record.outboundImageId)).toHaveLength(1)
-    expect(f.sends.filter((record) => record.outboundImageId)).toHaveLength(2)
+    expect(f.sends.filter((record) => !record.outboundFileId)).toHaveLength(1)
+    expect(f.sends.filter((record) => record.outboundFileId)).toHaveLength(2)
     expect((await run(f.store.get(image.id)))?.state).toBe("sent")
   })
   it("exports private image bytes through the native file module without a public URL", async () => {
     const f = await fixture(),
       input = await imageReceipt()
     const id = await run(f.importer(input.id, imageMetadata))
-    expect(await run(exportWhatsAppImage(f.workspace, id))).toEqual({
+    expect(await run(exportWhatsAppMedia(f.workspace, id))).toEqual({
       name: `whatsapp-${id}.jpg`,
       mime: "image/jpeg",
       data: btoa(String.fromCharCode(...imageBytes)),
     })
     await run(f.workspace.trash(id, true))
     await expect(
-      run(exportWhatsAppImage(f.workspace, id))
+      run(exportWhatsAppMedia(f.workspace, id))
     ).rejects.toMatchObject({ _tag: "WhatsAppRejected" })
     await expect(
       run(f.importer(input.id, imageMetadata))

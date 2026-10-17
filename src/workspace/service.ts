@@ -1,7 +1,13 @@
-import { Clock, Effect, Layer } from "effect"
+import { Clock, Effect, Layer, Schema } from "effect"
 
 import { WorkspaceAdmission } from "./admission"
 import type { WorkspaceAssets } from "./assets"
+import {
+  AudioTranscript,
+  audioMetadata,
+  AUDIO_TEXT_LIMIT,
+  type TranscribeAudio,
+} from "./audio"
 import type { ExtractDocument } from "./documents"
 import {
   attachedFileNotice,
@@ -30,6 +36,12 @@ import type { WorkspaceLedger } from "./ledger"
 import { fileAsset, workspacePreparation } from "./preparation"
 import type { ExtractVideo } from "./video"
 import { Workspace, type AttachmentContent } from "./workspace"
+export interface WorkspaceProcessing {
+  document: ExtractDocument
+  video: ExtractVideo
+  image: PrepareImage
+  audio: TranscribeAudio
+}
 
 const base64 = (bytes: Uint8Array) => {
   let binary = ""
@@ -41,16 +53,17 @@ export function makeWorkspace(
   ledger: WorkspaceLedger,
   assets: WorkspaceAssets,
   canWrite: () => Effect.Effect<boolean, WorkspaceUnavailable>,
-  extractDocument: ExtractDocument,
-  extractVideo: ExtractVideo,
-  prepareImage: PrepareImage = () => Effect.fail(new WorkspaceUnavailable())
+  processing: Partial<WorkspaceProcessing> = {}
 ): Workspace["Service"] {
+  const unavailable = () => Effect.fail(new WorkspaceUnavailable())
+  const prepareImage = processing.image ?? unavailable
+  const transcribe = processing.audio ?? unavailable
   const preparation = workspacePreparation(
     ledger,
     assets,
     canWrite,
-    extractDocument,
-    extractVideo
+    processing.document ?? unavailable,
+    processing.video ?? unavailable
   )
   const row = (id: string, active = false) =>
     ledger
@@ -83,6 +96,17 @@ export function makeWorkspace(
       const file = yield* row(id, true)
       if (file.kind === "text")
         return { file, bytes: yield* assets.read(fileAsset(file)) }
+      if (file.kind === "audio") {
+        if (!file.audio) return yield* new WorkspaceUnavailable()
+        const bytes = yield* assets.read({
+          id: file.id,
+          hash: file.audio.textHash,
+          variant: "audio-text-v1",
+        })
+        if (bytes.length > AUDIO_TEXT_LIMIT * 4)
+          return yield* new WorkspaceUnavailable()
+        return { file, bytes }
+      }
       const state = yield* ledger.document(id)
       if (state?.status !== "ready")
         return yield* new FileRejected({
@@ -94,9 +118,9 @@ export function makeWorkspace(
       return { file, bytes: yield* assets.read(fileAsset(file, "pdf-text-v1")) }
     })
   return Workspace.of({
-    imageReplies: (turnId) =>
+    replyFiles: (turnId) =>
       Effect.gen(function* () {
-        const replies = yield* ledger.imageReplies(turnId)
+        const replies = yield* ledger.replyFiles(turnId)
         const files = yield* Effect.forEach(
           [...new Set(replies.map((value) => value.fileId))],
           (id) => row(id)
@@ -105,10 +129,10 @@ export function makeWorkspace(
           .filter((file) => !file.trashed && file.status === "ready")
           .map((file) => workspaceFileInfo(file))
       }),
-    replyImage: (input) =>
+    replyFile: (input) =>
       ledger.atomic(() =>
         Effect.gen(function* () {
-          const previous = yield* ledger.imageReply(input.operationId)
+          const previous = yield* ledger.fileReply(input.operationId)
           if (
             previous &&
             (previous.turnId !== input.turnId ||
@@ -125,15 +149,15 @@ export function makeWorkspace(
           if (!previous) {
             yield* writable()
             const files = new Set(
-              (yield* ledger.imageReplies(input.turnId)).map(
+              (yield* ledger.replyFiles(input.turnId)).map(
                 (reply) => reply.fileId
               )
             )
             if (!files.has(input.fileId) && files.size >= 4)
               return yield* new FileRejected({
-                message: "A reply can include up to four images.",
+                message: "A reply can include up to four media attachments.",
               })
-            yield* ledger.replyImage(input)
+            yield* ledger.replyFile(input)
           }
           return workspaceFileInfo(file)
         })
@@ -215,6 +239,8 @@ export function makeWorkspace(
       if (reserved.status === "ready") return yield* info(reserved.id)
       yield* assets.write(fileAsset(reserved), input.bytes)
       let visionHash: string | null = null
+      let transcript: AudioTranscript | undefined
+      let textHash = ""
       if (metadata.kind === "image") {
         const preview = yield* prepareImage(input.bytes).pipe(
           Effect.flatMap((bytes) => attempt(() => requireImagePreview(bytes)))
@@ -222,11 +248,29 @@ export function makeWorkspace(
         visionHash = yield* assets.digest(preview)
         yield* assets.write({ id: reserved.id, hash: visionHash }, preview)
       }
+      if (metadata.kind === "audio") {
+        transcript = yield* transcribe(input.bytes).pipe(
+          Effect.catchTag("AudioUnreadable", (error) =>
+            Effect.fail(new FileRejected({ message: error.message }))
+          ),
+          Effect.map(Schema.decodeUnknownSync(AudioTranscript))
+        )
+        const bytes = new TextEncoder().encode(transcript.text)
+        textHash = yield* assets.digest(bytes)
+        yield* assets.write(
+          { id: reserved.id, hash: textHash, variant: "audio-text-v1" },
+          bytes
+        )
+      }
       return yield* ledger.atomic(() =>
         Effect.gen(function* () {
           const current = yield* row(input.id)
           if (current.status === "ready") return yield* info(input.id)
-          yield* ledger.ready(input.id, visionHash)
+          yield* ledger.ready(
+            input.id,
+            visionHash,
+            transcript ? audioMetadata(transcript, textHash) : undefined
+          )
           if (metadata.kind === "video") yield* ledger.enqueueVideo(input.id)
           if (metadata.mime === "application/pdf")
             yield* ledger.enqueueDocument(input.id)
@@ -295,6 +339,13 @@ export function makeWorkspace(
             mimeType: "image/jpeg",
             data: base64(bytes),
           })
+        } else if (file.kind === "audio") {
+          const { bytes } = yield* textContent(id)
+          content.push({
+            type: "text",
+            text: `Audio automatic transcription${file.audio?.truncated ? " (truncated)" : ""}${file.audio?.duration ? `, ${file.audio.duration.toFixed(1)} seconds` : ""}. Transcriptions may contain mistakes; do not claim to have directly heard the recording.`,
+          })
+          content.push(...attachedText(id, new TextDecoder().decode(bytes)))
         } else if (file.kind === "text" || file.mime === "application/pdf") {
           const { bytes } = yield* textContent(id)
           content.push(
@@ -320,14 +371,12 @@ export const workspaceApplication = (
   ledger: WorkspaceLedger,
   assets: WorkspaceAssets,
   canWrite: () => Effect.Effect<boolean, WorkspaceUnavailable>,
-  document: ExtractDocument,
-  video: ExtractVideo,
-  image?: PrepareImage
+  processing: Partial<WorkspaceProcessing> = {}
 ) =>
   Layer.mergeAll(
     Layer.succeed(
       Workspace,
-      makeWorkspace(ledger, assets, canWrite, document, video, image)
+      makeWorkspace(ledger, assets, canWrite, processing)
     ),
     Layer.succeed(WorkspaceAdmission, {
       transactionGroup: ledger.transactionGroup,

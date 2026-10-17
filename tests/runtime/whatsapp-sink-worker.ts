@@ -1,11 +1,15 @@
 import { Agent } from "agents"
 
+import { audioBytes } from "../audio-fixture"
+
 /** Synthetic provider boundary; the actor, Pi queue, receipts and RPC are real. */
 export class WhatsAppSink extends Agent {
-  async downloadImage() {
+  async downloadMedia(media: { mime: string }) {
     return {
       ok: true as const,
-      bytes: new Uint8Array([255, 216, 255, 224, 0, 16]),
+      bytes: media.mime.startsWith("audio/")
+        ? audioBytes
+        : new Uint8Array([255, 216, 255, 224, 0, 16]),
     }
   }
   async send(_threadId: string, body: string, image?: unknown) {

@@ -8,7 +8,7 @@ import {
   text,
 } from "drizzle-orm/sqlite-core"
 
-import type { WhatsAppDelivery, WhatsAppImage } from "../contracts"
+import type { WhatsAppDelivery, WhatsAppMedia } from "../contracts"
 
 export const whatsappSettings = sqliteTable(
   "whatsapp_settings",
@@ -39,10 +39,10 @@ export const whatsappMessages = sqliteTable(
     sender: text("sender").notNull(),
     body: text("body").notNull(),
     timestamp: integer("timestamp").notNull(),
-    image: text("image", { mode: "json" }).$type<WhatsAppImage>(),
-    imageFileId: text("image_file_id"),
-    outboundImageId: text("outbound_image_id"),
-    imageAttempts: integer("image_attempts").notNull().default(0),
+    media: text("image", { mode: "json" }).$type<WhatsAppMedia>(),
+    fileId: text("image_file_id"),
+    outboundFileId: text("outbound_image_id"),
+    mediaAttempts: integer("image_attempts").notNull().default(0),
     agentId: text("agent_id").notNull(),
     generation: integer("generation").notNull(),
     control: integer("control", { mode: "boolean" }).notNull(),

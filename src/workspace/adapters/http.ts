@@ -77,7 +77,7 @@ export function filesRequest(
         request,
         (file) =>
           action === "vision" ||
-          (file.info.kind === "image" &&
+          (["image", "audio"].includes(file.info.kind) &&
             new URL(request.url).searchParams.get("download") !== "1"),
         runBody
       )

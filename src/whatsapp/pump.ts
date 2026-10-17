@@ -18,7 +18,7 @@ export class WhatsAppSendFailed extends Schema.TaggedError<WhatsAppSendFailed>()
   { uncertain: Schema.Boolean }
 ) {}
 export interface WhatsAppPumpHost {
-  image?: (record: WhatsAppRecord) => Effect.Effect<string, WhatsAppFailure>
+  media?: (record: WhatsAppRecord) => Effect.Effect<string, WhatsAppFailure>
   active: (id: AgentId) => Effect.Effect<boolean, WhatsAppFailure>
   admit: (
     id: AgentId,
@@ -41,7 +41,7 @@ export function whatsappPump(records: WhatsAppStore, host: WhatsAppPumpHost) {
     text: string
   ) {
     const name = yield* host.name(record.agentId)
-    const reply = record.outboundImageId
+    const reply = record.outboundFileId
       ? `${name}\n\n${text}`.slice(0, 500)
       : `${name}\n\n${text.slice(0, 3000)}${text.length > 3000 ? "\n\nContinued in Pi." : ""}\n\n${host.reviewUrl(record.agentId)}`.slice(
           0,
@@ -83,7 +83,7 @@ export function whatsappPump(records: WhatsAppStore, host: WhatsAppPumpHost) {
           ...identity,
           messageId: `approval:${record.id}`,
           body: "Approval notification",
-          image: null,
+          media: null,
         },
         record.agentId,
         {
@@ -93,14 +93,14 @@ export function whatsappPump(records: WhatsAppStore, host: WhatsAppPumpHost) {
       )
       .pipe(Effect.catchTag("WhatsAppRejected", () => Effect.void))
   })
-  const prepareImage = Effect.fn("WhatsApp.prepareImage")(function* (
+  const prepareMedia = Effect.fn("WhatsApp.prepareMedia")(function* (
     record: WhatsAppRecord
   ) {
-    let imageFileId = record.imageFileId
-    if (record.image && !imageFileId) {
-      if (!(yield* records.beginImage(record.id))) return undefined
+    let fileId = record.fileId
+    if (record.media && !fileId) {
+      if (!(yield* records.beginMedia(record.id))) return undefined
       const imported = yield* (
-        host.image ? host.image(record) : Effect.fail(new WhatsAppUnavailable())
+        host.media ? host.media(record) : Effect.fail(new WhatsAppUnavailable())
       ).pipe(
         Effect.map((id) => ({ id })),
         Effect.catchTag("WhatsAppRejected", (error) =>
@@ -110,15 +110,15 @@ export function whatsappPump(records: WhatsAppStore, host: WhatsAppPumpHost) {
         )
       )
       if (!imported) return undefined
-      imageFileId = imported.id
+      fileId = imported.id
       if (
         !(yield* records.update(record.id, "queued", "queued", {
-          imageFileId,
+          fileId,
         }))
       )
         return undefined
     }
-    return imageFileId ? [imageFileId] : []
+    return fileId ? [fileId] : []
   })
   const process = Effect.fn("WhatsApp.process")(function* (
     record: WhatsAppRecord
@@ -147,7 +147,7 @@ export function whatsappPump(records: WhatsAppStore, host: WhatsAppPumpHost) {
       return
     }
     if (record.state === "queued") {
-      const files = yield* prepareImage(record)
+      const files = yield* prepareMedia(record)
       if (!files) return
       yield* host.admit(record.agentId, {
         operationId: record.id,
@@ -167,10 +167,11 @@ export function whatsappPump(records: WhatsAppStore, host: WhatsAppPumpHost) {
     if (!turn) return
     if (turn.needsApproval) yield* notice(record)
     if (["done", "failed", "cancelled"].includes(turn.status)) {
-      for (const id of turn.status === "done" ? (turn.images ?? []) : [])
-        yield* records.queueImage(record, id)
+      for (const id of turn.status === "done" ? (turn.files ?? []) : [])
+        yield* records.queueMedia(record, id)
       const answer =
-        turn.answer.trim() || (turn.images?.length ? "Images attached." : "")
+        turn.answer.trim() ||
+        (turn.files?.length ? "Attachments included." : "")
       yield* send(
         record,
         turn.status === "done" && answer

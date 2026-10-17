@@ -207,8 +207,10 @@ it("interrupts multipart ingress without admitting a file and joins reader cance
     ledger,
     assets,
     () => Effect.sync(() => true),
-    () => Effect.fail(new WorkspaceUnavailable()),
-    () => Effect.fail(new WorkspaceUnavailable())
+    {
+      document: () => Effect.fail(new WorkspaceUnavailable()),
+      video: () => Effect.fail(new WorkspaceUnavailable()),
+    }
   )
   const init: RequestInit & { duplex: "half" } = {
     method: "POST",
@@ -261,8 +263,10 @@ it("does not turn oversized input plus failed reader cancellation into an ordina
     ledger,
     assets,
     () => Effect.sync(() => true),
-    () => Effect.fail(new WorkspaceUnavailable()),
-    () => Effect.fail(new WorkspaceUnavailable())
+    {
+      document: () => Effect.fail(new WorkspaceUnavailable()),
+      video: () => Effect.fail(new WorkspaceUnavailable()),
+    }
   )
   const exit = await Effect.runPromiseExit(
     filesRequest(
