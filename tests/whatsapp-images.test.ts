@@ -38,6 +38,7 @@ async function fixture() {
     sends: WhatsAppRecord[] = []
   const state = {
     finished: false,
+    answer: "Here is the image.",
     images: [] as string[],
     downloaded: 0,
     temporary: false,
@@ -83,7 +84,7 @@ async function fixture() {
     turn: () =>
       Effect.succeed({
         status: state.finished ? "done" : "running",
-        answer: "Here is the image.",
+        answer: state.answer,
         needsApproval: false,
         images: state.images,
       }),
@@ -192,7 +193,11 @@ describe("images through the shared workspace and WhatsApp", () => {
     await run(f.app.pump())
     f.state.images = [f.admitted[0]!.files[0]!]
     f.state.finished = true
+    f.state.answer = ""
     await run(f.app.pump())
+    expect((await run(f.store.get(input.id)))?.reply).toContain(
+      "Images attached."
+    )
     f.state.uncertain = true
     await run(f.app.pump())
     await run(f.app.pump())

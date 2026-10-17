@@ -169,10 +169,12 @@ export function whatsappPump(records: WhatsAppStore, host: WhatsAppPumpHost) {
     if (["done", "failed", "cancelled"].includes(turn.status)) {
       for (const id of turn.status === "done" ? (turn.images ?? []) : [])
         yield* records.queueImage(record, id)
+      const answer =
+        turn.answer.trim() || (turn.images?.length ? "Images attached." : "")
       yield* send(
         record,
-        turn.status === "done" && turn.answer.trim()
-          ? turn.answer
+        turn.status === "done" && answer
+          ? answer
           : "This request could not finish. Open Pi to review the conversation."
       )
     }
