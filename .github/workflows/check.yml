@@ -154,6 +154,12 @@ jobs:
           AGENT_EMAIL_DOMAIN: ${{ vars.AGENT_EMAIL_DOMAIN }}
           EMAIL_ADDRESS_SECRET: ${{ secrets.EMAIL_ADDRESS_SECRET }}
           EMAIL_REVIEW_URL: ${{ vars.EMAIL_REVIEW_URL }}
+          WHATSAPP_ACCESS_TOKEN: ${{ secrets.WHATSAPP_ACCESS_TOKEN }}
+          WHATSAPP_APP_SECRET: ${{ secrets.WHATSAPP_APP_SECRET }}
+          WHATSAPP_VERIFY_TOKEN: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
+          WHATSAPP_OWNER_ID: ${{ secrets.WHATSAPP_OWNER_ID }}
+          WHATSAPP_PHONE_NUMBER_ID: ${{ vars.WHATSAPP_PHONE_NUMBER_ID }}
+          WHATSAPP_BUSINESS_NUMBER: ${{ vars.WHATSAPP_BUSINESS_NUMBER }}
           OPENAI_CREDENTIAL: ${{ secrets.OPENAI_CREDENTIAL }}
       - name: Configure native issue detection
         run: node --import tsx scripts/configure-observability.ts

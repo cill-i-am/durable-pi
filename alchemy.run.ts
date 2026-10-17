@@ -10,6 +10,7 @@ import type { BackgroundGroupRPC } from "./src/delegation/worker"
 import type { NativeCapacityRPC } from "./src/terminal/adapters/capacity"
 import type { LinuxSandboxV1 } from "./src/terminal/adapters/native-worker"
 import type { LinuxSandbox } from "./src/terminal/worker"
+import type { WhatsAppBridgeRpc } from "./src/whatsapp/adapters/bridge-rpc"
 
 const observability = {
   enabled: true,
@@ -112,9 +113,28 @@ export const AgentWorker = Cloudflare.Worker("AgentWorkerDrizzleV1", {
   main: "./src/agent/worker.ts",
   dev: { port: 1338, strictPort: true },
   workersDev: { enabled: false, previewsEnabled: false },
-  compatibility: { date: "2026-09-25", flags: ["nodejs_compat"] },
+  compatibility: { date: "2026-10-17", flags: ["nodejs_compat"] },
   env: {
     AGENT: Cloudflare.DurableObject<PersonalAgent>("PersonalAgent"),
+    WHATSAPP: Cloudflare.DurableObject<WhatsAppBridgeRpc>("WhatsAppBridge"),
+    WHATSAPP_ACCESS_TOKEN: Config.Redacted("WHATSAPP_ACCESS_TOKEN").pipe(
+      Config.withDefault("")
+    ),
+    WHATSAPP_APP_SECRET: Config.Redacted("WHATSAPP_APP_SECRET").pipe(
+      Config.withDefault("")
+    ),
+    WHATSAPP_VERIFY_TOKEN: Config.Redacted("WHATSAPP_VERIFY_TOKEN").pipe(
+      Config.withDefault("")
+    ),
+    WHATSAPP_PHONE_NUMBER_ID: Config.String("WHATSAPP_PHONE_NUMBER_ID").pipe(
+      Config.withDefault("")
+    ),
+    WHATSAPP_OWNER_ID: Config.Redacted("WHATSAPP_OWNER_ID").pipe(
+      Config.withDefault("")
+    ),
+    WHATSAPP_BUSINESS_NUMBER: Config.String("WHATSAPP_BUSINESS_NUMBER").pipe(
+      Config.withDefault("")
+    ),
     BACKGROUND: BackgroundGroups,
     MEMORY_BACKUPS: MemoryBackups,
     WORKSPACE_ASSETS: WorkspaceAssets,
@@ -161,6 +181,32 @@ export const EmailWorker = Cloudflare.Worker("EmailWorker", {
   },
 })
 export type EmailEnv = Cloudflare.InferEnv<typeof EmailWorker>
+export const WhatsAppWorker = Cloudflare.Worker(
+  "WhatsAppWorker",
+  Effect.gen(function* () {
+    const stage = yield* Alchemy.Stage
+    return {
+      main: "./src/whatsapp/worker.ts",
+      dev: { port: 1344, strictPort: true },
+      workersDev: { enabled: false, previewsEnabled: false },
+      domain:
+        stage === "production"
+          ? {
+              name: "whatsapp.cill-i-am.com",
+              zoneId: "37e485d6619dee244939e66e1ee90d3f",
+            }
+          : undefined,
+      compatibility: { date: "2026-10-17", flags: ["nodejs_compat"] },
+      observability: { enabled: false },
+      env: {
+        AUTH_DB: AuthDatabase,
+        AGENT_SERVICE: AgentWorker,
+        OWNER_EMAIL: Config.String("OWNER_EMAIL"),
+      },
+    }
+  })
+)
+export type WhatsAppEnv = Cloudflare.InferEnv<typeof WhatsAppWorker>
 export const Website = Cloudflare.Website.Vite(
   "Website",
   Effect.gen(function* () {
@@ -211,6 +257,7 @@ export default Alchemy.Stack(
   Effect.gen(function* () {
     const website = yield* Website
     yield* EmailWorker
+    yield* WhatsAppWorker
     return { url: website.url }
   })
 )

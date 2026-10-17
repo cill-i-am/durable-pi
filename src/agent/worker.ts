@@ -8,6 +8,7 @@ import {
   type Tx,
   type ToolExecutionApi,
 } from "@earendil-works/pi-durable"
+import { getAgentByName } from "agents"
 import { PiHarness, openPiSessionStore } from "agents/harness/pi"
 import {
   Lifecycle,
@@ -27,9 +28,10 @@ import {
   Scope,
 } from "effect"
 import * as Effect from "effect/Effect"
-import * as Schema from "effect/Schema"
 
 import "../observability/lifecycle"
+import * as Schema from "effect/Schema"
+
 import type { AgentEnv } from "../../alchemy.run"
 import {
   connectionRequest,
@@ -246,6 +248,26 @@ import {
   type ConfigureEmail,
 } from "../email/contracts"
 import { emailPump } from "../email/pump"
+import { jsonRequest } from "../shared/http"
+import { whatsappConfigured } from "../whatsapp/adapters/chat"
+import { whatsappRequest } from "../whatsapp/adapters/http"
+import {
+  WhatsAppOutcome,
+  WhatsAppRequest,
+  whatsappNative,
+  whatsappRpc,
+} from "../whatsapp/adapters/rpc"
+import { WhatsAppStore } from "../whatsapp/adapters/sqlite"
+import {
+  WhatsAppStorageError,
+  WhatsAppUnavailable,
+  WhatsAppWebhook,
+  type WhatsAppRecord,
+} from "../whatsapp/contracts"
+import { WhatsAppSendFailed } from "../whatsapp/pump"
+import { whatsappApplication } from "../whatsapp/service"
+import type { AgentGatewayBindings } from "./adapters/gateway"
+export { WhatsAppBridge, ChatSdkStateAgent } from "../whatsapp/bridge"
 import { executionRequest } from "../execution/adapters/http"
 import { codeService } from "../execution/adapters/service"
 import { ExecutionStore } from "../execution/adapters/sqlite"
@@ -540,6 +562,15 @@ class EmailRunner extends TurnRunner {
   }
   async onJob(): Promise<LifecycleJobOutcome> {
     return this.owner.stepEmail()
+  }
+}
+
+class WhatsAppRunner extends TurnRunner {
+  constructor(owner: PersonalAgent) {
+    super(owner, "whatsapp")
+  }
+  async onJob(): Promise<LifecycleJobOutcome> {
+    return this.owner.stepWhatsApp()
   }
 }
 
@@ -1221,6 +1252,161 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     notify: () => Effect.sync(() => this.notifyConversation()),
   })
   readonly emailStore = new EmailStore(this.db)
+  readonly whatsappStore = new WhatsAppStore(this.db)
+  private wakeWhatsApp() {
+    return agentNative("wake WhatsApp", () => this.whatsappRunner.wake()).pipe(
+      Effect.mapError(() => new WhatsAppUnavailable())
+    )
+  }
+  private whatsappTurn(id: string) {
+    return Effect.gen({ self: this }, function* () {
+      const turn = yield* this.conversations.get(id)
+      if (!turn || turn.origin?.kind !== "whatsapp") return undefined
+      const access = yield* this.access.state()
+      return {
+        status: turn.status,
+        answer: turn.answer,
+        needsApproval: access.approvals.some(
+          (approval) => approval.turnId === id && approval.status === "pending"
+        ),
+      }
+    }).pipe(
+      Effect.mapError(
+        () => new WhatsAppStorageError({ operation: "read conversation" })
+      )
+    )
+  }
+  private whatsapp(owner: string): ReturnType<typeof whatsappApplication> {
+    const profiles = () =>
+      this.catalog
+        .list()
+        .pipe(
+          Effect.mapError(
+            () => new WhatsAppStorageError({ operation: "read agents" })
+          )
+        )
+    const profile = (id: AgentId) =>
+      profiles().pipe(
+        Effect.map((agents) => agents.find((agent) => agent.id === id))
+      )
+    const active = (id: AgentId) =>
+      profile(id).pipe(
+        Effect.map(
+          (agent) => whatsappConfigured(this.env) && agent?.status === "active"
+        )
+      )
+    return whatsappApplication(this.whatsappStore, {
+      profiles,
+      active,
+      configured: () => whatsappConfigured(this.env),
+      contactUrl: () =>
+        /^[1-9]\d{6,14}$/.test(this.env.WHATSAPP_BUSINESS_NUMBER)
+          ? `https://wa.me/${this.env.WHATSAPP_BUSINESS_NUMBER}`
+          : null,
+      name: (id) => profile(id).pipe(Effect.map((agent) => agent?.name ?? id)),
+      wake: () => this.wakeWhatsApp(),
+      reviewUrl: (id) => `${this.env.EMAIL_REVIEW_URL}/agents/${id}`,
+      admit: (id, input) =>
+        Effect.gen({ self: this }, function* () {
+          if (id === homeAgentId)
+            return yield* this.messageAdmission(input).pipe(
+              Effect.mapError(() => new WhatsAppUnavailable())
+            )
+          const agent = yield* profile(id)
+          if (agent?.status !== "active")
+            return yield* new WhatsAppUnavailable()
+          const peer = this.env.AGENT.getByName(agentObjectName(owner, id))
+          yield* agentRpcNative(() =>
+            agentRpc(peer).configure(owner, agent, owner)
+          ).pipe(Effect.mapError(() => new WhatsAppUnavailable()))
+          if (input.origin?.kind !== "whatsapp")
+            return yield* new WhatsAppUnavailable()
+          const origin = input.origin
+          return yield* whatsappNative(() =>
+            whatsappRpc(peer).submit(owner, {
+              id: input.operationId,
+              body: input.text,
+              sender: origin.sender,
+              messageId: origin.messageId,
+            })
+          )
+        }),
+      turn: (id, turnId) =>
+        id === homeAgentId
+          ? this.whatsappTurn(turnId)
+          : whatsappNative(() =>
+              whatsappRpc(
+                this.env.AGENT.getByName(agentObjectName(owner, id))
+              ).turn(owner, turnId)
+            ).pipe(Effect.map((turn) => turn ?? undefined)),
+      send: (record: WhatsAppRecord, reply: string) =>
+        Effect.tryPromise({
+          try: async () => {
+            const bridge = await getAgentByName(this.env.WHATSAPP, owner)
+            const result = await bridge.send(record.threadId, reply)
+            if (!result.ok)
+              throw new WhatsAppSendFailed({ uncertain: result.uncertain })
+            return result.id
+          },
+          catch: (error) =>
+            error instanceof WhatsAppSendFailed
+              ? error
+              : new WhatsAppSendFailed({ uncertain: true }),
+        }),
+    })
+  }
+  async stepWhatsApp(): Promise<LifecycleJobOutcome> {
+    if (!(await this.run(this.whatsappStore.pending())).length) return undefined
+    const identity = await this.run(this.communication.mailbox.identity())
+    const next = await this.run(this.whatsapp(identity.owner).pump())
+    return next === undefined ? undefined : { rescheduleAt: next }
+  }
+  async whatsappV1(raw: unknown): Promise<Schema.Json> {
+    const work = Effect.gen({ self: this }, function* () {
+      const input = yield* Schema.decodeUnknownEffect(WhatsAppRequest)(raw)
+      const config = yield* this.configurationService.read()
+      if (input._tag === "Receive") {
+        if (
+          !this.ctx.id.equals(this.env.AGENT.idFromName(input.owner)) ||
+          input.input.sender !== this.env.WHATSAPP_OWNER_ID
+        )
+          return yield* new WhatsAppUnavailable()
+        yield* this.communicationIdentity(input.owner, homeAgentId)
+        return yield* this.whatsapp(input.owner).receive(input.input)
+      }
+      const identity = yield* this.communication.mailbox.identity()
+      if (
+        identity.owner !== input.owner ||
+        !this.ctx.id.equals(
+          this.env.AGENT.idFromName(agentObjectName(input.owner, identity.bot))
+        )
+      )
+        return yield* new WhatsAppUnavailable()
+      if (input._tag === "Turn")
+        return (yield* this.whatsappTurn(input.id)) ?? null
+      if (
+        config?.status !== "active" ||
+        input.input.sender !== this.env.WHATSAPP_OWNER_ID ||
+        !whatsappConfigured(this.env)
+      )
+        return yield* new WhatsAppUnavailable()
+      yield* this.messageAdmission({
+        operationId: input.input.id,
+        text: input.input.body,
+        mode: "followUp",
+        origin: {
+          kind: "whatsapp",
+          sender: input.input.sender,
+          messageId: input.input.messageId,
+        },
+      })
+      return true
+    }).pipe(
+      preserveFatal,
+      Effect.mapError(() => new WhatsAppUnavailable())
+    )
+    return WhatsAppOutcome.encode(await this.actorRuntime.runPromiseExit(work))
+  }
   readonly emailPump = emailPump(this.emailStore, {
     active: () =>
       this.configurationService.read().pipe(
@@ -2264,6 +2450,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   readonly appEvents = new AppEventRunner(this)
   readonly routineRunner = new RoutineRunner(this)
   readonly emailRunner = new EmailRunner(this)
+  readonly whatsappRunner = new WhatsAppRunner(this)
   readonly actorServices = new ActorServices(this)
   readonly lifecycle = Lifecycle.install(this)
     .use(this.mcp)
@@ -2278,6 +2465,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     .use(this.appEvents)
     .use(this.routineRunner)
     .use(this.emailRunner)
+    .use(this.whatsappRunner)
     .use(this.actorServices)
 
   private readonly conversationCheckpoint = new ConversationCheckpoint()
@@ -2287,6 +2475,9 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   }
 
   async onStart() {
+    await this.run(this.whatsappStore.recover())
+    if ((await this.run(this.whatsappStore.pending())).length)
+      await this.whatsappRunner.wake()
     await this.run(this.emailStore.recover())
     if ((await this.run(this.emailStore.pending())).length)
       await this.emailRunner.wake()
@@ -2729,6 +2920,25 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       const url = new URL(request.url)
       const path = url.pathname.replace("/api/agent/", "")
       const base = path.split("/")[0]
+      if (base === "whatsapp") {
+        const owner = request.headers.get("x-owner-id") ?? ""
+        const id = Schema.decodeUnknownSync(AgentId)(
+          url.searchParams.get("agent") ?? homeAgentId
+        )
+        const bound = yield* this.communicationIdentity(
+          owner,
+          homeAgentId
+        ).pipe(Effect.match({ onSuccess: () => true, onFailure: () => false }))
+        if (!bound) return new Response("Unauthorized", { status: 401 })
+        return yield* whatsappRequest(
+          request,
+          path,
+          id,
+          this.whatsapp(owner),
+          this.whatsappStore,
+          () => this.wakeWhatsApp()
+        )
+      }
       if (base === "email") {
         const owner = request.headers.get("x-owner-id") ?? ""
         const id = Schema.decodeUnknownSync(AgentId)(
@@ -3314,7 +3524,41 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   }
 }
 
-export default { fetch: agentGateway }
+export default {
+  async fetch(
+    request: Request,
+    env: AgentGatewayBindings & Partial<Pick<AgentEnv, "WHATSAPP">>,
+    ctx?: Pick<ExecutionContext, "waitUntil">
+  ) {
+    if (new URL(request.url).pathname !== "/api/whatsapp/webhook")
+      return agentGateway(request, env, ctx)
+    const owner = request.headers.get("x-owner-id")
+    if (!owner || request.method !== "POST")
+      return new Response("Unauthorized", { status: 401 })
+    if (!env.WHATSAPP)
+      return new Response("WhatsApp is not configured.", { status: 503 })
+    try {
+      const input = await Effect.runPromise(
+        jsonRequest(
+          request,
+          WhatsAppWebhook,
+          2 * 1024 * 1024,
+          () => new WhatsAppUnavailable()
+        )
+      )
+      const bridge = await getAgentByName(env.WHATSAPP, owner)
+      const result = await bridge.webhook(input)
+      return new Response(result.body, {
+        status: result.status,
+        headers: { "content-type": "text/plain", "cache-control": "no-store" },
+      })
+    } catch {
+      return new Response("WhatsApp is temporarily unavailable.", {
+        status: 503,
+      })
+    }
+  },
+}
 
 function isMemoryRead(
   request: Request,

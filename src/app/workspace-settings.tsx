@@ -30,6 +30,7 @@ import { MessageDeliverySettings } from "@/features/conversation"
 import { ModelDefaults } from "@/features/conversation/model-defaults"
 import { EmailSettings } from "@/features/email"
 import { SkillsPanel } from "@/features/skills"
+import { WhatsAppSettings } from "@/features/whatsapp/whatsapp-settings"
 import { useInteractionSoundPreference } from "@/hooks/interaction-sound-preference"
 import { useInteractionSound } from "@/hooks/use-interaction-sound"
 import { ThinkingLevel } from "@/inference/selection"
@@ -103,6 +104,7 @@ export function WorkspaceSettings({
   const [connectionsPending, setConnectionsPending] = useState(false)
   const [skillsPending, setSkillsPending] = useState(false)
   const [emailPending, setEmailPending] = useState(false)
+  const [whatsappPending, setWhatsAppPending] = useState(false)
   const mobileDetail = location.search.settingsView !== "sections"
   const setMobileDetail = (detail: boolean) =>
     location.update({ settingsView: detail ? undefined : "sections" })
@@ -115,6 +117,7 @@ export function WorkspaceSettings({
     connectionsPending ||
     skillsPending ||
     emailPending ||
+    whatsappPending ||
     securityPending
   useEffect(() => {
     onPendingChange(locked)
@@ -281,6 +284,14 @@ export function WorkspaceSettings({
                   agentId={agent.id}
                   archived={agent.status === "archived"}
                   onPendingChange={setEmailPending}
+                />
+                <WhatsAppSettings
+                  key={`whatsapp-${agent.id}`}
+                  agentId={agent.id}
+                  agentName={agent.name}
+                  archived={agent.status === "archived"}
+                  open={category === "general"}
+                  onPendingChange={setWhatsAppPending}
                 />
                 <div className="settings-preference">
                   <Volume2 />

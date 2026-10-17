@@ -44,6 +44,11 @@ export type ChatTurn = {
 }
 export const TurnOrigin = Schema.Union([
   Schema.Struct({
+    kind: Schema.Literal("whatsapp"),
+    sender: Schema.String,
+    messageId: Schema.String,
+  }),
+  Schema.Struct({
     kind: Schema.Literal("email"),
     sender: Schema.String,
     subject: Schema.String,

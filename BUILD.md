@@ -1,5 +1,15 @@
 # Durable Pi — build tracker
 
+## WhatsApp through Chat SDK — 17 October 2026
+
+- [x] Build from current main (`3d001f0`) using the official WhatsApp adapter and Cloudflare's native Chat SDK state, with the existing Pi harness.
+- [x] Owner-only text routing, authenticated enable/disable and route selection, `/agents` and `/agent <id>`, durable receipts and send intent, explicit uncertain retries, and authenticated approval links.
+- [x] Local static checks, 1,699 unit tests, app/Worker bundles and six existing desktop/mobile journeys. Native checks cover production Pi admission, one reply, dedupe/restart and the actual Chat SDK SQLite state.
+- [ ] Pass required CI and release through protected main.
+- [ ] Configure the Meta application, business number, owner identifier and production secrets, then verify live messages. Deferred at the owner's request; no provider account, grant or live delivery is claimed.
+
+The [WhatsApp decision record](docs/decisions/agent-whatsapp.md) tracks consequential choices and verification boundaries.
+
 ## Executor defaults and ChatGPT reconnection — 17 October 2026
 
 - [x] Existing/new agents inherit the shared Executor MCP entry points, with browser approvals in Executor and per-agent Ask/Deny overrides.
