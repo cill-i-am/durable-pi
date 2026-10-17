@@ -10,11 +10,13 @@ Generated Drizzle tables retain inbound identity/content receipts and reply inte
 - [x] Durable inbox and outbox, disconnected-model waiting, receipt conflicts, replay-safe settings/retries, and restart recovery.
 - [x] Native workerd test through production PersonalAgent and Pi: one answer, duplicate delivery, sent-state restart, and SIGKILL during a held provider send.
 - [x] Local static checks, 1,668 unit tests, production app/Worker bundles, native runtime suites, and four desktop/mobile browser journeys. The browser checks also exercise explicit resend confirmation and reject page errors or horizontal overflow.
-- [ ] Production subdomain/routing activation, live sender/destination verification, deployment, and real inbox round trip. These require separate delivery evidence.
+- [x] Production mail subdomain, routing rule, private bindings, deployment, and hosted authentication check. [PR #124](https://github.com/cill-i-am/durable-pi/pull/124) merged as `eb0540d`; [production workflow](https://github.com/cill-i-am/durable-pi/actions/runs/39031350190) passed.
+- [x] Chrome/Gmail live inbound test: one owner-sent message reached an isolated production agent and persisted as Queued. The initial old-agent-version 404 cleared after rollout settled.
+- [ ] Real inbox reply and thread round trip. The existing ChatGPT connection needs reconnection; official sign-in attempts timed out at consent. The accepted email remains queued. Outbound delivery, threaded replies, and test-agent cleanup require continuation after reconnection.
 
 See [Email an agent](README.md#email-an-agent) for controls, limits, and activation. No provider onboarding, DNS change, or real email send is claimed by the local tests.
 
-The ongoing [email decision log](docs/decisions/agent-email.md) records choices, reasons, verification boundaries, and open activation decisions. [Draft PR #124](https://github.com/cill-i-am/durable-pi/pull/124) contains the implementation; CI and production activation are separate release evidence.
+The ongoing [email decision log](docs/decisions/agent-email.md) records choices, reasons, verification boundaries, production evidence, and the remaining model-connection blocker.
 
 ## Source-link favicons — 13 October 2026
 
