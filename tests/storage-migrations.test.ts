@@ -66,9 +66,35 @@ it("creates the declared schema once and preserves rows on reactivation", () => 
       "SELECT name FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
     )
   ).toEqual(before)
-  expect(db.all("SELECT * FROM __durable_pi_migrations")).toHaveLength(5)
+  expect(db.all("SELECT * FROM __durable_pi_migrations")).toHaveLength(6)
   expect(db.all("SELECT * FROM tool_grants")).toEqual([
     { name: "keep", mode: "ask", revision: 0 },
+  ])
+})
+it("preserves existing model credentials while marking their deployment origin", () => {
+  const db = database({ migrate: false })
+  for (const version of agentMigrationManifest.versions.slice(0, -1)) {
+    for (const statement of version.statements) db.run(statement)
+    db.run(
+      "INSERT INTO __durable_pi_migrations VALUES (?,?)",
+      version.id,
+      version.checksum
+    )
+  }
+  db.run(
+    "INSERT INTO model_credentials(provider,value,seed) VALUES (?,?,?)",
+    "openai",
+    "existing-encoded-credential",
+    "existing-deployment-seed"
+  )
+  Effect.runSync(migrateSqlite(db, { audit: true }))
+  expect(db.all("SELECT * FROM model_credentials")).toEqual([
+    {
+      provider: "openai",
+      value: "existing-encoded-credential",
+      seed: "existing-deployment-seed",
+      source: "deployment",
+    },
   ])
 })
 it("requires an explicit reset for unversioned application storage without modifying it", () => {

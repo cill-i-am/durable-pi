@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { useModelCatalog } from "@/features/conversation/use-model-catalog"
 
+import { ChatGPTReconnect } from "./chatgpt-sign-in"
 import { useFamily } from "./context"
 
 export function ModelAccess() {
@@ -13,6 +14,7 @@ export function ModelAccess() {
   const [error, setError] = useState("")
   const { catalog, refresh } = useModelCatalog("home", 0, setError)
   const [pending, setPending] = useState(false)
+  const [savedConnection, setSavedConnection] = useState(false)
   const owner = family.role === "owner"
   return (
     <section
@@ -21,7 +23,7 @@ export function ModelAccess() {
     >
       <header className="settings-section-heading">
         <h2>Model access</h2>
-        <p>One connection for the whole family.</p>
+        <p>Connect your ChatGPT plan for everyone in your family.</p>
       </header>
       <div className="settings-section-body">
         <div className="settings-provider">
@@ -29,7 +31,9 @@ export function ModelAccess() {
             <h3>ChatGPT</h3>
             <Badge variant="secondary">
               {catalog?.error || error
-                ? "Needs attention"
+                ? savedConnection
+                  ? "Check unavailable"
+                  : "Needs attention"
                 : catalog?.checkedAt
                   ? "Connected"
                   : "Checking…"}
@@ -39,6 +43,19 @@ export function ModelAccess() {
             Provided by {owner ? "you" : family.ownerName}. Everyone’s agents
             use this connection.
           </p>
+          {owner && (
+            <ChatGPTReconnect
+              defaultEmail={
+                family.members.find((member) => member.role === "owner")
+                  ?.email ?? ""
+              }
+              onConnected={async () => {
+                setSavedConnection(true)
+                setError("")
+                await refresh()
+              }}
+            />
+          )}
           {owner && (
             <Button
               variant="outline"
@@ -58,7 +75,9 @@ export function ModelAccess() {
           <Alert role="alert">
             <AlertDescription>
               {owner
-                ? "Your ChatGPT connection needs attention. Reconnect your account, then refresh here to check family access."
+                ? savedConnection
+                  ? "ChatGPT connection saved. Could not verify model availability. Refresh to retry."
+                  : "Your ChatGPT connection needs attention. Sign in above to restore access for the family."
                 : `${family.ownerName} needs to reconnect ChatGPT. You can keep writing; your draft stays here.`}
             </AlertDescription>
           </Alert>

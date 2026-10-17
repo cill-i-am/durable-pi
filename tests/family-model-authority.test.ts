@@ -112,6 +112,7 @@ function fixture(rotate?: () => Promise<void>) {
       env: {
         AUTH_DB: d1(sql),
         OWNER_EMAIL: "owner@example.com",
+        EMAIL_REVIEW_URL: "https://pi.example/email/review",
         AGENT: {
           idFromName: (name: string) => name,
           getByName: (name: string) => people.get(name)!,
@@ -183,6 +184,36 @@ it("rechecks membership after a shared refresh settles before releasing a token 
   expect(f.refresh).toHaveBeenCalledTimes(1)
   expect(Effect.runSync(member.ledger.read("openai"))).toBeUndefined()
   expect(Effect.runSync(owner.ledger.read("openai"))).toBeDefined()
+})
+it("immediately shares an in-product replacement with members and their private agents without copying refresh tokens", async () => {
+  const f = fixture(),
+    owner = f.actor("cillian"),
+    member = f.actor("claire"),
+    bot = f.actor("claire", "bot:claire:private-bot", "claire")
+  await owner.host.resolveModelCredential("openai")
+  await owner.host.credentialService
+    .install(
+      Schema.decodeUnknownSync(OAuthCredential)({
+        ...credential,
+        clientId: "new-registration",
+        access: "new-family-access",
+        refresh: "private-new-refresh",
+        expires: Date.now() + 3_600_000,
+      })
+    )
+    .pipe(Effect.runPromise)
+  for (const actor of [owner, member, bot])
+    expect(await actor.host.resolveModelCredential("openai")).toMatchObject({
+      access: "new-family-access",
+      refresh: "",
+    })
+  expect(Effect.runSync(member.ledger.read("openai"))).toBeUndefined()
+  expect(Effect.runSync(bot.ledger.read("openai"))).toBeUndefined()
+  expect(await owner.host.reconnectChatGPTAction()).toHaveProperty(
+    "status",
+    "sign_in_required"
+  )
+  expect(await member.host.reconnectChatGPTAction()).toHaveProperty("error")
 })
 
 it("pauses old scheduled work when removal and a new membership occur between actor wakes", async () => {

@@ -5,7 +5,7 @@ import {
   returningCredential,
   returningSignInCallback,
   returningSignInUrl,
-} from "../scripts/lib/model-reauthorization"
+} from "../src/inference/adapters/sign-in-protocol"
 
 const input = {
   clientId: "oaiapp_synthetic",

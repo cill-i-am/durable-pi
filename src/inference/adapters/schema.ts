@@ -15,6 +15,9 @@ export const modelCredentials = sqliteTable(
     provider: text("provider").notNull(),
     value: text("value").notNull(),
     seed: text("seed").notNull(),
+    source: text("source", { enum: ["deployment", "account"] })
+      .notNull()
+      .default("deployment"),
   },
   (t) => [primaryKey({ columns: [t.provider] })]
 )

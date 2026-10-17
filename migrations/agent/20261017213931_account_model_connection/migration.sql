@@ -1,0 +1,1 @@
+ALTER TABLE `model_credentials` ADD `source` text DEFAULT 'deployment' NOT NULL;

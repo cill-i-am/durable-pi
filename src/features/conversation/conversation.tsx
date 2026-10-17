@@ -782,6 +782,20 @@ function ConversationConnection({
             {family.role === "owner"
               ? "Reconnect ChatGPT to restore model access for the family. Your draft stays here."
               : `${family.ownerName} needs to reconnect ChatGPT. You can keep writing; your draft stays here.`}
+            {family.role === "owner" && (
+              <Button
+                variant="outline"
+                className="mt-3"
+                render={
+                  <a
+                    href="/agents/home/settings/model-access"
+                    aria-label="Reconnect ChatGPT"
+                  />
+                }
+              >
+                Reconnect ChatGPT
+              </Button>
+            )}
           </AlertDescription>
         </Alert>
       )}

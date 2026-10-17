@@ -27,7 +27,7 @@ export const workerChatGPTAuth: OAuthAuth = {
   name: "Sign in with ChatGPT",
   isSubscription: true,
   login: async () => {
-    throw new Error("Run pnpm model:login on your own computer")
+    throw new Error("Open Model access in Settings to reconnect ChatGPT")
   },
   toAuth: async (credential) => ({ apiKey: credential.access }),
   refresh: (credential, signal) =>

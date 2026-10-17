@@ -47,6 +47,9 @@ export function returningSignInCallback(
   if (
     url.origin !== redirect.origin ||
     url.pathname !== redirect.pathname ||
+    url.username !== "" ||
+    url.password !== "" ||
+    url.hash !== "" ||
     url.searchParams.getAll("state").length !== 1 ||
     url.searchParams.get("state") !== input.state
   )
@@ -54,7 +57,10 @@ export function returningSignInCallback(
   if (url.searchParams.has("error"))
     throw new Error("ChatGPT did not authorize this connection.")
   const clientId = url.searchParams.get("client_id")
-  if (clientId !== null && clientId !== input.clientId)
+  if (
+    url.searchParams.getAll("client_id").length > 1 ||
+    (clientId !== null && clientId !== input.clientId)
+  )
     throw new Error("The callback changed the selected Pi registration.")
   const code = url.searchParams.get("code")
   if (!code || url.searchParams.getAll("code").length !== 1)
@@ -66,6 +72,7 @@ export async function returningCredential(
   raw: unknown,
   input: Pick<ReturningSignIn, "clientId" | "nonce"> & {
     expectedEmail: string
+    expectedSubject?: string
   },
   verificationKey: JWTVerifyGetKey = keys
 ) {
@@ -93,7 +100,9 @@ export async function returningCredential(
     payload.nonce !== input.nonce ||
     typeof payload.email !== "string" ||
     payload.email.toLowerCase() !== input.expectedEmail.toLowerCase() ||
-    payload.email_verified === false
+    payload.email_verified !== true ||
+    (input.expectedSubject !== undefined &&
+      payload.sub !== input.expectedSubject)
   )
     throw new Error("ChatGPT identity does not match the selected Pi owner.")
   const scopes = token.scope.trim().split(/\s+/)
@@ -106,5 +115,6 @@ export async function returningCredential(
     refresh: token.refresh_token,
     expires: Date.now() + token.expires_in * 1000 - 180_000,
     scopes,
+    identity: { issuer, subject: payload.sub!, email: payload.email },
   }
 }

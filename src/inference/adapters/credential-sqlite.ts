@@ -19,6 +19,7 @@ const Row = Schema.Struct({
   value: Schema.String,
   seed: Schema.String,
   refreshing: Schema.NullOr(Schema.String),
+  source: Schema.Literals(["deployment", "account"]),
 })
 const JsonCredential = Schema.fromJsonString(ModelCredential)
 export class SqliteCredentials implements CredentialLedger {
@@ -56,6 +57,7 @@ export class SqliteCredentials implements CredentialLedger {
         .select({
           value: modelCredentials.value,
           seed: modelCredentials.seed,
+          source: modelCredentials.source,
           refreshing: modelCredentialRefresh.provider,
         })
         .from(modelCredentials)
@@ -76,7 +78,7 @@ export class SqliteCredentials implements CredentialLedger {
         }
         const refreshing = row.refreshing !== null
         const seed = Redacted.value(this.deploymentSeed)
-        if (seed && row.seed !== seed)
+        if (row.source === "deployment" && seed && row.seed !== seed)
           return { seedCurrent: false as const, refreshing }
         return {
           value: this.decode(row.value),
@@ -122,5 +124,26 @@ export class SqliteCredentials implements CredentialLedger {
             .delete(modelCredentialRefresh)
             .where(eq(modelCredentialRefresh.provider, provider))
         ).pipe(Effect.asVoid)
+  }
+
+  install(provider: string, value: ModelCredential) {
+    return Effect.suspend(() => {
+      let encoded: string
+      try {
+        encoded = Schema.encodeSync(JsonCredential)(value)
+      } catch {
+        throw new CredentialCorrupt()
+      }
+      const seed = Redacted.value(this.deploymentSeed)
+      return this.query((orm) =>
+        orm
+          .insert(modelCredentials)
+          .values({ provider, value: encoded, seed, source: "account" })
+          .onConflictDoUpdate({
+            target: modelCredentials.provider,
+            set: { value: encoded, seed, source: "account" },
+          })
+      ).pipe(Effect.asVoid)
+    })
   }
 }

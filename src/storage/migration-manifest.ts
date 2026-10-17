@@ -130,6 +130,14 @@ export const agentMigrationManifest = {
         "d1bb4e02f9c523b809043548611e574256db6aeecba0ab4ca3b661118cc96581",
       statements: ["ALTER TABLE `workspace_files` ADD `audio` text;"],
     },
+    {
+      id: "20261017213931_account_model_connection",
+      checksum:
+        "70b6714d43eb67d79ce938078e05e8615adbd26cc62209eec1960ba775b00555",
+      statements: [
+        "ALTER TABLE `model_credentials` ADD `source` text DEFAULT 'deployment' NOT NULL;",
+      ],
+    },
   ],
   schema: [
     {
@@ -405,7 +413,7 @@ export const agentMigrationManifest = {
     {
       type: "table",
       name: "model_credentials",
-      sql: "CREATE TABLE `model_credentials` (\n\t`provider` text PRIMARY KEY NOT NULL,\n\t`value` text NOT NULL,\n\t`seed` text NOT NULL\n)",
+      sql: "CREATE TABLE `model_credentials` (\n\t`provider` text PRIMARY KEY NOT NULL,\n\t`value` text NOT NULL,\n\t`seed` text NOT NULL\n, `source` text DEFAULT 'deployment' NOT NULL)",
     },
     {
       type: "table",

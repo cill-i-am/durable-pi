@@ -65,6 +65,104 @@ const gate = <T = void>() => {
 }
 
 describe("private model credentials", () => {
+  it("keeps an in-product connection across restart and later deployment seed changes", async () => {
+    const f = fixture()
+    const next = rotated()
+    await f.runtime.runPromise(f.service.install(next))
+    expect(f.db.all("SELECT source FROM model_credentials")).toEqual([
+      { source: "account" },
+    ])
+    const replacementSeed = JSON.stringify({
+      ...seedValue,
+      access: "stale-deploy-token",
+      expires: Date.now() + 900_000,
+    })
+    const restored = fixture(f.db, replacementSeed)
+    expect(toNativeCredential((await restored.resolve())!)).toMatchObject({
+      access: "rotated-access",
+      refresh: "rotated-refresh",
+    })
+    expect(f.pending()).toBe(0)
+  })
+  it("settles an old rotation before installing the new grant and never writes it over the replacement", async () => {
+    const entered = gate(),
+      finish = gate()
+    const f = fixture(undefined, seed, () =>
+      Effect.promise(async () => {
+        entered.resolve()
+        await finish.promise
+        return rotated()
+      })
+    )
+    const refresh = f.resolve()
+    await entered.promise
+    const next = Schema.decodeUnknownSync(ModelCredential.members[0])({
+      ...seedValue,
+      access: "new-grant-access",
+      refresh: "new-grant-refresh",
+      expires: Date.now() + 900_000,
+    })
+    const install = f.runtime.runPromise(f.service.install(next))
+    finish.resolve()
+    await Promise.all([refresh, install])
+    expect(toNativeCredential((await f.resolve())!)).toMatchObject({
+      access: "new-grant-access",
+      refresh: "new-grant-refresh",
+    })
+    expect(f.pending()).toBe(0)
+  })
+  it("keeps the account connection authoritative after its tokens rotate", async () => {
+    const f = fixture()
+    await f.runtime.runPromise(
+      f.service.install(
+        Schema.decodeUnknownSync(ModelCredential.members[0])(seedValue)
+      )
+    )
+    await f.resolve()
+    expect(f.db.all("SELECT source FROM model_credentials")).toEqual([
+      { source: "account" },
+    ])
+    const restored = fixture(
+      f.db,
+      JSON.stringify({ ...seedValue, access: "old-deployment" })
+    )
+    expect(toNativeCredential((await restored.resolve())!)).toMatchObject({
+      access: "rotated-access",
+      refresh: "rotated-refresh",
+    })
+  })
+  it("does not replace an invalid account connection with a deployment seed", async () => {
+    const f = fixture()
+    await f.runtime.runPromise(f.service.install(rotated()))
+    f.db.run("UPDATE model_credentials SET value='{}'")
+    const restored = fixture(
+      f.db,
+      JSON.stringify({ ...seedValue, access: "old-deployment" })
+    )
+    await expect(restored.resolve()).rejects.toThrow(
+      "The stored model credential is invalid"
+    )
+    expect(f.db.all("SELECT value,source FROM model_credentials")).toEqual([
+      { value: "{}", source: "account" },
+    ])
+  })
+  it("recovers an uncertain rotation only by installing a newly authorized grant", async () => {
+    const f = fixture(undefined, seed, () =>
+      Effect.fail(
+        new CredentialRefreshError({
+          reason: "unavailable",
+          message: "Unconfirmed",
+        })
+      )
+    )
+    await expect(f.resolve()).rejects.toThrow("Unconfirmed")
+    expect(f.pending()).toBe(1)
+    await f.runtime.runPromise(f.service.install(rotated()))
+    expect(f.pending()).toBe(0)
+    expect(toNativeCredential((await f.resolve())!)).toMatchObject({
+      access: "rotated-access",
+    })
+  })
   it("coalesces account refresh, commits the intent before dispatch and persists rotated tokens across restart", async () => {
     const entered = gate(),
       finish = gate()
@@ -227,7 +325,7 @@ describe("private model credentials", () => {
   it("sanitizes corrupt durable credentials without echoing their raw secret in defects", async () => {
     const f = fixture(undefined, "")
     f.db.run(
-      "INSERT INTO model_credentials VALUES (?,?,?)",
+      "INSERT INTO model_credentials(provider,value,seed) VALUES (?,?,?)",
       "openai",
       '{"access":"private-secret"}',
       ""
