@@ -66,6 +66,32 @@ const forward = (peer: Peer, request: Request) =>
     )
   })
 
+function suspendFamilyWork(
+  root: Peer,
+  owner: string,
+  env: AgentGatewayBindings,
+  request: Request
+) {
+  return Effect.gen(function* () {
+    const profiles = yield* agentRpcNative(() => agentRpc(root).profiles())
+    for (const profile of profiles) {
+      const target = env.AGENT.getByName(agentObjectName(owner, profile.id))
+      yield* agentRpcNative(() =>
+        agentRpc(target).configure(
+          profile.id === homeAgentId ? "" : owner,
+          profile,
+          owner
+        )
+      )
+      const response = yield* forward(target, request)
+      yield* releaseForwardedResponse(response)
+      if (response.status !== 403)
+        return new Response("Could not confirm suspension", { status: 503 })
+    }
+    return Response.json({ ok: true })
+  })
+}
+
 export function agentGatewayProgram(
   request: Request,
   env: AgentGatewayBindings,
@@ -88,6 +114,9 @@ export function agentGatewayProgram(
       return new Response("Not found", { status: 404 })
     const root = env.AGENT.getByName(owner)
     const path = url.pathname.slice("/api/agent/".length)
+    if (path === "family/suspend" && request.method === "POST") {
+      return yield* suspendFamilyWork(root, owner, env, request)
+    }
     if (path === "bots/statuses") {
       if (request.method !== "GET")
         return new Response("Method not allowed", { status: 405 })

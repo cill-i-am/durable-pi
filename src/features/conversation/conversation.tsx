@@ -72,6 +72,7 @@ import {
   type SubmissionMode,
 } from "@/conversations/turns"
 import { ApprovalCard } from "@/features/access"
+import { useFamily } from "@/features/family/context"
 import {
   type FilesState,
   FilePicker,
@@ -739,6 +740,7 @@ function ConversationConnection({
   connectionError: ReturnType<typeof useConversation>["error"]
   reload: () => void
 }) {
+  const { family } = useFamily()
   return (
     <>
       {(error || connectionError) && (
@@ -759,8 +761,9 @@ function ConversationConnection({
       {state && !state.connected && !archived && (
         <Alert>
           <AlertDescription>
-            Your model connection is unavailable. Reconnect it before sending a
-            message.
+            {family.role === "owner"
+              ? "Reconnect ChatGPT to restore model access for the family. Your draft stays here."
+              : `${family.ownerName} needs to reconnect ChatGPT. You can keep writing; your draft stays here.`}
           </AlertDescription>
         </Alert>
       )}

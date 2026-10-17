@@ -280,6 +280,9 @@ import { ExecutionStore } from "../execution/adapters/sqlite"
 import { executionTools } from "../execution/adapters/tools"
 import { ExecutionStorageError } from "../execution/contracts"
 import { Executions, executionApplication } from "../execution/service"
+import { familyAgentAction } from "../family/adapters/agent-actions"
+import { familyDirectory } from "../family/adapters/directory"
+import { familyTools } from "../family/adapters/tools"
 import {
   AccountRequest,
   AccountResult,
@@ -310,6 +313,7 @@ import { SqliteUsage } from "../inference/adapters/usage-sqlite"
 import { ModelCatalogReader, catalogApplication } from "../inference/catalog"
 import {
   ModelCredentials,
+  CredentialUnavailable,
   credentialApplication,
   type CredentialRefresh,
 } from "../inference/credentials"
@@ -520,6 +524,7 @@ class CommunicationRunner extends TurnRunner {
     })
   }
   async onJob(): Promise<LifecycleJobOutcome> {
+    if (!(await this.owner.familyAdmission())) return
     const next = await this.owner.communication.runtime.runPromise(
       Effect.flatMap(Communication, (app) => app.pump())
     )
@@ -542,6 +547,7 @@ class AppEventRunner extends TurnRunner {
     super(owner, "app-events")
   }
   async onJob(): Promise<LifecycleJobOutcome> {
+    if (!(await this.owner.familyAdmission())) return
     const next = await this.owner.actorRuntime.runPromise(
       this.owner.appPump.run().pipe(Effect.provide(WorkerTelemetry))
     )
@@ -554,12 +560,14 @@ class RoutineRunner extends TurnRunner {
     super(owner, "routines")
   }
   async onJob(): Promise<LifecycleJobOutcome> {
+    if (!(await this.owner.familyAdmission())) return
     const next = await this.owner.actorRuntime.runPromise(
       this.owner.routinePump.run().pipe(Effect.provide(WorkerTelemetry))
     )
     return next === undefined ? undefined : { rescheduleAt: next }
   }
   async onJobError(): Promise<LifecycleJobOutcome> {
+    if (!(await this.owner.familyAdmission())) return
     const next = await this.owner.actorRuntime.runPromise(
       this.owner.routinePump.retry()
     )
@@ -590,6 +598,7 @@ class MemoryRunner extends TurnRunner {
     super(owner, "memory-compactor")
   }
   async onJob(): Promise<LifecycleJobOutcome> {
+    if (!(await this.owner.familyAdmission())) return
     const next = await this.owner.actorRuntime.runPromise(
       this.owner.memoryMaintenance
         .compact()
@@ -799,7 +808,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     ]),
     (program, options) =>
       this.actorRuntime.runPromiseExit(
-        program.pipe(Effect.provide(WorkerTelemetry)),
+        this.familyModelOwnerProgram().pipe(
+          Effect.andThen(program),
+          Effect.provide(WorkerTelemetry)
+        ),
         options
       )
   )
@@ -967,10 +979,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       ),
       catalogApplication(
         ownerCatalogSource(
-          () =>
-            this.configurationService
-              .read()
-              .pipe(Effect.map((configuration) => configuration?.owner)),
+          () => this.familyModelOwnerProgram(),
           (owner) => accountRpc(this.env.AGENT.getByName(owner)).catalog(),
           openaiCatalogSource(
             () =>
@@ -1130,6 +1139,8 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   readonly appService: typeof Apps.Service = this.actorRuntime.runSync(Apps)
   readonly appPump = appEventPump<
     | Effect.Error<ReturnType<PersonalAgent["modelConnectedProgram"]>>
+    | AgentConflict
+    | AgentStorageError
     | AgentSynchronizationError,
     never
   >(this.appService, {
@@ -1429,6 +1440,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     })
   }
   async stepWhatsApp(): Promise<LifecycleJobOutcome> {
+    if (!(await this.familyAdmission())) return
     if (!(await this.run(this.whatsappStore.pending())).length) return undefined
     const identity = await this.run(this.communication.mailbox.identity())
     const next = await this.run(this.whatsapp(identity.owner).pump())
@@ -1628,6 +1640,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     )
   }
   async stepEmail(): Promise<LifecycleJobOutcome> {
+    if (!(await this.familyAdmission())) return
     const next = await this.run(this.emailPump())
     return next === undefined ? undefined : { rescheduleAt: next }
   }
@@ -1933,6 +1946,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     return this.run(this.background.read(id))
   }
   async stepBackground() {
+    if (!(await this.familyAdmission())) return
     return this.run(this.background.step())
   }
   readonly delegations: typeof Delegation.Service =
@@ -1969,29 +1983,161 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   protected catalogProgram() {
     return this.catalogService.read()
   }
+  protected familyStateProgram(): Effect.Effect<
+    {
+      owner: string
+      modelOwner: string | undefined
+      joinedAt: number
+      membershipId: string
+    } | null,
+    CredentialUnavailable
+  > {
+    return Effect.gen({ self: this }, function* () {
+      const configuration = yield* this.configurationService.read()
+      const identity = yield* this.communication.mailbox.identity()
+      return yield* accountNative(async () => {
+        if (!this.env.AUTH_DB)
+          throw new Error("Family directory is unavailable")
+        const directory = familyDirectory(
+          this.env.AUTH_DB,
+          this.env.OWNER_EMAIL
+        )
+        const modelOwner = await directory.owner()
+        if (!modelOwner) return null
+        const owner =
+          configuration?.owner ||
+          identity?.owner ||
+          (this.ctx.id.equals(this.env.AGENT.idFromName(modelOwner.id))
+            ? modelOwner.id
+            : undefined)
+        if (!owner) return null
+        const access = await directory.access(owner)
+        return access
+          ? {
+              owner,
+              modelOwner: modelOwner.id,
+              joinedAt: access.joinedAt,
+              membershipId: access.membershipId,
+            }
+          : null
+      })
+    }).pipe(
+      Effect.mapError(
+        () =>
+          new CredentialUnavailable({
+            message: "Could not confirm family model access. Please try again.",
+          })
+      )
+    )
+  }
+  /** Every execution boundary reads live membership. The persisted membership
+   * generation also prevents old scheduled work resuming after a new invite. */
+  async familyAdmission() {
+    const state = await this.run(this.familyStateProgram())
+    const previous = await this.ctx.storage.get<string | null>(
+      "family-membership-generation"
+    )
+    if (
+      (!state && previous !== null) ||
+      (state && previous !== undefined && previous !== state.membershipId)
+    ) {
+      const sessions = await this.run(
+        Effect.gen({ self: this }, function* () {
+          const sessions: string[] = []
+          for (const routine of yield* this.routines.list()) {
+            if (routine.status !== "active") continue
+            yield* this.routines.setStatus({
+              id: routine.id,
+              expectedRevision: routine.revision,
+              operationId: crypto.randomUUID(),
+              status: "paused",
+            })
+            const run = yield* this.routines.cancelPendingRun(routine.id)
+            if (run?.status === "queued") {
+              yield* this.conversations.requestStop(run.turnId)
+              yield* this.access.cancel(run.turnId)
+            }
+          }
+          for (const turn of yield* this.conversations.unfinished()) {
+            yield* this.conversations.requestStop(turn.id)
+            yield* this.access.cancel(turn.id)
+            if (turn.session_id) sessions.push(turn.session_id)
+          }
+          let offset = 0
+          while (true) {
+            const groups = yield* this.backgroundMailbox.list(offset)
+            if (!groups.length) break
+            for (const group of groups) {
+              if (["done", "failed", "cancelled"].includes(group.status))
+                continue
+              yield* this.background.stop(group.id)
+            }
+            offset += groups.length
+          }
+          return sessions
+        })
+      )
+      // Abort after recording stop intent. Owned cleanup can finish after a
+      // revoked tool callback returns, rather than waiting on that callback.
+      for (const session of sessions)
+        this.ctx.waitUntil(this.run(this.conversationExecution.abort(session)))
+    }
+    if (previous !== (state?.membershipId ?? null))
+      await this.ctx.storage.put(
+        "family-membership-generation",
+        state?.membershipId ?? null
+      )
+    return state
+  }
+  protected familyModelOwnerProgram() {
+    return accountNative(async () => {
+      const access = await this.familyAdmission()
+      if (!access)
+        throw new CredentialUnavailable({
+          message: "Your family access has ended.",
+        })
+      return access.modelOwner
+    })
+  }
   async accountModelCatalog(): Promise<ModelCatalog> {
     return this.run(this.catalogProgram())
   }
   private modelCredentialProgram(provider: string) {
     return Effect.gen({ self: this }, function* () {
-      const owner = (yield* this.configurationService.read())?.owner
-      if (owner)
-        return yield* accountNative(() =>
+      const owner = yield* this.familyModelOwnerProgram()
+      if (owner && !this.ctx.id.equals(this.env.AGENT.idFromName(owner))) {
+        const token = yield* accountNative(() =>
           accountRpc(this.env.AGENT.getByName(owner)).credential(provider)
         )
+        if ((yield* this.familyModelOwnerProgram()) !== owner)
+          return yield* new CredentialUnavailable({
+            message: "Family model access changed. Try again.",
+          })
+        return token
+      }
       return yield* this.accountCredentialProgram(provider)
     })
   }
   private accountCredentialProgram(provider: string) {
     // This endpoint is the account authority. It must resolve locally even when
     // that account's bot configuration names the same owner/object.
-    return this.credentialService
-      .resolve(provider)
-      .pipe(
-        Effect.map((value) =>
-          value?.type === "oauth" ? accountToken(value) : null
-        )
-      )
+    return this.familyModelOwnerProgram().pipe(
+      Effect.flatMap((owner) => {
+        if (owner && !this.ctx.id.equals(this.env.AGENT.idFromName(owner)))
+          return Effect.fail(
+            new CredentialUnavailable({
+              message: "Only the family model owner can refresh ChatGPT.",
+            })
+          )
+        return this.credentialService
+          .resolve(provider)
+          .pipe(
+            Effect.map((value) =>
+              value?.type === "oauth" ? accountToken(value) : null
+            )
+          )
+      })
+    )
   }
   async accountV1(raw: unknown): Promise<Schema.Json> {
     const exit = await this.actorRuntime.runPromiseExit(
@@ -2048,6 +2194,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       modelCallback(
         this.actorRuntime.runPromiseExit(
           Effect.gen({ self: this }, function* () {
+            yield* this.familyModelOwnerProgram()
             if (!(yield* this.communication.pi.request(id)))
               yield* this.delegations.request(id)
           }),
@@ -2216,6 +2363,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           },
         ],
         tools: [
+          ...familyTools(
+            (input, signal) => this.familyAction(input, signal),
+            (input, signal) => this.modelSettingsAction(input, signal)
+          ),
           ...communicationTools(
             this.communication.runtime.runSync(Communication),
             (api) => {
@@ -2749,7 +2900,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   resolveModelCredential(provider: string) {
     const refreshed = modelCallback(
       this.actorRuntime.runPromiseExit(
-        this.accountCredentialProgram(provider).pipe(
+        this.modelCredentialProgram(provider).pipe(
           Effect.map((value) => (value ? nativeAccountToken(value) : undefined))
         )
       )
@@ -2825,8 +2976,8 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   }
   protected modelConnectedProgram() {
     return Effect.gen({ self: this }, function* () {
-      const owner = (yield* this.configurationService.read())?.owner
-      return owner
+      const owner = yield* this.familyModelOwnerProgram()
+      return owner && !this.ctx.id.equals(this.env.AGENT.idFromName(owner))
         ? yield* accountNative(() =>
             accountConnectionRpc(this.env.AGENT.getByName(owner)).connected()
           )
@@ -2852,7 +3003,17 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   async modelConnectionV1(): Promise<Schema.Json> {
     const work = this.actorRuntime.runPromiseExit(
       Effect.yieldNow.pipe(
-        Effect.andThen(this.accountConnectedProgram()),
+        Effect.andThen(this.familyModelOwnerProgram()),
+        Effect.flatMap((owner) =>
+          owner && !this.ctx.id.equals(this.env.AGENT.idFromName(owner))
+            ? Effect.fail(
+                new CredentialUnavailable({
+                  message:
+                    "Only the family model owner can report this account connection.",
+                })
+              )
+            : this.accountConnectedProgram()
+        ),
         Effect.provide(WorkerTelemetry)
       )
     )
@@ -3548,8 +3709,86 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       return new Response("Not found", { status: 404 })
     })
   }
+  async familyAction(input: unknown, signal?: AbortSignal) {
+    const access = await this.familyAdmission()
+    if (!access) return { error: "Your family access has ended." }
+    return this.run(
+      familyAgentAction(
+        {
+          DB: this.env.AUTH_DB,
+          OWNER_EMAIL: this.env.OWNER_EMAIL,
+          BETTER_AUTH_SECRET: this.env.BETTER_AUTH_SECRET,
+          AUTH_EMAIL: this.env.AUTH_EMAIL,
+          APP_URL: new URL(this.env.EMAIL_REVIEW_URL).origin,
+          AGENT_SERVICE: {
+            fetch: (request) =>
+              agentGateway(request, { AGENT: this.env.AGENT }, this.ctx),
+          },
+        },
+        access.owner,
+        input
+      ).pipe(
+        Effect.catchTag("FamilyActionFailed", (error) =>
+          Effect.succeed({ error: error.message })
+        )
+      ),
+      { signal }
+    )
+  }
+  async modelSettingsAction(input: unknown, signal?: AbortSignal) {
+    const access = await this.familyAdmission()
+    if (!access) return { error: "Your family access has ended." }
+    const command = Schema.decodeUnknownSync(
+      Schema.Union([
+        Schema.Struct({ action: Schema.Literal("read") }),
+        Schema.Struct({
+          action: Schema.Literal("set"),
+          job: JobType,
+          ...ModelSettings.fields,
+        }),
+      ])
+    )(input)
+    const request =
+      command.action === "read"
+        ? new Request("https://agent.internal/api/agent/models")
+        : new Request("https://agent.internal/api/agent/settings", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              job: command.job,
+              model: command.model,
+              thinking: command.thinking,
+            }),
+          })
+    const response = await modelCallback(
+      this.actorRuntime.runPromiseExit(
+        this.httpProgram(request).pipe(
+          Effect.scoped,
+          agentResponse,
+          Effect.provide(WorkerTelemetry)
+        ),
+        { signal }
+      )
+    )
+    return response.json<unknown>()
+  }
   async fetch(request: Request): Promise<Response> {
     await this.lifecycle.start()
+    const principal = request.headers.get("x-owner-id")
+    if (principal && this.ctx.id.equals(this.env.AGENT.idFromName(principal)))
+      await this.run(this.communicationIdentity(principal, homeAgentId))
+    const familyAccess = await this.familyAdmission()
+    if (!familyAccess)
+      return new Response("Family access has ended.", { status: 403 })
+    if (
+      familyAccess.modelOwner &&
+      familyAccess.owner !== familyAccess.modelOwner &&
+      /\/api\/agent\/(email|whatsapp)(\/|$)/.test(new URL(request.url).pathname)
+    )
+      return new Response(
+        "Personal email and WhatsApp are not configured for this account.",
+        { status: 403 }
+      )
     if (isMailboxRequest(request)) return this.communication.rpc(request)
     const path = new URL(request.url).pathname.replace("/api/agent/", "")
     if (
@@ -3614,6 +3853,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     return this.run(this.snapshotProgram())
   }
   async step(): Promise<LifecycleJobOutcome> {
+    if (!(await this.familyAdmission())) return
     this.installRemoteTools(await this.run(this.refreshRemoteTools()))
     const next = await this.actorRuntime.runPromise(
       this.active().pipe(

@@ -12,10 +12,12 @@ export function AuthFrame({
   title,
   description,
   children,
+  family = false,
 }: {
   title: string
   description: string
   children: React.ReactNode
+  family?: boolean
 }) {
   return (
     <main id="main-content" tabIndex={-1} className="login-page">
@@ -30,33 +32,41 @@ export function AuthFrame({
         <div className="login-story">
           <AgentMark className="login-character" />
           <p className="login-display">
-            Pick up where
+            {family ? "A family workspace." : "Pick up where"}
             <br />
-            you left off.
+            {family ? "A space of your own." : "you left off."}
           </p>
           <p className="login-description">
-            Your agents, their tools, and the work you’re doing together. All in
-            one private place.
+            {family
+              ? "Your own agents, your own conversations, and a little more room to get things done."
+              : "Your agents, their tools, and the work you’re doing together. All in one private place."}
           </p>
-          <figure className="login-preview">
-            <figcaption>Example workspace</figcaption>
-            {(
-              [
-                ["Atlas", "Your weekend guide is ready", "primary"],
-                ["Research", "4 sources, one clear answer", "peach"],
-                ["Studio", "Ready when you are", "lilac"],
-              ] as const
-            ).map(([name, detail, tone]) => (
-              <div className="login-preview-row" key={name}>
-                <AgentMark tone={tone} />
-                <div>
-                  <strong>{name}</strong>
-                  <span>{detail}</span>
+          {family ? (
+            <div className="family-auth-promise">
+              Your chats, agents, memory, files and connected accounts are
+              private to you.
+            </div>
+          ) : (
+            <figure className="login-preview">
+              <figcaption>Example workspace</figcaption>
+              {(
+                [
+                  ["Atlas", "Your weekend guide is ready", "primary"],
+                  ["Research", "4 sources, one clear answer", "peach"],
+                  ["Studio", "Ready when you are", "lilac"],
+                ] as const
+              ).map(([name, detail, tone]) => (
+                <div className="login-preview-row" key={name}>
+                  <AgentMark tone={tone} />
+                  <div>
+                    <strong>{name}</strong>
+                    <span>{detail}</span>
+                  </div>
+                  <Check aria-hidden="true" />
                 </div>
-                <Check aria-hidden="true" />
-              </div>
-            ))}
-          </figure>
+              ))}
+            </figure>
+          )}
         </div>
       </aside>
       <div className="login-content">

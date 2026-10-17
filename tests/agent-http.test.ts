@@ -65,6 +65,11 @@ function fixture(
   const retrySummary = vi.fn(retry)
   Object.assign(host, {
     actorRuntime: runtime,
+    familyAdmission: async () => ({
+      owner: "fixture",
+      modelOwner: "fixture",
+      joinedAt: 1,
+    }),
     lifecycle: { start: async () => {} },
     ctx: { waitUntil, id: { toString: () => "actor-id" } },
     retrySummary,

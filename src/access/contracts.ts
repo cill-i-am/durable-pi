@@ -159,6 +159,34 @@ export const builtInTools = [
     mode: "allow",
   },
   {
+    name: "read_family",
+    title: "Read family access",
+    description:
+      "Read family membership and model provider without opening anyone's private work.",
+    mode: "allow",
+  },
+  {
+    name: "manage_family",
+    title: "Manage family access",
+    description:
+      "Admin only: invite, resend, cancel invitations or remove a member. Sends invitation email and changes access.",
+    mode: "ask",
+  },
+  {
+    name: "get_model_settings",
+    title: "Read model settings",
+    description:
+      "Read this agent's model defaults and shared ChatGPT availability.",
+    mode: "allow",
+  },
+  {
+    name: "set_model_settings",
+    title: "Change model defaults",
+    description:
+      "Change this private agent's model defaults. Running jobs keep their model.",
+    mode: "ask",
+  },
+  {
     name: "read_routine",
     title: "Read routine",
     description: "Read a routine and its instructions.",

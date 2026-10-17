@@ -58,6 +58,7 @@ import {
 } from "@/components/ui/menubar"
 import { useSidebar } from "@/components/ui/sidebar"
 import { UserAvatar } from "@/components/user-avatar"
+import { useFamily } from "@/features/family/context"
 import type { Workbench } from "@/navigation/workspace"
 
 export type { Workbench } from "@/navigation/workspace"
@@ -102,6 +103,7 @@ export function WorkspaceNavigation({
   onAction: (action: WorkspaceAction) => void
   onSelect: (id: AgentProfile["id"]) => void
 }) {
+  const { family } = useFamily()
   const [searchOpen, setSearchOpen] = useState(false)
   const searchTrigger = useRef<HTMLButtonElement>(null)
   const skipSearchFocusReturn = useRef(false)
@@ -159,7 +161,7 @@ export function WorkspaceNavigation({
             >
               <UserAvatar name={name} image={image} />
               <strong>Pi</strong>
-              <span>/ Personal</span>
+              <span>/ {family.name}</span>
               <ChevronDown />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-68">

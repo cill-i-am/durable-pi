@@ -3,6 +3,7 @@ import {
   createRoute,
   createRouter,
   RouterProvider,
+  Outlet,
 } from "@tanstack/react-router"
 import { ThemeProvider } from "next-themes"
 import { useState } from "react"
@@ -18,12 +19,13 @@ import {
   InputGroup,
   InputGroupTextarea,
 } from "../../src/components/ui/input-group"
+import { JoinFamily } from "../../src/features/family/join"
 
 import "./styles.css"
 
 // The actual workspace, with only its transport and route shell replaced.
 // No Cloudflare credentials or real provider/tool calls enter this fixture.
-const root = createRootRoute({ component: ChatApp })
+const root = createRootRoute({ component: Outlet })
 const paths = [
   "/",
   "/agents",
@@ -34,9 +36,16 @@ const paths = [
   "/agents/$agentId/$panel/$itemId",
 ] as const
 const router = createRouter({
-  routeTree: root.addChildren(
-    paths.map((path) => createRoute({ getParentRoute: () => root, path }))
-  ),
+  routeTree: root.addChildren([
+    ...paths.map((path) =>
+      createRoute({ getParentRoute: () => root, path, component: ChatApp })
+    ),
+    createRoute({
+      getParentRoute: () => root,
+      path: "/join",
+      component: JoinFamily,
+    }),
+  ]),
 })
 const observe = new MutationObserver(() => {
   for (const [stage, selector] of [

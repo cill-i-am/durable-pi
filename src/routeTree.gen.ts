@@ -11,9 +11,11 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WorkspaceRouteImport } from './routes/_workspace'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as JoinRouteImport } from './routes/join'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as TwoFactorRouteImport } from './routes/two-factor'
 import { Route as WorkspaceIndexRouteImport } from './routes/_workspace.index'
+import { Route as ApiFamilyRouteImport } from './routes/api.family'
 import { Route as ApiSetupRouteImport } from './routes/api.setup'
 import { Route as WorkspaceAgentsIndexRouteImport } from './routes/_workspace.agents.index'
 import { Route as WorkspaceAgentsArchivedRouteImport } from './routes/_workspace.agents.archived'
@@ -21,6 +23,7 @@ import { Route as WorkspaceAgentsNewRouteImport } from './routes/_workspace.agen
 import { Route as ApiAccountAvatarRouteImport } from './routes/api.account.avatar'
 import { Route as ApiAgentSplatRouteImport } from './routes/api.agent.$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api.auth.$'
+import { Route as ApiFamilySplatRouteImport } from './routes/api.family.$'
 import { Route as WorkspaceAgentsAgentIdIndexRouteImport } from './routes/_workspace.agents.$agentId.index'
 import { Route as WorkspaceAgentsAgentIdEditRouteImport } from './routes/_workspace.agents.$agentId.edit'
 import { Route as ApiHooksAgentRoutineRouteImport } from './routes/api.hooks.$agent.$routine'
@@ -38,6 +41,11 @@ const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
+const JoinRoute = JoinRouteImport.update({
+  id: '/join',
+  path: '/join',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
@@ -52,6 +60,11 @@ const WorkspaceIndexRoute = WorkspaceIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => WorkspaceRoute,
+} as any)
+const ApiFamilyRoute = ApiFamilyRouteImport.update({
+  id: '/api/family',
+  path: '/api/family',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSetupRoute = ApiSetupRouteImport.update({
   id: '/api/setup',
@@ -87,6 +100,11 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ApiFamilySplatRoute = ApiFamilySplatRouteImport.update({
+  id: '/$',
+  path: '/$',
+  getParentRoute: () => ApiFamilyRoute,
 } as any)
 const WorkspaceAgentsAgentIdIndexRoute =
   WorkspaceAgentsAgentIdIndexRouteImport.update({
@@ -133,14 +151,17 @@ const WorkspaceAgentsAgentIdSettingsSectionRoute =
 export interface FileRoutesByFullPath {
   '/': typeof WorkspaceIndexRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/join': typeof JoinRoute
   '/reset-password': typeof ResetPasswordRoute
   '/two-factor': typeof TwoFactorRoute
+  '/api/family': typeof ApiFamilyRouteWithChildren
   '/api/setup': typeof ApiSetupRoute
   '/agents/archived': typeof WorkspaceAgentsArchivedRoute
   '/agents/new': typeof WorkspaceAgentsNewRoute
   '/api/account/avatar': typeof ApiAccountAvatarRoute
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/family/$': typeof ApiFamilySplatRoute
   '/agents/': typeof WorkspaceAgentsIndexRoute
   '/agents/$agentId/edit': typeof WorkspaceAgentsAgentIdEditRoute
   '/api/hooks/$agent/$routine': typeof ApiHooksAgentRoutineRoute
@@ -152,8 +173,10 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/forgot-password': typeof ForgotPasswordRoute
+  '/join': typeof JoinRoute
   '/reset-password': typeof ResetPasswordRoute
   '/two-factor': typeof TwoFactorRoute
+  '/api/family': typeof ApiFamilyRouteWithChildren
   '/api/setup': typeof ApiSetupRoute
   '/': typeof WorkspaceIndexRoute
   '/agents/archived': typeof WorkspaceAgentsArchivedRoute
@@ -161,6 +184,7 @@ export interface FileRoutesByTo {
   '/api/account/avatar': typeof ApiAccountAvatarRoute
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/family/$': typeof ApiFamilySplatRoute
   '/agents': typeof WorkspaceAgentsIndexRoute
   '/agents/$agentId/edit': typeof WorkspaceAgentsAgentIdEditRoute
   '/api/hooks/$agent/$routine': typeof ApiHooksAgentRoutineRoute
@@ -174,8 +198,10 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_workspace': typeof WorkspaceRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
+  '/join': typeof JoinRoute
   '/reset-password': typeof ResetPasswordRoute
   '/two-factor': typeof TwoFactorRoute
+  '/api/family': typeof ApiFamilyRouteWithChildren
   '/api/setup': typeof ApiSetupRoute
   '/_workspace/': typeof WorkspaceIndexRoute
   '/_workspace/agents/archived': typeof WorkspaceAgentsArchivedRoute
@@ -183,6 +209,7 @@ export interface FileRoutesById {
   '/api/account/avatar': typeof ApiAccountAvatarRoute
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/family/$': typeof ApiFamilySplatRoute
   '/_workspace/agents/': typeof WorkspaceAgentsIndexRoute
   '/_workspace/agents/$agentId/edit': typeof WorkspaceAgentsAgentIdEditRoute
   '/api/hooks/$agent/$routine': typeof ApiHooksAgentRoutineRoute
@@ -197,14 +224,17 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/forgot-password'
+    | '/join'
     | '/reset-password'
     | '/two-factor'
+    | '/api/family'
     | '/api/setup'
     | '/agents/archived'
     | '/agents/new'
     | '/api/account/avatar'
     | '/api/agent/$'
     | '/api/auth/$'
+    | '/api/family/$'
     | '/agents/'
     | '/agents/$agentId/edit'
     | '/api/hooks/$agent/$routine'
@@ -216,8 +246,10 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/forgot-password'
+    | '/join'
     | '/reset-password'
     | '/two-factor'
+    | '/api/family'
     | '/api/setup'
     | '/'
     | '/agents/archived'
@@ -225,6 +257,7 @@ export interface FileRouteTypes {
     | '/api/account/avatar'
     | '/api/agent/$'
     | '/api/auth/$'
+    | '/api/family/$'
     | '/agents'
     | '/agents/$agentId/edit'
     | '/api/hooks/$agent/$routine'
@@ -237,8 +270,10 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_workspace'
     | '/forgot-password'
+    | '/join'
     | '/reset-password'
     | '/two-factor'
+    | '/api/family'
     | '/api/setup'
     | '/_workspace/'
     | '/_workspace/agents/archived'
@@ -246,6 +281,7 @@ export interface FileRouteTypes {
     | '/api/account/avatar'
     | '/api/agent/$'
     | '/api/auth/$'
+    | '/api/family/$'
     | '/_workspace/agents/'
     | '/_workspace/agents/$agentId/edit'
     | '/api/hooks/$agent/$routine'
@@ -259,8 +295,10 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   WorkspaceRoute: typeof WorkspaceRouteWithChildren
   ForgotPasswordRoute: typeof ForgotPasswordRoute
+  JoinRoute: typeof JoinRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   TwoFactorRoute: typeof TwoFactorRoute
+  ApiFamilyRoute: typeof ApiFamilyRouteWithChildren
   ApiSetupRoute: typeof ApiSetupRoute
   ApiAccountAvatarRoute: typeof ApiAccountAvatarRoute
   ApiAgentSplatRoute: typeof ApiAgentSplatRoute
@@ -284,6 +322,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/join': {
+      id: '/join'
+      path: '/join'
+      fullPath: '/join'
+      preLoaderRoute: typeof JoinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/reset-password': {
       id: '/reset-password'
       path: '/reset-password'
@@ -304,6 +349,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof WorkspaceIndexRouteImport
       parentRoute: typeof WorkspaceRoute
+    }
+    '/api/family': {
+      id: '/api/family'
+      path: '/api/family'
+      fullPath: '/api/family'
+      preLoaderRoute: typeof ApiFamilyRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/setup': {
       id: '/api/setup'
@@ -353,6 +405,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/api/family/$': {
+      id: '/api/family/$'
+      path: '/$'
+      fullPath: '/api/family/$'
+      preLoaderRoute: typeof ApiFamilySplatRouteImport
+      parentRoute: typeof ApiFamilyRoute
     }
     '/_workspace/agents/$agentId/': {
       id: '/_workspace/agents/$agentId/'
@@ -439,11 +498,25 @@ const WorkspaceRouteWithChildren = WorkspaceRoute._addFileChildren(
   WorkspaceRouteChildren,
 )
 
+interface ApiFamilyRouteChildren {
+  ApiFamilySplatRoute: typeof ApiFamilySplatRoute
+}
+
+const ApiFamilyRouteChildren: ApiFamilyRouteChildren = {
+  ApiFamilySplatRoute: ApiFamilySplatRoute,
+}
+
+const ApiFamilyRouteWithChildren = ApiFamilyRoute._addFileChildren(
+  ApiFamilyRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   WorkspaceRoute: WorkspaceRouteWithChildren,
   ForgotPasswordRoute: ForgotPasswordRoute,
+  JoinRoute: JoinRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   TwoFactorRoute: TwoFactorRoute,
+  ApiFamilyRoute: ApiFamilyRouteWithChildren,
   ApiSetupRoute: ApiSetupRoute,
   ApiAccountAvatarRoute: ApiAccountAvatarRoute,
   ApiAgentSplatRoute: ApiAgentSplatRoute,
@@ -453,13 +526,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

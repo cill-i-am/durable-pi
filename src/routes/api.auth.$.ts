@@ -1,12 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router"
 
 import { createAuth, sameOrigin } from "../auth/server"
-import { getEnv, runInBackground } from "../env"
+import { getEnv } from "../env"
 
 async function handle(request: Request) {
-  const response = await createAuth(getEnv(), false, runInBackground).handler(
-    request
-  )
+  const response = await createAuth(getEnv()).handler(request)
   response.headers.set("Cache-Control", "private, no-store")
   response.headers.set("Pragma", "no-cache")
   response.headers.set("X-Content-Type-Options", "nosniff")

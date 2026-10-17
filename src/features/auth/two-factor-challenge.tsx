@@ -6,10 +6,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import {
-  workspaceReturnPath,
-  workspaceReturnLink,
-} from "@/navigation/workspace"
+import { authReturnPath, workspaceReturnLink } from "@/navigation/workspace"
 
 import { AuthFrame } from "./auth-frame"
 import { securityError } from "./security-errors"
@@ -36,7 +33,7 @@ export function TwoFactorChallenge() {
       if (result.error) setError(securityError(result.error))
       else
         window.location.assign(
-          workspaceReturnPath(
+          authReturnPath(
             new URLSearchParams(window.location.search).get("returnTo") ?? "/"
           )
         )
@@ -109,7 +106,9 @@ export function TwoFactorChallenge() {
         {recovery ? "Use your authenticator" : "Use a recovery code"}
       </Button>
       <Link
-        {...workspaceReturnLink(returnTo ?? "/")}
+        {...(returnTo === "/join"
+          ? { to: "/join" as const }
+          : workspaceReturnLink(returnTo ?? "/"))}
         className="text-center text-sm text-muted-foreground underline underline-offset-4"
       >
         Back to sign in

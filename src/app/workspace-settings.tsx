@@ -12,6 +12,7 @@ import {
   ShieldCheck,
   Volume2,
   X,
+  Users,
 } from "lucide-react"
 import { useEffect, useState } from "react"
 
@@ -31,6 +32,9 @@ import type { useConversation } from "@/features/conversation"
 import { MessageDeliverySettings } from "@/features/conversation"
 import { ModelDefaults } from "@/features/conversation/model-defaults"
 import { EmailSettings } from "@/features/email"
+import { useFamily } from "@/features/family/context"
+import { FamilySettings } from "@/features/family/family-settings"
+import { ModelAccess } from "@/features/family/model-access"
 import { SkillsPanel } from "@/features/skills"
 import { WhatsAppSettings } from "@/features/whatsapp/whatsapp-settings"
 import { useInteractionSoundPreference } from "@/hooks/interaction-sound-preference"
@@ -68,6 +72,18 @@ const settingsSections = [
     icon: BookOpen,
   },
   {
+    id: "family",
+    title: "Family",
+    description: "People and invitations",
+    icon: Users,
+  },
+  {
+    id: "model-access",
+    title: "Model access",
+    description: "Shared ChatGPT connection",
+    icon: Plug,
+  },
+  {
     id: "memory",
     title: "Memory & data",
     description: "Notes, original sources and files",
@@ -100,6 +116,8 @@ export function WorkspaceSettings({
   onWorkbench: (workbench: Workbench) => void
 }) {
   const location = useWorkspaceLocation()
+  const { family } = useFamily()
+  const [familyPending, setFamilyPending] = useState(false)
   const [securityPending, setSecurityPending] = useState(false)
   const [profilePending, setProfilePending] = useState(false)
   const [modelsPending, setModelsPending] = useState(false)
@@ -114,15 +132,17 @@ export function WorkspaceSettings({
   const sound = useInteractionSoundPreference()
   const playInteractionSound = useInteractionSound()
   const { state: sidebarState } = useSidebar()
-  const locked =
-    modelsPending ||
-    accessPending ||
-    connectionsPending ||
-    skillsPending ||
-    emailPending ||
-    whatsappPending ||
-    profilePending ||
-    securityPending
+  const locked = [
+    familyPending,
+    modelsPending,
+    accessPending,
+    connectionsPending,
+    skillsPending,
+    emailPending,
+    whatsappPending,
+    profilePending,
+    securityPending,
+  ].some(Boolean)
   useEffect(() => {
     onPendingChange(locked)
   }, [locked, onPendingChange])
@@ -157,6 +177,7 @@ export function WorkspaceSettings({
         overlayClassName="settings-backdrop"
         data-detail={mobileDetail}
         data-sidebar={sidebarState}
+        data-family={category === "family" || category === "model-access"}
       >
         <aside className="settings-navigation">
           <div className="settings-agent">
@@ -260,6 +281,13 @@ export function WorkspaceSettings({
             </Button>
           </div>
           <div className="settings-detail-content">
+            {category === "family" && (
+              <FamilySettings
+                onPendingChange={setFamilyPending}
+                onModelAccess={() => onCategoryChange("model-access")}
+              />
+            )}
+            {category === "model-access" && <ModelAccess />}
             <section
               hidden={category !== "general"}
               className="settings-section"
@@ -285,20 +313,24 @@ export function WorkspaceSettings({
                 </div>
                 <AppearanceSettings />
                 <MessageDeliverySettings />
-                <EmailSettings
-                  key={agent.id}
-                  agentId={agent.id}
-                  archived={agent.status === "archived"}
-                  onPendingChange={setEmailPending}
-                />
-                <WhatsAppSettings
-                  key={`whatsapp-${agent.id}`}
-                  agentId={agent.id}
-                  agentName={agent.name}
-                  archived={agent.status === "archived"}
-                  open={category === "general"}
-                  onPendingChange={setWhatsAppPending}
-                />
+                {family.role === "owner" && (
+                  <EmailSettings
+                    key={agent.id}
+                    agentId={agent.id}
+                    archived={agent.status === "archived"}
+                    onPendingChange={setEmailPending}
+                  />
+                )}
+                {family.role === "owner" && (
+                  <WhatsAppSettings
+                    key={`whatsapp-${agent.id}`}
+                    agentId={agent.id}
+                    agentName={agent.name}
+                    archived={agent.status === "archived"}
+                    open={category === "general"}
+                    onPendingChange={setWhatsAppPending}
+                  />
+                )}
                 <div className="settings-preference">
                   <Volume2 />
                   <div>

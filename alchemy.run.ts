@@ -119,6 +119,11 @@ export const AgentWorker = Cloudflare.Worker("AgentWorkerDrizzleV1", {
   compatibility: { date: "2026-10-17", flags: ["nodejs_compat"] },
   env: {
     AGENT: Cloudflare.DurableObject<PersonalAgent>("PersonalAgent"),
+    AUTH_DB: AuthDatabase,
+    BETTER_AUTH_SECRET: Config.Redacted("BETTER_AUTH_SECRET"),
+    AUTH_EMAIL: Cloudflare.Email.SendEmail("AgentAuthEmail", {
+      allowedSenderAddresses: [PASSWORD_EMAIL_FROM],
+    }),
     WHATSAPP: Cloudflare.DurableObject<WhatsAppBridgeRpc>("WhatsAppBridge"),
     WHATSAPP_ACCESS_TOKEN: Config.Redacted("WHATSAPP_ACCESS_TOKEN").pipe(
       Config.withDefault("")
@@ -234,7 +239,6 @@ export const Website = Cloudflare.Website.Vite(
         OWNER_EMAIL: owner,
         AUTH_EMAIL: Cloudflare.Email.SendEmail("AuthEmail", {
           allowedSenderAddresses: [PASSWORD_EMAIL_FROM],
-          allowedDestinationAddresses: [owner],
         }),
         SETUP_TOKEN: Config.Redacted("SETUP_TOKEN"),
         APP_URL: Cloudflare.Worker.URL,
