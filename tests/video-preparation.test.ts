@@ -59,14 +59,10 @@ function fixture(extract: ExtractVideo = () => Effect.succeed(result)) {
   }
   const make = (prefix = "private-bot") =>
     ManagedRuntime.make(
-      workspaceLayer(
-        db,
-        bucket,
-        prefix,
-        () => Effect.sync(() => active),
-        undefined,
-        extract
-      )
+      workspaceLayer(db, bucket, prefix, () => Effect.sync(() => active), {
+        document: undefined,
+        video: extract,
+      })
     )
   const runtime = make()
   const run = <T, TError>(

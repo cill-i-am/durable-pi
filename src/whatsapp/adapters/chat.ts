@@ -2,11 +2,12 @@ import { createWhatsAppAdapter, WhatsAppApiError } from "@chat-adapter/whatsapp"
 import { Chat, ConsoleLogger, type StateAdapter } from "chat"
 import { Schema } from "effect"
 
+import { audioMime } from "../../workspace/audio"
 import { imageMime, MAX_FILE_BYTES } from "../../workspace/files"
 import {
   IncomingWhatsApp,
-  WhatsAppImage,
-  type WhatsAppImageExport,
+  WhatsAppMedia,
+  type WhatsAppMediaExport,
   WHATSAPP_WINDOW_MS,
   whatsappIdentity,
   type WhatsAppWebhook,
@@ -32,9 +33,16 @@ export function whatsappConfigured(env: WhatsAppConfiguration) {
 const RawMessage = Schema.Struct({
   phoneNumberId: Schema.String,
   message: Schema.Struct({
-    type: Schema.Literals(["text", "image"]),
+    type: Schema.Literals(["text", "image", "audio"]),
     timestamp: Schema.String,
     image: Schema.optionalKey(
+      Schema.Struct({
+        id: Schema.String,
+        mime_type: Schema.String,
+        sha256: Schema.String,
+      })
+    ),
+    audio: Schema.optionalKey(
       Schema.Struct({
         id: Schema.String,
         mime_type: Schema.String,
@@ -87,24 +95,40 @@ export function whatsappChat(
     const identity = await whatsappIdentity(
       `${env.WHATSAPP_PHONE_NUMBER_ID}:${message.id}`
     )
-    const image =
+    const rawMedia =
       raw.value.message.type === "image"
-        ? Schema.decodeUnknownSync(WhatsAppImage)({
-            id: raw.value.message.image?.id,
-            mime: raw.value.message.image?.mime_type,
-            sha256: raw.value.message.image?.sha256,
-          })
-        : undefined
+        ? raw.value.message.image
+        : raw.value.message.audio
+    const media = rawMedia
+      ? Schema.decodeUnknownSync(WhatsAppMedia)({
+          id: rawMedia.id,
+          mime: rawMedia.mime_type.split(";")[0]?.trim().toLowerCase(),
+          sha256: rawMedia.sha256,
+        })
+      : undefined
+    if (raw.value.message.type !== "text" && !media) return
+    if (media && !media.mime.startsWith(`${raw.value.message.type}/`)) return
     const body = {
       id: identity.id,
       messageId: message.id,
       threadId: thread.id,
       sender: message.author.userId,
-      body: message.text.trim() || "Please inspect the attached image.",
+      body:
+        raw.value.message.type === "audio"
+          ? "Please respond to my voice message."
+          : message.text.trim() || "Please inspect the attached image.",
       timestamp: Number(raw.value.message.timestamp) * 1000,
-      ...(image ? { image } : {}),
+      ...(media ? { media } : {}),
     }
-    const fingerprint = await whatsappIdentity(JSON.stringify(body))
+    // Keep the released image fingerprint encoding through the generic media
+    // refactor, so old Meta redeliveries match their existing receipt.
+    const fingerprint = await whatsappIdentity(
+      JSON.stringify(
+        media?.mime.startsWith("image/")
+          ? { ...body, media: undefined, image: media }
+          : body
+      )
+    )
     await receive(
       Schema.decodeUnknownSync(IncomingWhatsApp)({
         ...body,
@@ -113,10 +137,13 @@ export function whatsappChat(
     )
   })
   return {
-    async downloadImage(image: WhatsAppImage) {
+    async downloadMedia(media: WhatsAppMedia) {
       try {
-        const bytes = new Uint8Array(await adapter.downloadMedia(image.id))
-        if (bytes.length > MAX_FILE_BYTES || imageMime(bytes) !== image.mime)
+        const bytes = new Uint8Array(await adapter.downloadMedia(media.id))
+        if (
+          bytes.length > MAX_FILE_BYTES ||
+          (imageMime(bytes) ?? audioMime(bytes, media.mime)) !== media.mime
+        )
           return { ok: false as const, retryable: false }
         const digest = new Uint8Array(
           await crypto.subtle.digest("SHA-256", new Uint8Array(bytes))
@@ -125,7 +152,7 @@ export function whatsappChat(
           value.toString(16).padStart(2, "0")
         ).join("")
         const base64 = btoa(String.fromCharCode(...digest))
-        if (image.sha256 !== base64 && image.sha256.toLowerCase() !== hex)
+        if (media.sha256 !== base64 && media.sha256.toLowerCase() !== hex)
           return { ok: false as const, retryable: false }
         return { ok: true as const, bytes }
       } catch (error) {
@@ -180,7 +207,7 @@ export function whatsappChat(
         await bot.shutdown()
       }
     },
-    async send(threadId: string, text: string, image?: WhatsAppImageExport) {
+    async send(threadId: string, text: string, image?: WhatsAppMediaExport) {
       try {
         const target = adapter.decodeThreadId(threadId)
         if (

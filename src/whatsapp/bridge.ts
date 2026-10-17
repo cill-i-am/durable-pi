@@ -7,8 +7,8 @@ import { whatsappChat, whatsappConfigured } from "./adapters/chat"
 import { whatsappRpc } from "./adapters/rpc"
 import {
   WhatsAppWebhook,
-  WhatsAppImage,
-  WhatsAppImageExport,
+  WhatsAppMedia,
+  WhatsAppMediaExport,
 } from "./contracts"
 
 export { ChatSdkStateAgent } from "agents/chat-sdk"
@@ -31,11 +31,11 @@ export class WhatsAppBridge extends Agent<AgentEnv> {
       return { status: 503, body: "WhatsApp is not configured." }
     return this.chat().webhook(Schema.decodeUnknownSync(WhatsAppWebhook)(raw))
   }
-  async downloadImage(raw: unknown) {
+  async downloadMedia(raw: unknown) {
     if (!whatsappConfigured(this.env))
       return { ok: false as const, retryable: true }
-    return this.chat().downloadImage(
-      Schema.decodeUnknownSync(WhatsAppImage)(raw)
+    return this.chat().downloadMedia(
+      Schema.decodeUnknownSync(WhatsAppMedia)(raw)
     )
   }
   async send(threadId: string, text: string, raw?: unknown) {
@@ -44,7 +44,7 @@ export class WhatsAppBridge extends Agent<AgentEnv> {
     return this.chat().send(
       threadId,
       text,
-      raw ? Schema.decodeUnknownSync(WhatsAppImageExport)(raw) : undefined
+      raw ? Schema.decodeUnknownSync(WhatsAppMediaExport)(raw) : undefined
     )
   }
 }

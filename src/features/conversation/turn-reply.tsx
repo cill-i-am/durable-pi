@@ -171,8 +171,8 @@ function ReplyBody({
                 : "Thinking…"}
           </span>
         ) : null}
-        {agentId && !!turn.images?.length && (
-          <FileAttachments files={turn.images} agentId={agentId} />
+        {agentId && !!turn.replyFiles?.length && (
+          <FileAttachments files={turn.replyFiles} agentId={agentId} />
         )}
       </BubbleContent>
     </Bubble>

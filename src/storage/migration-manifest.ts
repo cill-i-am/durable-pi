@@ -124,6 +124,12 @@ export const agentMigrationManifest = {
         "CREATE INDEX `workspace_image_replies_file` ON `workspace_image_replies` (`file_id`);",
       ],
     },
+    {
+      id: "20261017195616_shared_audio",
+      checksum:
+        "d1bb4e02f9c523b809043548611e574256db6aeecba0ab4ca3b661118cc96581",
+      statements: ["ALTER TABLE `workspace_files` ADD `audio` text;"],
+    },
   ],
   schema: [
     {
@@ -544,7 +550,7 @@ export const agentMigrationManifest = {
     {
       type: "table",
       name: "workspace_files",
-      sql: 'CREATE TABLE `workspace_files` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`name` text NOT NULL,\n\t`mime` text NOT NULL,\n\t`kind` text NOT NULL,\n\t`size` integer NOT NULL,\n\t`createdAt` text NOT NULL,\n\t`status` text NOT NULL,\n\t`trashed` integer DEFAULT 0 NOT NULL,\n\t`hash` text NOT NULL,\n\t`visionHash` text,\n\tCONSTRAINT "workspace_files_kind_check" CHECK("kind" in (\'image\', \'text\', \'video\', \'document\')),\n\tCONSTRAINT "workspace_files_status_check" CHECK("status" in (\'uploading\', \'ready\')),\n\tCONSTRAINT "workspace_files_trashed_check" CHECK("trashed" in (0, 1)),\n\tCONSTRAINT "workspace_files_size_check" CHECK("size" >= 0)\n)',
+      sql: 'CREATE TABLE `workspace_files` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`name` text NOT NULL,\n\t`mime` text NOT NULL,\n\t`kind` text NOT NULL,\n\t`size` integer NOT NULL,\n\t`createdAt` text NOT NULL,\n\t`status` text NOT NULL,\n\t`trashed` integer DEFAULT 0 NOT NULL,\n\t`hash` text NOT NULL,\n\t`visionHash` text, `audio` text,\n\tCONSTRAINT "workspace_files_kind_check" CHECK("kind" in (\'image\', \'text\', \'video\', \'document\')),\n\tCONSTRAINT "workspace_files_status_check" CHECK("status" in (\'uploading\', \'ready\')),\n\tCONSTRAINT "workspace_files_trashed_check" CHECK("trashed" in (0, 1)),\n\tCONSTRAINT "workspace_files_size_check" CHECK("size" >= 0)\n)',
     },
     {
       type: "index",

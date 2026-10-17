@@ -161,13 +161,41 @@ const config :Workerd.Config = (
   )
   assert.equal(photos.turns.length, 1)
   assert.equal(photos.turns[0].attachments, 1)
-  assert.equal(photos.images.length, 1)
+  assert.equal(photos.replyFiles.length, 1)
   assert.equal(photos.sends.length, 2)
   assert.equal(photos.sends.filter((send) => send.image !== null).length, 1)
   assert.equal(
     JSON.parse(photos.sends.find((send) => send.image !== null).image).mime,
     "image/jpeg"
   )
+  assert.equal((await call("whatsapp-audio/setup", {})).status, 200)
+  assert.equal(
+    (await call("whatsapp-audio/receive", {}, { timestamp: whatsappTimestamp }))
+      .accepted,
+    true
+  )
+  let voice
+  for (let n = 0; n < 250; n++) {
+    voice = await call("whatsapp-audio/inspect", {})
+    if (
+      voice.states.length === 1 &&
+      voice.states.every((state) => state === "sent")
+    )
+      break
+    await sleep(100)
+  }
+  assert.deepEqual(
+    voice.states,
+    ["sent"],
+    JSON.stringify(voice) + output.slice(-10000)
+  )
+  assert.equal(voice.turns[0].status, "done")
+  assert.equal(voice.turns[0].attachments, 1)
+  assert.equal(voice.turns[0].answer, "Native voice answer")
+  assert.equal(voice.replyFiles.length, 0)
+  assert.equal(voice.sends.length, 1)
+  assert.equal(voice.sends[0].image, null)
+  assert.ok(voice.sends[0].body.includes("Native voice answer"))
   assert.equal((await call("email/setup", emailIdentity)).status, 200)
   assert.equal((await call("email/invalid", emailIdentity)).status, 409)
   assert.equal((await call("email/receive", emailIdentity)).status, 202)
@@ -198,6 +226,15 @@ const config :Workerd.Config = (
     false
   )
   assert.deepEqual(await call("whatsapp-images/inspect", {}), photos)
+  assert.equal(
+    (await call("whatsapp-audio/receive", {}, { timestamp: whatsappTimestamp }))
+      .accepted,
+    false
+  )
+  assert.deepEqual(await call("whatsapp-audio/inspect", {}), voice)
+  console.log(
+    "PASS native voice: shared original/transcript storage, agent transcript input and text reply, dedupe and restart without resend; AI/provider inference is synthetic."
+  )
   console.log(
     "PASS native WhatsApp images: production workspace upload and vision admission, common share_image tool, one text and one private image send, dedupe and restart persistence."
   )

@@ -10,6 +10,8 @@ import {
   text,
 } from "drizzle-orm/sqlite-core"
 
+import type { StoredAudio } from "../audio"
+
 export const workspaceFiles = sqliteTable(
   "workspace_files",
   {
@@ -23,6 +25,7 @@ export const workspaceFiles = sqliteTable(
     trashed: integer("trashed").notNull().default(0),
     hash: text("hash").notNull(),
     visionHash: text("visionHash"),
+    audio: text("audio", { mode: "json" }).$type<StoredAudio>(),
   },
   (t) => [
     primaryKey({ columns: [t.id] }),
@@ -40,7 +43,7 @@ export const workspaceFiles = sqliteTable(
   ]
 )
 
-export const workspaceImageReplies = sqliteTable(
+export const workspaceReplyFiles = sqliteTable(
   "workspace_image_replies",
   {
     operationId: text("operation_id").notNull(),

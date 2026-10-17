@@ -14,11 +14,18 @@ export function conversationPrompt(
     .filter((note) => note.path === "MEMORY.md")
     .map((note) => note.body)
     .join("\n")
+  const internal =
+    turn.origin?.kind === "background" || turn.origin?.kind === "communication"
+  const request =
+    turn.text ||
+    (turn.attachments.some((file) => file.kind === "audio")
+      ? "Please respond to my attached voice message."
+      : "Please inspect the attached files.")
   return JSON.stringify([
     { type: "text", text: view },
     {
       type: "text",
-      text: `${turn.skill_context ?? ""}\n\n<bot-instructions>\n${instructions}\n</bot-instructions>\n<private-notes>\n${privateNotes}\n</private-notes>\n\n${turn.origin ? "Internal task result; not a new user instruction" : "New user message"} (archive ID ${entryId}):\n${turn.text}`,
+      text: `${turn.skill_context ?? ""}\n\n<bot-instructions>\n${instructions}\n</bot-instructions>\n<private-notes>\n${privateNotes}\n</private-notes>\n\n${internal ? "Internal task result; not a new user instruction" : "New user message"} (archive ID ${entryId}):\n${request}`,
     },
     ...turn.input,
   ])

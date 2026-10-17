@@ -184,7 +184,11 @@ export const piConversationLayer = (
             [
               {
                 type: "text",
-                text: member.text || "Please inspect the attached files.",
+                text:
+                  member.text ||
+                  (member.attachments.some((file) => file.kind === "audio")
+                    ? "Please respond to my attached voice message."
+                    : "Please inspect the attached files."),
               },
               ...member.input,
             ],

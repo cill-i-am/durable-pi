@@ -1,14 +1,16 @@
 import type { Effect } from "effect"
 
+import type { StoredAudio } from "./audio"
 import type {
   WorkspaceUnavailable,
   FileInfo,
   DocumentExtraction,
-  ImageReply,
+  FileReply,
 } from "./files"
 import type { VideoPreparation } from "./video"
 
-export type WorkspaceFile = Omit<FileInfo, "extraction" | "video"> & {
+export type WorkspaceFile = Omit<FileInfo, "extraction" | "video" | "audio"> & {
+  audio?: StoredAudio
   hash: string
   visionHash: string | null
 }
@@ -19,13 +21,13 @@ export type VideoJob = VideoPreparation & {
   retryAt: number
 }
 export interface WorkspaceLedger {
-  imageReply: (
+  fileReply: (
     operationId: string
-  ) => Effect.Effect<ImageReply | undefined, WorkspaceUnavailable>
-  imageReplies: (
+  ) => Effect.Effect<FileReply | undefined, WorkspaceUnavailable>
+  replyFiles: (
     turnId: string
-  ) => Effect.Effect<readonly ImageReply[], WorkspaceUnavailable>
-  replyImage: (input: ImageReply) => Effect.Effect<void, WorkspaceUnavailable>
+  ) => Effect.Effect<readonly FileReply[], WorkspaceUnavailable>
+  replyFile: (input: FileReply) => Effect.Effect<void, WorkspaceUnavailable>
   readonly transactionGroup: object
   atomic: <TValue, TError, TRequirements>(
     change: () => Effect.Effect<TValue, TError, TRequirements>
@@ -42,7 +44,8 @@ export interface WorkspaceLedger {
   promotePdf: (id: string) => Effect.Effect<void, WorkspaceUnavailable>
   ready: (
     id: string,
-    visionHash?: string | null
+    visionHash?: string | null,
+    audio?: StoredAudio
   ) => Effect.Effect<void, WorkspaceUnavailable>
   rename: (
     id: string,

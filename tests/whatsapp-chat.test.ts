@@ -1,4 +1,4 @@
-import { createHmac } from "node:crypto"
+import { createHash, createHmac } from "node:crypto"
 
 import { createMemoryState } from "@chat-adapter/state-memory"
 import { WhatsAppAdapter } from "@chat-adapter/whatsapp"
@@ -12,6 +12,7 @@ import type {
   IncomingWhatsApp,
   WhatsAppWebhook,
 } from "../src/whatsapp/contracts"
+import { audioBytes, audioMetadata } from "./audio-fixture"
 import { imageBytes, imageMetadata } from "./image-fixture"
 
 const env: WhatsAppConfiguration = {
@@ -54,11 +55,20 @@ function event(
                   ...(type === "text"
                     ? { text: { body: "Help with dinner." } }
                     : {
-                        image: {
-                          id: imageMetadata.id,
-                          mime_type: imageMetadata.mime,
-                          sha256: imageMetadata.sha256,
-                          caption,
+                        [type === "audio" ? "audio" : "image"]: {
+                          id:
+                            type === "audio"
+                              ? audioMetadata.id
+                              : imageMetadata.id,
+                          mime_type:
+                            type === "audio"
+                              ? "audio/ogg; codecs=opus"
+                              : imageMetadata.mime,
+                          sha256:
+                            type === "audio"
+                              ? audioMetadata.sha256
+                              : imageMetadata.sha256,
+                          ...(type === "audio" ? { voice: true } : { caption }),
                         },
                       }),
                 },
@@ -121,7 +131,8 @@ describe("official WhatsApp Chat SDK transport", () => {
   it.each([
     ["15550999999", "text", env.WHATSAPP_PHONE_NUMBER_ID],
     ["15550999999", "image", env.WHATSAPP_PHONE_NUMBER_ID],
-    [env.WHATSAPP_OWNER_ID, "audio", env.WHATSAPP_PHONE_NUMBER_ID],
+    ["15550999999", "audio", env.WHATSAPP_PHONE_NUMBER_ID],
+    [env.WHATSAPP_OWNER_ID, "video", env.WHATSAPP_PHONE_NUMBER_ID],
     [env.WHATSAPP_OWNER_ID, "text", "999999"],
   ])(
     "never admits an unknown sender, media caption or foreign business number",
@@ -161,27 +172,78 @@ describe("official WhatsApp Chat SDK transport", () => {
       ).toBe(200)
       expect(receive).toHaveBeenCalledWith(
         expect.objectContaining({
-          image: imageMetadata,
+          media: imageMetadata,
           body: caption || "Please inspect the attached image.",
         })
       )
+      const input = receive.mock.calls[0]![0]
+      const releasedFingerprint = createHash("sha256")
+        .update(
+          JSON.stringify({
+            id: input.id,
+            messageId: input.messageId,
+            threadId: input.threadId,
+            sender: input.sender,
+            body: input.body,
+            timestamp: input.timestamp,
+            image: imageMetadata,
+          })
+        )
+        .digest("hex")
+      expect(input.fingerprint).toBe(releasedFingerprint)
       expect(download).not.toHaveBeenCalled()
     }
   )
+  it("admits a signed voice note without downloading during webhook handling", async () => {
+    const receive = vi.fn(async (_input: IncomingWhatsApp) => {})
+    const download = vi.spyOn(WhatsAppAdapter.prototype, "downloadMedia")
+    expect(
+      (
+        await whatsappChat(env, createMemoryState(), receive).webhook(
+          event(env.WHATSAPP_OWNER_ID, "audio")
+        )
+      ).status
+    ).toBe(200)
+    expect(receive).toHaveBeenCalledWith(
+      expect.objectContaining({
+        media: audioMetadata,
+        body: "Please respond to my voice message.",
+      })
+    )
+    expect(download).not.toHaveBeenCalled()
+  })
+  it("validates an audio download against the container and signed digest", async () => {
+    const download = vi
+      .spyOn(WhatsAppAdapter.prototype, "downloadMedia")
+      .mockResolvedValue(Buffer.from(audioBytes))
+    const chat = () => whatsappChat(env, createMemoryState(), async () => {})
+    expect(await chat().downloadMedia(audioMetadata)).toEqual({
+      ok: true,
+      bytes: audioBytes,
+    })
+    expect(
+      await chat().downloadMedia({ ...audioMetadata, sha256: "a".repeat(64) })
+    ).toEqual({ ok: false, retryable: false })
+    download.mockResolvedValueOnce(Buffer.from(imageBytes))
+    expect(await chat().downloadMedia(audioMetadata)).toEqual({
+      ok: false,
+      retryable: false,
+    })
+  })
   it("validates downloaded image type and digest before exposing its bytes", async () => {
     const download = vi
       .spyOn(WhatsAppAdapter.prototype, "downloadMedia")
       .mockResolvedValue(Buffer.from(imageBytes))
     const chat = () => whatsappChat(env, createMemoryState(), async () => {})
-    expect(await chat().downloadImage(imageMetadata)).toEqual({
+    expect(await chat().downloadMedia(imageMetadata)).toEqual({
       ok: true,
       bytes: imageBytes,
     })
     expect(
-      await chat().downloadImage({ ...imageMetadata, sha256: "a".repeat(64) })
+      await chat().downloadMedia({ ...imageMetadata, sha256: "a".repeat(64) })
     ).toEqual({ ok: false, retryable: false })
     download.mockResolvedValueOnce(Buffer.from("not an image"))
-    expect(await chat().downloadImage(imageMetadata)).toEqual({
+    expect(await chat().downloadMedia(imageMetadata)).toEqual({
       ok: false,
       retryable: false,
     })

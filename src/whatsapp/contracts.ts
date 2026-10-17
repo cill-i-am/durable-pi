@@ -1,6 +1,7 @@
 import { Schema } from "effect"
 
 import { AgentId } from "../agents/domain"
+import { AudioMime } from "../workspace/audio"
 import { FileId } from "../workspace/files"
 
 export class WhatsAppRejected extends Schema.TaggedError<WhatsAppRejected>()(
@@ -31,7 +32,12 @@ export const WhatsAppImage = Schema.Struct({
   ),
 })
 export type WhatsAppImage = typeof WhatsAppImage.Type
-export const WhatsAppImageExport = Schema.Struct({
+export const WhatsAppMedia = Schema.Struct({
+  ...WhatsAppImage.fields,
+  mime: Schema.Union([WhatsAppImage.fields.mime, AudioMime]),
+})
+export type WhatsAppMedia = typeof WhatsAppMedia.Type
+export const WhatsAppMediaExport = Schema.Struct({
   name: Schema.String,
   mime: Schema.Literals(["image/jpeg", "image/png"]),
   data: Schema.String.check(
@@ -39,7 +45,7 @@ export const WhatsAppImageExport = Schema.Struct({
     Schema.isPattern(/^[A-Za-z0-9+/]+={0,2}$/)
   ),
 })
-export type WhatsAppImageExport = typeof WhatsAppImageExport.Type
+export type WhatsAppMediaExport = typeof WhatsAppMediaExport.Type
 export const IncomingWhatsApp = Schema.Struct({
   id: OperationId,
   fingerprint: Schema.String.check(Schema.isPattern(/^[a-f0-9]{64}$/)),
@@ -53,7 +59,7 @@ export const IncomingWhatsApp = Schema.Struct({
   sender: WhatsAppSender,
   body: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(4096)),
   timestamp: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
-  image: Schema.optionalKey(Schema.NullOr(WhatsAppImage)),
+  media: Schema.optionalKey(Schema.NullOr(WhatsAppMedia)),
 })
 export type IncomingWhatsApp = typeof IncomingWhatsApp.Type
 export const WhatsAppDelivery = Schema.Literals([
@@ -84,10 +90,10 @@ export const ConfigureWhatsApp = Schema.Struct({
 export type ConfigureWhatsApp = typeof ConfigureWhatsApp.Type
 export const WhatsAppRecord = Schema.Struct({
   ...IncomingWhatsApp.fields,
-  image: Schema.NullOr(WhatsAppImage),
-  imageFileId: Schema.NullOr(FileId),
-  outboundImageId: Schema.NullOr(FileId),
-  imageAttempts: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+  media: Schema.NullOr(WhatsAppMedia),
+  fileId: Schema.NullOr(FileId),
+  outboundFileId: Schema.NullOr(FileId),
+  mediaAttempts: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
   agentId: AgentId,
   generation: Schema.Number,
   control: Schema.Boolean,
@@ -112,7 +118,9 @@ export const WhatsAppView = Schema.Struct({
       state: WhatsAppDelivery,
       error: Schema.NullOr(Schema.String),
       createdAt: Schema.Number,
-      kind: Schema.optionalKey(Schema.Literals(["text", "image"])),
+      kind: Schema.optionalKey(
+        Schema.Literals(["text", "image", "audio", "media"])
+      ),
     })
   ),
 })
@@ -134,7 +142,7 @@ export const WhatsAppTurn = Schema.Struct({
   ]),
   answer: Schema.String,
   needsApproval: Schema.Boolean,
-  images: Schema.optionalKey(Schema.Array(FileId).check(Schema.isMaxLength(4))),
+  files: Schema.optionalKey(Schema.Array(FileId).check(Schema.isMaxLength(4))),
 })
 export type WhatsAppTurn = typeof WhatsAppTurn.Type
 export const WhatsAppWebhook = Schema.Struct({

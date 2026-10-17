@@ -16,7 +16,7 @@ export function conversationSnapshot<TError, TRequirements>(
   execution: Pick<typeof ConversationExecution.Service, "observe">,
   journal: Pick<typeof ConversationJournal.Service, "activity">,
   metadata: () => Effect.Effect<SnapshotMetadata, TError, TRequirements>,
-  images: (turnId: string) => Effect.Effect<FileInfo[], FileError> = () =>
+  replyFiles: (turnId: string) => Effect.Effect<FileInfo[], FileError> = () =>
     Effect.succeed([])
 ) {
   return Effect.fn("Conversations.snapshot")(function* () {
@@ -48,7 +48,7 @@ export function conversationSnapshot<TError, TRequirements>(
           error: turn.error,
           created_at: turn.created_at,
           attachments: turn.attachments,
-          images: yield* images(turn.id),
+          replyFiles: yield* replyFiles(turn.id),
           skills: turn.skills,
           routing: pinnedRoute(turn, settings),
           activity: saved,

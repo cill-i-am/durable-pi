@@ -38,6 +38,7 @@ import { parseAgentId, workspaceDestination } from "@/navigation/workspace"
 import type { FileInfo } from "@/workspace/files"
 import { VideoResult } from "@/workspace/video"
 
+import { AudioPlayer } from "./audio-player"
 import { fileSize } from "./file-attachments"
 import { attachmentReady, fileDescription, legacyPdf } from "./preparation"
 import { FilePicker, UploadStatus } from "./upload-controls"
@@ -457,6 +458,14 @@ function FilePreview({
   }, [agentId, file.id, file.kind, file.extraction?.status])
   if (file.kind === "video" && file.video?.status === "ready")
     return <VideoPreview file={file} agentId={agentId} />
+  if (file.kind === "audio")
+    return (
+      <AudioPlayer
+        key={`${agentId}:${file.id}`}
+        file={file}
+        agentId={agentId}
+      />
+    )
   if (
     file.kind !== "image" &&
     file.kind !== "text" &&

@@ -251,7 +251,7 @@ import { emailPump } from "../email/pump"
 import { jsonRequest } from "../shared/http"
 import { whatsappConfigured } from "../whatsapp/adapters/chat"
 import { whatsappRequest } from "../whatsapp/adapters/http"
-import { exportWhatsAppImage } from "../whatsapp/adapters/images"
+import { exportWhatsAppMedia } from "../whatsapp/adapters/media"
 import {
   WhatsAppOutcome,
   WhatsAppRequest,
@@ -265,11 +265,11 @@ import {
   WhatsAppUnavailable,
   WhatsAppWebhook,
   type WhatsAppRecord,
-  type WhatsAppImage,
-  type WhatsAppImageExport,
+  type WhatsAppMedia,
+  type WhatsAppMediaExport,
   type WhatsAppFailure,
 } from "../whatsapp/contracts"
-import { importWhatsAppImage } from "../whatsapp/images"
+import { importWhatsAppMedia } from "../whatsapp/media"
 import { WhatsAppSendFailed } from "../whatsapp/pump"
 import { whatsappApplication } from "../whatsapp/service"
 import type { AgentGatewayBindings } from "./adapters/gateway"
@@ -455,6 +455,7 @@ import { sqliteWebhookPersistence } from "../webhooks/adapters/sqlite"
 import { WebhookKey } from "../webhooks/contracts"
 import { WebhookStorageError } from "../webhooks/persistence"
 import { Webhooks, webhookApplication } from "../webhooks/service"
+import { transcribeAudio } from "../workspace/adapters/audio"
 import { documentService } from "../workspace/adapters/document-service"
 import { filesRequest } from "../workspace/adapters/http"
 import { prepareImage } from "../workspace/adapters/images"
@@ -1024,9 +1025,15 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         this.env.WORKSPACE_ASSETS,
         `files/${this.ctx.id.toString()}`,
         () => this.writable(() => new WorkspaceUnavailable()),
-        documentService(this.env.DOCUMENT_SERVICE),
-        videoService(this.env.TERMINAL_SERVICE, this.ctx.id.toString()),
-        prepareImage(this.env.IMAGES)
+        {
+          document: documentService(this.env.DOCUMENT_SERVICE),
+          video: videoService(
+            this.env.TERMINAL_SERVICE,
+            this.ctx.id.toString()
+          ),
+          image: prepareImage(this.env.IMAGES),
+          audio: transcribeAudio(this.env.AI),
+        }
       ),
       Layer.unwrap(
         Effect.map(MemoryTransaction, (memory) =>
@@ -1290,7 +1297,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       return {
         status: turn.status,
         answer: turn.answer,
-        images: (yield* this.workspaceService.imageReplies(id)).map(
+        files: (yield* this.workspaceService.replyFiles(id)).map(
           (file) => file.id
         ),
         needsApproval: access.approvals.some(
@@ -1303,23 +1310,23 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       )
     )
   }
-  private importWhatsAppImage(owner: string, id: string, image: WhatsAppImage) {
-    return importWhatsAppImage(this.workspaceService, (source) =>
+  private importWhatsAppMedia(owner: string, id: string, media: WhatsAppMedia) {
+    return importWhatsAppMedia(this.workspaceService, (source) =>
       Effect.gen({ self: this }, function* () {
         const result = yield* whatsappNative(async () => {
           const bridge = await getAgentByName(this.env.WHATSAPP, owner)
-          return bridge.downloadImage(source)
+          return bridge.downloadMedia(source)
         })
         if (!result.ok)
           return yield* result.retryable
             ? new WhatsAppUnavailable()
             : new WhatsAppRejected({
                 message:
-                  "This image is unavailable, invalid or too large. Send a PNG, JPEG or WebP image up to 8 MB.",
+                  "This attachment is unavailable, invalid or too large. Send a supported image or audio file up to 8 MB.",
               })
         return result.bytes
       })
-    )(id, image)
+    )(id, media)
   }
   private whatsapp(owner: string): ReturnType<typeof whatsappApplication> {
     const profiles = () =>
@@ -1350,16 +1357,16 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         ).pipe(Effect.mapError(() => new WhatsAppUnavailable()))
         return peer
       })
-    const exportImage = (
+    const exportMedia = (
       agentId: AgentId,
       id: string
-    ): Effect.Effect<WhatsAppImageExport, WhatsAppFailure> =>
+    ): Effect.Effect<WhatsAppMediaExport, WhatsAppFailure> =>
       agentId === homeAgentId
-        ? exportWhatsAppImage(this.workspaceService, id)
+        ? exportWhatsAppMedia(this.workspaceService, id)
         : whatsappNative(() =>
             whatsappRpc(
               this.env.AGENT.getByName(agentObjectName(owner, agentId))
-            ).exportImage(owner, id)
+            ).exportMedia(owner, id)
           )
     return whatsappApplication(this.whatsappStore, {
       profiles,
@@ -1372,18 +1379,18 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       name: (id) => profile(id).pipe(Effect.map((agent) => agent?.name ?? id)),
       wake: () => this.wakeWhatsApp(),
       reviewUrl: (id) => `${this.env.EMAIL_REVIEW_URL}/agents/${id}`,
-      image: (record) =>
+      media: (record) =>
         Effect.gen({ self: this }, function* () {
-          if (!record.image) return yield* new WhatsAppUnavailable()
+          if (!record.media) return yield* new WhatsAppUnavailable()
           if (record.agentId === homeAgentId)
-            return yield* this.importWhatsAppImage(
+            return yield* this.importWhatsAppMedia(
               owner,
               record.id,
-              record.image
+              record.media
             )
           const peer = yield* connected(record.agentId)
           return yield* whatsappNative(() =>
-            whatsappRpc(peer).importImage(owner, record.id, record.image!)
+            whatsappRpc(peer).importMedia(owner, record.id, record.media!)
           )
         }),
       admit: (id, input) =>
@@ -1416,8 +1423,8 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             ).pipe(Effect.map((turn) => turn ?? undefined)),
       send: (record: WhatsAppRecord, reply: string) =>
         Effect.gen({ self: this }, function* () {
-          const image = record.outboundImageId
-            ? yield* exportImage(record.agentId, record.outboundImageId).pipe(
+          const image = record.outboundFileId
+            ? yield* exportMedia(record.agentId, record.outboundFileId).pipe(
                 Effect.mapError(
                   () => new WhatsAppSendFailed({ uncertain: false })
                 )
@@ -1469,15 +1476,15 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         return yield* new WhatsAppUnavailable()
       if (input._tag === "Turn")
         return (yield* this.whatsappTurn(input.id)) ?? null
-      if (input._tag === "ExportImage")
-        return yield* exportWhatsAppImage(this.workspaceService, input.id)
-      if (input._tag === "ImportImage") {
+      if (input._tag === "ExportMedia")
+        return yield* exportWhatsAppMedia(this.workspaceService, input.id)
+      if (input._tag === "ImportMedia") {
         if (!whatsappConfigured(this.env))
           return yield* new WhatsAppUnavailable()
-        return yield* this.importWhatsAppImage(
+        return yield* this.importWhatsAppMedia(
           input.owner,
           input.id,
-          input.image
+          input.media
         )
       }
       if (
@@ -1500,7 +1507,12 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       return true
     }).pipe(
       preserveFatal,
-      Effect.mapError(() => new WhatsAppUnavailable())
+      Effect.mapError((error) =>
+        Schema.is(WhatsAppRejected)(error) ||
+        Schema.is(WhatsAppStorageError)(error)
+          ? error
+          : new WhatsAppUnavailable()
+      )
     )
     return WhatsAppOutcome.encode(await this.actorRuntime.runPromiseExit(work))
   }
@@ -2688,7 +2700,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     this.conversationExecution,
     this.conversationJournal,
     () => this.snapshotMetadata(),
-    (id) => this.workspaceService.imageReplies(id)
+    (id) => this.workspaceService.replyFiles(id)
   )
   readonly runner = new TurnRunner(this)
   readonly compactor = new MemoryRunner(this)

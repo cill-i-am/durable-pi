@@ -142,8 +142,8 @@ export class WhatsAppStore {
     {
       reply = "",
       route,
-      outboundImageId = null,
-    }: { reply?: string; route?: AgentId; outboundImageId?: string | null } = {}
+      outboundFileId = null,
+    }: { reply?: string; route?: AgentId; outboundFileId?: string | null } = {}
   ) {
     return this.atomic(() =>
       Effect.gen({ self: this }, function* () {
@@ -193,10 +193,10 @@ export class WhatsAppStore {
         yield* this.query((orm) =>
           orm.insert(whatsappMessages).values({
             ...input,
-            image: input.image ?? null,
-            imageFileId: null,
-            outboundImageId,
-            imageAttempts: 0,
+            media: input.media ?? null,
+            fileId: null,
+            outboundFileId,
+            mediaAttempts: 0,
             agentId,
             generation: settings.generation,
             control: !!reply,
@@ -220,8 +220,8 @@ export class WhatsAppStore {
       reply?: string
       error?: string | null
       providerId?: string | null
-      imageFileId?: string
-      imageAttempts?: number
+      fileId?: string
+      mediaAttempts?: number
     } = {}
   ) {
     return this.query((orm) =>
@@ -279,12 +279,12 @@ export class WhatsAppStore {
         .where(eq(whatsappMessages.state, "sending"))
     )
   }
-  beginImage(id: string) {
+  beginMedia(id: string) {
     return this.atomic(() =>
       Effect.gen({ self: this }, function* () {
         const record = yield* this.get(id)
         if (!record || record.state !== "queued") return false
-        if (record.imageAttempts >= 5) {
+        if (record.mediaAttempts >= 5) {
           yield* this.update(id, "queued", "failed", {
             error:
               "The image could not be prepared after several attempts. Retry or send it again.",
@@ -292,12 +292,12 @@ export class WhatsAppStore {
           return false
         }
         return yield* this.update(id, "queued", "queued", {
-          imageAttempts: record.imageAttempts + 1,
+          mediaAttempts: record.mediaAttempts + 1,
         })
       })
     )
   }
-  queueImage(record: WhatsAppRecord, fileId: string) {
+  queueMedia(record: WhatsAppRecord, fileId: string) {
     return Effect.gen({ self: this }, function* () {
       const identity = yield* Effect.promise(() =>
         whatsappIdentity(`${record.id}:reply-image:${fileId}`)
@@ -313,11 +313,14 @@ export class WhatsAppStore {
             {
               ...record,
               ...identity,
-              image: null,
+              media: null,
               messageId: `image:${record.id}:${fileId}`,
             },
             record.agentId,
-            { reply: "Image included in this reply.", outboundImageId: fileId }
+            {
+              reply: "Attachment included in this reply.",
+              outboundFileId: fileId,
+            }
           )
         })
       )
@@ -384,7 +387,7 @@ export class WhatsAppStore {
           id,
           row.state,
           row.control || row.reply ? "waiting" : "queued",
-          { error: null, imageAttempts: 0 }
+          { error: null, mediaAttempts: 0 }
         )
       })
     )

@@ -5,7 +5,10 @@ import { Effect } from "effect"
 import { r2WorkspaceAssets } from "../src/workspace/adapters/r2"
 import { SqliteWorkspace } from "../src/workspace/adapters/sqlite"
 import { WorkspaceUnavailable } from "../src/workspace/files"
-import { makeWorkspace } from "../src/workspace/service"
+import {
+  makeWorkspace,
+  type WorkspaceProcessing,
+} from "../src/workspace/service"
 import { database } from "./database"
 
 export const imageBytes = new Uint8Array([255, 216, 255, 224, 0, 16])
@@ -15,7 +18,7 @@ export const imageMetadata = {
   mime: "image/jpeg" as const,
   sha256: createHash("sha256").update(imageBytes).digest("base64"),
 }
-export function imageWorkspace() {
+export function imageWorkspace(processing: Partial<WorkspaceProcessing> = {}) {
   const db = database(),
     objects = new Map<string, Uint8Array>()
   const calls = { prepared: 0, writes: 0 },
@@ -43,13 +46,16 @@ export function imageWorkspace() {
     new SqliteWorkspace(db),
     assets,
     () => Effect.succeed(state.writable),
-    () => Effect.fail(new WorkspaceUnavailable()),
-    () => Effect.fail(new WorkspaceUnavailable()),
-    () =>
-      Effect.sync(() => {
-        calls.prepared++
-        return imagePreview
-      })
+    {
+      document: () => Effect.fail(new WorkspaceUnavailable()),
+      video: () => Effect.fail(new WorkspaceUnavailable()),
+      image: () =>
+        Effect.sync(() => {
+          calls.prepared++
+          return imagePreview
+        }),
+      ...processing,
+    }
   )
   return { db, objects, calls, state, workspace }
 }

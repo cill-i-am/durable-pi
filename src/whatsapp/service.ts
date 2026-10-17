@@ -40,7 +40,7 @@ export function whatsappApplication(store: WhatsAppStore, host: WhatsAppHost) {
       }
       const settings = yield* store.settings()
       if (!settings.enabled) return false
-      const command = input.image ? "" : input.body.trim()
+      const command = input.media ? "" : input.body.trim()
       let route: AgentId | undefined
       let reply = ""
       if (command === "/agents") {
@@ -84,16 +84,21 @@ export function whatsappApplication(store: WhatsAppStore, host: WhatsAppHost) {
             state,
             error,
             createdAt,
-            image,
-            outboundImageId,
+            media,
+            outboundFileId,
           }) => ({
             id,
             agentId,
             state,
             error,
             createdAt,
-            kind:
-              image || outboundImageId ? ("image" as const) : ("text" as const),
+            kind: media
+              ? media.mime.startsWith("audio/")
+                ? ("audio" as const)
+                : ("image" as const)
+              : outboundFileId
+                ? ("media" as const)
+                : ("text" as const),
           })
         ),
       }

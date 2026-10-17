@@ -1,4 +1,4 @@
-import { FileText, Film, X } from "lucide-react"
+import { FileText, Film, X, Download } from "lucide-react"
 
 import {
   Attachment,
@@ -13,6 +13,7 @@ import {
 import { agentUrl } from "@/http/client"
 import type { FileInfo } from "@/workspace/files"
 
+import { AudioPlayer } from "./audio-player"
 import { fileDescription, preparingFile } from "./preparation"
 
 export function fileSize(size: number) {
@@ -67,18 +68,46 @@ export function FileAttachments({
               {fileSize(file.size)} · {fileDescription(file)}
             </AttachmentDescription>
           </AttachmentContent>
-          <AttachmentTrigger
-            render={
-              <a
-                aria-label={`Download ${file.name}`}
-                href={
-                  agentUrl(agentId, `files/${file.id}/content`) + "&download=1"
-                }
-                download
+          {file.kind === "audio" ? (
+            <>
+              <AudioPlayer
+                key={`${agentId}:${file.id}`}
+                file={file}
+                agentId={agentId}
               />
-            }
-            aria-label={`Download ${file.name}`}
-          />
+              <AttachmentActions>
+                <AttachmentAction
+                  render={
+                    <a
+                      href={
+                        agentUrl(agentId, `files/${file.id}/content`) +
+                        "&download=1"
+                      }
+                      download
+                      aria-label={`Download ${file.name}`}
+                    />
+                  }
+                  aria-label={`Download ${file.name}`}
+                >
+                  <Download />
+                </AttachmentAction>
+              </AttachmentActions>
+            </>
+          ) : (
+            <AttachmentTrigger
+              render={
+                <a
+                  aria-label={`Download ${file.name}`}
+                  href={
+                    agentUrl(agentId, `files/${file.id}/content`) +
+                    "&download=1"
+                  }
+                  download
+                />
+              }
+              aria-label={`Download ${file.name}`}
+            />
+          )}
           {onRemove && (
             <AttachmentActions>
               <AttachmentAction
