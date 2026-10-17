@@ -183,30 +183,28 @@ export class ChatGPTSignIn {
           return { pending, code }
         })
         const { pending, code } = claimed
+        const transport = this.transport
         const value = yield* Effect.scoped(
           Effect.gen({ self: this }, function* () {
             const response = yield* nativeResponse(
               (signal) =>
-                this.transport(
-                  "https://auth.openai.com/api/accounts/oauth/token",
-                  {
-                    method: "POST",
-                    redirect: "error",
-                    signal,
-                    headers: {
-                      "content-type": "application/x-www-form-urlencoded",
-                      accept: "application/json",
-                    },
-                    body: new URLSearchParams({
-                      grant_type: "authorization_code",
-                      client_id: pending.clientId,
-                      code,
-                      code_verifier: pending.verifier,
-                      redirect_uri: pending.redirectUri,
-                      resource: "https://api.openai.com/v1",
-                    }),
-                  }
-                ),
+                transport("https://auth.openai.com/api/accounts/oauth/token", {
+                  method: "POST",
+                  redirect: "error",
+                  signal,
+                  headers: {
+                    "content-type": "application/x-www-form-urlencoded",
+                    accept: "application/json",
+                  },
+                  body: new URLSearchParams({
+                    grant_type: "authorization_code",
+                    client_id: pending.clientId,
+                    code,
+                    code_verifier: pending.verifier,
+                    redirect_uri: pending.redirectUri,
+                    resource: "https://api.openai.com/v1",
+                  }),
+                }),
               unavailable
             )
             if (!response.ok || !response.body) return yield* unavailable()

@@ -196,6 +196,12 @@ it("finishes an admin sign-in after actor restart, keeping tokens server-side an
   ).toBe(new URL(first.authorizationUrl).searchParams.get("ext_agent_host_id"))
   expect(second.id).not.toBe(first.id)
 })
+it("exchanges the code without binding native fetch to the sign-in service", async () => {
+  const f = fixture()
+  await f.start()
+  await f.finish()
+  expect(f.transport.mock.contexts[0]).toBeUndefined()
+})
 it("rejects changed callback state, origin, path, duplicate codes and fragments before dispatch", async () => {
   const f = fixture()
   await f.start()
