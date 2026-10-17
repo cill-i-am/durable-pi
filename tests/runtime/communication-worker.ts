@@ -38,8 +38,10 @@ import { LoopBot } from "./loop-worker"
 import { PersonalAgentProbe } from "./personal-agent-worker"
 import { SqlitePilot } from "./sqlite-worker"
 import { TerminalProbe } from "./terminal-worker"
+import { WhatsAppSink } from "./whatsapp-sink-worker"
 
 export {
+  WhatsAppSink,
   LoopBot,
   BrowserRecoveryBot,
   PersonalAgentProbe,
@@ -49,6 +51,7 @@ export {
 }
 
 interface Env {
+  WHATSAPP: DurableObjectNamespace<WhatsAppSink>
   SQL_PILOT: DurableObjectNamespace<SqlitePilot>
   LOADER: WorkerLoader
   PERSONAL: DurableObjectNamespace<PersonalAgentProbe>
@@ -340,6 +343,7 @@ export class MailboxBot extends DurableObject<Env> {
   }
 }
 const personalProbeOwners = new Map([
+  ["whatsapp", "whatsapp-owner"],
   ["email", "email-owner"],
   ["email-held", "email-held-owner"],
   ["personal-credential", "personal-credential-owner"],

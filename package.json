@@ -17,7 +17,8 @@
     "verify": "pnpm verify:static && pnpm verify:unit-and-build && pnpm verify:native-runtime && pnpm verify:browser && pnpm verify:container",
     "verify:static": "node --import tsx scripts/check-secrets.ts && pnpm generate-routes && pnpm db:check:agent && pnpm typecheck && pnpm lint && pnpm check",
     "verify:unit-and-build": "pnpm generate-routes && pnpm test && pnpm build && pnpm build:workers",
-    "verify:native-runtime": "pnpm generate-routes && pnpm test:communication-runtime && pnpm test:drizzle-runtime",
+    "verify:native-runtime": "pnpm generate-routes && pnpm test:communication-runtime && pnpm test:drizzle-runtime && pnpm test:whatsapp-runtime",
+    "test:whatsapp-runtime": "node scripts/test-whatsapp-runtime.mjs",
     "model:login": "tsx scripts/model-login.ts",
     "model:reauthorize": "tsx scripts/model-reauthorize.ts",
     "test:communication-runtime": "node scripts/test-communication-runtime.mjs",
@@ -36,6 +37,7 @@
   "dependencies": {
     "@alchemy.run/frontend-frameworks": "2.0.0-beta.83",
     "@base-ui/react": "^1.9.0",
+    "@chat-adapter/whatsapp": "4.42.0",
     "@cloudflare/puppeteer": "1.4.0",
     "@cloudflare/sandbox": "1.0.1",
     "@earendil-works/chord": "1.3.0",
@@ -62,6 +64,7 @@
     "alchemy": "2.0.0-beta.83",
     "better-auth": "1.7.10",
     "border-beam": "1.4.1",
+    "chat": "4.42.0",
     "class-variance-authority": "^0.7.1",
     "cmdk": "^1.1.1",
     "cn": "^0.5.0",
@@ -86,6 +89,7 @@
     "unpdf": "^1.9.0"
   },
   "devDependencies": {
+    "@chat-adapter/state-memory": "4.42.0",
     "@cloudflare/sandbox-v0": "npm:@cloudflare/sandbox@0.12.10",
     "@cloudflare/workers-types": "5.20261016.1",
     "@effect/sql-sqlite-node": "4.0.5",

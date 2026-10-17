@@ -4,6 +4,7 @@ import {
   fauxToolCall,
 } from "@earendil-works/pi-ai"
 import * as SqliteDriver from "@effect/sql-sqlite-do/SqliteClient"
+import { getAgentByName } from "agents"
 import { Cause, Effect, Exit, Schema } from "effect"
 import { SqlClient } from "effect/sql"
 
@@ -54,8 +55,11 @@ import type { PlanUpdate } from "../../src/planning/contracts"
 import { nativeOperation } from "../../src/shared/interop"
 import { SkillStorageError } from "../../src/skills/contracts"
 import { WebhookStorageError } from "../../src/webhooks/persistence"
+import { whatsappRpc } from "../../src/whatsapp/adapters/rpc"
+import { whatsappIdentity } from "../../src/whatsapp/contracts"
 import type { BackgroundGroupProbe } from "./background-worker"
 import type { TerminalProbe } from "./terminal-worker"
+import type { WhatsAppSink } from "./whatsapp-sink-worker"
 
 class NativeCommitRefused extends Schema.TaggedError<NativeCommitRefused>()(
   "NativeCommitRefused",
@@ -63,6 +67,7 @@ class NativeCommitRefused extends Schema.TaggedError<NativeCommitRefused>()(
 ) {}
 
 interface ProbeEnv {
+  WHATSAPP: DurableObjectNamespace<WhatsAppSink>
   LOADER: WorkerLoader
   PERSONAL: DurableObjectNamespace<PersonalAgentProbe>
   BACKGROUND: DurableObjectNamespace<BackgroundGroupProbe>
@@ -135,6 +140,7 @@ export class PersonalAgentProbe extends PersonalAgent {
   private terminalProbe: { projections: unknown[]; released: number }
   private terminalNamespace: DurableObjectNamespace<TerminalProbe>
   private backgroundNamespace: DurableObjectNamespace<BackgroundGroupProbe>
+  private whatsappNamespace: DurableObjectNamespace<WhatsAppSink>
   private commandProbe: {
     entered: boolean
     aborted: boolean
@@ -255,6 +261,13 @@ export class PersonalAgentProbe extends PersonalAgent {
     }
     super(ctx, {
       AGENT: env.PERSONAL,
+      WHATSAPP: env.WHATSAPP,
+      WHATSAPP_ACCESS_TOKEN: "synthetic-token",
+      WHATSAPP_APP_SECRET: "synthetic-secret",
+      WHATSAPP_VERIFY_TOKEN: "synthetic-verifier",
+      WHATSAPP_PHONE_NUMBER_ID: "123456",
+      WHATSAPP_OWNER_ID: "15550101010",
+      WHATSAPP_BUSINESS_NUMBER: "15550102020",
       MEMORY_BACKUPS: bucket,
       WORKSPACE_ASSETS: bucket,
       BACKGROUND: env.BACKGROUND,
@@ -398,6 +411,7 @@ export class PersonalAgentProbe extends PersonalAgent {
     this.terminalProbe = terminal
     this.terminalNamespace = env.TERMINALS
     this.backgroundNamespace = env.BACKGROUND
+    this.whatsappNamespace = env.WHATSAPP
     this.commandProbe = command
     this.downloadProbe = download
     this.fixtureRun(
@@ -914,6 +928,8 @@ export class PersonalAgentProbe extends PersonalAgent {
 
   override async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url)
+    if (url.pathname.startsWith("/whatsapp/"))
+      return this.whatsappProbe(request)
     if (
       url.pathname.startsWith("/email/") ||
       url.pathname.startsWith("/email-held/")
@@ -1050,6 +1066,56 @@ export class PersonalAgentProbe extends PersonalAgent {
     })
   }
 
+  private async whatsappProbe(request: Request): Promise<Response> {
+    await this.lifecycle.start()
+    const action = new URL(request.url).pathname.split("/").at(-1)
+    const owner = "whatsapp-owner"
+    if (action === "setup") {
+      const response = await super.fetch(
+        new Request(
+          "https://internal/api/agent/whatsapp/configure?agent=home",
+          {
+            method: "POST",
+            headers: {
+              "x-owner-id": owner,
+              "content-type": "application/json",
+            },
+            body: JSON.stringify({
+              operationId: crypto.randomUUID(),
+              revision: 0,
+              enabled: true,
+            }),
+          }
+        )
+      )
+      return Response.json({ status: response.status })
+    }
+    if (action === "receive") {
+      const { timestamp } = await request.json<{ timestamp: number }>()
+      const accepted = await whatsappRpc(this).receive(owner, {
+        ...(await whatsappIdentity("wamid.native-request")),
+        messageId: "wamid.native-request",
+        threadId: "whatsapp:123456:15550101010",
+        sender: "15550101010",
+        body: "Give the synthetic answer.",
+        timestamp,
+      })
+      return Response.json({ accepted })
+    }
+    const sink = await getAgentByName(this.whatsappNamespace, owner)
+    const rows = await this.actorRuntime.runPromise(this.whatsappStore.list())
+    const turns = await this.actorRuntime.runPromise(
+      this.conversations.recent()
+    )
+    return Response.json({
+      states: rows.map((row) => row.state),
+      turns: turns.map((turn) => ({
+        status: turn.status,
+        origin: turn.origin,
+      })),
+      sends: await sink.inspect(),
+    })
+  }
   private async emailProbe(request: Request): Promise<Response> {
     await this.lifecycle.start()
     const url = new URL(request.url),

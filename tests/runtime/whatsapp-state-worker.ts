@@ -1,0 +1,46 @@
+import { Agent, getAgentByName } from "agents"
+import { createChatSdkState } from "agents/chat-sdk"
+
+export { ChatSdkStateAgent } from "agents/chat-sdk"
+
+export class WhatsAppStateProbe extends Agent {
+  async probe() {
+    const state = createChatSdkState({ parent: this, name: "whatsapp-probe" })
+    await state.connect()
+    const previous = (await state.get<number>("whatsapp-counter")) ?? 0
+    await state.set("whatsapp-counter", previous + 1)
+    const lock = await state.acquireLock("whatsapp:123:owner", 5000)
+    const duplicate = await state.acquireLock("whatsapp:123:owner", 5000)
+    if (lock) await state.releaseLock(lock)
+    await state.appendToList("history:probe", "one", {
+      maxLength: 2,
+      ttlMs: 5000,
+    })
+    await state.appendToList("history:probe", "two", {
+      maxLength: 2,
+      ttlMs: 5000,
+    })
+    await state.appendToList("history:probe", "three", {
+      maxLength: 2,
+      ttlMs: 5000,
+    })
+    const result = {
+      counter: previous + 1,
+      locked: !!lock,
+      duplicate: !!duplicate,
+      list: await state.getList("history:probe"),
+    }
+    await state.disconnect()
+    return result
+  }
+}
+export default {
+  async fetch(
+    _request: Request,
+    env: { PROBES: DurableObjectNamespace<WhatsAppStateProbe> }
+  ) {
+    return Response.json(
+      await (await getAgentByName(env.PROBES, "owner")).probe()
+    )
+  },
+}

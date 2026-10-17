@@ -154,6 +154,23 @@ Select other connected tools for each bot. New selections require approval of th
 
 The integration follows the [Cloudflare MCP client API](https://developers.cloudflare.com/agents/model-context-protocol/apis/client-api/). The pinned SDK has a small pnpm patch for concurrent refresh-token rotation, verified by `tests/mcp-oauth.test.ts`; retain its regression tests when upgrading or removing the patch. Workspace authorization is required before Executor becomes available. [Decisions and release evidence](docs/decisions/executor-defaults.md) distinguish implementation, authorization, and live verification.
 
+## WhatsApp an agent
+
+WhatsApp uses the official [Chat SDK adapter](https://chat-sdk.dev/adapters/official/whatsapp), with native Cloudflare Durable Object state. It shares the existing Pi conversations, models, memory, Executor connection and approval controls. One configured owner can message one business number and switch agents with `/agents` and `/agent <id>`. Settings → General → WhatsApp also selects the agent and enables or disables the channel. Each admitted request keeps its original agent after a route change.
+
+The connection starts unavailable until Meta credentials and the owner identifier are configured. Live Meta onboarding and message acceptance are deferred. To activate it later:
+
+1. Set up a Meta WhatsApp Business application and number. Store `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN` and `WHATSAPP_OWNER_ID` as production secrets. The owner ID must match the adapter's canonical sender identifier exactly, either a phone number without `+` or its business-scoped user ID. Unknown senders cannot run agents or receive private replies.
+2. Set production variables `WHATSAPP_PHONE_NUMBER_ID` and, optionally, `WHATSAPP_BUSINESS_NUMBER` (international digits without `+`, for the contact link). Deploy with the existing production workflow.
+3. Configure `https://whatsapp.cill-i-am.com/webhook` in Meta with the matching verification token. Subscribe to `messages` and `user_id_update` events. Signature validation uses the app secret.
+4. Enable the channel in authenticated settings. Send a text message from the configured owner, inspect the conversation, and verify a reply, duplicate delivery, route switching and an approval wait before relying on it.
+
+Text messages are supported within WhatsApp's 24-hour customer-service window. Incoming media, proactive templates and approval by chat are outside this slice. A reply contains a bounded text preview and a link to the full Pi conversation; sensitive actions still require the existing authenticated approval flow. Messages wait durably when the model is disconnected. A closed reply window preserves the request for review in Pi.
+
+Recent message status records provider acceptance, rather than delivery or read confirmation. Interrupted or ambiguous sends become **Delivery unconfirmed** and never resend automatically. Check WhatsApp before an explicit retry; uncertain retries require acknowledgement of duplicate risk. Disabling stops new requests and replies that have not begun sending. Already admitted conversations remain available in Pi.
+
+The inbox permits 20 pending messages, 2,000 retained receipts and 100 explicit retries per receipt. Settings show the latest 30 records. Local checks use synthetic provider responses and a real native SQLite runtime; they do not prove a live Meta connection. Consequential choices and release evidence are recorded in [the decision log](docs/decisions/agent-whatsapp.md).
+
 ## Reusable skills
 
 **Skills → Import → From Executor** reads the `skills` tool from a ready connection. Choose an app, preview its pinned SKILL.md, then save a private local copy. The library keeps immutable revisions; each bot stays on the version you selected until you explicitly update it. Source details remain visible through edits and history restoration. Provider updates never silently replace saved instructions.

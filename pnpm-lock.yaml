@@ -177,6 +177,9 @@ importers:
       '@base-ui/react':
         specifier: ^1.9.0
         version: 1.9.0(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      '@chat-adapter/whatsapp':
+        specifier: 4.42.0
+        version: 4.42.0(zod@4.6.5)
       '@cloudflare/puppeteer':
         specifier: 1.4.0
         version: 1.4.0
@@ -245,7 +248,7 @@ importers:
         version: 6.0.0
       agents:
         specifier: 0.28.1
-        version: 0.28.1(patch_hash=db35af7ff9deaacc8ab80968601886b5ca39d0e1e5ccfe28b770b539190e2eb1)(@babel/core@8.0.6)(@babel/runtime@7.29.7)(@earendil-works/pi-ai@1.3.0(@aws-sdk/credential-provider-node@3.972.84)(@modelcontextprotocol/sdk@1.32.1(@cfworker/json-schema@4.1.1)(zod@4.6.5))(@smithy/signature-v4@5.7.4)(undici@8.11.2)(ws@8.22.0)(zod@4.6.5))(@earendil-works/pi-durable@1.3.0(@aws-sdk/credential-provider-node@3.972.84)(@modelcontextprotocol/sdk@1.32.1(@cfworker/json-schema@4.1.1)(zod@4.6.5))(@smithy/signature-v4@5.7.4)(undici@8.11.2)(ws@8.22.0)(zod@4.6.5))(@modelcontextprotocol/client@2.3.1(patch_hash=04e31f0c5336d22cf11d1b2957b3cc1b6669a7f86d0b004d436005034d123819))(@modelcontextprotocol/sdk@1.32.1(@cfworker/json-schema@4.1.1)(zod@4.6.5))(@modelcontextprotocol/server@2.3.1)(@tanstack/ai@0.69.0(zod@4.6.5))(react@19.3.1)(rolldown@1.2.12)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))(zod@4.6.5)
+        version: 0.28.1(patch_hash=db35af7ff9deaacc8ab80968601886b5ca39d0e1e5ccfe28b770b539190e2eb1)(@babel/core@8.0.6)(@babel/runtime@7.29.7)(@earendil-works/pi-ai@1.3.0(@aws-sdk/credential-provider-node@3.972.84)(@modelcontextprotocol/sdk@1.32.1(@cfworker/json-schema@4.1.1)(zod@4.6.5))(@smithy/signature-v4@5.7.4)(undici@8.11.2)(ws@8.22.0)(zod@4.6.5))(@earendil-works/pi-durable@1.3.0(@aws-sdk/credential-provider-node@3.972.84)(@modelcontextprotocol/sdk@1.32.1(@cfworker/json-schema@4.1.1)(zod@4.6.5))(@smithy/signature-v4@5.7.4)(undici@8.11.2)(ws@8.22.0)(zod@4.6.5))(@modelcontextprotocol/client@2.3.1(patch_hash=04e31f0c5336d22cf11d1b2957b3cc1b6669a7f86d0b004d436005034d123819))(@modelcontextprotocol/sdk@1.32.1(@cfworker/json-schema@4.1.1)(zod@4.6.5))(@modelcontextprotocol/server@2.3.1)(@tanstack/ai@0.69.0(zod@4.6.5))(chat@4.42.0(zod@4.6.5))(react@19.3.1)(rolldown@1.2.12)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))(zod@4.6.5)
       alchemy:
         specifier: 2.0.0-beta.83
         version: 2.0.0-beta.83(patch_hash=08ab25f26b839b3b7b6f08c17e591d4919d531dde04d1c3478601670bd0428d2)(b3e02829f0acd222f66bfcdeb685bcf9)
@@ -255,6 +258,9 @@ importers:
       border-beam:
         specifier: 1.4.1
         version: 1.4.1(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      chat:
+        specifier: 4.42.0
+        version: 4.42.0(zod@4.6.5)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -322,6 +328,9 @@ importers:
         specifier: ^1.9.0
         version: 1.9.0
     devDependencies:
+      '@chat-adapter/state-memory':
+        specifier: 4.42.0
+        version: 4.42.0(zod@4.6.5)
       '@cloudflare/sandbox-v0':
         specifier: npm:@cloudflare/sandbox@0.12.10
         version: '@cloudflare/sandbox@0.12.10(@xterm/xterm@6.0.0)'
@@ -938,6 +947,22 @@ packages:
 
   '@cfworker/json-schema@4.1.1':
     resolution: {integrity: sha512-gAmrUZSGtKc3AiBL71iNWxDsyUC5uMaKKGdvzYsBoTW/xi42JQHl7eKV2OYzCUqvc+D2RCcf7EXY2iCyFIk6og==}
+
+  '@chat-adapter/catalog@4.42.0':
+    resolution: {integrity: sha512-JrsQaiUg3rJIgIcqXteuhgccmbzlwyv9LSBlUokDeX6nFD0I3nrn+msLiI381NYKpu6V/l8GrNWF9Y73JeyMcw==}
+    engines: {node: '>=20'}
+
+  '@chat-adapter/shared@4.42.0':
+    resolution: {integrity: sha512-/0yn3rT3BBEe+hFiSNibYEitATMA9IqIHQujvHr4+2DxZBzBK2zGSlb19L/ghYAAoK0NQqzkZ7P3flzSF1D9ew==}
+    engines: {node: '>=20'}
+
+  '@chat-adapter/state-memory@4.42.0':
+    resolution: {integrity: sha512-hSI5VmQ7RAlV+7JoIwsE3ZSZ0AQtMP6fpkUzJ36izJIfrfPOID2yn/Yr7UkwoHHZz5l8vN/hy5pFGH+Xf1XHzQ==}
+    engines: {node: '>=20'}
+
+  '@chat-adapter/whatsapp@4.42.0':
+    resolution: {integrity: sha512-3Tq28mD/33onnCVTa6w+76F7sofxYopspW/hb7rZ6qnSfBg86CPEWBVCscmL5KZjbm2ppOsITQym290zEbb1jw==}
+    engines: {node: '>=20'}
 
   '@chevrotain/cst-dts-gen@10.5.0':
     resolution: {integrity: sha512-lhmC/FyqQ2o7pGK4Om+hzuDrm9rhFYIJ/AXoQBeongmn870Xeb0L6oGEiuR8nohFNL5sMaQEJWCxr1oIVIVXrw==}
@@ -3788,6 +3813,9 @@ packages:
   '@vitest/spy@5.0.5':
     resolution: {integrity: sha512-lwJRExuH417257Q5wv9QYugN9IMJkoxcrKrYxGPQkBzl7wlNpTUxD/5yNX4ESKVUIShKPgkGchYPFMWOOk0wzw==}
 
+  '@workflow/serde@4.1.0-beta.2':
+    resolution: {integrity: sha512-8kkeoQKLDaKXefjV5dbhBj2aErfKp1Mc4pb6tj8144cF+Em5SPbyMbyLCHp+BVrFfFVCBluCtMx+jjvaFVZGww==}
+
   '@xterm/addon-fit@0.11.0':
     resolution: {integrity: sha512-jYcgT6xtVYhnhgxh3QgYDnnNMYTcf8ElbxxFzX0IZo+vabQqSPAjC3c1wJrKB5E19VwQei89QCiZZP86DCPF7g==}
 
@@ -4236,6 +4264,21 @@ packages:
 
   character-reference-invalid@2.0.1:
     resolution: {integrity: sha512-iBZ4F4wRbyORVsu0jPV7gXkOsGYjGHPmAyv+HiHG8gi5PtC9KI2j1+v8/tlibRvjoWX027ypmG/n0HtO5t7unw==}
+
+  chat@4.42.0:
+    resolution: {integrity: sha512-CXZyMG+qU9bX0nk8uO/cmZoI/yLu3kImdjS5BlCNYyE+Xi3umKwT8X8hrNaDA+ZyMzmkQJLYxdnN/HlPNIwl3A==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      ai: ^6.0.182 || ^7.0.0
+      workflow: ^5.0.0-beta.35
+      zod: ^3.0.0 || ^4.0.0
+    peerDependenciesMeta:
+      ai:
+        optional: true
+      workflow:
+        optional: true
+      zod:
+        optional: true
 
   chevrotain@10.5.0:
     resolution: {integrity: sha512-Pkv5rBY3+CsHOYfV5g/Vs5JY9WTHHDEKOlohI2XeygaZhUeqhAlldZ8Hz9cRmxu709bvS08YzxHdTPHhffc13A==}
@@ -6289,6 +6332,9 @@ packages:
   remeda@2.33.4:
     resolution: {integrity: sha512-ygHswjlc/opg2VrtiYvUOPLjxjtdKvjGz1/plDhkG66hjNjFr1xmfrs2ClNFo/E6TyUFiwYNh53bKV26oBoMGQ==}
 
+  remend@1.4.0:
+    resolution: {integrity: sha512-mHiYhhwphs1IgIZmkToKLwJn0U99IjPXuutkA2acrNcG0vlEq2G4TGnd2eT0saIHwh2KjaCpvleHcsd5SAz96A==}
+
   require-directory@2.1.1:
     resolution: {integrity: sha512-fGxEI7+wsG9xrvdjsrlmL22OMTTiHRwAMroiEeMgq8gzoLC/PQr7RsRDSTLUg/bZAZtF+TVIkHc6/4RIKrui+Q==}
     engines: {node: '>=0.10.0'}
@@ -7743,6 +7789,36 @@ snapshots:
     optional: true
 
   '@cfworker/json-schema@4.1.1': {}
+
+  '@chat-adapter/catalog@4.42.0': {}
+
+  '@chat-adapter/shared@4.42.0(zod@4.6.5)':
+    dependencies:
+      chat: 4.42.0(zod@4.6.5)
+    transitivePeerDependencies:
+      - ai
+      - supports-color
+      - workflow
+      - zod
+
+  '@chat-adapter/state-memory@4.42.0(zod@4.6.5)':
+    dependencies:
+      chat: 4.42.0(zod@4.6.5)
+    transitivePeerDependencies:
+      - ai
+      - supports-color
+      - workflow
+      - zod
+
+  '@chat-adapter/whatsapp@4.42.0(zod@4.6.5)':
+    dependencies:
+      '@chat-adapter/shared': 4.42.0(zod@4.6.5)
+      chat: 4.42.0(zod@4.6.5)
+    transitivePeerDependencies:
+      - ai
+      - supports-color
+      - workflow
+      - zod
 
   '@chevrotain/cst-dts-gen@10.5.0':
     dependencies:
@@ -10086,6 +10162,8 @@ snapshots:
 
   '@vitest/spy@5.0.5': {}
 
+  '@workflow/serde@4.1.0-beta.2': {}
+
   '@xterm/addon-fit@0.11.0': {}
 
   '@xterm/xterm@6.0.0': {}
@@ -10106,7 +10184,7 @@ snapshots:
 
   agent-base@9.0.0: {}
 
-  agents@0.28.1(patch_hash=db35af7ff9deaacc8ab80968601886b5ca39d0e1e5ccfe28b770b539190e2eb1)(@babel/core@8.0.6)(@babel/runtime@7.29.7)(@earendil-works/pi-ai@1.3.0(@aws-sdk/credential-provider-node@3.972.84)(@modelcontextprotocol/sdk@1.32.1(@cfworker/json-schema@4.1.1)(zod@4.6.5))(@smithy/signature-v4@5.7.4)(undici@8.11.2)(ws@8.22.0)(zod@4.6.5))(@earendil-works/pi-durable@1.3.0(@aws-sdk/credential-provider-node@3.972.84)(@modelcontextprotocol/sdk@1.32.1(@cfworker/json-schema@4.1.1)(zod@4.6.5))(@smithy/signature-v4@5.7.4)(undici@8.11.2)(ws@8.22.0)(zod@4.6.5))(@modelcontextprotocol/client@2.3.1(patch_hash=04e31f0c5336d22cf11d1b2957b3cc1b6669a7f86d0b004d436005034d123819))(@modelcontextprotocol/sdk@1.32.1(@cfworker/json-schema@4.1.1)(zod@4.6.5))(@modelcontextprotocol/server@2.3.1)(@tanstack/ai@0.69.0(zod@4.6.5))(react@19.3.1)(rolldown@1.2.12)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))(zod@4.6.5):
+  agents@0.28.1(patch_hash=db35af7ff9deaacc8ab80968601886b5ca39d0e1e5ccfe28b770b539190e2eb1)(@babel/core@8.0.6)(@babel/runtime@7.29.7)(@earendil-works/pi-ai@1.3.0(@aws-sdk/credential-provider-node@3.972.84)(@modelcontextprotocol/sdk@1.32.1(@cfworker/json-schema@4.1.1)(zod@4.6.5))(@smithy/signature-v4@5.7.4)(undici@8.11.2)(ws@8.22.0)(zod@4.6.5))(@earendil-works/pi-durable@1.3.0(@aws-sdk/credential-provider-node@3.972.84)(@modelcontextprotocol/sdk@1.32.1(@cfworker/json-schema@4.1.1)(zod@4.6.5))(@smithy/signature-v4@5.7.4)(undici@8.11.2)(ws@8.22.0)(zod@4.6.5))(@modelcontextprotocol/client@2.3.1(patch_hash=04e31f0c5336d22cf11d1b2957b3cc1b6669a7f86d0b004d436005034d123819))(@modelcontextprotocol/sdk@1.32.1(@cfworker/json-schema@4.1.1)(zod@4.6.5))(@modelcontextprotocol/server@2.3.1)(@tanstack/ai@0.69.0(zod@4.6.5))(chat@4.42.0(zod@4.6.5))(react@19.3.1)(rolldown@1.2.12)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))(zod@4.6.5):
     dependencies:
       '@babel/plugin-proposal-decorators': 8.0.2(@babel/core@8.0.6)
       '@cfworker/json-schema': 4.1.1
@@ -10127,6 +10205,7 @@ snapshots:
       '@earendil-works/pi-ai': 1.3.0(@aws-sdk/credential-provider-node@3.972.84)(@modelcontextprotocol/sdk@1.32.1(@cfworker/json-schema@4.1.1)(zod@4.6.5))(@smithy/signature-v4@5.7.4)(undici@8.11.2)(ws@8.22.0)(zod@4.6.5)
       '@earendil-works/pi-durable': 1.3.0(@aws-sdk/credential-provider-node@3.972.84)(@modelcontextprotocol/sdk@1.32.1(@cfworker/json-schema@4.1.1)(zod@4.6.5))(@smithy/signature-v4@5.7.4)(undici@8.11.2)(ws@8.22.0)(zod@4.6.5)
       '@tanstack/ai': 0.69.0(zod@4.6.5)
+      chat: 4.42.0(zod@4.6.5)
       react: 19.3.1
       vite: 8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
     transitivePeerDependencies:
@@ -10445,6 +10524,21 @@ snapshots:
   character-entities@2.0.2: {}
 
   character-reference-invalid@2.0.1: {}
+
+  chat@4.42.0(zod@4.6.5):
+    dependencies:
+      '@chat-adapter/catalog': 4.42.0
+      '@workflow/serde': 4.1.0-beta.2
+      mdast-util-to-string: 4.0.0
+      remark-gfm: 4.0.1
+      remark-parse: 11.0.0
+      remark-stringify: 11.0.0
+      remend: 1.4.0
+      unified: 11.0.5
+    optionalDependencies:
+      zod: 4.6.5
+    transitivePeerDependencies:
+      - supports-color
 
   chevrotain@10.5.0:
     dependencies:
@@ -12689,6 +12783,8 @@ snapshots:
       unified: 11.0.5
 
   remeda@2.33.4: {}
+
+  remend@1.4.0: {}
 
   require-directory@2.1.1: {}
 

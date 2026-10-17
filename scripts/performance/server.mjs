@@ -292,6 +292,17 @@ async function fixtureGet(req, res, path, session) {
     await wait(startupCase === "catalog-slow" ? 2200 : 500)
     return sendJson(res, { agents: [profile] })
   }
+  if (path === "/api/agent/whatsapp") {
+    return sendJson(res, {
+      configured: false,
+      enabled: false,
+      revision: 0,
+      agentId: "home",
+      agentName: "Home",
+      contactUrl: null,
+      messages: [],
+    })
+  }
   if (path === "/api/agent/bots/statuses") {
     await wait(100)
     return sendJson(res, {

@@ -80,6 +80,10 @@ try {
     format: "esm",
     target: "es2022",
     external: ["cloudflare:*", "node:*"],
+    alias: {
+      "cloudflare:email": resolve("tests/runtime/unused-cloudflare-email.ts"),
+    },
+    keepNames: true,
     logLevel: "error",
   })
   const schema = join(
@@ -95,8 +99,8 @@ const config :Workerd.Config = (
     (name = "fixture", worker = (
       compatibilityDate = ${JSON.stringify(workerd.compatibilityDate)}, compatibilityFlags = ["nodejs_compat", "enable_request_signal"],
       modules = [(name = "worker.mjs", esModule = embed "worker.mjs")],
-      bindings = [(name = "SQL_PILOT", durableObjectNamespace = (className = "SqlitePilot")), (name = "LEGACY", durableObjectNamespace = (className = "LegacyAgentProbe")), (name = "TERMINALS", durableObjectNamespace = (className = "TerminalProbe")), (name = "BACKGROUND", durableObjectNamespace = (className = "BackgroundGroupProbe")), (name = "LOADER", workerLoader = (id = "native-code-local")), (name = "BROWSERS", durableObjectNamespace = (className = "BrowserRecoveryBot")), (name = "BOTS", durableObjectNamespace = (className = "MailboxBot")), (name = "LOOPS", durableObjectNamespace = (className = "LoopBot")), (name = "PERSONAL", durableObjectNamespace = (className = "PersonalAgentProbe"))],
-      durableObjectNamespaces = [(className = "SqlitePilot", uniqueKey = "sqlite-pilot-local-test", enableSql = true), (className = "LegacyAgentProbe", uniqueKey = "legacy-agent-local-test", enableSql = true), (className = "TerminalProbe", uniqueKey = "terminal-local-test", enableSql = true), (className = "BackgroundGroupProbe", uniqueKey = "background-local-test", enableSql = true), (className = "BrowserRecoveryBot", uniqueKey = "browser-local-test", enableSql = true), (className = "MailboxBot", uniqueKey = "mailbox-local-test", enableSql = true), (className = "LoopBot", uniqueKey = "loops-local-test", enableSql = true), (className = "PersonalAgentProbe", uniqueKey = "personal-local-test", enableSql = true)],
+      bindings = [(name = "WHATSAPP", durableObjectNamespace = (className = "WhatsAppSink")), (name = "SQL_PILOT", durableObjectNamespace = (className = "SqlitePilot")), (name = "LEGACY", durableObjectNamespace = (className = "LegacyAgentProbe")), (name = "TERMINALS", durableObjectNamespace = (className = "TerminalProbe")), (name = "BACKGROUND", durableObjectNamespace = (className = "BackgroundGroupProbe")), (name = "LOADER", workerLoader = (id = "native-code-local")), (name = "BROWSERS", durableObjectNamespace = (className = "BrowserRecoveryBot")), (name = "BOTS", durableObjectNamespace = (className = "MailboxBot")), (name = "LOOPS", durableObjectNamespace = (className = "LoopBot")), (name = "PERSONAL", durableObjectNamespace = (className = "PersonalAgentProbe"))],
+      durableObjectNamespaces = [(className = "WhatsAppSink", uniqueKey = "whatsapp-sink-local-test", enableSql = true), (className = "SqlitePilot", uniqueKey = "sqlite-pilot-local-test", enableSql = true), (className = "LegacyAgentProbe", uniqueKey = "legacy-agent-local-test", enableSql = true), (className = "TerminalProbe", uniqueKey = "terminal-local-test", enableSql = true), (className = "BackgroundGroupProbe", uniqueKey = "background-local-test", enableSql = true), (className = "BrowserRecoveryBot", uniqueKey = "browser-local-test", enableSql = true), (className = "MailboxBot", uniqueKey = "mailbox-local-test", enableSql = true), (className = "LoopBot", uniqueKey = "loops-local-test", enableSql = true), (className = "PersonalAgentProbe", uniqueKey = "personal-local-test", enableSql = true)],
       durableObjectStorage = (localDisk = "storage")
     )),
     (name = "storage", disk = (path = "storage", writable = true))
@@ -105,6 +109,29 @@ const config :Workerd.Config = (
 );`
   )
   await start()
+  const whatsappTimestamp = Date.now()
+  assert.equal((await call("whatsapp/setup", {})).status, 200)
+  assert.equal(
+    (await call("whatsapp/receive", {}, { timestamp: whatsappTimestamp }))
+      .accepted,
+    true
+  )
+  assert.equal(
+    (await call("whatsapp/receive", {}, { timestamp: whatsappTimestamp }))
+      .accepted,
+    false
+  )
+  let whatsapp
+  for (let n = 0; n < 120; n++) {
+    whatsapp = await call("whatsapp/inspect", {})
+    if (whatsapp.states[0] === "sent") break
+    await sleep(100)
+  }
+  assert.deepEqual(whatsapp.states, ["sent"])
+  assert.equal(whatsapp.turns.length, 1)
+  assert.equal(whatsapp.turns[0].origin.kind, "whatsapp")
+  assert.equal(whatsapp.sends.length, 1)
+  assert.match(whatsapp.sends[0].body, /Native actor answer/)
   const emailIdentity = { owner: "synthetic-email", bot: "home" }
   assert.equal((await call("email/setup", emailIdentity)).status, 200)
   assert.equal((await call("email/invalid", emailIdentity)).status, 409)
@@ -125,6 +152,15 @@ const config :Workerd.Config = (
   await stop()
   await start()
   assert.deepEqual(await call("email/inspect", emailIdentity), email)
+  assert.equal(
+    (await call("whatsapp/receive", {}, { timestamp: whatsappTimestamp }))
+      .accepted,
+    false
+  )
+  assert.deepEqual(await call("whatsapp/inspect", {}), whatsapp)
+  console.log(
+    "PASS native WhatsApp: production actor admission, one Pi reply, webhook dedupe and sent restart without resend."
+  )
   assert.equal((await call("email-held/setup", emailIdentity)).status, 200)
   await call("email-held/hold", emailIdentity)
   await call("email-held/receive", emailIdentity)

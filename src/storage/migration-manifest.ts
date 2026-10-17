@@ -98,6 +98,18 @@ export const agentMigrationManifest = {
         "CREATE INDEX `email_retries_email` ON `email_retries` (`email_id`);",
       ],
     },
+    {
+      id: "20261017162521_agent_whatsapp",
+      checksum:
+        "0099dd2e100b2f4e5a72ba55a1462a4051bdb694cb2ba1cf800d976ac01c40bb",
+      statements: [
+        "CREATE TABLE `whatsapp_messages` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`fingerprint` text NOT NULL,\n\t`message_id` text NOT NULL,\n\t`thread_id` text NOT NULL,\n\t`sender` text NOT NULL,\n\t`body` text NOT NULL,\n\t`timestamp` integer NOT NULL,\n\t`agent_id` text NOT NULL,\n\t`generation` integer NOT NULL,\n\t`control` integer NOT NULL,\n\t`state` text NOT NULL,\n\t`reply` text DEFAULT '' NOT NULL,\n\t`provider_id` text,\n\t`error` text,\n\t`created_at` integer NOT NULL,\n\tCONSTRAINT \"whatsapp_messages_state\" CHECK(\"state\" in ('queued','waiting','sending','sent','failed','uncertain','cancelled','expired')),\n\tCONSTRAINT \"whatsapp_messages_control\" CHECK(\"control\" in (0,1))\n);",
+        'CREATE TABLE `whatsapp_retries` (\n\t`operation_id` text PRIMARY KEY NOT NULL,\n\t`message_id` text NOT NULL,\n\t`acknowledge_duplicate_risk` integer NOT NULL,\n\tCONSTRAINT `fk_whatsapp_retries_message_id_whatsapp_messages_id_fk` FOREIGN KEY (`message_id`) REFERENCES `whatsapp_messages`(`id`),\n\tCONSTRAINT "whatsapp_retries_acknowledgement" CHECK("acknowledge_duplicate_risk" in (0,1))\n);',
+        'CREATE TABLE `whatsapp_settings` (\n\t`id` integer PRIMARY KEY,\n\t`enabled` integer NOT NULL,\n\t`agent_id` text NOT NULL,\n\t`revision` integer NOT NULL,\n\t`generation` integer NOT NULL,\n\t`operation_id` text NOT NULL,\n\t`last_inbound_at` integer NOT NULL,\n\tCONSTRAINT "whatsapp_settings_singleton" CHECK("id" = 1),\n\tCONSTRAINT "whatsapp_settings_enabled" CHECK("enabled" in (0,1)),\n\tCONSTRAINT "whatsapp_settings_revision" CHECK("revision" >= 0),\n\tCONSTRAINT "whatsapp_settings_generation" CHECK("generation" >= 0)\n);',
+        "CREATE INDEX `whatsapp_messages_state_created` ON `whatsapp_messages` (`state`,`created_at`);",
+        "CREATE INDEX `whatsapp_retries_message` ON `whatsapp_retries` (`message_id`);",
+      ],
+    },
   ],
   schema: [
     {
@@ -484,6 +496,31 @@ export const agentMigrationManifest = {
       type: "table",
       name: "webhooks",
       sql: 'CREATE TABLE `webhooks` (\n\t`routine_id` text PRIMARY KEY NOT NULL,\n\t`revision` integer NOT NULL,\n\t`hash` text,\n\tCONSTRAINT "webhooks_revision_check" CHECK("revision" >= 0)\n)',
+    },
+    {
+      type: "table",
+      name: "whatsapp_messages",
+      sql: "CREATE TABLE `whatsapp_messages` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`fingerprint` text NOT NULL,\n\t`message_id` text NOT NULL,\n\t`thread_id` text NOT NULL,\n\t`sender` text NOT NULL,\n\t`body` text NOT NULL,\n\t`timestamp` integer NOT NULL,\n\t`agent_id` text NOT NULL,\n\t`generation` integer NOT NULL,\n\t`control` integer NOT NULL,\n\t`state` text NOT NULL,\n\t`reply` text DEFAULT '' NOT NULL,\n\t`provider_id` text,\n\t`error` text,\n\t`created_at` integer NOT NULL,\n\tCONSTRAINT \"whatsapp_messages_state\" CHECK(\"state\" in ('queued','waiting','sending','sent','failed','uncertain','cancelled','expired')),\n\tCONSTRAINT \"whatsapp_messages_control\" CHECK(\"control\" in (0,1))\n)",
+    },
+    {
+      type: "index",
+      name: "whatsapp_messages_state_created",
+      sql: "CREATE INDEX `whatsapp_messages_state_created` ON `whatsapp_messages` (`state`,`created_at`)",
+    },
+    {
+      type: "table",
+      name: "whatsapp_retries",
+      sql: 'CREATE TABLE `whatsapp_retries` (\n\t`operation_id` text PRIMARY KEY NOT NULL,\n\t`message_id` text NOT NULL,\n\t`acknowledge_duplicate_risk` integer NOT NULL,\n\tCONSTRAINT `fk_whatsapp_retries_message_id_whatsapp_messages_id_fk` FOREIGN KEY (`message_id`) REFERENCES `whatsapp_messages`(`id`),\n\tCONSTRAINT "whatsapp_retries_acknowledgement" CHECK("acknowledge_duplicate_risk" in (0,1))\n)',
+    },
+    {
+      type: "index",
+      name: "whatsapp_retries_message",
+      sql: "CREATE INDEX `whatsapp_retries_message` ON `whatsapp_retries` (`message_id`)",
+    },
+    {
+      type: "table",
+      name: "whatsapp_settings",
+      sql: 'CREATE TABLE `whatsapp_settings` (\n\t`id` integer PRIMARY KEY,\n\t`enabled` integer NOT NULL,\n\t`agent_id` text NOT NULL,\n\t`revision` integer NOT NULL,\n\t`generation` integer NOT NULL,\n\t`operation_id` text NOT NULL,\n\t`last_inbound_at` integer NOT NULL,\n\tCONSTRAINT "whatsapp_settings_singleton" CHECK("id" = 1),\n\tCONSTRAINT "whatsapp_settings_enabled" CHECK("enabled" in (0,1)),\n\tCONSTRAINT "whatsapp_settings_revision" CHECK("revision" >= 0),\n\tCONSTRAINT "whatsapp_settings_generation" CHECK("generation" >= 0)\n)',
     },
     {
       type: "table",

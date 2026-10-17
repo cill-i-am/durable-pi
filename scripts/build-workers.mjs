@@ -9,6 +9,7 @@ await build({
   entryPoints: [
     "src/agent/worker.ts",
     "src/email/worker.ts",
+    "src/whatsapp/worker.ts",
     "src/execution/worker.ts",
     "src/terminal/worker.ts",
     "src/terminal/adapters/native-worker.ts",
@@ -17,6 +18,7 @@ await build({
   outdir: "dist/workers",
   outbase: "src",
   bundle: true,
+  keepNames: true,
   format: "esm",
   platform: "node",
   target: "es2022",
