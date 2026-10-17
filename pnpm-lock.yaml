@@ -183,9 +183,6 @@ importers:
       '@cloudflare/sandbox':
         specifier: 1.0.1
         version: 1.0.1
-      '@cloudflare/sandbox-v0':
-        specifier: npm:@cloudflare/sandbox@0.12.10
-        version: '@cloudflare/sandbox@0.12.10(@xterm/xterm@6.0.0)'
       '@earendil-works/chord':
         specifier: 1.3.0
         version: 1.3.0
@@ -322,6 +319,9 @@ importers:
         specifier: ^1.9.0
         version: 1.9.0
     devDependencies:
+      '@cloudflare/sandbox-v0':
+        specifier: npm:@cloudflare/sandbox@0.12.10
+        version: '@cloudflare/sandbox@0.12.10(@xterm/xterm@6.0.0)'
       '@cloudflare/workers-types':
         specifier: 5.20261016.1
         version: 5.20261016.1

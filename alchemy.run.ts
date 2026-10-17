@@ -120,7 +120,7 @@ export const AgentWorker = Cloudflare.Worker("AgentWorkerDrizzleV1", {
     WORKSPACE_ASSETS: WorkspaceAssets,
     DOCUMENT_SERVICE: DocumentWorker,
     EXECUTION_SERVICE: ExecutionWorker,
-    TERMINAL_SERVICE: TerminalWorker,
+    TERMINAL_SERVICE: NativeTerminalWorker,
     BROWSER: Cloudflare.Browser().pipe(Alchemy.remote()),
     OPENAI_CREDENTIAL: Config.Redacted("OPENAI_CREDENTIAL").pipe(
       Config.withDefault("")
