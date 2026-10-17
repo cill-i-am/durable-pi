@@ -4,6 +4,7 @@ import { BrowserPage, Hostname } from "@/browser/contracts"
 import type { ChatState, TimelineItem } from "@/conversations/contracts"
 import { RunSummary } from "@/execution/contracts"
 import { ResourceId, type WorkspaceSearch } from "@/navigation/workspace"
+import { richResultToolNames } from "@/rich-results/contracts"
 import { CommandRun } from "@/terminal/contracts"
 import { FileInfo } from "@/workspace/files"
 
@@ -37,6 +38,7 @@ export function activitySections(items: readonly TimelineItem[]): Section[] {
           "read_object",
           "update_checklist",
           "publish_app",
+          ...richResultToolNames,
         ].includes(item.name)
       ) {
         flush()
@@ -110,7 +112,12 @@ export function toolPresentation(item: ToolItem): ToolPresentation {
   const result: ToolPresentation = { kind, sources: [] }
   if (!["done", "error"].includes(item.status)) return result
   if (
-    ["browser_open", "browser_read", "browser_interact"].includes(item.name) &&
+    [
+      "browser_open",
+      "browser_read",
+      "browser_interact",
+      "search_products",
+    ].includes(item.name) &&
     item.status === "done"
   ) {
     browserPresentation(item, result)
@@ -216,7 +223,7 @@ function toolKind(name: string) {
       ? "terminal"
       : name === "run_code"
         ? "code"
-        : name === "search_memory"
+        : ["search_memory", "search_products"].includes(name)
           ? "search"
           : name === "read_file"
             ? "file"

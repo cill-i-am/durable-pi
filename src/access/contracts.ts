@@ -74,6 +74,81 @@ export class AccessStorageError extends Schema.TaggedError<AccessStorageError>()
 
 export const builtInTools = [
   {
+    name: "show_brief",
+    title: "Compose an answer brief",
+    description:
+      "Present related sourced cards as a day brief or multi-part answer.",
+    mode: "allow",
+  },
+  {
+    name: "ask_question",
+    title: "Ask a clarification question",
+    description:
+      "Present choices and a free-text answer for the user to review in their draft.",
+    mode: "allow",
+  },
+  {
+    name: "compare_products",
+    title: "Compare product offers",
+    description:
+      "Present sourced products, shortlists and a comparison workspace. No purchases.",
+    mode: "allow",
+  },
+  {
+    name: "analyze_data",
+    title: "Analyze supplied data",
+    description:
+      "Group numeric data locally and present tables, summaries and charts.",
+    mode: "allow",
+  },
+  {
+    name: "lookup_route",
+    title: "Look up a driving route",
+    description:
+      "Send sourced stop coordinates to OSRM and show a driving route estimate.",
+    mode: "allow",
+  },
+  {
+    name: "search_products",
+    title: "Search for products",
+    description:
+      "Search Google Shopping in the bot's browser using its saved internet settings. No purchases.",
+    mode: "allow",
+  },
+  {
+    name: "show_ui",
+    title: "Show an interactive answer",
+    description:
+      "Present sourced cards, product comparisons, tables, charts and timelines in chat. No external actions.",
+    mode: "allow",
+  },
+  {
+    name: "calculate",
+    title: "Calculate",
+    description: "Evaluate arithmetic locally and show the result.",
+    mode: "allow",
+  },
+  {
+    name: "convert_units",
+    title: "Convert measurements",
+    description: "Convert compatible units locally.",
+    mode: "allow",
+  },
+  {
+    name: "lookup_places",
+    title: "Look up places",
+    description:
+      "Send an address or place query to Photon/OpenStreetMap and show map candidates.",
+    mode: "allow",
+  },
+  {
+    name: "lookup_weather",
+    title: "Look up weather",
+    description:
+      "Send coordinates to Open-Meteo and show a seven-day forecast.",
+    mode: "allow",
+  },
+  {
     name: "discover_bots",
     title: "Discover bots",
     description: "List other active bots owned by this account.",

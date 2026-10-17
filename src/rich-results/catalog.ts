@@ -1,0 +1,401 @@
+import { defineCatalog } from "@json-render/core"
+import { schema } from "@json-render/react/schema"
+import { z } from "zod"
+
+const text = z.string().min(1).max(500)
+export const webUrl = z
+  .url()
+  .max(2000)
+  .refine((value) => {
+    const url = new URL(value)
+    return url.protocol === "https:" && !url.username && !url.password
+  }, "Use an HTTPS URL without credentials")
+const source = z
+  .object({
+    label: text,
+    url: webUrl
+      .nullable()
+      .describe(
+        "Null for user-provided data or a proposed plan without a public source"
+      ),
+  })
+  .strict()
+const provenance = {
+  source,
+  asOf: text.describe(
+    "When the data was retrieved, or the supplied dataset's date"
+  ),
+}
+export const placeSchema = z
+  .object({
+    name: text,
+    address: text,
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180),
+  })
+  .strict()
+export const coordinateSchema = z.tuple([
+  z.number().min(-180).max(180),
+  z.number().min(-90).max(90),
+])
+export const productSchema = z
+  .object({
+    id: z.string().min(1).max(80),
+    name: text,
+    merchant: text,
+    price: z
+      .number()
+      .nonnegative()
+      .nullable()
+      .describe("Null when price is unverified"),
+    currency: z.string().regex(/^[A-Z]{3}$/),
+    url: webUrl,
+    imageUrl: webUrl.optional(),
+    detail: text,
+    availability: text.describe("Verified stock information, or 'Not checked'"),
+    specs: z.array(z.object({ label: text, value: text }).strict()).max(10),
+  })
+  .strict()
+const cell = z.union([z.string().max(1000), z.number(), z.boolean(), z.null()])
+export const definitions = {
+  Stack: {
+    props: z.object({}).strict(),
+    slots: ["default"],
+    description:
+      "A vertical group of related answer cards. Use children for composition.",
+  },
+  Brief: {
+    props: z
+      .object({
+        title: text,
+        summary: text,
+        date: text,
+      })
+      .strict(),
+    slots: ["default"],
+    description:
+      "An editorial day brief or multi-part answer. Compose two to eight related cards as children; each card retains its source. No scheduling or external actions.",
+  },
+  Question: {
+    props: z
+      .object({
+        question: text,
+        description: text,
+        options: z
+          .array(
+            z
+              .object({
+                label: z.string().min(1).max(120),
+                description: z.string().max(300),
+              })
+              .strict()
+          )
+          .min(2)
+          .max(7)
+          .refine(
+            (items) =>
+              new Set(items.map((item) => item.label)).size === items.length,
+            "Use distinct options"
+          ),
+        multiple: z.boolean(),
+      })
+      .strict(),
+    description:
+      "A clarification question with choices and a free-text answer. Choices add an answer to the user's draft; they never send a message or approve an action. Wait for the user's reply.",
+  },
+  Weather: {
+    props: z
+      .object({
+        location: text,
+        temperature: z.number(),
+        condition: text,
+        windKph: z.number().nonnegative(),
+        timezone: text,
+        days: z
+          .array(
+            z
+              .object({
+                date: z.iso.date(),
+                low: z.number(),
+                high: z.number(),
+                rainPercent: z.number().min(0).max(100),
+                condition: text,
+              })
+              .strict()
+          )
+          .min(1)
+          .max(7),
+        ...provenance,
+      })
+      .strict(),
+    description:
+      "Current weather and seven-day forecast, Celsius and km/h. Prefer lookup_weather for live data.",
+  },
+  Calculation: {
+    props: z
+      .object({
+        title: text,
+        expression: text,
+        result: z.number(),
+        unit: z.string().max(40),
+        explanation: text.optional(),
+      })
+      .strict(),
+    description:
+      "A numerical answer with its expression and units. Prefer calculate to verify arithmetic.",
+  },
+  Places: {
+    props: z
+      .object({
+        title: text,
+        places: z.array(placeSchema).min(1).max(8),
+        ...provenance,
+      })
+      .strict(),
+    description:
+      "Address lookup or a place shortlist with selectable embedded OpenStreetMap. Coordinates must come from a source.",
+  },
+  Route: {
+    props: z
+      .object({
+        title: text,
+        stops: z.array(placeSchema).min(2).max(8),
+        coordinates: z.array(coordinateSchema).min(2).max(1000),
+        distanceMeters: z.number().nonnegative(),
+        durationSeconds: z.number().nonnegative(),
+        profile: z.literal("driving"),
+        ...provenance,
+      })
+      .strict(),
+    description:
+      "A sourced driving route, multiple map pins, distance and estimated duration. Prefer lookup_route; no live traffic, walking estimates or navigation guarantees.",
+  },
+  Products: {
+    props: z
+      .object({
+        title: text,
+        context: z
+          .object({ question: text, priorities: z.array(text).max(8) })
+          .strict()
+          .optional(),
+        products: z
+          .array(productSchema)
+          .min(1)
+          .max(12)
+          .refine(
+            (items) =>
+              new Set(items.map((item) => item.id)).size === items.length,
+            "Use unique product IDs"
+          )
+          .refine(
+            (items) => new Set(items.map((item) => item.currency)).size === 1,
+            "Use one currency per shopping result; do not silently convert prices"
+          ),
+        ...provenance,
+      })
+      .strict(),
+    description:
+      "Shoppable sourced product cards with budget filtering, price sorting, shortlist and comparison. Use browser/connected tools to research real prices and URLs first; this component does not search or buy.",
+  },
+  DataTable: {
+    props: z
+      .object({
+        title: text,
+        columns: z
+          .array(
+            z
+              .object({
+                key: z.string().regex(/^[a-zA-Z][a-zA-Z0-9_]{0,39}$/),
+                label: text,
+                format: z
+                  .enum([
+                    "text",
+                    "number",
+                    "currency",
+                    "percent",
+                    "date",
+                    "badge",
+                    "link",
+                  ])
+                  .optional(),
+                currency: z
+                  .string()
+                  .regex(/^[A-Z]{3}$/)
+                  .optional(),
+              })
+              .strict()
+          )
+          .min(1)
+          .max(12)
+          .refine(
+            (items) =>
+              new Set(items.map((item) => item.key)).size === items.length,
+            "Use unique column keys"
+          ),
+        rows: z.array(z.record(z.string().max(40), cell)).max(200),
+        ...provenance,
+      })
+      .strict(),
+    description:
+      "Searchable, sortable, paginated table with CSV download. Columns support text, number, currency (supply currency code), percent (fraction), date (ISO), badge and HTTPS link formats. Keep numbers numeric for sorting. Good for expenses, flights, stock, plans or any dataset. Rows use the column keys. Max 200 rows.",
+  },
+  Comparison: {
+    props: z
+      .object({
+        title: text,
+        options: z.array(text).min(2).max(4),
+        criteria: z
+          .array(
+            z
+              .object({ label: text, values: z.array(text).min(2).max(4) })
+              .strict()
+          )
+          .min(1)
+          .max(12),
+        verdict: text,
+        ...provenance,
+      })
+      .strict()
+      .refine(
+        (props) =>
+          props.criteria.every(
+            (row) => row.values.length === props.options.length
+          ),
+        "Each criterion needs one value per option"
+      ),
+    description:
+      "A side-by-side decision matrix and reasoned verdict for products, travel, services or other options.",
+  },
+  BarChart: {
+    props: z
+      .object({
+        title: text,
+        unit: z.string().max(40),
+        values: z
+          .array(
+            z.object({ label: text, value: z.number().nonnegative() }).strict()
+          )
+          .min(1)
+          .max(20),
+        ...provenance,
+      })
+      .strict(),
+    description:
+      "An accessible horizontal bar chart for nonnegative values: costs, energy, category totals or rankings. Never invent measurements.",
+  },
+  Timeline: {
+    props: z
+      .object({
+        title: text,
+        events: z
+          .array(z.object({ when: text, title: text, detail: text }).strict())
+          .min(1)
+          .max(20),
+        ...provenance,
+      })
+      .strict(),
+    description:
+      "An itinerary, delivery timeline, project milestones or a day plan. Distinguish proposed plans from confirmed bookings.",
+  },
+}
+
+export const answerCatalog = defineCatalog(schema, {
+  components: definitions,
+  actions: {},
+})
+export type AnswerType = keyof typeof definitions
+export type AnswerProps<T extends AnswerType> = z.infer<
+  (typeof definitions)[T]["props"]
+>
+
+// Deliberately static: model JSON cannot install actions, scripts, bindings or arbitrary HTML.
+export const answerSpecSchema = z
+  .object({
+    root: z.string().min(1).max(80),
+    elements: z.record(
+      z.string().min(1).max(80),
+      z
+        .object({
+          type: z.enum(
+            Object.keys(definitions) as [AnswerType, ...AnswerType[]]
+          ),
+          props: z.record(z.string(), z.unknown()),
+          children: z.array(z.string().min(1).max(80)).max(12),
+        })
+        .strict()
+    ),
+  })
+  .strict()
+export type AnswerSpec = z.infer<typeof answerSpecSchema>
+
+export function validateAnswerSpec(input: unknown): AnswerSpec {
+  const spec = answerSpecSchema.parse(input)
+  if (JSON.stringify(spec).length > 28_000)
+    throw new Error(
+      "Keep rich results below 28,000 characters. Split large datasets into separate results."
+    )
+  const keys = Object.keys(spec.elements)
+  if (keys.length > 24) throw new Error("Use at most 24 elements")
+  const visited = new Set<string>()
+  const visit = (key: string, depth: number) => {
+    if (visited.has(key) || depth > 4)
+      throw new Error(
+        "Use a tree with no cycles, shared children, or more than four levels"
+      )
+    const element = spec.elements[key]
+    if (!element) throw new Error(`Missing element: ${key}`)
+    visited.add(key)
+    element.props = definitions[element.type].props.parse(element.props)
+    if (!["Stack", "Brief"].includes(element.type) && element.children.length)
+      throw new Error("Only Stack and Brief accept children")
+    if (
+      element.type === "Brief" &&
+      (element.children.length < 2 || element.children.length > 8)
+    )
+      throw new Error("A brief needs two to eight cards")
+    if (
+      element.type === "Brief" &&
+      element.children.some((child) =>
+        ["Stack", "Brief"].includes(spec.elements[child]?.type ?? "")
+      )
+    )
+      throw new Error("Brief children must be answer cards")
+    for (const child of element.children) visit(child, depth + 1)
+  }
+  visit(spec.root, 1)
+  if (visited.size !== keys.length)
+    throw new Error("Every element must be reachable from the root")
+  return spec
+}
+
+export function answerResult<T extends AnswerType>(
+  type: T,
+  props: AnswerProps<T>
+) {
+  return {
+    kind: "rich-result" as const,
+    version: 1 as const,
+    spec: validateAnswerSpec({
+      root: "answer",
+      elements: { answer: { type, props, children: [] } },
+    }),
+  }
+}
+
+const answerEnvelopeSchema = z
+  .object({
+    kind: z.literal("rich-result"),
+    version: z.literal(1),
+    spec: answerSpecSchema,
+  })
+  .strict()
+
+export function parseAnswerResult(output: string): AnswerSpec | null {
+  if (output.length > 32_000) return null
+  try {
+    const envelope = answerEnvelopeSchema.parse(JSON.parse(output))
+    return validateAnswerSpec(envelope.spec)
+  } catch {
+    return null
+  }
+}

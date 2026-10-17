@@ -406,92 +406,147 @@ it("browser tool projection preserves requirements and caller Context, and drive
   expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)
 })
 
-it("native Pi browser tools share the retained actor Context and SDK signal without exposing provider session identities", async () => {
-  class Invocation extends Context.Service<Invocation, string>()(
-    "BrowserNativeToolInvocation"
-  ) {}
-  const f = fixture(),
-    directory = await mkdtemp(join(tmpdir(), "pi-browser-tools-"))
-  f.driver.open = () =>
-    Clock.currentTimeMillis.pipe(
-      Effect.map((now) => ({ ...session, expiresAt: now + 600000 }))
+it.each<{
+  name: string
+  args: Record<string, string>
+  shopping: boolean
+  restricted: boolean
+}>([
+  {
+    name: "browser_open",
+    args: { url: "https://example.com" },
+    shopping: false,
+    restricted: false,
+  },
+  {
+    name: "search_products",
+    args: { query: "headphones & travel", country: "ie" },
+    shopping: true,
+    restricted: false,
+  },
+  {
+    name: "search_products",
+    args: { query: "headphones & travel", country: "ie" },
+    shopping: true,
+    restricted: true,
+  },
+])(
+  "native Pi $name retains actor Context and SDK signal and honors restricted=$restricted",
+  async ({ name, args, shopping, restricted }) => {
+    class Invocation extends Context.Service<Invocation, string>()(
+      "BrowserNativeToolInvocation"
+    ) {}
+    const f = fixture(),
+      directory = await mkdtemp(join(tmpdir(), "pi-browser-tools-"))
+    const navigations: string[] = []
+    let current = capture
+    f.driver.navigate = (_session, url) =>
+      Effect.sync(() => {
+        navigations.push(url)
+        current = {
+          ...capture,
+          page: { ...capture.page, url, capturedAt: Date.now() },
+        }
+        return current
+      })
+    f.driver.capture = () => Effect.succeed(current)
+    await Effect.runPromise(
+      f.browser.configure({
+        generation: 0,
+        hosts: restricted ? ["example.com"] : ["example.com", "www.google.com"],
+        unrestricted: false,
+      })
     )
-  const actor = ManagedRuntime.make(Layer.succeed(Invocation, "tool caller")),
-    seen: { context: string; activeSignal: boolean; value: unknown }[] = []
-  const registry = createRegistry()
-  registry.install({
-    name: "browser",
-    tools: browserTools(f.browser, (program, options) =>
-      actor.runPromise(
-        Effect.gen(function* () {
-          const context = yield* Invocation,
-            activeSignal =
-              options?.signal !== undefined && !options.signal.aborted
-          const value = yield* program
-          seen.push({ context, activeSignal, value })
-          return value
-        }),
-        options
+    f.driver.open = () =>
+      Clock.currentTimeMillis.pipe(
+        Effect.map((now) => ({ ...session, expiresAt: now + 600000 }))
       )
-    ),
-  })
-  const faux = fauxProvider({ tokensPerSecond: 100000 }),
-    models = createModels()
-  models.setProvider(faux.provider)
-  faux.setResponses([
-    fauxAssistantMessage(
-      fauxToolCall(
-        "browser_open",
-        { url: "https://example.com" },
-        { id: "open" }
+    const actor = ManagedRuntime.make(Layer.succeed(Invocation, "tool caller")),
+      seen: { context: string; activeSignal: boolean; value: unknown }[] = []
+    const registry = createRegistry()
+    registry.install({
+      name: "browser",
+      tools: browserTools(f.browser, (program, options) =>
+        actor.runPromise(
+          Effect.gen(function* () {
+            const context = yield* Invocation,
+              activeSignal =
+                options?.signal !== undefined && !options.signal.aborted
+            const value = yield* program
+            seen.push({ context, activeSignal, value })
+            return value
+          }),
+          options
+        )
       ),
-      { stopReason: "toolUse" }
-    ),
-    fauxAssistantMessage(fauxToolCall("browser_read", {}, { id: "read" }), {
-      stopReason: "toolUse",
-    }),
-    fauxAssistantMessage("Read the page."),
-  ])
-  const harness = await Harness.open(
-    await openNodeSqliteStorage(join(directory, "pi.sqlite")),
-    {
-      models,
-      registry,
-      settings: { compaction: { enabled: false }, retry: { enabled: false } },
-    },
-    ctx
-  )
-  try {
-    const conversation = await harness.root(ctx, {
-      agent: { model: { provider: "faux", modelId: "faux-1" } },
     })
-    const command = {
-      type: "input" as const,
-      requestId: crypto.randomUUID(),
-      content: [
-        { type: "text" as const, text: "Open and read the synthetic page." },
-      ],
+    const faux = fauxProvider({ tokensPerSecond: 100000 }),
+      models = createModels()
+    models.setProvider(faux.provider)
+    faux.setResponses([
+      fauxAssistantMessage(fauxToolCall(name, args, { id: "open" }), {
+        stopReason: "toolUse",
+      }),
+      fauxAssistantMessage(fauxToolCall("browser_read", {}, { id: "read" }), {
+        stopReason: "toolUse",
+      }),
+      fauxAssistantMessage("Read the page."),
+    ])
+    const harness = await Harness.open(
+      await openNodeSqliteStorage(join(directory, "pi.sqlite")),
+      {
+        models,
+        registry,
+        settings: { compaction: { enabled: false }, retry: { enabled: false } },
+      },
+      ctx
+    )
+    try {
+      const conversation = await harness.root(ctx, {
+        agent: { model: { provider: "faux", modelId: "faux-1" } },
+      })
+      const command = {
+        type: "input" as const,
+        requestId: crypto.randomUUID(),
+        content: [
+          { type: "text" as const, text: "Open and read the synthetic page." },
+        ],
+      }
+      const turn = await conversation.submit(command, ctx)
+      await turn.wait(ctx)
+      await conversation.waitForIdle(ctx)
+      expect(seen).toHaveLength(2)
+      expect(
+        seen.every(
+          (entry) => entry.context === "tool caller" && entry.activeSignal
+        )
+      ).toBe(true)
+      if (restricted) {
+        expect(navigations).toEqual([])
+        expect(seen[0]!.value).toMatchObject({ isError: true })
+      } else {
+        expect(JSON.stringify(seen)).toContain("Untrusted page")
+        expect(navigations).toHaveLength(1)
+        if (shopping) {
+          const url = new URL(navigations[0]!)
+          expect(url.origin).toBe("https://www.google.com")
+          expect(url.searchParams.get("q")).toBe("headphones & travel")
+          expect(url.searchParams.get("tbm")).toBe("shop")
+          expect(url.searchParams.get("gl")).toBe("ie")
+        }
+      }
+      expect(JSON.stringify(seen)).not.toContain(session.id)
+      expect(JSON.stringify(seen)).not.toContain(session.targetId)
+      expect((await conversation.submit(command, ctx)).id).toBe(turn.id)
+      expect(seen).toHaveLength(2)
+    } finally {
+      await harness.close(ctx)
+      await actor.dispose()
+      await rm(directory, { recursive: true, force: true })
     }
-    const turn = await conversation.submit(command, ctx)
-    await turn.wait(ctx)
-    await conversation.waitForIdle(ctx)
-    expect(seen).toHaveLength(2)
-    expect(
-      seen.every(
-        (entry) => entry.context === "tool caller" && entry.activeSignal
-      )
-    ).toBe(true)
-    expect(JSON.stringify(seen)).toContain("Untrusted page")
-    expect(JSON.stringify(seen)).not.toContain(session.id)
-    expect(JSON.stringify(seen)).not.toContain(session.targetId)
-    expect((await conversation.submit(command, ctx)).id).toBe(turn.id)
-    expect(seen).toHaveLength(2)
-  } finally {
-    await harness.close(ctx)
-    await actor.dispose()
-    await rm(directory, { recursive: true, force: true })
-  }
-}, 15000)
+  },
+  15000
+)
 
 it.each(["defect", "interruption"])(
   "does not recover a browser rejection combined with %s at tool or HTTP boundaries",

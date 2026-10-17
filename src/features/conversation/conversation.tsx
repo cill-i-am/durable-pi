@@ -80,6 +80,7 @@ import {
   FileAttachments,
 } from "@/features/files"
 import { markReady } from "@/features/performance"
+import { AnswerExplorer } from "@/features/rich-results/explorer"
 import { agentApi } from "@/http/client"
 import type { Profile, JobType } from "@/inference/policy"
 
@@ -117,6 +118,14 @@ export function Conversation({
   const api = useMemo(() => agentApi(agent.id), [agent.id])
   const [draft, setDraft] = useState("")
   const composerInput = useRef<HTMLTextAreaElement>(null)
+  const answerPrompt = archived
+    ? undefined
+    : (prompt: string) => {
+        setDraft((current) =>
+          current.trim() ? `${current}\n\n${prompt}` : prompt
+        )
+        requestAnimationFrame(() => composerInput.current?.focus())
+      }
   const [dragging, setDragging] = useState(false)
   const dragDepth = useRef(0)
   const [profile, setProfile] = useState<Profile>("auto")
@@ -417,6 +426,7 @@ export function Conversation({
                       messageId={`${turn.id}:assistant`}
                     >
                       <TurnReply
+                        onAnswerPrompt={answerPrompt}
                         onAppPendingChange={onAppPendingChange}
                         turn={turn}
                         waitingForApproval={state.access?.approvals.some(
@@ -602,6 +612,17 @@ function Composer({
       }}
     >
       {attachments}
+      <div className="flex justify-start py-1">
+        <AnswerExplorer
+          disabled={pending}
+          onPrompt={(prompt) => {
+            setDraft((current) =>
+              current.trim() ? `${current}\n\n${prompt}` : prompt
+            )
+            requestAnimationFrame(() => inputRef.current?.focus())
+          }}
+        />
+      </div>
       <ActivityBorder active={working}>
         <InputGroup className="chat-composer">
           <InputGroupTextarea
