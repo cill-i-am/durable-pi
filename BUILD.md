@@ -14,7 +14,7 @@ Generated Drizzle tables retain inbound identity/content receipts and reply inte
 
 See [Email an agent](README.md#email-an-agent) for controls, limits, and activation. No provider onboarding, DNS change, or real email send is claimed by the local tests.
 
-The ongoing [email decision log](docs/decisions/agent-email.md) records choices, reasons, verification boundaries, and open activation decisions.
+The ongoing [email decision log](docs/decisions/agent-email.md) records choices, reasons, verification boundaries, and open activation decisions. [Draft PR #124](https://github.com/cill-i-am/durable-pi/pull/124) contains the implementation; CI and production activation are separate release evidence.
 
 ## Source-link favicons — 13 October 2026
 
