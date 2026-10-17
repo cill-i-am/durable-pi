@@ -29,6 +29,9 @@ for (const path of [
   "/agents/home/edit",
   "/agents/home/settings/general",
   "/agents/home/settings/security",
+  "/agents/home/settings/family",
+  "/agents/home/settings/model-access",
+  "/join",
   "/agents/home/files/synthetic_file?preview=source",
   "/agents/home/activity?scope=all&filter=attention",
   "/agents/home/memory?tab=history&query=synthetic",
@@ -41,6 +44,17 @@ for (const path of [
   )
 }
 assert.equal((await request("/api/agent/bots")).status, 401)
+const family = await request("/api/family")
+assert.equal(family.status, 401)
+assert.match(family.headers.get("content-type") ?? "", /application\/json/)
+assert.equal(
+  (
+    await request("/api/family/invitation", {
+      invitation: "synthetic-unavailable-deployment-check",
+    })
+  ).status,
+  404
+)
 assert.equal((await request("/api/agent/state?agent=home")).status, 401)
 if (process.env.LEGACY_APP_URL) {
   const legacy = await fetch(process.env.LEGACY_APP_URL + "/", {
