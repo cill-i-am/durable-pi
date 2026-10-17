@@ -117,7 +117,7 @@ const VisibleTurn = Schema.Struct({
   error: Schema.NullOr(Schema.String),
   created_at: Schema.String,
   attachments: Schema.optional(Schema.Array(FileInfo)),
-  images: Schema.optional(Schema.Array(FileInfo)),
+  replyFiles: Schema.optional(Schema.Array(FileInfo)),
   activity: Schema.optional(Schema.Array(TimelineItem)),
   steering: Schema.optional(
     Schema.Array(

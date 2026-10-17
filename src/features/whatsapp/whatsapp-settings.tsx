@@ -173,7 +173,13 @@ export function WhatsAppSettings({
               <div key={message.id} className="flex flex-col gap-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="secondary">
-                    {message.kind === "image" ? "Image · " : ""}
+                    {message.kind === "image"
+                      ? "Image · "
+                      : message.kind === "audio"
+                        ? "Audio · "
+                        : message.kind === "media"
+                          ? "Attachment · "
+                          : ""}
                     {labels[message.state]}
                   </Badge>
                   {["failed", "uncertain", "expired"].includes(

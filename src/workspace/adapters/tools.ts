@@ -52,7 +52,7 @@ export function workspaceTools(
           await run(
             Effect.gen(function* () {
               const turnId = yield* turn(api)
-              return yield* workspace.replyImage({
+              return yield* workspace.replyFile({
                 operationId: `tool:${api.taskId}`,
                 turnId,
                 fileId: args.id,

@@ -66,7 +66,7 @@ it("creates the declared schema once and preserves rows on reactivation", () => 
       "SELECT name FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
     )
   ).toEqual(before)
-  expect(db.all("SELECT * FROM __durable_pi_migrations")).toHaveLength(4)
+  expect(db.all("SELECT * FROM __durable_pi_migrations")).toHaveLength(5)
   expect(db.all("SELECT * FROM tool_grants")).toEqual([
     { name: "keep", mode: "ask", revision: 0 },
   ])

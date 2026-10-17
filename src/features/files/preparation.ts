@@ -16,7 +16,10 @@ export const attachmentReady = (file: FileInfo) =>
   file.status === "ready" &&
   (file.mime !== "application/pdf" || file.extraction?.status === "ready") &&
   (file.kind !== "video" || file.video?.status === "ready")
+const audioDescription = (file: FileInfo) =>
+  `Audio${file.audio?.duration ? ` · ${Math.round(file.audio.duration)}s` : ""} · Transcribed${file.audio?.truncated ? " · transcript truncated" : ""}`
 export function fileDescription(file: FileInfo) {
+  if (file.kind === "audio") return audioDescription(file)
   if (file.kind === "video") {
     if (!file.video) return "Video · Frames not prepared"
     if (file.video.status === "ready")

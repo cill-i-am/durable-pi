@@ -50,9 +50,11 @@ it("native Pi file tools retain the actor runner, invocation Context, cancellati
     ledger,
     assets,
     () => Effect.sync(() => true),
-    () => Effect.fail(new WorkspaceUnavailable()),
-    () => Effect.fail(new WorkspaceUnavailable()),
-    () => Effect.succeed(imagePreview)
+    {
+      document: () => Effect.fail(new WorkspaceUnavailable()),
+      video: () => Effect.fail(new WorkspaceUnavailable()),
+      image: () => Effect.succeed(imagePreview),
+    }
   )
   const file = {
     id: crypto.randomUUID(),

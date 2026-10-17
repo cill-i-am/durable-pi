@@ -5,7 +5,7 @@ import type { WorkspaceUnavailable } from "./files"
 export interface WorkspaceAsset {
   readonly id: string
   readonly hash: string
-  readonly variant?: "pdf-text-v1" | "video-v1"
+  readonly variant?: "pdf-text-v1" | "video-v1" | "audio-text-v1"
 }
 export interface WorkspaceAssets {
   read: (

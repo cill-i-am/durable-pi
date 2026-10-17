@@ -2,7 +2,7 @@ import type { Agent } from "agents"
 
 // Explicit RPC surface breaks the stack/actor environment type cycle.
 export interface WhatsAppBridgeRpc extends Agent {
-  downloadImage(
+  downloadMedia(
     raw: unknown
   ): Promise<
     { ok: true; bytes: Uint8Array } | { ok: false; retryable: boolean }

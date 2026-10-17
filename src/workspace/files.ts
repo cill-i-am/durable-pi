@@ -1,5 +1,6 @@
 import { Schema } from "effect"
 
+import { AudioMetadata, audioMime } from "./audio"
 import { VideoPreparation } from "./video"
 
 export const MAX_FILE_BYTES = 8 * 1024 * 1024
@@ -38,21 +39,22 @@ export const FileInfo = Schema.Struct({
   id: FileId,
   name: FileName,
   mime: Schema.String,
-  kind: Schema.Literals(["image", "text", "video", "document"]),
+  kind: Schema.Literals(["image", "text", "video", "audio", "document"]),
   size: Schema.Number,
   createdAt: Schema.String,
   status: Schema.Literals(["uploading", "ready"]),
   trashed: Schema.Boolean,
   extraction: Schema.optional(DocumentExtraction),
   video: Schema.optional(VideoPreparation),
+  audio: Schema.optional(AudioMetadata),
 })
 export type FileInfo = typeof FileInfo.Type
-export const ImageReply = Schema.Struct({
+export const FileReply = Schema.Struct({
   operationId: Schema.String,
   turnId: Schema.String,
   fileId: FileId,
 })
-export type ImageReply = typeof ImageReply.Type
+export type FileReply = typeof FileReply.Type
 export const AttachmentContent = Schema.Union([
   Schema.Struct({ type: Schema.Literal("text"), text: Schema.String }),
   Schema.Struct({
@@ -147,6 +149,18 @@ export function inspectFile(
     }
   if (upload.mime.startsWith("image/"))
     throw new FileRejected({ message: "Use a PNG, JPEG or WebP image." })
+  const audio = audioMime(upload.bytes, upload.mime)
+  if (audio)
+    return {
+      name: name.value,
+      kind: "audio",
+      mime: audio,
+      size: upload.bytes.length,
+    }
+  if (upload.mime.startsWith("audio/"))
+    throw new FileRejected({
+      message: "Use Ogg, MP3, M4A, WebM, WAV, AAC or FLAC audio.",
+    })
   if (upload.mime === "video/mp4" && ascii(upload.bytes, 4, 8) === "ftyp")
     return {
       name: name.value,

@@ -7,7 +7,7 @@ import type {
   FileInfo,
   Upload,
   WorkspaceUnavailable,
-  ImageReply,
+  FileReply,
 } from "./files"
 import type { VideoResult } from "./video"
 
@@ -21,8 +21,8 @@ export type { AttachmentContent } from "./files"
 export class Workspace extends Context.Service<
   Workspace,
   {
-    replyImage: (input: ImageReply) => Effect.Effect<FileInfo, FileError>
-    imageReplies: (turnId: string) => Effect.Effect<FileInfo[], FileError>
+    replyFile: (input: FileReply) => Effect.Effect<FileInfo, FileError>
+    replyFiles: (turnId: string) => Effect.Effect<FileInfo[], FileError>
     video: (id: FileId) => Effect.Effect<VideoResult, FileError>
     list: () => Effect.Effect<FileInfo[], FileError>
     extractionPending: () => Effect.Effect<boolean, FileError>

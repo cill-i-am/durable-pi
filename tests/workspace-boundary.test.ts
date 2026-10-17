@@ -88,8 +88,7 @@ function fixture(
       ledger,
       assets,
       () => Effect.sync(() => state.writable),
-      extract,
-      video
+      { document: extract, video: video }
     ),
   }
 }

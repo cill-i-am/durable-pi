@@ -9,19 +9,19 @@ import {
   WhatsAppStorageError,
   WhatsAppTurn,
   WhatsAppUnavailable,
-  WhatsAppImage,
-  WhatsAppImageExport,
+  WhatsAppMedia,
+  WhatsAppMediaExport,
 } from "../contracts"
 
 export const WhatsAppRequest = Schema.Union([
   Schema.Struct({
-    _tag: Schema.Literal("ImportImage"),
+    _tag: Schema.Literal("ImportMedia"),
     owner: Schema.String,
     id: IncomingWhatsApp.fields.id,
-    image: WhatsAppImage,
+    media: WhatsAppMedia,
   }),
   Schema.Struct({
-    _tag: Schema.Literal("ExportImage"),
+    _tag: Schema.Literal("ExportMedia"),
     owner: Schema.String,
     id: FileId,
   }),
@@ -52,7 +52,7 @@ export const WhatsAppOutcome = rpcOutcome(
     Schema.Boolean,
     Schema.NullOr(WhatsAppTurn),
     FileId,
-    WhatsAppImageExport,
+    WhatsAppMediaExport,
   ]),
   Schema.Union([WhatsAppRejected, WhatsAppStorageError, WhatsAppUnavailable]),
   "WhatsApp operation failed unexpectedly."
@@ -66,14 +66,14 @@ export const whatsappNative = <T>(work: () => Promise<T>) =>
     return new WhatsAppUnavailable()
   })
 export const whatsappRpc = (peer: WhatsAppRpc) => ({
-  importImage: (owner: string, id: string, image: WhatsAppImage) =>
+  importMedia: (owner: string, id: string, media: WhatsAppMedia) =>
     peer
-      .whatsappV1({ _tag: "ImportImage", owner, id, image })
+      .whatsappV1({ _tag: "ImportMedia", owner, id, media })
       .then((raw) => WhatsAppOutcome.unwrap(raw, FileId)),
-  exportImage: (owner: string, id: string) =>
+  exportMedia: (owner: string, id: string) =>
     peer
-      .whatsappV1({ _tag: "ExportImage", owner, id })
-      .then((raw) => WhatsAppOutcome.unwrap(raw, WhatsAppImageExport)),
+      .whatsappV1({ _tag: "ExportMedia", owner, id })
+      .then((raw) => WhatsAppOutcome.unwrap(raw, WhatsAppMediaExport)),
   receive: (owner: string, input: typeof IncomingWhatsApp.Type) =>
     peer
       .whatsappV1({ _tag: "Receive", owner, input })

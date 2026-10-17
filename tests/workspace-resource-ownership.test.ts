@@ -53,8 +53,10 @@ function fixture(
       open: (asset) => inspect().pipe(Effect.andThen(assets.open(asset))),
     },
     () => Effect.sync(() => true),
-    () => Effect.fail(new WorkspaceUnavailable()),
-    () => Effect.fail(new WorkspaceUnavailable())
+    {
+      document: () => Effect.fail(new WorkspaceUnavailable()),
+      video: () => Effect.fail(new WorkspaceUnavailable()),
+    }
   )
   const runtime = ManagedRuntime.make(
     Layer.mergeAll(

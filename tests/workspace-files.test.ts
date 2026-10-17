@@ -48,15 +48,11 @@ function fixture(
   }
   const db = database()
   const runtime = ManagedRuntime.make(
-    workspaceLayer(
-      db,
-      bucket,
-      prefix,
-      () => Effect.sync(canWrite),
-      undefined,
-      undefined,
-      () => Effect.succeed(preview)
-    )
+    workspaceLayer(db, bucket, prefix, () => Effect.sync(canWrite), {
+      document: undefined,
+      video: undefined,
+      image: () => Effect.succeed(preview),
+    })
   )
   const run = <T, TError>(
     f: (workspace: Workspace["Service"]) => Effect.Effect<T, TError>

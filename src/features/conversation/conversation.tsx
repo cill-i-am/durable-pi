@@ -75,10 +75,10 @@ import { ApprovalCard } from "@/features/access"
 import { useFamily } from "@/features/family/context"
 import {
   type FilesState,
-  FilePicker,
   UploadStatus,
   FileAttachments,
 } from "@/features/files"
+import { MessageFileControls } from "@/features/files/message-file-controls"
 import { markReady } from "@/features/performance"
 import { AnswerExplorer } from "@/features/rich-results/explorer"
 import { agentApi } from "@/http/client"
@@ -514,10 +514,7 @@ export function Conversation({
               />
             }
             attachmentControl={
-              <FilePicker
-                state={files}
-                disabled={sending || files.selected.length >= 4}
-              />
+              <MessageFileControls files={files} sending={sending} />
             }
             enabled={!!state?.connected && files.attachmentsReady}
             modelControl={(delivery) =>

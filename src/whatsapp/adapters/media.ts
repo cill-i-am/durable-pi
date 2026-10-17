@@ -1,10 +1,14 @@
-import { Effect, Stream } from "effect"
+import { Effect, Stream, Schema } from "effect"
 
 import { FileRejected } from "../../workspace/files"
 import type { Workspace } from "../../workspace/workspace"
-import { WhatsAppRejected, WhatsAppUnavailable } from "../contracts"
+import {
+  WhatsAppRejected,
+  WhatsAppUnavailable,
+  WhatsAppMediaExport,
+} from "../contracts"
 
-export function exportWhatsAppImage(
+export function exportWhatsAppMedia(
   workspace: typeof Workspace.Service,
   id: string
 ) {
@@ -27,7 +31,7 @@ export function exportWhatsAppImage(
             return size > 5 * 1024 * 1024
               ? Effect.fail(
                   new FileRejected({
-                    message: "The image is too large to send.",
+                    message: "The attachment is too large to send.",
                   })
                 )
               : Effect.succeed(part)
@@ -37,14 +41,11 @@ export function exportWhatsAppImage(
       let binary = ""
       for (let offset = 0; offset < bytes.length; offset += 8192)
         binary += String.fromCharCode(...bytes.subarray(offset, offset + 8192))
-      return {
+      return Schema.decodeUnknownSync(WhatsAppMediaExport)({
         name: original ? file.name : `${file.id}.jpg`,
-        mime:
-          content.mime === "image/png"
-            ? ("image/png" as const)
-            : ("image/jpeg" as const),
+        mime: content.mime,
         data: btoa(binary),
-      }
+      })
     })
   ).pipe(
     Effect.catchTags({
