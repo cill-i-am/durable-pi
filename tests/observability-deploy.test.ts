@@ -16,7 +16,6 @@ const productionScripts = [
   deployed("document-script", "DocumentWorker"),
   deployed("execution-script", "ExecutionWorker"),
   deployed("native-terminal-script", "TerminalWorkerSandboxV1"),
-  deployed("shortened-terminal-script", "TerminalWorkerDrizzleV1"),
 ]
 
 afterEach(() => {
@@ -93,7 +92,7 @@ it("updates script-level Issues without reconciling Durable Object exports or ch
       )
     )
   )
-  expect(network).toHaveBeenCalledTimes(19)
+  expect(network).toHaveBeenCalledTimes(16)
 })
 it("rejects a non-main invocation before contacting Cloudflare", async () => {
   vi.stubEnv("GITHUB_REF", "refs/heads/topic")
@@ -118,7 +117,7 @@ it.each(["missing", "ambiguous"])(
         ? productionScripts.slice(0, -1)
         : [
             ...productionScripts,
-            deployed("duplicate-terminal-script", "TerminalWorkerDrizzleV1"),
+            deployed("duplicate-terminal-script", "TerminalWorkerSandboxV1"),
           ]
     const network = vi.fn<typeof fetch>(async () =>
       Response.json({ success: true, result: scripts })
@@ -128,7 +127,7 @@ it.each(["missing", "ambiguous"])(
       Effect.runPromise(configureObservability)
     ).rejects.toMatchObject({
       _tag: "ObservabilitySetupFailed",
-      operation: "resolve TerminalWorkerDrizzleV1",
+      operation: "resolve TerminalWorkerSandboxV1",
     })
     expect(network).toHaveBeenCalledTimes(1)
   }

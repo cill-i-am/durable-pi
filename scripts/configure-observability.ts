@@ -26,7 +26,6 @@ const resources = [
   "DocumentWorker",
   "ExecutionWorker",
   "TerminalWorkerSandboxV1",
-  "TerminalWorkerDrizzleV1",
 ]
 
 export const configureObservability = Effect.gen(function* () {
