@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto"
 
-import { Effect, ManagedRuntime, Redacted } from "effect"
+import { Effect, Logger, ManagedRuntime, Redacted } from "effect"
 import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from "jose"
 import { afterEach, beforeAll, expect, it, vi } from "vitest"
 
@@ -79,6 +79,7 @@ function fixture() {
   let started: ChatGPTSignInPending
   let overrides: Record<string, unknown> = {}
   let beforeExchange = async () => {}
+  const warnings: unknown[] = []
   const transport = vi.fn(
     async (_url: string | URL | Request, init?: RequestInit) => {
       expect(saved.has(pendingKey)).toBe(false)
@@ -154,7 +155,19 @@ function fixture() {
       host = controller()
     },
     status: () => Effect.runPromise(host.status()),
-    finish: () => Effect.runPromise(host.finish(started.id, address())),
+    warnings,
+    finish: () =>
+      Effect.runPromise(
+        host.finish(started.id, address()).pipe(
+          Effect.provide(
+            Logger.layer([
+              Logger.make((entry) => {
+                warnings.push(Logger.formatStructured.log(entry))
+              }),
+            ])
+          )
+        )
+      ),
     submit: (value: string) =>
       Effect.runPromise(host.finish(started.id, value)),
     request: (request: Request) =>
@@ -266,6 +279,26 @@ it("rejects a token endpoint redirect without installing credentials or replayin
   await expect(f.finish()).rejects.toThrow("already used")
   expect(f.transport).toHaveBeenCalledTimes(1)
   expect(f.current()).toBeUndefined()
+  expect(JSON.stringify(f.warnings)).toContain("token_exchange")
+  expect(JSON.stringify(f.warnings)).toContain("302")
+  expect(JSON.stringify(f.warnings)).not.toContain("unexpected.invalid")
+})
+it("logs only a fixed credential rejection reason, never the token or returned identity", async () => {
+  const f = fixture()
+  await f.start()
+  f.claims({ email: "private-returned-identity@example.invalid" })
+  await expect(f.finish()).rejects.toThrow("existing connection has been kept")
+  const warnings = JSON.stringify(f.warnings)
+  expect(warnings).toContain("credential_validation")
+  expect(warnings).toContain("email_mismatch")
+  for (const secret of [
+    "private-returned-identity",
+    "new-access",
+    "new-refresh",
+    "synthetic-code",
+    "eyJ",
+  ])
+    expect(warnings).not.toContain(secret)
 })
 it.each([
   { nonce: "other" },

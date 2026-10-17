@@ -1,5 +1,6 @@
 import { Clock, Effect, Schema, Semaphore } from "effect"
 import type { JWTVerifyGetKey } from "jose"
+import { errors as joseErrors } from "jose"
 
 import { jsonRequest } from "../../shared/http"
 import { nativeResponse } from "../../shared/interop"
@@ -15,6 +16,7 @@ import {
   returningCredential,
   returningSignInCallback,
   returningSignInUrl,
+  ReturningCredentialError,
   type ReturningSignIn,
 } from "./sign-in-protocol"
 
@@ -207,7 +209,15 @@ export class ChatGPTSignIn {
                 }),
               unavailable
             )
-            if (!response.ok || !response.body) return yield* unavailable()
+            if (!response.ok || !response.body) {
+              yield* Effect.logWarning("ChatGPT.signInRejected").pipe(
+                Effect.annotateLogs({
+                  stage: "token_exchange",
+                  status: response.status,
+                })
+              )
+              return yield* unavailable()
+            }
             const bytes = yield* nativeBytes(
               response.body,
               65_536,
@@ -226,8 +236,23 @@ export class ChatGPTSignIn {
                   },
                   this.keys
                 ),
-              catch: unavailable,
-            })
+              catch: (cause) =>
+                cause instanceof ReturningCredentialError
+                  ? cause.reason
+                  : cause instanceof joseErrors.JOSEError
+                    ? cause.code
+                    : "invalid_token_response",
+            }).pipe(
+              Effect.tapError((reason) =>
+                Effect.logWarning("ChatGPT.signInRejected").pipe(
+                  Effect.annotateLogs({
+                    stage: "credential_validation",
+                    reason,
+                  })
+                )
+              ),
+              Effect.mapError(unavailable)
+            )
           })
         ).pipe(
           Effect.timeoutOrElse({ duration: "30 seconds", orElse: unavailable })
