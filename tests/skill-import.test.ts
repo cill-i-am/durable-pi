@@ -114,6 +114,7 @@ describe("hosted skill import", () => {
       source: skill,
     })
     expect(f.call.mock.calls[1]![0].arguments).toMatchObject({
+      app: skill.app.slug,
       version: deployment,
       revision: skill.revision,
       file: "SKILL.md",

@@ -157,8 +157,9 @@ export function importSkillsRequest(
           )
         )
         if (
+          loaded.app.id !== query.skill.app.id ||
           JSON.stringify(hostedSkillQuery(loaded)) !==
-          JSON.stringify(hostedSkillQuery(query.skill))
+            JSON.stringify(hostedSkillQuery(query.skill))
         )
           return yield* new SkillConflict({
             message:
