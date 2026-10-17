@@ -45,13 +45,13 @@ export async function emailAddress(
       JSON.stringify(["agent-email:v1", domain, owner, agent, generation])
     )
   )
-  return `${agent.replaceAll("-", "")}+${base32(new Uint8Array(signature).slice(0, 16))}@${domain}`
+  return `pi+${agent.replaceAll("-", "")}.${base32(new Uint8Array(signature).slice(0, 16))}@${domain}`
 }
 export function emailAgent(
   address: string,
   domain: string
 ): AgentId | undefined {
-  const match = /^(home|[a-f0-9]{32})\+[a-z2-7]{26}@([^@]+)$/.exec(address)
+  const match = /^pi\+(home|[a-f0-9]{32})\.[a-z2-7]{26}@([^@]+)$/.exec(address)
   if (!match || match[2] !== domain) return
   const compact = match[1]!
   const id =

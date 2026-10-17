@@ -140,6 +140,8 @@ describe("private agent email addresses", () => {
     )
     const address = await emailAddress(secret, domain, "owner-id", agent, 1)
     expect(address.split("@")[0]!.length).toBeLessThanOrEqual(64)
+    expect(address).toMatch(/^pi\+[a-f0-9]{32}\.[a-z2-7]{26}@/)
+    expect(address.split("+")[0]).toBe("pi")
     expect(emailAgent(address, domain)).toBe(agent)
     expect(sameAddress(address, address)).toBe(true)
     for (const other of [

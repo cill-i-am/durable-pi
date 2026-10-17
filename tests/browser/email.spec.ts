@@ -40,7 +40,7 @@ test("enable and revoke an address; uncertain replies require an explicit resend
         enabled: input.enabled,
         revision: view.revision + 1,
         address: input.enabled
-          ? "1234567812344234a234123456789abc+abcdefghijklmnopqrstuvwxyz@agents.example.com"
+          ? "pi+1234567812344234a234123456789abc.abcdefghijklmnopqrstuvwxyz@agents.example.com"
           : null,
       }
     }
