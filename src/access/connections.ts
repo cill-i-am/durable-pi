@@ -1,5 +1,7 @@
 import { Schema } from "effect"
 
+import { isExecutorConnection } from "./executor"
+
 export const ConnectionId = Schema.String.check(
   Schema.isPattern(/^mcp-[a-f0-9]{32}$/)
 )
@@ -113,7 +115,7 @@ export function connectionUrl(value: string) {
   const invalid = () =>
     new ConnectionError({
       message:
-        "Use a public HTTPS MCP endpoint without a query, credentials, or custom port.",
+        "Use a public HTTPS MCP endpoint without credentials or a custom port. Only Executor's browser-approval option is supported in a query.",
     })
   let url: URL
   try {
@@ -125,7 +127,7 @@ export function connectionUrl(value: string) {
     url.protocol !== "https:" ||
     url.username ||
     url.password ||
-    url.search ||
+    (url.search && !isExecutorConnection(url.href)) ||
     url.hash ||
     url.port ||
     !/^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?\.[a-z]{2,}$/i.test(url.hostname) ||

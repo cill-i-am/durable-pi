@@ -1,0 +1,24 @@
+# Executor defaults and model reconnection
+
+The owner requested Executor MCP by default for all production agents on 17 October 2026. This record tracks consequential decisions and their verification.
+
+| Decision | Reason and consequence |
+| --- | --- |
+| Reuse the existing workspace connection host. | One owner Durable Object owns MCP authorization and dispatch. Agents receive tool definitions and call that host; provider credentials do not enter agents, prompts, or source control. |
+| Include Executor's six stable MCP tools automatically for existing and new agents. | `skills`, `search`, `describe`, `call`, `execute`, and `resume` expose the user's configured Executor apps. Other MCP connections retain explicit per-agent selections. Additional tools published by a server do not automatically become defaults. |
+| Use the exact hosted Executor endpoint with `elicitation_mode=browser`. | Executor sends an approval URL and retains the request. The user answers on its signed-in browser page, and the agent collects the decision with `resume`. Never rerun the original program after a pause or uncertain outcome. Only this exact public endpoint may use the query option; arbitrary query strings, URL credentials, and private endpoints remain rejected. |
+| Let Executor enforce action approvals without a duplicate Pi prompt by default. | The owner prefers Executor's approval controls. Its default tools pass through Pi's durable operation receipts, authority checks, cancellation, and replay protection, with a default policy of Allow. Per-agent Ask and Deny overrides still apply. Unrelated external tools retain Ask as their default. |
+| Read shared defaults when a job starts and when tool settings open. | Existing agents gain the connection without recreating them. Disconnect/reconnect and server/tool revisions are rechecked by the owner at dispatch. Explicit agent policies override the default. |
+| Extend the existing owner RPC with an optional resolve flag. | An owner still running the previous Worker version ignores the flag and returns an empty selection, rather than rejecting an unknown operation and blocking a new agent's conversation. Executor becomes available after that owner upgrades. A regression test checks the previous request schema. |
+| Reuse Pi's issued OpenAI client registration and stable host ID for reconnection. | The installed login helper always starts dynamic registration. Official OpenAI documentation specifies a separate returning sign-in path and permits callbacks without a repeated client ID. The new local helper validates state, PKCE, client binding, signed ID-token issuer/audience/nonce, owner identity, and direct model scope before replacing the ignored credential file atomically. Existing app and Codex credentials are not repurposed. |
+| Preserve the repository's release controls. | Live main-branch protection requires a PR and the aggregate `check`, including for admins. The owner's question about direct pushes did not authorize changing that policy. Deployment remains gated by the main workflow. Commits use the owner's previously authorized per-command unsigned override. |
+
+Sources: [Executor MCP and browser approvals](https://executor.sh/docs/mcp), [OpenAI returning sign-in](https://developers.openai.com/siwc/token-sharing-open-source/sign-in).
+
+## Verification and delivery
+
+- Six focused tests pass for returning sign-in URL/callback binding, signed identity and nonce verification, and rejecting missing model permission or rotating tokens.
+- Live reconnection using both saved Pi registrations and the original host identifier still reached consent and timed out at OpenAI. The returning sign-in helper corrects the local protocol, but has not restored the provider connection. Local `.env` credentials were expired; read-only inspection found no current subscription credential in the local app database. No replacement production model credential or completed agent email round trip is claimed.
+- Local verification passed 1,680 unit tests, application and Worker builds, native communication/recovery and Drizzle suites, and four desktop/mobile browser journeys. Focused coverage exercises automatic defaults through the actual owner RPC and production job entry point for existing/new agents, disconnect removal, endpoint restrictions, durable dispatch uncertainty, and per-agent policy overrides.
+- Native verification caught a startup dependency cycle when the harness tried to await MCP discovery during Lifecycle initialization. The harness now installs its local snapshot during startup; defaults refresh before the job runs and when tool settings open. The native production actor/email/restart suites then passed.
+- Chrome confirmed the existing Executor account is signed in and has six installed apps. Its connected agents currently list Codex and ChatGPT. Pi has not yet been authorized; no live production Executor call is claimed.
