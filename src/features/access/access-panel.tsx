@@ -20,7 +20,6 @@ export function AccessPanel({
   agentName,
   open,
   onOpenChange: setOpen,
-  tools,
   onSaved,
 }: {
   embedded?: boolean
@@ -29,17 +28,35 @@ export function AccessPanel({
   agentName: string
   open: boolean
   onOpenChange: (open: boolean) => void
-  tools: readonly ToolPolicy[] | undefined
   onSaved: () => void
 }) {
-  const [confirmed, setConfirmed] = useState<readonly ToolPolicy[]>([])
+  const [policies, setPolicies] = useState<readonly ToolPolicy[]>()
+  const [refresh, setRefresh] = useState(0)
   const [busy, setBusy] = useState("")
   const [error, setError] = useState("")
   const lock = useRef(false)
-  const policies = tools?.map((tool) => {
-    const saved = confirmed.find((value) => value.name === tool.name)
-    return saved && saved.revision > tool.revision ? saved : tool
-  })
+  useEffect(() => {
+    if (!open) return
+    let current = true
+    setPolicies(undefined)
+    setError("")
+    void agentApi(agentId)("access")
+      .then((value) => Schema.decodeUnknownSync(AccessState)(value))
+      .then(
+        (value) => {
+          if (current) setPolicies(value.tools)
+        },
+        (cause) => {
+          if (current)
+            setError(
+              cause instanceof Error ? cause.message : "Could not load access."
+            )
+        }
+      )
+    return () => {
+      current = false
+    }
+  }, [agentId, open, refresh])
   async function update(tool: ToolPolicy, mode: AccessMode) {
     if (lock.current || tool.mode === mode) return
     lock.current = true
@@ -53,7 +70,7 @@ export function AccessPanel({
           mode,
         })
       )
-      setConfirmed(state.tools)
+      setPolicies(state.tools)
     } catch (cause) {
       setError(
         cause instanceof Error ? cause.message : "Could not update access."
@@ -88,7 +105,7 @@ export function AccessPanel({
                 variant="link"
                 onClick={() => {
                   setError("")
-                  onSaved()
+                  setRefresh((value) => value + 1)
                 }}
               >
                 <RefreshCw />
@@ -97,7 +114,7 @@ export function AccessPanel({
             </AlertDescription>
           </Alert>
         )}
-        {!policies && (
+        {!policies && !error && (
           <p className="py-4 text-sm text-muted-foreground">
             Loading tool access…
           </p>

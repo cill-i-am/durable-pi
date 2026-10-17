@@ -378,7 +378,6 @@ export function WorkspaceSettings({
               agentName={agent.name}
               open={category === "access"}
               onOpenChange={() => {}}
-              tools={state?.access?.tools}
               onSaved={reload}
               onPendingChange={setAccessPending}
             />

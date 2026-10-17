@@ -5,7 +5,8 @@
 - [x] Existing/new agents inherit the shared Executor MCP entry points, with browser approvals in Executor and per-agent Ask/Deny overrides.
 - [x] Local checks: 1,680 unit tests, app/Worker bundles, native communication/recovery and Drizzle suites, four desktop/mobile browser journeys.
 - [x] Returning ChatGPT sign-in helper reuses the saved Pi registration and validates callback state, signed identity, nonce and model scope before atomically saving credentials.
-- [ ] PR checks, production deployment and Chrome Executor acceptance. Main currently requires a PR and passing aggregate check; branch protection is preserved.
+- [x] PR #126 checks and production deployment passed. Chrome completed the owner-approved Executor grant and confirmed six automatic tools on existing/new agents with zero manual selections. Main protection remains unchanged.
+- [ ] Deploy the permissions-screen catalog refresh found during Chrome acceptance, then verify per-agent controls before a model run. Model-driven Executor calls and the full email reply still require ChatGPT reconnection.
 - [ ] Restore the model connection and finish the queued email round trip. Both saved registrations still encountered OpenAI consent timeouts; no fresh credential is deployed.
 
 The [decision log](docs/decisions/executor-defaults.md) records the authorization boundaries, live findings, verification and release evidence.
