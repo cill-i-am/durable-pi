@@ -12,6 +12,7 @@ import {
   MessageFooter,
 } from "@/components/ui/message"
 import type { ChatState } from "@/conversations/contracts"
+import { FileAttachments } from "@/features/files/file-attachments"
 
 import { TurnActivity, SteeringMessage } from "./turn-activity"
 
@@ -170,6 +171,9 @@ function ReplyBody({
                 : "Thinking…"}
           </span>
         ) : null}
+        {agentId && !!turn.images?.length && (
+          <FileAttachments files={turn.images} agentId={agentId} />
+        )}
       </BubbleContent>
     </Bubble>
   )

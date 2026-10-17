@@ -251,6 +251,7 @@ import { emailPump } from "../email/pump"
 import { jsonRequest } from "../shared/http"
 import { whatsappConfigured } from "../whatsapp/adapters/chat"
 import { whatsappRequest } from "../whatsapp/adapters/http"
+import { exportWhatsAppImage } from "../whatsapp/adapters/images"
 import {
   WhatsAppOutcome,
   WhatsAppRequest,
@@ -260,10 +261,15 @@ import {
 import { WhatsAppStore } from "../whatsapp/adapters/sqlite"
 import {
   WhatsAppStorageError,
+  WhatsAppRejected,
   WhatsAppUnavailable,
   WhatsAppWebhook,
   type WhatsAppRecord,
+  type WhatsAppImage,
+  type WhatsAppImageExport,
+  type WhatsAppFailure,
 } from "../whatsapp/contracts"
+import { importWhatsAppImage } from "../whatsapp/images"
 import { WhatsAppSendFailed } from "../whatsapp/pump"
 import { whatsappApplication } from "../whatsapp/service"
 import type { AgentGatewayBindings } from "./adapters/gateway"
@@ -447,6 +453,7 @@ import { WebhookStorageError } from "../webhooks/persistence"
 import { Webhooks, webhookApplication } from "../webhooks/service"
 import { documentService } from "../workspace/adapters/document-service"
 import { filesRequest } from "../workspace/adapters/http"
+import { prepareImage } from "../workspace/adapters/images"
 import { workspaceLayer } from "../workspace/adapters/storage"
 import { workspaceTools } from "../workspace/adapters/tools"
 import { videoService } from "../workspace/adapters/video-service"
@@ -455,7 +462,11 @@ import {
   workspaceExtractionCycle,
   workspaceExtractionFailure,
 } from "../workspace/application"
-import { WorkspaceUnavailable, messageArchiveText } from "../workspace/files"
+import {
+  WorkspaceUnavailable,
+  WorkspaceReadOnly,
+  messageArchiveText,
+} from "../workspace/files"
 import { Workspace } from "../workspace/workspace"
 import { agentGateway } from "./adapters/gateway"
 import { agentJson, agentNative, agentResponse } from "./adapters/http"
@@ -781,6 +792,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     new Set([
       ...recoverableObjectTools,
       ...recoverablePlanTools,
+      "share_image",
       "delegate_tasks",
       "background_tasks",
       "delegate_bot",
@@ -1004,7 +1016,8 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         `files/${this.ctx.id.toString()}`,
         () => this.writable(() => new WorkspaceUnavailable()),
         documentService(this.env.DOCUMENT_SERVICE),
-        videoService(this.env.TERMINAL_SERVICE, this.ctx.id.toString())
+        videoService(this.env.TERMINAL_SERVICE, this.ctx.id.toString()),
+        prepareImage(this.env.IMAGES)
       ),
       Layer.unwrap(
         Effect.map(MemoryTransaction, (memory) =>
@@ -1266,6 +1279,9 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       return {
         status: turn.status,
         answer: turn.answer,
+        images: (yield* this.workspaceService.imageReplies(id)).map(
+          (file) => file.id
+        ),
         needsApproval: access.approvals.some(
           (approval) => approval.turnId === id && approval.status === "pending"
         ),
@@ -1275,6 +1291,24 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         () => new WhatsAppStorageError({ operation: "read conversation" })
       )
     )
+  }
+  private importWhatsAppImage(owner: string, id: string, image: WhatsAppImage) {
+    return importWhatsAppImage(this.workspaceService, (source) =>
+      Effect.gen({ self: this }, function* () {
+        const result = yield* whatsappNative(async () => {
+          const bridge = await getAgentByName(this.env.WHATSAPP, owner)
+          return bridge.downloadImage(source)
+        })
+        if (!result.ok)
+          return yield* result.retryable
+            ? new WhatsAppUnavailable()
+            : new WhatsAppRejected({
+                message:
+                  "This image is unavailable, invalid or too large. Send a PNG, JPEG or WebP image up to 8 MB.",
+              })
+        return result.bytes
+      })
+    )(id, image)
   }
   private whatsapp(owner: string): ReturnType<typeof whatsappApplication> {
     const profiles = () =>
@@ -1295,6 +1329,27 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           (agent) => whatsappConfigured(this.env) && agent?.status === "active"
         )
       )
+    const connected = (id: AgentId) =>
+      Effect.gen({ self: this }, function* () {
+        const agent = yield* profile(id)
+        if (agent?.status !== "active") return yield* new WhatsAppUnavailable()
+        const peer = this.env.AGENT.getByName(agentObjectName(owner, id))
+        yield* agentRpcNative(() =>
+          agentRpc(peer).configure(owner, agent, owner)
+        ).pipe(Effect.mapError(() => new WhatsAppUnavailable()))
+        return peer
+      })
+    const exportImage = (
+      agentId: AgentId,
+      id: string
+    ): Effect.Effect<WhatsAppImageExport, WhatsAppFailure> =>
+      agentId === homeAgentId
+        ? exportWhatsAppImage(this.workspaceService, id)
+        : whatsappNative(() =>
+            whatsappRpc(
+              this.env.AGENT.getByName(agentObjectName(owner, agentId))
+            ).exportImage(owner, id)
+          )
     return whatsappApplication(this.whatsappStore, {
       profiles,
       active,
@@ -1306,19 +1361,27 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       name: (id) => profile(id).pipe(Effect.map((agent) => agent?.name ?? id)),
       wake: () => this.wakeWhatsApp(),
       reviewUrl: (id) => `${this.env.EMAIL_REVIEW_URL}/agents/${id}`,
+      image: (record) =>
+        Effect.gen({ self: this }, function* () {
+          if (!record.image) return yield* new WhatsAppUnavailable()
+          if (record.agentId === homeAgentId)
+            return yield* this.importWhatsAppImage(
+              owner,
+              record.id,
+              record.image
+            )
+          const peer = yield* connected(record.agentId)
+          return yield* whatsappNative(() =>
+            whatsappRpc(peer).importImage(owner, record.id, record.image!)
+          )
+        }),
       admit: (id, input) =>
         Effect.gen({ self: this }, function* () {
           if (id === homeAgentId)
             return yield* this.messageAdmission(input).pipe(
               Effect.mapError(() => new WhatsAppUnavailable())
             )
-          const agent = yield* profile(id)
-          if (agent?.status !== "active")
-            return yield* new WhatsAppUnavailable()
-          const peer = this.env.AGENT.getByName(agentObjectName(owner, id))
-          yield* agentRpcNative(() =>
-            agentRpc(peer).configure(owner, agent, owner)
-          ).pipe(Effect.mapError(() => new WhatsAppUnavailable()))
+          const peer = yield* connected(id)
           if (input.origin?.kind !== "whatsapp")
             return yield* new WhatsAppUnavailable()
           const origin = input.origin
@@ -1328,6 +1391,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
               body: input.text,
               sender: origin.sender,
               messageId: origin.messageId,
+              files: input.files,
             })
           )
         }),
@@ -1340,18 +1404,27 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
               ).turn(owner, turnId)
             ).pipe(Effect.map((turn) => turn ?? undefined)),
       send: (record: WhatsAppRecord, reply: string) =>
-        Effect.tryPromise({
-          try: async () => {
-            const bridge = await getAgentByName(this.env.WHATSAPP, owner)
-            const result = await bridge.send(record.threadId, reply)
-            if (!result.ok)
-              throw new WhatsAppSendFailed({ uncertain: result.uncertain })
-            return result.id
-          },
-          catch: (error) =>
-            error instanceof WhatsAppSendFailed
-              ? error
-              : new WhatsAppSendFailed({ uncertain: true }),
+        Effect.gen({ self: this }, function* () {
+          const image = record.outboundImageId
+            ? yield* exportImage(record.agentId, record.outboundImageId).pipe(
+                Effect.mapError(
+                  () => new WhatsAppSendFailed({ uncertain: false })
+                )
+              )
+            : undefined
+          return yield* Effect.tryPromise({
+            try: async () => {
+              const bridge = await getAgentByName(this.env.WHATSAPP, owner)
+              const result = await bridge.send(record.threadId, reply, image)
+              if (!result.ok)
+                throw new WhatsAppSendFailed({ uncertain: result.uncertain })
+              return result.id
+            },
+            catch: (error) =>
+              error instanceof WhatsAppSendFailed
+                ? error
+                : new WhatsAppSendFailed({ uncertain: true }),
+          })
         }),
     })
   }
@@ -1384,6 +1457,17 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         return yield* new WhatsAppUnavailable()
       if (input._tag === "Turn")
         return (yield* this.whatsappTurn(input.id)) ?? null
+      if (input._tag === "ExportImage")
+        return yield* exportWhatsAppImage(this.workspaceService, input.id)
+      if (input._tag === "ImportImage") {
+        if (!whatsappConfigured(this.env))
+          return yield* new WhatsAppUnavailable()
+        return yield* this.importWhatsAppImage(
+          input.owner,
+          input.id,
+          input.image
+        )
+      }
       if (
         config?.status !== "active" ||
         input.input.sender !== this.env.WHATSAPP_OWNER_ID ||
@@ -1394,6 +1478,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         operationId: input.input.id,
         text: input.input.body,
         mode: "followUp",
+        files: input.input.files,
         origin: {
           kind: "whatsapp",
           sender: input.input.sender,
@@ -2228,8 +2313,23 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             () => this.routineRunner.wake(),
             (operation, signal) => this.run(operation, { signal })
           ),
-          ...workspaceTools(this.workspaceService, (program, signal) =>
-            this.run(program, { signal })
+          ...workspaceTools(
+            this.workspaceService,
+            (program, signal) => this.run(program, { signal }),
+            (api) =>
+              Effect.gen({ self: this }, function* () {
+                const receipt = yield* this.accessStore.get(String(api.taskId))
+                const turn = receipt
+                  ? yield* this.conversations.get(receipt.turnId)
+                  : undefined
+                if (
+                  !turn ||
+                  turn.session_id !== String(api.conversationId) ||
+                  !["running", "preparing"].includes(turn.status)
+                )
+                  return yield* new WorkspaceReadOnly()
+                return turn.id
+              }).pipe(Effect.mapError(() => new WorkspaceUnavailable()))
           ),
           ...this.memoryTools.read,
           ...terminalTools(
@@ -2436,7 +2536,8 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     this.conversationService,
     this.conversationExecution,
     this.conversationJournal,
-    () => this.snapshotMetadata()
+    () => this.snapshotMetadata(),
+    (id) => this.workspaceService.imageReplies(id)
   )
   readonly runner = new TurnRunner(this)
   readonly compactor = new MemoryRunner(this)

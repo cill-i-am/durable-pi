@@ -6,6 +6,7 @@ import { preserveFatal } from "../shared/effect"
 import type { WhatsAppStore } from "./adapters/sqlite"
 import {
   whatsappIdentity,
+  WhatsAppUnavailable,
   WHATSAPP_WINDOW_MS,
   type WhatsAppFailure,
   type WhatsAppRecord,
@@ -17,6 +18,7 @@ export class WhatsAppSendFailed extends Schema.TaggedError<WhatsAppSendFailed>()
   { uncertain: Schema.Boolean }
 ) {}
 export interface WhatsAppPumpHost {
+  image?: (record: WhatsAppRecord) => Effect.Effect<string, WhatsAppFailure>
   active: (id: AgentId) => Effect.Effect<boolean, WhatsAppFailure>
   admit: (
     id: AgentId,
@@ -39,11 +41,12 @@ export function whatsappPump(records: WhatsAppStore, host: WhatsAppPumpHost) {
     text: string
   ) {
     const name = yield* host.name(record.agentId)
-    const reply =
-      `${name}\n\n${text.slice(0, 3000)}${text.length > 3000 ? "\n\nContinued in Pi." : ""}\n\n${host.reviewUrl(record.agentId)}`.slice(
-        0,
-        3900
-      )
+    const reply = record.outboundImageId
+      ? `${name}\n\n${text}`.slice(0, 500)
+      : `${name}\n\n${text.slice(0, 3000)}${text.length > 3000 ? "\n\nContinued in Pi." : ""}\n\n${host.reviewUrl(record.agentId)}`.slice(
+          0,
+          3900
+        )
     if (
       !(yield* records.claim(record, reply, () => host.active(record.agentId)))
     )
@@ -61,7 +64,7 @@ export function whatsappPump(records: WhatsAppStore, host: WhatsAppPumpHost) {
           {
             error: failure.uncertain
               ? "Delivery could not be confirmed. Check WhatsApp before retrying."
-              : "WhatsApp rejected this reply. Review the connection and reply window before retrying.",
+              : "This reply could not be sent. Review the connection, source image and reply window before retrying.",
           }
         )
       )
@@ -80,11 +83,42 @@ export function whatsappPump(records: WhatsAppStore, host: WhatsAppPumpHost) {
           ...identity,
           messageId: `approval:${record.id}`,
           body: "Approval notification",
+          image: null,
         },
         record.agentId,
-        "An action needs your approval. Open Pi to review it. WhatsApp messages cannot approve actions."
+        {
+          reply:
+            "An action needs your approval. Open Pi to review it. WhatsApp messages cannot approve actions.",
+        }
       )
       .pipe(Effect.catchTag("WhatsAppRejected", () => Effect.void))
+  })
+  const prepareImage = Effect.fn("WhatsApp.prepareImage")(function* (
+    record: WhatsAppRecord
+  ) {
+    let imageFileId = record.imageFileId
+    if (record.image && !imageFileId) {
+      if (!(yield* records.beginImage(record.id))) return undefined
+      const imported = yield* (
+        host.image ? host.image(record) : Effect.fail(new WhatsAppUnavailable())
+      ).pipe(
+        Effect.map((id) => ({ id })),
+        Effect.catchTag("WhatsAppRejected", (error) =>
+          records
+            .update(record.id, "queued", "failed", { error: error.message })
+            .pipe(Effect.as(undefined))
+        )
+      )
+      if (!imported) return undefined
+      imageFileId = imported.id
+      if (
+        !(yield* records.update(record.id, "queued", "queued", {
+          imageFileId,
+        }))
+      )
+        return undefined
+    }
+    return imageFileId ? [imageFileId] : []
   })
   const process = Effect.fn("WhatsApp.process")(function* (
     record: WhatsAppRecord
@@ -113,10 +147,13 @@ export function whatsappPump(records: WhatsAppStore, host: WhatsAppPumpHost) {
       return
     }
     if (record.state === "queued") {
+      const files = yield* prepareImage(record)
+      if (!files) return
       yield* host.admit(record.agentId, {
         operationId: record.id,
         text: record.body,
         mode: "followUp",
+        files,
         origin: {
           kind: "whatsapp",
           sender: record.sender,
@@ -129,20 +166,26 @@ export function whatsappPump(records: WhatsAppStore, host: WhatsAppPumpHost) {
     const turn = yield* host.turn(record.agentId, record.id)
     if (!turn) return
     if (turn.needsApproval) yield* notice(record)
-    if (["done", "failed", "cancelled"].includes(turn.status))
+    if (["done", "failed", "cancelled"].includes(turn.status)) {
+      for (const id of turn.status === "done" ? (turn.images ?? []) : [])
+        yield* records.queueImage(record, id)
       yield* send(
         record,
         turn.status === "done" && turn.answer.trim()
           ? turn.answer
           : "This request could not finish. Open Pi to review the conversation."
       )
+    }
   })
   return Effect.fn("WhatsApp.pump")(function* () {
     for (const record of yield* records.pending()) {
       if (record.state === "sending") continue
       yield* process(record).pipe(
         preserveFatal,
-        Effect.catchTag("WhatsAppUnavailable", () => Effect.void)
+        Effect.catchTags({
+          WhatsAppUnavailable: () => Effect.void,
+          WhatsAppRejected: () => Effect.void,
+        })
       )
     }
     if ((yield* records.pending()).some((record) => record.state !== "sending"))

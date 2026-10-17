@@ -80,6 +80,7 @@ export function delegationTool(
                 "search_memory",
                 "list_files",
                 "read_file",
+                "view_image",
                 "read_note",
               ].map((name) => Type.Literal(name))
             ),

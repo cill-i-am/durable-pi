@@ -3,6 +3,7 @@ import { Effect } from "effect"
 import type { Sqlite } from "../../storage/sqlite"
 import type { ExtractDocument } from "../documents"
 import { WorkspaceUnavailable } from "../files"
+import type { PrepareImage } from "../images"
 import { workspaceApplication } from "../service"
 import type { ExtractVideo } from "../video"
 import { r2WorkspaceAssets, type AssetBucket } from "./r2"
@@ -17,13 +18,15 @@ export function workspaceLayer(
     Effect.succeed(true),
   extractDocument: ExtractDocument = () =>
     Effect.fail(new WorkspaceUnavailable()),
-  extractVideo: ExtractVideo = () => Effect.fail(new WorkspaceUnavailable())
+  extractVideo: ExtractVideo = () => Effect.fail(new WorkspaceUnavailable()),
+  prepareImage?: PrepareImage
 ) {
   return workspaceApplication(
     new SqliteWorkspace(database),
     r2WorkspaceAssets(bucket, prefix),
     canWrite,
     extractDocument,
-    extractVideo
+    extractVideo,
+    prepareImage
   )
 }

@@ -40,7 +40,7 @@ export function whatsappApplication(store: WhatsAppStore, host: WhatsAppHost) {
       }
       const settings = yield* store.settings()
       if (!settings.enabled) return false
-      const command = input.body.trim()
+      const command = input.image ? "" : input.body.trim()
       let route: AgentId | undefined
       let reply = ""
       if (command === "/agents") {
@@ -57,12 +57,10 @@ export function whatsappApplication(store: WhatsAppStore, host: WhatsAppHost) {
           reply =
             "That agent is unavailable. Send /agents to see your active agents."
       }
-      const accepted = yield* store.receive(
-        input,
-        route ?? settings.agentId,
+      const accepted = yield* store.receive(input, route ?? settings.agentId, {
         reply,
-        route
-      )
+        route,
+      })
       yield* host.wake()
       return accepted
     })
@@ -80,12 +78,22 @@ export function whatsappApplication(store: WhatsAppStore, host: WhatsAppHost) {
           settings.agentId,
         contactUrl: host.contactUrl(),
         messages: (yield* store.list()).map(
-          ({ id, agentId, state, error, createdAt }) => ({
+          ({
             id,
             agentId,
             state,
             error,
             createdAt,
+            image,
+            outboundImageId,
+          }) => ({
+            id,
+            agentId,
+            state,
+            error,
+            createdAt,
+            kind:
+              image || outboundImageId ? ("image" as const) : ("text" as const),
           })
         ),
       }

@@ -172,7 +172,10 @@ export function WhatsAppSettings({
             .map((message) => (
               <div key={message.id} className="flex flex-col gap-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="secondary">{labels[message.state]}</Badge>
+                  <Badge variant="secondary">
+                    {message.kind === "image" ? "Image · " : ""}
+                    {labels[message.state]}
+                  </Badge>
                   {["failed", "uncertain", "expired"].includes(
                     message.state
                   ) && (

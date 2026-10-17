@@ -47,6 +47,12 @@ export const FileInfo = Schema.Struct({
   video: Schema.optional(VideoPreparation),
 })
 export type FileInfo = typeof FileInfo.Type
+export const ImageReply = Schema.Struct({
+  operationId: Schema.String,
+  turnId: Schema.String,
+  fileId: FileId,
+})
+export type ImageReply = typeof ImageReply.Type
 export const AttachmentContent = Schema.Union([
   Schema.Struct({ type: Schema.Literal("text"), text: Schema.String }),
   Schema.Struct({
@@ -95,7 +101,6 @@ export type Upload = {
   name: string
   mime: string
   bytes: Uint8Array
-  vision?: Uint8Array
 }
 
 const ascii = (bytes: Uint8Array, start: number, end: number) =>

@@ -141,6 +141,7 @@ export class PersonalAgentProbe extends PersonalAgent {
   private terminalNamespace: DurableObjectNamespace<TerminalProbe>
   private backgroundNamespace: DurableObjectNamespace<BackgroundGroupProbe>
   private whatsappNamespace: DurableObjectNamespace<WhatsAppSink>
+  private imageReply?: (id: string) => void
   private commandProbe: {
     entered: boolean
     aborted: boolean
@@ -270,6 +271,22 @@ export class PersonalAgentProbe extends PersonalAgent {
       WHATSAPP_BUSINESS_NUMBER: "15550102020",
       MEMORY_BACKUPS: bucket,
       WORKSPACE_ASSETS: bucket,
+      IMAGES: {
+        info: async () => ({
+          format: "image/jpeg",
+          fileSize: 6,
+          width: 1,
+          height: 1,
+        }),
+        input: () => ({
+          transform: () => ({
+            output: async () => ({
+              image: () =>
+                new Blob([new Uint8Array([255, 216, 255, 224])]).stream(),
+            }),
+          }),
+        }),
+      },
       BACKGROUND: env.BACKGROUND,
       DOCUMENT_SERVICE: {
         fetch: async (request: Request) =>
@@ -456,6 +473,32 @@ export class PersonalAgentProbe extends PersonalAgent {
     )
     this.models.setProvider(faux.provider)
     faux.setResponses([fauxAssistantMessage("Native actor answer")])
+    this.imageReply = (id) =>
+      faux.setResponses(
+        Array.from({ length: 6 }, () => async (context) => {
+          const summary = "The image was shared in this reply."
+          if (
+            context.messages.some(
+              (message) =>
+                message.role === "system" &&
+                typeof message.content === "string" &&
+                message.content.startsWith(
+                  "You are a context summarization assistant."
+                )
+            )
+          )
+            return fauxAssistantMessage(summary)
+          if (
+            JSON.stringify(context.messages).includes(summary) ||
+            context.messages.some((message) => message.role === "toolResult")
+          )
+            return fauxAssistantMessage("Native image answer")
+          return fauxAssistantMessage(
+            fauxToolCall("share_image", { id }, { id: "native-share-image" }),
+            { stopReason: "toolUse" }
+          )
+        })
+      )
     const settle = this.connectionClient.settle.bind(this.connectionClient)
     this.connectionClient.settle = () =>
       Effect.sync(() => {
@@ -928,7 +971,10 @@ export class PersonalAgentProbe extends PersonalAgent {
 
   override async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url)
-    if (url.pathname.startsWith("/whatsapp/"))
+    if (
+      url.pathname.startsWith("/whatsapp/") ||
+      url.pathname.startsWith("/whatsapp-images/")
+    )
       return this.whatsappProbe(request)
     if (
       url.pathname.startsWith("/email/") ||
@@ -1069,8 +1115,14 @@ export class PersonalAgentProbe extends PersonalAgent {
   private async whatsappProbe(request: Request): Promise<Response> {
     await this.lifecycle.start()
     const action = new URL(request.url).pathname.split("/").at(-1)
-    const owner = "whatsapp-owner"
+    const photo = new URL(request.url).pathname.startsWith("/whatsapp-images/")
+    const owner = photo ? "whatsapp-images-owner" : "whatsapp-owner"
+    const receipt = await whatsappIdentity(
+      photo ? "wamid.native-image-request" : "wamid.native-request"
+    )
     if (action === "setup") {
+      if (photo)
+        this.imageReply?.((await whatsappIdentity(`${receipt.id}:image`)).id)
       const response = await super.fetch(
         new Request(
           "https://internal/api/agent/whatsapp/configure?agent=home",
@@ -1093,12 +1145,23 @@ export class PersonalAgentProbe extends PersonalAgent {
     if (action === "receive") {
       const { timestamp } = await request.json<{ timestamp: number }>()
       const accepted = await whatsappRpc(this).receive(owner, {
-        ...(await whatsappIdentity("wamid.native-request")),
-        messageId: "wamid.native-request",
+        ...receipt,
+        messageId: photo
+          ? "wamid.native-image-request"
+          : "wamid.native-request",
         threadId: "whatsapp:123456:15550101010",
         sender: "15550101010",
         body: "Give the synthetic answer.",
         timestamp,
+        ...(photo
+          ? {
+              image: {
+                id: "123456789",
+                mime: "image/jpeg" as const,
+                sha256: "a".repeat(64),
+              },
+            }
+          : {}),
       })
       return Response.json({ accepted })
     }
@@ -1112,8 +1175,27 @@ export class PersonalAgentProbe extends PersonalAgent {
       turns: turns.map((turn) => ({
         status: turn.status,
         origin: turn.origin,
+        ...(photo
+          ? {
+              attachments: turn.attachments.length,
+              answer: turn.answer,
+              error: turn.error,
+            }
+          : {}),
       })),
       sends: await sink.inspect(),
+      ...(photo
+        ? {
+            activity: turns[0]
+              ? await this.actorRuntime.runPromise(
+                  this.conversationJournal.activity(turns[0].id)
+                )
+              : [],
+            images: await this.actorRuntime.runPromise(
+              this.workspaceService.imageReplies(turns[0]?.id ?? "")
+            ),
+          }
+        : {}),
     })
   }
   private async emailProbe(request: Request): Promise<Response> {

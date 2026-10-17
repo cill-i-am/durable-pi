@@ -138,6 +138,7 @@ export const AgentWorker = Cloudflare.Worker("AgentWorkerDrizzleV1", {
     BACKGROUND: BackgroundGroups,
     MEMORY_BACKUPS: MemoryBackups,
     WORKSPACE_ASSETS: WorkspaceAssets,
+    IMAGES: Cloudflare.Images.Images("IMAGES"),
     DOCUMENT_SERVICE: DocumentWorker,
     EXECUTION_SERVICE: ExecutionWorker,
     TERMINAL_SERVICE: NativeTerminalWorker,

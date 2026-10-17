@@ -4,6 +4,7 @@ import type {
   WorkspaceUnavailable,
   FileInfo,
   DocumentExtraction,
+  ImageReply,
 } from "./files"
 import type { VideoPreparation } from "./video"
 
@@ -18,6 +19,13 @@ export type VideoJob = VideoPreparation & {
   retryAt: number
 }
 export interface WorkspaceLedger {
+  imageReply: (
+    operationId: string
+  ) => Effect.Effect<ImageReply | undefined, WorkspaceUnavailable>
+  imageReplies: (
+    turnId: string
+  ) => Effect.Effect<readonly ImageReply[], WorkspaceUnavailable>
+  replyImage: (input: ImageReply) => Effect.Effect<void, WorkspaceUnavailable>
   readonly transactionGroup: object
   atomic: <TValue, TError, TRequirements>(
     change: () => Effect.Effect<TValue, TError, TRequirements>
@@ -32,7 +40,10 @@ export interface WorkspaceLedger {
   >
   insert: (file: WorkspaceFile) => Effect.Effect<void, WorkspaceUnavailable>
   promotePdf: (id: string) => Effect.Effect<void, WorkspaceUnavailable>
-  ready: (id: string) => Effect.Effect<void, WorkspaceUnavailable>
+  ready: (
+    id: string,
+    visionHash?: string | null
+  ) => Effect.Effect<void, WorkspaceUnavailable>
   rename: (
     id: string,
     name: string

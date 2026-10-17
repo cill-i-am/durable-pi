@@ -208,6 +208,37 @@ server.listen(Number(process.argv[2] ?? 4397), "127.0.0.1", () =>
 )
 
 async function journeyPost(req, res, path, sessionId, session) {
+  if (path === "/api/agent/files/upload" && session) {
+    const chunks = []
+    for await (const chunk of req) chunks.push(chunk)
+    const form = await new Request("http://fixture/upload", {
+      method: "POST",
+      headers: { "content-type": req.headers["content-type"] },
+      body: Buffer.concat(chunks),
+    }).formData()
+    const file = form.get("file")
+    if (!(file instanceof File) || form.has("vision")) {
+      res.writeHead(400)
+      res.end()
+      return true
+    }
+    const info = {
+      id: form.get("id"),
+      name: file.name,
+      mime: file.type,
+      kind: "image",
+      size: file.size,
+      createdAt: new Date().toISOString(),
+      status: "ready",
+      trashed: false,
+    }
+    session.files.set(info.id, {
+      info,
+      bytes: Buffer.from(await file.arrayBuffer()),
+    })
+    sendJson(res, info)
+    return true
+  }
   if (path === "/api/auth/sign-out") {
     sessions.delete(sessionId)
     res.setHeader(
@@ -234,7 +265,7 @@ async function journeyPost(req, res, path, sessionId, session) {
       return true
     }
     const id = crypto.randomUUID()
-    sessions.set(id, { messages: [], subscribers: new Set() })
+    sessions.set(id, { messages: [], subscribers: new Set(), files: new Map() })
     res.setHeader(
       "set-cookie",
       `pi_fixture=${id}; Path=/; HttpOnly; SameSite=Lax`
@@ -249,6 +280,7 @@ async function journeyPost(req, res, path, sessionId, session) {
   if (path === "/api/agent/send" && session) {
     try {
       const input = Schema.decodeUnknownSync(SendInput)(body)
+      const images = (input.files ?? []).map((id) => session.files.get(id).info)
       session.messages.push(
         ...chatMessages([
           {
@@ -258,6 +290,8 @@ async function journeyPost(req, res, path, sessionId, session) {
             status: "done",
             error: null,
             created_at: new Date().toISOString(),
+            attachments: images,
+            images,
           },
         ])
       )
@@ -395,7 +429,21 @@ async function fixtureGet(req, res, path, session) {
     })
   }
   if (path === "/api/agent/objects") return sendJson(res, { objects: [] })
-  if (path === "/api/agent/files") return sendJson(res, { files: [] })
+  return fixtureFiles(res, path, session)
+}
+
+function fixtureFiles(res, path, session) {
+  if (path === "/api/agent/files")
+    return sendJson(res, {
+      files: [...(session?.files.values() ?? [])].map((file) => file.info),
+    })
+  const image = path.match(/^\/api\/agent\/files\/([^/]+)\/(vision|content)$/)
+  if (image && session?.files.has(image[1])) {
+    const file = session.files.get(image[1])
+    res.writeHead(200, { "content-type": file.info.mime })
+    res.end(file.bytes)
+    return
+  }
   res.writeHead(404)
   res.end()
   return

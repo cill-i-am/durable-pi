@@ -6,8 +6,6 @@ import {
   FileNotFound,
   FileRejected,
   WorkspaceReadOnly,
-  MAX_VISION_BYTES,
-  imageMime,
   inspectFile,
   type Upload,
   type AttachmentContent,
@@ -42,25 +40,12 @@ export const workspaceFileInfo = (
       : undefined,
   })
 export function inspectWorkspaceUpload(input: Upload) {
-  const metadata = inspectFile(input)
-  if (
-    metadata.kind === "image" &&
-    (!input.vision ||
-      input.vision.length > MAX_VISION_BYTES ||
-      imageMime(input.vision) !== "image/jpeg")
-  )
-    throw new FileRejected({
-      message: "Prepare a JPEG image preview up to 192 KB before uploading.",
-    })
-  if (metadata.kind !== "image" && input.vision)
-    throw new FileRejected({ message: "Only images accept a vision preview." })
-  return metadata
+  return inspectFile(input)
 }
 export function workspaceUploadReplay(
   existing: WorkspaceFile,
   metadata: ReturnType<typeof inspectFile>,
-  hash: string,
-  visionHash: string | null
+  hash: string
 ) {
   const promote =
     existing.kind === "document" &&
@@ -68,7 +53,6 @@ export function workspaceUploadReplay(
     metadata.mime === "application/pdf"
   if (
     existing.hash !== hash ||
-    existing.visionHash !== visionHash ||
     existing.size !== metadata.size ||
     existing.kind !== metadata.kind ||
     (existing.mime !== metadata.mime && !promote)

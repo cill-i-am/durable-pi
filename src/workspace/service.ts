@@ -24,6 +24,8 @@ import {
   type FileId,
   type Upload,
 } from "./files"
+import type { PrepareImage } from "./images"
+import { requireImagePreview } from "./images"
 import type { WorkspaceLedger } from "./ledger"
 import { fileAsset, workspacePreparation } from "./preparation"
 import type { ExtractVideo } from "./video"
@@ -40,7 +42,8 @@ export function makeWorkspace(
   assets: WorkspaceAssets,
   canWrite: () => Effect.Effect<boolean, WorkspaceUnavailable>,
   extractDocument: ExtractDocument,
-  extractVideo: ExtractVideo
+  extractVideo: ExtractVideo,
+  prepareImage: PrepareImage = () => Effect.fail(new WorkspaceUnavailable())
 ): Workspace["Service"] {
   const preparation = workspacePreparation(
     ledger,
@@ -91,6 +94,50 @@ export function makeWorkspace(
       return { file, bytes: yield* assets.read(fileAsset(file, "pdf-text-v1")) }
     })
   return Workspace.of({
+    imageReplies: (turnId) =>
+      Effect.gen(function* () {
+        const replies = yield* ledger.imageReplies(turnId)
+        const files = yield* Effect.forEach(
+          [...new Set(replies.map((value) => value.fileId))],
+          (id) => row(id)
+        )
+        return files
+          .filter((file) => !file.trashed && file.status === "ready")
+          .map((file) => workspaceFileInfo(file))
+      }),
+    replyImage: (input) =>
+      ledger.atomic(() =>
+        Effect.gen(function* () {
+          const previous = yield* ledger.imageReply(input.operationId)
+          if (
+            previous &&
+            (previous.turnId !== input.turnId ||
+              previous.fileId !== input.fileId)
+          )
+            return yield* new FileRejected({
+              message: "This image reply identity belongs to different input.",
+            })
+          const file = yield* row(input.fileId, true)
+          if (file.kind !== "image")
+            return yield* new FileRejected({
+              message: "Choose an image file to include in the reply.",
+            })
+          if (!previous) {
+            yield* writable()
+            const files = new Set(
+              (yield* ledger.imageReplies(input.turnId)).map(
+                (reply) => reply.fileId
+              )
+            )
+            if (!files.has(input.fileId) && files.size >= 4)
+              return yield* new FileRejected({
+                message: "A reply can include up to four images.",
+              })
+            yield* ledger.replyImage(input)
+          }
+          return workspaceFileInfo(file)
+        })
+      ),
     video: preparation.video,
     extractionPending: preparation.pending,
     extractNext: preparation.next,
@@ -131,11 +178,9 @@ export function makeWorkspace(
       const input = {
         ...source,
         bytes: source.bytes.slice(),
-        vision: source.vision?.slice(),
       }
       const metadata = yield* attempt(() => inspectWorkspaceUpload(input))
-      const hash = yield* assets.digest(input.bytes),
-        visionHash = input.vision ? yield* assets.digest(input.vision) : null
+      const hash = yield* assets.digest(input.bytes)
       const now = yield* Clock.currentTimeMillis
       const reserved = yield* ledger.atomic(() =>
         Effect.gen(function* () {
@@ -143,7 +188,7 @@ export function makeWorkspace(
           if (existing) {
             if (
               yield* attempt(() =>
-                workspaceUploadReplay(existing, metadata, hash, visionHash)
+                workspaceUploadReplay(existing, metadata, hash)
               )
             ) {
               yield* ledger.promotePdf(input.id)
@@ -162,21 +207,26 @@ export function makeWorkspace(
             status: "uploading",
             trashed: false,
             hash,
-            visionHash,
+            visionHash: null,
           })
           return yield* row(input.id)
         })
       )
       if (reserved.status === "ready") return yield* info(reserved.id)
       yield* assets.write(fileAsset(reserved), input.bytes)
-      if (input.vision)
-        yield* assets.write(
-          { id: reserved.id, hash: reserved.visionHash! },
-          input.vision
+      let visionHash: string | null = null
+      if (metadata.kind === "image") {
+        const preview = yield* prepareImage(input.bytes).pipe(
+          Effect.flatMap((bytes) => attempt(() => requireImagePreview(bytes)))
         )
+        visionHash = yield* assets.digest(preview)
+        yield* assets.write({ id: reserved.id, hash: visionHash }, preview)
+      }
       return yield* ledger.atomic(() =>
         Effect.gen(function* () {
-          yield* ledger.ready(input.id)
+          const current = yield* row(input.id)
+          if (current.status === "ready") return yield* info(input.id)
+          yield* ledger.ready(input.id, visionHash)
           if (metadata.kind === "video") yield* ledger.enqueueVideo(input.id)
           if (metadata.mime === "application/pdf")
             yield* ledger.enqueueDocument(input.id)
@@ -271,12 +321,13 @@ export const workspaceApplication = (
   assets: WorkspaceAssets,
   canWrite: () => Effect.Effect<boolean, WorkspaceUnavailable>,
   document: ExtractDocument,
-  video: ExtractVideo
+  video: ExtractVideo,
+  image?: PrepareImage
 ) =>
   Layer.mergeAll(
     Layer.succeed(
       Workspace,
-      makeWorkspace(ledger, assets, canWrite, document, video)
+      makeWorkspace(ledger, assets, canWrite, document, video, image)
     ),
     Layer.succeed(WorkspaceAdmission, {
       transactionGroup: ledger.transactionGroup,

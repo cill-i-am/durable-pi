@@ -20,6 +20,7 @@ import { workspaceTools } from "../src/workspace/adapters/tools"
 import { WorkspaceUnavailable } from "../src/workspace/files"
 import { makeWorkspace } from "../src/workspace/service"
 import { database } from "./database"
+import { imageBytes, imagePreview } from "./image-fixture"
 
 it("native Pi file tools retain the actor runner, invocation Context, cancellation signal and range semantics", async () => {
   class Invocation extends Context.Service<Invocation, string>()(
@@ -50,7 +51,8 @@ it("native Pi file tools retain the actor runner, invocation Context, cancellati
     assets,
     () => Effect.sync(() => true),
     () => Effect.fail(new WorkspaceUnavailable()),
-    () => Effect.fail(new WorkspaceUnavailable())
+    () => Effect.fail(new WorkspaceUnavailable()),
+    () => Effect.succeed(imagePreview)
   )
   const file = {
     id: crypto.randomUUID(),
@@ -62,6 +64,13 @@ it("native Pi file tools retain the actor runner, invocation Context, cancellati
   const hidden = { ...file, id: crypto.randomUUID() }
   await Effect.runPromise(workspace.upload(hidden))
   await Effect.runPromise(workspace.trash(hidden.id, true))
+  const photo = {
+    id: crypto.randomUUID(),
+    name: "photo.jpg",
+    mime: "image/jpeg",
+    bytes: imageBytes,
+  }
+  await Effect.runPromise(workspace.upload(photo))
   const actor = ManagedRuntime.make(Layer.succeed(Invocation, "caller"))
   const seen: {
     signal: AbortSignal | undefined
@@ -100,7 +109,11 @@ it("native Pi file tools retain the actor runner, invocation Context, cancellati
       ),
       { stopReason: "toolUse" }
     ),
-    fauxAssistantMessage("Read private file."),
+    fauxAssistantMessage(
+      fauxToolCall("view_image", { id: photo.id }, { id: "view" }),
+      { stopReason: "toolUse" }
+    ),
+    fauxAssistantMessage("Read private file and inspected the photo."),
   ])
   const harness = await Harness.open(
     await openNodeSqliteStorage(join(directory, "pi.sqlite")),
@@ -125,7 +138,7 @@ it("native Pi file tools retain the actor runner, invocation Context, cancellati
     )
     await turn.wait(ctx)
     await conversation.waitForIdle(ctx)
-    expect(seen).toHaveLength(2)
+    expect(seen).toHaveLength(3)
     expect(
       seen.every(
         (entry) =>
@@ -134,15 +147,35 @@ it("native Pi file tools retain the actor runner, invocation Context, cancellati
           entry.context === "caller"
       )
     ).toBe(true)
-    expect(seen[0]?.value).toMatchObject([
-      { id: file.id, status: "ready", trashed: false },
-    ])
-    expect(seen[0]?.value).toHaveLength(1)
+    expect(seen[0]?.value).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: file.id,
+          status: "ready",
+          trashed: false,
+        }),
+        expect.objectContaining({
+          id: photo.id,
+          status: "ready",
+          trashed: false,
+        }),
+      ])
+    )
+    expect(seen[0]?.value).toHaveLength(2)
     expect(seen[1]?.value).toMatchObject({
       text: "private",
       offset: 2,
       next: 9,
       total: 17,
+    })
+    expect(seen[2]?.value).toMatchObject({
+      output: expect.arrayContaining([
+        {
+          type: "image",
+          mimeType: "image/jpeg",
+          data: btoa(String.fromCharCode(...imagePreview)),
+        },
+      ]),
     })
   } finally {
     await harness.close(ctx)

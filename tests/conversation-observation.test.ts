@@ -15,6 +15,7 @@ import {
   conversationNativeOperation,
 } from "../src/conversations/adapters/pi-execution"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
+import type { TurnOrigin } from "../src/conversations/contracts"
 import { ConversationExecution } from "../src/conversations/execution"
 import { database } from "./database"
 
@@ -25,6 +26,37 @@ function deferred() {
   })
   return { promise, resolve }
 }
+
+it("clears inherited tool exclusions for web, channel messages and agent reports", async () => {
+  const f = fixture()
+  const configure = vi.fn(async (_change: unknown) => {})
+  const harness = {
+    conversation: async () => ({ configure }),
+  } as unknown as PiHarness
+  const execution = await Effect.runPromise(
+    ConversationExecution.pipe(
+      Effect.provide(
+        piConversationLayer(
+          () => harness,
+          () => "default"
+        )
+      )
+    )
+  )
+  const origins: (TurnOrigin | undefined)[] = [
+    undefined,
+    { kind: "whatsapp", sender: "owner", messageId: "message" },
+    { kind: "email", sender: "owner", subject: "question" },
+    { kind: "background", groupId: 1, turnId: "worker" },
+    { kind: "communication", taskId: "report", turnId: "sender" },
+  ]
+  for (const origin of origins) {
+    await Effect.runPromise(
+      execution.configure("session", { ...f.root, origin })
+    )
+    expect(configure.mock.lastCall?.[0]).toMatchObject({ tools: null })
+  }
+})
 
 it("keeps corrupt historical prompt arrays as defects before native submission", async () => {
   const f = fixture()

@@ -160,28 +160,17 @@ const uploadFile = Effect.fn("Workspace.uploadRequest")(function* (
     )
   )
   const id = yield* decode(FileId, form.get("id"))
-  const file = form.get("file"),
-    preview = form.get("vision")
-  if (
-    !(file instanceof File) ||
-    (preview !== null && !(preview instanceof File))
-  )
+  const file = form.get("file")
+  if (!(file instanceof File))
     return yield* new FileRejected({ message: "Choose a file to upload." })
   const bytes = new Uint8Array(
     yield* workspaceNativeOperation(() => file.arrayBuffer())
   )
-  const vision =
-    preview instanceof File
-      ? new Uint8Array(
-          yield* workspaceNativeOperation(() => preview.arrayBuffer())
-        )
-      : undefined
   const saved = yield* workspace.upload({
     id,
     name: file.name,
     mime: file.type,
     bytes,
-    vision,
   })
   return Response.json(saved, { status: 201 })
 })
