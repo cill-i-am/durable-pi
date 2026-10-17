@@ -26,6 +26,7 @@ export function TurnReply({
   canRetry,
   onAppPendingChange,
   waitingForApproval,
+  onAnswerPrompt,
 }: {
   turn: ChatState["turns"][number]
   toolTitles?: Record<string, string>
@@ -36,6 +37,7 @@ export function TurnReply({
   canRetry?: boolean
   onAppPendingChange?: (key: string, pending: boolean) => void
   waitingForApproval?: boolean
+  onAnswerPrompt?: (text: string) => void
 }) {
   const stopped = turn.status === "cancelled"
   const failed = turn.status === "failed"
@@ -55,6 +57,7 @@ export function TurnReply({
           </p>
         )}
         <ReplyBody
+          onAnswerPrompt={onAnswerPrompt}
           turn={turn}
           agentId={agentId}
           toolTitles={toolTitles}
@@ -131,6 +134,7 @@ export function TurnReply({
 }
 
 function ReplyBody({
+  onAnswerPrompt,
   turn,
   agentId,
   toolTitles,
@@ -142,6 +146,7 @@ function ReplyBody({
   | "agentId"
   | "toolTitles"
   | "onAppPendingChange"
+  | "onAnswerPrompt"
   | "waitingForApproval"
 >) {
   return (
@@ -149,6 +154,7 @@ function ReplyBody({
       <BubbleContent className="message-text">
         {turn.activity?.length ? (
           <TurnActivity
+            onAnswerPrompt={onAnswerPrompt}
             onAppPendingChange={onAppPendingChange}
             items={turn.activity}
             agentId={agentId}

@@ -402,6 +402,7 @@ import { planningInputSource } from "../planning/domain"
 import { planEvidence } from "../planning/evidence"
 import type { PlanSource, PlanControl, PlanEvidence } from "../planning/plans"
 import { Planning, planningApplication } from "../planning/service"
+import { richResultTools } from "../rich-results/adapters/tools"
 import { routinesRequest } from "../routines/adapters/http"
 import { routineTools } from "../routines/adapters/pi"
 import { sqliteRoutinePersistence } from "../routines/adapters/sqlite"
@@ -2379,6 +2380,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             (input, signal) => this.familyAction(input, signal),
             (input, signal) => this.modelSettingsAction(input, signal)
           ),
+          ...richResultTools(),
           ...communicationTools(
             this.communication.runtime.runSync(Communication),
             (api) => {

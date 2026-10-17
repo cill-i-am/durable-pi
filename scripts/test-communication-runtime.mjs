@@ -57,7 +57,9 @@ async function call(path, identity, extra = {}) {
   const response = await fetch(`${origin}/${path}`, {
     signal: AbortSignal.timeout(20_000),
     method: "POST",
-    headers: { "content-type": "application/json" },
+    // This fixture repeatedly kills/restarts workerd and holds requests during
+    // shutdown. Give each mutation a fresh socket instead of reusing an idle one.
+    headers: { "content-type": "application/json", connection: "close" },
     body: JSON.stringify({ identity, ...extra }),
   }).catch((cause) => {
     throw new Error(`Fixture ${path} request failed; ${output.slice(-6000)}`, {

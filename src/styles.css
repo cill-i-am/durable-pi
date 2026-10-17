@@ -6,6 +6,56 @@
 
 @custom-variant dark (&:is(.dark *));
 
+.rich-result {
+  animation: rich-result-enter 180ms ease-out;
+}
+.rich-result-bar {
+  animation: rich-result-grow 300ms ease-out;
+  transform-origin: left;
+}
+.rich-map-pin {
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--background);
+  border-radius: 50%;
+  background: var(--foreground);
+  color: var(--background);
+  font: 600 13px var(--font-sans);
+  cursor: pointer;
+  box-shadow: 0 1px 5px #00000030;
+}
+.rich-map-pin[aria-pressed="true"] {
+  background: var(--primary);
+}
+.rich-map-pin:focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 3px;
+}
+@keyframes rich-result-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes rich-result-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rich-result,
+  .rich-result-bar {
+    animation: none;
+  }
+}
+
 @theme inline {
   --font-heading: var(--font-sans);
   --font-sans: "Geist Variable", sans-serif;

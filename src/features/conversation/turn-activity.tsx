@@ -14,7 +14,7 @@ import {
   ArrowUpRight,
   Wrench,
 } from "lucide-react"
-import { useState } from "react"
+import { lazy, Suspense, useState } from "react"
 
 import { AgentId } from "@/agents/contracts"
 import { CopyButton } from "@/components/copy-button"
@@ -26,6 +26,7 @@ import {
   CodeBlockActions,
   CodeBlockContent,
 } from "@/components/ui/code-block"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Trace,
   TraceLine,
@@ -40,6 +41,7 @@ import { InlineApp } from "@/features/apps/inline-app"
 import { FileAttachments } from "@/features/files"
 import { InlineObject } from "@/features/objects/checklist"
 import { workspaceDestination } from "@/navigation/workspace"
+import { richResultToolNames } from "@/rich-results/contracts"
 import type { FileInfo } from "@/workspace/files"
 
 import { Markdown } from "../../components/markdown"
@@ -58,6 +60,12 @@ import {
   type WorkItem,
 } from "./activity-presentation"
 
+const RichResult = lazy(() =>
+  import("@/features/rich-results/rich-result").then((module) => ({
+    default: module.RichResult,
+  }))
+)
+
 export function TurnActivity({
   items,
   toolTitles,
@@ -65,6 +73,7 @@ export function TurnActivity({
   status = "done",
   waitingForApproval = false,
   onAppPendingChange,
+  onAnswerPrompt,
 }: {
   toolTitles?: Record<string, string>
   items: readonly TimelineItem[]
@@ -72,6 +81,7 @@ export function TurnActivity({
   status?: ChatState["turns"][number]["status"]
   waitingForApproval?: boolean
   onAppPendingChange?: (key: string, pending: boolean) => void
+  onAnswerPrompt?: (text: string) => void
 }) {
   const sections = activitySections(items)
   return (
@@ -102,6 +112,20 @@ export function TurnActivity({
             />
           )
         const result = item.item
+        if (richResultToolNames.some((name) => name === result.name))
+          return (
+            <Suspense
+              key={item.id}
+              fallback={
+                <Skeleton
+                  className="h-40 w-full"
+                  aria-label="Loading interactive answer"
+                />
+              }
+            >
+              <RichResult output={result.output} onPrompt={onAnswerPrompt} />
+            </Suspense>
+          )
         return (
           agentId &&
           (result.name === "publish_app" ? (
