@@ -7,7 +7,6 @@ import { SkillBody, SkillConflict, SkillName } from "../contracts"
 import {
   BrowseHostedSkills,
   HostedSkill,
-  HostedSkillCatalog,
   ReadHostedSkill,
   SkillSource,
   hostedSkillQuery,
@@ -20,6 +19,24 @@ const unavailable = () =>
     message:
       "This skills connection is unavailable or changed. Reload Connections and try again.",
   })
+
+// Keep saved source revisions stable while accepting Executor's current name
+// for the same pinned deployment identifier.
+const ProviderSkill = Schema.Struct({
+  ...HostedSkill.fields,
+  deployment: Schema.optional(HostedSkill.fields.deployment),
+  version: Schema.optional(HostedSkill.fields.deployment),
+})
+const versionPin = Schema.makeFilter<typeof ProviderSkill.Type>(
+  ({ deployment, version }) =>
+    (!!(version ?? deployment) &&
+      (!version || !deployment || version === deployment)) ||
+    "Use one consistent pinned skill version."
+)
+function pinnedSkill<T extends typeof ProviderSkill.Type>(skill: T) {
+  const { version, ...value } = skill
+  return { ...value, deployment: version ?? value.deployment! }
+}
 
 function providerJson(result: RemoteToolResult) {
   if (
@@ -94,8 +111,14 @@ export function importSkillsRequest(
           yield* Schema.decodeUnknownEffect(BrowseHostedSkills)(input)
         yield* resolve(query.toolName)
         const raw = yield* read(query.toolName, { app: query.app })
-        const catalog =
-          yield* Schema.decodeUnknownEffect(HostedSkillCatalog)(raw)
+        const loaded = yield* Schema.decodeUnknownEffect(
+          Schema.Struct({
+            skills: Schema.Array(ProviderSkill.check(versionPin)).check(
+              Schema.isMaxLength(100)
+            ),
+          })
+        )(raw)
+        const catalog = { skills: loaded.skills.map(pinnedSkill) }
         if (
           catalog.skills.some(
             (skill) =>
@@ -118,12 +141,13 @@ export function importSkillsRequest(
         })
         const loaded = yield* Schema.decodeUnknownEffect(
           Schema.Struct({
-            ...HostedSkill.fields,
+            ...ProviderSkill.fields,
             file: Schema.Literal("SKILL.md"),
             content: SkillBody,
             files: SkillSource.fields.files,
-          })
+          }).check(versionPin)
         )(raw).pipe(
+          Effect.map(pinnedSkill),
           Effect.mapError(
             () =>
               new SkillConflict({

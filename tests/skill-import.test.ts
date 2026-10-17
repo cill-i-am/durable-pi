@@ -90,6 +90,55 @@ function fixture() {
 }
 
 describe("hosted skill import", () => {
+  it("accepts Executor version metadata and sends a pinned version without rewriting saved sources", async () => {
+    const f = fixture()
+    const { deployment, ...metadata } = skill
+    f.call.mockImplementation(async ({ arguments: args }) => ({
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(
+            args.name
+              ? { ...document, deployment: undefined, version: deployment }
+              : { skills: [{ ...metadata, version: deployment }] }
+          ),
+        },
+      ],
+    }))
+    const catalog = await f.request("list")
+    expect(await catalog.json()).toEqual({ skills: [skill] })
+    const read = await f.request("read")
+    expect(read.status).toBe(200)
+    expect(await read.json()).toMatchObject({
+      body: document.content,
+      source: skill,
+    })
+    expect(f.call.mock.calls[1]![0].arguments).toMatchObject({
+      version: deployment,
+      revision: skill.revision,
+      file: "SKILL.md",
+    })
+    expect(f.call.mock.calls[1]![0].arguments).not.toHaveProperty("deployment")
+  })
+  it.each([undefined, "different-version"])(
+    "rejects missing or conflicting provider version %s",
+    async (version) => {
+      const f = fixture()
+      f.call.mockResolvedValue({
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              ...document,
+              deployment: version ? skill.deployment : undefined,
+              version,
+            }),
+          },
+        ],
+      })
+      expect((await f.request("read")).status).toBe(409)
+    }
+  )
   it("reads the selected app and pins profile, deployment and revision for a preview without saving or granting tools", async () => {
     const f = fixture()
     const catalog = await f.request("list")
