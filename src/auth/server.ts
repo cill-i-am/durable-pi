@@ -14,6 +14,11 @@ import {
 import { verificationEmail } from "../family/adapters/mail"
 import { nativeOperation } from "../shared/interop"
 import { OwnerSessionUnavailable, ownerSession } from "./owner-session"
+import {
+  accountPasskeys,
+  guardPasskeyAuth,
+  passkeyAuthenticationOptions,
+} from "./passkeys"
 import { passwordResetEmail, PASSWORD_RESET_SECONDS } from "./password-email"
 import * as schema from "./schema"
 
@@ -72,6 +77,7 @@ export function authOptions(
     baseURL: env.APP_URL,
     trustedOrigins: [env.APP_URL],
     plugins: [
+      accountPasskeys(env.APP_URL),
       familyOrganization(env, family, onMemberRemoved, (id, delivery) => {
         if (delivery === "failed") invitationDeliveryFailures.add(id)
         else invitationDeliveryFailures.delete(id)
@@ -104,6 +110,7 @@ export function authOptions(
           throw new APIError("FORBIDDEN", {
             message: "Family access is unavailable.",
           })
+        await guardPasskeyAuth(ctx, family, !!principal)
         if (
           ctx.path.startsWith("/two-factor/") &&
           Schema.is(Schema.Struct({ trustDevice: Schema.Literal(true) }))(
@@ -116,6 +123,8 @@ export function authOptions(
           })
       }),
       after: createAuthMiddleware(async (ctx) => {
+        const options = passkeyAuthenticationOptions(ctx, ctx.context.returned)
+        if (options) return options
         if (ctx.path === "/send-verification-email") {
           const body = Schema.decodeUnknownOption(
             Schema.Struct({ email: Schema.String })
@@ -215,6 +224,10 @@ export function authOptions(
         "/sign-up/email": { window: 600, max: 5 },
         "/send-verification-email": { window: 600, max: 3 },
         "/organization/invite-member": { window: 600, max: 20 },
+        "/passkey/generate-authenticate-options": { window: 60, max: 20 },
+        "/passkey/verify-authentication": { window: 60, max: 10 },
+        "/passkey/generate-register-options": { window: 60, max: 10 },
+        "/passkey/verify-registration": { window: 60, max: 10 },
       },
     },
     session: {

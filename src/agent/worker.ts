@@ -274,6 +274,8 @@ import { WhatsAppSendFailed } from "../whatsapp/pump"
 import { whatsappApplication } from "../whatsapp/service"
 import type { AgentGatewayBindings } from "./adapters/gateway"
 export { WhatsAppBridge, ChatSdkStateAgent } from "../whatsapp/bridge"
+import { passkeyAgentAction } from "../auth/adapters/passkey-actions"
+import { passkeyTools } from "../auth/adapters/passkey-tools"
 import { executionRequest } from "../execution/adapters/http"
 import { codeService } from "../execution/adapters/service"
 import { ExecutionStore } from "../execution/adapters/sqlite"
@@ -2376,6 +2378,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           },
         ],
         tools: [
+          ...passkeyTools((input, signal) => this.passkeyAction(input, signal)),
           ...familyTools(
             (input, signal) => this.familyAction(input, signal),
             (input, signal) => this.modelSettingsAction(input, signal)
@@ -3743,6 +3746,28 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         input
       ).pipe(
         Effect.catchTag("FamilyActionFailed", (error) =>
+          Effect.succeed({ error: error.message })
+        )
+      ),
+      { signal }
+    )
+  }
+  async passkeyAction(input: unknown, signal?: AbortSignal) {
+    const access = await this.familyAdmission()
+    if (!access) return { error: "Your family access has ended." }
+    return this.run(
+      passkeyAgentAction(
+        {
+          DB: this.env.AUTH_DB,
+          OWNER_EMAIL: this.env.OWNER_EMAIL,
+          BETTER_AUTH_SECRET: this.env.BETTER_AUTH_SECRET,
+          AUTH_EMAIL: this.env.AUTH_EMAIL,
+          APP_URL: new URL(this.env.EMAIL_REVIEW_URL).origin,
+        },
+        access.owner,
+        input
+      ).pipe(
+        Effect.catchTag("PasskeyActionFailed", (error) =>
           Effect.succeed({ error: error.message })
         )
       ),

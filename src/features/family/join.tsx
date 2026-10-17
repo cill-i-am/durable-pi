@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { InvitationPreview } from "@/family/contracts"
 import { AuthFrame } from "@/features/auth/auth-frame"
+import { PasskeySignIn } from "@/features/auth/passkey-sign-in"
 import { api } from "@/http/client"
 
 type Invitation = InvitationPreview & { id: string }
@@ -208,6 +209,8 @@ function useJoinFlow() {
     notice,
     setName,
     setPassword,
+    setPending,
+    refetch,
     submit,
     join,
     resend,
@@ -381,6 +384,13 @@ function JoinAccount({ flow }: { flow: ReturnType<typeof useJoinFlow> }) {
           </Button>
         </FieldGroup>
       </form>
+      {signin && (
+        <PasskeySignIn
+          disabled={pending}
+          onBusyChange={flow.setPending}
+          onSignedIn={flow.refetch}
+        />
+      )}
       {signin && (
         <a
           className="text-sm text-primary underline underline-offset-4"
