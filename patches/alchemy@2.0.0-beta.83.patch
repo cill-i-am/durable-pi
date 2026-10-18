@@ -14,3 +14,82 @@ index 59e2d62..e3d603a 100644
      "./Cloudflare/*": {
        "types": "./lib/Cloudflare/*/index.d.ts",
        "bun": "./src/Cloudflare/*/index.ts",
+diff --git a/lib/Cloudflare/Workers/LocalWorkerProvider.js b/lib/Cloudflare/Workers/LocalWorkerProvider.js
+--- a/lib/Cloudflare/Workers/LocalWorkerProvider.js
++++ b/lib/Cloudflare/Workers/LocalWorkerProvider.js
+@@ -3,6 +3,7 @@
+ import * as WorkerProxy from "@alchemy.run/cloudflare-runtime/core/proxy/WorkerProxy";
+ import * as Cause from "effect/Cause";
+ import * as ConsoleService from "effect/Console";
++import * as Deferred from "effect/Deferred";
+ import * as Effect from "effect/Effect";
+ import * as Equal from "effect/Equal";
+ import * as Exit from "effect/Exit";
+@@ -862,6 +863,7 @@
+      * {@link Bundle.BundleWatchEvent} protocol.
+      */
+     const serveBundleStream = Effect.fn(function* (worker, proxy, bundles) {
++        const ready = yield* Deferred.make();
+         let start = Date.now();
+         let status = "start";
+         yield* bundles.pipe(Stream.tap((event) => {
+@@ -894,7 +896,7 @@
+                     ? workerUpdatedMessage(worker.fqn, Date.now() - start)
+                     : workerStartedMessage(worker.fqn, Date.now() - start, proxy.url, workerLogDir(worker)));
+                 status = "update";
+-                return message;
++                return Deferred.succeed(ready, undefined).pipe(Effect.andThen(message));
+             }
+             else {
+                 return Effect.all([
+@@ -902,7 +904,8 @@
+                     proxy.fail(Cause.pretty(exit.cause)),
+                 ]);
+             }
+-        }))), Stream.runDrain, Effect.forkScoped);
++        }))), Stream.runDrain, Effect.onExit((exit) => Exit.isFailure(exit) ? Deferred.failCause(ready, exit.cause) : Effect.void), Effect.forkScoped);
++        yield* Deferred.await(ready);
+     });
+     const runWorker = Effect.fn(function* (worker) {
+         const start = Date.now();
+diff --git a/src/Cloudflare/Workers/LocalWorkerProvider.ts b/src/Cloudflare/Workers/LocalWorkerProvider.ts
+--- a/src/Cloudflare/Workers/LocalWorkerProvider.ts
++++ b/src/Cloudflare/Workers/LocalWorkerProvider.ts
+@@ -14,6 +14,7 @@
+ import * as WorkerProxy from "@alchemy.run/cloudflare-runtime/core/proxy/WorkerProxy";
+ import * as Cause from "effect/Cause";
+ import * as ConsoleService from "effect/Console";
++import * as Deferred from "effect/Deferred";
+ import * as Effect from "effect/Effect";
+ import * as Equal from "effect/Equal";
+ import * as Exit from "effect/Exit";
+@@ -1084,6 +1085,7 @@
+         proxy: WorkerProxy.WorkerProxyInstance,
+         bundles: Stream.Stream<Bundle.BundleWatchEvent, E, R>,
+       ) {
++        const ready = yield* Deferred.make<void, E>();
+         let start = Date.now();
+         let status: "start" | "update" = "start";
+         yield* bundles.pipe(
+@@ -1130,7 +1132,7 @@
+                         ),
+                   );
+                   status = "update";
+-                  return message;
++                  return Deferred.succeed(ready, undefined).pipe(Effect.andThen(message));
+                 } else {
+                   return Effect.all([
+                     Effect.logError(`[${worker.fqn}] Error`, Cause.squash(exit.cause)),
+@@ -1141,8 +1143,12 @@
+             ),
+           ),
+           Stream.runDrain,
++          Effect.onExit((exit) =>
++            Exit.isFailure(exit) ? Deferred.failCause(ready, exit.cause) : Effect.void,
++          ),
+           Effect.forkScoped,
+         );
++        yield* Deferred.await(ready);
+       });
+
+       const runWorker = Effect.fn(function* (worker: RunnableWorkerConfig) {

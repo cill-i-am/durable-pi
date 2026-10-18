@@ -43,6 +43,10 @@ for (const id of [bot, sibling])
     ).status,
     200
   )
+assert.equal(
+  (await api("terminal/network", { revision: 0, unrestricted: false })).status,
+  200
+)
 async function wait(id: string) {
   for (let count = 0; count < 240; count++) {
     const state = Schema.decodeUnknownSync(CommandRun)(
@@ -98,6 +102,24 @@ const network = await execute(
 )
 assert.equal(network.result.status, "failed")
 assert.notEqual(network.result.exitCode, 0)
+assert.equal(
+  (await api("terminal/network", { revision: 1, unrestricted: true })).status,
+  200
+)
+const unrestricted = await execute(
+  "curl --fail --connect-timeout 5 --max-time 10 https://example.com"
+)
+assert.equal(unrestricted.result.status, "succeeded")
+assert.match(unrestricted.result.output, /Example Domain/)
+assert.equal(
+  (await api("terminal/network", { revision: 2, unrestricted: false })).status,
+  200
+)
+const restrictedAgain = await execute(
+  "curl --connect-timeout 2 --max-time 3 https://example.com"
+)
+assert.equal(restrictedAgain.result.status, "failed")
+assert.notEqual(restrictedAgain.result.exitCode, 0)
 const oversized = await execute(
   "node -e 'process.stdout.write(\"x\".repeat(64001))'"
 )

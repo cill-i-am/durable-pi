@@ -163,9 +163,10 @@ settings:
   excludeLinksFromLockfile: false
 
 patchedDependencies:
+  '@alchemy.run/cloudflare-runtime@2.0.0-beta.83': 33e89868f56b108b616e6412eb730072282d33dbd6a167e565b9552b94647c53
   '@modelcontextprotocol/client@2.3.1': 04e31f0c5336d22cf11d1b2957b3cc1b6669a7f86d0b004d436005034d123819
   agents@0.28.1: db35af7ff9deaacc8ab80968601886b5ca39d0e1e5ccfe28b770b539190e2eb1
-  alchemy@2.0.0-beta.83: 08ab25f26b839b3b7b6f08c17e591d4919d531dde04d1c3478601670bd0428d2
+  alchemy@2.0.0-beta.83: 992fa1aa776bff48b21b29952de32b1bd2d1742709f6b1798171354c62cf3625
 
 importers:
 
@@ -263,7 +264,7 @@ importers:
         version: 0.28.1(patch_hash=db35af7ff9deaacc8ab80968601886b5ca39d0e1e5ccfe28b770b539190e2eb1)(@babel/core@8.0.6)(@babel/runtime@7.29.7)(@earendil-works/pi-ai@1.3.0(@aws-sdk/credential-provider-node@3.972.84)(@modelcontextprotocol/sdk@1.32.1(@cfworker/json-schema@4.1.1)(zod@4.6.5))(@smithy/signature-v4@5.7.4)(undici@8.11.2)(ws@8.22.0)(zod@4.6.5))(@earendil-works/pi-durable@1.3.0(@aws-sdk/credential-provider-node@3.972.84)(@modelcontextprotocol/sdk@1.32.1(@cfworker/json-schema@4.1.1)(zod@4.6.5))(@smithy/signature-v4@5.7.4)(undici@8.11.2)(ws@8.22.0)(zod@4.6.5))(@modelcontextprotocol/client@2.3.1(patch_hash=04e31f0c5336d22cf11d1b2957b3cc1b6669a7f86d0b004d436005034d123819))(@modelcontextprotocol/sdk@1.32.1(@cfworker/json-schema@4.1.1)(zod@4.6.5))(@modelcontextprotocol/server@2.3.1)(@tanstack/ai@0.69.0(zod@4.6.5))(chat@4.42.0(zod@4.6.5))(react@19.3.1)(rolldown@1.2.12)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))(zod@4.6.5)
       alchemy:
         specifier: 2.0.0-beta.83
-        version: 2.0.0-beta.83(patch_hash=08ab25f26b839b3b7b6f08c17e591d4919d531dde04d1c3478601670bd0428d2)(b3e02829f0acd222f66bfcdeb685bcf9)
+        version: 2.0.0-beta.83(patch_hash=992fa1aa776bff48b21b29952de32b1bd2d1742709f6b1798171354c62cf3625)(b3e02829f0acd222f66bfcdeb685bcf9)
       better-auth:
         specifier: 1.7.10
         version: 1.7.10(@tanstack/react-start@1.169.3(esbuild@0.28.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(rolldown@1.2.12)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(drizzle-kit@1.0.0-rc.5-ab785fc)(drizzle-orm@1.0.0-rc.5-ab785fc(@cloudflare/workers-types@5.20261016.1)(@effect/sql-d1@4.0.1(effect@4.0.5))(@effect/sql-sqlite-do@4.0.5(effect@4.0.5))(@effect/sql-sqlite-node@4.0.5(effect@4.0.5))(@electric-sql/pglite@0.3.15)(@libsql/client@0.17.4)(effect@4.0.5)(typebox@1.3.27)(valibot@1.2.0(@typescript/typescript6@6.0.2))(zod@4.6.5))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(solid-js@1.9.16)(vitest@5.0.5(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))
@@ -7548,7 +7549,7 @@ snapshots:
     optionalDependencies:
       zod: 4.6.5
 
-  '@alchemy.run/cloudflare-runtime@2.0.0-beta.83(@distilled.cloud/cloudflare@1.0.0-rc.15(effect@4.0.5))(@effect/platform-bun@4.0.5(effect@4.0.5))(@effect/platform-node@4.0.5(effect@4.0.5)(redis@6.3.0))(@types/node@24.19.2)(@typescript/typescript6@6.0.2)(effect@4.0.5)(rolldown@1.2.5)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))':
+  '@alchemy.run/cloudflare-runtime@2.0.0-beta.83(patch_hash=33e89868f56b108b616e6412eb730072282d33dbd6a167e565b9552b94647c53)(@distilled.cloud/cloudflare@1.0.0-rc.15(effect@4.0.5))(@effect/platform-bun@4.0.5(effect@4.0.5))(@effect/platform-node@4.0.5(effect@4.0.5)(redis@6.3.0))(@types/node@24.19.2)(@typescript/typescript6@6.0.2)(effect@4.0.5)(rolldown@1.2.5)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))':
     dependencies:
       '@alchemy.run/node-utils': 2.0.0-beta.83
       '@cloudflare/unenv-preset': 2.16.2(unenv@2.0.0-rc.24)(workerd@1.20261002.1)
@@ -7578,7 +7579,7 @@ snapshots:
 
   '@alchemy.run/frontend-frameworks@2.0.0-beta.83(@effect/platform-bun@4.0.5(effect@4.0.5))(@effect/platform-node@4.0.5(effect@4.0.5)(redis@6.3.0))(@types/node@24.19.2)(@typescript/typescript6@6.0.2)(@vitejs/plugin-react@6.1.2(@rolldown/plugin-babel@0.2.4(@babel/core@8.0.6)(@babel/runtime@7.29.7)(rolldown@1.2.12)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(effect@4.0.5)(hono@4.13.13)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))':
     dependencies:
-      '@alchemy.run/cloudflare-runtime': 2.0.0-beta.83(@distilled.cloud/cloudflare@1.0.0-rc.15(effect@4.0.5))(@effect/platform-bun@4.0.5(effect@4.0.5))(@effect/platform-node@4.0.5(effect@4.0.5)(redis@6.3.0))(@types/node@24.19.2)(@typescript/typescript6@6.0.2)(effect@4.0.5)(rolldown@1.2.5)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+      '@alchemy.run/cloudflare-runtime': 2.0.0-beta.83(patch_hash=33e89868f56b108b616e6412eb730072282d33dbd6a167e565b9552b94647c53)(@distilled.cloud/cloudflare@1.0.0-rc.15(effect@4.0.5))(@effect/platform-bun@4.0.5(effect@4.0.5))(@effect/platform-node@4.0.5(effect@4.0.5)(redis@6.3.0))(@types/node@24.19.2)(@typescript/typescript6@6.0.2)(effect@4.0.5)(rolldown@1.2.5)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       '@distilled.cloud/aws': 1.0.0-rc.15(effect@4.0.5)
       '@distilled.cloud/cloudflare': 1.0.0-rc.15(effect@4.0.5)
       effect: 4.0.5
@@ -10887,9 +10888,9 @@ snapshots:
       json-schema-traverse: 1.0.0
       require-from-string: 2.0.2
 
-  alchemy@2.0.0-beta.83(patch_hash=08ab25f26b839b3b7b6f08c17e591d4919d531dde04d1c3478601670bd0428d2)(b3e02829f0acd222f66bfcdeb685bcf9):
+  alchemy@2.0.0-beta.83(patch_hash=992fa1aa776bff48b21b29952de32b1bd2d1742709f6b1798171354c62cf3625)(b3e02829f0acd222f66bfcdeb685bcf9):
     dependencies:
-      '@alchemy.run/cloudflare-runtime': 2.0.0-beta.83(@distilled.cloud/cloudflare@1.0.0-rc.15(effect@4.0.5))(@effect/platform-bun@4.0.5(effect@4.0.5))(@effect/platform-node@4.0.5(effect@4.0.5)(redis@6.3.0))(@types/node@24.19.2)(@typescript/typescript6@6.0.2)(effect@4.0.5)(rolldown@1.2.5)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+      '@alchemy.run/cloudflare-runtime': 2.0.0-beta.83(patch_hash=33e89868f56b108b616e6412eb730072282d33dbd6a167e565b9552b94647c53)(@distilled.cloud/cloudflare@1.0.0-rc.15(effect@4.0.5))(@effect/platform-bun@4.0.5(effect@4.0.5))(@effect/platform-node@4.0.5(effect@4.0.5)(redis@6.3.0))(@types/node@24.19.2)(@typescript/typescript6@6.0.2)(effect@4.0.5)(rolldown@1.2.5)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       '@alchemy.run/floci': 2.0.0-beta.83(effect@4.0.5)
       '@alchemy.run/node-utils': 2.0.0-beta.83
       '@alchemy.run/sigil': 0.1.0-alpha.1(@types/react@19.3.0)
