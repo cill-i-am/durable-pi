@@ -126,7 +126,7 @@ it("replays an acknowledged native Pi input after a lost host acknowledgment and
     storage = await openNodeSqliteStorage(path)
     harness = await Harness.open(storage, options, context)
     conversation = (await harness.conversation(original.id, context))!
-    await Effect.runPromise(f.memory.saveNode({ start: 0, count: 1 }, "hello"))
+    expect(await Effect.runPromise(f.memory.settled())).toBe(false)
     await Effect.runPromise(pump.run())
     expect(submitted).toHaveLength(2)
     expect(submitted[1]).toEqual(submitted[0])

@@ -482,6 +482,7 @@ import {
 import { Workspace } from "../workspace/workspace"
 import { agentGateway } from "./adapters/gateway"
 import { agentJson, agentNative, agentResponse } from "./adapters/http"
+import { MaintenanceRunner } from "./adapters/maintenance-runner"
 import { proxyTerminalRequest } from "./adapters/terminal"
 import { agentSettings, contextProjectionBytes } from "./compaction"
 import { SYSTEM_PROMPT } from "./prompts"
@@ -601,18 +602,20 @@ class WhatsAppRunner extends TurnRunner {
   }
 }
 
-class MemoryRunner extends TurnRunner {
-  constructor(owner: PersonalAgent) {
-    super(owner, "memory-compactor")
-  }
-  async onJob(): Promise<LifecycleJobOutcome> {
-    if (!(await this.owner.familyAdmission())) return
-    const next = await this.owner.actorRuntime.runPromise(
-      this.owner.memoryMaintenance
-        .compact()
-        .pipe(Effect.provide(WorkerTelemetry))
+class MemoryRunner extends MaintenanceRunner {
+  constructor(owner: PersonalAgent, retain: (work: Promise<void>) => void) {
+    super(
+      "memory-compactor",
+      async () => {
+        if (!(await owner.familyAdmission())) return
+        return owner.actorRuntime.runPromise(
+          owner.memoryMaintenance
+            .compact()
+            .pipe(Effect.provide(WorkerTelemetry))
+        )
+      },
+      retain
     )
-    return next === undefined ? undefined : { rescheduleAt: next }
   }
 }
 class ActorServices extends LifecycleCapability {
@@ -649,17 +652,18 @@ class ActorServices extends LifecycleCapability {
     )
   }
 }
-class BackupRunner extends TurnRunner {
-  constructor(owner: PersonalAgent) {
-    super(owner, "memory-backups")
-  }
-  async onJob(): Promise<LifecycleJobOutcome> {
-    const next = await this.owner.actorRuntime.runPromise(
-      runMemoryBackup(this.owner.backupPrefix()).pipe(
-        Effect.provide(WorkerTelemetry)
-      )
+class BackupRunner extends MaintenanceRunner {
+  constructor(owner: PersonalAgent, retain: (work: Promise<void>) => void) {
+    super(
+      "memory-backups",
+      () =>
+        owner.actorRuntime.runPromise(
+          runMemoryBackup(owner.backupPrefix()).pipe(
+            Effect.provide(WorkerTelemetry)
+          )
+        ),
+      retain
     )
-    return next === undefined ? undefined : { rescheduleAt: next }
   }
 }
 
@@ -2666,7 +2670,6 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         conversationNativeOperation("wake background", () =>
           this.backgroundRunner.wake()
         ),
-      notify: () => Effect.sync(() => this.notifyConversation()),
       completed: (turn, failed, recovery) =>
         this.inferenceUsage.totals(turn.id).pipe(
           Effect.flatMap((totals) =>
@@ -2737,8 +2740,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     (id) => this.workspaceService.replyFiles(id)
   )
   readonly runner = new TurnRunner(this)
-  readonly compactor = new MemoryRunner(this)
-  readonly backups = new BackupRunner(this)
+  readonly compactor = new MemoryRunner(this, (work) =>
+    this.ctx.waitUntil(work)
+  )
+  readonly backups = new BackupRunner(this, (work) => this.ctx.waitUntil(work))
   readonly extraction = new ExtractionRunner(this)
   readonly browserCleanup = new BrowserRunner(this)
   readonly webApps = new WebApps(

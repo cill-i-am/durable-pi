@@ -625,9 +625,38 @@ class SqliteMemory implements MemoryLedger {
   render(): ReturnType<MemoryLedger["render"]> {
     return this.atomic(() =>
       Effect.gen({ self: this }, function* () {
+        const parts = yield* this.parts()
+        const nodes = new Map(
+          (yield* this.viewNodes()).map((node) => [nodeKey(node), node])
+        )
+        const originals =
+          parts.length === nodes.size
+            ? []
+            : yield* this.rows(LogEntry, (orm) =>
+                orm
+                  .select(getTableColumns(t.memoryLog))
+                  .from(t.memoryView)
+                  .leftJoin(
+                    t.memoryNodes,
+                    and(
+                      eq(t.memoryNodes.start, t.memoryView.start),
+                      eq(t.memoryNodes.count, t.memoryView.count)
+                    )
+                  )
+                  .innerJoin(
+                    t.memoryLog,
+                    and(
+                      eq(t.memoryLog.id, t.memoryView.start),
+                      eq(t.memoryView.count, 1)
+                    )
+                  )
+                  .where(isNull(t.memoryNodes.start))
+                  .orderBy(asc(t.memoryLog.id))
+              )
         return Policy.renderMemory(
-          yield* this.viewNodes(),
-          (yield* this.parts()).length
+          parts,
+          nodes,
+          new Map(originals.map((entry) => [entry.id, entry]))
         )
       })
     )

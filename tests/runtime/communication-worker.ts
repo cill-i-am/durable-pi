@@ -35,12 +35,14 @@ import { BrowserRecoveryBot } from "./browser-worker"
 import { nativeDatabase } from "./database"
 import { eventStreamProbe } from "./event-stream-worker"
 import { LoopBot } from "./loop-worker"
+import { MaintenanceProbe } from "./maintenance-worker"
 import { PersonalAgentProbe } from "./personal-agent-worker"
 import { SqlitePilot } from "./sqlite-worker"
 import { TerminalProbe } from "./terminal-worker"
 import { WhatsAppSink } from "./whatsapp-sink-worker"
 
 export {
+  MaintenanceProbe,
   WhatsAppSink,
   LoopBot,
   BrowserRecoveryBot,
@@ -51,6 +53,7 @@ export {
 }
 
 interface Env {
+  MAINTENANCE: DurableObjectNamespace<MaintenanceProbe>
   WHATSAPP: DurableObjectNamespace<WhatsAppSink>
   SQL_PILOT: DurableObjectNamespace<SqlitePilot>
   LOADER: WorkerLoader
@@ -353,6 +356,7 @@ const personalProbeOwners = new Map([
   ["personal-code", "personal-code-owner"],
   ["personal-terminal", "personal-terminal-owner"],
   ["personal", "personal-owner"],
+  ["personal-maintenance", "personal-maintenance-owner"],
 ])
 let websiteSessionValid = true
 let websiteSessionReads = 0
@@ -428,6 +432,8 @@ export default {
       )
     if (url.pathname.startsWith("/browser/"))
       return env.BROWSERS.getByName(url.pathname).fetch(request)
+    if (url.pathname.startsWith("/maintenance/"))
+      return env.MAINTENANCE.getByName("maintenance-test").fetch(request)
     if (url.pathname.startsWith("/loops/"))
       return env.LOOPS.getByName("loop-test").fetch(request)
     const personalOwner = personalProbeOwners.get(

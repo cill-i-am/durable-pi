@@ -164,7 +164,9 @@ function ReplyBody({
           />
         ) : turn.answer ? (
           <Markdown text={turn.answer} />
-        ) : ["running", "preparing", "stopping"].includes(turn.status) ? (
+        ) : ["queued", "running", "preparing", "stopping"].includes(
+            turn.status
+          ) ? (
           <span className="working-indicator" role="status">
             <ActivityOrb
               state={turn.status === "preparing" ? "searching" : "breathing"}
@@ -172,9 +174,11 @@ function ReplyBody({
             />
             {turn.status === "stopping"
               ? "Stopping…"
-              : turn.status === "preparing"
-                ? "Finding the thread…"
-                : "Thinking…"}
+              : turn.status === "queued"
+                ? "Starting…"
+                : turn.status === "preparing"
+                  ? "Finding the thread…"
+                  : "Thinking…"}
           </span>
         ) : null}
         {agentId && !!turn.replyFiles?.length && (

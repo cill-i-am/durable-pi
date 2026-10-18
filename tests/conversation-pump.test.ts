@@ -103,8 +103,7 @@ it.effect(
         failure: { _tag: "ConversationExecutionError" },
       })
       expect(Effect.runSync(f.store.get(root.id))?.status).toBe("preparing")
-      // The new input temporarily makes Memory unsettled; finish its summary.
-      yield* f.memory.saveNode({ start: 0, count: 1 }, "hello")
+      expect(yield* f.memory.settled()).toBe(false)
       yield* pump(f).run()
       expect(attempts).toHaveLength(2)
       expect(attempts[1]).toEqual(attempts[0])
@@ -221,28 +220,37 @@ it.effect(
       expect(Effect.runSync(f.store.get("steer"))?.status).toBe("done")
     })
 )
-it.effect(
-  "fails blocked Memory atomically and wakes background work only after completion",
-  () =>
-    Effect.gen(function* () {
-      const f = yield* conversationFixture()
-      const root = Effect.runSync(
-        f.store.admit({ operationId: "root", text: "hello" })
-      ).turn
-      f.memory.settled = () => Effect.succeed(false)
-      f.memory.blocked = () => Effect.succeed(true)
-      f.host.wakeBackground = () =>
-        Effect.sync(() => {
-          expect(Effect.runSync(f.store.get(root.id))?.status).toBe("failed")
-          f.events.push("background")
+for (const paused of [false, true]) {
+  it.effect(
+    `starts a reply using original context while memory summaries are ${paused ? "paused" : "pending"}`,
+    () =>
+      Effect.gen(function* () {
+        const f = yield* conversationFixture()
+        const prior = yield* f.memory.append(
+          "prior",
+          "user",
+          "The exact amount was €42.75 🍀"
+        )
+        if (paused) {
+          for (let i = 0; i < 3; i++)
+            yield* f.memory.failNode({ start: prior.id, count: 1 }, 10_000)
+        }
+        expect(yield* f.memory.settled()).toBe(false)
+        expect(yield* f.memory.blocked()).toBe(paused)
+        const root = yield* f.store.admit({
+          operationId: "root",
+          text: "What was the amount?",
         })
-      yield* pump(f).run()
-      expect(f.events).toEqual(["background", "notify"])
-      expect(Effect.runSync(f.store.get(root.id))?.error).toContain(
-        "Memory summaries are paused"
-      )
-    })
-)
+        yield* pump(f).run()
+        const submitted = yield* f.store.get(root.turn.id)
+        expect(submitted?.status).toBe("running")
+        expect(submitted?.prompt).toContain("The exact amount was €42.75 🍀")
+        expect(f.events).toContain("submit")
+        expect(submitted?.error).toBeNull()
+        expect(yield* f.memory.settled()).toBe(false)
+      })
+  )
+}
 class Caller extends Context.Service<Caller, { instructions: string }>()(
   "Test/ConversationCaller"
 ) {}

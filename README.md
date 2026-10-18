@@ -93,7 +93,7 @@ For the initial local-to-remote state migration, `scripts/migrate-production-sta
 
 - A private bot catalog: create, rename, select, archive and restore bots. The original chat remains the personal assistant; each new bot has its own conversation, memory, notes and backups.
 - Queued messages, committed response updates, stop, retry-safe submission IDs, and reopening after a restart.
-- One fresh Pi conversation per user turn. Prior context is a bounded summary view, with `zoom` and `date` tools to recover original messages.
+- One fresh Pi conversation per user turn. Prior context combines saved summaries and recent original messages within a byte budget, with `zoom`, `search_memory` and `date` to retrieve full originals. Summaries and backups run in the background and do not gate replies.
 - The reference compaction prompt, a 512-byte scale example, five byte-feedback attempts, eight concurrent compactions with a source-order barrier, and durable ten-second retries. Aligned binary merges preserve an incremental view that never splits.
 - Exact archive search, private Markdown notes with source message IDs and revision history, and a memory inspector.
 - Better Auth sessions and authenticator two-factor protection backed by D1, with encrypted recovery codes and individual/bulk browser-session revocation. An authenticated server route forwards to a Worker with both public and preview URLs disabled. Bot objects are addressed from the authenticated owner ID and a validated catalog identity. The default bot retains its original object ID.

@@ -111,8 +111,8 @@ const config :Workerd.Config = (
       compatibilityDate = ${JSON.stringify(workerd.compatibilityDate)}, compatibilityFlags = ["nodejs_compat", "enable_request_signal"],
       modules = [(name = "worker.mjs", esModule = embed "worker.mjs")],
       globalOutbound = "chatgpt-provider",
-      bindings = [(name = "WHATSAPP", durableObjectNamespace = (className = "WhatsAppSink")), (name = "SQL_PILOT", durableObjectNamespace = (className = "SqlitePilot")), (name = "LEGACY", durableObjectNamespace = (className = "LegacyAgentProbe")), (name = "TERMINALS", durableObjectNamespace = (className = "TerminalProbe")), (name = "BACKGROUND", durableObjectNamespace = (className = "BackgroundGroupProbe")), (name = "LOADER", workerLoader = (id = "native-code-local")), (name = "BROWSERS", durableObjectNamespace = (className = "BrowserRecoveryBot")), (name = "BOTS", durableObjectNamespace = (className = "MailboxBot")), (name = "LOOPS", durableObjectNamespace = (className = "LoopBot")), (name = "PERSONAL", durableObjectNamespace = (className = "PersonalAgentProbe"))],
-      durableObjectNamespaces = [(className = "WhatsAppSink", uniqueKey = "whatsapp-sink-local-test", enableSql = true), (className = "SqlitePilot", uniqueKey = "sqlite-pilot-local-test", enableSql = true), (className = "LegacyAgentProbe", uniqueKey = "legacy-agent-local-test", enableSql = true), (className = "TerminalProbe", uniqueKey = "terminal-local-test", enableSql = true), (className = "BackgroundGroupProbe", uniqueKey = "background-local-test", enableSql = true), (className = "BrowserRecoveryBot", uniqueKey = "browser-local-test", enableSql = true), (className = "MailboxBot", uniqueKey = "mailbox-local-test", enableSql = true), (className = "LoopBot", uniqueKey = "loops-local-test", enableSql = true), (className = "PersonalAgentProbe", uniqueKey = "personal-local-test", enableSql = true)],
+      bindings = [(name = "MAINTENANCE", durableObjectNamespace = (className = "MaintenanceProbe")), (name = "WHATSAPP", durableObjectNamespace = (className = "WhatsAppSink")), (name = "SQL_PILOT", durableObjectNamespace = (className = "SqlitePilot")), (name = "LEGACY", durableObjectNamespace = (className = "LegacyAgentProbe")), (name = "TERMINALS", durableObjectNamespace = (className = "TerminalProbe")), (name = "BACKGROUND", durableObjectNamespace = (className = "BackgroundGroupProbe")), (name = "LOADER", workerLoader = (id = "native-code-local")), (name = "BROWSERS", durableObjectNamespace = (className = "BrowserRecoveryBot")), (name = "BOTS", durableObjectNamespace = (className = "MailboxBot")), (name = "LOOPS", durableObjectNamespace = (className = "LoopBot")), (name = "PERSONAL", durableObjectNamespace = (className = "PersonalAgentProbe"))],
+      durableObjectNamespaces = [(className = "MaintenanceProbe", uniqueKey = "maintenance-local-test", enableSql = true), (className = "WhatsAppSink", uniqueKey = "whatsapp-sink-local-test", enableSql = true), (className = "SqlitePilot", uniqueKey = "sqlite-pilot-local-test", enableSql = true), (className = "LegacyAgentProbe", uniqueKey = "legacy-agent-local-test", enableSql = true), (className = "TerminalProbe", uniqueKey = "terminal-local-test", enableSql = true), (className = "BackgroundGroupProbe", uniqueKey = "background-local-test", enableSql = true), (className = "BrowserRecoveryBot", uniqueKey = "browser-local-test", enableSql = true), (className = "MailboxBot", uniqueKey = "mailbox-local-test", enableSql = true), (className = "LoopBot", uniqueKey = "loops-local-test", enableSql = true), (className = "PersonalAgentProbe", uniqueKey = "personal-local-test", enableSql = true)],
       durableObjectStorage = (localDisk = "storage")
     )),
     (name = "chatgpt-provider", worker = (
@@ -125,6 +125,84 @@ const config :Workerd.Config = (
 );`
   )
   await start()
+  const maintenanceState = () => call("maintenance/inspect", {})
+  const waitMaintenance = async (predicate) => {
+    for (let attempt = 0; attempt < 100; attempt++) {
+      const state = await maintenanceState()
+      if (predicate(state)) return state
+      await sleep(25)
+    }
+    throw new Error("Native maintenance scheduler did not progress")
+  }
+  await call("maintenance/start", {})
+  await waitMaintenance((state) => state.calls === 1)
+  await call("maintenance/foreground", {})
+  const responsive = await waitMaintenance((state) => state.ticks === 1)
+  assert.equal(
+    responsive.applied,
+    0,
+    "Foreground must run while maintenance IO is still held"
+  )
+  assert.equal(
+    responsive.jobs.length,
+    1,
+    "A durable recovery backstop must remain"
+  )
+  await call("maintenance/new-work", {})
+  assert.equal(
+    (await maintenanceState()).calls,
+    1,
+    "A wake must not overlap maintenance attempts"
+  )
+  await call("maintenance/release", {})
+  await waitMaintenance(
+    (state) => state.applied === 2 && state.jobs.length === 0
+  )
+  await call("maintenance/start", {})
+  const heldAgain = await waitMaintenance((state) => state.calls === 3)
+  assert.equal(heldAgain.applied, 2)
+  await stop()
+  await start()
+  const recoveredMaintenance = await maintenanceState()
+  assert.equal(recoveredMaintenance.applied, 2)
+  assert.equal(
+    recoveredMaintenance.jobs.length,
+    1,
+    "Maintenance wake must survive isolate loss"
+  )
+  await call("maintenance/release", {})
+  await waitMaintenance(
+    (state) => state.applied === 3 && state.jobs.length === 0
+  )
+  console.log(
+    "PASS native maintenance: foreground progress during held IO, no overlapping attempts, wake during completion retained, and persisted recovery after SIGKILL."
+  )
+  const waitMaintenanceChat = async (predicate) => {
+    for (let attempt = 0; attempt < 100; attempt++) {
+      const state = await call("personal-maintenance/memory-chat-inspect", {})
+      if (predicate(state)) return state
+      await sleep(25)
+    }
+    throw new Error("Native chat waited for background maintenance")
+  }
+  await call("personal-maintenance/memory-chat-start", {})
+  await waitMaintenanceChat(
+    (state) => state.summaryEntered && state.backupEntered
+  )
+  await call("personal-maintenance/memory-chat-send", {})
+  const chatDuringMaintenance = await waitMaintenanceChat(
+    (state) => state.turn?.status === "done"
+  )
+  assert.equal(chatDuringMaintenance.ready, false)
+  assert.equal(chatDuringMaintenance.backupHeld, true)
+  assert.equal(chatDuringMaintenance.turn.answer, "Native actor answer")
+  assert(
+    chatDuringMaintenance.turn.prompt.includes("The exact cost is €42.75 🍀")
+  )
+  await call("personal-maintenance/memory-chat-release", {})
+  console.log(
+    "PASS native chat: production admission, context pinning, Pi reply and turn completion all finish while the summary model and backup IO remain held."
+  )
   const nativeSignIn = await call("personal-chatgpt/chatgpt-native", {})
   assert.deepEqual(nativeSignIn, {
     status: 200,

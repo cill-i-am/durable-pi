@@ -3,6 +3,7 @@ import {
   fitView,
   InvalidMemory,
   MemoryNotReady,
+  VIEW_BYTES,
   nodeKey,
   validRange,
   type LogEntry,
@@ -130,9 +131,95 @@ export function summaryJob(
       .join("\n"),
   }
 }
-export function renderMemory(view: readonly MemoryNode[], partCount: number) {
-  if (view.length !== partCount) throw new MemoryNotReady()
-  return `<chat>\n${view.map((part) => `${nodeKey(part)}|${part.text.replaceAll("\n", " ")}`).join("\n")}\n</chat>`
+function memoryExcerpt(text: string, budget: number) {
+  const marker = "\n[… excerpt omitted; use zoom for the full entry …]\n"
+  const bytes = new TextEncoder().encode(text)
+  const available = Math.max(0, budget - byteLength(marker))
+  const headBytes = Math.floor(available / 2)
+  let tailStart = bytes.length - (available - headBytes)
+  while ((bytes[tailStart]! & 0xc0) === 0x80) tailStart++
+  const decoder = new TextDecoder()
+  const head = decoder.decode(bytes.subarray(0, headBytes), { stream: true })
+  const tail = new TextDecoder().decode(bytes.subarray(tailStart))
+  return head + marker + tail
+}
+
+// Pending summaries must not turn large tool results into unbounded input.
+// Keep ordinary messages exact, preserve the saved-summary prefix, and give
+// recent originals a separate allowance while their background work catches up.
+export const PENDING_ORIGINAL_BYTES = 8_192
+export const ORIGINAL_EXCERPT_BYTES = 4_096
+const abbreviatedContext =
+  "[Working context is abbreviated. Use search_memory or zoom to retrieve full archived entries.]"
+const memoryLine = (part: Part, node: MemoryNode) =>
+  `${nodeKey(part)}|${node.text.replaceAll("\n", " ")}`
+function pendingOriginals(
+  parts: readonly Part[],
+  nodes: ReadonlyMap<string, MemoryNode>,
+  originals: ReadonlyMap<number, LogEntry>
+) {
+  const lines = new Map<number, string>()
+  const abbreviated = new Set<number>()
+  const savedBytes = parts.reduce((sum, part) => {
+    const node = nodes.get(nodeKey(part))
+    return sum + (node ? byteLength(memoryLine(part, node)) + 1 : 0)
+  }, 0)
+  const framingBytes = byteLength(`<chat>\n${abbreviatedContext}\n</chat>`) + 1
+  let available = Math.max(
+    0,
+    Math.min(PENDING_ORIGINAL_BYTES, VIEW_BYTES - savedBytes - framingBytes)
+  )
+  for (const part of [...parts].reverse()) {
+    if (nodes.has(nodeKey(part))) continue
+    const entry = originals.get(part.start)
+    if (part.count !== 1 || !entry)
+      throw new Error("Memory lost a committed working-context part")
+    const line = `${part.start}+0|${entry.kind}: ${entry.text}`
+    const budget = Math.min(ORIGINAL_EXCERPT_BYTES, available)
+    if (byteLength(line) > budget) abbreviated.add(part.start)
+    if (budget < 128) continue
+    const rendered =
+      byteLength(line) > budget ? memoryExcerpt(line, budget) : line
+    lines.set(part.start, rendered)
+    available -= byteLength(rendered) + 1
+  }
+  return { lines, abbreviated }
+}
+
+/** Summaries optimize working context; committed originals fill unfinished
+ * leaves. Abbreviation changes only this prompt, never the durable archive. */
+export function renderMemory(
+  parts: readonly Part[],
+  nodes: ReadonlyMap<string, MemoryNode>,
+  originals: ReadonlyMap<number, LogEntry>
+) {
+  const pending = pendingOriginals(parts, nodes, originals)
+  let noted = false
+  const lines = parts.flatMap((part) => {
+    const node = nodes.get(nodeKey(part))
+    if (node) return [memoryLine(part, node)]
+    const line = pending.lines.get(part.start)
+    const notice = !noted && pending.abbreviated.has(part.start)
+    if (notice) noted = true
+    return [...(notice ? [abbreviatedContext] : []), ...(line ? [line] : [])]
+  })
+  const full = `<chat>\n${lines.join("\n")}\n</chat>`
+  if (byteLength(full) <= VIEW_BYTES) return full
+  const prefix = `<chat>\n${abbreviatedContext}\n`
+  const suffix = "\n</chat>"
+  let available = VIEW_BYTES - byteLength(prefix + suffix)
+  const kept: string[] = []
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const line = lines[i]!
+    const separator = kept.length ? 1 : 0
+    if (byteLength(line) + separator > available) {
+      if (available > 128) kept.push(memoryExcerpt(line, available - separator))
+      break
+    }
+    kept.push(line)
+    available -= byteLength(line) + separator
+  }
+  return prefix + kept.reverse().join("\n") + suffix
 }
 export function requireMemoryRange(part: Part, total: number) {
   if (!validRange(part, total))

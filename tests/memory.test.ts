@@ -3,17 +3,19 @@ import { describe, expect, it } from "vitest"
 
 import { makeSqliteMemory } from "../src/memory/adapters/sqlite"
 import { byteLength, fitView, type MemoryNode } from "../src/memory/domain"
+import { renderMemory } from "../src/memory/policy"
 import { migrateSqlite } from "../src/storage/migrations"
 import { database } from "./database"
 
 describe("lossless memory", () => {
   it("deduplicates durable appends and retrieves original Unicode text", () => {
     const memory = Effect.runSync(makeSqliteMemory(database()))
-    const original = "🍀\n".repeat(1000)
+    const original = "🍀\n".repeat(100)
     Effect.runSync(memory.append("one", "user", original))
     Effect.runSync(memory.append("one", "user", original))
     expect(Effect.runSync(memory.total())).toBe(1)
-    expect(() => Effect.runSync(memory.render())).toThrow("summarized")
+    expect(Effect.runSync(memory.render())).toContain(original)
+    expect(Effect.runSync(memory.settled())).toBe(false)
     Effect.runSync(memory.saveNode({ start: 0, count: 1 }, "user: clovers"))
     expect(Effect.runSync(memory.zoom(0, 1))).toBe(`0+0|user: ${original}`)
     expect(byteLength("🍀")).toBe(4)
@@ -229,4 +231,94 @@ it("keeps Effects lazy and returns a typed storage error without exposing driver
     operation: "query",
   })
   expect(JSON.stringify(failing)).not.toContain("private driver payload")
+})
+
+it("uses saved summaries alongside pending originals without publishing synthetic summary nodes", () => {
+  const db = database(),
+    memory = Effect.runSync(makeSqliteMemory(db))
+  Effect.runSync(memory.append("older", "user", "Old raw message"))
+  Effect.runSync(memory.saveNode({ start: 0, count: 1 }, "Saved older summary"))
+  Effect.runSync(
+    memory.append("recent", "talk", "Recent exact reply €42.75 🍀")
+  )
+  const before = Effect.runSync(memory.watermark())
+  const rendered = Effect.runSync(memory.render())
+  expect(rendered).toContain("0+1|Saved older summary")
+  expect(rendered).toContain("1+0|talk: Recent exact reply €42.75 🍀")
+  expect(rendered).not.toContain("Old raw message")
+  expect(Effect.runSync(memory.watermark())).toEqual(before)
+  expect(Effect.runSync(Effect.runSync(makeSqliteMemory(db)).render())).toBe(
+    rendered
+  )
+})
+
+it("bounds unsummarized working context, marks omissions and preserves complete originals", () => {
+  const memory = Effect.runSync(makeSqliteMemory(database()))
+  Effect.runSync(memory.append("older", "user", "Old entry"))
+  const original =
+    "Beginning €42.75 🍀 " + "中🍀".repeat(40_000) + " Latest detail"
+  Effect.runSync(memory.append("huge", "echo", original))
+  const rendered = Effect.runSync(memory.render())
+  expect(byteLength(rendered)).toBeLessThanOrEqual(4_300)
+  expect(rendered).toContain("Working context is abbreviated")
+  expect(rendered).toContain("Beginning €42.75 🍀")
+  expect(rendered).toContain("Latest detail")
+  expect(rendered).not.toContain("�")
+  expect(Effect.runSync(memory.zoom(1, 1))).toBe(`1+0|echo: ${original}`)
+})
+
+it("keeps the saved-summary prefix and bounds pending originals across a stalled backlog", () => {
+  const memory = Effect.runSync(makeSqliteMemory(database()))
+  Effect.runSync(memory.append("saved", "user", "Older important preference"))
+  Effect.runSync(
+    memory.saveNode({ start: 0, count: 1 }, "user: Keep exact amounts")
+  )
+  const prefix = Effect.runSync(memory.render()).slice(0, -"\n</chat>".length)
+  const originals = Array.from(
+    { length: 12 },
+    (_, i) => `Start ${i} €42.75 🍀 ` + "中🍀".repeat(10_000) + ` End ${i}`
+  )
+  for (const [i, original] of originals.entries())
+    Effect.runSync(memory.append(`pending-${i}`, "echo", original))
+  const rendered = Effect.runSync(memory.render())
+  expect(rendered.startsWith(prefix + "\n")).toBe(true)
+  expect(byteLength(rendered)).toBeLessThanOrEqual(8_400)
+  expect(rendered).toContain("Working context is abbreviated")
+  expect(rendered).toContain("Start 11 €42.75 🍀")
+  expect(rendered).toContain("End 11")
+  expect(rendered).not.toContain("�")
+  for (const [i, original] of originals.entries())
+    expect(Effect.runSync(memory.zoom(i + 1, 1))).toBe(
+      `${i + 1}+0|echo: ${original}`
+    )
+})
+
+it("reserves the existing summary prefix when the working context is nearly full", () => {
+  const parts = Array.from({ length: 240 }, (_, start) => ({ start, count: 1 }))
+  const nodes = new Map(
+    parts.map((part) => [
+      `${part.start}+1`,
+      { ...part, text: "s".repeat(512), bytes: 512 },
+    ])
+  )
+  const prefix = renderMemory(parts, nodes, new Map()).slice(
+    0,
+    -"\n</chat>".length
+  )
+  const entry = {
+    id: 240,
+    source: "pending",
+    kind: "echo" as const,
+    text: "A large pending result 🍀".repeat(1_000),
+    date: "2026-10-18T00:00:00Z",
+  }
+  const rendered = renderMemory(
+    [...parts, { start: entry.id, count: 1 }],
+    nodes,
+    new Map([[entry.id, entry]])
+  )
+  expect(rendered.startsWith(prefix + "\n")).toBe(true)
+  expect(rendered).toContain("Working context is abbreviated")
+  expect(byteLength(rendered)).toBeLessThanOrEqual(128_000)
+  expect(rendered).not.toContain("�")
 })
