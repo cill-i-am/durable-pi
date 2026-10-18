@@ -1,8 +1,9 @@
-import { Cause, Schema, SchemaGetter } from "effect"
+import { Cause, Schema } from "effect"
 
 import { RuntimeStatus } from "../../conversations/status"
 import { nativeOperation } from "../../shared/interop"
 import { rpcOutcome } from "../../shared/rpc-outcome"
+import { AgentProfileResponse } from "../contracts"
 import {
   AgentId,
   AgentProfile,
@@ -13,25 +14,11 @@ import {
   AgentRuntimeUnavailable,
 } from "../domain"
 
-// Rolling deployments can still reach a worker that predates slugs. Keep its
-// ID link usable until the current catalog supplies the persisted canonical slug.
-const ProfileWire = Schema.Struct({
-  ...AgentProfile.fields,
-  slug: Schema.optional(AgentProfile.fields.slug),
-}).pipe(
-  Schema.decodeTo(Schema.toType(AgentProfile), {
-    decode: SchemaGetter.transform((profile) => ({
-      ...profile,
-      slug: profile.slug ?? profile.id,
-    })),
-    encode: SchemaGetter.transform((profile) => profile),
-  })
-)
-export const AgentProfiles = Schema.Array(ProfileWire)
+export const AgentProfiles = Schema.Array(AgentProfileResponse)
 export const AgentContacts = Schema.Array(
   Schema.Struct({ id: AgentProfile.fields.id, name: AgentProfile.fields.name })
 )
-const Profile = Schema.NullOr(ProfileWire)
+const Profile = Schema.NullOr(AgentProfileResponse)
 const Ack = Schema.Literal(true)
 export const AgentRequest = Schema.Union([
   Schema.Struct({ _tag: Schema.Literal("Profiles") }),
@@ -41,7 +28,7 @@ export const AgentRequest = Schema.Union([
   Schema.Struct({
     _tag: Schema.Literal("Configure"),
     owner: Schema.String,
-    profile: ProfileWire,
+    profile: AgentProfileResponse,
     communicationOwner: Schema.optional(Schema.String),
   }),
   Schema.Struct({
