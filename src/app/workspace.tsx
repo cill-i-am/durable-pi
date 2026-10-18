@@ -619,6 +619,7 @@ function AgentWorkspace({
             }}
             returnFocus={workbenchTrigger}
             agentName={agent.name}
+            agentReference={agent.slug}
             locked={locked}
             overlayOpen={overlayOpen || settings !== null}
             overlays={settingsPanel}

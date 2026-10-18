@@ -1,0 +1,626 @@
+{
+  "version": 1,
+  "date": "2026-10-18",
+  "timezone": "Europe/Dublin",
+  "site": "https://bot.cill-i-am.com",
+  "execution": "live production site through signed-in Chrome controls; original-message exports graded locally",
+  "model": "gpt-6.1-sol · medium",
+  "trialsPerCase": 1,
+  "casesHash": "efa47021c62b8b80c9c07807bce487d8d21503addc709a36f9f8f5ee296900e7",
+  "graderHash": "3ae8a0220479cfdecc877c9034107065348715bd9ed83c2f61ea026ee82afae0",
+  "hashSources": {
+    "cases": ["cases.ts"],
+    "grader": ["grade.ts", "card-checks.ts"]
+  },
+  "productionRevisionsObserved": ["61f13cef6e39f8c216f691aa5167fd85799fc24e"],
+  "releaseRevision": "fdcdeb3b8b9f5203afe5d0830a9f11151b81ed9d",
+  "executionDeploymentRun": "https://github.com/cill-i-am/durable-pi/actions/runs/39117221487",
+  "executionDeploymentNote": "Application deployment succeeded; its separate issue-detection step failed. The later verified release fixes deployment monitoring; a subsequent compatibility change prevents mixed-version browser failures. See notes.",
+  "browserCompatibilityRevision": "4e5855b778ac5806f86ac7551f44f67ed1357e47",
+  "deploymentRun": "https://github.com/cill-i-am/durable-pi/actions/runs/39120211487",
+  "clientEntryScript": "/assets/index-C0u-5bDf.js",
+  "summary": {
+    "attempted": 34,
+    "passed": 34,
+    "failed": 0,
+    "blocked": 0,
+    "checks": 414
+  },
+  "historicalControlRegrade": {
+    "sourceBaseline": "baseline-2026-10-18-tables.json",
+    "trials": 20,
+    "passed": 14,
+    "failed": 6,
+    "failures": [
+      {
+        "id": "weather-weekend",
+        "failedChecks": ["question-matched-card-selection"]
+      },
+      {
+        "id": "weather-today",
+        "failedChecks": ["question-matched-card-selection"]
+      },
+      {
+        "id": "weather-tomorrow",
+        "failedChecks": ["question-matched-card-selection"]
+      },
+      {
+        "id": "weather-week",
+        "failedChecks": ["question-matched-card-selection"]
+      },
+      {
+        "id": "landmark",
+        "failedChecks": ["single-requested-landmark"]
+      },
+      {
+        "id": "expenses",
+        "failedChecks": ["question-matched-card-selection"]
+      }
+    ]
+  },
+  "initialAdaptiveRun": {
+    "productionRevision": "5222defb85641bb754fe2a8d09800c15f6253a8b",
+    "attempted": 21,
+    "passed": 18,
+    "failed": 3,
+    "failures": [
+      {
+        "id": "weather-weekend",
+        "failedChecks": ["question-matched-card-selection"]
+      },
+      {
+        "id": "weather-today",
+        "failedChecks": ["question-matched-card-selection"]
+      },
+      {
+        "id": "weather-tomorrow",
+        "failedChecks": ["question-matched-card-selection"]
+      }
+    ],
+    "privateArchiveDirectory": "results/adaptive-2026-10-18"
+  },
+  "rendererRegressionRun": {
+    "productionRevision": "983a9ae7996259f3db43cd70fbab9d168a106322",
+    "attempted": 3,
+    "passed": 0,
+    "failed": 3,
+    "failures": [
+      {
+        "id": "weather-weekend",
+        "failedChecks": ["no-renderer-fallback"]
+      },
+      {
+        "id": "weather-today",
+        "failedChecks": ["no-renderer-fallback"]
+      },
+      {
+        "id": "weather-tomorrow",
+        "failedChecks": ["no-renderer-fallback"]
+      }
+    ],
+    "privateArchiveDirectory": "results/adaptive-final-2026-10-18"
+  },
+  "notes": [
+    "Single-trial production smoke suite, not a reliability estimate. All original 20 natural user prompts are unchanged; 14 new questions cover adaptive selection and scope across the remaining card families. Each final trial used a fresh agent with the standard personal-thinking-partner purpose and the observed model profile. This run used normal Chrome controls, not the separate Playwright CLI runner.",
+    "The grader checks exact card types and counts on selection cases, supplied numeric facts, map scope, driving-stop order, choice modes, duplicate rich cards and a bounded literal prose recap. One decisive data fact is allowed in an interpretation. Paraphrased or rounded values can evade the recap check; this is not a semantic duplication judge or a full fact-check of every recommendation. Spec card counts exclude the Stack layout container.",
+    "The earlier 20-case table baseline regrades to 14 passes and six failures under the stronger contract: four unrequested weather maps, the oversized landmark result and the extra expense table. Its original reports and private archives remain unchanged. This is a concrete presentation regression check, not a controlled estimate of broader model quality.",
+    "The first adaptive run at 5222def stopped after 21 completed, exported and archived trials when manual review found unrequested maps during coordinate discovery. Regrading with the strengthened contract gives 18 passes and three weather-card selection failures. All 14 newly added adaptive cases passed in that run. Its original-message evidence remains in ignored results/adaptive-2026-10-18.",
+    "The subsequent run at 983a9ae retained three weather failures solely for the visible renderer fallback. Their tool, card-selection and forecast checks passed: coordinate lookup had become data-only, but the client still attempted to render it. The activity dispatcher regression was then fixed and tested. Those original-message archives and UI captures remain in ignored results/adaptive-final-2026-10-18.",
+    "Manual UI checks in the initial adaptive run confirmed that a one-offer layout omits collection search, shortlist and comparison controls; one mapped landmark shows its address directly; and the three-place map retains selection. Selecting Dublin Castle changed the selected pin and directions destination to the supplied coordinates. No directions link was followed.",
+    "Manual clarification checks in the initial run selected Comfort and Battery life together and added them only to the draft; no reply was sent. The exclusive transport choice cleared Train when Car was selected. The model waited for a reply without dependent research in both cases.",
+    "The initial capture had two client-state recoveries and a temporary session-check rate limit. Timeline Memory navigation and a stale grouped-chart availability banner each received one reload; decision export received one reload after a cooldown. Capture switched to one tab and normal full-page Memory/collection navigation. A closing-panel/menu timing issue also required completing cleanup from the collection. These operator effects are retained separately from model outcomes. No original question was resent within an agent.",
+    "The 983a9ae deployment first completed application deployment but failed the separate native issue-detection step with an unlabelled schema error. Hosted authentication checks passed independently, and retrying the failed deployment job succeeded, including issue detection and the hosted boundary. No security setting was weakened and no deployment guard was bypassed.",
+    "Completed eval agents are recoverably archived only after export. Private original-message JSONL, screenshots, UI evidence and full grader output stay under ignored results directories. This sanitized report contains no agent URLs, original account archives or browser credentials.",
+    "The final verified run encountered a temporary session-check rate limit while exporting products-supplied. Its completed conversation and capture were retained. After cooldown, normal page reload/export recovery was used; no prompt was resent and authentication protections were unchanged.",
+    "Final shopping research used three normal Allow once approvals for read-only Currys Ireland browsing: the headphones search page and the observed Bose QuietComfort and Sony ULT Wear product links. No persistent permission changed and no purchase was attempted. The answer kept both offers in one Products card, including ANC-specific battery qualifiers and location-dependent availability.",
+    "Main received the concurrent email/slugs PR 157 after all final prompts had been submitted. All 34 captures observed the same client entry script and all answers completed before the new client was loaded. Shopping export then reached a workspace-unavailable state: the new client rejected an otherwise valid legacy agent-list response without slugs. A normal reload and Retry did not resolve it. The completed archive was downloaded through the same authenticated browser using the previously observed Archive JSONL URL format; no raw API client or copied credential was used.",
+    "The 61f13ce card application deployed successfully, but both attempts of its separate issue-detection step failed with an unlabelled schema error. Investigation found that Cloudflare permits tags:null on untagged Workers, which the deployment schema rejected. The metadata schema now accepts that valid shape and labels each read/patch/verification failure. Exact ownership checks and enabled-Issues readback remain mandatory; this fixes a reproduced valid-response bug without claiming it conclusively caused every earlier unlabelled failure.",
+    "The final run preserved all 34 original-message archives and UI captures. They passed 414 checks using gpt-6.1-sol at medium reasoning, one trial per case. This is smoke coverage rather than a measured reliability rate. The focused single-offer and map layouts were checked visually; dedicated interaction checks are described above.",
+    "The fdcdeb3 release passed application deployment, native issue detection and the hosted authentication boundary. Once the rollout completed, the existing shopping workspace reopened and its already-exported test agent was recoverably archived. All 34 final agents were exported and archived; no question was resent. The separate profile-response compatibility fix reproduces and prevents the mixed-version missing-slug failure before rollout completion."
+  ],
+  "results": [
+    {
+      "id": "day-brief",
+      "status": "passed",
+      "requestAt": "2026-10-18T10:35:00.666Z",
+      "checks": 15,
+      "passedChecks": 15,
+      "failedChecks": [],
+      "toolsUsed": ["show_brief"],
+      "cards": ["Brief", "Calculation", "Timeline"],
+      "cardCounts": {
+        "Brief": 1,
+        "Calculation": 1,
+        "Timeline": 1
+      },
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "driving-route",
+      "status": "passed",
+      "requestAt": "2026-10-18T10:35:19.350Z",
+      "checks": 10,
+      "passedChecks": 10,
+      "failedChecks": [],
+      "toolsUsed": ["lookup_route"],
+      "cards": ["Route"],
+      "cardCounts": {
+        "Route": 1
+      },
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "clarify-options",
+      "status": "passed",
+      "requestAt": "2026-10-18T10:35:23.550Z",
+      "checks": 11,
+      "passedChecks": 11,
+      "failedChecks": [],
+      "toolsUsed": ["ask_question"],
+      "cards": ["Question"],
+      "cardCounts": {
+        "Question": 1
+      },
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "weather-weekend",
+      "status": "passed",
+      "requestAt": "2026-10-18T10:01:44.167Z",
+      "checks": 17,
+      "passedChecks": 17,
+      "failedChecks": [],
+      "toolsUsed": ["lookup_places", "lookup_weather"],
+      "cards": ["Weather"],
+      "cardCounts": {
+        "Weather": 1
+      },
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "weather-today",
+      "status": "passed",
+      "requestAt": "2026-10-18T10:01:49.331Z",
+      "checks": 17,
+      "passedChecks": 17,
+      "failedChecks": [],
+      "toolsUsed": ["lookup_places", "lookup_weather"],
+      "cards": ["Weather"],
+      "cardCounts": {
+        "Weather": 1
+      },
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "weather-tomorrow",
+      "status": "passed",
+      "requestAt": "2026-10-18T10:01:53.637Z",
+      "checks": 17,
+      "passedChecks": 17,
+      "failedChecks": [],
+      "toolsUsed": ["lookup_places", "lookup_weather"],
+      "cards": ["Weather"],
+      "cardCounts": {
+        "Weather": 1
+      },
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "weather-week",
+      "status": "passed",
+      "requestAt": "2026-10-18T10:03:13.186Z",
+      "checks": 16,
+      "passedChecks": 16,
+      "failedChecks": [],
+      "toolsUsed": ["lookup_places", "lookup_weather"],
+      "cards": ["Weather"],
+      "cardCounts": {
+        "Weather": 1
+      },
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "split-bill",
+      "status": "passed",
+      "requestAt": "2026-10-18T10:36:14.283Z",
+      "checks": 13,
+      "passedChecks": 13,
+      "failedChecks": [],
+      "toolsUsed": ["calculate"],
+      "cards": ["Calculation"],
+      "cardCounts": {
+        "Calculation": 1
+      },
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "units",
+      "status": "passed",
+      "requestAt": "2026-10-18T10:36:18.491Z",
+      "checks": 13,
+      "passedChecks": 13,
+      "failedChecks": [],
+      "toolsUsed": ["convert_units"],
+      "cards": ["Calculation"],
+      "cardCounts": {
+        "Calculation": 1
+      },
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "landmark",
+      "status": "passed",
+      "requestAt": "2026-10-18T10:03:17.739Z",
+      "checks": 12,
+      "passedChecks": 12,
+      "failedChecks": [],
+      "toolsUsed": ["lookup_places"],
+      "cards": ["Places"],
+      "cardCounts": {
+        "Places": 1
+      },
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "expenses",
+      "status": "passed",
+      "requestAt": "2026-10-18T10:03:22.886Z",
+      "checks": 14,
+      "passedChecks": 14,
+      "failedChecks": [],
+      "toolsUsed": ["analyze_data"],
+      "cards": ["Stack", "DataTable", "BarChart"],
+      "cardCounts": {
+        "DataTable": 1,
+        "BarChart": 1
+      },
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "table-default",
+      "status": "passed",
+      "requestAt": "2026-10-18T10:36:39.897Z",
+      "checks": 11,
+      "passedChecks": 11,
+      "failedChecks": [],
+      "toolsUsed": ["show_ui"],
+      "cards": ["DataTable"],
+      "cardCounts": {
+        "DataTable": 1
+      },
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "markdown-source",
+      "status": "passed",
+      "requestAt": "2026-10-18T10:37:00.172Z",
+      "checks": 10,
+      "passedChecks": 10,
+      "failedChecks": [],
+      "toolsUsed": [],
+      "cards": [],
+      "cardCounts": {},
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "comparison",
+      "status": "passed",
+      "requestAt": "2026-10-18T10:37:07.181Z",
+      "checks": 11,
+      "passedChecks": 11,
+      "failedChecks": [],
+      "toolsUsed": ["show_ui"],
+      "cards": ["Comparison"],
+      "cardCounts": {
+        "Comparison": 1
+      },
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "products-supplied",
+      "status": "passed",
+      "requestAt": "2026-10-18T10:37:56.578Z",
+      "checks": 14,
+      "passedChecks": 14,
+      "failedChecks": [],
+      "toolsUsed": ["compare_products"],
+      "cards": ["Products"],
+      "cardCounts": {
+        "Products": 1
+      },
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "shopping",
+      "status": "passed",
+      "requestAt": "2026-10-18T10:37:17.626Z",
+      "checks": 15,
+      "passedChecks": 15,
+      "failedChecks": [],
+      "toolsUsed": ["search_products", "browser_open", "compare_products"],
+      "cards": ["Products"],
+      "cardCounts": {
+        "Products": 1
+      },
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "clarify",
+      "status": "passed",
+      "requestAt": "2026-10-18T10:38:05.704Z",
+      "checks": 9,
+      "passedChecks": 9,
+      "failedChecks": [],
+      "toolsUsed": ["ask_question"],
+      "cards": ["Question"],
+      "cardCounts": {
+        "Question": 1
+      },
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "explain-only",
+      "status": "passed",
+      "requestAt": "2026-10-18T10:38:09.188Z",
+      "checks": 10,
+      "passedChecks": 10,
+      "failedChecks": [],
+      "toolsUsed": [],
+      "cards": [],
+      "cardCounts": {},
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "thanks",
+      "status": "passed",
+      "requestAt": "2026-10-18T10:38:19.755Z",
+      "checks": 11,
+      "passedChecks": 11,
+      "failedChecks": [],
+      "toolsUsed": [],
+      "cards": [],
+      "cardCounts": {},
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "beyond-horizon",
+      "status": "passed",
+      "requestAt": "2026-10-18T10:38:24.695Z",
+      "checks": 10,
+      "passedChecks": 10,
+      "failedChecks": [],
+      "toolsUsed": [],
+      "cards": [],
+      "cardCounts": {},
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "timeline-plan",
+      "status": "passed",
+      "requestAt": "2026-10-18T10:06:42.201Z",
+      "checks": 11,
+      "passedChecks": 11,
+      "failedChecks": [],
+      "toolsUsed": ["show_ui"],
+      "cards": ["Timeline"],
+      "cardCounts": {
+        "Timeline": 1
+      },
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "chart-ranking",
+      "status": "passed",
+      "requestAt": "2026-10-18T10:06:46.114Z",
+      "checks": 11,
+      "passedChecks": 11,
+      "failedChecks": [],
+      "toolsUsed": ["show_ui"],
+      "cards": ["BarChart"],
+      "cardCounts": {
+        "BarChart": 1
+      },
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "grouped-summary",
+      "status": "passed",
+      "requestAt": "2026-10-18T10:06:50.594Z",
+      "checks": 12,
+      "passedChecks": 12,
+      "failedChecks": [],
+      "toolsUsed": ["analyze_data"],
+      "cards": ["Stack", "DataTable"],
+      "cardCounts": {
+        "DataTable": 1
+      },
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "grouped-chart",
+      "status": "passed",
+      "requestAt": "2026-10-18T10:31:22.791Z",
+      "checks": 12,
+      "passedChecks": 12,
+      "failedChecks": [],
+      "toolsUsed": ["analyze_data"],
+      "cards": ["Stack", "BarChart"],
+      "cardCounts": {
+        "BarChart": 1
+      },
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "single-place",
+      "status": "passed",
+      "requestAt": "2026-10-18T10:31:26.813Z",
+      "checks": 11,
+      "passedChecks": 11,
+      "failedChecks": [],
+      "toolsUsed": ["show_ui"],
+      "cards": ["Places"],
+      "cardCounts": {
+        "Places": 1
+      },
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "place-shortlist",
+      "status": "passed",
+      "requestAt": "2026-10-18T10:31:46.349Z",
+      "checks": 11,
+      "passedChecks": 11,
+      "failedChecks": [],
+      "toolsUsed": ["show_ui"],
+      "cards": ["Places"],
+      "cardCounts": {
+        "Places": 1
+      },
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "ordered-route",
+      "status": "passed",
+      "requestAt": "2026-10-18T10:32:53.946Z",
+      "checks": 11,
+      "passedChecks": 11,
+      "failedChecks": [],
+      "toolsUsed": ["lookup_route"],
+      "cards": ["Route"],
+      "cardCounts": {
+        "Route": 1
+      },
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "three-way-decision",
+      "status": "passed",
+      "requestAt": "2026-10-18T10:33:03.003Z",
+      "checks": 11,
+      "passedChecks": 11,
+      "failedChecks": [],
+      "toolsUsed": ["show_ui"],
+      "cards": ["Comparison"],
+      "cardCounts": {
+        "Comparison": 1
+      },
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "single-offer",
+      "status": "passed",
+      "requestAt": "2026-10-18T10:33:06.516Z",
+      "checks": 11,
+      "passedChecks": 11,
+      "failedChecks": [],
+      "toolsUsed": ["compare_products"],
+      "cards": ["Products"],
+      "cardCounts": {
+        "Products": 1
+      },
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "question-multiple",
+      "status": "passed",
+      "requestAt": "2026-10-18T10:33:46.067Z",
+      "checks": 12,
+      "passedChecks": 12,
+      "failedChecks": [],
+      "toolsUsed": ["ask_question"],
+      "cards": ["Question"],
+      "cardCounts": {
+        "Question": 1
+      },
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "question-single",
+      "status": "passed",
+      "requestAt": "2026-10-18T10:33:58.497Z",
+      "checks": 12,
+      "passedChecks": 12,
+      "failedChecks": [],
+      "toolsUsed": ["ask_question"],
+      "cards": ["Question"],
+      "cardCounts": {
+        "Question": 1
+      },
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "calculation-scenarios",
+      "status": "passed",
+      "requestAt": "2026-10-18T10:34:02.778Z",
+      "checks": 12,
+      "passedChecks": 12,
+      "failedChecks": [],
+      "toolsUsed": ["show_ui"],
+      "cards": ["Stack", "Calculation"],
+      "cardCounts": {
+        "Calculation": 2
+      },
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "signed-values",
+      "status": "passed",
+      "requestAt": "2026-10-18T10:34:41.164Z",
+      "checks": 11,
+      "passedChecks": 11,
+      "failedChecks": [],
+      "toolsUsed": ["show_ui"],
+      "cards": ["DataTable"],
+      "cardCounts": {
+        "DataTable": 1
+      },
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "prose-only-plan",
+      "status": "passed",
+      "requestAt": "2026-10-18T10:34:45.598Z",
+      "checks": 10,
+      "passedChecks": 10,
+      "failedChecks": [],
+      "toolsUsed": [],
+      "cards": [],
+      "cardCounts": {},
+      "failedTools": 0,
+      "staleClientReloads": 0
+    }
+  ]
+}
