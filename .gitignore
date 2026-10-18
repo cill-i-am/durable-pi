@@ -17,4 +17,5 @@ credentials*.json
 coverage/
 test-results/
 evals/rich-answers/results/
+evals/family-invitations/results/
 .DS_Store

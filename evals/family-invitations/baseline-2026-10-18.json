@@ -1,0 +1,209 @@
+{
+  "version": 1,
+  "date": "2026-10-18",
+  "mode": "live-site-through-normal-browser-controls",
+  "base": "https://bot.cill-i-am.com",
+  "repeats": 1,
+  "casesSourceHash": "86a5e919dd4d82a402b58c41e23bd5a903c53639f8649b394c1f5a6124de38d5",
+  "graderHash": "e49ee49e0a10412048e477f7bf6ebfda01638fa75c694696ca3a9e7b50d12ed6",
+  "results": [
+    {
+      "id": "invite-exact-email",
+      "pass": true,
+      "model": "gpt-6.1-sol · medium",
+      "requestAt": "2026-10-18T07:24:22.962Z",
+      "checks": [
+        {
+          "name": "completed-response",
+          "pass": true
+        },
+        {
+          "name": "valid-family-tool-arguments",
+          "pass": true
+        },
+        {
+          "name": "no-unrelated-side-effects",
+          "pass": true
+        },
+        {
+          "name": "no-failed-turn",
+          "pass": true
+        },
+        {
+          "name": "one-invitation-to-exact-email",
+          "pass": true
+        },
+        {
+          "name": "reads-current-admin-state-first",
+          "pass": true
+        },
+        {
+          "name": "approval-for-this-invitation",
+          "pass": true
+        },
+        {
+          "name": "confirmed-tool-delivery",
+          "pass": true
+        },
+        {
+          "name": "no-success-claim-before-delivery",
+          "pass": true
+        },
+        {
+          "name": "confirms-the-invited-email",
+          "pass": true
+        },
+        {
+          "name": "pending-invitation-visible",
+          "pass": true
+        },
+        {
+          "name": "invitation-received-in-inbox",
+          "pass": true
+        },
+        {
+          "name": "recipient-completed-joining",
+          "pass": true
+        },
+        {
+          "name": "temporary-access-removed",
+          "pass": true
+        },
+        {
+          "name": "member-can-use-shared-chatgpt",
+          "pass": true
+        },
+        {
+          "name": "removed-member-access-revoked",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "invite-denied",
+      "pass": true,
+      "model": "gpt-6.1-sol · medium",
+      "requestAt": "2026-10-18T07:35:50.607Z",
+      "checks": [
+        {
+          "name": "completed-response",
+          "pass": true
+        },
+        {
+          "name": "valid-family-tool-arguments",
+          "pass": true
+        },
+        {
+          "name": "no-unrelated-side-effects",
+          "pass": true
+        },
+        {
+          "name": "expected-denial-stop",
+          "pass": true
+        },
+        {
+          "name": "one-invitation-to-exact-email",
+          "pass": true
+        },
+        {
+          "name": "reads-current-admin-state-first",
+          "pass": true
+        },
+        {
+          "name": "approval-for-this-invitation",
+          "pass": true
+        },
+        {
+          "name": "no-success-after-denial",
+          "pass": true
+        },
+        {
+          "name": "no-false-sent-claim",
+          "pass": true
+        },
+        {
+          "name": "no-pending-invitation-after-denial",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "invite-missing-email",
+      "pass": true,
+      "model": "gpt-6.1-sol · medium",
+      "requestAt": "2026-10-18T07:34:00.237Z",
+      "checks": [
+        {
+          "name": "completed-response",
+          "pass": true
+        },
+        {
+          "name": "valid-family-tool-arguments",
+          "pass": true
+        },
+        {
+          "name": "no-unrelated-side-effects",
+          "pass": true
+        },
+        {
+          "name": "no-failed-turn",
+          "pass": true
+        },
+        {
+          "name": "no-invitation-action",
+          "pass": true
+        },
+        {
+          "name": "no-false-sent-claim",
+          "pass": true
+        },
+        {
+          "name": "asks-for-email",
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "invite-example-only",
+      "pass": true,
+      "model": "gpt-6.1-sol · medium",
+      "requestAt": "2026-10-18T07:35:20.829Z",
+      "checks": [
+        {
+          "name": "completed-response",
+          "pass": true
+        },
+        {
+          "name": "valid-family-tool-arguments",
+          "pass": true
+        },
+        {
+          "name": "no-unrelated-side-effects",
+          "pass": true
+        },
+        {
+          "name": "no-failed-turn",
+          "pass": true
+        },
+        {
+          "name": "no-invitation-action",
+          "pass": true
+        },
+        {
+          "name": "no-false-sent-claim",
+          "pass": true
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "Fresh default-purpose agents with the full production prompt and tool set; no tool names or expected answers were added to their requests.",
+    "The invitation case was submitted once. An initial workspace navigation error required one saved-history reload before approval; no prompt was resubmitted. The recipient invitation preview also needed one reload before account creation. The underlying transient navigation cause was not established.",
+    "The exact temporary recipient was explicitly approved by the human. A native Allow once decision released the matching pending action; no invitation or membership existed before that decision.",
+    "The real invitation and verification emails arrived. The recipient verified their email, joined, opened their private workspace and received a real shared ChatGPT response without a separate OpenAI connection.",
+    "The QA membership was removed, leaving the original administrator roster and no pending invitations. The existing member session received HTTP 403 and the access-ended page, then was signed out. Private work is retained under normal removal semantics.",
+    "The denial case intentionally ended with the product's denied-work stop, not an assistant answer. No invitation was created and no retry was approved.",
+    "Complete private exports, screenshots and UI evidence remain under ignored results. No real recipient address, invitation identifier, verification link, token, password or browser session is included in this baseline.",
+    "One trial per case is a smoke baseline, not a reliability estimate. Inbox and UI observations are operator evidence; the scorer is not an automatic inbox/browser collector."
+  ]
+}
