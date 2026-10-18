@@ -25,9 +25,9 @@ summarization:
 
 Each item has a kind: user (the user's words), talk (Pi's replies), tool
 (Pi's tool calls), echo (their results), or note (saved context).
-Recent originals are included without waiting for summaries. If the working
-context exceeds its byte budget, omissions and excerpts are explicitly
-marked. The complete original messages remain in the archive.
+Recent originals are included without waiting for summaries. Large originals
+and pending backlogs have a separate byte allowance so they cannot crowd out
+saved summaries. Omissions and excerpts are explicitly marked. The complete original messages remain in the archive.
 
 Use search_memory to find omitted entries. zoom(id, n) opens a summary into
 its two halves; zoom(id, 1) gives message id in full, including an excerpted

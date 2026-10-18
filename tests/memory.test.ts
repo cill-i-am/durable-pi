@@ -9,7 +9,7 @@ import { database } from "./database"
 describe("lossless memory", () => {
   it("deduplicates durable appends and retrieves original Unicode text", () => {
     const memory = Effect.runSync(makeSqliteMemory(database()))
-    const original = "🍀\n".repeat(1000)
+    const original = "🍀\n".repeat(100)
     Effect.runSync(memory.append("one", "user", original))
     Effect.runSync(memory.append("one", "user", original))
     expect(Effect.runSync(memory.total())).toBe(1)
@@ -258,10 +258,36 @@ it("bounds unsummarized working context, marks omissions and preserves complete 
     "Beginning €42.75 🍀 " + "中🍀".repeat(40_000) + " Latest detail"
   Effect.runSync(memory.append("huge", "echo", original))
   const rendered = Effect.runSync(memory.render())
-  expect(byteLength(rendered)).toBeLessThanOrEqual(128_000)
+  expect(byteLength(rendered)).toBeLessThanOrEqual(4_300)
   expect(rendered).toContain("Working context is abbreviated")
   expect(rendered).toContain("Beginning €42.75 🍀")
   expect(rendered).toContain("Latest detail")
   expect(rendered).not.toContain("�")
   expect(Effect.runSync(memory.zoom(1, 1))).toBe(`1+0|echo: ${original}`)
+})
+
+it("keeps the saved-summary prefix and bounds pending originals across a stalled backlog", () => {
+  const memory = Effect.runSync(makeSqliteMemory(database()))
+  Effect.runSync(memory.append("saved", "user", "Older important preference"))
+  Effect.runSync(
+    memory.saveNode({ start: 0, count: 1 }, "user: Keep exact amounts")
+  )
+  const prefix = Effect.runSync(memory.render()).slice(0, -"\n</chat>".length)
+  const originals = Array.from(
+    { length: 12 },
+    (_, i) => `Start ${i} €42.75 🍀 ` + "中🍀".repeat(10_000) + ` End ${i}`
+  )
+  for (const [i, original] of originals.entries())
+    Effect.runSync(memory.append(`pending-${i}`, "echo", original))
+  const rendered = Effect.runSync(memory.render())
+  expect(rendered.startsWith(prefix + "\n")).toBe(true)
+  expect(byteLength(rendered)).toBeLessThanOrEqual(8_400)
+  expect(rendered).toContain("Working context is abbreviated")
+  expect(rendered).toContain("Start 11 €42.75 🍀")
+  expect(rendered).toContain("End 11")
+  expect(rendered).not.toContain("�")
+  for (const [i, original] of originals.entries())
+    expect(Effect.runSync(memory.zoom(i + 1, 1))).toBe(
+      `${i + 1}+0|echo: ${original}`
+    )
 })

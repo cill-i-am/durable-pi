@@ -144,6 +144,38 @@ function memoryExcerpt(text: string, budget: number) {
   return head + marker + tail
 }
 
+// Pending summaries must not turn large tool results into unbounded input.
+// Keep ordinary messages exact, preserve the saved-summary prefix, and give
+// recent originals a separate allowance while their background work catches up.
+export const PENDING_ORIGINAL_BYTES = 8_192
+export const ORIGINAL_EXCERPT_BYTES = 4_096
+const abbreviatedContext =
+  "[Working context is abbreviated. Use search_memory or zoom to retrieve full archived entries.]"
+function pendingOriginals(
+  parts: readonly Part[],
+  nodes: ReadonlyMap<string, MemoryNode>,
+  originals: ReadonlyMap<number, LogEntry>
+) {
+  const lines = new Map<number, string>()
+  const abbreviated = new Set<number>()
+  let available = PENDING_ORIGINAL_BYTES
+  for (const part of [...parts].reverse()) {
+    if (nodes.has(nodeKey(part))) continue
+    const entry = originals.get(part.start)
+    if (part.count !== 1 || !entry)
+      throw new Error("Memory lost a committed working-context part")
+    const line = `${part.start}+0|${entry.kind}: ${entry.text}`
+    const budget = Math.min(ORIGINAL_EXCERPT_BYTES, available)
+    if (byteLength(line) > budget) abbreviated.add(part.start)
+    if (budget < 128) continue
+    const rendered =
+      byteLength(line) > budget ? memoryExcerpt(line, budget) : line
+    lines.set(part.start, rendered)
+    available -= byteLength(rendered) + 1
+  }
+  return { lines, abbreviated }
+}
+
 /** Summaries optimize working context; committed originals fill unfinished
  * leaves. Abbreviation changes only this prompt, never the durable archive. */
 export function renderMemory(
@@ -151,18 +183,19 @@ export function renderMemory(
   nodes: ReadonlyMap<string, MemoryNode>,
   originals: ReadonlyMap<number, LogEntry>
 ) {
-  const lines = parts.map((part) => {
+  const pending = pendingOriginals(parts, nodes, originals)
+  let noted = false
+  const lines = parts.flatMap((part) => {
     const node = nodes.get(nodeKey(part))
-    if (node) return `${nodeKey(part)}|${node.text.replaceAll("\n", " ")}`
-    const entry = originals.get(part.start)
-    if (part.count !== 1 || !entry)
-      throw new Error("Memory lost a committed working-context part")
-    return `${part.start}+0|${entry.kind}: ${entry.text}`
+    if (node) return [`${nodeKey(part)}|${node.text.replaceAll("\n", " ")}`]
+    const line = pending.lines.get(part.start)
+    const notice = !noted && pending.abbreviated.has(part.start)
+    if (notice) noted = true
+    return [...(notice ? [abbreviatedContext] : []), ...(line ? [line] : [])]
   })
   const full = `<chat>\n${lines.join("\n")}\n</chat>`
   if (byteLength(full) <= VIEW_BYTES) return full
-  const prefix =
-    "<chat>\n[Working context is abbreviated. Use search_memory or zoom to retrieve full archived entries.]\n"
+  const prefix = `<chat>\n${abbreviatedContext}\n`
   const suffix = "\n</chat>"
   let available = VIEW_BYTES - byteLength(prefix + suffix)
   const kept: string[] = []

@@ -1,71 +1,65 @@
 import * as Schema from "effect/Schema"
 
-export const CACHE_MARKS = [50_000, 80_000, 100_000] as const
 const record = Schema.decodeUnknownSync(
   Schema.Record(Schema.String, Schema.Unknown)
 )
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value)
+const VIEW_MESSAGE_CHARS = 4_000
 
-export function viewBlocks(text: string) {
+/** Native message endings give implicit caching reusable boundaries. Keep
+ * complete lines and never bisect Unicode or require provider-only fields. */
+export function viewChunks(text: string) {
+  const chunks: string[] = []
   let start = 0
-  const blocks: {
-    type: "input_text"
-    text: string
-    prompt_cache_breakpoint?: { mode: "explicit" }
-  }[] = []
-  for (const mark of CACHE_MARKS) {
-    if (mark >= text.length) continue
-    const end = text.lastIndexOf("\n", mark - 1) + 1
-    if (end <= start) continue
-    blocks.push({
-      type: "input_text",
-      text: text.slice(start, end),
-      prompt_cache_breakpoint: { mode: "explicit" },
-    })
+  while (start < text.length) {
+    let end = Math.min(start + VIEW_MESSAGE_CHARS, text.length)
+    if (end < text.length) {
+      const previous = text.lastIndexOf("\n", end - 1) + 1
+      const next = text.indexOf("\n", end)
+      end = previous > start ? previous : next < 0 ? text.length : next + 1
+    }
+    chunks.push(text.slice(start, end))
     start = end
   }
-  blocks.push({ type: "input_text", text: text.slice(start) })
-  return blocks
+  return chunks.length ? chunks : [""]
+}
+function memoryMessages(item: unknown) {
+  if (!isRecord(item) || item.role !== "user" || !Array.isArray(item.content))
+    return [item]
+  const parts: readonly unknown[] = item.content
+  const first = parts[0]
+  if (
+    !isRecord(first) ||
+    first.type !== "input_text" ||
+    typeof first.text !== "string" ||
+    !first.text.startsWith("<chat>\n")
+  )
+    return [item]
+  const end = first.text.indexOf("\n</chat>")
+  if (end < 0) return [item]
+  const messages: Record<string, unknown>[] = viewChunks(
+    first.text.slice("<chat>\n".length, end)
+  ).map((chunk) => ({
+    ...item,
+    content: [{ ...first, text: `<chat>\n${chunk}\n</chat>` }],
+  }))
+  const rest = first.text.slice(end + "\n</chat>".length)
+  const content: unknown[] = [
+    ...(rest ? [{ ...first, text: rest }] : []),
+    ...parts.slice(1),
+  ]
+  if (content.length) messages.push({ ...item, content })
+  return messages
 }
 
 export function memoryPayload(payload: unknown) {
   const body = record(payload)
-  const input = Array.isArray(body.input)
-    ? body.input.map((item: unknown) => {
-        if (
-          !isRecord(item) ||
-          item.role !== "user" ||
-          !Array.isArray(item.content)
-        )
-          return item
-        return {
-          ...item,
-          content: item.content.flatMap((part: unknown) => {
-            if (
-              !isRecord(part) ||
-              part.type !== "input_text" ||
-              typeof part.text !== "string" ||
-              !part.text.startsWith("<chat>\n")
-            )
-              return [part]
-            const end = part.text.indexOf("\n</chat>")
-            if (end < 0) return [part]
-            const boundary = end + "\n</chat>".length
-            const blocks = viewBlocks(part.text.slice(0, boundary))
-            if (boundary < part.text.length)
-              blocks.push({
-                type: "input_text",
-                text: part.text.slice(boundary),
-              })
-            return blocks
-          }),
-        }
-      })
-    : body.input
   return {
     ...body,
-    input,
+    input: Array.isArray(body.input)
+      ? body.input.flatMap(memoryMessages)
+      : body.input,
     store: false,
     ...(isRecord(body.reasoning)
       ? { reasoning: { ...body.reasoning, context: "all_turns" } }

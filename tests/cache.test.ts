@@ -2,33 +2,10 @@ import { expect, it } from "vitest"
 
 import {
   memoryPayload,
-  viewBlocks,
+  viewChunks,
 } from "../src/inference/adapters/payload-openai"
 import { providerUsage } from "../src/inference/adapters/usage-openai"
 
-it("splits on stable line ends and preserves every character", () => {
-  const text =
-    "<chat>\n" +
-    Array.from({ length: 600 }, (_, i) => `${i}+1|${"é".repeat(220)}\n`).join(
-      ""
-    ) +
-    "</chat>"
-  const blocks = viewBlocks(text)
-  expect(blocks).toHaveLength(4)
-  expect(blocks.map((b) => b.text).join("")).toBe(text)
-  expect(
-    blocks
-      .slice(0, 3)
-      .every(
-        (b) =>
-          b.text.endsWith("\n") &&
-          b.prompt_cache_breakpoint?.mode === "explicit"
-      )
-  ).toBe(true)
-  expect(viewBlocks(text + "\nnew tail").slice(0, 3)).toEqual(
-    blocks.slice(0, 3)
-  )
-})
 it("preserves encrypted reasoning/tool replay and separates legacy user text", () => {
   const reasoning = {
       type: "reasoning",
@@ -59,10 +36,11 @@ it("preserves encrypted reasoning/tool replay and separates legacy user text", (
     input: [
       {
         role: "user",
-        content: [
-          { type: "input_text", text: "<chat>\n0+1|old\n</chat>" },
-          { type: "input_text", text: "\nNew user request" },
-        ],
+        content: [{ type: "input_text", text: "<chat>\n0+1|old\n</chat>" }],
+      },
+      {
+        role: "user",
+        content: [{ type: "input_text", text: "\nNew user request" }],
       },
       reasoning,
       tool,
@@ -146,7 +124,60 @@ it("keeps native summary requests uncached and ordinary OptChat prompts cacheabl
     expect(payload.store).toBe(false)
     expect(payload.context_management).toBeUndefined()
     expect(payload.max_output_tokens).toBeUndefined()
-    expect(JSON.stringify(payload)).toContain('"mode":"explicit"')
+    expect(JSON.stringify(payload)).not.toContain("prompt_cache_breakpoint")
+    const input = payload.input as { content: { text: string }[] }[]
+    const messages = input.map((item) => item.content[0]!.text)
+    expect(messages.at(-1)).toBe("\nCurrent request")
+    expect(
+      messages
+        .slice(0, -1)
+        .map((text) => text.slice(7, -8))
+        .join("")
+    ).toBe("old entry\n".repeat(6000).slice(0, -1))
     expect(payload.reasoning).toMatchObject({ context: "all_turns" })
   }
+})
+
+it("keeps native cache boundaries stable as the context grows, without losing Unicode lines", () => {
+  const original = Array.from(
+    { length: 500 },
+    (_, i) => `${i}+1|Saved €42.75 🍀 中\n`
+  ).join("")
+  const before = viewChunks(original)
+  expect(before.join("")).toBe(original)
+  expect(viewChunks(original + "500+0|user: New message").slice(0, -1)).toEqual(
+    before.slice(0, -1)
+  )
+  expect(before.every((chunk) => chunk.endsWith("\n"))).toBe(true)
+  expect(viewChunks("🍀".repeat(4_001)).join("")).toBe("🍀".repeat(4_001))
+})
+it("keeps current request attachments together after the working-context messages", () => {
+  const image = {
+    type: "input_image",
+    image_url: "data:image/png;base64,synthetic",
+  }
+  const result = memoryPayload({
+    input: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "input_text",
+            text: "<chat>\n0+1|old\n</chat>\nInspect this image",
+          },
+          image,
+        ],
+      },
+    ],
+  })
+  expect(result.input).toEqual([
+    {
+      role: "user",
+      content: [{ type: "input_text", text: "<chat>\n0+1|old\n</chat>" }],
+    },
+    {
+      role: "user",
+      content: [{ type: "input_text", text: "\nInspect this image" }, image],
+    },
+  ])
 })
