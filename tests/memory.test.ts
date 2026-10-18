@@ -13,7 +13,8 @@ describe("lossless memory", () => {
     Effect.runSync(memory.append("one", "user", original))
     Effect.runSync(memory.append("one", "user", original))
     expect(Effect.runSync(memory.total())).toBe(1)
-    expect(() => Effect.runSync(memory.render())).toThrow("summarized")
+    expect(Effect.runSync(memory.render())).toContain(original)
+    expect(Effect.runSync(memory.settled())).toBe(false)
     Effect.runSync(memory.saveNode({ start: 0, count: 1 }, "user: clovers"))
     expect(Effect.runSync(memory.zoom(0, 1))).toBe(`0+0|user: ${original}`)
     expect(byteLength("🍀")).toBe(4)
@@ -229,4 +230,38 @@ it("keeps Effects lazy and returns a typed storage error without exposing driver
     operation: "query",
   })
   expect(JSON.stringify(failing)).not.toContain("private driver payload")
+})
+
+it("uses saved summaries alongside pending originals without publishing synthetic summary nodes", () => {
+  const db = database(),
+    memory = Effect.runSync(makeSqliteMemory(db))
+  Effect.runSync(memory.append("older", "user", "Old raw message"))
+  Effect.runSync(memory.saveNode({ start: 0, count: 1 }, "Saved older summary"))
+  Effect.runSync(
+    memory.append("recent", "talk", "Recent exact reply €42.75 🍀")
+  )
+  const before = Effect.runSync(memory.watermark())
+  const rendered = Effect.runSync(memory.render())
+  expect(rendered).toContain("0+1|Saved older summary")
+  expect(rendered).toContain("1+0|talk: Recent exact reply €42.75 🍀")
+  expect(rendered).not.toContain("Old raw message")
+  expect(Effect.runSync(memory.watermark())).toEqual(before)
+  expect(Effect.runSync(Effect.runSync(makeSqliteMemory(db)).render())).toBe(
+    rendered
+  )
+})
+
+it("bounds unsummarized working context, marks omissions and preserves complete originals", () => {
+  const memory = Effect.runSync(makeSqliteMemory(database()))
+  Effect.runSync(memory.append("older", "user", "Old entry"))
+  const original =
+    "Beginning €42.75 🍀 " + "中🍀".repeat(40_000) + " Latest detail"
+  Effect.runSync(memory.append("huge", "echo", original))
+  const rendered = Effect.runSync(memory.render())
+  expect(byteLength(rendered)).toBeLessThanOrEqual(128_000)
+  expect(rendered).toContain("Working context is abbreviated")
+  expect(rendered).toContain("Beginning €42.75 🍀")
+  expect(rendered).toContain("Latest detail")
+  expect(rendered).not.toContain("�")
+  expect(Effect.runSync(memory.zoom(1, 1))).toBe(`1+0|echo: ${original}`)
 })

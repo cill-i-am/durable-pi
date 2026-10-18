@@ -545,7 +545,7 @@ it("sends the pinned independent memory model through the installed Responses ad
   }
 })
 
-it("delivers a ready background report when a later foreground turn fails on blocked memory", async () => {
+it("completes foreground work despite blocked summaries, then delivers a ready background report", async () => {
   const { host, conversations, runtime, db, wakes } = fixture()
   const source = Effect.runSync(
     conversations.admit({
@@ -608,7 +608,6 @@ it("delivers a ready background report when a later foreground turn fails on blo
   f.memory.settled = () => Effect.succeed(false)
   f.memory.blocked = () => Effect.succeed(true)
   f.host.wakeBackground = () => Effect.promise(() => host.stepBackground())
-  f.host.notify = () => Effect.sync(() => host.notifyConversation())
   Object.assign(host, {
     backgroundMailbox: mailbox,
     background: makeBackgroundDelegation(
@@ -666,7 +665,12 @@ it("delivers a ready background report when a later foreground turn fails on blo
     expect(Effect.runSync(mailbox.nextWake())).toBeUndefined()
     await host.step()
     expect(Effect.runSync(conversations.get(foreground.id))?.status).toBe(
-      "failed"
+      "running"
+    )
+    expect(Effect.runSync(mailbox.get(73))?.status).toBe("ready")
+    await host.step()
+    expect(Effect.runSync(conversations.get(foreground.id))?.status).toBe(
+      "done"
     )
     expect(Effect.runSync(mailbox.get(73))?.status).toBe("delivered")
     expect(Effect.runSync(conversations.active())?.origin).toMatchObject({

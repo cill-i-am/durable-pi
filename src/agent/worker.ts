@@ -2670,7 +2670,6 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         conversationNativeOperation("wake background", () =>
           this.backgroundRunner.wake()
         ),
-      notify: () => Effect.sync(() => this.notifyConversation()),
       completed: (turn, failed, recovery) =>
         this.inferenceUsage.totals(turn.id).pipe(
           Effect.flatMap((totals) =>

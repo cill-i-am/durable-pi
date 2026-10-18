@@ -177,6 +177,32 @@ const config :Workerd.Config = (
   console.log(
     "PASS native maintenance: foreground progress during held IO, no overlapping attempts, wake during completion retained, and persisted recovery after SIGKILL."
   )
+  const waitMaintenanceChat = async (predicate) => {
+    for (let attempt = 0; attempt < 100; attempt++) {
+      const state = await call("personal-maintenance/memory-chat-inspect", {})
+      if (predicate(state)) return state
+      await sleep(25)
+    }
+    throw new Error("Native chat waited for background maintenance")
+  }
+  await call("personal-maintenance/memory-chat-start", {})
+  await waitMaintenanceChat(
+    (state) => state.summaryEntered && state.backupEntered
+  )
+  await call("personal-maintenance/memory-chat-send", {})
+  const chatDuringMaintenance = await waitMaintenanceChat(
+    (state) => state.turn?.status === "done"
+  )
+  assert.equal(chatDuringMaintenance.ready, false)
+  assert.equal(chatDuringMaintenance.backupHeld, true)
+  assert.equal(chatDuringMaintenance.turn.answer, "Native actor answer")
+  assert(
+    chatDuringMaintenance.turn.prompt.includes("The exact cost is €42.75 🍀")
+  )
+  await call("personal-maintenance/memory-chat-release", {})
+  console.log(
+    "PASS native chat: production admission, context pinning, Pi reply and turn completion all finish while the summary model and backup IO remain held."
+  )
   const nativeSignIn = await call("personal-chatgpt/chatgpt-native", {})
   assert.deepEqual(nativeSignIn, {
     status: 200,

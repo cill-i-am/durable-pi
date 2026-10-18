@@ -74,7 +74,6 @@ export const conversationFixture = Effect.fn("Test.conversationFixture")(
       wakeCompaction: () => record("compaction"),
       wakeBackup: () => record("backup"),
       wakeBackground: () => record("background"),
-      notify: () => record("notify"),
       completed: (turn) =>
         Effect.sync(() => {
           if (

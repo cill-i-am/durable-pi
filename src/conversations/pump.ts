@@ -26,7 +26,6 @@ export interface ConversationPumpHost<TError, TRequirements = never> {
   wakeCompaction: () => Effect.Effect<void, TError, TRequirements>
   wakeBackup: () => Effect.Effect<void, TError, TRequirements>
   wakeBackground: () => Effect.Effect<void, TError, TRequirements>
-  notify: () => Effect.Effect<void, TError, TRequirements>
   completed: (
     turn: Turn,
     failed: boolean,
@@ -38,10 +37,7 @@ export interface ConversationPumpHost<TError, TRequirements = never> {
  * retains operation IDs; Lifecycle interprets only the next persisted wake. */
 export function conversationPump<TError, TRequirements>(
   conversations: typeof Conversations.Service,
-  memory: Pick<
-    typeof MemoryRepository.Service,
-    "watermark" | "settled" | "blocked" | "retryAt"
-  >,
+  memory: Pick<typeof MemoryRepository.Service, "watermark">,
   journal: typeof ConversationJournal.Service,
   execution: typeof ConversationExecution.Service,
   host: ConversationPumpHost<TError, TRequirements>
@@ -131,30 +127,6 @@ export function conversationPump<TError, TRequirements>(
       return yield* completeTurn(turn, members, reply)
     }
   )
-  const awaitMemory = Effect.fn("Conversations.awaitMemory")(function* (
-    turn: Turn
-  ) {
-    if (yield* memory.settled()) return
-    if (yield* memory.blocked()) {
-      const members = yield* conversations.members(turn.id)
-      const finished = yield* journal.complete(
-        turn,
-        members.map((member) => ({
-          id: member.id,
-          delivery: "unanswered" as const,
-        })),
-        "",
-        "Memory summaries are paused. Open Memory to retry them, then retry this message."
-      )
-      if (finished) {
-        yield* host.wakeBackground()
-        yield* host.notify()
-      }
-      return yield* retry(10)
-    }
-    yield* host.wakeCompaction()
-    return Math.max(yield* retry(750), (yield* memory.retryAt()) ?? 0)
-  })
   return {
     run: Effect.fn("Conversations.pump")(function* () {
       let turn = yield* conversations.active()
@@ -168,8 +140,6 @@ export function conversationPump<TError, TRequirements>(
         return yield* observeActiveTurn(turn)
       }
       if (!canSubmit(yield* current(turn.id))) return yield* retry(10)
-      const memoryRetry = yield* awaitMemory(turn)
-      if (memoryRetry !== undefined) return memoryRetry
       if (!turn.prompt) {
         const prompt = yield* journal.prompt(
           turn.id,

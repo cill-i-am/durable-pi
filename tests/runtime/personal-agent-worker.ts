@@ -1,3 +1,4 @@
+import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context"
 import {
   fauxAssistantMessage,
   fauxProvider,
@@ -159,6 +160,11 @@ export class PersonalAgentProbe extends PersonalAgent {
   private stopEntered = false
   private observationInterrupted = false
   private watchAttached = false
+  private readonly maintenanceBackupProbe: {
+    held: boolean
+    entered: boolean
+    release?: () => void
+  }
   private summaryGate?: Promise<void>
   private releaseSummary?: () => void
   private summaryEntered = false
@@ -206,6 +212,10 @@ export class PersonalAgentProbe extends PersonalAgent {
       string,
       { etag: string; value: string | Uint8Array }
     >()
+    const maintenanceBackup: PersonalAgentProbe["maintenanceBackupProbe"] = {
+      held: false,
+      entered: false,
+    }
     const bucket = {
       get: async (key: string) => {
         const object = objects.get(key)
@@ -254,6 +264,12 @@ export class PersonalAgentProbe extends PersonalAgent {
           onlyIf?: { etagMatches?: string; etagDoesNotMatch?: string }
         }
       ) => {
+        if (maintenanceBackup.held && key.startsWith("memory/")) {
+          maintenanceBackup.entered = true
+          await new Promise<void>((resolve) => {
+            maintenanceBackup.release = resolve
+          })
+        }
         const current = objects.get(key)
         if (
           options?.onlyIf?.etagMatches &&
@@ -432,6 +448,7 @@ export class PersonalAgentProbe extends PersonalAgent {
         },
       },
     } as unknown as AgentEnv)
+    this.maintenanceBackupProbe = maintenanceBackup
     this.externalCalls = calls
     this.fixtureRun(
       "CREATE TABLE IF NOT EXISTS personal_probe_email_sends (body TEXT NOT NULL)"
@@ -2945,6 +2962,68 @@ export class PersonalAgentProbe extends PersonalAgent {
     _request: Request,
     action: string | undefined
   ): Promise<Response | undefined> {
+    if (action?.startsWith("memory-chat-")) {
+      await this.lifecycle.start()
+      if (action === "memory-chat-start") {
+        this.summaryGate = new Promise<void>((resolve) => {
+          this.releaseSummary = resolve
+        })
+        this.maintenanceBackupProbe.held = true
+        await this.actorRuntime.runPromise(
+          this.memory.append(
+            "prior-cost",
+            "user",
+            "The exact cost is €42.75 🍀. " + "Prior context. ".repeat(45)
+          )
+        )
+        await this.compactor.wake()
+        await this.backups.wake()
+      }
+      if (action === "memory-chat-send") {
+        const response = await super.fetch(
+          new Request("https://internal/api/agent/send", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              operationId: "00000000-0000-4000-8000-000000000031",
+              text: "What was the exact cost?",
+            }),
+          })
+        )
+        if (!response.ok)
+          throw new Error(`Native chat admission failed: ${response.status}`)
+        await response.body?.cancel()
+      }
+      if (action === "memory-chat-release") {
+        this.maintenanceBackupProbe.held = false
+        this.maintenanceBackupProbe.release?.()
+        this.releaseSummary?.()
+      }
+      const turn = await this.actorRuntime.runPromise(
+        this.conversations.get("00000000-0000-4000-8000-000000000031")
+      )
+      return Response.json({
+        summaryEntered: this.summaryEntered,
+        backupEntered: this.maintenanceBackupProbe.entered,
+        backupHeld: this.maintenanceBackupProbe.held,
+        ready: await this.actorRuntime.runPromise(this.memory.settled()),
+        turn: turn && {
+          status: turn.status,
+          answer: turn.answer,
+          prompt:
+            turn.prompt ??
+            (turn.session_id
+              ? JSON.stringify(
+                  (
+                    await (
+                      await this.harness.conversation(turn.session_id)
+                    ).entries({}, 256, undefined, BACKGROUND_CONTEXT)
+                  ).items
+                )
+              : null),
+        },
+      })
+    }
     if (action === "memory") {
       const jsonl = JSON.stringify({
         kind: "note",
