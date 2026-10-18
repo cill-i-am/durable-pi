@@ -200,7 +200,7 @@ export const definitions = {
       })
       .strict(),
     description:
-      "Shoppable sourced product cards with budget filtering, price sorting, shortlist and comparison. Use browser/connected tools to research real prices and URLs first; this component does not search or buy.",
+      "Shoppable sourced product cards with budget filtering, price sorting, shortlist and comparison. Use browser/connected tools to research real prices and URLs first; this component does not search or buy. Its comparison matrix already presents the specifications: do not duplicate them in a Markdown table or DataTable.",
   },
   DataTable: {
     props: z
@@ -242,7 +242,7 @@ export const definitions = {
       })
       .strict(),
     description:
-      "Searchable, sortable, paginated table with CSV download. Columns support text, number, currency (supply currency code), percent (fraction), date (ISO), badge and HTTPS link formats. Keep numbers numeric for sorting. Good for expenses, flights, stock, plans or any dataset. Rows use the column keys. Max 200 rows.",
+      "The default for tabular answers instead of Markdown tables, including a simple request to make a table. Searchable, sortable, paginated, with CSV download. Columns support text, number, currency (supply currency code), percent (fraction), date (ISO), badge and HTTPS link formats. Keep numbers numeric for sorting. Good for expenses, flights, stock, plans or any dataset. Rows use the column keys. Max 200 rows. Do not repeat an existing Products, Comparison or Weather card's data here.",
   },
   Comparison: {
     props: z
@@ -269,7 +269,7 @@ export const definitions = {
         "Each criterion needs one value per option"
       ),
     description:
-      "A side-by-side decision matrix and reasoned verdict for products, travel, services or other options.",
+      "A side-by-side decision matrix and reasoned verdict for products, travel, services or other options. This is already the comparison table; follow it with a short interpretation, not a duplicate Markdown table or DataTable.",
   },
   BarChart: {
     props: z

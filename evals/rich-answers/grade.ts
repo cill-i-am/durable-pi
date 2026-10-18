@@ -353,11 +353,7 @@ function caseChecks(
         (calls.some((call) => call.name === "ask_question") ||
           text.includes("?")),
     })
-  if (test.noMarkdownTable)
-    checks.push({
-      name: "no-duplicate-markdown-table",
-      pass: !/^\s*\|?.+\|.+\n\s*\|?\s*:?-{3,}/m.test(text),
-    })
+  checks.push(...presentationChecks(test, cards, text))
   if (test.result !== undefined) {
     checks.push({
       name: "correct-calculation",
@@ -418,6 +414,53 @@ function verifiedCalculations(cards: Card[]) {
   )
 }
 
+function presentationChecks(
+  test: EvalCase,
+  cards: Card[],
+  text: string
+): Check[] {
+  const checks: Check[] = []
+  if (test.markdownSource) {
+    const source =
+      /^(```|~~~)(?:markdown|md|text)?[ \t]*\r?\n([\s\S]*?)\r?\n\1$/i.exec(
+        text.trim()
+      )?.[2]
+    checks.push({
+      name: "requested-markdown-source",
+      pass: source !== undefined && hasMarkdownTable(source),
+    })
+  } else
+    checks.push({
+      name: "no-markdown-table",
+      pass: !hasMarkdownTable(text),
+    })
+  if (test.markdownSource && test.id === "markdown-source")
+    checks.push({
+      name: "exact-markdown-source-records",
+      pass:
+        /\bName\b/i.test(text) &&
+        /\bHours\b/i.test(text) &&
+        /^.*\bAda\b.*\|\s*12\s*\|?\s*$/m.test(text) &&
+        /^.*\bBen\b.*\|\s*8\s*\|?\s*$/m.test(text),
+    })
+  if (test.cards?.includes("Products"))
+    checks.push({
+      name: "no-duplicate-product-table",
+      pass:
+        cards.filter((card) => card.type === "Products").length === 1 &&
+        !cards.some(
+          (card) => card.type === "DataTable" || card.type === "Comparison"
+        ),
+    })
+  return checks
+}
+
+function hasMarkdownTable(text: string) {
+  return /^[ \t]*.*\|.*\r?\n[ \t]*\|?[ \t]*:?-+:?[ \t]*(?:\|[ \t]*:?-+:?[ \t]*)*\|?[ \t]*$/m.test(
+    text
+  )
+}
+
 function richSpecs(outputs: { text: string; at: number }[]) {
   const specs: AnswerSpec[] = []
   const cards: Card[] = []
@@ -448,6 +491,29 @@ function richSpecs(outputs: { text: string; at: number }[]) {
 }
 
 function suppliedDataChecks(id: string, cards: Card[]): Check[] {
+  if (id === "table-default") {
+    const tables = cards
+      .filter((card) => card.type === "DataTable")
+      .map((card) => definitions.DataTable.props.parse(card.props))
+    return [
+      {
+        name: "exact-supplied-records-with-numeric-hours",
+        pass: tables.some(
+          (table) =>
+            table.rows.length === 3 &&
+            [
+              ["Ada", "Design", 12.5],
+              ["Ben", "Engineering", 8],
+              ["Cara", "Design", 16],
+            ].every((expected) =>
+              table.rows.some((row) =>
+                expected.every((value) => Object.values(row).includes(value))
+              )
+            )
+        ),
+      },
+    ]
+  }
   if (id === "products-supplied") {
     const products = cards
       .filter((card) => card.type === "Products")
