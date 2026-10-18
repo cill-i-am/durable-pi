@@ -1,8 +1,14 @@
+import { Schema } from "effect"
 import type { ReactNode } from "react"
 import { renderToStaticMarkup } from "react-dom/server"
 import { expect, it, vi } from "vitest"
 
-import { homeAgentId, type AgentProfile } from "../src/agents/contracts"
+import {
+  AgentList,
+  AgentProfileResponse,
+  homeAgentId,
+  type AgentProfile,
+} from "../src/agents/contracts"
 import { AgentCollection } from "../src/features/agents/agent-collection"
 import { parseAgentId } from "../src/navigation/workspace"
 
@@ -54,4 +60,41 @@ it("offers Archive beside active agents and protects Home from archiving", () =>
   expect(html).toContain('aria-label="Archive Research"')
   expect(html).not.toContain('aria-label="Archive Home"')
   expect(html).toContain(`href="/agents/${agent.slug}"`)
+})
+
+it("keeps ID links usable when a rolling-deploy catalog predates slugs", () => {
+  const { slug: _slug, ...legacy } = agent
+  const decoded = Schema.decodeUnknownSync(AgentList)({ agents: [legacy] })
+  expect(decoded.agents[0]!.slug).toBe(agent.id)
+  expect(Schema.decodeUnknownSync(AgentProfileResponse)(legacy)).toEqual(
+    decoded.agents[0]
+  )
+  const html = renderToStaticMarkup(
+    <AgentCollection
+      agents={[...decoded.agents]}
+      archived={false}
+      query=""
+      onQuery={() => {}}
+      onCreate={() => {}}
+      onArchive={() => {}}
+    />
+  )
+  expect(html).toContain(`href="/agents/${agent.id}"`)
+})
+
+it("retains canonical catalog slugs and rejects malformed supplied slugs", () => {
+  expect(
+    Schema.decodeUnknownSync(AgentList)({ agents: [agent] }).agents[0]!.slug
+  ).toBe("research")
+  for (const slug of [null, "../other-agent", "Uppercase", ""]) {
+    expect(() =>
+      Schema.decodeUnknownSync(AgentList)({ agents: [{ ...agent, slug }] })
+    ).toThrow()
+  }
+  const { slug: _slug, ...legacy } = agent
+  expect(() =>
+    Schema.decodeUnknownSync(AgentList)({
+      agents: [{ ...legacy, id: "../other-agent" }],
+    })
+  ).toThrow()
 })

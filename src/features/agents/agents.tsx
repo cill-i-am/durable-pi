@@ -17,6 +17,7 @@ import { useCallback, useEffect, useReducer, useRef, useState } from "react"
 
 import {
   AgentList,
+  AgentProfileResponse,
   AgentProfile,
   type AgentId,
   homeAgentId,
@@ -458,7 +459,7 @@ export function AgentEditor({
     setPending(true)
     setError("")
     try {
-      const result = Schema.decodeUnknownSync(AgentProfile)(
+      const result = Schema.decodeUnknownSync(AgentProfileResponse)(
         await api(`/api/agent/bots/${agent ? "update" : "create"}`, {
           id: id.current,
           name: name.trim(),
