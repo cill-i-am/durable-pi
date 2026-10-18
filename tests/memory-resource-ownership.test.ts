@@ -10,8 +10,10 @@ import {
 import { expect, it } from "vitest"
 
 import { bucketLayer, type BackupBucket } from "../src/memory/adapters/bucket"
+import { webCryptoLayer } from "../src/memory/adapters/crypto"
 import { exportResponse } from "../src/memory/adapters/http"
 import { makeSqliteMemory } from "../src/memory/adapters/sqlite"
+import { backupMemory } from "../src/memory/backup"
 import { BackupStore } from "../src/memory/backup-store"
 import { MemoryStorageError } from "../src/memory/domain"
 import { MemoryRepository } from "../src/memory/repository"
@@ -362,4 +364,57 @@ it("bucket failures are safe and typed while synchronous callback defects remain
   expect(Exit.isFailure(malformed) && Cause.hasFails(malformed.cause)).toBe(
     false
   )
+})
+
+it("actor shutdown joins both concurrent backup writes and never publishes latest", async () => {
+  const events: string[] = [],
+    checkpointStarted = gate(),
+    snapshotStarted = gate(),
+    checkpoint = gate(),
+    snapshot = gate(),
+    checkpointFinished = gate()
+  const runtime = ManagedRuntime.make(
+    Layer.mergeAll(
+      Layer.succeed(MemoryRepository, memory()),
+      webCryptoLayer,
+      bucketLayer({
+        get: async () => null,
+        put: async (key) => {
+          if (key.endsWith("/progress.json")) {
+            checkpointStarted.release()
+            await checkpoint.waiting
+            events.push("checkpoint.settled")
+            checkpointFinished.release()
+          } else if (key.includes("/snapshots/")) {
+            snapshotStarted.release()
+            await snapshot.waiting
+            events.push("snapshot.settled")
+          } else if (key.endsWith("/latest.json")) events.push("publication")
+          return { etag: "synthetic" }
+        },
+      }),
+      retained(events)
+    )
+  )
+  try {
+    const pending = runtime.runPromiseExit(backupMemory("p"))
+    await Promise.all([checkpointStarted.waiting, snapshotStarted.waiting])
+    const closing = runtime.dispose()
+    checkpoint.release()
+    await checkpointFinished.waiting
+    expect(events).toEqual(["checkpoint.settled"])
+    snapshot.release()
+    await closing
+    const exit = await pending
+    expect(Exit.isFailure(exit) && Cause.hasInterrupts(exit.cause)).toBe(true)
+    expect(events).toEqual([
+      "checkpoint.settled",
+      "snapshot.settled",
+      "layer.closed",
+    ])
+  } finally {
+    checkpoint.release()
+    snapshot.release()
+    await runtime.dispose()
+  }
 })

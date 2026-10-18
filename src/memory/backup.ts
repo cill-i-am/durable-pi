@@ -85,16 +85,24 @@ export const backupMemory = Effect.fn("Memory.backup")(function* (
     parts: complete ? parts : (prior?.parts ?? []),
     date: new Date(yield* Clock.currentTimeMillis).toISOString(),
   }
-  yield* bucket.put(
+  const checkpoint = bucket.put(
     `${prefix}/progress.json`,
     JSON.stringify(manifest),
     object ? { etag: object.etag } : { absent: true }
   )
   if (complete) {
     const data = JSON.stringify(manifest)
-    yield* bucket.put(`${prefix}/snapshots/${yield* sha256(data)}.json`, data)
+    // Both writes depend on the uploaded batches. Publish latest only once
+    // the conditional checkpoint and immutable snapshot have both succeeded.
+    yield* Effect.all(
+      [
+        checkpoint,
+        bucket.put(`${prefix}/snapshots/${yield* sha256(data)}.json`, data),
+      ],
+      { concurrency: 2 }
+    )
     yield* bucket.put(`${prefix}/latest.json`, data)
-  }
+  } else yield* checkpoint
   return { pending: !complete, date: manifest.date }
 })
 
