@@ -16,6 +16,7 @@ import {
   weatherWindow,
   weatherRequestSchema,
 } from "../../src/rich-results/weather"
+import { adaptiveDataChecks, cardChecks } from "./card-checks"
 import type { EvalCase } from "./cases"
 
 const toolCall = z.object({
@@ -87,6 +88,22 @@ export function grade(
     )
   checks.push(...caseChecks(test, calls, cards, text))
   checks.push(...suppliedDataChecks(test.id, cards))
+  checks.push(
+    ...cardChecks(test, cards, text),
+    ...adaptiveDataChecks(test.id, cards)
+  )
+  if (test.suppliedOnly)
+    checks.push({
+      name: "no-unrequested-research",
+      pass: !calls.some((call) =>
+        /^(lookup_|search_products$|browser_)/.test(call.name)
+      ),
+    })
+  if (test.id === "calculation-scenarios")
+    checks.push({
+      name: "server-computed-calculation",
+      pass: verifiedCalculations(cards),
+    })
   if (test.weather)
     checks.push(...weatherChecks(test.weather, start.date, calls, cards, ui))
   if (test.research) checks.push(...shoppingChecks(rows, calls, cards))
@@ -371,27 +388,7 @@ function caseChecks(
       pass: verifiedCalculations(cards),
     })
   }
-  if (test.id === "expenses") {
-    const tables = cards
-      .filter((card) => card.type === "DataTable")
-      .map((card) => definitions.DataTable.props.parse(card.props))
-    checks.push({
-      name: "exact-category-totals",
-      pass: tables.some(
-        (table) =>
-          table.rows.some(
-            (row) =>
-              Object.values(row).includes("Food") &&
-              Object.values(row).includes(20)
-          ) &&
-          table.rows.some(
-            (row) =>
-              Object.values(row).includes("Travel") &&
-              Object.values(row).includes(5)
-          )
-      ),
-    })
-  }
+
   return checks
 }
 
@@ -549,6 +546,26 @@ function suppliedDataChecks(id: string, cards: Card[]): Check[] {
       .filter((card) => card.type === "BarChart")
       .map((card) => definitions.BarChart.props.parse(card.props))
     return [
+      {
+        name: "exact-supplied-expense-rows",
+        pass: cards
+          .filter((card) => card.type === "DataTable")
+          .some((card) => {
+            const rows = definitions.DataTable.props.parse(card.props).rows
+            return (
+              rows.length === 3 &&
+              [
+                ["Food", 12.5],
+                ["Travel", 5],
+                ["Food", 7.5],
+              ].every((expected) =>
+                rows.some((row) =>
+                  expected.every((value) => Object.values(row).includes(value))
+                )
+              )
+            )
+          }),
+      },
       {
         name: "exact-chart-totals",
         pass: charts.some(

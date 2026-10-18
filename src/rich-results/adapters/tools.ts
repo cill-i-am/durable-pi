@@ -71,7 +71,7 @@ export function richResultTools() {
     defineTool({
       name: "show_brief",
       description:
-        "Compose a day brief or a multi-part answer from two to eight sourced cards in an editorial layout. Use weather, places, timeline, calculation, products, comparisons, charts, tables or clarification cards. Embedded Calculation expressions are recomputed on the server, including canonical unit conversions such as '350 F' to unit 'C'; result is overwritten. A separate calculate call is unnecessary for an embedded calculation. Each card keeps its own source/date. Gather facts first. Plans must be labelled proposed; this creates a saved answer, not a scheduled task.",
+        "Compose two to eight distinct connected needs into a multi-part answer using sourced cards in an editorial layout. Use weather, places, timeline, calculation, products, comparisons, charts, tables or clarification cards. Embedded Calculation expressions are recomputed on the server, including canonical unit conversions such as '350 F' to unit 'C'; result is overwritten. A separate calculate call is unnecessary for an embedded calculation. Each card keeps its own source/date. Gather facts first; do not emit the same cards separately and again inside a brief. A single task needs its own card. Keep the brief summary interpretive, without replaying child data. Plans must be labelled proposed; this creates a saved answer, not a scheduled task.",
       parameters: Type.Unsafe<z.infer<typeof briefInput>>(
         z.toJSONSchema(briefInput)
       ),
@@ -81,7 +81,7 @@ export function richResultTools() {
     defineTool({
       name: "ask_question",
       description:
-        "Present one clarification question with two to seven choices and a free-text answer. Set multiple for a multi-select question. The user can add their answer to the composer and review it before sending. This does not pause a workflow, send a message or grant approval. Stop and wait for their reply before doing dependent work.",
+        "Present one clarification question with two to seven choices and a free-text answer. Set multiple=true for independent priorities and false for mutually exclusive choices. Ask only when a missing choice blocks progress or the user requests choices; do not repeat options in prose. The user can add their answer to the composer and review it before sending. This does not pause a workflow, send a message or grant approval. Stop and wait for their reply before doing dependent work.",
       parameters: Type.Unsafe<AnswerProps<"Question">>(
         z.toJSONSchema(definitions.Question.props)
       ),
@@ -101,7 +101,7 @@ export function richResultTools() {
     defineTool({
       name: "analyze_data",
       description:
-        "Present supplied tabular data with sorting, faceted filters and CSV export, and deterministically group rows by a column using sum, average or count. Supply valueKey for sum/average (empty for count). Returns the original table and grouped totals, plus a bar chart when all totals are nonnegative. Max 200 rows/20 groups/28000 characters. No currency or unit conversion. Missing/nonnumeric amounts must be resolved first. These tables are the answer; do not duplicate their rows in Markdown tables. Add only a short interpretation.",
+        "Present supplied tabular data with sorting, faceted filters and CSV export, and deterministically group rows by a column using sum, average or count. Supply valueKey for sum/average (empty for count). Use views to match the question: data for original rows, summary for a grouped table, chart for grouped bars. Choose only requested views; do not add source rows or a table to a chart-only request. Omit views for the legacy full analysis. Explicit chart requests require nonempty nonnegative totals; use summary for signed values. Max 200 rows/20 groups/28000 characters. No currency or unit conversion. Missing/nonnumeric amounts must be resolved first. The selected views are the answer; do not duplicate rows or chart values in prose, Markdown or another rich result. Add only a short interpretation.",
       parameters: Type.Unsafe<z.infer<typeof analysisInput>>(
         z.toJSONSchema(analysisInput)
       ),
@@ -111,7 +111,7 @@ export function richResultTools() {
     defineTool({
       name: "lookup_route",
       description:
-        "Retrieve an OSRM driving route through two to eight sourced stops, with an interactive multi-pin map, route overlay, distance and duration estimate. Resolve coordinates with lookup_places first. Coordinates are sent to OSRM's public service. Driving only; no walking, public transport or live traffic claims. No route optimization or bookings.",
+        "Retrieve an OSRM driving route through two to eight sourced stops, with an interactive multi-pin map, route overlay, distance and duration estimate. Use sourced coordinates, resolving with lookup_places when needed. Preserve exactly the requested stop order; do not add sightseeing stops. The card already shows stops, distance and duration; do not repeat them as a prose itinerary. Coordinates are sent to OSRM's public service. Driving only; no walking, public transport or live traffic claims. No route optimization or bookings.",
       parameters: Type.Object({
         title: Type.String({ minLength: 1, maxLength: 200 }),
         stops: Type.Unsafe<AnswerProps<"Route">["stops"]>(
@@ -125,7 +125,7 @@ export function richResultTools() {
     defineTool({
       name: "show_ui",
       description:
-        "Show interactive answers inline: shopping, comparison, rich tables, charts, timelines, weather, maps, routes, calculations or questions. DataTable is the default for tabular answers, including a simple request to make a table; keep numeric values numeric. Prefer a dedicated Products, Comparison or Weather card when it fits, and do not duplicate that card in another table. Do not follow rich results with Markdown tables; add a short interpretation instead. Use Brief for an editorial multi-card layout, Stack for a simple group. Research current facts with browser/connected tools first, or use supplied data. Cite a real source and date; label proposed plans/example data. Never invent prices, availability, links or coordinates. This only presents data; no search, purchase, booking or external changes. Use a flat json-render spec {root, elements}; each element has type, props and children. Only Stack and Brief accept children. No actions, bindings, HTML or code. Max 28,000 characters/24 elements.",
+        "Show interactive answers inline: shopping, comparison, rich tables, charts, timelines, weather, maps, routes, calculations or questions. DataTable is the default for tabular answers, including a simple request to make a table; keep numeric values numeric. Choose the smallest fitting card: Calculation for arithmetic, Places for locations, Route for a driving journey, Products for offers, Comparison for alternatives, Timeline for ordered events, BarChart for nonnegative magnitudes, Question for a necessary choice. Match requested counts and relevant criteria; do not pad a single task into a Brief or repeat a card in another table. Do not follow rich results with Markdown tables; add a short interpretation instead. Use Brief for an editorial multi-card layout, Stack for a simple group. Research current facts with browser/connected tools first, or use supplied data. Cite a real source and date; label proposed plans/example data. Never invent prices, availability, links or coordinates. This only presents data; no search, purchase, booking or external changes. Use a flat json-render spec {root, elements}; each element has type, props and children. Only Stack and Brief accept children. No actions, bindings, HTML or code. Max 28,000 characters/24 elements.",
       parameters: Type.Object({
         spec: Type.Unsafe<AnswerSpec>({
           ...specSchema,
@@ -171,7 +171,7 @@ export function richResultTools() {
     defineTool({
       name: "calculate",
       description:
-        "Calculate arithmetic deterministically and show an inline result. Supports numbers, parentheses, + - * / ^ and postfix % (20% means 0.2). No functions or variables. Good for discounts, split bills, recipe scaling and budget scenarios. Does not retrieve exchange rates or financial terms.",
+        "Calculate arithmetic deterministically and show an inline result. Supports numbers, parentheses, + - * / ^ and postfix % (20% means 0.2). No functions or variables. The card is the numerical answer: do not replay the expression and result in a prose walkthrough. Use show_brief/show_ui for different scenario calculations in one presentation. Good for discounts, split bills, recipe scaling and budget scenarios. Does not retrieve exchange rates or financial terms.",
       parameters: Type.Object({
         expression: Type.String({ minLength: 1, maxLength: 300 }),
         title: Type.String({ minLength: 1, maxLength: 200 }),
@@ -191,7 +191,7 @@ export function richResultTools() {
     }),
     defineTool({
       name: "convert_units",
-      description: `Convert compatible measurements and show the result. Supported units: ${unitNames.join(", ")}. oz is mass, ml/l are volume. No ingredient density, currency, or ambiguous cups/gallons.`,
+      description: `Convert compatible measurements and show the result. Supported units: ${unitNames.join(", ")}. oz is mass, ml/l are volume. The card is the answer; add only a useful practical caveat, not repeated conversion steps. No ingredient density, currency, or ambiguous cups/gallons.`,
       parameters: Type.Object({
         value: Type.Number(),
         from: Type.String(),

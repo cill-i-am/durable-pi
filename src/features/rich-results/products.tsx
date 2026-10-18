@@ -1,5 +1,5 @@
 import { Bookmark, ExternalLink, ShoppingBag } from "lucide-react"
-import { useContext, useMemo, useState } from "react"
+import { useContext, useMemo, useState, type ReactNode } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button, buttonVariants } from "@/components/ui/button"
@@ -99,6 +99,17 @@ export function ProductsCard(props: AnswerProps<"Products">) {
       ),
     })),
   ]
+  if (props.products.length === 1)
+    return (
+      <ResultCard title={props.title} provenance={props}>
+        <div className="flex flex-col gap-3">
+          <ProductOffer product={props.products[0]!} />
+          <p className="text-xs text-muted-foreground">
+            Confirm price, delivery and availability with the retailer.
+          </p>
+        </div>
+      </ResultCard>
+    )
   return (
     <ResultCard
       title={props.title}
@@ -298,45 +309,10 @@ export function ProductsCard(props: AnswerProps<"Products">) {
               </div>
               <div className="grid gap-3 @lg:grid-cols-2 @4xl:grid-cols-3">
                 {visible.map((product) => (
-                  <Card key={product.id} size="sm">
-                    {product.imageUrl && (
-                      <img
-                        src={product.imageUrl}
-                        alt={product.name}
-                        loading="lazy"
-                        referrerPolicy="no-referrer"
-                        className="aspect-[4/3] w-full object-contain"
-                      />
-                    )}
-                    <CardHeader>
-                      <CardTitle>{product.name}</CardTitle>
-                      <CardDescription>{product.merchant}</CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex flex-col gap-3">
-                      <p className="text-xl font-medium tabular-nums">
-                        {money(product.price, product.currency)}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {product.detail}
-                      </p>
-                      <Badge variant="outline" className="w-fit">
-                        {product.availability}
-                      </Badge>
-                      <dl className="flex flex-col gap-2">
-                        {product.specs.map((spec, index) => (
-                          <div
-                            className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2 text-xs"
-                            key={index}
-                          >
-                            <dt className="text-muted-foreground">
-                              {spec.label}
-                            </dt>
-                            <dd className="text-right">{spec.value}</dd>
-                          </div>
-                        ))}
-                      </dl>
-                    </CardContent>
-                    <CardFooter className="flex-wrap justify-between gap-2">
+                  <ProductOffer
+                    key={product.id}
+                    product={product}
+                    shortlist={
                       <Button
                         variant={
                           selected.includes(product.id) ? "secondary" : "ghost"
@@ -358,20 +334,8 @@ export function ProductsCard(props: AnswerProps<"Products">) {
                         <Bookmark data-icon="inline-start" />
                         {selected.includes(product.id) ? "Saved" : "Shortlist"}
                       </Button>
-                      <a
-                        href={product.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={buttonVariants({
-                          variant: "outline",
-                          size: "sm",
-                        })}
-                      >
-                        View retailer
-                        <ExternalLink data-icon="inline-end" />
-                      </a>
-                    </CardFooter>
-                  </Card>
+                    }
+                  />
                 ))}
               </div>
               {!visible.length && (
@@ -396,5 +360,66 @@ export function ProductsCard(props: AnswerProps<"Products">) {
         </div>
       </AnswerWorkspace>
     </ResultCard>
+  )
+}
+
+function ProductOffer({
+  product,
+  shortlist,
+}: {
+  product: AnswerProps<"Products">["products"][number]
+  shortlist?: ReactNode
+}) {
+  return (
+    <Card size="sm">
+      {product.imageUrl && (
+        <img
+          src={product.imageUrl}
+          alt={product.name}
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          className="aspect-[4/3] w-full object-contain"
+        />
+      )}
+      <CardHeader>
+        <CardTitle>{product.name}</CardTitle>
+        <CardDescription>{product.merchant}</CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        <p className="text-xl font-medium tabular-nums">
+          {money(product.price, product.currency)}
+        </p>
+        <p className="text-sm text-muted-foreground">{product.detail}</p>
+        <Badge variant="outline" className="w-fit">
+          {product.availability}
+        </Badge>
+        <dl className="flex flex-col gap-2">
+          {product.specs.map((spec, index) => (
+            <div
+              className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2 text-xs"
+              key={index}
+            >
+              <dt className="text-muted-foreground">{spec.label}</dt>
+              <dd className="text-right">{spec.value}</dd>
+            </div>
+          ))}
+        </dl>
+      </CardContent>
+      <CardFooter className="flex-wrap justify-between gap-2">
+        {shortlist}
+        <a
+          href={product.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={buttonVariants({
+            variant: "outline",
+            size: "sm",
+          })}
+        >
+          View retailer
+          <ExternalLink data-icon="inline-end" />
+        </a>
+      </CardFooter>
+    </Card>
   )
 }

@@ -109,7 +109,11 @@ export function PlacesCard(props: AnswerProps<"Places">) {
   return (
     <ResultCard
       title={props.title}
-      description={`${props.places.length} ${props.places.length === 1 ? "place" : "places"} · Select a place to view its map`}
+      description={
+        props.places.length === 1
+          ? "Address and map"
+          : `${props.places.length} places · Select a place to view its map`
+      }
       action={<MapPin className="size-5 text-primary" aria-hidden="true" />}
       provenance={props}
     >
@@ -122,25 +126,32 @@ export function PlacesCard(props: AnswerProps<"Places">) {
         <p className="text-xs text-muted-foreground">
           Map data © OpenStreetMap contributors
         </p>
-        <div className="flex flex-col gap-2" role="group" aria-label="Places">
-          {props.places.map((item, index) => (
-            <Button
-              className="h-auto justify-start py-2 text-left whitespace-normal"
-              key={`${item.latitude}:${item.longitude}:${index}`}
-              variant={index === selected ? "secondary" : "ghost"}
-              aria-pressed={index === selected}
-              onClick={() => setSelected(index)}
-            >
-              <MapPin data-icon="inline-start" />
-              <span className="flex min-w-0 flex-col gap-1">
-                <span>{item.name}</span>
-                <span className="text-xs font-normal text-muted-foreground">
-                  {item.address}
+        {props.places.length === 1 ? (
+          <address className="flex flex-col gap-1 text-sm not-italic">
+            <span>{place.name}</span>
+            <span className="text-muted-foreground">{place.address}</span>
+          </address>
+        ) : (
+          <div className="flex flex-col gap-2" role="group" aria-label="Places">
+            {props.places.map((item, index) => (
+              <Button
+                className="h-auto justify-start py-2 text-left whitespace-normal"
+                key={`${item.latitude}:${item.longitude}:${index}`}
+                variant={index === selected ? "secondary" : "ghost"}
+                aria-pressed={index === selected}
+                onClick={() => setSelected(index)}
+              >
+                <MapPin data-icon="inline-start" />
+                <span className="flex min-w-0 flex-col gap-1">
+                  <span>{item.name}</span>
+                  <span className="text-xs font-normal text-muted-foreground">
+                    {item.address}
+                  </span>
                 </span>
-              </span>
-            </Button>
-          ))}
-        </div>
+              </Button>
+            ))}
+          </div>
+        )}
         <a
           href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${place.latitude},${place.longitude}`)}`}
           target="_blank"

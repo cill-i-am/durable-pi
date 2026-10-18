@@ -13,6 +13,7 @@ import { richResultTools } from "../src/rich-results/adapters/tools"
 import { calculate, convertUnits } from "../src/rich-results/calculation"
 import {
   answerResult,
+  definitions,
   parseAnswerResult,
   validateAnswerSpec,
 } from "../src/rich-results/catalog"
@@ -173,6 +174,51 @@ describe("bounded json-render results", () => {
     expect(csv).toContain('"-2"')
     expect(csv).toContain('"A, ""B"""')
     expect(csv.split("\r\n")).toHaveLength(3)
+  })
+  it("keeps a single offer focused and retains collection controls for multiple offers", () => {
+    const example = answerExamples.find((item) => item.id === "shopping")!
+    const props = definitions.Products.props.parse(
+      example.result.spec.elements.answer!.props
+    )
+    const html = renderToStaticMarkup(
+      <RichResult
+        output={JSON.stringify(
+          answerResult("Products", {
+            ...props,
+            products: props.products.slice(0, 1),
+          })
+        )}
+      />
+    )
+    expect(html).toContain("Everyday wireless")
+    expect(html).toContain("View retailer")
+    expect(html).not.toContain("Search products")
+    expect(html).not.toContain("Product view")
+    expect(html).not.toContain("Shortlist")
+    const collection = renderToStaticMarkup(
+      <RichResult output={example.output} />
+    )
+    expect(collection).toContain("Search products")
+    expect(collection).toContain("Product view")
+  })
+  it("shows an address directly for one place and selection controls for a map shortlist", () => {
+    const example = answerExamples.find((item) => item.id === "places")!
+    const props = definitions.Places.props.parse(
+      example.result.spec.elements.answer!.props
+    )
+    const html = renderToStaticMarkup(
+      <RichResult
+        output={JSON.stringify(
+          answerResult("Places", { ...props, places: props.places.slice(0, 1) })
+        )}
+      />
+    )
+    expect(html).toContain("<address")
+    expect(html).toContain("Merrion Square West")
+    expect(html).not.toContain("Select a place")
+    expect(
+      renderToStaticMarkup(<RichResult output={example.output} />)
+    ).toContain('aria-label="Places"')
   })
   it("shows user-provided data without inventing a public source URL", () => {
     const output = JSON.stringify(

@@ -88,6 +88,18 @@ export const analysisInput = z
     groupBy: z.string().min(1).max(40),
     valueKey: z.string().max(40),
     operation: z.enum(["sum", "average", "count"]),
+    views: z
+      .array(z.enum(["data", "summary", "chart"]))
+      .min(1)
+      .max(3)
+      .refine(
+        (views) => new Set(views).size === views.length,
+        "Use unique views"
+      )
+      .optional()
+      .describe(
+        "Return only the views the question needs. data = original rows, summary = grouped table, chart = grouped bars. Omit for all available views."
+      ),
   })
   .strict()
 
@@ -112,7 +124,8 @@ function aggregationFormat(
 }
 
 export function analyzeData(input: z.infer<typeof analysisInput>) {
-  const { table, groupBy, valueKey, operation } = analysisInput.parse(input)
+  const { table, groupBy, valueKey, operation, views } =
+    analysisInput.parse(input)
   const groupColumn = table.columns.find((column) => column.key === groupBy)
   if (!groupColumn) throw new Error("The group column is missing")
   const valueColumn = table.columns.find((column) => column.key === valueKey)
@@ -156,6 +169,11 @@ export function analyzeData(input: z.infer<typeof analysisInput>) {
     asOf: table.asOf,
   }
   const chart = values.length > 0 && values.every((item) => item.value >= 0)
+  if (views?.includes("chart") && !chart)
+    throw new Error(
+      "Bar charts need nonempty, nonnegative totals. Request a summary table instead."
+    )
+  const selected = views ?? ["data", "summary", ...(chart ? ["chart"] : [])]
   return {
     kind: "rich-result" as const,
     version: 1 as const,
@@ -165,11 +183,15 @@ export function analyzeData(input: z.infer<typeof analysisInput>) {
         analysis: {
           type: "Stack",
           props: {},
-          children: ["data", "summary", ...(chart ? ["chart"] : [])],
+          children: selected,
         },
-        data: { type: "DataTable", props: table, children: [] },
-        summary: { type: "DataTable", props: summary, children: [] },
-        ...(chart
+        ...(selected.includes("data")
+          ? { data: { type: "DataTable", props: table, children: [] } }
+          : {}),
+        ...(selected.includes("summary")
+          ? { summary: { type: "DataTable", props: summary, children: [] } }
+          : {}),
+        ...(selected.includes("chart")
           ? {
               chart: {
                 type: "BarChart",
