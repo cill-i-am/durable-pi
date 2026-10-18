@@ -16,7 +16,7 @@ TanStack Start’s file routes own page and resource identity. `src/navigation/w
 
 Panels are Browser, Terminal, Files, Apps, Activity, Checklists, Memory, Code and Routines. A selected app, file, checklist, command, execution result, routine, plan or activity record belongs in the resource path. Browser and Memory currently have no independent saved-detail screen. Source disclosure and tree expansion inside Memory remain local interactions.
 
-`/` is a bootstrap location that replaces itself with the last owned active agent. `/agents/$agentId/settings` redirects to General. A valid unknown bot or missing resource remains unavailable at its requested location; it does not substitute another bot. Opening an archived agent reads its history. Restore is a separate operation.
+`/` is a bootstrap location that replaces itself with the last owned active agent. `/agents/$agentId/settings` redirects to General. A valid unknown bot or missing resource remains unavailable at its requested location; it does not substitute another bot. Opening a link to an archived agent replaces that location with `/agents/archived`. Restore is a separate operation.
 
 ## Search state
 
@@ -28,6 +28,10 @@ Use `workspaceDestination` with native TanStack `Link` for ordinary navigation. 
 
 Menus, attachment pickers, disclosure panels and archive confirmations remain transient. Navigation never confirms a mutation or grants tool access. A link is shareable as navigation, while the server still requires the owner’s authenticated session and enforces bot/resource ownership. Reset credentials remain in their existing private fragment flow and are excluded from workspace return URLs.
 
+Confirming an archive navigates to `/agents/archived` after the mutation succeeds, clearing the previous screen's query parameters. Both collections offer a direct Home link and render as standalone management lists, without workspace commands, an agent sidebar, or a workbench. Active agents have an Archive action on the right (except Home); archived agents have Restore and do not link to a workspace.
+
+Selecting an active agent from command search opens its conversation, including when that agent already has a workbench open.
+
 ## Overlay ownership
 
 Base UI owns drawer lifecycle, gestures and focus. When Settings opens above the workbench, the workbench yields modal focus ownership. When Security opens, Settings yields it to Security. This prevents a parent from hiding its child when the viewport crosses the mobile breakpoint. The single primitive tree retains its mounted content.
@@ -35,5 +39,7 @@ Base UI owns drawer lifecycle, gestures and focus. When Settings opens above the
 ## References and verification
 
 Follow [TanStack file-based routing](https://tanstack.com/router/latest/docs/routing/file-based-routing), [search parameters](https://tanstack.com/router/latest/docs/guide/search-params), and [navigation blocking](https://tanstack.com/router/latest/docs/guide/navigation-blocking). `tests/workspace-url.test.ts` covers Schema validation, auth return sanitization, native matching and memory-history restoration. Local browser checks cover the actual route components, reloads, Back/Forward, dirty guards and mobile nesting. Hosted release evidence belongs in BUILD.md.
+
+The desktop tool picker opens below its trigger to keep its first choices visible. Local browser audits use actual route definitions and components with synthetic API responses; they verify navigation, not live provider operations or deployment. `tests/workspace-navigation.test.tsx` and `tests/agent-collection.test.tsx` enforce the management-list boundary, archive/restore actions, and returning to the current agent's conversation.
 
 The [XState–Effect skill PR](https://github.com/cill-i-am/skills/pull/12) was read for this work. Its selection rule applies: keep routing and overlay lifecycle with their existing owners rather than introduce a competing machine. No XState package was added or upgraded. For a future workflow that benefits from a statechart, use the official Effect integration and verify its installed version first.

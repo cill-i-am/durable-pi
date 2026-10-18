@@ -138,7 +138,11 @@ export function WorkbenchPanel({
                       <selected.icon aria-hidden="true" />
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent mobileTitle="Workbench tools">
+                    <SelectContent
+                      mobileTitle="Workbench tools"
+                      alignItemWithTrigger={false}
+                      align="start"
+                    >
                       <SelectGroup>
                         {tools.map((tool) => (
                           <SelectItem key={tool.id} value={tool.id}>

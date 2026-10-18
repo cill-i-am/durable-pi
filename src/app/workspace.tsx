@@ -116,6 +116,7 @@ function Workspace({
   const catalog = useAgentCatalog(ownerId, location.agentId)
   const {
     collection,
+    archived,
     securityOpen,
     settings,
     workbench,
@@ -132,7 +133,10 @@ function Workspace({
   const setSettings = location.setSettings
   const navigationLocked = workLocked || settingsPending
   const setWorkbench = location.setPanel
-  const { openAgent } = location
+  const { openAgent, agentId, openArchivedAgents } = location
+  useEffect(() => {
+    if (agentId && archived) void openArchivedAgents(true)
+  }, [agentId, archived, openArchivedAgents])
   useEffect(() => {
     if (location.pathname === "/" && !catalog.loading && catalog.selected) {
       openAgent(
@@ -163,7 +167,7 @@ function Workspace({
   function selectAgent(id: AgentProfile["id"], panel?: Workbench) {
     if (navigationLocked) return
     catalog.select(id)
-    if (id !== location.agentId || panel) location.openAgent(id, { panel })
+    location.openAgent(id, { panel })
   }
   const savedEditor = useRef<AgentProfile["id"] | null>(null)
   function setEditor(value: { agent?: AgentProfile; key: string } | null) {
@@ -187,9 +191,13 @@ function Workspace({
     if (!navigationLocked && !editor && !archiveTarget)
       setNavigationBlocked(false)
   }, [navigationLocked, editor, archiveTarget])
-  async function updateArchive(agent: AgentProfile, archived: boolean) {
-    await api("/api/agent/bots/archive", { id: agent.id, archived })
+  async function updateArchive(agent: AgentProfile, shouldArchive: boolean) {
+    await api("/api/agent/bots/archive", {
+      id: agent.id,
+      archived: shouldArchive,
+    })
     setError("")
+    if (shouldArchive) await location.openArchivedAgents()
     await catalog.refresh().catch(() => {
       setError(
         "Agent updated, but the list could not refresh. Try refreshing it."
@@ -257,42 +265,43 @@ function Workspace({
           } as React.CSSProperties
         }
       >
-        <WorkspaceNavigation
-          name={name}
-          image={image}
-          agents={catalog.agents}
-          selected={catalog.selected}
-          locked={navigationLocked}
-          workbench={workbench}
-          onAction={act}
-          onSelect={selectAgent}
-        />
-        <div className="workspace-body">
-          <AgentSidebar
-            view={location.search}
-            query={location.search.q ?? ""}
-            onQuery={location.setQuery}
-            archived={
-              location.pathname === "/agents/archived" ||
-              catalog.selected?.status === "archived"
-            }
-            disabled={navigationLocked}
-            agents={catalog.agents}
-            statuses={runtime.statuses}
-            selected={catalog.selected}
+        {!collection && (
+          <WorkspaceNavigation
             name={name}
             image={image}
-            onSettings={() => act("settings")}
-            onActivity={() => act("activity")}
-            onMemory={() => act("memory")}
-            onCreate={() => {
-              if (!navigationLocked) setEditor({ key: crypto.randomUUID() })
-            }}
-            onEdit={(agent) => {
-              if (!navigationLocked) setEditor({ key: agent.id, agent })
-            }}
-            onArchive={(agent) => void archive(agent)}
+            agents={catalog.agents}
+            selected={catalog.selected}
+            locked={navigationLocked}
+            workbench={workbench}
+            onAction={act}
+            onSelect={selectAgent}
           />
+        )}
+        <div className="workspace-body">
+          {!collection && (
+            <AgentSidebar
+              view={location.search}
+              query={location.search.q ?? ""}
+              onQuery={location.setQuery}
+              archived={false}
+              disabled={navigationLocked}
+              agents={catalog.agents}
+              statuses={runtime.statuses}
+              selected={catalog.selected}
+              name={name}
+              image={image}
+              onSettings={() => act("settings")}
+              onActivity={() => act("activity")}
+              onMemory={() => act("memory")}
+              onCreate={() => {
+                if (!navigationLocked) setEditor({ key: crypto.randomUUID() })
+              }}
+              onEdit={(agent) => {
+                if (!navigationLocked) setEditor({ key: agent.id, agent })
+              }}
+              onArchive={(agent) => void archive(agent)}
+            />
+          )}
           <main id="main-content" tabIndex={-1} className="workspace-main">
             {navigationBlocked && (
               <Alert>
@@ -324,11 +333,11 @@ function Workspace({
             {collection ? (
               <AgentCollection
                 agents={catalog.agents}
-                archived={location.pathname === "/agents/archived"}
+                archived={archived}
                 query={location.search.q ?? ""}
                 onQuery={location.setQuery}
                 onCreate={() => act("create")}
-                onRestore={(agent) => void archive(agent)}
+                onArchive={(agent) => void archive(agent)}
               />
             ) : catalog.selected ? (
               <AgentWorkspace
@@ -656,15 +665,18 @@ function workspaceRoute(
   location: ReturnType<typeof useWorkspaceLocation>,
   selected: AgentProfile | null | undefined
 ) {
-  const collection = ["/agents", "/agents/archived"].includes(location.pathname)
+  const archived =
+    location.pathname === "/agents/archived" || selected?.status === "archived"
+  const collection = location.pathname === "/agents" || archived
   const editor =
     location.pathname === "/agents/new"
       ? { key: "new", agent: undefined }
-      : location.pathname.endsWith("/edit") && selected
+      : location.pathname.endsWith("/edit") && selected && !archived
         ? { key: selected.id, agent: selected }
         : null
   return {
     collection,
+    archived,
     editor,
     securityOpen: location.search.security ?? false,
     settings:
