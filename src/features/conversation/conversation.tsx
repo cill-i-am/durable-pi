@@ -55,7 +55,7 @@ import {
   InputGroupAddon,
   InputGroupButton,
 } from "@/components/ui/input-group"
-import { Message, MessageContent, MessageFooter } from "@/components/ui/message"
+import { Message, MessageContent } from "@/components/ui/message"
 import {
   MessageScrollerProvider,
   MessageScroller,
@@ -88,6 +88,7 @@ import { submissionAttempt, rejectedModelAttempt } from "./commands"
 import { useMessageDeliveryDefault } from "./delivery-preference"
 import { ModelMenu } from "./model-menu"
 import { QueuedTurnAnchor } from "./queued-turn-anchor"
+import { TurnDelivery } from "./turn-delivery"
 import { TurnReply } from "./turn-reply"
 import type { useConversation } from "./use-conversation"
 
@@ -351,129 +352,110 @@ export function Conversation({
                   </Empty>
                 </MessageScrollerItem>
               ) : (
-                state.turns.flatMap((turn) => [
-                  <MessageScrollerItem
-                    key={`${turn.id}:user`}
-                    messageId={`${turn.id}:user`}
-                    scrollAnchor={turn.status !== "queued"}
-                  >
-                    <Message
-                      align={turn.origin ? "start" : "end"}
-                      className={
-                        turn.origin ? "background-message" : "owner-message"
-                      }
-                      data-queued={turn.status === "queued"}
-                    >
-                      <MessageContent>
-                        <Bubble
-                          align={turn.origin ? "start" : "end"}
-                          variant={turn.origin ? "muted" : "secondary"}
-                        >
-                          <BubbleContent className="message-text">
-                            {turn.origin
-                              ? turn.origin.kind === "email"
-                                ? `Email · ${turn.text}`
-                                : turn.origin.kind === "whatsapp"
-                                  ? `WhatsApp · ${turn.text}`
-                                  : turn.origin.kind === "communication"
-                                    ? "Bot task result"
-                                    : `Background findings · group ${turn.origin.groupId}`
-                              : turn.text}
-                            <FileAttachments
-                              files={turn.attachments ?? []}
-                              agentId={agent.id}
-                            />
-                            <MessageFooter
-                              className={
-                                turn.status === "queued"
-                                  ? undefined
-                                  : "message-timestamp"
-                              }
-                            >
-                              {turn.status === "queued"
-                                ? "Queued"
-                                : new Date(turn.created_at).toLocaleTimeString(
-                                    [],
-                                    {
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                    }
-                                  )}
-                              {turn.status === "queued" && (
-                                <Button
-                                  variant="ghost"
-                                  size="xs"
-                                  onClick={() =>
-                                    void api("cancel", {
-                                      operationId: turn.id,
-                                    }).catch(() =>
-                                      setError("Could not cancel.")
-                                    )
-                                  }
-                                >
-                                  Cancel
-                                </Button>
-                              )}
-                            </MessageFooter>
-                          </BubbleContent>
-                        </Bubble>
-                      </MessageContent>
-                    </Message>
-                  </MessageScrollerItem>,
-                  turn.status === "queued" ? null : (
+                state.turns.flatMap((turn) => {
+                  const waiting =
+                    turn.status === "queued" && turn.id !== active?.id
+                  return [
                     <MessageScrollerItem
-                      key={`${turn.id}:assistant`}
-                      messageId={`${turn.id}:assistant`}
+                      key={`${turn.id}:user`}
+                      messageId={`${turn.id}:user`}
+                      scrollAnchor={!waiting}
                     >
-                      <TurnReply
-                        onAnswerPrompt={answerPrompt}
-                        onAppPendingChange={onAppPendingChange}
-                        turn={turn}
-                        waitingForApproval={state.access?.approvals.some(
-                          (approval) =>
-                            approval.turnId === turn.id &&
-                            approval.status === "pending"
-                        )}
-                        toolTitles={Object.fromEntries(
-                          (state.access?.tools ?? []).map((tool) => [
-                            tool.name,
-                            tool.title ?? tool.name,
-                          ])
-                        )}
-                        agentName={agent.name}
-                        agentId={agent.id}
-                        onRetry={(id) => void retry(id)}
-                        retrying={retrying}
-                        canRetry={!archived && !!state.connected && !retrying}
-                      />
-                      {state.access?.approvals
-                        .filter((value) => value.turnId === turn.id)
-                        .map((approval) => (
-                          <ApprovalCard
-                            key={approval.id}
-                            approval={approval}
-                            agentName={agent.name}
-                            toolPolicy={state.access?.tools.find(
-                              (tool) => tool.name === approval.tool
-                            )}
-                            toolLabel={
-                              state.access?.tools.find(
+                      <Message
+                        align={turn.origin ? "start" : "end"}
+                        className={
+                          turn.origin ? "background-message" : "owner-message"
+                        }
+                        data-queued={waiting}
+                      >
+                        <MessageContent>
+                          <Bubble
+                            align={turn.origin ? "start" : "end"}
+                            variant={turn.origin ? "muted" : "secondary"}
+                          >
+                            <BubbleContent className="message-text">
+                              {turn.origin
+                                ? turn.origin.kind === "email"
+                                  ? `Email · ${turn.text}`
+                                  : turn.origin.kind === "whatsapp"
+                                    ? `WhatsApp · ${turn.text}`
+                                    : turn.origin.kind === "communication"
+                                      ? "Bot task result"
+                                      : `Background findings · group ${turn.origin.groupId}`
+                                : turn.text}
+                              <FileAttachments
+                                files={turn.attachments ?? []}
+                                agentId={agent.id}
+                              />
+                              <TurnDelivery
+                                turn={turn}
+                                waiting={waiting}
+                                onCancel={() =>
+                                  void api("cancel", {
+                                    operationId: turn.id,
+                                  }).catch(() => setError("Could not cancel."))
+                                }
+                              />
+                            </BubbleContent>
+                          </Bubble>
+                        </MessageContent>
+                      </Message>
+                    </MessageScrollerItem>,
+                    waiting ? null : (
+                      <MessageScrollerItem
+                        key={`${turn.id}:assistant`}
+                        messageId={`${turn.id}:assistant`}
+                      >
+                        <TurnReply
+                          onAnswerPrompt={answerPrompt}
+                          onAppPendingChange={onAppPendingChange}
+                          turn={turn}
+                          waitingForApproval={state.access?.approvals.some(
+                            (approval) =>
+                              approval.turnId === turn.id &&
+                              approval.status === "pending"
+                          )}
+                          toolTitles={Object.fromEntries(
+                            (state.access?.tools ?? []).map((tool) => [
+                              tool.name,
+                              tool.title ?? tool.name,
+                            ])
+                          )}
+                          agentName={agent.name}
+                          agentId={agent.id}
+                          onRetry={(id) => void retry(id)}
+                          retrying={retrying}
+                          canRetry={!archived && !!state.connected && !retrying}
+                        />
+                        {state.access?.approvals
+                          .filter((value) => value.turnId === turn.id)
+                          .map((approval) => (
+                            <ApprovalCard
+                              key={approval.id}
+                              approval={approval}
+                              agentName={agent.name}
+                              toolPolicy={state.access?.tools.find(
                                 (tool) => tool.name === approval.tool
-                              )?.title
-                            }
-                            agentId={agent.id}
-                            disabled={
-                              archived ||
-                              turn.status === "stopping" ||
-                              !["queued", "preparing", "running"].includes(
-                                turn.status
-                              )
-                            }
-                          />
-                        ))}
-                    </MessageScrollerItem>
-                  ),
-                ])
+                              )}
+                              toolLabel={
+                                state.access?.tools.find(
+                                  (tool) => tool.name === approval.tool
+                                )?.title
+                              }
+                              agentId={agent.id}
+                              disabled={
+                                archived ||
+                                turn.status === "stopping" ||
+                                !["queued", "preparing", "running"].includes(
+                                  turn.status
+                                )
+                              }
+                            />
+                          ))}
+                      </MessageScrollerItem>
+                    ),
+                  ]
+                })
               )}
             </MessageScrollerContent>
           </MessageScrollerViewport>
@@ -811,7 +793,7 @@ function conversationWorking(
 ) {
   return (
     !!active &&
-    ["preparing", "running"].includes(active.status) &&
+    ["queued", "preparing", "running"].includes(active.status) &&
     !state?.access?.approvals.some((approval) => approval.status === "pending")
   )
 }
