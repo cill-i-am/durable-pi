@@ -421,7 +421,6 @@ it("Memory restores a credential callback defect after the actual SDK reports an
         start: (request) => owner.runtime.runSync(owner.streams.start(request)),
       }),
       systemPrompt: "Synthetic",
-      tools: () => [],
     },
     () => Effect.die("Catalog must not be reached")
   )
@@ -458,7 +457,6 @@ it("Memory cancellation joins a late credential defect and retains it alongside 
         start: (request) => owner.runtime.runSync(owner.streams.start(request)),
       }),
       systemPrompt: "Synthetic",
-      tools: () => [],
     },
     () => Effect.die("Catalog must not be reached")
   )

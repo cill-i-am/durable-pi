@@ -15,9 +15,6 @@ import type { SummaryProvider } from "../summary-execution"
 import { SummaryFailure } from "../summary-model"
 import { piSummaryCompletion } from "./pi"
 
-type NativeContext = Parameters<
-  ReturnType<typeof createAgentModels>["completeSimple"]
->[1]
 export interface PiSummaryHost {
   credentials: () => CredentialStore
   options: (
@@ -25,7 +22,6 @@ export interface PiSummaryHost {
     job: SummaryJob
   ) => Parameters<typeof createAgentModels>[1]
   systemPrompt: string
-  tools: () => NativeContext["tools"]
 }
 export function piModelSummaryProvider<TRequirements>(
   host: PiSummaryHost,
@@ -82,7 +78,6 @@ export function piModelSummaryProvider<TRequirements>(
                     model,
                     {
                       systemPrompt: host.systemPrompt,
-                      tools: host.tools(),
                       messages: nativeMessages,
                     },
                     {

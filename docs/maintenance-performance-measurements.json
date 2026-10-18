@@ -1,0 +1,969 @@
+{
+  "date": "2026-10-18",
+  "productionFix": {
+    "pr": 141,
+    "commit": "56e86fd6afc331afaff0ea5af094c0073eb68ff9",
+    "workflow": 39107159464,
+    "workerVersion": "e6a43f3c-228a-4813-abc1-e7f648828962",
+    "probe": {
+      "activity": {
+        "botId": "df172cf3ea8fe4d76918ad544a8a756f5ef95ce28d4c4895f4366b9cfd6bd80f",
+        "runId": "9832dd5b-d9fb-43ca-93c0-a609df58f08e",
+        "sessionId": "30",
+        "status": "done",
+        "createdAt": "2026-10-18T07:28:42.785Z",
+        "startedAt": "2026-10-18T07:28:42.858Z",
+        "finishedAt": "2026-10-18T07:28:46.855Z",
+        "totals": {
+          "modelRequests": 1,
+          "usageReportedRequests": 1,
+          "knownInputTokens": 18585,
+          "knownCachedInputTokens": 18176,
+          "knownOutputTokens": 8
+        },
+        "events": [
+          {
+            "key": "finished:9832dd5b-d9fb-43ca-93c0-a609df58f08e",
+            "at": "2026-10-18T07:28:46.855Z",
+            "kind": "run",
+            "title": "Run ended",
+            "status": "done",
+            "reference": "9832dd5b-d9fb-43ca-93c0-a609df58f08e",
+            "finishedAt": null,
+            "detail": null
+          },
+          {
+            "key": "started:9832dd5b-d9fb-43ca-93c0-a609df58f08e",
+            "at": "2026-10-18T07:28:42.858Z",
+            "kind": "run",
+            "title": "Pi session started",
+            "status": "started",
+            "reference": "9832dd5b-d9fb-43ca-93c0-a609df58f08e",
+            "finishedAt": null,
+            "detail": null
+          },
+          {
+            "key": "model:f458695c-ea2e-4fea-b751-6f974b940992",
+            "at": "2026-10-18T07:28:42.858Z",
+            "kind": "model",
+            "title": "gpt-6.1-sol",
+            "status": "completed",
+            "reference": "f458695c-ea2e-4fea-b751-6f974b940992",
+            "finishedAt": "2026-10-18T07:28:46.693Z",
+            "detail": null,
+            "attempt": {
+              "id": "f458695c-ea2e-4fea-b751-6f974b940992",
+              "turnId": "9832dd5b-d9fb-43ca-93c0-a609df58f08e",
+              "route": {
+                "model": "gpt-6.1-sol",
+                "thinking": "medium",
+                "job": "conversation",
+                "profile": "auto",
+                "policyVersion": "jobs-v1",
+                "reason": "application default",
+                "contextWindow": 272000
+              },
+              "purpose": "conversation",
+              "startedAt": "2026-10-18T07:28:42.858Z",
+              "finishedAt": "2026-10-18T07:28:46.693Z",
+              "outcome": "completed",
+              "error": null,
+              "reportedModel": "gpt-6.1-sol",
+              "input": 18585,
+              "cached": 18176,
+              "output": 8
+            }
+          },
+          {
+            "key": "accepted:9832dd5b-d9fb-43ca-93c0-a609df58f08e",
+            "at": "2026-10-18T07:28:42.785Z",
+            "kind": "run",
+            "title": "Request accepted",
+            "status": "accepted",
+            "reference": "9832dd5b-d9fb-43ca-93c0-a609df58f08e",
+            "finishedAt": null,
+            "detail": null
+          }
+        ],
+        "next": null
+      },
+      "beforeSend": {
+        "memoryReady": false,
+        "runtime": {
+          "state": "ready",
+          "turnId": "2d646210-5072-4255-8bbd-1d56ca28c48d"
+        }
+      },
+      "browserRequestAt": 1792308522710.8657
+    },
+    "overlappingSummary": {
+      "model": "gpt-6-luna",
+      "purpose": "memory 0+4",
+      "finishedAtMs": 1792308527837,
+      "elapsedMs": 4976,
+      "input": 18048,
+      "cached": 15616,
+      "output": 123
+    }
+  },
+  "finalSummaryComparison": {
+    "id": "dfa06aff-f279-4efe-8ab9-30edade9aa8d",
+    "at": "2026-10-18T07:42:20.654Z",
+    "model": "gpt-6-luna",
+    "thinking": "medium",
+    "tools": 58,
+    "baselineSystemBytes": 10295,
+    "candidateSystemBytes": 10295,
+    "cases": [
+      {
+        "name": "user",
+        "start": 0,
+        "count": 1,
+        "context": "",
+        "source": "user: Project Cedar. Keep the exact approved amount €42.75 and date 2026-10-21. Prepare a draft only; do not send it until I explicitly approve. Use grams and Celsius; no honey. Discussion note 0: the layout can change, but the private draft is still awaiting my approval. Discussion note 1: the layout can change, but the private draft is still awaiting my approval. Discussion note 2: the layout can change, but the private draft is still awaiting my approval. Discussion note 3: the layout can change, but the private draft is still awaiting my approval. Discussion note 4: the layout can change, but the private draft is still awaiting my approval. Discussion note 5: the layout can change, but the private draft is still awaiting my approval. Discussion note 6: the layout can change, but the private draft is still awaiting my approval. Discussion note 7: the layout can change, but the private draft is still awaiting my approval. Discussion note 8: the layout can change, but the private draft is still awaiting my approval. Discussion note 9: the layout can change, but the private draft is still awaiting my approval. Discussion note 10: the layout can change, but the private draft is still awaiting my approval. Discussion note 11: the layout can change, but the private draft is still awaiting my approval. Discussion note 12: the layout can change, but the private draft is still awaiting my approval. Discussion note 13: the layout can change, but the private draft is still awaiting my approval. "
+      },
+      {
+        "name": "tool-result",
+        "start": 2,
+        "count": 1,
+        "context": "0+1|user: Check whether the gallery is open and prepare private directions.\n1+1|tool: browser_open(https://example.com/gallery)",
+        "source": "echo: {\"name\":\"Cedar Gallery\",\"address\":\"14 Example Street, Dublin\",\"amount\":\"€42.75\",\"verified\":\"2026-10-18\",\"status\":\"failed\",\"error\":\"HTTP 503: opening hours could not be verified; the cached page is stale\",\"sent\":false,\"records\":[{\"id\":0,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":1,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":2,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":3,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":4,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":5,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":6,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":7,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":8,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":9,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":10,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":11,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":12,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":13,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":14,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":15,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":16,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":17,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":18,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":19,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":20,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":21,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":22,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":23,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":24,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":25,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":26,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":27,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":28,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":29,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"}]}"
+      },
+      {
+        "name": "merge",
+        "start": 0,
+        "count": 2,
+        "context": "",
+        "source": "0+1|user: Project Cedar: draft the itinerary for 2026-10-21. Budget €42.75. I originally said send it tomorrow, then corrected myself: keep it a private draft until I explicitly approve; no booking or sending. Keep exact prices, metric units and Celsius. The preferred route is walking, weather permitting.\n1+1|echo: Cedar Gallery at 14 Example Street, Dublin; the current-hours request failed HTTP 503 and no reservation was made. Cached hours are unverified. talk: The itinerary draft is saved; delivery and opening hours remain unconfirmed. No purchase or email was sent."
+      }
+    ],
+    "results": [
+      {
+        "arm": "baseline",
+        "scenario": "user",
+        "repeat": 0,
+        "elapsedMs": 6903,
+        "bytes": 270,
+        "calls": 1,
+        "missingFacts": [],
+        "answer": "user: Project Cedar: keep approved amount exactly €42.75 and date 2026-10-21; prepare draft only, do not send without explicit approval. Use grams and Celsius; no honey. Discussion notes 0–13 all say layout may change, but private draft still awaits user's approval.",
+        "attempts": [
+          {
+            "input": 17007,
+            "cached": 0,
+            "uncached": 17007,
+            "output": 94,
+            "reasoning": 26,
+            "totalMs": 6902,
+            "firstEventMs": 3049,
+            "ttftMs": 6379,
+            "requestBytes": 89444,
+            "responseId": "resp_07a9b1a07b28fffc016ad478229ce487d29944185dec2291c6",
+            "answer": "user: Project Cedar: keep approved amount exactly €42.75 and date 2026-10-21; prepare draft only, do not send without explicit approval. Use grams and Celsius; no honey. Discussion notes 0–13 all say layout may change, but private draft still awaits user's approval."
+          }
+        ]
+      },
+      {
+        "arm": "candidate",
+        "scenario": "user",
+        "repeat": 0,
+        "elapsedMs": 4545,
+        "bytes": 261,
+        "calls": 1,
+        "missingFacts": [],
+        "answer": "user: Project Cedar: preserve approved amount €42.75 and date 2026-10-21 exactly; prepare draft only, do not send without explicit approval. Use grams and Celsius; no honey. Layout may change; private draft remains awaiting approval (Discussion notes 0–13).",
+        "attempts": [
+          {
+            "input": 2512,
+            "cached": 0,
+            "uncached": 2512,
+            "output": 77,
+            "reasoning": 12,
+            "totalMs": 4544,
+            "firstEventMs": 1906,
+            "ttftMs": 3828,
+            "requestBytes": 12913,
+            "responseId": "resp_0d8670d40fb5e89d016ad47828a02887d2a9036fde25bcbbc1",
+            "answer": "user: Project Cedar: preserve approved amount €42.75 and date 2026-10-21 exactly; prepare draft only, do not send without explicit approval. Use grams and Celsius; no honey. Layout may change; private draft remains awaiting approval (Discussion notes 0–13)."
+          }
+        ]
+      },
+      {
+        "arm": "baseline",
+        "scenario": "tool-result",
+        "repeat": 0,
+        "elapsedMs": 5753,
+        "bytes": 321,
+        "calls": 1,
+        "missingFacts": [],
+        "answer": "user: Asked whether gallery is open and to prepare private directions. echo: Cedar Gallery, 14 Example Street, Dublin; hours unverified after HTTP 503 and stale cached page; directions not sent. Cached catalogue describes paintings and sculpture. Result also listed €42.75, verified 2026-10-18, with no clear relevance.",
+        "attempts": [
+          {
+            "input": 17406,
+            "cached": 16512,
+            "uncached": 894,
+            "output": 116,
+            "reasoning": 40,
+            "totalMs": 5753,
+            "firstEventMs": 2261,
+            "ttftMs": 5267,
+            "requestBytes": 91673,
+            "responseId": "resp_0b1339a6a3f666c7016ad4782d55c887d29ae610414484faa5",
+            "answer": "user: Asked whether gallery is open and to prepare private directions. echo: Cedar Gallery, 14 Example Street, Dublin; hours unverified after HTTP 503 and stale cached page; directions not sent. Cached catalogue describes paintings and sculpture. Result also listed €42.75, verified 2026-10-18, with no clear relevance."
+          }
+        ]
+      },
+      {
+        "arm": "candidate",
+        "scenario": "tool-result",
+        "repeat": 0,
+        "elapsedMs": 2923,
+        "bytes": 227,
+        "calls": 1,
+        "missingFacts": [],
+        "answer": "echo: Cedar Gallery, 14 Example Street, Dublin; opening hours unverified because page returned HTTP 503 and cache is stale. Cached catalogue only. No directions were sent. A €42.75 amount appeared, but its meaning is unclear.",
+        "attempts": [
+          {
+            "input": 2911,
+            "cached": 1920,
+            "uncached": 991,
+            "output": 54,
+            "reasoning": 0,
+            "totalMs": 2923,
+            "firstEventMs": 1464,
+            "ttftMs": 1740,
+            "requestBytes": 15142,
+            "responseId": "resp_022a0f28ad09b998016ad47832f90887d2b7caa14194d68257",
+            "answer": "echo: Cedar Gallery, 14 Example Street, Dublin; opening hours unverified because page returned HTTP 503 and cache is stale. Cached catalogue only. No directions were sent. A €42.75 amount appeared, but its meaning is unclear."
+          }
+        ]
+      },
+      {
+        "arm": "baseline",
+        "scenario": "merge",
+        "repeat": 0,
+        "elapsedMs": 5281,
+        "bytes": 420,
+        "calls": 1,
+        "missingFacts": [],
+        "answer": "user: Project Cedar: draft itinerary for 2026-10-21, budget €42.75; keep private until explicit approval—no booking or sending. Keep exact prices, metric units, Celsius; prefer walking if weather permits. User corrected “send it tomorrow.” echo: Cedar Gallery, 14 Example Street, Dublin; hours lookup failed (HTTP 503), cached hours unverified; no reservation. talk: draft saved; no delivery, purchase, or email.",
+        "attempts": [
+          {
+            "input": 16815,
+            "cached": 16512,
+            "uncached": 303,
+            "output": 115,
+            "reasoning": 13,
+            "totalMs": 5281,
+            "firstEventMs": 4060,
+            "ttftMs": 4202,
+            "requestBytes": 88525,
+            "responseId": "resp_01b2699113dd3b2f016ad478362a7087d2a1d05577f2df13f7",
+            "answer": "user: Project Cedar: draft itinerary for 2026-10-21, budget €42.75; keep private until explicit approval—no booking or sending. Keep exact prices, metric units, Celsius; prefer walking if weather permits. User corrected “send it tomorrow.” echo: Cedar Gallery, 14 Example Street, Dublin; hours lookup failed (HTTP 503), cached hours unverified; no reservation. talk: draft saved; no delivery, purchase, or email."
+          }
+        ]
+      },
+      {
+        "arm": "candidate",
+        "scenario": "merge",
+        "repeat": 0,
+        "elapsedMs": 4730,
+        "bytes": 444,
+        "calls": 1,
+        "missingFacts": [],
+        "answer": "user: Project Cedar itinerary for 2026-10-21, budget €42.75. User corrected “send it tomorrow”: keep private until explicit approval; no booking or sending. Keep exact prices, metric units, Celsius; prefer walking if weather permits. echo: Cedar Gallery, 14 Example Street, Dublin; current-hours lookup failed HTTP 503, cached hours unverified, no reservation. talk: Draft saved; hours and delivery unconfirmed; no purchase or email sent.",
+        "attempts": [
+          {
+            "input": 2320,
+            "cached": 1920,
+            "uncached": 400,
+            "output": 123,
+            "reasoning": 19,
+            "totalMs": 4730,
+            "firstEventMs": 1051,
+            "ttftMs": 3762,
+            "requestBytes": 11994,
+            "responseId": "resp_0c486aa5d3c8470f016ad4783b0c7c87d29a9ddc9ba2613bb2",
+            "answer": "user: Project Cedar itinerary for 2026-10-21, budget €42.75. User corrected “send it tomorrow”: keep private until explicit approval; no booking or sending. Keep exact prices, metric units, Celsius; prefer walking if weather permits. echo: Cedar Gallery, 14 Example Street, Dublin; current-hours lookup failed HTTP 503, cached hours unverified, no reservation. talk: Draft saved; hours and delivery unconfirmed; no purchase or email sent."
+          }
+        ]
+      },
+      {
+        "arm": "candidate",
+        "scenario": "user",
+        "repeat": 1,
+        "elapsedMs": 4738,
+        "bytes": 275,
+        "calls": 1,
+        "missingFacts": [],
+        "answer": "user: Project Cedar: preserve exact approved amount €42.75 and date 2026-10-21; prepare a draft only and do not send until explicit approval. Use grams and Celsius; no honey. Layout can change; private draft is still awaiting approval (repeated in discussion notes 0–13).",
+        "attempts": [
+          {
+            "input": 2512,
+            "cached": 0,
+            "uncached": 2512,
+            "output": 128,
+            "reasoning": 58,
+            "totalMs": 4738,
+            "firstEventMs": 1186,
+            "ttftMs": 4323,
+            "requestBytes": 12913,
+            "responseId": "resp_07352a1c96b2a0c5016ad4783fcc5c87d2a880b01c800ddc8b",
+            "answer": "user: Project Cedar: preserve exact approved amount €42.75 and date 2026-10-21; prepare a draft only and do not send until explicit approval. Use grams and Celsius; no honey. Layout can change; private draft is still awaiting approval (repeated in discussion notes 0–13)."
+          }
+        ]
+      },
+      {
+        "arm": "baseline",
+        "scenario": "user",
+        "repeat": 1,
+        "elapsedMs": 4341,
+        "bytes": 272,
+        "calls": 1,
+        "missingFacts": [],
+        "answer": "user: Project Cedar—keep exact approved amount €42.75 and date 2026-10-21; prepare draft only and do not send until I explicitly approve. Use grams and Celsius; no honey. Layout may change, but private draft still awaits approval (repeated in discussion notes 0–13).",
+        "attempts": [
+          {
+            "input": 17007,
+            "cached": 16512,
+            "uncached": 495,
+            "output": 85,
+            "reasoning": 15,
+            "totalMs": 4341,
+            "firstEventMs": 1992,
+            "ttftMs": 3740,
+            "requestBytes": 89444,
+            "responseId": "resp_07c8560ab647d2c2016ad47844b9b487d2ad4c21d64ccf2667",
+            "answer": "user: Project Cedar—keep exact approved amount €42.75 and date 2026-10-21; prepare draft only and do not send until I explicitly approve. Use grams and Celsius; no honey. Layout may change, but private draft still awaits approval (repeated in discussion notes 0–13)."
+          }
+        ]
+      },
+      {
+        "arm": "candidate",
+        "scenario": "tool-result",
+        "repeat": 1,
+        "elapsedMs": 4647,
+        "bytes": 259,
+        "calls": 1,
+        "missingFacts": [],
+        "answer": "echo: Cedar Gallery, 14 Example Street, Dublin; hours could not be verified (HTTP 503; cached page stale), so open status unknown. Cached catalogue describes paintings and sculpture. Directions were not sent; €42.75 appears in result with unclear relevance.",
+        "attempts": [
+          {
+            "input": 2911,
+            "cached": 1920,
+            "uncached": 991,
+            "output": 104,
+            "reasoning": 44,
+            "totalMs": 4647,
+            "firstEventMs": 1887,
+            "ttftMs": 4416,
+            "requestBytes": 15142,
+            "responseId": "resp_0e0cb2af5648ebe3016ad47849182487d2b864b0643e47b3a7",
+            "answer": "echo: Cedar Gallery, 14 Example Street, Dublin; hours could not be verified (HTTP 503; cached page stale), so open status unknown. Cached catalogue describes paintings and sculpture. Directions were not sent; €42.75 appears in result with unclear relevance."
+          }
+        ]
+      },
+      {
+        "arm": "baseline",
+        "scenario": "tool-result",
+        "repeat": 1,
+        "elapsedMs": 4179,
+        "bytes": 273,
+        "calls": 1,
+        "missingFacts": [],
+        "answer": "echo: Cedar Gallery, 14 Example Street, Dublin; 2026-10-18 lookup failed (HTTP 503), so opening hours remain unverified; cached page is stale. Catalogue says paintings and sculpture. Amount €42.75 appears in the result but its meaning is unclear. No directions were sent.",
+        "attempts": [
+          {
+            "input": 17406,
+            "cached": 16512,
+            "uncached": 894,
+            "output": 68,
+            "reasoning": 0,
+            "totalMs": 4179,
+            "firstEventMs": 2073,
+            "ttftMs": 2331,
+            "requestBytes": 91673,
+            "responseId": "resp_0cd9345ec3080bae016ad4784dd46c87d293e9d56ba553e71c",
+            "answer": "echo: Cedar Gallery, 14 Example Street, Dublin; 2026-10-18 lookup failed (HTTP 503), so opening hours remain unverified; cached page is stale. Catalogue says paintings and sculpture. Amount €42.75 appears in the result but its meaning is unclear. No directions were sent."
+          }
+        ]
+      },
+      {
+        "arm": "candidate",
+        "scenario": "merge",
+        "repeat": 1,
+        "elapsedMs": 6431,
+        "bytes": 398,
+        "calls": 1,
+        "missingFacts": [],
+        "answer": "user: Project Cedar: draft an itinerary for 2026-10-21, budget €42.75. Keep it a private draft until I explicitly approve; no booking or sending. Keep exact prices, metric units and Celsius; prefer walking if weather permits. echo: Cedar Gallery, 14 Example Street, Dublin. Current-hours lookup failed (HTTP 503); cached hours unverified. No reservation, purchase or email; itinerary draft saved.",
+        "attempts": [
+          {
+            "input": 2320,
+            "cached": 2176,
+            "uncached": 144,
+            "output": 114,
+            "reasoning": 18,
+            "totalMs": 6431,
+            "firstEventMs": 1199,
+            "ttftMs": 5192,
+            "requestBytes": 11994,
+            "responseId": "resp_09889f4a7c0db234016ad47851d1b487d2bcd5c2b10783c1ab",
+            "answer": "user: Project Cedar: draft an itinerary for 2026-10-21, budget €42.75. Keep it a private draft until I explicitly approve; no booking or sending. Keep exact prices, metric units and Celsius; prefer walking if weather permits. echo: Cedar Gallery, 14 Example Street, Dublin. Current-hours lookup failed (HTTP 503); cached hours unverified. No reservation, purchase or email; itinerary draft saved."
+          }
+        ]
+      },
+      {
+        "arm": "baseline",
+        "scenario": "merge",
+        "repeat": 1,
+        "elapsedMs": 5358,
+        "bytes": 413,
+        "calls": 1,
+        "missingFacts": [],
+        "answer": "user: Project Cedar: draft itinerary for 2026-10-21, budget €42.75. Corrected “send it tomorrow”: keep private until explicit approval; no booking or sending. Keep exact prices, metric units, Celsius; prefer walking if weather permits. echo: Cedar Gallery, 14 Example Street, Dublin; current-hours check failed HTTP 503, cached hours unverified; no reservation. talk: draft saved; no purchase or email sent.",
+        "attempts": [
+          {
+            "input": 16815,
+            "cached": 16512,
+            "uncached": 303,
+            "output": 122,
+            "reasoning": 22,
+            "totalMs": 5358,
+            "firstEventMs": 2456,
+            "ttftMs": 3826,
+            "requestBytes": 88525,
+            "responseId": "resp_0083a009a87ea78d016ad478586ef487d2bc358fa21c75d30e",
+            "answer": "user: Project Cedar: draft itinerary for 2026-10-21, budget €42.75. Corrected “send it tomorrow”: keep private until explicit approval; no booking or sending. Keep exact prices, metric units, Celsius; prefer walking if weather permits. echo: Cedar Gallery, 14 Example Street, Dublin; current-hours check failed HTTP 503, cached hours unverified; no reservation. talk: draft saved; no purchase or email sent."
+          }
+        ]
+      }
+    ]
+  },
+  "exploration": {
+    "minimalPrompt": {
+      "id": "b4d2bcaf-ad4f-462b-b033-866c6f8234a2",
+      "at": "2026-10-18T07:37:17.221Z",
+      "model": "gpt-6-luna",
+      "thinking": "medium",
+      "tools": 58,
+      "baselineSystemBytes": 9682,
+      "candidateSystemBytes": 3190,
+      "cases": [
+        {
+          "name": "user",
+          "start": 0,
+          "count": 1,
+          "context": "",
+          "source": "user: Project Cedar. Keep the exact approved amount €42.75 and date 2026-10-21. Prepare a draft only; do not send it until I explicitly approve. Use grams and Celsius; no honey. Discussion note 0: the layout can change, but the private draft is still awaiting my approval. Discussion note 1: the layout can change, but the private draft is still awaiting my approval. Discussion note 2: the layout can change, but the private draft is still awaiting my approval. Discussion note 3: the layout can change, but the private draft is still awaiting my approval. Discussion note 4: the layout can change, but the private draft is still awaiting my approval. Discussion note 5: the layout can change, but the private draft is still awaiting my approval. Discussion note 6: the layout can change, but the private draft is still awaiting my approval. Discussion note 7: the layout can change, but the private draft is still awaiting my approval. Discussion note 8: the layout can change, but the private draft is still awaiting my approval. Discussion note 9: the layout can change, but the private draft is still awaiting my approval. Discussion note 10: the layout can change, but the private draft is still awaiting my approval. Discussion note 11: the layout can change, but the private draft is still awaiting my approval. Discussion note 12: the layout can change, but the private draft is still awaiting my approval. Discussion note 13: the layout can change, but the private draft is still awaiting my approval. "
+        },
+        {
+          "name": "tool-result",
+          "start": 2,
+          "count": 1,
+          "context": "0+1|user: Check whether the gallery is open and prepare private directions.\n1+1|tool: browser_open(https://example.com/gallery)",
+          "source": "echo: {\"name\":\"Cedar Gallery\",\"address\":\"14 Example Street, Dublin\",\"amount\":\"€42.75\",\"verified\":\"2026-10-18\",\"status\":\"failed\",\"error\":\"HTTP 503: opening hours could not be verified; the cached page is stale\",\"sent\":false,\"records\":[{\"id\":0,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":1,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":2,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":3,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":4,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":5,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":6,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":7,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":8,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":9,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":10,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":11,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":12,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":13,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":14,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":15,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":16,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":17,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":18,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":19,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":20,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":21,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":22,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":23,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":24,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":25,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":26,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":27,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":28,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":29,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"}]}"
+        },
+        {
+          "name": "merge",
+          "start": 0,
+          "count": 2,
+          "context": "",
+          "source": "0+1|user: Project Cedar: draft the itinerary for 2026-10-21. Budget €42.75. I originally said send it tomorrow, then corrected myself: keep it a private draft until I explicitly approve; no booking or sending. Keep exact prices, metric units and Celsius. The preferred route is walking, weather permitting.\n1+1|echo: Cedar Gallery at 14 Example Street, Dublin; the current-hours request failed HTTP 503 and no reservation was made. Cached hours are unverified. talk: The itinerary draft is saved; delivery and opening hours remain unconfirmed. No purchase or email was sent."
+        }
+      ],
+      "results": [
+        {
+          "arm": "baseline",
+          "scenario": "user",
+          "repeat": 0,
+          "elapsedMs": 7789,
+          "bytes": 275,
+          "calls": 1,
+          "missingFacts": [],
+          "answer": "user: Project Cedar: keep exact approved amount €42.75 and date 2026-10-21; prepare draft only—do not send without my explicit approval. Use grams and Celsius; no honey. Discussion notes 0–13 all reiterate: layout may change, but private draft still awaits my approval.",
+          "attempts": [
+            {
+              "input": 16893,
+              "cached": 0,
+              "uncached": 16893,
+              "output": 90,
+              "reasoning": 19,
+              "totalMs": 7788,
+              "firstEventMs": 5567,
+              "ttftMs": 7405,
+              "requestBytes": 88827,
+              "responseId": "resp_0e0d83d800cea4e9016ad476e6682487d29d19075756512670",
+              "answer": "user: Project Cedar: keep exact approved amount €42.75 and date 2026-10-21; prepare draft only—do not send without my explicit approval. Use grams and Celsius; no honey. Discussion notes 0–13 all reiterate: layout may change, but private draft still awaits my approval."
+            }
+          ]
+        },
+        {
+          "arm": "candidate",
+          "scenario": "user",
+          "repeat": 0,
+          "elapsedMs": 3554,
+          "bytes": 260,
+          "calls": 1,
+          "missingFacts": [],
+          "answer": "user: Project Cedar: exact approved amount €42.75; date 2026-10-21. Prepare draft only; do not send until explicit approval. Use grams and Celsius; no honey. Repeated discussion notes (0–13): layout can change, but private draft still awaits user approval.",
+          "attempts": [
+            {
+              "input": 1139,
+              "cached": 0,
+              "uncached": 1139,
+              "output": 104,
+              "reasoning": 36,
+              "totalMs": 3553,
+              "firstEventMs": 1291,
+              "ttftMs": 3166,
+              "requestBytes": 5764,
+              "responseId": "resp_09724127f9cb8f6f016ad476eab05087d28377f743a8b366ee",
+              "answer": "user: Project Cedar: exact approved amount €42.75; date 2026-10-21. Prepare draft only; do not send until explicit approval. Use grams and Celsius; no honey. Repeated discussion notes (0–13): layout can change, but private draft still awaits user approval."
+            }
+          ]
+        },
+        {
+          "arm": "baseline",
+          "scenario": "tool-result",
+          "repeat": 0,
+          "elapsedMs": 5357,
+          "bytes": 246,
+          "calls": 1,
+          "missingFacts": [],
+          "answer": "echo: Cedar Gallery, 14 Example Street, Dublin: opening hours unverified (HTTP 503; cached page stale, checked 2026-10-18); cached catalogue lists paintings and sculpture. No directions were sent. €42.75 appeared in the result, meaning unclear.",
+          "attempts": [
+            {
+              "input": 17292,
+              "cached": 16384,
+              "uncached": 908,
+              "output": 83,
+              "reasoning": 19,
+              "totalMs": 5356,
+              "firstEventMs": 2869,
+              "ttftMs": 4527,
+              "requestBytes": 91056,
+              "responseId": "resp_0500311036bc2707016ad476ee4a2c87d2bb8383560d627976",
+              "answer": "echo: Cedar Gallery, 14 Example Street, Dublin: opening hours unverified (HTTP 503; cached page stale, checked 2026-10-18); cached catalogue lists paintings and sculpture. No directions were sent. €42.75 appeared in the result, meaning unclear."
+            }
+          ]
+        },
+        {
+          "arm": "candidate",
+          "scenario": "tool-result",
+          "repeat": 0,
+          "elapsedMs": 4911,
+          "bytes": 225,
+          "calls": 1,
+          "missingFacts": [],
+          "answer": "echo: Cedar Gallery, 14 Example Street, Dublin; opening hours unverified: HTTP 503, cached page stale (2026-10-18). Cached catalogue lists paintings/sculpture; 30 duplicate records. Status failed, sent=false; amount €42.75.",
+          "attempts": [
+            {
+              "input": 1538,
+              "cached": 0,
+              "uncached": 1538,
+              "output": 119,
+              "reasoning": 56,
+              "totalMs": 4911,
+              "firstEventMs": 1276,
+              "ttftMs": 4783,
+              "requestBytes": 7993,
+              "responseId": "resp_0b990f90b1b6f230016ad476f3c35887d2b7cd686ebbfa26b7",
+              "answer": "echo: Cedar Gallery, 14 Example Street, Dublin; opening hours unverified: HTTP 503, cached page stale (2026-10-18). Cached catalogue lists paintings/sculpture; 30 duplicate records. Status failed, sent=false; amount €42.75."
+            }
+          ]
+        },
+        {
+          "arm": "baseline",
+          "scenario": "merge",
+          "repeat": 0,
+          "elapsedMs": 6693,
+          "bytes": 427,
+          "calls": 1,
+          "missingFacts": [],
+          "answer": "user: Project Cedar itinerary for 2026-10-21, €42.75 budget. Corrected “send tomorrow”: keep private until explicit approval; no booking or sending. Use exact prices, metric units, Celsius; prefer walking if weather permits. echo: Cedar Gallery, 14 Example Street, Dublin; hours lookup failed HTTP 503, cached hours unverified; no reservation. talk: Draft saved; delivery and hours unconfirmed; no purchase or email sent.",
+          "attempts": [
+            {
+              "input": 16701,
+              "cached": 16384,
+              "uncached": 317,
+              "output": 100,
+              "reasoning": 0,
+              "totalMs": 6692,
+              "firstEventMs": 4230,
+              "ttftMs": 4459,
+              "requestBytes": 87908,
+              "responseId": "resp_0a8be2c8611b9a18016ad476fad84487d2a0a627b0dfa40ad5",
+              "answer": "user: Project Cedar itinerary for 2026-10-21, €42.75 budget. Corrected “send tomorrow”: keep private until explicit approval; no booking or sending. Use exact prices, metric units, Celsius; prefer walking if weather permits. echo: Cedar Gallery, 14 Example Street, Dublin; hours lookup failed HTTP 503, cached hours unverified; no reservation. talk: Draft saved; delivery and hours unconfirmed; no purchase or email sent."
+            }
+          ]
+        },
+        {
+          "arm": "candidate",
+          "scenario": "merge",
+          "repeat": 0,
+          "elapsedMs": 7088,
+          "bytes": 442,
+          "calls": 1,
+          "missingFacts": [],
+          "answer": "user: Project Cedar itinerary for 2026-10-21, budget €42.75. Corrected “send tomorrow”: keep private draft until explicit approval; no booking or sending. Use exact prices, metric units, Celsius; prefer walking if weather permits. echo: Cedar Gallery, 14 Example Street, Dublin; current-hours request failed HTTP 503, cached hours unverified, no reservation. talk: Draft saved; delivery and hours unconfirmed; no purchase or email sent.",
+          "attempts": [
+            {
+              "input": 947,
+              "cached": 0,
+              "uncached": 947,
+              "output": 184,
+              "reasoning": 80,
+              "totalMs": 7087,
+              "firstEventMs": 3208,
+              "ttftMs": 6035,
+              "requestBytes": 4845,
+              "responseId": "resp_08604e2dce6e638e016ad47700335887d2b8a89cf687adc6de",
+              "answer": "user: Project Cedar itinerary for 2026-10-21, budget €42.75. Corrected “send tomorrow”: keep private draft until explicit approval; no booking or sending. Use exact prices, metric units, Celsius; prefer walking if weather permits. echo: Cedar Gallery, 14 Example Street, Dublin; current-hours request failed HTTP 503, cached hours unverified, no reservation. talk: Draft saved; delivery and hours unconfirmed; no purchase or email sent."
+            }
+          ]
+        },
+        {
+          "arm": "candidate",
+          "scenario": "user",
+          "repeat": 1,
+          "elapsedMs": 4776,
+          "bytes": 268,
+          "calls": 1,
+          "missingFacts": [],
+          "answer": "user: Project Cedar—keep approved amount exactly €42.75 and date 2026-10-21; prepare draft only, do not send until explicit approval. Use grams and Celsius; no honey. Layout may change; private draft remains awaiting approval (repeated in discussion notes 0–13).",
+          "attempts": [
+            {
+              "input": 1139,
+              "cached": 0,
+              "uncached": 1139,
+              "output": 117,
+              "reasoning": 49,
+              "totalMs": 4776,
+              "firstEventMs": 1447,
+              "ttftMs": 4326,
+              "requestBytes": 5764,
+              "responseId": "resp_04e9721994587be0016ad47706605c87d2bf0813358b5046a0",
+              "answer": "user: Project Cedar—keep approved amount exactly €42.75 and date 2026-10-21; prepare draft only, do not send until explicit approval. Use grams and Celsius; no honey. Layout may change; private draft remains awaiting approval (repeated in discussion notes 0–13)."
+            }
+          ]
+        },
+        {
+          "arm": "baseline",
+          "scenario": "user",
+          "repeat": 1,
+          "elapsedMs": 9143,
+          "bytes": 269,
+          "calls": 1,
+          "missingFacts": [],
+          "answer": "user: Project Cedar—keep approved amount exactly €42.75 and date 2026-10-21; prepare draft only, do not send without explicit approval. Use grams and Celsius; no honey. Discussion notes 0–13 repeat: layout can change, but private draft still awaits user approval.",
+          "attempts": [
+            {
+              "input": 16893,
+              "cached": 16768,
+              "uncached": 125,
+              "output": 82,
+              "reasoning": 14,
+              "totalMs": 9143,
+              "firstEventMs": 3180,
+              "ttftMs": 5044,
+              "requestBytes": 88827,
+              "responseId": "resp_09c8ed31013e1d3c016ad4770bf72087d28e16dfb7daef232c",
+              "answer": "user: Project Cedar—keep approved amount exactly €42.75 and date 2026-10-21; prepare draft only, do not send without explicit approval. Use grams and Celsius; no honey. Discussion notes 0–13 repeat: layout can change, but private draft still awaits user approval."
+            }
+          ]
+        },
+        {
+          "arm": "candidate",
+          "scenario": "tool-result",
+          "repeat": 1,
+          "elapsedMs": 8202,
+          "bytes": 254,
+          "calls": 1,
+          "missingFacts": [],
+          "answer": "echo: Cedar Gallery, 14 Example Street, Dublin; HTTP 503, so current hours could not be verified (cached page stale); cached catalogue lists paintings/sculpture (30 duplicate entries). Status failed, not sent; record amount €42.75, verified 2026-10-18.",
+          "attempts": [
+            {
+              "input": 1538,
+              "cached": 0,
+              "uncached": 1538,
+              "output": 139,
+              "reasoning": 71,
+              "totalMs": 8201,
+              "firstEventMs": 1384,
+              "ttftMs": 7788,
+              "requestBytes": 7993,
+              "responseId": "resp_0cf3bb711a7d5966016ad4771459c487d2bdd87278a69f4f4b",
+              "answer": "echo: Cedar Gallery, 14 Example Street, Dublin; HTTP 503, so current hours could not be verified (cached page stale); cached catalogue lists paintings/sculpture (30 duplicate entries). Status failed, not sent; record amount €42.75, verified 2026-10-18."
+            }
+          ]
+        },
+        {
+          "arm": "baseline",
+          "scenario": "tool-result",
+          "repeat": 1,
+          "elapsedMs": 6419,
+          "bytes": 225,
+          "calls": 1,
+          "missingFacts": [],
+          "answer": "echo: Cedar Gallery, 14 Example Street, Dublin; opening hours unverified—HTTP 503, cached page stale. Cached catalogue lists paintings and sculpture; 30 duplicate records. Amount €42.75; verified 2026-10-18. Nothing sent.",
+          "attempts": [
+            {
+              "input": 17292,
+              "cached": 17152,
+              "uncached": 140,
+              "output": 106,
+              "reasoning": 45,
+              "totalMs": 6419,
+              "firstEventMs": 2665,
+              "ttftMs": 5702,
+              "requestBytes": 91056,
+              "responseId": "resp_06a8b2921a0e4184016ad4771cf8c887d29e50a75d5ef34d6d",
+              "answer": "echo: Cedar Gallery, 14 Example Street, Dublin; opening hours unverified—HTTP 503, cached page stale. Cached catalogue lists paintings and sculpture; 30 duplicate records. Amount €42.75; verified 2026-10-18. Nothing sent."
+            }
+          ]
+        },
+        {
+          "arm": "candidate",
+          "scenario": "merge",
+          "repeat": 1,
+          "elapsedMs": 4487,
+          "bytes": 456,
+          "calls": 1,
+          "missingFacts": [],
+          "answer": "user: Project Cedar itinerary for 2026-10-21, budget €42.75. User corrected “send it tomorrow”: keep private draft until explicit approval; no booking or sending. Preserve exact prices, metric units, Celsius; prefer walking, weather permitting. echo: Cedar Gallery, 14 Example Street, Dublin; current-hours request failed HTTP 503, cached hours unverified; no reservation. talk: draft saved; delivery and hours unconfirmed; no purchase or email sent.",
+          "attempts": [
+            {
+              "input": 947,
+              "cached": 0,
+              "uncached": 947,
+              "output": 136,
+              "reasoning": 31,
+              "totalMs": 4486,
+              "firstEventMs": 1541,
+              "ttftMs": 4101,
+              "requestBytes": 4845,
+              "responseId": "resp_06b593ee173fc295016ad47723344487d293085db65e395412",
+              "answer": "user: Project Cedar itinerary for 2026-10-21, budget €42.75. User corrected “send it tomorrow”: keep private draft until explicit approval; no booking or sending. Preserve exact prices, metric units, Celsius; prefer walking, weather permitting. echo: Cedar Gallery, 14 Example Street, Dublin; current-hours request failed HTTP 503, cached hours unverified; no reservation. talk: draft saved; delivery and hours unconfirmed; no purchase or email sent."
+            }
+          ]
+        },
+        {
+          "arm": "baseline",
+          "scenario": "merge",
+          "repeat": 1,
+          "elapsedMs": 6808,
+          "bytes": 420,
+          "calls": 1,
+          "missingFacts": [],
+          "answer": "user: Project Cedar: draft itinerary for 2026-10-21, budget €42.75; keep private until explicit approval—no booking or sending. Preserve exact prices, metric units and Celsius; prefer walking if weather permits. echo: Cedar Gallery, 14 Example Street, Dublin; hours lookup failed HTTP 503, cached hours unverified; no reservation made. talk: Draft saved; hours and delivery unconfirmed; nothing purchased or emailed.",
+          "attempts": [
+            {
+              "input": 16701,
+              "cached": 16512,
+              "uncached": 189,
+              "output": 96,
+              "reasoning": 0,
+              "totalMs": 6808,
+              "firstEventMs": 4376,
+              "ttftMs": 4541,
+              "requestBytes": 87908,
+              "responseId": "resp_0c4d51d8085f78e2016ad4772793d487d2ad33ff809288a678",
+              "answer": "user: Project Cedar: draft itinerary for 2026-10-21, budget €42.75; keep private until explicit approval—no booking or sending. Preserve exact prices, metric units and Celsius; prefer walking if weather permits. echo: Cedar Gallery, 14 Example Street, Dublin; hours lookup failed HTTP 503, cached hours unverified; no reservation made. talk: Draft saved; hours and delivery unconfirmed; nothing purchased or emailed."
+            }
+          ]
+        }
+      ]
+    },
+    "noToolsBeforeMainUpdate": {
+      "id": "5c37f5b3-c254-4422-afa9-107ef36866e4",
+      "at": "2026-10-18T07:38:12.359Z",
+      "model": "gpt-6-luna",
+      "thinking": "medium",
+      "tools": 58,
+      "baselineSystemBytes": 9682,
+      "candidateSystemBytes": 9682,
+      "cases": [
+        {
+          "name": "user",
+          "start": 0,
+          "count": 1,
+          "context": "",
+          "source": "user: Project Cedar. Keep the exact approved amount €42.75 and date 2026-10-21. Prepare a draft only; do not send it until I explicitly approve. Use grams and Celsius; no honey. Discussion note 0: the layout can change, but the private draft is still awaiting my approval. Discussion note 1: the layout can change, but the private draft is still awaiting my approval. Discussion note 2: the layout can change, but the private draft is still awaiting my approval. Discussion note 3: the layout can change, but the private draft is still awaiting my approval. Discussion note 4: the layout can change, but the private draft is still awaiting my approval. Discussion note 5: the layout can change, but the private draft is still awaiting my approval. Discussion note 6: the layout can change, but the private draft is still awaiting my approval. Discussion note 7: the layout can change, but the private draft is still awaiting my approval. Discussion note 8: the layout can change, but the private draft is still awaiting my approval. Discussion note 9: the layout can change, but the private draft is still awaiting my approval. Discussion note 10: the layout can change, but the private draft is still awaiting my approval. Discussion note 11: the layout can change, but the private draft is still awaiting my approval. Discussion note 12: the layout can change, but the private draft is still awaiting my approval. Discussion note 13: the layout can change, but the private draft is still awaiting my approval. "
+        },
+        {
+          "name": "tool-result",
+          "start": 2,
+          "count": 1,
+          "context": "0+1|user: Check whether the gallery is open and prepare private directions.\n1+1|tool: browser_open(https://example.com/gallery)",
+          "source": "echo: {\"name\":\"Cedar Gallery\",\"address\":\"14 Example Street, Dublin\",\"amount\":\"€42.75\",\"verified\":\"2026-10-18\",\"status\":\"failed\",\"error\":\"HTTP 503: opening hours could not be verified; the cached page is stale\",\"sent\":false,\"records\":[{\"id\":0,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":1,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":2,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":3,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":4,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":5,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":6,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":7,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":8,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":9,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":10,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":11,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":12,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":13,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":14,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":15,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":16,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":17,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":18,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":19,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":20,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":21,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":22,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":23,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":24,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":25,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":26,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":27,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":28,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"},{\"id\":29,\"description\":\"Paintings and sculpture. Cached exhibition catalogue; current hours unverified.\"}]}"
+        },
+        {
+          "name": "merge",
+          "start": 0,
+          "count": 2,
+          "context": "",
+          "source": "0+1|user: Project Cedar: draft the itinerary for 2026-10-21. Budget €42.75. I originally said send it tomorrow, then corrected myself: keep it a private draft until I explicitly approve; no booking or sending. Keep exact prices, metric units and Celsius. The preferred route is walking, weather permitting.\n1+1|echo: Cedar Gallery at 14 Example Street, Dublin; the current-hours request failed HTTP 503 and no reservation was made. Cached hours are unverified. talk: The itinerary draft is saved; delivery and opening hours remain unconfirmed. No purchase or email was sent."
+        }
+      ],
+      "results": [
+        {
+          "arm": "candidate",
+          "scenario": "user",
+          "repeat": 0,
+          "elapsedMs": 6064,
+          "bytes": 281,
+          "calls": 1,
+          "missingFacts": [],
+          "answer": "user: Project Cedar: keep approved amount exactly €42.75 and date 2026-10-21; prepare a draft only and do not send until I explicitly approve. Use grams and Celsius; no honey. Discussion notes 0–13 repeat: layout may change, but the private draft is still awaiting my approval.",
+          "attempts": [
+            {
+              "input": 2398,
+              "cached": 0,
+              "uncached": 2398,
+              "output": 115,
+              "reasoning": 43,
+              "totalMs": 6063,
+              "firstEventMs": 1592,
+              "ttftMs": 5858,
+              "requestBytes": 12296,
+              "responseId": "resp_095aa7be45d1cc6f016ad47745506487d2b2e153c39c8c0ee7",
+              "answer": "user: Project Cedar: keep approved amount exactly €42.75 and date 2026-10-21; prepare a draft only and do not send until I explicitly approve. Use grams and Celsius; no honey. Discussion notes 0–13 repeat: layout may change, but the private draft is still awaiting my approval."
+            }
+          ]
+        },
+        {
+          "arm": "candidate",
+          "scenario": "tool-result",
+          "repeat": 0,
+          "elapsedMs": 6022,
+          "bytes": 299,
+          "calls": 1,
+          "missingFacts": [],
+          "answer": "echo: Cedar Gallery, 14 Example Street, Dublin; opening hours could not be verified (HTTP 503; cached page stale). Cached catalogue lists paintings and sculpture. Result includes €42.75; status failed, sent=false. User wanted open-status check and private directions; availability remains unknown.",
+          "attempts": [
+            {
+              "input": 2797,
+              "cached": 0,
+              "uncached": 2797,
+              "output": 160,
+              "reasoning": 94,
+              "totalMs": 6022,
+              "firstEventMs": 1799,
+              "ttftMs": 5849,
+              "requestBytes": 14525,
+              "responseId": "resp_04851570c1681f6d016ad4774b811487d2bd1b28b211885039",
+              "answer": "echo: Cedar Gallery, 14 Example Street, Dublin; opening hours could not be verified (HTTP 503; cached page stale). Cached catalogue lists paintings and sculpture. Result includes €42.75; status failed, sent=false. User wanted open-status check and private directions; availability remains unknown."
+            }
+          ]
+        },
+        {
+          "arm": "candidate",
+          "scenario": "merge",
+          "repeat": 0,
+          "elapsedMs": 5732,
+          "bytes": 437,
+          "calls": 1,
+          "missingFacts": [],
+          "answer": "user: Project Cedar: draft itinerary for 2026-10-21, budget €42.75. Corrected “send it tomorrow”: keep private until explicit approval; no booking or sending. Keep exact prices, metric units and Celsius; prefer walking if weather permits. echo: Cedar Gallery, 14 Example Street, Dublin; current-hours lookup failed (HTTP 503), cached hours unverified; no reservation, purchase or email. Draft saved; delivery and hours unconfirmed.",
+          "attempts": [
+            {
+              "input": 2206,
+              "cached": 0,
+              "uncached": 2206,
+              "output": 120,
+              "reasoning": 17,
+              "totalMs": 5731,
+              "firstEventMs": 3029,
+              "ttftMs": 4321,
+              "requestBytes": 11377,
+              "responseId": "resp_087f284099744575016ad4775227cc87d2a80376af1343af8d",
+              "answer": "user: Project Cedar: draft itinerary for 2026-10-21, budget €42.75. Corrected “send it tomorrow”: keep private until explicit approval; no booking or sending. Keep exact prices, metric units and Celsius; prefer walking if weather permits. echo: Cedar Gallery, 14 Example Street, Dublin; current-hours lookup failed (HTTP 503), cached hours unverified; no reservation, purchase or email. Draft saved; delivery and hours unconfirmed."
+            }
+          ]
+        },
+        {
+          "arm": "candidate",
+          "scenario": "user",
+          "repeat": 1,
+          "elapsedMs": 4496,
+          "bytes": 271,
+          "calls": 1,
+          "missingFacts": [],
+          "answer": "user: Project Cedar—keep approved amount exactly €42.75 and date 2026-10-21; prepare draft only, do not send until I explicitly approve. Use grams and Celsius; no honey. Layout may change, but private draft still awaits approval (repeated in discussion notes 0–13).",
+          "attempts": [
+            {
+              "input": 2398,
+              "cached": 2176,
+              "uncached": 222,
+              "output": 111,
+              "reasoning": 41,
+              "totalMs": 4495,
+              "firstEventMs": 1161,
+              "ttftMs": 3491,
+              "requestBytes": 12296,
+              "responseId": "resp_087cddb5404a5aed016ad47756b57087d28b364d961672d257",
+              "answer": "user: Project Cedar—keep approved amount exactly €42.75 and date 2026-10-21; prepare draft only, do not send until I explicitly approve. Use grams and Celsius; no honey. Layout may change, but private draft still awaits approval (repeated in discussion notes 0–13)."
+            }
+          ]
+        },
+        {
+          "arm": "candidate",
+          "scenario": "tool-result",
+          "repeat": 1,
+          "elapsedMs": 6149,
+          "bytes": 242,
+          "calls": 1,
+          "missingFacts": [],
+          "answer": "echo: Cedar Gallery, 14 Example Street, Dublin; opening hours not verified (HTTP 503; cached page stale). Cached catalogue says paintings and sculpture. Request status failed; nothing sent. Result also included €42.75 (verified 2026-10-18).",
+          "attempts": [
+            {
+              "input": 2797,
+              "cached": 2560,
+              "uncached": 237,
+              "output": 111,
+              "reasoning": 49,
+              "totalMs": 6149,
+              "firstEventMs": 1327,
+              "ttftMs": 5731,
+              "requestBytes": 14525,
+              "responseId": "resp_0205672baf02bc1b016ad4775b4cd487d29dfd80e2efee2112",
+              "answer": "echo: Cedar Gallery, 14 Example Street, Dublin; opening hours not verified (HTTP 503; cached page stale). Cached catalogue says paintings and sculpture. Request status failed; nothing sent. Result also included €42.75 (verified 2026-10-18)."
+            }
+          ]
+        },
+        {
+          "arm": "candidate",
+          "scenario": "merge",
+          "repeat": 1,
+          "elapsedMs": 3891,
+          "bytes": 440,
+          "calls": 1,
+          "missingFacts": [],
+          "answer": "user: Project Cedar: draft itinerary for 2026-10-21, budget €42.75. Corrected “send it tomorrow”: keep private until explicit approval; no booking or sending. Exact prices, metric units, Celsius; prefer walking if weather permits. echo: Cedar Gallery, 14 Example Street, Dublin; current-hours check failed HTTP 503, cached hours unverified; no reservation. talk: Draft saved; delivery and hours unconfirmed; no purchase or email sent.",
+          "attempts": [
+            {
+              "input": 2206,
+              "cached": 2048,
+              "uncached": 158,
+              "output": 124,
+              "reasoning": 19,
+              "totalMs": 3891,
+              "firstEventMs": 1170,
+              "ttftMs": 3668,
+              "requestBytes": 11377,
+              "responseId": "resp_0b8818cc0578eb9f016ad477615f3087d284dbe930244be5bd",
+              "answer": "user: Project Cedar: draft itinerary for 2026-10-21, budget €42.75. Corrected “send it tomorrow”: keep private until explicit approval; no booking or sending. Exact prices, metric units, Celsius; prefer walking if weather permits. echo: Cedar Gallery, 14 Example Street, Dublin; current-hours check failed HTTP 503, cached hours unverified; no reservation. talk: Draft saved; delivery and hours unconfirmed; no purchase or email sent."
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "limitations": [
+    "Synthetic requests only; no personal messages or credentials included.",
+    "Provider usage is observed input/cached/output, not billing or account-plan weighting.",
+    "Small sample; provider routing, caching and generation latency vary.",
+    "Backup optimization timing is a controlled replay until separately deployed and measured."
+  ]
+}

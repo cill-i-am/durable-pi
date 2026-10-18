@@ -3,6 +3,7 @@ import { Cause, Clock, Context, Deferred, Effect, Exit, Fiber } from "effect"
 import { TestClock } from "effect/testing"
 import { vi } from "vitest"
 
+import { SYSTEM_PROMPT } from "../src/agent/prompts"
 import { accountCredentials } from "../src/inference/adapters/credentials-pi"
 import { resolveRoute, type ResolvedRoute } from "../src/inference/policy"
 import { SummaryRoutes } from "../src/memory/adapters/model-routes"
@@ -197,7 +198,6 @@ it.effect(
             contextWindow: () => route.contextWindow,
           }),
           systemPrompt: "Synthetic",
-          tools: () => [],
         },
         () =>
           Effect.gen(function* () {
@@ -252,7 +252,6 @@ it.effect(
             contextWindow: () => route.contextWindow,
           }),
           systemPrompt: "Synthetic",
-          tools: () => [],
         },
         () =>
           Deferred.succeed(entered, undefined).pipe(
@@ -303,7 +302,6 @@ it.effect(
             contextWindow: () => route.contextWindow,
           }),
           systemPrompt: "Synthetic",
-          tools: () => [],
         },
         () => Effect.die(defect)
       )
@@ -323,6 +321,49 @@ it.effect(
         expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)
         expect(Exit.isFailure(exit) && Cause.hasFails(exit.cause)).toBe(false)
         expect(fetches).toBe(0)
+      } finally {
+        vi.unstubAllGlobals()
+      }
+    })
+)
+
+it.effect(
+  "summary requests retain the existing instructions without advertising tools",
+  () =>
+    Effect.gen(function* () {
+      const payloads: {
+        input: { role: string; content: string }[]
+        tools?: unknown[]
+      }[] = []
+      const provider = piModelSummaryProvider(
+        {
+          credentials: () => accountCredentials(async () => credential),
+          options: (route) => ({
+            start: modelStart(),
+            contextWindow: () => route.contextWindow,
+          }),
+          systemPrompt: SYSTEM_PROMPT,
+        },
+        () => Effect.succeed(catalog)
+      )
+      vi.stubGlobal("fetch", async (_input: unknown, init?: RequestInit) => {
+        payloads.push(JSON.parse(String(init?.body)))
+        return response("gpt-6-luna")
+      })
+      try {
+        const prepared = yield* provider.prepare(
+          { ...resolveRoute("memory"), contextWindow: 272000 },
+          job
+        )
+        expect(
+          yield* prepared.complete([{ role: "user", text: "Source" }], job)
+        ).toBe("Saved and verified.")
+        expect(payloads).toHaveLength(1)
+        expect(payloads[0]?.input[0]).toMatchObject({
+          role: "developer",
+          content: SYSTEM_PROMPT,
+        })
+        expect(payloads[0]?.tools ?? []).toEqual([])
       } finally {
         vi.unstubAllGlobals()
       }
