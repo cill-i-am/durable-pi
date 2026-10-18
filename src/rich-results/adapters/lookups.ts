@@ -82,35 +82,39 @@ const photonSchema = z.object({
 export async function lookupPlaces(
   query: string,
   signal?: AbortSignal,
-  request?: typeof fetch
+  request?: typeof fetch,
+  limit = 5
 ) {
   const clean = z.string().trim().min(2).max(200).parse(query)
+  const count = z.number().int().min(1).max(5).parse(limit)
   const url = new URL("https://photon.komoot.io/api/")
   url.search = new URLSearchParams({
     q: clean,
-    limit: "5",
+    limit: String(count),
     lang: "en",
   }).toString()
   const data = photonSchema.parse(await readJson(url, signal, request))
-  const places = data.features.map(({ geometry, properties: p }) =>
-    placeSchema.parse({
-      name: p.name || p.street || p.city || clean,
-      address:
-        [
-          [p.housenumber, p.street].filter(Boolean).join(" "),
-          p.postcode,
-          p.city,
-          p.state,
-          p.country,
-        ]
-          .filter(Boolean)
-          .join(", ") ||
-        p.name ||
-        clean,
-      latitude: geometry.coordinates[1],
-      longitude: geometry.coordinates[0],
-    })
-  )
+  const places = data.features
+    .slice(0, count)
+    .map(({ geometry, properties: p }) =>
+      placeSchema.parse({
+        name: p.name || p.street || p.city || clean,
+        address:
+          [
+            [p.housenumber, p.street].filter(Boolean).join(" "),
+            p.postcode,
+            p.city,
+            p.state,
+            p.country,
+          ]
+            .filter(Boolean)
+            .join(", ") ||
+          p.name ||
+          clean,
+        latitude: geometry.coordinates[1],
+        longitude: geometry.coordinates[0],
+      })
+    )
   if (!places.length)
     throw new Error(
       "No places matched. Try adding a town, postcode or country."

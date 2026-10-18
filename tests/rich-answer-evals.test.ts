@@ -52,6 +52,47 @@ const weatherRows = (): Row[] => [
 ]
 
 describe("rich-answer eval graders (synthetic traces, not model runs)", () => {
+  it("rejects an unrequested map before an otherwise correct weather card", () => {
+    const rows = weatherRows()
+    const places = answerResult("Places", {
+      title: "Dublin",
+      places: [
+        {
+          name: "Dublin",
+          address: "Ireland",
+          latitude: 53.34,
+          longitude: -6.25,
+        },
+      ],
+      source: { label: "Photon", url: "https://photon.komoot.io/" },
+      asOf: "Today",
+    })
+    rows.splice(
+      1,
+      0,
+      {
+        kind: "tool",
+        text: JSON.stringify({
+          name: "lookup_places",
+          arguments: { query: "Dublin, Ireland" },
+        }),
+      },
+      { kind: "echo", text: JSON.stringify(places) }
+    )
+    expect(grade(weekend, archive(rows)).checks).toContainEqual({
+      name: "question-matched-card-selection",
+      pass: false,
+    })
+    rows[1]!.text = JSON.stringify({
+      name: "lookup_places",
+      arguments: { query: "Dublin, Ireland", display: false },
+    })
+    rows[2]!.text = JSON.stringify({
+      kind: "place-lookup",
+      ...places.spec.elements.answer!.props,
+    })
+    expect(grade(weekend, archive(rows)).pass).toBe(true)
+  })
   it("accepts a valid trace and records the evidence scope", () => {
     const result = grade(weekend, archive(weatherRows()), {
       failed: false,
