@@ -12,7 +12,8 @@ async function readJson(
       ? AbortSignal.any([signal, AbortSignal.timeout(12_000)])
       : AbortSignal.timeout(12_000),
     headers: { Accept: "application/json" },
-    redirect: "error",
+    // Workers does not support "error"; the status check below rejects redirects.
+    redirect: "manual",
   })
   if (!response.ok)
     throw new Error(

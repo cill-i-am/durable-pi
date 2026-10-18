@@ -238,7 +238,7 @@ describe("driving route adapter", () => {
     )
     expect(url.searchParams.get("overview")).toBe("simplified")
     expect(request.mock.calls[0]![1]).toMatchObject({
-      redirect: "error",
+      redirect: "manual",
       signal: expect.any(AbortSignal),
     })
     expect(answer.spec.elements.answer!.props).toMatchObject({

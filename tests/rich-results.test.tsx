@@ -284,6 +284,7 @@ describe("live lookup adapters", () => {
       /^https:\/\/photon.komoot.io\/api\//
     )
     expect(request.mock.calls[0]![1]!.signal).toBeInstanceOf(AbortSignal)
+    expect(request.mock.calls[0]![1]!.redirect).toBe("manual")
     expect(value.spec.elements.answer!.props.source).toBeDefined()
   })
   it("maps weather into Celsius forecast cards and rejects incomplete days", async () => {
@@ -312,6 +313,7 @@ describe("live lookup adapters", () => {
       request
     )
     expect(value.spec.elements.answer!.props.condition).toBe("Overcast")
+    expect(request.mock.calls[0]![1]!.redirect).toBe("manual")
     expect(value.spec.elements.answer!.props.days).toEqual([
       {
         date: "2026-10-17",
@@ -330,6 +332,22 @@ describe("live lookup adapters", () => {
       )
     ).rejects.toThrow()
   })
+  it.each([301, 302, 303, 307, 308])(
+    "rejects a provider redirect (%i) without following its location or reading its body",
+    async (status) => {
+      const response = new Response("not JSON", {
+        status,
+        headers: { Location: "https://other-provider.example/" },
+      })
+      const request = vi.fn<typeof fetch>().mockResolvedValue(response)
+      await expect(
+        lookupPlaces("County Kerry Ireland", undefined, request)
+      ).rejects.toThrow(`Lookup provider returned ${status}`)
+      expect(request).toHaveBeenCalledTimes(1)
+      expect(request.mock.calls[0]![1]!.redirect).toBe("manual")
+      expect(response.bodyUsed).toBe(false)
+    }
+  )
   it("fails clearly on no results, provider errors and unbounded responses", async () => {
     await expect(
       lookupPlaces(
