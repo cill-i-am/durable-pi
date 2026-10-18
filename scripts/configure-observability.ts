@@ -15,7 +15,7 @@ const ResponseEnvelope = Schema.Struct({
 const Scripts = Schema.Array(
   Schema.Struct({
     id: Schema.String,
-    tags: Schema.optional(Schema.Array(Schema.String)),
+    tags: Schema.optional(Schema.NullOr(Schema.Array(Schema.String))),
   })
 )
 const Settings = Schema.Struct({
@@ -78,7 +78,14 @@ export const configureObservability = Effect.gen(function* () {
     return envelope.result
   })
   const scripts = yield* request("").pipe(
-    Effect.flatMap(Schema.decodeUnknownEffect(Scripts))
+    Effect.flatMap(Schema.decodeUnknownEffect(Scripts)),
+    Effect.catchTag("SchemaError", () =>
+      Effect.fail(
+        new ObservabilitySetupFailed({
+          operation: "Worker list metadata schema",
+        })
+      )
+    )
   )
   const selected: string[] = []
   for (const resource of resources) {
@@ -96,7 +103,14 @@ export const configureObservability = Effect.gen(function* () {
   }
   for (const name of selected) {
     const settings = yield* request(`/${name}/script-settings`).pipe(
-      Effect.flatMap(Schema.decodeUnknownEffect(Settings))
+      Effect.flatMap(Schema.decodeUnknownEffect(Settings)),
+      Effect.catchTag("SchemaError", () =>
+        Effect.fail(
+          new ObservabilitySetupFailed({
+            operation: `Read settings schema: ${name}`,
+          })
+        )
+      )
     )
     // Script-level settings preserve the deployed version and DO exports.
     yield* request(`/${name}/script-settings`, {
@@ -104,25 +118,38 @@ export const configureObservability = Effect.gen(function* () {
         ...settings.observability,
         issues: { enabled: true },
       },
-    })
-    const verified = yield* request(`/${name}/script-settings`).pipe(
-      Effect.flatMap(Schema.decodeUnknownEffect(Settings))
-    )
-    yield* Schema.decodeUnknownEffect(
-      Schema.Struct({ enabled: Schema.Literal(true) })
-    )(verified.observability.issues)
-    yield* Effect.logInfo("Workers Issues enabled", { worker: name })
-  }
-})
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)
-  await Effect.runPromise(
-    configureObservability.pipe(
+    }).pipe(
       Effect.catchTag("SchemaError", () =>
         Effect.fail(
           new ObservabilitySetupFailed({
-            operation: "Cloudflare response schema",
+            operation: `Patch settings schema: ${name}`,
           })
         )
       )
     )
-  )
+    const verified = yield* request(`/${name}/script-settings`).pipe(
+      Effect.flatMap(Schema.decodeUnknownEffect(Settings)),
+      Effect.catchTag("SchemaError", () =>
+        Effect.fail(
+          new ObservabilitySetupFailed({
+            operation: `Verify settings schema: ${name}`,
+          })
+        )
+      )
+    )
+    yield* Schema.decodeUnknownEffect(
+      Schema.Struct({ enabled: Schema.Literal(true) })
+    )(verified.observability.issues).pipe(
+      Effect.catchTag("SchemaError", () =>
+        Effect.fail(
+          new ObservabilitySetupFailed({
+            operation: `Verify Issues enabled: ${name}`,
+          })
+        )
+      )
+    )
+    yield* Effect.logInfo("Workers Issues enabled", { worker: name })
+  }
+})
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)
+  await Effect.runPromise(configureObservability)

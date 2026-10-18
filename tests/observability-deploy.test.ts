@@ -37,6 +37,7 @@ it("updates script-level Issues without reconciling Durable Object exports or ch
     ),
     deployed("retired-agent", "AgentWorker"),
     { id: "unmanaged-worker" },
+    { id: "untagged-worker", tags: null },
     {
       id: "different-stack",
       tags: [
@@ -104,6 +105,49 @@ it("rejects a non-main invocation before contacting Cloudflare", async () => {
     { _tag: "ObservabilitySetupFailed", operation: "main deployment guard" }
   )
   expect(network).not.toHaveBeenCalled()
+})
+
+it("reports invalid list metadata before making any settings changes", async () => {
+  vi.stubEnv("GITHUB_REF", "refs/heads/main")
+  vi.stubEnv("GITHUB_EVENT_NAME", "push")
+  vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "synthetic")
+  vi.stubEnv("CLOUDFLARE_API_TOKEN", "synthetic")
+  const network = vi.fn<typeof fetch>(async () =>
+    Response.json({ success: true, result: [{ id: "invalid", tags: 123 }] })
+  )
+  vi.stubGlobal("fetch", network)
+  await expect(Effect.runPromise(configureObservability)).rejects.toMatchObject(
+    {
+      _tag: "ObservabilitySetupFailed",
+      operation: "Worker list metadata schema",
+    }
+  )
+  expect(network).toHaveBeenCalledTimes(1)
+})
+
+it("still fails if the provider does not confirm Issues after a successful patch", async () => {
+  vi.stubEnv("GITHUB_REF", "refs/heads/main")
+  vi.stubEnv("GITHUB_EVENT_NAME", "push")
+  vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "synthetic")
+  vi.stubEnv("CLOUDFLARE_API_TOKEN", "synthetic")
+  const network = vi.fn<typeof fetch>(async (input) =>
+    Response.json({
+      success: true,
+      result: String(input).endsWith("/scripts")
+        ? productionScripts
+        : { observability: { enabled: true } },
+    })
+  )
+  vi.stubGlobal("fetch", network)
+  await expect(Effect.runPromise(configureObservability)).rejects.toMatchObject(
+    {
+      _tag: "ObservabilitySetupFailed",
+      operation: "Verify Issues enabled: shortened-agent-script",
+    }
+  )
+  expect(
+    network.mock.calls.filter(([, init]) => init?.method === "PATCH")
+  ).toHaveLength(1)
 })
 
 it.each(["missing", "ambiguous"])(
