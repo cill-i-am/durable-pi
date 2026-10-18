@@ -142,7 +142,7 @@ function Workspace({
   }, [agentId, archived, openArchivedAgents])
   useEffect(() => {
     if (location.pathname === "/" && !catalog.loading && catalog.selected) {
-      openAgent(
+      void openAgent(
         catalog.selected.id,
         {
           ...(location.search.connections
@@ -170,7 +170,7 @@ function Workspace({
   function selectAgent(id: AgentProfile["id"], panel?: Workbench) {
     if (navigationLocked) return
     catalog.select(id)
-    location.openAgent(id, { panel })
+    void location.openAgent(id, { panel })
   }
   const savedEditor = useRef<AgentProfile["id"] | null>(null)
   function setEditor(value: { agent?: AgentProfile; key: string } | null) {
@@ -200,7 +200,8 @@ function Workspace({
       archived: shouldArchive,
     })
     setError("")
-    if (shouldArchive) await location.openArchivedAgents()
+    if (shouldArchive && location.agentId === agent.id)
+      await location.openAgent(homeAgentId, {}, true)
     await catalog.refresh().catch(() => {
       setError(
         "Agent updated, but the list could not refresh. Try refreshing it."
@@ -402,7 +403,7 @@ function Workspace({
             onOpenChange={(open) => {
               if (!open) {
                 if (savedEditor.current && !editor.agent)
-                  location.openAgent(savedEditor.current)
+                  void location.openAgent(savedEditor.current)
                 else location.closeEditor()
                 savedEditor.current = null
               }
