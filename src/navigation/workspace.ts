@@ -6,6 +6,11 @@ import { Schema } from "effect"
 
 import { ActivityFilter, ActivityCursor } from "@/activity/contracts"
 import { AgentId } from "@/agents/contracts"
+import { AgentSlug } from "@/agents/slugs"
+
+export const AgentReference = Schema.Union([AgentId, AgentSlug])
+export type AgentReference = typeof AgentReference.Type
+export const parseAgentReference = Schema.decodeUnknownSync(AgentReference)
 
 export const Workbench = Schema.Literals([
   "browser",
@@ -100,7 +105,7 @@ const tabs: Record<Workbench, readonly NonNullable<WorkspaceQuery["tab"]>[]> = {
   memory: ["notes", "history", "tree", "files"],
 }
 const WorkspaceParams = Schema.Struct({
-  agentId: Schema.optional(AgentId),
+  agentId: Schema.optional(AgentReference),
   panel: Schema.optional(Workbench),
   itemId: Schema.optional(ResourceId),
   section: Schema.optional(SettingsSection),
@@ -157,7 +162,7 @@ function validatePanelSelection(view: WorkspaceSearch) {
 }
 
 export function workspaceDestination(
-  agentId: AgentId,
+  agentId: AgentReference,
   view: WorkspaceSearch = {}
 ) {
   const { panel, item, settings, security, ...query } = view
@@ -205,7 +210,7 @@ export function workspaceReturnPath(value: string, depth = 0): string {
       const returnTo = url.searchParams.get("returnTo")
       return `/agents/new${defaultStringifySearch({ returnTo: returnTo ? workspaceReturnPath(returnTo, depth + 1) : undefined })}`
     }
-    const agentId = parseAgentId(parts[1])
+    const agentId = parseAgentReference(parts[1])
     if (parts.length === 3 && parts[2] === "edit") {
       const returnTo = url.searchParams.get("returnTo")
       return `/agents/${agentId}/edit${defaultStringifySearch({ returnTo: returnTo ? workspaceReturnPath(returnTo, depth + 1) : undefined })}`
@@ -225,7 +230,7 @@ export function workspaceReturnPath(value: string, depth = 0): string {
 
 function agentWorkspaceParams(
   parts: string[],
-  agentId: AgentId
+  agentId: AgentReference
 ): WorkspaceParams {
   return parts[2] === "settings" && parts.length === 4
     ? { agentId, section: parseSection(parts[3]) }
@@ -265,7 +270,7 @@ export function workspaceReturnLink(value: string) {
       undefined,
       url.searchParams.get("returnTo") ?? "/agents"
     )
-  const agentId = parseAgentId(parts[1])
+  const agentId = parseAgentReference(parts[1])
   if (parts[2] === "edit")
     return editorDestination(
       agentId,
@@ -287,7 +292,10 @@ export function workspaceReturnLink(value: string) {
   )
 }
 
-export function editorDestination(agentId?: AgentId, returnTo = "/agents") {
+export function editorDestination(
+  agentId?: AgentReference,
+  returnTo = "/agents"
+) {
   const search = { returnTo: workspaceReturnPath(returnTo) }
   return agentId
     ? { to: "/agents/$agentId/edit" as const, params: { agentId }, search }

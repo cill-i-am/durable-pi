@@ -34,7 +34,11 @@ export function AgentCollection({
     >
       <Link
         to="/agents/$agentId"
-        params={{ agentId: homeAgentId }}
+        params={{
+          agentId:
+            agents.find((agent) => agent.id === homeAgentId)?.slug ??
+            homeAgentId,
+        }}
         className={buttonVariants({
           variant: "ghost",
           className: "self-start",
@@ -82,7 +86,7 @@ export function AgentCollection({
                 ) : (
                   <Link
                     to="/agents/$agentId"
-                    params={{ agentId: agent.id }}
+                    params={{ agentId: agent.slug }}
                     className="block truncate rounded-sm text-sm font-semibold outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     {agent.name}

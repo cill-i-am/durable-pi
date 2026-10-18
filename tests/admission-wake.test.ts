@@ -299,6 +299,7 @@ it("does not admit or wake new work when the bot is archived during catalog disc
     const now = new Date().toISOString()
     Effect.runSync(
       host.botConfiguration.configure("owner", {
+        slug: "test",
         id: homeAgentId,
         name: "Test",
         instructions: "",

@@ -12,6 +12,7 @@ import {
 export class LegacyAgentProbe extends DurableObject<unknown> {
   async agentProfile(id: string): Promise<AgentProfile> {
     return {
+      slug: "legacy-bot",
       id: Schema.decodeUnknownSync(AgentId)(id),
       name: "Legacy bot",
       instructions: "Synthetic legacy instructions.",

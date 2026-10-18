@@ -4,6 +4,13 @@ import type { DefaultTreeAdapterMap } from "parse5"
 import PostalMime from "postal-mime"
 
 import { digest } from "../../webhooks/adapters/crypto"
+import {
+  FileName,
+  MAX_ATTACHMENTS,
+  MAX_FILE_BYTES,
+  type Upload,
+} from "../../workspace/files"
+import { emailDecision } from "../approvals"
 import { EmailRejected, IncomingEmail, EMAIL_MAX_RAW } from "../contracts"
 import { emailAgent } from "./address"
 
@@ -35,7 +42,7 @@ async function boundedRaw(
 ) {
   if (message.rawSize > EMAIL_MAX_RAW)
     throw new EmailRejected({
-      message: "Email must be no larger than 256 KiB.",
+      message: "Email must be no larger than 20 MiB including attachments.",
     })
   const reader = message.raw.getReader()
   const chunks: Uint8Array[] = []
@@ -48,7 +55,7 @@ async function boundedRaw(
       if (size > EMAIL_MAX_RAW) {
         await reader.cancel()
         throw new EmailRejected({
-          message: "Email must be no larger than 256 KiB.",
+          message: "Email must be no larger than 20 MiB including attachments.",
         })
       }
       chunks.push(value)
@@ -65,6 +72,10 @@ async function boundedRaw(
   return bytes
 }
 const safeHeader = (value: string) => value.replace(/[\r\n\u0000]/g, " ").trim()
+// Mail clients quote the full approval card. Keep that history out of a
+// decision command; ordinary message bodies retain their original text.
+const commandBody = (body: string) =>
+  emailDecision(body) ? body.trimStart().split(/\r?\n/, 1)[0]!.trim() : body
 function requireSender(
   message: Pick<
     ForwardableEmailMessage,
@@ -104,13 +115,35 @@ export async function parseEmail(
     throw new EmailRejected({
       message: "The sender must match the enrolled owner.",
     })
-  if (parsed.attachments.length)
+  if (parsed.attachments.length > MAX_ATTACHMENTS)
     throw new EmailRejected({
-      message:
-        "This email channel currently accepts text only. Add attachments in Pi.",
+      message: "Attach up to four files to one email.",
     })
+  const attachments = await Promise.all(
+    parsed.attachments.map(async (file, index) => {
+      if (typeof file.content === "string")
+        throw new EmailRejected({
+          message: "Could not decode this email attachment.",
+        })
+      const bytes = new Uint8Array(file.content)
+      const name = file.filename?.trim() || `attachment-${index + 1}`
+      if (bytes.byteLength > MAX_FILE_BYTES || !Schema.is(FileName)(name))
+        throw new EmailRejected({
+          message: "Use valid filenames and files up to 8 MiB each.",
+        })
+      const hash = Array.from(
+        new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))
+      )
+        .map((byte) => byte.toString(16).padStart(2, "0"))
+        .join("")
+      return { name, mime: file.mimeType, bytes, hash }
+    })
+  )
   const subject = safeHeader(parsed.subject ?? "").slice(0, 200)
-  const body = (parsed.text?.trim() || htmlText(parsed.html ?? "")).trim()
+  const originalBody =
+    (parsed.text?.trim() || htmlText(parsed.html ?? "")).trim() ||
+    (attachments.length ? "Please review the attached files." : "")
+  const body = commandBody(originalBody)
   if (!body || body.length > 25_000)
     throw new EmailRejected({
       message: "Email needs between 1 and 25,000 characters of text.",
@@ -128,8 +161,11 @@ export async function parseEmail(
     ownerEmail.toLowerCase(),
     message.to,
     subject,
-    body,
+    originalBody,
     references,
+    ...(attachments.length
+      ? [attachments.map(({ name, mime, hash }) => [name, mime, hash])]
+      : []),
   ])
   const fingerprint = await digest(canonical)
   const identity = await digest(
@@ -140,17 +176,29 @@ export async function parseEmail(
     ])
   )
   const id = `${identity.slice(0, 8)}-${identity.slice(8, 12)}-4${identity.slice(13, 16)}-a${identity.slice(17, 20)}-${identity.slice(20, 32)}`
-  return Schema.decodeUnknownSync(IncomingEmail)({
-    id,
-    fingerprint,
-    messageId,
-    sender: ownerEmail,
-    recipient: message.to,
-    subject,
-    body,
-    references,
-  })
+  const uploads: Upload[] = await Promise.all(
+    attachments.map(async ({ hash, ...file }, index) => ({
+      ...file,
+      id: uuidFromHash(await digest(JSON.stringify([identity, index, hash]))),
+    }))
+  )
+  return {
+    ...Schema.decodeUnknownSync(IncomingEmail)({
+      id,
+      fingerprint,
+      messageId,
+      sender: ownerEmail,
+      recipient: message.to,
+      subject,
+      body,
+      references,
+      files: uploads.map((file) => file.id),
+    }),
+    attachments: uploads,
+  }
 }
+const uuidFromHash = (value: string) =>
+  `${value.slice(0, 8)}-${value.slice(8, 12)}-4${value.slice(13, 16)}-a${value.slice(17, 20)}-${value.slice(20, 32)}`
 export async function receiveCloudflareEmail(
   message: ForwardableEmailMessage,
   host: {
@@ -158,7 +206,8 @@ export async function receiveCloudflareEmail(
     domain: string
     deliver: (
       agent: NonNullable<ReturnType<typeof emailAgent>>,
-      input: IncomingEmail
+      input: IncomingEmail,
+      attachments: readonly Upload[]
     ) => Promise<void>
   }
 ) {
@@ -166,8 +215,8 @@ export async function receiveCloudflareEmail(
     const agent = emailAgent(message.to, host.domain)
     if (!agent)
       throw new EmailRejected({ message: "Unknown agent email address." })
-    const input = await parseEmail(message, host.ownerEmail)
-    await host.deliver(agent, input)
+    const { attachments, ...input } = await parseEmail(message, host.ownerEmail)
+    await host.deliver(agent, input, attachments)
   } catch (cause) {
     if (Schema.is(EmailRejected)(cause)) {
       message.setReject(cause.message)

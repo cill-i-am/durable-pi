@@ -24,3 +24,4 @@ export const AgentStatuses = Schema.Struct({
   ),
 })
 export { AgentProfile, AgentId, homeAgentId } from "./domain"
+export { AgentSlug } from "./slugs"

@@ -11,6 +11,7 @@ import { homeAgentId } from "../src/agents/domain"
 import { database, corrupt } from "./database"
 
 const profile = {
+  slug: "test",
   id: homeAgentId,
   name: "Test",
   instructions: "Policy",

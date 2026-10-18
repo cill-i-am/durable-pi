@@ -2,6 +2,7 @@ import { Effect } from "effect"
 
 import { preserveFatal } from "../../shared/effect"
 import { jsonRequest } from "../../shared/http"
+import type { Upload } from "../../workspace/files"
 import {
   ConfigureEmail,
   EmailRejected,
@@ -10,13 +11,17 @@ import {
   type EmailView,
   type EmailFailure,
 } from "../contracts"
+import { incomingEmailRequest } from "./attachments"
 
 export function emailRequest(
   request: Request,
   path: string,
   host: {
     view: () => Effect.Effect<EmailView, EmailFailure>
-    receive: (input: IncomingEmail) => Effect.Effect<boolean, EmailFailure>
+    receive: (
+      input: IncomingEmail,
+      attachments: readonly Upload[]
+    ) => Effect.Effect<boolean, EmailFailure>
     configure: (input: ConfigureEmail) => Effect.Effect<unknown, EmailFailure>
     retry: (
       input: typeof RetryEmail.Type
@@ -25,14 +30,9 @@ export function emailRequest(
 ) {
   return Effect.gen(function* () {
     if (request.method === "POST" && path === "email/incoming") {
-      const input = yield* jsonRequest(
-        request,
-        IncomingEmail,
-        160_000,
-        () => new EmailRejected({ message: "Invalid incoming email." })
-      )
+      const { input, attachments } = yield* incomingEmailRequest(request)
       return Response.json(
-        { accepted: yield* host.receive(input) },
+        { accepted: yield* host.receive(input, attachments) },
         { status: 202 }
       )
     }

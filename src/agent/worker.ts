@@ -234,12 +234,16 @@ import { sharedReference } from "../delegation/delegation"
 import { Delegation, delegationApplication } from "../delegation/service"
 import {
   emailAddress,
+  emailAgent,
   emailConfigured,
   sameAddress,
 } from "../email/adapters/address"
+import { emailApprovalProofs } from "../email/adapters/approval-proof"
+import { emailReplyFiles } from "../email/adapters/attachments"
 import { emailRequest } from "../email/adapters/http"
 import { sendEmailReply } from "../email/adapters/sending"
 import { EmailStore } from "../email/adapters/sqlite"
+import { emailApprovals } from "../email/approval-flow"
 import {
   EmailRejected,
   EmailUnavailable,
@@ -814,6 +818,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       ...recoverableObjectTools,
       ...recoverablePlanTools,
       "share_image",
+      "share_file",
       "delegate_tasks",
       "background_tasks",
       "delegate_bot",
@@ -1556,9 +1561,47 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             () => new EmailStorageError({ operation: "read conversation" })
           )
         ),
-    send: (record, reply) =>
-      sendEmailReply(this.env.AGENT_EMAIL, record, reply),
-    reviewUrl: `${this.env.EMAIL_REVIEW_URL}/agents`,
+    send: (record, reply, attachments) =>
+      sendEmailReply(this.env.AGENT_EMAIL, record, reply, attachments),
+    files: (record, reviewUrl) =>
+      emailReplyFiles(this.workspaceService, record.id, reviewUrl).pipe(
+        Effect.mapError(() => new EmailUnavailable())
+      ),
+    ...emailApprovals(this.emailStore, this.access, {
+      proofs: emailApprovalProofs(this.env.EMAIL_ADDRESS_SECRET),
+      wakeConversation: () =>
+        agentNative("wake conversation", () => this.runner.wake()).pipe(
+          Effect.mapError(() => new EmailUnavailable())
+        ),
+      active: () =>
+        this.configurationService.read().pipe(
+          Effect.map(
+            (configuration) =>
+              this.emailReady() && configuration?.status === "active"
+          ),
+          Effect.mapError(() => new EmailUnavailable())
+        ),
+      members: (id) =>
+        this.conversations
+          .members(id)
+          .pipe(Effect.mapError(() => new EmailUnavailable())),
+    }),
+    reviewUrl: (record) =>
+      Effect.gen({ self: this }, function* () {
+        const configuration = yield* this.configurationService.read()
+        const id = emailAgent(record.recipient, this.env.AGENT_EMAIL_DOMAIN)
+        if (!configuration || !id) return yield* new EmailUnavailable()
+        const profile =
+          id === homeAgentId
+            ? yield* this.catalog.requireActive(id)
+            : yield* agentRpcNative(() =>
+                agentRpc(this.env.AGENT.getByName(configuration.owner)).profile(
+                  id
+                )
+              )
+        if (!profile) return yield* new EmailUnavailable()
+        return `${this.env.EMAIL_REVIEW_URL}/agents/${profile.slug}`
+      }).pipe(Effect.mapError(() => new EmailUnavailable())),
   })
   private emailReady() {
     return emailConfigured(
@@ -1593,7 +1636,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       )
       return {
         configured,
-        enabled: settings.enabled,
+        enabled: configured && settings.enabled,
         revision: settings.revision,
         address,
         messages,
@@ -1620,7 +1663,12 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       )
     )
   }
-  private receiveEmail(owner: string, id: AgentId, email: IncomingEmail) {
+  private receiveEmail(
+    owner: string,
+    id: AgentId,
+    email: IncomingEmail,
+    attachments: readonly import("../workspace/files").Upload[]
+  ) {
     return Effect.gen({ self: this }, function* () {
       if (
         !this.emailReady() ||
@@ -1652,6 +1700,24 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         return yield* new EmailRejected({
           message: "Unknown or revoked agent email address.",
         })
+      const previous = yield* this.emailStore.get(email.id)
+      if (previous && previous.fingerprint !== email.fingerprint)
+        return yield* new EmailRejected({
+          message: "This Message-ID was already used for different content.",
+        })
+      if (!previous) {
+        for (const attachment of attachments) {
+          yield* this.workspaceService
+            .upload(attachment)
+            .pipe(
+              Effect.mapError((error) =>
+                error._tag === "FileRejected"
+                  ? new EmailRejected({ message: error.message })
+                  : new EmailUnavailable()
+              )
+            )
+        }
+      }
       const accepted = yield* this.emailStore.receive(
         email,
         settings.generation
@@ -3259,7 +3325,8 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         )
         return yield* emailRequest(request, path, {
           view: () => this.emailView(owner, id),
-          receive: (input) => this.receiveEmail(owner, id, input),
+          receive: (input, attachments) =>
+            this.receiveEmail(owner, id, input, attachments),
           configure: (input) => this.configureEmail(input),
           retry: (input) =>
             this.emailStore

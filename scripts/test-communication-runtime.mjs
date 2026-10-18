@@ -328,6 +328,65 @@ const config :Workerd.Config = (
   await stop()
   await start()
   assert.deepEqual(await call("email/inspect", emailIdentity), email)
+  assert.equal((await call("email/attachment", emailIdentity)).status, 202)
+  for (let n = 0; n < 150; n++) {
+    email = await call("email/inspect", emailIdentity)
+    if (
+      email.approvals.some((approval) => approval.tool === "share_file") &&
+      email.sends.length === 2
+    )
+      break
+    await sleep(100)
+  }
+  assert.equal(email.turns.length, 2)
+  assert.ok(
+    email.turns.some((turn) =>
+      turn.attachments.some((file) => file.name === "acceptance.txt")
+    )
+  )
+  assert.equal(email.sends.length, 2)
+  assert.match(email.sends[1].body, /APPROVE /)
+  assert.equal((await call("email/approve", emailIdentity)).status, 202)
+  for (let n = 0; n < 150; n++) {
+    email = await call("email/inspect", emailIdentity)
+    if (
+      email.states.length === 4 &&
+      email.states.every((state) => state === "sent")
+    )
+      break
+    await sleep(100)
+  }
+  assert.deepEqual(
+    email.states,
+    ["sent", "sent", "sent", "sent"],
+    JSON.stringify({
+      states: email.states,
+      operations: email.operations,
+      replyFiles: email.replyFiles,
+      turns: email.turns,
+      approvals: email.approvals.map(({ tool, status }) => ({ tool, status })),
+      replies: email.sends.map((send) => send.body.split("\n")[0]),
+    })
+  )
+  assert.equal(
+    email.turns.length,
+    2,
+    "Approval commands must not become model turns"
+  )
+  assert.equal(email.sends.length, 4)
+  assert.ok(
+    email.sends.some((send) =>
+      JSON.parse(send.attachments).some(
+        (file) => file.name === "acceptance.txt" && file.bytes === 27
+      )
+    )
+  )
+  assert.ok(
+    email.sends.every((send) =>
+      send.body.includes("/agents/personal-assistant")
+    )
+  )
+
   assert.equal(
     (await call("personal-chatgpt/chatgpt-native?mode=inspect", {})).installed,
     true

@@ -11,6 +11,7 @@ import { WebhookStorageError } from "../src/webhooks/persistence"
 
 vi.mock("../src/observability/events", () => ({ reportService: vi.fn() }))
 const profile: AgentProfile = {
+  slug: "bot",
   id: Schema.decodeUnknownSync(AgentId)("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"),
   name: "Bot",
   instructions: "",

@@ -1,5 +1,7 @@
 import { Schema } from "effect"
 
+import { FileSelection } from "../workspace/files"
+
 export class EmailRejected extends Schema.TaggedError<EmailRejected>()(
   "EmailRejected",
   {
@@ -39,6 +41,7 @@ export const IncomingEmail = Schema.Struct({
   subject: Schema.String.check(Schema.isMaxLength(200)),
   body: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(25_000)),
   references: Schema.String.check(Schema.isMaxLength(1500)),
+  files: Schema.optional(FileSelection),
 })
 export type IncomingEmail = typeof IncomingEmail.Type
 export const EmailSettings = Schema.Struct({
@@ -56,6 +59,7 @@ export const ConfigureEmail = Schema.Struct({
 export type ConfigureEmail = typeof ConfigureEmail.Type
 export const EmailRecord = Schema.Struct({
   ...IncomingEmail.fields,
+  purpose: Schema.Literals(["request", "notification"]),
   state: EmailDelivery,
   reply: Schema.String,
   providerId: Schema.NullOr(Schema.String),
@@ -84,7 +88,8 @@ export const RetryEmail = Schema.Struct({
   id: Schema.String,
   acknowledgeDuplicateRisk: Schema.Boolean,
 })
-export const EMAIL_MAX_RAW = 256 * 1024
+// MIME/base64 overhead counts too. Keep parsing comfortably below Worker memory.
+export const EMAIL_MAX_RAW = 20 * 1024 * 1024
 export const EMAIL_MAX_PENDING = 20
 export const EMAIL_MAX_RECORDS = 2000
 export const EMAIL_MAX_RETRIES = 100

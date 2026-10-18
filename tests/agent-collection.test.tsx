@@ -19,6 +19,7 @@ vi.mock("@tanstack/react-router", async (original) => ({
   }) => <a href={to.replace("$agentId", params?.agentId ?? "")}>{children}</a>,
 }))
 const agent: AgentProfile = {
+  slug: "research",
   id: parseAgentId("11111111-1111-4111-8111-111111111111"),
   name: "Research",
   instructions: "Review sources",
@@ -31,7 +32,7 @@ function render(archived: boolean) {
   return renderToStaticMarkup(
     <AgentCollection
       agents={[
-        { ...agent, id: homeAgentId, name: "Home" },
+        { ...agent, id: homeAgentId, slug: "personal-assistant", name: "Home" },
         { ...agent, status: archived ? "archived" : "active" },
       ]}
       archived={archived}
@@ -46,11 +47,11 @@ it("lists archived agents with Restore and no link into their workspace", () => 
   const html = render(true)
   expect(html).toContain('aria-label="Restore Research"')
   expect(html).not.toContain(`/agents/${agent.id}`)
-  expect(html).toContain('href="/agents/home"')
+  expect(html).toContain('href="/agents/personal-assistant"')
 })
 it("offers Archive beside active agents and protects Home from archiving", () => {
   const html = render(false)
   expect(html).toContain('aria-label="Archive Research"')
   expect(html).not.toContain('aria-label="Archive Home"')
-  expect(html).toContain(`href="/agents/${agent.id}"`)
+  expect(html).toContain(`href="/agents/${agent.slug}"`)
 })

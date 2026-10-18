@@ -10,6 +10,16 @@ import type {
 } from "./contracts"
 
 export interface EmailPersistence {
+  decide: <A, E>(
+    id: string,
+    allowed: () => Effect.Effect<boolean, EmailFailure>,
+    body: () => Effect.Effect<A, E>
+  ) => Effect.Effect<A, E | EmailFailure>
+  notice: (
+    parent: EmailRecord,
+    key: string,
+    reply: string
+  ) => Effect.Effect<void, EmailFailure>
   claim: (
     id: string,
     reply: string,

@@ -203,6 +203,7 @@ export class BackgroundGroupProbe extends BackgroundGroup {
                 ? agentRpcNative(() => agentRpc({ agentV1: reply }).status())
                 : agentRpcNative(() =>
                     agentRpc({ agentV1: reply }).configure("", {
+                      slug: "fixture",
                       id: homeAgentId,
                       name: "Fixture",
                       instructions: "",

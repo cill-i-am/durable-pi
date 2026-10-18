@@ -13,7 +13,7 @@ export default {
     await receiveCloudflareEmail(message, {
       ownerEmail: env.OWNER_EMAIL,
       domain: env.AGENT_EMAIL_DOMAIN,
-      deliver: async (id, input) => {
+      deliver: async (id, input, attachments) => {
         const owner = await Effect.runPromise(
           ownerAccounts(env.AUTH_DB).owner(env.OWNER_EMAIL)
         )
@@ -21,6 +21,14 @@ export default {
           throw new EmailRejected({
             message: "Set up the owner account before using email.",
           })
+        const body = new FormData()
+        body.set("message", JSON.stringify(input))
+        for (const file of attachments)
+          body.append(
+            "attachment",
+            new Blob([new Uint8Array(file.bytes)], { type: file.mime }),
+            file.name
+          )
         const response = await env.AGENT_SERVICE.fetch(
           new Request(
             `https://agent.internal/api/agent/email/incoming?agent=${id}`,
@@ -28,9 +36,8 @@ export default {
               method: "POST",
               headers: {
                 "x-owner-id": owner,
-                "content-type": "application/json",
               },
-              body: JSON.stringify(input),
+              body,
             }
           )
         )

@@ -26,6 +26,7 @@ import { database, type TestSqlite, corrupt } from "./database"
 import { catalog } from "./inference-fixture"
 
 const profile = {
+  slug: "test",
   id: homeAgentId,
   name: "Test",
   instructions: "",

@@ -5,6 +5,7 @@ import {
   primaryKey,
   sqliteTable,
   text,
+  uniqueIndex,
 } from "drizzle-orm/sqlite-core"
 
 export const botConfiguration = sqliteTable(
@@ -39,6 +40,7 @@ export const agentCatalog = sqliteTable(
   {
     id: text("id").notNull(),
     name: text("name").notNull(),
+    slug: text("slug"),
     instructions: text("instructions").notNull(),
     status: text("status").notNull(),
     createdAt: text("createdAt").notNull(),
@@ -48,6 +50,7 @@ export const agentCatalog = sqliteTable(
   },
   (t) => [
     primaryKey({ columns: [t.id] }),
+    uniqueIndex("agent_catalog_slug").on(t.slug),
     check("agent_catalog_status", sql`${t.status} in ('active', 'archived')`),
     check("agent_catalog_revision_check", sql`${t.revision} >= 0`),
   ]

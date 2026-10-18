@@ -113,7 +113,7 @@ describe("canonical workspace locations", () => {
     "javascript:alert(1)",
     "/api/agent/send",
     "/agents/home/../../api/agent/send",
-    "/agents/not-a-bot",
+    "/agents/invalid.slug",
     "/agents/home/files/../secret",
     "/agents/home/files?tab=webhook",
     "/agents/home?item=orphan",

@@ -138,6 +138,19 @@ export const agentMigrationManifest = {
         "ALTER TABLE `model_credentials` ADD `source` text DEFAULT 'deployment' NOT NULL;",
       ],
     },
+    {
+      id: "20261018100210_email_surfaces",
+      checksum:
+        "2c5ae3a4a14b64e0a08c6c390b047c9dda603e79ded0dfedf401d6c752102b2b",
+      statements: [
+        "ALTER TABLE `agent_catalog` ADD `slug` text;",
+        "ALTER TABLE `email_messages` ADD `files` text DEFAULT '[]' NOT NULL;",
+        "ALTER TABLE `email_messages` ADD `purpose` text DEFAULT 'request' NOT NULL;",
+        "ALTER TABLE `email_messages` ADD `notice_key` text;",
+        "CREATE UNIQUE INDEX `agent_catalog_slug` ON `agent_catalog` (`slug`);",
+        "CREATE UNIQUE INDEX `email_messages_notice` ON `email_messages` (`notice_key`);",
+      ],
+    },
   ],
   schema: [
     {
@@ -153,7 +166,12 @@ export const agentMigrationManifest = {
     {
       type: "table",
       name: "agent_catalog",
-      sql: 'CREATE TABLE `agent_catalog` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`name` text NOT NULL,\n\t`instructions` text NOT NULL,\n\t`status` text NOT NULL,\n\t`createdAt` text NOT NULL,\n\t`updatedAt` text NOT NULL,\n\t`creation` text NOT NULL,\n\t`revision` integer DEFAULT 0 NOT NULL,\n\tCONSTRAINT "agent_catalog_status" CHECK("status" in (\'active\', \'archived\')),\n\tCONSTRAINT "agent_catalog_revision_check" CHECK("revision" >= 0)\n)',
+      sql: 'CREATE TABLE `agent_catalog` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`name` text NOT NULL,\n\t`instructions` text NOT NULL,\n\t`status` text NOT NULL,\n\t`createdAt` text NOT NULL,\n\t`updatedAt` text NOT NULL,\n\t`creation` text NOT NULL,\n\t`revision` integer DEFAULT 0 NOT NULL, `slug` text,\n\tCONSTRAINT "agent_catalog_status" CHECK("status" in (\'active\', \'archived\')),\n\tCONSTRAINT "agent_catalog_revision_check" CHECK("revision" >= 0)\n)',
+    },
+    {
+      type: "index",
+      name: "agent_catalog_slug",
+      sql: "CREATE UNIQUE INDEX `agent_catalog_slug` ON `agent_catalog` (`slug`)",
     },
     {
       type: "table",
@@ -273,7 +291,12 @@ export const agentMigrationManifest = {
     {
       type: "table",
       name: "email_messages",
-      sql: "CREATE TABLE `email_messages` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`fingerprint` text NOT NULL,\n\t`message_id` text NOT NULL,\n\t`sender` text NOT NULL,\n\t`recipient` text NOT NULL,\n\t`subject` text NOT NULL,\n\t`body` text NOT NULL,\n\t`references` text NOT NULL,\n\t`state` text NOT NULL,\n\t`reply` text DEFAULT '' NOT NULL,\n\t`provider_id` text,\n\t`error` text,\n\t`created_at` integer NOT NULL,\n\tCONSTRAINT \"email_messages_state\" CHECK(\"state\" in ('queued','waiting','sending','sent','failed','uncertain','cancelled'))\n)",
+      sql: "CREATE TABLE `email_messages` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`fingerprint` text NOT NULL,\n\t`message_id` text NOT NULL,\n\t`sender` text NOT NULL,\n\t`recipient` text NOT NULL,\n\t`subject` text NOT NULL,\n\t`body` text NOT NULL,\n\t`references` text NOT NULL,\n\t`state` text NOT NULL,\n\t`reply` text DEFAULT '' NOT NULL,\n\t`provider_id` text,\n\t`error` text,\n\t`created_at` integer NOT NULL, `files` text DEFAULT '[]' NOT NULL, `purpose` text DEFAULT 'request' NOT NULL, `notice_key` text,\n\tCONSTRAINT \"email_messages_state\" CHECK(\"state\" in ('queued','waiting','sending','sent','failed','uncertain','cancelled'))\n)",
+    },
+    {
+      type: "index",
+      name: "email_messages_notice",
+      sql: "CREATE UNIQUE INDEX `email_messages_notice` ON `email_messages` (`notice_key`)",
     },
     {
       type: "index",

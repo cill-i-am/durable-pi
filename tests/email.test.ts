@@ -96,7 +96,8 @@ function fixture() {
           ? Effect.fail(sendError)
           : Effect.succeed("<provider@example.com>")
       }),
-    reviewUrl: "https://pi.example.com/agents/home",
+    reviewUrl: () =>
+      Effect.succeed("https://pi.example.com/agents/personal-assistant"),
   })
   const input: IncomingEmail = {
     id: crypto.randomUUID(),
@@ -170,6 +171,27 @@ describe("inbound MIME boundary", () => {
     const b = await parseEmail(mail("hello", { "Message-ID": "" }), owner)
     expect(a.id).toBe(b.id)
   })
+  it("accepts a first-line decision with a long quoted card without admitting the quote", async () => {
+    const result = await parseEmail(
+      mail(
+        `APPROVE synthetic.proof\n\n> ${"Quoted action details. ".repeat(2000)}`
+      ),
+      owner
+    )
+    expect(result.body).toBe("APPROVE synthetic.proof")
+    const changedQuote = await parseEmail(
+      mail("APPROVE synthetic.proof\n\n> Changed quoted details."),
+      owner
+    )
+    expect(changedQuote.id).toBe(result.id)
+    expect(changedQuote.fingerprint).not.toBe(result.fingerprint)
+    await expect(
+      parseEmail(
+        mail(`Thanks\n\n> APPROVE synthetic.proof\n${"x".repeat(25000)}`),
+        owner
+      )
+    ).rejects.toMatchObject({ _tag: "EmailRejected" })
+  })
   it("extracts HTML text without executing or retaining scripts", async () => {
     const result = await parseEmail(
       mail("<p>Hello &amp; welcome</p><script>steal()</script>", {
@@ -201,14 +223,20 @@ describe("inbound MIME boundary", () => {
       _tag: "EmailRejected",
     })
   })
-  it("rejects attachments explicitly", async () => {
+  it("preserves attachment bytes and stable file identities", async () => {
     const message = mail(
       '--boundary\r\nContent-Type: text/plain\r\n\r\nhello\r\n--boundary\r\nContent-Type: application/pdf\r\nContent-Disposition: attachment; filename="file.pdf"\r\n\r\npdf\r\n--boundary--',
       { "Content-Type": 'multipart/mixed; boundary="boundary"' }
     )
-    await expect(parseEmail(message, owner)).rejects.toMatchObject({
-      message: expect.stringContaining("text only"),
-    })
+    const parsed = await parseEmail(message, owner)
+    expect(parsed.attachments).toMatchObject([
+      {
+        name: "file.pdf",
+        mime: "application/pdf",
+        bytes: new TextEncoder().encode("pdf"),
+      },
+    ])
+    expect(parsed.files).toEqual(parsed.attachments.map((file) => file.id))
   })
   it("enforces actual stream size even when rawSize lies", async () => {
     const message = mail("x".repeat(EMAIL_MAX_RAW + 1))

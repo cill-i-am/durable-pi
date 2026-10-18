@@ -12,6 +12,55 @@ const details = (name = "Research") => ({
   instructions: "Cite your sources.",
 })
 describe("owner bot catalog", () => {
+  it("assigns readable collision-safe slugs, reserves ID/routes and keeps links stable on rename", async () => {
+    const runtime = ManagedRuntime.make(sqliteAgentCatalog(database()))
+    const catalog = runtime.runSync(AgentCatalog)
+    const first = runtime.runSync(catalog.create(details("Café research")))
+    const second = runtime.runSync(catalog.create(details("Cafe research")))
+    expect(first.slug).toBe("cafe-research")
+    expect(second.slug).toBe("cafe-research-2")
+    for (const name of ["home", "new", "archived"])
+      expect(runtime.runSync(catalog.create(details(name))).slug).toBe(
+        `${name}-2`
+      )
+    const emoji = runtime.runSync(catalog.create(details("🤖")))
+    expect(emoji.slug).toBe("agent")
+    expect(
+      runtime.runSync(
+        catalog.update({ ...first, name: "Renamed", instructions: "" })
+      ).slug
+    ).toBe(first.slug)
+    runtime.runSync(catalog.archive(first.id, true))
+    expect(runtime.runSync(catalog.create(details("Cafe research"))).slug).toBe(
+      "cafe-research-3"
+    )
+    await runtime.dispose()
+  })
+  it("backfills old names transactionally without changing identities, revisions or creation receipts", async () => {
+    const db = database(),
+      input = details("Legacy researcher")
+    db.run(
+      "INSERT INTO agent_catalog(id,name,instructions,status,createdAt,updatedAt,creation,revision) VALUES (?,?,?,'active','original','original','receipt',7)",
+      input.id,
+      input.name,
+      input.instructions
+    )
+    const runtime = ManagedRuntime.make(sqliteAgentCatalog(db))
+    const catalog = runtime.runSync(AgentCatalog)
+    expect(runtime.runSync(catalog.requireActive(input.id))).toMatchObject({
+      id: input.id,
+      slug: "legacy-researcher",
+      revision: 7,
+      createdAt: "original",
+    })
+    expect(
+      db.all<{ creation: string }>(
+        "SELECT creation FROM agent_catalog WHERE id=?",
+        input.id
+      )[0]?.creation
+    ).toBe("receipt")
+    await runtime.dispose()
+  })
   it("preserves the original object and isolates owner and bot identities", () => {
     const bot = details()
     expect(agentObjectName("owner-a", homeAgentId)).toBe("owner-a")

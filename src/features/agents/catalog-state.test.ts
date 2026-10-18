@@ -5,6 +5,7 @@ import { catalogReducer, initialCatalog } from "./catalog-state"
 
 it("retains the latest catalog when older loads succeed or fail out of order", () => {
   const profile = {
+    slug: "renamed-assistant",
     id: homeAgentId,
     name: "Renamed assistant",
     instructions: "",

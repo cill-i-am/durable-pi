@@ -67,6 +67,7 @@ function deferred<T>() {
   return { promise, resolve, reject }
 }
 const profile: AgentProfile = {
+  slug: "fixture",
   id: homeAgentId,
   name: "Fixture",
   instructions: "Synthetic instructions.",

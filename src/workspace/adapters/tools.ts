@@ -39,29 +39,37 @@ export function workspaceTools(
           execution.abortSignal
         ),
     }),
-    defineTool({
-      name: "share_image",
-      description:
-        "Include an existing image from this agent's private workspace in the current reply, on every surface including web and WhatsApp. Use its exact file ID from attachments or list_files. This records an image reply, not proof of external delivery. Up to four images per reply. Do not invent file IDs or public URLs.",
-      parameters: Type.Object({
-        id: Type.String({ pattern: "^[a-f0-9-]{36}$" }),
-      }),
-      replay: "safe",
-      execute: async (args, api, execution) =>
-        result(
-          await run(
-            Effect.gen(function* () {
-              const turnId = yield* turn(api)
-              return yield* workspace.replyFile({
-                operationId: `tool:${api.taskId}`,
-                turnId,
-                fileId: args.id,
-              })
-            }),
-            execution.abortSignal
-          )
-        ),
-    }),
+    ...["share_image", "share_file"].map((name) =>
+      defineTool({
+        name,
+        description: `${name === "share_image" ? "Include an existing image" : "Include an existing file"} from this agent's private workspace in the current reply across connected surfaces, including email. Use its exact file ID from attachments or list_files. This records a reply attachment, not proof of external delivery. Up to four files per reply. Do not invent file IDs or public URLs.`,
+        parameters: Type.Object({
+          id: Type.String({ pattern: "^[a-f0-9-]{36}$" }),
+        }),
+        replay: "safe",
+        execute: async (args, api, execution) =>
+          result(
+            await run(
+              Effect.gen(function* () {
+                if (name === "share_image") {
+                  const [file] = yield* workspace.requireFiles([args.id])
+                  if (file?.kind !== "image")
+                    return yield* new FileRejected({
+                      message: "Choose an image file to include in the reply.",
+                    })
+                }
+                const turnId = yield* turn(api)
+                return yield* workspace.replyFile({
+                  operationId: `tool:${api.taskId}`,
+                  turnId,
+                  fileId: args.id,
+                })
+              }),
+              execution.abortSignal
+            )
+          ),
+      })
+    ),
     defineTool({
       name: "list_files",
       description:

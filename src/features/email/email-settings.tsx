@@ -140,7 +140,7 @@ export function EmailSettings({
           <FieldLabel>Email this agent</FieldLabel>
           <FieldDescription>
             {view?.configured
-              ? "Send text from your enrolled email address. Replies return to that inbox. Tool approvals stay in Pi."
+              ? "Email your assistant from your enrolled inbox. Send files, receive replies and review action approvals by email."
               : "Email is not available yet."}
           </FieldDescription>
           <Button
@@ -201,8 +201,8 @@ export function EmailSettings({
               </InputGroupAddon>
             </InputGroup>
             <FieldDescription>
-              Keep this address private. Emails with attachments are rejected;
-              add files in Pi.
+              Keep this address private. Attach up to four files, 8 MiB each and
+              20 MiB per email. Approval emails let you approve once or deny.
             </FieldDescription>
           </Field>
         )}

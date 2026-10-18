@@ -45,7 +45,7 @@ export class EmailStore {
       Effect.map((row) =>
         row
           ? Schema.decodeUnknownSync(EmailSettings)(row)
-          : { enabled: false, revision: 0, generation: 0, operationId: "" }
+          : { enabled: true, revision: 0, generation: 1, operationId: "" }
       )
     )
   }
@@ -120,7 +120,7 @@ export class EmailStore {
         .from(emailMessages)
         .where(inArray(emailMessages.state, pending))
         .orderBy(asc(emailMessages.createdAt))
-        .limit(20)
+        .limit(80)
     ).pipe(Effect.map(Schema.decodeUnknownSync(Schema.Array(EmailRecord))))
   }
   receive(input: IncomingEmail, generation: number) {
@@ -156,6 +156,56 @@ export class EmailStore {
             .values({ ...input, state: "queued", createdAt: Date.now() })
         )
         return true
+      })
+    )
+  }
+  notice(parent: EmailRecord, key: string, reply: string) {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        if (!(yield* this.settings()).enabled) return
+        yield* this.query((orm) =>
+          orm
+            .insert(emailMessages)
+            .values({
+              id: crypto.randomUUID(),
+              fingerprint: parent.fingerprint,
+              messageId: parent.messageId,
+              sender: parent.sender,
+              recipient: parent.recipient,
+              subject: parent.subject,
+              body: "Approval notification",
+              references: parent.references,
+              files: [],
+              purpose: "notification",
+              noticeKey: key,
+              state: "waiting",
+              reply,
+              createdAt: Date.now(),
+            })
+            .onConflictDoNothing()
+        )
+      })
+    )
+  }
+  /** Fence revocation and the ledger decision together in this actor database. */
+  decide<A, E>(
+    id: string,
+    allowed: () => Effect.Effect<boolean, EmailFailure>,
+    body: () => Effect.Effect<A, E>
+  ) {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const current = yield* this.get(id)
+        if (
+          !(yield* this.settings()).enabled ||
+          current?.state !== "queued" ||
+          !(yield* allowed())
+        )
+          return yield* new EmailRejected({
+            message:
+              "Email was disabled or this request is no longer active. Review the action in Pi.",
+          })
+        return yield* body()
       })
     )
   }

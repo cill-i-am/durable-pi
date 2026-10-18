@@ -36,7 +36,7 @@ test("sign in, open an agent, receive a fixture reply and reload it", async ({
   const collection = page.getByRole("region", { name: "Your agents" })
   await expect(collection).toBeVisible()
   await collection.getByRole("link", { name: /Navi/ }).click()
-  await expect(page).toHaveURL(/\/agents\/home/)
+  await expect(page).toHaveURL(/\/agents\/navi/)
   const composer = page.getByRole("textbox", {
     name: "Message Navi",
     exact: true,

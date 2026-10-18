@@ -156,6 +156,7 @@ describe("agent runtime status", () => {
       status: AgentProfile["status"] = "active"
     ): AgentProfile => ({
       id,
+      slug: id,
       status,
       name: id,
       instructions: "",

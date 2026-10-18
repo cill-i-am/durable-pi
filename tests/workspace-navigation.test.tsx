@@ -14,6 +14,7 @@ const harness = vi.hoisted(() => ({
   choose: undefined as ((id: AgentProfile["id"]) => void) | undefined,
 }))
 const selectedAgent: AgentProfile = {
+  slug: "research",
   id: parseAgentId("11111111-1111-4111-8111-111111111111"),
   name: "Research",
   instructions: "",

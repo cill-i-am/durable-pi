@@ -167,7 +167,7 @@ it("keeps ordinary chat available when a new gateway reaches a previous-version 
   expect(fetch).toHaveBeenCalledOnce()
   expect(configureBot.mock.calls[0]).toEqual([
     "owner-a",
-    profile(first),
+    { ...profile(first), slug: first.id },
     "owner-a",
   ])
   expect("bindCommunicationIdentity" in previousVersion).toBe(false)

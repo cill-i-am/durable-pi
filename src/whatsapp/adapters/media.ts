@@ -1,5 +1,6 @@
-import { Effect, Stream, Schema } from "effect"
+import { Effect, Schema } from "effect"
 
+import { exportFileBytes } from "../../workspace/adapters/export"
 import { FileRejected } from "../../workspace/files"
 import type { Workspace } from "../../workspace/workspace"
 import {
@@ -22,28 +23,18 @@ export function exportWhatsAppMedia(
       const original =
         ["image/jpeg", "image/png"].includes(file.mime) &&
         file.size <= 5 * 1024 * 1024
-      const content = yield* workspace.content(id, !original)
-      let size = 0
-      const bytes = yield* Stream.mkUint8Array(
-        content.body.pipe(
-          Stream.mapEffect((part) => {
-            size += part.length
-            return size > 5 * 1024 * 1024
-              ? Effect.fail(
-                  new FileRejected({
-                    message: "The attachment is too large to send.",
-                  })
-                )
-              : Effect.succeed(part)
-          })
-        )
+      const { mime, bytes } = yield* exportFileBytes(
+        workspace,
+        id,
+        5 * 1024 * 1024,
+        !original
       )
       let binary = ""
       for (let offset = 0; offset < bytes.length; offset += 8192)
         binary += String.fromCharCode(...bytes.subarray(offset, offset + 8192))
       return Schema.decodeUnknownSync(WhatsAppMediaExport)({
         name: original ? file.name : `${file.id}.jpg`,
-        mime: content.mime,
+        mime,
         data: btoa(binary),
       })
     })

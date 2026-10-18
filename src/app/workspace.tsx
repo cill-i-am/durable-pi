@@ -1,4 +1,4 @@
-import { useBlocker } from "@tanstack/react-router"
+import { useBlocker, useParams } from "@tanstack/react-router"
 import { PanelRight } from "lucide-react"
 import { lazy, Suspense, useCallback, useEffect, useState, useRef } from "react"
 
@@ -114,8 +114,9 @@ function Workspace({
   name: string
   image?: string | null
 }) {
-  const location = useWorkspaceLocation()
-  const catalog = useAgentCatalog(ownerId, location.agentId)
+  const params = useParams({ strict: false })
+  const catalog = useAgentCatalog(ownerId, params.agentId)
+  const location = useWorkspaceLocation(catalog.agents)
   const {
     collection,
     archived,

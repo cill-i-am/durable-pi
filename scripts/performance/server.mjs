@@ -133,6 +133,7 @@ if (process.env.PERF_SCENARIO === "activity") {
   }
 }
 const profile = {
+  slug: "navi",
   id: "home",
   name: "Navi",
   instructions: "Synthetic performance fixture",

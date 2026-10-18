@@ -64,6 +64,7 @@ const profile = (
   status: "active" | "archived" = "active"
 ): AgentProfile => ({
   ...details(),
+  slug: "research",
   status,
   revision,
   createdAt: "old",
@@ -186,18 +187,26 @@ it.effect(
         status: "active",
       })
       f.db.run("DROP TRIGGER reject_profile")
+      let failCommit = false
       const failing: Sqlite = {
         ...f.db,
         transaction: (body) =>
           f.db.transaction(() =>
             body().pipe(
-              Effect.andThen(Effect.fail(sqliteFailure("commit failed")))
+              Effect.tap(() =>
+                Effect.suspend(() =>
+                  failCommit
+                    ? Effect.fail(sqliteFailure("commit failed"))
+                    : Effect.void
+                )
+              )
             )
           ),
       }
       const service = yield* AgentCatalog.pipe(
         Effect.provide(agentCatalogApplication(new SqliteAgentCatalog(failing)))
       )
+      failCommit = true
       expect(
         yield* service.update({ ...details(), name: "New" }).pipe(Effect.result)
       ).toMatchObject({

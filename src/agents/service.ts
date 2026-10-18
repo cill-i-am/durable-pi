@@ -12,6 +12,7 @@ import {
   originalAgent,
 } from "./domain"
 import type { AgentCatalogLedger } from "./ledger"
+import { allocateAgentSlug } from "./slugs"
 
 const attempt = <T>(body: () => T) =>
   Effect.try({
@@ -53,10 +54,16 @@ export function makeAgentCatalog(
           }
           const count = yield* ledger.activeCount()
           yield* attempt(() => requireAgentCapacity(count))
+          const agents = yield* ledger.list()
+          const slug = allocateAgentSlug(
+            input.name,
+            agents.flatMap((agent) => [agent.id, agent.slug])
+          )
           yield* ledger.insert(
             {
               ...input,
               name: input.name.trim(),
+              slug,
               status: "active",
               revision: 0,
               createdAt: now,

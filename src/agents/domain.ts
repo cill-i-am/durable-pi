@@ -1,5 +1,7 @@
 import { Schema } from "effect"
 
+import { AgentSlug } from "./slugs"
+
 export const AgentId = Schema.String.check(
   Schema.isPattern(
     /^(home|[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12})$/
@@ -15,6 +17,7 @@ export const AgentName = Schema.String.check(
 export const AgentInstructions = Schema.String.check(Schema.isMaxLength(8000))
 export const AgentProfile = Schema.Struct({
   id: AgentId,
+  slug: AgentSlug,
   name: AgentName,
   instructions: AgentInstructions,
   status: Schema.Literals(["active", "archived"]),
@@ -95,6 +98,7 @@ export function agentArchiveChange(
 }
 export const originalAgent = (now: string): AgentProfile => ({
   id: homeAgentId,
+  slug: "personal-assistant",
   name: "Personal assistant",
   instructions: "",
   status: "active",

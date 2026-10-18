@@ -9,6 +9,7 @@ import {
 import { AgentProfile, AgentStorageError, type AgentId } from "../domain"
 import type { AgentCatalogLedger } from "../ledger"
 import { agentCatalogApplication } from "../service"
+import { allocateAgentSlug } from "../slugs"
 import { agentCatalog } from "./schema"
 
 export class SqliteAgentCatalog implements AgentCatalogLedger {
@@ -75,17 +76,44 @@ export class SqliteAgentCatalog implements AgentCatalogLedger {
     ).pipe(Effect.map((rows) => rows[0]!.n))
   }
   ensureHome(profile: AgentProfile) {
-    return this.query((orm) =>
-      orm
-        .insert(agentCatalog)
-        .values({
-          ...profile,
-          status: "active",
-          revision: 0,
-          creation: "legacy",
-        })
-        .onConflictDoNothing()
-    ).pipe(Effect.asVoid)
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        yield* this.query((orm) =>
+          orm
+            .insert(agentCatalog)
+            .values({
+              ...profile,
+              status: "active",
+              revision: 0,
+              creation: "legacy",
+            })
+            .onConflictDoNothing()
+        )
+        // Add names to pre-slug catalogs in a deterministic order. Keep IDs and
+        // revisions intact: these are aliases, never new actor identities.
+        const rows = yield* this.query((orm) =>
+          orm
+            .select()
+            .from(agentCatalog)
+            .orderBy(asc(agentCatalog.createdAt), asc(agentCatalog.id))
+        )
+        const occupied = rows.flatMap((row) => [
+          row.id,
+          ...(row.slug ? [row.slug] : []),
+        ])
+        for (const row of rows) {
+          if (row.slug) continue
+          const slug = allocateAgentSlug(row.name, occupied)
+          yield* this.query((orm) =>
+            orm
+              .update(agentCatalog)
+              .set({ slug })
+              .where(eq(agentCatalog.id, row.id))
+          )
+          occupied.push(slug)
+        }
+      })
+    )
   }
   insert(profile: AgentProfile, creation: string) {
     return this.query((orm) =>

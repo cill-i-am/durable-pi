@@ -357,6 +357,13 @@ export const builtInTools = [
     mode: "allow",
   },
   {
+    name: "share_file",
+    title: "Include file in reply",
+    description:
+      "Include a file from this agent's private files in its reply across connected surfaces.",
+    mode: "allow",
+  },
+  {
     name: "share_image",
     title: "Include image in reply",
     description:
