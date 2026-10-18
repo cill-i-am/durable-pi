@@ -112,3 +112,17 @@ export function convertUnits(value: number, from: string, to: string): number {
     throw new Error("The conversion exceeds the supported range")
   return Number(result.toPrecision(14))
 }
+
+/** The same canonical measurement format emitted by convert_units. */
+export function computeCalculation(expression: string, unit: string) {
+  const measurement =
+    /^\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?)\s+([a-z]+)\s*$/i.exec(
+      expression
+    )
+  return measurement
+    ? {
+        result: convertUnits(Number(measurement[1]), measurement[2]!, unit),
+        computed: "conversion" as const,
+      }
+    : { result: calculate(expression), computed: "arithmetic" as const }
+}

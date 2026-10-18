@@ -14,6 +14,7 @@ import { orDieAll } from "../../shared/effect"
 import {
   BROWSER_IDLE_MS,
   BROWSER_SESSION_MS,
+  BROWSER_VIEWPORT,
   BrowserFailure,
   BrowserPage,
   allowedBrowserUrl,
@@ -106,7 +107,7 @@ export class CloudflareBrowser implements BrowserDriver {
         }
         yield* native(() => page.goto("about:blank"))
         yield* native(() =>
-          page.setViewport({ width: 1024, height: 768, deviceScaleFactor: 1 })
+          page.setViewport({ ...BROWSER_VIEWPORT, deviceScaleFactor: 1 })
         )
         const targetId = yield* this.targetId(page)
         return Schema.decodeUnknownSync(BrowserSessionRecord)({
@@ -171,6 +172,11 @@ export class CloudflareBrowser implements BrowserDriver {
         const pages = yield* native(() => browser.pages())
         for (const page of pages.slice(0, 10)) {
           if ((yield* this.targetId(page)) === session.targetId) {
+            // Puppeteer reconnect defaults existing pages back to 800×600.
+            // Restore the advertised coordinate space before reads or input.
+            yield* native(() =>
+              page.setViewport({ ...BROWSER_VIEWPORT, deviceScaleFactor: 1 })
+            )
             page.setDefaultTimeout(15000)
             page.setDefaultNavigationTimeout(15000)
             return yield* use(page)
@@ -389,12 +395,25 @@ export class CloudflareBrowser implements BrowserDriver {
           const key = action.key
           yield* native(() => page.keyboard.press(key))
         }
-        if (watching) {
-          const result = yield* Effect.promise(() => watching.completed)
-          if (!result.ok && !(result.cause instanceof TimeoutError))
-            return yield* browserNativeFailure(result.cause)
-        }
-        return yield* this.snapshot(page, hosts, unrestricted)
+        // Input delivery is confirmed here. A failed subsequent observation
+        // should permit a fresh read, never repeat the delivered input. Native
+        // input failures above, defects and interruptions remain uncertain.
+        return yield* Effect.gen({ self: this }, function* () {
+          if (watching) {
+            const result = yield* Effect.promise(() => watching.completed)
+            if (!result.ok && !(result.cause instanceof TimeoutError))
+              return yield* browserNativeFailure(result.cause)
+          }
+          return yield* this.snapshot(page, hosts, unrestricted)
+        }).pipe(
+          Effect.mapError(
+            (error) =>
+              new BrowserFailure({
+                outcome: "failed",
+                message: `The browser input was sent, but its updated view could not be captured. Read the page with browser_read before any further input; do not repeat the previous input. ${error._tag === "BrowserFailure" ? error.message : "The browser connection could not supply a view."}`,
+              })
+          )
+        )
       })
     )
   }
@@ -466,6 +485,7 @@ export class CloudflareBrowser implements BrowserDriver {
       )
       if ((yield* this.destination(page.url(), hosts, unrestricted)) !== url)
         return yield* new BrowserFailure({
+          outcome: "failed",
           message: "The page navigated while being captured. Refresh the view.",
         })
       return { page: contents, screenshot }
@@ -543,18 +563,20 @@ export const PAGE_OBSERVATION = `(() => ({
       })(),
       title: document.title.slice(0, 200),
       text: (() => {
-        const body = document.querySelector('body');
+        const body = document.querySelector('main, [role="main"]') || document.querySelector('body');
         if (!body) return '';
         const walker = document.createTreeWalker(body, 4);
         let text = '', node, count = 0;
         while ((node = walker.nextNode()) && ++count <= 20000 && text.length < 24000) {
           const parent = node.parentElement;
-          if (parent && !parent.closest('script, style, input, textarea, [contenteditable], [hidden], [aria-hidden="true"]') && parent.getClientRects().length) text += node.textContent.slice(0, 24000 - text.length) + '\\n';
+          if (parent && !parent.closest('script, style, input, textarea, [contenteditable], [hidden], [aria-hidden="true"]') && parent.getClientRects().length) {
+            const part = node.textContent.slice(0, 24000).replace(/\\s+/g, ' ').trim();
+            if (part) text += part.slice(0, 24000 - text.length) + '\\n';
+          }
         }
         return text.slice(0, 24000);
       })(),
-      links: Array.from(document.querySelectorAll("a[href]"))
-        .slice(0, 100)
+      links: [...Array.from(document.querySelectorAll('main a[href], [role="main"] a[href]')).slice(0, 100), ...Array.from(document.querySelectorAll("a[href]")).slice(0, 100)]
         .filter((link) => !link.closest('[contenteditable]') && !link.querySelector('input, textarea, [contenteditable]'))
         .map((link) => ({
           text: (
@@ -564,6 +586,6 @@ export const PAGE_OBSERVATION = `(() => ({
           ).slice(0, 120),
           url: link.href.slice(0, 2048),
         }))
-        .filter((link) => /^https?:/.test(link.url))
+        .filter((link, index, links) => /^https?:/.test(link.url) && links.findIndex(other => other.url === link.url) === index)
         .slice(0, 20),
     }))()`

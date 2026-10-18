@@ -19,7 +19,11 @@ async function readJson(
     signal: signal
       ? AbortSignal.any([signal, AbortSignal.timeout(12_000)])
       : AbortSignal.timeout(12_000),
-    headers: { Accept: "application/json" },
+    headers: {
+      Accept: "application/json",
+      "User-Agent": "DurablePi/1.0 (+https://bot.cill-i-am.com)",
+      Referer: "https://bot.cill-i-am.com/",
+    },
     // Workers does not support "error"; the status check below rejects redirects.
     redirect: "manual",
   })
@@ -132,7 +136,7 @@ export async function lookupRoute(
     .map((stop) => `${stop.longitude},${stop.latitude}`)
     .join(";")
   const url = new URL(
-    `https://router.project-osrm.org/route/v1/driving/${path}`
+    `https://routing.openstreetmap.de/routed-car/route/v1/driving/${path}`
   )
   url.search = new URLSearchParams({
     overview: "simplified",
@@ -169,7 +173,10 @@ export async function lookupRoute(
     distanceMeters: route.distance,
     durationSeconds: route.duration,
     profile: "driving",
-    source: { label: "OSRM · OpenStreetMap", url: "https://project-osrm.org/" },
+    source: {
+      label: "OSRM · FOSSGIS · OpenStreetMap",
+      url: "https://routing.openstreetmap.de/about.html",
+    },
     asOf: new Date().toISOString(),
   })
 }

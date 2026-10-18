@@ -5,6 +5,7 @@ import { z } from "zod"
 import { BrowserPage } from "../../src/browser/contracts"
 import { parseArchive } from "../../src/memory/archive"
 import { richResultTools } from "../../src/rich-results/adapters/tools"
+import { computeCalculation } from "../../src/rich-results/calculation"
 import {
   definitions,
   parseAnswerResult,
@@ -88,7 +89,7 @@ export function grade(
   checks.push(...suppliedDataChecks(test.id, cards))
   if (test.weather)
     checks.push(...weatherChecks(test.weather, start.date, calls, cards, ui))
-  if (test.research) checks.push(...shoppingChecks(rows, calls, cards, text))
+  if (test.research) checks.push(...shoppingChecks(rows, calls, cards))
   return {
     id: test.id,
     pass: checks.every((check) => check.pass),
@@ -229,8 +230,7 @@ function weatherChecks(
 function shoppingChecks(
   rows: ReturnType<typeof readArchive>,
   calls: Call[],
-  cards: Card[],
-  text: string
+  cards: Card[]
 ): Check[] {
   const checks: Check[] = []
   const products = cards
@@ -260,11 +260,44 @@ function shoppingChecks(
     ),
   })
   checks.push({
-    name: "shopping-result-or-explicit-limit",
+    name: "two-priced-products-with-battery-specs",
     pass:
-      products.length >= 2 ||
-      /couldn.t|cannot|can.t|unable|unavailable|could not|blocked|not.*verif/i.test(
-        text
+      products.length >= 2 &&
+      products.every(
+        (product) =>
+          product.price !== null &&
+          product.price > 0 &&
+          product.price < 250 &&
+          product.currency === "EUR" &&
+          product.specs.some(
+            (spec) =>
+              /battery|playback|listening/i.test(spec.label) &&
+              /\d/.test(spec.value)
+          )
+      ),
+  })
+  checks.push({
+    name: "retailer-price-and-battery-evidence",
+    pass:
+      products.length >= 2 &&
+      products.every((product) =>
+        observed.some(
+          (page) =>
+            page.at < product.before &&
+            page.url === product.url &&
+            product.price !== null &&
+            /€|EUR/.test(page.text) &&
+            observedNumber(page.text, product.price) &&
+            product.specs.some(
+              (spec) =>
+                /battery|playback|listening/i.test(spec.label) &&
+                /battery|playback|listening/i.test(page.text) &&
+                (spec.value.match(/\d+(?:\.\d+)?/g) ?? []).length > 0 &&
+                (spec.value.match(/\d+(?:\.\d+)?/g) ?? []).every((value) =>
+                  observedNumber(page.text, Number(value))
+                )
+            )
+        )
       ),
   })
   return checks
@@ -325,7 +358,7 @@ function caseChecks(
       name: "no-duplicate-markdown-table",
       pass: !/^\s*\|?.+\|.+\n\s*\|?\s*:?-{3,}/m.test(text),
     })
-  if (test.result !== undefined)
+  if (test.result !== undefined) {
     checks.push({
       name: "correct-calculation",
       pass: cards.some(
@@ -337,6 +370,11 @@ function caseChecks(
           ) < 1e-8
       ),
     })
+    checks.push({
+      name: "server-computed-calculation",
+      pass: verifiedCalculations(cards),
+    })
+  }
   if (test.id === "expenses") {
     const tables = cards
       .filter((card) => card.type === "DataTable")
@@ -359,6 +397,25 @@ function caseChecks(
     })
   }
   return checks
+}
+
+function verifiedCalculations(cards: Card[]) {
+  const calculations = cards.filter((card) => card.type === "Calculation")
+  return (
+    calculations.length > 0 &&
+    calculations.every((card) => {
+      const props = definitions.Calculation.props.parse(card.props)
+      try {
+        const actual = computeCalculation(props.expression, props.unit)
+        return (
+          props.computed === actual.computed &&
+          Math.abs(props.result - actual.result) < 1e-8
+        )
+      } catch {
+        return false
+      }
+    })
+  )
 }
 
 function richSpecs(outputs: { text: string; at: number }[]) {
@@ -452,10 +509,19 @@ function browserPages(rows: ReturnType<typeof readArchive>, calls: Call[]) {
     try {
       const value: unknown = JSON.parse(row.text)
       return Schema.is(BrowserPage)(value)
-        ? [{ at: row.id, url: value.url }]
+        ? [{ at: row.id, url: value.url, text: value.text }]
         : []
     } catch {
       return []
     }
   })
+}
+
+function observedNumber(text: string, value: number) {
+  const normalized = text.replace(/(\d)\s*[,.]\s*(?=\d)/g, "$1.")
+  return [value.toFixed(2), String(value)].some((form) =>
+    new RegExp(
+      `(?:^|[^\\d.,])${form.replaceAll(".", "\\.")}(?!\\d|[.,]\\d)`
+    ).test(normalized)
+  )
 }
