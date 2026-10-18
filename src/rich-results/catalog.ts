@@ -138,10 +138,16 @@ export const definitions = {
         result: z.number(),
         unit: z.string().max(40),
         explanation: text.optional(),
+        computed: z
+          .enum(["arithmetic", "conversion"])
+          .optional()
+          .describe(
+            "Assigned by the server after recomputing the expression; absent on legacy saved cards."
+          ),
       })
       .strict(),
     description:
-      "A numerical answer with its expression and units. Prefer calculate to verify arithmetic.",
+      "A numerical answer computed by the server. Use arithmetic with numbers, parentheses, + - * / ^ % (put units in unit), or a canonical measurement such as '350 F' with unit 'C' for conversion. show_brief and show_ui recompute result; do not invent unsupported expressions.",
   },
   Places: {
     props: z

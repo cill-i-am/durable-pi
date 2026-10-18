@@ -1,11 +1,35 @@
 import { z } from "zod"
 
+import { computeCalculation } from "./calculation"
 import {
   definitions,
   validateAnswerSpec,
   type AnswerType,
   type AnswerProps,
 } from "./catalog"
+
+export function presentAnswerSpec(input: unknown) {
+  const spec = validateAnswerSpec(input)
+  return validateAnswerSpec({
+    ...spec,
+    elements: Object.fromEntries(
+      Object.entries(spec.elements).map(([id, element]) => {
+        if (element.type !== "Calculation") return [id, element]
+        const props = definitions.Calculation.props.parse(element.props)
+        return [
+          id,
+          {
+            ...element,
+            props: {
+              ...props,
+              ...computeCalculation(props.expression, props.unit),
+            },
+          },
+        ]
+      })
+    ),
+  })
+}
 
 function card<T extends Exclude<AnswerType, "Stack" | "Brief">>(type: T) {
   return z
@@ -39,7 +63,7 @@ export function createBrief(input: z.infer<typeof briefInput>) {
   return {
     kind: "rich-result" as const,
     version: 1 as const,
-    spec: validateAnswerSpec({
+    spec: presentAnswerSpec({
       root: "brief",
       elements: {
         brief: {

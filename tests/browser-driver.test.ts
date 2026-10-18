@@ -76,6 +76,13 @@ function fixture(
     url: () => "https://example.com/",
     setDefaultTimeout: vi.fn(),
     setDefaultNavigationTimeout: vi.fn(),
+    setViewport: vi.fn(
+      async (_viewport: {
+        width: number
+        height: number
+        deviceScaleFactor?: number
+      }) => {}
+    ),
     setRequestInterception: vi.fn(async () => {}),
     on: vi.fn(),
     off: vi.fn(),
@@ -146,6 +153,45 @@ it("isolated observer bounds strings and links even when the page realm has pois
   const isolated = runInNewContext(PAGE_OBSERVATION, { document })
   expect(isolated.title.length).toBe(200)
   expect(isolated.text.length).toBe(24_000)
+})
+it("prioritizes main content and product links over a whitespace-heavy retail navigation", () => {
+  const main = { kind: "main" }
+  const parent = { closest: () => null, getClientRects: () => [{}] }
+  const link = (name: string) => ({
+    innerText: name,
+    href: `https://example.com/${name}`,
+    closest: () => null,
+    querySelector: () => null,
+  })
+  const product = link("headphones")
+  const document = {
+    title: "Shop",
+    querySelector: (selector: string) =>
+      selector.startsWith("main") ? main : { kind: "body" },
+    createTreeWalker: (root: unknown) => {
+      const nodes = (
+        root === main
+          ? [
+              " ".repeat(24000),
+              "Headphones €79.99",
+              " Battery   life: 35 hours ",
+            ]
+          : ["Navigation ".repeat(5000)]
+      ).map((textContent) => ({ textContent, parentElement: parent }))
+      return { nextNode: () => nodes.shift() }
+    },
+    querySelectorAll: (selector: string) =>
+      selector.startsWith("main")
+        ? [product]
+        : [...Array.from({ length: 100 }, (_, i) => link(`nav${i}`)), product],
+  }
+  const result = runInNewContext(PAGE_OBSERVATION, { document })
+  expect(result.text).toBe("Headphones €79.99\nBattery life: 35 hours\n")
+  expect(result.links[0]).toEqual({
+    text: "headphones",
+    url: "https://example.com/headphones",
+  })
+  expect(result.links).toHaveLength(20)
 })
 it("discards a page that navigated during its screenshot", async () => {
   const f = fixture()
@@ -232,6 +278,68 @@ it("clicks native coordinates and bounds navigation waiting", async () => {
     expect.objectContaining({ timeout: 2000 })
   )
   expect(f.page.setRequestInterception).toHaveBeenCalledWith(true)
+})
+it("restores the advertised viewport on each reconnect before delivering coordinates", async () => {
+  const f = fixture()
+  let viewport = { width: 800, height: 600 }
+  provider.connect.mockImplementation(async () => {
+    viewport = { width: 800, height: 600 }
+    return f.browser
+  })
+  f.page.setViewport.mockImplementation(async (value) => {
+    viewport = value
+  })
+  f.page.mouse.click.mockImplementation(async () => {
+    expect(viewport).toMatchObject({ width: 1024, height: 768 })
+  })
+  await driver.capture(session, ["example.com"])
+  await driver.interact(
+    session,
+    { kind: "click", x: 900, y: 700 },
+    "https://example.com/",
+    ["example.com"],
+    "agent"
+  )
+  expect(f.page.setViewport).toHaveBeenCalledTimes(2)
+  expect(f.page.mouse.click).toHaveBeenCalledExactlyOnceWith(900, 700)
+})
+it("keeps a delivered click recoverable when navigation changes during its screenshot", async () => {
+  const f = fixture()
+  f.page.screenshot.mockImplementationOnce(async () => {
+    f.page.url = () => "https://example.com/product"
+    return new Uint8Array([255, 216, 255, 217])
+  })
+  await expect(
+    driver.interact(
+      session,
+      { kind: "click", x: 40, y: 80 },
+      "https://example.com/",
+      ["example.com"],
+      "agent"
+    )
+  ).rejects.toMatchObject({
+    _tag: "BrowserFailure",
+    outcome: "failed",
+    message: expect.stringContaining("input was sent"),
+  })
+  await expect(driver.capture(session, ["example.com"])).resolves.toMatchObject(
+    { page: { url: "https://example.com/product" } }
+  )
+  expect(f.page.mouse.click).toHaveBeenCalledTimes(1)
+})
+it("does not confirm input when its native delivery fails", async () => {
+  const f = fixture()
+  f.page.mouse.click.mockRejectedValue(new Error("Lost input connection"))
+  await expect(
+    driver.interact(
+      session,
+      { kind: "click", x: 40, y: 80 },
+      "https://example.com/",
+      ["example.com"],
+      "agent"
+    )
+  ).rejects.toMatchObject({ _tag: "BrowserUnavailable" })
+  expect(f.page.screenshot).not.toHaveBeenCalled()
 })
 it("releases modifier keys even when selection fails", async () => {
   const f = fixture()
@@ -446,7 +554,7 @@ it("keeps a navigation uncertain when stopping its load is unconfirmed", async (
   expect(f.page.goto).toHaveBeenCalledOnce()
 })
 
-it("does not settle a click from a subsequent error document", async () => {
+it("reports delivered input without claiming success from a subsequent error document", async () => {
   const f = fixture()
   f.page.mouse.click.mockImplementation(async () => {
     f.page.url = () => "chrome-error://chromewebdata/"
@@ -460,7 +568,10 @@ it("does not settle a click from a subsequent error document", async () => {
     true
   )
   await expect(action).rejects.toMatchObject({ _tag: "BrowserFailure" })
-  await expect(action).rejects.not.toHaveProperty("outcome")
+  await expect(action).rejects.toMatchObject({
+    outcome: "failed",
+    message: expect.stringContaining("input was sent"),
+  })
   expect(f.page.mouse.click).toHaveBeenCalledOnce()
   expect(f.browser.disconnect).toHaveBeenCalled()
 })

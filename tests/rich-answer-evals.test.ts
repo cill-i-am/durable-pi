@@ -343,6 +343,123 @@ describe("rich-answer eval graders (synthetic traces, not model runs)", () => {
       pass: false,
     })
   })
+  it("requires server computation evidence even when a supplied number is correct", () => {
+    const test = cases.find((item) => item.id === "split-bill")!
+    const result = answerResult("Calculation", {
+      title: "Share",
+      expression: "186 * (1 - 15%) / 4",
+      result: 39.525,
+      unit: "EUR",
+    })
+    const rows: Row[] = [
+      { kind: "user", text: test.prompt },
+      {
+        kind: "tool",
+        text: JSON.stringify({
+          name: "calculate",
+          arguments: {
+            title: "Share",
+            expression: "186 * (1 - 15%) / 4",
+            unit: "EUR",
+          },
+        }),
+      },
+      { kind: "echo", text: JSON.stringify(result) },
+    ]
+    expect(grade(test, archive(rows)).checks).toContainEqual({
+      name: "server-computed-calculation",
+      pass: false,
+    })
+    result.spec.elements.answer!.props.computed = "arithmetic"
+    rows[2]!.text = JSON.stringify(result)
+    expect(grade(test, archive(rows)).pass).toBe(true)
+    result.spec.elements.answer!.props.result = 40
+    rows[2]!.text = JSON.stringify(result)
+    expect(grade(test, archive(rows)).checks).toContainEqual({
+      name: "server-computed-calculation",
+      pass: false,
+    })
+  })
+  it("requires a complete shopping result with price and battery evidence for each product", () => {
+    const test = cases.find((item) => item.id === "shopping")!
+    const products = [89, 149].map((price, i) => ({
+      id: String(i),
+      name: `Headphones ${i}`,
+      merchant: `Retailer ${i}`,
+      price,
+      currency: "EUR",
+      url: `https://example.com/product-${i}`,
+      detail: "Wireless ANC",
+      availability: "Not checked",
+      specs: [
+        { label: "Battery life", value: i === 0 ? "30 hours" : "50 hours" },
+      ],
+    }))
+    const result = answerResult("Products", {
+      title: "Offers",
+      products,
+      source: { label: "Retailers", url: null },
+      asOf: "Today",
+    })
+    const rows: Row[] = [
+      { kind: "user", text: test.prompt },
+      {
+        kind: "tool",
+        text: JSON.stringify({
+          name: "search_products",
+          arguments: { query: "ANC headphones", country: "ie" },
+        }),
+      },
+      ...products.flatMap((product, i): Row[] => [
+        {
+          kind: "tool",
+          text: JSON.stringify({
+            name: "browser_open",
+            arguments: { url: product.url },
+          }),
+        },
+        {
+          kind: "echo",
+          text: JSON.stringify({
+            url: product.url,
+            title: product.name,
+            text: `${product.name} €${i === 0 ? "89,00" : "149.00"}. Battery life: ${i === 0 ? 30 : 50} hours.`,
+            links: [],
+            capturedAt: 1792305900000,
+          }),
+        },
+      ]),
+      {
+        kind: "tool",
+        text: JSON.stringify({
+          name: "compare_products",
+          arguments: result.spec.elements.answer!.props,
+        }),
+      },
+      { kind: "echo", text: JSON.stringify(result) },
+    ]
+    expect(grade(test, archive(rows)).pass).toBe(true)
+    const bad = [...rows]
+    bad[3] = {
+      kind: "echo",
+      text: JSON.stringify({
+        url: products[0]!.url,
+        title: "Product",
+        text: "€890. Battery life 35 hours.",
+        links: [],
+        capturedAt: 1792305900000,
+      }),
+    }
+    expect(grade(test, archive(bad)).checks).toContainEqual({
+      name: "retailer-price-and-battery-evidence",
+      pass: false,
+    })
+    const unavailable: Row[] = [
+      ...rows.slice(0, 2),
+      { kind: "talk", text: "I cannot verify retailer offers right now." },
+    ]
+    expect(grade(test, archive(unavailable)).pass).toBe(false)
+  })
   it("has unique case IDs and covers every rich tool plus negative controls", () => {
     expect(new Set(cases.map((test) => test.id)).size).toBe(cases.length)
     for (const tool of [
