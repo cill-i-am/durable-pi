@@ -39,6 +39,7 @@ async function fixture() {
   })
   const profiles: AgentProfile[] = [homeAgentId, child].map((id) => ({
     id,
+    slug: id,
     name: id === homeAgentId ? "Home" : "Research",
     instructions: "",
     status: "active",

@@ -9,6 +9,7 @@ it("keeps archive admission closed across delayed routing, restart and out-of-or
   const db = database()
   const bot = new BotConfigurationStore(db)
   const active = {
+    slug: "test",
     id: homeAgentId,
     name: "Test",
     instructions: "First policy",

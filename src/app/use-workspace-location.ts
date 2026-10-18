@@ -4,9 +4,9 @@ import {
   useSearch,
   useLocation,
 } from "@tanstack/react-router"
-import { useCallback, useMemo } from "react"
+import { useCallback, useMemo, useEffect } from "react"
 
-import type { AgentId } from "@/agents/contracts"
+import type { AgentId, AgentProfile } from "@/agents/contracts"
 import {
   workspaceDestination,
   editorDestination,
@@ -17,40 +17,66 @@ import {
   type WorkspaceSearch,
 } from "@/navigation/workspace"
 
-export function useWorkspaceLocation() {
+const noAgents: readonly AgentProfile[] = []
+export function useWorkspaceLocation(
+  agents: readonly AgentProfile[] = noAgents
+) {
   const params = useParams({ strict: false })
   const query = useSearch({ strict: false })
   const href = useLocation({ select: (location) => location.href })
   const pathname = useLocation({ select: (location) => location.pathname })
   const search = useMemo(() => workspaceView(params, query), [params, query])
   const navigate = useNavigate()
-  const agentId = params.agentId
+  const profile = agents.find(
+    (agent) => agent.id === params.agentId || agent.slug === params.agentId
+  )
+  const agentId = profile?.id
+  const reference = profile?.slug ?? params.agentId
+  const hash = useLocation({ select: (location) => location.hash })
+  useEffect(() => {
+    if (!profile || params.agentId === profile.slug) return
+    void navigate({
+      to: pathname.replace(/^\/agents\/[^/]+/, `/agents/${profile.slug}`),
+      search: query,
+      hash,
+      replace: true,
+      ignoreBlocker: true,
+    })
+  }, [profile, params.agentId, pathname, query, hash, navigate])
   const update = useCallback(
     (change: Partial<WorkspaceSearch>, replace = false) => {
-      if (!agentId) return
+      if (!reference) return
       void navigate({
-        ...workspaceDestination(agentId, { ...search, ...change }),
+        ...workspaceDestination(reference, { ...search, ...change }),
         replace,
         ignoreBlocker: true,
       })
     },
-    [agentId, navigate, search]
+    [reference, navigate, search]
   )
   const openAgent = useCallback(
     (id: AgentId, next: WorkspaceSearch = {}, replace = false) => {
       void navigate({
-        ...workspaceDestination(id, next),
+        ...workspaceDestination(
+          agents.find((agent) => agent.id === id)?.slug ?? id,
+          next
+        ),
         replace,
         ignoreBlocker: true,
       })
     },
-    [navigate]
+    [navigate, agents]
   )
   const openEditor = useCallback(
     (id?: AgentId) => {
-      void navigate(editorDestination(id, href))
+      void navigate(
+        editorDestination(
+          agents.find((agent) => agent.id === id)?.slug ?? id,
+          href
+        )
+      )
     },
-    [href, navigate]
+    [href, navigate, agents]
   )
   const openArchivedAgents = useCallback(
     (replace = false) =>

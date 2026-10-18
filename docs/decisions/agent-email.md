@@ -1,5 +1,7 @@
 # Agent email decisions
 
+The [18 October email parity decisions](email-surface-parity.md) supersede the initial opt-in, text-only and web-only approval limits below.
+
 This log records the email slice started on 17 October 2026. Implementation is on `feat/agent-email`, tracking `origin/main`, initially fetched at `9aa3d48c1416402ee0eeb3ca83c429d47a89da52`. Existing changes in the primary checkout remain separate.
 
 ## Accepted decisions

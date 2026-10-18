@@ -75,7 +75,7 @@ import {
 
 import { catalogReducer, initialCatalog } from "./catalog-state"
 
-export function useAgentCatalog(ownerId: string, selectedId?: AgentId) {
+export function useAgentCatalog(ownerId: string, selectedId?: string) {
   const [state, dispatch] = useReducer(catalogReducer, initialCatalog)
   const [selected, setSelected] = useState<string>(homeAgentId)
   const requestId = useRef(0)
@@ -104,15 +104,14 @@ export function useAgentCatalog(ownerId: string, selectedId?: AgentId) {
     return () => controller.abort()
   }, [ownerId, refresh])
   useEffect(() => {
-    if (
-      !selectedId ||
-      !state.agents.some(
-        (agent) => agent.id === selectedId && agent.status === "active"
-      )
+    const agent = state.agents.find(
+      (agent) =>
+        (agent.id === selectedId || agent.slug === selectedId) &&
+        agent.status === "active"
     )
-      return
+    if (!agent) return
     try {
-      localStorage.setItem(`pi:selected:${ownerId}`, selectedId)
+      localStorage.setItem(`pi:selected:${ownerId}`, agent.id)
     } catch {}
   }, [selectedId, ownerId, state.agents])
   const select = (id: AgentId) => {
@@ -126,7 +125,7 @@ export function useAgentCatalog(ownerId: string, selectedId?: AgentId) {
     refresh,
     select,
     selected: selectedId
-      ? state.agents.find((a) => a.id === selectedId)
+      ? state.agents.find((a) => a.id === selectedId || a.slug === selectedId)
       : (state.agents.find((a) => a.id === selected && a.status === "active") ??
         state.agents.find((a) => a.id === homeAgentId)),
   }
@@ -268,7 +267,7 @@ export function AgentSidebar({
                     render={
                       <Link
                         to="/agents/$agentId"
-                        params={{ agentId: agent.id }}
+                        params={{ agentId: agent.slug }}
                       />
                     }
                     onClick={() => setOpenMobile(false)}

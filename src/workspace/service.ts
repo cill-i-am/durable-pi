@@ -139,13 +139,9 @@ export function makeWorkspace(
               previous.fileId !== input.fileId)
           )
             return yield* new FileRejected({
-              message: "This image reply identity belongs to different input.",
+              message: "This file reply identity belongs to different input.",
             })
           const file = yield* row(input.fileId, true)
-          if (file.kind !== "image")
-            return yield* new FileRejected({
-              message: "Choose an image file to include in the reply.",
-            })
           if (!previous) {
             yield* writable()
             const files = new Set(

@@ -3,14 +3,14 @@ import { createFileRoute } from "@tanstack/react-router"
 import {
   validateWorkspaceSearch,
   workspaceView,
-  parseAgentId,
+  parseAgentReference,
   parsePanel,
 } from "@/navigation/workspace"
 
 export const Route = createFileRoute("/_workspace/agents/$agentId/$panel/")({
   params: {
     parse: ({ agentId, panel }) => ({
-      agentId: parseAgentId(agentId),
+      agentId: parseAgentReference(agentId),
       panel: parsePanel(panel),
     }),
   },

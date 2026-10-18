@@ -26,6 +26,7 @@ import {
 import { nativeOperation } from "../src/shared/interop"
 
 const profile: AgentProfile = {
+  slug: "home",
   id: homeAgentId,
   name: "Home",
   instructions: "",

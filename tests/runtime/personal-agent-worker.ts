@@ -147,7 +147,7 @@ export class PersonalAgentProbe extends PersonalAgent {
   private terminalNamespace: DurableObjectNamespace<TerminalProbe>
   private backgroundNamespace: DurableObjectNamespace<BackgroundGroupProbe>
   private whatsappNamespace: DurableObjectNamespace<WhatsAppSink>
-  private fileReply: (id: string) => void
+  private fileReply: (id: string, tool?: string) => void
   private voiceReply: () => void
   private commandProbe: {
     entered: boolean
@@ -435,8 +435,20 @@ export class PersonalAgentProbe extends PersonalAgent {
       AGENT_EMAIL: {
         send: async (message: EmailMessageBuilder) => {
           ctx.storage.sql.exec(
-            "INSERT INTO personal_probe_email_sends (body) VALUES (?)",
-            message.text ?? ""
+            "INSERT INTO personal_probe_email_sends (body,attachments) VALUES (?,?)",
+            message.text ?? "",
+            JSON.stringify(
+              (message.attachments ?? []).map((file) => ({
+                name: file.filename,
+                type: file.type,
+                bytes:
+                  typeof file.content === "string"
+                    ? file.content.length
+                    : "byteLength" in file.content
+                      ? file.content.byteLength
+                      : 0,
+              }))
+            )
           )
           const held = ctx.storage.sql
             .exec<{ held: number }>(
@@ -451,7 +463,7 @@ export class PersonalAgentProbe extends PersonalAgent {
     this.maintenanceBackupProbe = maintenanceBackup
     this.externalCalls = calls
     this.fixtureRun(
-      "CREATE TABLE IF NOT EXISTS personal_probe_email_sends (body TEXT NOT NULL)"
+      "CREATE TABLE IF NOT EXISTS personal_probe_email_sends (body TEXT NOT NULL,attachments TEXT NOT NULL DEFAULT '[]')"
     )
     this.fixtureRun(
       "CREATE TABLE IF NOT EXISTS personal_probe_email_control (id INTEGER PRIMARY KEY,held INTEGER NOT NULL)"
@@ -482,6 +494,7 @@ export class PersonalAgentProbe extends PersonalAgent {
           ? ""
           : "personal-owner",
         {
+          slug: "native-probe",
           id: homeAgentId,
           name: "Native probe",
           instructions: "Synthetic probe only.",
@@ -505,7 +518,7 @@ export class PersonalAgentProbe extends PersonalAgent {
     )
     this.models.setProvider(faux.provider)
     faux.setResponses([fauxAssistantMessage("Native actor answer")])
-    this.fileReply = (id) =>
+    this.fileReply = (id, tool = "share_image") =>
       faux.setResponses(
         Array.from({ length: 6 }, () => async (context) => {
           const summary = "The media was included in this reply."
@@ -527,7 +540,7 @@ export class PersonalAgentProbe extends PersonalAgent {
             return fauxAssistantMessage("Native image answer")
           return fauxAssistantMessage(
             fauxToolCall(
-              "share_image",
+              tool,
               { id },
               {
                 id: "native-share-image",
@@ -819,6 +832,7 @@ export class PersonalAgentProbe extends PersonalAgent {
                 _tag: "Configure",
                 owner: "personal-owner",
                 profile: {
+                  slug: "native-probe",
                   id: homeAgentId,
                   name: "Native probe",
                   instructions: "",
@@ -1380,13 +1394,27 @@ export class PersonalAgentProbe extends PersonalAgent {
       this.fixtureRun(
         "INSERT INTO personal_probe_email_control VALUES (1,1) ON CONFLICT(id) DO UPDATE SET held=1"
       )
-    if (action === "receive" || action === "invalid") {
+    if (
+      ["receive", "invalid", "attachment", "approve"].includes(action ?? "")
+    ) {
       const view = Schema.decodeUnknownSync(EmailView)(
         await (await call("email")).json()
       )
       const address =
         action === "invalid" ? view.address!.replace("+", "+a") : view.address!
-      const raw = `From: owner@example.com\r\nTo: ${address}\r\nMessage-ID: <native-email-request@example.com>\r\nSubject: Native email\r\nContent-Type: text/plain\r\n\r\nGive the synthetic answer.`
+      const token =
+        action === "approve"
+          ? this.fixtureRows<{ body: string }>(
+              "SELECT body FROM personal_probe_email_sends"
+            )
+              .map((row) => /^APPROVE (.+)$/m.exec(row.body)?.[1])
+              .find(Boolean)
+          : undefined
+      const content =
+        action === "attachment"
+          ? 'Content-Type: multipart/mixed; boundary="native-boundary"\r\n\r\n--native-boundary\r\nContent-Type: text/plain\r\n\r\nPlease send the attached report back.\r\n--native-boundary\r\nContent-Type: text/plain\r\nContent-Disposition: attachment; filename="acceptance.txt"\r\n\r\nSynthetic email attachment.\r\n--native-boundary--'
+          : `Content-Type: text/plain\r\n\r\n${token ? `APPROVE ${token}` : "Give the synthetic answer."}`
+      const raw = `From: owner@example.com\r\nTo: ${address}\r\nMessage-ID: <native-email-${action === "invalid" ? "receive" : action}@example.com>\r\nSubject: Native email\r\n${content}`
       const bytes = new TextEncoder().encode(raw)
       const input = await parseEmail(
         {
@@ -1403,7 +1431,31 @@ export class PersonalAgentProbe extends PersonalAgent {
         },
         "owner@example.com"
       )
-      const response = await call("email/incoming", input)
+      const { attachments, ...metadata } = input
+      if (action === "attachment") {
+        const policy = (
+          await this.actorRuntime.runPromise(this.access.state())
+        ).tools.find((tool) => tool.name === "share_file")!
+        await this.actorRuntime.runPromise(
+          this.access.updatePolicy("share_file", policy.revision, "ask")
+        )
+        this.fileReply(attachments[0]!.id, "share_file")
+      }
+      const form = new FormData()
+      form.set("message", JSON.stringify(metadata))
+      for (const file of attachments)
+        form.append(
+          "attachment",
+          new Blob([new Uint8Array(file.bytes)], { type: file.mime }),
+          file.name
+        )
+      const response = await super.fetch(
+        new Request("https://internal/api/agent/email/incoming?agent=home", {
+          method: "POST",
+          headers: { "x-owner-id": owner },
+          body: form,
+        })
+      )
       await response.body?.cancel()
       return Response.json({ status: response.status })
     }
@@ -1413,10 +1465,25 @@ export class PersonalAgentProbe extends PersonalAgent {
     )
     return Response.json({
       states: rows.map((row) => row.state),
-      sends: this.fixtureRows("SELECT body FROM personal_probe_email_sends"),
+      sends: this.fixtureRows(
+        "SELECT body,attachments FROM personal_probe_email_sends"
+      ),
+      approvals: await this.actorRuntime.runPromise(this.access.pending()),
+      operations: this.fixtureRows(
+        "SELECT tool,status,result FROM tool_operations"
+      ),
+      replyFiles: await this.actorRuntime.runPromise(
+        Effect.forEach(turns, (turn) =>
+          this.workspaceService.replyFiles(turn.id)
+        )
+      ),
       turns: turns.map((turn) => ({
         status: turn.status,
         origin: turn.origin,
+        attachments: turn.attachments.map((file) => ({
+          name: file.name,
+          kind: file.kind,
+        })),
         answer: turn.answer,
       })),
     })
@@ -1570,6 +1637,7 @@ export class PersonalAgentProbe extends PersonalAgent {
         mode === "invalid"
           ? Effect.succeed([
               {
+                slug: "test-agent",
                 id: homeAgentId,
                 name: "",
                 instructions: "",

@@ -6,7 +6,7 @@ import type {
   AccessStorageError,
   AccessMode,
 } from "./contracts"
-import type { AccessLedger, ToolIntent } from "./ledger"
+import type { AccessLedger, ToolIntent, ToolOperation } from "./ledger"
 import { scopedReceiptFact, type ReceiptQuery } from "./receipt"
 
 export class AccessGate {
@@ -68,17 +68,23 @@ export class AccessGate {
         .update(name, revision, mode)
         .pipe(Effect.tap(() => Effect.sync(() => this.notify())))
   )
-  decide = Effect.fn("Access.decide")(
-    (
-      id: string,
-      approve: boolean,
-      revision: number,
-      remember?: { expectedPolicyRevision: number }
-    ) =>
-      this.store
-        .decide(id, approve, revision, remember)
-        .pipe(Effect.tap(() => Effect.sync(() => this.notify())))
-  )
+  decide = <CommitError = never>(
+    id: string,
+    approve: boolean,
+    revision: number,
+    remember?: { expectedPolicyRevision: number },
+    commit?: (
+      decision: Effect.Effect<ToolOperation, AccessError>
+    ) => Effect.Effect<ToolOperation, AccessError | CommitError>
+  ) => {
+    const decision = this.store.decide(id, approve, revision, remember)
+    // Wake tool execution only after the outer authority transaction has
+    // committed. A resumed native tool must never inherit its storage lease.
+    return (commit ? commit(decision) : decision).pipe(
+      Effect.tap(() => Effect.sync(() => this.notify())),
+      Effect.withSpan("Access.decide")
+    )
+  }
 
   run<T, TError, TRequirements>(
     intent: ToolIntent,

@@ -452,6 +452,7 @@ async function assertion(page, mode) {
 async function agentFixture(route, path) {
   const profile = {
     id: "home",
+    slug: "personal-assistant",
     name: "Navi",
     instructions: "Synthetic passkey fixture",
     status: "active",

@@ -1,8 +1,9 @@
-import { Schema } from "effect"
+import { Effect, Schema } from "effect"
 
 import { nativeOperation } from "../../shared/interop"
 import type { EmailRecord } from "../contracts"
 import { EmailSendFailed } from "../pump"
+import { renderReplyEmail } from "./template"
 
 const rejected = new Set([
   "E_VALIDATION_ERROR",
@@ -26,38 +27,47 @@ const rejected = new Set([
 export const sendEmailReply = (
   binding: SendEmail,
   record: EmailRecord,
-  text: string
+  text: string,
+  attachments: EmailAttachment[] = []
 ) =>
-  nativeOperation(
-    async () => {
-      const response = await binding.send({
-        from: record.recipient,
-        to: record.sender,
-        replyTo: record.recipient,
-        subject: /^re:/i.test(record.subject)
-          ? record.subject
-          : `Re: ${record.subject || "Your request"}`,
-        text,
-        html: `<pre>${text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")}</pre>`,
-        headers: {
-          ...(record.messageId
-            ? {
-                "In-Reply-To": record.messageId,
-                References: `${record.references} ${record.messageId}`.trim(),
-              }
-            : {}),
-          "Auto-Submitted": "auto-replied",
-        },
-      })
-      return response.messageId
-    },
-    (cause, channel) => {
-      if (channel === "failure" || Schema.isSchemaError(cause)) throw cause
-      const decoded = Schema.decodeUnknownOption(
-        Schema.Struct({ code: Schema.String })
-      )(cause)
-      return new EmailSendFailed({
-        uncertain: decoded._tag === "None" || !rejected.has(decoded.value.code),
-      })
-    }
-  )
+  Effect.suspend(() => {
+    let dispatched = false
+    return nativeOperation(
+      async () => {
+        const html = renderReplyEmail(record, text)
+        dispatched = true
+        const response = await binding.send({
+          from: record.recipient,
+          to: record.sender,
+          replyTo: record.recipient,
+          subject: /^re:/i.test(record.subject)
+            ? record.subject
+            : `Re: ${record.subject || "Your request"}`,
+          text,
+          attachments,
+          html,
+          headers: {
+            ...(record.messageId
+              ? {
+                  "In-Reply-To": record.messageId,
+                  References: `${record.references} ${record.messageId}`.trim(),
+                }
+              : {}),
+            "Auto-Submitted": "auto-replied",
+          },
+        })
+        return response.messageId
+      },
+      (cause, channel) => {
+        if (channel === "failure" || Schema.isSchemaError(cause)) throw cause
+        const decoded = Schema.decodeUnknownOption(
+          Schema.Struct({ code: Schema.String })
+        )(cause)
+        return new EmailSendFailed({
+          uncertain:
+            dispatched &&
+            (decoded._tag === "None" || !rejected.has(decoded.value.code)),
+        })
+      }
+    )
+  })

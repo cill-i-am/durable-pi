@@ -6,6 +6,7 @@ import {
   primaryKey,
   sqliteTable,
   text,
+  uniqueIndex,
 } from "drizzle-orm/sqlite-core"
 
 import type { EmailDelivery } from "../contracts"
@@ -37,6 +38,12 @@ export const emailMessages = sqliteTable(
     subject: text("subject").notNull(),
     body: text("body").notNull(),
     references: text("references").notNull(),
+    files: text("files", { mode: "json" })
+      .$type<readonly string[]>()
+      .notNull()
+      .default([]),
+    purpose: text("purpose").notNull().default("request"),
+    noticeKey: text("notice_key"),
     state: text("state").$type<EmailDelivery>().notNull(),
     reply: text("reply").notNull().default(""),
     providerId: text("provider_id"),
@@ -46,6 +53,7 @@ export const emailMessages = sqliteTable(
   (t) => [
     primaryKey({ columns: [t.id] }),
     index("email_messages_state_created").on(t.state, t.createdAt),
+    uniqueIndex("email_messages_notice").on(t.noticeKey),
     check(
       "email_messages_state",
       sql`${t.state} in ('queued','waiting','sending','sent','failed','uncertain','cancelled')`
