@@ -74,8 +74,12 @@ async function boundedRaw(
 const safeHeader = (value: string) => value.replace(/[\r\n\u0000]/g, " ").trim()
 // Mail clients quote the full approval card. Keep that history out of a
 // decision command; ordinary message bodies retain their original text.
-const commandBody = (body: string) =>
-  emailDecision(body) ? body.trimStart().split(/\r?\n/, 1)[0]!.trim() : body
+const commandBody = (body: string) => {
+  const decision = emailDecision(body)
+  return decision
+    ? `${decision.approve ? "APPROVE" : "DENY"} ${decision.token}`.trimEnd()
+    : body
+}
 function requireSender(
   message: Pick<
     ForwardableEmailMessage,
