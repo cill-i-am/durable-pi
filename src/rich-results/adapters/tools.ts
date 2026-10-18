@@ -7,7 +7,6 @@ import {
   answerResult,
   answerSpecSchema,
   definitions,
-  validateAnswerSpec,
   type AnswerSpec,
   type AnswerProps,
 } from "../catalog"
@@ -16,6 +15,7 @@ import {
   createBrief,
   analysisInput,
   analyzeData,
+  presentAnswerSpec,
 } from "../presentation"
 import { weatherRequestSchema, type WeatherRequest } from "../weather"
 import { lookupPlaces, lookupWeather, lookupRoute } from "./lookups"
@@ -71,7 +71,7 @@ export function richResultTools() {
     defineTool({
       name: "show_brief",
       description:
-        "Compose a day brief or a multi-part answer from two to eight sourced cards in an editorial layout. Use weather, places, timeline, calculation, products, comparisons, charts, tables or clarification cards. Each card keeps its own source/date. Gather facts first. Plans must be labelled proposed; this creates a saved answer, not a scheduled task.",
+        "Compose a day brief or a multi-part answer from two to eight sourced cards in an editorial layout. Use weather, places, timeline, calculation, products, comparisons, charts, tables or clarification cards. Embedded Calculation expressions are recomputed on the server, including canonical unit conversions such as '350 F' to unit 'C'; result is overwritten. A separate calculate call is unnecessary for an embedded calculation. Each card keeps its own source/date. Gather facts first. Plans must be labelled proposed; this creates a saved answer, not a scheduled task.",
       parameters: Type.Unsafe<z.infer<typeof briefInput>>(
         z.toJSONSchema(briefInput)
       ),
@@ -143,7 +143,7 @@ export function richResultTools() {
         result(() => ({
           kind: "rich-result",
           version: 1,
-          spec: validateAnswerSpec(spec),
+          spec: presentAnswerSpec(spec),
         })),
     }),
     defineTool({
@@ -185,6 +185,7 @@ export function richResultTools() {
             expression,
             result: calculate(expression),
             unit,
+            computed: "arithmetic",
           })
         ),
     }),
@@ -204,6 +205,7 @@ export function richResultTools() {
             expression: `${value} ${from}`,
             result: convertUnits(value, from, to),
             unit: to,
+            computed: "conversion",
           })
         ),
     }),
