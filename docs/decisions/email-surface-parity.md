@@ -20,4 +20,6 @@ Decisions from 18 October 2026. These extend the original [email slice](agent-em
 
 Unit and native checks cover the actual catalog, workspace, email pump and approval ledger. Browser checks cover ID-to-slug replacement, direct slug navigation and selected-view preservation. Live inbox/provider acceptance is a separate release gate; successful synthetic tests alone do not establish real delivery.
 
+Rolling deployment finding: a new web app can receive a successful catalog response from an older actor that has no slug field. HTTP and RPC now share one boundary decoder that temporarily uses the existing ID alias for those responses. Persisted profiles still require a real slug; current responses retain their canonical slug. This prevents a frontend rollout from making an otherwise healthy old actor unavailable.
+
 Provider references: [sending and attachment types](https://developers.cloudflare.com/email-service/api/send-emails/workers-api/), [verified-destination limits](https://developers.cloudflare.com/email-service/platform/limits/), [React Email rendering](https://react.email/docs/utilities/render).
