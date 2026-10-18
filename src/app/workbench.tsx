@@ -36,7 +36,6 @@ import {
 } from "@/components/ui/tooltip"
 import { workspaceDestination } from "@/navigation/workspace"
 
-import { useWorkspaceLocation } from "./use-workspace-location"
 import type { Workbench } from "./workspace-navigation"
 
 const tools = [
@@ -59,6 +58,7 @@ export function WorkbenchPanel({
   onClosed,
   returnFocus,
   agentName,
+  agentReference,
   locked,
   overlayOpen,
   mobileNavigation,
@@ -72,6 +72,7 @@ export function WorkbenchPanel({
   onClosed: () => void
   returnFocus: RefObject<HTMLElement | null>
   agentName: string
+  agentReference: string
   locked: boolean
   overlayOpen: boolean
   mobileNavigation: ReactNode
@@ -79,7 +80,6 @@ export function WorkbenchPanel({
   children: ReactNode
   overlays?: ReactNode
 }) {
-  const location = useWorkspaceLocation()
   const [container, setContainer] = useState<HTMLDivElement | null>(null)
   const selected = tools.find((tool) => tool.id === value)!
   return (
@@ -163,7 +163,7 @@ export function WorkbenchPanel({
                       <TooltipTrigger
                         render={
                           <Link
-                            {...workspaceDestination(location.agentId!, {
+                            {...workspaceDestination(agentReference, {
                               panel: tool.id,
                             })}
                             className={buttonVariants({
