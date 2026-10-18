@@ -22,7 +22,7 @@ export const cases: EvalCase[] = [
     id: "day-brief",
     prompt:
       "Make me a compact day brief using only these supplied facts: a €40 group lunch split four ways; a proposed schedule of museum at 10:00, lunch at 12:00, and park at 14:00. Put the cost calculation and proposed itinerary together in one view. No bookings or research needed.",
-    tools: ["show_brief", "calculate"],
+    tools: ["show_brief"],
     cards: ["Brief", "Calculation", "Timeline"],
     result: 10,
   },
@@ -123,6 +123,7 @@ export const cases: EvalCase[] = [
     prompt:
       "Find two noise-cancelling headphones sold by Irish retailers for under €250. Compare their current prices and battery life with links. Research only; do not buy anything.",
     tools: ["search_products"],
+    cards: ["Products"],
     research: true,
   },
   {

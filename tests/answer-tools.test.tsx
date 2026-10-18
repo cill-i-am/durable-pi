@@ -16,6 +16,7 @@ import {
   analyzeData,
   briefInput,
   createBrief,
+  presentAnswerSpec,
 } from "../src/rich-results/presentation"
 
 const provenance = {
@@ -41,6 +42,64 @@ const stops = [
 ]
 
 describe("composed answer tools", () => {
+  it.each([
+    { expression: "40 / 4", unit: "EUR", result: 10, computed: "arithmetic" },
+    {
+      expression: "350 F",
+      unit: "C",
+      result: 176.66666666667,
+      computed: "conversion",
+    },
+  ])(
+    "recomputes composed calculations instead of trusting model results: $expression",
+    ({ expression, unit, result, computed }) => {
+      const props = {
+        title: "Result",
+        expression,
+        result: 999,
+        unit,
+        computed: "conversion" as const,
+      }
+      const spec = presentAnswerSpec({
+        root: "answer",
+        elements: { answer: { type: "Calculation", props, children: [] } },
+      })
+      expect(spec.elements.answer!.props).toMatchObject({ result, computed })
+      const brief = createBrief({
+        title: "Day",
+        summary: "Proposed",
+        date: "Today",
+        cards: [
+          { type: "Calculation", props },
+          { type: "DataTable", props: table },
+        ],
+      })
+      expect(brief.spec.elements.card0!.props).toMatchObject({
+        result,
+        computed,
+      })
+    }
+  )
+  it("rejects fabricated or unsupported expressions even with a claimed computation marker", () => {
+    expect(() =>
+      presentAnswerSpec({
+        root: "answer",
+        elements: {
+          answer: {
+            type: "Calculation",
+            props: {
+              title: "Bad",
+              expression: "Math.random()",
+              result: 10,
+              unit: "EUR",
+              computed: "arithmetic",
+            },
+            children: [],
+          },
+        },
+      })
+    ).toThrow()
+  })
   it("round trips an editorial brief while retaining each card's source", () => {
     const brief = createBrief(
       briefInput.parse({
@@ -232,14 +291,19 @@ describe("driving route adapter", () => {
       request
     )
     const url = new URL(String(request.mock.calls[0]![0]))
-    expect(url.origin).toBe("https://router.project-osrm.org")
+    expect(url.origin).toBe("https://routing.openstreetmap.de")
     expect(url.pathname).toBe(
-      "/route/v1/driving/-6.2526,53.3409;-6.2591,53.3382"
+      "/routed-car/route/v1/driving/-6.2526,53.3409;-6.2591,53.3382"
     )
     expect(url.searchParams.get("overview")).toBe("simplified")
     expect(request.mock.calls[0]![1]).toMatchObject({
       redirect: "manual",
       signal: expect.any(AbortSignal),
+      headers: {
+        Accept: "application/json",
+        "User-Agent": "DurablePi/1.0 (+https://bot.cill-i-am.com)",
+        Referer: "https://bot.cill-i-am.com/",
+      },
     })
     expect(answer.spec.elements.answer!.props).toMatchObject({
       coordinates,

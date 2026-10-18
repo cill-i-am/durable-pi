@@ -1,6 +1,7 @@
 import { Cause, Effect } from "effect"
 
 import type { BrowserFailure, BrowserObservation } from "../contracts"
+import { BROWSER_VIEWPORT } from "../contracts"
 import type { BrowserStorageError } from "../repository"
 
 export function browserResult(result: BrowserObservation) {
@@ -12,7 +13,7 @@ export function browserResult(result: BrowserObservation) {
           ...result.page,
           generation: result.generation,
           version: result.version,
-          viewport: { width: 1024, height: 768 },
+          viewport: BROWSER_VIEWPORT,
         }),
       },
       ...(result.screenshot

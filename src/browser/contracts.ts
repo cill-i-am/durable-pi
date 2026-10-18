@@ -9,6 +9,7 @@ export class BrowserFailure extends Schema.TaggedError<BrowserFailure>()(
     ),
   }
 ) {}
+export const BROWSER_VIEWPORT = { width: 1024, height: 768 } as const
 export const Hostname = Schema.String.check(
   Schema.makeFilter((value) => {
     if (
