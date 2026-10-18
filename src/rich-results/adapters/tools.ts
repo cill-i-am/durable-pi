@@ -17,6 +17,7 @@ import {
   analysisInput,
   analyzeData,
 } from "../presentation"
+import { weatherRequestSchema, type WeatherRequest } from "../weather"
 import { lookupPlaces, lookupWeather, lookupRoute } from "./lookups"
 
 async function result(operation: () => unknown | Promise<unknown>) {
@@ -159,12 +160,10 @@ export function richResultTools() {
     defineTool({
       name: "lookup_weather",
       description:
-        "Fetch current conditions and a seven-day forecast from Open-Meteo, shown inline. Celsius and km/h. Use sourced coordinates (lookup_places) and a location label; clarify ambiguous locations. Coordinates are sent to Open-Meteo. Forecasts are timestamped snapshots, not live subscriptions.",
-      parameters: Type.Object({
-        latitude: Type.Number({ minimum: -90, maximum: 90 }),
-        longitude: Type.Number({ minimum: -180, maximum: 180 }),
-        location: Type.String({ minLength: 1, maxLength: 200 }),
-      }),
+        "Fetch a sourced forecast for the dates the user asked about. Use period today/tomorrow for one detailed day, period weekend for the upcoming Saturday and Sunday, or startDate plus days (1–16) for exact dates. Defaults to a seven-day overview. One or two days include hourly detail, feels-like temperatures, rain amounts, maximum wind/gusts and sunrise/sunset when available. The card adapts automatically: one detailed day, two comparison columns, or a compact longer outlook. Dates and relative periods use the location's timezone. Show this card instead of duplicating its metrics in a Markdown table; add only a short interpretation. Current conditions are separate from future forecasts. Use sourced coordinates (lookup_places), clarify ambiguous locations, and do not invent missing hours or dates beyond the forecast horizon. Coordinates are sent to Open-Meteo; snapshots are not subscriptions.",
+      parameters: Type.Unsafe<WeatherRequest>(
+        z.toJSONSchema(weatherRequestSchema)
+      ),
       replay: "safe",
       execute: async (input, _api, execution) =>
         result(() => lookupWeather(input, execution.abortSignal)),

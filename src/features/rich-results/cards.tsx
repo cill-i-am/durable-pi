@@ -1,12 +1,4 @@
-import {
-  CloudSun,
-  MapPin,
-  Navigation,
-  ExternalLink,
-  Wind,
-  Droplets,
-  Calculator,
-} from "lucide-react"
+import { MapPin, Navigation, ExternalLink, Calculator } from "lucide-react"
 import { useId, useState, type ReactNode } from "react"
 
 import { Badge } from "@/components/ui/badge"
@@ -81,56 +73,6 @@ export function ResultCard({
         </CardFooter>
       )}
     </Card>
-  )
-}
-export function WeatherCard(props: AnswerProps<"Weather">) {
-  return (
-    <ResultCard
-      title={props.location}
-      description={`${props.condition} · ${props.timezone}`}
-      action={<CloudSun className="size-6 text-primary" aria-hidden="true" />}
-      provenance={props}
-    >
-      <div className="flex flex-col gap-5">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <p className="text-5xl font-medium tracking-tighter tabular-nums">
-            {Math.round(props.temperature)}
-            <span className="text-xl text-muted-foreground">°C</span>
-          </p>
-          <p className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-            <Wind className="size-4" aria-hidden="true" />
-            {props.windKph} km/h
-          </p>
-        </div>
-        <div className="grid grid-cols-4 gap-x-2 gap-y-4 sm:grid-cols-7">
-          {props.days.map((day) => (
-            <div
-              key={day.date}
-              className="flex flex-col gap-1"
-              title={day.condition}
-            >
-              <p className="text-xs text-muted-foreground">
-                {new Date(`${day.date}T12:00:00Z`).toLocaleDateString("en-IE", {
-                  weekday: "short",
-                  timeZone: "UTC",
-                })}
-              </p>
-              <p className="text-sm tabular-nums">
-                {Math.round(day.high)}°{" "}
-                <span className="text-muted-foreground">
-                  {Math.round(day.low)}°
-                </span>
-              </p>
-              <p className="text-xs text-muted-foreground">{day.condition}</p>
-              <p className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                <Droplets className="size-3" aria-hidden="true" />
-                {day.rainPercent}%
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </ResultCard>
   )
 }
 export function CalculationCard(props: AnswerProps<"Calculation">) {

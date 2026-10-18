@@ -52,6 +52,16 @@ export function useWorkspaceLocation() {
     },
     [href, navigate]
   )
+  const openArchivedAgents = useCallback(
+    (replace = false) =>
+      navigate({
+        to: "/agents/archived",
+        search: {},
+        replace,
+        ignoreBlocker: true,
+      }),
+    [navigate]
+  )
   const closeEditor = useCallback(() => {
     void navigate({
       ...workspaceReturnLink(
@@ -140,6 +150,7 @@ export function useWorkspaceLocation() {
     setQuery,
     update,
     openAgent,
+    openArchivedAgents,
     setPanel,
     setSettings,
     setSecurity,
