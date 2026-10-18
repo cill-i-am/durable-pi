@@ -2307,15 +2307,6 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             ),
         }),
         systemPrompt: SYSTEM_PROMPT,
-        tools: () =>
-          this.registry
-            .snapshot()
-            .tools()
-            .map(({ tool }) => ({
-              name: tool.name,
-              description: tool.description,
-              parameters: tool.parameters,
-            })),
       },
       this.summaryInputs.catalog
     )

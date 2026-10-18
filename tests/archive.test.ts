@@ -307,3 +307,76 @@ it("does not advance the backup checkpoint on a failed conditional write", async
   expect(error).toMatchObject({ _tag: "BackupFailure", reason: "conflict" })
   expect(bucket.objects.get("p/latest.json")).toBe(prior)
 })
+
+it.each(["progress-first", "snapshot-first"] as const)(
+  "overlaps checkpoint and snapshot writes and waits for both before publishing (%s)",
+  async (order) => {
+    const memory = fixture(),
+      bucket = new Bucket(),
+      checkpoint = Promise.withResolvers<void>(),
+      snapshot = Promise.withResolvers<void>(),
+      checkpointStarted = Promise.withResolvers<void>(),
+      snapshotStarted = Promise.withResolvers<void>(),
+      firstFinished = Promise.withResolvers<void>()
+    const pending = backupMemory(
+      memory,
+      {
+        get: (key) => bucket.get(key),
+        put: async (key, data, options) => {
+          if (key.endsWith("/progress.json")) {
+            checkpointStarted.resolve()
+            await checkpoint.promise
+          } else if (key.includes("/snapshots/")) {
+            snapshotStarted.resolve()
+            await snapshot.promise
+          }
+          const result = await bucket.put(key, data, options)
+          if (
+            (order === "progress-first" && key.endsWith("/progress.json")) ||
+            (order === "snapshot-first" && key.includes("/snapshots/"))
+          )
+            firstFinished.resolve()
+          return result
+        },
+      },
+      "p"
+    )
+    try {
+      await Promise.all([checkpointStarted.promise, snapshotStarted.promise])
+      expect(bucket.writes.some((key) => key.includes("/batches/"))).toBe(true)
+      expect(bucket.objects.has("p/latest.json")).toBe(false)
+      if (order === "progress-first") checkpoint.resolve()
+      else snapshot.resolve()
+      await firstFinished.promise
+      expect(bucket.objects.has("p/latest.json")).toBe(false)
+      checkpoint.resolve()
+      snapshot.resolve()
+      await pending
+      expect(bucket.writes.at(-1)).toBe("p/latest.json")
+      expect((await readBackup(bucket, "p")).until).toEqual(watermark(memory))
+    } finally {
+      checkpoint.resolve()
+      snapshot.resolve()
+      await pending
+    }
+  }
+)
+
+it.each(["progress", "snapshot"] as const)(
+  "preserves the last complete backup when the concurrent %s write fails",
+  async (failed) => {
+    const memory = fixture(),
+      bucket = new Bucket()
+    await backupMemory(memory, bucket, "p")
+    const previous = bucket.objects.get("p/latest.json")
+    Effect.runSync(memory.append("new", "user", "new message"))
+    bucket.failAt = failed === "progress" ? "/progress.json" : "/snapshots/"
+    await expect(backupMemory(memory, bucket, "p")).rejects.toThrow(
+      "write failed"
+    )
+    expect(bucket.objects.get("p/latest.json")).toBe(previous)
+    bucket.failAt = ""
+    await backupMemory(memory, bucket, "p")
+    expect((await readBackup(bucket, "p")).until).toEqual(watermark(memory))
+  }
+)
