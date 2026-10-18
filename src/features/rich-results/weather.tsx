@@ -351,6 +351,7 @@ export function WeatherCard(props: AnswerProps<"Weather">) {
           {current && (
             <div
               className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b pb-4 text-sm"
+              role="group"
               aria-label="Current conditions"
             >
               <Badge variant="secondary">
