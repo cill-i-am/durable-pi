@@ -1,7 +1,8 @@
 import { Link } from "@tanstack/react-router"
-import { Archive, Plus, Undo2 } from "lucide-react"
+import { Archive, ArrowLeft, Plus, Undo2 } from "lucide-react"
 
 import type { AgentProfile } from "@/agents/contracts"
+import { homeAgentId } from "@/agents/contracts"
 import { AgentMark, agentTone } from "@/components/agent-mark"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,14 +13,14 @@ export function AgentCollection({
   query,
   onQuery,
   onCreate,
-  onRestore,
+  onArchive,
 }: {
   agents: AgentProfile[]
   archived: boolean
   query: string
   onQuery: (query: string) => void
   onCreate: () => void
-  onRestore: (agent: AgentProfile) => void
+  onArchive: (agent: AgentProfile) => void
 }) {
   const shown = agents.filter(
     (agent) =>
@@ -31,6 +32,17 @@ export function AgentCollection({
       className="mx-auto flex w-full max-w-3xl flex-col gap-6 overflow-y-auto p-6 sm:p-10"
       aria-label={archived ? "Archived agents" : "Your agents"}
     >
+      <Link
+        to="/agents/$agentId"
+        params={{ agentId: homeAgentId }}
+        className={buttonVariants({
+          variant: "ghost",
+          className: "self-start",
+        })}
+      >
+        <ArrowLeft data-icon="inline-start" />
+        Back to Home
+      </Link>
       <header className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold">
           {archived ? "Archived agents" : "Your agents"}
@@ -57,45 +69,57 @@ export function AgentCollection({
         value={query}
         onChange={(event) => onQuery(event.target.value)}
       />
-      <div className="divide-y rounded-lg border">
+      <ul className="divide-y rounded-lg border">
         {shown.map((agent) => (
-          <div key={agent.id} className="flex items-center gap-3 p-4">
-            <Link
-              to="/agents/$agentId"
-              params={{ agentId: agent.id }}
-              className="flex min-w-0 flex-1 items-center gap-3 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
+          <li key={agent.id} className="flex items-center gap-3 p-4">
+            <div className="flex min-w-0 flex-1 items-center gap-3">
               <AgentMark tone={agentTone(agent.id)} />
               <span className="min-w-0">
-                <strong className="block truncate text-sm">{agent.name}</strong>
+                {archived ? (
+                  <strong className="block truncate text-sm">
+                    {agent.name}
+                  </strong>
+                ) : (
+                  <Link
+                    to="/agents/$agentId"
+                    params={{ agentId: agent.id }}
+                    className="block truncate rounded-sm text-sm font-semibold outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    {agent.name}
+                  </Link>
+                )}
                 <span className="block truncate text-xs text-muted-foreground">
                   {agent.instructions || "Your personal assistant"}
                 </span>
               </span>
-            </Link>
-            {archived && (
+            </div>
+            {agent.id !== homeAgentId && (
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => onRestore(agent)}
-                aria-label={`Restore ${agent.name}`}
+                onClick={() => onArchive(agent)}
+                aria-label={`${archived ? "Restore" : "Archive"} ${agent.name}`}
               >
-                <Undo2 />
-                Restore
+                {archived ? (
+                  <Undo2 data-icon="inline-start" />
+                ) : (
+                  <Archive data-icon="inline-start" />
+                )}
+                {archived ? "Restore" : "Archive"}
               </Button>
             )}
-          </div>
+          </li>
         ))}
         {!shown.length && (
-          <p className="p-6 text-sm text-muted-foreground">
+          <li className="p-6 text-sm text-muted-foreground">
             {query
               ? "No matching agents."
               : archived
                 ? "No archived agents."
                 : "No agents yet."}
-          </p>
+          </li>
         )}
-      </div>
+      </ul>
       {!archived && (
         <Link
           to="/agents/archived"
