@@ -2,17 +2,24 @@ import { lazy, Suspense, type ReactNode, type ComponentProps } from "react"
 import type { ThinkingOrb as NativeThinkingOrb } from "thinking-orbs"
 
 import { useActivityMotion } from "@/hooks/activity-motion"
+import { reportClientError } from "@/observability/browser"
 
 // Optional animation downloads must not unmount the live chat or its draft.
 const ThinkingOrb = lazy(() =>
   import("thinking-orbs")
     .then((module) => ({ default: module.ThinkingOrb }))
-    .catch(() => ({ default: StaticOrb }))
+    .catch((error) => {
+      void reportClientError(error, undefined, "activity-orb")
+      return { default: StaticOrb }
+    })
 )
 const ActivityBorderEffect = lazy<() => ReactNode>(() =>
   import("./activity-border-effect")
     .then((module) => ({ default: module.ActivityBorderEffect }))
-    .catch(() => ({ default: () => null }))
+    .catch((error) => {
+      void reportClientError(error, undefined, "activity-border")
+      return { default: () => null }
+    })
 )
 
 function StaticOrb() {

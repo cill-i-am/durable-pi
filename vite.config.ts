@@ -4,6 +4,11 @@ import viteReact from "@vitejs/plugin-react"
 import { defineConfig } from "vite"
 
 const config = defineConfig({
+  define: {
+    "import.meta.env.VITE_BUILD_ID": JSON.stringify(
+      process.env.GITHUB_SHA ?? "development"
+    ),
+  },
   resolve: { tsconfigPaths: true },
   ssr: {
     external: ["cloudflare:workers"],
