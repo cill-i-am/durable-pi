@@ -149,13 +149,25 @@ export function richResultTools() {
     defineTool({
       name: "lookup_places",
       description:
-        "Look up an address, postcode, city or landmark using Photon/OpenStreetMap. Returns sourced candidates and selectable embedded maps. Include country/town for ambiguous queries; ask which candidate before relying on an ambiguous address. Query text is sent to Photon. No autocomplete, routing, opening-hours or booking claims.",
+        "Look up an address, postcode, city or landmark using Photon/OpenStreetMap. Set display=false when gathering coordinates for weather, routing or another answer: this returns sourced data without an unrequested map card. Omit display or set true when the user actually wants addresses/maps. Use limit=1 for one well-specified landmark; match requested counts up to five. Keep multiple candidates or clarify ambiguous locations instead of hiding ambiguity with a limit. Include country/town. Query text is sent to Photon. No autocomplete, routing, opening-hours or booking claims.",
       parameters: Type.Object({
         query: Type.String({ minLength: 2, maxLength: 200 }),
+        display: Type.Optional(Type.Boolean()),
+        limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 5 })),
       }),
       replay: "safe",
-      execute: async ({ query }, _api, execution) =>
-        result(() => lookupPlaces(query, execution.abortSignal)),
+      execute: async ({ query, display, limit }, _api, execution) =>
+        result(async () => {
+          const lookup = await lookupPlaces(
+            query,
+            execution.abortSignal,
+            undefined,
+            limit
+          )
+          return display === false
+            ? { kind: "place-lookup", ...lookup.spec.elements.answer!.props }
+            : lookup
+        }),
     }),
     defineTool({
       name: "lookup_weather",

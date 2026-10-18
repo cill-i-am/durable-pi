@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server"
 import { describe, expect, it, vi } from "vitest"
 
+import { toolReceipt } from "../src/access/adapters/receipt"
 import { activitySections } from "../src/features/conversation/activity-presentation"
 import { cellText, tableCsv } from "../src/features/rich-results/data-table"
 import { answerExamples } from "../src/features/rich-results/examples"
@@ -300,6 +301,79 @@ describe("verified arithmetic and units", () => {
 })
 
 describe("live lookup adapters", () => {
+  it("can retain sourced coordinates without rendering an intermediate map", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation(
+        async () =>
+          new Response(
+            JSON.stringify({
+              features: [
+                {
+                  geometry: { coordinates: [-6.25, 53.34] },
+                  properties: { name: "Dublin", country: "Ireland" },
+                },
+              ],
+            })
+          )
+      )
+    )
+    try {
+      const tool = richResultTools().find(
+        (item) => item.name === "lookup_places"
+      )!
+      const execute = (display?: boolean) =>
+        tool.execute(
+          { query: "Dublin, Ireland", display } as never,
+          {} as never,
+          { abortSignal: new AbortController().signal } as never
+        )
+      const text = async (display?: boolean) => {
+        const block = toolReceipt(await execute(display)).output?.[0]
+        if (block?.type !== "text") throw new Error("Expected lookup JSON")
+        return block.text
+      }
+      const quietText = await text(false)
+      expect(parseAnswerResult(quietText)).toBeNull()
+      expect(JSON.parse(quietText)).toMatchObject({
+        kind: "place-lookup",
+        places: [{ latitude: 53.34, longitude: -6.25 }],
+        source: { label: "OpenStreetMap · Photon" },
+      })
+      expect(parseAnswerResult(await text())?.elements.answer?.type).toBe(
+        "Places"
+      )
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+  it("bounds a requested place count even when the provider returns extra candidates", async () => {
+    const request = vi.fn<typeof fetch>().mockImplementation(
+      async () =>
+        new Response(
+          JSON.stringify({
+            features: ["Gallery", "Library"].map((name) => ({
+              geometry: { coordinates: [-6.25, 53.34] },
+              properties: { name, city: "Dublin", country: "Ireland" },
+            })),
+          })
+        )
+    )
+    const result = await lookupPlaces(
+      "Gallery Dublin Ireland",
+      undefined,
+      request,
+      1
+    )
+    expect(result.spec.elements.answer!.props.places).toHaveLength(1)
+    expect(
+      new URL(String(request.mock.calls[0]![0])).searchParams.get("limit")
+    ).toBe("1")
+    await expect(
+      lookupPlaces("Gallery Dublin Ireland", undefined, request, 0)
+    ).rejects.toThrow()
+    expect(request).toHaveBeenCalledTimes(1)
+  })
   it("requests fixed providers, preserves coordinates and returns source metadata", async () => {
     const request = vi.fn<typeof fetch>().mockResolvedValue(
       new Response(

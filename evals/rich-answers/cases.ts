@@ -51,6 +51,7 @@ export const cases: EvalCase[] = [
     tools: ["lookup_weather"],
     cards: ["Weather"],
     weather: { period: "weekend", days: 2 },
+    selection: ["Weather"],
   },
   {
     id: "weather-today",
@@ -59,6 +60,7 @@ export const cases: EvalCase[] = [
     tools: ["lookup_weather"],
     cards: ["Weather"],
     weather: { period: "today", days: 1 },
+    selection: ["Weather"],
   },
   {
     id: "weather-tomorrow",
@@ -66,6 +68,7 @@ export const cases: EvalCase[] = [
     tools: ["lookup_weather"],
     cards: ["Weather"],
     weather: { period: "tomorrow", days: 1 },
+    selection: ["Weather"],
   },
   {
     id: "weather-week",
@@ -74,6 +77,7 @@ export const cases: EvalCase[] = [
     tools: ["lookup_weather"],
     cards: ["Weather"],
     weather: { days: 7 },
+    selection: ["Weather"],
   },
   {
     id: "split-bill",
@@ -98,6 +102,7 @@ export const cases: EvalCase[] = [
       "Where is the National Gallery of Ireland in Dublin? Show me its address and a map.",
     tools: ["lookup_places"],
     cards: ["Places"],
+    selection: ["Places"],
   },
   {
     id: "expenses",

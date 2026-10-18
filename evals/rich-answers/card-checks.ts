@@ -136,6 +136,20 @@ function props<T extends AnswerType>(cards: Card[], type: T): AnswerProps<T>[] {
 }
 
 const dataChecks: Record<string, (cards: Card[]) => Check> = {
+  landmark: (cards) => {
+    const places = props(cards, "Places").flatMap((p) => p.places)
+    return {
+      name: "single-requested-landmark",
+      pass:
+        places.length === 1 &&
+        /National Gallery/i.test(places[0]!.name) &&
+        /Dublin/i.test(places[0]!.address) &&
+        places[0]!.latitude > 53.2 &&
+        places[0]!.latitude < 53.5 &&
+        places[0]!.longitude > -6.5 &&
+        places[0]!.longitude < -6,
+    }
+  },
   "timeline-plan": (cards) => {
     const events = props(cards, "Timeline").flatMap((p) => p.events)
     return {
