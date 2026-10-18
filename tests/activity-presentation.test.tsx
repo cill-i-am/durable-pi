@@ -47,6 +47,38 @@ const thought: TimelineItem = {
 }
 
 describe("recorded activity presentation", () => {
+  it("keeps data-only coordinate lookups in the trace without mounting a card or its fallback", () => {
+    const item = {
+      ...tool(
+        "lookup_places",
+        JSON.stringify({
+          kind: "place-lookup",
+          places: [{ name: "Dublin", latitude: 53.34, longitude: -6.25 }],
+          source: { label: "Photon", url: "https://photon.komoot.io/" },
+          asOf: "Today",
+        })
+      ),
+      input: JSON.stringify({ query: "Dublin, Ireland", display: false }),
+    }
+    expect(activitySections([item]).map((section) => section.type)).toEqual([
+      "work",
+    ])
+    const html = renderToStaticMarkup(<TurnActivity items={[item]} />)
+    expect(html).toContain("Completed tool calls")
+    expect(html).not.toContain("Loading interactive answer")
+    expect(html).not.toContain("Couldn’t display")
+    expect(item.output).toContain('"latitude":53.34')
+  })
+  it.each(['{"kind":"rich-result","version":1,"spec":{}}', "not JSON"])(
+    "retains card rendering and recovery for existing or malformed visible place results: %s",
+    (output) => {
+      expect(
+        activitySections([tool("lookup_places", output)]).map(
+          (section) => section.type
+        )
+      ).toEqual(["work", "inline"])
+    }
+  )
   it("keeps text, steering and live editable results outside work disclosures without changing records", () => {
     const items: TimelineItem[] = [
       thought,
