@@ -16,4 +16,5 @@ dist/
 credentials*.json
 coverage/
 test-results/
+evals/rich-answers/results/
 .DS_Store
