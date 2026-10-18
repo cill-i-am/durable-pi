@@ -308,16 +308,24 @@ it("does not advance the backup checkpoint on a failed conditional write", async
   expect(bucket.objects.get("p/latest.json")).toBe(prior)
 })
 
+function gate() {
+  let resolve!: () => void
+  const promise = new Promise<void>((done) => {
+    resolve = done
+  })
+  return { promise, resolve }
+}
+
 it.each(["progress-first", "snapshot-first"] as const)(
   "overlaps checkpoint and snapshot writes and waits for both before publishing (%s)",
   async (order) => {
     const memory = fixture(),
       bucket = new Bucket(),
-      checkpoint = Promise.withResolvers<void>(),
-      snapshot = Promise.withResolvers<void>(),
-      checkpointStarted = Promise.withResolvers<void>(),
-      snapshotStarted = Promise.withResolvers<void>(),
-      firstFinished = Promise.withResolvers<void>()
+      checkpoint = gate(),
+      snapshot = gate(),
+      checkpointStarted = gate(),
+      snapshotStarted = gate(),
+      firstFinished = gate()
     const pending = backupMemory(
       memory,
       {

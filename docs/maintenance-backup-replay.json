@@ -1,0 +1,77 @@
+{
+  "kind": "controlled replay of measured production latencies; not a second live R2 measurement",
+  "trace": "3167996d45a8acf3c855daad40e47eab",
+  "latencies": {
+    "get": 316,
+    "batch": 704,
+    "checkpoint": 618,
+    "snapshot": 575,
+    "latest": 2188
+  },
+  "results": [
+    {
+      "arm": "before",
+      "totalMs": 4455,
+      "requests": 5,
+      "calls": [
+        {
+          "name": "get",
+          "startMs": 25,
+          "endMs": 343
+        },
+        {
+          "name": "batch",
+          "startMs": 352,
+          "endMs": 1059
+        },
+        {
+          "name": "checkpoint",
+          "startMs": 1061,
+          "endMs": 1681
+        },
+        {
+          "name": "snapshot",
+          "startMs": 1687,
+          "endMs": 2264
+        },
+        {
+          "name": "latest",
+          "startMs": 2264,
+          "endMs": 4454
+        }
+      ]
+    },
+    {
+      "arm": "after",
+      "totalMs": 3867,
+      "requests": 5,
+      "calls": [
+        {
+          "name": "get",
+          "startMs": 27,
+          "endMs": 344
+        },
+        {
+          "name": "batch",
+          "startMs": 350,
+          "endMs": 1056
+        },
+        {
+          "name": "checkpoint",
+          "startMs": 1057,
+          "endMs": 1677
+        },
+        {
+          "name": "snapshot",
+          "startMs": 1057,
+          "endMs": 1634
+        },
+        {
+          "name": "latest",
+          "startMs": 1677,
+          "endMs": 3867
+        }
+      ]
+    }
+  ]
+}
