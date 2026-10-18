@@ -64,7 +64,7 @@ export const definitions = {
     props: z.object({}).strict(),
     slots: ["default"],
     description:
-      "A vertical group of related answer cards. Use children for composition.",
+      "A simple group of related answer cards. Use children only for distinct needs; do not repeat a dataset in several cards.",
   },
   Brief: {
     props: z
@@ -76,7 +76,7 @@ export const definitions = {
       .strict(),
     slots: ["default"],
     description:
-      "An editorial day brief or multi-part answer. Compose two to eight related cards as children; each card retains its source. No scheduling or external actions.",
+      "A multi-part answer for two to eight distinct connected needs. Use only relevant children, each with its own source. A single calculation, list or chart needs its own card, not a Brief. Summary interprets the plan without repeating child data. No scheduling or external actions.",
   },
   Question: {
     props: z
@@ -103,7 +103,7 @@ export const definitions = {
       })
       .strict(),
     description:
-      "A clarification question with choices and a free-text answer. Choices add an answer to the user's draft; they never send a message or approve an action. Wait for the user's reply.",
+      "One focused clarification with choices and a free-text answer. multiple=true for independent priorities; false for mutually exclusive options. Only ask if needed or requested; do not repeat options in prose or do dependent research before the reply. Choices add to the draft, never send or approve an action.",
   },
   Weather: {
     props: z
@@ -147,7 +147,7 @@ export const definitions = {
       })
       .strict(),
     description:
-      "A numerical answer computed by the server. Use arithmetic with numbers, parentheses, + - * / ^ % (put units in unit), or a canonical measurement such as '350 F' with unit 'C' for conversion. show_brief and show_ui recompute result; do not invent unsupported expressions.",
+      "One numerical answer or conversion with relevant assumptions in explanation. Do not repeat its arithmetic or result in a prose walkthrough. A numerical answer computed by the server. Use arithmetic with numbers, parentheses, + - * / ^ % (put units in unit), or a canonical measurement such as '350 F' with unit 'C' for conversion. show_brief and show_ui recompute result; do not invent unsupported expressions.",
   },
   Places: {
     props: z
@@ -158,7 +158,7 @@ export const definitions = {
       })
       .strict(),
     description:
-      "Address lookup or a place shortlist with selectable embedded OpenStreetMap. Coordinates must come from a source.",
+      "One address or a requested set of places with selectable embedded OpenStreetMap. Match the requested number; do not add unrelated alternatives. Use Route for a journey. Coordinates must be sourced. The card supplies addresses; do not list them again in prose.",
   },
   Route: {
     props: z
@@ -173,7 +173,7 @@ export const definitions = {
       })
       .strict(),
     description:
-      "A sourced driving route, multiple map pins, distance and estimated duration. Prefer lookup_route; no live traffic, walking estimates or navigation guarantees.",
+      "An ordered driving journey with the requested stops, map, distance and estimated duration. Prefer lookup_route. Do not add stops or repeat its itinerary/metrics in prose. Use Places for locations without a journey. No live traffic, walking estimates or navigation guarantees.",
   },
   Products: {
     props: z
@@ -200,7 +200,7 @@ export const definitions = {
       })
       .strict(),
     description:
-      "Shoppable sourced product cards with budget filtering, price sorting, shortlist and comparison. Use browser/connected tools to research real prices and URLs first; this component does not search or buy. Its comparison matrix already presents the specifications: do not duplicate them in a Markdown table or DataTable.",
+      "One or more shoppable sourced offers, limited to the requested products and priority specifications, with budget filtering, price sorting, shortlist and comparison. Use browser/connected tools to research real prices and URLs first; this component does not search or buy. Its comparison matrix already presents the specifications: do not duplicate them in a Markdown table or DataTable.",
   },
   DataTable: {
     props: z
@@ -269,7 +269,7 @@ export const definitions = {
         "Each criterion needs one value per option"
       ),
     description:
-      "A side-by-side decision matrix and reasoned verdict for products, travel, services or other options. This is already the comparison table; follow it with a short interpretation, not a duplicate Markdown table or DataTable.",
+      "A decision matrix for two to four alternatives, with only relevant criteria and a reasoned verdict reflecting the user's priorities. Use Products for shoppable offers. This is already the comparison table; do not repeat its criteria/values in prose, Markdown or DataTable.",
   },
   BarChart: {
     props: z
@@ -286,7 +286,7 @@ export const definitions = {
       })
       .strict(),
     description:
-      "An accessible horizontal bar chart for nonnegative values: costs, energy, category totals or rankings. Never invent measurements.",
+      "A magnitude comparison or ranking with exactly the requested nonnegative values and units. Use analyze_data for grouped calculations, selecting only chart when that is the request. Signed values need a DataTable. Do not add an unrequested table or list chart values in prose. Never invent measurements.",
   },
   Timeline: {
     props: z
@@ -300,7 +300,7 @@ export const definitions = {
       })
       .strict(),
     description:
-      "An itinerary, delivery timeline, project milestones or a day plan. Distinguish proposed plans from confirmed bookings.",
+      "Chronological events, an itinerary or project milestones, limited to the requested scope and events. Label proposed plans; never claim bookings. Do not repeat the event schedule in prose or add a DataTable with the same events.",
   },
 }
 

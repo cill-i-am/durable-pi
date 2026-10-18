@@ -242,6 +242,36 @@ describe("composed answer tools", () => {
       })
     ).toThrow("twenty groups")
   })
+  it("returns only requested analysis views while retaining verified aggregation", () => {
+    const input = {
+      table,
+      groupBy: "category",
+      valueKey: "amount",
+      operation: "sum" as const,
+    }
+    const summary = analyzeData({ ...input, views: ["summary"] })
+    expect(Object.keys(summary.spec.elements)).toEqual(["analysis", "summary"])
+    expect(summary.spec.elements.summary!.props.rows).toEqual([
+      { label: "Food", value: 0.3 },
+      { label: "Travel", value: 12 },
+    ])
+    const chart = analyzeData({ ...input, views: ["chart"] })
+    expect(Object.keys(chart.spec.elements)).toEqual(["analysis", "chart"])
+    expect(chart.spec.elements.chart!.props.values).toEqual(
+      summary.spec.elements.summary!.props.rows
+    )
+    expect(() => analyzeData({ ...input, views: ["chart", "chart"] })).toThrow(
+      "unique views"
+    )
+    expect(() => analyzeData({ ...input, views: [] })).toThrow()
+    expect(() =>
+      analyzeData({
+        ...input,
+        views: ["chart"],
+        table: { ...table, rows: [{ category: "Refund", amount: -5 }] },
+      })
+    ).toThrow("nonnegative")
+  })
   it("accepts bounded clarification choices and rejects duplicate choices", () => {
     const props = {
       question: "Which matters most?",

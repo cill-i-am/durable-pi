@@ -36,6 +36,7 @@ const runId = new Date().toISOString().replaceAll(":", "-")
 const directory = resolve(root, runId)
 const graderHash = createHash("sha256")
   .update(await readFile(new URL("./grade.ts", import.meta.url)))
+  .update(await readFile(new URL("./card-checks.ts", import.meta.url)))
   .digest("hex")
 await mkdir(directory, { recursive: true, mode: 0o700 })
 // A dedicated browser profile keeps login in the browser, never in reports.
