@@ -140,7 +140,7 @@ describe("rich-answer eval graders (synthetic traces, not model runs)", () => {
       pass: false,
     })
     expect(result.checks).toContainEqual({
-      name: "no-duplicate-markdown-table",
+      name: "no-markdown-table",
       pass: false,
     })
     expect(result.pass).toBe(false)
@@ -169,6 +169,99 @@ describe("rich-answer eval graders (synthetic traces, not model runs)", () => {
       name: "tool:lookup_weather",
       pass: false,
     })
+  })
+  it.each([
+    "| Name | Hours |\n| --- | --- |\n| Ada | 12.5 |",
+    "Name | Hours\n:--- | ---:\nAda | 12.5",
+    "| Name |\n| --- |\n| Ada |",
+    "Name | Hours\n- | -\nAda | 12.5",
+    "```markdown\n| Name | Hours |\n| --- | --- |\n| Ada | 12.5 |\n```",
+  ])(
+    "rejects ordinary Markdown tables without needing a weather-specific flag: %s",
+    (text) => {
+      const test = cases.find((item) => item.id === "table-default")!
+      const result = grade(
+        test,
+        archive([
+          { kind: "user", text: test.prompt },
+          { kind: "talk", text },
+        ])
+      )
+      expect(result.checks).toContainEqual({
+        name: "no-markdown-table",
+        pass: false,
+      })
+      expect(result.checks).toContainEqual({
+        name: "card:DataTable",
+        pass: false,
+      })
+      expect(result.pass).toBe(false)
+    }
+  )
+  it("requires the supplied rows and numeric hours in a rich table, with no duplicate Markdown recap", () => {
+    const test = cases.find((item) => item.id === "table-default")!
+    const result = answerResult("DataTable", {
+      title: "Working hours",
+      columns: [
+        { key: "name", label: "Name" },
+        { key: "team", label: "Team" },
+        { key: "hours", label: "Hours", format: "number" },
+      ],
+      rows: [
+        { name: "Ada", team: "Design", hours: 12.5 },
+        { name: "Ben", team: "Engineering", hours: 8 },
+        { name: "Cara", team: "Design", hours: 16 },
+      ],
+      source: { label: "Supplied records", url: null },
+      asOf: "Supplied in this conversation",
+    })
+    const rows: Row[] = [
+      { kind: "user", text: test.prompt },
+      {
+        kind: "tool",
+        text: JSON.stringify({
+          name: "show_ui",
+          arguments: { spec: result.spec },
+        }),
+      },
+      { kind: "echo", text: JSON.stringify(result) },
+    ]
+    expect(grade(test, archive(rows)).pass).toBe(true)
+    rows.push({
+      kind: "talk",
+      text: "| Name | Hours |\n| --- | --- |\n| Ada | 12.5 |",
+    })
+    expect(grade(test, archive(rows)).checks).toContainEqual({
+      name: "no-markdown-table",
+      pass: false,
+    })
+    rows.pop()
+    const table = result.spec.elements.answer!.props
+    table.rows = [
+      { name: "Ada", team: "Design", hours: "12.5 hours" },
+      { name: "Ben", team: "Engineering", hours: 8 },
+      { name: "Cara", team: "Design", hours: 16 },
+    ]
+    rows[2]!.text = JSON.stringify(result)
+    expect(grade(test, archive(rows)).checks).toContainEqual({
+      name: "exact-supplied-records-with-numeric-hours",
+      pass: false,
+    })
+  })
+  it("allows explicit Markdown source requests without replacing them with a card", () => {
+    const test = cases.find((item) => item.id === "markdown-source")!
+    const rows: Row[] = [
+      { kind: "user", text: test.prompt },
+      {
+        kind: "talk",
+        text: "```markdown\n| Name | Hours |\n| --- | --- |\n| Ada | 12 |\n| Ben | 8 |\n```",
+      },
+    ]
+    expect(grade(test, archive(rows)).pass).toBe(true)
+    rows[1]!.text = rows[1]!.text.replace("12", "13")
+    expect(grade(test, archive(rows)).pass).toBe(false)
+    rows[1]!.text = "| Name | Hours |\n| --- | --- |\n| Ada | 12 |\n| Ben | 8 |"
+    expect(grade(test, archive(rows)).pass).toBe(false)
   })
   it("cannot borrow a correct result from an earlier or later request", () => {
     const rows = weatherRows()
@@ -439,6 +532,43 @@ describe("rich-answer eval graders (synthetic traces, not model runs)", () => {
       { kind: "echo", text: JSON.stringify(result) },
     ]
     expect(grade(test, archive(rows)).pass).toBe(true)
+    const duplicate = answerResult("DataTable", {
+      title: "Same offers again",
+      columns: [
+        { key: "name", label: "Name" },
+        { key: "price", label: "Price", format: "currency", currency: "EUR" },
+      ],
+      rows: products.map((product) => ({
+        name: product.name,
+        price: product.price,
+      })),
+      source: { label: "Retailers", url: null },
+      asOf: "Today",
+    })
+    expect(
+      grade(
+        test,
+        archive([...rows, { kind: "echo", text: JSON.stringify(duplicate) }])
+      ).checks
+    ).toContainEqual({
+      name: "no-duplicate-product-table",
+      pass: false,
+    })
+    expect(
+      grade(
+        test,
+        archive([
+          ...rows,
+          {
+            kind: "talk",
+            text: "| Product | Price |\n| --- | --- |\n| Headphones 0 | €89 |",
+          },
+        ])
+      ).checks
+    ).toContainEqual({
+      name: "no-markdown-table",
+      pass: false,
+    })
     const bad = [...rows]
     bad[3] = {
       kind: "echo",

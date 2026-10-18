@@ -91,7 +91,7 @@ export function richResultTools() {
     defineTool({
       name: "compare_products",
       description:
-        "Show researched product offers with a temporary shortlist, a spacious comparison workspace and a specification matrix. Research with search_products/browser tools first. Supply actual retailer URLs, price (null when unknown), one currency and source/date. Optional context captures the user's question and priorities. This tool only presents evidence; no search, checkout or purchase.",
+        "Show researched product offers with a temporary shortlist, a spacious comparison workspace and a specification matrix. Research with search_products/browser tools first. Supply actual retailer URLs, price (null when unknown), one currency and source/date. Optional context captures the user's question and priorities. Use consistent spec labels and units for comparable facts while keeping conditions such as ANC on/off explicit. This card includes the comparison matrix: do not repeat its facts in a Markdown table, another DataTable or a prose list of every product. Follow it with a short recommendation and any necessary caveat. This tool only presents evidence; no search, checkout or purchase.",
       parameters: Type.Unsafe<AnswerProps<"Products">>(
         z.toJSONSchema(definitions.Products.props)
       ),
@@ -101,7 +101,7 @@ export function richResultTools() {
     defineTool({
       name: "analyze_data",
       description:
-        "Present supplied tabular data with sorting, faceted filters and CSV export, and deterministically group rows by a column using sum, average or count. Supply valueKey for sum/average (empty for count). Returns the original table and grouped totals, plus a bar chart when all totals are nonnegative. Max 200 rows/20 groups/28000 characters. No currency or unit conversion. Missing/nonnumeric amounts must be resolved first.",
+        "Present supplied tabular data with sorting, faceted filters and CSV export, and deterministically group rows by a column using sum, average or count. Supply valueKey for sum/average (empty for count). Returns the original table and grouped totals, plus a bar chart when all totals are nonnegative. Max 200 rows/20 groups/28000 characters. No currency or unit conversion. Missing/nonnumeric amounts must be resolved first. These tables are the answer; do not duplicate their rows in Markdown tables. Add only a short interpretation.",
       parameters: Type.Unsafe<z.infer<typeof analysisInput>>(
         z.toJSONSchema(analysisInput)
       ),
@@ -125,7 +125,7 @@ export function richResultTools() {
     defineTool({
       name: "show_ui",
       description:
-        "Show interactive answers inline: shopping, comparison, rich tables, charts, timelines, weather, maps, routes, calculations or questions. Use Brief for an editorial multi-card layout, Stack for a simple group. Research current facts with browser/connected tools first, or use supplied data. Cite a real source and date; label proposed plans/example data. Never invent prices, availability, links or coordinates. This only presents data; no search, purchase, booking or external changes. Use a flat json-render spec {root, elements}; each element has type, props and children. Only Stack and Brief accept children. No actions, bindings, HTML or code. Max 28,000 characters/24 elements.",
+        "Show interactive answers inline: shopping, comparison, rich tables, charts, timelines, weather, maps, routes, calculations or questions. DataTable is the default for tabular answers, including a simple request to make a table; keep numeric values numeric. Prefer a dedicated Products, Comparison or Weather card when it fits, and do not duplicate that card in another table. Do not follow rich results with Markdown tables; add a short interpretation instead. Use Brief for an editorial multi-card layout, Stack for a simple group. Research current facts with browser/connected tools first, or use supplied data. Cite a real source and date; label proposed plans/example data. Never invent prices, availability, links or coordinates. This only presents data; no search, purchase, booking or external changes. Use a flat json-render spec {root, elements}; each element has type, props and children. Only Stack and Brief accept children. No actions, bindings, HTML or code. Max 28,000 characters/24 elements.",
       parameters: Type.Object({
         spec: Type.Unsafe<AnswerSpec>({
           ...specSchema,

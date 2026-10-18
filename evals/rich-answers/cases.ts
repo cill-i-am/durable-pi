@@ -11,7 +11,7 @@ export type EvalCase = {
     | { days: number }
   result?: number
   clarify?: boolean
-  noMarkdownTable?: boolean
+  markdownSource?: boolean
   research?: boolean
   forbiddenTools?: string[]
 }
@@ -47,7 +47,6 @@ export const cases: EvalCase[] = [
     tools: ["lookup_weather"],
     cards: ["Weather"],
     weather: { period: "weekend", days: 2 },
-    noMarkdownTable: true,
   },
   {
     id: "weather-today",
@@ -56,7 +55,6 @@ export const cases: EvalCase[] = [
     tools: ["lookup_weather"],
     cards: ["Weather"],
     weather: { period: "today", days: 1 },
-    noMarkdownTable: true,
   },
   {
     id: "weather-tomorrow",
@@ -64,7 +62,6 @@ export const cases: EvalCase[] = [
     tools: ["lookup_weather"],
     cards: ["Weather"],
     weather: { period: "tomorrow", days: 1 },
-    noMarkdownTable: true,
   },
   {
     id: "weather-week",
@@ -73,7 +70,6 @@ export const cases: EvalCase[] = [
     tools: ["lookup_weather"],
     cards: ["Weather"],
     weather: { days: 7 },
-    noMarkdownTable: true,
   },
   {
     id: "split-bill",
@@ -103,6 +99,19 @@ export const cases: EvalCase[] = [
       "Here are my expenses in EUR: Food 12.50, Travel 5.00, Food 7.50. Show the underlying numbers in a table I can sort and filter, and chart the total for each category.",
     tools: ["analyze_data"],
     cards: ["DataTable", "BarChart"],
+  },
+  {
+    id: "table-default",
+    prompt:
+      "Put these working-hour records into a table: Ada, Design, 12.5 hours; Ben, Engineering, 8 hours; Cara, Design, 16 hours. Use only those records.",
+    cards: ["DataTable"],
+  },
+  {
+    id: "markdown-source",
+    prompt:
+      "I'm writing a README. Give me only a fenced Markdown table snippet with columns Name and Hours, containing Ada with 12 hours and Ben with 8 hours. I need the source text to paste into the file.",
+    noCards: true,
+    markdownSource: true,
   },
   {
     id: "comparison",
