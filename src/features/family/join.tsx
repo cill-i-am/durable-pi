@@ -16,20 +16,54 @@ import { Input } from "@/components/ui/input"
 import { InvitationPreview } from "@/family/contracts"
 import { AuthFrame } from "@/features/auth/auth-frame"
 import { PasskeySignIn } from "@/features/auth/passkey-sign-in"
-import { api } from "@/http/client"
+import { api, ApiError } from "@/http/client"
 
 type Invitation = InvitationPreview & { id: string }
 type Session = NonNullable<ReturnType<typeof authClient.useSession>["data"]>
 type Step =
   | "loading"
   | "unavailable"
+  | "error"
   | "wrong-account"
   | "verify"
   | "accept"
   | "account"
   | "welcome"
 
-async function openInvitation(refetch: () => Promise<unknown>) {
+class InvitationUnavailable extends Error {}
+
+async function invitationPreview(id: string, signal: AbortSignal) {
+  for (let attempt = 0; ; attempt++) {
+    signal.throwIfAborted()
+    try {
+      return await api(
+        "/api/family/invitation",
+        { invitation: id },
+        AbortSignal.any([signal, AbortSignal.timeout(10_000)])
+      )
+    } catch (cause) {
+      const temporary =
+        cause instanceof TypeError ||
+        (cause instanceof DOMException && cause.name === "TimeoutError") ||
+        (cause instanceof ApiError && cause.status >= 500)
+      if (signal.aborted || attempt > 0 || !temporary) throw cause
+      // Only this read-only preview is retried. Verification and joining are never replayed.
+      await new Promise((resolve) => setTimeout(resolve, 250))
+    }
+  }
+}
+
+function unavailableInvitation(cause: unknown) {
+  return (
+    cause instanceof InvitationUnavailable ||
+    (cause instanceof ApiError && [400, 404, 410].includes(cause.status))
+  )
+}
+
+async function openInvitation(
+  refetch: () => Promise<unknown>,
+  signal: AbortSignal
+) {
   const hash = new URLSearchParams(window.location.hash.slice(1))
   const token = hash.get("token")
   let verificationFailed = false
@@ -38,7 +72,7 @@ async function openInvitation(refetch: () => Promise<unknown>) {
     hash.delete("token")
     window.history.replaceState(null, "", `/join${hash.size ? `#${hash}` : ""}`)
     try {
-      await api("/api/family/verify", { token })
+      await api("/api/family/verify", { token }, signal)
     } catch {
       verificationFailed = true
     }
@@ -46,7 +80,11 @@ async function openInvitation(refetch: () => Promise<unknown>) {
   }
   if (!id) {
     const result = await authClient.organization.listUserInvitations()
-    if (result.error) throw new Error("Open the invitation from your email.")
+    if (result.error) {
+      if ([401, 403].includes(result.error.status))
+        throw new InvitationUnavailable()
+      throw new Error("Could not check invitations.")
+    }
     id =
       result.data?.find(
         (item) =>
@@ -55,9 +93,9 @@ async function openInvitation(refetch: () => Promise<unknown>) {
           new Date(item.expiresAt).getTime() > Date.now()
       )?.id ?? null
   }
-  if (!id) throw new Error("Open the invitation from your email.")
+  if (!id) throw new InvitationUnavailable()
   const preview = Schema.decodeUnknownSync(InvitationPreview)(
-    await api("/api/family/invitation", { invitation: id })
+    await invitationPreview(id, signal)
   )
   return {
     invitation: { ...preview, id },
@@ -70,10 +108,12 @@ function joinStep(
   loading: boolean,
   welcome: boolean,
   invitation: Invitation | null,
-  session: Session | null
+  session: Session | null,
+  loadFailed: boolean
 ): Step {
   if (welcome) return "welcome"
   if (loading) return "loading"
+  if (loadFailed) return "error"
   if (!invitation || invitation.status !== "pending") return "unavailable"
   if (!session) return "account"
   if (session.user.email.toLowerCase() !== invitation.email.toLowerCase())
@@ -84,6 +124,8 @@ function useJoinFlow() {
   const { data: session, isPending, refetch } = authClient.useSession()
   const [invitation, setInvitation] = useState<Invitation | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadFailed, setLoadFailed] = useState(false)
+  const [attempt, setAttempt] = useState(0)
   const [error, setError] = useState("")
   const [pending, setPending] = useState(false)
   const [welcome, setWelcome] = useState(false)
@@ -94,10 +136,21 @@ function useJoinFlow() {
   useEffect(() => {
     let disposed = false
     let sequence = 0
+    let controller: AbortController | undefined
     function load() {
       const current = ++sequence
+      controller?.abort()
+      controller = new AbortController()
       setLoading(true)
-      void openInvitation(refetch)
+      setInvitation(null)
+      setLoadFailed(false)
+      setError("")
+      setNotice("")
+      setPassword("")
+      setWelcome(false)
+      if (new URLSearchParams(window.location.hash.slice(1)).has("token"))
+        setSignin(true)
+      void openInvitation(refetch, controller.signal)
         .then((result) => {
           if (disposed || current !== sequence) return
           setInvitation(result.invitation)
@@ -110,11 +163,16 @@ function useJoinFlow() {
           if (result.verified)
             setNotice("Email verified. Finish joining your family below.")
         })
-        .catch(() => {
-          if (!disposed && current === sequence)
+        .catch((cause) => {
+          if (!disposed && current === sequence) {
+            const unavailable = unavailableInvitation(cause)
+            setLoadFailed(!unavailable)
             setError(
-              "This link could not be opened. It may have expired or been cancelled. Open the latest invitation email, or ask your family admin to resend it."
+              unavailable
+                ? "This invitation is no longer available. Open the latest invitation email, or ask your family admin to resend it."
+                : "Could not connect to load your invitation. Please try again."
             )
+          }
         })
         .finally(() => {
           if (!disposed && current === sequence) setLoading(false)
@@ -124,11 +182,12 @@ function useJoinFlow() {
     window.addEventListener("hashchange", load)
     return () => {
       disposed = true
+      controller?.abort()
       window.removeEventListener("hashchange", load)
     }
     // Re-open a verification link arriving in this tab, without repeating it on session refresh.
     // oxlint-disable-next-line react/exhaustive-deps
-  }, [])
+  }, [attempt])
   async function perform(work: () => Promise<void>) {
     if (pending) return
     setPending(true)
@@ -216,7 +275,14 @@ function useJoinFlow() {
     resend,
     switchAccount,
     toggleSignin,
-    step: joinStep(loading || isPending, welcome, invitation, session),
+    retry: () => setAttempt((value) => value + 1),
+    step: joinStep(
+      loading || isPending,
+      welcome,
+      invitation,
+      session,
+      loadFailed
+    ),
   }
 }
 function joinTitle(step: Step, familyName: string, signin: boolean) {
@@ -227,6 +293,8 @@ function joinTitle(step: Step, familyName: string, signin: boolean) {
       return "Your space is ready"
     case "unavailable":
       return "This invitation is unavailable"
+    case "error":
+      return "Couldn’t load your invitation"
     case "verify":
       return "Check your email"
     case "account":
@@ -273,6 +341,8 @@ function JoinContent({ flow }: { flow: ReturnType<typeof useJoinFlow> }) {
   switch (flow.step) {
     case "loading":
       return <p role="status">Just a moment…</p>
+    case "error":
+      return <Button onClick={flow.retry}>Try again</Button>
     case "welcome":
       return <Welcome />
     case "unavailable":
