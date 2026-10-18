@@ -17,6 +17,7 @@ test("ID links become canonical slug URLs and preserve the selected view", async
   await expect(page).toHaveURL(/\/agents\/navi\/files\?tab=trash$/)
   const shortcuts = page.getByRole("navigation", {
     name: "Workbench shortcuts",
+    includeHidden: true,
   })
   for (const [name, panel] of [
     ["Browser", "browser"],
@@ -26,7 +27,7 @@ test("ID links become canonical slug URLs and preserve the selected view", async
     ["Activity", "activity"],
   ]) {
     await expect(
-      shortcuts.getByRole("link", { name, exact: true })
+      shortcuts.getByRole("link", { name, exact: true, includeHidden: true })
     ).toHaveAttribute("href", `/agents/navi/${panel}`)
   }
   if (!isMobile) {
