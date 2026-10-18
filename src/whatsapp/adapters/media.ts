@@ -1,7 +1,7 @@
 import { Effect, Schema } from "effect"
 
 import { exportFileBytes } from "../../workspace/adapters/export"
-import { FileRejected } from "../../workspace/files"
+import { MAX_FILE_BYTES } from "../../workspace/files"
 import type { Workspace } from "../../workspace/workspace"
 import {
   WhatsAppRejected,
@@ -15,25 +15,17 @@ export function exportWhatsAppMedia(
 ) {
   return Effect.scoped(
     Effect.gen(function* () {
-      const [file] = yield* workspace.requireFiles([id])
-      if (file?.kind !== "image")
-        return yield* new FileRejected({
-          message: "Only images can be included in this reply.",
-        })
-      const original =
-        ["image/jpeg", "image/png"].includes(file.mime) &&
-        file.size <= 5 * 1024 * 1024
-      const { mime, bytes } = yield* exportFileBytes(
+      yield* workspace.requireFiles([id])
+      const { name, mime, bytes } = yield* exportFileBytes(
         workspace,
         id,
-        5 * 1024 * 1024,
-        !original
+        MAX_FILE_BYTES
       )
       let binary = ""
       for (let offset = 0; offset < bytes.length; offset += 8192)
         binary += String.fromCharCode(...bytes.subarray(offset, offset + 8192))
       return Schema.decodeUnknownSync(WhatsAppMediaExport)({
-        name: original ? file.name : `${file.id}.jpg`,
+        name,
         mime,
         data: btoa(binary),
       })
@@ -45,7 +37,7 @@ export function exportWhatsAppMedia(
       FileNotFound: () =>
         Effect.fail(
           new WhatsAppRejected({
-            message: "This reply image is unavailable or in Trash.",
+            message: "This reply file is unavailable or in Trash.",
           })
         ),
       WorkspaceReadOnly: () => Effect.fail(new WhatsAppUnavailable()),

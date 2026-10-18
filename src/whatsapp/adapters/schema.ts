@@ -8,6 +8,7 @@ import {
   text,
 } from "drizzle-orm/sqlite-core"
 
+import type { ReplyProgress } from "../../replies/contracts"
 import type { WhatsAppDelivery, WhatsAppMedia } from "../contracts"
 
 export const whatsappSettings = sqliteTable(
@@ -48,6 +49,7 @@ export const whatsappMessages = sqliteTable(
     control: integer("control", { mode: "boolean" }).notNull(),
     state: text("state").$type<WhatsAppDelivery>().notNull(),
     reply: text("reply").notNull().default(""),
+    delivery: text("delivery", { mode: "json" }).$type<ReplyProgress>(),
     providerId: text("provider_id"),
     error: text("error"),
     createdAt: integer("created_at").notNull(),

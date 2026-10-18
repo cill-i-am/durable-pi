@@ -56,6 +56,8 @@ export const sendEmailReply = (
             "Auto-Submitted": "auto-replied",
           },
         })
+        if (!response.messageId)
+          throw new Error("Email provider returned no message receipt")
         return response.messageId
       },
       (cause, channel) => {

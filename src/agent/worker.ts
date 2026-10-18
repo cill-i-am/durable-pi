@@ -239,7 +239,7 @@ import {
   sameAddress,
 } from "../email/adapters/address"
 import { emailApprovalProofs } from "../email/adapters/approval-proof"
-import { emailReplyFiles } from "../email/adapters/attachments"
+import { emailAttachments } from "../email/adapters/attachments"
 import { emailRequest } from "../email/adapters/http"
 import { sendEmailReply } from "../email/adapters/sending"
 import { EmailStore } from "../email/adapters/sqlite"
@@ -251,7 +251,7 @@ import {
   type IncomingEmail,
   type ConfigureEmail,
 } from "../email/contracts"
-import { emailPump } from "../email/pump"
+import { emailPump, EmailSendFailed } from "../email/pump"
 import { jsonRequest } from "../shared/http"
 import { whatsappConfigured } from "../whatsapp/adapters/chat"
 import { whatsappRequest } from "../whatsapp/adapters/http"
@@ -1561,12 +1561,17 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             () => new EmailStorageError({ operation: "read conversation" })
           )
         ),
-    send: (record, reply, attachments) =>
-      sendEmailReply(this.env.AGENT_EMAIL, record, reply, attachments),
-    files: (record, reviewUrl) =>
-      emailReplyFiles(this.workspaceService, record.id, reviewUrl).pipe(
-        Effect.mapError(() => new EmailUnavailable())
+    send: (record, reply, ids = []) =>
+      emailAttachments(this.workspaceService, ids).pipe(
+        Effect.mapError(() => new EmailSendFailed({ uncertain: false })),
+        Effect.flatMap((attachments) =>
+          sendEmailReply(this.env.AGENT_EMAIL, record, reply, attachments)
+        )
       ),
+    files: (record) =>
+      this.workspaceService
+        .replyFiles(record.id)
+        .pipe(Effect.mapError(() => new EmailUnavailable())),
     ...emailApprovals(this.emailStore, this.access, {
       proofs: emailApprovalProofs(this.env.EMAIL_ADDRESS_SECRET),
       wakeConversation: () =>

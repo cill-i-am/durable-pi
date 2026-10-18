@@ -9,6 +9,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core"
 
+import type { ReplyProgress } from "../../replies/contracts"
 import type { EmailDelivery } from "../contracts"
 
 export const emailSettings = sqliteTable(
@@ -46,6 +47,7 @@ export const emailMessages = sqliteTable(
     noticeKey: text("notice_key"),
     state: text("state").$type<EmailDelivery>().notNull(),
     reply: text("reply").notNull().default(""),
+    delivery: text("delivery", { mode: "json" }).$type<ReplyProgress>(),
     providerId: text("provider_id"),
     error: text("error"),
     createdAt: integer("created_at").notNull(),

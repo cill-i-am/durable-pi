@@ -1,7 +1,9 @@
-import { Clock, Effect, Schema } from "effect"
+import { Clock, Effect } from "effect"
 
 import type { AgentId } from "../agents/domain"
 import type { Submission } from "../conversations/turns"
+import { ReplySendFailed as WhatsAppSendFailed } from "../replies/contracts"
+import { deliverReply } from "../replies/delivery"
 import { preserveFatal } from "../shared/effect"
 import type { WhatsAppStore } from "./adapters/sqlite"
 import {
@@ -12,11 +14,9 @@ import {
   type WhatsAppRecord,
   type WhatsAppTurn,
 } from "./contracts"
+import { whatsappReply } from "./reply"
 
-export class WhatsAppSendFailed extends Schema.TaggedError<WhatsAppSendFailed>()(
-  "WhatsAppSendFailed",
-  { uncertain: Schema.Boolean }
-) {}
+export { ReplySendFailed as WhatsAppSendFailed } from "../replies/contracts"
 export interface WhatsAppPumpHost {
   media?: (record: WhatsAppRecord) => Effect.Effect<string, WhatsAppFailure>
   active: (id: AgentId) => Effect.Effect<boolean, WhatsAppFailure>
@@ -38,37 +38,47 @@ export interface WhatsAppPumpHost {
 export function whatsappPump(records: WhatsAppStore, host: WhatsAppPumpHost) {
   const send = Effect.fn("WhatsApp.sendReply")(function* (
     record: WhatsAppRecord,
-    text: string
+    text: string,
+    files: readonly string[] = []
   ) {
-    const name = yield* host.name(record.agentId)
-    const reply = record.outboundFileId
-      ? `${name}\n\n${text}`.slice(0, 500)
-      : `${name}\n\n${text.slice(0, 3000)}${text.length > 3000 ? "\n\nContinued in Pi." : ""}\n\n${host.reviewUrl(record.agentId)}`.slice(
-          0,
-          3900
-        )
-    if (
-      !(yield* records.claim(record, reply, () => host.active(record.agentId)))
-    )
-      return
-    yield* host.send(record, reply).pipe(
-      preserveFatal,
-      Effect.flatMap((providerId) =>
-        records.update(record.id, "sending", "sent", { providerId })
+    const progress = record.delivery ?? {
+      version: 1 as const,
+      generation: (yield* records.settings()).generation,
+      parts: whatsappReply(
+        text,
+        yield* host.name(record.agentId),
+        host.reviewUrl(record.agentId),
+        record.outboundFileId ? [record.outboundFileId] : files
       ),
-      Effect.catchTag("WhatsAppSendFailed", (failure) =>
-        records.update(
-          record.id,
-          "sending",
-          failure.uncertain ? "uncertain" : "failed",
-          {
-            error: failure.uncertain
-              ? "Delivery could not be confirmed. Check WhatsApp before retrying."
-              : "This reply could not be sent. Review the connection, source image and reply window before retrying.",
-          }
-        )
-      )
-    )
+      receipts: [],
+    }
+    yield* deliverReply(progress, {
+      claim: (delivery, from) =>
+        records.claim(
+          record,
+          text,
+          () => host.active(record.agentId),
+          delivery,
+          from
+        ),
+      checkpoint: (delivery) =>
+        records.update(record.id, "sending", "sending", { delivery }),
+      send: (part) =>
+        host.send(
+          { ...record, outboundFileId: part.files[0] ?? null },
+          part.text
+        ),
+      finish: (state, providerId) =>
+        records.update(record.id, "sending", state, {
+          providerId,
+          error:
+            state === "sent"
+              ? null
+              : state === "uncertain"
+                ? "Delivery could not be confirmed. Check WhatsApp before retrying."
+                : "This reply could not be sent. Review the connection, source file and reply window before retrying.",
+        }),
+    })
   })
   const notice = Effect.fn("WhatsApp.approvalNotice")(function* (
     record: WhatsAppRecord
@@ -142,7 +152,7 @@ export function whatsappPump(records: WhatsAppStore, host: WhatsAppPumpHost) {
       })
       return
     }
-    if (record.control) {
+    if (record.delivery || record.control) {
       yield* send(record, record.reply)
       return
     }
@@ -167,16 +177,17 @@ export function whatsappPump(records: WhatsAppStore, host: WhatsAppPumpHost) {
     if (!turn) return
     if (turn.needsApproval) yield* notice(record)
     if (["done", "failed", "cancelled"].includes(turn.status)) {
-      for (const id of turn.status === "done" ? (turn.files ?? []) : [])
-        yield* records.queueMedia(record, id)
-      const answer =
-        turn.answer.trim() ||
-        (turn.files?.length ? "Attachments included." : "")
+      const answer = turn.answer.trim()
+        ? turn.answer
+        : turn.files?.length
+          ? "Attachments included."
+          : ""
       yield* send(
         record,
         turn.status === "done" && answer
           ? answer
-          : "This request could not finish. Open Pi to review the conversation."
+          : "This request could not finish. Open Pi to review the conversation.",
+        turn.status === "done" ? (turn.files ?? []) : []
       )
     }
   })

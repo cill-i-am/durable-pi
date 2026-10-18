@@ -1,6 +1,7 @@
 import { and, asc, count, desc, eq, inArray } from "drizzle-orm"
 import { Effect, Schema } from "effect"
 
+import { replyComplete, type ReplyProgress } from "../../replies/contracts"
 import {
   mapSqliteError,
   type Sqlite,
@@ -215,6 +216,7 @@ export class EmailStore {
     state: EmailDelivery,
     details: {
       reply?: string
+      delivery?: ReplyProgress
       error?: string | null
       providerId?: string | null
     } = {}
@@ -228,35 +230,53 @@ export class EmailStore {
     ).pipe(Effect.map((rows) => rows.length > 0))
   }
   recover() {
-    return this.query((orm) =>
-      orm
-        .update(emailMessages)
-        .set({
-          state: "uncertain",
-          error:
-            "Delivery was interrupted. Check your inbox before sending again.",
-        })
-        .where(eq(emailMessages.state, "sending"))
-    )
+    return Effect.gen({ self: this }, function* () {
+      for (const record of yield* this.pending()) {
+        if (record.state !== "sending") continue
+        const complete = replyComplete(record.delivery)
+        yield* this.update(
+          record.id,
+          "sending",
+          complete ? "sent" : "uncertain",
+          {
+            providerId: complete
+              ? (record.delivery!.receipts.at(-1) ?? null)
+              : null,
+            error: complete
+              ? null
+              : "Sending was interrupted. Check the destination before retrying.",
+          }
+        )
+      }
+    })
   }
+
   /** Revalidate channel and agent authority in the same local transaction as
    * the send intent. The supplied authority read must use this actor database. */
   claim(
     id: string,
     reply: string,
-    allowed: () => Effect.Effect<boolean, EmailFailure>
+    allowed: () => Effect.Effect<boolean, EmailFailure>,
+    delivery?: ReplyProgress,
+    from: "waiting" | "sending" = "waiting"
   ) {
     return this.atomic(() =>
       Effect.gen({ self: this }, function* () {
-        if (!(yield* this.settings()).enabled || !(yield* allowed())) {
-          yield* this.update(id, "waiting", "cancelled", {
+        const settings = yield* this.settings()
+        if (
+          !settings.enabled ||
+          (delivery && delivery.generation !== settings.generation) ||
+          !(yield* allowed())
+        ) {
+          yield* this.update(id, from, "cancelled", {
             error:
               "Email is disabled or the agent is archived. The conversation remains in Pi.",
           })
           return false
         }
-        return yield* this.update(id, "waiting", "sending", {
+        return yield* this.update(id, from, "sending", {
           reply,
+          ...(delivery ? { delivery } : {}),
           error: null,
         })
       })

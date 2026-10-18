@@ -1,5 +1,6 @@
 import { Schema } from "effect"
 
+import { ReplyProgress } from "../replies/contracts"
 import { FileSelection } from "../workspace/files"
 
 export class EmailRejected extends Schema.TaggedError<EmailRejected>()(
@@ -62,6 +63,7 @@ export const EmailRecord = Schema.Struct({
   purpose: Schema.Literals(["request", "notification"]),
   state: EmailDelivery,
   reply: Schema.String,
+  delivery: Schema.optionalKey(Schema.NullOr(ReplyProgress)),
   providerId: Schema.NullOr(Schema.String),
   error: Schema.NullOr(Schema.String),
   createdAt: Schema.Number,

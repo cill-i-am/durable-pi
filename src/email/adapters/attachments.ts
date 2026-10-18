@@ -69,24 +69,15 @@ export const incomingEmailRequest = (request: Request) =>
     return { input, attachments }
   })
 
-/** Only files explicitly registered for this reply are eligible for transport.
- * The user authorized these selected files to their enrolled Gmail inbox. */
-export const emailReplyFiles = (
+/** Export one frozen delivery part through the shared private-file reader. */
+export const emailAttachments = (
   workspace: typeof Workspace.Service,
-  turnId: string,
-  reviewUrl: string
+  ids: readonly string[]
 ) =>
   Effect.gen(function* () {
-    const files = yield* workspace.replyFiles(turnId)
-    const maximum = 16 * 1024 * 1024
-    if (files.reduce((total, file) => total + file.size, 0) > maximum)
-      return {
-        attachments: [] as EmailAttachment[],
-        suffix: `\n\nThese files exceed the email attachment limit. Open them in Pi:\n${files.map((file) => `${file.name}: ${reviewUrl}/files/${file.id}`).join("\n")}`,
-      }
     const attachments: EmailAttachment[] = []
-    for (const file of files) {
-      const exported = yield* exportFileBytes(workspace, file.id, maximum)
+    for (const id of ids) {
+      const exported = yield* exportFileBytes(workspace, id, 16 * 1024 * 1024)
       attachments.push({
         content: new Uint8Array(exported.bytes).buffer,
         filename: exported.name,
@@ -94,5 +85,5 @@ export const emailReplyFiles = (
         disposition: "attachment",
       })
     }
-    return { attachments, suffix: "" }
+    return attachments
   })

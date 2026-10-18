@@ -524,8 +524,23 @@ describe("provider binding", () => {
       )
       expect(Exit.isFailure(result) && result.cause.reasons[0]).toMatchObject({
         _tag: "Fail",
-        error: { _tag: "EmailSendFailed", uncertain },
+        error: { _tag: "ReplySendFailed", uncertain },
       })
     }
   )
+  it("keeps a provider response without a usable receipt uncertain", async () => {
+    const f = fixture()
+    run(f.records.receive(f.input, 1))
+    const result = await Effect.runPromiseExit(
+      sendEmailReply(
+        { send: async () => ({ messageId: "" }) },
+        run(f.records.get(f.input.id))!,
+        "hello"
+      )
+    )
+    expect(Exit.isFailure(result) && result.cause.reasons[0]).toMatchObject({
+      _tag: "Fail",
+      error: { _tag: "ReplySendFailed", uncertain: true },
+    })
+  })
 })

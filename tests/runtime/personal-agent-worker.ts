@@ -537,7 +537,11 @@ export class PersonalAgentProbe extends PersonalAgent {
             JSON.stringify(context.messages).includes(summary) ||
             context.messages.some((message) => message.role === "toolResult")
           )
-            return fauxAssistantMessage("Native image answer")
+            return fauxAssistantMessage(
+              "Native image answer\n" +
+                "Complete report paragraph. ".repeat(240) +
+                "END OF FULL REPLY"
+            )
           return fauxAssistantMessage(
             fauxToolCall(
               tool,
