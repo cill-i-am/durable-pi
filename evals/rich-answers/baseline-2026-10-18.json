@@ -1,0 +1,262 @@
+{
+  "version": 1,
+  "date": "2026-10-18",
+  "timezone": "Europe/Dublin",
+  "site": "https://bot.cill-i-am.com",
+  "execution": "live site through existing signed-in Chrome controls; original-message exports graded locally",
+  "model": "gpt-6.1-sol · medium",
+  "trialsPerCase": 1,
+  "casesHash": "9ba69ba811fa9013f4cc1537fdf132caf1c9bd096c494ceba3af1b26e21827c2",
+  "graderHash": "138c5430d1b111f84f33fa6a0c2f685754f62df381fe8189a20f7f23a8ddcc54",
+  "productionRevisionsObserved": [
+    "a9527ee",
+    "5ce58f20bbe4ed7a78df93d80a3f850a541cbcb2"
+  ],
+  "clientEntryScript": "/assets/index-BwEZKYU6.js",
+  "summary": {
+    "attempted": 18,
+    "passed": 15,
+    "failed": 2,
+    "blocked": 1
+  },
+  "notes": [
+    "Single-trial smoke baseline; no statistical reliability claim. The separate Playwright CLI runner was typechecked but was not the execution path for this run.",
+    "All four weather cases passed, including exact local dates, 1/2/7-day layouts, short-forecast hourly detail, current-observation scope and no duplicate Markdown table.",
+    "day-brief: numerical result was correct (EUR 10), but the model used show_brief without the required deterministic calculate tool.",
+    "driving-route: model selected lookup_route with the supplied public coordinates; provider returned HTTP 403, so the required Route card was absent. Model acknowledged the failure and offered a directions link.",
+    "shopping: Google presented a verification page. Public Currys research required Allow once approvals; no persistent permissions were changed. One manual workbench view refresh during review invalidated a pending browser observation. The model recovered with browser_read, then later stopped with an unconfirmed browser action receipt. No final comparison was produced and no action was replayed. This case is operator-assisted and blocked, not a clean unattended model quality measurement.",
+    "weather-weekend: two stale-client reloads were needed across production deployments; saved history was recovered without resubmitting the prompt.",
+    "Raw archives, page evidence and per-case grader outputs are retained locally under ignored evals/rich-answers/results/live-2026-10-18. Test agents remain in the live workspace for inspection; the normal CLI runner recoverably archives completed agents."
+  ],
+  "results": [
+    {
+      "id": "day-brief",
+      "status": "failed",
+      "requestAt": "2026-10-18T06:55:35.722Z",
+      "checks": 11,
+      "passedChecks": 10,
+      "failedChecks": ["tool:calculate"],
+      "toolsUsed": ["show_brief"],
+      "cards": ["Brief", "Calculation", "Timeline"],
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "driving-route",
+      "status": "failed",
+      "requestAt": "2026-10-18T06:55:36.116Z",
+      "checks": 7,
+      "passedChecks": 6,
+      "failedChecks": ["card:Route"],
+      "toolsUsed": ["lookup_route"],
+      "cards": [],
+      "failedTools": 1,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "clarify-options",
+      "status": "passed",
+      "requestAt": "2026-10-18T06:57:02.801Z",
+      "checks": 7,
+      "passedChecks": 7,
+      "failedChecks": [],
+      "toolsUsed": ["ask_question"],
+      "cards": ["Question"],
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "weather-weekend",
+      "status": "passed",
+      "requestAt": "2026-10-18T06:40:44.020Z",
+      "checks": 14,
+      "passedChecks": 14,
+      "failedChecks": [],
+      "toolsUsed": ["lookup_places", "lookup_weather"],
+      "cards": ["Places", "Weather"],
+      "layout": "comparison",
+      "failedTools": 0,
+      "staleClientReloads": 2
+    },
+    {
+      "id": "weather-today",
+      "status": "passed",
+      "requestAt": "2026-10-18T06:48:52.801Z",
+      "checks": 14,
+      "passedChecks": 14,
+      "failedChecks": [],
+      "toolsUsed": ["lookup_places", "lookup_weather"],
+      "cards": ["Places", "Weather"],
+      "layout": "day",
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "weather-tomorrow",
+      "status": "passed",
+      "requestAt": "2026-10-18T06:52:02.931Z",
+      "checks": 14,
+      "passedChecks": 14,
+      "failedChecks": [],
+      "toolsUsed": ["lookup_places", "lookup_weather"],
+      "cards": ["Places", "Weather"],
+      "layout": "day",
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "weather-week",
+      "status": "passed",
+      "requestAt": "2026-10-18T06:53:04.843Z",
+      "checks": 13,
+      "passedChecks": 13,
+      "failedChecks": [],
+      "toolsUsed": ["lookup_places", "lookup_weather"],
+      "cards": ["Places", "Weather"],
+      "layout": "overview",
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "split-bill",
+      "status": "passed",
+      "requestAt": "2026-10-18T06:46:19.474Z",
+      "checks": 8,
+      "passedChecks": 8,
+      "failedChecks": [],
+      "toolsUsed": ["calculate"],
+      "cards": ["Calculation"],
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "units",
+      "status": "passed",
+      "requestAt": "2026-10-18T06:49:25.816Z",
+      "checks": 8,
+      "passedChecks": 8,
+      "failedChecks": [],
+      "toolsUsed": ["convert_units"],
+      "cards": ["Calculation"],
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "landmark",
+      "status": "passed",
+      "requestAt": "2026-10-18T06:52:03.270Z",
+      "checks": 7,
+      "passedChecks": 7,
+      "failedChecks": [],
+      "toolsUsed": ["lookup_places"],
+      "cards": ["Places"],
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "expenses",
+      "status": "passed",
+      "requestAt": "2026-10-18T06:47:02.305Z",
+      "checks": 10,
+      "passedChecks": 10,
+      "failedChecks": [],
+      "toolsUsed": ["analyze_data"],
+      "cards": ["Stack", "DataTable", "BarChart"],
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "comparison",
+      "status": "passed",
+      "requestAt": "2026-10-18T06:49:26.113Z",
+      "checks": 7,
+      "passedChecks": 7,
+      "failedChecks": [],
+      "toolsUsed": ["show_ui"],
+      "cards": ["Comparison"],
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "products-supplied",
+      "status": "passed",
+      "requestAt": "2026-10-18T06:52:03.605Z",
+      "checks": 9,
+      "passedChecks": 9,
+      "failedChecks": [],
+      "toolsUsed": ["compare_products"],
+      "cards": ["Products"],
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "shopping",
+      "status": "blocked",
+      "requestAt": "2026-10-18T06:53:58.352Z",
+      "checks": 8,
+      "passedChecks": 5,
+      "failedChecks": [
+        "completed-response",
+        "no-failed-turn",
+        "shopping-result-or-explicit-limit"
+      ],
+      "toolsUsed": [
+        "search_products",
+        "browser_open",
+        "browser_interact",
+        "browser_read"
+      ],
+      "cards": [],
+      "failedTools": 2,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "clarify",
+      "status": "passed",
+      "requestAt": "2026-10-18T06:53:04.848Z",
+      "checks": 6,
+      "passedChecks": 6,
+      "failedChecks": [],
+      "toolsUsed": [],
+      "cards": [],
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "explain-only",
+      "status": "passed",
+      "requestAt": "2026-10-18T06:53:04.842Z",
+      "checks": 7,
+      "passedChecks": 7,
+      "failedChecks": [],
+      "toolsUsed": [],
+      "cards": [],
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "thanks",
+      "status": "passed",
+      "requestAt": "2026-10-18T06:53:57.443Z",
+      "checks": 8,
+      "passedChecks": 8,
+      "failedChecks": [],
+      "toolsUsed": [],
+      "cards": [],
+      "failedTools": 0,
+      "staleClientReloads": 0
+    },
+    {
+      "id": "beyond-horizon",
+      "status": "passed",
+      "requestAt": "2026-10-18T06:53:58.095Z",
+      "checks": 7,
+      "passedChecks": 7,
+      "failedChecks": [],
+      "toolsUsed": [],
+      "cards": [],
+      "failedTools": 0,
+      "staleClientReloads": 0
+    }
+  ]
+}

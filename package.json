@@ -26,6 +26,8 @@
     "db:check:agent": "node scripts/generate-agent-migration-manifest.mjs --check",
     "test:drizzle-runtime": "node scripts/test-drizzle-runtime.mjs",
     "test:browser": "playwright test",
+    "eval:rich-answers:live": "tsx evals/rich-answers/live.ts",
+    "eval:rich-answers:score": "tsx evals/rich-answers/score.ts",
     "verify:browser": "pnpm build && pnpm test:browser && node --import tsx scripts/check-passkeys.mjs",
     "verify:container": "docker build --platform linux/amd64 --tag durable-pi-ci:terminal containers/terminal && docker build --platform linux/amd64 --tag durable-pi-ci:terminal-native containers/terminal-native",
     "dev:sandbox": "alchemy dev stacks/sandbox-rehearsal.ts --stage sandbox-rehearsal --profile default",
