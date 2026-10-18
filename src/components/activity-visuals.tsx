@@ -3,14 +3,21 @@ import type { ThinkingOrb as NativeThinkingOrb } from "thinking-orbs"
 
 import { useActivityMotion } from "@/hooks/activity-motion"
 
+// Optional animation downloads must not unmount the live chat or its draft.
 const ThinkingOrb = lazy(() =>
-  import("thinking-orbs").then((module) => ({ default: module.ThinkingOrb }))
+  import("thinking-orbs")
+    .then((module) => ({ default: module.ThinkingOrb }))
+    .catch(() => ({ default: StaticOrb }))
 )
-const ActivityBorderEffect = lazy(() =>
-  import("./activity-border-effect").then((module) => ({
-    default: module.ActivityBorderEffect,
-  }))
+const ActivityBorderEffect = lazy<() => ReactNode>(() =>
+  import("./activity-border-effect")
+    .then((module) => ({ default: module.ActivityBorderEffect }))
+    .catch(() => ({ default: () => null }))
 )
+
+function StaticOrb() {
+  return <span aria-hidden="true" className="activity-orb size-5 shrink-0" />
+}
 
 export function ActivityOrb({
   state = "working",
@@ -21,11 +28,7 @@ export function ActivityOrb({
 }) {
   const { animate } = useActivityMotion()
   return (
-    <Suspense
-      fallback={
-        <span aria-hidden="true" className="activity-orb size-5 shrink-0" />
-      }
-    >
+    <Suspense fallback={<StaticOrb />}>
       <ThinkingOrb
         state={state}
         size={20}

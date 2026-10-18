@@ -10,6 +10,7 @@ import { useState } from "react"
 import { createRoot } from "react-dom/client"
 
 import { ChatApp } from "../../src/app/workspace"
+import { WorkspaceLinkError } from "../../src/app/workspace-link-error"
 import {
   ActivityBorder,
   ActivityOrb,
@@ -44,6 +45,16 @@ const router = createRouter({
       getParentRoute: () => root,
       path: "/join",
       component: JoinFamily,
+    }),
+    createRoute({
+      getParentRoute: () => root,
+      path: "/__route-recovery",
+      loader: async () => {
+        const response = await fetch("/api/fixture/route-ready")
+        if (!response.ok) throw new Error("Synthetic workspace load failure")
+      },
+      errorComponent: WorkspaceLinkError,
+      component: ChatApp,
     }),
   ]),
 })
