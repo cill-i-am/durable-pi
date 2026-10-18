@@ -56,7 +56,7 @@ export function useWorkspaceLocation(
   )
   const openAgent = useCallback(
     (id: AgentId, next: WorkspaceSearch = {}, replace = false) => {
-      void navigate({
+      return navigate({
         ...workspaceDestination(
           agents.find((agent) => agent.id === id)?.slug ?? id,
           next

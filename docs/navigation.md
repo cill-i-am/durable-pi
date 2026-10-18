@@ -28,7 +28,7 @@ Use `workspaceDestination` with native TanStack `Link` for ordinary navigation. 
 
 Menus, attachment pickers, disclosure panels and archive confirmations remain transient. Navigation never confirms a mutation or grants tool access. A link is shareable as navigation, while the server still requires the owner’s authenticated session and enforces bot/resource ownership. Reset credentials remain in their existing private fragment flow and are excluded from workspace return URLs.
 
-Confirming an archive navigates to `/agents/archived` after the mutation succeeds, clearing the previous screen's query parameters. Both collections offer a direct Home link and render as standalone management lists, without workspace commands, an agent sidebar, or a workbench. Active agents have an Archive action on the right (except Home); archived agents have Restore and do not link to a workspace.
+Confirming an archive keeps the current view and its query parameters. If the archived agent is open, the workspace replaces its location with Home before refreshing the agent list. Both collections offer a direct Home link and render as standalone management lists, without workspace commands, an agent sidebar, or a workbench. Active agents have an Archive action on the right (except Home); archived agents have Restore and do not link to a workspace.
 
 Selecting an active agent from command search opens its conversation, including when that agent already has a workbench open.
 
