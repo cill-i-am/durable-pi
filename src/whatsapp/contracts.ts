@@ -1,6 +1,7 @@
 import { Schema } from "effect"
 
 import { AgentId } from "../agents/domain"
+import { ReplyProgress } from "../replies/contracts"
 import { AudioMime } from "../workspace/audio"
 import { FileId } from "../workspace/files"
 
@@ -39,9 +40,9 @@ export const WhatsAppMedia = Schema.Struct({
 export type WhatsAppMedia = typeof WhatsAppMedia.Type
 export const WhatsAppMediaExport = Schema.Struct({
   name: Schema.String,
-  mime: Schema.Literals(["image/jpeg", "image/png"]),
+  mime: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(200)),
   data: Schema.String.check(
-    Schema.isMaxLength(7_000_000),
+    Schema.isMaxLength(12_000_000),
     Schema.isPattern(/^[A-Za-z0-9+/]+={0,2}$/)
   ),
 })
@@ -99,6 +100,7 @@ export const WhatsAppRecord = Schema.Struct({
   control: Schema.Boolean,
   state: WhatsAppDelivery,
   reply: Schema.String,
+  delivery: Schema.optionalKey(Schema.NullOr(ReplyProgress)),
   providerId: Schema.NullOr(Schema.String),
   error: Schema.NullOr(Schema.String),
   createdAt: Schema.Number,

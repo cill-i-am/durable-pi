@@ -160,7 +160,7 @@ export default defineConfig({
     },
     {
       files: [
-        "src/{access,activity,agent,agents,apps,auth,browser,communication,conversations,delegation,execution,inference,memory,objects,observability,planning,routines,shared,skills,storage,terminal,webhooks,workspace,email}/**/*.ts",
+        "src/{access,activity,agent,agents,apps,auth,browser,communication,conversations,delegation,execution,inference,memory,objects,observability,planning,routines,shared,skills,storage,terminal,webhooks,workspace,email,replies}/**/*.ts",
       ],
       excludeFiles: [
         "**/*.test.ts",
@@ -171,7 +171,7 @@ export default defineConfig({
     },
     {
       files: [
-        "src/{memory,agents,activity,objects,planning,workspace,browser,shared,inference,delegation,execution,routines,webhooks,access,apps,skills,terminal,communication,conversations,email}/*.ts",
+        "src/{memory,agents,activity,objects,planning,workspace,browser,shared,inference,delegation,execution,routines,webhooks,access,apps,skills,terminal,communication,conversations,email,replies}/*.ts",
       ],
       excludeFiles: ["**/*.test.ts", "src/*/worker.ts"],
       rules: {

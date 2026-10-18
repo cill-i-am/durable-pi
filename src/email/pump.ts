@@ -1,7 +1,9 @@
-import { Clock, Effect, Schema } from "effect"
+import { Clock, Effect } from "effect"
 
 import type { Turn } from "../conversations/turns"
 import type { Submission } from "../conversations/turns"
+import { ReplySendFailed as EmailSendFailed } from "../replies/contracts"
+import { deliverReply } from "../replies/delivery"
 import { preserveFatal } from "../shared/effect"
 import { emailDecision } from "./approvals"
 import {
@@ -10,13 +12,9 @@ import {
   type EmailFailure,
 } from "./contracts"
 import type { EmailPersistence } from "./persistence"
+import { emailReply } from "./reply"
 
-export class EmailSendFailed extends Schema.TaggedError<EmailSendFailed>()(
-  "EmailSendFailed",
-  {
-    uncertain: Schema.Boolean,
-  }
-) {}
+export { ReplySendFailed as EmailSendFailed } from "../replies/contracts"
 export interface EmailPumpHost {
   active: () => Effect.Effect<boolean, EmailFailure>
   admit: (input: Submission) => Effect.Effect<unknown, EmailUnavailable>
@@ -24,16 +22,12 @@ export interface EmailPumpHost {
   send: (
     email: EmailRecord,
     reply: string,
-    attachments?: EmailAttachment[]
+    files?: readonly string[]
   ) => Effect.Effect<string, EmailSendFailed>
   reviewUrl: (record: EmailRecord) => Effect.Effect<string, EmailFailure>
   files?: (
-    record: EmailRecord,
-    reviewUrl: string
-  ) => Effect.Effect<
-    { attachments: EmailAttachment[]; suffix: string },
-    EmailFailure
-  >
+    record: EmailRecord
+  ) => Effect.Effect<readonly { id: string; size: number }[], EmailFailure>
   notices?: (
     record: EmailRecord
   ) => Effect.Effect<readonly { key: string; text: string }[], EmailFailure>
@@ -45,33 +39,33 @@ export function emailPump(records: EmailPersistence, host: EmailPumpHost) {
     text: string,
     includeFiles = false
   ) {
-    const reviewUrl = yield* host.reviewUrl(record)
-    const files =
-      host.files && includeFiles
-        ? yield* host.files(record, reviewUrl)
-        : { attachments: [], suffix: "" }
-    const reply = `${text.replace(/\n\nView this agent in Pi: https?:\/\/[^\s]+$/, "")}${files.suffix}\n\nView this agent in Pi: ${reviewUrl}`
-    if (!(yield* records.claim(record.id, reply, host.active))) return
-    // Persist the claim before contacting the provider. An interrupted claim is
-    // recovered as uncertain; neither a restart nor a webhook replay resends it.
-    yield* host.send(record, reply, files.attachments).pipe(
-      preserveFatal,
-      Effect.flatMap((providerId) =>
-        records.update(record.id, "sending", "sent", { providerId })
+    const progress = record.delivery ?? {
+      version: 1 as const,
+      generation: (yield* records.settings()).generation,
+      parts: emailReply(
+        text,
+        yield* host.reviewUrl(record),
+        host.files && includeFiles ? yield* host.files(record) : []
       ),
-      Effect.catchTag("EmailSendFailed", (error) =>
-        records.update(
-          record.id,
-          "sending",
-          error.uncertain ? "uncertain" : "failed",
-          {
-            error: error.uncertain
-              ? "Delivery could not be confirmed. Check your inbox before sending again."
-              : "The email provider rejected this reply. Check email configuration before retrying.",
-          }
-        )
-      )
-    )
+      receipts: [],
+    }
+    yield* deliverReply(progress, {
+      claim: (delivery, from) =>
+        records.claim(record.id, text, host.active, delivery, from),
+      checkpoint: (delivery) =>
+        records.update(record.id, "sending", "sending", { delivery }),
+      send: (part) => host.send(record, part.text, part.files),
+      finish: (state, providerId) =>
+        records.update(record.id, "sending", state, {
+          providerId,
+          error:
+            state === "sent"
+              ? null
+              : state === "uncertain"
+                ? "Delivery could not be confirmed. Check your inbox before sending again."
+                : "The email provider rejected this reply. Check email configuration before retrying.",
+        }),
+    })
   })
   const process = Effect.fn("Email.process")(function* (record: EmailRecord) {
     if (!(yield* records.settings()).enabled || !(yield* host.active())) {
@@ -79,6 +73,10 @@ export function emailPump(records: EmailPersistence, host: EmailPumpHost) {
         error:
           "Email is disabled or the agent is archived. The conversation remains in Pi.",
       })
+      return
+    }
+    if (record.delivery) {
+      yield* send(record, record.reply)
       return
     }
     if (record.state === "queued") {
@@ -118,8 +116,8 @@ export function emailPump(records: EmailPersistence, host: EmailPumpHost) {
       const turn = yield* host.turn(record.id)
       if (turn && ["done", "failed", "cancelled"].includes(turn.status)) {
         const text =
-          turn.status === "done" && turn.answer.trim()
-            ? turn.answer
+          turn.status === "done"
+            ? turn.answer || "Your request is complete."
             : `This request ${turn.status === "cancelled" ? "was cancelled" : "could not finish"}. Open Pi to review the conversation.`
         yield* send(record, text, turn.status === "done")
       } else if (host.notices) {

@@ -9,7 +9,7 @@ import {
   emailApprovalProofs,
 } from "../src/email/adapters/approval-proof"
 import {
-  emailReplyFiles,
+  emailAttachments,
   incomingEmailRequest,
 } from "../src/email/adapters/attachments"
 import { EmailStore } from "../src/email/adapters/sqlite"
@@ -270,17 +270,7 @@ describe("email attachment transport", () => {
     expect((await run(f.workspace.attach([file.id]))).content[1]).toMatchObject(
       { type: "text", text: expect.stringContaining("A private report 🐟") }
     )
-    expect(
-      (
-        await run(
-          emailReplyFiles(
-            f.workspace,
-            input.id,
-            "https://pi.example.com/agents/navi"
-          )
-        )
-      ).attachments
-    ).toEqual([])
+    expect(await run(emailAttachments(f.workspace, []))).toEqual([])
     await run(
       f.workspace.replyFile({
         operationId: "share-report",
@@ -289,28 +279,26 @@ describe("email attachment transport", () => {
       })
     )
     const reply = await run(
-      emailReplyFiles(
+      emailAttachments(
         f.workspace,
-        input.id,
-        "https://pi.example.com/agents/navi"
+        (await run(f.workspace.replyFiles(input.id))).map((file) => file.id)
       )
     )
-    expect(reply.attachments).toHaveLength(1)
-    expect(reply.attachments[0]).toMatchObject({
+    expect(reply).toHaveLength(1)
+    expect(reply[0]).toMatchObject({
       filename: "report.txt",
       disposition: "attachment",
       content: data.buffer,
     })
     expect(
-      (
-        await run(
-          emailReplyFiles(
-            f.workspace,
-            "other-turn",
-            "https://pi.example.com/agents/navi"
+      await run(
+        emailAttachments(
+          f.workspace,
+          (await run(f.workspace.replyFiles("other-turn"))).map(
+            (file) => file.id
           )
         )
-      ).attachments
+      )
     ).toEqual([])
   })
   it("enables new email settings by default and preserves explicit disable/revocation", async () => {

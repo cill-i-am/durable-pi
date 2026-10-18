@@ -1,6 +1,8 @@
 import { Agent, getAgentByName } from "agents"
 import { createChatSdkState } from "agents/chat-sdk"
 
+import { probeReplies } from "./reply-probe"
+
 export { ChatSdkStateAgent } from "agents/chat-sdk"
 
 export class WhatsAppStateProbe extends Agent {
@@ -26,6 +28,7 @@ export class WhatsAppStateProbe extends Agent {
     })
     const result = {
       counter: previous + 1,
+      replies: await probeReplies(this.ctx.storage, previous),
       locked: !!lock,
       duplicate: !!duplicate,
       list: await state.getList("history:probe"),

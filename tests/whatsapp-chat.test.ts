@@ -342,4 +342,51 @@ describe("official WhatsApp Chat SDK transport", () => {
       )
     ).toEqual({ ok: false, uncertain: true })
   })
+  it.each([
+    ["report.pdf", "application/pdf", "document"],
+    ["report.txt", "text/plain", "document"],
+    ["voice.ogg", "audio/ogg", "audio"],
+    ["clip.mp4", "video/mp4", "video"],
+  ])(
+    "sends %s as one provider message with original bytes and no hidden caption send",
+    async (name, mime, kind) => {
+      const bytes = new Uint8Array([0, 1, 127, 128, 255])
+      const messages: Record<string, unknown>[] = []
+      const uploads: { name: string; type: string; bytes: Uint8Array }[] = []
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+          if (String(input).endsWith("/media")) {
+            const form = init!.body as FormData
+            const file = form.get("file") as File
+            uploads.push({
+              name: file.name,
+              type: file.type,
+              bytes: new Uint8Array(await file.arrayBuffer()),
+            })
+            return Response.json({ id: "media.synthetic" })
+          }
+          messages.push(JSON.parse(String(init!.body)))
+          return Response.json({ messages: [{ id: "wamid.file" }] })
+        })
+      )
+      const result = await whatsappChat(
+        env,
+        createMemoryState(),
+        async () => {}
+      ).send(
+        `whatsapp:${env.WHATSAPP_PHONE_NUMBER_ID}:${env.WHATSAPP_OWNER_ID}`,
+        "",
+        { name, mime, data: btoa(String.fromCharCode(...bytes)) }
+      )
+      expect(result).toEqual({ ok: true, id: "wamid.file" })
+      expect(uploads).toEqual([{ name, type: mime, bytes }])
+      expect(messages).toHaveLength(1)
+      expect(messages[0]).toMatchObject({
+        type: kind,
+        [kind]: { id: "media.synthetic" },
+      })
+      expect(messages[0]![kind]).not.toHaveProperty("caption")
+    }
+  )
 })

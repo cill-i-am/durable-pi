@@ -86,12 +86,32 @@ const config :Workerd.Config = (
   assert.equal(first.locked, true)
   assert.equal(first.duplicate, false)
   assert.deepEqual(first.list, ["two", "three"])
+  for (const reply of first.replies) {
+    assert.equal(reply.state, "sending")
+    assert.equal(reply.receipts.length, 1)
+    assert.deepEqual(reply.sends, ["confirmed first", "unconfirmed second"])
+  }
   await stop()
   const restarted = await start()
   assert.equal(restarted.counter, 2)
   assert.deepEqual(restarted.list, ["two", "three"])
+  for (const reply of restarted.replies) {
+    assert.equal(reply.state, "uncertain")
+    assert.equal(reply.receipts.length, 1)
+    assert.deepEqual(reply.sends, ["confirmed first", "unconfirmed second"])
+  }
+  const retried = await (await fetch(`http://127.0.0.1:${port}/`)).json()
+  for (const reply of retried.replies) {
+    assert.equal(reply.state, "sent")
+    assert.equal(reply.receipts.length, 2)
+    assert.deepEqual(reply.sends, [
+      "confirmed first",
+      "unconfirmed second",
+      "unconfirmed second",
+    ])
+  }
   console.log(
-    "WhatsApp Chat SDK state: native SQLite facets, locking, list bounds and restart persistence passed."
+    "Multipart email/WhatsApp: native receipt checkpoints, restart without resend, and explicit retry skipping confirmed parts passed. WhatsApp Chat SDK state: native SQLite facets, locking, list bounds and restart persistence passed."
   )
 } finally {
   await stop()

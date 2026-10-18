@@ -1,5 +1,6 @@
 import type { Effect } from "effect"
 
+import type { ReplyProgress } from "../replies/contracts"
 import type {
   ConfigureEmail,
   EmailFailure,
@@ -23,7 +24,9 @@ export interface EmailPersistence {
   claim: (
     id: string,
     reply: string,
-    allowed: () => Effect.Effect<boolean, EmailFailure>
+    allowed: () => Effect.Effect<boolean, EmailFailure>,
+    delivery?: ReplyProgress,
+    from?: "waiting" | "sending"
   ) => Effect.Effect<boolean, EmailFailure>
   settings: () => Effect.Effect<EmailSettings, EmailFailure>
   configure: (
@@ -42,6 +45,7 @@ export interface EmailPersistence {
     state: EmailDelivery,
     details?: {
       reply?: string
+      delivery?: ReplyProgress
       error?: string | null
       providerId?: string | null
     }

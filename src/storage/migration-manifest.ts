@@ -151,6 +151,15 @@ export const agentMigrationManifest = {
         "CREATE UNIQUE INDEX `email_messages_notice` ON `email_messages` (`notice_key`);",
       ],
     },
+    {
+      id: "20261018175354_happy_scalphunter",
+      checksum:
+        "3f0f7666317ed22af3bf010ef0055ff3d5ba0a65096210cfb9aa9c8ae24e3998",
+      statements: [
+        "ALTER TABLE `email_messages` ADD `delivery` text;",
+        "ALTER TABLE `whatsapp_messages` ADD `delivery` text;",
+      ],
+    },
   ],
   schema: [
     {
@@ -291,7 +300,7 @@ export const agentMigrationManifest = {
     {
       type: "table",
       name: "email_messages",
-      sql: "CREATE TABLE `email_messages` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`fingerprint` text NOT NULL,\n\t`message_id` text NOT NULL,\n\t`sender` text NOT NULL,\n\t`recipient` text NOT NULL,\n\t`subject` text NOT NULL,\n\t`body` text NOT NULL,\n\t`references` text NOT NULL,\n\t`state` text NOT NULL,\n\t`reply` text DEFAULT '' NOT NULL,\n\t`provider_id` text,\n\t`error` text,\n\t`created_at` integer NOT NULL, `files` text DEFAULT '[]' NOT NULL, `purpose` text DEFAULT 'request' NOT NULL, `notice_key` text,\n\tCONSTRAINT \"email_messages_state\" CHECK(\"state\" in ('queued','waiting','sending','sent','failed','uncertain','cancelled'))\n)",
+      sql: "CREATE TABLE `email_messages` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`fingerprint` text NOT NULL,\n\t`message_id` text NOT NULL,\n\t`sender` text NOT NULL,\n\t`recipient` text NOT NULL,\n\t`subject` text NOT NULL,\n\t`body` text NOT NULL,\n\t`references` text NOT NULL,\n\t`state` text NOT NULL,\n\t`reply` text DEFAULT '' NOT NULL,\n\t`provider_id` text,\n\t`error` text,\n\t`created_at` integer NOT NULL, `files` text DEFAULT '[]' NOT NULL, `purpose` text DEFAULT 'request' NOT NULL, `notice_key` text, `delivery` text,\n\tCONSTRAINT \"email_messages_state\" CHECK(\"state\" in ('queued','waiting','sending','sent','failed','uncertain','cancelled'))\n)",
     },
     {
       type: "index",
@@ -551,7 +560,7 @@ export const agentMigrationManifest = {
     {
       type: "table",
       name: "whatsapp_messages",
-      sql: "CREATE TABLE `whatsapp_messages` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`fingerprint` text NOT NULL,\n\t`message_id` text NOT NULL,\n\t`thread_id` text NOT NULL,\n\t`sender` text NOT NULL,\n\t`body` text NOT NULL,\n\t`timestamp` integer NOT NULL,\n\t`agent_id` text NOT NULL,\n\t`generation` integer NOT NULL,\n\t`control` integer NOT NULL,\n\t`state` text NOT NULL,\n\t`reply` text DEFAULT '' NOT NULL,\n\t`provider_id` text,\n\t`error` text,\n\t`created_at` integer NOT NULL, `image` text, `image_file_id` text, `outbound_image_id` text, `image_attempts` integer DEFAULT 0 NOT NULL,\n\tCONSTRAINT \"whatsapp_messages_state\" CHECK(\"state\" in ('queued','waiting','sending','sent','failed','uncertain','cancelled','expired')),\n\tCONSTRAINT \"whatsapp_messages_control\" CHECK(\"control\" in (0,1))\n)",
+      sql: "CREATE TABLE `whatsapp_messages` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`fingerprint` text NOT NULL,\n\t`message_id` text NOT NULL,\n\t`thread_id` text NOT NULL,\n\t`sender` text NOT NULL,\n\t`body` text NOT NULL,\n\t`timestamp` integer NOT NULL,\n\t`agent_id` text NOT NULL,\n\t`generation` integer NOT NULL,\n\t`control` integer NOT NULL,\n\t`state` text NOT NULL,\n\t`reply` text DEFAULT '' NOT NULL,\n\t`provider_id` text,\n\t`error` text,\n\t`created_at` integer NOT NULL, `image` text, `image_file_id` text, `outbound_image_id` text, `image_attempts` integer DEFAULT 0 NOT NULL, `delivery` text,\n\tCONSTRAINT \"whatsapp_messages_state\" CHECK(\"state\" in ('queued','waiting','sending','sent','failed','uncertain','cancelled','expired')),\n\tCONSTRAINT \"whatsapp_messages_control\" CHECK(\"control\" in (0,1))\n)",
     },
     {
       type: "index",

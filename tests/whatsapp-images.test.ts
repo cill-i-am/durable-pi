@@ -194,6 +194,7 @@ describe("images through the shared workspace and WhatsApp", () => {
     f.state.images = [f.admitted[0]!.files[0]!]
     f.state.finished = true
     f.state.answer = ""
+    f.state.uncertain = true
     await run(f.app.pump())
     expect((await run(f.store.get(input.id)))?.reply).toContain(
       "Attachments included."
@@ -202,9 +203,7 @@ describe("images through the shared workspace and WhatsApp", () => {
     await run(f.app.pump())
     await run(f.app.pump())
     expect(f.sends).toHaveLength(2)
-    const image = (await run(f.store.list())).find(
-      (record) => record.outboundFileId
-    )!
+    const image = (await run(f.store.get(input.id)))!
     expect(image.state).toBe("uncertain")
     await expect(
       run(f.store.retry(image.id, false, crypto.randomUUID()))
@@ -233,5 +232,22 @@ describe("images through the shared workspace and WhatsApp", () => {
       run(f.importer(input.id, imageMetadata))
     ).rejects.toMatchObject({ _tag: "WhatsAppRejected" })
     expect(f.state.downloaded).toBe(1)
+  })
+  it("exports original report bytes, filenames and MIME types without requiring an image", async () => {
+    const f = await fixture()
+    const bytes = new TextEncoder().encode("A complete private report 🐟")
+    const file = await run(
+      f.workspace.upload({
+        id: crypto.randomUUID(),
+        name: "report.txt",
+        mime: "text/plain",
+        bytes,
+      })
+    )
+    expect(await run(exportWhatsAppMedia(f.workspace, file.id))).toEqual({
+      name: "report.txt",
+      mime: "text/plain; charset=utf-8",
+      data: btoa(String.fromCharCode(...bytes)),
+    })
   })
 })

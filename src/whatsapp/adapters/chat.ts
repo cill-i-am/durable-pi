@@ -213,7 +213,10 @@ export function whatsappChat(
         if (
           target.phoneNumberId !== env.WHATSAPP_PHONE_NUMBER_ID ||
           target.userWaId !== env.WHATSAPP_OWNER_ID ||
-          text.length > (image ? 700 : 3900)
+          text.length > (image ? 700 : 3900) ||
+          (image &&
+            ["image/jpeg", "image/png"].includes(image.mime) &&
+            atob(image.data).length > 5 * 1024 * 1024)
         )
           return { ok: false as const, uncertain: false }
         await bot.initialize()

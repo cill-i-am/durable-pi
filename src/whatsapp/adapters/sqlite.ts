@@ -2,6 +2,7 @@ import { and, asc, count, desc, eq, inArray } from "drizzle-orm"
 import { Effect, Schema } from "effect"
 
 import { homeAgentId, type AgentId } from "../../agents/domain"
+import { replyComplete, type ReplyProgress } from "../../replies/contracts"
 import {
   mapSqliteError,
   type Sqlite,
@@ -9,7 +10,6 @@ import {
 } from "../../storage/sqlite"
 import {
   WhatsAppSettings,
-  whatsappIdentity,
   WhatsAppRecord,
   WhatsAppRejected,
   WhatsAppStorageError,
@@ -218,6 +218,7 @@ export class WhatsAppStore {
     state: WhatsAppDelivery,
     details: {
       reply?: string
+      delivery?: ReplyProgress
       error?: string | null
       providerId?: string | null
       fileId?: string
@@ -237,7 +238,9 @@ export class WhatsAppStore {
   claim(
     record: WhatsAppRecord,
     reply: string,
-    active: () => Effect.Effect<boolean, WhatsAppFailure>
+    active: () => Effect.Effect<boolean, WhatsAppFailure>,
+    delivery?: ReplyProgress,
+    from: "waiting" | "sending" = "waiting"
   ) {
     return this.atomic(() =>
       Effect.gen({ self: this }, function* () {
@@ -247,38 +250,50 @@ export class WhatsAppStore {
           settings.generation !== record.generation ||
           !(yield* active())
         ) {
-          yield* this.update(record.id, "waiting", "cancelled", {
+          yield* this.update(record.id, from, "cancelled", {
             error:
               "WhatsApp is disabled or the agent is archived. Review this conversation in Pi.",
           })
           return false
         }
         if (Date.now() - settings.lastInboundAt >= WHATSAPP_WINDOW_MS) {
-          yield* this.update(record.id, "waiting", "expired", {
+          yield* this.update(record.id, from, "expired", {
             reply,
             error:
               "The WhatsApp reply window closed. Send a new WhatsApp message before retrying.",
           })
           return false
         }
-        return yield* this.update(record.id, "waiting", "sending", {
+        return yield* this.update(record.id, from, "sending", {
           reply,
+          ...(delivery ? { delivery } : {}),
           error: null,
         })
       })
     )
   }
   recover() {
-    return this.query((orm) =>
-      orm
-        .update(whatsappMessages)
-        .set({
-          state: "uncertain",
-          error: "Sending was interrupted. Check WhatsApp before retrying.",
-        })
-        .where(eq(whatsappMessages.state, "sending"))
-    )
+    return Effect.gen({ self: this }, function* () {
+      for (const record of yield* this.pending()) {
+        if (record.state !== "sending") continue
+        const complete = replyComplete(record.delivery)
+        yield* this.update(
+          record.id,
+          "sending",
+          complete ? "sent" : "uncertain",
+          {
+            providerId: complete
+              ? (record.delivery!.receipts.at(-1) ?? null)
+              : null,
+            error: complete
+              ? null
+              : "Sending was interrupted. Check the destination before retrying.",
+          }
+        )
+      }
+    })
   }
+
   beginMedia(id: string) {
     return this.atomic(() =>
       Effect.gen({ self: this }, function* () {
@@ -296,35 +311,6 @@ export class WhatsAppStore {
         })
       })
     )
-  }
-  queueMedia(record: WhatsAppRecord, fileId: string) {
-    return Effect.gen({ self: this }, function* () {
-      const identity = yield* Effect.promise(() =>
-        whatsappIdentity(`${record.id}:reply-image:${fileId}`)
-      )
-      // Hash before entering the native SQLite transaction: only synchronous
-      // database work may run while the Durable Object's input gate is held.
-      yield* this.atomic(() =>
-        Effect.gen({ self: this }, function* () {
-          const settings = yield* this.settings()
-          if (!settings.enabled || settings.generation !== record.generation)
-            return
-          yield* this.receive(
-            {
-              ...record,
-              ...identity,
-              media: null,
-              messageId: `image:${record.id}:${fileId}`,
-            },
-            record.agentId,
-            {
-              reply: "Attachment included in this reply.",
-              outboundFileId: fileId,
-            }
-          )
-        })
-      )
-    })
   }
   retry(id: string, acknowledgeDuplicateRisk: boolean, operationId: string) {
     return this.atomic(() =>

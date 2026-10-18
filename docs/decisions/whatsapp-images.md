@@ -21,3 +21,7 @@ Local verification on 17 October 2026:
 - Six desktop/mobile browser journeys pass, including original-only image upload, an image reply with a working preview, and reload. Browser journeys use the local fixture transport.
 
 Meta onboarding, the real Images service and live WhatsApp acceptance remain deferred. Surface parity is the product direction; previously deferred media and approval capabilities are slice boundaries, not permanent web-only restrictions.
+
+## Reply delivery update on 18 October 2026
+
+[Shared reply delivery](reply-delivery.md) replaces independent image-only reply records with a frozen multipart plan. Complete text and original selected files are sent in order with a durable receipt for each provider message. Documents, audio and video use the same private workspace export; Meta still enforces its media limits. Image input and the shared workspace preparation pipeline are unchanged.

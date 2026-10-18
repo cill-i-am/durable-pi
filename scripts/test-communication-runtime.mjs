@@ -261,7 +261,7 @@ const config :Workerd.Config = (
   for (let n = 0; n < 250; n++) {
     photos = await call("whatsapp-images/inspect", {})
     if (
-      photos.states.length === 2 &&
+      photos.states.length === 1 &&
       photos.states.every((state) => state === "sent")
     )
       break
@@ -269,13 +269,25 @@ const config :Workerd.Config = (
   }
   assert.deepEqual(
     photos.states,
-    ["sent", "sent"],
+    ["sent"],
     JSON.stringify(photos) + output.slice(-10000)
   )
   assert.equal(photos.turns.length, 1)
   assert.equal(photos.turns[0].attachments, 1)
   assert.equal(photos.replyFiles.length, 1)
-  assert.equal(photos.sends.length, 2)
+  assert.equal(photos.sends.length, 3)
+  assert.equal(
+    photos.sends
+      .filter((send) => send.image === null)
+      .map((send) =>
+        send.body
+          .replace(/^[^\n]+\n\n/, "")
+          .replace(/\n\nhttps?:\/\/[^\s]+$/, "")
+      )
+      .join(""),
+    photos.turns[0].answer
+  )
+  assert.ok(photos.turns[0].answer.endsWith("END OF FULL REPLY"))
   assert.equal(photos.sends.filter((send) => send.image !== null).length, 1)
   assert.equal(
     JSON.parse(photos.sends.find((send) => send.image !== null).image).mime,
@@ -412,7 +424,7 @@ const config :Workerd.Config = (
     "PASS native voice: shared original/transcript storage, agent transcript input and text reply, dedupe and restart without resend; AI/provider inference is synthetic."
   )
   console.log(
-    "PASS native WhatsApp images: production workspace upload and vision admission, common share_image tool, one text and one private image send, dedupe and restart persistence."
+    "PASS native WhatsApp images: production workspace upload and vision admission, common share_image tool, complete multipart text and a private image send, dedupe and restart persistence."
   )
   assert.equal(
     (await call("whatsapp/receive", {}, { timestamp: whatsappTimestamp }))
