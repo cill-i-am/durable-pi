@@ -3,13 +3,25 @@ import {
   useRouter,
   type ErrorComponentProps,
 } from "@tanstack/react-router"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 import { Button, buttonVariants } from "@/components/ui/button"
+import { reportClientError } from "@/observability/browser"
 
-export function WorkspaceLinkError({ reset }: ErrorComponentProps) {
+export function WorkspaceLinkError({ reset, error }: ErrorComponentProps) {
   const router = useRouter()
   const [retrying, setRetrying] = useState(false)
+  const [receipt, setReceipt] = useState<{ error: unknown; id: string }>()
+  const reference = receipt?.error === error ? receipt?.id : undefined
+  useEffect(() => {
+    let disposed = false
+    void reportClientError(error).then((id) => {
+      if (!disposed && id) setReceipt({ error, id })
+    })
+    return () => {
+      disposed = true
+    }
+  }, [error])
   async function retry() {
     setRetrying(true)
     try {
@@ -26,6 +38,11 @@ export function WorkspaceLinkError({ reset }: ErrorComponentProps) {
         Try opening this page again. Your saved conversations are still
         available.
       </p>
+      {reference && (
+        <p className="text-xs text-muted-foreground">
+          Error reference: <code>{reference}</code>
+        </p>
+      )}
       <Button disabled={retrying} onClick={() => void retry()}>
         {retrying ? "Opening…" : "Try again"}
       </Button>

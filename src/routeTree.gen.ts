@@ -22,6 +22,7 @@ import { Route as WorkspaceAgentsNewRouteImport } from './routes/_workspace.agen
 import { Route as ApiAccountAvatarRouteImport } from './routes/api.account.avatar'
 import { Route as ApiAgentSplatRouteImport } from './routes/api.agent.$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api.auth.$'
+import { Route as ApiDiagnosticsClientErrorRouteImport } from './routes/api.diagnostics.client-error'
 import { Route as ApiFamilySplatRouteImport } from './routes/api.family.$'
 import { Route as WorkspaceAgentsAgentIdIndexRouteImport } from './routes/_workspace.agents.$agentId.index'
 import { Route as WorkspaceAgentsAgentIdEditRouteImport } from './routes/_workspace.agents.$agentId.edit'
@@ -95,6 +96,12 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiDiagnosticsClientErrorRoute =
+  ApiDiagnosticsClientErrorRouteImport.update({
+    id: '/api/diagnostics/client-error',
+    path: '/api/diagnostics/client-error',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiFamilySplatRoute = ApiFamilySplatRouteImport.update({
   id: '/api/family/$',
   path: '/api/family/$',
@@ -154,6 +161,7 @@ export interface FileRoutesByFullPath {
   '/api/account/avatar': typeof ApiAccountAvatarRoute
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/diagnostics/client-error': typeof ApiDiagnosticsClientErrorRoute
   '/api/family/$': typeof ApiFamilySplatRoute
   '/agents/': typeof WorkspaceAgentsIndexRoute
   '/agents/$agentId/edit': typeof WorkspaceAgentsAgentIdEditRoute
@@ -176,6 +184,7 @@ export interface FileRoutesByTo {
   '/api/account/avatar': typeof ApiAccountAvatarRoute
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/diagnostics/client-error': typeof ApiDiagnosticsClientErrorRoute
   '/api/family/$': typeof ApiFamilySplatRoute
   '/agents': typeof WorkspaceAgentsIndexRoute
   '/agents/$agentId/edit': typeof WorkspaceAgentsAgentIdEditRoute
@@ -200,6 +209,7 @@ export interface FileRoutesById {
   '/api/account/avatar': typeof ApiAccountAvatarRoute
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/diagnostics/client-error': typeof ApiDiagnosticsClientErrorRoute
   '/api/family/$': typeof ApiFamilySplatRoute
   '/_workspace/agents/': typeof WorkspaceAgentsIndexRoute
   '/_workspace/agents/$agentId/edit': typeof WorkspaceAgentsAgentIdEditRoute
@@ -224,6 +234,7 @@ export interface FileRouteTypes {
     | '/api/account/avatar'
     | '/api/agent/$'
     | '/api/auth/$'
+    | '/api/diagnostics/client-error'
     | '/api/family/$'
     | '/agents/'
     | '/agents/$agentId/edit'
@@ -246,6 +257,7 @@ export interface FileRouteTypes {
     | '/api/account/avatar'
     | '/api/agent/$'
     | '/api/auth/$'
+    | '/api/diagnostics/client-error'
     | '/api/family/$'
     | '/agents'
     | '/agents/$agentId/edit'
@@ -269,6 +281,7 @@ export interface FileRouteTypes {
     | '/api/account/avatar'
     | '/api/agent/$'
     | '/api/auth/$'
+    | '/api/diagnostics/client-error'
     | '/api/family/$'
     | '/_workspace/agents/'
     | '/_workspace/agents/$agentId/edit'
@@ -290,6 +303,7 @@ export interface RootRouteChildren {
   ApiAccountAvatarRoute: typeof ApiAccountAvatarRoute
   ApiAgentSplatRoute: typeof ApiAgentSplatRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiDiagnosticsClientErrorRoute: typeof ApiDiagnosticsClientErrorRoute
   ApiFamilySplatRoute: typeof ApiFamilySplatRoute
   ApiHooksAgentRoutineRoute: typeof ApiHooksAgentRoutineRoute
 }
@@ -385,6 +399,13 @@ declare module '@tanstack/react-router' {
       path: '/api/auth/$'
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/diagnostics/client-error': {
+      id: '/api/diagnostics/client-error'
+      path: '/api/diagnostics/client-error'
+      fullPath: '/api/diagnostics/client-error'
+      preLoaderRoute: typeof ApiDiagnosticsClientErrorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/family/$': {
@@ -489,6 +510,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAccountAvatarRoute: ApiAccountAvatarRoute,
   ApiAgentSplatRoute: ApiAgentSplatRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiDiagnosticsClientErrorRoute: ApiDiagnosticsClientErrorRoute,
   ApiFamilySplatRoute: ApiFamilySplatRoute,
   ApiHooksAgentRoutineRoute: ApiHooksAgentRoutineRoute,
 }

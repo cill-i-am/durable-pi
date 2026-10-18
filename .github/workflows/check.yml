@@ -161,6 +161,13 @@ jobs:
           WHATSAPP_PHONE_NUMBER_ID: ${{ vars.WHATSAPP_PHONE_NUMBER_ID }}
           WHATSAPP_BUSINESS_NUMBER: ${{ vars.WHATSAPP_BUSINESS_NUMBER }}
           OPENAI_CREDENTIAL: ${{ secrets.OPENAI_CREDENTIAL }}
+      - name: Retain matching browser source maps
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: client-sourcemaps-${{ github.sha }}
+          path: dist/client/assets/*.js.map
+          retention-days: 90
+          if-no-files-found: error
       - name: Configure native issue detection
         run: node --import tsx scripts/configure-observability.ts
         env:

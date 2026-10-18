@@ -21,6 +21,7 @@ import {
   InputGroupTextarea,
 } from "../../src/components/ui/input-group"
 import { JoinFamily } from "../../src/features/family/join"
+import { reportClientError } from "../../src/observability/browser"
 
 import "./styles.css"
 
@@ -37,10 +38,19 @@ const paths = [
   "/agents/$agentId/$panel/$itemId",
 ] as const
 const router = createRouter({
+  defaultOnCatch: (error, info?: { componentStack?: string | null }) => {
+    void reportClientError(error, info)
+  },
   routeTree: root.addChildren([
     ...paths.map((path) =>
       createRoute({ getParentRoute: () => root, path, component: ChatApp })
     ),
+    createRoute({
+      getParentRoute: () => root,
+      path: "/__client-error",
+      errorComponent: WorkspaceLinkError,
+      component: ClientErrorFixture,
+    }),
     createRoute({
       getParentRoute: () => root,
       path: "/join",
@@ -58,6 +68,19 @@ const router = createRouter({
     }),
   ]),
 })
+function ClientErrorFixture() {
+  const [failed, setFailed] = useState(false)
+  if (failed)
+    throw new TypeError(
+      "Cannot read properties of undefined (reading 'PRIVATE_CHAT_CONTENT')",
+      { cause: new Error("PRIVATE_CHAT_CONTENT") }
+    )
+  return (
+    <Button onClick={() => setFailed(true)}>
+      Trigger synthetic render error
+    </Button>
+  )
+}
 const observe = new MutationObserver(() => {
   for (const [stage, selector] of [
     ["history", 'button[aria-label="Copy response"]'],

@@ -24,6 +24,7 @@ import { useFiles } from "@/features/files/use-files"
 import { ObjectsProvider } from "@/features/objects/context"
 import { markReady } from "@/features/performance"
 import { api } from "@/http/client"
+import { listenForClientErrors } from "@/observability/browser"
 
 import { MobileNavigation } from "./mobile-navigation"
 import { useWorkspaceLocation } from "./use-workspace-location"
@@ -81,6 +82,7 @@ const ObjectsWorkbench = lazy(() =>
 )
 
 export function ChatApp() {
+  useEffect(listenForClientErrors, [])
   const { data: session, isPending, error } = authClient.useSession()
   useEffect(() => {
     if (session && !isPending) markReady("session")

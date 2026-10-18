@@ -48,4 +48,21 @@ for (const [path, status, options] of [
   assert.match(response.headers.get("content-type") ?? "", /application\/json/)
   await response.body?.cancel()
 }
-console.log("Built website family API routing passed.")
+const diagnostic = await website.fetch(
+  new Request(origin + "/api/diagnostics/client-error", {
+    method: "POST",
+    headers: {
+      origin: "https://attacker.invalid",
+      "content-type": "application/json",
+    },
+    body: "{}",
+  })
+)
+assert.equal(
+  diagnostic.status,
+  403,
+  "Built diagnostic route rejects cross-origin reports"
+)
+assert.equal(diagnostic.headers.get("cache-control"), "private, no-store")
+await diagnostic.body?.cancel()
+console.log("Built website family and diagnostic API routing passed.")

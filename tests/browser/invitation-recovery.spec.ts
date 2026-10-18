@@ -135,7 +135,14 @@ test("failed animation downloads preserve the composer and its draft", async ({
   page,
 }) => {
   const errors: string[] = []
+  const reports: { surface: string; failure: { module?: string } }[] = []
   let downloads = 0
+  await page.route("**/api/diagnostics/client-error", (route) => {
+    const report = route.request().postDataJSON()
+    expect(route.request().postData()).not.toContain("Keep this private draft")
+    reports.push(report)
+    return route.fulfill({ status: 204 })
+  })
   page.on("pageerror", (error) => errors.push(error.message))
   await page.goto("/__visuals")
   const draft = page.getByRole("textbox", {
@@ -156,6 +163,13 @@ test("failed animation downloads preserve the composer and its draft", async ({
   await expect(draft).toHaveValue("Keep this private draft during activity.")
   await expect(draft).toBeFocused()
   expect(errors).toEqual([])
+  expect(reports.map((report) => report.surface).sort()).toEqual([
+    "activity-border",
+    "activity-orb",
+  ])
+  expect(
+    reports.every((report) => report.failure.module?.startsWith("/assets/"))
+  ).toBe(true)
 })
 
 test("a workspace load error retries the same page without a document reload", async ({
