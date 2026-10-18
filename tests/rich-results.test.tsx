@@ -290,14 +290,15 @@ describe("live lookup adapters", () => {
   it("maps weather into Celsius forecast cards and rejects incomplete days", async () => {
     const data = {
       timezone: "Europe/Dublin",
+      utc_offset_seconds: 3600,
       current: {
         temperature_2m: 14,
         weather_code: 3,
         wind_speed_10m: 10,
-        time: "2026-10-17T12:00",
+        time: Date.parse("2026-10-17T11:00:00Z") / 1000,
       },
       daily: {
-        time: ["2026-10-17"],
+        time: [Date.parse("2026-10-16T23:00:00Z") / 1000],
         temperature_2m_min: [8],
         temperature_2m_max: [15],
         precipitation_probability_max: [30],
@@ -308,11 +309,15 @@ describe("live lookup adapters", () => {
       .fn<typeof fetch>()
       .mockImplementation(async () => new Response(JSON.stringify(data)))
     const value = await lookupWeather(
-      { latitude: 53.34, longitude: -6.25, location: "Dublin" },
+      { latitude: 53.34, longitude: -6.25, location: "Dublin", days: 1 },
       undefined,
-      request
+      request,
+      new Date("2026-10-17T12:00:00Z")
     )
-    expect(value.spec.elements.answer!.props.condition).toBe("Overcast")
+    expect(value.spec.elements.answer!.props.current).toMatchObject({
+      condition: "Overcast",
+      temperature: 14,
+    })
     expect(request.mock.calls[0]![1]!.redirect).toBe("manual")
     expect(value.spec.elements.answer!.props.days).toEqual([
       {
@@ -326,9 +331,10 @@ describe("live lookup adapters", () => {
     data.daily.temperature_2m_max = []
     await expect(
       lookupWeather(
-        { latitude: 53.34, longitude: -6.25, location: "Dublin" },
+        { latitude: 53.34, longitude: -6.25, location: "Dublin", days: 1 },
         undefined,
-        request
+        request,
+        new Date("2026-10-17T12:00:00Z")
       )
     ).rejects.toThrow()
   })

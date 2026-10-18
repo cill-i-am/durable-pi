@@ -14,12 +14,12 @@ import {
   PlacesCard,
   ResultCard,
   TimelineCard,
-  WeatherCard,
   RouteCard,
 } from "./cards"
 import { DataTableView } from "./data-table"
 import { ProductsCard } from "./products"
 import { AnswerDraftContext, QuestionCard } from "./question"
+import { WeatherCard } from "./weather"
 
 const { registry } = defineRegistry(answerCatalog, {
   components: {

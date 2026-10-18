@@ -1,4 +1,4 @@
-import { answerResult } from "@/rich-results/catalog"
+import { answerResult, type AnswerProps } from "@/rich-results/catalog"
 import { briefInput, createBrief } from "@/rich-results/presentation"
 
 const demo = {
@@ -8,6 +8,79 @@ const demo = {
   },
   asOf: "Example · not live",
 }
+const exampleWeatherDays: AnswerProps<"Weather">["days"] = Array.from(
+  { length: 7 },
+  (_, index) => ({
+    date: `2026-10-${19 + index}`,
+    low: [9, 9, 7, 6, 5, 7, 7][index]!,
+    high: [13, 14, 11, 12, 10, 12, 17][index]!,
+    condition: [
+      "Rain",
+      "Rain showers",
+      "Rain",
+      "Drizzle",
+      "Overcast",
+      "Drizzle",
+      "Partly cloudy",
+    ][index]!,
+    rainPercent: [94, 59, 57, 82, 75, 57, 55][index]!,
+    rainMm: [5.8, 2.1, 2.9, 1.4, 0.2, 1.8, 0.8][index]!,
+    windKph: [28, 20, 19, 22, 18, 31, 24][index]!,
+    gustKph: [46, 35, 32, 38, 29, 49, 39][index]!,
+    feelsLikeHigh: [10, 12, 9, 10, 8, 9, 15][index]!,
+    uvIndex: 1.2,
+    sunrise: `2026-10-${19 + index}T07:10:00Z`,
+    sunset: `2026-10-${19 + index}T17:15:00Z`,
+  })
+)
+const detailedWeatherDays = exampleWeatherDays
+  .slice(-2)
+  .map((day, dayIndex) => ({
+    ...day,
+    hours: Array.from({ length: 12 }, (_, index) => ({
+      time: `${day.date}T${String(7 + index).padStart(2, "0")}:00:00Z`,
+      temperature: Math.round(day.high - Math.abs(6 - index) * 0.7),
+      condition: index < 4 ? "Drizzle" : "Partly cloudy",
+      rainPercent: [60, 55, 50, 35, 25, 20, 20, 25, 30, 35, 45, 50][index]!,
+      rainMm: index < 4 ? 0.2 : 0,
+      windKph: dayIndex === 0 ? 24 : 18,
+    })),
+  }))
+export const weatherExamples = [
+  {
+    id: "day",
+    label: "1 day",
+    question: "What is Sunday looking like?",
+    prompt:
+      "Look up the weather in Dublin, Ireland for 25 October 2026. Show a detailed single-day forecast with hourly rain and wind, and briefly explain what that means for a family walk.",
+    days: detailedWeatherDays.slice(-1),
+  },
+  {
+    id: "weekend",
+    label: "2 days",
+    question: "Which day looks better for a family walk?",
+    prompt:
+      "Compare this coming Saturday and Sunday in Dublin, Ireland for a family walk. Request a two-day weather comparison with hourly detail. Briefly explain the trade-offs without repeating the card in a Markdown table.",
+    days: detailedWeatherDays,
+  },
+  {
+    id: "week",
+    label: "7 days",
+    question: "How is the week shaping up?",
+    prompt:
+      "Look up a seven-day weather outlook for Dublin, Ireland and show a compact forecast card. Briefly point out any useful patterns.",
+    days: exampleWeatherDays,
+  },
+].map(({ days, ...example }) => {
+  const result = answerResult("Weather", {
+    location: "Dublin, Ireland",
+    timezone: "Europe/Dublin",
+    days,
+    ...demo,
+  })
+  return { ...example, result, output: JSON.stringify(result) }
+})
+
 const examples = [
   {
     id: "shopping",
@@ -73,21 +146,7 @@ const examples = [
     question: "Will we need raincoats this weekend?",
     prompt:
       "Look up the weather in Dublin, Ireland. Show a forecast card and tell me which day this coming weekend looks best for a family walk.",
-    result: answerResult("Weather", {
-      location: "Dublin, Ireland",
-      temperature: 14,
-      condition: "Partly cloudy",
-      windKph: 16,
-      timezone: "Europe/Dublin",
-      days: Array.from({ length: 7 }, (_, i) => ({
-        date: `2026-10-${17 + i}`,
-        low: [9, 8, 10, 9, 7, 8, 9][i]!,
-        high: [15, 14, 16, 13, 14, 15, 14][i]!,
-        rainPercent: [20, 60, 30, 80, 10, 20, 40][i]!,
-        condition: i % 2 ? "Rain showers" : "Partly cloudy",
-      })),
-      ...demo,
-    }),
+    result: weatherExamples[1]!.result,
   },
   {
     id: "places",

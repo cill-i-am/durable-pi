@@ -2,6 +2,8 @@ import { defineCatalog } from "@json-render/core"
 import { schema } from "@json-render/react/schema"
 import { z } from "zod"
 
+import { weatherCurrentSchema, weatherDaySchema } from "./weather"
+
 const text = z.string().min(1).max(500)
 export const webUrl = z
   .url()
@@ -107,29 +109,26 @@ export const definitions = {
     props: z
       .object({
         location: text,
-        temperature: z.number(),
-        condition: text,
-        windKph: z.number().nonnegative(),
+        // Retain old saved results; new lookups separate current conditions from forecasts.
+        temperature: z.number().optional(),
+        condition: text.optional(),
+        windKph: z.number().nonnegative().optional(),
+        current: weatherCurrentSchema.optional(),
         timezone: text,
         days: z
-          .array(
-            z
-              .object({
-                date: z.iso.date(),
-                low: z.number(),
-                high: z.number(),
-                rainPercent: z.number().min(0).max(100),
-                condition: text,
-              })
-              .strict()
-          )
+          .array(weatherDaySchema)
           .min(1)
-          .max(7),
+          .max(16)
+          .refine(
+            (days) =>
+              days.every((day, i) => i === 0 || days[i - 1]!.date < day.date),
+            "Forecast dates must be unique and in order"
+          ),
         ...provenance,
       })
       .strict(),
     description:
-      "Current weather and seven-day forecast, Celsius and km/h. Prefer lookup_weather for live data.",
+      "A composable forecast for exact local dates, Celsius and km/h. One day shows detailed conditions and hourly data; two days compare side by side; longer ranges use a compact overview. Prefer lookup_weather with period, startDate and days. Current conditions are separate from future forecasts. Do not duplicate its metrics in a Markdown table.",
   },
   Calculation: {
     props: z

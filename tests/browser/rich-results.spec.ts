@@ -140,3 +140,64 @@ test("table search and sorting survive expansion and govern the exported CSV", a
     ].join("\r\n")
   )
 })
+
+test("weather adapts from a dated weekend comparison to a detailed day and a compact week", async ({
+  page,
+}) => {
+  const gallery = await openConversation(page)
+  await gallery.getByRole("tab", { name: "Weather", exact: true }).click()
+  await expect(
+    gallery.getByRole("region", {
+      name: "Saturday 24 October 2026",
+      exact: true,
+    })
+  ).toBeVisible()
+  await expect(
+    gallery.getByRole("region", { name: "Sunday 25 October 2026", exact: true })
+  ).toBeVisible()
+  await expect(gallery.getByText("Maximum wind", { exact: true })).toHaveCount(
+    2
+  )
+  await expect(
+    gallery.getByLabel("Current conditions", { exact: true })
+  ).toHaveCount(0)
+  await gallery.getByRole("button", { name: "1 day", exact: true }).click()
+  await expect(
+    gallery.getByRole("region", {
+      name: "Saturday 24 October 2026",
+      exact: true,
+    })
+  ).toHaveCount(0)
+  const hourly = gallery.getByRole("region", {
+    name: "Hourly forecast for Sunday 25 October 2026",
+    exact: true,
+  })
+  await expect(hourly).toBeVisible()
+  await hourly.focus()
+  await expect(hourly).toBeFocused()
+  await expect(
+    gallery.getByText("Feels like up to 15°", { exact: true })
+  ).toBeVisible()
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth
+    )
+  ).toBe(true)
+  await gallery.getByRole("button", { name: "7 days", exact: true }).click()
+  await expect(
+    gallery.getByRole("region", { name: /^Hourly forecast for/ })
+  ).toHaveCount(0)
+  await expect(
+    gallery.getByRole("region", {
+      name: /^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday) \d+ October 2026$/,
+    })
+  ).toHaveCount(7)
+  await expect(
+    gallery.getByText("7-day forecast", { exact: false })
+  ).toBeVisible()
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth
+    )
+  ).toBe(true)
+})
