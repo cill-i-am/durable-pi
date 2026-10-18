@@ -171,6 +171,16 @@ describe("inbound MIME boundary", () => {
     const b = await parseEmail(mail("hello", { "Message-ID": "" }), owner)
     expect(a.id).toBe(b.id)
   })
+  it.each(["APPROVE", "DENY"])(
+    "keeps Gmail's folded %s token while discarding quoted history",
+    async (command) => {
+      const parsed = await parseEmail(
+        mail(`${command}\r\nsynthetic.proof\r\n\r\n> The old approval card.`),
+        owner
+      )
+      expect(parsed.body).toBe(`${command} synthetic.proof`)
+    }
+  )
   it("accepts a first-line decision with a long quoted card without admitting the quote", async () => {
     const result = await parseEmail(
       mail(

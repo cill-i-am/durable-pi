@@ -20,4 +20,6 @@ Decisions from 18 October 2026. These extend the original [email slice](agent-em
 
 Unit and native checks cover the actual catalog, workspace, email pump and approval ledger. Browser checks cover ID-to-slug replacement, direct slug navigation and selected-view preservation. Live inbox/provider acceptance is a separate release gate; successful synthetic tests alone do not establish real delivery.
 
+Live Gmail finding: Gmail folds a long approval command after its verb in the plain-text MIME part. Accept a token on the immediately following unquoted line, normalize the command before storing it, and discard the quoted card. A blank line or quoted mail cannot supply a missing token. The native approval round trip exercises this actual mail-client layout.
+
 Provider references: [sending and attachment types](https://developers.cloudflare.com/email-service/api/send-emails/workers-api/), [verified-destination limits](https://developers.cloudflare.com/email-service/platform/limits/), [React Email rendering](https://react.email/docs/utilities/render).

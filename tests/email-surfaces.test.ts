@@ -191,6 +191,17 @@ describe("email approvals", () => {
     expect(emailDecision(`Thanks\n\nAPPROVE ${token}`)).toBeUndefined()
     expect(emailDecision(`> APPROVE ${token}`)).toBeUndefined()
     expect(emailDecision("yes")).toBeUndefined()
+    expect(emailDecision(`APPROVE\n${token}\n\n> old card`)).toEqual({
+      approve: true,
+      token,
+    })
+    expect(emailDecision(`DENY\n${token}`)).toEqual({ approve: false, token })
+    for (const quote of [
+      `> ${token}`,
+      `\n${token}`,
+      `On Sunday, old mail\n${token}`,
+    ])
+      expect(emailDecision(`APPROVE\n${quote}`)?.token).toBe("")
     const reply = incoming(`APPROVE ${token}`)
     await run(f.records.receive(reply, 1))
     await run(

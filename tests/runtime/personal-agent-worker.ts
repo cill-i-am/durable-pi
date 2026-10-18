@@ -1413,7 +1413,7 @@ export class PersonalAgentProbe extends PersonalAgent {
       const content =
         action === "attachment"
           ? 'Content-Type: multipart/mixed; boundary="native-boundary"\r\n\r\n--native-boundary\r\nContent-Type: text/plain\r\n\r\nPlease send the attached report back.\r\n--native-boundary\r\nContent-Type: text/plain\r\nContent-Disposition: attachment; filename="acceptance.txt"\r\n\r\nSynthetic email attachment.\r\n--native-boundary--'
-          : `Content-Type: text/plain\r\n\r\n${token ? `APPROVE ${token}` : "Give the synthetic answer."}`
+          : `Content-Type: text/plain\r\n\r\n${token ? `APPROVE\r\n${token}` : "Give the synthetic answer."}`
       const raw = `From: owner@example.com\r\nTo: ${address}\r\nMessage-ID: <native-email-${action === "invalid" ? "receive" : action}@example.com>\r\nSubject: Native email\r\n${content}`
       const bytes = new TextEncoder().encode(raw)
       const input = await parseEmail(

@@ -13,14 +13,19 @@ export interface EmailApprovalProofs {
   ) => { id: string; turnId: string; revision: number; expiresAt: number }
 }
 
-/** Only an explicit first line is a command. Quoted requests never decide. */
+/** Only a leading command decides. Gmail may fold its token onto the next line;
+ * consume only that immediately following, unquoted token, never mail history. */
 export function emailDecision(body: string) {
-  const first = body.trimStart().split(/\r?\n/, 1)[0]!.trim()
+  const [firstLine, continuation] = body.trimStart().split(/\r?\n/, 2)
+  const first = firstLine!.trim()
   const command = /^(APPROVE|DENY)(?:\s+(.*))?$/i.exec(first)
+  const folded = continuation?.trim() ?? ""
   return command
     ? {
         approve: command[1]!.toUpperCase() === "APPROVE",
-        token: command[2] ?? "",
+        token:
+          command[2] ||
+          (/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(folded) ? folded : ""),
       }
     : undefined
 }
