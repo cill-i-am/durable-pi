@@ -15,6 +15,10 @@ type Section =
   | Extract<TimelineItem, { type: "text" | "steer" }>
   | { id: string; type: "inline"; item: ToolItem }
 
+const DataOnlyPlaceLookup = Schema.fromJsonString(
+  Schema.Struct({ kind: Schema.Literal("place-lookup") })
+)
+
 export function activitySections(items: readonly TimelineItem[]): Section[] {
   const sections: Section[] = []
   let work: WorkItem[] = []
@@ -39,7 +43,13 @@ export function activitySections(items: readonly TimelineItem[]): Section[] {
           "update_checklist",
           "publish_app",
           ...richResultToolNames,
-        ].includes(item.name)
+        ].includes(item.name) &&
+        !(
+          item.name === "lookup_places" &&
+          Option.isSome(
+            Schema.decodeUnknownOption(DataOnlyPlaceLookup)(item.output)
+          )
+        )
       ) {
         flush()
         sections.push({ id: `inline:${item.id}`, type: "inline", item })
