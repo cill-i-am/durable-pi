@@ -1155,5 +1155,11 @@
         }
       ]
     }
-  ]
+  ],
+  "postMeasurementGuard": "Pending-original allowance also shrinks to remaining view space after saved summaries and framing. The four measured fixtures retain their exact views; verified against captured promptBytes. Near-full prefix preservation has a dedicated unit regression.",
+  "finalSourceSHA256": {
+    "src/agent/prompts.ts": "5b8d00dd40f6b57905e806af63984522172dd387af0d973ccc227317c458bf15",
+    "src/memory/policy.ts": "93c425d08a97a7e9d4f4b146b879318cbeebd403c6630de580e9736aa31dc8dc",
+    "src/inference/adapters/payload-openai.ts": "c879445b8d5728b2fa798db7ea9add32a37116dbcc689f8dc1db9f9da49e969e"
+  }
 }

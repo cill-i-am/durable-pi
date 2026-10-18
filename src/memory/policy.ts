@@ -151,6 +151,8 @@ export const PENDING_ORIGINAL_BYTES = 8_192
 export const ORIGINAL_EXCERPT_BYTES = 4_096
 const abbreviatedContext =
   "[Working context is abbreviated. Use search_memory or zoom to retrieve full archived entries.]"
+const memoryLine = (part: Part, node: MemoryNode) =>
+  `${nodeKey(part)}|${node.text.replaceAll("\n", " ")}`
 function pendingOriginals(
   parts: readonly Part[],
   nodes: ReadonlyMap<string, MemoryNode>,
@@ -158,7 +160,15 @@ function pendingOriginals(
 ) {
   const lines = new Map<number, string>()
   const abbreviated = new Set<number>()
-  let available = PENDING_ORIGINAL_BYTES
+  const savedBytes = parts.reduce((sum, part) => {
+    const node = nodes.get(nodeKey(part))
+    return sum + (node ? byteLength(memoryLine(part, node)) + 1 : 0)
+  }, 0)
+  const framingBytes = byteLength(`<chat>\n${abbreviatedContext}\n</chat>`) + 1
+  let available = Math.max(
+    0,
+    Math.min(PENDING_ORIGINAL_BYTES, VIEW_BYTES - savedBytes - framingBytes)
+  )
   for (const part of [...parts].reverse()) {
     if (nodes.has(nodeKey(part))) continue
     const entry = originals.get(part.start)
@@ -187,7 +197,7 @@ export function renderMemory(
   let noted = false
   const lines = parts.flatMap((part) => {
     const node = nodes.get(nodeKey(part))
-    if (node) return [`${nodeKey(part)}|${node.text.replaceAll("\n", " ")}`]
+    if (node) return [memoryLine(part, node)]
     const line = pending.lines.get(part.start)
     const notice = !noted && pending.abbreviated.has(part.start)
     if (notice) noted = true

@@ -21,7 +21,7 @@ The sixteen final comparison requests had median time to first output of 3.02 se
 
 The original 128,000-byte fallback allowed a synthetic 66 KB tool result to grow foreground input from 17,530 to 31,200 tokens (+78%). A three-exchange stalled backlog grew it from 17,882 to 41,364 tokens (+131%), also displacing the saved-summary prefix. Those exploratory counts used an earlier instruction snapshot; compare within each pair, not across snapshots.
 
-Pending originals now receive an 8,192-byte allowance in total and at most 4,096 bytes per entry. Saved summaries retain their place ahead of the backlog. Messages within that allowance stay exact. Larger entries contain explicit head/tail excerpt markers; omitted entries remain retrievable with `search_memory` and `zoom`. The complete archive is unchanged, including exact Unicode and amounts. The existing 128,000-byte overall working-context limit still applies.
+Pending originals now receive an 8,192-byte allowance in total and at most 4,096 bytes per entry. The allowance shrinks to the space remaining after saved summaries and framing; a nearly full saved-summary prefix is not displaced by pending originals. Messages within that allowance stay exact. Larger entries contain explicit head/tail excerpt markers; omitted entries remain retrievable with `search_memory` and `zoom`. The complete archive is unchanged, including exact Unicode and amounts. The existing 128,000-byte overall working-context limit still applies.
 
 The large-prompt trial also received two HTTP 400 responses: `prompt_cache_breakpoint is not supported on this model`. The application had inserted these fields even though the ChatGPT subscription route rejected them. The payload now uses supported consecutive context messages, with boundaries around 4,000 characters at whole line endings, and a separate current-request message with its attachments. It preserves native encrypted reasoning and tool-result replay, the stable per-agent cache key and `store: false`.
 
@@ -44,7 +44,7 @@ The benchmark deliberately fixes output and executes no tools. It isolates input
 ## Verification
 
 - Required static checks and Worker builds pass.
-- All 178 unit-test files / 1,829 tests pass.
+- All 178 unit-test files / 1,830 tests pass.
 - The complete native communication runtime suite passes, including foreground completion with held summary and backup IO, no overlapping maintenance attempt, wake retention, restart recovery and exact archive retrieval.
 - Cache regressions cover stable context boundaries, complete Unicode lines, current-request attachments, encrypted reasoning and tool replay, and omission of rejected provider fields.
 

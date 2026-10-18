@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 
 import { makeSqliteMemory } from "../src/memory/adapters/sqlite"
 import { byteLength, fitView, type MemoryNode } from "../src/memory/domain"
+import { renderMemory } from "../src/memory/policy"
 import { migrateSqlite } from "../src/storage/migrations"
 import { database } from "./database"
 
@@ -290,4 +291,34 @@ it("keeps the saved-summary prefix and bounds pending originals across a stalled
     expect(Effect.runSync(memory.zoom(i + 1, 1))).toBe(
       `${i + 1}+0|echo: ${original}`
     )
+})
+
+it("reserves the existing summary prefix when the working context is nearly full", () => {
+  const parts = Array.from({ length: 240 }, (_, start) => ({ start, count: 1 }))
+  const nodes = new Map(
+    parts.map((part) => [
+      `${part.start}+1`,
+      { ...part, text: "s".repeat(512), bytes: 512 },
+    ])
+  )
+  const prefix = renderMemory(parts, nodes, new Map()).slice(
+    0,
+    -"\n</chat>".length
+  )
+  const entry = {
+    id: 240,
+    source: "pending",
+    kind: "echo" as const,
+    text: "A large pending result 🍀".repeat(1_000),
+    date: "2026-10-18T00:00:00Z",
+  }
+  const rendered = renderMemory(
+    [...parts, { start: entry.id, count: 1 }],
+    nodes,
+    new Map([[entry.id, entry]])
+  )
+  expect(rendered.startsWith(prefix + "\n")).toBe(true)
+  expect(rendered).toContain("Working context is abbreviated")
+  expect(byteLength(rendered)).toBeLessThanOrEqual(128_000)
+  expect(rendered).not.toContain("�")
 })
