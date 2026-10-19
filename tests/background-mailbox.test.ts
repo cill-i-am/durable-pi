@@ -330,6 +330,41 @@ function application(
   )
 }
 
+it.each(["pending", "delivered"])(
+  "persists %s background revocation without joining remote cleanup",
+  async (state) => {
+    const f = fixture()
+    if (state === "delivered") {
+      Effect.runSync(
+        f.conversations.admit({
+          operationId: "synthetic-active",
+          text: "Keep this separate request running",
+        })
+      )
+      f.status("done")
+      Effect.runSync(f.mailbox.observed(19, f.result))
+      Effect.runSync(f.mailbox.deliver(f.admission))
+    }
+    const unrelated = Effect.runSync(f.conversations.get("synthetic-active"))
+    const app = application(f, {
+      stop: () => Effect.die("Remote cleanup must not run in requestStop"),
+    })
+    await Effect.runPromise(app.requestStop(19))
+    expect(Effect.runSync(f.mailbox.get(19))?.status).toBe(
+      state === "delivered" ? "delivered" : "cancelled"
+    )
+    expect(Effect.runSync(f.mailbox.authorized(19))).toBe(false)
+    if (state === "delivered")
+      expect(
+        Effect.runSync(f.conversations.get(f.handoff.reportId))?.status
+      ).toBe("stopping")
+    if (state === "delivered")
+      expect(Effect.runSync(f.conversations.get("synthetic-active"))).toEqual(
+        unrelated
+      )
+  }
+)
+
 it.each(["storage", "identity"])(
   "rejects a different admission %s and rolls back writes",
   async (mode) => {

@@ -111,6 +111,7 @@ export function makeBackgroundDelegation(
     // Re-read after the RPC so a concurrent Stop is visible in the projection.
     return projectBackground(yield* required(id), group)
   })
+  const requestStop = (id: number) => mailbox.cancel(id, host.admission)
   return {
     read,
     list: Effect.fn("Background.list")(function* (offset: number = 0) {
@@ -138,9 +139,10 @@ export function makeBackgroundDelegation(
       yield* host.wakeBackground()
       return `Background group ${row.id} accepted. Its text-only drafting children have no tools. You can finish this reply; the findings will arrive later in this bot's chat. Do not claim the work is complete. Activity has progress and Stop controls.`
     }),
+    requestStop,
     stop: Effect.fn("Background.stop")(function* (id: number) {
       yield* Effect.yieldNow
-      yield* mailbox.cancel(id, host.admission)
+      yield* requestStop(id)
       yield* ignoreUnavailable(remote.stop(id))
       yield* host.wakeConversation()
       return { accepted: true }

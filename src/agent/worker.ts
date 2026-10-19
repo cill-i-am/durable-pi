@@ -2320,68 +2320,95 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   }
   /** Every execution boundary reads live membership. The persisted membership
    * generation also prevents old scheduled work resuming after a new invite. */
+  private familyTransition?: Promise<void>
   async familyAdmission() {
-    const state = await this.run(this.familyStateProgram())
-    const previous = await this.ctx.storage.get<string | null>(
-      "family-membership-generation"
-    )
-    if (
-      (!state && previous !== null) ||
-      (state && previous !== undefined && previous !== state.membershipId)
-    ) {
-      const sessions = await this.run(
-        Effect.gen({ self: this }, function* () {
-          const sessions: string[] = []
-          for (const routine of yield* this.routines.list()) {
-            if (routine.status !== "active") continue
-            yield* this.routines.setStatus({
-              id: routine.id,
-              expectedRevision: routine.revision,
-              operationId: crypto.randomUUID(),
-              status: "paused",
+    for (;;) {
+      const state = await this.run(this.familyStateProgram())
+      const previous = await this.ctx.storage.get<string | null>(
+        "family-membership-generation"
+      )
+      if (this.familyTransition) {
+        await this.familyTransition
+        continue
+      }
+      if (
+        (!state && previous !== null) ||
+        (state && previous !== undefined && previous !== state.membershipId)
+      ) {
+        // Join only generation changes. A waiter rechecks live membership and
+        // cannot admit new work before an older cleanup finishes.
+        const transition = (async () => {
+          const sessions = await this.run(
+            Effect.gen({ self: this }, function* () {
+              const sessions: string[] = []
+              for (const routine of yield* this.routines.list()) {
+                if (routine.status !== "active") continue
+                yield* this.routines.setStatus({
+                  id: routine.id,
+                  expectedRevision: routine.revision,
+                  operationId: crypto.randomUUID(),
+                  status: "paused",
+                })
+                const run = yield* this.routines.cancelPendingRun(routine.id)
+                if (run?.status === "queued") {
+                  yield* this.conversations.requestStop(run.turnId)
+                  yield* this.access.cancel(run.turnId)
+                }
+              }
+              for (const turn of yield* this.conversations.unfinished()) {
+                yield* this.conversations.requestStop(turn.id)
+                yield* this.access.cancel(turn.id)
+                if (turn.session_id) sessions.push(turn.session_id)
+              }
+              yield* this.coordination.store.closeAll()
+              for (const id of yield* this.delegationLedger.catalog()) {
+                const group = yield* this.delegationLedger.group(id)
+                yield* this.coordination.store.close(group.turnId)
+                this.ctx.waitUntil(
+                  this.run(this.delegations.reconcile(group.turnId))
+                )
+              }
+              let offset = 0
+              while (true) {
+                const groups = yield* this.backgroundMailbox.list(offset)
+                if (!groups.length) break
+                for (const group of groups) {
+                  if (["done", "failed", "cancelled"].includes(group.status))
+                    continue
+                  yield* this.background.requestStop(group.id)
+                  this.ctx.waitUntil(this.run(this.background.stop(group.id)))
+                }
+                offset += groups.length
+              }
+              return sessions
             })
-            const run = yield* this.routines.cancelPendingRun(routine.id)
-            if (run?.status === "queued") {
-              yield* this.conversations.requestStop(run.turnId)
-              yield* this.access.cancel(run.turnId)
-            }
-          }
-          for (const turn of yield* this.conversations.unfinished()) {
-            yield* this.conversations.requestStop(turn.id)
-            yield* this.access.cancel(turn.id)
-            if (turn.session_id) sessions.push(turn.session_id)
-          }
-          yield* this.coordination.store.closeAll()
-          for (const id of yield* this.delegationLedger.catalog()) {
-            const group = yield* this.delegationLedger.group(id)
-            yield* this.coordination.store.close(group.turnId)
-            yield* this.delegations.reconcile(group.turnId)
-          }
-          let offset = 0
-          while (true) {
-            const groups = yield* this.backgroundMailbox.list(offset)
-            if (!groups.length) break
-            for (const group of groups) {
-              if (["done", "failed", "cancelled"].includes(group.status))
-                continue
-              yield* this.background.stop(group.id)
-            }
-            offset += groups.length
-          }
-          return sessions
-        })
-      )
-      // Abort after recording stop intent. Owned cleanup can finish after a
-      // revoked tool callback returns, rather than waiting on that callback.
-      for (const session of sessions)
-        this.ctx.waitUntil(this.run(this.conversationExecution.abort(session)))
+          )
+          // Abort after recording stop intent. Owned cleanup can finish after a
+          // revoked tool callback returns, rather than waiting on that callback.
+          for (const session of sessions)
+            this.ctx.waitUntil(
+              this.run(this.conversationExecution.abort(session))
+            )
+          await this.ctx.storage.put(
+            "family-membership-generation",
+            state?.membershipId ?? null
+          )
+        })()
+        this.familyTransition = transition
+        try {
+          await transition
+        } finally {
+          this.familyTransition = undefined
+        }
+        continue
+      }
+      if (previous !== (state?.membershipId ?? null))
+        await this.ctx.storage.put(
+          "family-membership-generation",
+          state?.membershipId ?? null
+        )
+      return state
     }
-    if (previous !== (state?.membershipId ?? null))
-      await this.ctx.storage.put(
-        "family-membership-generation",
-        state?.membershipId ?? null
-      )
-    return state
   }
   protected familyModelOwnerProgram() {
     return accountNative(async () => {
