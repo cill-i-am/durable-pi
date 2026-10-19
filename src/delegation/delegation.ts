@@ -10,6 +10,8 @@ export const DURATION_MS = 10 * 60_000
 export const REPORT_BYTES = 36_000
 
 export type DelegationSource = {
+  botId?: string
+  detached?: boolean
   turnId: string
   conversationId: number
   taskId: number

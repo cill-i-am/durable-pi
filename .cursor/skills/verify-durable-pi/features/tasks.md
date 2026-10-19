@@ -4,7 +4,7 @@ Ask any normal agent what is running across your account and stop one exact task
 
 ## Sub-features
 
-- `tasks-list`: Read unfinished requests, named-agent tasks, and background groups for one agent or all agents.
+- `tasks-list`: Read unfinished requests, continuing agent sessions, named-agent tasks, and background groups for one agent or all agents.
 - `tasks-state`: Distinguish preparing files, approval waits, running, stopping, and unavailable agents.
 - `tasks-handle`: Return a stable agent-ID/kind/original-task-ID handle.
 - `tasks-stop`: Request cancellation through the task's original owner without stopping newer work.
@@ -31,6 +31,7 @@ Preconditions: Use a harmless test request paused at an approval. Keep another r
 
 - A stop acknowledgement can report **stopping** while cleanup settles. It cannot undo completed actions.
 - There is no implicit stop-current or stop-all operation. A copied old handle cannot target a newer task.
+- A `spawn_agents` session remains listed under its original request handle after the parent replies, until the group expires or stops. Stopping that handle also closes its coordination inbox.
 - Attachment-bearing input and commands in quoted/prose text remain ordinary conversation input.
 - Normal agents receive the tools by default with Allow; explicit overrides and restricted child grants remain authoritative.
 - Continue, retry, clarification, and separate request-child steering are not supplied by this shared task-control slice.

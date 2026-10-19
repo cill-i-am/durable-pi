@@ -15,12 +15,14 @@ export function makeMemoryRepository(
     Effect.map((now) => new Date(now).toISOString())
   )
   const repository = MemoryRepository.of({
-    append: Effect.fn("Memory.append")(function* (source, kind, text, at) {
-      const timestamp = at ?? (yield* date)
-      return yield* read("append", () =>
-        storage.append(source, kind, text, timestamp)
-      )
-    }),
+    append: Effect.fn("Memory.append")(
+      function* (source, kind, text, at, provenance) {
+        const timestamp = at ?? (yield* date)
+        return yield* read("append", () =>
+          storage.append(source, kind, text, timestamp, provenance)
+        )
+      }
+    ),
     total: () => read("total", () => storage.total()),
     parts: () => read("parts", () => storage.parts()),
     node: (part) => read("node", () => storage.node(part)),

@@ -123,7 +123,7 @@ it.effect(
       expect(content[0].text).not.toContain("new question")
       expect(content[1].text).toContain("private note")
       expect(content[1].text).toContain(
-        "New user message (archive ID 1):\nnew question"
+        'Incoming message (archive ID 1):\n{"provenance":{"author":{"kind":"unknown"}},"content":"new question"}'
       )
       expect(yield* f.memory.total()).toBe(2)
       expect(yield* f.journal.prompt(root.id, "changed instructions")).toBe(

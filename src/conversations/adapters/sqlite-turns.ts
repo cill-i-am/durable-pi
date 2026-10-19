@@ -7,12 +7,16 @@ import {
   getTableColumns,
   inArray,
   isNull,
+  isNotNull,
+  lt,
   or,
+  sql,
 } from "drizzle-orm"
 import type { EffectDrizzleQueryError } from "drizzle-orm/effect-core/errors"
 import { Effect, Schema } from "effect"
 
 import { ResolvedRoute, type JobType } from "../../inference/policy"
+import { MessageProvenance } from "../../messages/identity"
 import { SkillReference, type SkillDocument } from "../../skills/contracts"
 import { coalesce, increment, literal } from "../../storage/expressions"
 import {
@@ -26,6 +30,7 @@ import * as Domain from "../domain"
 import type { ConversationLedger } from "../ledger"
 import { RecoveryView } from "../recovery"
 import {
+  ConversationConflict,
   ConversationStorageError,
   TurnRecord,
   conversationFailure,
@@ -37,10 +42,18 @@ import {
 } from "../turns"
 import { chatTurns, chatSettings, jobModelSettings } from "./schema"
 
+const sessionOrigin = or(
+  isNull(chatTurns.origin),
+  inArray(sql<string>`json_extract(${chatTurns.origin}, '$.kind')`, [
+    "email",
+    "whatsapp",
+  ])
+)
 const activeStatuses = ["queued", "preparing", "running", "stopping"]
 const RawTurn = Schema.Struct({
   ...TurnRecord.fields,
   origin: Schema.NullOr(Schema.String),
+  provenance: Schema.NullOr(Schema.String),
   routing: Schema.NullOr(Schema.String),
   skills: Schema.String,
   attachments: Schema.String,
@@ -220,6 +233,91 @@ export class ConversationStore implements ConversationLedger {
         .limit(100)
     ).pipe(Effect.map((rows) => rows.reverse().map(restore)))
   }
+  sessions(before?: string) {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const cursor = before
+          ? yield* this.query((orm) =>
+              orm
+                .select({ sequence: chatTurns.sequence })
+                .from(chatTurns)
+                .where(eq(chatTurns.id, before))
+                .limit(1)
+            )
+          : []
+        return yield* this.query((orm) =>
+          orm
+            .select()
+            .from(chatTurns)
+            .where(
+              and(
+                isNull(chatTurns.parent_id),
+                sessionOrigin,
+                isNotNull(chatTurns.session_id),
+                cursor[0]
+                  ? lt(chatTurns.sequence, cursor[0].sequence)
+                  : undefined
+              )
+            )
+            .orderBy(desc(chatTurns.sequence))
+            .limit(20)
+        ).pipe(Effect.map((rows) => rows.map(restore)))
+      })
+    )
+  }
+  sessionForNative(id: number) {
+    return this.query((orm) =>
+      orm
+        .select()
+        .from(chatTurns)
+        .where(
+          and(
+            eq(chatTurns.session_id, String(id)),
+            isNull(chatTurns.parent_id),
+            sessionOrigin
+          )
+        )
+        .orderBy(asc(chatTurns.sequence))
+        .limit(1)
+    ).pipe(Effect.map((rows) => (rows[0] ? restore(rows[0]) : undefined)))
+  }
+  private resumable(id: string) {
+    return Effect.gen({ self: this }, function* () {
+      const root = yield* this.get(id)
+      if (
+        !root?.session_id ||
+        (root.origin && !["email", "whatsapp"].includes(root.origin.kind)) ||
+        root.parent_id ||
+        ["failed", "cancelled", "stopping"].includes(root.status)
+      )
+        return yield* new ConversationConflict({
+          message: "The addressed session has stopped.",
+        })
+      return root
+    })
+  }
+  resumeMessage(
+    input: Submission & {
+      origin: Extract<TurnOrigin, { kind: "coordination" }>
+    }
+  ) {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const root = yield* this.resumable(input.origin.turnId)
+        const existing = yield* this.get(input.operationId)
+        const active = yield* this.active()
+        const mode =
+          existing?.mode ??
+          (active?.session_id === root.session_id ? "steer" : "followUp")
+        return yield* this.admit(
+          { ...input, mode },
+          undefined,
+          [],
+          root.routing ?? undefined
+        )
+      })
+    )
+  }
   statusTurns(): ReturnType<ConversationLedger["statusTurns"]> {
     return this.atomic(() =>
       Effect.gen({ self: this }, function* () {
@@ -311,12 +409,20 @@ export class ConversationStore implements ConversationLedger {
           ? yield* this.get(input.retryOf)
           : undefined
         const origin = input.retryOf ? source?.origin : input.origin
-        const creation = Domain.submissionIdentity(input, origin)
+        const provenance = input.retryOf ? source?.provenance : input.provenance
+        const creation = Domain.submissionIdentity(
+          { ...input, provenance },
+          origin
+        )
         const existing = yield* this.get(input.operationId)
         if (existing) {
           yield* attempt(() => Domain.requireReplay(existing, input, creation))
           return { turn: existing, accepted: false }
         }
+        const resumed =
+          origin?.kind === "coordination"
+            ? yield* this.resumable(origin.turnId)
+            : undefined
         const capacity = yield* this.query((orm) =>
           orm
             .select({ n: count() })
@@ -369,6 +475,12 @@ export class ConversationStore implements ConversationLedger {
             skill_context: content.skill_context,
             routing: JSON.stringify(settings),
             origin: origin ? JSON.stringify(origin) : null,
+            provenance: provenance
+              ? Schema.encodeSync(Schema.fromJsonString(MessageProvenance))(
+                  provenance
+                )
+              : null,
+            session_id: parent ? null : (resumed?.session_id ?? null),
           })
         )
         if (parent)
@@ -575,6 +687,11 @@ function restore(raw: unknown): Turn {
   const row = Schema.decodeUnknownSync(RawTurn)(raw)
   const decoded = Schema.decodeUnknownSync(TurnRecord)({
     ...row,
+    provenance: row.provenance
+      ? Schema.decodeUnknownSync(Schema.fromJsonString(MessageProvenance))(
+          row.provenance
+        )
+      : undefined,
     origin: row.origin
       ? Schema.decodeUnknownSync(TurnOrigin)(JSON.parse(row.origin))
       : undefined,
@@ -591,5 +708,10 @@ function restore(raw: unknown): Turn {
       JSON.parse(row.input)
     ),
   })
-  return { ...row, ...decoded, origin: decoded.origin }
+  return {
+    ...row,
+    ...decoded,
+    origin: decoded.origin,
+    provenance: decoded.provenance,
+  }
 }

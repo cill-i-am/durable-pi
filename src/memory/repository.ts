@@ -1,5 +1,6 @@
 import { Context, type Effect } from "effect"
 
+import type { MessageProvenance } from "../messages/identity"
 import type {
   LogEntry,
   LogKind,
@@ -19,7 +20,8 @@ export class MemoryRepository extends Context.Service<
       source: string,
       kind: LogKind,
       text: string,
-      date?: string
+      date?: string,
+      provenance?: MessageProvenance
     ) => Effect.Effect<LogEntry, MemoryError>
     total: () => Effect.Effect<number, MemoryError>
     parts: () => Effect.Effect<Part[], MemoryError>

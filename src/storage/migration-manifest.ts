@@ -168,6 +168,20 @@ export const agentMigrationManifest = {
         "ALTER TABLE `chat_turns` ADD `files_pending` integer DEFAULT false NOT NULL;",
       ],
     },
+    {
+      id: "20261019115143_charming_speedball",
+      checksum:
+        "1f1bac0818ce3f34c81d95d2345699bde7ee31fe7c9d84f4ae57f9932b977b1b",
+      statements: [
+        'CREATE TABLE `agent_messages` (\n\t`sequence` integer PRIMARY KEY AUTOINCREMENT,\n\t`id` text NOT NULL UNIQUE,\n\t`operation_id` text NOT NULL UNIQUE,\n\t`sender_session` text NOT NULL,\n\t`sender_agent` text NOT NULL,\n\t`recipient_session` text NOT NULL,\n\t`recipient_agent` text NOT NULL,\n\t`payload` text NOT NULL,\n\t`state` text NOT NULL,\n\t`attempts` integer DEFAULT 0 NOT NULL,\n\t`retry_at` integer NOT NULL,\n\t`error` text,\n\tCONSTRAINT "agent_messages_payload_json" CHECK(json_valid("payload")),\n\tCONSTRAINT "agent_messages_state_check" CHECK("state" in (\'accepted\',\'delivered\',\'failed\')),\n\tCONSTRAINT "agent_messages_attempts_check" CHECK("attempts" >= 0)\n);',
+        'CREATE TABLE `agent_session_limits` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`closed` integer DEFAULT false NOT NULL,\n\t`requests` integer DEFAULT 0 NOT NULL,\n\tCONSTRAINT "agent_session_requests_check" CHECK("requests" >= 0),\n\tCONSTRAINT "agent_session_closed_check" CHECK("closed" in (0, 1))\n);',
+        "ALTER TABLE `chat_turns` ADD `provenance` text;",
+        "ALTER TABLE `memory_log` ADD `provenance` text;",
+        "CREATE INDEX `agent_messages_pending` ON `agent_messages` (`state`,`retry_at`);",
+        "CREATE INDEX `agent_messages_recipient` ON `agent_messages` (`recipient_session`,`recipient_agent`,`sequence`);",
+        "CREATE INDEX `agent_messages_sender` ON `agent_messages` (`sender_session`,`sender_agent`);",
+      ],
+    },
   ],
   schema: [
     {
@@ -189,6 +203,31 @@ export const agentMigrationManifest = {
       type: "index",
       name: "agent_catalog_slug",
       sql: "CREATE UNIQUE INDEX `agent_catalog_slug` ON `agent_catalog` (`slug`)",
+    },
+    {
+      type: "table",
+      name: "agent_messages",
+      sql: 'CREATE TABLE `agent_messages` (\n\t`sequence` integer PRIMARY KEY AUTOINCREMENT,\n\t`id` text NOT NULL UNIQUE,\n\t`operation_id` text NOT NULL UNIQUE,\n\t`sender_session` text NOT NULL,\n\t`sender_agent` text NOT NULL,\n\t`recipient_session` text NOT NULL,\n\t`recipient_agent` text NOT NULL,\n\t`payload` text NOT NULL,\n\t`state` text NOT NULL,\n\t`attempts` integer DEFAULT 0 NOT NULL,\n\t`retry_at` integer NOT NULL,\n\t`error` text,\n\tCONSTRAINT "agent_messages_payload_json" CHECK(json_valid("payload")),\n\tCONSTRAINT "agent_messages_state_check" CHECK("state" in (\'accepted\',\'delivered\',\'failed\')),\n\tCONSTRAINT "agent_messages_attempts_check" CHECK("attempts" >= 0)\n)',
+    },
+    {
+      type: "index",
+      name: "agent_messages_pending",
+      sql: "CREATE INDEX `agent_messages_pending` ON `agent_messages` (`state`,`retry_at`)",
+    },
+    {
+      type: "index",
+      name: "agent_messages_recipient",
+      sql: "CREATE INDEX `agent_messages_recipient` ON `agent_messages` (`recipient_session`,`recipient_agent`,`sequence`)",
+    },
+    {
+      type: "index",
+      name: "agent_messages_sender",
+      sql: "CREATE INDEX `agent_messages_sender` ON `agent_messages` (`sender_session`,`sender_agent`)",
+    },
+    {
+      type: "table",
+      name: "agent_session_limits",
+      sql: 'CREATE TABLE `agent_session_limits` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`closed` integer DEFAULT false NOT NULL,\n\t`requests` integer DEFAULT 0 NOT NULL,\n\tCONSTRAINT "agent_session_requests_check" CHECK("requests" >= 0),\n\tCONSTRAINT "agent_session_closed_check" CHECK("closed" in (0, 1))\n)',
     },
     {
       type: "table",
@@ -253,7 +292,7 @@ export const agentMigrationManifest = {
     {
       type: "table",
       name: "chat_turns",
-      sql: 'CREATE TABLE `chat_turns` (\n\t`sequence` integer PRIMARY KEY AUTOINCREMENT,\n\t`id` text NOT NULL UNIQUE,\n\t`text` text NOT NULL,\n\t`status` text NOT NULL,\n\t`answer` text DEFAULT \'\' NOT NULL,\n\t`error` text,\n\t`created_at` text NOT NULL,\n\t`session_id` text,\n\t`prompt` text,\n\t`parent_id` text,\n\t`started_at` text,\n\t`finished_at` text,\n\t`stopped_at` text,\n\t`recovery` text,\n\t`mode` text DEFAULT \'followUp\' NOT NULL,\n\t`delivery` text DEFAULT \'queued\' NOT NULL,\n\t`model` text,\n\t`routing` text,\n\t`origin` text,\n\t`thinking` text,\n\t`revision` integer DEFAULT 0 NOT NULL,\n\t`creation` text,\n\t`attachments` text DEFAULT \'[]\' NOT NULL,\n\t`input` text DEFAULT \'[]\' NOT NULL,\n\t`skills` text DEFAULT \'[]\' NOT NULL,\n\t`skill_context` text DEFAULT \'\' NOT NULL, `files_pending` integer DEFAULT false NOT NULL,\n\tCONSTRAINT `fk_chat_turns_parent_id_chat_turns_id_fk` FOREIGN KEY (`parent_id`) REFERENCES `chat_turns`(`id`) ON DELETE RESTRICT,\n\tCONSTRAINT "chat_turns_status_check" CHECK("status" in (\'queued\', \'preparing\', \'running\', \'stopping\', \'done\', \'failed\', \'cancelled\')),\n\tCONSTRAINT "chat_turns_mode_check" CHECK("mode" in (\'followUp\', \'steer\')),\n\tCONSTRAINT "chat_turns_delivery_check" CHECK("delivery" in (\'queued\', \'accepted\', \'consumed\', \'answered\', \'unanswered\')),\n\tCONSTRAINT "chat_turns_attachments_json" CHECK(json_valid("attachments")),\n\tCONSTRAINT "chat_turns_skills_json" CHECK(json_valid("skills")),\n\tCONSTRAINT "chat_turns_input_json" CHECK(json_valid("input")),\n\tCONSTRAINT "chat_turns_routing_json" CHECK("routing" is null or json_valid("routing")),\n\tCONSTRAINT "chat_turns_origin_json" CHECK("origin" is null or json_valid("origin")),\n\tCONSTRAINT "chat_turns_recovery_json" CHECK("recovery" is null or json_valid("recovery")),\n\tCONSTRAINT "chat_turns_revision_check" CHECK("revision" >= 0)\n)',
+      sql: 'CREATE TABLE `chat_turns` (\n\t`sequence` integer PRIMARY KEY AUTOINCREMENT,\n\t`id` text NOT NULL UNIQUE,\n\t`text` text NOT NULL,\n\t`status` text NOT NULL,\n\t`answer` text DEFAULT \'\' NOT NULL,\n\t`error` text,\n\t`created_at` text NOT NULL,\n\t`session_id` text,\n\t`prompt` text,\n\t`parent_id` text,\n\t`started_at` text,\n\t`finished_at` text,\n\t`stopped_at` text,\n\t`recovery` text,\n\t`mode` text DEFAULT \'followUp\' NOT NULL,\n\t`delivery` text DEFAULT \'queued\' NOT NULL,\n\t`model` text,\n\t`routing` text,\n\t`origin` text,\n\t`thinking` text,\n\t`revision` integer DEFAULT 0 NOT NULL,\n\t`creation` text,\n\t`attachments` text DEFAULT \'[]\' NOT NULL,\n\t`input` text DEFAULT \'[]\' NOT NULL,\n\t`skills` text DEFAULT \'[]\' NOT NULL,\n\t`skill_context` text DEFAULT \'\' NOT NULL, `files_pending` integer DEFAULT false NOT NULL, `provenance` text,\n\tCONSTRAINT `fk_chat_turns_parent_id_chat_turns_id_fk` FOREIGN KEY (`parent_id`) REFERENCES `chat_turns`(`id`) ON DELETE RESTRICT,\n\tCONSTRAINT "chat_turns_status_check" CHECK("status" in (\'queued\', \'preparing\', \'running\', \'stopping\', \'done\', \'failed\', \'cancelled\')),\n\tCONSTRAINT "chat_turns_mode_check" CHECK("mode" in (\'followUp\', \'steer\')),\n\tCONSTRAINT "chat_turns_delivery_check" CHECK("delivery" in (\'queued\', \'accepted\', \'consumed\', \'answered\', \'unanswered\')),\n\tCONSTRAINT "chat_turns_attachments_json" CHECK(json_valid("attachments")),\n\tCONSTRAINT "chat_turns_skills_json" CHECK(json_valid("skills")),\n\tCONSTRAINT "chat_turns_input_json" CHECK(json_valid("input")),\n\tCONSTRAINT "chat_turns_routing_json" CHECK("routing" is null or json_valid("routing")),\n\tCONSTRAINT "chat_turns_origin_json" CHECK("origin" is null or json_valid("origin")),\n\tCONSTRAINT "chat_turns_recovery_json" CHECK("recovery" is null or json_valid("recovery")),\n\tCONSTRAINT "chat_turns_revision_check" CHECK("revision" >= 0)\n)',
     },
     {
       type: "index",
@@ -398,7 +437,7 @@ export const agentMigrationManifest = {
     {
       type: "table",
       name: "memory_log",
-      sql: "CREATE TABLE `memory_log` (\n\t`id` integer PRIMARY KEY,\n\t`source` text NOT NULL UNIQUE,\n\t`kind` text NOT NULL,\n\t`text` text NOT NULL,\n\t`date` text NOT NULL,\n\tCONSTRAINT \"memory_log_kind_check\" CHECK(\"kind\" in ('user', 'talk', 'tool', 'echo', 'note')),\n\tCONSTRAINT \"memory_log_id_check\" CHECK(\"id\" >= 0)\n)",
+      sql: "CREATE TABLE `memory_log` (\n\t`id` integer PRIMARY KEY,\n\t`source` text NOT NULL UNIQUE,\n\t`kind` text NOT NULL,\n\t`text` text NOT NULL,\n\t`date` text NOT NULL, `provenance` text,\n\tCONSTRAINT \"memory_log_kind_check\" CHECK(\"kind\" in ('user', 'talk', 'tool', 'echo', 'note')),\n\tCONSTRAINT \"memory_log_id_check\" CHECK(\"id\" >= 0)\n)",
     },
     {
       type: "table",

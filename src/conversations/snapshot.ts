@@ -42,6 +42,7 @@ export function conversationSnapshot<TError, TRequirements>(
         return {
           id: turn.id,
           origin: turn.origin,
+          provenance: turn.provenance,
           text: turn.text,
           status: turn.status,
           preparingFiles: turn.files_pending || undefined,
@@ -55,11 +56,12 @@ export function conversationSnapshot<TError, TRequirements>(
           activity: saved,
           steering: members
             .filter((member) => member.parent_id)
-            .map(({ id, text, delivery, attachments }) => ({
+            .map(({ id, text, delivery, attachments, provenance }) => ({
               id,
               text,
               delivery,
               attachments,
+              provenance,
             })),
         }
       })

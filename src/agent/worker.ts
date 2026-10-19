@@ -7,6 +7,7 @@ import {
   type Storage,
   type Tx,
   type ToolExecutionApi,
+  type ToolRegistration,
 } from "@earendil-works/pi-durable"
 import { getAgentByName } from "agents"
 import { PiHarness, openPiSessionStore } from "agents/harness/pi"
@@ -30,7 +31,6 @@ import {
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 
-import "../observability/lifecycle"
 import type { AgentEnv } from "../../alchemy.run"
 import {
   connectionRequest,
@@ -42,6 +42,7 @@ import {
   ConnectionStore,
   sqliteRemoteSelection,
 } from "../access/adapters/connections"
+import "../observability/lifecycle"
 import { accessRequest } from "../access/adapters/http"
 import { mcpConnectionClient } from "../access/adapters/mcp"
 import { ConnectionOAuthProvider } from "../access/adapters/oauth"
@@ -202,6 +203,13 @@ import {
   type Submission,
   type Turn,
 } from "../conversations/turns"
+import { personalCoordination } from "../coordination/personal-agent"
+import {
+  coordinationTools,
+  coordinationInstructions,
+  coordinationHook,
+  coordinationToolNames,
+} from "../coordination/tools"
 import { backgroundRequest } from "../delegation/adapters/background-http"
 import { SqliteBackgroundMailbox } from "../delegation/adapters/background-mailbox"
 import {
@@ -253,6 +261,12 @@ import {
   type ConfigureEmail,
 } from "../email/contracts"
 import { emailPump, EmailSendFailed } from "../email/pump"
+import {
+  attributedText,
+  identityInstructions,
+  type Actor,
+  type MessageProvenance,
+} from "../messages/identity"
 import { replyDeliveryProgress } from "../replies/progress"
 import { jsonRequest } from "../shared/http"
 import { localTaskControls } from "../tasks/adapters/personal-agent"
@@ -562,6 +576,20 @@ class BackgroundRunner extends TurnRunner {
   }
 }
 
+class CoordinationRunner extends TurnRunner {
+  constructor(owner: PersonalAgent) {
+    super(owner, "agent-coordination")
+  }
+  async onJob(): Promise<LifecycleJobOutcome> {
+    if (!(await this.owner.familyAdmission())) return
+    const next = await this.owner.actorRuntime.runPromise(
+      this.owner.coordination.pump().pipe(Effect.provide(WorkerTelemetry))
+    )
+    this.owner.notifyConversation()
+    return next === undefined ? undefined : { rescheduleAt: next }
+  }
+}
+
 class AppEventRunner extends TurnRunner {
   constructor(owner: PersonalAgent) {
     super(owner, "app-events")
@@ -810,12 +838,16 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   )
   readonly access = new AccessGate(
     this.accessStore,
-    (turnId) =>
+    (turnId, tool) =>
       Effect.gen({ self: this }, function* () {
         const turn = yield* this.conversations.get(turnId)
         return (
           !!turn &&
-          ["queued", "preparing", "running"].includes(turn.status) &&
+          (["queued", "preparing", "running"].includes(turn.status) ||
+            (turn.status === "done" &&
+              (yield* this.coordination.rootLive(turnId)) &&
+              (coordinationToolNames.has(tool) ||
+                Schema.is(ReadTool)(tool)))) &&
           (yield* this.recovery.get(turnId))?.view?.phase !== "blocked" &&
           (yield* this.routineAuthority.canRun(turnId)) &&
           (yield* this.botConfiguration.read())?.status !== "archived"
@@ -849,6 +881,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       "share_image",
       "share_file",
       "delegate_tasks",
+      "spawn_agents",
       "background_tasks",
       "delegate_bot",
     ]),
@@ -863,6 +896,44 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   )
   readonly skills = new SkillStore(this.db)
   readonly botConfiguration = new BotConfigurationStore(this.db)
+  readonly delegationLedger = piDelegationLedger(
+    () => this.harness.pi(),
+    () => this.registry.snapshot().extension("delegated-reader")!,
+    () => this.registry.snapshot().extension("delegated-reader")?.tools ?? [],
+    (child) =>
+      this.coordination.store.childRequests(child).pipe(
+        Effect.mapError(
+          () =>
+            new DelegationFailure({
+              code: "unavailable",
+              message: "Could not read child messages.",
+            })
+        )
+      )
+  )
+  readonly coordination = personalCoordination(this)
+  readonly protectCoordinationTool: (
+    tool: ToolRegistration
+  ) => ToolRegistration = guardedTools(
+    this.access,
+    (api) =>
+      this.coordination.service
+        .source(Number(api.conversationId))
+        .pipe(Effect.map((agent) => agent.address.sessionId)),
+    new Set(["send_message"]),
+    (program, options) =>
+      this.actorRuntime.runPromiseExit(
+        this.familyModelOwnerProgram().pipe(
+          Effect.andThen(program),
+          Effect.provide(WorkerTelemetry)
+        ),
+        options
+      )
+  )
+  readonly coordinationTools: ToolRegistration[] = coordinationTools(
+    this.coordination.service,
+    (work, signal) => this.run(work, { signal })
+  ).map(this.protectCoordinationTool)
   readonly apps = new AppStore(this.db, () =>
     this.writable(
       (cause) => new AppStorageError({ operation: "read app authority", cause })
@@ -958,6 +1029,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
                   {
                     operationId: handoff.reportId,
                     text: report,
+                    provenance: this.messageProvenance(
+                      { kind: "service", id: "background-delegation" },
+                      handoff.turnId
+                    ),
                     origin: {
                       kind: "background",
                       groupId: handoff.id,
@@ -974,51 +1049,45 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           },
         }
       ),
-      delegationApplication(
-        piDelegationLedger(
-          () => this.harness.pi(),
-          () => this.registry.snapshot().extension("delegated-reader")!,
-          () =>
-            this.registry.snapshot().extension("delegated-reader")?.tools ?? []
-        ),
-        {
-          current: (id, conversationId) =>
-            Effect.gen({ self: this }, function* () {
-              const turn = yield* this.conversations.get(id)
-              return (
-                turn?.status === "running" &&
-                turn.session_id === String(conversationId) &&
-                (yield* this.routineAuthority.canRun(id)) &&
-                (yield* this.botConfiguration.read())?.status !== "archived"
-              )
-            }).pipe(
-              Effect.mapError(
-                () =>
-                  new DelegationFailure({
-                    code: "unavailable",
-                    message: "Could not confirm the parent request.",
-                  })
-              )
-            ),
-          cancelled: (id) =>
-            Effect.gen({ self: this }, function* () {
-              return (
-                ["stopping", "cancelled", "failed"].includes(
-                  (yield* this.conversations.get(id))?.status ?? "cancelled"
-                ) ||
-                (yield* this.botConfiguration.read())?.status === "archived"
-              )
-            }).pipe(
-              Effect.mapError(
-                () =>
-                  new DelegationFailure({
-                    code: "unavailable",
-                    message: "Could not confirm the parent request.",
-                  })
-              )
-            ),
-        }
-      ),
+      delegationApplication(this.delegationLedger, {
+        current: (id, conversationId) =>
+          Effect.gen({ self: this }, function* () {
+            const turn = yield* this.conversations.get(id)
+            return (
+              turn?.status === "running" &&
+              turn.session_id === String(conversationId) &&
+              (yield* this.routineAuthority.canRun(id)) &&
+              (yield* this.botConfiguration.read())?.status !== "archived"
+            )
+          }).pipe(
+            Effect.mapError(
+              () =>
+                new DelegationFailure({
+                  code: "unavailable",
+                  message: "Could not confirm the parent request.",
+                })
+            )
+          ),
+        cancelled: (id) =>
+          Effect.gen({ self: this }, function* () {
+            return (
+              ["stopping", "cancelled", "failed"].includes(
+                (yield* this.conversations.get(id))?.status ?? "cancelled"
+              ) ||
+              (yield* this.botConfiguration.read())?.status === "archived" ||
+              (yield* this.coordination.store.closed(id)) ||
+              !(yield* this.routineAuthority.canRun(id))
+            )
+          }).pipe(
+            Effect.mapError(
+              () =>
+                new DelegationFailure({
+                  code: "unavailable",
+                  message: "Could not confirm the parent request.",
+                })
+            )
+          ),
+      }),
       credentialApplication(
         this.credentialLedger,
         this.createCredentialRefresher()
@@ -1093,7 +1162,8 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       conversationApplication(this.conversations),
       piConversationLayer(
         () => this.harness,
-        () => this.env.MODEL_ID
+        () => this.env.MODEL_ID,
+        () => this.coordinationTools
       ),
       connectionApplication(this.connectionStore, this.connectionClient),
       appApplication(this.apps),
@@ -1216,7 +1286,14 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       admit: (event) =>
         Effect.gen({ self: this }, function* () {
           return (yield* this.conversations.admit(
-            { operationId: event.turnId, text: event.text },
+            {
+              operationId: event.turnId,
+              provenance: this.messageProvenance({
+                kind: "service",
+                id: "app-event",
+              }),
+              text: event.text,
+            },
             undefined,
             (yield* this.skills.selection().pipe(
               Effect.mapError(
@@ -1342,21 +1419,49 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       }),
     notify: () => Effect.sync(() => this.notifyConversation()),
   })
+  private channelAdmission(input: Submission) {
+    return Effect.gen({ self: this }, function* () {
+      const access = yield* this.familyStateProgram()
+      if (!access)
+        return yield* new CredentialUnavailable({
+          message: "Your family access has ended.",
+        })
+      return yield* this.messageAdmission({
+        ...input,
+        provenance: this.messageProvenance({ kind: "human", id: access.owner }),
+      })
+    })
+  }
   readonly retryMessage = retryMessage(
     this.conversationService,
     this.messageAdmission
   )
-  readonly stopConversation = stopConversation(this.conversationService, {
-    wake: () =>
-      conversationNativeOperation("wake conversation", () =>
-        this.runner.wake()
+  private readonly stopConversationCommand = stopConversation(
+    this.conversationService,
+    {
+      wake: () =>
+        conversationNativeOperation("wake conversation", () =>
+          this.runner.wake()
+        ),
+      wakeBackground: () =>
+        conversationNativeOperation("wake background work", async () => {
+          await this.backgroundRunner.wake()
+          await this.coordinationRunner.wake()
+        }),
+      notify: () => Effect.sync(() => this.notifyConversation()),
+    }
+  )
+  readonly stopConversation = (id: string) =>
+    this.coordination.stop(id).pipe(
+      Effect.mapError(
+        (cause) =>
+          new ConversationStorageError({
+            operation: "stop agent session",
+            cause,
+          })
       ),
-    wakeBackground: () =>
-      conversationNativeOperation("wake background work", () =>
-        this.backgroundRunner.wake()
-      ),
-    notify: () => Effect.sync(() => this.notifyConversation()),
-  })
+      Effect.andThen(this.stopConversationCommand(id))
+    )
   readonly emailStore = new EmailStore(this.db)
   readonly whatsappStore = new WhatsAppStore(this.db)
   private wakeWhatsApp() {
@@ -1477,7 +1582,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       admit: (id, input) =>
         Effect.gen({ self: this }, function* () {
           if (id === homeAgentId)
-            return yield* this.messageAdmission(input).pipe(
+            return yield* this.channelAdmission(input).pipe(
               Effect.mapError(() => new WhatsAppUnavailable())
             )
           const peer = yield* connected(id)
@@ -1574,7 +1679,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         !whatsappConfigured(this.env)
       )
         return yield* new WhatsAppUnavailable()
-      yield* this.messageAdmission({
+      yield* this.channelAdmission({
         operationId: input.input.id,
         text: input.input.body,
         mode: "followUp",
@@ -1613,7 +1718,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         )
       ),
     admit: (input) =>
-      this.messageAdmission(input).pipe(
+      this.channelAdmission(input).pipe(
         Effect.mapError(() => new EmailUnavailable())
       ),
     turn: (id) =>
@@ -1884,6 +1989,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           return (yield* this.conversations.admit(
             {
               operationId: run.turnId,
+              provenance: this.messageProvenance({
+                kind: "service",
+                id: "routine",
+              }),
               text: `Routine: ${run.title}\n${run.trigger === "manual" ? "Requested now" : run.trigger === "webhook" ? "Triggered by an external event" : "Scheduled for " + new Date(run.scheduledAt).toISOString()}\n\n${run.prompt}\n\nThis run has a ten-minute budget. Follow the bot's current tool permissions; wait for any required approval. Report the useful result or a concrete failure in this conversation.`,
             },
             undefined,
@@ -2037,7 +2146,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           : undefined
       if (
         !turn?.routing ||
-        turn.origin ||
+        (turn.origin && !["email", "whatsapp"].includes(turn.origin.kind)) ||
         turn.session_id !== String(api.conversationId)
       )
         return yield* new DelegationFailure({
@@ -2046,6 +2155,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             "Delegation must belong to an original active request, not a background report.",
         })
       return {
+        botId: this.ctx.id.toString(),
         turnId: turn.id,
         conversationId: Number(api.conversationId),
         taskId: Number(api.taskId),
@@ -2240,6 +2350,11 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             yield* this.conversations.requestStop(turn.id)
             yield* this.access.cancel(turn.id)
             if (turn.session_id) sessions.push(turn.session_id)
+          }
+          for (const id of yield* this.delegationLedger.catalog()) {
+            const group = yield* this.delegationLedger.group(id)
+            yield* this.coordination.store.close(group.turnId)
+            yield* this.delegations.reconcile(group.turnId)
           }
           let offset = 0
           while (true) {
@@ -2476,6 +2591,9 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       this.registry.install({
         name: "personal",
         hooks: [
+          coordinationHook((nativeId, signal) =>
+            this.run(this.coordination.beforeRequest(nativeId), { signal })
+          ),
           runRecoveryHook({
             storage,
             store: this.recovery,
@@ -2536,6 +2654,12 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           ),
         ],
         sections: [
+          { key: "authorship", render: () => identityInstructions, tag: false },
+          {
+            key: "coordination",
+            render: () => coordinationInstructions,
+            tag: false,
+          },
           { key: "preamble", render: () => SYSTEM_PROMPT, tag: false },
           {
             key: "communication",
@@ -2551,149 +2675,166 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           },
         ],
         tools: [
-          ...taskTools((command, signal) =>
-            this.taskAction(command, undefined, signal)
-          ),
-          ...passkeyTools((input, signal) => this.passkeyAction(input, signal)),
-          ...familyTools(
-            (input, signal) => this.familyAction(input, signal),
-            (input, signal) => this.modelSettingsAction(input, signal),
-            (signal) => this.reconnectChatGPTAction(signal)
-          ),
-          ...richResultTools(),
-          ...communicationTools(
-            this.communication.runtime.runSync(Communication),
-            (api) => {
-              return this.delegationSource(api).pipe(
-                Effect.map((source) => ({
-                  turnId: source.turnId,
-                  toolId: String(api.taskId),
-                }))
-              )
-            },
-            (operation, signal) =>
-              this.communication.runtime.runPromise(operation, { signal })
-          ),
-          backgroundTool(
-            (input, api) =>
-              this.delegationSource(api).pipe(
-                Effect.flatMap((source) =>
-                  this.background.create(input, source)
+          ...this.coordinationTools,
+          ...[
+            ...taskTools((command, signal) =>
+              this.taskAction(command, undefined, signal)
+            ),
+            ...passkeyTools((input, signal) =>
+              this.passkeyAction(input, signal)
+            ),
+            ...familyTools(
+              (input, signal) => this.familyAction(input, signal),
+              (input, signal) => this.modelSettingsAction(input, signal),
+              (signal) => this.reconnectChatGPTAction(signal)
+            ),
+            ...richResultTools(),
+            ...communicationTools(
+              this.communication.runtime.runSync(Communication),
+              (api) => {
+                return this.delegationSource(api).pipe(
+                  Effect.map((source) => ({
+                    turnId: source.turnId,
+                    toolId: String(api.taskId),
+                  }))
                 )
-              ),
-            (work, signal) => this.run(work, { signal })
-          ),
-          delegationTool(
-            this.delegations,
-            (api) => this.delegationSource(api),
-            (work, signal) => this.run(work, { signal })
-          ),
-          ...planTools(
-            this.plans,
-            (api) =>
-              Effect.gen({ self: this }, function* () {
-                const receipt = yield* this.accessStore.get(String(api.taskId)),
-                  source = receipt
-                    ? yield* this.planSource(receipt.turnId)
-                    : undefined
-                if (
-                  !source ||
-                  (yield* this.conversations.get(source.turnId))?.session_id !==
-                    String(api.conversationId)
-                )
-                  return yield* new PlanFailure({
-                    code: "cancelled",
-                    message: "This tool no longer belongs to an active run.",
-                  })
-                return source
-              }).pipe(
-                Effect.mapError((cause) =>
-                  cause instanceof PlanFailure
-                    ? cause
-                    : new PlanFailure({
-                        code: "unavailable",
-                        message: "Could not confirm the current request.",
-                      })
-                )
-              ),
-            (operation, signal) => this.run(operation, { signal })
-          ),
-          ...objectTools(
-            this.objects,
-            (api) =>
-              Effect.gen({ self: this }, function* () {
-                const receipt = yield* this.accessStore.get(String(api.taskId)),
-                  turn = receipt
+              },
+              (operation, signal) =>
+                this.communication.runtime.runPromise(operation, { signal })
+            ),
+            backgroundTool(
+              (input, api) =>
+                this.delegationSource(api).pipe(
+                  Effect.flatMap((source) =>
+                    this.background.create(input, source)
+                  )
+                ),
+              (work, signal) => this.run(work, { signal })
+            ),
+            delegationTool(
+              this.delegations,
+              (api) => this.delegationSource(api),
+              (work, signal) => this.run(work, { signal })
+            ),
+            delegationTool(
+              this.delegations,
+              (api) => this.delegationSource(api),
+              (work, signal) => this.run(work, { signal }),
+              { wake: () => this.coordinationRunner.wake() }
+            ),
+            ...planTools(
+              this.plans,
+              (api) =>
+                Effect.gen({ self: this }, function* () {
+                  const receipt = yield* this.accessStore.get(
+                      String(api.taskId)
+                    ),
+                    source = receipt
+                      ? yield* this.planSource(receipt.turnId)
+                      : undefined
+                  if (
+                    !source ||
+                    (yield* this.conversations.get(source.turnId))
+                      ?.session_id !== String(api.conversationId)
+                  )
+                    return yield* new PlanFailure({
+                      code: "cancelled",
+                      message: "This tool no longer belongs to an active run.",
+                    })
+                  return source
+                }).pipe(
+                  Effect.mapError((cause) =>
+                    cause instanceof PlanFailure
+                      ? cause
+                      : new PlanFailure({
+                          code: "unavailable",
+                          message: "Could not confirm the current request.",
+                        })
+                  )
+                ),
+              (operation, signal) => this.run(operation, { signal })
+            ),
+            ...objectTools(
+              this.objects,
+              (api) =>
+                Effect.gen({ self: this }, function* () {
+                  const receipt = yield* this.accessStore.get(
+                      String(api.taskId)
+                    ),
+                    turn = receipt
+                      ? yield* this.conversations.get(receipt.turnId)
+                      : undefined
+                  if (!turn || turn.session_id !== String(api.conversationId))
+                    return yield* new ObjectFailure({
+                      code: "read_only",
+                      message:
+                        "This tool no longer belongs to the active conversation.",
+                    })
+                  return {
+                    actor: "agent" as const,
+                    surface: "tool" as const,
+                    turnId: turn.id,
+                    toolCallId: api.callId,
+                  }
+                }).pipe(
+                  Effect.mapError((cause) =>
+                    cause instanceof ObjectFailure
+                      ? cause
+                      : new ObjectFailure({
+                          code: "unavailable",
+                          message: "Could not confirm the current request.",
+                        })
+                  )
+                ),
+              (operation, signal) => this.run(operation, { signal })
+            ),
+            ...appTools(this.appService, (operation, signal) =>
+              this.run(operation, { signal })
+            ),
+            ...routineTools(
+              this.routines,
+              () => this.routineRunner.wake(),
+              (operation, signal) => this.run(operation, { signal })
+            ),
+            ...workspaceTools(
+              this.workspaceService,
+              (program, signal) => this.run(program, { signal }),
+              (api) =>
+                Effect.gen({ self: this }, function* () {
+                  const receipt = yield* this.accessStore.get(
+                    String(api.taskId)
+                  )
+                  const turn = receipt
                     ? yield* this.conversations.get(receipt.turnId)
                     : undefined
-                if (!turn || turn.session_id !== String(api.conversationId))
-                  return yield* new ObjectFailure({
-                    code: "read_only",
-                    message:
-                      "This tool no longer belongs to the active conversation.",
-                  })
-                return {
-                  actor: "agent" as const,
-                  surface: "tool" as const,
-                  turnId: turn.id,
-                  toolCallId: api.callId,
-                }
-              }).pipe(
-                Effect.mapError((cause) =>
-                  cause instanceof ObjectFailure
-                    ? cause
-                    : new ObjectFailure({
-                        code: "unavailable",
-                        message: "Could not confirm the current request.",
-                      })
-                )
-              ),
-            (operation, signal) => this.run(operation, { signal })
-          ),
-          ...appTools(this.appService, (operation, signal) =>
-            this.run(operation, { signal })
-          ),
-          ...routineTools(
-            this.routines,
-            () => this.routineRunner.wake(),
-            (operation, signal) => this.run(operation, { signal })
-          ),
-          ...workspaceTools(
-            this.workspaceService,
-            (program, signal) => this.run(program, { signal }),
-            (api) =>
-              Effect.gen({ self: this }, function* () {
-                const receipt = yield* this.accessStore.get(String(api.taskId))
-                const turn = receipt
-                  ? yield* this.conversations.get(receipt.turnId)
-                  : undefined
-                if (
-                  !turn ||
-                  turn.session_id !== String(api.conversationId) ||
-                  !["running", "preparing"].includes(turn.status)
-                )
-                  return yield* new WorkspaceReadOnly()
-                return turn.id
-              }).pipe(Effect.mapError(() => new WorkspaceUnavailable()))
-          ),
-          ...this.memoryTools.read,
-          ...terminalTools(
-            (input) =>
-              runCommand(
-                this.env.TERMINAL_SERVICE,
-                this.ctx.id.toString(),
-                input
-              ),
-            (program, options) => this.run(program, options)
-          ),
-          ...executionTools(this.executions, (program, options) =>
-            this.run(program, options)
-          ),
-          ...browserTools(this.browser, (program, options) =>
-            this.run(program, options)
-          ),
-          this.memoryTools.write,
-        ].map(this.protectTool),
+                  if (
+                    !turn ||
+                    turn.session_id !== String(api.conversationId) ||
+                    !["running", "preparing"].includes(turn.status)
+                  )
+                    return yield* new WorkspaceReadOnly()
+                  return turn.id
+                }).pipe(Effect.mapError(() => new WorkspaceUnavailable()))
+            ),
+            ...this.memoryTools.read,
+            ...terminalTools(
+              (input) =>
+                runCommand(
+                  this.env.TERMINAL_SERVICE,
+                  this.ctx.id.toString(),
+                  input
+                ),
+              (program, options) => this.run(program, options)
+            ),
+            ...executionTools(this.executions, (program, options) =>
+              this.run(program, options)
+            ),
+            ...browserTools(this.browser, (program, options) =>
+              this.run(program, options)
+            ),
+            this.memoryTools.write,
+          ].map(this.protectTool),
+        ],
       })
       this.registry.install({
         name: "delegated-reader",
@@ -2704,12 +2845,19 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
               this.conversations.members(id).pipe(
                 Effect.map((members) =>
                   members
-                    .filter((member) => member.parent_id)
+                    .filter(
+                      (member) =>
+                        member.parent_id &&
+                        (!member.provenance ||
+                          member.provenance.author.kind === "human")
+                    )
                     .map((member) => ({
                       id: member.id,
-                      text:
+                      text: attributedText(
                         member.text ||
-                        "New attachments were supplied to the parent. Do not infer their contents; the parent must reconcile them.",
+                          "New attachments were supplied to the parent. Do not infer their contents; the parent must reconcile them.",
+                        member.provenance
+                      ),
                     }))
                 ),
                 Effect.mapError(
@@ -2723,10 +2871,17 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             (work, signal) => this.run(work, { signal })
           ),
         ],
-        tools: this.registry
-          .snapshot()
-          .extension("personal")!
-          .tools!.filter((tool) => Schema.is(ReadTool)(tool.name)),
+        tools: [
+          ...this.coordinationTools,
+          ...[
+            ...this.memoryTools.read,
+            ...workspaceTools(this.workspaceService, (work, signal) =>
+              this.run(work, { signal })
+            ),
+          ]
+            .filter((tool) => Schema.is(ReadTool)(tool.name))
+            .map(this.protectTool),
+        ],
       })
       const harness = await Harness.open(
         storage,
@@ -2798,7 +2953,24 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
               })
           )
         ),
-      canRun: (id) => this.routines.canRun(id),
+      canRun: (id) =>
+        Effect.gen({ self: this }, function* () {
+          const allowed = yield* this.routines.canRun(id)
+          const origin = (yield* this.conversations.get(id))?.origin
+          return (
+            allowed &&
+            (origin?.kind !== "coordination" ||
+              (yield* this.coordination.rootLive(origin.turnId)))
+          )
+        }).pipe(
+          Effect.mapError(
+            (cause) =>
+              new ConversationStorageError({
+                operation: "read session authority",
+                cause,
+              })
+          )
+        ),
       instructions: () =>
         this.configurationService
           .read()
@@ -2809,7 +2981,23 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         this.recoveryService
           .get(id)
           .pipe(Effect.map((state) => state?.view ?? undefined)),
-      cancelAccess: (id) => this.access.cancel(id),
+      cancelAccess: (id) =>
+        Effect.gen({ self: this }, function* () {
+          const groupId = yield* this.delegationLedger.parent(id)
+          if (groupId && (yield* this.coordination.rootLive(id))) {
+            const group = yield* this.delegationLedger.group(groupId)
+            if (group.detached && !group.closed) return
+          }
+          yield* this.access.cancel(id)
+        }).pipe(
+          Effect.mapError(
+            (cause) =>
+              new AccessStorageError({
+                operation: "close request access",
+                cause,
+              })
+          )
+        ),
       awaitingAccess: () =>
         this.access.pending().pipe(Effect.map((pending) => pending.length > 0)),
       cancelPlan: (id) => this.plans.cancel(id),
@@ -2893,6 +3081,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     () => this.snapshotMetadata(),
     (id) => this.workspaceService.replyFiles(id)
   )
+  readonly coordinationRunner = new CoordinationRunner(this)
   readonly runner = new TurnRunner(this)
   readonly compactor = new MemoryRunner(this, (work) =>
     this.ctx.waitUntil(work)
@@ -2913,6 +3102,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     .use(this.mcp)
     .use(this.harness)
     .use(this.runner)
+    .use(this.coordinationRunner)
     .use(this.backgroundRunner)
     .use(this.communicationRunner)
     .use(this.compactor)
@@ -2932,6 +3122,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   }
 
   async onStart() {
+    await this.coordinationRunner.wake()
     await this.run(this.whatsappStore.recover())
     if ((await this.run(this.whatsappStore.pending())).length)
       await this.whatsappRunner.wake()
@@ -3093,6 +3284,15 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     if (Exit.isFailure(exit) && SkillOutcome.isUnexpected(exit))
       reportHarness(exit.cause, "personal")
     return SkillOutcome.encode(exit)
+  }
+  messageProvenance(author: Actor, causedBy?: string): MessageProvenance {
+    const conversationId = this.ctx.id.toString()
+    return {
+      author,
+      conversationId,
+      recipients: [{ kind: "agent", id: conversationId }],
+      ...(causedBy ? { causedBy } : {}),
+    }
   }
   current(id: string) {
     return this.conversations.get(id)
@@ -3782,7 +3982,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       if (base === "background")
         return yield* backgroundRequest(this.background, request, path)
       if (base === "delegations")
-        return yield* delegationsRequest(this.delegations, request, path)
+        return yield* this.delegationHttpProgram(request, path)
       if (base === "plans")
         return yield* plansRequest(this.plans, request, path)
       if (base === "objects")
@@ -3882,6 +4082,57 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       if (response.ok && request.method === "POST")
         yield* agentNative("wake extraction", () => this.extraction.wake())
       return response
+    })
+  }
+  private humanPrincipal(request: Request) {
+    return Effect.gen({ self: this }, function* () {
+      const id = request.headers.get("x-owner-id")
+      if (!id) return undefined
+      const configured = yield* this.botConfiguration.read()
+      return configured?.owner === id ||
+        this.ctx.id.equals(this.env.AGENT.idFromName(id))
+        ? id
+        : undefined
+    })
+  }
+  private delegationHttpProgram(request: Request, path: string) {
+    return Effect.gen({ self: this }, function* () {
+      const human = yield* this.humanPrincipal(request)
+      if (request.method === "POST" && !human)
+        return new Response("Unauthorized", { status: 401 })
+      return yield* delegationsRequest(
+        this.delegations,
+        request,
+        path,
+        "delegations",
+        (input) =>
+          human
+            ? {
+                author: { kind: "human", id: human },
+                conversationId: this.ctx.id.toString(),
+                recipients: [
+                  {
+                    kind: "agent",
+                    id: `${this.ctx.id}/child/${input.childId}`,
+                  },
+                ],
+                causedBy: input.operationId,
+              }
+            : undefined
+      )
+    })
+  }
+  private sendHttpProgram(request: Request) {
+    return Effect.gen({ self: this }, function* () {
+      const human = yield* this.humanPrincipal(request)
+      if (!human) return new Response("Unauthorized", { status: 401 })
+      const input = yield* agentJson(request, SendInput)
+      return yield* admissionResponse(
+        this.messageAdmission({
+          ...input,
+          provenance: this.messageProvenance({ kind: "human", id: human }),
+        })
+      )
     })
   }
   private conversationHttpProgram(request: Request, path: string) {
@@ -3987,9 +4238,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         return Response.json(selection)
       }
       if (`${request.method} ${path}` === "POST send")
-        return yield* admissionResponse(
-          this.messageAdmission(yield* agentJson(request, SendInput))
-        )
+        return yield* this.sendHttpProgram(request)
       if (`${request.method} ${path}` === "POST retry") {
         const input = yield* agentJson(
           request,
@@ -3998,6 +4247,26 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             turnId: CancelInput.fields.operationId,
           })
         )
+        const original = yield* this.conversations.get(input.turnId)
+        if (
+          original?.origin?.kind === "coordination" &&
+          !(yield* this.coordination.rootLive(original.origin.turnId).pipe(
+            Effect.mapError(
+              (cause) =>
+                new ConversationStorageError({
+                  operation: "read session authority",
+                  cause,
+                })
+            )
+          ))
+        )
+          return Response.json(
+            {
+              error:
+                "This agent session has stopped. Send a new message to continue.",
+            },
+            { status: 409 }
+          )
         return yield* admissionResponse(this.retryMessage(input))
       }
       if (`${request.method} ${path}` === "POST cancel") {

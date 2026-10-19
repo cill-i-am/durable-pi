@@ -1,6 +1,7 @@
 import { Schema } from "effect"
 
 import { ResolvedRoute } from "../inference/policy"
+import { attributedText } from "../messages/identity"
 import {
   Control,
   DelegateInput,
@@ -13,6 +14,8 @@ import { REPORT_BYTES, REQUEST_LIMIT } from "./delegation"
 import type { DelegationFacts } from "./delegations"
 
 export const SavedGroup = Schema.Struct({
+  botId: Schema.optional(Schema.String),
+  detached: Schema.optional(Schema.Boolean),
   id: NativeId,
   turnId: Schema.String,
   conversationId: NativeId,
@@ -42,8 +45,39 @@ export const requestId = (group: SavedGroup, child: number) =>
   `delegation:${group.id}:${child}`
 export const controlId = (control: Control) =>
   `delegation-control:${control.operationId}`
+export const initialMessage = (
+  group: SavedGroup,
+  child: SavedGroup["children"][number]
+) =>
+  attributedText(
+    child.task,
+    group.botId
+      ? {
+          author: {
+            kind: "agent",
+            id: group.botId,
+            sessionId: group.turnId,
+            runId: group.turnId,
+          },
+          recipients: [
+            {
+              kind: "agent",
+              id: `${group.botId}/child/${child.id}`,
+              sessionId: group.turnId,
+            },
+          ],
+          conversationId: group.botId,
+          causedBy: String(group.id),
+        }
+      : undefined
+  )
 export function requireCurrent(group: SavedGroup, authority: DelegationFacts) {
-  if (!authority.current(group.turnId, group.conversationId) || group.closed)
+  if (
+    (group.detached
+      ? authority.cancelled(group.turnId)
+      : !authority.current(group.turnId, group.conversationId)) ||
+    group.closed
+  )
     throw failure(
       "cancelled",
       "The parent request has ended. Saved tasks cannot restart it."
@@ -121,6 +155,7 @@ export function projectGroup(
   now: number
 ): Group {
   return {
+    ...(group.detached ? { detached: true } : {}),
     id: group.id,
     turnId: group.turnId,
     conversationId: group.conversationId,
@@ -128,7 +163,13 @@ export function projectGroup(
     route: group.route,
     createdAt: group.createdAt,
     deadline: group.deadline,
-    status: cancelled ? "cancelled" : group.closed ? "completed" : "working",
+    status:
+      cancelled ||
+      (group.detached && group.children.every((child) => child.stopped))
+        ? "cancelled"
+        : group.closed
+          ? "completed"
+          : "working",
     children: group.children.map((child, index) => {
       const fact = facts[index]!
       const stopped =
@@ -165,11 +206,11 @@ export function projectGroup(
             : fact.inputs.every((value) => !value || value.status === "queued")
               ? "queued"
               : "working"
-          : failed
-            ? stopped
-              ? "cancelled"
-              : "failed"
-            : "completed",
+          : stopped
+            ? "cancelled"
+            : failed
+              ? "failed"
+              : "completed",
         error:
           failed && !stopped
             ? child.requests >= REQUEST_LIMIT

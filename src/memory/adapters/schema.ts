@@ -46,6 +46,7 @@ export const memoryLog = sqliteTable(
   {
     id: integer("id").notNull().primaryKey(),
     source: text("source").notNull(),
+    provenance: text("provenance"),
     kind: text("kind").notNull(),
     text: text("text").notNull(),
     date: text("date").notNull(),

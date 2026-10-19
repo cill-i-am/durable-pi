@@ -66,6 +66,7 @@ import {
 } from "@/components/ui/message-scroller"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Skeleton } from "@/components/ui/skeleton"
+import type { ChatState } from "@/conversations/contracts"
 import {
   ThinkingLevel,
   type Submission,
@@ -355,6 +356,7 @@ export function Conversation({
                 state.turns.flatMap((turn) => {
                   const waiting =
                     turn.status === "queued" && turn.id !== active?.id
+                  const human = humanMessage(turn)
                   return [
                     <MessageScrollerItem
                       key={`${turn.id}:user`}
@@ -362,27 +364,24 @@ export function Conversation({
                       scrollAnchor={!waiting}
                     >
                       <Message
-                        align={turn.origin ? "start" : "end"}
+                        align={human ? "end" : "start"}
                         className={
-                          turn.origin ? "background-message" : "owner-message"
+                          human ? "owner-message" : "background-message"
                         }
                         data-queued={waiting}
                       >
                         <MessageContent>
                           <Bubble
-                            align={turn.origin ? "start" : "end"}
-                            variant={turn.origin ? "muted" : "secondary"}
+                            align={human ? "end" : "start"}
+                            variant={human ? "secondary" : "muted"}
                           >
                             <BubbleContent className="message-text">
-                              {turn.origin
-                                ? turn.origin.kind === "email"
-                                  ? `Email · ${turn.text}`
-                                  : turn.origin.kind === "whatsapp"
-                                    ? `WhatsApp · ${turn.text}`
-                                    : turn.origin.kind === "communication"
-                                      ? "Bot task result"
-                                      : `Background findings · group ${turn.origin.groupId}`
-                                : turn.text}
+                              {turn.provenance && (
+                                <span className="mb-1 block text-xs text-muted-foreground">
+                                  {authorLabels[turn.provenance.author.kind]}
+                                </span>
+                              )}
+                              {messageText(turn)}
                               <FileAttachments
                                 files={turn.attachments ?? []}
                                 agentId={agent.id}
@@ -822,4 +821,30 @@ function ComposerAttachments({
       )}
     </>
   )
+}
+
+const authorLabels = {
+  human: "Human message",
+  agent: "Agent message",
+  service: "Automated message",
+}
+const humanMessage = (
+  turn: Pick<ChatState["turns"][number], "provenance" | "origin">
+) =>
+  turn.provenance?.author.kind === "human" || (!turn.provenance && !turn.origin)
+function messageText(
+  turn: Pick<ChatState["turns"][number], "origin" | "text">
+) {
+  switch (turn.origin?.kind) {
+    case "email":
+      return `Email · ${turn.text}`
+    case "whatsapp":
+      return `WhatsApp · ${turn.text}`
+    case "communication":
+      return "Bot task result"
+    case "background":
+      return `Background findings · group ${turn.origin.groupId}`
+    default:
+      return turn.text
+  }
 }

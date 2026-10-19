@@ -13,7 +13,7 @@ import {
 
 /** Projection over original records; cancellation remains owned by each domain. */
 export function localTaskControls(owner: PersonalAgent) {
-  const request = (
+  const requestView = (
     turn: { id: string; text: string; status: string; files_pending?: boolean },
     needsApproval = false
   ): Task => ({
@@ -31,6 +31,27 @@ export function localTaskControls(owner: PersonalAgent) {
       turn.status
     ),
   })
+  const request = (
+    turn: Parameters<typeof requestView>[0],
+    needsApproval = false
+  ) =>
+    Effect.gen(function* () {
+      const view = requestView(turn, needsApproval)
+      if (!view.terminal) return view
+      const id = yield* owner.delegationLedger.parent(turn.id)
+      if (!id) return view
+      const group = yield* owner.delegationLedger.group(id)
+      if (!group.detached) return view
+      if (yield* owner.coordination.store.closed(turn.id))
+        return { ...view, state: "cancelled" }
+      if (
+        group.closed ||
+        group.deadline <= Date.now() ||
+        !(yield* owner.coordination.rootLive(turn.id))
+      )
+        return view
+      return { ...view, state: "running", terminal: false }
+    })
   const mailbox = owner.communication.runtime.runSync(Communication)
   const bot = (task: Parameters<typeof terminal>[0]): Task => ({
     id: task.id,
@@ -57,7 +78,7 @@ export function localTaskControls(owner: PersonalAgent) {
     Effect.gen(function* () {
       if (ref.kind === "request") {
         const turn = yield* owner.conversations.get(ref.id)
-        if (turn) return request(turn)
+        if (turn) return yield* request(turn)
       } else if (ref.kind === "bot-task") return bot(yield* mailbox.get(ref.id))
       else {
         if (
@@ -79,12 +100,24 @@ export function localTaskControls(owner: PersonalAgent) {
         const approvals = (yield* owner.access.state()).approvals.filter(
           (a) => a.status === "pending"
         )
-        const requests = (yield* owner.conversations.unfinished()).map((t) =>
+        const turns = yield* owner.conversations.unfinished()
+        const known = new Set(turns.map((turn) => turn.id))
+        for (const id of yield* owner.delegationLedger.catalog()) {
+          const group = yield* owner.delegationLedger.group(id)
+          if (!group.detached || group.closed || known.has(group.turnId))
+            continue
+          const turn = yield* owner.conversations.get(group.turnId)
+          if (turn) {
+            turns.push(turn)
+            known.add(turn.id)
+          }
+        }
+        const requests = (yield* Effect.forEach(turns, (turn) =>
           request(
-            t,
-            approvals.some((a) => a.turnId === t.id)
+            turn,
+            approvals.some((a) => a.turnId === turn.id)
           )
-        )
+        )).filter((task) => !task.terminal)
         const tasks = (yield* owner.communication.mailbox.pending())
           .filter((t) => !terminal(t))
           .map(bot)

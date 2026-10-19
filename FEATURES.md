@@ -36,7 +36,7 @@ Each linked page gives sub-features, every mapped entry point, a drive recipe wi
 | Tools and environments | [JavaScript](.cursor/skills/verify-durable-pi/features/code.md) | Isolated code with explicit input, logs, saved result, and cancellation. |
 | Tools and environments | [Linux terminal](.cursor/skills/verify-durable-pi/features/terminal.md) | Commands, interactive shell, saved workspace, and file transfer. |
 | Autonomous work | [Routines and events](.cursor/skills/verify-durable-pi/features/routines.md) | One-off/interval schedules, run controls, and authenticated webhooks. |
-| Autonomous work | [Temporary delegation](.cursor/skills/verify-durable-pi/features/delegation.md) | Request-owned research and tool-free background reports. |
+| Autonomous work | [Temporary delegation](.cursor/skills/verify-durable-pi/features/delegation.md) | Request-owned research, continuing agent sessions, and tool-free background reports. |
 | Autonomous work | [Named-agent communication](.cursor/skills/verify-durable-pi/features/bot-communication.md) | Bounded text tasks with correlated results and delivery recovery. |
 | Visibility | [Activity and recovery](.cursor/skills/verify-durable-pi/features/activity.md) | Account/agent timelines, saved traces, partial reads, and specific recovery. |
 

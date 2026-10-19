@@ -153,7 +153,7 @@ it("treats owner channel requests as user messages and empty audio requests as v
       "",
       []
     )
-  ).toContain("New user message")
+  ).toContain("Incoming message")
   expect(
     conversationPrompt(
       {
@@ -165,7 +165,7 @@ it("treats owner channel requests as user messages and empty audio requests as v
       "",
       []
     )
-  ).toContain("New user message")
+  ).toContain("Incoming message")
   expect(
     conversationPrompt(
       {

@@ -73,6 +73,22 @@ export class AccessStorageError extends Schema.TaggedError<AccessStorageError>()
 ) {}
 
 export const builtInTools = [
+  ...["list_agents", "list_sessions", "get_last_message", "send_message"].map(
+    (name) => ({
+      name,
+      title: name.replaceAll("_", " "),
+      description:
+        "Coordinate with permitted agents in this bot's sessions. No additional action permissions.",
+      mode: "allow" as const,
+    })
+  ),
+  {
+    name: "spawn_agents",
+    title: "Start collaborating agents",
+    description:
+      "Start up to three bounded research or drafting agents with selected read tools. They can communicate while the parent continues.",
+    mode: "ask",
+  },
   {
     name: "show_brief",
     title: "Compose an answer brief",

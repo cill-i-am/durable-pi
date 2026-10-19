@@ -74,6 +74,7 @@ export function TurnReply({
               key={input.id}
               text={input.text}
               attachments={input.attachments}
+              provenance={input.provenance}
               agentId={agentId}
               label={
                 input.delivery === "unanswered"

@@ -143,6 +143,35 @@ const done = {
   entry: 1,
   answer: 2,
 } as SubmissionRecord
+it("archives only the new continuation when a native session is reused", () => {
+  const f = fixture()
+  const root = {
+    ...f.root,
+    origin: {
+      kind: "coordination" as const,
+      turnId: "original",
+      messageId: "peer-message",
+    },
+  }
+  const entries: EntryRecord[] = [
+    { ...entry(1), model: [fauxAssistantMessage("Old response")] },
+    {
+      ...entry(3),
+      model: [{ role: "user", content: "Peer question", timestamp: 3 }],
+    },
+    { ...entry(4), model: [fauxAssistantMessage("New response")] },
+  ]
+  const observation = normalizePiObservation(root, [root], {
+    snapshot: { ...snapshot([]), entries },
+    records: new Map([
+      [root.id, { ...done, entry: 3, answer: 4 } as SubmissionRecord],
+    ]),
+  })
+  expect(observation.answer).toBe("New response")
+  expect(observation.archives.map((record) => record.text)).not.toContain(
+    "Old response"
+  )
+})
 function fixture() {
   const store = new ConversationStore(database(), {
     model: "test",

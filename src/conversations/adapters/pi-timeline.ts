@@ -1,5 +1,6 @@
 import type { EntryRecord, SnapshotEvent } from "@earendil-works/pi-durable"
 
+import type { MessageProvenance } from "../../messages/identity"
 import type { FileInfo } from "../../workspace/files"
 import type { TimelineItem } from "../contracts"
 
@@ -8,7 +9,12 @@ export function piTimeline(
   live?: SnapshotEvent,
   steers: ReadonlyMap<
     number,
-    { id: string; text: string; attachments?: readonly FileInfo[] }
+    {
+      id: string
+      text: string
+      attachments?: readonly FileInfo[]
+      provenance?: MessageProvenance
+    }
   > = new Map()
 ): TimelineItem[] {
   const items: TimelineItem[] = []
@@ -36,6 +42,7 @@ export function piTimeline(
           type: "steer",
           text: steer.text,
           attachments: steer.attachments,
+          provenance: steer.provenance,
         })
     }
     if (message.role === "assistant") {

@@ -4,10 +4,12 @@ import type {
   Storage,
   SnapshotEvent,
   SubmissionRecord,
+  ToolRegistration,
 } from "@earendil-works/pi-durable"
 import type { PiHarness } from "agents/harness/pi"
 import { Cause, Effect, Layer, Schema } from "effect"
 
+import { attributedText } from "../../messages/identity"
 import { fatalCause } from "../../shared/effect"
 import { nativeOperation } from "../../shared/interop"
 import { AttachmentContent } from "../../workspace/files"
@@ -46,7 +48,19 @@ export function normalizePiObservation(
     records: ReadonlyMap<string, SubmissionRecord>
   }
 ): ConversationObservation {
-  const { snapshot, records } = reply
+  const { records } = reply
+  const first = Math.min(
+    ...[...records.values()].flatMap((record) =>
+      record.entry === undefined ? [] : [record.entry]
+    )
+  )
+  const snapshot =
+    root.origin?.kind === "coordination"
+      ? {
+          ...reply.snapshot,
+          entries: reply.snapshot.entries.filter((entry) => entry.id >= first),
+        }
+      : reply.snapshot
   const users = placedInputs(members, records)
   const steers = new Map([...users].filter(([, member]) => member.parent_id))
   const entryIds = new Set<number>(snapshot.entries.map((entry) => entry.id))
@@ -172,7 +186,8 @@ export const piConversationObserver = (
 
 export const piConversationLayer = (
   harness: () => PiHarness,
-  defaultModel: () => string
+  defaultModel: () => string,
+  coordinationTools: () => readonly ToolRegistration[] = () => []
 ) =>
   Layer.succeed(ConversationExecution, {
     ...piConversationObserver(harness),
@@ -184,11 +199,21 @@ export const piConversationLayer = (
             [
               {
                 type: "text",
-                text:
-                  member.text ||
-                  (member.attachments.some((file) => file.kind === "audio")
-                    ? "Please respond to my attached voice message."
-                    : "Please inspect the attached files."),
+                text: attributedText(
+                  member.origin?.kind === "coordination"
+                    ? JSON.stringify({
+                        messageId: member.origin.messageId,
+                        from: member.origin.from,
+                        text: member.text,
+                      })
+                    : member.text ||
+                        (member.attachments.some(
+                          (file) => file.kind === "audio"
+                        )
+                          ? "Please respond to my attached voice message."
+                          : "Please inspect the attached files."),
+                  member.provenance
+                ),
               },
               ...member.input,
             ],
@@ -218,7 +243,10 @@ export const piConversationLayer = (
                 modelId: turn.model ?? defaultModel(),
               },
               thinkingLevel: turn.thinking ?? "medium",
-              tools: null,
+              tools:
+                turn.origin?.kind === "coordination"
+                  ? coordinationTools()
+                  : null,
             },
             BACKGROUND_CONTEXT
           )

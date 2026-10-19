@@ -10,6 +10,7 @@ import {
   Conversations,
   conversationApplication,
 } from "../src/conversations/service"
+import { CoordinationStore } from "../src/coordination/adapters/sqlite"
 import { SqliteCredentials } from "../src/inference/adapters/credential-sqlite"
 import {
   ModelCredentials,
@@ -87,6 +88,8 @@ function fixture(rotate?: () => Promise<void>) {
     runtimes.push(runtime)
     const storage = new Map<string, unknown>()
     const pause = vi.fn(() => Effect.void)
+    const coordination = new CoordinationStore(db)
+    const reconcile = vi.fn(() => Effect.void)
     const host: PersonalAgent = Object.create(PersonalAgent.prototype)
     Object.assign(host, {
       actorRuntime: runtime,
@@ -108,6 +111,12 @@ function fixture(rotate?: () => Promise<void>) {
         cancelPendingRun: () => Effect.succeed(undefined),
       },
       conversations: { unfinished: () => Effect.succeed([]) },
+      coordination: { store: coordination },
+      delegationLedger: {
+        catalog: () => Effect.succeed([1]),
+        group: () => Effect.succeed({ turnId: "finished-request" }),
+      },
+      delegations: { reconcile },
       backgroundMailbox: { list: () => Effect.succeed([]) },
       env: {
         AUTH_DB: d1(sql),
@@ -132,7 +141,7 @@ function fixture(rotate?: () => Promise<void>) {
       },
     })
     people.set(key, host)
-    return { host, db, ledger, pause }
+    return { host, db, ledger, pause, coordination, reconcile }
   }
   return { sql, actor, refresh }
 }
@@ -229,6 +238,10 @@ it("pauses old scheduled work when removal and a new membership occur between ac
     joinedAt: 1,
   })
   expect(member.pause).toHaveBeenCalledTimes(1)
+  expect(Effect.runSync(member.coordination.closed("finished-request"))).toBe(
+    true
+  )
+  expect(member.reconcile).toHaveBeenCalledWith("finished-request")
   await member.host.familyAdmission()
   expect(member.pause).toHaveBeenCalledTimes(1)
 })

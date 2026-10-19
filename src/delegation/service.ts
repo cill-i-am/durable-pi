@@ -1,5 +1,6 @@
 import { Clock, Context, Effect, Layer, Schema } from "effect"
 
+import { attributedText } from "../messages/identity"
 import { preserveFatal } from "../shared/effect"
 import { Control, DelegationFailure } from "./contracts"
 import {
@@ -20,10 +21,11 @@ import {
   projectGroup,
   report,
   requestId,
+  initialMessage,
   requireChild,
   requireCurrent,
 } from "./domain"
-import type { DelegationLedger } from "./ledger"
+import type { DelegationLedger, DelegationTransaction } from "./ledger"
 
 export class Delegation extends Context.Service<Delegation, Delegations>()(
   "durable-pi/delegation/Delegation"
@@ -103,7 +105,12 @@ export function makeDelegations(
     if (input.action.type === "stop") yield* ledger.abort(child.id)
     else {
       yield* decision(() => requireChild(group, child.id, now))
-      yield* ledger.submit(child.id, input.action.text, controlId(input), true)
+      yield* ledger.submit(
+        child.id,
+        attributedText(input.action.text, input.provenance),
+        controlId(input),
+        true
+      )
     }
     yield* ledger.atomic((tx) =>
       Effect.gen(function* () {
@@ -124,9 +131,80 @@ export function makeDelegations(
       if (
         (yield* read(() => authority.cancelled(group.turnId))) ||
         (yield* clock) >= group.deadline
-      )
+      ) {
         for (const child of group.children) yield* ledger.abort(child.id)
-      else for (const control of group.controls) yield* deliver(control)
+        if (group.detached)
+          yield* ledger.atomic((tx) =>
+            Effect.gen(function* () {
+              const doc = yield* tx.group(group.id)
+              if (doc.value)
+                doc.value = {
+                  ...doc.value,
+                  closed: true,
+                  revision: doc.value.revision + 1,
+                  children: doc.value.children.map((child) => ({
+                    ...child,
+                    stopped: true,
+                  })),
+                }
+            })
+          )
+      } else {
+        // Ownerless children survive the tool call. Reconcile the initial handoff
+        // as well as controls after a crash between committing and submitting.
+        if (group.detached)
+          for (const child of group.children) {
+            if (
+              !child.stopped &&
+              !(yield* ledger.hasSubmission(
+                child.id,
+                requestId(group, child.id)
+              ))
+            )
+              yield* ledger.submit(
+                child.id,
+                initialMessage(group, child),
+                requestId(group, child.id),
+                false
+              )
+          }
+        for (const control of group.controls) yield* deliver(control)
+        if (group.detached && group.children.every((child) => child.stopped))
+          yield* ledger.atomic((tx) =>
+            Effect.gen(function* () {
+              const doc = yield* tx.group(group.id)
+              if (doc.value)
+                doc.value = {
+                  ...doc.value,
+                  closed: true,
+                  revision: doc.value.revision + 1,
+                }
+            })
+          )
+      }
+    })
+  const requireGroupCapacity = (
+    tx: DelegationTransaction,
+    ids: readonly number[],
+    now: number
+  ) =>
+    Effect.gen(function* () {
+      let live = 0
+      for (const id of ids) {
+        const previous = (yield* tx.group(id)).value
+        if (
+          previous?.detached &&
+          !previous.closed &&
+          previous.deadline > now &&
+          !(yield* read(() => authority.cancelled(previous.turnId)))
+        )
+          live++
+      }
+      if (live >= 3)
+        return yield* failure(
+          "limit",
+          "Three agent groups are already open in this bot."
+        )
     })
   return {
     run: Effect.fn("Delegation.run")(function* (raw, source: DelegationSource) {
@@ -169,7 +247,10 @@ export function makeDelegations(
                 "conflict",
                 "Delegation identity belongs to a different parent request."
               )
-            if (JSON.stringify(document.value.input) !== JSON.stringify(input))
+            if (
+              JSON.stringify(document.value.input) !== JSON.stringify(input) ||
+              !!document.value.detached !== !!source.detached
+            )
               return yield* failure(
                 "conflict",
                 "Delegation identity was reused with a different brief."
@@ -177,7 +258,17 @@ export function makeDelegations(
             return document.value
           }
           const now = yield* clock
+          if (
+            !(yield* read(() =>
+              authority.current(source.turnId, source.conversationId)
+            ))
+          )
+            return yield* failure("cancelled", "The parent request has ended.")
+          const catalog = yield* tx.catalog()
+          if (source.detached) yield* requireGroupCapacity(tx, catalog.ids, now)
           const saved: SavedGroup = {
+            ...(source.botId ? { botId: source.botId } : {}),
+            ...(source.detached ? { detached: true } : {}),
             id: source.taskId,
             turnId: source.turnId,
             conversationId: source.conversationId,
@@ -202,7 +293,6 @@ export function makeDelegations(
               stopped: false,
             })
           const value = { ...saved, children }
-          const catalog = yield* tx.catalog()
           yield* current(value)
           document.value = value
           parent.group = value.id
@@ -225,15 +315,27 @@ export function makeDelegations(
               return
             const submission = yield* ledger.submit(
               child.id,
-              child.task,
+              initialMessage(group, child),
               requestId(group, child.id),
               false
             )
             yield* reconcile(yield* ledger.group(group.id))
-            yield* ledger.wait(submission)
+            if (!group.detached) yield* ledger.wait(submission)
           }),
         { concurrency: CHILD_LIMIT, discard: true }
       )
+      if (group.detached)
+        return JSON.stringify({
+          groupId: group.id,
+          sessionId: group.turnId,
+          status: "accepted",
+          agents: group.children.map((child) => ({
+            sessionId: group.turnId,
+            agentId: String(child.id),
+            name: child.name,
+          })),
+          deadline: group.deadline,
+        })
       for (;;) {
         const saved = yield* ledger.group(group.id)
         yield* current(saved)
@@ -319,9 +421,11 @@ export function makeDelegations(
       const group = yield* ledger.group(input.groupId)
       if (
         !group.closed &&
-        (yield* read(() =>
-          authority.current(group.turnId, group.conversationId)
-        ))
+        (group.detached
+          ? !(yield* read(() => authority.cancelled(group.turnId)))
+          : yield* read(() =>
+              authority.current(group.turnId, group.conversationId)
+            ))
       )
         yield* deliver(input)
       return { accepted }
