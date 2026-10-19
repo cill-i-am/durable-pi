@@ -5,6 +5,7 @@ import type { Submission } from "../conversations/turns"
 import { ReplySendFailed as WhatsAppSendFailed } from "../replies/contracts"
 import { deliverReply } from "../replies/delivery"
 import { preserveFatal } from "../shared/effect"
+import { taskCommand } from "../tasks/commands"
 import type { WhatsAppStore } from "./adapters/sqlite"
 import {
   whatsappIdentity,
@@ -18,6 +19,10 @@ import { whatsappReply } from "./reply"
 
 export { ReplySendFailed as WhatsAppSendFailed } from "../replies/contracts"
 export interface WhatsAppPumpHost {
+  control?: (
+    body: string,
+    agent: AgentId
+  ) => Effect.Effect<string, WhatsAppFailure>
   media?: (record: WhatsAppRecord) => Effect.Effect<string, WhatsAppFailure>
   active: (id: AgentId) => Effect.Effect<boolean, WhatsAppFailure>
   admit: (
@@ -130,6 +135,41 @@ export function whatsappPump(records: WhatsAppStore, host: WhatsAppPumpHost) {
     }
     return fileId ? [fileId] : []
   })
+  const prepareControl = Effect.fn("WhatsApp.prepareControl")(function* (
+    record: WhatsAppRecord
+  ) {
+    if (!record.media && taskCommand(record.body)) {
+      const reply = host.control
+        ? yield* host.control(record.body, record.agentId)
+        : "Task controls are unavailable. Open Pi to review the task."
+      yield* records.update(record.id, "queued", "waiting", {
+        reply,
+        control: true,
+      })
+      return true
+    }
+    return false
+  })
+  const prepareQueued = Effect.fn("WhatsApp.prepareQueued")(function* (
+    record: WhatsAppRecord
+  ) {
+    if (yield* prepareControl(record)) return
+    const files = yield* prepareMedia(record)
+    if (!files) return
+    yield* host.admit(record.agentId, {
+      operationId: record.id,
+      text: record.body,
+      mode: "followUp",
+      files,
+      origin: {
+        kind: "whatsapp",
+        sender: record.sender,
+        messageId: record.messageId,
+      },
+    })
+    yield* records.update(record.id, "queued", "waiting")
+    return
+  })
   const process = Effect.fn("WhatsApp.process")(function* (
     record: WhatsAppRecord
   ) {
@@ -157,20 +197,7 @@ export function whatsappPump(records: WhatsAppStore, host: WhatsAppPumpHost) {
       return
     }
     if (record.state === "queued") {
-      const files = yield* prepareMedia(record)
-      if (!files) return
-      yield* host.admit(record.agentId, {
-        operationId: record.id,
-        text: record.body,
-        mode: "followUp",
-        files,
-        origin: {
-          kind: "whatsapp",
-          sender: record.sender,
-          messageId: record.messageId,
-        },
-      })
-      yield* records.update(record.id, "queued", "waiting")
+      yield* prepareQueued(record)
       return
     }
     const turn = yield* host.turn(record.agentId, record.id)

@@ -255,6 +255,11 @@ import {
 import { emailPump, EmailSendFailed } from "../email/pump"
 import { replyDeliveryProgress } from "../replies/progress"
 import { jsonRequest } from "../shared/http"
+import { localTaskControls } from "../tasks/adapters/personal-agent"
+import { taskTools, taskInstructions } from "../tasks/adapters/tools"
+import { taskCommand, type TaskCommand } from "../tasks/commands"
+import { TaskControlError, TaskReference } from "../tasks/contracts"
+import { taskDirectory } from "../tasks/directory"
 import { whatsappConfigured } from "../whatsapp/adapters/chat"
 import { whatsappRequest } from "../whatsapp/adapters/http"
 import { exportWhatsAppMedia } from "../whatsapp/adapters/media"
@@ -1441,6 +1446,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             ).exportMedia(owner, id)
           )
     return whatsappApplication(this.whatsappStore, {
+      control: (body, id) =>
+        agentNative("control task from WhatsApp", (signal) =>
+          this.taskAction(taskCommand(body)!, id, signal)
+        ).pipe(Effect.mapError(() => new WhatsAppUnavailable())),
       profiles,
       active,
       configured: () => whatsappConfigured(this.env),
@@ -1589,6 +1598,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     return WhatsAppOutcome.encode(await this.actorRuntime.runPromiseExit(work))
   }
   readonly emailPump = emailPump(this.emailStore, {
+    control: (record) =>
+      agentNative("control task from email", (signal) =>
+        this.taskAction(taskCommand(record.body)!, undefined, signal)
+      ).pipe(Effect.mapError(() => new EmailUnavailable())),
     active: () =>
       this.configurationService.read().pipe(
         Effect.map(
@@ -2529,6 +2542,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             render: () => communicationInstructions,
             tag: false,
           },
+          { key: "tasks", render: () => taskInstructions, tag: false },
           { key: "planning", render: () => planningInstructions, tag: false },
           {
             key: "delegation",
@@ -2537,6 +2551,9 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           },
         ],
         tools: [
+          ...taskTools((command, signal) =>
+            this.taskAction(command, undefined, signal)
+          ),
           ...passkeyTools((input, signal) => this.passkeyAction(input, signal)),
           ...familyTools(
             (input, signal) => this.familyAction(input, signal),
@@ -3364,12 +3381,97 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     return AgentOutcome.encode(exit)
   }
 
+  private localTasks() {
+    return localTaskControls(this)
+  }
+  async taskAction(
+    command: TaskCommand,
+    current?: AgentId,
+    signal?: AbortSignal
+  ) {
+    const access = await this.familyAdmission()
+    if (!access) return "Your account access has ended."
+    const identity = await this.communication.runtime.runPromise(
+      this.communication.mailbox.identity()
+    )
+    const root = this.env.AGENT.getByName(access.owner)
+    const call = async (
+      agent: AgentProfile,
+      task?: typeof TaskReference.Type
+    ) => {
+      const response = await agentGateway(
+        new Request(
+          `https://agent.internal/api/agent/tasks${task ? "/stop" : ""}?agent=${agent.id}`,
+          {
+            method: task ? "POST" : "GET",
+            headers: {
+              "x-owner-id": access.owner,
+              "content-type": "application/json",
+            },
+            ...(task ? { body: JSON.stringify(task) } : {}),
+            signal,
+          }
+        ),
+        { AGENT: this.env.AGENT },
+        this.ctx
+      )
+      if (!response.ok) {
+        await response.body?.cancel()
+        throw new TaskControlError({
+          code: response.status === 404 ? "not_found" : "unavailable",
+          message:
+            "This task's state could not be confirmed. Retry the same handle.",
+        })
+      }
+      return response.json<unknown>()
+    }
+    try {
+      return await taskDirectory({
+        profiles: () => agentRpc(root).profiles(),
+        list: (agent) => call(agent),
+        stop: call,
+      })(command, current ?? identity.bot)
+    } catch (error) {
+      if (Schema.is(TaskControlError)(error)) return error.message
+      throw error
+    }
+  }
   private httpProgram(request: Request) {
     return Effect.gen({ self: this }, function* () {
       yield* Effect.yieldNow
       const url = new URL(request.url)
       const path = url.pathname.replace("/api/agent/", "")
       const base = path.split("/")[0]
+      if (base === "tasks") {
+        const tasks = this.localTasks()
+        const operation = Effect.gen(function* () {
+          if (path === "tasks" && request.method === "GET")
+            return Response.json(yield* tasks.list())
+          if (path === "tasks/stop" && request.method === "POST")
+            return Response.json(
+              yield* tasks.stop(yield* agentJson(request, TaskReference, 2048))
+            )
+          return new Response("Not found", { status: 404 })
+        })
+        return yield* operation.pipe(
+          preserveFatal,
+          Effect.catchTag("TaskControlError", (error) =>
+            Effect.succeed(
+              Response.json(
+                { error: error.message },
+                {
+                  status:
+                    error.code === "not_found"
+                      ? 404
+                      : error.code === "unavailable"
+                        ? 503
+                        : 400,
+                }
+              )
+            )
+          )
+        )
+      }
       if (path === "model-account") {
         const principal = request.headers.get("x-owner-id")
         if (

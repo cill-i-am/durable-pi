@@ -306,3 +306,9 @@ The selected community [Effect lifecycle rules](https://github.com/cevr/oxlint-p
 React component syntax and handler naming remain flexible. Memo wrappers and native-tag substitutions are not required for valid live regions and composite widgets. The incomplete React Compiler diagnostics are explicitly disabled where they reject supported try/finally, dynamic imports, schemas or mutable request lifetimes; the Hooks dependency checker remains enabled. Intentional request-generation invalidation and the reconnect transport key have local, explained exceptions.
 
 Oxlint enforces classic cyclomatic complexity **20** for source, scripts and tests, with no legacy waivers. [cccc](https://github.com/moznion/cccc) reports cognitive and cyclomatic complexity separately: install its official **v1.8.3** release, then run `pnpm complexity:report` for JSON or `cccc --top-cognitive 25 --table src` for a table. CI verifies the reporter through its pinned setup action, adds the top cognitive hotspots to the check summary, and retains the complete JSON report for 14 days. cccc is informational; Oxlint provides the complexity gate.
+
+### Task controls across agents and surfaces
+
+Each agent can use `list_tasks` to inspect unfinished requests, bot-to-bot tasks and background groups across the account, and `stop_task` to stop one exact task. The same existing tool permissions apply. Request-owned research stops with its parent request.
+
+Email and WhatsApp accept `STATUS`, `STATUS all`, `STATUS <agent slug>` and `STOP <handle>` as the first line. WhatsApp also accepts slash prefixes. Copy the stable task handle returned by status; it identifies the original agent and task even after an agent is renamed. These commands run while the model is busy. A stop acknowledgement records cancellation intent and reports its saved state; it cannot undo completed actions. Approvals keep their existing controls.

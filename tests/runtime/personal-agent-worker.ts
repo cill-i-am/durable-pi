@@ -59,6 +59,7 @@ import { piPlanLedger } from "../../src/planning/adapters/pi"
 import type { PlanUpdate } from "../../src/planning/contracts"
 import { nativeOperation } from "../../src/shared/interop"
 import { SkillStorageError } from "../../src/skills/contracts"
+import { localTaskControls } from "../../src/tasks/adapters/personal-agent"
 import { WebhookStorageError } from "../../src/webhooks/persistence"
 import { whatsappRpc } from "../../src/whatsapp/adapters/rpc"
 import { whatsappIdentity } from "../../src/whatsapp/contracts"
@@ -1126,6 +1127,54 @@ export class PersonalAgentProbe extends PersonalAgent {
     })
   }
 
+  private async taskControlProbe(
+    _request: Request,
+    action: string | undefined
+  ): Promise<Response | undefined> {
+    if (action !== "task-controls") return undefined
+    await this.communication.runtime.runPromise(
+      this.communication.repository.bindIdentity({
+        owner: "task-controls-owner",
+        bot: homeAgentId,
+      })
+    )
+    await this.actorRuntime.runPromise(
+      this.conversations.admit(
+        {
+          operationId: "original-task",
+          text: "Original queued task.",
+        },
+        { pending: true, files: [], content: [] }
+      )
+    )
+    await this.actorRuntime.runPromise(
+      this.conversations.admit({
+        operationId: "newer-task",
+        text: "Newer queued task.",
+      })
+    )
+    const tasks = localTaskControls(this)
+    const before = await this.actorRuntime.runPromise(tasks.list())
+    const stopped = await this.actorRuntime.runPromise(
+      tasks.stop({ kind: "request", id: "original-task" })
+    )
+    const replay = await this.actorRuntime.runPromise(
+      tasks.stop({ kind: "request", id: "original-task" })
+    )
+    const newer = await this.actorRuntime.runPromise(
+      this.conversations.get("newer-task")
+    )
+    const original = await this.actorRuntime.runPromise(
+      this.conversations.get("original-task")
+    )
+    return Response.json({
+      before,
+      stopped,
+      replay,
+      newerState: newer?.status,
+      originalSession: original?.session_id,
+    })
+  }
   override async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url)
     if (url.pathname.endsWith("/chatgpt-native"))
@@ -1165,6 +1214,7 @@ export class PersonalAgentProbe extends PersonalAgent {
       )
     const action = new URL(request.url).pathname.split("/").at(-1)
     for (const probe of [
+      this.taskControlProbe,
       this.nativeCommitProbe,
       this.nativeRpcProbe,
       this.commandsProbe,

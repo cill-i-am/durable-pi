@@ -5,6 +5,7 @@ import type { Submission } from "../conversations/turns"
 import { ReplySendFailed as EmailSendFailed } from "../replies/contracts"
 import { deliverReply } from "../replies/delivery"
 import { preserveFatal } from "../shared/effect"
+import { taskCommand } from "../tasks/commands"
 import { emailDecision } from "./approvals"
 import {
   EmailUnavailable,
@@ -16,6 +17,7 @@ import { emailReply } from "./reply"
 
 export { ReplySendFailed as EmailSendFailed } from "../replies/contracts"
 export interface EmailPumpHost {
+  control?: (record: EmailRecord) => Effect.Effect<string, EmailFailure>
   active: () => Effect.Effect<boolean, EmailFailure>
   admit: (input: Submission) => Effect.Effect<unknown, EmailUnavailable>
   turn: (id: string) => Effect.Effect<Turn | undefined, EmailFailure>
@@ -67,6 +69,35 @@ export function emailPump(records: EmailPersistence, host: EmailPumpHost) {
         }),
     })
   })
+  const isTaskControl = (record: EmailRecord) =>
+    !record.files?.length && taskCommand(record.body)
+  const prepareControl = Effect.fn("Email.prepareControl")(function* (
+    record: EmailRecord
+  ) {
+    if (isTaskControl(record)) {
+      const reply = host.control
+        ? yield* host.control(record)
+        : "Task controls are unavailable. Open Pi to review the task."
+      yield* records.update(record.id, "queued", "waiting", { reply })
+      return true
+    }
+    if (emailDecision(record.body)) {
+      const reply = yield* (
+        host.decide
+          ? host.decide(record)
+          : Effect.succeed(
+              "Email decisions are unavailable. Review this action in Pi."
+            )
+      ).pipe(
+        Effect.catchTag("EmailRejected", (error) =>
+          Effect.succeed(error.message)
+        )
+      )
+      yield* records.update(record.id, "queued", "waiting", { reply })
+      return true
+    }
+    return false
+  })
   const process = Effect.fn("Email.process")(function* (record: EmailRecord) {
     if (!(yield* records.settings()).enabled || !(yield* host.active())) {
       yield* records.update(record.id, record.state, "cancelled", {
@@ -80,21 +111,7 @@ export function emailPump(records: EmailPersistence, host: EmailPumpHost) {
       return
     }
     if (record.state === "queued") {
-      if (emailDecision(record.body)) {
-        const reply = yield* (
-          host.decide
-            ? host.decide(record)
-            : Effect.succeed(
-                "Email decisions are unavailable. Review this action in Pi."
-              )
-        ).pipe(
-          Effect.catchTag("EmailRejected", (error) =>
-            Effect.succeed(error.message)
-          )
-        )
-        yield* records.update(record.id, "queued", "waiting", { reply })
-        return
-      }
+      if (yield* prepareControl(record)) return
       yield* host.admit({
         operationId: record.id,
         text: `Subject: ${record.subject || "(no subject)"}\n\n${record.body}`,
@@ -109,7 +126,11 @@ export function emailPump(records: EmailPersistence, host: EmailPumpHost) {
       yield* records.update(record.id, "queued", "waiting")
     }
     if (record.state === "waiting") {
-      if (record.purpose === "notification" || emailDecision(record.body)) {
+      if (
+        record.purpose === "notification" ||
+        emailDecision(record.body) ||
+        isTaskControl(record)
+      ) {
         yield* send(record, record.reply)
         return
       }

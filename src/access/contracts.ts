@@ -162,6 +162,19 @@ export const builtInTools = [
     mode: "ask",
   },
   {
+    name: "list_tasks",
+    title: "Read task status",
+    description: "Read unfinished work across your account's agents.",
+    mode: "allow",
+  },
+  {
+    name: "stop_task",
+    title: "Stop a task",
+    description:
+      "Request cancellation of one explicit task across your account's agents.",
+    mode: "allow",
+  },
+  {
     name: "check_bot_task",
     title: "Read bot task",
     description: "Inspect this bot's durable task result.",

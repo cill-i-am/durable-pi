@@ -357,6 +357,7 @@ const personalProbeOwners = new Map([
   ["personal-code", "personal-code-owner"],
   ["personal-terminal", "personal-terminal-owner"],
   ["personal", "personal-owner"],
+  ["personal-tasks", "task-controls-owner"],
   ["personal-maintenance", "personal-maintenance-owner"],
 ])
 let websiteSessionValid = true
