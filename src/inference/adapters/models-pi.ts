@@ -10,6 +10,7 @@ import { runObserved } from "../../observability/worker"
 import { fatalCause } from "../../shared/effect"
 import { validateRoute, type ModelCatalog } from "../policy"
 import type { ThinkingLevel } from "../selection"
+import { makeInferenceTiming } from "../timing"
 import { workerChatGPTAuth } from "./credentials-pi"
 import { memoryPayload } from "./payload-openai"
 import { PiModelRequest } from "./streams-pi"
@@ -142,6 +143,7 @@ export function createAgentModels(
   models.streamSimple = (model, context, request) => {
     let observation: NativeInferenceObservation | undefined
     let incomplete = false
+    const timing = Effect.runSync(makeInferenceTiming)
     const owned = new PiModelRequest(
       model,
       async (current) => {
@@ -181,8 +183,16 @@ export function createAgentModels(
         return nativeStream(model, context, {
           ...request,
           signal: current.signal,
-          fetch: (input, init) =>
-            current.fetch(input, init, request?.fetch ?? globalThis.fetch),
+          fetch: async (input, init) => {
+            Effect.runSync(timing.mark("fetchStartMs"))
+            const response = await current.fetch(
+              input,
+              init,
+              request?.fetch ?? globalThis.fetch
+            )
+            Effect.runSync(timing.mark("responseHeadersMs"))
+            return response
+          },
           onPayload: (payload, selected) =>
             current.callback(
               async () =>
@@ -194,6 +204,17 @@ export function createAgentModels(
             }),
           onProviderStreamEvent: (event, selected) =>
             current.callback(async () => {
+              Effect.runSync(timing.mark("firstEventMs"))
+              if (
+                typeof event === "object" &&
+                event !== null &&
+                "type" in event &&
+                event.type === "response.output_text.delta" &&
+                "delta" in event &&
+                typeof event.delta === "string" &&
+                event.delta.length > 0
+              )
+                Effect.runSync(timing.mark("firstTextMs"))
               const usage = providerUsage(event)
               if (usage) await persistUsage(() => observation?.usage(usage))
               if (
@@ -212,7 +233,9 @@ export function createAgentModels(
         })
       },
       async (event) => {
-        if (event.type === "done") await observation?.end("completed")
+        const timings = Effect.runSync(timing.snapshot())
+        if (event.type === "done")
+          await observation?.end("completed", null, timings)
         else
           await observation?.end(
             incomplete
@@ -220,7 +243,8 @@ export function createAgentModels(
               : event.reason === "aborted"
                 ? "cancelled"
                 : "failed",
-            safeInferenceError(event.error.errorMessage ?? "")
+            safeInferenceError(event.error.errorMessage ?? ""),
+            timings
           )
       },
       request?.signal

@@ -4,6 +4,7 @@ import type { ResolvedRoute } from "./policy"
 import { finishAttempt, recordUsage, restartError } from "./usage-domain"
 import type {
   AccountUsage,
+  InferenceTimings,
   Attempt,
   TerminalOutcome,
   UsageReport,
@@ -18,7 +19,8 @@ export interface InferenceObservation {
   usage: (report: UsageReport) => Effect.Effect<void, UsageStorageError>
   end: (
     outcome: TerminalOutcome,
-    error?: string | null
+    error?: string | null,
+    timings?: InferenceTimings
   ) => Effect.Effect<Attempt | undefined, UsageStorageError>
 }
 export class InferenceUsage extends Context.Service<
@@ -71,13 +73,20 @@ export function usageApplication(ledger: UsageLedger, uuid: () => string) {
           }),
           end: Effect.fn("InferenceUsage.finish")(function* (
             outcome,
-            error = null
+            error = null,
+            timings
           ) {
             const at = new Date(yield* Clock.currentTimeMillis).toISOString()
             return yield* ledger.atomic(() =>
               Effect.gen(function* () {
                 const current = yield* ledger.read(id)
-                const finished = finishAttempt(current, outcome, error, at)
+                const finished = finishAttempt(
+                  current,
+                  outcome,
+                  error,
+                  at,
+                  timings
+                )
                 if (finished) yield* ledger.put(finished)
                 return finished
               })

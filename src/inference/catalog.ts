@@ -43,7 +43,10 @@ export const makeModelCatalog = (source: CatalogSource) =>
       {
         capacity: 1,
         requireServicesAt: "lookup",
-        timeToLive: (exit) => (Exit.isSuccess(exit) ? "60 seconds" : 0),
+        // Capability metadata is reusable; authority is not. Every read above
+        // still checks live membership and the current credential fingerprint.
+        // No expired result or failed refresh is served as a fallback.
+        timeToLive: (exit) => (Exit.isSuccess(exit) ? "5 minutes" : 0),
       }
     )
     return {

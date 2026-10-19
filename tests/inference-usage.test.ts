@@ -392,3 +392,22 @@ test("existing account rows survive activation and new attempt identity collisio
     requests: 1,
   })
 })
+
+test("optional phase timings survive storage and cannot overwrite an already settled attempt", async () => {
+  const db = database(),
+    usage = usageFixture(db)
+  const start = piUsage(usage.service, Effect.runPromise)
+  const observation = await start(route, "timed", "conversation")
+  const timings = {
+    fetchStartMs: 120,
+    responseHeadersMs: 350,
+    firstEventMs: 360,
+    firstTextMs: 1650,
+  }
+  await observation.end("completed", null, timings)
+  await observation.end("failed", "late", { fetchStartMs: 999 })
+  expect(usageFixture(db).recent()[0]?.timings).toEqual(timings)
+  const old = await start(route, "legacy", "memory")
+  await old.end("completed")
+  expect(usage.recent()[0]?.timings).toBeUndefined()
+})
