@@ -2,6 +2,7 @@ import { Schema } from "effect"
 
 import { AgentId } from "../agents/domain"
 import { ReplyProgress } from "../replies/contracts"
+import { ReplyDeliveryProgress } from "../replies/progress"
 import { AudioMime } from "../workspace/audio"
 import { FileId } from "../workspace/files"
 
@@ -117,6 +118,8 @@ export const WhatsAppView = Schema.Struct({
     Schema.Struct({
       id: OperationId,
       agentId: AgentId,
+      progress: Schema.optionalKey(ReplyDeliveryProgress),
+      preparingFiles: Schema.optionalKey(Schema.Boolean),
       state: WhatsAppDelivery,
       error: Schema.NullOr(Schema.String),
       createdAt: Schema.Number,
@@ -133,6 +136,8 @@ export const RetryWhatsApp = Schema.Struct({
   acknowledgeDuplicateRisk: Schema.Boolean,
 })
 export const WhatsAppTurn = Schema.Struct({
+  error: Schema.optionalKey(Schema.NullOr(Schema.String)),
+  preparingFiles: Schema.optionalKey(Schema.Boolean),
   status: Schema.Literals([
     "queued",
     "preparing",

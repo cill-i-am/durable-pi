@@ -362,6 +362,7 @@ export class ConversationStore implements ConversationLedger {
             model: settings.model,
             thinking: settings.thinking,
             creation,
+            files_pending: content.files_pending,
             attachments: JSON.stringify(content.attachments),
             input: JSON.stringify(content.input),
             skills: JSON.stringify(content.skills),
@@ -381,6 +382,40 @@ export class ConversationStore implements ConversationLedger {
         if (!turn)
           return yield* Effect.die(new Error("Committed turn was not readable"))
         return { turn, accepted: true }
+      })
+    )
+  }
+  saveAttachments(
+    id: string,
+    prepared: PreparedMessage
+  ): ReturnType<ConversationLedger["saveAttachments"]> {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const turn = yield* this.get(id)
+        if (
+          !turn?.files_pending ||
+          !["queued", "preparing"].includes(turn.status) ||
+          turn.prompt !== null
+        )
+          return false
+        if (
+          JSON.stringify(turn.attachments.map((f) => f.id)) !==
+          JSON.stringify(prepared.files.map((f) => f.id))
+        )
+          return yield* Effect.die(
+            new Error("Prepared attachments do not match the admitted request")
+          )
+        yield* this.query((orm) =>
+          orm
+            .update(chatTurns)
+            .set({
+              files_pending: prepared.pending ?? false,
+              attachments: JSON.stringify(prepared.files),
+              input: JSON.stringify(prepared.content),
+            })
+            .where(eq(chatTurns.id, id))
+        )
+        return true
       })
     )
   }
@@ -515,6 +550,7 @@ export class ConversationStore implements ConversationLedger {
               .update(chatTurns)
               .set({
                 status: outcome.status,
+                files_pending: false,
                 finished_at: new Date().toISOString(),
                 delivery: outcome.delivery,
                 input: "[]",

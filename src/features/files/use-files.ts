@@ -5,7 +5,7 @@ import { agentApi } from "@/http/client"
 import { poll } from "@/http/poll"
 import { FileInfo, FileList, MAX_ATTACHMENTS } from "@/workspace/files"
 
-import { attachmentReady, preparingFile } from "./preparation"
+import { attachmentSelectable, preparingFile } from "./preparation"
 import { uploadFile, type UploadAttempt } from "./uploads"
 
 export function useFiles(agentId: string) {
@@ -179,7 +179,7 @@ export function useFiles(agentId: string) {
     retry,
     mutate,
     uploading: processing,
-    attachmentsReady: selected.every(attachmentReady),
+    attachmentsReady: selected.every(attachmentSelectable),
     remove: (id: string) =>
       setSelected((current) => current.filter((file) => file.id !== id)),
     clear: (ids: readonly string[]) =>

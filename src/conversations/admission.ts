@@ -13,6 +13,7 @@ import {
 import { SkillConflict, SkillStorageError } from "../skills/contracts"
 import type { SkillLedger } from "../skills/repository"
 import type { WorkspaceAdmission } from "../workspace/admission"
+import { prepareAttachments } from "../workspace/attachments"
 import {
   FileNotFound,
   FileRejected,
@@ -127,7 +128,11 @@ export function guardedMessageAdmission(
           validateRoute(
             route,
             catalog,
-            prepared.content.some((block) => block.type === "image")
+            prepared.content.some((block) => block.type === "image") ||
+              (!!prepared.pending &&
+                prepared.files.some(
+                  (file) => file.kind === "video" || file.kind === "image"
+                ))
           )
         )
         return yield* conversations.admit(
@@ -156,7 +161,10 @@ export interface MessageAdmissionHost<TError, TRequirements = never> {
 }
 export function messageAdmission<TError, TRequirements>(
   conversations: typeof Conversations.Service,
-  workspace: Pick<typeof Workspace.Service, "attach" | "requireFiles">,
+  workspace: Pick<
+    typeof Workspace.Service,
+    "attach" | "requireFiles" | "retryExtraction"
+  >,
   commit: MessageCommit,
   host: MessageAdmissionHost<TError, TRequirements>
 ) {
@@ -176,7 +184,11 @@ export function messageAdmission<TError, TRequirements>(
     }
     if (!(yield* host.connected()))
       return yield* new ConversationRejected({ reason: "disconnected" })
-    const prepared = yield* workspace.attach(input.files ?? [])
+    const prepared = yield* prepareAttachments(
+      workspace,
+      input.files ?? [],
+      !!input.retryOf
+    )
     if (yield* host.archived())
       return yield* new ConversationRejected({ reason: "archived" })
     yield* workspace.requireFiles(input.files ?? [])

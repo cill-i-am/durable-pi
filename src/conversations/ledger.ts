@@ -46,6 +46,10 @@ export interface ConversationLedger {
     skills?: readonly SkillDocument[],
     resolved?: ResolvedRoute
   ) => Effect.Effect<TurnAdmission, ConversationError>
+  saveAttachments: (
+    id: string,
+    prepared: PreparedMessage
+  ) => Effect.Effect<boolean, ConversationError>
   prepare: (id: string) => Effect.Effect<void, ConversationError>
   savePrompt: (
     id: string,

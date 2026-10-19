@@ -40,7 +40,7 @@ import { VideoResult } from "@/workspace/video"
 
 import { AudioPlayer } from "./audio-player"
 import { fileSize } from "./file-attachments"
-import { attachmentReady, fileDescription, legacyPdf } from "./preparation"
+import { attachmentSelectable, fileDescription, legacyPdf } from "./preparation"
 import { FilePicker, UploadStatus } from "./upload-controls"
 import type { FilesState } from "./use-files"
 
@@ -192,7 +192,7 @@ export function FilesWorkbench({
                     onAttached()
                   }}
                   disabled={
-                    !attachmentReady(preview) ||
+                    !attachmentSelectable(preview) ||
                     selectionDisabled ||
                     state.selected.length >= 4 ||
                     state.selected.some((item) => item.id === preview.id)

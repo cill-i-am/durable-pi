@@ -11,6 +11,8 @@ export const legacyPdf = (file: FileInfo) =>
   file.kind === "document" &&
   file.mime === "application/octet-stream" &&
   /\.pdf$/i.test(file.name)
+export const attachmentSelectable = (file: FileInfo) =>
+  !file.trashed && file.status === "ready"
 export const attachmentReady = (file: FileInfo) =>
   !file.trashed &&
   file.status === "ready" &&

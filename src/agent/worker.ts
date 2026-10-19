@@ -170,6 +170,7 @@ import {
   guardedMessageAdmission,
   messageAdmission,
 } from "../conversations/admission"
+import { resumeAttachments } from "../conversations/attachments"
 import { retryMessage, stopConversation } from "../conversations/commands"
 import {
   CancelInput,
@@ -252,6 +253,7 @@ import {
   type ConfigureEmail,
 } from "../email/contracts"
 import { emailPump, EmailSendFailed } from "../email/pump"
+import { replyDeliveryProgress } from "../replies/progress"
 import { jsonRequest } from "../shared/http"
 import { whatsappConfigured } from "../whatsapp/adapters/chat"
 import { whatsappRequest } from "../whatsapp/adapters/http"
@@ -1271,6 +1273,13 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     this.skills,
     conversationTransactions(this.db)
   )
+  readonly resumeAttachments = resumeAttachments(
+    this.conversations,
+    this.workspaceService,
+    this.botConfiguration,
+    this.actorRuntime.runSync(WorkspaceAdmission),
+    conversationTransactions(this.db)
+  )
   readonly messageAdmission = messageAdmission<
     ConversationExecutionError | AgentConflict | AgentStorageError,
     never
@@ -1284,9 +1293,26 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         ),
     catalog: () => this.catalogProgram(),
     wake: () =>
-      conversationNativeOperation("wake conversation", () =>
-        this.runner.wake()
-      ),
+      Effect.gen({ self: this }, function* () {
+        yield* conversationNativeOperation("wake conversation", () =>
+          this.runner.wake()
+        )
+        if (
+          yield* this.workspaceService.extractionPending().pipe(
+            Effect.mapError(
+              (cause) =>
+                new ConversationExecutionError({
+                  operation: "check attachment preparation",
+                  cause,
+                })
+            )
+          )
+        )
+          yield* conversationNativeOperation(
+            "wake attachment preparation",
+            () => this.extraction.wake()
+          )
+      }),
     notify: () => Effect.sync(() => this.notifyConversation()),
   })
   readonly retryMessage = retryMessage(
@@ -1318,6 +1344,8 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       const access = yield* this.access.state()
       return {
         status: turn.status,
+        error: turn.error,
+        preparingFiles: turn.files_pending ?? false,
         answer: turn.answer,
         files: (yield* this.workspaceService.replyFiles(id)).map(
           (file) => file.id
@@ -1630,14 +1658,29 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
               )
             )
           : null
-      const messages = (yield* this.emailStore.list()).map(
-        ({ id, subject, state, error, createdAt }) => ({
-          id,
-          subject,
-          state,
-          error,
-          createdAt,
-        })
+      const messages = yield* Effect.forEach(
+        yield* this.emailStore.list(),
+        (record) =>
+          Effect.gen({ self: this }, function* () {
+            const { id, subject, state, error, createdAt, delivery } = record
+            const turn =
+              state === "waiting"
+                ? yield* this.conversations
+                    .get(id)
+                    .pipe(Effect.mapError(() => new EmailUnavailable()))
+                : undefined
+            return {
+              id,
+              subject,
+              state,
+              error,
+              createdAt,
+              preparingFiles: turn?.files_pending ?? false,
+              ...(delivery
+                ? { progress: replyDeliveryProgress(delivery) }
+                : {}),
+            }
+          })
       )
       return {
         configured,
@@ -2706,6 +2749,16 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     this.conversationJournal,
     this.conversationExecution,
     {
+      prepareFiles: (turn) =>
+        this.resumeAttachments(turn).pipe(
+          Effect.mapError(
+            (cause) =>
+              new ConversationExecutionError({
+                operation: "prepare attachments",
+                cause,
+              })
+          )
+        ),
       canRun: (id) => this.routines.canRun(id),
       instructions: () =>
         this.configurationService

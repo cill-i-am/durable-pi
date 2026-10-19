@@ -1,6 +1,7 @@
 import { Effect, Schema } from "effect"
 
 import { AgentId, type AgentProfile } from "../agents/domain"
+import { replyDeliveryProgress } from "../replies/progress"
 import { preserveFatal } from "../shared/effect"
 import type { WhatsAppStore } from "./adapters/sqlite"
 import {
@@ -77,28 +78,42 @@ export function whatsappApplication(store: WhatsAppStore, host: WhatsAppHost) {
           profiles.find((agent) => agent.id === settings.agentId)?.name ??
           settings.agentId,
         contactUrl: host.contactUrl(),
-        messages: (yield* store.list()).map(
-          ({
-            id,
-            agentId,
-            state,
-            error,
-            createdAt,
-            media,
-            outboundFileId,
-          }) => ({
-            id,
-            agentId,
-            state,
-            error,
-            createdAt,
-            kind: media
-              ? media.mime.startsWith("audio/")
-                ? ("audio" as const)
-                : ("image" as const)
-              : outboundFileId
-                ? ("media" as const)
-                : ("text" as const),
+        messages: yield* Effect.forEach(yield* store.list(), (record) =>
+          Effect.gen(function* () {
+            const {
+              id,
+              agentId,
+              state,
+              error,
+              createdAt,
+              media,
+              outboundFileId,
+              delivery,
+            } = record
+            const turn =
+              state === "waiting" && !record.control
+                ? yield* host.turn(agentId, id)
+                : undefined
+            return {
+              id,
+              agentId,
+              state,
+              error,
+              createdAt,
+              preparingFiles: turn?.preparingFiles ?? false,
+              ...(delivery
+                ? { progress: replyDeliveryProgress(delivery) }
+                : {}),
+              kind: media
+                ? media.mime.startsWith("audio/")
+                  ? ("audio" as const)
+                  : media.mime.startsWith("image/")
+                    ? ("image" as const)
+                    : ("media" as const)
+                : outboundFileId
+                  ? ("media" as const)
+                  : ("text" as const),
+            }
           })
         ),
       }

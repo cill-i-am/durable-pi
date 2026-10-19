@@ -160,6 +160,14 @@ export const agentMigrationManifest = {
         "ALTER TABLE `whatsapp_messages` ADD `delivery` text;",
       ],
     },
+    {
+      id: "20261019065208_eager_white_queen",
+      checksum:
+        "8711561e0af4582925cbb83c55509b6d113bd9b2436a15f819547e79ed811891",
+      statements: [
+        "ALTER TABLE `chat_turns` ADD `files_pending` integer DEFAULT false NOT NULL;",
+      ],
+    },
   ],
   schema: [
     {
@@ -245,7 +253,7 @@ export const agentMigrationManifest = {
     {
       type: "table",
       name: "chat_turns",
-      sql: 'CREATE TABLE `chat_turns` (\n\t`sequence` integer PRIMARY KEY AUTOINCREMENT,\n\t`id` text NOT NULL UNIQUE,\n\t`text` text NOT NULL,\n\t`status` text NOT NULL,\n\t`answer` text DEFAULT \'\' NOT NULL,\n\t`error` text,\n\t`created_at` text NOT NULL,\n\t`session_id` text,\n\t`prompt` text,\n\t`parent_id` text,\n\t`started_at` text,\n\t`finished_at` text,\n\t`stopped_at` text,\n\t`recovery` text,\n\t`mode` text DEFAULT \'followUp\' NOT NULL,\n\t`delivery` text DEFAULT \'queued\' NOT NULL,\n\t`model` text,\n\t`routing` text,\n\t`origin` text,\n\t`thinking` text,\n\t`revision` integer DEFAULT 0 NOT NULL,\n\t`creation` text,\n\t`attachments` text DEFAULT \'[]\' NOT NULL,\n\t`input` text DEFAULT \'[]\' NOT NULL,\n\t`skills` text DEFAULT \'[]\' NOT NULL,\n\t`skill_context` text DEFAULT \'\' NOT NULL,\n\tCONSTRAINT `fk_chat_turns_parent_id_chat_turns_id_fk` FOREIGN KEY (`parent_id`) REFERENCES `chat_turns`(`id`) ON DELETE RESTRICT,\n\tCONSTRAINT "chat_turns_status_check" CHECK("status" in (\'queued\', \'preparing\', \'running\', \'stopping\', \'done\', \'failed\', \'cancelled\')),\n\tCONSTRAINT "chat_turns_mode_check" CHECK("mode" in (\'followUp\', \'steer\')),\n\tCONSTRAINT "chat_turns_delivery_check" CHECK("delivery" in (\'queued\', \'accepted\', \'consumed\', \'answered\', \'unanswered\')),\n\tCONSTRAINT "chat_turns_attachments_json" CHECK(json_valid("attachments")),\n\tCONSTRAINT "chat_turns_skills_json" CHECK(json_valid("skills")),\n\tCONSTRAINT "chat_turns_input_json" CHECK(json_valid("input")),\n\tCONSTRAINT "chat_turns_routing_json" CHECK("routing" is null or json_valid("routing")),\n\tCONSTRAINT "chat_turns_origin_json" CHECK("origin" is null or json_valid("origin")),\n\tCONSTRAINT "chat_turns_recovery_json" CHECK("recovery" is null or json_valid("recovery")),\n\tCONSTRAINT "chat_turns_revision_check" CHECK("revision" >= 0)\n)',
+      sql: 'CREATE TABLE `chat_turns` (\n\t`sequence` integer PRIMARY KEY AUTOINCREMENT,\n\t`id` text NOT NULL UNIQUE,\n\t`text` text NOT NULL,\n\t`status` text NOT NULL,\n\t`answer` text DEFAULT \'\' NOT NULL,\n\t`error` text,\n\t`created_at` text NOT NULL,\n\t`session_id` text,\n\t`prompt` text,\n\t`parent_id` text,\n\t`started_at` text,\n\t`finished_at` text,\n\t`stopped_at` text,\n\t`recovery` text,\n\t`mode` text DEFAULT \'followUp\' NOT NULL,\n\t`delivery` text DEFAULT \'queued\' NOT NULL,\n\t`model` text,\n\t`routing` text,\n\t`origin` text,\n\t`thinking` text,\n\t`revision` integer DEFAULT 0 NOT NULL,\n\t`creation` text,\n\t`attachments` text DEFAULT \'[]\' NOT NULL,\n\t`input` text DEFAULT \'[]\' NOT NULL,\n\t`skills` text DEFAULT \'[]\' NOT NULL,\n\t`skill_context` text DEFAULT \'\' NOT NULL, `files_pending` integer DEFAULT false NOT NULL,\n\tCONSTRAINT `fk_chat_turns_parent_id_chat_turns_id_fk` FOREIGN KEY (`parent_id`) REFERENCES `chat_turns`(`id`) ON DELETE RESTRICT,\n\tCONSTRAINT "chat_turns_status_check" CHECK("status" in (\'queued\', \'preparing\', \'running\', \'stopping\', \'done\', \'failed\', \'cancelled\')),\n\tCONSTRAINT "chat_turns_mode_check" CHECK("mode" in (\'followUp\', \'steer\')),\n\tCONSTRAINT "chat_turns_delivery_check" CHECK("delivery" in (\'queued\', \'accepted\', \'consumed\', \'answered\', \'unanswered\')),\n\tCONSTRAINT "chat_turns_attachments_json" CHECK(json_valid("attachments")),\n\tCONSTRAINT "chat_turns_skills_json" CHECK(json_valid("skills")),\n\tCONSTRAINT "chat_turns_input_json" CHECK(json_valid("input")),\n\tCONSTRAINT "chat_turns_routing_json" CHECK("routing" is null or json_valid("routing")),\n\tCONSTRAINT "chat_turns_origin_json" CHECK("origin" is null or json_valid("origin")),\n\tCONSTRAINT "chat_turns_recovery_json" CHECK("recovery" is null or json_valid("recovery")),\n\tCONSTRAINT "chat_turns_revision_check" CHECK("revision" >= 0)\n)',
     },
     {
       type: "index",
