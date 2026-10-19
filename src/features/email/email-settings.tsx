@@ -32,6 +32,7 @@ import {
 } from "@/email/contracts"
 import { agentApi, ApiError } from "@/http/client"
 import { poll } from "@/http/poll"
+import { replyProgressText, replyRetryLabel } from "@/replies/progress"
 
 const labels = {
   queued: "Queued",
@@ -236,7 +237,11 @@ export function EmailSettings({
             <div key={message.id} className="flex flex-col gap-1">
               <p className="break-words">{message.subject || "(no subject)"}</p>
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="secondary">{labels[message.state]}</Badge>
+                <Badge variant="secondary">
+                  {message.preparingFiles
+                    ? "Preparing files"
+                    : labels[message.state]}
+                </Badge>
                 {["failed", "uncertain"].includes(message.state) && (
                   <Button
                     size="sm"
@@ -248,10 +253,15 @@ export function EmailSettings({
                         : retry(message.id, false)
                     }
                   >
-                    Retry reply
+                    {replyRetryLabel(message.progress)}
                   </Button>
                 )}
               </div>
+              {message.progress && (
+                <p className="text-sm text-muted-foreground">
+                  {replyProgressText(message.progress)}
+                </p>
+              )}
               {message.error && (
                 <p className="text-sm text-muted-foreground">{message.error}</p>
               )}
@@ -269,8 +279,9 @@ export function EmailSettings({
           <AlertDialogHeader>
             <AlertDialogTitle>Send this reply again?</AlertDialogTitle>
             <AlertDialogDescription>
-              The previous send may have reached your inbox. Check it first.
-              Sending again may create a duplicate.
+              Confirmed messages will be skipped. The next unconfirmed message
+              may have reached your inbox. Check it first. Sending again may
+              create a duplicate.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

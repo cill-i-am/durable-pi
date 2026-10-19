@@ -186,7 +186,8 @@ export function whatsappPump(records: WhatsAppStore, host: WhatsAppPumpHost) {
         record,
         turn.status === "done" && answer
           ? answer
-          : "This request could not finish. Open Pi to review the conversation.",
+          : turn.error ||
+              "This request could not finish. Open Pi to review the conversation.",
         turn.status === "done" ? (turn.files ?? []) : []
       )
     }

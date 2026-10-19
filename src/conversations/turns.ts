@@ -29,6 +29,7 @@ export type Turn = ChatTurn & {
   routing?: ResolvedRoute | null
   revision: number
   creation: string | null
+  files_pending?: boolean
   attachments: readonly FileInfo[]
   skills?: readonly SkillReference[]
   skill_context?: string
@@ -68,6 +69,7 @@ export const TurnRecord = Schema.Struct({
   origin: Schema.optional(TurnOrigin),
   revision: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
   creation: Schema.NullOr(Schema.String),
+  files_pending: Schema.optional(Schema.Boolean),
   attachments: Schema.Array(FileInfo),
   input: Schema.Array(AttachmentContent),
   skills: Schema.Array(SkillReference),
@@ -84,6 +86,7 @@ export type Submission = {
   job?: JobType
 }
 export type PreparedMessage = {
+  pending?: boolean
   files: readonly FileInfo[]
   content: readonly AttachmentContent[]
 }

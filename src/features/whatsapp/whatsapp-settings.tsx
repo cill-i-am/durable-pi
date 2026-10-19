@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { agentApi, ApiError } from "@/http/client"
 import { poll } from "@/http/poll"
+import { replyProgressText, replyRetryLabel } from "@/replies/progress"
 import {
   WhatsAppView,
   type ConfigureWhatsApp,
@@ -180,7 +181,9 @@ export function WhatsAppSettings({
                         : message.kind === "media"
                           ? "Attachment · "
                           : ""}
-                    {labels[message.state]}
+                    {message.preparingFiles
+                      ? "Preparing files"
+                      : labels[message.state]}
                   </Badge>
                   {["failed", "uncertain", "expired"].includes(
                     message.state
@@ -195,13 +198,18 @@ export function WhatsAppSettings({
                           : retry(message.id, false)
                       }
                     >
-                      Retry reply
+                      {replyRetryLabel(message.progress)}
                     </Button>
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {new Date(message.createdAt).toLocaleString()}
                 </p>
+                {message.progress && (
+                  <p className="text-sm text-muted-foreground">
+                    {replyProgressText(message.progress)}
+                  </p>
+                )}
                 {message.error && (
                   <p className="text-sm text-muted-foreground">
                     {message.error}
@@ -221,8 +229,9 @@ export function WhatsAppSettings({
           <AlertDialogHeader>
             <AlertDialogTitle>Send this WhatsApp reply again?</AlertDialogTitle>
             <AlertDialogDescription>
-              The previous send may have reached WhatsApp. Check it first.
-              Sending again may create a duplicate.
+              Confirmed messages will be skipped. The next unconfirmed message
+              may have reached WhatsApp. Check it first. Sending again may
+              create a duplicate.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

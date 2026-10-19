@@ -40,10 +40,10 @@ async function start() {
     }
   }
 }
-async function stop() {
+async function stop(signal = "SIGTERM") {
   if (!child || child.exitCode !== null) return
   const exited = new Promise((done) => child.once("exit", done))
-  child.kill("SIGTERM")
+  child.kill(signal)
   await exited
 }
 try {
@@ -91,8 +91,18 @@ const config :Workerd.Config = (
     assert.equal(reply.receipts.length, 1)
     assert.deepEqual(reply.sends, ["confirmed first", "unconfirmed second"])
   }
-  await stop()
+  assert.equal(first.attachments.pending, true)
+  assert.equal(first.attachments.jobPending, true)
+  assert.equal(first.attachments.input, "[]")
+  await stop("SIGKILL")
   const restarted = await start()
+  assert.equal(restarted.attachments.id, first.attachments.id)
+  assert.equal(restarted.attachments.pending, false)
+  assert.equal(restarted.attachments.files, 1)
+  assert.equal(restarted.attachments.jobPending, false)
+  assert.ok(
+    restarted.attachments.input.includes("NATIVE_PREPARATION_RESTART_OK")
+  )
   assert.equal(restarted.counter, 2)
   assert.deepEqual(restarted.list, ["two", "three"])
   for (const reply of restarted.replies) {
@@ -111,7 +121,7 @@ const config :Workerd.Config = (
     ])
   }
   console.log(
-    "Multipart email/WhatsApp: native receipt checkpoints, restart without resend, and explicit retry skipping confirmed parts passed. WhatsApp Chat SDK state: native SQLite facets, locking, list bounds and restart persistence passed."
+    "Attachment preparation: native SQLite request and PDF job survived SIGKILL and resumed with the original ID. Multipart email/WhatsApp: native receipt checkpoints, restart without resend, and explicit retry skipping confirmed parts passed. WhatsApp Chat SDK state: native SQLite facets, locking, list bounds and restart persistence passed."
   )
 } finally {
   await stop()

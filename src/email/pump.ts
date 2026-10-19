@@ -118,7 +118,8 @@ export function emailPump(records: EmailPersistence, host: EmailPumpHost) {
         const text =
           turn.status === "done"
             ? turn.answer || "Your request is complete."
-            : `This request ${turn.status === "cancelled" ? "was cancelled" : "could not finish"}. Open Pi to review the conversation.`
+            : turn.error ||
+              `This request ${turn.status === "cancelled" ? "was cancelled" : "could not finish"}. Open Pi to review the conversation.`
         yield* send(record, text, turn.status === "done")
       } else if (host.notices) {
         for (const notice of yield* host.notices(record))

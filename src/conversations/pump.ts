@@ -1,6 +1,7 @@
 import { Clock, Effect } from "effect"
 
 import type { MemoryRepository } from "../memory/repository"
+import type { AttachmentReadiness } from "./attachments"
 import { canSubmit } from "./domain"
 import type {
   ConversationObservation,
@@ -12,6 +13,9 @@ import type { Conversations } from "./service"
 import type { Turn } from "./turns"
 
 export interface ConversationPumpHost<TError, TRequirements = never> {
+  prepareFiles?: (
+    turn: Turn
+  ) => Effect.Effect<AttachmentReadiness, TError, TRequirements>
   canRun: (id: string) => Effect.Effect<boolean, TError, TRequirements>
   instructions: () => Effect.Effect<string, TError, TRequirements>
   recovery: (
@@ -54,7 +58,8 @@ export function conversationPump<TError, TRequirements>(
   const completeTurn = Effect.fn("Conversations.completeTurn")(function* (
     turn: Turn,
     members: readonly Turn[],
-    reply: ConversationObservation | undefined
+    reply: ConversationObservation | undefined,
+    preparationError?: string
   ) {
     const outcomes =
       reply?.outcomes ??
@@ -68,11 +73,12 @@ export function conversationPump<TError, TRequirements>(
       turn,
       outcomes,
       reply?.answer ?? "",
-      failed
-        ? recovery?.phase === "blocked"
-          ? recovery.detail
-          : "The model could not finish. Check the connection and try again."
-        : null
+      preparationError ??
+        (failed
+          ? recovery?.phase === "blocked"
+            ? recovery.detail
+            : "The model could not finish. Check the connection and try again."
+          : null)
     )
     if (!finished) return yield* retry(10)
     yield* host.completed(turn, failed, recovery)
@@ -127,6 +133,35 @@ export function conversationPump<TError, TRequirements>(
       return yield* completeTurn(turn, members, reply)
     }
   )
+  const prepareMembers = Effect.fn("Conversations.prepareMembers")(function* (
+    turn: Turn
+  ) {
+    if (turn.status === "stopping" || !host.prepareFiles) return
+    for (const member of yield* conversations.members(turn.id)) {
+      if (!member.files_pending) continue
+      const readiness = yield* host.prepareFiles(member)
+      if (readiness.error) {
+        yield* host.cancelAccess(turn.id)
+        yield* host.cancelPlan(turn.id)
+        if (turn.session_id) {
+          yield* execution.abort(turn.session_id)
+          const reply = yield* execution.observe(
+            turn,
+            yield* conversations.members(turn.id)
+          )
+          if (reply && !reply.settled) return yield* retry(150)
+          if (reply) yield* journal.archive(turn.id, reply)
+        }
+        return yield* completeTurn(
+          turn,
+          yield* conversations.members(turn.id),
+          undefined,
+          readiness.error
+        )
+      }
+      if (!readiness.ready) return yield* retry(5000)
+    }
+  })
   return {
     run: Effect.fn("Conversations.pump")(function* () {
       let turn = yield* conversations.active()
@@ -135,6 +170,9 @@ export function conversationPump<TError, TRequirements>(
         yield* conversations.requestStop(turn.id)
         turn = yield* current(turn.id)
       }
+      const preparationWake = yield* prepareMembers(turn)
+      if (preparationWake !== undefined) return preparationWake
+      turn = yield* current(turn.id)
       if (turn.status === "queued") yield* conversations.prepare(turn.id)
       if (turn.status === "running" || turn.status === "stopping") {
         return yield* observeActiveTurn(turn)

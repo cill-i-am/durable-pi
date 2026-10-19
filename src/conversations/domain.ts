@@ -120,6 +120,7 @@ export function admissionContent(
   prepared?: PreparedMessage
 ) {
   return {
+    files_pending: prepared?.pending ?? false,
     attachments: prepared?.files ?? [],
     input: prepared?.content ?? [],
     skills:
@@ -176,6 +177,7 @@ export const canPrepare = (turn: Turn) => turn.status === "queued"
 export const canSavePrompt = (turn: Turn) => turn.prompt === null
 export const canSaveSession = (turn: Turn) => turn.session_id === null
 export const canSubmit = (turn: Turn) =>
+  !turn.files_pending &&
   ["queued", "preparing", "running"].includes(turn.status)
 export const canConsume = (turn: Turn) =>
   ["queued", "accepted"].includes(turn.delivery)

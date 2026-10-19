@@ -14,14 +14,16 @@ export function TurnDelivery({
   const pending = turn.status === "queued"
   return (
     <MessageFooter className={pending ? undefined : "message-timestamp"}>
-      {pending
-        ? waiting
-          ? "Queued"
-          : "Starting…"
-        : new Date(turn.created_at).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
+      {turn.preparingFiles && pending
+        ? "Preparing files…"
+        : pending
+          ? waiting
+            ? "Queued"
+            : "Starting…"
+          : new Date(turn.created_at).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
       {pending && (
         <Button variant="ghost" size="xs" onClick={onCancel}>
           Cancel

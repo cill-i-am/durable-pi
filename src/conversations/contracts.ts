@@ -99,6 +99,7 @@ export const TimelineItem = Schema.Union([
 ])
 export type TimelineItem = typeof TimelineItem.Type
 const VisibleTurn = Schema.Struct({
+  preparingFiles: Schema.optional(Schema.Boolean),
   origin: Schema.optional(TurnOrigin),
   routing: Schema.optional(Schema.NullOr(ResolvedRoute)),
   skills: Schema.optional(Schema.Array(SkillReference)),

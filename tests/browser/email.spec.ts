@@ -23,6 +23,11 @@ test("enable and revoke an address; uncertain replies require an explicit resend
         id: "fixture-email",
         subject: "Email fixture",
         state: "uncertain",
+        progress: {
+          confirmed: 1,
+          total: 3,
+          next: { number: 2, kind: "files" },
+        },
         error: "Delivery could not be confirmed.",
         createdAt: 1,
       },
@@ -76,7 +81,15 @@ test("enable and revoke an address; uncertain replies require an explicit resend
   await expect(
     page.getByText("Delivery unconfirmed", { exact: true })
   ).toBeVisible()
-  await page.getByRole("button", { name: "Retry reply", exact: true }).click()
+  await expect(
+    page.getByText(
+      "1 of 3 messages accepted by the provider. Next: message 2 (files).",
+      { exact: true }
+    )
+  ).toBeVisible()
+  await page
+    .getByRole("button", { name: "Retry remaining messages", exact: true })
+    .click()
   await expect(
     page.getByRole("heading", { name: "Send this reply again?" })
   ).toBeVisible()
@@ -87,7 +100,9 @@ test("enable and revoke an address; uncertain replies require an explicit resend
   expect(retries).toBe(0)
   await page.getByRole("button", { name: "Cancel", exact: true }).click()
   expect(retries).toBe(0)
-  await page.getByRole("button", { name: "Retry reply", exact: true }).click()
+  await page
+    .getByRole("button", { name: "Retry remaining messages", exact: true })
+    .click()
   await page.getByRole("button", { name: "Send again", exact: true }).click()
   await expect(page.getByText("Sent", { exact: true })).toBeVisible()
   await expect(

@@ -1,0 +1,1 @@
+ALTER TABLE `chat_turns` ADD `files_pending` integer DEFAULT false NOT NULL;

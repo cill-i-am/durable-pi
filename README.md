@@ -283,9 +283,13 @@ Both raw and normalized JSON must fit 16 KB. A 202 response accepts a durable ru
 
 Keys are opt-in; no external service receives one automatically. Rotating/disabling a key cancels waiting webhook work, while an admitted reply can finish unless stopped. Event data cannot grant tool permissions; normal bot approvals and the ten-minute budget apply. Results appear in the conversation.
 
+## Automatic file preparation
+
+PDFs and videos can be sent before extraction finishes. The request retains its original identity, route and files across restarts; cancellation prevents it from starting later. Unreadable files produce a specific error rather than an incomplete model answer. Existing stored binary documents remain available for sharing, without claiming their contents were extracted. See [the preparation decisions](docs/decisions/attachment-preparation.md).
+
 ## Video attachments
 
-Upload an MP4 or WebM in **Files** or the composer. Preparation runs in an isolated Cloudflare container and stores up to six timestamped JPEG frames plus any supported embedded text captions in private R2 storage. **Preview** shows exactly what can enter the model context; **Attach** becomes available when preparation succeeds. Older uploads can use **Prepare frames**, and failed preparation can be retried.
+Upload an MP4 or WebM in **Files** or the composer. Preparation runs in an isolated Cloudflare container and stores up to six timestamped JPEG frames plus any supported embedded text captions in private R2 storage. **Preview** shows what can enter the model context. Attach and send while preparation is running: the original request waits durably and starts automatically when its files are ready. Email and WhatsApp use the same pipeline. Missing preparation jobs are queued automatically; failed preparation is reported in the originating conversation and can be retried explicitly.
 
 Limits: 8 MB, ten minutes, 4096 pixels per side, six frames of at most 24 KB each, and 8,000 UTF-16 units of captions. Sampled frames omit movement and events between them. Audio is not transcribed; image-based subtitles are not read with OCR. Complex or damaged clips may exceed the decoding limit. Originals remain available for download.
 

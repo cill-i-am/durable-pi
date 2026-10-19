@@ -44,6 +44,7 @@ export function conversationSnapshot<TError, TRequirements>(
           origin: turn.origin,
           text: turn.text,
           status: turn.status,
+          preparingFiles: turn.files_pending || undefined,
           answer: turn.answer,
           error: turn.error,
           created_at: turn.created_at,

@@ -69,6 +69,9 @@ export const chatTurns = sqliteTable(
     thinking: text("thinking"),
     revision: integer("revision").notNull().default(0),
     creation: text("creation"),
+    files_pending: integer("files_pending", { mode: "boolean" })
+      .notNull()
+      .default(false),
     attachments: text("attachments").notNull().default("[]"),
     input: text("input").notNull().default("[]"),
     skills: text("skills").notNull().default("[]"),
