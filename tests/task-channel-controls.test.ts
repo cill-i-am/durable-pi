@@ -2,6 +2,7 @@ import { Effect } from "effect"
 import { expect, it, vi } from "vitest"
 
 import { homeAgentId } from "../src/agents/domain"
+import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import { EmailStore } from "../src/email/adapters/sqlite"
 import { EmailStorageError, type IncomingEmail } from "../src/email/contracts"
 import { emailPump } from "../src/email/pump"
@@ -178,4 +179,48 @@ it("attachment-bearing email remains ordinary conversation input even when its t
   )
   expect(admit).toHaveBeenCalledTimes(1)
   expect(control).not.toHaveBeenCalled()
+})
+
+it("an old actor's already-admitted STATUS email keeps its original conversation reply", async () => {
+  const db = database(),
+    records = new EmailStore(db)
+  const conversations = new ConversationStore(db, {
+    model: "test",
+    thinking: "medium",
+  })
+  await run(
+    records.configure({
+      enabled: true,
+      revision: 0,
+      operationId: crypto.randomUUID(),
+    })
+  )
+  await run(records.receive({ ...email, body: "STATUS all" }, 1))
+  await run(conversations.admit({ operationId: email.id, text: "STATUS all" }))
+  await run(records.update(email.id, "queued", "waiting"))
+  const turn = await run(conversations.get(email.id))
+  if (!turn) throw new Error("Legacy conversation is missing")
+  const control = vi.fn(() => Effect.succeed("new control reply"))
+  const send = vi.fn((_record: unknown, _text: string) =>
+    Effect.succeed("legacy-receipt")
+  )
+  await run(
+    emailPump(records, {
+      active: () => Effect.succeed(true),
+      admit: () => Effect.die("already admitted"),
+      turn: () =>
+        Effect.succeed({
+          ...turn,
+          status: "done" as const,
+          answer: "Original legacy answer.",
+        }),
+      control,
+      send,
+      reviewUrl: () =>
+        Effect.succeed("https://app.example/agents/personal-assistant"),
+    })()
+  )
+  expect(control).not.toHaveBeenCalled()
+  expect(send).toHaveBeenCalledTimes(1)
+  expect(send.mock.calls[0]?.[1]).toContain("Original legacy answer.")
 })
