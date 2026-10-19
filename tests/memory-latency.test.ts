@@ -216,3 +216,15 @@ it.effect(
       }
     })
 )
+
+it.effect("preserves a leading byte-order mark in pending originals", () =>
+  Effect.gen(function* () {
+    const memory = yield* makeSqliteMemory(database())
+    const original = "\uFEFFfile contents"
+    yield* memory.append("bom", "user", original)
+    expect(yield* memory.render()).toBe(
+      `<chat>\n0+0|user: ${original}\n</chat>`
+    )
+    expect((yield* memory.entry(0))?.text).toBe(original)
+  })
+)

@@ -74,7 +74,7 @@ const PendingText = Schema.Struct({
   hex: Schema.String,
 })
 const decodeOriginal = (hex: string) =>
-  new TextDecoder().decode(
+  new TextDecoder("utf-8", { ignoreBOM: true }).decode(
     Uint8Array.from({ length: hex.length / 2 }, (_, index) =>
       Number.parseInt(hex.slice(index * 2, index * 2 + 2), 16)
     )

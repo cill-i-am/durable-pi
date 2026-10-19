@@ -78,7 +78,7 @@ export class MemoryLatencyProbe extends DurableObject {
           }
         }
         if (path === "/pending") {
-          const text = "\0" + "🍀\n".repeat(6000)
+          const text = "\uFEFF\0" + "🍀\n".repeat(6000)
           this.ctx.storage.transactionSync(() => {
             this.db.run(
               "WITH RECURSIVE n(i) AS (SELECT 0 UNION ALL SELECT i+1 FROM n WHERE i+1<4096) INSERT INTO memory_log(id,source,kind,text,date) SELECT i,'pending-'||i,'tool',?,'2026-10-19T00:00:00Z' FROM n",
