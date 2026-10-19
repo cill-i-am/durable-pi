@@ -18,6 +18,11 @@ await build({
   outdir: "dist/workers",
   outbase: "src",
   bundle: true,
+  define: {
+    __PI_BUILD_REVISION__: JSON.stringify(
+      process.env.GITHUB_SHA ?? "development"
+    ),
+  },
   keepNames: true,
   format: "esm",
   platform: "node",

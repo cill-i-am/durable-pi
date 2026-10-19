@@ -15,6 +15,7 @@ import { Route as JoinRouteImport } from './routes/join'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as TwoFactorRouteImport } from './routes/two-factor'
 import { Route as WorkspaceIndexRouteImport } from './routes/_workspace.index'
+import { Route as ApiDeploymentRouteImport } from './routes/api.deployment'
 import { Route as ApiSetupRouteImport } from './routes/api.setup'
 import { Route as WorkspaceAgentsIndexRouteImport } from './routes/_workspace.agents.index'
 import { Route as WorkspaceAgentsArchivedRouteImport } from './routes/_workspace.agents.archived'
@@ -60,6 +61,11 @@ const WorkspaceIndexRoute = WorkspaceIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => WorkspaceRoute,
+} as any)
+const ApiDeploymentRoute = ApiDeploymentRouteImport.update({
+  id: '/api/deployment',
+  path: '/api/deployment',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSetupRoute = ApiSetupRouteImport.update({
   id: '/api/setup',
@@ -155,6 +161,7 @@ export interface FileRoutesByFullPath {
   '/join': typeof JoinRoute
   '/reset-password': typeof ResetPasswordRoute
   '/two-factor': typeof TwoFactorRoute
+  '/api/deployment': typeof ApiDeploymentRoute
   '/api/setup': typeof ApiSetupRoute
   '/agents/archived': typeof WorkspaceAgentsArchivedRoute
   '/agents/new': typeof WorkspaceAgentsNewRoute
@@ -177,6 +184,7 @@ export interface FileRoutesByTo {
   '/join': typeof JoinRoute
   '/reset-password': typeof ResetPasswordRoute
   '/two-factor': typeof TwoFactorRoute
+  '/api/deployment': typeof ApiDeploymentRoute
   '/api/setup': typeof ApiSetupRoute
   '/': typeof WorkspaceIndexRoute
   '/agents/archived': typeof WorkspaceAgentsArchivedRoute
@@ -202,6 +210,7 @@ export interface FileRoutesById {
   '/join': typeof JoinRoute
   '/reset-password': typeof ResetPasswordRoute
   '/two-factor': typeof TwoFactorRoute
+  '/api/deployment': typeof ApiDeploymentRoute
   '/api/setup': typeof ApiSetupRoute
   '/_workspace/': typeof WorkspaceIndexRoute
   '/_workspace/agents/archived': typeof WorkspaceAgentsArchivedRoute
@@ -228,6 +237,7 @@ export interface FileRouteTypes {
     | '/join'
     | '/reset-password'
     | '/two-factor'
+    | '/api/deployment'
     | '/api/setup'
     | '/agents/archived'
     | '/agents/new'
@@ -250,6 +260,7 @@ export interface FileRouteTypes {
     | '/join'
     | '/reset-password'
     | '/two-factor'
+    | '/api/deployment'
     | '/api/setup'
     | '/'
     | '/agents/archived'
@@ -274,6 +285,7 @@ export interface FileRouteTypes {
     | '/join'
     | '/reset-password'
     | '/two-factor'
+    | '/api/deployment'
     | '/api/setup'
     | '/_workspace/'
     | '/_workspace/agents/archived'
@@ -299,6 +311,7 @@ export interface RootRouteChildren {
   JoinRoute: typeof JoinRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   TwoFactorRoute: typeof TwoFactorRoute
+  ApiDeploymentRoute: typeof ApiDeploymentRoute
   ApiSetupRoute: typeof ApiSetupRoute
   ApiAccountAvatarRoute: typeof ApiAccountAvatarRoute
   ApiAgentSplatRoute: typeof ApiAgentSplatRoute
@@ -351,6 +364,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof WorkspaceIndexRouteImport
       parentRoute: typeof WorkspaceRoute
+    }
+    '/api/deployment': {
+      id: '/api/deployment'
+      path: '/api/deployment'
+      fullPath: '/api/deployment'
+      preLoaderRoute: typeof ApiDeploymentRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/setup': {
       id: '/api/setup'
@@ -506,6 +526,7 @@ const rootRouteChildren: RootRouteChildren = {
   JoinRoute: JoinRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   TwoFactorRoute: TwoFactorRoute,
+  ApiDeploymentRoute: ApiDeploymentRoute,
   ApiSetupRoute: ApiSetupRoute,
   ApiAccountAvatarRoute: ApiAccountAvatarRoute,
   ApiAgentSplatRoute: ApiAgentSplatRoute,

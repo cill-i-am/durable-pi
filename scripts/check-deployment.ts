@@ -1,9 +1,34 @@
 import assert from "node:assert/strict"
 import { setTimeout } from "node:timers/promises"
 
+import { waitForDeployment } from "../src/deployment/readiness"
+
 const base = process.env.APP_URL
 if (!base?.startsWith("https://"))
   throw new Error("APP_URL must be an HTTPS URL")
+const revision = process.env.GITHUB_SHA
+const secret = process.env.SETUP_TOKEN
+if (!revision || !secret)
+  throw new Error("GITHUB_SHA and SETUP_TOKEN are required.")
+const live = await waitForDeployment(revision, {
+  read: async () => {
+    const response = await fetch(base + "/api/deployment", {
+      headers: { "x-setup-token": secret },
+      cache: "no-store",
+      signal: AbortSignal.timeout(20_000),
+    })
+    if (!response.ok) {
+      await response.body?.cancel()
+      throw new Error("Deployment is not ready")
+    }
+    return response.json()
+  },
+  now: Date.now,
+  wait: () => setTimeout(10_000),
+})
+console.log(
+  `Revision ${revision} is live on the website, Worker and ${live.agents.length} active agents.`
+)
 const request = (path: string, body?: unknown, origin = base) =>
   fetch(base + path, {
     method: body ? "POST" : "GET",
@@ -143,4 +168,5 @@ assert.equal(
   (await request("/api/agent/send", {}, "https://attacker.invalid")).status,
   403
 )
-console.log("Hosted app and authentication boundary passed.")
+assert.equal((await request("/api/deployment")).status, 401)
+console.log("Hosted revision readiness and authentication boundary passed.")

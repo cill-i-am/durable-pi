@@ -114,6 +114,17 @@ export const BackgroundGroups: Cloudflare.DurableObjectLike<BackgroundGroupRPC> 
 export const AgentWorker = Cloudflare.Worker("AgentWorkerDrizzleV1", {
   observability,
   main: "./src/agent/worker.ts",
+  build: {
+    input: {
+      transform: {
+        define: {
+          __PI_BUILD_REVISION__: JSON.stringify(
+            process.env.GITHUB_SHA ?? "development"
+          ),
+        },
+      },
+    },
+  },
   dev: { port: 1338, strictPort: true },
   workersDev: { enabled: false, previewsEnabled: false },
   compatibility: { date: "2026-10-17", flags: ["nodejs_compat"] },
@@ -233,6 +244,8 @@ export const Website = Cloudflare.Website.Vite(
             }
           : undefined,
       env: {
+        // Changing the release also invalidates Alchemy's Vite build metadata.
+        VITE_BUILD_ID: process.env.GITHUB_SHA ?? "development",
         DB: AuthDatabase,
         USER_AVATARS: UserAvatars,
         AGENT_SERVICE: AgentWorker,

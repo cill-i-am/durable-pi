@@ -173,8 +173,9 @@ jobs:
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      - name: Verify hosted authentication boundary
+      - name: Wait for the live revision and verify authentication
         run: node --import tsx scripts/check-deployment.ts
         env:
           APP_URL: https://bot.cill-i-am.com
+          SETUP_TOKEN: ${{ secrets.SETUP_TOKEN }}
           LEGACY_APP_URL: https://durable-pi-website-production-ymvgn6wvhopg5b2y.barroncillian.workers.dev

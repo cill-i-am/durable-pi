@@ -15,6 +15,7 @@ import { Effect, Exit, Layer, Schema, Scope } from "effect"
 
 import { agentGateway } from "../../src/agent/adapters/gateway"
 import { agentSettings } from "../../src/agent/compaction"
+import agentWorker from "../../src/agent/worker"
 import { agentObjectName } from "../../src/agents/domain"
 import { agentProxy } from "../../src/auth/adapters/agent-proxy"
 import { piMailbox } from "../../src/communication/adapters/pi"
@@ -363,6 +364,14 @@ let websiteSessionReads = 0
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext) {
     const url = new URL(request.url)
+    if (url.pathname === "/deployment")
+      return agentWorker.fetch(
+        new Request("https://agent.internal/__deployment", {
+          headers: { "x-owner-id": "gateway-owner" },
+        }),
+        { AGENT: env.PERSONAL },
+        ctx
+      )
     if (url.pathname.startsWith("/encoding/"))
       return eventStreamProbe(request, ctx)
     if (url.pathname.startsWith("/sql-pilot/"))

@@ -1277,6 +1277,13 @@ const config :Workerd.Config = (
     if (path.startsWith("activity")) assert(Array.isArray(body.entries))
     if (path === "bots/statuses") assert.equal(body.statuses[0].agentId, "home")
   }
+  const liveRevision = await (await fetch(`${origin}/deployment`)).json()
+  assert.equal(liveRevision.worker, "development")
+  assert(liveRevision.agents.length >= 1)
+  assert(liveRevision.agents.every((revision) => revision === "development"))
+  console.log(
+    "PASS native read-only deployment revisions through the production Worker and actual PersonalAgent catalogue/actors."
+  )
   const denied = await fetch(
     `${origin}/gateway/webhooks/incoming?routine=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa`,
     {
