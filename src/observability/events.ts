@@ -21,6 +21,7 @@ export function inferenceFields(attempt: Attempt, botId?: string) {
       attempt.finishedAt && attempt.outcome !== "interrupted"
         ? Date.parse(attempt.finishedAt) - Date.parse(attempt.startedAt)
         : null,
+    inferenceTimings: attempt.timings ?? null,
     inputTokens: attempt.input,
     cachedInputTokens: attempt.cached,
     uncachedInputTokens:

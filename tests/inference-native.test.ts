@@ -272,3 +272,81 @@ it("records an auth failure before provider dispatch and never hangs on a failed
     ]),
   })
 }, 2000)
+
+it("persists provider milestones independently of total inference duration and without prompt data", async () => {
+  const usage = usageFixture(database())
+  const models = createAgentModels(
+    accountCredentials(async () => credential),
+    {
+      catalog: async () => catalog,
+      onAttempt: () =>
+        usage.start(resolveRoute("conversation"), "timed-turn", "conversation"),
+    }
+  )
+  const model = models.getModel("openai", "gpt-6.1-sol")!
+  const raw = await response(model.id).text()
+  const events = raw
+    .split("\n")
+    .filter((line) => line.startsWith("data: {"))
+    .map((line) => JSON.parse(line.slice(6)))
+  const added = events.find(
+    (event) => event.type === "response.output_item.added"
+  )
+  added.item.content = [{ type: "output_text", text: "", annotations: [] }]
+  events.splice(
+    2,
+    0,
+    {
+      type: "response.content_part.added",
+      output_index: 0,
+      content_index: 0,
+      part: { type: "output_text", text: "", annotations: [] },
+    },
+    {
+      type: "response.output_text.delta",
+      item_id: "msg_one",
+      output_index: 0,
+      content_index: 0,
+      delta: "Saved and verified.",
+    }
+  )
+  const result = await models.completeSimple(
+    model,
+    {
+      messages: [
+        {
+          role: "user",
+          content: "Private prompt must not be in timings",
+          timestamp: 0,
+        },
+      ],
+    },
+    {
+      reasoning: "medium",
+      sessionId: "timing-test",
+      fetch: async () =>
+        new Response(
+          events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("") +
+            "data: [DONE]\n\n",
+          { headers: { "content-type": "text/event-stream" } }
+        ),
+    }
+  )
+  expect(result.stopReason).toBe("stop")
+  const attempt = usage.recent()[0]!
+  expect(attempt.outcome).toBe("completed")
+  const timings = attempt.timings!
+  expect(timings.fetchStartMs).toBeGreaterThanOrEqual(0)
+  expect(timings.responseHeadersMs).toBeGreaterThanOrEqual(
+    timings.fetchStartMs!
+  )
+  expect(timings.firstEventMs).toBeGreaterThanOrEqual(
+    timings.responseHeadersMs!
+  )
+  expect(timings.firstTextMs).toBeGreaterThanOrEqual(timings.firstEventMs!)
+  expect(
+    Object.values(timings).every((value) => typeof value === "number")
+  ).toBe(true)
+  expect(JSON.stringify(attempt)).not.toContain("Private prompt")
+  expect(JSON.stringify(attempt)).not.toContain(credential.access)
+})

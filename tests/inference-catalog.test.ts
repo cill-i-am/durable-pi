@@ -85,10 +85,13 @@ it.effect(
       const reader = yield* makeModelCatalog(source)
       yield* TestClock.setTime(20_000)
       expect(yield* reader.read()).toEqual(catalog)
-      yield* TestClock.setTime(79_999)
+      yield* TestClock.setTime(90_000)
       yield* reader.read()
       expect(calls).toBe(1)
-      yield* TestClock.setTime(80_000)
+      yield* TestClock.setTime(319_999)
+      yield* reader.read()
+      expect(calls).toBe(1)
+      yield* TestClock.setTime(320_000)
       yield* reader.read()
       expect(calls).toBe(2)
       key = "b"
@@ -183,7 +186,7 @@ it.effect(
           }),
       })
       yield* reader.read()
-      yield* TestClock.adjust("60 seconds")
+      yield* TestClock.adjust("5 minutes")
       fail = true
       expect((yield* reader.read()).models).toEqual([])
       expect((yield* reader.read()).error).toBe("Synthetic unavailable")
@@ -551,3 +554,42 @@ test("an already-errored consumed body remains a checked transport failure witho
   ).toBe(true)
   expect(body.locked).toBe(false)
 })
+
+it.effect(
+  "cached metadata never bypasses live membership or disconnected credentials",
+  () =>
+    Effect.gen(function* () {
+      let authorized = true,
+        connected = true,
+        loads = 0,
+        checks = 0
+      const reader = yield* makeModelCatalog({
+        current: () =>
+          Effect.gen(function* () {
+            checks++
+            if (!authorized || !connected)
+              return yield* new ModelUnavailable({
+                message: "Live authority denied",
+              })
+            return {
+              identity: "same-connection",
+              load: () =>
+                Effect.sync(() => {
+                  loads++
+                  return catalog
+                }),
+            }
+          }),
+      })
+      yield* reader.read()
+      authorized = false
+      expect((yield* reader.read()).error).toBe("Live authority denied")
+      authorized = true
+      connected = false
+      expect((yield* reader.read()).error).toBe("Live authority denied")
+      connected = true
+      expect(yield* reader.read()).toEqual(catalog)
+      expect(loads).toBe(1)
+      expect(checks).toBeGreaterThanOrEqual(4)
+    })
+)

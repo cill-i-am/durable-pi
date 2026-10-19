@@ -1,13 +1,22 @@
 import type { Effect } from "effect"
 
 import type { InferenceUsage } from "../usage"
-import type { Attempt, TerminalOutcome, UsageReport } from "../usage-domain"
+import type {
+  Attempt,
+  InferenceTimings,
+  TerminalOutcome,
+  UsageReport,
+} from "../usage-domain"
 
 export interface NativeInferenceObservation {
   readonly id: string
   readonly turnId: string | null
   usage: (report: UsageReport) => void | Promise<void>
-  end: (outcome: TerminalOutcome, error?: string | null) => void | Promise<void>
+  end: (
+    outcome: TerminalOutcome,
+    error?: string | null,
+    timings?: InferenceTimings
+  ) => void | Promise<void>
 }
 
 /** The owning stream awaits admission, each usage hook and final settlement.
@@ -25,8 +34,8 @@ export function piUsage(
       id: observation.id,
       turnId: observation.turnId,
       usage: (report) => run(observation.usage(report)),
-      end: async (outcome, error) => {
-        const finished = await run(observation.end(outcome, error))
+      end: async (outcome, error, timings) => {
+        const finished = await run(observation.end(outcome, error, timings))
         if (finished) onFinished?.(finished)
       },
     }

@@ -94,6 +94,38 @@ async function frame(
 }
 
 describe("conversation stream", () => {
+  it("publishes the first change immediately and coalesces the following burst", async () => {
+    vi.useFakeTimers()
+    const f = fixture()
+    try {
+      await frame(f.reader)
+      let first: ReadableStreamReadResult<Uint8Array> | undefined
+      const pending = f.reader.read().then((value) => {
+        first = value
+      })
+      f.change({ ...initial, turns: [{ ...turn, answer: "First token" }] })
+      await vi.advanceTimersByTimeAsync(0)
+      expect(first?.done).toBe(false)
+      await pending
+      for (let count = 1; count <= 20; count++)
+        f.change({
+          ...initial,
+          turns: [{ ...turn, answer: `Tokens ${count}` }],
+        })
+      let next: ReadableStreamReadResult<Uint8Array> | undefined
+      const burst = f.reader.read().then((value) => {
+        next = value
+      })
+      await vi.advanceTimersByTimeAsync(79)
+      expect(next).toBeUndefined()
+      await vi.advanceTimersByTimeAsync(1)
+      await burst
+      expect(new TextDecoder().decode(next?.value)).toContain("Tokens 20")
+    } finally {
+      await f.reader.cancel()
+    }
+  })
+
   it("joins late acquisition and delayed closure before reader cancellation completes", async () => {
     const started = deferred<void>(),
       acquired = deferred<AgentEventStream>(),
