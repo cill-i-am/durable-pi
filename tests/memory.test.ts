@@ -2,10 +2,17 @@ import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 
 import { makeSqliteMemory } from "../src/memory/adapters/sqlite"
-import { byteLength, fitView, type MemoryNode } from "../src/memory/domain"
+import {
+  byteLength,
+  fitView as fitViewEffect,
+  type MemoryNode,
+} from "../src/memory/domain"
 import { renderMemory } from "../src/memory/policy"
 import { migrateSqlite } from "../src/storage/migrations"
 import { database } from "./database"
+
+const fitView = (...args: Parameters<typeof fitViewEffect>) =>
+  Effect.runSync(fitViewEffect(...args))
 
 describe("lossless memory", () => {
   it("deduplicates durable appends and retrieves original Unicode text", () => {

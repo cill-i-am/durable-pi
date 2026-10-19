@@ -8,10 +8,12 @@ import {
   gt,
   gte,
   isNull,
+  inArray,
   lt,
   lte,
   max,
   or,
+  sql,
 } from "drizzle-orm"
 import { alias } from "drizzle-orm/sqlite-core"
 import { Effect, Layer, Schema } from "effect"
@@ -31,12 +33,14 @@ import {
 } from "../../storage/sqlite"
 import {
   nodeKey,
+  byteLength,
+  NonNegativeInteger,
+  LogKind,
   VIEW_BYTES,
   InvalidMemory,
   MemoryNotReady,
   MemoryStorageError,
   LogEntry,
-  type LogKind,
   type MemoryNode,
   type Part,
 } from "../domain"
@@ -56,6 +60,25 @@ import {
 } from "../records"
 import { makeMemoryRepository, memoryApplication } from "../service"
 import * as t from "./schema"
+
+// Two columns per row/range: 32 keeps every batch below workerd's 100 binds.
+const SQL_BATCH_ROWS = 32
+const ORIGINAL_READ_ROWS = 8
+const PendingMetadata = Schema.Struct({
+  id: NonNegativeInteger,
+  kind: LogKind,
+  bytes: NonNegativeInteger,
+})
+const PendingText = Schema.Struct({
+  id: NonNegativeInteger,
+  hex: Schema.String,
+})
+const decodeOriginal = (hex: string) =>
+  new TextDecoder().decode(
+    Uint8Array.from({ length: hex.length / 2 }, (_, index) =>
+      Number.parseInt(hex.slice(index * 2, index * 2 + 2), 16)
+    )
+  )
 
 const ProvenanceJson = Schema.fromJsonString(MessageProvenance)
 const decodeProvenance = (row: unknown) => {
@@ -148,9 +171,11 @@ class SqliteMemory implements MemoryLedger {
         yield* this.readyLeaves()
         yield* this.readyParents()
         const view = yield* this.query((orm) => orm.select().from(t.memoryView))
-        if (view.length)
+        for (let offset = 0; offset < view.length; offset += SQL_BATCH_ROWS)
           yield* this.query((orm) =>
-            orm.insert(t.memoryCompactionView).values(view)
+            orm
+              .insert(t.memoryCompactionView)
+              .values(view.slice(offset, offset + SQL_BATCH_ROWS))
           )
         yield* this.query((orm) =>
           orm
@@ -179,11 +204,15 @@ class SqliteMemory implements MemoryLedger {
           )
           .where(isNull(t.memoryNodes.start))
       )
-      if (missing.length)
+      for (let offset = 0; offset < missing.length; offset += SQL_BATCH_ROWS)
         yield* this.query((orm) =>
           orm
             .insert(t.memoryReady)
-            .values(missing.map((row) => ({ start: row.start, count: 1 })))
+            .values(
+              missing
+                .slice(offset, offset + SQL_BATCH_ROWS)
+                .map((row) => ({ start: row.start, count: 1 }))
+            )
             .onConflictDoNothing()
         )
     })
@@ -205,11 +234,15 @@ class SqliteMemory implements MemoryLedger {
             )
             .where(isNull(t.memoryNodes.start))
         )
-        if (missing.length)
+        for (let offset = 0; offset < missing.length; offset += SQL_BATCH_ROWS)
           yield* this.query((orm) =>
             orm
               .insert(t.memoryReady)
-              .values(missing.map((row) => ({ start: row.start, count: 1 })))
+              .values(
+                missing
+                  .slice(offset, offset + SQL_BATCH_ROWS)
+                  .map((row) => ({ start: row.start, count: 1 }))
+              )
               .onConflictDoNothing()
           )
         yield* this.readyParents()
@@ -240,9 +273,12 @@ class SqliteMemory implements MemoryLedger {
             )
           )
       )
-      if (candidates.length)
+      for (let offset = 0; offset < candidates.length; offset += SQL_BATCH_ROWS)
         yield* this.query((orm) =>
-          orm.insert(t.memoryReady).values(candidates).onConflictDoNothing()
+          orm
+            .insert(t.memoryReady)
+            .values(candidates.slice(offset, offset + SQL_BATCH_ROWS))
+            .onConflictDoNothing()
         )
     })
   }
@@ -348,9 +384,11 @@ class SqliteMemory implements MemoryLedger {
       if (changed) {
         yield* this.query((orm) => orm.delete(t.memoryCompactionView))
         const view = yield* this.query((orm) => orm.select().from(t.memoryView))
-        if (view.length)
+        for (let offset = 0; offset < view.length; offset += SQL_BATCH_ROWS)
           yield* this.query((orm) =>
-            orm.insert(t.memoryCompactionView).values(view)
+            orm
+              .insert(t.memoryCompactionView)
+              .values(view.slice(offset, offset + SQL_BATCH_ROWS))
           )
         yield* this.query((orm) =>
           orm
@@ -391,12 +429,21 @@ class SqliteMemory implements MemoryLedger {
         )
       )
         return false
-      for (const part of Policy.memoryAncestors(parts, total)) {
-        if (nodes.has(nodeKey(part))) continue
-        const node = yield* this.node(part)
-        if (node) nodes.set(nodeKey(part), node)
+      const wanted = Policy.memoryAncestors(parts, total).filter(
+        (part) => !nodes.has(nodeKey(part))
+      )
+      for (let offset = 0; offset < wanted.length; offset += SQL_BATCH_ROWS) {
+        const found = yield* this.rows(StoredNode, (orm) =>
+          orm
+            .select()
+            .from(t.memoryNodes)
+            .where(
+              or(...wanted.slice(offset, offset + SQL_BATCH_ROWS).map(key))
+            )
+        )
+        for (const node of found) nodes.set(nodeKey(node), node)
       }
-      const plan = Policy.fitMemory(parts, total, nodes, budget)
+      const plan = yield* Policy.fitMemory(parts, total, nodes, budget)
       yield* this.query((orm) =>
         orm
           .update(t.memoryViewState)
@@ -405,8 +452,12 @@ class SqliteMemory implements MemoryLedger {
       )
       if (!plan.changed) return false
       yield* this.query((orm) => orm.delete(table))
-      if (plan.view.length)
-        yield* this.query((orm) => orm.insert(table).values(plan.view))
+      for (let offset = 0; offset < plan.view.length; offset += SQL_BATCH_ROWS)
+        yield* this.query((orm) =>
+          orm
+            .insert(table)
+            .values(plan.view.slice(offset, offset + SQL_BATCH_ROWS))
+        )
       return true
     })
   }
@@ -663,12 +714,16 @@ class SqliteMemory implements MemoryLedger {
         const nodes = new Map(
           (yield* this.viewNodes()).map((node) => [nodeKey(node), node])
         )
-        const originals =
+        const metadata =
           parts.length === nodes.size
             ? []
-            : yield* this.rows(LogEntry, (orm) =>
+            : yield* this.rows(PendingMetadata, (orm) =>
                 orm
-                  .select(getTableColumns(t.memoryLog))
+                  .select({
+                    id: t.memoryLog.id,
+                    kind: t.memoryLog.kind,
+                    bytes: sql<number>`length(cast(${t.memoryLog.text} as blob))`,
+                  })
                   .from(t.memoryView)
                   .leftJoin(
                     t.memoryNodes,
@@ -685,13 +740,58 @@ class SqliteMemory implements MemoryLedger {
                     )
                   )
                   .where(isNull(t.memoryNodes.start))
-                  .orderBy(asc(t.memoryLog.id))
+                  .orderBy(desc(t.memoryLog.id))
               )
-        return Policy.renderMemory(
-          parts,
-          nodes,
-          new Map(originals.map((entry) => [entry.id, entry]))
-        )
+        const originals = new Map<number, LogEntry>()
+        const omitted = new Map<number, boolean>()
+        const texts = new Map<number, string>()
+        let available = Policy.pendingOriginalAllowance(parts, nodes)
+        for (let index = 0; index < metadata.length; index++) {
+          const row = metadata[index]!
+          if (available < 128) {
+            omitted.set(
+              row.id,
+              row.bytes + byteLength(`${row.id}+0|${row.kind}: `) > available
+            )
+            continue
+          }
+          if (!texts.has(row.id)) {
+            const ids = metadata
+              .slice(index, index + ORIGINAL_READ_ROWS)
+              .map((entry) => entry.id)
+            // Slice bytes, not SQLite text (whose length/substr stop at NUL).
+            // Hex transports split UTF-8 safely. Any replacement at the joined
+            // middle lies outside the smaller head/tail selected by the policy.
+            const rows = yield* this.rows(PendingText, (orm) =>
+              orm
+                .select({
+                  id: t.memoryLog.id,
+                  hex: sql<string>`hex(case when length(cast(${t.memoryLog.text} as blob)) > 8192 then substr(cast(${t.memoryLog.text} as blob),1,4096) || substr(cast(${t.memoryLog.text} as blob),-4096) else cast(${t.memoryLog.text} as blob) end)`,
+                })
+                .from(t.memoryLog)
+                .where(inArray(t.memoryLog.id, ids))
+            )
+            for (const entry of rows)
+              texts.set(entry.id, decodeOriginal(entry.hex))
+          }
+          const text = texts.get(row.id)
+          if (text === undefined)
+            return yield* Effect.die(
+              new Error("Memory lost a committed working-context original")
+            )
+          const entry = {
+            id: row.id,
+            kind: row.kind,
+            text,
+            source: "",
+            date: "",
+          }
+          originals.set(row.id, entry)
+          const selected = Policy.pendingOriginalLine(entry, available)
+          if (selected.rendered !== undefined)
+            available -= byteLength(selected.rendered) + 1
+        }
+        return Policy.renderMemory(parts, nodes, originals, omitted)
       })
     )
   }
@@ -918,12 +1018,16 @@ class SqliteMemory implements MemoryLedger {
             .set({ compacting: 1 })
             .where(eq(t.memoryViewState.id, 2))
         )
-        if (parts.length) {
+        for (let offset = 0; offset < parts.length; offset += SQL_BATCH_ROWS) {
           yield* this.query((orm) =>
-            orm.insert(t.memoryCompactionView).values([...parts])
+            orm
+              .insert(t.memoryCompactionView)
+              .values(parts.slice(offset, offset + SQL_BATCH_ROWS))
           )
           yield* this.query((orm) =>
-            orm.insert(t.memoryView).values([...parts])
+            orm
+              .insert(t.memoryView)
+              .values(parts.slice(offset, offset + SQL_BATCH_ROWS))
           )
         }
       })

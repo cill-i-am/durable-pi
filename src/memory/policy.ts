@@ -1,3 +1,5 @@
+import { Effect } from "effect"
+
 import { attributedText } from "../messages/identity"
 import {
   byteLength,
@@ -82,20 +84,20 @@ export function memoryAncestors(parts: readonly Part[], total: number): Part[] {
   }
   return [...ancestors.values()]
 }
-export function fitMemory(
+export const fitMemory = Effect.fn("Memory.fit")(function* (
   parts: Part[],
   total: number,
   nodes: Map<string, MemoryNode>,
   budget: number
 ) {
   const target = budget / 2,
-    view = fitView(parts, total, nodes, target)
+    view = yield* fitView(parts, total, nodes, target)
   return {
     view,
     compacting: viewBytes(view, nodes) > target,
     changed: view.length !== parts.length,
   }
-}
+})
 export function summaryFailure(previous: number | undefined, retryAt: number) {
   return {
     attempts: Math.min(SUMMARY_FAILURES, (previous ?? 0) + 1),
@@ -154,35 +156,61 @@ const abbreviatedContext =
   "[Working context is abbreviated. Use search_memory or zoom to retrieve full archived entries.]"
 const memoryLine = (part: Part, node: MemoryNode) =>
   `${nodeKey(part)}|${node.text.replaceAll("\n", " ")}`
-function pendingOriginals(
+export function pendingOriginalAllowance(
   parts: readonly Part[],
-  nodes: ReadonlyMap<string, MemoryNode>,
-  originals: ReadonlyMap<number, LogEntry>
+  nodes: ReadonlyMap<string, MemoryNode>
 ) {
-  const lines = new Map<number, string>()
-  const abbreviated = new Set<number>()
   const savedBytes = parts.reduce((sum, part) => {
     const node = nodes.get(nodeKey(part))
     return sum + (node ? byteLength(memoryLine(part, node)) + 1 : 0)
   }, 0)
   const framingBytes = byteLength(`<chat>\n${abbreviatedContext}\n</chat>`) + 1
-  let available = Math.max(
+  return Math.max(
     0,
     Math.min(PENDING_ORIGINAL_BYTES, VIEW_BYTES - savedBytes - framingBytes)
   )
+}
+export function pendingOriginalLine(
+  entry: Pick<LogEntry, "id" | "kind" | "text">,
+  available: number
+) {
+  const line = `${entry.id}+0|${entry.kind}: ${entry.text}`
+  const budget = Math.min(ORIGINAL_EXCERPT_BYTES, available)
+  const abbreviated = byteLength(line) > budget
+  return {
+    abbreviated,
+    rendered:
+      budget < 128
+        ? undefined
+        : abbreviated
+          ? memoryExcerpt(line, budget)
+          : line,
+  }
+}
+function pendingOriginals(
+  parts: readonly Part[],
+  nodes: ReadonlyMap<string, MemoryNode>,
+  originals: ReadonlyMap<number, LogEntry>,
+  omitted: ReadonlyMap<number, boolean>
+) {
+  const lines = new Map<number, string>()
+  const abbreviated = new Set<number>()
+  let available = pendingOriginalAllowance(parts, nodes)
   for (const part of [...parts].reverse()) {
     if (nodes.has(nodeKey(part))) continue
+    if (omitted.has(part.start)) {
+      if (omitted.get(part.start)) abbreviated.add(part.start)
+      continue
+    }
     const entry = originals.get(part.start)
     if (part.count !== 1 || !entry)
       throw new Error("Memory lost a committed working-context part")
-    const line = `${part.start}+0|${entry.kind}: ${entry.text}`
-    const budget = Math.min(ORIGINAL_EXCERPT_BYTES, available)
-    if (byteLength(line) > budget) abbreviated.add(part.start)
-    if (budget < 128) continue
-    const rendered =
-      byteLength(line) > budget ? memoryExcerpt(line, budget) : line
-    lines.set(part.start, rendered)
-    available -= byteLength(rendered) + 1
+    const selected = pendingOriginalLine(entry, available)
+    if (selected.abbreviated) abbreviated.add(part.start)
+    if (selected.rendered !== undefined) {
+      lines.set(part.start, selected.rendered)
+      available -= byteLength(selected.rendered) + 1
+    }
   }
   return { lines, abbreviated }
 }
@@ -192,9 +220,10 @@ function pendingOriginals(
 export function renderMemory(
   parts: readonly Part[],
   nodes: ReadonlyMap<string, MemoryNode>,
-  originals: ReadonlyMap<number, LogEntry>
+  originals: ReadonlyMap<number, LogEntry>,
+  omitted: ReadonlyMap<number, boolean> = new Map()
 ) {
-  const pending = pendingOriginals(parts, nodes, originals)
+  const pending = pendingOriginals(parts, nodes, originals, omitted)
   let noted = false
   const lines = parts.flatMap((part) => {
     const node = nodes.get(nodeKey(part))
