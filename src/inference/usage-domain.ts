@@ -2,12 +2,21 @@ import { Schema } from "effect"
 
 import { ResolvedRoute } from "./policy"
 
+export const InferenceTimings = Schema.Struct({
+  fetchStartMs: Schema.optional(Schema.Number),
+  responseHeadersMs: Schema.optional(Schema.Number),
+  firstEventMs: Schema.optional(Schema.Number),
+  firstTextMs: Schema.optional(Schema.Number),
+})
+export type InferenceTimings = typeof InferenceTimings.Type
+
 export const Attempt = Schema.Struct({
   id: Schema.String,
   turnId: Schema.NullOr(Schema.String),
   route: ResolvedRoute,
   purpose: Schema.String,
   startedAt: Schema.String,
+  timings: Schema.optional(InferenceTimings),
   finishedAt: Schema.NullOr(Schema.String),
   outcome: Schema.Literals([
     "running",
@@ -67,10 +76,17 @@ export function finishAttempt(
   attempt: Attempt,
   outcome: TerminalOutcome,
   error: string | null,
-  at: string
+  at: string,
+  timings?: InferenceTimings
 ): Attempt | undefined {
   return attempt.outcome === "running"
-    ? { ...attempt, outcome, error, finishedAt: at }
+    ? {
+        ...attempt,
+        outcome,
+        error,
+        finishedAt: at,
+        ...(timings ? { timings } : {}),
+      }
     : undefined
 }
 

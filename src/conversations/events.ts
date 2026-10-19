@@ -68,9 +68,11 @@ export function conversationEventPump<TError, TRequirements>(
       yield* refresh
       for (;;) {
         yield* Queue.take(changes)
-        yield* Effect.sleep(80)
         yield* Queue.clear(changes)
         yield* refresh
+        // Publish the leading change without a debounce penalty. Changes
+        // during this interval remain in the sliding queue for the next pass.
+        yield* Effect.sleep(80)
       }
     })
     yield* observeCleanup(updates, (observed) =>

@@ -4,6 +4,7 @@ import { SqliteUsage } from "../src/inference/adapters/usage-sqlite"
 import { InferenceUsage, usageApplication } from "../src/inference/usage"
 import type {
   TerminalOutcome,
+  InferenceTimings,
   UsageReport,
 } from "../src/inference/usage-domain"
 import type { Sqlite } from "../src/storage/sqlite"
@@ -27,8 +28,12 @@ export function usageFixture(db: Sqlite) {
         turnId: observation.turnId,
         usage: (report: UsageReport) =>
           Effect.runSync(observation.usage(report)),
-        end: (outcome: TerminalOutcome, error?: string | null) => {
-          Effect.runSync(observation.end(outcome, error))
+        end: (
+          outcome: TerminalOutcome,
+          error?: string | null,
+          timings?: InferenceTimings
+        ) => {
+          Effect.runSync(observation.end(outcome, error, timings))
         },
       }
     },

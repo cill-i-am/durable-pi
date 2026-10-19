@@ -308,7 +308,7 @@ import { executionTools } from "../execution/adapters/tools"
 import { ExecutionStorageError } from "../execution/contracts"
 import { Executions, executionApplication } from "../execution/service"
 import { familyAgentAction } from "../family/adapters/agent-actions"
-import { familyDirectory } from "../family/adapters/directory"
+import { familyModelAccess } from "../family/adapters/model-access"
 import { familyTools } from "../family/adapters/tools"
 import {
   AccountRequest,
@@ -2283,32 +2283,23 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     return Effect.gen({ self: this }, function* () {
       const configuration = yield* this.configurationService.read()
       const identity = yield* this.communication.mailbox.identity()
-      return yield* accountNative(async () => {
-        if (!this.env.AUTH_DB)
-          throw new Error("Family directory is unavailable")
-        const directory = familyDirectory(
-          this.env.AUTH_DB,
-          this.env.OWNER_EMAIL
-        )
-        const modelOwner = await directory.owner()
-        if (!modelOwner) return null
-        const owner =
-          configuration?.owner ||
-          identity?.owner ||
-          (this.ctx.id.equals(this.env.AGENT.idFromName(modelOwner.id))
-            ? modelOwner.id
-            : undefined)
-        if (!owner) return null
-        const access = await directory.access(owner)
-        return access
-          ? {
-              owner,
-              modelOwner: modelOwner.id,
-              joinedAt: access.joinedAt,
-              membershipId: access.membershipId,
-            }
-          : null
-      })
+      if (!this.env.AUTH_DB)
+        return yield* new CredentialUnavailable({
+          message: "Family directory is unavailable",
+        })
+      const owner = configuration?.owner || identity?.owner || undefined
+      const access = yield* familyModelAccess(
+        this.env.AUTH_DB,
+        this.env.OWNER_EMAIL,
+        owner
+      )
+      if (
+        !access ||
+        (!owner &&
+          !this.ctx.id.equals(this.env.AGENT.idFromName(access.modelOwner)))
+      )
+        return null
+      return access
     }).pipe(
       Effect.mapError(
         () =>
