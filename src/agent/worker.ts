@@ -28,10 +28,9 @@ import {
   Scope,
 } from "effect"
 import * as Effect from "effect/Effect"
-
-import "../observability/lifecycle"
 import * as Schema from "effect/Schema"
 
+import "../observability/lifecycle"
 import type { AgentEnv } from "../../alchemy.run"
 import {
   connectionRequest,
@@ -233,6 +232,7 @@ import { DelegationFailure, ReadTool } from "../delegation/contracts"
 import type { DelegationSource } from "../delegation/delegation"
 import { sharedReference } from "../delegation/delegation"
 import { Delegation, delegationApplication } from "../delegation/service"
+import { buildRevision } from "../deployment/revision"
 import {
   emailAddress,
   emailAgent,
@@ -708,6 +708,28 @@ class BrowserRunner extends TurnRunner {
 }
 
 export class PersonalAgent extends DurableObject<AgentEnv> {
+  deploymentRevision() {
+    return buildRevision
+  }
+  async deploymentStatus(owner: string) {
+    if (!this.ctx.id.equals(this.env.AGENT.idFromName(owner)))
+      throw new Error("Deployment catalogue is only available from its root.")
+    const profiles = await this.agentProfiles()
+    // Read each existing active actor, including the original personal agent.
+    // Do not configure profiles, start lifecycle work, or invoke a model.
+    return Promise.all(
+      profiles
+        .filter((p) => p.status === "active")
+        .map((p) =>
+          p.id === homeAgentId
+            ? Promise.resolve(buildRevision)
+            : this.env.AGENT.getByName(
+                agentObjectName(owner, p.id)
+              ).deploymentRevision()
+        )
+    )
+  }
+
   private run<TValue, TError>(
     program: Effect.Effect<TValue, TError>,
     options?: { signal?: AbortSignal }
@@ -4086,6 +4108,21 @@ export default {
     env: AgentGatewayBindings & Partial<Pick<AgentEnv, "WHATSAPP">>,
     ctx?: Pick<ExecutionContext, "waitUntil">
   ) {
+    if (new URL(request.url).pathname === "/__deployment") {
+      const owner = request.headers.get("x-owner-id")
+      if (!owner || request.method !== "GET")
+        return new Response("Unauthorized", { status: 401 })
+      const root = env.AGENT.getByName(owner)
+      if (!root.deploymentStatus)
+        return new Response("Unavailable", { status: 503 })
+      return Response.json(
+        {
+          worker: buildRevision,
+          agents: await root.deploymentStatus(owner),
+        },
+        { headers: { "cache-control": "no-store" } }
+      )
+    }
     if (new URL(request.url).pathname !== "/api/whatsapp/webhook")
       return agentGateway(request, env, ctx)
     const owner = request.headers.get("x-owner-id")

@@ -30,6 +30,7 @@ type Peer = AgentRpc &
   ActivityReadRpc &
   WebhookAuthorizationRpc &
   Parameters<typeof accountConnectionRpc>[0] & {
+    deploymentStatus?: (owner: string) => Promise<string[]>
     fetch: (request: Request) => Promise<Response>
   }
 export interface AgentGatewayBindings {

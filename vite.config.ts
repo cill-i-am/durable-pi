@@ -5,6 +5,9 @@ import { defineConfig } from "vite"
 
 const config = defineConfig({
   define: {
+    __PI_BUILD_REVISION__: JSON.stringify(
+      process.env.GITHUB_SHA ?? "development"
+    ),
     "import.meta.env.VITE_BUILD_ID": JSON.stringify(
       process.env.GITHUB_SHA ?? "development"
     ),
