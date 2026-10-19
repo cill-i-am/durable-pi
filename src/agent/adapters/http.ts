@@ -34,6 +34,7 @@ import { preserveFatal } from "../../shared/effect"
 import { jsonRequest } from "../../shared/http"
 import { nativeOperation } from "../../shared/interop"
 import { SkillConflict, SkillStorageError } from "../../skills/contracts"
+import { TaskControlError } from "../../tasks/contracts"
 import {
   FileNotFound,
   FileRejected,
@@ -50,6 +51,7 @@ export class AgentRequestUnavailable extends Schema.TaggedError<AgentRequestUnav
   { operation: Schema.String }
 ) {}
 const HttpFailure = Schema.Union([
+  TaskControlError,
   AgentRequestInvalid,
   AgentConflict,
   AgentStorageError,
@@ -96,6 +98,7 @@ export const agentNative = <T>(
   })
 
 const genericFailureStatuses = {
+  TaskControlError: 400,
   AgentStorageError: 400,
   AgentNotFound: 400,
   SkillConflict: 400,

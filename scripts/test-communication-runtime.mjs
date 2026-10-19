@@ -1264,7 +1264,13 @@ const config :Workerd.Config = (
     conversation: null,
     authorized: false,
   })
-  for (const path of ["bots", "state", "activity?scope=all", "bots/statuses"]) {
+  for (const path of [
+    "bots",
+    "state",
+    "tasks",
+    "activity?scope=all",
+    "bots/statuses",
+  ]) {
     const response = await fetch(`${origin}/gateway/${path}`)
     assert.equal(
       response.status,
@@ -1277,6 +1283,18 @@ const config :Workerd.Config = (
     if (path.startsWith("activity")) assert(Array.isArray(body.entries))
     if (path === "bots/statuses") assert.equal(body.statuses[0].agentId, "home")
   }
+  const taskControls = await call("personal-tasks/task-controls", {})
+  assert.deepEqual(
+    taskControls.before.map((task) => task.id),
+    ["original-task", "newer-task"]
+  )
+  assert(["stopping", "cancelled"].includes(taskControls.stopped.state))
+  assert(["stopping", "cancelled"].includes(taskControls.replay.state))
+  assert.notEqual(taskControls.newerState, "cancelled")
+  assert.equal(taskControls.originalSession, null)
+  console.log(
+    "PASS native task controls: original records, queued cancellation before model dispatch, exact retry and a newer request preserved."
+  )
   const liveRevision = await (await fetch(`${origin}/deployment`)).json()
   assert.equal(liveRevision.worker, "development")
   assert(liveRevision.agents.length >= 1)

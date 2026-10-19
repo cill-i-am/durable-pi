@@ -217,6 +217,7 @@ export class WhatsAppStore {
     from: WhatsAppDelivery,
     state: WhatsAppDelivery,
     details: {
+      control?: boolean
       reply?: string
       delivery?: ReplyProgress
       error?: string | null

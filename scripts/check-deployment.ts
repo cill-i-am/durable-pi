@@ -91,6 +91,7 @@ if (process.env.LEGACY_APP_URL) {
 }
 for (const path of [
   "state",
+  "tasks",
   "events?protocol=tanstack",
   "communication",
   "communication/synthetic-task",
@@ -123,6 +124,12 @@ assert.equal(
       "https://attacker.invalid"
     )
   ).status,
+  403
+)
+assert.equal((await request("/api/agent/tasks/stop", {})).status, 401)
+assert.equal(
+  (await request("/api/agent/tasks/stop", {}, "https://attacker.invalid"))
+    .status,
   403
 )
 for (const action of ["control", "stop", "retry"]) {
