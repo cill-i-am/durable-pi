@@ -110,7 +110,7 @@ function fixture(rotate?: () => Promise<void>) {
         setStatus: pause,
         cancelPendingRun: () => Effect.succeed(undefined),
       },
-      conversations: { unfinished: () => Effect.succeed([]) },
+      conversations: turns,
       coordination: { store: coordination },
       delegationLedger: {
         catalog: () => Effect.succeed([1]),
@@ -141,7 +141,7 @@ function fixture(rotate?: () => Promise<void>) {
       },
     })
     people.set(key, host)
-    return { host, db, ledger, pause, coordination, reconcile }
+    return { host, db, ledger, pause, coordination, reconcile, turns }
   }
   return { sql, actor, refresh }
 }
@@ -244,6 +244,50 @@ it("pauses old scheduled work when removal and a new membership occur between ac
   expect(member.reconcile).toHaveBeenCalledWith("finished-request")
   await member.host.familyAdmission()
   expect(member.pause).toHaveBeenCalledTimes(1)
+})
+
+it("fences completed main sessions without child groups when membership changes", async () => {
+  const f = fixture()
+  f.actor("cillian")
+  const member = f.actor("claire")
+  await member.host.familyAdmission()
+  // More than one discovery page, and no delegation group owns these sessions.
+  for (let n = 0; n < 25; n++) {
+    const id = `old-main-${n}`
+    await Effect.runPromise(member.turns.admit({ operationId: id, text: id }))
+    await Effect.runPromise(member.turns.saveSession(id, String(100 + n)))
+    member.db.run("UPDATE chat_turns SET status='done' WHERE id=?", id)
+  }
+  await Effect.runPromise(
+    member.coordination.accept({
+      id: "old-message",
+      operationId: "old-operation",
+      from: { sessionId: "old-main-0", agentId: "main" },
+      to: { sessionId: "old-main-24", agentId: "main" },
+      text: "Continue old work after re-invitation",
+      provenance: {
+        author: { kind: "agent", id: "private-bot", sessionId: "old-main-0" },
+        conversationId: "private-bot",
+        recipients: [],
+      },
+      createdAt: Date.now(),
+      deadline: Date.now() + 600000,
+    })
+  )
+  f.sql.exec(
+    "DELETE FROM member WHERE userId='claire'; INSERT INTO member(id,organizationId,userId,role,createdAt) VALUES('replacement','family','claire','member',1)"
+  )
+  await member.host.familyAdmission()
+  expect(
+    (await Effect.runPromise(member.coordination.get("old-message")))?.state
+  ).toBe("failed")
+  for (let n = 0; n < 25; n++)
+    expect(
+      await Effect.runPromise(member.coordination.closed(`old-main-${n}`))
+    ).toBe(true)
+  expect(
+    (await Effect.runPromise(member.turns.get("old-main-0")))?.status
+  ).toBe("done")
 })
 
 it("fails closed when live membership cannot be read", async () => {
