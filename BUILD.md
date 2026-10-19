@@ -247,7 +247,7 @@ Hosted checks will be reported separately. Local fault injection does not prove 
 
 ## Memory, run state, and model context review — 2026-10-11
 
-Status: caller and recovery trace, focused projection fixes and local verification complete. [PR #47](https://github.com/cill-i-am/durable-pi/pull/47) merged as `d934a66`; [main checks, deployment and hosted authentication checks](https://github.com/cill-i-am/durable-pi/actions/runs/38145812360) passed. The product overview, backend domains, frontend feature slices and six interaction diagrams are in [FEATURES.md](FEATURES.md).
+Status: caller and recovery trace, focused projection fixes and local verification complete. [PR #47](https://github.com/cill-i-am/durable-pi/pull/47) merged as `d934a66`; [main checks, deployment and hosted authentication checks](https://github.com/cill-i-am/durable-pi/actions/runs/38145812360) passed. The product overview is in [FEATURES.md](FEATURES.md). Backend ownership, frontend feature slices and interaction diagrams are preserved in the [architecture guide](docs/architecture.md).
 
 ### Ownership and justified no-op decisions
 
