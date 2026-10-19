@@ -1,0 +1,28 @@
+diff --git a/dist/core/node/bindings/cache/Cache.mjs b/dist/core/node/bindings/cache/Cache.mjs
+--- a/dist/core/node/bindings/cache/Cache.mjs
++++ b/dist/core/node/bindings/cache/Cache.mjs
+@@ -36,7 +36,7 @@
+ 			message: "Cannot configure Cache persistence: the Storage service has no disk path.",
+ 			hint: "Configure a disk-backed storage layer (`Storage.layerDisk` or `Storage.layerTemp`)."
+ 		});
+-		const persistPath = path.join(storageDiskPath, "cache");
++		const persistPath = path.join(storageDiskPath, "cache", encodeURIComponent((yield* PluginContext).worker.name));
+ 		yield* fs.makeDirectory(persistPath, { recursive: true }).pipe(Effect.mapError((cause) => ConfigError.make({
+ 			subtag: "Cache",
+ 			message: `Failed to create Cache persistence directory "${persistPath}": ${cause.message}`,
+diff --git a/src/core/bindings/cache/Cache.ts b/src/core/bindings/cache/Cache.ts
+--- a/src/core/bindings/cache/Cache.ts
++++ b/src/core/bindings/cache/Cache.ts
+@@ -53,7 +53,11 @@
+           hint: "Configure a disk-backed storage layer (`Storage.layerDisk` or `Storage.layerTemp`).",
+         });
+       }
+-      const persistPath = path.join(storageDiskPath, "cache");
++      const persistPath = path.join(
++        storageDiskPath,
++        "cache",
++        encodeURIComponent((yield* PluginContext.PluginContext).worker.name),
++      );
+       yield* fs.makeDirectory(persistPath, { recursive: true }).pipe(
+         Effect.mapError((cause) =>
+           ConfigError.make({

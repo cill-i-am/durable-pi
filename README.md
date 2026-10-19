@@ -54,7 +54,7 @@ Requires Node 24+ and pnpm 12.14.0. Install with `pnpm install --frozen-lockfile
 
 To reconnect a saved Pi registration, run `pnpm model:reauthorize --credential-file .env --expected-email owner@example.com`, using your ChatGPT account email. Keep the original `.agent-device-id.local` host file; `--device-file` selects it when using a separate checkout, and `--env-file` selects the private output. Returning sign-in reuses the issued client ID, verifies the callback and signed account identity, then atomically saves the new credential. Deploy the credential through the production secret workflow only after local sign-in succeeds.
 
-`pnpm verify` runs static checks, unit tests, native runtime recovery checks, the website and Worker builds, desktop and mobile browser journeys, and the terminal container's media checks. Start Docker and install Chromium with `pnpm exec playwright install --with-deps chromium` before the first full run. These checks do not need provider credentials.
+`pnpm verify` runs static checks, unit tests, native runtime recovery and local startup checks, the website and Worker builds, desktop and mobile browser journeys, and the terminal container's media checks. Start Docker and install Chromium with `pnpm exec playwright install --with-deps chromium` before the first full run. These checks do not need provider credentials.
 
 Run `pnpm verify:browser` to check sign-in, opening an agent, sending a message, receiving a reply, and reloading the conversation. It uses the real workspace UI with synthetic authentication and reply transports; it does not verify production sign-in or call a model. Failure screenshots and traces are saved in `test-results/`. `pnpm verify:container` builds the production `linux/amd64` terminal image and runs its video checks through the Dockerfile.
 
@@ -65,6 +65,8 @@ CI runs the verification suites in parallel and requires the aggregate `check` r
 Production uses the dedicated `durable-pi` Alchemy profile. Configure it with `pnpm exec alchemy profile create durable-pi` and `pnpm exec alchemy profile edit --profile durable-pi`, selecting Workers scripts read/write, D1 read/write, Workers R2 Storage read/write, account settings read, memberships read, and user details read. OAuth adds offline refresh access. A fresh machine also needs Secrets Store read/write to retrieve remote-state credentials; an existing trusted state-credential cache avoids that additional local permission.
 
 Workers use the `2026-09-25` compatibility date. Alchemy beta.83 bundles local workerd `2026-10-02`. Local development keeps infrastructure state under ignored `.alchemy/state`; deployments share the encrypted Cloudflare state service. Use a separate ChatGPT login for independently running deployments: OAuth refresh tokens rotate.
+
+Local startup waits for each Worker’s first successful start before reporting readiness, including services used by agent configuration. Build and startup errors leave the watcher running so repairing a file can complete startup. Each Worker uses its own persistent Cache API directory to avoid SQLite contention between Workers. These fixes are pinned package patches for Alchemy beta.83 and its local runtime; they do not alter deployed Worker behavior. Run `pnpm test:dev-runtime` to check startup failure and repair, service-binding readiness, cache isolation and cache persistence across a rebuild. CI runs this check in the native-runtime suite.
 
 ## Account security
 
