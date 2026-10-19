@@ -24,6 +24,8 @@ Conversation rows, archive export/restore, retrieval and summary inputs retain t
 
 Shared task status retains open asynchronous sessions under their original request handle after the parent's initial reply. Stop closes that session and fences queued messages. A family membership change closes every old main session, including completed sessions without child groups, as well as its child groups. It fails queued messages touching those sessions, so a later invitation cannot revive previously authorized work. Conversation history remains readable; closing a coordination session does not delete its completed answer.
 
+Concurrent admissions share an in-flight membership transition and recheck live membership after it settles. This prevents a delayed cleanup from cancelling work admitted under the new membership. Durable session fences and background stop/report-cancellation intents are recorded before releasing admission. Native abort settlement runs through the actor's existing lifetime owner, so cleanup can finish after a revoked callback returns. A failed transition releases the barrier and retains the old durable generation for a later retry.
+
 ## Verification
 
 `pnpm test` covers message scope, forged identity, replay, recipient ordering, expiry, cancellation, archive restoration and native Pi restart behavior. `pnpm test:communication-runtime` runs the production PersonalAgent in workerd with synthetic models, including nonblocking spawn, child discovery/question, parent reply, automatic findings and continuation in the original native session. These deterministic checks establish execution behavior, not model judgment.

@@ -290,6 +290,95 @@ it("fences completed main sessions without child groups when membership changes"
   ).toBe("done")
 })
 
+it("does not let concurrent old-generation cleanup fence newly authorized work", async () => {
+  const f = fixture()
+  f.actor("cillian")
+  const member = f.actor("claire")
+  await member.host.familyAdmission()
+  f.sql.exec(
+    "DELETE FROM member WHERE userId='claire'; INSERT INTO member(id,organizationId,userId,role,createdAt) VALUES('replacement','family','claire','member',1)"
+  )
+  let release!: () => void, entered!: () => void
+  const held = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  const started = new Promise<void>((resolve) => {
+    entered = resolve
+  })
+  member.pause.mockImplementationOnce(() =>
+    Effect.promise(async () => {
+      entered()
+      await held
+    })
+  )
+  const earlier = member.host.familyAdmission()
+  await started
+  // A second admission must join cleanup instead of admitting new work early.
+  let laterSettled = false
+  const later = member.host.familyAdmission().then(async (value) => {
+    await Effect.runPromise(
+      member.turns.admit({
+        operationId: "fresh-work",
+        text: "Authorized under the new membership",
+      })
+    )
+    await Effect.runPromise(member.turns.saveSession("fresh-work", "9000"))
+    member.db.run("UPDATE chat_turns SET status='done' WHERE id='fresh-work'")
+    laterSettled = true
+    return value
+  })
+  await new Promise((resolve) => setTimeout(resolve, 20))
+  const admittedEarly = laterSettled
+  release()
+  await Promise.all([earlier, later])
+  expect(admittedEarly).toBe(false)
+  expect(
+    await Effect.runPromise(member.coordination.closed("fresh-work"))
+  ).toBe(false)
+  expect(member.pause).toHaveBeenCalledTimes(1)
+})
+
+it("lets native abort cleanup recheck membership after durable fencing without a cycle", async () => {
+  const f = fixture()
+  f.actor("cillian")
+  const member = f.actor("claire")
+  await member.host.familyAdmission()
+  f.sql.exec(
+    "DELETE FROM member WHERE userId='claire'; INSERT INTO member(id,organizationId,userId,role,createdAt) VALUES('replacement','family','claire','member',1)"
+  )
+  let settled!: () => void
+  const cleanup = new Promise<void>((resolve) => {
+    settled = resolve
+  })
+  member.reconcile.mockImplementationOnce(() =>
+    Effect.promise(async () => {
+      await member.host.familyAdmission()
+      settled()
+    })
+  )
+  expect(await member.host.familyAdmission()).toMatchObject({ owner: "claire" })
+  await cleanup
+  expect(
+    await Effect.runPromise(member.coordination.closed("finished-request"))
+  ).toBe(true)
+})
+
+it("retries a failed membership transition instead of retaining a rejected barrier", async () => {
+  const f = fixture()
+  f.actor("cillian")
+  const member = f.actor("claire")
+  await member.host.familyAdmission()
+  f.sql.exec(
+    "DELETE FROM member WHERE userId='claire'; INSERT INTO member(id,organizationId,userId,role,createdAt) VALUES('replacement','family','claire','member',1)"
+  )
+  member.pause.mockImplementationOnce(() =>
+    Effect.die(new Error("Synthetic transition failure"))
+  )
+  await expect(member.host.familyAdmission()).rejects.toBeDefined()
+  expect(await member.host.familyAdmission()).toMatchObject({ owner: "claire" })
+  expect(member.pause).toHaveBeenCalledTimes(2)
+})
+
 it("fails closed when live membership cannot be read", async () => {
   const f = fixture()
   f.actor("cillian")
