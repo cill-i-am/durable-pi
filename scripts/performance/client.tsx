@@ -21,6 +21,7 @@ import {
   InputGroupTextarea,
 } from "../../src/components/ui/input-group"
 import { JoinFamily } from "../../src/features/family/join"
+import { UpdateRecovery } from "../../src/features/updates/update-recovery"
 import { reportClientError } from "../../src/observability/browser"
 
 import "./styles.css"
@@ -125,10 +126,12 @@ function VisualsFixture() {
 
 createRoot(document.getElementById("root")!).render(
   <ThemeProvider attribute="class">
-    {window.location.pathname === "/__visuals" ? (
-      <VisualsFixture />
-    ) : (
-      <RouterProvider router={router} />
-    )}
+    <UpdateRecovery>
+      {window.location.pathname === "/__visuals" ? (
+        <VisualsFixture />
+      ) : (
+        <RouterProvider router={router} />
+      )}
+    </UpdateRecovery>
   </ThemeProvider>
 )

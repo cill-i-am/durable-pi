@@ -6,6 +6,8 @@ import {
 import { useEffect, useState } from "react"
 
 import { Button, buttonVariants } from "@/components/ui/button"
+import { importFailure } from "@/features/updates/recovery"
+import { ReloadRecovery } from "@/features/updates/update-recovery"
 import { reportClientError } from "@/observability/browser"
 
 export function WorkspaceLinkError({ reset, error }: ErrorComponentProps) {
@@ -31,6 +33,12 @@ export function WorkspaceLinkError({ reset, error }: ErrorComponentProps) {
       setRetrying(false)
     }
   }
+  if (importFailure(error))
+    return (
+      <main id="main-content" tabIndex={-1} className="loading-view">
+        <ReloadRecovery />
+      </main>
+    )
   return (
     <main id="main-content" tabIndex={-1} className="loading-view">
       <h1 className="text-lg font-semibold">Couldn’t open this workspace.</h1>

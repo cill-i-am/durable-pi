@@ -11,6 +11,10 @@ Find an agent, move between chat and saved work, and reopen the same view from a
 - `workspace-appearance`: Choose appearance and interaction-sound preferences.
 - `workspace-links`: Preserve the selected resource, tab, and supported filters in the URL.
 
+- `workspace-update`: Detect another build and offer a persistent explicit Reload action.
+- `workspace-asset-recovery`: Recover a retired lazy-loaded screen without unmounting the conversation.
+- `workspace-reload-fences`: Wait for open edits, saves, uploads, recordings, or an interactive terminal before reloading.
+
 ## How to get to it (user POV)
 
 - Open `/agents`, `/agents/archived`, or an agent's `/agents/AGENT_SLUG` page.
@@ -28,8 +32,10 @@ Preconditions: Use the disposable browser fixture or a signed-in account. Substi
 - **Inspect other panels.** On the real app, open each mapped panel through **Workbench tool**, reload, and confirm the selected panel remains visible. The fixture does not supply every panel's data.
 - **Proof.** Keep the trace and URL before and after navigation; a screenshot alone does not establish draft or route preservation.
 
+- **Stale tab.** Run `pnpm test:browser tests/browser/stale-tab.spec.ts` for update, missing-chunk, draft, upload, storage, and uncertain-send recovery on desktop/mobile. Run `pnpm test:client-upgrade` for two distinct builds and an actually retired asset; verify the new entry bundle, preserved draft/file, and zero submissions.
+
 ## Gotchas
 
 - Cmd/Ctrl+K searches agents and navigation commands. Conversation-content search is in Memory.
 - The visible label **Checklists** uses the path segment `objects`.
-- A stale tab can fail to load a removed lazy-loaded chunk after a deployment. A full reload is the recorded workaround; automatic recovery is not mapped as implemented.
+- An update offers an explicit Reload action. A failed import offers Reload page; ordinary route failures retain Try again. Detection does not automatically reload or resubmit work. Offline state or unresolved local work disables reload.

@@ -2,6 +2,7 @@ import { Mic, Square, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 
 import { InputGroupButton } from "@/components/ui/input-group"
+import { useReloadGuard } from "@/features/updates/update-recovery"
 import { MAX_FILE_BYTES } from "@/workspace/files"
 
 /** The browser owns capture only. The resulting File enters the normal shared
@@ -14,6 +15,10 @@ export function VoiceRecorder({
   onRecorded: (file: File) => Promise<void>
 }) {
   const [state, setState] = useState<"idle" | "starting" | "recording">("idle")
+  useReloadGuard(
+    "Finish or cancel the voice recording before reloading.",
+    state !== "idle"
+  )
   const [error, setError] = useState("")
   const capture = useRef<{
     recorder: MediaRecorder

@@ -45,6 +45,8 @@ Use another feature file's command for an existing scripted journey. To cover bo
 
 Real-app journeys in the feature files name the action and observable result for a browser-driving harness. They do not imply an existing end-to-end script. Read the actual current accessibility state before interacting; keep exact controls and routes from the map, and record a harness gap when automation is missing. No production DB setter or fixture API is a substitute for a user action.
 
+For a real frontend build transition with disposable backend state, run `pnpm test:client-upgrade`. It builds two revisions, retires the first build's assets while its tab stays open, drives the explicit recovery action, and checks draft/file preservation without a send. Use `PI_BROWSER_CHANNEL=chrome` for installed Chrome. Evidence defaults to ignored `test-results/client-upgrade`; cleanup removes only its owned browser/server/build directories and retains the evidence.
+
 ## Evidence
 
 Keep the Playwright trace in the output directory named in Launch. The trace captures actions, DOM snapshots, and screenshots of the interaction. The existing config also captures a separate screenshot on failure; this installed CLI has no `--screenshot` flag. A passing exit code must accompany the artifacts. Native checks retain their process/output evidence separately. For real-provider acceptance, verify the actual inbox or provider outcome and the corresponding Pi request/file/decision record.

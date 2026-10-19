@@ -59,3 +59,9 @@ Upstream format: [Cursor pstack create-verification-skill](https://github.com/cu
 ## Consequential source finding
 
 The WhatsApp inbound adapter validates only text/image/audio message types in `src/whatsapp/adapters/chat.ts`, and `WhatsAppMedia` in `src/whatsapp/contracts.ts` accepts image/audio MIME types. Its outbound export path accepts broader file MIME types. The map and README therefore distinguish document/video export from document/video intake. No product code was changed to close that gap.
+
+## Stale-tab and draft recovery slice
+
+The [recovery decisions](../../../../docs/decisions/stale-tab-recovery.md) describe ownership and evidence. Product source: [updates feature](../../../../src/features/updates), [composer draft storage](../../../../src/features/conversation/draft.ts), [composer integration](../../../../src/features/conversation/use-composer-draft.ts), and [public build revision](../../../../src/routes/api.version.ts). Existing tool/admission permissions remain authoritative.
+
+Checks: [reload controller](../../../../tests/client-recovery.test.ts), [draft recovery](../../../../tests/composer-draft.test.ts), [browser journeys](../../../../tests/browser/stale-tab.spec.ts), [microphone fence](../../../../tests/browser/audio.spec.ts), and [two-build acceptance](../../../../scripts/check-client-upgrade.mjs). Actual local Chrome acceptance retained before/failure/after screenshots and trace outside Git. Synthetic auth/provider boundaries are stated in the decision record.

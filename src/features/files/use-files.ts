@@ -8,9 +8,13 @@ import { FileInfo, FileList, MAX_ATTACHMENTS } from "@/workspace/files"
 import { attachmentSelectable, preparingFile } from "./preparation"
 import { uploadFile, type UploadAttempt } from "./uploads"
 
-export function useFiles(agentId: string) {
+export function useFiles(
+  agentId: string,
+  initialSelection: readonly FileInfo[] = []
+) {
   const [files, setFiles] = useState<readonly FileInfo[]>([])
-  const [selected, setSelected] = useState<readonly FileInfo[]>([])
+  const [selected, setSelected] =
+    useState<readonly FileInfo[]>(initialSelection)
   const [uploads, setUploads] = useState<UploadAttempt[]>([])
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)

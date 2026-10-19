@@ -91,9 +91,11 @@ import { ModelMenu } from "./model-menu"
 import { QueuedTurnAnchor } from "./queued-turn-anchor"
 import { TurnDelivery } from "./turn-delivery"
 import { TurnReply } from "./turn-reply"
+import type { ComposerDraftState } from "./use-composer-draft"
 import type { useConversation } from "./use-conversation"
 
 export function Conversation({
+  composerDraft,
   name,
   agent,
   workbenchAction,
@@ -105,6 +107,7 @@ export function Conversation({
   onSettings,
   onAppPendingChange,
 }: {
+  composerDraft: ComposerDraftState
   name: string
   agent: AgentProfile
   workbenchAction?: ReactNode
@@ -118,7 +121,13 @@ export function Conversation({
 }) {
   const archived = agent.status === "archived"
   const api = useMemo(() => agentApi(agent.id), [agent.id])
-  const [draft, setDraft] = useState("")
+  const { text: draft, profile, job } = composerDraft.value
+  const setDraft = (change: string | ((text: string) => string)) =>
+    composerDraft.update((current) => ({
+      text: typeof change === "function" ? change(current.text) : change,
+    }))
+  const setProfile = (profile: Profile) => composerDraft.update({ profile })
+  const setJob = (job: JobType) => composerDraft.update({ job })
   const composerInput = useRef<HTMLTextAreaElement>(null)
   const answerPrompt = archived
     ? undefined
@@ -130,12 +139,10 @@ export function Conversation({
       }
   const [dragging, setDragging] = useState(false)
   const dragDepth = useRef(0)
-  const [profile, setProfile] = useState<Profile>("auto")
-  const [job, setJob] = useState<JobType>("conversation")
   const [error, setError] = useState("")
   const [retrying, setRetrying] = useState<string | null>(null)
   const retryKeys = useRef(new Map<string, string>())
-  const pending = useRef<Submission | null>(null)
+  const pending = useRef<Submission | null>(composerDraft.value.attempt)
   const { state, error: connectionError, reload } = conversation
   const active = state?.turns.find((t) =>
     ["queued", "preparing", "running", "stopping"].includes(t.status)
@@ -157,16 +164,26 @@ export function Conversation({
       profile,
       job
     )
+    composerDraft.update({ attempt: pending.current })
     try {
       const submittedFiles = pending.current.files ?? []
       await conversation.submit(pending.current)
       files.clear(submittedFiles)
       pending.current = null
-      setProfile("auto")
-      setJob("conversation")
+      composerDraft.update((current) => ({
+        attempt: null,
+        profile: "auto",
+        job: "conversation",
+        files: current.files.filter(
+          (file) => !submittedFiles.includes(file.id)
+        ),
+      }))
       return true
     } catch (e) {
-      if (rejectedModelAttempt(e)) pending.current = null
+      if (rejectedModelAttempt(e)) {
+        pending.current = null
+        composerDraft.update({ attempt: null })
+      }
       setError(e instanceof Error ? e.message : "Could not send")
       return false
     } finally {

@@ -1,4 +1,4 @@
-import { readFile, stat } from "node:fs/promises"
+import { readFile, stat, writeFile } from "node:fs/promises"
 import { createServer } from "node:http"
 import { resolve, extname } from "node:path"
 import { Readable } from "node:stream"
@@ -19,14 +19,24 @@ const project = resolve(fileURLToPath(new URL("../..", import.meta.url)))
 const output = process.env.PERF_DIST
   ? resolve(process.env.PERF_DIST)
   : resolve(project, "dist/performance")
-if (!process.argv.includes("--serve-only"))
+if (!process.argv.includes("--serve-only")) {
   await build({
     configFile: false,
+    define: {
+      __PI_BUILD_REVISION__: JSON.stringify(
+        process.env.PERF_BUILD_REVISION ?? "a".repeat(40)
+      ),
+    },
     root: resolve(project, "scripts/performance"),
     resolve: { alias: { "@": resolve(project, "src") } },
     plugins: [tailwindcss(), react()],
     build: { outDir: output, emptyOutDir: true },
   })
+  await writeFile(
+    resolve(output, ".build-revision"),
+    process.env.PERF_BUILD_REVISION ?? "a".repeat(40)
+  )
+}
 if (process.argv.includes("--build-only")) process.exit(0)
 const wait = (ms) => new Promise((done) => setTimeout(done, ms))
 const requests = []
@@ -154,6 +164,11 @@ const server = createServer(async (req, res) => {
   if (url.pathname === "/__measurements") return sendJson(res, requests)
   if (url.pathname.startsWith("/api/")) {
     const path = url.pathname
+    if (path === "/api/version")
+      return sendJson(res, {
+        revision: await readFile(resolve(output, ".build-revision"), "utf8"),
+      })
+
     const sessionId = req.headers.cookie?.match(
       /(?:^|; )pi_fixture=([^;]+)/
     )?.[1]
@@ -173,6 +188,13 @@ const server = createServer(async (req, res) => {
     }
     return fixtureGet(req, res, path, session)
   }
+  return serveAsset(url, res)
+})
+server.listen(Number(process.argv[2] ?? 4397), "127.0.0.1", () =>
+  console.log("Synthetic performance fixture ready")
+)
+
+async function serveAsset(url, res) {
   try {
     const file = resolve(output, "." + decodeURIComponent(url.pathname))
     if (file !== output && !file.startsWith(output + "/")) {
@@ -183,6 +205,11 @@ const server = createServer(async (req, res) => {
     const resource = await stat(file)
       .then((s) => (s.isFile() ? file : null))
       .catch(() => null)
+    if (!resource && url.pathname.startsWith("/assets/")) {
+      res.writeHead(404)
+      res.end()
+      return
+    }
     const body = await readFile(resource ?? resolve(output, "index.html"))
     const type =
       {
@@ -203,10 +230,7 @@ const server = createServer(async (req, res) => {
     res.writeHead(500)
     res.end()
   }
-})
-server.listen(Number(process.argv[2] ?? 4397), "127.0.0.1", () =>
-  console.log("Synthetic performance fixture ready")
-)
+}
 
 async function journeyPost(req, res, path, sessionId, session) {
   if (path === "/api/fixture/model-connection")
