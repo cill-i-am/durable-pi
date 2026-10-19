@@ -333,3 +333,105 @@ it.effect(
       expect(retry.origin).toEqual(input.origin)
     })
 )
+
+it.effect(
+  "rolls back a membership fence if failing queued mail cannot be committed",
+  () =>
+    Effect.gen(function* () {
+      const f = fixture()
+      const turns = new ConversationStore(f.db, {
+        model: "test",
+        thinking: "off",
+      })
+      for (const id of ["a", "b"]) {
+        yield* turns.admit({ operationId: id, text: "Retained original" })
+        yield* turns.saveSession(id, id === "a" ? "1" : "4")
+      }
+      const receipt = yield* f.service.send(1, "before-revoke", {
+        to: { sessionId: "b", agentId: "main" },
+        text: "Queued",
+      })
+      f.db.run(
+        "CREATE TRIGGER reject_fence BEFORE UPDATE ON agent_messages BEGIN SELECT RAISE(ABORT, 'Synthetic failure'); END"
+      )
+      expect(yield* Effect.flip(f.store.closeAll())).toMatchObject({
+        code: "unavailable",
+      })
+      expect(yield* f.store.closed("a")).toBe(false)
+      expect((yield* f.store.get(receipt.id))?.state).toBe("accepted")
+      f.db.run("DROP TRIGGER reject_fence")
+      yield* f.store.closeAll()
+      expect(yield* f.store.closed("a")).toBe(true)
+      expect(yield* f.store.closed("b")).toBe(true)
+      expect((yield* f.store.get(receipt.id))?.state).toBe("failed")
+    })
+)
+
+it.effect(
+  "serializes concurrent replay and capacity checks without losing receipts",
+  () =>
+    Effect.gen(function* () {
+      const f = fixture()
+      const input = {
+        to: { sessionId: "b", agentId: "main" },
+        text: "Same operation",
+      }
+      const replay = yield* Effect.forEach(
+        Array.from({ length: 32 }),
+        () => f.service.send(1, "concurrent-replay", input),
+        { concurrency: 16 }
+      )
+      expect(new Set(replay.map((r) => r.id)).size).toBe(1)
+      const outcomes = yield* Effect.forEach(
+        Array.from({ length: 80 }, (_, n) => n),
+        (n) => f.service.send(1, `concurrent-${n}`, input).pipe(Effect.result),
+        { concurrency: 16 }
+      )
+      expect(outcomes.filter((r) => r._tag === "Success")).toHaveLength(63)
+      expect(
+        f.db.all<{ n: number }>("SELECT count(*) n FROM agent_messages")[0]?.n
+      ).toBe(64)
+      expect((yield* f.service.send(1, "concurrent-replay", input)).id).toBe(
+        replay[0]!.id
+      )
+    })
+)
+
+it.effect(
+  "keeps an unavailable recipient from blocking others and settles retry exhaustion",
+  () =>
+    Effect.gen(function* () {
+      const f = fixture()
+      const seen: string[] = []
+      f.host.deliver = (message) =>
+        message.to.sessionId === "b"
+          ? Effect.fail(fail("unavailable", "Synthetic outage"))
+          : Effect.sync(() => {
+              seen.push(message.id)
+            })
+      const blocked = yield* f.service.send(1, "outage", {
+        to: { sessionId: "b", agentId: "main" },
+        text: "Retry me",
+      })
+      const healthy = yield* f.service.send(2, "healthy", {
+        to: { sessionId: "a", agentId: "main" },
+        text: "Deliver me",
+      })
+      yield* f.service.pump()
+      expect(seen).toEqual([healthy.id])
+      for (let n = 0; n < 7; n++) {
+        f.advance(30001)
+        const reopened = new AgentCoordination(
+          new CoordinationStore(f.db),
+          f.host,
+          () => 1000 + (n + 1) * 30001
+        )
+        yield* reopened.pump()
+      }
+      expect(yield* f.store.get(blocked.id)).toMatchObject({
+        state: "failed",
+        attempts: 7,
+      })
+      expect(yield* f.store.nextWake()).toBeUndefined()
+    })
+)

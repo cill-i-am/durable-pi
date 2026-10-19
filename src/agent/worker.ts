@@ -2342,6 +2342,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             yield* this.access.cancel(turn.id)
             if (turn.session_id) sessions.push(turn.session_id)
           }
+          yield* this.coordination.store.closeAll()
           for (const id of yield* this.delegationLedger.catalog()) {
             const group = yield* this.delegationLedger.group(id)
             yield* this.coordination.store.close(group.turnId)

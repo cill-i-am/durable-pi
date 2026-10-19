@@ -3300,6 +3300,51 @@ export class PersonalAgentProbe extends PersonalAgent {
       await this.actorRuntime.runPromise(this.coordination.pump())
       return Response.json({ ok: true })
     }
+    if (action === "coordination-membership-fence") {
+      const result = await this.actorRuntime.runPromise(
+        Effect.gen({ self: this }, function* () {
+          const ids = Array.from(
+            { length: 25 },
+            (_, n) => `membership-main-${n}`
+          )
+          for (const [n, id] of ids.entries()) {
+            yield* this.conversations.admit({
+              operationId: id,
+              text: "Retained synthetic history",
+            })
+            yield* this.conversations.saveSession(id, String(500000 + n))
+            this.fixtureRun(
+              "UPDATE chat_turns SET status='done' WHERE id=?",
+              id
+            )
+          }
+          yield* this.coordination.store.accept({
+            id: "membership-message",
+            operationId: "membership-operation",
+            from: { sessionId: ids[0]!, agentId: "main" },
+            to: { sessionId: ids[24]!, agentId: "main" },
+            text: "Queued before membership changed",
+            provenance: {
+              author: { kind: "agent", id: "synthetic" },
+              conversationId: "synthetic",
+              recipients: [],
+            },
+            createdAt: Date.now(),
+            deadline: Date.now() + 600000,
+          })
+          yield* this.coordination.store.closeAll()
+          return {
+            closed: yield* Effect.forEach(ids, (id) =>
+              this.coordination.store.closed(id)
+            ),
+            message: (yield* this.coordination.store.get("membership-message"))
+              ?.state,
+            retained: (yield* this.conversations.get(ids[0]!))?.status,
+          }
+        })
+      )
+      return Response.json(result)
+    }
     return undefined
   }
 
