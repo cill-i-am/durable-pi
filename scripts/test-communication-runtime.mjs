@@ -209,8 +209,15 @@ const config :Workerd.Config = (
     )
   )
   await call("personal-coordination/coordination-close", {})
+  const fenced = await call(
+    "personal-coordination/coordination-membership-fence",
+    {}
+  )
+  assert.deepEqual(fenced.closed, Array(25).fill(true))
+  assert.equal(fenced.message, "failed")
+  assert.equal(fenced.retained, "done")
   console.log(
-    "PASS native agent coordination: authenticated human provenance, nonblocking spawn, child discovery/question, addressed reply, automatic findings and resuming the original native session."
+    "PASS native agent coordination: authenticated human provenance, nonblocking spawn, child discovery/question, addressed reply, automatic findings, resuming the original native session, and atomic membership fencing of 25 completed main sessions with queued mail and retained history."
   )
   assert.equal(
     responsive.applied,

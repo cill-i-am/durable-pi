@@ -10,10 +10,12 @@ import {
   min,
   notExists,
   or,
+  sql,
 } from "drizzle-orm"
 import { alias } from "drizzle-orm/sqlite-core"
 import { Effect, Schema } from "effect"
 
+import { chatTurns } from "../../conversations/adapters/schema"
 import { increment } from "../../storage/expressions"
 import {
   mapSqliteError,
@@ -273,6 +275,28 @@ export class CoordinationStore {
                 or(eq(t.sender_session, id), eq(t.recipient_session, id))
               )
             )
+        )
+      })
+    )
+  }
+  /** Membership revocation fences existing native roots and their queued mail
+   * in one transaction, without loading historical prompts into the actor. */
+  closeAll() {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        yield* this.query((orm) =>
+          orm.run(sql`
+          INSERT INTO ${limits} (id, closed, requests)
+          SELECT ${chatTurns.id}, 1, 0 FROM ${chatTurns}
+          WHERE ${chatTurns.parent_id} IS NULL AND ${chatTurns.session_id} IS NOT NULL
+          ON CONFLICT (id) DO UPDATE SET closed = 1
+        `)
+        )
+        yield* this.query((orm) =>
+          orm
+            .update(t)
+            .set({ state: "failed", error: "Membership changed." })
+            .where(accepted)
         )
       })
     )

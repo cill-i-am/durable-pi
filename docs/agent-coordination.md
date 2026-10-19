@@ -22,10 +22,18 @@ Authorship is application metadata, independent of the provider's `user` or `ass
 
 Conversation rows, archive export/restore, retrieval and summary inputs retain the metadata. Summary instructions require retaining who requested, suggested or approved something; summaries themselves are never authorization records. Historical records without provenance remain unknown. Adding real multiplayer requires authenticated conversation membership and per-actor permissions at all entrypoints and retrieval boundaries. This change does not make bot boundaries shared or implement multiplayer membership, invitations or UI.
 
-Shared task status retains open asynchronous sessions under their original request handle after the parent's initial reply. Stop closes that session and fences queued messages. A family membership change also closes its old session groups, so a later invitation cannot revive previously authorized work.
+Shared task status retains open asynchronous sessions under their original request handle after the parent's initial reply. Stop closes that session and fences queued messages. A family membership change closes every old main session, including completed sessions without child groups, as well as its child groups. It fails queued messages touching those sessions, so a later invitation cannot revive previously authorized work. Conversation history remains readable; closing a coordination session does not delete its completed answer.
 
 ## Verification
 
 `pnpm test` covers message scope, forged identity, replay, recipient ordering, expiry, cancellation, archive restoration and native Pi restart behavior. `pnpm test:communication-runtime` runs the production PersonalAgent in workerd with synthetic models, including nonblocking spawn, child discovery/question, parent reply, automatic findings and continuation in the original native session. These deterministic checks establish execution behavior, not model judgment.
 
 With `OPENAI_API_KEY` and `EVAL_MODEL` supplied to the process, run `pnpm eval:coordination` for live model tool-selection and authorship cases. It uses the actual tool declarations and synthetic conversations. It never executes the selected tools. Missing credentials exit with status 2 and are not a pass. Inspect the reported calls and prose; a single successful run does not establish reliability across models, prompts or conversation lengths.
+
+### Bounded local capacity checks
+
+Run `node --import tsx scripts/eval-coordination-load.ts` to exercise the production store and coordinator with synthetic identities and real local SQLite. It admits 3,200 messages across 100 main sessions at concurrency 16, verifies unique ordered delivery and session limits, then fills the 10,000-row archive and verifies rejection. Set `COORDINATION_PAYLOAD=max` for 8,000-character, 24,000-byte Unicode messages. Set `COORDINATION_SOAK=1` for an additional one-minute paced run that reopens the store/coordinator every 32 messages while retaining the same database. Native process restart is covered separately by the workerd suite.
+
+The output reports local admission latency and drain time. Model inference, provider quotas, network time, Workers scheduling and production multi-bot capacity are outside this benchmark. The ten-minute group deadline, three open groups, twelve requests per child/continuation and message caps bound work; they do not establish a monetary budget or an end-to-end latency target.
+
+Before sustained higher-volume use, define archive retention while preserving reply references and replay receipts. A full archive currently refuses additional messages indefinitely. Active-group maintenance also reads the historical delegation catalogue on each wake; an active-group index and backlog/oldest-message/retry metrics are operational follow-ups. Validate these changes with hosted load and longer soak tests before promising a production capacity envelope or multiplayer readiness.
