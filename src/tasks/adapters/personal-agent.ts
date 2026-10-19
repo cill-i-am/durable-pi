@@ -85,7 +85,7 @@ export function localTaskControls(owner: PersonalAgent) {
             approvals.some((a) => a.turnId === t.id)
           )
         )
-        const tasks = (yield* mailbox.read()).tasks
+        const tasks = (yield* owner.communication.mailbox.pending())
           .filter((t) => !terminal(t))
           .map(bot)
         const groups: Task[] = []

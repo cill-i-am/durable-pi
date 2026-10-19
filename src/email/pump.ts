@@ -129,7 +129,7 @@ export function emailPump(records: EmailPersistence, host: EmailPumpHost) {
       if (
         record.purpose === "notification" ||
         emailDecision(record.body) ||
-        isTaskControl(record)
+        (isTaskControl(record) && !!record.reply.trim())
       ) {
         yield* send(record, record.reply)
         return

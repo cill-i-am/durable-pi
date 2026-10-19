@@ -12,4 +12,6 @@ Read status by a human slug or across all agents. Stop requires an exact handle 
 
 Email and WhatsApp recognize explicit leading STATUS, STATUS all, STATUS <slug> and STOP <handle> commands (slash prefixes also work). Attachment-bearing input and commands inside quoted/prose text remain ordinary conversation input. Controls run from already accepted transport records, independently of a busy model queue. Save the control reply before provider send and use the existing complete-reply delivery pipeline. If a crash loses that checkpoint, replay can only repeat the same idempotent cancellation target. Unknown/malformed commands return help and do not guess another task.
 
+During mixed-version rollout, a waiting email is a task-control reply only after its nonempty reply checkpoint exists. A STATUS message already admitted by previous code retains its original conversation result. Status reads use pending mailbox records rather than loading historical deliveries.
+
 No new storage, migration, provider integration or secret. WhatsApp onboarding stays parked; its adapter is exercised locally and in native CI.
