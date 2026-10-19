@@ -1,5 +1,7 @@
 import * as Schema from "effect/Schema"
 
+import { MessageProvenance } from "../messages/identity"
+
 export const NonNegativeInteger = Schema.Number.check(
   Schema.isInt(),
   Schema.isGreaterThanOrEqualTo(0)
@@ -7,6 +9,7 @@ export const NonNegativeInteger = Schema.Number.check(
 export const LogKind = Schema.Literals(["user", "talk", "tool", "echo", "note"])
 export type LogKind = typeof LogKind.Type
 export const LogEntry = Schema.Struct({
+  provenance: Schema.optional(MessageProvenance),
   id: NonNegativeInteger,
   source: Schema.String,
   kind: LogKind,

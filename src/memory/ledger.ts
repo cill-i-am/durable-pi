@@ -1,6 +1,7 @@
 import type { Effect } from "effect"
 import { Context } from "effect"
 
+import type { MessageProvenance } from "../messages/identity"
 import type {
   MemoryError,
   MemoryStorageError,
@@ -26,7 +27,8 @@ export interface MemoryLedger {
     source: string,
     kind: LogKind,
     text: string,
-    date: string
+    date: string,
+    provenance?: MessageProvenance
   ) => Effect.Effect<LogEntry, MemoryError>
   render: () => Effect.Effect<string, MemoryError>
   notes: () => Effect.Effect<MemoryNote[], MemoryError>

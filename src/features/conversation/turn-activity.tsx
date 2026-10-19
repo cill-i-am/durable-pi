@@ -40,6 +40,7 @@ import {
 import { InlineApp } from "@/features/apps/inline-app"
 import { FileAttachments } from "@/features/files"
 import { InlineObject } from "@/features/objects/checklist"
+import type { MessageProvenance } from "@/messages/identity"
 import { workspaceDestination } from "@/navigation/workspace"
 import { richResultToolNames } from "@/rich-results/contracts"
 import type { FileInfo } from "@/workspace/files"
@@ -93,6 +94,7 @@ export function TurnActivity({
               key={item.id}
               text={item.text}
               attachments={item.attachments}
+              provenance={item.provenance}
               agentId={agentId}
               label="Steered this reply"
             />
@@ -442,17 +444,36 @@ export function SteeringMessage({
   label,
   attachments,
   agentId,
+  provenance,
 }: {
   text: string
   label: string
   attachments?: readonly FileInfo[]
   agentId?: string
+  provenance?: MessageProvenance
 }) {
+  const internal = provenance && provenance.author.kind !== "human"
   return (
-    <Message align="end" className="owner-message steering-message">
+    <Message
+      align={internal ? "start" : "end"}
+      className={`${internal ? "background-message" : "owner-message"} steering-message`}
+    >
       <MessageContent>
-        <Bubble align="end" variant="secondary">
+        <Bubble
+          align={internal ? "start" : "end"}
+          variant={internal ? "muted" : "secondary"}
+        >
           <BubbleContent className="message-text">
+            {internal && (
+              <>
+                <strong>
+                  {provenance.author.kind === "agent"
+                    ? "Agent message"
+                    : "Automated message"}
+                </strong>
+                <br />
+              </>
+            )}
             {text}
             {agentId && (
               <FileAttachments files={attachments ?? []} agentId={agentId} />

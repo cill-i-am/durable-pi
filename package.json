@@ -35,7 +35,8 @@
     "test:sandbox": "node scripts/check-native-sandbox.mjs",
     "lint:fix": "oxlint --config oxlint.config.ts --fix",
     "prepare": "effect-tsgo patch --oxlint",
-    "complexity:report": "cccc src scripts tests stacks"
+    "complexity:report": "cccc src scripts tests stacks",
+    "eval:coordination": "tsx scripts/eval-coordination.ts"
   },
   "dependencies": {
     "@alchemy.run/frontend-frameworks": "2.0.0-beta.83",

@@ -139,6 +139,80 @@ const config :Workerd.Config = (
   await call("maintenance/foreground", {})
   const responsive = await waitMaintenance((state) => state.ticks === 1)
   assert.equal(
+    (await call("personal-coordination/coordination-start", {})).status,
+    202
+  )
+  let coordination
+  for (let n = 0; n < 100; n++) {
+    coordination = await call("personal-coordination/coordination-read", {})
+    if (coordination.root?.status === "done") break
+    await sleep(50)
+  }
+  assert.equal(
+    coordination.root?.answer,
+    "Parent free while child works",
+    JSON.stringify(coordination) + output.slice(-2000)
+  )
+  assert.equal(coordination.root.provenance.author.kind, "human")
+  assert.equal(
+    coordination.root.provenance.author.id,
+    "personal-coordination-owner"
+  )
+  assert.equal(coordination.groups[0].children[0].status, "working")
+  assert(
+    coordination.tasks.some(
+      (task) =>
+        task.kind === "request" &&
+        task.id === coordination.root.id &&
+        !task.terminal
+    )
+  )
+  await call("personal-coordination/coordination-release", {})
+  for (let n = 0; n < 200; n++) {
+    coordination = await call("personal-coordination/coordination-read", {})
+    if (
+      coordination.latest?.lastReply?.text ===
+        "Child conclusion after clarification" &&
+      coordination.messages.some(
+        (m) =>
+          m.text === "Child conclusion after clarification" &&
+          m.state === "delivered"
+      ) &&
+      coordination.turns.every((t) => t.status === "done")
+    )
+      break
+    await sleep(50)
+  }
+  assert.equal(
+    coordination.latest?.lastReply?.text,
+    "Child conclusion after clarification",
+    JSON.stringify(coordination) + output.slice(-4000)
+  )
+  assert.equal(
+    coordination.groups[0].children[0].answer,
+    "Child conclusion after clarification"
+  )
+  assert(
+    coordination.messages.some(
+      (m) => m.replyTo && m.text === "Use the private draft"
+    )
+  )
+  assert(
+    coordination.messages.every(
+      (m) => m.provenance.author.kind === "agent" && m.state === "delivered"
+    )
+  )
+  assert(coordination.turns.length > 1)
+  assert(
+    coordination.turns.every(
+      (t) => t.session_id === coordination.root.session_id
+    )
+  )
+  await call("personal-coordination/coordination-close", {})
+  console.log(
+    "PASS native agent coordination: authenticated human provenance, nonblocking spawn, child discovery/question, addressed reply, automatic findings and resuming the original native session."
+  )
+  assert.equal(
     responsive.applied,
     0,
     "Foreground must run while maintenance IO is still held"

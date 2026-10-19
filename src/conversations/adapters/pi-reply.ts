@@ -8,6 +8,10 @@ import type {
 } from "@earendil-works/pi-durable"
 import type { PiHarness } from "agents/harness/pi"
 
+import {
+  replyProvenance,
+  type MessageProvenance,
+} from "../../messages/identity"
 import { messageArchiveText } from "../../workspace/files"
 import type { Turn } from "../turns"
 
@@ -120,6 +124,7 @@ export function archiveEntries(
     kind: "user" | "talk" | "tool" | "echo" | "note"
     text: string
     date?: string
+    provenance?: MessageProvenance
   }[] = []
   for (const entry of entries)
     for (const [index, message] of (entry.model ?? []).entries()) {
@@ -132,15 +137,23 @@ export function archiveEntries(
             kind: user.origin ? "note" : "user",
             text: messageArchiveText(user.text, user.attachments),
             date: user.created_at,
+            provenance: user.provenance,
           })
       } else if (message.role === "assistant") {
         const text = textContent(message.content)
-        if (text) output.push({ source: `${source}:talk`, kind: "talk", text })
+        if (text)
+          output.push({
+            source: `${source}:talk`,
+            kind: "talk",
+            text,
+            provenance: replyProvenance(root, root.id),
+          })
         for (const block of message.content)
           if (block.type === "toolCall")
             output.push({
               source: `${source}:${block.id}`,
               kind: "tool",
+              provenance: replyProvenance(root, root.id),
               text: JSON.stringify({
                 name: block.name,
                 arguments: block.arguments,
@@ -150,6 +163,13 @@ export function archiveEntries(
         output.push({
           source: `${source}:echo`,
           kind: "echo",
+          provenance: root.provenance
+            ? {
+                ...root.provenance,
+                author: { kind: "service", id: `tool:${message.toolName}` },
+                causedBy: root.id,
+              }
+            : undefined,
           text: textContent(message.content),
         })
     }

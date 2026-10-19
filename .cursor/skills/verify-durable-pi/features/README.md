@@ -1,6 +1,6 @@
 # Durable Pi verification map
 
-This is the maintained user-journey map for Durable Pi. It covers **27 feature areas and 155 behavior IDs**, checked against source revision `a133e4b93452694bf5d5aef0f3129ac4f662073e` on **October 19, 2026**. A listed recipe is not a claim that it passed in production.
+This is the maintained user-journey map for Durable Pi. It covers **27 feature areas and 161 behavior IDs**, checked against source revision `a133e4b93452694bf5d5aef0f3129ac4f662073e` on **October 19, 2026**. Coordination and authorship entries were added with the agent-session messaging change. A listed recipe is not a claim that it passed in production.
 
 For a product overview and cross-surface comparison, start with [FEATURES.md](../../../../FEATURES.md). For launch, health checks, evidence, and cleanup, read the [verification skill](../SKILL.md). The [source register](../references/source-register.md) links each area to its implementation and checks without mixing backend structure into the user journeys.
 
@@ -64,6 +64,6 @@ Do not substitute another entry point for one that failed. Do not weaken a recip
 - [JavaScript](code.md): Isolated code with explicit input, logs, saved result, and cancellation.
 - [Linux terminal](terminal.md): Commands, interactive shell, saved workspace, and file transfer.
 - [Routines and events](routines.md): One-off/interval schedules, run controls, and authenticated webhooks.
-- [Temporary delegation](delegation.md): Request-owned research and tool-free background reports.
+- [Temporary delegation](delegation.md): Request-owned research, continuing agent sessions, and tool-free background reports.
 - [Named-agent communication](bot-communication.md): Bounded text tasks with correlated results and delivery recovery.
 - [Activity and recovery](activity.md): Account/agent timelines, saved traces, partial reads, and specific recovery.

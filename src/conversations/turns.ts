@@ -2,6 +2,7 @@ import { Option, Schema } from "effect"
 
 import { ResolvedRoute, type Profile, type JobType } from "../inference/policy"
 import { ModelSettings, ThinkingLevel } from "../inference/selection"
+import { MessageProvenance } from "../messages/identity"
 import { SkillReference } from "../skills/contracts"
 import { AttachmentContent, FileInfo } from "../workspace/files"
 import { TurnOrigin, type ChatTurn } from "./contracts"
@@ -20,6 +21,7 @@ export type Delivery =
   | "answered"
   | "unanswered"
 export type Turn = ChatTurn & {
+  provenance?: MessageProvenance
   origin?: TurnOrigin
   parent_id: string | null
   mode: SubmissionMode
@@ -67,6 +69,7 @@ export const TurnRecord = Schema.Struct({
   thinking: Schema.NullOr(ThinkingLevel),
   routing: Schema.NullOr(ResolvedRoute),
   origin: Schema.optional(TurnOrigin),
+  provenance: Schema.optional(MessageProvenance),
   revision: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
   creation: Schema.NullOr(Schema.String),
   files_pending: Schema.optional(Schema.Boolean),
@@ -76,6 +79,7 @@ export const TurnRecord = Schema.Struct({
   skill_context: Schema.String,
 })
 export type Submission = {
+  provenance?: MessageProvenance
   origin?: TurnOrigin
   operationId: string
   text: string

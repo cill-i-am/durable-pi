@@ -107,7 +107,8 @@ export function makeConversationJournal(
             `${turn.origin ? "event" : "user"}:${turn.id}`,
             turn.origin ? "note" : "user",
             messageArchiveText(turn.text, turn.attachments),
-            turn.created_at
+            turn.created_at,
+            turn.provenance
           )
           const prompt = conversationPrompt(
             turn,
@@ -132,7 +133,8 @@ export function makeConversationJournal(
                 item.source,
                 item.kind,
                 item.text,
-                item.date ?? timestamp
+                item.date ?? timestamp,
+                item.provenance
               )
             for (const member of observation.consumed)
               yield* conversations.consumed(member)
@@ -160,7 +162,8 @@ export function makeConversationJournal(
                 item.source,
                 item.kind,
                 item.text,
-                item.date ?? timestamp
+                item.date ?? timestamp,
+                item.provenance
               )
             if (!(yield* conversations.finish(root, outcomes, answer, error)))
               return yield* Effect.die(

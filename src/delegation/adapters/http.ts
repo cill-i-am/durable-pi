@@ -1,5 +1,6 @@
 import { Effect, Schema } from "effect"
 
+import type { MessageProvenance } from "../../messages/identity"
 import { preserveFatal } from "../../shared/effect"
 import { nativeBytes } from "../../shared/stream"
 import type { BackgroundError } from "../background-mailbox"
@@ -10,7 +11,8 @@ export function delegationsRequest(
   service: DelegationQueries<BackgroundError>,
   request: Request,
   path: string,
-  prefix = "delegations"
+  prefix = "delegations",
+  provenance?: (input: Control) => MessageProvenance | undefined
 ) {
   const invalid = () =>
     new DelegationFailure({
@@ -33,12 +35,25 @@ export function delegationsRequest(
       if (!request.body) return yield* invalid()
       const bytes = yield* nativeBytes(request.body, 40000, invalid, invalid)
       const input = yield* Schema.decodeUnknownEffect(
-        Schema.fromJsonString(Control)
+        Schema.fromJsonString(
+          Schema.Struct({
+            groupId: Control.fields.groupId,
+            childId: Control.fields.childId,
+            operationId: Control.fields.operationId,
+            action: Control.fields.action,
+          })
+        )
       )(new TextDecoder().decode(bytes)).pipe(
         preserveFatal,
         Effect.mapError(invalid)
       )
-      return Response.json(yield* service.control(input))
+      const author = provenance?.(input)
+      return Response.json(
+        yield* service.control({
+          ...input,
+          ...(author ? { provenance: author } : {}),
+        })
+      )
     }
     if (request.method !== "GET")
       return new Response("Method not allowed", { status: 405 })

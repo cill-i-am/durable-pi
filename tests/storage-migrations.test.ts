@@ -58,7 +58,7 @@ it("creates the declared schema once and preserves rows on reactivation", () => 
   const before = db.all(
     "SELECT name FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
   )
-  expect(before).toHaveLength(69)
+  expect(before).toHaveLength(71)
   db.run("INSERT INTO tool_grants(name,mode,revision) VALUES ('keep','ask',0)")
   Effect.runSync(migrateSqlite(db))
   expect(

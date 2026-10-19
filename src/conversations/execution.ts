@@ -1,5 +1,6 @@
 import { Context, Schema, type Effect } from "effect"
 
+import type { MessageProvenance } from "../messages/identity"
 import type { TimelineItem } from "./contracts"
 import type { Turn, TurnOutcome } from "./turns"
 
@@ -21,6 +22,7 @@ export interface ConversationObservation {
     kind: "user" | "talk" | "tool" | "echo" | "note"
     text: string
     date?: string
+    provenance?: MessageProvenance
   }[]
   readonly consumed: readonly string[]
   readonly outcomes: readonly TurnOutcome[]

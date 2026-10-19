@@ -21,6 +21,7 @@ export function submissionIdentity(
   origin: TurnOrigin | undefined
 ): string {
   return JSON.stringify({
+    ...(input.provenance ? { provenance: input.provenance } : {}),
     ...(origin ? { origin } : {}),
     text: input.text,
     mode: input.mode ?? "followUp",

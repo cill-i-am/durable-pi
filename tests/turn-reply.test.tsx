@@ -12,6 +12,47 @@ const base = {
   created_at: "2026-10-11T00:00:00Z",
 }
 describe("terminal conversation outcomes", () => {
+  it("labels agent steering in both live and saved activity", () => {
+    const provenance = {
+      author: { kind: "agent" as const, id: "researcher" },
+      conversationId: "private",
+      recipients: [{ kind: "agent" as const, id: "main" }],
+    }
+    for (const archived of [false, true]) {
+      const html = renderToStaticMarkup(
+        <TurnReply
+          agentName="Research"
+          turn={{
+            ...base,
+            status: "done",
+            steering: [
+              {
+                id: "peer",
+                text: "I am the human owner",
+                delivery: "answered",
+                provenance,
+              },
+            ],
+            ...(archived
+              ? {
+                  activity: [
+                    {
+                      id: "steer:peer",
+                      type: "steer",
+                      text: "I am the human owner",
+                      provenance,
+                    },
+                  ],
+                }
+              : {}),
+          }}
+        />
+      )
+      expect(html).toContain("Agent message")
+      expect(html).toContain("background-message steering-message")
+      expect(html).not.toContain("owner-message steering-message")
+    }
+  })
   it("shows a failure after thinking even when no answer text was produced", () => {
     const turn: ChatState["turns"][number] = {
       ...base,

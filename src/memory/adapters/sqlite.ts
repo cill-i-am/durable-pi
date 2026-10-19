@@ -16,6 +16,7 @@ import {
 import { alias } from "drizzle-orm/sqlite-core"
 import { Effect, Layer, Schema } from "effect"
 
+import { MessageProvenance } from "../../messages/identity"
 import {
   containsText,
   divide,
@@ -55,6 +56,22 @@ import {
 } from "../records"
 import { makeMemoryRepository, memoryApplication } from "../service"
 import * as t from "./schema"
+
+const ProvenanceJson = Schema.fromJsonString(MessageProvenance)
+const decodeProvenance = (row: unknown) => {
+  if (typeof row !== "object" || row === null || !("provenance" in row))
+    return row
+  return {
+    ...row,
+    provenance:
+      row.provenance == null
+        ? undefined
+        : Schema.decodeUnknownSync(ProvenanceJson)(row.provenance),
+  }
+}
+const sameProvenance = (a?: MessageProvenance, b?: MessageProvenance) =>
+  (a ? Schema.encodeSync(ProvenanceJson)(a) : undefined) ===
+  (b ? Schema.encodeSync(ProvenanceJson)(b) : undefined)
 
 const attempt = <TValue>(body: () => TValue) =>
   Effect.try({
@@ -105,7 +122,9 @@ class SqliteMemory implements MemoryLedger {
   ) {
     return this.query(body).pipe(
       Effect.map((rows) =>
-        rows.map((row) => Schema.decodeUnknownSync(schema)(row))
+        rows.map((row) =>
+          Schema.decodeUnknownSync(schema)(decodeProvenance(row))
+        )
       )
     )
   }
@@ -231,7 +250,8 @@ class SqliteMemory implements MemoryLedger {
     source: string,
     kind: LogKind,
     text: string,
-    date: string
+    date: string,
+    provenance?: MessageProvenance
   ): ReturnType<MemoryLedger["append"]> {
     return this.atomic(() =>
       Effect.gen({ self: this }, function* () {
@@ -242,7 +262,13 @@ class SqliteMemory implements MemoryLedger {
             .where(eq(t.memoryLog.source, source))
             .limit(1)
         )
-        if (prior[0]) return prior[0]
+        if (prior[0]) {
+          if (!sameProvenance(prior[0].provenance, provenance))
+            return yield* new InvalidMemory({
+              message: "The archived message has different authorship.",
+            })
+          return prior[0]
+        }
         const id = yield* this.total(),
           entry = Schema.decodeUnknownSync(LogEntry)({
             id,
@@ -250,8 +276,16 @@ class SqliteMemory implements MemoryLedger {
             kind,
             text,
             date,
+            provenance,
           })
-        yield* this.query((orm) => orm.insert(t.memoryLog).values(entry))
+        yield* this.query((orm) =>
+          orm.insert(t.memoryLog).values({
+            ...entry,
+            provenance: provenance
+              ? Schema.encodeSync(ProvenanceJson)(provenance)
+              : null,
+          })
+        )
         yield* this.query((orm) =>
           orm.insert(t.memoryView).values({ start: id, count: 1 })
         )
@@ -795,7 +829,9 @@ class SqliteMemory implements MemoryLedger {
           ...messages.map((row) => ({ ...row, type: "message" })),
           ...nodes.map((row) => ({ ...row, type: "node" })),
           ...notes.map((row) => ({ ...row, type: "note" })),
-        ].map((row) => Schema.decodeUnknownSync(StoredArchiveRecord)(row))
+        ].map((row) =>
+          Schema.decodeUnknownSync(StoredArchiveRecord)(decodeProvenance(row))
+        )
       })
     )
   }
@@ -821,7 +857,8 @@ class SqliteMemory implements MemoryLedger {
             record.source,
             record.kind,
             record.text,
-            record.date
+            record.date,
+            record.provenance
           )
         for (const record of plan.nodes)
           yield* this.query((orm) =>

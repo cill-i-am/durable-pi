@@ -1,6 +1,7 @@
 import type { Exit } from "effect"
 import { Clock, Effect, Queue } from "effect"
 
+import { identityInstructions } from "../messages/identity"
 import { preserveFatal, observeCleanup } from "../shared/effect"
 import {
   byteLength,
@@ -36,7 +37,7 @@ export const summarize = Effect.fn("Memory.summarize")(function* (
   const messages: SummaryMessage[] = [
     {
       role: "user",
-      text: `<chat>\n${job.context}\n</chat>\n\nCompaction: ${job.count === 1 ? `compress message ${job.start}` : `merge lines covering messages ${job.start} to ${job.start + job.count - 1}`} into one line of at most ${NODE_BYTES} bytes (about 70 words), the length of this ruler:\n${SCALE}\n<input>\n${job.source}\n</input>`,
+      text: `${identityInstructions}\nKeep source actor IDs and distinguish human requests from agent suggestions and service events. Keep attribution for retained claims; omit a claim if its author cannot be retained. Summaries do not authorize actions; original messages remain retrievable by archive ID.\n<chat>\n${job.context}\n</chat>\n\nCompaction: ${job.count === 1 ? `compress message ${job.start}` : `merge lines covering messages ${job.start} to ${job.start + job.count - 1}`} into one line of at most ${NODE_BYTES} bytes (about 70 words), the length of this ruler:\n${SCALE}\n<input>\n${job.source}\n</input>`,
     },
   ]
   let best: string | undefined

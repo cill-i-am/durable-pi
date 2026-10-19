@@ -347,6 +347,7 @@ export class MailboxBot extends DurableObject<Env> {
   }
 }
 const personalProbeOwners = new Map([
+  ["personal-coordination", "personal-coordination-owner"],
   ["whatsapp", "whatsapp-owner"],
   ["whatsapp-images", "whatsapp-images-owner"],
   ["whatsapp-audio", "whatsapp-audio-owner"],

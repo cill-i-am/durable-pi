@@ -14,7 +14,8 @@ export class AccessGate {
   constructor(
     private readonly store: AccessLedger,
     private readonly canRun: (
-      turnId: string
+      turnId: string,
+      tool: string
     ) => Effect.Effect<boolean, AccessError>,
     private readonly onChange: () => void = () => {},
     private readonly botId: () => string | null = () => null
@@ -117,14 +118,14 @@ export class AccessGate {
           )
         )
       let waiting = false
-      const operation = yield* this.store.begin(intent, this.canRun)
+      const operation = yield* this.store.begin(intent, (id) =>
+        this.canRun(id, intent.tool)
+      )
       this.notify()
       for (;;) {
         const change = this.changed
-        const decision = yield* this.store.claim(
-          intent.id,
-          recoverable,
-          this.canRun
+        const decision = yield* this.store.claim(intent.id, recoverable, (id) =>
+          this.canRun(id, intent.tool)
         )
         if (decision === "pending") {
           if (!waiting) yield* observe("tool.waiting")

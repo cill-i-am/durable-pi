@@ -180,7 +180,9 @@ export function DelegationGroup({
                 ? "Report ready"
                 : group.status === "cancelled"
                   ? "Stopped with parent"
-                  : "Parent is waiting for results"}
+                  : group.detached
+                    ? "Agents can exchange messages while the parent continues"
+                    : "Parent is waiting for results"}
           </p>
           <div className="flex flex-wrap gap-2">
             <Badge variant="secondary">{group.route.model}</Badge>
@@ -211,13 +213,17 @@ export function DelegationGroup({
 }
 function childPresentation(child: Child, group: Group) {
   const unsettled = ["queued", "working", "stopping"].includes(child.status)
-  const running = group.status === "working" && unsettled
+  const running =
+    group.status === "working" &&
+    (unsettled || (!!group.detached && child.status === "completed"))
   const label =
     unsettled && group.status !== "working"
       ? group.status === "cancelled"
         ? "Stopped with parent"
         : "Interrupted"
-      : child.status
+      : group.detached && running && child.status === "completed"
+        ? "Idle · available for messages"
+        : child.status
   const status =
     label === "Interrupted" || child.status === "failed"
       ? "error"

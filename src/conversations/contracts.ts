@@ -1,8 +1,10 @@
 import * as Schema from "effect/Schema"
 
 import { AccessState } from "../access/contracts"
+import { Address } from "../coordination/contracts"
 import { Profile, JobType, ResolvedRoute } from "../inference/policy"
 import { SummaryIssue } from "../memory/domain"
+import { MessageProvenance } from "../messages/identity"
 import { SkillReference } from "../skills/contracts"
 import { FileInfo, FileSelection } from "../workspace/files"
 import { RuntimeStatus } from "./status"
@@ -44,6 +46,12 @@ export type ChatTurn = {
 }
 export const TurnOrigin = Schema.Union([
   Schema.Struct({
+    kind: Schema.Literal("coordination"),
+    turnId: Schema.String,
+    messageId: Schema.String,
+    from: Schema.optional(Address),
+  }),
+  Schema.Struct({
     kind: Schema.Literal("whatsapp"),
     sender: Schema.String,
     messageId: Schema.String,
@@ -79,6 +87,7 @@ export const TimelineItem = Schema.Union([
   Schema.Struct({
     id: Schema.String,
     type: Schema.Literal("steer"),
+    provenance: Schema.optional(MessageProvenance),
     text: Schema.String,
     attachments: Schema.optional(Schema.Array(FileInfo)),
   }),
@@ -100,6 +109,7 @@ export const TimelineItem = Schema.Union([
 export type TimelineItem = typeof TimelineItem.Type
 const VisibleTurn = Schema.Struct({
   preparingFiles: Schema.optional(Schema.Boolean),
+  provenance: Schema.optional(MessageProvenance),
   origin: Schema.optional(TurnOrigin),
   routing: Schema.optional(Schema.NullOr(ResolvedRoute)),
   skills: Schema.optional(Schema.Array(SkillReference)),
@@ -125,6 +135,7 @@ const VisibleTurn = Schema.Struct({
       Schema.Struct({
         id: Schema.String,
         text: Schema.String,
+        provenance: Schema.optional(MessageProvenance),
         attachments: Schema.optional(Schema.Array(FileInfo)),
         delivery: Schema.Literals([
           "queued",

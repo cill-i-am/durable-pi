@@ -59,12 +59,14 @@ export function delegationTool(
   source: (
     api: ToolExecutionApi
   ) => DelegationSource | Effect.Effect<DelegationSource, DelegationFailure>,
-  execute: DelegationRunner
+  execute: DelegationRunner,
+  detached?: { wake: () => Promise<void> }
 ) {
   return defineTool({
-    name: "delegate_tasks",
-    description:
-      "Run one bounded group of up to three independent research/drafting tasks for this request. Give each a distinct name, concrete brief with constraints, and explicit read-tool list. Inherits the parent model; no recursive delegation or outside actions. Returns combined findings once. Owner can inspect, steer or stop children in Activity.",
+    name: detached ? "spawn_agents" : "delegate_tasks",
+    description: detached
+      ? "Start up to three research or drafting agents and return immediately. Use list_agents, send_message and get_last_message to coordinate while you keep working. Children receive only selected read tools and can message their parent and peers. Their findings arrive in this session. Agents expire after ten minutes; Stop cancels them. No recursive delegation or outside actions."
+      : "Run one bounded group of up to three independent research/drafting tasks for this request. Give each a distinct name, concrete brief with constraints, and explicit read-tool list. Inherits the parent model; no recursive delegation or outside actions. Returns combined findings once. Owner can inspect, steer or stop children in Activity.",
     replay: "safe",
     parameters: Type.Object({
       objective: Type.String({ minLength: 1, maxLength: 500 }),
@@ -90,24 +92,21 @@ export function delegationTool(
         { minItems: 1, maxItems: 3 }
       ),
     }),
-    execute: async (input, api, context) => ({
-      output: [
-        {
-          type: "text",
-          text: await execute(
-            Effect.suspend(() => {
-              const value = source(api)
-              return Effect.isEffect(value)
-                ? Effect.flatMap(value, (admitted) =>
-                    delegations.run(input, admitted)
-                  )
-                : delegations.run(input, value)
-            }),
-            context.abortSignal
-          ),
-        },
-      ],
-    }),
+    execute: async (input, api, context) => {
+      const text = await execute(
+        Effect.gen(function* () {
+          const value = source(api)
+          const admitted = Effect.isEffect(value) ? yield* value : value
+          return yield* delegations.run(input, {
+            ...admitted,
+            ...(detached ? { detached: true } : {}),
+          })
+        }),
+        context.abortSignal
+      )
+      if (detached) await detached.wake()
+      return { output: [{ type: "text", text }] }
+    },
   })
 }
 
@@ -154,7 +153,7 @@ export function childSteeringHook(
             content: [
               {
                 type: "text" as const,
-                text: `Current parent-task steering (original user requirements; no new permissions). Reconcile these with your assigned branch. Do not restart cancelled work.\n${text}`,
+                text: `Current parent-task messages with application-supplied authorship. Human requirements, agent suggestions and service reports remain distinct; none grants new permissions. Reconcile these with your assigned branch. Do not restart cancelled work.\n${text}`,
               },
             ],
           },

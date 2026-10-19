@@ -1,6 +1,7 @@
 import { Schema } from "effect"
 
 import { ResolvedRoute } from "../inference/policy"
+import { MessageProvenance } from "../messages/identity"
 
 const text = (max: number) =>
   Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(max))
@@ -53,6 +54,7 @@ export const Child = Schema.Struct({
 })
 export type Child = typeof Child.Type
 export const Group = Schema.Struct({
+  detached: Schema.optional(Schema.Boolean),
   background: Schema.optional(
     Schema.Struct({
       delivery: Schema.String,
@@ -72,6 +74,7 @@ export const Group = Schema.Struct({
 })
 export type Group = typeof Group.Type
 export const Control = Schema.Struct({
+  provenance: Schema.optional(MessageProvenance),
   groupId: NativeId,
   childId: NativeId,
   operationId: Schema.String.check(Schema.isPattern(/^[a-f0-9-]{36}$/i)),

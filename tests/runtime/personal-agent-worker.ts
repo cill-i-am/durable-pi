@@ -584,6 +584,7 @@ export class PersonalAgentProbe extends PersonalAgent {
     return this.ctx.storage.sql.exec(query, ...bindings).toArray() as T[]
   }
 
+  private coordinationProbeEnabled = false
   protected override catalogProgram(): Effect.Effect<ModelCatalog> {
     return Effect.succeed({
       models: [
@@ -593,7 +594,7 @@ export class PersonalAgentProbe extends PersonalAgent {
           thinking: ["off", "medium"],
           input: ["text", "image"],
           tools: true,
-          contextWindow: 8192,
+          contextWindow: this.coordinationProbeEnabled ? 65536 : 8192,
           unavailable: null,
         },
       ],
@@ -903,7 +904,7 @@ export class PersonalAgentProbe extends PersonalAgent {
     this.downloadProbe.wait = new Promise<void>((resolve) => {
       this.downloadProbe.release = resolve
     })
-    const download = await super.fetch(
+    const download = await this.authenticatedFetch(
       new Request(
         "https://internal/api/agent/files/00000000-0000-4000-8000-000000000014/content"
       )
@@ -1175,6 +1176,11 @@ export class PersonalAgentProbe extends PersonalAgent {
       originalSession: original?.session_id,
     })
   }
+  private authenticatedFetch(request: Request) {
+    const headers = new Headers(request.headers)
+    if (!headers.has("x-owner-id")) headers.set("x-owner-id", "personal-owner")
+    return super.fetch(new Request(request, { headers }))
+  }
   override async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url)
     if (url.pathname.endsWith("/chatgpt-native"))
@@ -1190,7 +1196,8 @@ export class PersonalAgentProbe extends PersonalAgent {
       url.pathname.startsWith("/email-held/")
     )
       return this.emailProbe(request)
-    if (url.pathname.startsWith("/api/agent/")) return super.fetch(request)
+    if (url.pathname.startsWith("/api/agent/"))
+      return this.authenticatedFetch(request)
     if (url.pathname === "/personal-terminal/setup") {
       await this.actorRuntime.runPromise(
         Effect.gen({ self: this }, function* () {
@@ -1206,7 +1213,7 @@ export class PersonalAgentProbe extends PersonalAgent {
       return Response.json({ ok: true })
     }
     if (url.pathname.startsWith("/personal-terminal/"))
-      return super.fetch(
+      return this.authenticatedFetch(
         new Request(
           `https://internal/api/agent/${url.pathname.slice("/personal-terminal/".length)}${url.search}`,
           request
@@ -1214,6 +1221,7 @@ export class PersonalAgentProbe extends PersonalAgent {
       )
     const action = new URL(request.url).pathname.split("/").at(-1)
     for (const probe of [
+      this.coordinationProbe,
       this.taskControlProbe,
       this.nativeCommitProbe,
       this.nativeRpcProbe,
@@ -1344,7 +1352,7 @@ export class PersonalAgentProbe extends PersonalAgent {
       if (voice) this.voiceReply()
       if (photo)
         this.fileReply((await whatsappIdentity(`${receipt.id}:image`)).id)
-      const response = await super.fetch(
+      const response = await this.authenticatedFetch(
         new Request(
           "https://internal/api/agent/whatsapp/configure?agent=home",
           {
@@ -1429,7 +1437,7 @@ export class PersonalAgentProbe extends PersonalAgent {
       ? "email-held-owner"
       : "email-owner"
     const call = (path: string, body?: unknown) =>
-      super.fetch(
+      this.authenticatedFetch(
         new Request(`https://internal/api/agent/${path}?agent=home`, {
           method: body ? "POST" : "GET",
           headers: { "x-owner-id": owner, "content-type": "application/json" },
@@ -1503,7 +1511,7 @@ export class PersonalAgentProbe extends PersonalAgent {
           new Blob([new Uint8Array(file.bytes)], { type: file.mime }),
           file.name
         )
-      const response = await super.fetch(
+      const response = await this.authenticatedFetch(
         new Request("https://internal/api/agent/email/incoming?agent=home", {
           method: "POST",
           headers: { "x-owner-id": owner },
@@ -1719,7 +1727,7 @@ export class PersonalAgentProbe extends PersonalAgent {
               )
             )
       try {
-        const response = await super.fetch(
+        const response = await this.authenticatedFetch(
           new Request("https://agent.internal/api/agent/bots", {
             headers: { "x-owner-id": "personal-owner" },
           })
@@ -1904,7 +1912,7 @@ export class PersonalAgentProbe extends PersonalAgent {
       return Response.json({ status: accepted.status })
     }
     if (action === "command-stop")
-      return super.fetch(
+      return this.authenticatedFetch(
         new Request("https://internal/api/agent/cancel", {
           method: "POST",
           body: JSON.stringify({
@@ -2377,7 +2385,7 @@ export class PersonalAgentProbe extends PersonalAgent {
           text: "Stop before dispatch.",
         })
       )
-      const stopped = await super.fetch(
+      const stopped = await this.authenticatedFetch(
         new Request("https://internal/api/agent/cancel", {
           method: "POST",
           headers: { "content-type": "application/json" },
@@ -2417,8 +2425,8 @@ export class PersonalAgentProbe extends PersonalAgent {
           }),
         })
       if (
-        !(await super.fetch(retryRequest())).ok ||
-        !(await super.fetch(retryRequest())).ok
+        !(await this.authenticatedFetch(retryRequest())).ok ||
+        !(await this.authenticatedFetch(retryRequest())).ok
       )
         throw new Error("Native memory retry or replay failed")
     }
@@ -2613,7 +2621,7 @@ export class PersonalAgentProbe extends PersonalAgent {
     if (action === "code") {
       const input = { id: "native-code", code: "return 3", data: "null" }
       const submit = () =>
-        super.fetch(
+        this.authenticatedFetch(
           new Request("https://internal/api/agent/execution/run", {
             method: "POST",
             body: JSON.stringify(input),
@@ -2635,7 +2643,7 @@ export class PersonalAgentProbe extends PersonalAgent {
       this.codeProbe.wait = new Promise<void>((resolve) => {
         this.codeProbe.release = resolve
       })
-      const accepted = await super.fetch(
+      const accepted = await this.authenticatedFetch(
         new Request("https://internal/api/agent/execution/run", {
           method: "POST",
           body: JSON.stringify({
@@ -2649,7 +2657,7 @@ export class PersonalAgentProbe extends PersonalAgent {
         throw new Error("Native held execution was not admitted")
     }
     if (action === "replay-code") {
-      const accepted = await super.fetch(
+      const accepted = await this.authenticatedFetch(
         new Request("https://internal/api/agent/execution/run", {
           method: "POST",
           body: JSON.stringify({
@@ -2691,7 +2699,7 @@ export class PersonalAgentProbe extends PersonalAgent {
             type: "text/plain",
           })
         )
-        return super.fetch(
+        return this.authenticatedFetch(
           new Request("https://internal/api/agent/files/upload", {
             method: "POST",
             body: form,
@@ -2700,25 +2708,25 @@ export class PersonalAgentProbe extends PersonalAgent {
       }
       const first = await uploading(),
         replay = await uploading()
-      const renamed = await super.fetch(
+      const renamed = await this.authenticatedFetch(
         new Request(`https://internal/api/agent/files/${id}/rename`, {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ name: "renamed.md" }),
         })
       )
-      const content = await super.fetch(
+      const content = await this.authenticatedFetch(
         new Request(`https://internal/api/agent/files/${id}/text`)
       )
-      await super.fetch(
+      await this.authenticatedFetch(
         new Request(`https://internal/api/agent/files/${id}/trash`, {
           method: "POST",
         })
       )
-      const trashed = await super.fetch(
+      const trashed = await this.authenticatedFetch(
         new Request(`https://internal/api/agent/files/${id}/text`)
       )
-      await super.fetch(
+      await this.authenticatedFetch(
         new Request(`https://internal/api/agent/files/${id}/restore`, {
           method: "POST",
         })
@@ -2727,7 +2735,7 @@ export class PersonalAgentProbe extends PersonalAgent {
         const form = new FormData()
         form.set("id", fileId)
         form.set("file", file)
-        return super.fetch(
+        return this.authenticatedFetch(
           new Request("https://internal/api/agent/files/upload", {
             method: "POST",
             body: form,
@@ -2784,7 +2792,7 @@ export class PersonalAgentProbe extends PersonalAgent {
         cancelledId = "00000000-0000-4000-8000-000000000019"
       const target = this.terminalNamespace.getByName(this.ctx.id.toString())
       const call = (path: string, body?: unknown) =>
-        super.fetch(
+        this.authenticatedFetch(
           new Request(
             `https://internal/api/agent/${path}`,
             body === undefined
@@ -2842,7 +2850,7 @@ export class PersonalAgentProbe extends PersonalAgent {
       })
     }
     if (action === "file-read") {
-      const response = await super.fetch(
+      const response = await this.authenticatedFetch(
         new Request("https://internal/api/agent/files")
       )
       return Response.json({
@@ -2860,7 +2868,7 @@ export class PersonalAgentProbe extends PersonalAgent {
   ): Promise<Response | undefined> {
     if (action === "objects") {
       const change = (value: unknown) =>
-        super.fetch(
+        this.authenticatedFetch(
           new Request("https://internal/api/agent/objects/mutate", {
             method: "POST",
             headers: { "content-type": "application/json" },
@@ -2907,7 +2915,7 @@ export class PersonalAgentProbe extends PersonalAgent {
       })
     }
     if (action === "object-read") {
-      const response = await super.fetch(
+      const response = await this.authenticatedFetch(
         new Request(
           "https://internal/api/agent/objects/00000000-0000-4000-8000-000000000007"
         )
@@ -2966,7 +2974,7 @@ export class PersonalAgentProbe extends PersonalAgent {
       const replay = await this.actorRuntime.runPromise(
         this.plans.update(input, source)
       )
-      const changed = await super.fetch(
+      const changed = await this.authenticatedFetch(
         new Request("https://internal/api/agent/objects/mutate", {
           method: "POST",
           headers: { "content-type": "application/json" },
@@ -2982,7 +2990,7 @@ export class PersonalAgentProbe extends PersonalAgent {
         })
       )
       if (!changed.ok) throw new Error("Native planning evidence update failed")
-      const response = await super.fetch(
+      const response = await this.authenticatedFetch(
         new Request(`https://internal/api/agent/plans/${input.id}`)
       )
       const reopened = await response.json()
@@ -3020,7 +3028,7 @@ export class PersonalAgentProbe extends PersonalAgent {
       })
     }
     if (action === "plan-read") {
-      const response = await super.fetch(
+      const response = await this.authenticatedFetch(
         new Request(
           "https://internal/api/agent/plans/00000000-0000-4000-8000-000000000011"
         )
@@ -3032,7 +3040,7 @@ export class PersonalAgentProbe extends PersonalAgent {
     }
     if (action === "profiles") {
       const change = (path: string, value: unknown) =>
-        super.fetch(
+        this.authenticatedFetch(
           new Request(`https://internal/api/agent/bots/${path}`, {
             method: "POST",
             headers: {
@@ -3080,6 +3088,221 @@ export class PersonalAgentProbe extends PersonalAgent {
     return undefined
   }
 
+  private async coordinationProbe(
+    _request: Request,
+    action: string | undefined
+  ): Promise<Response | undefined> {
+    const coordinationTurn = "00000000-0000-4000-8000-000000000081"
+    if (action === "coordination-start") {
+      this.coordinationProbeEnabled = true
+      await this.harness.pi()
+      this.fixtureRun(
+        "CREATE TABLE IF NOT EXISTS coordination_probe (released INTEGER NOT NULL)"
+      )
+      this.fixtureRun("INSERT INTO coordination_probe VALUES (0)")
+      const policy = await this.actorRuntime.runPromise(
+        this.accessStore.policy("spawn_agents")
+      )
+      await this.actorRuntime.runPromise(
+        this.accessStore.update("spawn_agents", policy.revision, "allow")
+      )
+      const faux = fauxProvider({
+        provider: "openai",
+        models: [{ id: "gpt-6-luna", contextWindow: 65536, maxTokens: 2048 }],
+        tokensPerSecond: 1000000,
+      })
+      this.models.setProvider(faux.provider)
+      faux.setResponses(
+        Array.from({ length: 60 }, () => async (context, options) => {
+          await this.actorRuntime.runPromise(
+            this.delegations.request(options!.sessionId!),
+            { signal: options?.signal }
+          )
+          const text = JSON.stringify(context.messages)
+          if (
+            context.messages.some(
+              (message) => message.role === "toolResult" && message.isError
+            )
+          )
+            throw new Error("A coordination probe tool failed")
+          const lastInput = JSON.stringify(
+            context.messages
+              .filter(
+                (m) =>
+                  m.role === "user" && JSON.stringify(m).includes("provenance")
+              )
+              .at(-1)
+          )
+          if (text.includes("You are the delegated child")) {
+            while (
+              !this.fixtureRows<{ released: number }>(
+                "SELECT released FROM coordination_probe"
+              )[0]?.released
+            ) {
+              options?.signal?.throwIfAborted()
+              await new Promise((r) => setTimeout(r, 10))
+            }
+            if (lastInput.includes("Use the private draft"))
+              return fauxAssistantMessage(
+                "Child conclusion after clarification"
+              )
+            if (
+              !context.messages.some(
+                (m) => m.role === "toolResult" && m.toolName === "date"
+              )
+            )
+              return fauxAssistantMessage(
+                fauxToolCall(
+                  "date",
+                  { id: 0 },
+                  { id: "child-read-after-parent" }
+                ),
+                { stopReason: "toolUse" }
+              )
+            if (
+              !context.messages.some(
+                (m) => m.role === "toolResult" && m.toolName === "list_agents"
+              )
+            )
+              return fauxAssistantMessage(
+                fauxToolCall("list_agents", {}, { id: "child-directory" }),
+                { stopReason: "toolUse" }
+              )
+            if (
+              !context.messages.some(
+                (m) => m.role === "toolResult" && m.toolName === "send_message"
+              )
+            )
+              return fauxAssistantMessage(
+                fauxToolCall(
+                  "send_message",
+                  {
+                    to: { sessionId: coordinationTurn, agentId: "main" },
+                    text: "Need clarification",
+                  },
+                  { id: "child-question" }
+                ),
+                { stopReason: "toolUse" }
+              )
+            return fauxAssistantMessage("Awaiting clarification")
+          }
+          if (text.includes("Need clarification")) {
+            const question = this.fixtureRows<{ payload: string }>(
+              "SELECT payload FROM agent_messages WHERE json_extract(payload,'$.text')='Need clarification'"
+            )[0]
+            const message = JSON.parse(question!.payload) as {
+              id: string
+              from: { sessionId: string; agentId: string }
+            }
+            if (
+              !context.messages.some(
+                (m) => m.role === "toolResult" && m.toolName === "send_message"
+              )
+            )
+              return fauxAssistantMessage(
+                fauxToolCall(
+                  "send_message",
+                  {
+                    to: message.from,
+                    text: "Use the private draft",
+                    replyTo: message.id,
+                  },
+                  { id: "parent-clarification" }
+                ),
+                { stopReason: "toolUse" }
+              )
+            return fauxAssistantMessage("Clarification sent")
+          }
+          if (lastInput.includes("message ID"))
+            return fauxAssistantMessage("Received child findings")
+          if (context.messages.some((m) => m.role === "toolResult"))
+            return fauxAssistantMessage("Parent free while child works")
+          return fauxAssistantMessage(
+            fauxToolCall(
+              "spawn_agents",
+              {
+                objective: "Collaborate privately",
+                tasks: [
+                  {
+                    name: "Research",
+                    task: "Research and ask for clarification",
+                    tools: ["date"],
+                  },
+                ],
+              },
+              { id: "spawn-collaborator" }
+            ),
+            { stopReason: "toolUse" }
+          )
+        })
+      )
+      const response = await this.authenticatedFetch(
+        new Request("https://internal/api/agent/send", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-owner-id": "personal-coordination-owner",
+          },
+          body: JSON.stringify({
+            operationId: coordinationTurn,
+            text: "Use a child agent for private research",
+            provenance: { author: { kind: "agent", id: "forged" } },
+          }),
+        })
+      )
+      return Response.json({
+        status: response.status,
+        body: await response.text(),
+      })
+    }
+    if (action === "coordination-release") {
+      this.fixtureRun("UPDATE coordination_probe SET released=1")
+      return Response.json({ ok: true })
+    }
+    if (action === "coordination-read") {
+      const groups = await this.actorRuntime.runPromise(this.delegations.list())
+      const root = await this.actorRuntime.runPromise(
+        this.conversations.get(coordinationTurn)
+      )
+      const child = groups[0]?.children[0]
+      return Response.json({
+        root,
+        groups,
+        transcript: child
+          ? await this.actorRuntime.runPromise(
+              this.delegations.transcript(groups[0]!.id, child.id)
+            )
+          : null,
+        turns: await this.actorRuntime.runPromise(this.conversations.recent()),
+        tasks: await this.actorRuntime.runPromise(
+          localTaskControls(this).list()
+        ),
+        messages: this.fixtureRows<{ payload: string; state: string }>(
+          "SELECT payload,state FROM agent_messages ORDER BY rowid"
+        ).map((row) => ({ ...JSON.parse(row.payload), state: row.state })),
+        latest:
+          root?.session_id &&
+          !["failed", "cancelled"].includes(root.status) &&
+          child
+            ? await this.actorRuntime.runPromise(
+                this.coordination.service.lastMessage(Number(root.session_id), {
+                  sessionId: coordinationTurn,
+                  agentId: String(child.id),
+                })
+              )
+            : null,
+      })
+    }
+    if (action === "coordination-close") {
+      await this.actorRuntime.runPromise(
+        localTaskControls(this).stop({ kind: "request", id: coordinationTurn })
+      )
+      await this.actorRuntime.runPromise(this.coordination.pump())
+      return Response.json({ ok: true })
+    }
+    return undefined
+  }
+
   private async memoryWorkProbe(
     _request: Request,
     action: string | undefined
@@ -3102,7 +3325,7 @@ export class PersonalAgentProbe extends PersonalAgent {
         await this.backups.wake()
       }
       if (action === "memory-chat-send") {
-        const response = await super.fetch(
+        const response = await this.authenticatedFetch(
           new Request("https://internal/api/agent/send", {
             method: "POST",
             headers: { "content-type": "application/json" },
@@ -3153,7 +3376,7 @@ export class PersonalAgentProbe extends PersonalAgent {
         date: "2020-01-02T10:00:00Z",
       })
       const importing = () =>
-        super.fetch(
+        this.authenticatedFetch(
           new Request("https://internal/api/agent/import", {
             method: "POST",
             headers: { "content-type": "application/json" },
@@ -3162,13 +3385,13 @@ export class PersonalAgentProbe extends PersonalAgent {
         )
       const first = await importing(),
         replay = await importing()
-      const search = await super.fetch(
+      const search = await this.authenticatedFetch(
         new Request(
           "https://internal/api/agent/search?q=" +
             encodeURIComponent("Native imported 🍀")
         )
       )
-      const tree = await super.fetch(
+      const tree = await this.authenticatedFetch(
         new Request("https://internal/api/agent/tree")
       )
       return Response.json({
@@ -3184,7 +3407,7 @@ export class PersonalAgentProbe extends PersonalAgent {
       })
     }
     if (action === "export") {
-      const response = await super.fetch(
+      const response = await this.authenticatedFetch(
         new Request("https://internal/api/agent/export")
       )
       const text = await response.text()

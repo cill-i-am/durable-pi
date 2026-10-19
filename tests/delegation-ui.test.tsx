@@ -34,6 +34,23 @@ const render = (value: Group) =>
   renderToStaticMarkup(<DelegationGroup group={value} agentId="home" />)
 
 describe("delegated work presentation", () => {
+  it("keeps idle asynchronous children steerable and stoppable", () => {
+    const html = render({
+      ...group,
+      detached: true,
+      children: [
+        {
+          ...group.children[0]!,
+          status: "completed",
+          answer: "Initial findings",
+        },
+      ],
+    })
+    expect(html).toContain("Idle · available for messages")
+    expect(html).toContain("Steer Research")
+    expect(html).toContain("Stop task")
+    expect(html).not.toContain("Parent is waiting for results")
+  })
   it("offers steering and stopping only while the parent and branch are active", () => {
     const live = render(group)
     expect(live).toContain("Steer Research")

@@ -1,3 +1,4 @@
+import { attributedText } from "../messages/identity"
 import {
   byteLength,
   fitView,
@@ -123,7 +124,7 @@ export function summaryJob(
     start,
     count,
     source: leaf
-      ? `${leaf.kind}: ${leaf.text}`
+      ? `${leaf.kind}: ${leaf.provenance ? attributedText(leaf.text, leaf.provenance) : leaf.text}`
       : `${parent!.left_text}\n${parent!.right_text}`,
     context: view
       .filter((part) => part.start + part.count <= end)
@@ -232,7 +233,7 @@ export function zoomMemory(
 ) {
   if (part.count === 1) {
     if (!entry) throw new Error("Memory lost a validated original message")
-    return `${part.start}+0|${entry.kind}: ${entry.text}`
+    return `${part.start}+0|${entry.kind}: ${entry.provenance ? attributedText(entry.text, entry.provenance) : entry.text}`
   }
   return children
     .map((child) => {

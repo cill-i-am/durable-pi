@@ -66,6 +66,7 @@ export const chatTurns = sqliteTable(
     model: text("model"),
     routing: text("routing"),
     origin: text("origin"),
+    provenance: text("provenance"),
     thinking: text("thinking"),
     revision: integer("revision").notNull().default(0),
     creation: text("creation"),
