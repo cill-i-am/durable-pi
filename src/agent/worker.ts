@@ -2312,12 +2312,16 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   /** Every execution boundary reads live membership. The persisted membership
    * generation also prevents old scheduled work resuming after a new invite. */
   private familyTransition?: Promise<void>
+  private familyRevision?: symbol
   async familyAdmission() {
     for (;;) {
+      const revision = this.familyRevision
       const state = await this.run(this.familyStateProgram())
       const previous = await this.ctx.storage.get<string | null>(
         "family-membership-generation"
       )
+      // Discard lookups begun before another admission changed the generation.
+      if (revision !== this.familyRevision) continue
       if (this.familyTransition) {
         await this.familyTransition
         continue
@@ -2326,6 +2330,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         (!state && previous !== null) ||
         (state && previous !== undefined && previous !== state.membershipId)
       ) {
+        this.familyRevision = Symbol()
         // Join only generation changes. A waiter rechecks live membership and
         // cannot admit new work before an older cleanup finishes.
         const transition = (async () => {
@@ -2393,11 +2398,13 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         }
         continue
       }
-      if (previous !== (state?.membershipId ?? null))
+      if (previous !== (state?.membershipId ?? null)) {
+        this.familyRevision = Symbol()
         await this.ctx.storage.put(
           "family-membership-generation",
           state?.membershipId ?? null
         )
+      }
       return state
     }
   }

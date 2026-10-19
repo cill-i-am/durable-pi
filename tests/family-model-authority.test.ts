@@ -13,6 +13,7 @@ import {
 import { CoordinationStore } from "../src/coordination/adapters/sqlite"
 import { SqliteCredentials } from "../src/inference/adapters/credential-sqlite"
 import {
+  CredentialUnavailable,
   ModelCredentials,
   OAuthCredential,
   credentialApplication,
@@ -378,6 +379,64 @@ it("retries a failed membership transition instead of retaining a rejected barri
   expect(await member.host.familyAdmission()).toMatchObject({ owner: "claire" })
   expect(member.pause).toHaveBeenCalledTimes(2)
 })
+
+it.each([false, true])(
+  "discards a delayed lookup after another admission changes membership, initialized=%s",
+  async (initialized) => {
+    const f = fixture()
+    f.actor("cillian")
+    const member = f.actor("claire")
+    if (initialized) await member.host.familyAdmission()
+    let release!: () => void, entered!: () => void
+    const held = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const started = new Promise<void>((resolve) => {
+      entered = resolve
+    })
+    const stateHost = member.host as unknown as {
+      familyStateProgram(): Effect.Effect<
+        Awaited<ReturnType<PersonalAgent["familyAdmission"]>>,
+        CredentialUnavailable
+      >
+    }
+    const stateProgram = stateHost.familyStateProgram.bind(member.host)
+    vi.spyOn(stateHost, "familyStateProgram").mockImplementationOnce(() =>
+      Effect.gen(function* () {
+        const snapshot = yield* stateProgram()
+        yield* Effect.promise(async () => {
+          entered()
+          await held
+        })
+        return snapshot
+      })
+    )
+    const delayed = member.host.familyAdmission()
+    await started
+    f.sql.exec(
+      "DELETE FROM member WHERE userId='claire'; INSERT INTO member(id,organizationId,userId,role,createdAt) VALUES('replacement','family','claire','member',1)"
+    )
+    await member.host.familyAdmission()
+    await Effect.runPromise(
+      member.turns.admit({
+        operationId: "fresh-after-read",
+        text: "New membership",
+      })
+    )
+    await Effect.runPromise(
+      member.turns.saveSession("fresh-after-read", "9001")
+    )
+    member.db.run(
+      "UPDATE chat_turns SET status='done' WHERE id='fresh-after-read'"
+    )
+    release()
+    await delayed
+    expect(
+      await Effect.runPromise(member.coordination.closed("fresh-after-read"))
+    ).toBe(false)
+    expect(member.pause).toHaveBeenCalledTimes(initialized ? 1 : 0)
+  }
+)
 
 it("fails closed when live membership cannot be read", async () => {
   const f = fixture()
