@@ -156,3 +156,32 @@ test("cancelling a pending microphone prompt closes a late stream without upload
   ).toBeEnabled()
   expect(uploads).toBe(0)
 })
+
+test("an update reload waits until a pending microphone request is cancelled", async ({
+  page,
+}) => {
+  let deployed = false
+  await page.route("**/api/version", (route) =>
+    route.fulfill({ json: { revision: (deployed ? "b" : "a").repeat(40) } })
+  )
+  await openChat(page, true)
+  await page
+    .getByRole("button", { name: "Record voice message", exact: true })
+    .click()
+  deployed = true
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")))
+  await expect(
+    page.getByRole("button", { name: "Reload", exact: true })
+  ).toBeDisabled()
+  await expect(
+    page.getByText("Finish or cancel the voice recording before reloading.", {
+      exact: true,
+    })
+  ).toBeVisible()
+  await page
+    .getByRole("button", { name: "Cancel voice recording", exact: true })
+    .click()
+  await expect(
+    page.getByRole("button", { name: "Reload", exact: true })
+  ).toBeEnabled()
+})

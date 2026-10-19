@@ -17,6 +17,7 @@ import { Route as TwoFactorRouteImport } from './routes/two-factor'
 import { Route as WorkspaceIndexRouteImport } from './routes/_workspace.index'
 import { Route as ApiDeploymentRouteImport } from './routes/api.deployment'
 import { Route as ApiSetupRouteImport } from './routes/api.setup'
+import { Route as ApiVersionRouteImport } from './routes/api.version'
 import { Route as WorkspaceAgentsIndexRouteImport } from './routes/_workspace.agents.index'
 import { Route as WorkspaceAgentsArchivedRouteImport } from './routes/_workspace.agents.archived'
 import { Route as WorkspaceAgentsNewRouteImport } from './routes/_workspace.agents.new'
@@ -70,6 +71,11 @@ const ApiDeploymentRoute = ApiDeploymentRouteImport.update({
 const ApiSetupRoute = ApiSetupRouteImport.update({
   id: '/api/setup',
   path: '/api/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiVersionRoute = ApiVersionRouteImport.update({
+  id: '/api/version',
+  path: '/api/version',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WorkspaceAgentsIndexRoute = WorkspaceAgentsIndexRouteImport.update({
@@ -163,6 +169,7 @@ export interface FileRoutesByFullPath {
   '/two-factor': typeof TwoFactorRoute
   '/api/deployment': typeof ApiDeploymentRoute
   '/api/setup': typeof ApiSetupRoute
+  '/api/version': typeof ApiVersionRoute
   '/agents/archived': typeof WorkspaceAgentsArchivedRoute
   '/agents/new': typeof WorkspaceAgentsNewRoute
   '/api/account/avatar': typeof ApiAccountAvatarRoute
@@ -186,6 +193,7 @@ export interface FileRoutesByTo {
   '/two-factor': typeof TwoFactorRoute
   '/api/deployment': typeof ApiDeploymentRoute
   '/api/setup': typeof ApiSetupRoute
+  '/api/version': typeof ApiVersionRoute
   '/': typeof WorkspaceIndexRoute
   '/agents/archived': typeof WorkspaceAgentsArchivedRoute
   '/agents/new': typeof WorkspaceAgentsNewRoute
@@ -212,6 +220,7 @@ export interface FileRoutesById {
   '/two-factor': typeof TwoFactorRoute
   '/api/deployment': typeof ApiDeploymentRoute
   '/api/setup': typeof ApiSetupRoute
+  '/api/version': typeof ApiVersionRoute
   '/_workspace/': typeof WorkspaceIndexRoute
   '/_workspace/agents/archived': typeof WorkspaceAgentsArchivedRoute
   '/_workspace/agents/new': typeof WorkspaceAgentsNewRoute
@@ -239,6 +248,7 @@ export interface FileRouteTypes {
     | '/two-factor'
     | '/api/deployment'
     | '/api/setup'
+    | '/api/version'
     | '/agents/archived'
     | '/agents/new'
     | '/api/account/avatar'
@@ -262,6 +272,7 @@ export interface FileRouteTypes {
     | '/two-factor'
     | '/api/deployment'
     | '/api/setup'
+    | '/api/version'
     | '/'
     | '/agents/archived'
     | '/agents/new'
@@ -287,6 +298,7 @@ export interface FileRouteTypes {
     | '/two-factor'
     | '/api/deployment'
     | '/api/setup'
+    | '/api/version'
     | '/_workspace/'
     | '/_workspace/agents/archived'
     | '/_workspace/agents/new'
@@ -313,6 +325,7 @@ export interface RootRouteChildren {
   TwoFactorRoute: typeof TwoFactorRoute
   ApiDeploymentRoute: typeof ApiDeploymentRoute
   ApiSetupRoute: typeof ApiSetupRoute
+  ApiVersionRoute: typeof ApiVersionRoute
   ApiAccountAvatarRoute: typeof ApiAccountAvatarRoute
   ApiAgentSplatRoute: typeof ApiAgentSplatRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -377,6 +390,13 @@ declare module '@tanstack/react-router' {
       path: '/api/setup'
       fullPath: '/api/setup'
       preLoaderRoute: typeof ApiSetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/version': {
+      id: '/api/version'
+      path: '/api/version'
+      fullPath: '/api/version'
+      preLoaderRoute: typeof ApiVersionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_workspace/agents/': {
@@ -528,6 +548,7 @@ const rootRouteChildren: RootRouteChildren = {
   TwoFactorRoute: TwoFactorRoute,
   ApiDeploymentRoute: ApiDeploymentRoute,
   ApiSetupRoute: ApiSetupRoute,
+  ApiVersionRoute: ApiVersionRoute,
   ApiAccountAvatarRoute: ApiAccountAvatarRoute,
   ApiAgentSplatRoute: ApiAgentSplatRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,

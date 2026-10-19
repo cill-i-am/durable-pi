@@ -15,6 +15,7 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
+import { useReloadGuard } from "@/features/updates/update-recovery"
 import { parseAgentId, workspaceDestination } from "@/navigation/workspace"
 import type { TerminalNetworkPolicy } from "@/terminal/contracts"
 
@@ -38,6 +39,10 @@ export function TerminalWorkbench({
   onPendingChange: (pending: boolean) => void
 }) {
   const terminal = useTerminal(agentId, selected, onSelect)
+  useReloadGuard(
+    "Save and close, or discard the interactive terminal before reloading.",
+    terminal.session !== null
+  )
   const [networkSettings, setNetworkSettings] =
     useState<TerminalNetworkPolicy | null>(null)
   const settingsTrigger = useRef<HTMLButtonElement>(null)

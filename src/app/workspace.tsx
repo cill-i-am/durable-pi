@@ -19,10 +19,16 @@ import {
 import { AgentCollection } from "@/features/agents/agent-collection"
 import { useAgentStatuses } from "@/features/agents/use-agent-statuses"
 import { Conversation, useConversation } from "@/features/conversation"
+import { adoptDraftOwner } from "@/features/conversation/draft"
+import { useComposerWorkspace } from "@/features/conversation/use-composer-draft"
 import { FamilyWorkspace } from "@/features/family/context"
-import { useFiles } from "@/features/files/use-files"
+import type { FilesState } from "@/features/files/use-files"
 import { ObjectsProvider } from "@/features/objects/context"
 import { markReady } from "@/features/performance"
+import {
+  AssetBoundary,
+  useReloadGuard,
+} from "@/features/updates/update-recovery"
 import { api } from "@/http/client"
 import { listenForClientErrors } from "@/observability/browser"
 
@@ -85,6 +91,14 @@ export function ChatApp() {
   useEffect(listenForClientErrors, [])
   const { data: session, isPending, error } = authClient.useSession()
   useEffect(() => {
+    if (isPending || error) return
+    try {
+      adoptDraftOwner(sessionStorage, session?.user.id ?? null)
+    } catch {
+      /* Unavailable tab storage is handled by the draft guard. */
+    }
+  }, [session?.user.id, isPending, error])
+  useEffect(() => {
     if (session && !isPending) markReady("session")
   }, [session, isPending])
   if (isPending) return <WorkspaceStartup />
@@ -105,6 +119,31 @@ export function ChatApp() {
     </FamilyWorkspace>
   )
 }
+/** Navigation and an update reload obey the same open-edit fence. */
+function useWorkspaceProtection(
+  locked: boolean,
+  editing: boolean,
+  archiving: boolean
+) {
+  const [navigationBlocked, setNavigationBlocked] = useState(false)
+  const protectedView = locked || editing || archiving
+  useReloadGuard(
+    "Finish or cancel the open edit before reloading.",
+    protectedView
+  )
+  useBlocker({
+    shouldBlockFn: () => {
+      if (protectedView) setNavigationBlocked(true)
+      return protectedView
+    },
+    enableBeforeUnload: protectedView,
+  })
+  useEffect(() => {
+    if (!protectedView) setNavigationBlocked(false)
+  }, [protectedView])
+  return navigationBlocked
+}
+
 function Workspace({
   ownerId,
   name,
@@ -180,20 +219,11 @@ function Workspace({
   }
   const [error, setError] = useState("")
   const [archiveTarget, setArchiveTarget] = useState<AgentProfile | null>(null)
-  const [navigationBlocked, setNavigationBlocked] = useState(false)
-  useBlocker({
-    shouldBlockFn: () => {
-      const blocked =
-        navigationLocked || editor !== null || archiveTarget !== null
-      if (blocked) setNavigationBlocked(true)
-      return blocked
-    },
-    enableBeforeUnload: navigationLocked || editor !== null,
-  })
-  useEffect(() => {
-    if (!navigationLocked && !editor && !archiveTarget)
-      setNavigationBlocked(false)
-  }, [navigationLocked, editor, archiveTarget])
+  const navigationBlocked = useWorkspaceProtection(
+    navigationLocked,
+    editor !== null,
+    archiveTarget !== null
+  )
   async function updateArchive(agent: AgentProfile, shouldArchive: boolean) {
     await api("/api/agent/bots/archive", {
       id: agent.id,
@@ -346,6 +376,7 @@ function Workspace({
             ) : catalog.selected ? (
               <AgentWorkspace
                 key={catalog.selected.id}
+                ownerId={ownerId}
                 location={location}
                 conversation={conversation}
                 overlayOpen={archiveTarget !== null || editor !== null}
@@ -420,6 +451,7 @@ function Workspace({
 }
 
 function AgentWorkspace({
+  ownerId,
   location,
   conversation,
   overlayOpen,
@@ -438,6 +470,7 @@ function AgentWorkspace({
   onNavigationLockChange,
   onStatus,
 }: {
+  ownerId: string
   location: ReturnType<typeof useWorkspaceLocation>
   conversation: ReturnType<typeof useConversation>
   overlayOpen: boolean
@@ -465,7 +498,12 @@ function AgentWorkspace({
       status: { state: runState, turnId: runTurnId },
     })
   }, [agent.id, runState, runTurnId, onStatus])
-  const files = useFiles(agent.id)
+  const [sending, setSending] = useState(false)
+  const { composerDraft, files } = useComposerWorkspace(
+    ownerId,
+    agent.id,
+    sending
+  )
   const [workbenchView, setWorkbenchView] = useState({
     panel: workbench,
     search: location.search,
@@ -480,7 +518,6 @@ function AgentWorkspace({
   const renderedWorkbench = workbench ?? workbenchView.panel
   const renderedSearch = workbench ? location.search : workbenchView.search
   const workbenchTrigger = useRef<HTMLButtonElement>(null)
-  const [sending, setSending] = useState(false)
   const [filePending, setFilePending] = useState(false)
   const [workbenchAppPending, setAppPending] = useState(false)
   const [inlineAppRequests, setInlineAppRequests] = useState<
@@ -587,6 +624,7 @@ function AgentWorkspace({
     >
       <div className={`agent-columns ${workbench ? "workbench-visible" : ""}`}>
         <Conversation
+          composerDraft={composerDraft}
           onAppPendingChange={onAppPendingChange}
           name={name}
           agent={agent}
@@ -637,26 +675,28 @@ function AgentWorkspace({
             }
             mobileNavigation={mobileNavigation(true)}
           >
-            <Suspense fallback={<p role="status">Opening workspace tool…</p>}>
-              <WorkspaceTool
-                renderedWorkbench={renderedWorkbench}
-                renderedSearch={renderedSearch}
-                location={location}
-                agent={agent}
-                agents={agents}
-                onOpenBot={onOpenBot}
-                onMemory={onMemory}
-                setExecutionPending={setExecutionPending}
-                setRoutinePending={setRoutinePending}
-                setObjectEditing={setObjectEditing}
-                setAppPending={setAppPending}
-                setFilePending={setFilePending}
-                files={files}
-                sending={sending}
-                openWorkbench={openWorkbench}
-                conversation={conversation}
-              />
-            </Suspense>
+            <AssetBoundary>
+              <Suspense fallback={<p role="status">Opening workspace tool…</p>}>
+                <WorkspaceTool
+                  renderedWorkbench={renderedWorkbench}
+                  renderedSearch={renderedSearch}
+                  location={location}
+                  agent={agent}
+                  agents={agents}
+                  onOpenBot={onOpenBot}
+                  onMemory={onMemory}
+                  setExecutionPending={setExecutionPending}
+                  setRoutinePending={setRoutinePending}
+                  setObjectEditing={setObjectEditing}
+                  setAppPending={setAppPending}
+                  setFilePending={setFilePending}
+                  files={files}
+                  sending={sending}
+                  openWorkbench={openWorkbench}
+                  conversation={conversation}
+                />
+              </Suspense>
+            </AssetBoundary>
           </WorkbenchPanel>
         )}
       </div>
@@ -750,7 +790,7 @@ function WorkspaceTool({
   setObjectEditing: (pending: boolean) => void
   setAppPending: (pending: boolean) => void
   setFilePending: (pending: boolean) => void
-  files: ReturnType<typeof useFiles>
+  files: FilesState
   sending: boolean
   openWorkbench: (value: Workbench | null) => void
   conversation: ReturnType<typeof useConversation>
@@ -957,19 +997,21 @@ function WorkspaceSettingsOverlay({
   openWorkbench: (value: Workbench | null) => void
 }) {
   return settings || securityOpen ? (
-    <Suspense fallback={<p role="status">Opening settings…</p>}>
-      <WorkspaceSettings
-        category={settings}
-        connectionResult={location.search.connections}
-        onConnectionResultConsumed={consumeConnectionCallback}
-        onCategoryChange={setSettings}
-        agent={agent}
-        conversation={conversation}
-        onPendingChange={onSettingsPending}
-        securityOpen={securityOpen}
-        onSecurityOpenChange={onSecurityOpenChange}
-        onWorkbench={openWorkbench}
-      />
-    </Suspense>
+    <AssetBoundary>
+      <Suspense fallback={<p role="status">Opening settings…</p>}>
+        <WorkspaceSettings
+          category={settings}
+          connectionResult={location.search.connections}
+          onConnectionResultConsumed={consumeConnectionCallback}
+          onCategoryChange={setSettings}
+          agent={agent}
+          conversation={conversation}
+          onPendingChange={onSettingsPending}
+          securityOpen={securityOpen}
+          onSecurityOpenChange={onSecurityOpenChange}
+          onWorkbench={openWorkbench}
+        />
+      </Suspense>
+    </AssetBoundary>
   ) : null
 }

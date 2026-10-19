@@ -6,11 +6,14 @@ import {
 } from "@tanstack/react-router"
 import { ThemeProvider } from "next-themes"
 
+import { WorkspaceLinkError } from "@/app/workspace-link-error"
 import { buttonVariants } from "@/components/ui/button"
+import { UpdateRecovery } from "@/features/updates/update-recovery"
 
 import appCss from "../styles.css?url"
 
 export const Route = createRootRoute({
+  errorComponent: WorkspaceLinkError,
   head: () => ({
     meta: [
       { name: "robots", content: "noindex, nofollow" },
@@ -68,7 +71,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           storageKey="durable-pi:theme"
           disableTransitionOnChange
         >
-          {children}
+          <UpdateRecovery>{children}</UpdateRecovery>
         </ThemeProvider>
         <Scripts />
       </body>

@@ -2,7 +2,7 @@
 
 Durable Pi is a private workspace of persistent personal agents. You can talk to an agent, give it tools, retain files and memory, maintain saved work, and inspect or stop its tasks. Web, email, and WhatsApp connect to the same agent capabilities where their adapters support them.
 
-This map covers **27 feature areas and 155 behaviors**, checked against main revision `a133e4b93452694bf5d5aef0f3129ac4f662073e` on **October 19, 2026**. It describes implemented behavior and explicit gaps. It does not claim that every journey was exercised in production during this documentation pass.
+This map covers **27 feature areas and 165 behaviors**, with the initial inventory checked against main revision `a133e4b93452694bf5d5aef0f3129ac4f662073e` on **October 19, 2026**. It describes implemented behavior and explicit gaps. It does not claim that every journey was exercised in production during this documentation pass.
 
 Open [Durable Pi](https://bot.cill-i-am.com), use the inventory below to find a feature, and follow its recipe to verify it. The [verification skill](.cursor/skills/verify-durable-pi/SKILL.md) provides launch, readiness, evidence, and cleanup instructions. The [architecture guide](docs/architecture.md) explains domain ownership separately.
 
@@ -86,6 +86,6 @@ The remaining gaps relevant to the product direction are explicit:
 - Speech output, real-time calls, native video inference, scanned-document OCR, and image-subtitle OCR are not built. Audio transcription is implemented.
 - Routines do not automatically send email/push outcome notifications. Calendar/timezone recurrence and provider-specific webhook signatures are separate work.
 - Private app sharing, additional working-object types, automatic memory dreaming, and full-account disaster recovery are not implemented.
-- A stale open tab can fail to load an old lazy-loaded chunk after deployment. A full reload is the recorded workaround; automatic refresh recovery remains a follow-up.
+- Stale-tab recovery offers an explicit Reload action, preserves the composer, and fences unresolved local work. See [the recovery decisions](docs/decisions/stale-tab-recovery.md). Other product errors retain their own recovery paths.
 
 These gaps describe scope; they do not add roadmap commitments. Use [maintain-verification-skill](https://github.com/cursor/plugins/blob/main/pstack/skills/maintain-verification-skill/SKILL.md) to audit the map when behavior changes. No new recurring automation is created by this document.

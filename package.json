@@ -29,7 +29,7 @@
     "eval:rich-answers:live": "tsx evals/rich-answers/live.ts",
     "eval:rich-answers:score": "tsx evals/rich-answers/score.ts",
     "eval:family-invitations:score": "node --import tsx evals/family-invitations/score.ts",
-    "verify:browser": "pnpm build && pnpm test:browser && node --import tsx scripts/check-passkeys.mjs",
+    "verify:browser": "pnpm build && pnpm test:browser && node --import tsx scripts/check-passkeys.mjs && pnpm test:client-upgrade",
     "verify:container": "docker build --platform linux/amd64 --tag durable-pi-ci:terminal containers/terminal && docker build --platform linux/amd64 --tag durable-pi-ci:terminal-native containers/terminal-native",
     "dev:sandbox": "alchemy dev stacks/sandbox-rehearsal.ts --stage sandbox-rehearsal --profile default",
     "test:sandbox": "node scripts/check-native-sandbox.mjs",
@@ -37,7 +37,8 @@
     "prepare": "effect-tsgo patch --oxlint",
     "complexity:report": "cccc src scripts tests stacks",
     "eval:coordination": "tsx scripts/eval-coordination.ts",
-    "test:memory-runtime": "node scripts/test-memory-runtime.mjs"
+    "test:memory-runtime": "node scripts/test-memory-runtime.mjs",
+    "test:client-upgrade": "node scripts/check-client-upgrade.mjs"
   },
   "dependencies": {
     "@alchemy.run/frontend-frameworks": "2.0.0-beta.83",

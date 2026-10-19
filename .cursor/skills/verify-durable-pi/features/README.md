@@ -1,6 +1,6 @@
 # Durable Pi verification map
 
-This is the maintained user-journey map for Durable Pi. It covers **27 feature areas and 161 behavior IDs**, checked against source revision `a133e4b93452694bf5d5aef0f3129ac4f662073e` on **October 19, 2026**. Coordination and authorship entries were added with the agent-session messaging change. A listed recipe is not a claim that it passed in production.
+This is the maintained user-journey map for Durable Pi. It covers **27 feature areas and 165 behavior IDs**, checked against source revision `a133e4b93452694bf5d5aef0f3129ac4f662073e` on **October 19, 2026**. Coordination/authorship and stale-tab/draft recovery entries were added by their later slices, with linked source and verification records. A listed recipe is not a claim that it passed in production.
 
 For a product overview and cross-surface comparison, start with [FEATURES.md](../../../../FEATURES.md). For launch, health checks, evidence, and cleanup, read the [verification skill](../SKILL.md). The [source register](../references/source-register.md) links each area to its implementation and checks without mixing backend structure into the user journeys.
 
