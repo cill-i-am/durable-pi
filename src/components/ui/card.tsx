@@ -1,6 +1,32 @@
 import { cn } from "cn"
 import * as React from "react"
 
+function CardFrame({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="card-frame"
+      className={cn(
+        "flex flex-col rounded-card-frame bg-card-panel text-card-foreground shadow-(--shadow-card-frame) [&>[data-slot=card]]:rounded-[inherit] [&>[data-slot=card]]:border-0 [&>[data-slot=card]]:border-b [&>[data-slot=card]]:shadow-none [&>[data-slot=card]>[data-slot=card-footer]]:bg-card",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+function CardPanel({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="card-panel"
+      className={cn(
+        "flex min-h-18 flex-wrap items-center justify-center gap-2 rounded-b-[inherit] px-6 py-3 text-sm text-muted-foreground",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
 function Card({
   className,
   size = "default",
@@ -99,6 +125,8 @@ function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
 
 export {
   Card,
+  CardFrame,
+  CardPanel,
   CardHeader,
   CardFooter,
   CardTitle,
