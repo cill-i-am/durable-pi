@@ -18,7 +18,7 @@ Find an agent, move between chat and saved work, and reopen the same view from a
 ## How to get to it (user POV)
 
 - Open `/agents`, `/agents/archived`, or an agent's `/agents/AGENT_SLUG` page.
-- Use the agent sidebar, agent search, or Cmd/Ctrl+K. Use the workbench shortcuts or the **Workbench tool** selector for saved work.
+- Use the agent sidebar, agent search, or Cmd/Ctrl+K. Use **Tools** or the **Workbench tool** selector for saved work.
 - Open Settings from the agent controls. Direct settings links use `/agents/AGENT_SLUG/settings/SECTION`.
 - On a narrow screen, use Agents, Chat, and Workspace navigation.
 

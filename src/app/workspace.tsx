@@ -190,11 +190,7 @@ function Workspace({
                 connections: location.search.connections,
               }
             : {}),
-          panel:
-            location.search.panel ??
-            (window.matchMedia("(min-width: 1024px)").matches
-              ? "apps"
-              : undefined),
+          panel: location.search.panel,
         },
         true
       )

@@ -1,4 +1,3 @@
-import { Link } from "@tanstack/react-router"
 import {
   Globe,
   TerminalSquare,
@@ -13,7 +12,7 @@ import {
 } from "lucide-react"
 import { useState, type ReactNode, type RefObject } from "react"
 
-import { Button, buttonVariants } from "@/components/ui/button"
+import { Button } from "@/components/ui/button"
 import {
   Select,
   SelectTrigger,
@@ -34,7 +33,6 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip"
-import { workspaceDestination } from "@/navigation/workspace"
 
 import type { Workbench } from "./workspace-navigation"
 
@@ -58,7 +56,6 @@ export function WorkbenchPanel({
   onClosed,
   returnFocus,
   agentName,
-  agentReference,
   locked,
   overlayOpen,
   mobileNavigation,
@@ -154,43 +151,6 @@ export function WorkbenchPanel({
                     </SelectContent>
                   </Select>
                 </div>
-                <nav
-                  className="workbench-shortcuts"
-                  aria-label="Workbench shortcuts"
-                >
-                  {tools.slice(0, 5).map((tool) => (
-                    <Tooltip key={tool.id}>
-                      <TooltipTrigger
-                        render={
-                          <Link
-                            {...workspaceDestination(agentReference, {
-                              panel: tool.id,
-                            })}
-                            className={buttonVariants({
-                              variant:
-                                value === tool.id ? "secondary" : "ghost",
-                              size: "icon-sm",
-                            })}
-                            aria-label={tool.label}
-                            aria-current={
-                              value === tool.id ? "page" : undefined
-                            }
-                            aria-disabled={locked || undefined}
-                            data-shortcut={tool.id}
-                            onClick={(event) => {
-                              if (locked) event.preventDefault()
-                            }}
-                          />
-                        }
-                      >
-                        <tool.icon aria-hidden="true" />
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom">
-                        {tool.label}
-                      </TooltipContent>
-                    </Tooltip>
-                  ))}
-                </nav>
                 <Tooltip>
                   <TooltipTrigger
                     render={

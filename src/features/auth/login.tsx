@@ -73,6 +73,20 @@ export function Login({ sessionError }: { sessionError?: string }) {
           ? "Create the single owner account using your private setup key."
           : "Sign in to your personal workspace."
       }
+      footer={
+        <Button
+          variant="link"
+          size="sm"
+          disabled={pending}
+          onClick={() => {
+            setSetup(!setup)
+            setError("")
+            setNotice("")
+          }}
+        >
+          {setup ? "Back to sign in" : "First time? Set up your account"}
+        </Button>
+      }
     >
       <form onSubmit={submit}>
         <FieldGroup>
@@ -161,18 +175,6 @@ export function Login({ sessionError }: { sessionError?: string }) {
         </FieldGroup>
       </form>
       {!setup && <PasskeySignIn disabled={pending} onBusyChange={setPending} />}
-      <Button
-        variant="link"
-        size="sm"
-        disabled={pending}
-        onClick={() => {
-          setSetup(!setup)
-          setError("")
-          setNotice("")
-        }}
-      >
-        {setup ? "Back to sign in" : "First time? Set up your account"}
-      </Button>
     </AuthFrame>
   )
 }

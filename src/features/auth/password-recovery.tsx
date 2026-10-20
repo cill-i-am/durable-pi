@@ -62,6 +62,7 @@ export function ForgotPassword() {
           ? "If this email belongs to your Pi account, a reset link is on its way. It expires in 15 minutes."
           : "Enter your owner email and we'll send a link to choose a new password."
       }
+      footer={<BackToSignIn />}
     >
       {sent ? (
         <div role="status" className="flex flex-col gap-4">
@@ -100,7 +101,6 @@ export function ForgotPassword() {
           </FieldGroup>
         </form>
       )}
-      <BackToSignIn />
     </AuthFrame>
   )
 }
@@ -192,6 +192,7 @@ export function ResetPassword() {
             ? "The link may have expired or already been used. Request a fresh one to continue."
             : "Use at least 12 characters. A long, unique password works best."
       }
+      footer={<BackToSignIn />}
     >
       {done ? (
         <div role="status">Sign in with your new password.</div>
@@ -246,7 +247,6 @@ export function ResetPassword() {
           </FieldGroup>
         </form>
       )}
-      <BackToSignIn />
     </AuthFrame>
   )
 }

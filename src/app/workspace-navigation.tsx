@@ -1,6 +1,5 @@
 import {
   Activity,
-  Archive,
   BookOpen,
   ChevronDown,
   Clock3,
@@ -21,7 +20,6 @@ import {
 import { useEffect, useRef, useState } from "react"
 
 import type { AgentProfile } from "@/agents/contracts"
-import { homeAgentId } from "@/agents/contracts"
 import { AgentMark, agentTone } from "@/components/agent-mark"
 import { Button } from "@/components/ui/button"
 import {
@@ -47,15 +45,6 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
-import {
-  Menubar,
-  MenubarMenu,
-  MenubarTrigger,
-  MenubarContent,
-  MenubarGroup,
-  MenubarItem,
-  MenubarSeparator,
-} from "@/components/ui/menubar"
 import { useSidebar } from "@/components/ui/sidebar"
 import { UserAvatar } from "@/components/user-avatar"
 import { useFamily } from "@/features/family/context"
@@ -77,6 +66,7 @@ const destinations = [
   { id: "activity", label: "Activity", icon: Activity },
   { id: "objects", label: "Checklists", icon: ListTodo },
   { id: "files", label: "Files", icon: Files },
+  { id: "memory", label: "Memory", icon: BookOpen },
   { id: "apps", label: "Apps", icon: PanelsTopLeft },
   { id: "browser", label: "Browser", icon: Globe },
   { id: "terminal", label: "Terminal", icon: TerminalSquare },
@@ -145,7 +135,6 @@ export function WorkspaceNavigation({
     { id: "security", label: "Account security", icon: ShieldCheck },
     { id: "create", label: "New agent", icon: Plus },
     { id: "settings", label: "Settings", icon: Settings2 },
-    { id: "memory", label: "Search this agent's memory", icon: BookOpen },
     ...destinations,
   ] as const
   return (
@@ -209,89 +198,44 @@ export function WorkspaceNavigation({
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <Menubar className="workspace-menubar" aria-label="Workspace commands">
-          <MenubarMenu>
-            <MenubarTrigger disabled={locked}>Agent</MenubarTrigger>
-            <MenubarContent>
-              <MenubarGroup>
-                <MenubarItem disabled={locked} onClick={() => run("create")}>
-                  <Plus />
-                  New agent
-                </MenubarItem>
-                <MenubarItem
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            disabled={locked || !selected}
+            render={<Button variant="ghost" className="workspace-tools" />}
+          >
+            <PanelsTopLeft />
+            Tools
+            <ChevronDown />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>Workspace tools</DropdownMenuLabel>
+              {destinations.map((item) => (
+                <DropdownMenuItem
+                  key={item.id}
                   disabled={locked || !selected}
-                  onClick={() => run("settings")}
+                  onClick={() => run(item.id)}
                 >
-                  <Settings2 />
-                  Settings
-                </MenubarItem>
-                <MenubarItem
-                  disabled={locked || !selected}
-                  onClick={() => run("memory")}
-                >
-                  <BookOpen />
-                  Memory
-                </MenubarItem>
-                <MenubarSeparator />
-                <MenubarItem
-                  disabled={locked || !selected || selected.id === homeAgentId}
-                  onClick={() => run("archive")}
-                >
-                  <Archive />
-                  Archive agent
-                </MenubarItem>
-              </MenubarGroup>
-            </MenubarContent>
-          </MenubarMenu>
-          <MenubarMenu>
-            <MenubarTrigger disabled={locked}>View</MenubarTrigger>
-            <MenubarContent>
-              <MenubarGroup>
-                <MenubarItem onClick={toggleSidebar}>
-                  <PanelLeft />
-                  Toggle sidebar
-                  <span className="ml-auto text-xs text-muted-foreground">
-                    ⌘ B
-                  </span>
-                </MenubarItem>
-                {destinations.slice(0, 3).map((item) => (
-                  <MenubarItem
-                    key={item.id}
-                    disabled={locked || !selected}
-                    onClick={() => run(item.id)}
-                  >
-                    <item.icon />
-                    {item.label}
-                  </MenubarItem>
-                ))}
-                <MenubarItem
-                  disabled={locked || !workbench}
-                  onClick={() => run("hide-workbench")}
-                >
-                  <PanelRight />
-                  Hide workbench
-                </MenubarItem>
-              </MenubarGroup>
-            </MenubarContent>
-          </MenubarMenu>
-          <MenubarMenu>
-            <MenubarTrigger disabled={locked}>Tools</MenubarTrigger>
-            <MenubarContent>
-              <MenubarGroup>
-                {destinations.slice(3).map((item) => (
-                  <MenubarItem
-                    key={item.id}
-                    disabled={locked || !selected}
-                    onClick={() => run(item.id)}
-                  >
-                    <item.icon />
-                    {item.label}
-                  </MenubarItem>
-                ))}
-              </MenubarGroup>
-            </MenubarContent>
-          </MenubarMenu>
-        </Menubar>
+                  <item.icon />
+                  {item.label}
+                  {workbench === item.id && (
+                    <span className="ml-auto text-xs text-muted-foreground">
+                      Open
+                    </span>
+                  )}
+                </DropdownMenuItem>
+              ))}
+              {workbench && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => run("hide-workbench")}>
+                    <PanelRight /> Close tools
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <Button
           ref={searchTrigger}
           variant="outline"
