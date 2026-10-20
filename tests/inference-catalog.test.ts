@@ -93,6 +93,7 @@ it.effect(
       expect(calls).toBe(1)
       yield* TestClock.setTime(320_000)
       yield* reader.read()
+      yield* Effect.yieldNow
       expect(calls).toBe(2)
       key = "b"
       yield* reader.read()
@@ -186,11 +187,11 @@ it.effect(
           }),
       })
       yield* reader.read()
-      yield* TestClock.adjust("5 minutes")
+      yield* TestClock.adjust("1 hour")
       fail = true
       expect((yield* reader.read()).models).toEqual([])
       expect((yield* reader.read()).error).toBe("Synthetic unavailable")
-      expect(calls).toBe(3)
+      expect(calls).toBe(2)
     })
 )
 
@@ -232,11 +233,13 @@ test("the local credential fingerprint changes across accounts sharing the same 
   expect(first.identity).not.toBe(second.identity)
   expect(first.identity).toMatch(/^[a-f0-9]{64}$/)
   expect(JSON.stringify(first)).not.toContain(credential.access)
-  const reader = await Effect.runPromise(makeModelCatalog(source))
+  const runtime = ManagedRuntime.make(catalogApplication(source))
+  const reader = runtime.runSync(ModelCatalogReader)
   expect((await Effect.runPromise(reader.read())).error).toBeNull()
   current = credential
   expect((await Effect.runPromise(reader.read())).error).toBeNull()
   expect(transport).toHaveBeenCalledTimes(2)
+  await runtime.dispose()
 })
 
 it.effect(

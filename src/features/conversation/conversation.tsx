@@ -539,7 +539,6 @@ export function Conversation({
                       : "medium",
                     settingsRevision: state?.settingsRevision ?? 0,
                   }}
-                  onError={setError}
                 />
               )
             }

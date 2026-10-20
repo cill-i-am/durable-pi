@@ -1,53 +1,70 @@
-import { Schema } from "effect"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useCallback, useEffect, useMemo, useRef } from "react"
 
-import { ModelSelection } from "@/conversations/turns"
 import { markReady } from "@/features/performance"
-import { agentApi } from "@/http/client"
-import { ModelCatalog, ResolvedRoute, validateRoute } from "@/inference/policy"
+import {
+  newestModelCatalog,
+  type ModelCatalogResponse,
+} from "@/inference/catalog-api"
+import { validateRoute } from "@/inference/policy"
 import type { ModelSettings } from "@/inference/selection"
 
-const Catalog = Schema.Struct({
-  ...ModelCatalog.fields,
-  selection: ModelSelection,
-  assignments: Schema.Record(Schema.String, ResolvedRoute),
-})
-export function useModelCatalog(
-  agentId: string,
-  revision: number,
-  onError: (message: string) => void
-) {
-  const requestSequence = useRef(0)
-  const [catalog, setCatalog] = useState<typeof Catalog.Type | null>(null)
-  const refresh = useCallback(async () => {
-    const sequence = ++requestSequence.current
-    try {
-      const next = Schema.decodeUnknownSync(Catalog)(
-        await agentApi(agentId)("models")
-      )
-      if (sequence === requestSequence.current) {
-        markReady("models")
-        setCatalog((current) =>
-          current &&
-          current.selection.settingsRevision > next.selection.settingsRevision
-            ? current
-            : next
-        )
-      }
-    } catch {
-      if (sequence === requestSequence.current)
-        onError("Could not verify model availability. Refresh to retry.")
-    }
-  }, [agentId, onError])
+import { modelQuery } from "./model-query"
+
+export function useModelCatalog(agentId: string, revision: number) {
+  const client = useQueryClient()
+  const input = useMemo(() => ({ query: { agent: agentId } }), [agentId])
+  const key = useMemo(() => modelQuery.getQueryKey(input), [input])
+  const query = useQuery(
+    modelQuery.queryOptions(input, {
+      staleTime: 60_000,
+      gcTime: 300_000,
+      refetchInterval: 60_000,
+      retry: false,
+      structuralSharing: (previous: unknown, next: unknown) =>
+        newestModelCatalog(
+          previous as ModelCatalogResponse | undefined,
+          next as ModelCatalogResponse
+        ),
+    })
+  )
+  const previousRevision = useRef({ agentId, revision })
   useEffect(() => {
-    void refresh()
-    return () => {
-      // oxlint-disable-next-line react/exhaustive-deps -- Advance the live request generation so all pending responses become stale.
-      requestSequence.current++
-    }
-  }, [refresh, revision])
+    const previous = previousRevision.current
+    previousRevision.current = { agentId, revision }
+    if (previous.agentId === agentId && previous.revision !== revision)
+      void client.invalidateQueries({ queryKey: key })
+  }, [agentId, revision, client, key])
+  useEffect(() => {
+    if (query.data) markReady("models")
+  }, [query.data])
+  const cancel = useCallback(
+    () => client.cancelQueries({ queryKey: key }),
+    [client, key]
+  )
+  const refresh = useCallback(async () => {
+    await client.invalidateQueries({ queryKey: key })
+  }, [client, key])
+  const setCatalog = useCallback(
+    (
+      update: (
+        current: ModelCatalogResponse | null
+      ) => ModelCatalogResponse | null
+    ) => {
+      client.setQueryData<ModelCatalogResponse>(
+        key,
+        (previous) => update(previous ?? null) ?? undefined
+      )
+    },
+    [client, key]
+  )
+  // An authorization/transport error must not keep a stale "available" control enabled.
+  const catalog = query.isError ? null : (query.data ?? null)
   function unavailable(value: ModelSettings) {
-    if (!catalog) return "Checking account availability…"
+    if (!catalog)
+      return query.isError
+        ? "Could not verify model availability. Refresh to retry."
+        : "Checking account availability…"
     try {
       validateRoute(value, catalog)
       return null
@@ -55,5 +72,8 @@ export function useModelCatalog(
       return error instanceof Error ? error.message : "Unavailable"
     }
   }
-  return { catalog, refresh, unavailable, setCatalog, requestSequence }
+  const catalogError = query.isError
+    ? "Could not verify model availability. Refresh to retry."
+    : (catalog?.error ?? "")
+  return { catalog, catalogError, refresh, unavailable, setCatalog, cancel }
 }

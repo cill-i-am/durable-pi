@@ -321,6 +321,7 @@ import {
   accountToken,
   nativeAccountToken,
 } from "../inference/adapters/account-rpc"
+import { catalogStorage } from "../inference/adapters/catalog-storage"
 import {
   ChatGPTSignIn,
   chatGPTSignInRequest,
@@ -1090,7 +1091,8 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       }),
       credentialApplication(
         this.credentialLedger,
-        this.createCredentialRefresher()
+        this.createCredentialRefresher(),
+        (work) => this.ctx.waitUntil(this.run(work))
       ),
       catalogApplication(
         ownerCatalogSource(
@@ -1111,10 +1113,27 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
                   value ? toNativeCredential(value) : undefined
                 )
               ),
-            () => openaiProvider().getModels()
+            () => openaiProvider().getModels(),
+            undefined,
+            () =>
+              this.credentialService.connection().pipe(
+                preserveFatal,
+                Effect.mapError(
+                  () =>
+                    new ModelUnavailable({
+                      message:
+                        "Reconnect ChatGPT to verify model availability.",
+                      reason: "denied",
+                    })
+                )
+              )
           ),
           (owner) => this.ctx.id.equals(this.env.AGENT.idFromName(owner))
-        )
+        ),
+        {
+          storage: catalogStorage(this.ctx.storage),
+          retain: (work) => this.ctx.waitUntil(this.run(work)),
+        }
       ),
       executionApplication(
         new ExecutionStore(this.db),

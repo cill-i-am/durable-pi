@@ -2,7 +2,7 @@
 
 The October 19 production trace for a 1.40-second Send acceptance contained 988 ms in `Inference.discoverCatalog` and 1,110 ms in `Inference.readModelCatalog`. The complete admission operation took 1,130 ms. Its provider model-list fetch alone took 956 ms. This is a real production trace, not a simulated provider. Trace: `27e3de3ad1e1f93f3384f33616447a52`, starting `2026-10-19T22:05:39.546Z`, revision `7a2389d`.
 
-## Changes
+## October 19 baseline changes (PR #174)
 
 - Successful model capability metadata lasts five minutes instead of one. Live family membership and current credential identity are still checked on every read. Reconnection changes the cache key; failures are not cached and expired success is never a fallback. Remote readers still forward to the owner on every read. The tradeoff is up to five minutes of capability metadata age; this does not cache authorization. The first read after expiry still discovers models.
 - Each existing family authority boundary reads the model owner and member in one joined SQL snapshot instead of two sequential D1 requests. No boundary or credential check is removed. Sixty native SQLite parity comparisons cover roles, verification, outsider isolation, owner changes, removal and reinvitation.
@@ -24,3 +24,17 @@ Offsets use the same worker clock. Subtract `fetchStartMs` from `firstTextMs` fo
 The existing attempt duration includes local preflight and final settlement; it is not provider time to first token. Browser Send-to-first-visible-text uses a separate monotonic clock and DOM observer. Do not subtract browser and worker wall clocks as if they were synchronized. Send acceptance uses the browser's request-to-response-headers resource timing. Compare the same agent, model, reasoning setting and prompt shape; report cold and warm catalog conditions and input/cache-token counts. Small live samples describe the observed runs, not a population percentile or guaranteed speedup.
 
 The regression tests first reproduced repeated catalog discovery at 90 seconds and the mandatory 80 ms leading-stream delay, then passed with the fixes. Native provider tests verify that phase milestones survive the existing usage ledger without retaining prompt or credential contents.
+
+## Account catalog reuse and refresh-ahead
+
+This supersedes the hard five-minute expiry above.
+
+The follow-up cache uses the account's persisted connection generation and the installed adapter capabilities as its identity. Token rotation retains that generation; reconnecting or replacing a deployment seed creates another. Legacy credentials acquire a generation lazily in the existing SQLite transaction. No new credential table or migration is needed.
+
+Successful catalog snapshots are persisted in the account Durable Object. They are fresh for five minutes and reusable for up to one hour from the last successful verification. A stale read starts one scoped Effect refresh and immediately returns the snapshot. The host retains that work; disconnecting a reader does not cancel it. Restarts restore the same bounded snapshot. Transient failures retain success with exponential retry spacing capped at one minute; a hard-expired result is never served. Confirmed denial, invalid metadata, or an unclassified error replaces success with an unavailable result. Failure to persist a result blocks further reads in that runtime. Reconnect races cannot publish an old generation. Members still resolve the current owner and live membership on every read, with no independent cache on the member agent.
+
+Catalog identity inspection does not resolve a token over the network. It can start account-owned refresh-ahead. Credential `expires` remains the usable-until time, already reduced by three minutes for safety; refresh-ahead starts five minutes before that. An otherwise valid token remains usable during an owned refresh. At usable-until it must join refresh before use. Failed or orphaned rotation intent blocks both metadata and credential reuse until reconnect; there is no refresh-token replay after an uncertain outcome. The existing owner serialization, persisted rotation intent, conditional commit and shutdown settlement remain in place.
+
+The client model query uses `@tiesen/effect-tanstack-query` with TanStack Query and the Effect HTTP client. Its cache is scoped to the authenticated family workspace, keyed by agent, and cleared when that workspace unmounts. Mounted consumers share a request and refresh once a minute while active, which also provides an opportunity for OAuth refresh-ahead before Send. Settings changes cancel pending reads before mutation and invalidate after it; older responses cannot roll back a newer settings revision. Transport failures hide cached availability. The client cache never authorizes Send.
+
+Neither background work nor cache warming guarantees a warm account after a long idle period. A missing or hard-expired catalog still requires discovery, and an expired token still requires refresh before inference. Acceptance and first-text timing must be measured separately; provider processing is unaffected by these changes.

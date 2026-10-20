@@ -89,7 +89,12 @@ export const ModelCatalog = Schema.Struct({
 export type ModelCatalog = typeof ModelCatalog.Type
 export class ModelUnavailable extends Schema.TaggedError<ModelUnavailable>()(
   "ModelUnavailable",
-  { message: Schema.String }
+  {
+    message: Schema.String,
+    reason: Schema.optional(
+      Schema.Literals(["transient", "denied", "invalid"])
+    ),
+  }
 ) {}
 export function validateRoute(
   route: ModelSettings,
