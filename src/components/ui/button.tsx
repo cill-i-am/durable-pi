@@ -10,13 +10,13 @@ const buttonStyles = cva(
         default:
           "bg-primary bg-[image:var(--gradient-button)] text-primary-foreground shadow-(--shadow-button) hover:brightness-110",
         outline:
-          "border-border bg-background text-foreground shadow-(--shadow-button-soft) hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-card dark:hover:bg-muted",
+          "border-input bg-background text-foreground shadow-(--shadow-button-soft) hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-card dark:hover:bg-muted",
         secondary:
-          "bg-secondary text-secondary-foreground shadow-(--shadow-button-soft) hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
+          "border-border bg-secondary text-secondary-foreground shadow-(--shadow-button-soft) hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
         ghost:
           "text-foreground hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
         destructive:
-          "bg-destructive/10 text-destructive shadow-(--shadow-button-soft) hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
+          "border-destructive bg-destructive text-destructive-foreground shadow-(--shadow-button-soft) hover:brightness-110 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
@@ -24,7 +24,7 @@ const buttonStyles = cva(
           "h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
         xs: "h-6 gap-1 rounded-[min(var(--radius-md),10px)] px-2 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
         sm: "h-7 gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
-        lg: "h-11 gap-2 px-5 has-data-[icon=inline-end]:pr-4 has-data-[icon=inline-start]:pl-4",
+        lg: "h-12 gap-2 px-5 has-data-[icon=inline-end]:pr-4 has-data-[icon=inline-start]:pl-4",
         icon: "size-8 max-md:min-w-11",
         "icon-xs":
           "size-6 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg max-md:min-w-11 [&_svg:not([class*='size-'])]:size-3",
@@ -33,7 +33,17 @@ const buttonStyles = cva(
         "icon-lg": "size-9 max-md:min-w-11",
       },
     },
-    compoundVariants: [{ variant: "default", class: "rounded-full" }],
+    compoundVariants: [
+      {
+        variant: ["default", "outline", "secondary", "destructive"],
+        class: "rounded-full",
+      },
+      {
+        variant: ["default", "outline", "secondary", "destructive"],
+        size: "default",
+        class: "h-12 px-5",
+      },
+    ],
     defaultVariants: {
       variant: "default",
       size: "default",

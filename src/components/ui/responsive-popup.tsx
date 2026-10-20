@@ -59,7 +59,7 @@ function Content({
     <ResponsiveOverlay.Portal>
       <ResponsiveOverlay.Backdrop className="fixed inset-0 bg-black/30" />
       <ResponsiveOverlay.Popup
-        className="bg-popover text-popover-foreground shadow-xl"
+        className="bg-popover text-popover-foreground shadow-(--shadow-drawer)"
         ref={popup}
         initialFocus={() =>
           popup.current?.querySelector<HTMLElement>(
