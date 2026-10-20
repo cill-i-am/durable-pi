@@ -133,7 +133,8 @@
   --popover: var(--background);
   --overlay: #00000040;
   --popover-foreground: var(--foreground);
-  --primary: #18181b;
+  --primary: #111114;
+  --primary-top: #242427;
   --primary-hover: #303034;
   --primary-foreground: #ffffff;
   --secondary: #f1f1f3;
@@ -163,7 +164,16 @@
   --control: #fcfcfd;
   --shadow-card: 0 14px 36px #18181b08, 0 2px 5px #18181b06;
   --shadow-field: inset 0 2px 4px #18181b06, 0 1px 2px #18181b04;
-  --shadow-button: inset 0 1px 0 #ffffff26, 0 2px 3px #18181b1a;
+  /* Overview: primary action gradient, inset highlight and surface shadows. */
+  --gradient-button: linear-gradient(
+    180deg in oklab,
+    var(--primary-top) 0%,
+    var(--primary) 100%
+  );
+  --shadow-button:
+    inset 0 1px 0 oklch(100% 0 0 / 25%),
+    0 3px 4px oklch(17.9% 0.006 285.8 / 12%);
+  --shadow-button-soft: 0 2px 3px oklch(17.9% 0.006 285.8 / 6%);
   --ambient-glow:
     radial-gradient(ellipse at 14% 0%, #eee9f780, transparent 55%),
     radial-gradient(ellipse at 90% 15%, #e8f0f980, transparent 50%);
@@ -185,6 +195,7 @@
   --popover: #242427;
   --overlay: #00000066;
   --primary: #ededef;
+  --primary-top: #ffffff;
   --primary-hover: #d8d8df;
   --primary-foreground: #1c1c1f;
   --secondary: #27272b;
@@ -204,7 +215,8 @@
   --ring: #a2a6ff;
   --shadow-card: 0 14px 36px #00000020, 0 2px 5px #00000014;
   --shadow-field: inset 0 2px 4px #00000014;
-  --shadow-button: inset 0 1px 0 #ffffff14, 0 2px 3px #00000026;
+  --shadow-button: inset 0 1px 0 #ffffff40, 0 3px 4px #00000040;
+  --shadow-button-soft: 0 2px 3px #00000026;
   --ambient-glow:
     radial-gradient(ellipse at 14% 0%, #342d442b, transparent 55%),
     radial-gradient(ellipse at 90% 15%, #27394c26, transparent 50%);
