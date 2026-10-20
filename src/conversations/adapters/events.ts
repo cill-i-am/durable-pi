@@ -203,7 +203,7 @@ export function conversationEvents<TError>(
   return new Response(body, {
     headers: {
       "Content-Type": "text/event-stream",
-      "Cache-Control": "private, no-store",
+      "Cache-Control": "private, no-store, no-transform",
       "X-Accel-Buffering": "no",
     },
   })

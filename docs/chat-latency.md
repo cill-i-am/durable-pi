@@ -38,3 +38,9 @@ Catalog identity inspection does not resolve a token over the network. It can st
 The client model query uses `@tiesen/effect-tanstack-query` with TanStack Query and the Effect HTTP client. Its cache is scoped to the authenticated family workspace, keyed by agent, and cleared when that workspace unmounts. Mounted consumers share a request and refresh once a minute while active, which also provides an opportunity for OAuth refresh-ahead before Send. Settings changes cancel pending reads before mutation and invalidate after it; older responses cannot roll back a newer settings revision. Transport failures hide cached availability. The client cache never authorizes Send.
 
 Neither background work nor cache warming guarantees a warm account after a long idle period. A missing or hard-expired catalog still requires discovery, and an expired token still requires refresh before inference. Acceptance and first-text timing must be measured separately; provider processing is unaffected by these changes.
+
+## Streaming transport
+
+Conversation SSE responses include `Cache-Control: private, no-store, no-transform`. The public proxy preserves this directive while enforcing private, non-cacheable responses, and its Effect encoding adapter skips compression when the directive is present. The production stream previously used the proxy's explicit gzip codec despite `X-Accel-Buffering: no`. Cloudflare also documents `no-transform` as the origin response directive that prevents its compression. This trades bandwidth for prompt chunk delivery; the Effect event pump and durable publication semantics are unchanged. Measure the effect in production rather than assuming compression caused a delay.
+
+Source: https://developers.cloudflare.com/speed/optimization/content/compression/
