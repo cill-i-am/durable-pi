@@ -1,7 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist";
+@import "@fontsource-variable/inter";
 @import "@fontsource-variable/geist-mono";
 
 @custom-variant dark (&:is(.dark *));
@@ -58,7 +58,7 @@
 
 @theme inline {
   --font-heading: var(--font-sans);
-  --font-sans: "Geist Variable", sans-serif;
+  --font-sans: "Inter Variable", sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -94,16 +94,18 @@
   --font-mono: "Geist Mono Variable", monospace;
   --text-xs: 12px;
   --text-xs--line-height: 16px;
-  --text-sm: 13px;
+  --text-sm: 14px;
   --text-sm--line-height: 20px;
-  --text-base: 14px;
-  --text-base--line-height: 22px;
+  --text-base: 16px;
+  --text-base--line-height: 24px;
   --text-md: 16px;
   --text-md--line-height: 24px;
-  --text-lg: 20px;
+  --text-lg: 18px;
   --text-xl: 24px;
   --color-canvas: var(--canvas);
   --color-control: var(--control);
+  --color-surface-low: var(--surface-low);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-warning: var(--warning);
   --color-warning-bg: var(--warning-bg);
   --color-destructive-bg: var(--destructive-bg);
@@ -112,9 +114,9 @@
   --color-blue: var(--blue);
   --color-terminal: var(--terminal);
   --color-terminal-foreground: var(--terminal-foreground);
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
+  --radius-sm: 7.2px;
+  --radius-md: 9.6px;
+  --radius-lg: 12px;
   --radius-xl: 20px;
   --radius-2xl: 24px;
   --radius-3xl: 28px;
@@ -126,7 +128,7 @@
   --mobile-panel-handle: 28px;
   --background: #ffffff;
   --canvas: #fafafa;
-  --foreground: #28282c;
+  --foreground: #111114;
   --agent-mark-ink: #28282c;
   --card: var(--background);
   --card-foreground: var(--foreground);
@@ -137,13 +139,14 @@
   --primary-top: #242427;
   --primary-hover: #303034;
   --primary-foreground: #ffffff;
-  --secondary: #f1f1f3;
+  --secondary: #f4f4f6;
   --secondary-foreground: var(--foreground);
-  --muted: #f1f1f3;
-  --muted-foreground: #67676f;
-  --accent: #ebebef;
+  --muted: #f4f4f6;
+  --muted-foreground: #65656f;
+  --accent: #f0ecfa;
   --accent-foreground: var(--foreground);
-  --destructive: #b5444d;
+  --destructive: #9b2431;
+  --destructive-foreground: #ffffff;
   --destructive-bg: #fceff0;
   --warning: #8c641c;
   --warning-bg: #fcf6e8;
@@ -152,18 +155,20 @@
   --blue: #cad9ed;
   --terminal: #18181b;
   --terminal-foreground: #e4e4e7;
-  --border: #e4e4e7;
-  --input: #8b8b95;
-  --ring: #3567c8;
+  --border: #e9e9ed;
+  --input: #909098;
+  --ring: #245bce;
   --chart-1: var(--primary);
   --chart-2: var(--blue);
   --chart-3: var(--lilac);
   --chart-4: var(--peach);
   --chart-5: var(--muted-foreground);
   --radius: 14px;
-  --control: #fcfcfd;
-  --shadow-card: 0 14px 36px #18181b08, 0 2px 5px #18181b06;
-  --shadow-field: inset 0 2px 4px #18181b06, 0 1px 2px #18181b04;
+  --control: #fcfcfc;
+  --surface-low: #fbfbfc;
+  --shadow-card: 0 14px 36px #1111140f, 0 2px 5px #1111140f;
+  --shadow-field: inset 0 2px 4px #1111140f;
+  --shadow-input-group: var(--shadow-field), 0 1px 2px #1111140f;
   /* Overview: primary action gradient, inset highlight and surface shadows. */
   --gradient-button: linear-gradient(
     180deg in oklab,
@@ -174,6 +179,9 @@
     inset 0 1px 0 oklch(100% 0 0 / 25%),
     0 3px 4px oklch(17.9% 0.006 285.8 / 12%);
   --shadow-button-soft: 0 2px 3px oklch(17.9% 0.006 285.8 / 6%);
+  --shadow-dialog: 0 24px 60px #1111141f;
+  --shadow-menu: 0 12px 32px #1111140f;
+  --shadow-drawer: 0 -12px 30px #1111140f;
   --ambient-glow:
     radial-gradient(ellipse at 14% 0%, #eee9f780, transparent 55%),
     radial-gradient(ellipse at 90% 15%, #e8f0f980, transparent 50%);
@@ -203,6 +211,7 @@
   --muted-foreground: #a0a0aa;
   --accent: #303035;
   --destructive: #ee969d;
+  --destructive-foreground: #1c1c1f;
   --destructive-bg: #382326;
   --warning: #dbb97c;
   --warning-bg: #332c20;
@@ -212,11 +221,16 @@
   --border: #34343a;
   --input: #73737c;
   --control: #222225;
+  --surface-low: #202023;
   --ring: #a2a6ff;
   --shadow-card: 0 14px 36px #00000020, 0 2px 5px #00000014;
   --shadow-field: inset 0 2px 4px #00000014;
+  --shadow-input-group: var(--shadow-field), 0 1px 2px #00000014;
   --shadow-button: inset 0 1px 0 #ffffff40, 0 3px 4px #00000040;
   --shadow-button-soft: 0 2px 3px #00000026;
+  --shadow-dialog: 0 24px 60px #00000050;
+  --shadow-menu: 0 12px 32px #00000030;
+  --shadow-drawer: 0 -12px 30px #00000030;
   --ambient-glow:
     radial-gradient(ellipse at 14% 0%, #342d442b, transparent 55%),
     radial-gradient(ellipse at 90% 15%, #27394c26, transparent 50%);
@@ -2736,6 +2750,7 @@ body {
   padding-bottom: var(--drawer-keyboard-inset, 0px);
 }
 .responsive-overlay[data-overlay-mobile="true"] {
+  box-shadow: var(--shadow-drawer);
   position: relative;
   inset: auto;
   translate: none;
@@ -2751,7 +2766,7 @@ body {
   padding: 0;
   gap: 0;
   border: 0;
-  border-radius: 20px 20px 0 0;
+  border-radius: 24px 24px 0 0;
   overflow: hidden;
   pointer-events: auto;
   animation: none;
@@ -3021,7 +3036,7 @@ body {
     inset-block-start: max(var(--mobile-panel-inset), env(safe-area-inset-top));
     inset-block-end: 0;
     inset-inline: 0;
-    border-radius: 20px 20px 0 0;
+    border-radius: 24px 24px 0 0;
     background: var(--popover);
     overflow: hidden;
   }
