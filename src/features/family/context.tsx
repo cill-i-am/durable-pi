@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { FamilySnapshot } from "@/family/contracts"
 import { AuthFrame } from "@/features/auth/auth-frame"
+import { ModelQueryProvider } from "@/features/conversation/model-query"
 
 const FamilyContext = createContext<{
   family: FamilySnapshot
@@ -59,7 +60,11 @@ export function FamilyWorkspace({ children }: { children: React.ReactNode }) {
     }
   }, [refresh])
   if (family)
-    return <FamilyContext value={{ family, refresh }}>{children}</FamilyContext>
+    return (
+      <FamilyContext value={{ family, refresh }}>
+        <ModelQueryProvider>{children}</ModelQueryProvider>
+      </FamilyContext>
+    )
   if (!ended && !error) return <WorkspaceStartup />
   return (
     <AuthFrame

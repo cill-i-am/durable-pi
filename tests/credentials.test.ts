@@ -219,6 +219,7 @@ describe("private model credentials", () => {
       "SELECT value FROM model_credentials"
     )[0]!
     expect(JSON.parse(row.value)).toEqual({
+      connectionId: expect.any(String),
       ...seedValue,
       access: "rotated-access",
       refresh: "rotated-refresh",
@@ -246,7 +247,7 @@ describe("private model credentials", () => {
     expect(calls).toBe(1)
     expect(f.pending()).toBe(1)
   })
-  it("clears a confirmed OAuth denial without automatically retrying it", async () => {
+  it("retains a confirmed OAuth denial until reconnection", async () => {
     let calls = 0
     const f = fixture(undefined, seed, () => {
       calls++
@@ -256,7 +257,9 @@ describe("private model credentials", () => {
     })
     await expect(f.resolve()).rejects.toThrow("Denied")
     expect(calls).toBe(1)
-    expect(f.pending()).toBe(0)
+    expect(f.pending()).toBe(1)
+    await expect(f.resolve()).rejects.toThrow("could not be confirmed")
+    expect(calls).toBe(1)
   })
   it("a cancelled waiter joins the accepted rotation without aborting it or losing its tokens", async () => {
     const entered = gate(),
@@ -334,16 +337,16 @@ describe("private model credentials", () => {
     expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)
     expect(JSON.stringify(exit)).not.toContain("private-secret")
   })
-  it("only treats a decoded OAuth error response as a definitive denial", async () => {
-    for (const [response, confirmed] of [
-      [Response.json({ error: "invalid_grant" }, { status: 400 }), true],
-      [new Response("private diagnostic", { status: 500 }), false],
+  it("requires reconnection after confirmed denial or uncertain transport failure", async () => {
+    for (const response of [
+      Response.json({ error: "invalid_grant" }, { status: 400 }),
+      new Response("private diagnostic", { status: 500 }),
     ] as const) {
       const f = fixture(undefined, seed, (current) =>
         refreshOAuth(current, async () => response)
       )
       await expect(f.resolve()).rejects.toThrow("ChatGPT authorization expired")
-      expect(f.pending()).toBe(confirmed ? 0 : 1)
+      expect(f.pending()).toBe(1)
     }
   })
 })

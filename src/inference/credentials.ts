@@ -23,6 +23,7 @@ export const OAuthCredential = Schema.Struct({
   refresh: Secret,
   expires: Schema.Number.check(Schema.isFinite()),
   clientId: Schema.String.check(Schema.isMinLength(1)),
+  connectionId: Schema.optional(Schema.String.check(Schema.isMinLength(1))),
   identity: Schema.optional(
     Schema.Struct({
       issuer: Schema.Literal("https://auth.openai.com"),
@@ -91,7 +92,8 @@ export const credentialNeedsRefresh = (value: ModelCredential, now: number) =>
   value.type === "oauth" && value.expires <= now + 300_000
 export function sameCredential(a: ModelCredential, b: ModelCredential) {
   return a.type === "oauth" && b.type === "oauth"
-    ? a.expires === b.expires &&
+    ? a.connectionId === b.connectionId &&
+        a.expires === b.expires &&
         a.clientId === b.clientId &&
         Equal.equals(a.access, b.access) &&
         Equal.equals(a.refresh, b.refresh)
@@ -105,6 +107,7 @@ const unconfirmed = () =>
 export class ModelCredentials extends Context.Service<
   ModelCredentials,
   {
+    connection: () => Effect.Effect<string | undefined, CredentialError>
     shutdown: () => Effect.Effect<void>
     install: (
       value: OAuthCredential,
@@ -115,14 +118,16 @@ export class ModelCredentials extends Context.Service<
       CredentialError
     >
     resolve: (
-      provider: string
+      provider: string,
+      refreshAhead?: boolean
     ) => Effect.Effect<ModelCredential | undefined, CredentialError>
   }
 >()("durable-pi/inference/ModelCredentials") {}
 
 export const makeModelCredentials = (
   ledger: CredentialLedger,
-  refresh: CredentialRefresh
+  refresh: CredentialRefresh,
+  retain: (work: Effect.Effect<void>) => void = () => {}
 ) =>
   Effect.gen(function* () {
     const scope = yield* Effect.scope
@@ -132,6 +137,7 @@ export const makeModelCredentials = (
     >()
     let fatal: Cause.Cause<CredentialError> | undefined
     let closed = false
+    let warming = false
     const connection = yield* Semaphore.make(1)
     const shutdown = () =>
       Effect.uninterruptible(
@@ -163,20 +169,68 @@ export const makeModelCredentials = (
           if (!row || !row.seedCurrent) {
             const seed = yield* ledger.seed()
             if (seed) {
-              yield* ledger.put(provider, seed)
+              const value =
+                seed.type === "oauth"
+                  ? { ...seed, connectionId: crypto.randomUUID() }
+                  : seed
+              yield* ledger.put(provider, value)
               yield* ledger.claim(provider, false)
               return {
-                value: seed,
+                value,
                 seedCurrent: true,
                 refreshing: false,
               } satisfies CredentialRecord
             }
             if (row) throw new CredentialCorrupt()
           }
+          if (
+            row?.seedCurrent &&
+            row.value.type === "oauth" &&
+            !row.value.connectionId
+          ) {
+            const value = { ...row.value, connectionId: crypto.randomUUID() }
+            yield* ledger.put(provider, value)
+            return { ...row, value }
+          }
           return row
         })
       )
-    return {
+    const service: typeof ModelCredentials.Service = {
+      connection: Effect.fn("Inference.connectionIdentity")(function* () {
+        yield* Effect.yieldNow
+        if (closed)
+          return yield* new CredentialUnavailable({
+            message: "The model credential host has stopped.",
+          })
+        if (fatal) return yield* Effect.failCause(fatal)
+        const row = yield* readCurrent("openai")
+        if (!row || row.value.type !== "oauth") return undefined
+        // A known owner may still be rotating. An orphaned intent is uncertain.
+        if (row.refreshing && !active.has("openai") && !warming)
+          return yield* unconfirmed()
+        const now = yield* Clock.currentTimeMillis
+        if (
+          !warming &&
+          !row.refreshing &&
+          credentialNeedsRefresh(row.value, now)
+        ) {
+          warming = true
+          const fiber = yield* Effect.forkIn(
+            service.resolve("openai", true).pipe(
+              Effect.asVoid,
+              Effect.ensuring(
+                Effect.sync(() => {
+                  warming = false
+                })
+              )
+            ),
+            scope
+          )
+          // The account scope owns rotation; a browser departure cannot cancel it.
+          retain(Fiber.await(fiber).pipe(Effect.asVoid))
+        }
+        return row.value.connectionId
+      }),
       shutdown,
       install: (
         value: OAuthCredential,
@@ -198,7 +252,10 @@ export const makeModelCredentials = (
             yield* Effect.uninterruptible(
               ledger.atomic(() =>
                 Effect.gen(function* () {
-                  yield* ledger.install("openai", value)
+                  yield* ledger.install("openai", {
+                    ...value,
+                    connectionId: crypto.randomUUID(),
+                  })
                   yield* ledger.claim("openai", false)
                 })
               )
@@ -212,115 +269,144 @@ export const makeModelCredentials = (
             message: "The model credential host has stopped.",
           })
         const row = yield* readCurrent("openai")
-        return row && !row.refreshing
+        return row && (!row.refreshing || active.has("openai"))
           ? [{ providerId: "openai", type: row.value.type }]
           : []
       }),
-      resolve: Effect.fn("Inference.resolveCredential")((provider: string) =>
-        connection.withPermit(
-          Effect.yieldNow.pipe(
-            Effect.andThen(
-              Effect.uninterruptibleMask((restore) =>
-                Effect.gen(function* () {
-                  if (closed)
-                    return yield* new CredentialUnavailable({
-                      message: "The model credential host has stopped.",
-                    })
-                  if (provider !== "openai") return undefined
-                  if (fatal) return yield* Effect.failCause(fatal)
-                  const pending = active.get(provider)
-                  if (pending) return yield* restore(wait(pending))
-                  const now = yield* Clock.currentTimeMillis
-                  const current = yield* readCurrent(provider)
-                  if (!current) return undefined
-                  if (current.refreshing) return yield* unconfirmed()
-                  if (
-                    current.value.type !== "oauth" ||
-                    !credentialNeedsRefresh(current.value, now)
-                  )
-                    return current.value
-                  const expected = current.value
-                  yield* ledger.atomic(() => ledger.claim(provider, true))
-                  const begin = yield* Deferred.make<void>()
-                  const work = Deferred.await(begin).pipe(
-                    Effect.andThen(
-                      Effect.uninterruptibleMask((restoreRefresh) =>
-                        Effect.gen(function* () {
-                          const next = yield* restoreRefresh(
-                            refresh(expected)
-                          ).pipe(
-                            preserveFatal,
-                            Effect.catchTag("CredentialRefreshError", (error) =>
-                              Effect.gen(function* () {
-                                // TValue decoded OAuth error confirms denial; transport/invalid-success
-                                // outcomes may have rotated the secret and retain the intent.
-                                if (error.reason === "rejected")
-                                  yield* ledger.atomic(() =>
-                                    Effect.gen(function* () {
-                                      const latest =
-                                        yield* ledger.read(provider)
-                                      if (
-                                        latest?.seedCurrent &&
-                                        sameCredential(latest.value, expected)
-                                      )
-                                        yield* ledger.claim(provider, false)
-                                    })
-                                  )
-                                return yield* new CredentialUnavailable({
-                                  message: error.message,
-                                })
-                              })
-                            )
-                          )
-                          return yield* ledger
-                            .atomic(() =>
-                              Effect.gen(function* () {
-                                const latest = yield* ledger.read(provider)
-                                if (
-                                  !latest?.seedCurrent ||
-                                  !latest.refreshing ||
-                                  !sameCredential(latest.value, expected)
-                                )
-                                  return undefined
-                                yield* ledger.put(provider, next)
-                                yield* ledger.claim(provider, false)
-                                return next
-                              })
-                            )
-                            .pipe(
-                              Effect.flatMap((value) =>
-                                value
-                                  ? Effect.succeed(value)
-                                  : Effect.fail(unconfirmed())
-                              )
-                            )
+      resolve: Effect.fn("Inference.resolveCredential")(
+        (provider: string, refreshAhead = false) =>
+          Effect.gen(function* () {
+            yield* Effect.yieldNow
+            if (closed)
+              return yield* new CredentialUnavailable({
+                message: "The model credential host has stopped.",
+              })
+            if (fatal) return yield* Effect.failCause(fatal)
+            if (provider !== "openai") return undefined
+            if (!refreshAhead) {
+              const row = yield* readCurrent(provider)
+              if (!row) return undefined
+              if (row.refreshing && !active.has(provider) && !warming)
+                return yield* unconfirmed()
+              const now = yield* Clock.currentTimeMillis
+              // expires is the usable-until time (already includes the three-minute
+              // safety buffer). Refresh-ahead must not block an otherwise valid token.
+              if (row.value.type !== "oauth" || row.value.expires > now) {
+                if (row.value.type === "oauth") {
+                  const identity = yield* service.connection()
+                  if (identity !== row.value.connectionId)
+                    return yield* service.resolve(provider)
+                }
+                return row.value
+              }
+            }
+            return yield* connection.withPermit(
+              Effect.yieldNow.pipe(
+                Effect.andThen(
+                  Effect.uninterruptibleMask((restore) =>
+                    Effect.gen(function* () {
+                      if (closed)
+                        return yield* new CredentialUnavailable({
+                          message: "The model credential host has stopped.",
                         })
+                      if (provider !== "openai") return undefined
+                      if (fatal) return yield* Effect.failCause(fatal)
+                      const pending = active.get(provider)
+                      if (pending) return yield* restore(wait(pending))
+                      const now = yield* Clock.currentTimeMillis
+                      const current = yield* readCurrent(provider)
+                      if (!current) return undefined
+                      if (current.refreshing) return yield* unconfirmed()
+                      if (
+                        current.value.type !== "oauth" ||
+                        !credentialNeedsRefresh(current.value, now)
                       )
-                    ),
-                    Effect.onExit((exit) =>
-                      Effect.sync(() => {
-                        if (Exit.isFailure(exit) && Cause.hasDies(exit.cause))
-                          fatal = exit.cause
-                        active.delete(provider)
-                      })
-                    )
+                        return current.value
+                      const expected = current.value
+                      yield* ledger.atomic(() => ledger.claim(provider, true))
+                      const begin = yield* Deferred.make<void>()
+                      const work = Deferred.await(begin).pipe(
+                        Effect.andThen(
+                          Effect.uninterruptibleMask((restoreRefresh) =>
+                            Effect.gen(function* () {
+                              const next = yield* restoreRefresh(
+                                refresh(expected)
+                              ).pipe(
+                                preserveFatal,
+                                Effect.catchTag(
+                                  "CredentialRefreshError",
+                                  (error) =>
+                                    Effect.gen(function* () {
+                                      // Retain the intent on every failed rotation. A reconnect
+                                      // installs a new generation and is the recovery boundary.
+                                      return yield* new CredentialUnavailable({
+                                        message: error.message,
+                                      })
+                                    })
+                                )
+                              )
+                              return yield* ledger
+                                .atomic(() =>
+                                  Effect.gen(function* () {
+                                    const latest = yield* ledger.read(provider)
+                                    if (
+                                      !latest?.seedCurrent ||
+                                      !latest.refreshing ||
+                                      !sameCredential(latest.value, expected)
+                                    )
+                                      return undefined
+                                    yield* ledger.put(provider, {
+                                      ...next,
+                                      connectionId: expected.connectionId,
+                                    })
+                                    yield* ledger.claim(provider, false)
+                                    return {
+                                      ...next,
+                                      connectionId: expected.connectionId,
+                                    }
+                                  })
+                                )
+                                .pipe(
+                                  Effect.flatMap((value) =>
+                                    value
+                                      ? Effect.succeed(value)
+                                      : Effect.fail(unconfirmed())
+                                  )
+                                )
+                            })
+                          )
+                        ),
+                        Effect.onExit((exit) =>
+                          Effect.sync(() => {
+                            if (
+                              Exit.isFailure(exit) &&
+                              Cause.hasDies(exit.cause)
+                            )
+                              fatal = exit.cause
+                            active.delete(provider)
+                          })
+                        )
+                      )
+                      const fiber = yield* Effect.forkIn(
+                        Effect.interruptible(work),
+                        scope
+                      )
+                      active.set(provider, fiber)
+                      yield* Deferred.succeed(begin, undefined)
+                      return yield* restore(wait(fiber))
+                    })
                   )
-                  const fiber = yield* Effect.forkIn(
-                    Effect.interruptible(work),
-                    scope
-                  )
-                  active.set(provider, fiber)
-                  yield* Deferred.succeed(begin, undefined)
-                  return yield* restore(wait(fiber))
-                })
+                )
               )
             )
-          )
-        )
+          })
       ),
     }
+    return service
   })
 export const credentialApplication = (
   ledger: CredentialLedger,
-  refresh: CredentialRefresh
-) => Layer.effect(ModelCredentials, makeModelCredentials(ledger, refresh))
+  refresh: CredentialRefresh,
+  retain: (work: Effect.Effect<void>) => void = () => {}
+) =>
+  Layer.effect(ModelCredentials, makeModelCredentials(ledger, refresh, retain))

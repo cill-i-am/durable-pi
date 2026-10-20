@@ -11,8 +11,7 @@ import { useFamily } from "./context"
 
 export function ModelAccess() {
   const { family } = useFamily()
-  const [error, setError] = useState("")
-  const { catalog, refresh } = useModelCatalog("home", 0, setError)
+  const { catalog, catalogError, refresh } = useModelCatalog("home", 0)
   const [pending, setPending] = useState(false)
   const [savedConnection, setSavedConnection] = useState(false)
   const owner = family.role === "owner"
@@ -30,7 +29,7 @@ export function ModelAccess() {
           <div className="family-section-label">
             <h3>ChatGPT</h3>
             <Badge variant="secondary">
-              {catalog?.error || error
+              {catalogError
                 ? savedConnection
                   ? "Check unavailable"
                   : "Needs attention"
@@ -51,7 +50,6 @@ export function ModelAccess() {
               }
               onConnected={async () => {
                 setSavedConnection(true)
-                setError("")
                 await refresh()
               }}
             />
@@ -62,7 +60,6 @@ export function ModelAccess() {
               disabled={pending}
               onClick={() => {
                 setPending(true)
-                setError("")
                 void refresh().finally(() => setPending(false))
               }}
             >
@@ -71,7 +68,7 @@ export function ModelAccess() {
             </Button>
           )}
         </div>
-        {(catalog?.error || error) && (
+        {catalogError && (
           <Alert role="alert">
             <AlertDescription>
               {owner

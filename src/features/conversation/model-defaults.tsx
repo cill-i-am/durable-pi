@@ -45,8 +45,8 @@ export function ModelDefaults({
   const { family } = useFamily()
   const { model, thinking } = selection
   const [error, setError] = useState("")
-  const { catalog, refresh, unavailable, setCatalog, requestSequence } =
-    useModelCatalog(agentId, selection.settingsRevision, setError)
+  const { catalog, catalogError, refresh, unavailable, setCatalog, cancel } =
+    useModelCatalog(agentId, selection.settingsRevision)
   const [settingsJob, setSettingsJob] = useState<JobType>("conversation")
   const [draft, setDraft] = useState<ModelSettings>(selection)
   const [dirty, setDirty] = useState(false)
@@ -68,12 +68,12 @@ export function ModelDefaults({
     if (saving || unavailable(draft)) return
     setSaving(true)
     setError("")
-    requestSequence.current++
+    await cancel()
     try {
       const confirmed = Schema.decodeUnknownSync(ModelSelection)(
         await agentApi(agentId)("settings", { ...draft, job: settingsJob })
       )
-      requestSequence.current++
+      await cancel()
       setCatalog((current) =>
         current &&
         current.selection.settingsRevision > confirmed.settingsRevision
@@ -116,7 +116,7 @@ export function ModelDefaults({
             <Badge variant="secondary">
               {catalog?.checkedAt && !catalog.error
                 ? "Connected"
-                : catalog?.error
+                : catalogError
                   ? "Needs attention"
                   : "Checking…"}
             </Badge>
@@ -141,9 +141,9 @@ export function ModelDefaults({
             </Button>
           )}
         </div>
-        {(error || catalog?.error) && (
+        {(error || catalogError) && (
           <Alert>
-            <AlertDescription>{error || catalog?.error}</AlertDescription>
+            <AlertDescription>{error || catalogError}</AlertDescription>
           </Alert>
         )}
         <div className="settings-rule" />

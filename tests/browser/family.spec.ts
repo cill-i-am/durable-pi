@@ -450,7 +450,11 @@ test("admin reconnects ChatGPT in Settings with a private return-address field a
   await page
     .getByRole("button", { name: "Refresh connection", exact: true })
     .click()
-  await expect(page.getByText("Connected", { exact: true })).toBeVisible()
+  await expect(
+    page
+      .getByRole("region", { name: "Model access", exact: true })
+      .getByText("Connected", { exact: true })
+  ).toBeVisible()
   await expect(
     page.getByRole("link", { name: "Back to chat", exact: true })
   ).toBeEnabled()
@@ -463,4 +467,46 @@ test("admin reconnects ChatGPT in Settings with a private return-address field a
     path: `${capture}/build-${info.project.name}-restored.png`,
     fullPage: true,
   })
+})
+
+test("model access recovers automatically after a transient catalog polling failure", async ({
+  page,
+}) => {
+  let unavailable = false
+  let successfulReads = 0
+  await page.route("**/api/agent/model-account?*", (route) =>
+    route.fulfill({ json: { pending: null } })
+  )
+  await page.route("**/api/family", (route) => route.fulfill({ json: family }))
+  await page.route("**/api/agent/models?*", (route) => {
+    if (unavailable)
+      return route.fulfill({ status: 503, json: { error: "Temporary outage" } })
+    successfulReads++
+    return route.fulfill({
+      json: {
+        models: [],
+        checkedAt: new Date().toISOString(),
+        error: null,
+        usage: "ChatGPT plan usage",
+        selection: { model: "test", thinking: "medium", settingsRevision: 0 },
+        assignments: {},
+      },
+    })
+  })
+  await page.clock.install()
+  await signIn(page)
+  await page.goto("/agents/home/settings/model-access")
+  const access = page.getByRole("region", { name: "Model access", exact: true })
+  await expect(access.getByText("Connected", { exact: true })).toBeVisible()
+  unavailable = true
+  await page.clock.runFor(60_100)
+  await expect(
+    access.getByText("Needs attention", { exact: true })
+  ).toBeVisible()
+  const previous = successfulReads
+  unavailable = false
+  await page.clock.runFor(60_100)
+  await expect.poll(() => successfulReads).toBeGreaterThan(previous)
+  await expect(access.getByText("Connected", { exact: true })).toBeVisible()
+  await expect(access.getByRole("alert")).toHaveCount(0)
 })
