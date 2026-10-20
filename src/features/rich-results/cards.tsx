@@ -1,3 +1,4 @@
+import { cn } from "cn"
 import { MapPin, Navigation, ExternalLink, Calculator } from "lucide-react"
 import { useId, useState, type ReactNode } from "react"
 
@@ -8,8 +9,9 @@ import {
   CardAction,
   CardContent,
   CardDescription,
-  CardFooter,
+  CardFrame,
   CardHeader,
+  CardPanel,
   CardTitle,
 } from "@/components/ui/card"
 import {
@@ -34,45 +36,61 @@ export function ResultCard({
   description,
   action,
   provenance,
+  panel,
   children,
 }: {
   title: string
   description?: string
   action?: ReactNode
   provenance?: Provenance
+  panel?: ReactNode
   children: ReactNode
 }) {
-  return (
-    <Card className="rich-result w-full min-w-0 whitespace-normal">
+  const card = (
+    <Card
+      className={cn(
+        "w-full min-w-0 whitespace-normal",
+        !provenance && !panel && "rich-result"
+      )}
+    >
       <CardHeader>
         <CardTitle>{title}</CardTitle>
         {description && <CardDescription>{description}</CardDescription>}
         {action && <CardAction>{action}</CardAction>}
       </CardHeader>
       <CardContent>{children}</CardContent>
-      {provenance && (
-        <CardFooter className="flex-wrap justify-between gap-2">
-          {provenance.source.url ? (
-            <a
-              className="inline-flex items-center gap-1 text-xs text-muted-foreground underline-offset-4 hover:underline"
-              href={provenance.source.url}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {provenance.source.label}
-              <ExternalLink className="size-3" aria-hidden="true" />
-            </a>
-          ) : (
-            <span className="text-xs text-muted-foreground">
-              {provenance.source.label}
-            </span>
-          )}
-          <span className="text-xs text-muted-foreground">
-            As of {provenance.asOf}
-          </span>
-        </CardFooter>
-      )}
     </Card>
+  )
+  if (!provenance && !panel) return card
+  return (
+    <CardFrame className="rich-result w-full min-w-0 whitespace-normal">
+      {card}
+      <CardPanel className="justify-between">
+        {panel}
+        {provenance && (
+          <>
+            {provenance.source.url ? (
+              <a
+                className="inline-flex items-center gap-1 text-xs text-muted-foreground underline-offset-4 hover:underline"
+                href={provenance.source.url}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {provenance.source.label}
+                <ExternalLink className="size-3" aria-hidden="true" />
+              </a>
+            ) : (
+              <span className="text-xs text-muted-foreground">
+                {provenance.source.label}
+              </span>
+            )}
+            <span className="text-xs text-muted-foreground">
+              As of {provenance.asOf}
+            </span>
+          </>
+        )}
+      </CardPanel>
+    </CardFrame>
   )
 }
 export function CalculationCard(props: AnswerProps<"Calculation">) {

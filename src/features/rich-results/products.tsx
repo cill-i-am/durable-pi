@@ -7,8 +7,9 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
+  CardFrame,
   CardHeader,
+  CardPanel,
   CardTitle,
 } from "@/components/ui/card"
 import {
@@ -371,41 +372,43 @@ function ProductOffer({
   shortlist?: ReactNode
 }) {
   return (
-    <Card size="sm">
-      {product.imageUrl && (
-        <img
-          src={product.imageUrl}
-          alt={product.name}
-          loading="lazy"
-          referrerPolicy="no-referrer"
-          className="aspect-[4/3] w-full object-contain"
-        />
-      )}
-      <CardHeader>
-        <CardTitle>{product.name}</CardTitle>
-        <CardDescription>{product.merchant}</CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3">
-        <p className="text-xl font-medium tabular-nums">
-          {money(product.price, product.currency)}
-        </p>
-        <p className="text-sm text-muted-foreground">{product.detail}</p>
-        <Badge variant="outline" className="w-fit">
-          {product.availability}
-        </Badge>
-        <dl className="flex flex-col gap-2">
-          {product.specs.map((spec, index) => (
-            <div
-              className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2 text-xs"
-              key={index}
-            >
-              <dt className="text-muted-foreground">{spec.label}</dt>
-              <dd className="text-right">{spec.value}</dd>
-            </div>
-          ))}
-        </dl>
-      </CardContent>
-      <CardFooter className="flex-wrap justify-between gap-2">
+    <CardFrame className="min-w-0">
+      <Card size="sm" className="flex-1">
+        {product.imageUrl && (
+          <img
+            src={product.imageUrl}
+            alt={product.name}
+            loading="lazy"
+            referrerPolicy="no-referrer"
+            className="aspect-[4/3] w-full object-contain"
+          />
+        )}
+        <CardHeader>
+          <CardTitle>{product.name}</CardTitle>
+          <CardDescription>{product.merchant}</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          <p className="text-xl font-medium tabular-nums">
+            {money(product.price, product.currency)}
+          </p>
+          <p className="text-sm text-muted-foreground">{product.detail}</p>
+          <Badge variant="outline" className="w-fit">
+            {product.availability}
+          </Badge>
+          <dl className="flex flex-col gap-2">
+            {product.specs.map((spec, index) => (
+              <div
+                className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2 text-xs"
+                key={index}
+              >
+                <dt className="text-muted-foreground">{spec.label}</dt>
+                <dd className="text-right">{spec.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </CardContent>
+      </Card>
+      <CardPanel className="justify-between px-4">
         {shortlist}
         <a
           href={product.url}
@@ -419,7 +422,7 @@ function ProductOffer({
           View retailer
           <ExternalLink data-icon="inline-end" />
         </a>
-      </CardFooter>
-    </Card>
+      </CardPanel>
+    </CardFrame>
   )
 }
