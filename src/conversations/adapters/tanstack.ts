@@ -211,10 +211,45 @@ function timelineMessage(
   return item
 }
 
+function appendedTextEvents(
+  previous: readonly ChatMessage[],
+  next: ChatMessage[]
+): StreamChunk[] | undefined {
+  const appended = next.at(-1)
+  const firstPart = appended?.parts[0]
+  if (
+    next.length === previous.length + 1 &&
+    appended?.role === "assistant" &&
+    appended.parts.length === 1 &&
+    firstPart?.type === "text" &&
+    firstPart.content.length > 0 &&
+    !previous.some((message) => message.id === appended.id) &&
+    previous.every(
+      (message, index) =>
+        JSON.stringify(message) === JSON.stringify(next[index])
+    )
+  )
+    return [
+      {
+        type: EventType.TEXT_MESSAGE_START,
+        messageId: appended.id,
+        role: "assistant",
+        metadata: appended.metadata,
+      },
+      {
+        type: EventType.TEXT_MESSAGE_CONTENT,
+        messageId: appended.id,
+        delta: firstPart.content,
+      },
+    ]
+}
+
 export function messageEvents(
   previous: readonly ChatMessage[] | undefined,
   next: ChatMessage[]
 ): StreamChunk[] {
+  const appended = previous && appendedTextEvents(previous, next)
+  if (appended) return appended
   if (previous?.length === next.length) {
     const changed = next.filter(
       (message, index) =>

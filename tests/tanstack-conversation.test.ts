@@ -109,6 +109,57 @@ const flush = async (ms = 100) => {
 }
 
 describe("Pi records through the real TanStack processor", () => {
+  it("delivers first text without retransmitting history and keeps native metadata", () => {
+    const history = {
+      ...base,
+      id: "history",
+      status: "done" as const,
+      answer: "Earlier response ".repeat(16_000),
+      activity: [text("Earlier response ".repeat(16_000))],
+    }
+    const processor = new StreamProcessor()
+    const previous = chatMessages([history, base])
+    messageEvents(undefined, previous).forEach((event) =>
+      processor.processChunk(event)
+    )
+    const turn = { ...base, answer: "Hello", activity: [text("Hello")] }
+    const next = chatMessages([history, turn])
+    const events = messageEvents(previous, next)
+    expect(events.map((event) => event.type)).toEqual([
+      EventType.TEXT_MESSAGE_START,
+      EventType.TEXT_MESSAGE_CONTENT,
+    ])
+    expect(JSON.stringify(events).length).toBeLessThan(600)
+    events.forEach((event) => processor.processChunk(event))
+    expect(projection(processor).turns).toEqual([
+      { ...history, activity: history.activity },
+      turn,
+    ])
+
+    const continued = {
+      ...turn,
+      answer: "Hello world",
+      activity: [text("Hello world")],
+    }
+    messageEvents(next, chatMessages([history, continued])).forEach((event) =>
+      processor.processChunk(event)
+    )
+    expect(projection(processor).turns.at(-1)?.answer).toBe("Hello world")
+    const completed = { ...continued, status: "done" as const }
+    messageEvents(undefined, chatMessages([history, completed])).forEach(
+      (event) => processor.processChunk(event)
+    )
+    expect(projection(processor).turns.at(-1)).toEqual(completed)
+  })
+  it("uses an authoritative snapshot when first text also changes earlier metadata", () => {
+    const previous = chatMessages([base])
+    const next = chatMessages([
+      { ...base, status: "done", answer: "Done", activity: [text("Done")] },
+    ])
+    expect(messageEvents(previous, next).map((event) => event.type)).toEqual([
+      EventType.MESSAGES_SNAPSHOT,
+    ])
+  })
   it("retains the separately bounded copyable answer and pending approvals", () => {
     const processor = new StreamProcessor()
     const turn = {
@@ -311,9 +362,15 @@ describe("TanStack live connection against the production SSE adapter", () => {
     vi.useFakeTimers()
     const f = fixture({
       ...metadata,
-      turns: [{ ...base, answer: "Hello", activity: [text("Hello")] }],
+      turns: [base],
     })
     const first = f.client()
+    await flush()
+    expect(first.view()?.turns[0]?.answer).toBe("")
+    f.change({
+      ...metadata,
+      turns: [{ ...base, answer: "Hello", activity: [text("Hello")] }],
+    })
     await flush()
     expect(first.view()?.turns[0]?.answer).toBe("Hello")
     f.change({
