@@ -1,7 +1,13 @@
-import { Check } from "lucide-react"
-
 import { AgentMark } from "@/components/agent-mark"
 import { InteractionSoundToggle } from "@/components/interaction-sound-toggle"
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card"
 import { ThemeMenu } from "@/features/appearance/appearance-settings"
 
 export function PiMark() {
@@ -13,70 +19,54 @@ export function AuthFrame({
   description,
   children,
   family = false,
+  footer,
 }: {
   title: string
   description: string
   children: React.ReactNode
   family?: boolean
+  footer?: React.ReactNode
 }) {
   return (
-    <main id="main-content" tabIndex={-1} className="login-page">
-      <aside className="login-intro" aria-label="About Pi">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="login-page"
+      data-family={family || undefined}
+    >
+      <header className="login-header">
         <div className="login-brand">
-          <PiMark />
-          <div className="flex items-center gap-1">
-            <ThemeMenu />
-            <InteractionSoundToggle />
-          </div>
+          <PiMark /> <span>Pi</span>
         </div>
-        <div className="login-story">
-          <AgentMark className="login-character" />
-          <p className="login-display">
-            {family ? "A family workspace." : "Pick up where"}
-            <br />
-            {family ? "A space of your own." : "you left off."}
-          </p>
-          <p className="login-description">
-            {family
-              ? "Your own agents, your own conversations, and a little more room to get things done."
-              : "Your agents, their tools, and the work you’re doing together. All in one private place."}
-          </p>
-          {family ? (
-            <div className="family-auth-promise">
-              Your chats, agents, memory, files and connected accounts are
-              private to you.
-            </div>
-          ) : (
-            <figure className="login-preview">
-              <figcaption>Example workspace</figcaption>
-              {(
-                [
-                  ["Atlas", "Your weekend guide is ready", "primary"],
-                  ["Research", "4 sources, one clear answer", "peach"],
-                  ["Studio", "Ready when you are", "lilac"],
-                ] as const
-              ).map(([name, detail, tone]) => (
-                <div className="login-preview-row" key={name}>
-                  <AgentMark tone={tone} />
-                  <div>
-                    <strong>{name}</strong>
-                    <span>{detail}</span>
-                  </div>
-                  <Check aria-hidden="true" />
-                </div>
-              ))}
-            </figure>
-          )}
+        <div className="flex items-center gap-1">
+          <ThemeMenu />
+          <InteractionSoundToggle />
         </div>
-      </aside>
+      </header>
       <div className="login-content">
-        <section className="login-panel" aria-labelledby="auth-title">
-          <header className="login-heading">
-            <h1 id="auth-title">{title}</h1>
-            <p>{description}</p>
-          </header>
-          {children}
-        </section>
+        <Card
+          className="login-panel"
+          role="region"
+          aria-labelledby="auth-title"
+        >
+          <CardHeader className="login-heading">
+            <CardTitle>
+              <h1 id="auth-title">{title}</h1>
+            </CardTitle>
+            <CardDescription>{description}</CardDescription>
+          </CardHeader>
+          <CardContent className="login-form">{children}</CardContent>
+          {(footer || family) && (
+            <CardFooter className="login-footer">
+              {footer ?? (
+                <p className="text-sm text-muted-foreground">
+                  Your chats, agents, memory, files and connected accounts are
+                  private to you.
+                </p>
+              )}
+            </CardFooter>
+          )}
+        </Card>
       </div>
     </main>
   )

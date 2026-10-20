@@ -2,7 +2,6 @@ import { expect, test } from "@playwright/test"
 
 test("ID links become canonical slug URLs and preserve the selected view", async ({
   page,
-  isMobile,
 }) => {
   await page.goto("/agents/home/settings/general")
   await page
@@ -15,25 +14,28 @@ test("ID links become canonical slug URLs and preserve the selected view", async
   await expect(page).toHaveURL(/\/agents\/navi\/settings\/general$/)
   await page.goto("/agents/home/files?tab=trash")
   await expect(page).toHaveURL(/\/agents\/navi\/files\?tab=trash$/)
-  const shortcuts = page.getByRole("navigation", {
-    name: "Workbench shortcuts",
-    includeHidden: true,
-  })
-  for (const [name, panel] of [
-    ["Browser", "browser"],
-    ["Terminal", "terminal"],
-    ["Files", "files"],
-    ["Apps", "apps"],
-    ["Activity", "activity"],
+  const picker = page.getByRole("combobox", { name: "Workbench tool" })
+  await picker.click()
+  for (const name of [
+    "Browser",
+    "Terminal",
+    "Files",
+    "Apps",
+    "Activity",
+    "Checklists",
+    "Memory",
+    "Code",
+    "Routines",
   ]) {
-    await expect(
-      shortcuts.getByRole("link", { name, exact: true, includeHidden: true })
-    ).toHaveAttribute("href", `/agents/navi/${panel}`)
+    await expect(page.getByRole("option", { name, exact: true })).toBeVisible()
   }
-  if (!isMobile) {
-    await shortcuts.getByRole("link", { name: "Files", exact: true }).click()
-    await expect(page).toHaveURL(/\/agents\/navi\/files$/)
-  }
+  await page.getByRole("option", { name: "Activity", exact: true }).click()
+  await expect(page).toHaveURL(/\/agents\/navi\/activity$/)
+  await picker.click()
+  await page.getByRole("option", { name: "Files", exact: true }).click()
+  await expect(page).toHaveURL(/\/agents\/navi\/files$/)
+  await page.reload()
+  await expect(picker).toContainText("Files")
   await page.goto("/agents/navi/settings/general")
   await expect(
     page.getByText("Email this agent", { exact: true })

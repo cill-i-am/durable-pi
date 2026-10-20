@@ -51,6 +51,29 @@ export function TwoFactorChallenge() {
           ? "Each recovery code works once. Keep the rest somewhere safe."
           : "Enter the 6-digit code from your authenticator app to finish signing in."
       }
+      footer={
+        <>
+          <Button
+            variant="link"
+            disabled={pending}
+            onClick={() => {
+              setRecovery(!recovery)
+              setCode("")
+              setError("")
+            }}
+          >
+            {recovery ? "Use your authenticator" : "Use a recovery code"}
+          </Button>
+          <Link
+            {...(returnTo === "/join"
+              ? { to: "/join" as const }
+              : workspaceReturnLink(returnTo ?? "/"))}
+            className="text-center text-sm text-muted-foreground underline underline-offset-4"
+          >
+            Back to sign in
+          </Link>
+        </>
+      }
     >
       <form onSubmit={submit}>
         <FieldGroup>
@@ -94,25 +117,6 @@ export function TwoFactorChallenge() {
           </Button>
         </FieldGroup>
       </form>
-      <Button
-        variant="link"
-        disabled={pending}
-        onClick={() => {
-          setRecovery(!recovery)
-          setCode("")
-          setError("")
-        }}
-      >
-        {recovery ? "Use your authenticator" : "Use a recovery code"}
-      </Button>
-      <Link
-        {...(returnTo === "/join"
-          ? { to: "/join" as const }
-          : workspaceReturnLink(returnTo ?? "/"))}
-        className="text-center text-sm text-muted-foreground underline underline-offset-4"
-      >
-        Back to sign in
-      </Link>
     </AuthFrame>
   )
 }

@@ -6,19 +6,19 @@ import { AccessState, type Approval, type ToolPolicy } from "@/access/contracts"
 import { CopyButton } from "@/components/copy-button"
 import { Button } from "@/components/ui/button"
 import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card"
+import {
   CodeBlock,
   CodeBlockHeader,
   CodeBlockTitle,
   CodeBlockActions,
   CodeBlockContent,
 } from "@/components/ui/code-block"
-import {
-  Item,
-  ItemMedia,
-  ItemContent,
-  ItemTitle,
-  ItemActions,
-} from "@/components/ui/item"
 import { agentApi } from "@/http/client"
 
 import { approvalDecision, type ConfirmedDecision } from "./decision"
@@ -88,18 +88,19 @@ export function ApprovalCard({
   const pending = approval.status === "pending" && decided === null
   const heading = approvalHeading(approval, decided, confirmed)
   return (
-    <Item
-      variant="outline"
-      render={<section />}
+    <Card
+      role="region"
       aria-label={`Approval for ${toolLabel ?? approval.tool}`}
-      className="mt-4 min-w-0 items-start"
+      className="approval-card mt-4 min-w-0"
       data-pending={pending}
     >
-      <ItemMedia variant="icon">
-        <ShieldQuestion />
-      </ItemMedia>
-      <ItemContent className="min-w-0 gap-3">
-        <ItemTitle>{heading}</ItemTitle>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-3">
+          <ShieldQuestion className="size-5 shrink-0" />
+          {heading}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="flex min-w-0 flex-col gap-3">
         {approval.status === "interrupted" && (
           <p className="text-sm">Check the outcome before retrying.</p>
         )}
@@ -121,14 +122,16 @@ export function ApprovalCard({
             {formatInput(approval.input)}
           </CodeBlockContent>
         </CodeBlock>
-        <p className="text-xs text-muted-foreground">
-          This action request expires at{" "}
-          {new Date(approval.expiresAt).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
-          .
-        </p>
+        {pending && (
+          <p className="text-xs text-muted-foreground">
+            This action request expires at{" "}
+            {new Date(approval.expiresAt).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+            .
+          </p>
+        )}
         {pending && (
           <p id={scopeId} className="text-xs text-muted-foreground">
             Always allow lets <strong>{agentName}</strong> use{" "}
@@ -142,45 +145,45 @@ export function ApprovalCard({
             {error}
           </p>
         )}
-        {pending && (
-          <ItemActions className="flex-wrap">
-            <Button
-              size="sm"
-              className="min-h-11 sm:min-h-0"
-              disabled={busy || disabled}
-              onClick={() => void decide(true)}
-            >
-              {busy ? "Saving decision…" : "Allow once"}
-            </Button>
-            <Button
-              size="sm"
-              className="min-h-11 sm:min-h-0"
-              variant="outline"
-              aria-describedby={scopeId}
-              disabled={
-                busy ||
-                disabled ||
-                !toolPolicy ||
-                toolPolicy.name !== approval.tool ||
-                toolPolicy.mode === "deny"
-              }
-              onClick={() => void decide(true, true)}
-            >
-              Always allow
-            </Button>
-            <Button
-              size="sm"
-              className="min-h-11 sm:min-h-0"
-              variant="outline"
-              disabled={busy || disabled}
-              onClick={() => void decide(false)}
-            >
-              Deny
-            </Button>
-          </ItemActions>
-        )}
-      </ItemContent>
-    </Item>
+      </CardContent>
+      {pending && (
+        <CardFooter className="flex-wrap gap-2">
+          <Button
+            size="sm"
+            className="min-h-10"
+            disabled={busy || disabled}
+            onClick={() => void decide(true)}
+          >
+            {busy ? "Saving decision…" : "Allow once"}
+          </Button>
+          <Button
+            size="sm"
+            className="min-h-10"
+            variant="outline"
+            aria-describedby={scopeId}
+            disabled={
+              busy ||
+              disabled ||
+              !toolPolicy ||
+              toolPolicy.name !== approval.tool ||
+              toolPolicy.mode === "deny"
+            }
+            onClick={() => void decide(true, true)}
+          >
+            Always allow
+          </Button>
+          <Button
+            size="sm"
+            className="min-h-10"
+            variant="outline"
+            disabled={busy || disabled}
+            onClick={() => void decide(false)}
+          >
+            Deny
+          </Button>
+        </CardFooter>
+      )}
+    </Card>
   )
 }
 function formatInput(input: string) {
