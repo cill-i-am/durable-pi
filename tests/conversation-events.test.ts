@@ -98,6 +98,9 @@ describe("conversation stream", () => {
     vi.useFakeTimers()
     const f = fixture()
     try {
+      expect(f.response.headers.get("Cache-Control")).toBe(
+        "private, no-store, no-transform"
+      )
       await frame(f.reader)
       let first: ReadableStreamReadResult<Uint8Array> | undefined
       const pending = f.reader.read().then((value) => {

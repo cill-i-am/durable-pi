@@ -40,7 +40,14 @@ const cleanup = (close: () => void) =>
   )
 const privateResponse = (response: Response) => {
   const out = new Response(response.body, response)
-  out.headers.set("Cache-Control", "private, no-store")
+  out.headers.set(
+    "Cache-Control",
+    /(?:^|,)\s*no-transform\s*(?:,|$)/i.test(
+      response.headers.get("cache-control") ?? ""
+    )
+      ? "private, no-store, no-transform"
+      : "private, no-store"
+  )
   out.headers.set("X-Content-Type-Options", "nosniff")
   return out
 }

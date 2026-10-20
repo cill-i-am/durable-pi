@@ -28,6 +28,9 @@ export const encodeEventStream = Effect.fn("Website.encodeEventStream")(
         request.method !== "GET" ||
         response.status !== 200 ||
         !response.body ||
+        /(?:^|,)\s*no-transform\s*(?:,|$)/i.test(
+          response.headers.get("cache-control") ?? ""
+        ) ||
         response.headers.get("content-type")?.split(";")[0]?.trim() !==
           "text/event-stream" ||
         response.headers.has("content-encoding")
