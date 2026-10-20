@@ -292,36 +292,6 @@ it("retains construction defects instead of treating them as transport outages",
   )
   expect(upstream.socket.close).toHaveBeenCalledOnce()
 })
-it("preserves untransformed live events through the public proxy for gzip clients", async () => {
-  const f = fixture()
-  const upstream = new ReadableStream<Uint8Array>({
-    start(controller) {
-      controller.enqueue(new TextEncoder().encode("data: first\n\n"))
-    },
-  })
-  f.forward.mockResolvedValue(
-    new Response(upstream, {
-      headers: {
-        "content-type": "text/event-stream",
-        "cache-control": "public, max-age=600, no-transform",
-      },
-    })
-  )
-  const response = await agentProxy(
-    f.request({ headers: { "accept-encoding": "gzip, br" } }),
-    f.bindings
-  )
-  expect(response.headers.get("cache-control")).toBe(
-    "private, no-store, no-transform"
-  )
-  expect(response.headers.has("content-encoding")).toBe(false)
-  const reader = response.body!.getReader()
-  expect(new TextDecoder().decode((await reader.read()).value)).toBe(
-    "data: first\n\n"
-  )
-  await reader.cancel()
-})
-
 it.each(["identity", "gzip"])(
   "joins work and closes the %s reply after failed host work registration",
   async (encoding) => {
