@@ -39,8 +39,10 @@ The client model query uses `@tiesen/effect-tanstack-query` with TanStack Query 
 
 Neither background work nor cache warming guarantees a warm account after a long idle period. A missing or hard-expired catalog still requires discovery, and an expired token still requires refresh before inference. Acceptance and first-text timing must be measured separately; provider processing is unaffected by these changes.
 
-## Streaming transport
+## First text delivery
 
-Conversation SSE responses include `Cache-Control: private, no-store, no-transform`. The public proxy preserves this directive while enforcing private, non-cacheable responses, and its Effect encoding adapter skips compression when the directive is present. The production stream previously used the proxy's explicit gzip codec despite `X-Accel-Buffering: no`. Cloudflare also documents `no-transform` as the origin response directive that prevents its compression. This trades bandwidth for prompt chunk delivery; the Effect event pump and durable publication semantics are unchanged. Measure the effect in production rather than assuming compression caused a delay.
+An October 20 production probe observed a 250,075-byte `MESSAGES_SNAPSHOT` for a nine-token response. Existing text growth used deltas, but adding the first assistant text message retransmitted the complete visible history.
 
-Source: https://developers.cloudflare.com/speed/optimization/content/compression/
+When exactly one assistant text message is appended and every preceding message is unchanged, the adapter now emits TanStack's native `TEXT_MESSAGE_START` with the durable metadata and `TEXT_MESSAGE_CONTENT`. Subsequent text uses the existing delta path. Metadata changes, replacements, tools, deletions and reconnects still use authoritative snapshots. The existing scoped Effect stream owns publication, backpressure and cancellation.
+
+Disabling SSE compression was tested in production in PR #183 but did not establish a latency improvement: five-chat median Send-to-visible-text was 4,893 ms before and 6,090 ms after, with variable provider time and one slow admission. Compression is restored; reducing first-text payload size is measured separately. These small sequential samples do not establish a percentile or a causal regression.
