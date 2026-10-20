@@ -29,6 +29,28 @@ export function QuestionCard(props: AnswerProps<"Question">) {
           className="size-5 text-primary"
         />
       }
+      panel={
+        <div className="flex w-full flex-wrap items-center gap-3">
+          <Button
+            disabled={added || !onPrompt || (!chosen.length && !other.trim())}
+            onClick={() => {
+              onPrompt?.(
+                `For “${props.question}”: ${[...chosen, other.trim()].filter(Boolean).join("; ")}`
+              )
+              setAdded(true)
+            }}
+          >
+            Add answer to draft <ArrowUpRight data-icon="inline-end" />
+          </Button>
+          <p role="status" className="text-xs text-muted-foreground">
+            {added
+              ? "Added to your draft. Review it before sending."
+              : onPrompt
+                ? "You can review your answer before sending."
+                : "Reply in the conversation with your answer."}
+          </p>
+        </div>
+      }
     >
       <div className="flex flex-col gap-4">
         <ToggleGroup
@@ -72,26 +94,6 @@ export function QuestionCard(props: AnswerProps<"Question">) {
             />
           </Field>
         </FieldGroup>
-        <div className="flex flex-wrap items-center gap-3">
-          <Button
-            disabled={added || !onPrompt || (!chosen.length && !other.trim())}
-            onClick={() => {
-              onPrompt?.(
-                `For “${props.question}”: ${[...chosen, other.trim()].filter(Boolean).join("; ")}`
-              )
-              setAdded(true)
-            }}
-          >
-            Add answer to draft <ArrowUpRight data-icon="inline-end" />
-          </Button>
-          <p role="status" className="text-xs text-muted-foreground">
-            {added
-              ? "Added to your draft. Review it before sending."
-              : onPrompt
-                ? "You can review your answer before sending."
-                : "Reply in the conversation with your answer."}
-          </p>
-        </div>
       </div>
     </ResultCard>
   )
