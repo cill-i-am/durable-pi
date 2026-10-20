@@ -105,6 +105,7 @@
   --color-canvas: var(--canvas);
   --color-control: var(--control);
   --color-surface-low: var(--surface-low);
+  --color-card-panel: var(--card-panel);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-warning: var(--warning);
   --color-warning-bg: var(--warning-bg);
@@ -118,6 +119,7 @@
   --radius-md: 9.6px;
   --radius-lg: 12px;
   --radius-xl: 20px;
+  --radius-card-frame: 16px;
   --radius-2xl: 24px;
   --radius-3xl: 28px;
   --radius-4xl: 32px;
@@ -166,7 +168,10 @@
   --radius: 14px;
   --control: #fcfcfc;
   --surface-low: #fbfbfc;
+  --card-panel: #f8f8f9;
   --shadow-card: 0 14px 36px #1111140f, 0 2px 5px #1111140f;
+  --shadow-card-frame:
+    0 0 0 1px #0000000f, 0 1px 2px -1px #0000000f, 0 2px 4px #0000000a;
   --shadow-field: inset 0 2px 4px #1111140f;
   --shadow-input-group: var(--shadow-field), 0 1px 2px #1111140f;
   /* Overview: primary action gradient, inset highlight and surface shadows. */
@@ -222,8 +227,11 @@
   --input: #73737c;
   --control: #222225;
   --surface-low: #202023;
+  --card-panel: var(--surface-low);
   --ring: #a2a6ff;
   --shadow-card: 0 14px 36px #00000020, 0 2px 5px #00000014;
+  --shadow-card-frame:
+    0 0 0 1px var(--border), 0 1px 2px -1px #00000020, 0 2px 4px #00000014;
   --shadow-field: inset 0 2px 4px #00000014;
   --shadow-input-group: var(--shadow-field), 0 1px 2px #00000014;
   --shadow-button: inset 0 1px 0 #ffffff40, 0 3px 4px #00000040;
