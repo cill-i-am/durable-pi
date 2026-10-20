@@ -35,7 +35,6 @@ const jobs = {
 export function ModelMenu({
   agentId,
   selection,
-  onError,
   profile,
   onProfile,
   job,
@@ -45,7 +44,6 @@ export function ModelMenu({
 }: {
   agentId: string
   selection: ModelSelection
-  onError: (message: string) => void
   profile: Profile
   onProfile: (value: Profile) => void
   job: JobType
@@ -55,8 +53,7 @@ export function ModelMenu({
 }) {
   const { catalog, refresh, unavailable } = useModelCatalog(
     agentId,
-    selection.settingsRevision,
-    onError
+    selection.settingsRevision
   )
   const route = resolveRoute(
     job,

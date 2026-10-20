@@ -79,7 +79,7 @@ it.effect(
         yield* service.resolve("openai")
         expect(calls).toBe(0)
         yield* TestClock.setTime(100_000)
-        const value = yield* service.resolve("openai")
+        const value = yield* service.resolve("openai", true)
         expect(value).toMatchObject({ expires: 3_520_000 })
         expect(calls).toBe(1)
       })
@@ -320,7 +320,7 @@ test("a late rotation cannot overwrite a newer deployment seed", async () => {
         db.all<{ value: string }>("SELECT value FROM model_credentials")[0]!
           .value
       )
-    ).toEqual(newer)
+    ).toEqual({ ...newer, connectionId: expect.any(String) })
   } finally {
     release.resolve()
     await first.runPromise(service.shutdown())

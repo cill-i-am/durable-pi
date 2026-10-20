@@ -29,6 +29,7 @@ const AccountModels = Schema.Struct({
 const unverified = () =>
   new ModelUnavailable({
     message: "Could not verify the ChatGPT model catalog. Try again later.",
+    reason: "transient",
   })
 
 const reconcileAccount = (
@@ -99,6 +100,12 @@ export const discoverCatalog = Effect.fn("Inference.discoverCatalog")((
         )
         if (!response.ok)
           return yield* new ModelUnavailable({
+            reason:
+              response.status === 401 || response.status === 403
+                ? "denied"
+                : response.status === 429 || response.status >= 500
+                  ? "transient"
+                  : "invalid",
             message:
               response.status === 401 || response.status === 403
                 ? "Reconnect ChatGPT to refresh account access."
@@ -115,7 +122,16 @@ export const discoverCatalog = Effect.fn("Inference.discoverCatalog")((
         )
         const account = yield* Schema.decodeUnknownEffect(
           Schema.fromJsonString(AccountModels)
-        )(new TextDecoder().decode(bytes)).pipe(Effect.mapError(unverified))
+        )(new TextDecoder().decode(bytes)).pipe(
+          Effect.mapError(
+            () =>
+              new ModelUnavailable({
+                message:
+                  "Could not verify the ChatGPT model catalog: invalid response.",
+                reason: "invalid",
+              })
+          )
+        )
         return reconcileAccount(
           account,
           installed,
@@ -130,6 +146,7 @@ export const discoverCatalog = Effect.fn("Inference.discoverCatalog")((
           orElse: () =>
             new ModelUnavailable({
               message: "ChatGPT model discovery timed out. Try again later.",
+              reason: "transient",
             }),
         })
       )
@@ -139,13 +156,15 @@ export const discoverCatalog = Effect.fn("Inference.discoverCatalog")((
 export function openaiCatalogSource(
   credential: () => Effect.Effect<Credential | undefined, ModelUnavailable>,
   installed: () => readonly Model<string>[],
-  transport: typeof fetch = fetch
+  transport: typeof fetch = fetch,
+  connection?: () => Effect.Effect<string | undefined, ModelUnavailable>
 ): CatalogSource {
   return {
     current: () =>
       Effect.gen(function* () {
-        const current = yield* credential()
-        if (current?.type !== "oauth")
+        const current = connection ? undefined : yield* credential()
+        const generation = connection ? yield* connection() : undefined
+        if (connection ? !generation : current?.type !== "oauth")
           return yield* new ModelUnavailable({
             message:
               "Connect ChatGPT to discover available models. API-key fallback is disabled.",
@@ -155,7 +174,19 @@ export function openaiCatalogSource(
             crypto.subtle.digest(
               "SHA-256",
               new TextEncoder().encode(
-                JSON.stringify([current.clientId, current.access])
+                JSON.stringify([
+                  generation ?? [
+                    current?.type === "oauth" ? current.clientId : null,
+                    current?.type === "oauth" ? current.access : null,
+                  ],
+                  installed().map((model) => ({
+                    id: model.id,
+                    api: model.api,
+                    contextWindow: model.contextWindow,
+                    thinking: getSupportedThinkingLevels(model),
+                    input: model.input,
+                  })),
+                ])
               )
             ),
           unverified
@@ -165,7 +196,12 @@ export function openaiCatalogSource(
         ).join("")
         return {
           identity,
-          load: () => discoverCatalog(current, installed(), transport),
+          load: () =>
+            credential().pipe(
+              Effect.flatMap((value) =>
+                discoverCatalog(value, installed(), transport)
+              )
+            ),
         }
       }),
   }
