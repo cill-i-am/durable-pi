@@ -301,6 +301,7 @@ import type { AgentGatewayBindings } from "./adapters/gateway"
 export { WhatsAppBridge, ChatSdkStateAgent } from "../whatsapp/bridge"
 import { passkeyAgentAction } from "../auth/adapters/passkey-actions"
 import { passkeyTools } from "../auth/adapters/passkey-tools"
+import { handoffPaddingBytes } from "../conversations/handoff"
 import { ConversationLatency } from "../conversations/latency"
 import { executionRequest } from "../execution/adapters/http"
 import { codeService } from "../execution/adapters/service"
@@ -4214,6 +4215,9 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
                     Effect.promise(() => this.ctx.storage.sync())
                   )
                 : undefined,
+            paddingBytes: handoffPaddingBytes.get(
+              url.searchParams.get("padding") ?? ""
+            ),
             snapshot: () => this.snapshotProgram(),
             activeSession: () =>
               this.conversationService

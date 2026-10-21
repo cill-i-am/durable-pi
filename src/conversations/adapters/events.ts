@@ -32,6 +32,7 @@ export type ConversationEventRunner = <TValue, TError>(
 type Source<TError> = {
   latency?: ConversationLatency
   confirmation?: Effect.Effect<void>
+  paddingBytes?: 4096 | 16384
   snapshot: () => Effect.Effect<ChatState, TError>
   activeSession: () => Effect.Effect<string | undefined, TError>
   watch: (id: string) => Promise<AgentEventStream>
@@ -110,6 +111,9 @@ export function conversationEvents<TError>(
   let snapshotStartedAt = 0
   let snapshotReadyAt = 0
   const streamId = source.confirmation ? crypto.randomUUID() : undefined
+  const openedAt = streamId
+    ? Effect.runSync(Clock.currentTimeMillis)
+    : undefined
   let publications: HandoffPublication[] = []
   let pullCount = 0
   let lastPullAt: number | undefined
@@ -215,7 +219,8 @@ export function conversationEvents<TError>(
                       previous,
                       snapshotStartedAt,
                       snapshotReadyAt,
-                      streamId
+                      streamId,
+                      source.paddingBytes
                     )
                   : { data: "", traces: [] }
                 let diagnostic = firstText.data
@@ -293,6 +298,9 @@ export function conversationEvents<TError>(
       "Content-Type": "text/event-stream",
       "Cache-Control": "private, no-store",
       "X-Accel-Buffering": "no",
+      ...(openedAt !== undefined
+        ? { "X-Durable-Pi-Stream-Opened-At": String(openedAt) }
+        : {}),
     },
   })
 }
@@ -303,7 +311,8 @@ function firstTextDiagnostic(
   previous: ChatState | undefined,
   started: number,
   ready: number,
-  streamId?: string
+  streamId?: string,
+  paddingBytes?: 4096 | 16384
 ) {
   const traces: FirstTextTrace[] = []
   if (!latency || !previous) return { data: "", traces }
@@ -317,7 +326,13 @@ function firstTextDiagnostic(
       diagnostic += `data: ${JSON.stringify({ type: "CUSTOM", name: "durable-pi.first-text", value: { ...trace, ...(streamId ? { streamId } : {}) } })}\n\n`
     }
   }
-  return { data: diagnostic, traces }
+  return {
+    data:
+      streamId && paddingBytes && diagnostic
+        ? `:${" ".repeat(paddingBytes - 3)}\n\n${diagnostic}`
+        : diagnostic,
+    traces,
+  }
 }
 
 function hasNativeText(event: AgentEvent): boolean {

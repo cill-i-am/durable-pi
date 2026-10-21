@@ -64,53 +64,70 @@ it("ignores malformed and oversized diagnostic lines without failing delivery", 
   expect(Effect.runSync(observer.output)).toBeUndefined()
 })
 
-it("publishes a correlated marker alongside first text without an extra queue slot", async () => {
-  const { conversationEvents } =
-    await import("../src/conversations/adapters/events")
-  const latency = new ConversationLatency()
-  const turn = {
-    id: "turn",
-    text: "hello",
-    answer: "",
-    status: "running" as const,
-    error: null,
-    created_at: "2026-10-21T00:00:00Z",
-  }
-  let state = {
-    turns: [turn],
-    model: "test",
-    connected: true,
-    memory: { messages: 0, summaries: 0, ready: true, notes: [] },
-  }
-  let notify = () => {}
-  const response = conversationEvents(
-    {
-      latency,
-      snapshot: () => Effect.sync(() => state),
-      activeSession: () => Effect.succeed(undefined),
-      watch: async () => {
-        throw new Error("unused")
+it.each([undefined, 4096, 16384] as const)(
+  "publishes a correlated marker with bounded diagnostic padding (%s)",
+  async (paddingBytes) => {
+    const { conversationEvents } =
+      await import("../src/conversations/adapters/events")
+    const latency = new ConversationLatency()
+    const turn = {
+      id: "turn",
+      text: "hello",
+      answer: "",
+      status: "running" as const,
+      error: null,
+      created_at: "2026-10-21T00:00:00Z",
+    }
+    let state = {
+      turns: [turn],
+      model: "test",
+      connected: true,
+      memory: { messages: 0, summaries: 0, ready: true, notes: [] },
+    }
+    let notify = () => {}
+    const response = conversationEvents(
+      {
+        latency,
+        paddingBytes: paddingBytes ?? 4096,
+        ...(paddingBytes ? { confirmation: Effect.void } : {}),
+        snapshot: () => Effect.sync(() => state),
+        activeSession: () => Effect.succeed(undefined),
+        watch: async () => {
+          throw new Error("unused")
+        },
+        subscribe: (listener) => {
+          notify = listener
+          return () => {}
+        },
       },
-      subscribe: (listener) => {
-        notify = listener
-        return () => {}
-      },
-    },
-    new AbortController().signal,
-    true
-  )
-  const reader = response.body!.getReader()
-  await reader.read()
-  await reader.read()
-  Effect.runSync(latency.provider("turn", "attempt", "session"))
-  state = { ...state, turns: [{ ...turn, answer: "Hello" }] }
-  notify()
-  const text = new TextDecoder().decode((await reader.read()).value)
-  expect(text).toContain('"name":"durable-pi.first-text"')
-  expect(text).toContain('"type":"TEXT_MESSAGE_START"')
-  expect(text).toContain('"turnId":"turn"')
-  await reader.cancel()
-})
+      new AbortController().signal,
+      true
+    )
+    const reader = response.body!.getReader()
+    expect(response.headers.has("x-durable-pi-stream-opened-at")).toBe(
+      Boolean(paddingBytes)
+    )
+    await reader.read()
+    await reader.read()
+    Effect.runSync(latency.provider("turn", "attempt", "session"))
+    state = { ...state, turns: [{ ...turn, answer: "Hello" }] }
+    notify()
+    const text = new TextDecoder().decode((await reader.read()).value)
+    expect(text).toContain('"name":"durable-pi.first-text"')
+    expect(text).toContain('"type":"TEXT_MESSAGE_START"')
+    expect(text).toContain('"turnId":"turn"')
+    if (paddingBytes) {
+      expect(text.indexOf("data: ")).toBe(paddingBytes)
+      expect(text.slice(0, paddingBytes)).toBe(
+        `:${" ".repeat(paddingBytes - 3)}\n\n`
+      )
+      const observer = Effect.runSync(makeFirstTextLatency)
+      Effect.runSync(observer.receive(new TextEncoder().encode(text)))
+      expect(Effect.runSync(observer.output)?.attemptId).toBe("attempt")
+    } else expect(text.startsWith("data: ")).toBe(true)
+    await reader.cancel()
+  }
+)
 
 it("times storage confirmation only for a new traced answer and joins it once", () => {
   vi.useFakeTimers()

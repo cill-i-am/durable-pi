@@ -1,5 +1,10 @@
 import { Clock, Effect } from "effect"
 
+export const handoffPaddingBytes: ReadonlyMap<string, 4096 | 16384> = new Map([
+  ["4k", 4096],
+  ["16k", 16384],
+])
+
 export type HandoffQueue = {
   readonly desiredSize: number | null
   readonly pullCount: number
