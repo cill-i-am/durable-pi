@@ -40,6 +40,9 @@ export interface ConversationLedger {
     rootId: string,
     includeInput?: boolean
   ) => Effect.Effect<Turn[], ConversationError>
+  visibleMembers: (
+    rootIds: readonly string[]
+  ) => Effect.Effect<Turn[], ConversationError>
   admit: (
     input: Submission,
     prepared?: PreparedMessage,

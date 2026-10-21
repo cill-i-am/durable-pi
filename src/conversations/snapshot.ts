@@ -6,6 +6,7 @@ import type { ChatState, TimelineItem } from "./contracts"
 import type { ConversationExecution } from "./execution"
 import type { ConversationJournal } from "./journal"
 import type { Conversations } from "./service"
+import type { Turn } from "./turns"
 
 export type SnapshotMetadata = Pick<
   ChatState,
@@ -21,12 +22,21 @@ export function conversationSnapshot<TError, TRequirements>(
 ) {
   return Effect.fn("Conversations.snapshot")(function* () {
     const turns = yield* conversations.recent()
+    const members = new Map<string, Turn[]>()
+    for (const member of yield* conversations.visibleMembers(
+      turns.map((turn) => turn.id)
+    )) {
+      const root = member.parent_id ?? member.id
+      const group = members.get(root) ?? []
+      group.push(member)
+      members.set(root, group)
+    }
     const activity = new Map<string, readonly TimelineItem[]>()
     for (const turn of turns) {
       if (turn.session_id && ["running", "stopping"].includes(turn.status)) {
         const observation = yield* execution.observe(
           turn,
-          yield* conversations.members(turn.id, false)
+          members.get(turn.id) ?? []
         )
         turn.answer = observation.liveAnswer
         activity.set(turn.id, observation.activity)
@@ -38,7 +48,6 @@ export function conversationSnapshot<TError, TRequirements>(
       Effect.gen(function* () {
         const saved =
           activity.get(turn.id) ?? (yield* journal.activity(turn.id))
-        const members = yield* conversations.members(turn.id, false)
         return {
           id: turn.id,
           origin: turn.origin,
@@ -54,7 +63,7 @@ export function conversationSnapshot<TError, TRequirements>(
           skills: turn.skills,
           routing: pinnedRoute(turn, settings),
           activity: saved,
-          steering: members
+          steering: (members.get(turn.id) ?? [])
             .filter((member) => member.parent_id)
             .map(({ id, text, delivery, attachments, provenance }) => ({
               id,

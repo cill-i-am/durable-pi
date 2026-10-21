@@ -1,5 +1,6 @@
 import { expect, it } from "@effect/vitest"
 import { Cause, Context, Effect, Exit } from "effect"
+import { vi } from "vitest"
 
 import {
   conversationSnapshot,
@@ -13,6 +14,42 @@ const metadata: SnapshotMetadata = {
   connected: true,
   memory: { messages: 0, summaries: 0, ready: true, notes: [] },
 }
+it.effect("reads membership once for the whole visible history", () =>
+  Effect.gen(function* () {
+    const f = yield* conversationFixture()
+    for (let i = 0; i < 50; i++)
+      f.db.run(
+        "INSERT INTO chat_turns(id,text,status,created_at) VALUES (?,?,'done','2026-10-21')",
+        `history-${i}`,
+        `message ${i}`
+      )
+    const root = yield* f.store.admit({
+      operationId: "latest",
+      text: "new request",
+    })
+    yield* f.store.admit({
+      operationId: "steer",
+      text: "new detail",
+      mode: "steer",
+    })
+    const bulk = vi.spyOn(f.store, "visibleMembers")
+    const single = vi.spyOn(f.store, "members")
+    const snapshot = yield* conversationSnapshot(
+      f.conversations,
+      f.execution,
+      f.journal,
+      () => Effect.succeed(metadata)
+    )()
+    expect(snapshot.turns).toHaveLength(51)
+    expect(snapshot.turns.at(-1)).toMatchObject({
+      id: root.turn.id,
+      steering: [{ id: "steer", text: "new detail" }],
+    })
+    expect(bulk).toHaveBeenCalledOnce()
+    expect(bulk.mock.calls[0]?.[0]).toHaveLength(51)
+    expect(single).not.toHaveBeenCalled()
+  })
+)
 it.effect(
   "uses live observations while running and saved activity after completion without changing durable answers",
   () =>

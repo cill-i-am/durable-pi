@@ -184,6 +184,7 @@ const config :Workerd.Config = (
           "pi-harness",
           "migrations",
           "activity",
+          "conversation-members",
         ].map((mode) => `guarded-${mode}`),
       ]
   const snapshots = new Map()
@@ -259,6 +260,14 @@ const config :Workerd.Config = (
         )
     }
     if (guarded) {
+      if (kind === "conversation-members") {
+        assert.deepEqual(result.counts, [48, 49, 100])
+        assert.equal(result.hidden, true)
+        assert.deepEqual(result.bindings, ["root-0", "root-99"])
+        assert.equal(result.duringRollback, 2)
+        assert.equal(result.rollback, "Failure")
+        assert.equal(result.afterRollback, 1)
+      }
       if (kind === "activity") {
         assert.equal(result.activity?.turn?.id, "native-activity")
         assert.equal(result.activity.rows[0]?.kind, "run")
