@@ -127,7 +127,12 @@ export const AgentWorker = Cloudflare.Worker("AgentWorkerDrizzleV1", {
   },
   dev: { port: 1338, strictPort: true },
   workersDev: { enabled: false, previewsEnabled: false },
-  compatibility: { date: "2026-10-17", flags: ["nodejs_compat"] },
+  // With the production bindings, the new registry exceeds startup limits;
+  // the same code and bindings validate at 379ms with the legacy registry.
+  compatibility: {
+    date: "2026-10-17",
+    flags: ["nodejs_compat", "legacy_module_registry"],
+  },
   env: {
     AGENT: Cloudflare.DurableObject<PersonalAgent>("PersonalAgent"),
     AUTH_DB: AuthDatabase,
