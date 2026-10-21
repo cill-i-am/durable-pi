@@ -23,6 +23,9 @@ export class Workspace extends Context.Service<
   {
     replyFile: (input: FileReply) => Effect.Effect<FileInfo, FileError>
     replyFiles: (turnId: string) => Effect.Effect<FileInfo[], FileError>
+    replyFilesForTurns: (
+      turnIds: readonly string[]
+    ) => Effect.Effect<ReadonlyMap<string, FileInfo[]>, FileError>
     video: (id: FileId) => Effect.Effect<VideoResult, FileError>
     list: () => Effect.Effect<FileInfo[], FileError>
     extractionPending: () => Effect.Effect<boolean, FileError>

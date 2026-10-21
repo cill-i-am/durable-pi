@@ -3132,7 +3132,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     this.conversationExecution,
     this.conversationJournal,
     () => this.snapshotMetadata(),
-    (id) => this.workspaceService.replyFiles(id)
+    (ids) => this.workspaceService.replyFilesForTurns(ids)
   )
   readonly coordinationRunner = new CoordinationRunner(this)
   readonly runner = new TurnRunner(this)

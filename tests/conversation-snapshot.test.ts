@@ -7,6 +7,7 @@ import {
   type SnapshotMetadata,
 } from "../src/conversations/snapshot"
 import { runtimeStatusEffect } from "../src/conversations/status"
+import type { FileInfo } from "../src/workspace/files"
 import { conversationFixture } from "./conversation-fixture"
 import { corrupt } from "./database"
 
@@ -34,11 +35,17 @@ it.effect("reads membership once for the whole visible history", () =>
     })
     const bulk = vi.spyOn(f.store, "visibleMembers")
     const single = vi.spyOn(f.store, "members")
+    const activities = vi.spyOn(f.journal, "activities")
+    const activity = vi.spyOn(f.journal, "activity")
+    const files = vi.fn((_ids: readonly string[]) =>
+      Effect.succeed(new Map<string, FileInfo[]>())
+    )
     const snapshot = yield* conversationSnapshot(
       f.conversations,
       f.execution,
       f.journal,
-      () => Effect.succeed(metadata)
+      () => Effect.succeed(metadata),
+      files
     )()
     expect(snapshot.turns).toHaveLength(51)
     expect(snapshot.turns.at(-1)).toMatchObject({
@@ -48,6 +55,11 @@ it.effect("reads membership once for the whole visible history", () =>
     expect(bulk).toHaveBeenCalledOnce()
     expect(bulk.mock.calls[0]?.[0]).toHaveLength(51)
     expect(single).not.toHaveBeenCalled()
+    expect(activities).toHaveBeenCalledOnce()
+    expect(activities.mock.calls[0]?.[0]).toHaveLength(51)
+    expect(activity).not.toHaveBeenCalled()
+    expect(files).toHaveBeenCalledOnce()
+    expect(files.mock.calls[0]?.[0]).toHaveLength(51)
   })
 )
 it.effect(
@@ -61,6 +73,7 @@ it.effect(
         f.store.admit({ operationId: "steer", text: "use blue", mode: "steer" })
       )
       const observe = f.execution.observe
+      const activities = vi.spyOn(f.journal, "activities")
       f.execution.observe = (root, members) =>
         observe(root, members).pipe(
           Effect.map((observation) => ({
@@ -84,6 +97,7 @@ it.effect(
       ])
       expect(live.turns[0]?.steering[0]?.id).toBe("steer")
       expect(Effect.runSync(f.store.get("root"))?.answer).toBe("")
+      expect(activities.mock.calls[0]?.[0]).toEqual([])
       f.db.run(
         "INSERT INTO chat_activity VALUES ('root',?)",
         JSON.stringify([{ id: "saved", type: "text", text: "Saved answer" }])
@@ -102,6 +116,7 @@ it.effect(
         )
       ).toBe(true)
       const saved = yield* snapshot()
+      expect(activities.mock.calls[1]?.[0]).toEqual(["root"])
       expect(saved.turns[0]?.answer).toBe("Saved answer")
       expect(saved.turns[0]?.activity).toEqual([
         { id: "saved", type: "text", text: "Saved answer" },

@@ -27,6 +27,9 @@ export interface WorkspaceLedger {
   replyFiles: (
     turnId: string
   ) => Effect.Effect<readonly FileReply[], WorkspaceUnavailable>
+  replyFilesForTurns: (
+    turnIds: readonly string[]
+  ) => Effect.Effect<readonly FileReply[], WorkspaceUnavailable>
   replyFile: (input: FileReply) => Effect.Effect<void, WorkspaceUnavailable>
   readonly transactionGroup: object
   atomic: <TValue, TError, TRequirements>(
