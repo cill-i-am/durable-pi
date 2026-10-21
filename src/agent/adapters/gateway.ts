@@ -1,4 +1,4 @@
-import { Cause, Effect, Exit, Schema } from "effect"
+import { Cause, Clock, Effect, Exit, Schema } from "effect"
 
 import { activityRequest } from "../../activity/adapters/http"
 import {
@@ -70,34 +70,45 @@ const forward = (peer: Peer, request: Request) =>
 
 const observeGateway = (
   request: Request,
-  response: Response,
+  forwarded: ReturnType<typeof forward>,
   own?: (work: Promise<void>) => void
-) => {
-  const url = new URL(request.url)
-  if (
-    !url.pathname.endsWith("/events") ||
-    request.method !== "GET" ||
-    url.searchParams.get("diagnostics") !== "storage" ||
-    !own
-  )
-    return Effect.succeed(response)
-  return observeFirstText(response, (trace) => {
-    own(
-      runObserved(
-        Effect.logInfo("Conversation.firstTextGateway").pipe(
-          Effect.annotateLogs({
-            turnId: trace.turnId,
-            attemptId: trace.attemptId,
-            publishedAt: trace.publishedAt,
-            gatewayReceivedAt: trace.receivedAt,
-            gatewayReadStartedAt: trace.readStartedAt,
-            streamId: trace.streamId,
-          })
-        )
-      ).catch(() => {})
+) =>
+  Effect.gen(function* () {
+    const url = new URL(request.url)
+    if (
+      !url.pathname.endsWith("/events") ||
+      request.method !== "GET" ||
+      url.searchParams.get("diagnostics") !== "storage" ||
+      !own
     )
+      return yield* forwarded
+    const gatewayRequestStartedAt = yield* Clock.currentTimeMillis
+    const response = yield* forwarded
+    const gatewayHeadersReceivedAt = yield* Clock.currentTimeMillis
+    const opened = response.headers.get("x-durable-pi-stream-opened-at")
+    const actorStreamOpenedAt = opened === null ? undefined : Number(opened)
+    return yield* observeFirstText(response, (trace) => {
+      own(
+        runObserved(
+          Effect.logInfo("Conversation.firstTextGateway").pipe(
+            Effect.annotateLogs({
+              turnId: trace.turnId,
+              attemptId: trace.attemptId,
+              publishedAt: trace.publishedAt,
+              gatewayReceivedAt: trace.receivedAt,
+              gatewayReadStartedAt: trace.readStartedAt,
+              streamId: trace.streamId,
+              gatewayRequestStartedAt,
+              gatewayHeadersReceivedAt,
+              ...(Number.isFinite(actorStreamOpenedAt)
+                ? { actorStreamOpenedAt }
+                : {}),
+            })
+          )
+        ).catch(() => {})
+      )
+    })
   })
-}
 
 function suspendFamilyWork(
   root: Peer,
@@ -220,7 +231,7 @@ export function agentGatewayProgram(
         owner
       )
     )
-    return yield* observeGateway(request, yield* forward(target, request), own)
+    return yield* observeGateway(request, forward(target, request), own)
   }).pipe(
     Effect.scoped,
     Effect.onExit((exit) =>
