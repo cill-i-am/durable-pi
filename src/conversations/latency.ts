@@ -17,6 +17,10 @@ export type FirstTextTrace = {
  * journal or cache of message content. All actor milestones share one clock. */
 export class ConversationLatency {
   private readonly traces = new Map<string, FirstTextTrace>()
+  private readonly confirmations = new WeakMap<
+    FirstTextTrace,
+    Effect.Effect<void>
+  >()
 
   provider = (turnId: string, attemptId: string, sessionId: string) =>
     Effect.gen({ self: this }, function* () {
@@ -44,18 +48,24 @@ export class ConversationLatency {
 
   /** Opt-in diagnostic: join the platform durability barrier without changing
    * write policy or allowing unconfirmed output. Never run for historical turns. */
-  confirm = <E>(turnIds: readonly string[], sync: Effect.Effect<void, E>) =>
+  confirm = (turnIds: readonly string[], sync: Effect.Effect<void>) =>
     Effect.gen({ self: this }, function* () {
-      const pending = turnIds.flatMap((id) => {
+      for (const id of turnIds) {
         const trace = this.traces.get(id)
-        return trace && trace.storageSyncStartedAt === undefined ? [trace] : []
-      })
-      if (!pending.length) return
-      const started = yield* Clock.currentTimeMillis
-      for (const trace of pending) trace.storageSyncStartedAt = started
-      yield* sync
-      const ready = yield* Clock.currentTimeMillis
-      for (const trace of pending) trace.storageSyncReadyAt = ready
+        if (!trace) continue
+        let confirmation = this.confirmations.get(trace)
+        if (!confirmation) {
+          confirmation = yield* Effect.cached(
+            Effect.gen(function* () {
+              trace.storageSyncStartedAt = yield* Clock.currentTimeMillis
+              yield* sync
+              trace.storageSyncReadyAt = yield* Clock.currentTimeMillis
+            })
+          )
+          this.confirmations.set(trace, confirmation)
+        }
+        yield* confirmation
+      }
     })
 
   publication = (

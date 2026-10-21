@@ -30,7 +30,7 @@ export type ConversationEventRunner = <TValue, TError>(
 ) => Promise<Exit.Exit<TValue, unknown>>
 type Source<TError> = {
   latency?: ConversationLatency
-  confirmation?: Effect.Effect<void, TError>
+  confirmation?: Effect.Effect<void>
   snapshot: () => Effect.Effect<ChatState, TError>
   activeSession: () => Effect.Effect<string | undefined, TError>
   watch: (id: string) => Promise<AgentEventStream>
