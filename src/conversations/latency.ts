@@ -6,6 +6,8 @@ export type FirstTextTrace = {
   readonly sessionId: string
   readonly providerAt: number
   nativeObservedAt?: number
+  storageSyncStartedAt?: number
+  storageSyncReadyAt?: number
   snapshotStartedAt?: number
   snapshotReadyAt?: number
   publishedAt?: number
@@ -38,6 +40,22 @@ export class ConversationLatency {
           trace.nativeObservedAt === undefined
         )
           trace.nativeObservedAt = now
+    })
+
+  /** Opt-in diagnostic: join the platform durability barrier without changing
+   * write policy or allowing unconfirmed output. Never run for historical turns. */
+  confirm = <E>(turnIds: readonly string[], sync: Effect.Effect<void, E>) =>
+    Effect.gen({ self: this }, function* () {
+      const pending = turnIds.flatMap((id) => {
+        const trace = this.traces.get(id)
+        return trace && trace.storageSyncStartedAt === undefined ? [trace] : []
+      })
+      if (!pending.length) return
+      const started = yield* Clock.currentTimeMillis
+      for (const trace of pending) trace.storageSyncStartedAt = started
+      yield* sync
+      const ready = yield* Clock.currentTimeMillis
+      for (const trace of pending) trace.storageSyncReadyAt = ready
     })
 
   publication = (

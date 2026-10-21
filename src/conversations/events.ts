@@ -5,6 +5,10 @@ import type { ChatState } from "./contracts"
 
 export interface ConversationEventSource<TError, TRequirements = never> {
   snapshot: () => Effect.Effect<ChatState, TError, TRequirements>
+  beforePublish?: (
+    state: ChatState,
+    previous: ChatState | undefined
+  ) => Effect.Effect<void, TError, TRequirements>
   activeSession: () => Effect.Effect<string | undefined, TError, TRequirements>
   watch: (
     id: string,
@@ -53,6 +57,7 @@ export function conversationEventPump<TError, TRequirements>(
         }
       }
       const current = yield* source.snapshot()
+      if (source.beforePublish) yield* source.beforePublish(current, previous)
       if (!sink.publish(current, previous)) finish()
       previous = current
     })

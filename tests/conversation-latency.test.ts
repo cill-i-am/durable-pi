@@ -111,3 +111,26 @@ it("publishes a correlated marker alongside first text without an extra queue sl
   expect(text).toContain('"turnId":"turn"')
   await reader.cancel()
 })
+
+it("times storage confirmation only for a new traced answer and joins it once", () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(1000)
+  const latency = new ConversationLatency()
+  const sync = vi.fn(() => vi.setSystemTime(1600))
+  Effect.runSync(latency.provider("turn", "attempt", "session"))
+  vi.setSystemTime(1100)
+  Effect.runSync(latency.confirm(["historical"], Effect.sync(sync)))
+  expect(sync).not.toHaveBeenCalled()
+  Effect.runSync(latency.confirm(["turn"], Effect.sync(sync)))
+  Effect.runSync(latency.confirm(["turn"], Effect.sync(sync)))
+  expect(sync).toHaveBeenCalledTimes(1)
+  expect(Effect.runSync(latency.publication("turn", 1080, 1100))).toMatchObject(
+    {
+      providerAt: 1000,
+      snapshotReadyAt: 1100,
+      storageSyncStartedAt: 1100,
+      storageSyncReadyAt: 1600,
+      publishedAt: 1600,
+    }
+  )
+})

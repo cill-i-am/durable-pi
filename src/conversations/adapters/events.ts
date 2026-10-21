@@ -30,6 +30,7 @@ export type ConversationEventRunner = <TValue, TError>(
 ) => Promise<Exit.Exit<TValue, unknown>>
 type Source<TError> = {
   latency?: ConversationLatency
+  confirmation?: Effect.Effect<void, TError>
   snapshot: () => Effect.Effect<ChatState, TError>
   activeSession: () => Effect.Effect<string | undefined, TError>
   watch: (id: string) => Promise<AgentEventStream>
@@ -130,6 +131,21 @@ export function conversationEvents<TError>(
                   snapshotReadyAt = yield* Clock.currentTimeMillis
                   return state
                 }),
+              beforePublish: (state, previous) =>
+                source.latency && source.confirmation && previous
+                  ? source.latency.confirm(
+                      state.turns
+                        .filter(
+                          (turn) =>
+                            turn.answer &&
+                            !previous.turns.find(
+                              (before) => before.id === turn.id
+                            )?.answer
+                        )
+                        .map((turn) => turn.id),
+                      source.confirmation
+                    )
+                  : Effect.void,
               activeSession: source.activeSession,
               subscribe: (notify) =>
                 Effect.acquireRelease(

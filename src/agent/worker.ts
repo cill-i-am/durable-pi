@@ -4208,6 +4208,12 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         return conversationEvents(
           {
             latency: this.conversationLatency,
+            confirmation:
+              url.searchParams.get("diagnostics") === "storage"
+                ? Effect.uninterruptible(
+                    Effect.promise(() => this.ctx.storage.sync())
+                  )
+                : undefined,
             snapshot: () => this.snapshotProgram(),
             activeSession: () =>
               this.conversationService

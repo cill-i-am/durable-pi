@@ -1,5 +1,5 @@
 import { CodeXml } from "lucide-react"
-import type { ComponentProps } from "react"
+import { memo, type ComponentProps } from "react"
 import ReactMarkdown, { type ExtraProps } from "react-markdown"
 import remarkGfm from "remark-gfm"
 
@@ -108,7 +108,7 @@ const markdownComponents: NonNullable<
   ),
 }
 
-export function Markdown({ text }: { text: string }) {
+export const Markdown = memo(function Markdown({ text }: { text: string }) {
   return (
     <div className="markdown">
       <ReactMarkdown
@@ -120,4 +120,4 @@ export function Markdown({ text }: { text: string }) {
       </ReactMarkdown>
     </div>
   )
-}
+})
