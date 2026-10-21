@@ -35,6 +35,7 @@ import { ConversationStore } from "../../src/conversations/adapters/sqlite-turns
 import { makeDurableObjectSqlite } from "../../src/storage/durable-object"
 import { migrateSqlite } from "../../src/storage/migrations"
 import type { Sqlite } from "../../src/storage/sqlite"
+import { conversationActivitiesProbe } from "./conversation-activities"
 import { conversationStreamProbe } from "./conversation-stream"
 import { drizzleProbeRows } from "./drizzle-schema"
 
@@ -157,6 +158,15 @@ export class DrizzleProbe extends DurableObject<Record<string, never>> {
         await this.runtime.runPromise(conversationStreamProbe())
       )
     const storage = this.ctx.storage
+    if (guardedMode && mode === "conversation-activities")
+      return Response.json(
+        await this.runtime.runPromise(
+          Effect.flatMap(
+            makeDurableObjectSqlite(storage),
+            conversationActivitiesProbe
+          ).pipe(Effect.scoped)
+        )
+      )
     if (guardedMode && mode === "conversation-members")
       return Response.json(
         await this.runtime.runPromise(

@@ -29,6 +29,8 @@ import {
   MAX_VISION_BYTES,
   type FileId,
   type Upload,
+  type FileReply,
+  type FileInfo,
 } from "./files"
 import type { PrepareImage } from "./images"
 import { requireImagePreview } from "./images"
@@ -117,18 +119,33 @@ export function makeWorkspace(
         })
       return { file, bytes: yield* assets.read(fileAsset(file, "pdf-text-v1")) }
     })
+  const readReplyFiles = Effect.fn("Workspace.readReplyFiles")(function* (
+    replies: readonly FileReply[]
+  ) {
+    const files = new Map<string, FileInfo>()
+    for (const id of new Set(replies.map((reply) => reply.fileId))) {
+      const file = yield* row(id)
+      if (!file.trashed && file.status === "ready")
+        files.set(id, workspaceFileInfo(file))
+    }
+    const turns = new Map<string, FileInfo[]>()
+    for (const reply of replies) {
+      const file = files.get(reply.fileId)
+      if (!file) continue
+      const group = turns.get(reply.turnId) ?? []
+      if (!group.some((existing) => existing.id === file.id)) group.push(file)
+      turns.set(reply.turnId, group)
+    }
+    return turns
+  })
   return Workspace.of({
     replyFiles: (turnId) =>
       Effect.gen(function* () {
         const replies = yield* ledger.replyFiles(turnId)
-        const files = yield* Effect.forEach(
-          [...new Set(replies.map((value) => value.fileId))],
-          (id) => row(id)
-        )
-        return files
-          .filter((file) => !file.trashed && file.status === "ready")
-          .map((file) => workspaceFileInfo(file))
+        return (yield* readReplyFiles(replies)).get(turnId) ?? []
       }),
+    replyFilesForTurns: (turnIds) =>
+      ledger.replyFilesForTurns(turnIds).pipe(Effect.flatMap(readReplyFiles)),
     replyFile: (input) =>
       ledger.atomic(() =>
         Effect.gen(function* () {

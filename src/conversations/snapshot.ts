@@ -15,10 +15,12 @@ export type SnapshotMetadata = Pick<
 export function conversationSnapshot<TError, TRequirements>(
   conversations: typeof Conversations.Service,
   execution: Pick<typeof ConversationExecution.Service, "observe">,
-  journal: Pick<typeof ConversationJournal.Service, "activity">,
+  journal: Pick<typeof ConversationJournal.Service, "activities">,
   metadata: () => Effect.Effect<SnapshotMetadata, TError, TRequirements>,
-  replyFiles: (turnId: string) => Effect.Effect<FileInfo[], FileError> = () =>
-    Effect.succeed([])
+  replyFiles: (
+    turnIds: readonly string[]
+  ) => Effect.Effect<ReadonlyMap<string, FileInfo[]>, FileError> = () =>
+    Effect.succeed(new Map())
 ) {
   return Effect.fn("Conversations.snapshot")(function* () {
     const turns = yield* conversations.recent()
@@ -44,37 +46,38 @@ export function conversationSnapshot<TError, TRequirements>(
     }
     const meta = yield* metadata()
     const settings = yield* conversations.settings()
-    const visible = yield* Effect.forEach(turns, (turn) =>
-      Effect.gen(function* () {
-        const saved =
-          activity.get(turn.id) ?? (yield* journal.activity(turn.id))
-        return {
-          id: turn.id,
-          origin: turn.origin,
-          provenance: turn.provenance,
-          text: turn.text,
-          status: turn.status,
-          preparingFiles: turn.files_pending || undefined,
-          answer: turn.answer,
-          error: turn.error,
-          created_at: turn.created_at,
-          attachments: turn.attachments,
-          replyFiles: yield* replyFiles(turn.id),
-          skills: turn.skills,
-          routing: pinnedRoute(turn, settings),
-          activity: saved,
-          steering: (members.get(turn.id) ?? [])
-            .filter((member) => member.parent_id)
-            .map(({ id, text, delivery, attachments, provenance }) => ({
-              id,
-              text,
-              delivery,
-              attachments,
-              provenance,
-            })),
-        }
-      })
+    const savedActivity = yield* journal.activities(
+      turns.filter((turn) => !activity.has(turn.id)).map((turn) => turn.id)
     )
+    const files = yield* replyFiles(turns.map((turn) => turn.id))
+    const visible = turns.map((turn) => {
+      const saved = activity.get(turn.id) ?? savedActivity.get(turn.id)
+      return {
+        id: turn.id,
+        origin: turn.origin,
+        provenance: turn.provenance,
+        text: turn.text,
+        status: turn.status,
+        preparingFiles: turn.files_pending || undefined,
+        answer: turn.answer,
+        error: turn.error,
+        created_at: turn.created_at,
+        attachments: turn.attachments,
+        replyFiles: files.get(turn.id) ?? [],
+        skills: turn.skills,
+        routing: pinnedRoute(turn, settings),
+        activity: saved,
+        steering: (members.get(turn.id) ?? [])
+          .filter((member) => member.parent_id)
+          .map(({ id, text, delivery, attachments, provenance }) => ({
+            id,
+            text,
+            delivery,
+            attachments,
+            provenance,
+          })),
+      }
+    })
     return {
       ...meta,
       turns: visible,

@@ -5,6 +5,7 @@ import {
   eq,
   getTableColumns,
   inArray,
+  sql,
   sum,
 } from "drizzle-orm"
 import type { EffectDrizzleQueryError } from "drizzle-orm/effect-core/errors"
@@ -78,6 +79,27 @@ export class SqliteWorkspace implements WorkspaceLedger {
             .from(replies)
             .where(eq(replies.turnId, turnId))
             .orderBy(replies.operationId)
+        )
+      )
+      .pipe(Effect.map(Schema.decodeUnknownSync(Schema.Array(FileReply))))
+  }
+  replyFilesForTurns(turnIds: readonly string[]) {
+    if (!turnIds.length) return Effect.succeed([])
+    return this.db
+      .use((orm) =>
+        this.query(
+          orm
+            .select()
+            .from(replies)
+            .where(
+              inArray(
+                replies.turnId,
+                orm
+                  .select({ id: sql<string>`value` })
+                  .from(sql`json_each(${JSON.stringify(turnIds)})`)
+              )
+            )
+            .orderBy(replies.turnId, replies.operationId)
         )
       )
       .pipe(Effect.map(Schema.decodeUnknownSync(Schema.Array(FileReply))))

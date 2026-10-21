@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm"
+import { eq, inArray, sql } from "drizzle-orm"
 import { Effect, Layer, Schema } from "effect"
 
 import type { MemoryLedger } from "../../memory/ledger"
@@ -12,6 +12,10 @@ import {
 import type { ConversationLedger } from "../ledger"
 import { ConversationStorageError } from "../turns"
 import { chatActivity } from "./schema"
+
+const decodeActivity = Schema.decodeUnknownSync(
+  Schema.fromJsonString(Schema.Array(TimelineItem))
+)
 
 export function conversationTransactions(
   db: Sqlite
@@ -47,13 +51,42 @@ export function sqliteConversationMaterialization(
           new ConversationStorageError({ operation: "read activity", cause })
       ).pipe(
         Effect.map((rows) =>
-          rows[0]
-            ? Schema.decodeUnknownSync(
-                Schema.fromJsonString(Schema.Array(TimelineItem))
-              )(rows[0].payload)
-            : undefined
+          rows[0] ? decodeActivity(rows[0].payload) : undefined
         )
       ),
+    readActivities: (ids) =>
+      ids.length === 0
+        ? Effect.succeed(new Map())
+        : mapSqliteError(
+            db.use((orm) =>
+              orm
+                .select({
+                  id: chatActivity.turn_id,
+                  payload: chatActivity.payload,
+                })
+                .from(chatActivity)
+                .where(
+                  inArray(
+                    chatActivity.turn_id,
+                    orm
+                      .select({ id: sql<string>`value` })
+                      .from(sql`json_each(${JSON.stringify(ids)})`)
+                  )
+                )
+            ),
+            (cause) =>
+              new ConversationStorageError({
+                operation: "read activities",
+                cause,
+              })
+          ).pipe(
+            Effect.map(
+              (rows) =>
+                new Map(
+                  rows.map((row) => [row.id, decodeActivity(row.payload)])
+                )
+            )
+          ),
     saveActivity: (id, activity) =>
       mapSqliteError(
         db.use((orm) =>

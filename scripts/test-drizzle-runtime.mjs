@@ -186,6 +186,7 @@ const config :Workerd.Config = (
           "migrations",
           "activity",
           "conversation-members",
+          "conversation-activities",
         ].map((mode) => `guarded-${mode}`),
       ]
   const snapshots = new Map()
@@ -267,6 +268,19 @@ const config :Workerd.Config = (
         released: 1,
       })
     if (guarded) {
+      if (kind === "conversation-activities") {
+        assert.deepEqual(result.counts, [48, 49, 100])
+        assert.equal(result.parity, true)
+        assert.equal(result.singleTransactions, 100)
+        assert.equal(result.bulkTransactions, 1)
+        assert.deepEqual(result.replyCounts, [48, 49, 100])
+        assert.equal(result.replyParity, true)
+        assert.equal(result.replyVisibleOnly, true)
+        assert.equal(result.visibleOnly, true)
+        assert.equal(result.during, true)
+        assert.equal(result.rollback, "Failure")
+        assert.equal(result.afterRollback, 1)
+      }
       if (kind === "conversation-members") {
         assert.deepEqual(result.counts, [48, 49, 100])
         assert.equal(result.hidden, true)

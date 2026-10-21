@@ -31,6 +31,12 @@ export interface ConversationMaterialization {
     readonly TimelineItem[] | undefined,
     ConversationStorageError
   >
+  readActivities: (
+    roots: readonly string[]
+  ) => Effect.Effect<
+    ReadonlyMap<string, readonly TimelineItem[]>,
+    ConversationStorageError
+  >
 }
 export type ConversationJournalError = ConversationFailure | MemoryError
 export class ConversationJournal extends Context.Service<
@@ -40,6 +46,12 @@ export class ConversationJournal extends Context.Service<
       id: string
     ) => Effect.Effect<
       readonly TimelineItem[] | undefined,
+      ConversationJournalError
+    >
+    activities: (
+      ids: readonly string[]
+    ) => Effect.Effect<
+      ReadonlyMap<string, readonly TimelineItem[]>,
       ConversationJournalError
     >
     prompt: (
@@ -91,6 +103,9 @@ export function makeConversationJournal(
   return {
     activity: Effect.fn("Conversations.readActivity")((id) =>
       atomic(() => storage.readActivity(id))
+    ),
+    activities: Effect.fn("Conversations.readActivities")((ids) =>
+      atomic(() => storage.readActivities(ids))
     ),
     prompt: Effect.fn("Conversations.pinPrompt")((id, instructions) =>
       atomic(() =>
