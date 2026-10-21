@@ -171,7 +171,11 @@ export async function agentProxy(
     }
     // Retain both until handoff: encoding owns and locks the original body.
     // A late host registration failure must cancel the returned body too.
-    outgoing = yield* encodeEventStream(request, privateResponse(response))
+    outgoing = yield* encodeEventStream(
+      request,
+      privateResponse(response),
+      bindings.own
+    )
     return outgoing
   }).pipe(
     Effect.scoped,

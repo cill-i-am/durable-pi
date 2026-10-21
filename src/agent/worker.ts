@@ -301,6 +301,7 @@ import type { AgentGatewayBindings } from "./adapters/gateway"
 export { WhatsAppBridge, ChatSdkStateAgent } from "../whatsapp/bridge"
 import { passkeyAgentAction } from "../auth/adapters/passkey-actions"
 import { passkeyTools } from "../auth/adapters/passkey-tools"
+import { ConversationLatency } from "../conversations/latency"
 import { executionRequest } from "../execution/adapters/http"
 import { codeService } from "../execution/adapters/service"
 import { ExecutionStore } from "../execution/adapters/sqlite"
@@ -2539,7 +2540,12 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       )
     )
   }
+  private readonly conversationLatency = new ConversationLatency()
   readonly models = createAgentModels(this.credentials, {
+    onFirstText: (turnId, attemptId, sessionId) =>
+      this.actorRuntime.runSync(
+        this.conversationLatency.provider(turnId, attemptId, sessionId)
+      ),
     start: (request) =>
       this.actorRuntime.runSync(
         Effect.flatMap(PiModelStreams, (streams) => streams.start(request))
@@ -4200,6 +4206,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       if (`${request.method} ${path}` === "GET events")
         return conversationEvents(
           {
+            latency: this.conversationLatency,
             snapshot: () => this.snapshotProgram(),
             activeSession: () =>
               this.conversationService

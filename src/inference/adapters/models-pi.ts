@@ -42,6 +42,7 @@ export function createAgentModels(
       purpose: "conversation" | "compaction" | "memory",
       sessionId?: string
     ) => NativeInferenceObservation | Promise<NativeInferenceObservation>
+    onFirstText?: (turnId: string, attemptId: string, sessionId: string) => void
     botId?: () => string
     waitUntil?: (work: Promise<unknown>) => void
   }
@@ -143,6 +144,7 @@ export function createAgentModels(
   models.streamSimple = (model, context, request) => {
     let observation: NativeInferenceObservation | undefined
     let incomplete = false
+    let firstText = false
     const timing = Effect.runSync(makeInferenceTiming)
     const owned = new PiModelRequest(
       model,
@@ -205,16 +207,18 @@ export function createAgentModels(
           onProviderStreamEvent: (event, selected) =>
             current.callback(async () => {
               Effect.runSync(timing.mark("firstEventMs"))
-              if (
-                typeof event === "object" &&
-                event !== null &&
-                "type" in event &&
-                event.type === "response.output_text.delta" &&
-                "delta" in event &&
-                typeof event.delta === "string" &&
-                event.delta.length > 0
-              )
+              if (isTextDelta(event)) {
                 Effect.runSync(timing.mark("firstTextMs"))
+                if (!firstText) {
+                  firstText = true
+                  if (observation?.turnId && request?.sessionId)
+                    options.onFirstText?.(
+                      observation.turnId,
+                      observation.id,
+                      request.sessionId
+                    )
+                }
+              }
               const usage = providerUsage(event)
               if (usage) await persistUsage(() => observation?.usage(usage))
               if (
@@ -270,4 +274,16 @@ export function safeInferenceError(message: string) {
   if (/unavailable|unsupported|catalog|reasoning|discover/i.test(message))
     return "The selected model or effort could not be verified. Review model availability."
   return "The model request failed. Saved work remains available."
+}
+
+function isTextDelta(event: unknown): boolean {
+  return (
+    typeof event === "object" &&
+    event !== null &&
+    "type" in event &&
+    event.type === "response.output_text.delta" &&
+    "delta" in event &&
+    typeof event.delta === "string" &&
+    event.delta.length > 0
+  )
 }
