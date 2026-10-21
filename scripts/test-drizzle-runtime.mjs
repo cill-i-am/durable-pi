@@ -161,6 +161,7 @@ const config :Workerd.Config = (
         "alchemy-commit",
         "alchemy-rollback",
         "alchemy-nested",
+        "conversation-stream",
         ...[
           "commit",
           "rollback",
@@ -259,6 +260,12 @@ const config :Workerd.Config = (
           `${mode}: outside reader waits for settlement`
         )
     }
+    if (kind === "conversation-stream")
+      assert.deepEqual(result, {
+        delivered: true,
+        cursorFrames: 2,
+        released: 1,
+      })
     if (guarded) {
       if (kind === "conversation-members") {
         assert.deepEqual(result.counts, [48, 49, 100])

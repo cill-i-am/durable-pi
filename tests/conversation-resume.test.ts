@@ -95,15 +95,20 @@ async function read(reader: ReturnType<typeof open>) {
   const chunk = await reader.read()
   if (chunk.done) throw new Error("Stream ended before its checkpoint")
   const text = new TextDecoder().decode(chunk.value)
-  return { bytes: chunk.value.byteLength, value: JSON.parse(text.slice(6)) }
+  const values = text
+    .split("\n\n")
+    .filter((line) => line.startsWith("data: "))
+    .map((line) => JSON.parse(line.slice(6)))
+  return { bytes: chunk.value.byteLength, value: values[0], values }
 }
 it("resumes an unchanged conversation without retransmitting its messages, and fully resyncs changed or restarted state", async () => {
   const checkpoint = new ConversationCheckpoint()
   const first = open(checkpoint, null)
   const snapshot = await read(first)
   expect(snapshot.value.type).toBe("MESSAGES_SNAPSHOT")
-  await read(first)
-  const cursor = (await read(first)).value.value as string
+  const cursor = snapshot.values.find(
+    (value) => value.name === "durable-pi.cursor"
+  ).value as string
   await first.cancel()
   const resumed = open(checkpoint, cursor)
   const next = await read(resumed)
@@ -137,8 +142,6 @@ it("unchanged heartbeat reconciliation does not reserialize the checkpoint", asy
   const checkpoint = new ConversationCheckpoint()
   const current = vi.spyOn(checkpoint, "current")
   const reader = open(checkpoint, null)
-  await read(reader)
-  await read(reader)
   await read(reader)
   await vi.advanceTimersByTimeAsync(15_080)
   const heartbeat = await reader.read()

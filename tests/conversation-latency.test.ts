@@ -108,7 +108,6 @@ it.each([undefined, 4096, 16384] as const)(
       Boolean(paddingBytes)
     )
     await reader.read()
-    await reader.read()
     Effect.runSync(latency.provider("turn", "attempt", "session"))
     state = { ...state, turns: [{ ...turn, answer: "Hello" }] }
     notify()
@@ -379,7 +378,6 @@ it("publishes first text while a post-enqueue durability probe is pending and jo
     true
   )
   const reader = response.body!.getReader()
-  await reader.read()
   await reader.read()
   Effect.runSync(latency.provider("turn", "attempt", "session"))
   state = { ...state, turns: [{ ...turn, answer: "Hello" }] }

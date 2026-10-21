@@ -12,6 +12,7 @@ import {
 import { conversationEventPump } from "../events"
 import { probeHandoff, type HandoffPublication } from "../handoff"
 import type { ConversationLatency, FirstTextTrace } from "../latency"
+import { conversationOutput } from "./output"
 import { chatMessages, messageEvents } from "./tanstack"
 
 export class ConversationStreamError extends Schema.TaggedError<ConversationStreamError>()(
@@ -103,7 +104,6 @@ export function conversationEvents<TError>(
   run: ConversationEventRunner = Effect.runPromiseExit,
   resume?: { checkpoint: ConversationCheckpoint; after: string | null }
 ): Response {
-  const encoder = new TextEncoder()
   const cancelled = new AbortController()
   let consumerClosed = false
   let task: Promise<Exit.Exit<void, unknown>> | undefined
@@ -117,6 +117,7 @@ export function conversationEvents<TError>(
   let publications: HandoffPublication[] = []
   let pullCount = 0
   let lastPullAt: number | undefined
+  let demand = () => {}
   const decodedCursor = Schema.decodeUnknownOption(ConversationCursor)(
     resume?.after
   )
@@ -125,11 +126,8 @@ export function conversationEvents<TError>(
   const body = new ReadableStream<Uint8Array>(
     {
       start(controller) {
-        const send = (value: string) => {
-          if (consumerClosed || (controller.desiredSize ?? 0) <= 0) return false
-          controller.enqueue(encoder.encode(value))
-          return true
-        }
+        const queue = conversationOutput(controller, () => consumerClosed)
+        demand = queue.pull
         const program = Effect.scoped(
           conversationEventPump<TError | ConversationStreamError, never>(
             {
@@ -141,7 +139,7 @@ export function conversationEvents<TError>(
                   return state
                 }),
               beforePublish: (state, previous) =>
-                source.latency && source.confirmation && previous
+                (source.latency && source.confirmation && previous
                   ? source.latency.confirm(
                       state.turns
                         .filter(
@@ -154,7 +152,11 @@ export function conversationEvents<TError>(
                         .map((turn) => turn.id),
                       source.confirmation
                     )
-                  : Effect.void,
+                  : Effect.void
+                ).pipe(
+                  Effect.andThen(queue.reserve),
+                  Effect.annotateLogs({ turnId: state.turns.at(-1)?.id })
+                ),
               afterPublish: source.confirmation
                 ? Effect.suspend(() => {
                     const pending = publications
@@ -200,62 +202,61 @@ export function conversationEvents<TError>(
             },
             {
               publish: (state, previous) => {
-                let revision =
-                  tanstack && !previous
-                    ? resume?.checkpoint.current(state)
-                    : undefined
-                const output =
-                  !previous && revision && revision === acknowledged
-                    ? []
-                    : frames(state, previous, tanstack)
-                // Unchanged heartbeats keep their existing reconciliation work
-                // without adding another full-state serialization for a cursor.
-                if (previous && output.length && tanstack)
-                  revision = resume?.checkpoint.current(state)
-                const firstText = tanstack
-                  ? firstTextDiagnostic(
-                      source.latency,
-                      state,
-                      previous,
-                      snapshotStartedAt,
-                      snapshotReadyAt,
+                try {
+                  let revision =
+                    tanstack && !previous
+                      ? resume?.checkpoint.current(state)
+                      : undefined
+                  const output =
+                    !previous && revision && revision === acknowledged
+                      ? []
+                      : frames(state, previous, tanstack)
+                  // Unchanged heartbeats keep their existing reconciliation work
+                  // without adding another full-state serialization for a cursor.
+                  if (previous && output.length && tanstack)
+                    revision = resume?.checkpoint.current(state)
+                  const firstText = tanstack
+                    ? firstTextDiagnostic(
+                        source.latency,
+                        state,
+                        previous,
+                        snapshotStartedAt,
+                        snapshotReadyAt,
+                        streamId,
+                        source.paddingBytes
+                      )
+                    : { data: "", traces: [] }
+                  let batch =
+                    firstText.data +
+                    output
+                      .map((frame) => `data: ${JSON.stringify(frame)}\n\n`)
+                      .join("")
+                  // Advance the client only after every preceding frame has been
+                  // delivered. A lost tail therefore causes a safe full resync.
+                  if (revision && revision !== sentRevision) {
+                    batch += `data: ${JSON.stringify({ type: "CUSTOM", name: "durable-pi.cursor", value: revision })}\n\n`
+                  }
+                  if (batch && !queue.enqueue(batch)) return false
+                  if (revision) sentRevision = revision
+                  if (streamId)
+                    publications = firstText.traces.map((trace) => ({
+                      turnId: trace.turnId,
+                      attemptId: trace.attemptId,
                       streamId,
-                      source.paddingBytes
-                    )
-                  : { data: "", traces: [] }
-                let diagnostic = firstText.data
-                for (const frame of output) {
-                  if (!send(`${diagnostic}data: ${JSON.stringify(frame)}\n\n`))
-                    return false
-                  diagnostic = ""
+                      publishedAt: trace.publishedAt!,
+                      enqueuedAt: Effect.runSync(Clock.currentTimeMillis),
+                      queue: {
+                        desiredSize: controller.desiredSize,
+                        pullCount,
+                        lastPullAt,
+                      },
+                    }))
+                  return !consumerClosed
+                } finally {
+                  queue.release()
                 }
-                // Advance the client only after every preceding frame has been
-                // delivered. A lost tail therefore causes a safe full resync.
-                if (revision && revision !== sentRevision) {
-                  if (
-                    !send(
-                      `data: ${JSON.stringify({ type: "CUSTOM", name: "durable-pi.cursor", value: revision })}\n\n`
-                    )
-                  )
-                    return false
-                  sentRevision = revision
-                }
-                if (streamId)
-                  publications = firstText.traces.map((trace) => ({
-                    turnId: trace.turnId,
-                    attemptId: trace.attemptId,
-                    streamId,
-                    publishedAt: trace.publishedAt!,
-                    enqueuedAt: Effect.runSync(Clock.currentTimeMillis),
-                    queue: {
-                      desiredSize: controller.desiredSize,
-                      pullCount,
-                      lastPullAt,
-                    },
-                  }))
-                return !consumerClosed
               },
-              heartbeat: () => send(": keepalive\n\n"),
+              heartbeat: queue.heartbeat,
             }
           )()
         ).pipe(
@@ -278,6 +279,7 @@ export function conversationEvents<TError>(
         })
       },
       pull() {
+        demand()
         if (streamId) {
           pullCount++
           lastPullAt = Effect.runSync(Clock.currentTimeMillis)
