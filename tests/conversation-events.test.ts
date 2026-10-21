@@ -361,13 +361,15 @@ describe("conversation stream", () => {
     expect(second.unsubscribe).toHaveBeenCalledOnce()
     expect(vi.getTimerCount()).toBe(0)
   })
-  it("bounds slow-client buffers and releases subscriptions", async () => {
+  it("bounds slow-client buffers and releases subscriptions at the authorization deadline", async () => {
     vi.useFakeTimers()
     const f = fixture()
     for (let count = 0; count < 8; count++) {
       f.change({ ...initial, memory: { ...initial.memory, messages: count } })
       await vi.advanceTimersByTimeAsync(80)
     }
+    expect(f.unsubscribe).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(60_000)
     expect(f.unsubscribe).toHaveBeenCalledOnce()
     expect(vi.getTimerCount()).toBe(0)
     await f.reader.cancel()
