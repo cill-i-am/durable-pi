@@ -162,6 +162,7 @@ const config :Workerd.Config = (
         "alchemy-rollback",
         "alchemy-nested",
         "conversation-stream",
+        "conversation-milestones",
         "conversation-handoff",
         ...[
           "commit",
@@ -262,10 +263,11 @@ const config :Workerd.Config = (
           `${mode}: outside reader waits for settlement`
         )
     }
-    if (kind === "conversation-stream")
+    if (kind === "conversation-stream" || kind === "conversation-milestones")
       assert.deepEqual(result, {
         delivered: true,
         cursorFrames: 2,
+        handoffFrames: kind === "conversation-milestones" ? 2 : 0,
         released: 1,
       })
     if (kind === "conversation-handoff")

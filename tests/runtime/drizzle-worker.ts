@@ -154,9 +154,11 @@ export class DrizzleProbe extends DurableObject<Record<string, never>> {
         ? requested.slice("alchemy-".length)
         : requested
     if (mode === "inspect") return Response.json({ rows: this.rows() })
-    if (mode === "conversation-stream")
+    if (mode === "conversation-stream" || mode === "conversation-milestones")
       return Response.json(
-        await this.runtime.runPromise(conversationStreamProbe())
+        await this.runtime.runPromise(
+          conversationStreamProbe(mode === "conversation-milestones")
+        )
       )
     if (mode === "conversation-handoff")
       return Response.json(

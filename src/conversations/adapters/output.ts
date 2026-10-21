@@ -43,6 +43,7 @@ export function conversationOutput(
   return {
     reserve,
     enqueue,
+    diagnostic: (value: string) => !reserved && enqueue(value),
     release: () => {
       reserved = false
     },

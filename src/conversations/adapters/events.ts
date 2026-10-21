@@ -34,6 +34,7 @@ type Source<TError> = {
   latency?: ConversationLatency
   confirmation?: Effect.Effect<void>
   paddingBytes?: 4096 | 16384
+  milestones?: boolean
   snapshot: () => Effect.Effect<ChatState, TError>
   activeSession: () => Effect.Effect<string | undefined, TError>
   watch: (id: string) => Promise<AgentEventStream>
@@ -135,6 +136,20 @@ export function conversationEvents<TError>(
       start(controller) {
         const queue = conversationOutput(controller, () => consumerClosed)
         demand = queue.pull
+        const milestones =
+          source.milestones && source.latency
+            ? Effect.acquireRelease(
+                Effect.sync(() =>
+                  source.latency!.observe((event) => {
+                    if (event.stage !== "enqueued")
+                      queue.diagnostic(
+                        `data: ${JSON.stringify({ type: "CUSTOM", name: "durable-pi.handoff", value: event })}\n\n`
+                      )
+                  })
+                ),
+                (unsubscribe) => Effect.sync(() => unsubscribe?.())
+              ).pipe(Effect.asVoid)
+            : Effect.void
         const program = Effect.scoped(
           conversationEventPump<TError | ConversationStreamError, never>(
             {
@@ -185,7 +200,7 @@ export function conversationEvents<TError>(
                 Effect.acquireRelease(
                   Effect.sync(() => source.subscribe(notify)),
                   (unsubscribe) => Effect.sync(unsubscribe)
-                ).pipe(Effect.asVoid),
+                ).pipe(Effect.andThen(milestones), Effect.asVoid),
               watch: (id, notify) =>
                 Effect.acquireRelease(
                   streamNative("watch", () => source.watch(id)),

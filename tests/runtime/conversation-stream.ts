@@ -10,7 +10,7 @@ import { ConversationLatency } from "../../src/conversations/latency"
 /** Leave the native body unread across publication. The former four-frame
  * queue accepted the marker/start and then closed before the first text. */
 export const conversationStreamProbe = Effect.fn("Test.conversationStream")(
-  function* () {
+  function* (milestones = false) {
     const turn = {
       id: "turn",
       text: "question",
@@ -31,6 +31,7 @@ export const conversationStreamProbe = Effect.fn("Test.conversationStream")(
     const response = conversationEvents(
       {
         latency,
+        milestones,
         snapshot: () => Effect.sync(() => state),
         activeSession: () => Effect.succeed(undefined),
         watch: async () => {
@@ -53,6 +54,7 @@ export const conversationStreamProbe = Effect.fn("Test.conversationStream")(
           // Let the initial snapshot fill the native queue without consuming it.
           yield* Effect.sleep(10)
           yield* latency.provider("turn", "attempt", "session")
+          yield* latency.native("session")
           state = {
             ...state,
             turns: [{ ...turn, answer: "Native first text" }],
@@ -69,6 +71,7 @@ export const conversationStreamProbe = Effect.fn("Test.conversationStream")(
           return {
             delivered: received.includes('"delta":"Native first text"'),
             cursorFrames: received.match(/durable-pi.cursor/g)?.length ?? 0,
+            handoffFrames: received.match(/durable-pi.handoff/g)?.length ?? 0,
           }
         }),
       (reader) => Effect.promise(() => reader.cancel())
