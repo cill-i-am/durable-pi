@@ -1,4 +1,4 @@
-import { Schema } from "effect"
+import { Array as EffectArray, Option, Schema } from "effect"
 import {
   ArrowUp,
   ChevronDown,
@@ -147,6 +147,18 @@ export function Conversation({
   const active = state?.turns.find((t) =>
     ["queued", "preparing", "running", "stopping"].includes(t.status)
   )
+  // The recent-history window replaces its oldest turn at 100 entries.
+  // With an unchanged row count, the scroller treats an unhandled historical
+  // anchor as new. Only the latest eligible turn should start a scroll.
+  const scrollAnchorId =
+    state &&
+    EffectArray.findLast(
+      state.turns,
+      (turn) => turn.status !== "queued" || turn.id === active?.id
+    ).pipe(
+      Option.map((turn) => turn.id),
+      Option.getOrUndefined
+    )
   useEffect(() => {
     if (state) markReady("history")
     if (composerInput.current && !composerInput.current.disabled)
@@ -378,7 +390,7 @@ export function Conversation({
                     <MessageScrollerItem
                       key={`${turn.id}:user`}
                       messageId={`${turn.id}:user`}
-                      scrollAnchor={!waiting}
+                      scrollAnchor={turn.id === scrollAnchorId}
                     >
                       <Message
                         align={human ? "end" : "start"}
