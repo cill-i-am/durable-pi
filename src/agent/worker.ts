@@ -4207,6 +4207,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       return conversationEvents(
         {
           latency: this.conversationLatency,
+          milestones: url.searchParams.get("diagnostics") === "milestones",
           confirmation:
             url.searchParams.get("diagnostics") === "storage"
               ? Effect.uninterruptible(
