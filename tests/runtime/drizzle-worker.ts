@@ -31,8 +31,10 @@ import {
 
 import { readRunRecords } from "../../src/activity/adapters/run-sqlite"
 import { chatTurns } from "../../src/conversations/adapters/schema"
+import { ConversationStore } from "../../src/conversations/adapters/sqlite-turns"
 import { makeDurableObjectSqlite } from "../../src/storage/durable-object"
 import { migrateSqlite } from "../../src/storage/migrations"
+import type { Sqlite } from "../../src/storage/sqlite"
 import { drizzleProbeRows } from "./drizzle-schema"
 
 declare const DRIZZLE_PROBE_MIGRATIONS: Record<string, string>
@@ -63,6 +65,66 @@ const microtasks = async (rounds = 200) => {
 const reasonTags = <TValue, TError>(exit: Exit.Exit<TValue, TError>) =>
   Exit.isFailure(exit) ? exit.cause.reasons.map((reason) => reason._tag) : []
 
+const conversationMembersProbe = Effect.fn("Test.conversationMembers")(
+  function* (db: Sqlite) {
+    yield* migrateSqlite(db)
+    const store = new ConversationStore(db, {
+      model: "test",
+      thinking: "medium",
+    })
+    const ids = Array.from({ length: 100 }, (_, index) => `root-${index}`)
+    for (const id of ids)
+      yield* db.use((orm) =>
+        orm.insert(chatTurns).values({
+          id,
+          text: id,
+          status: "done",
+          created_at: "2026-10-21",
+          prompt: "private",
+          skill_context: "private",
+        })
+      )
+    const counts = []
+    for (const size of [48, 49, 100])
+      counts.push((yield* store.visibleMembers(ids.slice(0, size))).length)
+    const rows = yield* store.visibleMembers(ids)
+    const first = yield* store.members(ids[0]!, false)
+    const last = yield* store.members(ids[99]!, false)
+    let duringRollback = 0
+    const rollback = yield* db
+      .transaction(() =>
+        Effect.gen(function* () {
+          yield* db.use((orm) =>
+            orm.insert(chatTurns).values({
+              id: "rolled-back-child",
+              parent_id: ids[0]!,
+              mode: "steer",
+              text: "child",
+              status: "done",
+              created_at: "2026-10-21",
+            })
+          )
+          duringRollback = (yield* store.members(ids[0]!, false)).length
+          return yield* Effect.fail("rollback")
+        })
+      )
+      .pipe(Effect.exit)
+    return {
+      counts,
+      hidden: rows.every(
+        (row) =>
+          row.prompt === null &&
+          row.skill_context === "" &&
+          row.input.length === 0
+      ),
+      bindings: [first[0]?.id, last[0]?.id],
+      duringRollback,
+      rollback: rollback._tag,
+      afterRollback: (yield* store.members(ids[0]!, false)).length,
+    }
+  }
+)
+
 /** Isolated local namespace: generated DDL and Drizzle queries only. */
 export class DrizzleProbe extends DurableObject<Record<string, never>> {
   private readonly native = drizzle(this.ctx.storage)
@@ -90,6 +152,15 @@ export class DrizzleProbe extends DurableObject<Record<string, never>> {
         : requested
     if (mode === "inspect") return Response.json({ rows: this.rows() })
     const storage = this.ctx.storage
+    if (guardedMode && mode === "conversation-members")
+      return Response.json(
+        await this.runtime.runPromise(
+          Effect.flatMap(
+            makeDurableObjectSqlite(storage),
+            conversationMembersProbe
+          ).pipe(Effect.scoped)
+        )
+      )
     let beforeCommit = false
     const wrapped = new Proxy(storage, {
       get(target, key) {

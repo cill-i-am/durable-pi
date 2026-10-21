@@ -16,6 +16,60 @@ const input = (text = "hello", mode: "followUp" | "steer" = "followUp") => ({
   mode,
 })
 describe("durable reply admission", () => {
+  it("reuses member query shapes while reading fresh bindings and transaction state", () => {
+    const db = database()
+    const store = new ConversationStore(db, defaults)
+    const root = Effect.runSync(store.admit(input("first root"))).turn
+    const other = Effect.runSync(store.admit(input("second root"))).turn
+    db.run(
+      "UPDATE chat_turns SET prompt = ?, skill_context = ? WHERE id = ?",
+      "private prompt",
+      "private skills",
+      root.id
+    )
+    expect(Effect.runSync(store.members(root.id, false))[0]).toMatchObject({
+      id: root.id,
+      prompt: null,
+      skill_context: "",
+    })
+    expect(
+      Effect.runSync(store.members(other.id, false)).map((row) => row.id)
+    ).toEqual([other.id])
+    expect(Effect.runSync(store.members(root.id))[0]).toMatchObject({
+      id: root.id,
+      prompt: "private prompt",
+      skill_context: "private skills",
+    })
+    const steer = Effect.runSync(store.admit(input("new steer", "steer"))).turn
+    expect(
+      Effect.runSync(store.members(root.id, false)).map((row) => row.id)
+    ).toEqual([root.id, steer.id])
+    const grouped = Effect.runSync(store.visibleMembers([root.id, other.id]))
+    for (const id of [root.id, other.id])
+      expect(
+        grouped.filter((row) => row.id === id || row.parent_id === id)
+      ).toEqual(Effect.runSync(store.members(id, false)))
+    expect(
+      Effect.runSync(store.visibleMembers([other.id])).map((row) => row.id)
+    ).toEqual([other.id])
+    expect(Effect.runSync(store.visibleMembers([]))).toEqual([])
+    expect(Effect.runSync(store.visibleMembers(["missing"]))).toEqual([])
+    const rollback = Effect.runSync(
+      Effect.exit(
+        db.transaction(() =>
+          Effect.gen(function* () {
+            yield* store.admit(input("rolled back steer", "steer"))
+            expect(yield* store.members(root.id, false)).toHaveLength(3)
+            return yield* Effect.fail("rollback")
+          })
+        )
+      )
+    )
+    expect(rollback._tag).toBe("Failure")
+    expect(
+      Effect.runSync(store.members(root.id, false)).map((row) => row.id)
+    ).toEqual([root.id, steer.id])
+  })
   it("reopens saved turns and joins steers while keeping follow-ups fresh", () => {
     const db = database()
     db.run(

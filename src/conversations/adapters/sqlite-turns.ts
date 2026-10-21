@@ -65,6 +65,18 @@ const visible = {
   skill_context: literal(""),
   input: literal("[]"),
 }
+const membersQuery = (orm: EffectSqliteDatabase, includeInput: boolean) =>
+  orm
+    .select(includeInput ? getTableColumns(chatTurns) : visible)
+    .from(chatTurns)
+    .where(
+      or(
+        eq(chatTurns.id, sql.placeholder("rootId")),
+        eq(chatTurns.parent_id, sql.placeholder("rootId"))
+      )
+    )
+    .orderBy(asc(chatTurns.sequence))
+    .prepare()
 const attempt = <TValue>(body: () => TValue) =>
   Effect.try({
     try: body,
@@ -77,6 +89,11 @@ const attempt = <TValue>(body: () => TValue) =>
 
 export class ConversationStore implements ConversationLedger {
   readonly transactionGroup: object
+  // Reuse compiled SQL and its row mapper, never rows or a transaction lease.
+  private readonly memberQueries = new Map<
+    boolean,
+    ReturnType<typeof membersQuery>
+  >()
   constructor(
     private readonly db: Sqlite,
     private readonly defaults: ModelSettings
@@ -389,13 +406,38 @@ export class ConversationStore implements ConversationLedger {
     rootId: string,
     includeInput = true
   ): ReturnType<ConversationLedger["members"]> {
-    return this.query((orm) =>
-      orm
-        .select(includeInput ? getTableColumns(chatTurns) : visible)
+    return this.query((orm) => {
+      let query = this.memberQueries.get(includeInput)
+      if (!query) {
+        query = membersQuery(orm, includeInput)
+        this.memberQueries.set(includeInput, query)
+      }
+      return query.all({ rootId })
+    }).pipe(Effect.map((rows) => rows.map(restore)))
+  }
+  visibleMembers(
+    rootIds: readonly string[]
+  ): ReturnType<ConversationLedger["visibleMembers"]> {
+    if (!rootIds.length) return Effect.succeed([])
+    return this.query((orm) => {
+      // A single bound keyset keeps even 100 roots below DO SQLite's 100-variable limit.
+      const roots = orm
+        .$with("visible_roots")
+        .as(
+          orm
+            .select({ id: sql<string>`value`.as("id") })
+            .from(sql`json_each(${JSON.stringify(rootIds)})`)
+        )
+      const ids = orm.select({ id: roots.id }).from(roots)
+      return orm
+        .with(roots)
+        .select(visible)
         .from(chatTurns)
-        .where(or(eq(chatTurns.id, rootId), eq(chatTurns.parent_id, rootId)))
+        .where(
+          or(inArray(chatTurns.id, ids), inArray(chatTurns.parent_id, ids))
+        )
         .orderBy(asc(chatTurns.sequence))
-    ).pipe(Effect.map((rows) => rows.map(restore)))
+    }).pipe(Effect.map((rows) => rows.map(restore)))
   }
   admit(
     input: Submission,
