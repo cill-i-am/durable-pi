@@ -110,14 +110,21 @@ export function conversationEvents<TError>(
   let sentRevision: string | undefined
   let snapshotStartedAt = 0
   let snapshotReadyAt = 0
-  const streamId = source.confirmation ? crypto.randomUUID() : undefined
-  const openedAt = streamId
+  const streamId = crypto.randomUUID()
+  const openedAt = source.confirmation
     ? Effect.runSync(Clock.currentTimeMillis)
     : undefined
   let publications: HandoffPublication[] = []
   let pullCount = 0
   let lastPullAt: number | undefined
   let demand = () => {}
+  const noteEnqueued = (traces: readonly FirstTextTrace[]) => {
+    if (source.latency)
+      for (const trace of traces)
+        Effect.runSync(
+          source.latency.enqueued(trace.turnId, trace.attemptId, streamId)
+        )
+  }
   const decodedCursor = Schema.decodeUnknownOption(ConversationCursor)(
     resume?.after
   )
@@ -223,7 +230,7 @@ export function conversationEvents<TError>(
                         snapshotStartedAt,
                         snapshotReadyAt,
                         streamId,
-                        source.paddingBytes
+                        source.confirmation ? source.paddingBytes : undefined
                       )
                     : { data: "", traces: [] }
                   let batch =
@@ -237,8 +244,9 @@ export function conversationEvents<TError>(
                     batch += `data: ${JSON.stringify({ type: "CUSTOM", name: "durable-pi.cursor", value: revision })}\n\n`
                   }
                   if (batch && !queue.enqueue(batch)) return false
+                  noteEnqueued(firstText.traces)
                   if (revision) sentRevision = revision
-                  if (streamId)
+                  if (source.confirmation)
                     publications = firstText.traces.map((trace) => ({
                       turnId: trace.turnId,
                       attemptId: trace.attemptId,
@@ -280,7 +288,7 @@ export function conversationEvents<TError>(
       },
       pull() {
         demand()
-        if (streamId) {
+        if (source.confirmation) {
           pullCount++
           lastPullAt = Effect.runSync(Clock.currentTimeMillis)
         }

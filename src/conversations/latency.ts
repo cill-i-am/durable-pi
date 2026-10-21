@@ -1,5 +1,12 @@
 import { Clock, Effect } from "effect"
 
+export type HandoffMilestone = {
+  readonly stage: "provider" | "native" | "enqueued"
+  readonly turnId: string
+  readonly attemptId: string
+  readonly streamId?: string
+}
+
 export type FirstTextTrace = {
   readonly turnId: string
   readonly attemptId: string
@@ -17,10 +24,35 @@ export type FirstTextTrace = {
  * journal or cache of message content. All actor milestones share one clock. */
 export class ConversationLatency {
   private readonly traces = new Map<string, FirstTextTrace>()
+  private readonly observers = new Set<(event: HandoffMilestone) => void>()
   private readonly confirmations = new WeakMap<
     FirstTextTrace,
     Effect.Effect<void>
   >()
+
+  /** Opt-in, bounded observers of causal milestones. No clocks or text. */
+  observe(listener: (event: HandoffMilestone) => void) {
+    if (this.observers.size >= 2) return undefined
+    this.observers.add(listener)
+    return () => {
+      this.observers.delete(listener)
+    }
+  }
+
+  private emit(event: HandoffMilestone) {
+    for (const listener of this.observers) {
+      try {
+        listener(event)
+      } catch {
+        this.observers.delete(listener)
+      }
+    }
+  }
+
+  enqueued = (turnId: string, attemptId: string, streamId: string) =>
+    Effect.sync(() =>
+      this.emit({ stage: "enqueued", turnId, attemptId, streamId })
+    )
 
   provider = (turnId: string, attemptId: string, sessionId: string) =>
     Effect.gen({ self: this }, function* () {
@@ -31,6 +63,7 @@ export class ConversationLatency {
         sessionId,
         providerAt: yield* Clock.currentTimeMillis,
       })
+      this.emit({ stage: "provider", turnId, attemptId })
       if (this.traces.size > 32)
         this.traces.delete(this.traces.keys().next().value!)
     })
@@ -42,8 +75,14 @@ export class ConversationLatency {
         if (
           trace.sessionId === sessionId &&
           trace.nativeObservedAt === undefined
-        )
+        ) {
           trace.nativeObservedAt = now
+          this.emit({
+            stage: "native",
+            turnId: trace.turnId,
+            attemptId: trace.attemptId,
+          })
+        }
     })
 
   /** Opt-in diagnostic: join the platform durability barrier without changing

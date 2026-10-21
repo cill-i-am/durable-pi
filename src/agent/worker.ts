@@ -301,6 +301,7 @@ import type { AgentGatewayBindings } from "./adapters/gateway"
 export { WhatsAppBridge, ChatSdkStateAgent } from "../whatsapp/bridge"
 import { passkeyAgentAction } from "../auth/adapters/passkey-actions"
 import { passkeyTools } from "../auth/adapters/passkey-tools"
+import { clocklessHandoff } from "../conversations/adapters/handoff"
 import { handoffPaddingBytes } from "../conversations/handoff"
 import { ConversationLatency } from "../conversations/latency"
 import { executionRequest } from "../execution/adapters/http"
@@ -4188,6 +4189,58 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       )
     })
   }
+  private conversationEventsProgram(request: Request) {
+    return Effect.gen({ self: this }, function* () {
+      const url = new URL(request.url)
+      if (url.searchParams.get("diagnostics") === "handoff")
+        return yield* clocklessHandoff(
+          this.conversationLatency,
+          Effect.promise(() => this.ctx.storage.sync()),
+          request.signal,
+          (program, options) =>
+            this.actorRuntime.runPromiseExit(
+              program.pipe(Effect.provide(WorkerTelemetry)),
+              options
+            ),
+          (task) => this.ctx.waitUntil(task)
+        )
+      return conversationEvents(
+        {
+          latency: this.conversationLatency,
+          confirmation:
+            url.searchParams.get("diagnostics") === "storage"
+              ? Effect.uninterruptible(
+                  Effect.promise(() => this.ctx.storage.sync())
+                )
+              : undefined,
+          paddingBytes: handoffPaddingBytes.get(
+            url.searchParams.get("padding") ?? ""
+          ),
+          snapshot: () => this.snapshotProgram(),
+          activeSession: () =>
+            this.conversationService
+              .active()
+              .pipe(Effect.map((turn) => turn?.session_id ?? undefined)),
+          watch: (id) => this.harness.session(id).events(),
+          subscribe: (listener) => {
+            this.conversationListeners.add(listener)
+            return () => this.conversationListeners.delete(listener)
+          },
+        },
+        request.signal,
+        url.searchParams.get("protocol") === "tanstack",
+        (program, options) =>
+          this.actorRuntime.runPromiseExit(
+            program.pipe(Effect.provide(WorkerTelemetry)),
+            options
+          ),
+        {
+          checkpoint: this.conversationCheckpoint,
+          after: url.searchParams.get("after"),
+        }
+      )
+    })
+  }
   private conversationHttpProgram(request: Request, path: string) {
     return Effect.gen({ self: this }, function* () {
       const url = new URL(request.url)
@@ -4206,41 +4259,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       if (isMemoryRead(request, path))
         return yield* memoryReadRequest(request, path)
       if (`${request.method} ${path}` === "GET events")
-        return conversationEvents(
-          {
-            latency: this.conversationLatency,
-            confirmation:
-              url.searchParams.get("diagnostics") === "storage"
-                ? Effect.uninterruptible(
-                    Effect.promise(() => this.ctx.storage.sync())
-                  )
-                : undefined,
-            paddingBytes: handoffPaddingBytes.get(
-              url.searchParams.get("padding") ?? ""
-            ),
-            snapshot: () => this.snapshotProgram(),
-            activeSession: () =>
-              this.conversationService
-                .active()
-                .pipe(Effect.map((turn) => turn?.session_id ?? undefined)),
-            watch: (id) => this.harness.session(id).events(),
-            subscribe: (listener) => {
-              this.conversationListeners.add(listener)
-              return () => this.conversationListeners.delete(listener)
-            },
-          },
-          request.signal,
-          url.searchParams.get("protocol") === "tanstack",
-          (program, options) =>
-            this.actorRuntime.runPromiseExit(
-              program.pipe(Effect.provide(WorkerTelemetry)),
-              options
-            ),
-          {
-            checkpoint: this.conversationCheckpoint,
-            after: url.searchParams.get("after"),
-          }
-        )
+        return yield* this.conversationEventsProgram(request)
       if (`${request.method} ${path}` === "GET state")
         return Response.json(yield* this.snapshotProgram())
       if (`${request.method} ${path}` === "POST memory/retry") {

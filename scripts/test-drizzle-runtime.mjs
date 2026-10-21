@@ -162,6 +162,7 @@ const config :Workerd.Config = (
         "alchemy-rollback",
         "alchemy-nested",
         "conversation-stream",
+        "conversation-handoff",
         ...[
           "commit",
           "rollback",
@@ -266,6 +267,23 @@ const config :Workerd.Config = (
         delivered: true,
         cursorFrames: 2,
         released: 1,
+      })
+    if (kind === "conversation-handoff")
+      assert.deepEqual(result, {
+        stages: [
+          "control-start",
+          "ready",
+          "provider",
+          "native",
+          "enqueued",
+          "yielded",
+          "confirmed",
+        ],
+        capacityBounded: true,
+        released: true,
+        overflowReleased: true,
+        abortReleased: true,
+        privateDataAbsent: true,
       })
     if (guarded) {
       if (kind === "conversation-activities") {
