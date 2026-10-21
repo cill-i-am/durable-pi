@@ -13,9 +13,10 @@ import {
 import { agentRuntimeReader } from "../../agents/adapters/statuses"
 import { AgentId, agentObjectName, homeAgentId } from "../../agents/domain"
 import { agentStatuses } from "../../agents/statuses"
+import { observeFirstText } from "../../conversations/adapters/latency"
 import type { accountConnectionRpc } from "../../inference/adapters/account-rpc"
 import { reportService } from "../../observability/events"
-import { WorkerTelemetry } from "../../observability/worker"
+import { WorkerTelemetry, runObserved } from "../../observability/worker"
 import { releaseForwardedResponse } from "../../shared/adapters/response"
 import { preserveFatal } from "../../shared/effect"
 import { nativeOperation } from "../../shared/interop"
@@ -66,6 +67,35 @@ const forward = (peer: Peer, request: Request) =>
       })
     )
   })
+
+const observeGateway = (
+  request: Request,
+  response: Response,
+  own?: (work: Promise<void>) => void
+) => {
+  const url = new URL(request.url)
+  if (
+    !url.pathname.endsWith("/events") ||
+    request.method !== "GET" ||
+    url.searchParams.get("diagnostics") !== "storage" ||
+    !own
+  )
+    return Effect.succeed(response)
+  return observeFirstText(response, (trace) => {
+    own(
+      runObserved(
+        Effect.logInfo("Conversation.firstTextGateway").pipe(
+          Effect.annotateLogs({
+            turnId: trace.turnId,
+            attemptId: trace.attemptId,
+            publishedAt: trace.publishedAt,
+            gatewayReceivedAt: trace.receivedAt,
+          })
+        )
+      ).catch(() => {})
+    )
+  })
+}
 
 function suspendFamilyWork(
   root: Peer,
@@ -188,7 +218,7 @@ export function agentGatewayProgram(
         owner
       )
     )
-    return yield* forward(target, request)
+    return yield* observeGateway(request, yield* forward(target, request), own)
   }).pipe(
     Effect.scoped,
     Effect.onExit((exit) =>

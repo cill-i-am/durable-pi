@@ -378,3 +378,21 @@ it.each(["expected", "defect", "mixed"])(
     expect(f.target.fetch).not.toHaveBeenCalled()
   }
 )
+
+it.each([false, true])(
+  "only wraps an explicitly diagnostic event stream (%s)",
+  async (diagnostic) => {
+    const f = fixture()
+    const original = new Response("data: unchanged\n\n", {
+      headers: { "content-type": "text/event-stream" },
+    })
+    f.target.fetch.mockResolvedValue(original)
+    const url = new URL(f.request(undefined, "events").url)
+    if (diagnostic) url.searchParams.set("diagnostics", "storage")
+    const request = new Request(url, { headers: { "x-owner-id": "owner" } })
+    const response = await agentGateway(request, f.env, f.ctx)
+    expect(response === original).toBe(!diagnostic)
+    expect(f.target.configureBot).toHaveBeenCalledOnce()
+    expect(await response.text()).toBe("data: unchanged\n\n")
+  }
+)
