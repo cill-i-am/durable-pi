@@ -10,7 +10,8 @@ import {
   type ConversationFrame,
 } from "../contracts"
 import { conversationEventPump } from "../events"
-import type { ConversationLatency } from "../latency"
+import { probeHandoff, type HandoffPublication } from "../handoff"
+import type { ConversationLatency, FirstTextTrace } from "../latency"
 import { chatMessages, messageEvents } from "./tanstack"
 
 export class ConversationStreamError extends Schema.TaggedError<ConversationStreamError>()(
@@ -108,6 +109,10 @@ export function conversationEvents<TError>(
   let sentRevision: string | undefined
   let snapshotStartedAt = 0
   let snapshotReadyAt = 0
+  const streamId = source.confirmation ? crypto.randomUUID() : undefined
+  let publications: HandoffPublication[] = []
+  let pullCount = 0
+  let lastPullAt: number | undefined
   const decodedCursor = Schema.decodeUnknownOption(ConversationCursor)(
     resume?.after
   )
@@ -146,6 +151,22 @@ export function conversationEvents<TError>(
                       source.confirmation
                     )
                   : Effect.void,
+              afterPublish: source.confirmation
+                ? Effect.suspend(() => {
+                    const pending = publications
+                    publications = []
+                    return Effect.forEach(
+                      pending,
+                      (publication) =>
+                        probeHandoff(publication, source.confirmation!, () => ({
+                          desiredSize: controller.desiredSize,
+                          pullCount,
+                          lastPullAt,
+                        })).pipe(Effect.forkScoped),
+                      { discard: true }
+                    )
+                  })
+                : undefined,
               activeSession: source.activeSession,
               subscribe: (notify) =>
                 Effect.acquireRelease(
@@ -187,15 +208,17 @@ export function conversationEvents<TError>(
                 // without adding another full-state serialization for a cursor.
                 if (previous && output.length && tanstack)
                   revision = resume?.checkpoint.current(state)
-                let diagnostic = tanstack
+                const firstText = tanstack
                   ? firstTextDiagnostic(
                       source.latency,
                       state,
                       previous,
                       snapshotStartedAt,
-                      snapshotReadyAt
+                      snapshotReadyAt,
+                      streamId
                     )
-                  : ""
+                  : { data: "", traces: [] }
+                let diagnostic = firstText.data
                 for (const frame of output) {
                   if (!send(`${diagnostic}data: ${JSON.stringify(frame)}\n\n`))
                     return false
@@ -212,6 +235,19 @@ export function conversationEvents<TError>(
                     return false
                   sentRevision = revision
                 }
+                if (streamId)
+                  publications = firstText.traces.map((trace) => ({
+                    turnId: trace.turnId,
+                    attemptId: trace.attemptId,
+                    streamId,
+                    publishedAt: trace.publishedAt!,
+                    enqueuedAt: Effect.runSync(Clock.currentTimeMillis),
+                    queue: {
+                      desiredSize: controller.desiredSize,
+                      pullCount,
+                      lastPullAt,
+                    },
+                  }))
                 return !consumerClosed
               },
               heartbeat: () => send(": keepalive\n\n"),
@@ -235,6 +271,12 @@ export function conversationEvents<TError>(
             controller.close()
           }
         })
+      },
+      pull() {
+        if (streamId) {
+          pullCount++
+          lastPullAt = Effect.runSync(Clock.currentTimeMillis)
+        }
       },
       async cancel() {
         consumerClosed = true
@@ -260,18 +302,22 @@ function firstTextDiagnostic(
   state: ChatState,
   previous: ChatState | undefined,
   started: number,
-  ready: number
+  ready: number,
+  streamId?: string
 ) {
-  if (!latency || !previous) return ""
+  const traces: FirstTextTrace[] = []
+  if (!latency || !previous) return { data: "", traces }
   let diagnostic = ""
   for (const turn of state.turns) {
     const before = previous.turns.find((candidate) => candidate.id === turn.id)
     if (!turn.answer || before?.answer) continue
     const trace = Effect.runSync(latency.publication(turn.id, started, ready))
-    if (trace)
-      diagnostic += `data: ${JSON.stringify({ type: "CUSTOM", name: "durable-pi.first-text", value: trace })}\n\n`
+    if (trace) {
+      traces.push(trace)
+      diagnostic += `data: ${JSON.stringify({ type: "CUSTOM", name: "durable-pi.first-text", value: { ...trace, ...(streamId ? { streamId } : {}) } })}\n\n`
+    }
   }
-  return diagnostic
+  return { data: diagnostic, traces }
 }
 
 function hasNativeText(event: AgentEvent): boolean {
