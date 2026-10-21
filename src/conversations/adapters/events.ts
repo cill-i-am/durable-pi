@@ -1,6 +1,6 @@
-import type { AgentEventStream } from "@earendil-works/pi-durable"
+import type { AgentEvent, AgentEventStream } from "@earendil-works/pi-durable"
 import type { StreamChunk } from "@tanstack/ai/client"
-import { Cause, Effect, Exit, Schema } from "effect"
+import { Cause, Clock, Effect, Exit, Schema } from "effect"
 
 import { orDieAll } from "../../shared/effect"
 import { nativeOperation } from "../../shared/interop"
@@ -10,6 +10,7 @@ import {
   type ConversationFrame,
 } from "../contracts"
 import { conversationEventPump } from "../events"
+import type { ConversationLatency } from "../latency"
 import { chatMessages, messageEvents } from "./tanstack"
 
 export class ConversationStreamError extends Schema.TaggedError<ConversationStreamError>()(
@@ -28,6 +29,7 @@ export type ConversationEventRunner = <TValue, TError>(
   options: { signal: AbortSignal }
 ) => Promise<Exit.Exit<TValue, unknown>>
 type Source<TError> = {
+  latency?: ConversationLatency
   snapshot: () => Effect.Effect<ChatState, TError>
   activeSession: () => Effect.Effect<string | undefined, TError>
   watch: (id: string) => Promise<AgentEventStream>
@@ -103,6 +105,8 @@ export function conversationEvents<TError>(
   let consumerClosed = false
   let task: Promise<Exit.Exit<void, unknown>> | undefined
   let sentRevision: string | undefined
+  let snapshotStartedAt = 0
+  let snapshotReadyAt = 0
   const decodedCursor = Schema.decodeUnknownOption(ConversationCursor)(
     resume?.after
   )
@@ -119,7 +123,13 @@ export function conversationEvents<TError>(
         const program = Effect.scoped(
           conversationEventPump<TError | ConversationStreamError, never>(
             {
-              snapshot: source.snapshot,
+              snapshot: () =>
+                Effect.gen(function* () {
+                  snapshotStartedAt = yield* Clock.currentTimeMillis
+                  const state = yield* source.snapshot()
+                  snapshotReadyAt = yield* Clock.currentTimeMillis
+                  return state
+                }),
               activeSession: source.activeSession,
               subscribe: (notify) =>
                 Effect.acquireRelease(
@@ -135,7 +145,15 @@ export function conversationEvents<TError>(
                     )
                 ).pipe(
                   Effect.flatMap((watch) =>
-                    Effect.sync(() => watch.start(async () => notify()))
+                    Effect.sync(() => {
+                      if (source.latency && hasNativeText(watch.snapshot))
+                        Effect.runSync(source.latency.native(id))
+                      watch.start(async (events) => {
+                        if (source.latency && events.some(hasNativeText))
+                          Effect.runSync(source.latency.native(id))
+                        notify()
+                      })
+                    })
                   )
                 ),
             },
@@ -153,8 +171,20 @@ export function conversationEvents<TError>(
                 // without adding another full-state serialization for a cursor.
                 if (previous && output.length && tanstack)
                   revision = resume?.checkpoint.current(state)
-                for (const frame of output)
-                  if (!send(`data: ${JSON.stringify(frame)}\n\n`)) return false
+                let diagnostic = tanstack
+                  ? firstTextDiagnostic(
+                      source.latency,
+                      state,
+                      previous,
+                      snapshotStartedAt,
+                      snapshotReadyAt
+                    )
+                  : ""
+                for (const frame of output) {
+                  if (!send(`${diagnostic}data: ${JSON.stringify(frame)}\n\n`))
+                    return false
+                  diagnostic = ""
+                }
                 // Advance the client only after every preceding frame has been
                 // delivered. A lost tail therefore causes a safe full resync.
                 if (revision && revision !== sentRevision) {
@@ -206,5 +236,39 @@ export function conversationEvents<TError>(
       "Cache-Control": "private, no-store",
       "X-Accel-Buffering": "no",
     },
+  })
+}
+
+function firstTextDiagnostic(
+  latency: ConversationLatency | undefined,
+  state: ChatState,
+  previous: ChatState | undefined,
+  started: number,
+  ready: number
+) {
+  if (!latency || !previous) return ""
+  let diagnostic = ""
+  for (const turn of state.turns) {
+    const before = previous.turns.find((candidate) => candidate.id === turn.id)
+    if (!turn.answer || before?.answer) continue
+    const trace = Effect.runSync(latency.publication(turn.id, started, ready))
+    if (trace)
+      diagnostic += `data: ${JSON.stringify({ type: "CUSTOM", name: "durable-pi.first-text", value: trace })}\n\n`
+  }
+  return diagnostic
+}
+
+function hasNativeText(event: AgentEvent): boolean {
+  const text = (content: readonly { type: string; text?: string }[]) =>
+    content.some((block) => block.type === "text" && Boolean(block.text))
+  if (event.type === "message_start")
+    return event.message.role === "assistant" && text(event.message.content)
+  if (event.type === "snapshot")
+    return text(event.generation?.message?.content ?? [])
+  if (event.type !== "message_update") return false
+  return event.changes.some((change) => {
+    if (change.type === "text_delta") return change.delta.length > 0
+    if (change.type === "message") return text(change.message.content)
+    return "block" in change && text([change.block])
   })
 }

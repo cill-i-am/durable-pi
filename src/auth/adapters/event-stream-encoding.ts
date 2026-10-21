@@ -3,6 +3,9 @@ import { constants, createGzip } from "node:zlib"
 
 import { Effect, Schema } from "effect"
 
+import { runObserved } from "../../observability/worker"
+import { makeEventStreamLatency } from "./event-stream-latency"
+
 function acceptsGzip(value: string | null) {
   let wildcard = false
   for (const entry of (value ?? "").toLowerCase().split(",")) {
@@ -22,7 +25,11 @@ function acceptsGzip(value: string | null) {
 /** Website transport adapter. The returned body owns its codec and upstream
  * reader; application streams and schemas stay intact. */
 export const encodeEventStream = Effect.fn("Website.encodeEventStream")(
-  (request: Request, response: Response) =>
+  (
+    request: Request,
+    response: Response,
+    own?: (work: Promise<unknown>) => void
+  ) =>
     Effect.sync(() => {
       if (
         request.method !== "GET" ||
@@ -62,6 +69,7 @@ export const encodeEventStream = Effect.fn("Website.encodeEventStream")(
       const headers = new Headers(response.headers)
       headers.set("Content-Encoding", "gzip")
       headers.delete("Content-Length")
+      const latency = own ? Effect.runSync(makeEventStreamLatency) : undefined
       const codec = Duplex.toWeb(createGzip({ flush: constants.Z_SYNC_FLUSH }))
       const reader = codec.readable.getReader()
       const writer = codec.writable.getWriter()
@@ -73,7 +81,10 @@ export const encodeEventStream = Effect.fn("Website.encodeEventStream")(
         start(controller) {
           void writer.closed.catch((cause) => controller.error(cause))
         },
-        write: (chunk) => writer.write(chunk),
+        write: (chunk) => {
+          if (latency) Effect.runSync(latency.receive(chunk))
+          return writer.write(chunk)
+        },
         close: () => writer.close(),
         abort: (cause) => writer.abort(cause),
       })
@@ -95,12 +106,25 @@ export const encodeEventStream = Effect.fn("Website.encodeEventStream")(
         async pull(controller) {
           const next = await reader.read()
           if (next.done) controller.close()
-          else
+          else {
             controller.enqueue(
               new Uint8Array(
                 Schema.decodeUnknownSync(Schema.Uint8Array)(next.value)
               )
             )
+            const trace = latency && Effect.runSync(latency.output)
+            if (trace && own) {
+              try {
+                own(
+                  runObserved(
+                    Effect.logInfo("Conversation.firstTextProxy").pipe(
+                      Effect.annotateLogs(trace)
+                    )
+                  ).catch(() => {})
+                )
+              } catch {}
+            }
+          }
         },
         cancel: stop,
       })

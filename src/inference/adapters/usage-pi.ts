@@ -11,6 +11,7 @@ import type {
 export interface NativeInferenceObservation {
   readonly id: string
   readonly turnId: string | null
+  readonly sessionId?: string
   usage: (report: UsageReport) => void | Promise<void>
   end: (
     outcome: TerminalOutcome,
