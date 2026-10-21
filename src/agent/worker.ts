@@ -2588,11 +2588,12 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           model,
           thinking,
         })
-      return this.observeInference(
+      const observation = await this.observeInference(
         { ...route, model, thinking },
         turn?.id ?? null,
         purpose
       )
+      return { ...observation, sessionId: turn?.session_id ?? undefined }
     },
     cacheKey: `pi-${this.ctx.id.toString()}`,
   })

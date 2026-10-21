@@ -209,13 +209,13 @@ export function createAgentModels(
               Effect.runSync(timing.mark("firstEventMs"))
               if (isTextDelta(event)) {
                 Effect.runSync(timing.mark("firstTextMs"))
-                if (!firstText) {
+                if (!firstText && request?.cacheRetention !== "none") {
                   firstText = true
-                  if (observation?.turnId && request?.sessionId)
+                  if (observation?.turnId && observation.sessionId)
                     options.onFirstText?.(
                       observation.turnId,
                       observation.id,
-                      request.sessionId
+                      observation.sessionId
                     )
                 }
               }

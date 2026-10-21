@@ -1,4 +1,4 @@
-import type { AgentEventStream } from "@earendil-works/pi-durable"
+import type { AgentEvent, AgentEventStream } from "@earendil-works/pi-durable"
 import type { StreamChunk } from "@tanstack/ai/client"
 import { Cause, Clock, Effect, Exit, Schema } from "effect"
 
@@ -145,24 +145,15 @@ export function conversationEvents<TError>(
                     )
                 ).pipe(
                   Effect.flatMap((watch) =>
-                    Effect.sync(() =>
+                    Effect.sync(() => {
+                      if (source.latency && hasNativeText(watch.snapshot))
+                        Effect.runSync(source.latency.native(id))
                       watch.start(async (events) => {
-                        if (
-                          source.latency &&
-                          events.some(
-                            (event) =>
-                              event.type === "message_update" &&
-                              event.changes.some(
-                                (change) =>
-                                  change.type === "text_delta" &&
-                                  change.delta.length > 0
-                              )
-                          )
-                        )
+                        if (source.latency && events.some(hasNativeText))
                           Effect.runSync(source.latency.native(id))
                         notify()
                       })
-                    )
+                    })
                   )
                 ),
             },
@@ -265,4 +256,19 @@ function firstTextDiagnostic(
       diagnostic += `data: ${JSON.stringify({ type: "CUSTOM", name: "durable-pi.first-text", value: trace })}\n\n`
   }
   return diagnostic
+}
+
+function hasNativeText(event: AgentEvent): boolean {
+  const text = (content: readonly { type: string; text?: string }[]) =>
+    content.some((block) => block.type === "text" && Boolean(block.text))
+  if (event.type === "message_start")
+    return event.message.role === "assistant" && text(event.message.content)
+  if (event.type === "snapshot")
+    return text(event.generation?.message?.content ?? [])
+  if (event.type !== "message_update") return false
+  return event.changes.some((change) => {
+    if (change.type === "text_delta") return change.delta.length > 0
+    if (change.type === "message") return text(change.message.content)
+    return "block" in change && text([change.block])
+  })
 }
