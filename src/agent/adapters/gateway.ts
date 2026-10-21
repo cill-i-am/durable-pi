@@ -90,6 +90,8 @@ const observeGateway = (
             attemptId: trace.attemptId,
             publishedAt: trace.publishedAt,
             gatewayReceivedAt: trace.receivedAt,
+            gatewayReadStartedAt: trace.readStartedAt,
+            streamId: trace.streamId,
           })
         )
       ).catch(() => {})

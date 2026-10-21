@@ -201,6 +201,7 @@ it("observes a split marker without changing streamed bytes or retaining private
       publishedAt: 100,
       receivedAt: expect.any(Number),
       outputAt: expect.any(Number),
+      readStartedAt: expect.any(Number),
     },
   ])
   expect(source.locked).toBe(false)
@@ -258,4 +259,125 @@ it("propagates upstream stream failure and releases its reader", async () => {
   )
   await expect(response.text()).rejects.toBe(error)
   expect(source.locked).toBe(false)
+})
+
+it("records the outstanding gateway read before a delayed first-text chunk", async () => {
+  const { observeFirstText } =
+    await import("../src/conversations/adapters/latency")
+  vi.useFakeTimers()
+  vi.setSystemTime(1000)
+  let controller!: ReadableStreamDefaultController<Uint8Array>
+  const source = new ReadableStream<Uint8Array>({
+    start(value) {
+      controller = value
+    },
+  })
+  const observed: unknown[] = []
+  const response = Effect.runSync(
+    observeFirstText(
+      new Response(source, {
+        headers: { "content-type": "text/event-stream" },
+      }),
+      (trace) => {
+        observed.push(trace)
+      }
+    )
+  )
+  const reading = response.text()
+  await Promise.resolve()
+  await Promise.resolve()
+  vi.setSystemTime(2000)
+  controller.enqueue(
+    new TextEncoder().encode(
+      marker.replace(
+        '"publishedAt":100',
+        '"publishedAt":100,"streamId":"diagnostic-stream"'
+      )
+    )
+  )
+  controller.close()
+  await reading
+  expect(observed).toEqual([
+    {
+      turnId: "turn",
+      attemptId: "attempt",
+      publishedAt: 100,
+      streamId: "diagnostic-stream",
+      readStartedAt: 1000,
+      receivedAt: 2000,
+      outputAt: 2000,
+    },
+  ])
+})
+
+it("publishes first text while a post-enqueue durability probe is pending and joins cancellation", async () => {
+  const { conversationEvents } =
+    await import("../src/conversations/adapters/events")
+  const latency = new ConversationLatency()
+  const turn = {
+    id: "turn",
+    text: "hi",
+    answer: "",
+    status: "running" as const,
+    error: null,
+    created_at: "2026-10-21T00:00:00Z",
+  }
+  let state = {
+    turns: [turn],
+    model: "test",
+    connected: true,
+    memory: { messages: 0, summaries: 0, ready: true, notes: [] },
+  }
+  let notify = () => {}
+  let calls = 0
+  let started!: () => void
+  let release!: () => void
+  const probing = new Promise<void>((resolve) => {
+    started = resolve
+  })
+  const confirmed = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  const response = conversationEvents(
+    {
+      latency,
+      confirmation: Effect.uninterruptible(
+        Effect.promise(() => {
+          if (++calls === 1) return Promise.resolve()
+          started()
+          return confirmed
+        })
+      ),
+      snapshot: () => Effect.sync(() => state),
+      activeSession: () => Effect.succeed(undefined),
+      watch: async () => {
+        throw new Error("unused")
+      },
+      subscribe: (listener) => {
+        notify = listener
+        return () => {}
+      },
+    },
+    new AbortController().signal,
+    true
+  )
+  const reader = response.body!.getReader()
+  await reader.read()
+  await reader.read()
+  Effect.runSync(latency.provider("turn", "attempt", "session"))
+  state = { ...state, turns: [{ ...turn, answer: "Hello" }] }
+  notify()
+  const text = new TextDecoder().decode((await reader.read()).value)
+  expect(text).toContain('"name":"durable-pi.first-text"')
+  expect(text).toContain('"streamId":')
+  await probing
+  let stopped = false
+  const stopping = reader.cancel().then(() => {
+    stopped = true
+  })
+  await Promise.resolve()
+  expect(stopped).toBe(false)
+  release()
+  await stopping
+  expect(stopped).toBe(true)
 })

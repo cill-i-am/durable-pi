@@ -7,6 +7,7 @@ const Marker = Schema.Struct({
     turnId: Schema.String.check(Schema.isMaxLength(128)),
     attemptId: Schema.String.check(Schema.isMaxLength(128)),
     publishedAt: Schema.Number,
+    streamId: Schema.optionalKey(Schema.String.check(Schema.isMaxLength(128))),
   }),
 })
 
@@ -22,6 +23,7 @@ export const makeFirstTextLatency = Effect.sync(() => {
         turnId: string
         attemptId: string
         publishedAt: number
+        streamId?: string
         receivedAt: number
       }
     | undefined
@@ -78,6 +80,8 @@ export const observeFirstText = Effect.fn("Conversations.observeFirstText")(
       attemptId: string
       publishedAt: number
       receivedAt: number
+      streamId?: string
+      readStartedAt: number
     }) => void
   ) =>
     Effect.gen(function* () {
@@ -93,6 +97,7 @@ export const observeFirstText = Effect.fn("Conversations.observeFirstText")(
       const body = new ReadableStream<Uint8Array>({
         async pull(controller) {
           try {
+            const readStartedAt = Effect.runSync(Clock.currentTimeMillis)
             const next = await reader.read()
             if (next.done) {
               reader.releaseLock()
@@ -106,7 +111,7 @@ export const observeFirstText = Effect.fn("Conversations.observeFirstText")(
             const trace = Effect.runSync(latency.output)
             if (trace) {
               try {
-                observe(trace)
+                observe({ ...trace, readStartedAt })
               } catch {}
             }
             controller.enqueue(bytes)

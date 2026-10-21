@@ -123,6 +123,7 @@ export const encodeEventStream = Effect.fn("Website.encodeEventStream")(
                         attemptId: trace.attemptId,
                         publishedAt: trace.publishedAt,
                         proxyReceivedAt: trace.receivedAt,
+                        streamId: trace.streamId,
                         diagnostic:
                           new URL(request.url).searchParams.get(
                             "diagnostics"

@@ -9,6 +9,7 @@ export interface ConversationEventSource<TError, TRequirements = never> {
     state: ChatState,
     previous: ChatState | undefined
   ) => Effect.Effect<void, TError, TRequirements>
+  afterPublish?: Effect.Effect<void, TError, TRequirements | Scope.Scope>
   activeSession: () => Effect.Effect<string | undefined, TError, TRequirements>
   watch: (
     id: string,
@@ -59,6 +60,7 @@ export function conversationEventPump<TError, TRequirements>(
       const current = yield* source.snapshot()
       if (source.beforePublish) yield* source.beforePublish(current, previous)
       if (!sink.publish(current, previous)) finish()
+      else if (source.afterPublish) yield* source.afterPublish
       previous = current
     })
     const heartbeat = Effect.forever(
