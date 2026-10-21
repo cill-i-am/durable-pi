@@ -3,8 +3,8 @@ import { constants, createGzip } from "node:zlib"
 
 import { Effect, Schema } from "effect"
 
+import { makeFirstTextLatency } from "../../conversations/adapters/latency"
 import { runObserved } from "../../observability/worker"
-import { makeEventStreamLatency } from "./event-stream-latency"
 
 function acceptsGzip(value: string | null) {
   let wildcard = false
@@ -69,7 +69,7 @@ export const encodeEventStream = Effect.fn("Website.encodeEventStream")(
       const headers = new Headers(response.headers)
       headers.set("Content-Encoding", "gzip")
       headers.delete("Content-Length")
-      const latency = own ? Effect.runSync(makeEventStreamLatency) : undefined
+      const latency = own ? Effect.runSync(makeFirstTextLatency) : undefined
       const codec = Duplex.toWeb(createGzip({ flush: constants.Z_SYNC_FLUSH }))
       const reader = codec.readable.getReader()
       const writer = codec.writable.getWriter()
@@ -118,7 +118,17 @@ export const encodeEventStream = Effect.fn("Website.encodeEventStream")(
                 own(
                   runObserved(
                     Effect.logInfo("Conversation.firstTextProxy").pipe(
-                      Effect.annotateLogs(trace)
+                      Effect.annotateLogs({
+                        turnId: trace.turnId,
+                        attemptId: trace.attemptId,
+                        publishedAt: trace.publishedAt,
+                        proxyReceivedAt: trace.receivedAt,
+                        diagnostic:
+                          new URL(request.url).searchParams.get(
+                            "diagnostics"
+                          ) === "storage",
+                        proxyOutputAt: trace.outputAt,
+                      })
                     )
                   ).catch(() => {})
                 )

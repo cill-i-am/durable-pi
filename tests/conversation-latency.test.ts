@@ -1,7 +1,7 @@
 import { Deferred, Effect, Fiber } from "effect"
 import { afterEach, expect, it, vi } from "vitest"
 
-import { makeEventStreamLatency } from "../src/auth/adapters/event-stream-latency"
+import { makeFirstTextLatency } from "../src/conversations/adapters/latency"
 import { ConversationLatency } from "../src/conversations/latency"
 
 afterEach(() => vi.useRealTimers())
@@ -35,7 +35,7 @@ const marker = `data: ${JSON.stringify({ type: "CUSTOM", name: "durable-pi.first
 it.each([1, 7, 4096, 300000])(
   "observes a marker across %i-byte chunks after a large private frame",
   (size) => {
-    const observer = Effect.runSync(makeEventStreamLatency)
+    const observer = Effect.runSync(makeFirstTextLatency)
     const bytes = new TextEncoder().encode(
       `data: ${"private".repeat(40000)}\n\n${marker}`
     )
@@ -46,15 +46,15 @@ it.each([1, 7, 4096, 300000])(
       turnId: "turn",
       attemptId: "attempt",
       publishedAt: 100,
-      proxyReceivedAt: expect.any(Number),
-      proxyOutputAt: expect.any(Number),
+      receivedAt: expect.any(Number),
+      outputAt: expect.any(Number),
     })
     expect(Effect.runSync(observer.output)).toBeUndefined()
   }
 )
 
 it("ignores malformed and oversized diagnostic lines without failing delivery", () => {
-  const observer = Effect.runSync(makeEventStreamLatency)
+  const observer = Effect.runSync(makeFirstTextLatency)
   for (const line of [
     'data: {"type":"CUSTOM","name":"durable-pi.first-text",broken\n',
     marker.replace('"turn"', JSON.stringify("x".repeat(3000))),
@@ -163,4 +163,99 @@ it("joins a pending confirmation before either stream publishes its marker", asy
         expect(trace?.storageSyncReadyAt).toEqual(expect.any(Number))
     })
   )
+})
+
+it("observes a split marker without changing streamed bytes or retaining private fields", async () => {
+  const { observeFirstText } =
+    await import("../src/conversations/adapters/latency")
+  const observed: unknown[] = []
+  const bytes = new TextEncoder().encode(
+    `data: ${"private🙂".repeat(1000)}\n\n${marker}`
+  )
+  let offset = 0
+  const source = new ReadableStream<Uint8Array>({
+    pull(controller) {
+      if (offset === bytes.length) return controller.close()
+      const end = Math.min(offset + 7, bytes.length)
+      controller.enqueue(bytes.slice(offset, end))
+      offset = end
+    },
+  })
+  const response = Effect.runSync(
+    observeFirstText(
+      new Response(source, {
+        headers: { "content-type": "text/event-stream", "x-preserved": "yes" },
+      }),
+      (trace) => {
+        observed.push(trace)
+        throw new Error("diagnostic only")
+      }
+    )
+  )
+  expect(response.headers.get("x-preserved")).toBe("yes")
+  expect(new Uint8Array(await response.arrayBuffer())).toEqual(bytes)
+  expect(observed).toEqual([
+    {
+      turnId: "turn",
+      attemptId: "attempt",
+      publishedAt: 100,
+      receivedAt: expect.any(Number),
+      outputAt: expect.any(Number),
+    },
+  ])
+  expect(source.locked).toBe(false)
+})
+
+it("joins upstream cancellation while a diagnostic read is pending", async () => {
+  const { observeFirstText } =
+    await import("../src/conversations/adapters/latency")
+  let release!: () => void
+  const cancelled = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  const cancel = vi.fn(() => cancelled)
+  const source = new ReadableStream<Uint8Array>({ cancel })
+  const response = Effect.runSync(
+    observeFirstText(
+      new Response(source, {
+        headers: { "content-type": "text/event-stream" },
+      }),
+      () => {}
+    )
+  )
+  const reader = response.body!.getReader()
+  const pending = reader.read()
+  const reason = new Error("client disconnected")
+  let settled = false
+  const stopping = reader.cancel(reason).then(() => {
+    settled = true
+  })
+  await Promise.resolve()
+  expect(cancel).toHaveBeenCalledWith(reason)
+  expect(settled).toBe(false)
+  release()
+  await stopping
+  expect(await pending).toEqual({ value: undefined, done: true })
+  expect(source.locked).toBe(false)
+})
+
+it("propagates upstream stream failure and releases its reader", async () => {
+  const { observeFirstText } =
+    await import("../src/conversations/adapters/latency")
+  const error = new Error("upstream failed")
+  const source = new ReadableStream<Uint8Array>({
+    pull(controller) {
+      controller.error(error)
+    },
+  })
+  const response = Effect.runSync(
+    observeFirstText(
+      new Response(source, {
+        headers: { "content-type": "text/event-stream" },
+      }),
+      () => {}
+    )
+  )
+  await expect(response.text()).rejects.toBe(error)
+  expect(source.locked).toBe(false)
 })
