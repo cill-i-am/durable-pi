@@ -1,4 +1,4 @@
-import { Effect } from "effect"
+import { Deferred, Effect, Fiber } from "effect"
 import { afterEach, expect, it, vi } from "vitest"
 
 import { makeEventStreamLatency } from "../src/auth/adapters/event-stream-latency"
@@ -110,4 +110,57 @@ it("publishes a correlated marker alongside first text without an extra queue sl
   expect(text).toContain('"type":"TEXT_MESSAGE_START"')
   expect(text).toContain('"turnId":"turn"')
   await reader.cancel()
+})
+
+it("times storage confirmation only for a new traced answer and joins it once", () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(1000)
+  const latency = new ConversationLatency()
+  const sync = vi.fn(() => vi.setSystemTime(1600))
+  Effect.runSync(latency.provider("turn", "attempt", "session"))
+  vi.setSystemTime(1100)
+  Effect.runSync(latency.confirm(["historical"], Effect.sync(sync)))
+  expect(sync).not.toHaveBeenCalled()
+  Effect.runSync(latency.confirm(["turn"], Effect.sync(sync)))
+  Effect.runSync(latency.confirm(["turn"], Effect.sync(sync)))
+  expect(sync).toHaveBeenCalledTimes(1)
+  expect(Effect.runSync(latency.publication("turn", 1080, 1100))).toMatchObject(
+    {
+      providerAt: 1000,
+      snapshotReadyAt: 1100,
+      storageSyncStartedAt: 1100,
+      storageSyncReadyAt: 1600,
+      publishedAt: 1600,
+    }
+  )
+})
+
+it("joins a pending confirmation before either stream publishes its marker", async () => {
+  await Effect.runPromise(
+    Effect.gen(function* () {
+      const latency = new ConversationLatency()
+      const started = yield* Deferred.make<void>()
+      const release = yield* Deferred.make<void>()
+      let calls = 0
+      const sync = Effect.gen(function* () {
+        calls++
+        yield* Deferred.succeed(started, undefined)
+        yield* Deferred.await(release)
+      })
+      yield* latency.provider("turn", "attempt", "session")
+      const stream = latency
+        .confirm(["turn"], sync)
+        .pipe(Effect.andThen(latency.publication("turn", 0, 0)))
+      const first = yield* Effect.forkChild(stream)
+      yield* Deferred.await(started)
+      const second = yield* Effect.forkChild(stream)
+      yield* Effect.yieldNow
+      expect(second.pollUnsafe()).toBeUndefined()
+      yield* Deferred.succeed(release, undefined)
+      const traces = yield* Effect.all([Fiber.join(first), Fiber.join(second)])
+      expect(calls).toBe(1)
+      for (const trace of traces)
+        expect(trace?.storageSyncReadyAt).toEqual(expect.any(Number))
+    })
+  )
 })
