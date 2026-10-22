@@ -8,15 +8,19 @@ export { UpstreamRelay } from "../../src/inference/adapters/upstream-worker"
 type ProbeEnv = { PROBE: DurableObjectNamespace<UpstreamProbe>; DELAY: Fetcher }
 export class UpstreamProbe extends DurableObject<ProbeEnv> {
   private sink?: WritableStream<Uint8Array>
-  async observeUpstream(_id: string, sink: WritableStream<Uint8Array>) {
+  private observerId?: string
+  async observeUpstream(id: string, sink: WritableStream<Uint8Array>) {
     if (this.sink) {
       await sink.abort()
       return false
     }
     this.sink = sink
+    this.observerId = id
     return true
   }
-  async releaseUpstream() {
+  async releaseUpstream(id: string) {
+    if (this.observerId !== id) return
+    this.observerId = undefined
     const sink = this.sink
     this.sink = undefined
     if (sink) await sink.abort().catch(() => {})
