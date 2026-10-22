@@ -9,6 +9,7 @@ import { isMailboxRequest } from "../src/communication/adapters/rpc"
 vi.mock("cloudflare:workers", () => ({
   DurableObject: class {},
   WorkerEntrypoint: class {},
+  RpcTarget: class {},
   env: {},
   tracing: undefined,
 }))

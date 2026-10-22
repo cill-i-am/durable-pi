@@ -15,6 +15,7 @@ import { AgentId, agentObjectName, homeAgentId } from "../../agents/domain"
 import { agentStatuses } from "../../agents/statuses"
 import { observeFirstText } from "../../conversations/adapters/latency"
 import type { accountConnectionRpc } from "../../inference/adapters/account-rpc"
+import type { UpstreamObservationPeer } from "../../inference/adapters/upstream"
 import { reportService } from "../../observability/events"
 import { WorkerTelemetry, runObserved } from "../../observability/worker"
 import { releaseForwardedResponse } from "../../shared/adapters/response"
@@ -26,11 +27,14 @@ import {
   type WebhookAuthorizationRpc,
 } from "../../webhooks/adapters/authorization-rpc"
 import { bearer } from "../../webhooks/adapters/crypto"
+import { upstreamDiagnostic } from "./upstream"
 
 type Peer = AgentRpc &
   ActivityReadRpc &
   WebhookAuthorizationRpc &
   Parameters<typeof accountConnectionRpc>[0] & {
+    observeUpstream?: UpstreamObservationPeer["observeUpstream"]
+    releaseUpstream?: UpstreamObservationPeer["releaseUpstream"]
     deploymentStatus?: (owner: string) => Promise<string[]>
     fetch: (request: Request) => Promise<Response>
   }
@@ -109,6 +113,39 @@ const observeGateway = (
       )
     })
   })
+
+function forwardConversation(
+  target: Peer,
+  request: Request,
+  status: string,
+  own?: (task: Promise<void>) => void
+) {
+  return Effect.gen(function* () {
+    const url = new URL(request.url)
+    if (
+      url.pathname.endsWith("/events") &&
+      request.method === "GET" &&
+      url.searchParams.get("diagnostics") === "upstream"
+    ) {
+      if (
+        !own ||
+        !target.observeUpstream ||
+        !target.releaseUpstream ||
+        status !== "active"
+      )
+        return new Response("Diagnostic unavailable", { status: 503 })
+      return yield* upstreamDiagnostic(
+        {
+          observeUpstream: (id, sink) => target.observeUpstream!(id, sink),
+          releaseUpstream: (id) => target.releaseUpstream!(id),
+        },
+        request,
+        own
+      )
+    }
+    return yield* observeGateway(request, forward(target, request), own)
+  })
+}
 
 function suspendFamilyWork(
   root: Peer,
@@ -231,7 +268,7 @@ export function agentGatewayProgram(
         owner
       )
     )
-    return yield* observeGateway(request, forward(target, request), own)
+    return yield* forwardConversation(target, request, agent.status, own)
   }).pipe(
     Effect.scoped,
     Effect.onExit((exit) =>
