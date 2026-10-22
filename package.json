@@ -17,7 +17,7 @@
     "verify": "pnpm verify:static && pnpm verify:unit-and-build && pnpm verify:native-runtime && pnpm verify:browser && pnpm verify:container",
     "verify:static": "node --import tsx scripts/check-secrets.ts && pnpm generate-routes && pnpm db:check:agent && pnpm typecheck && pnpm lint && pnpm check",
     "verify:unit-and-build": "pnpm generate-routes && pnpm test && pnpm build && node scripts/check-website-routes.mjs && pnpm build:workers",
-    "verify:native-runtime": "pnpm generate-routes && pnpm test:communication-runtime && pnpm test:drizzle-runtime && pnpm test:whatsapp-runtime && pnpm test:memory-runtime",
+    "verify:native-runtime": "pnpm generate-routes && pnpm test:communication-runtime && pnpm test:drizzle-runtime && pnpm test:whatsapp-runtime && pnpm test:memory-runtime && pnpm test:upstream-runtime",
     "test:whatsapp-runtime": "node scripts/test-whatsapp-runtime.mjs",
     "model:login": "tsx scripts/model-login.ts",
     "model:reauthorize": "tsx scripts/model-reauthorize.ts",
@@ -38,7 +38,8 @@
     "complexity:report": "cccc src scripts tests stacks",
     "eval:coordination": "tsx scripts/eval-coordination.ts",
     "test:memory-runtime": "node scripts/test-memory-runtime.mjs",
-    "test:client-upgrade": "node scripts/check-client-upgrade.mjs"
+    "test:client-upgrade": "node scripts/check-client-upgrade.mjs",
+    "test:upstream-runtime": "node scripts/test-upstream-runtime.mjs"
   },
   "dependencies": {
     "@alchemy.run/frontend-frameworks": "2.0.0-beta.83",

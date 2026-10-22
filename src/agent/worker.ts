@@ -343,6 +343,7 @@ import {
   piModelStreamsLayer,
   modelCallback,
 } from "../inference/adapters/streams-pi"
+import { observedUpstreamFetch } from "../inference/adapters/upstream-worker"
 import { piUsage } from "../inference/adapters/usage-pi"
 import { SqliteUsage } from "../inference/adapters/usage-sqlite"
 import { ModelCatalogReader, catalogApplication } from "../inference/catalog"
@@ -517,6 +518,15 @@ import { agentSettings, contextProjectionBytes } from "./compaction"
 import { SYSTEM_PROMPT } from "./prompts"
 
 export { BackgroundGroup } from "../delegation/worker"
+export { UpstreamRelay } from "../inference/adapters/upstream-worker"
+
+declare global {
+  namespace Cloudflare {
+    interface GlobalProps {
+      mainModule: typeof import("./worker")
+    }
+  }
+}
 
 class TurnRunner extends LifecycleCapability {
   constructor(
@@ -2543,7 +2553,59 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     )
   }
   private readonly conversationLatency = new ConversationLatency()
+  private upstreamProbe?: {
+    id: string
+    sink: WritableStream<Uint8Array>
+    claimed: boolean
+    abort: AbortController
+    work: Promise<unknown>
+  }
+  async observeUpstream(id: string, sink: WritableStream<Uint8Array>) {
+    if (this.upstreamProbe) {
+      await sink.abort().catch(() => {})
+      return false
+    }
+    const abort = new AbortController()
+    const lease = {
+      id,
+      sink,
+      claimed: false,
+      abort,
+      work: Promise.resolve() as Promise<unknown>,
+    }
+    this.upstreamProbe = lease
+    lease.work = this.actorRuntime.runPromiseExit(
+      Effect.sleep(60_000).pipe(
+        Effect.ensuring(
+          Effect.promise(async () => {
+            if (this.upstreamProbe === lease) this.upstreamProbe = undefined
+            if (!lease.claimed) await sink.abort().catch(() => {})
+          })
+        )
+      ),
+      { signal: abort.signal }
+    )
+    this.ctx.waitUntil(lease.work)
+    return true
+  }
+  async releaseUpstream(id: string) {
+    const lease = this.upstreamProbe
+    if (lease?.id !== id) return
+    lease.abort.abort()
+    await lease.work
+  }
   readonly models = createAgentModels(this.credentials, {
+    fetch: (fallback, input, init, correlation) => {
+      const probe = this.upstreamProbe
+      if (!probe || probe.claimed || !correlation) return fallback(input, init)
+      probe.claimed = true
+      return observedUpstreamFetch(
+        this.ctx.exports.UpstreamRelay,
+        new Request(input, init),
+        probe.sink,
+        correlation
+      )
+    },
     onFirstText: (turnId, attemptId, sessionId) =>
       this.actorRuntime.runSync(
         this.conversationLatency.provider(turnId, attemptId, sessionId)

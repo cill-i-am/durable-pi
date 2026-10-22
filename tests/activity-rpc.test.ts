@@ -30,6 +30,7 @@ import { WebhookStorageError } from "../src/webhooks/persistence"
 vi.mock("cloudflare:workers", () => ({
   DurableObject: class {},
   WorkerEntrypoint: class {},
+  RpcTarget: class {},
   env: {},
   tracing: undefined,
 }))

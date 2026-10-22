@@ -43,6 +43,12 @@ export function createAgentModels(
       sessionId?: string
     ) => NativeInferenceObservation | Promise<NativeInferenceObservation>
     onFirstText?: (turnId: string, attemptId: string, sessionId: string) => void
+    fetch?: (
+      fallback: typeof fetch,
+      input: RequestInfo | URL,
+      init: RequestInit | undefined,
+      correlation: { turnId: string; attemptId: string } | undefined
+    ) => Promise<Response>
     botId?: () => string
     waitUntil?: (work: Promise<unknown>) => void
   }
@@ -190,7 +196,22 @@ export function createAgentModels(
             const response = await current.fetch(
               input,
               init,
-              request?.fetch ?? globalThis.fetch
+              options.fetch
+                ? (target, init) =>
+                    options.fetch!(
+                      request?.fetch ?? globalThis.fetch,
+                      target,
+                      init,
+                      observation?.turnId &&
+                        request?.cacheRetention !== "none" &&
+                        request?.sessionId !== "memory"
+                        ? {
+                            turnId: observation.turnId,
+                            attemptId: observation.id,
+                          }
+                        : undefined
+                    )
+                : (request?.fetch ?? globalThis.fetch)
             )
             Effect.runSync(timing.mark("responseHeadersMs"))
             return response

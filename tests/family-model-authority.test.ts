@@ -25,6 +25,7 @@ import { credential, catalog } from "./inference-fixture"
 vi.mock("cloudflare:workers", () => ({
   DurableObject: class {},
   WorkerEntrypoint: class {},
+  RpcTarget: class {},
   env: {},
   tracing: undefined,
 }))

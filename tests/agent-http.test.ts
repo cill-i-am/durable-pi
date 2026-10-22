@@ -33,6 +33,7 @@ import { routineFixture } from "./routine-fixture"
 vi.mock("cloudflare:workers", () => ({
   DurableObject: class {},
   WorkerEntrypoint: class {},
+  RpcTarget: class {},
   env: {},
   tracing: undefined,
 }))
@@ -428,4 +429,33 @@ it("composes routine wake effects without admitting work after a defect", async 
       expect.objectContaining({ _tag: "Die", defect })
     )
   expect(Effect.runSync(store.list())).toEqual([])
+})
+
+it("bounds the upstream lease, fences unrelated releases and joins unused-channel cleanup", async () => {
+  const f = fixture()
+  let firstAborted = 0
+  let refusedAborted = 0
+  const first = new WritableStream<Uint8Array>({
+    abort() {
+      firstAborted++
+    },
+  })
+  const refused = new WritableStream<Uint8Array>({
+    abort() {
+      refusedAborted++
+    },
+  })
+  try {
+    expect(await f.host.observeUpstream("first", first)).toBe(true)
+    expect(await f.host.observeUpstream("refused", refused)).toBe(false)
+    expect(refusedAborted).toBe(1)
+    await f.host.releaseUpstream("unrelated")
+    expect(firstAborted).toBe(0)
+  } finally {
+    await f.host.releaseUpstream("first")
+  }
+  expect(firstAborted).toBe(1)
+  const next = new WritableStream<Uint8Array>()
+  expect(await f.host.observeUpstream("next", next)).toBe(true)
+  await f.host.releaseUpstream("next")
 })
