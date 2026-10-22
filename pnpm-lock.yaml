@@ -261,6 +261,9 @@ importers:
       '@tiesen/effect-tanstack-query':
         specifier: 0.0.26
         version: 0.0.26(@tanstack/query-core@5.104.1)(effect@4.0.5)(react@19.3.1)
+      '@xstate/effect':
+        specifier: 1.0.0-alpha.8
+        version: 1.0.0-alpha.8(effect@4.0.5)(xstate@6.0.0-alpha.68)
       '@xterm/addon-fit':
         specifier: 0.11.0
         version: 0.11.0
@@ -357,6 +360,9 @@ importers:
       unpdf:
         specifier: ^1.9.0
         version: 1.9.0
+      xstate:
+        specifier: 6.0.0-alpha.68
+        version: 6.0.0-alpha.68
       zod:
         specifier: ^4.6.5
         version: 4.6.5
@@ -4020,6 +4026,12 @@ packages:
   '@workflow/serde@4.1.0-beta.2':
     resolution: {integrity: sha512-8kkeoQKLDaKXefjV5dbhBj2aErfKp1Mc4pb6tj8144cF+Em5SPbyMbyLCHp+BVrFfFVCBluCtMx+jjvaFVZGww==}
 
+  '@xstate/effect@1.0.0-alpha.8':
+    resolution: {integrity: sha512-EccCEYiaeAdHGj1oystUoghxwSYLQJN78v5ViBH9+xAe5Wo/j7E4lHlxhWTnH/h8Pru0rYHnWmFvZmxFdeerPw==}
+    peerDependencies:
+      effect: ^4.0.0
+      xstate: ^6.0.0-alpha.68
+
   '@xterm/addon-fit@0.11.0':
     resolution: {integrity: sha512-jYcgT6xtVYhnhgxh3QgYDnnNMYTcf8ElbxxFzX0IZo+vabQqSPAjC3c1wJrKB5E19VwQei89QCiZZP86DCPF7g==}
 
@@ -7512,6 +7524,10 @@ packages:
     resolution: {integrity: sha512-bx8Q1STctnNaaDymWnkfQLKofs0mGNN7rLLapJlGuV3VlvegD7Ls4ggMjE3aUSWItCCzU0PEv45lI87iSigiCA==}
     engines: {node: '>=20.0'}
 
+  xstate@6.0.0-alpha.68:
+    resolution: {integrity: sha512-CuYdl+qacCb5h4vtxHKqlqMsl2FojFO0pX0YiWdgW6U1AFfcQ5jzldExZMLnF5mIH0P03DTzExYF6j7zV0IWOg==}
+    hasBin: true
+
   y18n@5.0.8:
     resolution: {integrity: sha512-0pfFzegeDWJHJIAmTLRP2DwHjdF5s7jo9tuztdQxAhINCdvS+3nGINqPd00AphqJR/0LhANUS6/+7SCb98YOfA==}
     engines: {node: '>=10'}
@@ -10853,6 +10869,11 @@ snapshots:
   '@vitest/spy@5.0.5': {}
 
   '@workflow/serde@4.1.0-beta.2': {}
+
+  '@xstate/effect@1.0.0-alpha.8(effect@4.0.5)(xstate@6.0.0-alpha.68)':
+    dependencies:
+      effect: 4.0.5
+      xstate: 6.0.0-alpha.68
 
   '@xterm/addon-fit@0.11.0': {}
 
@@ -14517,6 +14538,8 @@ snapshots:
       '@oozcitak/infra': 2.0.2
       '@oozcitak/util': 10.0.0
       js-yaml: 4.3.2
+
+  xstate@6.0.0-alpha.68: {}
 
   y18n@5.0.8: {}
 

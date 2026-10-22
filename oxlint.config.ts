@@ -140,6 +140,17 @@ export default defineConfig({
   },
   overrides: [
     ...(tanstack.overrides ?? []),
+    {
+      files: ["src/**/*.{ts,tsx}"],
+      rules: { "architecture/effect-machines": "error" },
+    },
+    {
+      files: ["src/**/*.machine.ts", "tests/lifecycle/*.machine.ts"],
+      rules: {
+        "architecture/boundaries": "error",
+        "architecture/effect-machines": "error",
+      },
+    },
     { files: ["src/**/*.{ts,tsx}"], rules: tanstackAddOn.rules },
     {
       // These scripts are not checked JavaScript; tests deliberately exercise malformed input.

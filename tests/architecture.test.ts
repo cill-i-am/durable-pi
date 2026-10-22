@@ -1,7 +1,10 @@
 import { RuleTester } from "oxlint/plugins-dev"
 import { describe, it } from "vitest"
 
-import { domainBoundaries } from "../scripts/architecture-rules.mjs"
+import {
+  domainBoundaries,
+  effectMachines,
+} from "../scripts/architecture-rules.mjs"
 
 RuleTester.describe = describe
 RuleTester.it = it
@@ -78,5 +81,48 @@ new RuleTester().run("architecture/boundaries", domainBoundaries, {
       filename: shared,
       errors: [{ messageId: "sharedDependency" }],
     })),
+  ],
+})
+
+new RuleTester().run("architecture/effect-machines", effectMachines, {
+  valid: [
+    'import { transition, initialTransition } from "xstate"; transition(machine, state, event)',
+    'import type { Actor } from "xstate"',
+    'export type { Actor } from "xstate"',
+    'export { transition as decide } from "xstate"',
+    'import { createEffectActor } from "@xstate/effect"; createEffectActor(machine)',
+    'import { useSelector } from "@xstate/react"; useSelector(actor, select)',
+    "const project = (record) => ({ status: record.status }); project(record)",
+    'import * as XS from "xstate"; function f(XS) { XS.createActor(machine) }',
+  ]
+    .map((code) => ({ code, filename: service }))
+    .concat([
+      {
+        code: 'import { setupEffect as define } from "@xstate/effect"; define({}).createMachine({})',
+        filename: "/project/src/features/files/preparation.machine.ts",
+      },
+    ]),
+  invalid: [
+    ...[
+      'import { createActor as start } from "xstate"; start(machine)',
+      'import * as XS from "xstate"; XS.createActor(machine)',
+      'import * as XS from "xstate"; XS["createActor"](machine)',
+      'import { Actor } from "xstate"; new Actor(machine)',
+      'import { setup } from "xstate"; setup({})',
+      'export { createActor as start } from "xstate"',
+      'export * from "xstate"',
+      'import("xstate")',
+      'import { useMachine } from "@xstate/react"; useMachine(machine)',
+      'import { useActorRef as start } from "@xstate/react"; start(machine)',
+    ].map((code) => ({
+      code,
+      filename: service,
+      errors: [{ messageId: "runtime" }],
+    })),
+    {
+      code: 'import { setupEffect as define } from "@xstate/effect"; define({}).createMachine({})',
+      filename: service,
+      errors: [{ messageId: "location" }],
+    },
   ],
 })
