@@ -1,6 +1,6 @@
 # XState Effect application lifecycles
 
-Decision: required architecture. Implementation baseline: `6ce50c15ee9af99fbe7e0c09f3e064ad0b81e1b1`. This standards change establishes executable conformance references and enforcement. The [repository-wide migration goal](../../BUILD.md#xstate-effect-lifecycle-refactor) remains open until its [inventory](../xstate-effect-inventory.md) is implemented.
+Decision: required architecture. Initial implementation baseline: `6ce50c15ee9af99fbe7e0c09f3e064ad0b81e1b1`; rebased parent: `696aca98000a6e82a9cb202acc18f92f2c8e987e`. This standards change establishes executable conformance references and enforcement. The [repository-wide migration goal](../../BUILD.md#xstate-effect-lifecycle-refactor) remains open until its [inventory](../xstate-effect-inventory.md) is implemented.
 
 ## Ownership and applicability
 
