@@ -1,5 +1,20 @@
 import { Deferred, Effect } from "effect"
-import { expect, it } from "vitest"
+import { expect, it, vi } from "vitest"
+
+import { observedUpstreamFetch } from "../src/inference/adapters/upstream-worker"
+
+vi.mock("cloudflare:workers", () => ({
+  WorkerEntrypoint: class {},
+  RpcTarget: class {},
+}))
+
+function deferred() {
+  let resolve!: () => void
+  const promise = new Promise<void>((done) => {
+    resolve = done
+  })
+  return { promise, resolve }
+}
 
 import {
   upstreamResponse,
@@ -84,4 +99,101 @@ it("preserves response bytes and status while inspecting only one first-text mar
   expect(new Uint8Array(await response.arrayBuffer())).toEqual(bytes)
   expect(stages).toEqual(["upstream-text"])
   expect((await work)._tag).toBe("Success")
+})
+
+it("joins one cleanup when cancellation overlaps EOF before remote close settles", async () => {
+  const entered = deferred(),
+    held = deferred()
+  const remote = {
+    response: async () =>
+      new Response(
+        new ReadableStream<Uint8Array>({
+          start(c) {
+            c.close()
+          },
+        })
+      ),
+    cancel: vi.fn(async () => {
+      entered.resolve()
+      await held.promise
+    }),
+    [Symbol.dispose]: vi.fn(),
+  }
+  const response = await observedUpstreamFetch(
+    { start: async () => remote },
+    new Request("https://api.openai.com/v1/responses", { method: "POST" }),
+    new WritableStream(),
+    { turnId: "turn", attemptId: "attempt" }
+  )
+  const reader = response.body!.getReader()
+  const reading = reader.read()
+  await entered.promise
+  const cancelling = reader.cancel()
+  held.resolve()
+  const results = await Promise.allSettled([reading, cancelling])
+  expect(results.map((result) => result.status)).toEqual([
+    "fulfilled",
+    "fulfilled",
+  ])
+  expect(remote.cancel).toHaveBeenCalledTimes(1)
+  expect(remote[Symbol.dispose]).toHaveBeenCalledTimes(1)
+})
+
+it("releases a late response acquired after pre-header cancellation", async () => {
+  let respond!: (response: Response) => void
+  const headers = new Promise<Response>((done) => {
+    respond = done
+  })
+  const released = vi.fn()
+  const remote = {
+    response: () => headers,
+    cancel: vi.fn(async () => {}),
+    [Symbol.dispose]: vi.fn(),
+  }
+  const abort = new AbortController()
+  const pending = observedUpstreamFetch(
+    { start: async () => remote },
+    new Request("https://api.openai.com/v1/responses", {
+      method: "POST",
+      signal: abort.signal,
+    }),
+    new WritableStream(),
+    { turnId: "turn", attemptId: "attempt" }
+  )
+  await Promise.resolve()
+  abort.abort()
+  await Promise.resolve()
+  respond(new Response(new ReadableStream({ cancel: released })))
+  await expect(pending).rejects.toThrow()
+  expect(released).toHaveBeenCalledTimes(1)
+  expect(remote.cancel).toHaveBeenCalledTimes(1)
+  expect(remote[Symbol.dispose]).toHaveBeenCalledTimes(1)
+})
+
+it("fences cleanup reentry when native reader cancellation aborts the request", async () => {
+  const abort = new AbortController()
+  const remote = {
+    response: async () =>
+      new Response(
+        new ReadableStream({
+          cancel() {
+            abort.abort()
+          },
+        })
+      ),
+    cancel: vi.fn(async () => {}),
+    [Symbol.dispose]: vi.fn(),
+  }
+  const response = await observedUpstreamFetch(
+    { start: async () => remote },
+    new Request("https://api.openai.com/v1/responses", {
+      method: "POST",
+      signal: abort.signal,
+    }),
+    new WritableStream(),
+    { turnId: "turn", attemptId: "attempt" }
+  )
+  await response.body!.cancel()
+  expect(remote.cancel).toHaveBeenCalledTimes(1)
+  expect(remote[Symbol.dispose]).toHaveBeenCalledTimes(1)
 })

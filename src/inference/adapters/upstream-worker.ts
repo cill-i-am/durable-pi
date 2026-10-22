@@ -131,7 +131,18 @@ class UpstreamRequest extends RpcTarget {
   }
 }
 
-export type UpstreamRelayBinding = Service<UpstreamRelay>
+export interface UpstreamRequestHandle {
+  response(): PromiseLike<Response>
+  cancel(): PromiseLike<void>
+  [Symbol.dispose](): void
+}
+export interface UpstreamRelayBinding {
+  start(
+    input: UpstreamRequestData,
+    sink: WritableStream<Uint8Array>,
+    correlation: UpstreamCorrelation
+  ): PromiseLike<UpstreamRequestHandle>
+}
 
 /** Keep the remote request owned through EOF, body cancellation and abort
  * before headers. Disposing the RPC target also aborts a disconnected caller. */
@@ -152,10 +163,32 @@ export async function observedUpstreamFetch(
     correlation
   )
   let closing: Promise<void> | undefined
+  let reader: ReadableStreamDefaultReader<unknown> | undefined
+  let reading: Promise<ReadableStreamReadResult<unknown>> | undefined
+  let ended = false
   const close = () =>
-    (closing ??= remote.cancel().finally(() => {
-      request.signal.removeEventListener("abort", abort)
-      remote[Symbol.dispose]()
+    (closing ??= Promise.resolve().then(async () => {
+      const acquired = reader
+      const results = await Promise.allSettled([
+        acquired && !ended ? acquired.cancel() : Promise.resolve(),
+        remote.cancel(),
+        reading?.then(
+          () => {},
+          () => {}
+        ) ?? Promise.resolve(),
+      ])
+      try {
+        acquired?.releaseLock()
+      } finally {
+        request.signal.removeEventListener("abort", abort)
+        remote[Symbol.dispose]()
+      }
+      const failed = results.filter((result) => result.status === "rejected")
+      if (failed.length)
+        throw new AggregateError(
+          failed.map((result): unknown => result.reason),
+          "Upstream cleanup failed"
+        )
     }))
   const abort = () => {
     void close().catch(() => {})
@@ -164,18 +197,31 @@ export async function observedUpstreamFetch(
   if (request.signal.aborted) abort()
   try {
     const response = await remote.response()
+    // A late response acquired after pre-header cancellation still needs its
+    // own release; the first cleanup may have completed without a reader.
+    if (closing) {
+      await response.body?.cancel()
+      await closing
+      request.signal.throwIfAborted()
+      throw new Error("Upstream request already closed")
+    }
     if (!response.body) {
       await close()
       return response
     }
-    const reader = response.body.getReader()
+    reader = response.body.getReader()
+    const acquired = reader
     const body = new ReadableStream<Uint8Array>({
       type: "bytes",
       async pull(controller) {
         try {
-          const next = await reader.read()
+          reading = acquired.read().catch((cause: unknown) => {
+            ended = true
+            throw cause
+          })
+          const next = await reading
           if (next.done) {
-            reader.releaseLock()
+            ended = true
             await close()
             controller.close()
           } else
@@ -186,29 +232,11 @@ export async function observedUpstreamFetch(
           try {
             await close()
           } finally {
-            reader.releaseLock()
             controller.error(cause)
           }
         }
       },
-      async cancel(reason) {
-        try {
-          const results = await Promise.allSettled([
-            reader.cancel(reason),
-            close(),
-          ])
-          const failed = results.filter(
-            (result) => result.status === "rejected"
-          )
-          if (failed.length)
-            throw new AggregateError(
-              failed.map((result): unknown => result.reason),
-              "Upstream cleanup failed"
-            )
-        } finally {
-          reader.releaseLock()
-        }
-      },
+      cancel: () => close(),
     })
     return new Response(body, response)
   } catch (cause) {

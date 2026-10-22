@@ -54,6 +54,16 @@ try {
     await new Promise((r) => setTimeout(r, 50))
   }
   const results = []
+  assert.deepEqual(
+    await (
+      await fetch(origin + "/race-eof", { signal: AbortSignal.timeout(5000) })
+    ).json(),
+    {
+      statuses: ["fulfilled", "fulfilled"],
+      closes: 1,
+      disposals: 1,
+    }
+  )
   for (const mode of [
     "baseline",
     "gate",

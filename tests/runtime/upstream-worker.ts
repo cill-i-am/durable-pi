@@ -71,6 +71,52 @@ export class UpstreamProbe extends DurableObject<ProbeEnv> {
 export default {
   async fetch(request: Request, env: ProbeEnv, ctx: ExecutionContext) {
     const url = new URL(request.url)
+    if (url.pathname === "/race-eof") {
+      let finishClose!: () => void, beganClose!: () => void
+      const held = new Promise<void>((done) => {
+        finishClose = done
+      })
+      const started = new Promise<void>((done) => {
+        beganClose = done
+      })
+      let closes = 0,
+        disposals = 0
+      const remote = {
+        response: async () =>
+          new Response(
+            new ReadableStream<Uint8Array>({
+              start(c) {
+                c.close()
+              },
+            })
+          ),
+        cancel: async () => {
+          closes++
+          beganClose()
+          await held
+        },
+        [Symbol.dispose]() {
+          disposals++
+        },
+      }
+      const response = await observedUpstreamFetch(
+        { start: async () => remote },
+        new Request("https://api.openai.com/v1/responses", { method: "POST" }),
+        new WritableStream(),
+        { turnId: "race", attemptId: "attempt" }
+      )
+      const reader = response.body!.getReader()
+      const pending = reader.read()
+      await started
+      const cancelling = reader.cancel()
+      finishClose()
+      const results = await Promise.allSettled([pending, cancelling])
+      return Response.json({
+        statuses: results.map((result) => result.status),
+        closes,
+        disposals,
+      })
+    }
     if (url.hostname === "api.openai.com") {
       const mode = await request.text()
       if (mode === "abort-headers")
