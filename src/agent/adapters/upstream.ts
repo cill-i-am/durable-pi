@@ -18,14 +18,26 @@ export const upstreamDiagnostic = Effect.fn("Agent.upstreamDiagnostic")(
     let handedOff = false
     let admission: Promise<boolean> | undefined
     let task: Promise<unknown> | undefined
+    let releasing: Promise<void> | undefined
+    let heartbeat: (() => void) | undefined
+    const release = () =>
+      (releasing ??= Promise.resolve().then(async () => {
+        // An unused transferred writable needs its actor owner to abort it while
+        // the gateway cancels the reader. Neither release may wait for the other.
+        const settled = await Promise.allSettled([
+          reader.cancel(),
+          peer.releaseUpstream(id),
+        ])
+        reader.releaseLock()
+        if (settled[1].status === "rejected") throw settled[1].reason
+      }))
     yield* Effect.addFinalizer(() =>
       handedOff
         ? Effect.void
         : Effect.promise(async () => {
             await admission?.catch(() => {})
             finish()
-            await reader.cancel().catch(() => {})
-            await peer.releaseUpstream(id)
+            await release()
             await task
           })
     )
@@ -37,14 +49,22 @@ export const upstreamDiagnostic = Effect.fn("Agent.upstreamDiagnostic")(
       return new Response("Diagnostic already active", { status: 429 })
     }
     const work = Effect.runPromiseExit(
-      Effect.raceFirst(Deferred.await(ended), Effect.sleep(60_000)).pipe(
-        Effect.ensuring(
-          Effect.promise(async () => {
-            await reader.cancel().catch(() => {})
-            await peer.releaseUpstream(id)
-          })
-        )
-      ),
+      Effect.gen(function* () {
+        yield* Effect.forever(
+          Effect.sleep(1000).pipe(
+            Effect.andThen(
+              Effect.sync(() => {
+                try {
+                  heartbeat?.()
+                } catch {
+                  finish()
+                }
+              })
+            )
+          )
+        ).pipe(Effect.forkScoped)
+        yield* Effect.raceFirst(Deferred.await(ended), Effect.sleep(60_000))
+      }).pipe(Effect.scoped, Effect.ensuring(Effect.promise(release))),
       { signal: request.signal }
     )
     task = work
@@ -52,6 +72,12 @@ export const upstreamDiagnostic = Effect.fn("Agent.upstreamDiagnostic")(
     const body = new ReadableStream<Uint8Array>({
       type: "bytes",
       start(controller) {
+        heartbeat = () => {
+          if ((controller.desiredSize ?? -1) >= 0)
+            controller.enqueue(
+              new TextEncoder().encode(": upstream heartbeat\n\n")
+            )
+        }
         controller.enqueue(
           new TextEncoder().encode(
             `data: ${JSON.stringify({ stage: "ready", id })}\n\n`

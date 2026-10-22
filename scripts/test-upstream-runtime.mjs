@@ -34,7 +34,7 @@ try {
   )
   await writeFile(
     dir + "/fixture.capnp",
-    `using Workerd=import ${JSON.stringify(schema)};const config:Workerd.Config=(services=[(name="fixture",worker=(compatibilityDate=${JSON.stringify(workerd.compatibilityDate)},compatibilityFlags=["nodejs_compat","legacy_module_registry"],modules=[(name="worker.mjs",esModule=embed "worker.mjs")],globalOutbound="upstream",bindings=[(name="DELAY",service="upstream"),(name="PROBE",durableObjectNamespace=(className="UpstreamProbe"))],durableObjectNamespaces=[(className="UpstreamProbe",uniqueKey="upstream-rpc-control",enableSql=true)],durableObjectStorage=(localDisk="storage"))),(name="upstream",worker=(compatibilityDate=${JSON.stringify(workerd.compatibilityDate)},compatibilityFlags=["nodejs_compat","legacy_module_registry"],modules=[(name="worker.mjs",esModule=embed "worker.mjs")])),(name="storage",disk=(path="storage",writable=true))],sockets=[(name="http",address="127.0.0.1:${port}",http=(),service="fixture")]);`
+    `using Workerd=import ${JSON.stringify(schema)};const config:Workerd.Config=(services=[(name="fixture",worker=(compatibilityDate=${JSON.stringify(workerd.compatibilityDate)},compatibilityFlags=["nodejs_compat","legacy_module_registry","enable_request_signal"],modules=[(name="worker.mjs",esModule=embed "worker.mjs")],globalOutbound="upstream",bindings=[(name="DELAY",service="upstream"),(name="PROBE",durableObjectNamespace=(className="UpstreamProbe"))],durableObjectNamespaces=[(className="UpstreamProbe",uniqueKey="upstream-rpc-control",enableSql=true)],durableObjectStorage=(localDisk="storage"))),(name="upstream",worker=(compatibilityDate=${JSON.stringify(workerd.compatibilityDate)},compatibilityFlags=["nodejs_compat","legacy_module_registry","enable_request_signal"],modules=[(name="worker.mjs",esModule=embed "worker.mjs")])),(name="storage",disk=(path="storage",writable=true))],sockets=[(name="http",address="127.0.0.1:${port}",http=(),service="fixture")]);`
   )
   child = spawn(
     workerd.default,
@@ -54,6 +54,30 @@ try {
     await new Promise((r) => setTimeout(r, 50))
   }
   const results = []
+  const unused = new AbortController()
+  const idle = await fetch(origin + "/observe?mode=idle-disconnect", {
+    signal: unused.signal,
+  })
+  assert.equal(idle.status, 200)
+  const idleReader = idle.body.getReader()
+  assert.match(
+    new TextDecoder().decode((await idleReader.read()).value),
+    /"stage":"ready"/
+  )
+  unused.abort()
+  await idleReader.read().catch(() => {})
+  await new Promise((done) => setTimeout(done, 1500))
+  const reopenedAbort = new AbortController()
+  const reopened = await fetch(origin + "/observe?mode=idle-disconnect", {
+    signal: reopenedAbort.signal,
+  })
+  assert.equal(
+    reopened.status,
+    200,
+    "Idle HTTP disconnect retained the unused observer lease"
+  )
+  reopenedAbort.abort()
+  console.log("PASS idle HTTP disconnect releases its unused observer lease")
   assert.deepEqual(
     await (
       await fetch(origin + "/race-eof", { signal: AbortSignal.timeout(5000) })
@@ -166,7 +190,7 @@ try {
 } finally {
   if (child && child.exitCode === null && child.signalCode === null) {
     const stopped = new Promise((r) => child.once("exit", r))
-    child.kill("SIGTERM")
+    child.kill("SIGKILL")
     await stopped
   }
   await rm(dir, { recursive: true, force: true })

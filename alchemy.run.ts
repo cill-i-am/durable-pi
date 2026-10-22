@@ -131,7 +131,7 @@ export const AgentWorker = Cloudflare.Worker("AgentWorkerDrizzleV1", {
   // the same code and bindings validate at 379ms with the legacy registry.
   compatibility: {
     date: "2026-10-17",
-    flags: ["nodejs_compat", "legacy_module_registry"],
+    flags: ["nodejs_compat", "legacy_module_registry", "enable_request_signal"],
   },
   env: {
     AGENT: Cloudflare.DurableObject<PersonalAgent>("PersonalAgent"),
