@@ -1,10 +1,10 @@
 # XState Effect standard: implementation evidence
 
-Implementation base: `6ce50c15ee9af99fbe7e0c09f3e064ad0b81e1b1`, freshly fetched from `cill-i-am/durable-pi/main`. Work is isolated on `codex/xstate-effect-standard`. The original working checkout's unrelated changes were retained. Open PRs inspected before edits: #198 (upstream observer) and #163 (local Worker startup/cache isolation); neither implements this standard.
+Implementation base: `6ce50c15ee9af99fbe7e0c09f3e064ad0b81e1b1`, freshly fetched from `cill-i-am/durable-pi/main`. Work is isolated on `codex/xstate-effect-standard`. The original working checkout's unrelated changes were retained. Before publication the branch was rebased onto `696aca98000a6e82a9cb202acc18f92f2c8e987e` after #198 merged; both upstream and XState native gates were retained. The refreshed open-PR check found #199 (idle observer cleanup) and #163, with no equivalent standards PR. Open PRs inspected before edits: #198 (upstream observer) and #163 (local Worker startup/cache isolation); neither implements this standard.
 
 ## Provenance and versions
 
-The supplied `durable-pi-review-evidence.zip` was extracted without modifying its original files. Archive SHA-256: `79cc729af8af8bbc6f05d1e4a30b28a668b15d29b1345b680e149d5aa126f56a`. All 12 SHA-256/size entries in its [manifest](evidence/xstate-effect/archive-manifest.txt) verified. Its original review commit is `d29803bc8fd8020cefffb5ce08a02a84a2e4f1df`. Its recorded 382 tests in 34 files are historical results; this change does not relabel that report as a current full-pipeline result.
+The supplied [review archive](evidence/xstate-effect/review-evidence.zip), including its README, probes, manifest, logs, historical report and version pins, is preserved byte-for-byte and was extracted without modifying its original files. Archive SHA-256: `79cc729af8af8bbc6f05d1e4a30b28a668b15d29b1345b680e149d5aa126f56a`. All 12 SHA-256/size entries in its [manifest](evidence/xstate-effect/archive-manifest.txt) verified. Its original review commit is `d29803bc8fd8020cefffb5ce08a02a84a2e4f1df`. Its recorded 382 tests in 34 files are historical results; this change does not relabel that report as a current full-pipeline result.
 
 Separate Git worktrees and separately installed frozen lockfiles were used for historical/current witnesses. New runs use Node `24.21.0`, pnpm `12.14.0`, Effect `4.0.5`, Pi Durable `1.3.0`, Agents `0.28.1`, and workerd `1.20261002.1`. The archive recorded Node `24.19.0` and available pnpm `11.25.0`; the runtime difference is retained in this evidence. No deployed-provider observation is claimed.
 
@@ -19,7 +19,7 @@ node --import ./node_modules/tsx/dist/loader.mjs ../review-notes/distributed-pro
 node --import ./node_modules/tsx/dist/loader.mjs ../review-notes/terminal-admission-probe.ts
 ```
 
-Both commands exited 0 on both SHAs. The distributed script asserts the old undesirable observation. Terminal is observational; its JSON was inspected for actual overlap/duplicate counts, not inferred from exit status. These scripts are historical witness revalidation, not regression tests asserting required corrected behavior. Required corrections are tracked in inventory B02–B04.
+Both commands exited 0 on the historical SHA and initial current baseline, and were rerun after rebase onto `696aca98000a6e82a9cb202acc18f92f2c8e987e`. The current raw logs below record the rebased run. The distributed script asserts the old undesirable observation. Terminal is observational; its JSON was inspected for actual overlap/duplicate counts, not inferred from exit status. These scripts are historical witness revalidation, not regression tests asserting required corrected behavior. Required corrections are tracked in inventory B02–B04.
 
 | Witness | Historical rerun | Current-base rerun | Classification and required property |
 | --- | --- | --- | --- |
@@ -27,7 +27,7 @@ Both commands exited 0 on both SHAs. The distributed script asserts the old unde
 | W2 background Stop | One Stop call despite two reconciliations; cancelled parent, no next wake, future authority false. | Same. | **Reproduced.** Retain stop obligation/acknowledgement or explicit unconfirmed outcome, independently of revocation. Pending handoff/unavailable stub does not establish a live runaway. |
 | W3 Terminal admission | Distinct commands overlap at scheduler budgets 128/32; held transaction at 128 dispatches duplicate `first` twice behind one row. | Same. | **Reproduced.** Fresh atomic claimant alone dispatches; attempt-owned occupancy remains until joined cleanup. No deployed Cloudflare incidence established. |
 
-Raw outputs: [historical distributed](evidence/xstate-effect/historical-distributed.log), [current distributed](evidence/xstate-effect/current-distributed.log), [historical Terminal](evidence/xstate-effect/historical-terminal.log), [current Terminal](evidence/xstate-effect/current-terminal.log). Terminal schedules were `MaxOpsBeforeYield` 2048, 512, 128 and 32 with/without a held database transaction, plus duplicate identity at 128. No random seed. Controls at 2048/512 admitted one distinct command. Real Node SQLite and production Terminal code were used with a synthetic executor.
+Extract the preserved archive beside a checkout named `durable-pi` to reproduce the commands; the scripts intentionally resolve that sibling path. Raw outputs: [historical distributed](evidence/xstate-effect/historical-distributed.log), [current distributed](evidence/xstate-effect/current-distributed.log), [historical Terminal](evidence/xstate-effect/historical-terminal.log), [current Terminal](evidence/xstate-effect/current-terminal.log). Terminal schedules were `MaxOpsBeforeYield` 2048, 512, 128 and 32 with/without a held database transaction, plus duplicate identity at 128. No random seed. Controls at 2048/512 admitted one distinct command. Real Node SQLite and production Terminal code were used with a synthetic executor.
 
 ## New conformance and enforcement
 
@@ -45,6 +45,8 @@ An earlier exploratory run killed the lost-ack fixture while inference was still
 
 ## Verification ledger
 
+The local full-gate results below precede the rebase unless explicitly stated. Required PR CI verifies the final combined tree, including the upstream native gate added on main.
+
 | Command | Fresh result / scope |
 | --- | --- |
 | `pnpm prepare` | Exit 0; applied the repository's existing Effect compiler/Oxlint patches after frozen installation with scripts disabled. |
@@ -52,7 +54,7 @@ An earlier exploratory run killed the lost-ack fixture while inference was still
 | `node scripts/test-xstate-runtime.mjs` | Exit 0; both handoff cases complete, one model call, retained native receipt, two forced restarts. |
 | `node scripts/test-xstate-runtime.mjs --break-recovery` | Expected exit 1; verifies wake-loss detection. |
 | `pnpm verify:static` | Exit 0; secret scan, routes/migration checks, typecheck, lint and formatting passed. Staged-file scan rerun before publication. |
-| `pnpm verify:unit-and-build` | Exit 0; 2,145 tests in 211 files, website route checks and production website/Worker builds passed. |
+| `pnpm verify:unit-and-build` | Exit 0 before rebase; 2,145 tests in 211 files, website route checks and production website/Worker builds passed. Rebased full-suite result recorded in PR CI. |
 | `pnpm verify:native-runtime` | Exit 0; existing communication, Drizzle, WhatsApp and memory gates plus the new restart proof passed. Reference rerun passed after adding deterministic pre-crash barriers. |
 | `pnpm verify:browser` | Exit 0; 66 desktop/mobile tests, built passkey journeys and two-build stale-client recovery passed. |
 | Required remote CI | Pending PR publication. Container inputs/workflow were not changed; existing CI decides whether their builds run. |
