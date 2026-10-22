@@ -1,0 +1,71 @@
+{
+  "repository": "https://github.com/cill-i-am/durable-pi",
+  "commit": "d29803bc8fd8020cefffb5ce08a02a84a2e4f1df",
+  "review_date": "2026-10-19",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 11358,
+      "sha256": "2af1dd7f77dc8e5c7bc80aecf1040578f8598beacca890c916e8ae327d8f9463"
+    },
+    {
+      "path": "review-notes/distributed-probes.log",
+      "bytes": 533,
+      "sha256": "ff3e7b20294791cf8cd2d38733b8aaf79f95641c3b62484c4b5bcc95cc7beed5"
+    },
+    {
+      "path": "review-notes/distributed-probes.mts",
+      "bytes": 5367,
+      "sha256": "72ff47e222da0416d1541194774c96994c3aa619680f67a785f21af09234f3fb"
+    },
+    {
+      "path": "review-notes/native-storage-check.log",
+      "bytes": 1189,
+      "sha256": "d7d8a77ac1b512ff4fe69478e4cf0a9046da73d43dba03f91a9b1c8ecb235ad7"
+    },
+    {
+      "path": "review-notes/targeted-baseline.json",
+      "bytes": 129625,
+      "sha256": "16885b5058baf0ed73a100a90a65f0f90ad676bbb1ee53cc550c9dcb9274b0ec"
+    },
+    {
+      "path": "review-notes/terminal-admission-probe.log",
+      "bytes": 2545,
+      "sha256": "94c0ec55d1e4e9ce7a2f0e05c70b436d8be0b2baa2e596b09342b3e9301cd975"
+    },
+    {
+      "path": "review-notes/terminal-admission-probe.ts",
+      "bytes": 3647,
+      "sha256": "7196a8655bf71cb469a999dabc870dcb460094b5d85abf6181a26a418790aa26"
+    },
+    {
+      "path": "review-notes/vitest-summary.md",
+      "bytes": 2878,
+      "sha256": "89b8e7c402440d5fa1a7ce01fbf4a5992305bb15cffd8b45309df21afc9729c3"
+    },
+    {
+      "path": "review-notes/xstate-probe/package-lock.json",
+      "bytes": 1484,
+      "sha256": "796dcf3ac5e8e5c5713f2f12571f1c04de263c57013be17957547dbbd463b91c"
+    },
+    {
+      "path": "review-notes/xstate-probe/package.json",
+      "bytes": 213,
+      "sha256": "96042a247705946dc3389d044e804a77e4353bbc1c151f0a65ec2f2042b03270"
+    },
+    {
+      "path": "review-notes/xstate-probe/probe.log",
+      "bytes": 599,
+      "sha256": "e626cb4c23f992b436c3970db3e8e58f22d8557715414436390daf38d3fcb2c6"
+    },
+    {
+      "path": "review-notes/xstate-probe/probe.ts",
+      "bytes": 5860,
+      "sha256": "616507338a8dcf77b4538017c5f5ebe2a03cbe150d84f553c0bdcf162ddf29bf"
+    }
+  ],
+  "notes": [
+    "Manifest excludes itself.",
+    "Distributed probe Effect import is rewritten only in this staged copy; raw Vitest JSON is unchanged."
+  ]
+}

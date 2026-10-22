@@ -12,6 +12,10 @@ PiHarness has a small pinned dependency patch adding `coordinateStorage`. Both i
 
 Node SQLite uses its first-party scoped Effect driver, including native asynchronous transactions. Feature stores expose Effects on every backend; domain decisions remain independent of driver types. Synchronous SDK model-sizing getters use a pinned snapshot refreshed before each conversation pump; authorization always reads fresh state through Effects.
 
+Application lifecycle decisions follow the mandatory [XState Effect standard](decisions/xstate-effect-state-machines.md). An acceptance transaction validates identity, revision, attempt and authority, computes the pure synchronous machine transition, and persists authoritative state plus command intent and accepted event identity. Dispatch Pi/provider work after commit; admit correlated results through another fenced transition. Never run an asynchronous Effect actor or Pi operation inside a native SQL transaction.
+
+Each lifecycle chooses one versioned representation: a machine snapshot or domain data that reconstructs machine state without replaying external work. Writable SQL status and writable snapshots cannot compete. Preserve existing ledgers, receipts and outboxes. Pre-arm recovery through Lifecycle or prove another durable discovery path before accepting work; `nextWakeAt` alone is not a platform wake. Version conversions must retain unfinished work, uncertainty and attempt identity. This refactor authorizes no storage reset or resource identity cutover; the historical Drizzle cutover below is not a reusable migration strategy.
+
 ## Queries and migrations
 
 Use typed table definitions in each feature's `adapters/schema.ts`. Complete handwritten SQL statements and `sql.raw` are prohibited in application queries. Small typed SQLite expressions cover JSON fields, arithmetic, and exact substring matching. Generated migration DDL and deliberate fault injection in test fixtures are infrastructure exceptions.

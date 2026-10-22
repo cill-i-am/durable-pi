@@ -1,5 +1,116 @@
 import path from "node:path"
 
+function importedPath(context, node) {
+  if (node.type === "Identifier") {
+    let scope = context.sourceCode.getScope(node)
+    while (scope) {
+      const binding = scope.set.get(node.name)
+      if (binding) {
+        const definition = binding.defs.find(
+          (value) => value.type === "ImportBinding"
+        )
+        if (!definition) return
+        const specifier = definition.node
+        return {
+          source: definition.parent.source.value,
+          members:
+            specifier.type === "ImportNamespaceSpecifier"
+              ? []
+              : [specifier.imported?.name ?? specifier.imported?.value],
+        }
+      }
+      scope = scope.upper
+    }
+  }
+  if (node.type === "MemberExpression") {
+    const base = importedPath(context, node.object)
+    const name = node.computed ? node.property.value : node.property.name
+    if (base && typeof name === "string")
+      return { ...base, members: [...base.members, name] }
+  }
+}
+
+const standalone = new Set([
+  "createActor",
+  "Actor",
+  "interpret",
+  "createMachine",
+  "setup",
+])
+function forbiddenRuntime(source, name) {
+  return (
+    (source === "xstate" && standalone.has(name)) ||
+    (source === "@xstate/react" &&
+      ["useActor", "useActorRef", "useMachine", "createActorContext"].includes(
+        name
+      ))
+  )
+}
+
+/** All application machine definitions have a mechanically checked location.
+ * Core types and synchronous transition helpers remain legitimate imports. */
+export const effectMachines = {
+  meta: {
+    type: "problem",
+    schema: [],
+    messages: {
+      runtime:
+        "Application machines use setupEffect and the official Effect host. Core transition helpers and useSelector are allowed.",
+      location:
+        "Define application machines in an owning *.machine.ts module so the machine dependency boundary is checked.",
+    },
+  },
+  create(context) {
+    const reportImport = (node, source, specifiers) => {
+      if (node.importKind === "type" || node.exportKind === "type") return
+      for (const specifier of specifiers ?? []) {
+        if (specifier.importKind === "type" || specifier.exportKind === "type")
+          continue
+        const name =
+          specifier.imported?.name ??
+          specifier.imported?.value ??
+          specifier.local?.name
+        if (forbiddenRuntime(source, name))
+          context.report({ node: specifier, messageId: "runtime" })
+      }
+    }
+    const call = (node) => {
+      const imported = importedPath(context, node.callee)
+      if (!imported || imported.members.length !== 1) return
+      if (
+        node.callee.type !== "Identifier" &&
+        forbiddenRuntime(imported.source, imported.members[0])
+      )
+        context.report({ node, messageId: "runtime" })
+      if (
+        imported.source === "@xstate/effect" &&
+        imported.members[0] === "setupEffect" &&
+        !context.filename.endsWith(".machine.ts")
+      )
+        context.report({ node, messageId: "location" })
+    }
+    return {
+      ImportDeclaration: (node) =>
+        reportImport(node, node.source.value, node.specifiers),
+      ExportNamedDeclaration: (node) =>
+        node.source && reportImport(node, node.source.value, node.specifiers),
+      ExportAllDeclaration(node) {
+        if (
+          node.exportKind !== "type" &&
+          ["xstate", "@xstate/react"].includes(node.source.value)
+        )
+          context.report({ node, messageId: "runtime" })
+      },
+      CallExpression: call,
+      NewExpression: call,
+      ImportExpression(node) {
+        if (["xstate", "@xstate/react"].includes(node.source.value))
+          context.report({ node, messageId: "runtime" })
+      },
+    }
+  },
+}
+
 // Resolve both aliases and relative paths; type-only imports obey the same boundary.
 export const domainBoundaries = {
   meta: {
@@ -45,37 +156,8 @@ export const domainBoundaries = {
       )
         context.report({ node, messageId: "infrastructure" })
     }
-    function importedPath(node) {
-      if (node.type === "Identifier") {
-        let scope = context.sourceCode.getScope(node)
-        while (scope) {
-          const binding = scope.set.get(node.name)
-          if (binding) {
-            const definition = binding.defs.find(
-              (value) => value.type === "ImportBinding"
-            )
-            if (!definition) return
-            const specifier = definition.node
-            return {
-              source: definition.parent.source.value,
-              members:
-                specifier.type === "ImportNamespaceSpecifier"
-                  ? []
-                  : [specifier.imported?.name ?? specifier.imported?.value],
-            }
-          }
-          scope = scope.upper
-        }
-      }
-      if (node.type === "MemberExpression") {
-        const base = importedPath(node.object)
-        const name = node.computed ? node.property.value : node.property.name
-        if (base && typeof name === "string")
-          return { ...base, members: [...base.members, name] }
-      }
-    }
     function runsEffect(node) {
-      const imported = importedPath(node)
+      const imported = importedPath(context, node)
       if (imported) {
         const members =
           imported.source === "effect"
@@ -123,5 +205,5 @@ export const domainBoundaries = {
 
 export default {
   meta: { name: "architecture" },
-  rules: { boundaries: domainBoundaries },
+  rules: { boundaries: domainBoundaries, "effect-machines": effectMachines },
 }
