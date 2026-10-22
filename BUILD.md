@@ -10,7 +10,7 @@ The [source-backed inventory](docs/xstate-effect-inventory.md) records each back
 - [x] Verify the scoped actor lifetime and native Pi/storage/Lifecycle handoff, including forced restart and a broken-wake negative control.
 - [x] Revalidate the three historical witnesses on their original SHA and current implementation baseline; keep unresolved defects explicit in B02–B04.
 - [x] Extend architecture lint with AST/import rules and positive/negative tests through its actual CLI; keep semantic coverage as inventory/review work.
-- [ ] Pass the complete standards PR verification contract and review; record CI.
+- [x] Review the standards source and pass the complete PR verification contract: [PR #200](https://github.com/cill-i-am/durable-pi/pull/200), [CI run 39867469758](https://github.com/cill-i-am/durable-pi/actions/runs/39867469758) at `87ff00f`. Final documentation updates retain the same required head checks.
 - [ ] Migrate authority and high-risk ownership items B01–B05 with preserved approval/receipt fences and corrected reply/Stop/Terminal witnesses.
 - [ ] Migrate coupled durable protocols B06–B12 and remaining owned workflows B13–B18, following the inventory's dependency order.
 - [ ] Migrate frontend lifecycles F01–F15, preserving draft/attempt identities and proving resource cleanup and browser behavior.

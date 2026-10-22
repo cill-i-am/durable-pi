@@ -45,7 +45,7 @@ An earlier exploratory run killed the lost-ack fixture while inference was still
 
 ## Verification ledger
 
-The local full-gate results below precede the rebase unless explicitly stated. Required PR CI verifies the final combined tree, including the upstream native gate added on main.
+Static, unit/build and the complete native suite were rerun locally after rebase. The local browser result precedes the rebase; CI ran it against the combined tree. Source review checked the acceptance transaction, dispatch/receipt path, failure controls, every inventory path and the diff against main. No independent human review or approval is implied.
 
 | Command | Fresh result / scope |
 | --- | --- |
@@ -54,9 +54,9 @@ The local full-gate results below precede the rebase unless explicitly stated. R
 | `node scripts/test-xstate-runtime.mjs` | Exit 0; both handoff cases complete, one model call, retained native receipt, two forced restarts. |
 | `node scripts/test-xstate-runtime.mjs --break-recovery` | Expected exit 1; verifies wake-loss detection. |
 | `pnpm verify:static` | Exit 0; secret scan, routes/migration checks, typecheck, lint and formatting passed. Staged-file scan rerun before publication. |
-| `pnpm verify:unit-and-build` | Exit 0 before rebase; 2,145 tests in 211 files, website route checks and production website/Worker builds passed. Rebased full-suite result recorded in PR CI. |
-| `pnpm verify:native-runtime` | Exit 0; existing communication, Drizzle, WhatsApp and memory gates plus the new restart proof passed. Reference rerun passed after adding deterministic pre-crash barriers. |
+| `pnpm verify:unit-and-build` | Exit 0 after rebase; 2,153 tests in 212 files, website route checks and production website/Worker builds passed. Before rebase: 2,145 tests in 211 files. |
+| `pnpm verify:native-runtime` | Exit 0 after rebase; communication, Drizzle (47 cases / 41 restart assertions), WhatsApp, memory, upstream observation and XState restart gates all passed. [Reference output](evidence/xstate-effect/native-reference.log). |
 | `pnpm verify:browser` | Exit 0; 66 desktop/mobile tests, built passkey journeys and two-build stale-client recovery passed. |
-| Required remote CI | Pending PR publication. Container inputs/workflow were not changed; existing CI decides whether their builds run. |
+| Required remote CI | All required jobs and aggregate `check` passed for `87ff00f` in [run 39867469758](https://github.com/cill-i-am/durable-pi/actions/runs/39867469758): static (including actionlint/complexity), unit/build, native and browser. Container jobs succeeded with builds skipped for unchanged inputs; deploy skipped. Final documentation-only updates are subject to the same [PR #200 head checks](https://github.com/cill-i-am/durable-pi/pull/200/checks). |
 
 No merge, deployment, production reset, live email/WhatsApp send, or production provider exactly-once claim is part of this evidence. The [repository-wide goal](../BUILD.md#xstate-effect-lifecycle-refactor) remains open; all B01–B18 and F01–F15 migration items require their own implementation and proof.
