@@ -1,5 +1,5 @@
 import { Monitor, ShieldCheck } from "lucide-react"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 
 import { authClient } from "@/auth/client"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -24,9 +24,11 @@ type Confirmation =
 export function AccountSecurity({
   onClose,
   onPendingChange,
+  embedded,
 }: {
   onClose: () => void
   onPendingChange?: (pending: boolean) => void
+  embedded?: boolean
 }) {
   const { data: current } = authClient.useSession()
   const [sessions, setSessions] = useState<BrowserSession[]>([])
@@ -107,6 +109,215 @@ export function AccountSecurity({
   const twoFactorEnabled = !!current?.user.twoFactorEnabled
   const locked = pending || factorLocked || passkeyLocked
   return (
+    <AccountSecurityFrame embedded={embedded} locked={locked} onClose={onClose}>
+      {factorView ? (
+        <FactorSettings
+          onBusyChange={setFactorLocked}
+          onDone={() => {
+            setFactorView(false)
+            void refresh()
+          }}
+        />
+      ) : (
+        <>
+          <TwoFactorCard
+            enabled={twoFactorEnabled}
+            pending={locked}
+            onManage={() => setFactorView(true)}
+          />
+          <PasskeySettings
+            disabled={pending || factorLocked}
+            onBusyChange={setPasskeyLocked}
+          />
+          <section
+            className="space-y-4"
+            aria-labelledby="sessions-heading"
+            aria-busy={loading}
+          >
+            <header className="space-y-1">
+              <div className="flex items-center justify-between gap-4">
+                <h2 id="sessions-heading" className="text-xl font-semibold">
+                  Browser sessions
+                </h2>
+                <Button
+                  variant="ghost"
+                  disabled={loading || locked}
+                  onClick={() => void refresh()}
+                >
+                  Refresh
+                </Button>
+              </div>
+              <p className="text-sm leading-6 text-muted-foreground">
+                Each entry is a browser session. Device names are inferred.
+              </p>
+            </header>
+            {loading && (
+              <p role="status" className="text-sm text-muted-foreground">
+                Loading sessions…
+              </p>
+            )}
+            <ul className="divide-y">
+              {[...sessions]
+                .sort(
+                  (a, b) =>
+                    Number(b.id === current?.session.id) -
+                    Number(a.id === current?.session.id)
+                )
+                .map((session) => (
+                  <li key={session.id} className="flex items-center gap-4 py-4">
+                    <Monitor className="size-5 shrink-0 text-muted-foreground max-sm:hidden" />
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <p className="text-sm font-medium">
+                        {sessionLabel(session.userAgent)}
+                      </p>
+                      <p className="text-xs leading-5 text-muted-foreground">
+                        Signed in {new Date(session.createdAt).toLocaleString()}
+                        <br />
+                        Expires {new Date(session.expiresAt).toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="flex w-26 shrink-0 justify-end">
+                      {session.id === current?.session.id ? (
+                        <span className="rounded-md bg-accent px-2 py-1 text-xs font-medium text-accent-foreground">
+                          This browser
+                        </span>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          disabled={locked}
+                          aria-label={`Sign out ${sessionLabel(session.userAgent)}`}
+                          onClick={() => {
+                            setError("")
+                            setConfirm({ kind: "one", session })
+                          }}
+                        >
+                          Sign out
+                        </Button>
+                      )}
+                    </div>
+                  </li>
+                ))}
+            </ul>
+            {!loading && !error && sessions.length === 0 && (
+              <p>No active sessions found. Sign in again to continue.</p>
+            )}
+          </section>
+          {confirm && (
+            <section
+              className="space-y-4 rounded-lg border p-5"
+              aria-label="Confirm browser sign-out"
+            >
+              <h3
+                ref={confirmationHeading}
+                tabIndex={-1}
+                className="font-semibold outline-none"
+              >
+                {confirm.kind === "others"
+                  ? "Sign out all other browsers?"
+                  : `Sign out ${sessionLabel(confirm.session.userAgent)}?`}
+              </h3>
+              <p className="text-sm leading-6 text-muted-foreground">
+                Those sessions will need to sign in again. Your agents and saved
+                work will keep running.
+              </p>
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  disabled={locked}
+                  onClick={() => setConfirm(null)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  disabled={locked}
+                  onClick={() => void revoke()}
+                >
+                  {pending ? "Signing out…" : "Sign out browser"}
+                </Button>
+              </div>
+            </section>
+          )}
+          {error && (
+            <Alert role="alert">
+              <AlertDescription>
+                {error}
+                {freshSignIn && (
+                  <Button
+                    variant="link"
+                    onClick={() => void authClient.signOut()}
+                  >
+                    Sign out and sign in again
+                  </Button>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
+          {notice && (
+            <p role="status" className="text-sm text-primary">
+              {notice}
+            </p>
+          )}
+          <footer className="flex flex-wrap items-center justify-between gap-4 border-t pt-5">
+            <p className="text-xs text-muted-foreground">
+              Your agents and saved work keep running.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                disabled={locked || loading || !others.length}
+                onClick={() => {
+                  setError("")
+                  setConfirm({ kind: "others" })
+                }}
+              >
+                Sign out other browsers
+              </Button>
+              <Button variant="outline" disabled={locked} onClick={onClose}>
+                Done
+              </Button>
+            </div>
+          </footer>
+        </>
+      )}
+    </AccountSecurityFrame>
+  )
+}
+
+function AccountSecurityFrame({
+  embedded = false,
+  locked,
+  onClose,
+  children,
+}: {
+  embedded?: boolean
+  locked: boolean
+  onClose: () => void
+  children: ReactNode
+}) {
+  const Heading = embedded ? "h2" : DialogTitle
+  const Description = embedded ? "p" : DialogDescription
+  const content = (
+    <>
+      <header className="space-y-2 pr-8">
+        <Heading className="text-2xl leading-8 font-semibold">
+          Account security
+        </Heading>
+        <Description className="text-sm leading-6 text-muted-foreground">
+          Protect your account and control where you’re signed in.
+        </Description>
+      </header>
+      {children}
+    </>
+  )
+  if (embedded) {
+    return (
+      <section className="account-security flex flex-col gap-6 p-6 sm:p-8">
+        {content}
+      </section>
+    )
+  }
+  return (
     <Dialog
       open
       dismissible={!locked}
@@ -118,188 +329,7 @@ export function AccountSecurity({
         showCloseButton={!locked}
         className="account-security flex max-h-[90dvh] flex-col gap-6 overflow-y-auto p-6 max-sm:top-0 max-sm:left-0 max-sm:h-dvh max-sm:max-h-dvh max-sm:max-w-none max-sm:translate-0 max-sm:rounded-none sm:max-w-[720px] sm:p-8"
       >
-        <header className="space-y-2 pr-8">
-          <DialogTitle className="text-2xl leading-8 font-semibold">
-            Account security
-          </DialogTitle>
-          <DialogDescription className="leading-6">
-            Protect your account and control where you’re signed in.
-          </DialogDescription>
-        </header>
-        {factorView ? (
-          <FactorSettings
-            onBusyChange={setFactorLocked}
-            onDone={() => {
-              setFactorView(false)
-              void refresh()
-            }}
-          />
-        ) : (
-          <>
-            <TwoFactorCard
-              enabled={twoFactorEnabled}
-              pending={locked}
-              onManage={() => setFactorView(true)}
-            />
-            <PasskeySettings
-              disabled={pending || factorLocked}
-              onBusyChange={setPasskeyLocked}
-            />
-            <section
-              className="space-y-4"
-              aria-labelledby="sessions-heading"
-              aria-busy={loading}
-            >
-              <header className="space-y-1">
-                <div className="flex items-center justify-between gap-4">
-                  <h2 id="sessions-heading" className="text-xl font-semibold">
-                    Browser sessions
-                  </h2>
-                  <Button
-                    variant="ghost"
-                    disabled={loading || locked}
-                    onClick={() => void refresh()}
-                  >
-                    Refresh
-                  </Button>
-                </div>
-                <p className="text-sm leading-6 text-muted-foreground">
-                  Each entry is a browser session. Device names are inferred.
-                </p>
-              </header>
-              {loading && (
-                <p role="status" className="text-sm text-muted-foreground">
-                  Loading sessions…
-                </p>
-              )}
-              <ul className="divide-y">
-                {[...sessions]
-                  .sort(
-                    (a, b) =>
-                      Number(b.id === current?.session.id) -
-                      Number(a.id === current?.session.id)
-                  )
-                  .map((session) => (
-                    <li
-                      key={session.id}
-                      className="flex items-center gap-4 py-4"
-                    >
-                      <Monitor className="size-5 shrink-0 text-muted-foreground max-sm:hidden" />
-                      <div className="min-w-0 flex-1 space-y-1">
-                        <p className="text-sm font-medium">
-                          {sessionLabel(session.userAgent)}
-                        </p>
-                        <p className="text-xs leading-5 text-muted-foreground">
-                          Signed in{" "}
-                          {new Date(session.createdAt).toLocaleString()}
-                          <br />
-                          Expires {new Date(session.expiresAt).toLocaleString()}
-                        </p>
-                      </div>
-                      <div className="flex w-26 shrink-0 justify-end">
-                        {session.id === current?.session.id ? (
-                          <span className="rounded-md bg-accent px-2 py-1 text-xs font-medium text-accent-foreground">
-                            This browser
-                          </span>
-                        ) : (
-                          <Button
-                            variant="outline"
-                            disabled={locked}
-                            aria-label={`Sign out ${sessionLabel(session.userAgent)}`}
-                            onClick={() => {
-                              setError("")
-                              setConfirm({ kind: "one", session })
-                            }}
-                          >
-                            Sign out
-                          </Button>
-                        )}
-                      </div>
-                    </li>
-                  ))}
-              </ul>
-              {!loading && !error && sessions.length === 0 && (
-                <p>No active sessions found. Sign in again to continue.</p>
-              )}
-            </section>
-            {confirm && (
-              <section
-                className="space-y-4 rounded-lg border p-5"
-                aria-label="Confirm browser sign-out"
-              >
-                <h3
-                  ref={confirmationHeading}
-                  tabIndex={-1}
-                  className="font-semibold outline-none"
-                >
-                  {confirm.kind === "others"
-                    ? "Sign out all other browsers?"
-                    : `Sign out ${sessionLabel(confirm.session.userAgent)}?`}
-                </h3>
-                <p className="text-sm leading-6 text-muted-foreground">
-                  Those sessions will need to sign in again. Your agents and
-                  saved work will keep running.
-                </p>
-                <div className="flex justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    disabled={locked}
-                    onClick={() => setConfirm(null)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    disabled={locked}
-                    onClick={() => void revoke()}
-                  >
-                    {pending ? "Signing out…" : "Sign out browser"}
-                  </Button>
-                </div>
-              </section>
-            )}
-            {error && (
-              <Alert role="alert">
-                <AlertDescription>
-                  {error}
-                  {freshSignIn && (
-                    <Button
-                      variant="link"
-                      onClick={() => void authClient.signOut()}
-                    >
-                      Sign out and sign in again
-                    </Button>
-                  )}
-                </AlertDescription>
-              </Alert>
-            )}
-            {notice && (
-              <p role="status" className="text-sm text-primary">
-                {notice}
-              </p>
-            )}
-            <footer className="flex flex-wrap items-center justify-between gap-4 border-t pt-5">
-              <p className="text-xs text-muted-foreground">
-                Your agents and saved work keep running.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="outline"
-                  disabled={locked || loading || !others.length}
-                  onClick={() => {
-                    setError("")
-                    setConfirm({ kind: "others" })
-                  }}
-                >
-                  Sign out other browsers
-                </Button>
-                <Button variant="outline" disabled={locked} onClick={onClose}>
-                  Done
-                </Button>
-              </div>
-            </footer>
-          </>
-        )}
+        {content}
       </DialogContent>
     </Dialog>
   )

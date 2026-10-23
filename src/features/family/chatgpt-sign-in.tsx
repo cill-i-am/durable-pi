@@ -12,9 +12,11 @@ const account = agentApi("home")
 export function ChatGPTReconnect({
   defaultEmail,
   onConnected,
+  onPendingChange,
 }: {
   defaultEmail: string
   onConnected: () => Promise<void>
+  onPendingChange?: (pending: boolean) => void
 }) {
   const [email, setEmail] = useState(defaultEmail)
   const [attempt, setAttempt] = useState<ChatGPTSignInPending | null>(null)
@@ -23,6 +25,11 @@ export function ChatGPTReconnect({
   const [saved, setSaved] = useState("")
   const [working, setWorking] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [requestError, setRequestError] = useState(false)
+  useEffect(() => {
+    onPendingChange?.(working || address.length > 0 || requestError)
+    return () => onPendingChange?.(false)
+  }, [working, address, requestError, onPendingChange])
   const returnField = useRef<HTMLInputElement>(null)
   useEffect(() => {
     const controller = new AbortController()
@@ -50,6 +57,7 @@ export function ChatGPTReconnect({
   }, [attempt, working, error])
   async function start() {
     setWorking(true)
+    setRequestError(false)
     setError("")
     setSaved("")
     // Open synchronously so browser popup policies can preserve the user's tab.
@@ -63,6 +71,7 @@ export function ChatGPTReconnect({
       setAttempt(next)
       if (tab) tab.location.replace(next.authorizationUrl)
     } catch (cause) {
+      setRequestError(true)
       tab?.close()
       setError(
         cause instanceof Error
@@ -76,6 +85,7 @@ export function ChatGPTReconnect({
   async function finish() {
     if (!attempt) return
     setWorking(true)
+    setRequestError(false)
     setError("")
     const returned = address
     setAddress("")
@@ -90,6 +100,7 @@ export function ChatGPTReconnect({
         `ChatGPT connected as ${result.email}. Your family uses this connection.`
       )
     } catch (cause) {
+      setRequestError(true)
       setError(
         cause instanceof Error
           ? cause.message
@@ -101,12 +112,14 @@ export function ChatGPTReconnect({
   }
   async function cancel() {
     setWorking(true)
+    setRequestError(false)
     setError("")
     setAddress("")
     try {
       await account("model-account", { action: "cancel" })
       setAttempt(null)
     } catch {
+      setRequestError(true)
       setError("Could not reset sign-in. Try again.")
     } finally {
       setWorking(false)
@@ -190,6 +203,7 @@ export function ChatGPTReconnect({
               onChange={(event) => {
                 setAddress(event.target.value)
                 setError("")
+                setRequestError(false)
               }}
               placeholder="http://127.0.0.1:…/auth/callback?…"
               className="h-11 min-w-0 text-base sm:text-sm"
@@ -261,6 +275,20 @@ export function ChatGPTReconnect({
           </Button>
           <p>Only you need to sign in. Your family uses this connection.</p>
         </form>
+      )}
+      {!working && (address.length > 0 || requestError) && (
+        <Button
+          type="button"
+          variant="ghost"
+          className="self-start"
+          onClick={() => {
+            setAddress("")
+            setError("")
+            setRequestError(false)
+          }}
+        >
+          {requestError ? "Dismiss error" : "Discard return address"}
+        </Button>
       )}
     </div>
   )

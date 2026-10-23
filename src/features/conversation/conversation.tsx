@@ -14,6 +14,7 @@ import {
   Ellipsis,
   ShieldCheck,
   Plug,
+  Settings2,
 } from "lucide-react"
 import {
   useEffect,
@@ -116,7 +117,13 @@ export function Conversation({
   sending: boolean
   setSending: (value: boolean) => void
   onSettings: (
-    category: "models" | "access" | "connections" | "skills" | "model-access"
+    category:
+      | "general"
+      | "models"
+      | "access"
+      | "connections"
+      | "skills"
+      | "model-access"
   ) => void
   onOpenWorkbench: (value: "files" | "memory") => void
   onAppPendingChange?: (key: string, pending: boolean) => void
@@ -304,6 +311,12 @@ export function Conversation({
             <DropdownMenuContent align="end" className="min-w-56">
               <DropdownMenuGroup>
                 <DropdownMenuLabel>{agent.name}</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => onSettings("general")}>
+                  <Settings2 /> Agent settings
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onSettings("models")}>
+                  <Plug /> Models
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onSettings("access")}>
                   <ShieldCheck /> Tool access
                 </DropdownMenuItem>

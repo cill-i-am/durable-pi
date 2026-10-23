@@ -9,7 +9,10 @@ import {
 } from "@/access/connections"
 import { agentApi } from "@/http/client"
 
-export function useConnections(agentId: string, onSaved: () => void) {
+export function useConnections(
+  agentId: string | undefined,
+  onSaved: () => void
+) {
   const [connections, setConnections] = useState<readonly ConnectionInfo[]>([])
   const [selection, setSelection] = useState<ToolSelection>({
     revision: 0,
@@ -30,9 +33,11 @@ export function useConnections(agentId: string, onSaved: () => void) {
         agentApi("home")("connections").then(
           Schema.decodeUnknownSync(ConnectionList)
         ),
-        agentApi(agentId)("remote-tools").then(
-          Schema.decodeUnknownSync(ToolSelection)
-        ),
+        agentId === undefined
+          ? Promise.resolve({ revision: 0, tools: [] })
+          : agentApi(agentId)("remote-tools").then(
+              Schema.decodeUnknownSync(ToolSelection)
+            ),
       ])
       if (revision !== sequence.current) return
       setConnections(library.connections)
@@ -72,13 +77,15 @@ export function useConnections(agentId: string, onSaved: () => void) {
     }
   }
   const change = (path: string, body: unknown) =>
-    mutate(
-      () =>
-        agentApi("home")(`connections/${path}`, body).then(
-          Schema.decodeUnknownSync(ConnectionList)
-        ),
-      (value) => setConnections(value.connections)
-    )
+    agentId !== undefined
+      ? Promise.resolve(false)
+      : mutate(
+          () =>
+            agentApi("home")(`connections/${path}`, body).then(
+              Schema.decodeUnknownSync(ConnectionList)
+            ),
+          (value) => setConnections(value.connections)
+        )
   return {
     connections,
     selection,
@@ -97,13 +104,15 @@ export function useConnections(agentId: string, onSaved: () => void) {
         expectedRevision: connection.revision,
       }),
     select: (names: readonly string[]) =>
-      mutate(
-        () =>
-          agentApi(agentId)("remote-tools", {
-            expectedRevision: selection.revision,
-            names,
-          }).then(Schema.decodeUnknownSync(ToolSelection)),
-        setSelection
-      ),
+      agentId === undefined
+        ? Promise.resolve(false)
+        : mutate(
+            () =>
+              agentApi(agentId)("remote-tools", {
+                expectedRevision: selection.revision,
+                names,
+              }).then(Schema.decodeUnknownSync(ToolSelection)),
+            setSelection
+          ),
   }
 }

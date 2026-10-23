@@ -1,7 +1,8 @@
 import { Schema } from "effect"
 import { MessageCircle } from "lucide-react"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useId, useRef, useState } from "react"
 
+import type { AgentProfile } from "@/agents/contracts"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   AlertDialog,
@@ -14,6 +15,15 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { agentApi, ApiError } from "@/http/client"
 import { poll } from "@/http/poll"
 import { replyProgressText, replyRetryLabel } from "@/replies/progress"
@@ -33,19 +43,17 @@ const labels = {
   cancelled: "Cancelled",
   expired: "Reply window closed",
 }
-type Change =
+// An unconfirmed mutation must replay its original URL target and operation ID.
+type Change = { agentId: string } & (
   | { path: "configure"; body: ConfigureWhatsApp }
   | { path: "retry"; body: typeof RetryWhatsApp.Type }
+)
 export function WhatsAppSettings({
-  agentId,
-  agentName,
-  archived,
+  agents,
   open,
   onPendingChange,
 }: {
-  agentId: string
-  agentName: string
-  archived: boolean
+  agents: readonly AgentProfile[]
   open: boolean
   onPendingChange: (pending: boolean) => void
 }) {
@@ -54,14 +62,23 @@ export function WhatsAppSettings({
   const [busy, setBusy] = useState(false)
   const [attempt, setAttempt] = useState<Change | null>(null)
   const [resend, setResend] = useState<string | null>(null)
+  const [chosenAgentId, setChosenAgentId] = useState<string | null>(null)
+  const activeAgents = agents.filter((agent) => agent.status === "active")
+  const selectedAgentId =
+    chosenAgentId ??
+    (view && activeAgents.some((agent) => agent.id === view.agentId)
+      ? view.agentId
+      : null)
+  const routingDirty =
+    !!view && selectedAgentId !== null && selectedAgentId !== view.agentId
   const lock = useRef(false),
     sequence = useRef(0)
   const refresh = useCallback(async () => {
-    if (lock.current) return
+    if (lock.current || attempt) return
     const generation = ++sequence.current
     try {
       const result = Schema.decodeUnknownSync(WhatsAppView)(
-        await agentApi(agentId)("whatsapp")
+        await agentApi("home")("whatsapp")
       )
       if (generation === sequence.current) {
         setView(result)
@@ -73,7 +90,7 @@ export function WhatsAppSettings({
           cause instanceof Error ? cause.message : "Could not load WhatsApp."
         )
     }
-  }, [agentId])
+  }, [attempt])
   useEffect(() => {
     if (!open) return
     const stop = poll(
@@ -90,8 +107,8 @@ export function WhatsAppSettings({
     }
   }, [open, refresh])
   useEffect(() => {
-    onPendingChange(busy || !!attempt || !!resend)
-  }, [busy, attempt, resend, onPendingChange])
+    onPendingChange(busy || !!attempt || !!resend || routingDirty)
+  }, [busy, attempt, resend, routingDirty, onPendingChange])
   async function change(input: Change) {
     if (lock.current) return
     lock.current = true
@@ -101,10 +118,11 @@ export function WhatsAppSettings({
     setError("")
     try {
       const result = Schema.decodeUnknownSync(WhatsAppView)(
-        await agentApi(agentId)(`whatsapp/${input.path}`, input.body)
+        await agentApi(input.agentId)(`whatsapp/${input.path}`, input.body)
       )
       setView(result)
       setAttempt(null)
+      if (input.path === "configure") setChosenAgentId(null)
     } catch (cause) {
       if (cause instanceof ApiError && [400, 409].includes(cause.status))
         setAttempt(null)
@@ -120,12 +138,20 @@ export function WhatsAppSettings({
   }
   const retry = (id: string, acknowledgeDuplicateRisk: boolean) =>
     change({
+      agentId: "home",
       path: "retry",
       body: { id, acknowledgeDuplicateRisk, operationId: crypto.randomUUID() },
     })
-  const configure = (enabled: boolean) =>
-    view &&
-    change({
+  const configure = (enabled: boolean) => {
+    if (!view) return
+    const agentId = enabled ? selectedAgentId : view.agentId
+    if (
+      !agentId ||
+      (enabled && !activeAgents.some((agent) => agent.id === agentId))
+    )
+      return
+    return change({
+      agentId,
       path: "configure",
       body: {
         enabled,
@@ -133,14 +159,17 @@ export function WhatsAppSettings({
         operationId: crypto.randomUUID(),
       },
     })
+  }
   return (
     <section aria-label="WhatsApp connection" className="flex flex-col gap-4">
       <WhatsAppRouting
         view={view}
-        agentId={agentId}
-        agentName={agentName}
-        archived={archived}
-        disabled={busy || !!attempt}
+        agents={activeAgents}
+        selectedAgentId={selectedAgentId}
+        onAgentChange={setChosenAgentId}
+        onCancelRouting={() => setChosenAgentId(null)}
+        routingDirty={routingDirty}
+        disabled={busy || !!attempt || !!resend}
         configure={configure}
       />
       {error && (
@@ -162,61 +191,71 @@ export function WhatsAppSettings({
           Reload WhatsApp
         </Button>
       )}
-      {!!view?.messages.some((message) => message.agentId === agentId) && (
+      {!!view?.messages.length && (
         <section
           aria-label="Recent WhatsApp replies"
           className="flex flex-col gap-3"
         >
           <h4 className="text-sm font-medium">Recent WhatsApp replies</h4>
-          {view.messages
-            .filter((message) => message.agentId === agentId)
-            .map((message) => (
-              <div key={message.id} className="flex flex-col gap-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="secondary">
-                    {message.kind === "image"
-                      ? "Image · "
-                      : message.kind === "audio"
-                        ? "Audio · "
-                        : message.kind === "media"
-                          ? "Attachment · "
-                          : ""}
-                    {message.preparingFiles
-                      ? "Preparing files"
-                      : labels[message.state]}
-                  </Badge>
-                  {["failed", "uncertain", "expired"].includes(
-                    message.state
-                  ) && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={busy || !!attempt || !view.enabled || archived}
-                      onClick={() =>
-                        message.state === "uncertain"
-                          ? setResend(message.id)
-                          : retry(message.id, false)
-                      }
-                    >
-                      {replyRetryLabel(message.progress)}
-                    </Button>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {new Date(message.createdAt).toLocaleString()}
-                </p>
-                {message.progress && (
-                  <p className="text-sm text-muted-foreground">
-                    {replyProgressText(message.progress)}
-                  </p>
-                )}
-                {message.error && (
-                  <p className="text-sm text-muted-foreground">
-                    {message.error}
-                  </p>
+          {view.messages.map((message) => (
+            <div key={message.id} className="flex flex-col gap-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="secondary">
+                  {message.kind === "image"
+                    ? "Image · "
+                    : message.kind === "audio"
+                      ? "Audio · "
+                      : message.kind === "media"
+                        ? "Attachment · "
+                        : ""}
+                  {message.preparingFiles
+                    ? "Preparing files"
+                    : labels[message.state]}
+                </Badge>
+                {["failed", "uncertain", "expired"].includes(message.state) && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={
+                      busy ||
+                      !!attempt ||
+                      !!resend ||
+                      routingDirty ||
+                      !view.enabled ||
+                      !activeAgents.some(
+                        (agent) => agent.id === message.agentId
+                      )
+                    }
+                    onClick={() =>
+                      message.state === "uncertain"
+                        ? setResend(message.id)
+                        : retry(message.id, false)
+                    }
+                  >
+                    {replyRetryLabel(message.progress)}
+                  </Button>
                 )}
               </div>
-            ))}
+              <p className="text-xs text-muted-foreground">
+                Agent:{" "}
+                {agents.find((agent) => agent.id === message.agentId)?.name ??
+                  (message.agentId === view.agentId
+                    ? view.agentName
+                    : message.agentId)}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {new Date(message.createdAt).toLocaleString()}
+              </p>
+              {message.progress && (
+                <p className="text-sm text-muted-foreground">
+                  {replyProgressText(message.progress)}
+                </p>
+              )}
+              {message.error && (
+                <p className="text-sm text-muted-foreground">{message.error}</p>
+              )}
+            </div>
+          ))}
         </section>
       )}
       <AlertDialog
@@ -254,26 +293,33 @@ export function WhatsAppSettings({
 
 function WhatsAppRouting({
   view,
-  agentId,
-  agentName,
-  archived,
+  agents,
+  selectedAgentId,
+  onAgentChange,
+  onCancelRouting,
+  routingDirty,
   disabled,
   configure,
 }: {
   view: WhatsAppView | null
-  agentId: string
-  agentName: string
-  archived: boolean
+  agents: readonly AgentProfile[]
+  selectedAgentId: string | null
+  onAgentChange: (id: string) => void
+  onCancelRouting: () => void
+  routingDirty: boolean
   disabled: boolean
   configure: (enabled: boolean) => unknown
 }) {
+  const selectedAgent = agents.find((agent) => agent.id === selectedAgentId)
   return (
     <div className="flex flex-col gap-2">
       <h3 className="text-sm font-medium">WhatsApp</h3>
       <p className="text-sm text-muted-foreground">
-        {view?.configured
-          ? "Send text from your connected WhatsApp account. Approvals stay in Pi and Executor."
-          : "WhatsApp Business setup is pending. Once connected, choose which agent receives your messages."}
+        {!view
+          ? "Loading WhatsApp…"
+          : view.configured
+            ? "Send text from your connected WhatsApp account. Approvals stay in Pi and Executor."
+            : "WhatsApp Business setup is pending. Once connected, choose which agent receives your messages."}
       </p>
       {view?.enabled && (
         <p className="text-sm">
@@ -281,32 +327,21 @@ function WhatsAppRouting({
           their original agent.
         </p>
       )}
-      <div className="flex flex-wrap gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={
-            !view?.configured ||
-            disabled ||
-            archived ||
-            (view.enabled && view.agentId === agentId)
-          }
-          onClick={() => configure(true)}
-        >
-          <MessageCircle data-icon="inline-start" />
-          {view?.enabled ? `Route WhatsApp to ${agentName}` : "Enable WhatsApp"}
-        </Button>
-        {view?.enabled && (
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={disabled}
-            onClick={() => configure(false)}
-          >
-            Disable WhatsApp
-          </Button>
-        )}
-      </div>
+      <WhatsAppAgentSelect
+        view={view}
+        agents={agents}
+        selectedAgent={selectedAgent}
+        disabled={disabled}
+        onAgentChange={onAgentChange}
+      />
+      <WhatsAppRoutingActions
+        view={view}
+        selectedAgent={selectedAgent}
+        routingDirty={routingDirty}
+        disabled={disabled}
+        configure={configure}
+        onCancelRouting={onCancelRouting}
+      />
       {view?.enabled && (
         <p className="text-xs text-muted-foreground">
           Disabling stops new messages and replies that have not started
@@ -328,6 +363,121 @@ function WhatsAppRouting({
         Replies need a WhatsApp message from you within the last 24 hours. Send
         files and review full answers in Pi.
       </p>
+    </div>
+  )
+}
+
+function WhatsAppAgentSelect({
+  view,
+  agents,
+  selectedAgent,
+  disabled,
+  onAgentChange,
+}: {
+  view: WhatsAppView | null
+  agents: readonly AgentProfile[]
+  selectedAgent: AgentProfile | undefined
+  disabled: boolean
+  onAgentChange: (id: string) => void
+}) {
+  const selectionId = useId()
+  return (
+    <>
+      <FieldGroup>
+        <Field>
+          <FieldLabel htmlFor={selectionId}>WhatsApp agent</FieldLabel>
+          <Select
+            items={agents.map((agent) => ({
+              value: agent.id,
+              label: agent.name,
+            }))}
+            value={selectedAgent?.id ?? null}
+            disabled={!view || disabled || agents.length === 0}
+            onValueChange={(value) => {
+              if (value) onAgentChange(value)
+            }}
+          >
+            <SelectTrigger id={selectionId} className="w-full">
+              <SelectValue placeholder="Choose an agent" />
+            </SelectTrigger>
+            <SelectContent mobileTitle="WhatsApp agent">
+              <SelectGroup>
+                {agents.map((agent) => (
+                  <SelectItem key={agent.id} value={agent.id}>
+                    {agent.name}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </Field>
+      </FieldGroup>
+      {view && !agents.some((agent) => agent.id === view.agentId) && (
+        <p className="text-sm text-muted-foreground">
+          {view.agentName} is unavailable. Choose an active agent to route new
+          WhatsApp messages.
+        </p>
+      )}
+      {view && agents.length === 0 && (
+        <p className="text-sm text-muted-foreground">
+          Create or restore an agent before enabling WhatsApp.
+        </p>
+      )}
+    </>
+  )
+}
+
+function WhatsAppRoutingActions({
+  view,
+  selectedAgent,
+  routingDirty,
+  disabled,
+  configure,
+  onCancelRouting,
+}: {
+  view: WhatsAppView | null
+  selectedAgent: AgentProfile | undefined
+  routingDirty: boolean
+  disabled: boolean
+  configure: (enabled: boolean) => unknown
+  onCancelRouting: () => void
+}) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={
+          !view?.configured ||
+          disabled ||
+          !selectedAgent ||
+          (view.enabled && view.agentId === selectedAgent.id)
+        }
+        onClick={() => configure(true)}
+      >
+        <MessageCircle data-icon="inline-start" />
+        {view?.enabled ? "Save WhatsApp agent" : "Enable WhatsApp"}
+      </Button>
+      {routingDirty && (
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={disabled}
+          onClick={onCancelRouting}
+        >
+          Cancel
+        </Button>
+      )}
+      {view?.enabled && (
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={disabled || routingDirty}
+          onClick={() => configure(false)}
+        >
+          Disable WhatsApp
+        </Button>
+      )}
     </div>
   )
 }

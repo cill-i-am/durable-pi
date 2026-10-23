@@ -402,7 +402,7 @@ export function AgentSidebar({
                         <Link
                           {...workspaceDestination(selected.id, {
                             ...view,
-                            settings: "general",
+                            settings: "account",
                             security: undefined,
                             connections: undefined,
                           })}

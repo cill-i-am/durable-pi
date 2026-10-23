@@ -23,7 +23,11 @@ import {
 } from "../../src/components/ui/input-group"
 import { JoinFamily } from "../../src/features/family/join"
 import { UpdateRecovery } from "../../src/features/updates/update-recovery"
-import { workspaceView } from "../../src/navigation/workspace"
+import {
+  workspaceView,
+  validateGlobalSettingsSearch,
+  validateConnectionSettingsSearch,
+} from "../../src/navigation/workspace"
 import { reportClientError } from "../../src/observability/browser"
 import { Route as PanelRoute } from "../../src/routes/_workspace.agents.$agentId.$panel.index"
 import { Route as SettingsRoute } from "../../src/routes/_workspace.agents.$agentId.settings.$section"
@@ -83,6 +87,19 @@ const router = createRouter({
         getParentRoute: () => workspace,
         path: "/settings/security",
       }),
+      ...(
+        ["account", "preferences", "connections", "skills", "channels"] as const
+      ).map((section) =>
+        createRoute({
+          getParentRoute: () => workspace,
+          path: `/settings/${section}`,
+          validateSearch:
+            section === "connections"
+              ? validateConnectionSettingsSearch
+              : validateGlobalSettingsSearch,
+          component: () => null,
+        })
+      ),
       createRoute({
         params: PanelRoute.options.params,
         validateSearch: PanelRoute.options.validateSearch,

@@ -23,7 +23,12 @@ import { Route as WorkspaceAgentsIndexRouteImport } from './routes/_workspace.ag
 import { Route as WorkspaceAgentsArchivedRouteImport } from './routes/_workspace.agents.archived'
 import { Route as WorkspaceAgentsNewRouteImport } from './routes/_workspace.agents.new'
 import { Route as WorkspaceFamilyModelAccessRouteImport } from './routes/_workspace.family.model-access'
+import { Route as WorkspaceSettingsAccountRouteImport } from './routes/_workspace.settings.account'
+import { Route as WorkspaceSettingsChannelsRouteImport } from './routes/_workspace.settings.channels'
+import { Route as WorkspaceSettingsConnectionsRouteImport } from './routes/_workspace.settings.connections'
+import { Route as WorkspaceSettingsPreferencesRouteImport } from './routes/_workspace.settings.preferences'
 import { Route as WorkspaceSettingsSecurityRouteImport } from './routes/_workspace.settings.security'
+import { Route as WorkspaceSettingsSkillsRouteImport } from './routes/_workspace.settings.skills'
 import { Route as ApiAccountAvatarRouteImport } from './routes/api.account.avatar'
 import { Route as ApiAgentSplatRouteImport } from './routes/api.agent.$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api.auth.$'
@@ -106,12 +111,41 @@ const WorkspaceFamilyModelAccessRoute =
     path: '/model-access',
     getParentRoute: () => WorkspaceFamilyRoute,
   } as any)
+const WorkspaceSettingsAccountRoute =
+  WorkspaceSettingsAccountRouteImport.update({
+    id: '/settings/account',
+    path: '/settings/account',
+    getParentRoute: () => WorkspaceRoute,
+  } as any)
+const WorkspaceSettingsChannelsRoute =
+  WorkspaceSettingsChannelsRouteImport.update({
+    id: '/settings/channels',
+    path: '/settings/channels',
+    getParentRoute: () => WorkspaceRoute,
+  } as any)
+const WorkspaceSettingsConnectionsRoute =
+  WorkspaceSettingsConnectionsRouteImport.update({
+    id: '/settings/connections',
+    path: '/settings/connections',
+    getParentRoute: () => WorkspaceRoute,
+  } as any)
+const WorkspaceSettingsPreferencesRoute =
+  WorkspaceSettingsPreferencesRouteImport.update({
+    id: '/settings/preferences',
+    path: '/settings/preferences',
+    getParentRoute: () => WorkspaceRoute,
+  } as any)
 const WorkspaceSettingsSecurityRoute =
   WorkspaceSettingsSecurityRouteImport.update({
     id: '/settings/security',
     path: '/settings/security',
     getParentRoute: () => WorkspaceRoute,
   } as any)
+const WorkspaceSettingsSkillsRoute = WorkspaceSettingsSkillsRouteImport.update({
+  id: '/settings/skills',
+  path: '/settings/skills',
+  getParentRoute: () => WorkspaceRoute,
+} as any)
 const ApiAccountAvatarRoute = ApiAccountAvatarRouteImport.update({
   id: '/api/account/avatar',
   path: '/api/account/avatar',
@@ -187,7 +221,12 @@ export interface FileRoutesByFullPath {
   '/agents/archived': typeof WorkspaceAgentsArchivedRoute
   '/agents/new': typeof WorkspaceAgentsNewRoute
   '/family/model-access': typeof WorkspaceFamilyModelAccessRoute
+  '/settings/account': typeof WorkspaceSettingsAccountRoute
+  '/settings/channels': typeof WorkspaceSettingsChannelsRoute
+  '/settings/connections': typeof WorkspaceSettingsConnectionsRoute
+  '/settings/preferences': typeof WorkspaceSettingsPreferencesRoute
   '/settings/security': typeof WorkspaceSettingsSecurityRoute
+  '/settings/skills': typeof WorkspaceSettingsSkillsRoute
   '/api/account/avatar': typeof ApiAccountAvatarRoute
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -214,7 +253,12 @@ export interface FileRoutesByTo {
   '/agents/archived': typeof WorkspaceAgentsArchivedRoute
   '/agents/new': typeof WorkspaceAgentsNewRoute
   '/family/model-access': typeof WorkspaceFamilyModelAccessRoute
+  '/settings/account': typeof WorkspaceSettingsAccountRoute
+  '/settings/channels': typeof WorkspaceSettingsChannelsRoute
+  '/settings/connections': typeof WorkspaceSettingsConnectionsRoute
+  '/settings/preferences': typeof WorkspaceSettingsPreferencesRoute
   '/settings/security': typeof WorkspaceSettingsSecurityRoute
+  '/settings/skills': typeof WorkspaceSettingsSkillsRoute
   '/api/account/avatar': typeof ApiAccountAvatarRoute
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -243,7 +287,12 @@ export interface FileRoutesById {
   '/_workspace/agents/archived': typeof WorkspaceAgentsArchivedRoute
   '/_workspace/agents/new': typeof WorkspaceAgentsNewRoute
   '/_workspace/family/model-access': typeof WorkspaceFamilyModelAccessRoute
+  '/_workspace/settings/account': typeof WorkspaceSettingsAccountRoute
+  '/_workspace/settings/channels': typeof WorkspaceSettingsChannelsRoute
+  '/_workspace/settings/connections': typeof WorkspaceSettingsConnectionsRoute
+  '/_workspace/settings/preferences': typeof WorkspaceSettingsPreferencesRoute
   '/_workspace/settings/security': typeof WorkspaceSettingsSecurityRoute
+  '/_workspace/settings/skills': typeof WorkspaceSettingsSkillsRoute
   '/api/account/avatar': typeof ApiAccountAvatarRoute
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -272,7 +321,12 @@ export interface FileRouteTypes {
     | '/agents/archived'
     | '/agents/new'
     | '/family/model-access'
+    | '/settings/account'
+    | '/settings/channels'
+    | '/settings/connections'
+    | '/settings/preferences'
     | '/settings/security'
+    | '/settings/skills'
     | '/api/account/avatar'
     | '/api/agent/$'
     | '/api/auth/$'
@@ -299,7 +353,12 @@ export interface FileRouteTypes {
     | '/agents/archived'
     | '/agents/new'
     | '/family/model-access'
+    | '/settings/account'
+    | '/settings/channels'
+    | '/settings/connections'
+    | '/settings/preferences'
     | '/settings/security'
+    | '/settings/skills'
     | '/api/account/avatar'
     | '/api/agent/$'
     | '/api/auth/$'
@@ -327,7 +386,12 @@ export interface FileRouteTypes {
     | '/_workspace/agents/archived'
     | '/_workspace/agents/new'
     | '/_workspace/family/model-access'
+    | '/_workspace/settings/account'
+    | '/_workspace/settings/channels'
+    | '/_workspace/settings/connections'
+    | '/_workspace/settings/preferences'
     | '/_workspace/settings/security'
+    | '/_workspace/settings/skills'
     | '/api/account/avatar'
     | '/api/agent/$'
     | '/api/auth/$'
@@ -459,11 +523,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceFamilyModelAccessRouteImport
       parentRoute: typeof WorkspaceFamilyRoute
     }
+    '/_workspace/settings/account': {
+      id: '/_workspace/settings/account'
+      path: '/settings/account'
+      fullPath: '/settings/account'
+      preLoaderRoute: typeof WorkspaceSettingsAccountRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
+    '/_workspace/settings/channels': {
+      id: '/_workspace/settings/channels'
+      path: '/settings/channels'
+      fullPath: '/settings/channels'
+      preLoaderRoute: typeof WorkspaceSettingsChannelsRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
+    '/_workspace/settings/connections': {
+      id: '/_workspace/settings/connections'
+      path: '/settings/connections'
+      fullPath: '/settings/connections'
+      preLoaderRoute: typeof WorkspaceSettingsConnectionsRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
+    '/_workspace/settings/preferences': {
+      id: '/_workspace/settings/preferences'
+      path: '/settings/preferences'
+      fullPath: '/settings/preferences'
+      preLoaderRoute: typeof WorkspaceSettingsPreferencesRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
     '/_workspace/settings/security': {
       id: '/_workspace/settings/security'
       path: '/settings/security'
       fullPath: '/settings/security'
       preLoaderRoute: typeof WorkspaceSettingsSecurityRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
+    '/_workspace/settings/skills': {
+      id: '/_workspace/settings/skills'
+      path: '/settings/skills'
+      fullPath: '/settings/skills'
+      preLoaderRoute: typeof WorkspaceSettingsSkillsRouteImport
       parentRoute: typeof WorkspaceRoute
     }
     '/api/account/avatar': {
@@ -563,7 +662,12 @@ interface WorkspaceRouteChildren {
   WorkspaceIndexRoute: typeof WorkspaceIndexRoute
   WorkspaceAgentsArchivedRoute: typeof WorkspaceAgentsArchivedRoute
   WorkspaceAgentsNewRoute: typeof WorkspaceAgentsNewRoute
+  WorkspaceSettingsAccountRoute: typeof WorkspaceSettingsAccountRoute
+  WorkspaceSettingsChannelsRoute: typeof WorkspaceSettingsChannelsRoute
+  WorkspaceSettingsConnectionsRoute: typeof WorkspaceSettingsConnectionsRoute
+  WorkspaceSettingsPreferencesRoute: typeof WorkspaceSettingsPreferencesRoute
   WorkspaceSettingsSecurityRoute: typeof WorkspaceSettingsSecurityRoute
+  WorkspaceSettingsSkillsRoute: typeof WorkspaceSettingsSkillsRoute
   WorkspaceAgentsIndexRoute: typeof WorkspaceAgentsIndexRoute
   WorkspaceAgentsAgentIdEditRoute: typeof WorkspaceAgentsAgentIdEditRoute
   WorkspaceAgentsAgentIdIndexRoute: typeof WorkspaceAgentsAgentIdIndexRoute
@@ -577,7 +681,12 @@ const WorkspaceRouteChildren: WorkspaceRouteChildren = {
   WorkspaceIndexRoute: WorkspaceIndexRoute,
   WorkspaceAgentsArchivedRoute: WorkspaceAgentsArchivedRoute,
   WorkspaceAgentsNewRoute: WorkspaceAgentsNewRoute,
+  WorkspaceSettingsAccountRoute: WorkspaceSettingsAccountRoute,
+  WorkspaceSettingsChannelsRoute: WorkspaceSettingsChannelsRoute,
+  WorkspaceSettingsConnectionsRoute: WorkspaceSettingsConnectionsRoute,
+  WorkspaceSettingsPreferencesRoute: WorkspaceSettingsPreferencesRoute,
   WorkspaceSettingsSecurityRoute: WorkspaceSettingsSecurityRoute,
+  WorkspaceSettingsSkillsRoute: WorkspaceSettingsSkillsRoute,
   WorkspaceAgentsIndexRoute: WorkspaceAgentsIndexRoute,
   WorkspaceAgentsAgentIdEditRoute: WorkspaceAgentsAgentIdEditRoute,
   WorkspaceAgentsAgentIdIndexRoute: WorkspaceAgentsAgentIdIndexRoute,

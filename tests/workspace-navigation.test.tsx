@@ -9,9 +9,11 @@ import { parseAgentId } from "../src/navigation/workspace"
 
 const harness = vi.hoisted(() => ({
   pathname: "/agents",
+  pendingPathname: undefined as string | undefined,
   navigate: vi.fn(),
   select: vi.fn(),
   choose: undefined as ((id: AgentProfile["id"]) => void) | undefined,
+  act: undefined as ((action: "settings" | "security") => void) | undefined,
 }))
 const selectedAgent: AgentProfile = {
   slug: "research",
@@ -36,7 +38,10 @@ vi.mock("@tanstack/react-router", async (original) => ({
       },
     ]),
   useLocation: ({ select }: { select: (location: unknown) => unknown }) =>
-    select({ pathname: harness.pathname, href: harness.pathname }),
+    select({
+      pathname: harness.pendingPathname ?? harness.pathname,
+      href: harness.pendingPathname ?? harness.pathname,
+    }),
   useNavigate: () => harness.navigate,
   useBlocker: () => ({}),
 }))
@@ -74,8 +79,12 @@ vi.mock("../src/features/agents/use-agent-statuses", () => ({
   useAgentStatuses: () => ({ statuses: {} }),
 }))
 vi.mock("../src/app/workspace-navigation", () => ({
-  WorkspaceNavigation: (props: { onSelect: typeof harness.choose }) => {
+  WorkspaceNavigation: (props: {
+    onSelect: typeof harness.choose
+    onAction: typeof harness.act
+  }) => {
     harness.choose = props.onSelect
+    harness.act = props.onAction
     return <nav aria-label="Workspace commands" />
   },
 }))
@@ -83,7 +92,9 @@ vi.mock("../src/app/workspace-navigation", () => ({
 beforeEach(() => {
   vi.clearAllMocks()
   harness.pathname = "/agents"
+  harness.pendingPathname = undefined
   harness.choose = undefined
+  harness.act = undefined
 })
 
 describe.each(["/agents", "/agents/archived"])(
@@ -111,3 +122,23 @@ it("choosing the current agent returns from its workbench to its conversation", 
     })
   )
 })
+
+it.each([
+  ["settings", "/settings/account"],
+  ["security", "/settings/security"],
+] as const)(
+  "opens account-owned %s from the committed workbench without adopting a pending location",
+  (action, to) => {
+    harness.pathname = "/agents/home/files"
+    harness.pendingPathname = "/agents/research"
+    renderToStaticMarkup(<ChatApp />)
+    harness.act!(action)
+    expect(harness.navigate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to,
+        params: {},
+        search: expect.objectContaining({ returnTo: "/agents/home/files" }),
+      })
+    )
+  }
+)

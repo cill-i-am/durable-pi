@@ -76,6 +76,68 @@ it.each([
   }
 )
 
+it.each([
+  { result: "connected", error: undefined },
+  {
+    result: "failed",
+    error: new ConnectionError({ message: "Authorization did not finish." }),
+  },
+  {
+    result: "failed",
+    error: new ConnectionStorageError({
+      operation: "save authorization",
+      cause: "private storage detail",
+    }),
+  },
+  {
+    result: "failed",
+    error: new ConnectionTransportError({
+      operation: "authorize",
+      cause: "private provider detail",
+    }),
+  },
+])(
+  "returns OAuth $result to global connection settings",
+  async ({ result, error }) => {
+    const unexpected = () =>
+      Effect.die(new Error("Unexpected connection operation"))
+    let received: Request | undefined
+    const connections: RemoteConnectionOperations = {
+      defaults: unexpected,
+      list: unexpected,
+      connect: unexpected,
+      disconnect: unexpected,
+      reconnect: unexpected,
+      refresh: unexpected,
+      callback: (request) => {
+        received = request
+        return error ? Effect.fail(error) : Effect.void
+      },
+      resolve: unexpected,
+      call: unexpected,
+    }
+    const response = await Effect.runPromise(
+      connectionRequest(
+        connections,
+        new Request(
+          "https://internal.example/api/agent/connections/callback?state=state-value&code=code-value"
+        ),
+        "connections/callback",
+        "https://app.example.com"
+      )
+    )
+    expect(received?.url).toBe(
+      "https://app.example.com/api/agent/connections/callback?state=state-value&code=code-value"
+    )
+    expect(received?.method).toBe("GET")
+    expect(response.status).toBe(303)
+    expect(response.headers.get("location")).toBe(
+      `/settings/connections?connections=${result}`
+    )
+    expect(response.headers.get("referrer-policy")).toBe("no-referrer")
+  }
+)
+
 it("rejects malformed, oversized and invalid connection input before invoking operations", async () => {
   const unexpected = () =>
     Effect.die(new Error("Unexpected connection operation"))

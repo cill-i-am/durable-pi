@@ -163,7 +163,10 @@ const callback = await fetch(
   { headers: { cookie }, redirect: "manual" }
 )
 assert.equal(callback.status, 303)
-assert.equal(callback.headers.get("location"), "/?connections=failed")
+assert.equal(
+  callback.headers.get("location"),
+  "/settings/connections?connections=failed"
+)
 assert.equal(callback.headers.get("referrer-policy"), "no-referrer")
 assert.equal(
   (await request("connections/disconnect", { id, expectedRevision: 3 })).status,

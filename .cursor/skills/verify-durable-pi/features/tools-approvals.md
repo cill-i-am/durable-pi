@@ -13,9 +13,9 @@ Connect trusted tool providers, select agent capabilities, and control exact act
 
 ## How to get to it (user POV)
 
-- Open `/agents/AGENT_SLUG/settings/connections` through **Models & connections → Connections**.
-- Choose **Connect Executor** or add a trusted public HTTPS MCP endpoint; sign in if requested.
-- Open `/agents/AGENT_SLUG/settings/access` through **Agents & tools** for tool selection/policies.
+- Open personal **Settings → Connections** at `/settings/connections` to manage your connection library. Choose **Connect Executor** or add a trusted public HTTPS MCP endpoint; sign in if requested. OAuth returns to this library for status verification.
+- Open agent **Connections** at `/agents/AGENT_SLUG/settings/connections` to select additional remote tools for that agent. Library add/reconnect/disconnect controls belong to personal settings, not the agent's assignment screen.
+- Open agent **Tool access** at `/agents/AGENT_SLUG/settings/access` for saved Allow/Ask/Deny policies. Browser and terminal internet policies remain agent-scoped workbench controls.
 - Use the inline approval card in chat, a linked Activity action, or the signed email decision card. Executor decisions use its own approval page.
 
 ## Driving it with the verification harness
@@ -31,7 +31,8 @@ Preconditions: Do not add a real provider or authorize an external action just t
 
 ## Gotchas
 
-- Executor defaults become available after workspace authorization. Other remote tools require explicit selection.
+- Executor's supported default entry points become available to all agents in the same person's account after connection authorization; their per-agent policy overrides remain separate. Other remote tools require explicit per-agent selection. Family membership does not share this connection library.
+- Disconnect affects all of your agents using that connection. Completing OAuth or opening the library does not assign additional remote tools or approve a Pi action.
 - Supported endpoints use Streamable HTTP with anonymous access or compatible public OAuth registration. Arbitrary auth headers and credential-bearing URLs are unsupported.
 - Skills, memory, incoming email, and presentation cards cannot grant permissions.
 - A provider-accepted action can finish after disconnect or cancellation. Reconcile an uncertain action at that provider before replaying it.

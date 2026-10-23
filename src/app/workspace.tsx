@@ -165,7 +165,6 @@ function Workspace({
   const {
     collection,
     archived,
-    securityOpen,
     settings,
     workbench,
     editor,
@@ -189,15 +188,7 @@ function Workspace({
     if (location.pathname === "/" && !catalog.loading && catalog.selected) {
       void openAgent(
         catalog.selected.id,
-        {
-          ...(location.search.connections
-            ? {
-                settings: "connections",
-                connections: location.search.connections,
-              }
-            : {}),
-          panel: location.search.panel,
-        },
+        { panel: location.search.panel },
         true
       )
     }
@@ -259,7 +250,7 @@ function Workspace({
       setEditor({ key: catalog.selected.id, agent: catalog.selected })
     else if (action === "archive" && catalog.selected)
       void archive(catalog.selected)
-    else if (action === "settings") setSettings("general")
+    else if (action === "settings") setSettings("account")
     else if (action === "security") {
       setSecurityOpen(true)
     } else if (action === "sign-out") void authClient.signOut()
@@ -288,7 +279,8 @@ function Workspace({
     conversation,
     collection,
     editor !== null,
-    !!globalSection
+    !!globalSection,
+    !!context.backgroundPath
   )
   if (!startupComplete && starting) return <WorkspaceStartup />
   if (!startupComplete) setStartupComplete(true)
@@ -376,7 +368,11 @@ function Workspace({
                 onCreate={() => act("create")}
                 onArchive={(agent) => void archive(agent)}
               />
-            ) : canRenderAgent(catalog.selected, globalSection) ? (
+            ) : canRenderAgent(
+                catalog.selected,
+                globalSection,
+                !!context.backgroundPath
+              ) ? (
               <AgentWorkspace
                 key={catalog.selected.id}
                 ownerId={ownerId}
@@ -386,8 +382,6 @@ function Workspace({
                 settings={settings}
                 setSettings={setSettings}
                 onSettingsPending={setSettingsPending}
-                securityOpen={securityOpen}
-                onSecurityOpenChange={setSecurityOpen}
                 workbench={workbench}
                 setWorkbench={setWorkbench}
                 onNavigationLockChange={setNavigationLocked}
@@ -406,29 +400,19 @@ function Workspace({
               />
             ) : (
               <>
-                <div className="loading-view">
-                  <p className="text-sm text-muted-foreground">
-                    Your workspace is unavailable.
-                  </p>
-                  {!catalog.loading && (
-                    <Button
-                      variant="outline"
-                      onClick={() => selectAgent(homeAgentId)}
-                    >
-                      Open home agent
-                    </Button>
-                  )}
-                </div>
+                <WorkspaceUnavailable
+                  globalSettings={!!globalSection}
+                  loading={catalog.loading}
+                  onOpen={() => selectAgent(homeAgentId)}
+                />
                 {globalSection && (
                   <WorkspaceSettingsOverlay
                     settings={settings}
-                    securityOpen={securityOpen}
+                    agents={catalog.agents}
                     location={location}
-                    consumeConnectionCallback={() => {}}
                     setSettings={setSettings}
                     conversation={conversation}
                     onSettingsPending={setSettingsPending}
-                    onSecurityOpenChange={setSecurityOpen}
                     openWorkbench={setWorkbench}
                   />
                 )}
@@ -468,6 +452,30 @@ function Workspace({
   )
 }
 
+function WorkspaceUnavailable({
+  globalSettings,
+  loading,
+  onOpen,
+}: {
+  globalSettings: boolean
+  loading: boolean
+  onOpen: () => void
+}) {
+  if (globalSettings) return null
+  return (
+    <div className="loading-view">
+      <p className="text-sm text-muted-foreground">
+        Your workspace is unavailable.
+      </p>
+      {!loading && (
+        <Button variant="outline" onClick={onOpen}>
+          Open home agent
+        </Button>
+      )}
+    </div>
+  )
+}
+
 function AgentWorkspace({
   ownerId,
   location,
@@ -476,8 +484,6 @@ function AgentWorkspace({
   settings,
   setSettings,
   onSettingsPending,
-  securityOpen,
-  onSecurityOpenChange,
   workbench,
   setWorkbench,
   agent,
@@ -495,8 +501,6 @@ function AgentWorkspace({
   settings: SettingsCategory | null
   setSettings: (value: SettingsCategory | null) => void
   onSettingsPending: (pending: boolean) => void
-  securityOpen: boolean
-  onSecurityOpenChange: (open: boolean) => void
   workbench: Workbench | null
   setWorkbench: (value: Workbench | null) => void
   agent: AgentProfile
@@ -608,23 +612,15 @@ function AgentWorkspace({
       }
     />
   )
-  const { update: updateLocation } = location
-  const consumeConnectionCallback = useCallback(
-    () =>
-      updateLocation({ connections: undefined, settings: "connections" }, true),
-    [updateLocation]
-  )
   const settingsPanel = (
     <WorkspaceSettingsOverlay
       settings={settings}
-      securityOpen={securityOpen}
       location={location}
-      consumeConnectionCallback={consumeConnectionCallback}
       setSettings={setSettings}
       agent={agent}
+      agents={agents}
       conversation={conversation}
       onSettingsPending={onSettingsPending}
-      onSecurityOpenChange={onSecurityOpenChange}
       openWorkbench={openWorkbench}
     />
   )
@@ -743,35 +739,36 @@ function workspaceRoute(
     collection,
     archived,
     editor,
-    securityOpen: location.search.security ?? false,
-    settings:
-      location.search.settings ??
-      (location.search.connections ? ("connections" as const) : null),
+    settings: location.search.settings ?? null,
     workbench: location.search.panel ?? null,
     conversationId: location.agentId ?? selected?.id ?? homeAgentId,
     conversationEnabled:
       !collection &&
       (globalSettingsSection(location.pathname)
-        ? selected?.status === "active"
+        ? !!location.search.returnTo && selected?.status === "active"
         : !!(location.agentId || selected)),
   }
 }
 function canRenderAgent(
   agent: AgentProfile | undefined | null,
-  globalSection: string | undefined
+  globalSection: string | undefined,
+  hasBackground: boolean
 ): agent is AgentProfile {
-  return !!agent && (!globalSection || agent.status === "active")
+  return (
+    !!agent && (!globalSection || (hasBackground && agent.status === "active"))
+  )
 }
 function workspaceStarting(
   catalog: ReturnType<typeof useAgentCatalog>,
   conversation: ReturnType<typeof useConversation>,
   collection: boolean,
   editing: boolean,
-  globalSettings: boolean
+  globalSettings: boolean,
+  hasBackground: boolean
 ) {
   const starting =
     !catalog.error &&
-    (catalog.loading ||
+    ((catalog.loading && (!globalSettings || hasBackground)) ||
       (!collection &&
         !editing &&
         !globalSettings &&
@@ -1005,42 +1002,30 @@ function memoryWorkspaceTab(
 
 function WorkspaceSettingsOverlay({
   settings,
-  securityOpen,
-  location,
-  consumeConnectionCallback,
   setSettings,
   agent,
+  agents,
   conversation,
   onSettingsPending,
-  onSecurityOpenChange,
   openWorkbench,
 }: Pick<
   Parameters<typeof AgentWorkspace>[0],
-  | "settings"
-  | "securityOpen"
-  | "location"
-  | "setSettings"
-  | "conversation"
-  | "onSettingsPending"
-  | "onSecurityOpenChange"
+  "settings" | "location" | "setSettings" | "conversation" | "onSettingsPending"
 > & {
   agent?: AgentProfile
-  consumeConnectionCallback: () => void
+  agents: readonly AgentProfile[]
   openWorkbench: (value: Workbench | null) => void
 }) {
-  return settings || securityOpen ? (
+  return settings ? (
     <AssetBoundary>
       <Suspense fallback={<p role="status">Opening settings…</p>}>
         <WorkspaceSettings
           category={settings}
-          connectionResult={location.search.connections}
-          onConnectionResultConsumed={consumeConnectionCallback}
           onCategoryChange={setSettings}
           agent={agent}
+          agents={agents}
           conversation={conversation}
           onPendingChange={onSettingsPending}
-          securityOpen={securityOpen}
-          onSecurityOpenChange={onSecurityOpenChange}
           onWorkbench={openWorkbench}
         />
       </Suspense>
