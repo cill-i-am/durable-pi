@@ -34,7 +34,7 @@
   ],
   "artifacts": [
     {
-      "file": "final-static.log",
+      "file": "final-static.log.txt",
       "origin": "/private/tmp/b11-b12-final-static-2.log",
       "bytes": 655,
       "sha256": "668e2285cd6f762490087d8eca797a1cbf960edee6dd545d198a9d07d7fdfee9",
@@ -42,7 +42,7 @@
       "reportedExitCode": 0
     },
     {
-      "file": "final-unit-build.log",
+      "file": "final-unit-build.log.txt",
       "origin": "/private/tmp/b11-b12-final-unit-build-2.log",
       "bytes": 25114,
       "sha256": "8e433ec1531e923548a08a0ad9c14ace1cacc6e0d2e19bbc7fa69a06a87f1ed1",
@@ -50,7 +50,7 @@
       "reportedExitCode": 0
     },
     {
-      "file": "final-browser.log",
+      "file": "final-browser.log.txt",
       "origin": "/private/tmp/b11-b12-final-browser-1.log",
       "bytes": 40943,
       "sha256": "0e93077fdfe4895d19ad760a9795ec5df3aaa6997d585d0d995135a0c7dff869",
@@ -58,7 +58,7 @@
       "reportedExitCode": 0
     },
     {
-      "file": "final-native.log",
+      "file": "final-native.log.txt",
       "origin": "/private/tmp/b11-b12-final-native-1.log",
       "bytes": 34045,
       "sha256": "6ee1a241dde842274a2829bca5203cb3e17834ee8e43ca7e4c0b5b2f485b2238",
@@ -66,7 +66,7 @@
       "reportedExitCode": 0
     },
     {
-      "file": "b11-positive.log",
+      "file": "b11-positive.log.txt",
       "origin": "/private/tmp/b11-native-positive.log",
       "bytes": 8211,
       "sha256": "cfeb678602348434b3ddd463a924ca0bb7705e257d228ecf31ae9c091e469adf",
@@ -74,7 +74,7 @@
       "reportedExitCode": 0
     },
     {
-      "file": "b11-broken-wake.log",
+      "file": "b11-broken-wake.log.txt",
       "origin": "/private/tmp/b11-native-broken-wake.log",
       "bytes": 8220,
       "sha256": "ffcbbbbbd7f0142033c8d5e21827b9cecc160ea77dba88b780f57ac89ff718d3",
@@ -96,14 +96,14 @@
       "description": "Final-native log names this positive artifact; source hashes match the negative control and frozen branch."
     },
     {
-      "file": "b12-final-positive-workerd.log",
+      "file": "b12-final-positive-workerd.log.txt",
       "origin": "/var/folders/s2/80_kxn9s19s1gyb6ylqwdh680000gn/T/apps-native-positive-47899-workerd.log",
       "bytes": 962,
       "sha256": "b0d66365aadbe3d064e4319a4831790543a1553d38c428cfd6a088bd3960aac6",
       "description": "Raw native output for the final B12 positive."
     },
     {
-      "file": "b12-negative.log",
+      "file": "b12-negative.log.txt",
       "origin": "/private/tmp/b12-apps-native-negative.log",
       "bytes": 796,
       "sha256": "097cc7a0f18afd36a9ef7f018a4bc4af42a8f27992753b29b6fc3916914cba05",
@@ -118,14 +118,14 @@
       "description": "Original negative snapshots and nine original source hashes; discovery expression changed only in the negative bundle."
     },
     {
-      "file": "b12-negative-workerd.log",
+      "file": "b12-negative-workerd.log.txt",
       "origin": "/private/tmp/b12-apps-native-negative-workerd.log",
       "bytes": 264,
       "sha256": "7d7adcdb6b08845f1fb80ead8cd8945a662cb26b545e57164614e6d51d65e89d",
       "description": "Raw native output for the B12 negative."
     },
     {
-      "file": "b12-earlier-positive.log",
+      "file": "b12-earlier-positive.log.txt",
       "origin": "/private/tmp/b12-apps-native-positive.log",
       "bytes": 372,
       "sha256": "39f626b206c800f7a8989c8415e7e7d2f0d3466cb359f20877295924d10e6c18",
@@ -140,7 +140,7 @@
       "description": "Historical evidence: sqlite.ts hash differs; retained without relabeling as final source."
     },
     {
-      "file": "b12-earlier-positive-workerd.log",
+      "file": "b12-earlier-positive-workerd.log.txt",
       "origin": "/private/tmp/b12-apps-native-positive-workerd.log",
       "bytes": 962,
       "sha256": "066feff331efff2a13307f6341857439e71d8e2295e1f9beed9c82b5661a0361",
@@ -161,7 +161,7 @@
       "description": "Original fixture handoff provenance."
     },
     {
-      "file": "b12-agent-http.log",
+      "file": "b12-agent-http.log.txt",
       "origin": "/private/tmp/b12-agent-http-fixed.log",
       "bytes": 226,
       "sha256": "99bef8a925bae672d58eae91c16172ab3510a420bb7b0cd958fc7bdaa0b7dff0",
@@ -169,7 +169,7 @@
       "reportedExitCode": 0
     },
     {
-      "file": "b12-archive-helper-review.log",
+      "file": "b12-archive-helper-review.log.txt",
       "origin": "/private/tmp/b12-archive-production-helper.log",
       "bytes": 572,
       "sha256": "53d9a69d3b50dc6075b284d3e0b125ffda08cc7816e0e9bb97360fc5cab3e7db",
@@ -177,7 +177,7 @@
       "reportedExitCode": 0
     },
     {
-      "file": "b12-stale-invalidation-negative.log",
+      "file": "b12-stale-invalidation-negative.log.txt",
       "origin": "/private/tmp/b12-archive-invalidation-negative.log",
       "bytes": 1449,
       "sha256": "11b004512ed45bc5ba1f3d6e68cec556fac9172efc76855ce1f39e1c2f7550f4",
@@ -185,7 +185,7 @@
       "reportedExitCode": 1
     },
     {
-      "file": "lifecycle-recovery-ui.log",
+      "file": "lifecycle-recovery-ui.log.txt",
       "origin": "/private/tmp/b12-recovery-ui-browser.log",
       "bytes": 2225,
       "sha256": "f54a6646de28862d8d8c4efd18c1d72b927a39de641f67134d4767183252de45",

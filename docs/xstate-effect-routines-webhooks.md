@@ -62,7 +62,7 @@ The `--break-wake` negative control removed the physical alarm while retaining d
 
 - Shared bundle SHA-256: `158126c8f2f1c0eb71ab939903af06f5fe07677df4cc11372652c208d575d2c2`.
 - Script SHA-256: `f80f5588ef75b03b73a5668bbf0ee58f039fc6e1d3f949694b3e26ba7af3d93b`.
-- Raw final logs: [positive](evidence/xstate-effect/b11-b12-2026-10-23/b11-positive.log) and [broken-wake control](evidence/xstate-effect/b11-b12-2026-10-23/b11-broken-wake.log). Their first lines contain every bundled source hash. Earlier local logs remain preserved with the `-before-authority.log` suffix.
+- Raw final logs: [positive](evidence/xstate-effect/b11-b12-2026-10-23/b11-positive.log.txt) and [broken-wake control](evidence/xstate-effect/b11-b12-2026-10-23/b11-broken-wake.log.txt). Their first lines contain every bundled source hash. Earlier local logs remain preserved with the `-before-authority.log` suffix.
 - [Original native evidence](evidence/xstate-effect/b11-b12-2026-10-23/b11-native-evidence.json.txt) records log hashes, expected exit codes and the no-drift check. The [capture manifest](evidence/xstate-effect/b11-b12-2026-10-23/manifest.json) records original paths and verifies the immutable copies; all 73 source hashes still matched at capture.
 
 This proves the composed RoutineRunner/Routines/Webhooks/Conversation/SQLite/native Pi recovery path with a synthetic provider and an always-allow family capability. The deterministic FamilyAdmission and actual worker composition tests above establish the revocation race behavior; this native fixture does not execute the full PersonalAgent authorization boundary or a live provider effect.
@@ -79,12 +79,12 @@ The frozen B11/B12 candidate was checked on `codex/xstate-routines-apps`, based 
 
 | Gate | Recorded result | Raw evidence |
 | --- | --- | --- |
-| Static | Secret scan, route/migration generation checks, TypeScript, lint and formatting passed. | [Log](evidence/xstate-effect/b11-b12-2026-10-23/final-static.log) |
-| Unit and builds | 2,771 tests in 254 files passed; website routing and Worker builds passed. | [Log](evidence/xstate-effect/b11-b12-2026-10-23/final-unit-build.log) |
-| Browser | 90 desktop/mobile cases, passkeys and the two-build client upgrade passed. | [Log](evidence/xstate-effect/b11-b12-2026-10-23/final-browser.log) |
-| Native | All ten native suite commands passed, including Routines and Apps. | [Log](evidence/xstate-effect/b11-b12-2026-10-23/final-native.log) |
+| Static | Secret scan, route/migration generation checks, TypeScript, lint and formatting passed. | [Log](evidence/xstate-effect/b11-b12-2026-10-23/final-static.log.txt) |
+| Unit and builds | 2,771 tests in 254 files passed; website routing and Worker builds passed. | [Log](evidence/xstate-effect/b11-b12-2026-10-23/final-unit-build.log.txt) |
+| Browser | 90 desktop/mobile cases, passkeys and the two-build client upgrade passed. | [Log](evidence/xstate-effect/b11-b12-2026-10-23/final-browser.log.txt) |
+| Native | All ten native suite commands passed, including Routines and Apps. | [Log](evidence/xstate-effect/b11-b12-2026-10-23/final-native.log.txt) |
 
-The [six focused recovery UI cases](evidence/xstate-effect/b11-b12-2026-10-23/lifecycle-recovery-ui.log) are included in the 90-case total. They cover stopping/unconfirmed routine occupancy and cancelled/exhausted Apps content retention. The [manifest](evidence/xstate-effect/b11-b12-2026-10-23/manifest.json) separates capture-time source hashes from run-time provenance and records the reported exit codes; artifact capture did not rerun these gates. No live provider, merge or deployment claim follows from these results.
+The [six focused recovery UI cases](evidence/xstate-effect/b11-b12-2026-10-23/lifecycle-recovery-ui.log.txt) are included in the 90-case total. They cover stopping/unconfirmed routine occupancy and cancelled/exhausted Apps content retention. The [manifest](evidence/xstate-effect/b11-b12-2026-10-23/manifest.json) separates capture-time source hashes from run-time provenance and records the reported exit codes; artifact capture did not rerun these gates. No live provider, merge or deployment claim follows from these results.
 
 ## Final stack composition
 

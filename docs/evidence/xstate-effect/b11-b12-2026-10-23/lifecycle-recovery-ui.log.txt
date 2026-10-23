@@ -1,0 +1,24 @@
+[WebServer] (node:41203) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] [plugin builtin:vite-reporter] 
+[WebServer] (!) Some chunks are larger than 500 kB after minification. Consider:
+[WebServer] - Using dynamic import() to code-split the application
+[WebServer] - Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+[WebServer] - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[WebServer] [INEFFECTIVE_DYNAMIC_IMPORT] src/features/files/files-panel.tsx is dynamically imported by src/app/workspace.tsx but also statically imported by src/features/files/index.ts, dynamic import will not move module into another chunk.
+[WebServer] 
+
+Running 6 tests using 1 worker
+
+(node:41210) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [desktop] › tests/browser/lifecycle-recovery.spec.ts:62:3 › routine stopping retains occupancy and stops only the selected existing run (4.1s)
+  ✓  2 [desktop] › tests/browser/lifecycle-recovery.spec.ts:62:3 › routine unconfirmed retains occupancy and stops only the selected existing run (4.3s)
+  ✓  3 [desktop] › tests/browser/lifecycle-recovery.spec.ts:189:1 › cancelled and exhausted app updates retain saved content without claiming delivery or replaying (4.3s)
+(node:41315) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  4 [mobile] › tests/browser/lifecycle-recovery.spec.ts:62:3 › routine stopping retains occupancy and stops only the selected existing run (4.0s)
+  ✓  5 [mobile] › tests/browser/lifecycle-recovery.spec.ts:62:3 › routine unconfirmed retains occupancy and stops only the selected existing run (3.9s)
+  ✓  6 [mobile] › tests/browser/lifecycle-recovery.spec.ts:189:1 › cancelled and exhausted app updates retain saved content without claiming delivery or replaying (4.0s)
+
+  6 passed (27.4s)
