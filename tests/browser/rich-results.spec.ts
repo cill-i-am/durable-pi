@@ -2,6 +2,8 @@ import { readFile } from "node:fs/promises"
 
 import { expect, test, type Page } from "@playwright/test"
 
+import { chatMessages } from "../../src/conversations/adapters/tanstack"
+
 async function openConversation(page: Page) {
   await page.goto("/agents")
   await page
@@ -200,4 +202,202 @@ test("weather adapts from a dated weekend comparison to a detailed day and a com
       () => document.documentElement.scrollWidth <= window.innerWidth
     )
   ).toBe(true)
+})
+
+const blankMapStyle = {
+  version: 8,
+  sources: {},
+  layers: [
+    {
+      id: "background",
+      type: "background",
+      paint: { "background-color": "#eeeeee" },
+    },
+  ],
+}
+
+test("map leases survive selection, theme replacement and route teardown without stale canvases", async ({
+  page,
+}) => {
+  const errors: string[] = []
+  page.on("pageerror", (error) => errors.push(error.message))
+  await page.emulateMedia({ colorScheme: "light" })
+  let styles = 0
+  await page.route("https://basemaps.cartocdn.com/**/style.json", (route) => {
+    styles++
+    return route.fulfill({ json: blankMapStyle })
+  })
+  const gallery = await openConversation(page)
+  await gallery.getByRole("tab", { name: "Maps", exact: true }).click()
+  const map = gallery.getByRole("region", {
+    name: "Interactive place map",
+    exact: true,
+  })
+  const second = map.getByRole("button", {
+    name: "Show St Stephen’s Green on map",
+    exact: true,
+  })
+  await expect(map.getByLabel("Loading map", { exact: true })).toHaveCount(0)
+  await second.click()
+  await expect(second).toHaveAttribute("aria-pressed", "true")
+  const beforeTheme = styles
+  await page.emulateMedia({ colorScheme: "dark" })
+  await expect.poll(() => styles).toBeGreaterThan(beforeTheme)
+  await expect(map.getByLabel("Loading map", { exact: true })).toHaveCount(0)
+  await expect(second).toHaveAttribute("aria-pressed", "true")
+  await expect(map.locator("canvas")).toHaveCount(1)
+  await gallery.getByRole("tab", { name: "Routes", exact: true }).click()
+  const routeMap = gallery.getByRole("region", {
+    name: "Interactive place map",
+    exact: true,
+  })
+  await expect(routeMap.getByLabel("Loading map", { exact: true })).toHaveCount(
+    0
+  )
+  await expect(routeMap.locator("canvas")).toHaveCount(1)
+  await routeMap
+    .getByRole("button", {
+      name: "Show National Gallery of Ireland on map",
+      exact: true,
+    })
+    .click()
+  await gallery.getByRole("tab", { name: "Weather", exact: true }).click()
+  await expect(page.locator(".maplibregl-canvas")).toHaveCount(0)
+  await gallery.getByRole("button", { name: "Close", exact: true }).click()
+  expect(errors).toEqual([])
+})
+
+test("closing a map during a held style request releases it and leaves the next map usable", async ({
+  page,
+}) => {
+  const errors: string[] = []
+  page.on("pageerror", (error) => errors.push(error.message))
+  let release!: () => void
+  const held = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  let requests = 0
+  await page.route(
+    "https://basemaps.cartocdn.com/**/style.json",
+    async (route) => {
+      requests++
+      if (requests === 1) await held
+      await route.fulfill({ json: blankMapStyle }).catch(() => {})
+    }
+  )
+  const gallery = await openConversation(page)
+  await gallery.getByRole("tab", { name: "Maps", exact: true }).click()
+  await expect.poll(() => requests).toBe(1)
+  await gallery.getByRole("tab", { name: "Questions", exact: true }).click()
+  await expect(page.locator(".maplibregl-canvas")).toHaveCount(0)
+  release()
+  await gallery.getByRole("tab", { name: "Routes", exact: true }).click()
+  const map = gallery.getByRole("region", {
+    name: "Interactive place map",
+    exact: true,
+  })
+  await expect(map.getByLabel("Loading map", { exact: true })).toHaveCount(0)
+  await expect(map.locator("canvas")).toHaveCount(1)
+  await expect(
+    map.getByRole("button", {
+      name: "Show St Stephen’s Green on map",
+      exact: true,
+    })
+  ).toBeEnabled()
+  await gallery.getByRole("button", { name: "Close", exact: true }).click()
+  await expect(page.locator(".maplibregl-canvas")).toHaveCount(0)
+  expect(errors).toEqual([])
+})
+
+test("loaded syntax highlighting preserves code text and unsupported-language fallback", async ({
+  page,
+}) => {
+  const errors: string[] = []
+  page.on("pageerror", (error) => errors.push(error.message))
+  await page.route("**/api/agent/events?**", (route) =>
+    route.fulfill({
+      contentType: "text/event-stream",
+      body: [
+        {
+          type: "MESSAGES_SNAPSHOT",
+          messages: chatMessages([
+            {
+              id: "highlight-fixture",
+              status: "done",
+              text: "Show code",
+              error: null,
+              created_at: "2026-10-23T14:00:00Z",
+              answer:
+                "```typescript\nconst answer = 42\nconsole.log(answer)\n```\n\n```custom-unknown\nplain & <safe>\n```",
+            },
+          ]),
+        },
+        {
+          type: "CUSTOM",
+          name: "durable-pi.metadata",
+          value: {
+            model: "test",
+            connected: true,
+            memory: { messages: 2, summaries: 0, ready: true, notes: [] },
+          },
+        },
+      ]
+        .map((frame) => `data: ${JSON.stringify(frame)}\n\n`)
+        .join(""),
+    })
+  )
+  const gallery = await openConversation(page)
+  await gallery.getByRole("button", { name: "Close", exact: true }).click()
+  const code = page.locator(
+    ".assistant-message code[data-slot=code-block-code]"
+  )
+  await expect(code).toHaveCount(2)
+  await expect(code.first()).toContainText("const answer = 42")
+  await expect(code.first()).toContainText("console.log(answer)")
+  await expect(
+    code.first().locator('span[style*="--shiki-light"]').first()
+  ).toBeVisible()
+  await expect(code.nth(1)).toHaveText("plain & <safe>")
+  await expect(code.nth(1).locator('span[style*="--shiki-light"]')).toHaveCount(
+    0
+  )
+  expect(errors).toEqual([])
+})
+
+test("failed map loading keeps accessible addresses and a selected-place fallback", async ({
+  page,
+}) => {
+  await page.route("https://basemaps.cartocdn.com/**/style.json", (route) =>
+    route.abort()
+  )
+  const gallery = await openConversation(page)
+  await page.clock.install()
+  await gallery.getByRole("tab", { name: "Maps", exact: true }).click()
+  const map = gallery.getByRole("region", {
+    name: "Interactive place map",
+    exact: true,
+  })
+  await expect(map.locator("canvas")).toHaveCount(1)
+  await page.clock.fastForward(16000)
+  await expect(
+    map.getByText("The interactive map is unavailable.", { exact: true })
+  ).toBeVisible()
+  await gallery
+    .getByRole("group", { name: "Places", exact: true })
+    .getByRole("button", {
+      name: "St Stephen’s Green Dublin 2, Ireland",
+      exact: true,
+    })
+    .click()
+  await expect(
+    map.getByRole("link", {
+      name: "Open St Stephen’s Green in OpenStreetMap",
+      exact: true,
+    })
+  ).toHaveAttribute("href", /mlat=53\.3382&mlon=-6\.2591/)
+  await expect(
+    gallery.getByRole("link", { name: "Get directions", exact: true })
+  ).toBeVisible()
+  await gallery.getByRole("button", { name: "Close", exact: true }).click()
+  await expect(page.locator(".maplibregl-canvas")).toHaveCount(0)
 })

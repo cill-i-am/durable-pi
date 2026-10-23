@@ -1,0 +1,50 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi
+
+stdout | tests/places-map.test.tsx > releases every earlier map acquisition when control fails
+[14:13:56.806] ERROR (#1): Error [AssertionError]: expected [] to have a length of 1 but got +0
+    at Proxy.<anonymous> (file:///Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/node_modules/.pnpm/vitest@5.0.5_@types+node@24.19.2_vite@8.3.4_@types+node@24.19.2_esbuild@0.28.2_jiti@2.7.0_tsx@4.23.15_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.aTZaPVhf.js:2163:20)
+    at Proxy.<anonymous> (file:///Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/node_modules/.pnpm/vitest@5.0.5_@types+node@24.19.2_vite@8.3.4_@types+node@24.19.2_esbuild@0.28.2_jiti@2.7.0_tsx@4.23.15_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.aTZaPVhf.js:1958:14)
+    at Proxy.methodWrapper (file:///Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/node_modules/.pnpm/chai@6.3.0/node_modules/chai/index.js:1737:25)
+    at /Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/tests/places-map.test.tsx:149:11 {
+  actual: 0,
+  expected: 1,
+  showDiff: true,
+  [cause]: undefined
+}
+
+ ❯ tests/places-map.test.tsx (13 tests | 1 failed | 12 skipped) 10ms
+   × releases every earlier map acquisition when control fails 10ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/places-map.test.tsx > releases every earlier map acquisition when control fails
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ tests/places-map.test.tsx:149:11
+    147|         expect(
+    148|           fixture.calls.filter((value) => value === "remove")
+    149|         ).toHaveLength(1)
+       |           ^
+    150|         if (failure !== "control") {
+    151|           expect(fixture.calls).toContain("removeMarker1")
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ FiberImpl.succeedWith node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:711:30
+ ❯ ~effect/Effect/failureCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:3794:20
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/core.ts:627:20
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 12 skipped (13)
+   Start at  14:13:56
+   Duration  318ms (import 75%, transform 15%, tests 5%, setup 3%, worker 1%)
+

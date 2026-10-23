@@ -1,11 +1,16 @@
-import type { Map as LibreMap } from "maplibre-gl"
+import { createEffectActor, send, type EffectActor } from "@xstate/effect"
+import { Cause, Effect, Exit, Fiber } from "effect"
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url"
 import { useTheme } from "next-themes"
 import { useEffect, useRef, useState } from "react"
+import type { SnapshotFrom } from "xstate"
 
 import "maplibre-gl/dist/maplibre-gl.css"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { AnswerProps } from "@/rich-results/catalog"
+
+import { openPlacesMap } from "./places-map-resource"
+import { placesMapMachine, type MapView } from "./places-map.machine"
 
 type Props = {
   places: AnswerProps<"Places">["places"]
@@ -13,140 +18,104 @@ type Props = {
   onSelect: (index: number) => void
   coordinates?: AnswerProps<"Route">["coordinates"]
 }
+type MapMachine = ReturnType<typeof placesMapMachine>
 
 export function PlacesMap({ places, selected, onSelect, coordinates }: Props) {
   const container = useRef<HTMLDivElement>(null)
-  const mapRef = useRef<LibreMap | null>(null)
-  const buttons = useRef<HTMLButtonElement[]>([])
-  const lastSelected = useRef(selected)
   const select = useRef(onSelect)
-  const [status, setStatus] = useState<"loading" | "ready" | "unavailable">(
-    "loading"
-  )
   const { resolvedTheme } = useTheme()
+  const dark = resolvedTheme === "dark"
+  const sent = useRef({ places, coordinates, dark, revision: 0 })
+  const [actor, setActor] = useState<EffectActor<MapMachine> | null>(null)
+  const [snapshot, setSnapshot] = useState<SnapshotFrom<MapMachine> | null>(
+    null
+  )
   useEffect(() => {
     select.current = onSelect
   }, [onSelect])
   useEffect(() => {
-    let disposed = false
-    let cleanup = () => {}
-    setStatus("loading")
-    void import("maplibre-gl")
-      .then((lib) => {
-        if (disposed || !container.current) return
-        lib.setWorkerUrl(workerUrl)
-        const map = new lib.Map({
-          container: container.current,
-          style:
-            resolvedTheme === "dark"
-              ? "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
-              : "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
-          center: [
-            places[0]!.longitude,
-            Math.max(-85, Math.min(85, places[0]!.latitude)),
-          ],
-          zoom: 13,
-          attributionControl: { compact: true },
-          cooperativeGestures: true,
-        })
-        mapRef.current = map
-        map.addControl(
-          new lib.NavigationControl({ showCompass: false }),
-          "top-right"
+    const element = container.current
+    if (!element) return
+    let mounted = true
+    const input: MapView = { ...sent.current, selected }
+    const fiber = Effect.runFork(
+      Effect.gen(function* () {
+        const owned = yield* createEffectActor(
+          placesMapMachine((view) =>
+            openPlacesMap(view, {
+              container: element,
+              load: () =>
+                import("maplibre-gl").then((lib) => {
+                  lib.setWorkerUrl(workerUrl)
+                  return lib
+                }),
+              createButton: () => document.createElement("button"),
+              createResizeObserver: (callback) => new ResizeObserver(callback),
+              routeColor: () =>
+                getComputedStyle(element)
+                  .getPropertyValue("--primary")
+                  .trim() || "#535fc6",
+              reducedMotion: () =>
+                window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+              onSelect: (index) => select.current(index),
+            })
+          ),
+          { input }
         )
-        const markers = places.map((place, index) => {
-          const button = document.createElement("button")
-          button.type = "button"
-          button.className = "rich-map-pin"
-          button.textContent = String(index + 1)
-          button.setAttribute("aria-label", `Show ${place.name} on map`)
-          button.setAttribute("aria-pressed", String(index === 0))
-          button.addEventListener("click", () => select.current(index))
-          buttons.current[index] = button
-          return new lib.Marker({ element: button })
-            .setLngLat([
-              place.longitude,
-              Math.max(-85, Math.min(85, place.latitude)),
-            ])
-            .addTo(map)
-        })
-        const timer = window.setTimeout(() => {
-          if (!disposed) setStatus("unavailable")
-        }, 15000)
-        map.on("load", () => {
-          if (disposed) return
-          window.clearTimeout(timer)
-          if (coordinates) {
-            map.addSource("route", {
-              type: "geojson",
-              data: {
-                type: "Feature",
-                properties: {},
-                geometry: { type: "LineString", coordinates },
-              },
+        yield* Effect.acquireRelease(
+          Effect.sync(() =>
+            owned.subscribe((value) => {
+              if (mounted) setSnapshot(value)
             })
-            map.addLayer({
-              id: "route",
-              type: "line",
-              source: "route",
-              layout: { "line-join": "round", "line-cap": "round" },
-              paint: {
-                "line-color":
-                  getComputedStyle(container.current!)
-                    .getPropertyValue("--primary")
-                    .trim() || "#535fc6",
-                "line-width": 4,
-              },
-            })
-          }
-          const points =
-            coordinates ??
-            places.map(
-              (place) => [place.longitude, place.latitude] as [number, number]
-            )
-          if (points.length > 1) {
-            const bounds = new lib.LngLatBounds()
-            points.forEach((point) =>
-              bounds.extend([point[0], Math.max(-85, Math.min(85, point[1]))])
-            )
-            map.fitBounds(bounds, { padding: 48, maxZoom: 14, duration: 0 })
-          }
-          setStatus("ready")
-        })
-        const resize = new ResizeObserver(() => map.resize())
-        resize.observe(container.current)
-        cleanup = () => {
-          clearTimeout(timer)
-          resize.disconnect()
-          markers.forEach((marker) => marker.remove())
-          map.remove()
-          mapRef.current = null
-          buttons.current = []
+          ),
+          (subscription) => Effect.sync(() => subscription.unsubscribe())
+        )
+        if (mounted) {
+          setActor(owned)
+          setSnapshot(owned.getSnapshot())
         }
-      })
-      .catch(() => {
-        if (!disposed) setStatus("unavailable")
-      })
-    return () => {
-      disposed = true
-      cleanup()
-    }
-  }, [places, coordinates, resolvedTheme])
-  useEffect(() => {
-    buttons.current.forEach((button, index) =>
-      button.setAttribute("aria-pressed", String(index === selected))
+        return yield* Effect.never
+      }).pipe(Effect.scoped)
     )
-    const place = places[selected]
-    if (place && status === "ready" && lastSelected.current !== selected) {
-      lastSelected.current = selected
-      mapRef.current?.easeTo({
-        center: [place.longitude, Math.max(-85, Math.min(85, place.latitude))],
-        duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-          ? 0
-          : 250,
-      })
+    return () => {
+      mounted = false
+      // The owner joins map/import/listener finalizers; notifications are detached first.
+      Effect.runFork(
+        Fiber.interrupt(fiber).pipe(
+          Effect.andThen(Fiber.await(fiber)),
+          Effect.flatMap((exit) =>
+            Exit.isFailure(exit) && !Cause.hasInterruptsOnly(exit.cause)
+              ? Effect.logError(exit.cause)
+              : Effect.void
+          )
+        )
+      )
     }
-  }, [places, selected, status])
+    // Configuration changes are machine events; the container has one owner.
+    // oxlint-disable-next-line react/exhaustive-deps
+  }, [])
+  useEffect(() => {
+    if (!actor) return
+    const previous = sent.current
+    const changed =
+      previous.places !== places ||
+      previous.coordinates !== coordinates ||
+      previous.dark !== dark
+    sent.current = {
+      places,
+      coordinates,
+      dark,
+      revision: previous.revision + Number(changed),
+    }
+    Effect.runFork(send(actor, { type: "VIEW", ...sent.current, selected }))
+  }, [actor, places, coordinates, dark, selected])
+  const status = snapshot?.matches({ active: "ready" })
+    ? "ready"
+    : snapshot?.matches({ active: "fallbackLoading" }) ||
+        snapshot?.matches("unavailable") ||
+        snapshot?.matches("blocked")
+      ? "unavailable"
+      : "loading"
   const place = places[selected] ?? places[0]!
   return (
     <div
