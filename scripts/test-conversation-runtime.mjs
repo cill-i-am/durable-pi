@@ -407,10 +407,16 @@ const config :Workerd.Config = (
   console.error(output.slice(-12000))
   throw error
 } finally {
-  await writeFile(
-    `/private/tmp/durable-pi-conversation-native-${negative ? "negative" : "evidence"}.json`,
-    JSON.stringify(evidence, null, 2)
-  )
-  await stop()
-  await rm(directory, { recursive: true, force: true })
+  try {
+    await writeFile(
+      join(
+        tmpdir(),
+        `durable-pi-conversation-native-${negative ? "negative" : "evidence"}.json`
+      ),
+      JSON.stringify(evidence, null, 2)
+    )
+  } finally {
+    await stop()
+    await rm(directory, { recursive: true, force: true })
+  }
 }
