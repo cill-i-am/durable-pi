@@ -123,6 +123,7 @@ function fixture(rotate?: () => Promise<void>) {
     const storage = new Map<string, unknown>()
     const pause = vi.fn(() => Effect.void)
     const coordination = new CoordinationStore(db)
+    const revoke = vi.fn(() => Effect.void)
     const reconcile = vi.fn(() => Effect.void)
     const pump = Effect.runSync(conversationFixture(db))
     Object.assign(host, {
@@ -164,7 +165,7 @@ function fixture(rotate?: () => Promise<void>) {
         catalog: () => Effect.succeed([1]),
         group: () => Effect.succeed({ turnId: "finished-request" }),
       },
-      delegations: { reconcile },
+      delegations: { revoke, reconcile },
       backgroundMailbox: { list: () => Effect.succeed([]) },
       env: {
         AUTH_DB: d1(sql),
@@ -197,6 +198,7 @@ function fixture(rotate?: () => Promise<void>) {
       ledger,
       pause,
       coordination,
+      revoke,
       reconcile,
       turns,
       admit,
@@ -305,7 +307,13 @@ it("pauses old scheduled work when removal and a new membership occur between ac
   expect(Effect.runSync(member.coordination.closed("finished-request"))).toBe(
     true
   )
-  expect(member.reconcile).toHaveBeenCalledWith("finished-request")
+  expect(member.revoke).toHaveBeenCalledWith("finished-request")
+  expect(member.revoke.mock.invocationCallOrder[0]).toBeLessThan(
+    member.reconcile.mock.invocationCallOrder[0]!
+  )
+  expect(member.reconcile).toHaveBeenCalledWith("finished-request", {
+    allowDispatch: false,
+  })
   await member.host.familyAdmission()
   expect(member.pause).toHaveBeenCalledTimes(1)
 })
@@ -388,20 +396,23 @@ it("fences completed main sessions without child groups when membership changes"
     member.db.run("UPDATE chat_turns SET status='done' WHERE id=?", id)
   }
   await Effect.runPromise(
-    member.coordination.accept({
-      id: "old-message",
-      operationId: "old-operation",
-      from: { sessionId: "old-main-0", agentId: "main" },
-      to: { sessionId: "old-main-24", agentId: "main" },
-      text: "Continue old work after re-invitation",
-      provenance: {
-        author: { kind: "agent", id: "private-bot", sessionId: "old-main-0" },
-        conversationId: "private-bot",
-        recipients: [],
+    member.coordination.accept(
+      {
+        id: "old-message",
+        operationId: "old-operation",
+        from: { sessionId: "old-main-0", agentId: "main" },
+        to: { sessionId: "old-main-24", agentId: "main" },
+        text: "Continue old work after re-invitation",
+        provenance: {
+          author: { kind: "agent", id: "private-bot", sessionId: "old-main-0" },
+          conversationId: "private-bot",
+          recipients: [],
+        },
+        createdAt: Date.now(),
+        deadline: Date.now() + 600000,
       },
-      createdAt: Date.now(),
-      deadline: Date.now() + 600000,
-    })
+      Date.now() + 60_000
+    )
   )
   f.sql.exec(
     "DELETE FROM member WHERE userId='claire'; INSERT INTO member(id,organizationId,userId,role,createdAt) VALUES('replacement','family','claire','member',1)"
@@ -465,6 +476,46 @@ it("does not let concurrent old-generation cleanup fence newly authorized work",
     await Effect.runPromise(member.coordination.closed("fresh-work"))
   ).toBe(false)
   expect(member.pause).toHaveBeenCalledTimes(1)
+})
+
+it("commits known detached-child revocation before starting cleanup-only reconciliation", async () => {
+  const f = fixture()
+  f.actor("cillian")
+  const member = f.actor("claire")
+  await member.host.familyAdmission()
+  f.sql.exec(
+    "DELETE FROM member WHERE userId='claire'; INSERT INTO member(id,organizationId,userId,role,createdAt) VALUES('replacement','family','claire','member',1)"
+  )
+  let entered!: () => void,
+    release!: () => void,
+    committed = false
+  const started = new Promise<void>((resolve) => {
+    entered = resolve
+  })
+  const held = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  member.revoke.mockImplementationOnce(() =>
+    Effect.promise(async () => {
+      entered()
+      await held
+      committed = true
+    })
+  )
+  member.reconcile.mockImplementationOnce(() =>
+    Effect.sync(() => {
+      expect(committed).toBe(true)
+    })
+  )
+  const fencing = member.host.familyAdmission()
+  await started
+  expect(member.reconcile).not.toHaveBeenCalled()
+  release()
+  await fencing
+  expect(member.revoke).toHaveBeenCalledWith("finished-request")
+  expect(member.reconcile).toHaveBeenCalledWith("finished-request", {
+    allowDispatch: false,
+  })
 })
 
 it("lets owned cleanup recheck membership after durable fencing without a cycle", async () => {

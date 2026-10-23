@@ -18,6 +18,7 @@ import {
   backgroundInitialId,
   backgroundControlId,
   restoreBackgroundState,
+  migrateBackgroundState,
   trimBackgroundText,
 } from "../background-task-domain"
 import type { BackgroundTaskLedger } from "../background-task-ledger"
@@ -25,7 +26,18 @@ import { delegationCommit, delegationNative, backgroundNative } from "./interop"
 
 export const BackgroundDocument = defineDoc({
   kind: "delegation.background",
-  version: 1,
+  version: 2,
+  migrate: (raw, version) => {
+    if (version !== 1 || typeof raw.value !== "string")
+      throw new Error(
+        "Unsupported background document version; retain the document and restore a compatible release."
+      )
+    return {
+      value: raw.value
+        ? JSON.stringify(migrateBackgroundState(JSON.parse(raw.value)))
+        : "",
+    }
+  },
   scope: "session",
   initial: () => ({ value: "" }),
 })
@@ -141,7 +153,15 @@ export function piBackgroundLedger(
         )
       ),
     state: () =>
-      snapshot((h, context) => h.snapshot(BackgroundDocument, context)).pipe(
+      snapshot(async (h, context) => {
+        if (!(await h.snapshot(BackgroundDocument, context))) return undefined
+        // Acquiring an existing v1 document commits its migrated base. Copy the
+        // value inside the native callback; an overlay cannot escape its commit.
+        return h.commit(
+          async (tx) => ({ value: (await tx.doc(BackgroundDocument)).value }),
+          context
+        )
+      }).pipe(
         Effect.map((document) =>
           document?.value ? decode(document.value) : undefined
         )

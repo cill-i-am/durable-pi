@@ -1,0 +1,38 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-review-stack/durable-pi
+
+ ❯ tests/coordination-held-dispatch.test.ts (2 tests | 1 failed) 163ms
+   × addressed messages share the native child Stop owner: held-before-stop 102ms
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 passed (2)
+   Start at  14:22:27
+   Duration  720ms (import 57%, tests 26%, transform 16%, setup 1%)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/coordination-held-dispatch.test.ts > addressed messages share the native child Stop owner: held-before-stop
+AssertionError: expected [ 'submit-entered', …(2) ] to deeply equal [ 'submit-entered' ]
+
+- Expected
++ Received
+
+  [
+    "submit-entered",
++   "native-abort-started",
++   "native-abort-acknowledged",
++   "native-admitted",
++   "stop-returned",
+  ]
+
+ ❯ tests/coordination-held-dispatch.test.ts:232:23
+    230|         await setImmediate()
+    231|         expect(stopped).toBe(false)
+    232|         expect(order).toEqual(["submit-entered"])
+       |                       ^
+    233|         expect(await receipt()).toBeUndefined()
+    234|         release.resolve()
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

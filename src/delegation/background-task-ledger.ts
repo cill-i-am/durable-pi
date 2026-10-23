@@ -38,12 +38,15 @@ export interface BackgroundTaskLedger {
     child: number,
     request: string
   ) => Effect.Effect<boolean, DelegationFailure>
+  /** Caller holds the group native owner through settlement. Reuse only the
+   * immutable request identity; this native submission is not an app retry. */
   readonly submit: (
     child: number,
     text: string,
     request: string,
     steer: boolean
   ) => Effect.Effect<void, DelegationFailure>
+  /** Resolves after native idle; does not fence later submissions by itself. */
   readonly abort: (child: number) => Effect.Effect<void, DelegationFailure>
   readonly transcript: (
     child: number,

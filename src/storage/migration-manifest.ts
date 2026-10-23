@@ -263,6 +263,19 @@ export const agentMigrationManifest = {
         'ALTER TABLE `chat_turns` ADD `control` text DEFAULT \'{"owner":null,"deadline":null,"unconfirmed":null}\' NOT NULL CONSTRAINT `chat_turns_control_json` CHECK (json_valid(`control`));',
       ],
     },
+    {
+      id: "20261023130802_coordination_lifecycle",
+      checksum:
+        "5f0c1da4f388055d7cc986b0ae1b30176dec8131187add6719224e1ada68c9fa",
+      statements: [
+        "ALTER TABLE `agent_messages` ADD `schema_version` integer DEFAULT 1 NOT NULL;",
+        "ALTER TABLE `agent_messages` ADD `workflow_version` integer DEFAULT 1 NOT NULL;",
+        "ALTER TABLE `agent_messages` ADD `revision` integer DEFAULT 0 NOT NULL;",
+        "ALTER TABLE `agent_messages` ADD `phase` text DEFAULT 'pending' NOT NULL;",
+        "ALTER TABLE `agent_messages` ADD `attempt_id` text;",
+        "UPDATE `agent_messages` SET `phase` = CASE `state` WHEN 'accepted' THEN 'pending' WHEN 'delivered' THEN 'delivered' WHEN 'failed' THEN 'failed' END;",
+      ],
+    },
   ],
   schema: [
     {
@@ -288,7 +301,7 @@ export const agentMigrationManifest = {
     {
       type: "table",
       name: "agent_messages",
-      sql: 'CREATE TABLE `agent_messages` (\n\t`sequence` integer PRIMARY KEY AUTOINCREMENT,\n\t`id` text NOT NULL UNIQUE,\n\t`operation_id` text NOT NULL UNIQUE,\n\t`sender_session` text NOT NULL,\n\t`sender_agent` text NOT NULL,\n\t`recipient_session` text NOT NULL,\n\t`recipient_agent` text NOT NULL,\n\t`payload` text NOT NULL,\n\t`state` text NOT NULL,\n\t`attempts` integer DEFAULT 0 NOT NULL,\n\t`retry_at` integer NOT NULL,\n\t`error` text,\n\tCONSTRAINT "agent_messages_payload_json" CHECK(json_valid("payload")),\n\tCONSTRAINT "agent_messages_state_check" CHECK("state" in (\'accepted\',\'delivered\',\'failed\')),\n\tCONSTRAINT "agent_messages_attempts_check" CHECK("attempts" >= 0)\n)',
+      sql: 'CREATE TABLE `agent_messages` (\n\t`sequence` integer PRIMARY KEY AUTOINCREMENT,\n\t`id` text NOT NULL UNIQUE,\n\t`operation_id` text NOT NULL UNIQUE,\n\t`sender_session` text NOT NULL,\n\t`sender_agent` text NOT NULL,\n\t`recipient_session` text NOT NULL,\n\t`recipient_agent` text NOT NULL,\n\t`payload` text NOT NULL,\n\t`state` text NOT NULL,\n\t`attempts` integer DEFAULT 0 NOT NULL,\n\t`retry_at` integer NOT NULL,\n\t`error` text, `schema_version` integer DEFAULT 1 NOT NULL, `workflow_version` integer DEFAULT 1 NOT NULL, `revision` integer DEFAULT 0 NOT NULL, `phase` text DEFAULT \'pending\' NOT NULL, `attempt_id` text,\n\tCONSTRAINT "agent_messages_payload_json" CHECK(json_valid("payload")),\n\tCONSTRAINT "agent_messages_state_check" CHECK("state" in (\'accepted\',\'delivered\',\'failed\')),\n\tCONSTRAINT "agent_messages_attempts_check" CHECK("attempts" >= 0)\n)',
     },
     {
       type: "index",

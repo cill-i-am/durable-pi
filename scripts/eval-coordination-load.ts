@@ -46,6 +46,8 @@ await Effect.runPromise(
           Effect.succeed(agents.filter((a) => a.address.sessionId === id)),
         sessions: () => Effect.succeed([]),
         latest: () => Effect.succeed(null),
+        // Store-only load probe: this finite lease does not prove alarm durability.
+        prearm: () => Effect.sync(() => Date.now() + 60_000),
         wake: () => Effect.void,
         deliver: (m) =>
           Effect.sync(() => {

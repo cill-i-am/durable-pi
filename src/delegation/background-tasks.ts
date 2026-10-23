@@ -1,20 +1,21 @@
-import { Clock, Context, Effect, Layer, Schema } from "effect"
+import { Clock, Context, Effect, Exit, Layer, Schema } from "effect"
 
 import { preserveFatal } from "../shared/effect"
 import { BackgroundHandoff } from "./background"
 import { backgroundRejected } from "./background-domain"
 import {
-  acceptBackgroundControl,
   backgroundChild,
-  backgroundControlId,
   backgroundInitialId,
-  consumeBackgroundRequest,
   projectBackgroundTasks,
   requireBackgroundState,
-  stopBackgroundState,
   type BackgroundState,
 } from "./background-task-domain"
 import type { BackgroundTaskLedger } from "./background-task-ledger"
+import { makeBackgroundTaskOwner } from "./background-task-owner"
+import {
+  advanceBackgroundTask,
+  initializeBackgroundTask,
+} from "./background-task.machine"
 import { Control, DelegationFailure } from "./contracts"
 
 export interface BackgroundTaskAuthority {
@@ -47,7 +48,8 @@ const decode = <T>(schema: Schema.ConstraintDecoder<T>, raw: unknown) =>
 export function makeBackgroundTasks(
   ledger: BackgroundTaskLedger,
   authority: BackgroundTaskAuthority,
-  now: Effect.Effect<number> = Clock.currentTimeMillis
+  now: Effect.Effect<number> = Clock.currentTimeMillis,
+  owner = makeBackgroundTaskOwner()
 ) {
   const load = () =>
     ledger
@@ -78,54 +80,112 @@ export function makeBackgroundTasks(
       const facts = yield* ledger.facts(state)
       return projectBackgroundTasks(state, facts, yield* now)
     })
-  const stop = Effect.fn("BackgroundTasks.stop")(function* () {
-    const children = yield* edit((state) => ({
-      state: stopBackgroundState(state),
-      result: state.sealed ? [] : state.children,
+  const own = owner.run
+  const revoke = () =>
+    edit((state) => ({
+      state: advanceBackgroundTask(state, { type: "REVOKE" }),
+      result: undefined,
     }))
-    yield* Effect.forEach(children, (child) => ledger.abort(child.id), {
-      concurrency: 3,
-      discard: true,
+  const cleanup = (child: number) =>
+    own({
+      claim: edit((state) => {
+        const before = backgroundChild(state, child)
+        if (before.stop === "none" || before.stop === "confirmed")
+          return { state, result: undefined }
+        const next = advanceBackgroundTask(state, { type: "STOP_CLAIM", child })
+        return {
+          state: next,
+          result: {
+            kind: "stop" as const,
+            child,
+            request: `background-stop:${child}`,
+            claim: backgroundChild(next, child).stopAttempt,
+            text: "",
+            steer: false,
+          },
+        }
+      }),
+      dispatch: (command) => ledger.abort(command.child),
+      record: (command, result) =>
+        edit((state) => ({
+          state: advanceBackgroundTask(state, {
+            type: Exit.isSuccess(result) ? "STOP_ACK" : "STOP_FAILED",
+            child: command.child,
+            attempt: command.claim,
+          }),
+          result: undefined,
+        })),
     })
-  })
-  const drain = Effect.fn("BackgroundTasks.deliverControls")(function* () {
-    const state = yield* load()
-    for (const input of state.controls) {
-      const latest = yield* load()
-      if (latest.applied.includes(input.operationId)) continue
-      const child = yield* decision(() =>
-        backgroundChild(latest, input.childId)
-      )
-      if (
-        input.action.type === "stop" ||
-        latest.stopped ||
-        child.stopped ||
-        (yield* now) >= latest.handoff.deadline
-      )
-        yield* ledger.abort(child.id)
-      else if (!latest.sealed) {
+  const dispatch = (request: string) =>
+    own({
+      claim: Effect.gen(function* () {
+        const state = yield* load()
+        const command = state.submissions.find(
+          (value) => value.request === request
+        )
+        if (!command) return undefined
         if (
+          command.steer &&
           !(yield* ledger.hasSubmission(
-            child.id,
-            backgroundInitialId(child.id)
+            command.child,
+            backgroundInitialId(command.child)
           ))
         )
-          continue
-        yield* ledger.submit(
-          child.id,
-          input.action.text,
-          backgroundControlId(input),
-          true
-        )
-      }
-      yield* edit((current) => ({
-        state: {
-          ...current,
-          applied: [...new Set([...current.applied, input.operationId])],
-        },
-        result: undefined,
-      }))
-    }
+          return undefined
+        const allowed =
+          state.authority === "active" &&
+          (yield* authority.authorized(state.handoff))
+        return yield* edit((current, at) => {
+          const revoked =
+            current.outcome === "working" &&
+            (!allowed || at >= current.handoff.deadline)
+              ? advanceBackgroundTask(current, { type: "REVOKE" })
+              : current
+          const next = advanceBackgroundTask(revoked, {
+            type: "CLAIM",
+            request,
+            now: at,
+            authorized: allowed,
+          })
+          const claimed = next.submissions.find(
+            (value) => value.request === request
+          )!
+          return {
+            state: next,
+            result:
+              next !== revoked && claimed.status === "claimed"
+                ? { ...claimed, kind: "submit" as const }
+                : undefined,
+          }
+        })
+      }),
+      dispatch: (command) =>
+        ledger.submit(
+          command.child,
+          command.text,
+          command.request,
+          command.steer
+        ),
+      record: (command, result) =>
+        edit((state) => ({
+          state: advanceBackgroundTask(state, {
+            type: Exit.isSuccess(result) ? "SUBMITTED" : "UNCONFIRMED",
+            request: command.request,
+            claim: command.claim,
+          }),
+          result: undefined,
+        })),
+    })
+  const stop = Effect.fn("BackgroundTasks.stop")(function* () {
+    yield* revoke()
+    for (const child of (yield* load()).children) yield* cleanup(child.id)
+  })
+  const drain = Effect.fn("BackgroundTasks.deliverControls")(function* (
+    initial = false
+  ) {
+    for (const command of (yield* load()).submissions)
+      if (initial || command.steer) yield* dispatch(command.request)
+    for (const child of (yield* load()).children) yield* cleanup(child.id)
   })
   return {
     initialize: Effect.fn("BackgroundTasks.initialize")(function* (
@@ -152,73 +212,36 @@ export function makeBackgroundTasks(
           }
           const children = []
           for (const task of handoff.input.tasks)
-            children.push({
-              ...(yield* tx.createChild(handoff, task)),
-              requests: 0,
-              stopped: false,
-            })
-          document.value = {
-            handoff,
-            children,
-            stopped: false,
-            sealed: false,
-            revision: 0,
-            controls: [],
-            applied: [],
-          }
+            children.push(yield* tx.createChild(handoff, task))
+          document.value = initializeBackgroundTask(handoff, children)
         })
       )
     }),
     advance: Effect.fn("BackgroundTasks.advance")(function* () {
       const state = yield* load()
-      if (!state.sealed && !(yield* authority.authorized(state.handoff)))
-        yield* edit((current) => ({
-          state: stopBackgroundState(current),
-          result: undefined,
-        }))
-      yield* edit((current, at) => ({
-        state:
-          !current.sealed && !current.stopped && at >= current.handoff.deadline
-            ? stopBackgroundState(current)
-            : current,
-        result: undefined,
-      }))
-      for (const [index, child] of state.children.entries()) {
-        const latest = yield* load()
-        if (latest.sealed) break
-        if (
-          latest.stopped ||
-          latest.children[index]!.stopped ||
-          (yield* now) >= latest.handoff.deadline
-        )
-          yield* ledger.abort(child.id)
-        else
-          yield* ledger.submit(
-            child.id,
-            latest.handoff.input.tasks[index]!.task,
-            backgroundInitialId(child.id),
-            false
-          )
-      }
-      yield* drain()
+      if (
+        state.outcome === "working" &&
+        (!(yield* authority.authorized(state.handoff)) ||
+          (yield* now) >= state.handoff.deadline)
+      )
+        yield* revoke()
+      yield* drain(true)
       const latest = yield* load(),
         view = yield* project(latest)
-      if (
-        !view.children.some((child) =>
-          ["queued", "working", "stopping"].includes(child.status)
-        )
-      )
-        yield* edit((current, at) => ({
-          state:
-            !current.sealed && current.revision === latest.revision
-              ? {
-                  ...current,
-                  sealed: true,
-                  stopped: current.stopped || at >= current.handoff.deadline,
-                }
-              : current,
-          result: undefined,
-        }))
+      yield* edit((current, at) => ({
+        state: advanceBackgroundTask(current, {
+          type: "OBSERVED",
+          revision: latest.revision,
+          settled: !view.children.some((child) =>
+            ["queued", "working", "stopping"].includes(child.status)
+          ),
+          now: at,
+        }),
+        result: undefined,
+      }))
+      // Observation can cross the deadline after the first drain. Join the new
+      // cleanup obligation before returning a cancellation acknowledgement.
+      for (const child of (yield* load()).children) yield* cleanup(child.id)
       return yield* project(yield* load())
     }),
     read: Effect.fn("BackgroundTasks.read")(function* () {
@@ -228,10 +251,17 @@ export function makeBackgroundTasks(
     control: Effect.fn("BackgroundTasks.control")(function* (raw: unknown) {
       const input = yield* decode(Control, raw),
         state = yield* load()
-      if (!state.sealed && !(yield* authority.authorized(state.handoff)))
+      if (
+        state.outcome === "working" &&
+        !(yield* authority.authorized(state.handoff))
+      )
         yield* stop()
       const accepted = yield* edit((current, at) => {
-        const next = acceptBackgroundControl(current, input, at)
+        const next = advanceBackgroundTask(current, {
+          type: "CONTROL",
+          input,
+          now: at,
+        })
         return { state: next, result: next !== current }
       })
       yield* drain()
@@ -245,7 +275,11 @@ export function makeBackgroundTasks(
           "This background task has stopped."
         )
       yield* edit((current, at) => ({
-        state: consumeBackgroundRequest(current, provider, at),
+        state: advanceBackgroundTask(current, {
+          type: "REQUEST",
+          provider,
+          now: at,
+        }),
         result: undefined,
       }))
     }),
