@@ -1,0 +1,166 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-10-23T16:16:32.688956+00:00",
+  "baseCommit": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+  "sources": {
+    "migrations/agent/20261023142600_memory_lifecycle/migration.sql": "eefc3a3828fed72025dca2182f3a9b0078cd26be9a9cfcc0c9ff8578acc47d8e",
+    "migrations/agent/20261023142600_memory_lifecycle/snapshot.json": "42c8cd27c3c9b90a10bf1099cea5953c8af84b2ad63b3e334b8f7885a015261b",
+    "package.json": "daa3a03808b0bb8eaa8818302b97832639758bae3e1fa000d6db7a5bc4ffb7ea",
+    "scripts/test-memory-backup-runtime.mjs": "93d494c7e8bfc78060e74f8f009c34bb68459fc010c79dfa7ae882c8aff374de",
+    "scripts/test-memory-summary-runtime.mjs": "1449262624b5d4c66ba0184bb13b714a8a008937fd6cb188c63c41218d336d0c",
+    "src/agent/worker.ts": "dc5ceba8d23517d2f2aea9c1ecafaa02c80c00fc98f2d301fba024bcb6a62ce6",
+    "src/app/workspace.tsx": "c0e63e75f2235720a0482d3fbf4a61097add3d2ca7f293a3c857ef2e10dac49a",
+    "src/conversations/adapters/sqlite-journal.ts": "fc6aa1ba4643a376f3f50301810de58284eb64acb3226f39fe6d33090b8da161",
+    "src/conversations/contracts.ts": "284e0137ef4dd1663a8e16781b5fa635ea5c9ae1f9c9675c1d70cc98b82d804e",
+    "src/conversations/journal.ts": "3740b61ccfac4ecf6b1b7445aba4fe6defa8ac2acd141220d40a10dca94c05c8",
+    "src/features/memory/backup-recovery-owner.ts": "67582d3f1f7c40434ad7826035d6fd76adb931d3c0200287aaf71c851e884d19",
+    "src/features/memory/backup-recovery.machine.ts": "54da888fb235035ca786f77974622a9528e5dede6aa3b2f27a2b9475a4519bfc",
+    "src/features/memory/backup-recovery.tsx": "f0865f89ed5a59b5b2ab7e59cdaae3e8d38100379904225c2f6ff2c527f36d35",
+    "src/features/memory/memory-panel.tsx": "250c5e620310556eee84bede9472e429220b9fe974bf2d5170bd90ab98651a6e",
+    "src/features/memory/summary-recovery-owner.ts": "367130c86688d993694983997ec22c0ad4b1b8b5e03329c8d869d3068c7574f3",
+    "src/features/memory/summary-recovery.machine.ts": "ace9bc87967826331003c5aa68c3c5d743b503d3e583f07f626c346c104a192d",
+    "src/features/memory/summary-recovery.tsx": "ed11c96904e8418fdb94bed3d4ea36559818120946a9bf90faa685240f6acfb1",
+    "src/memory/adapters/backup-lifecycle.ts": "4717bcfea235454ce315f8c5c155407b199f085ea48d4f07f25ea8dc6ab34fa7",
+    "src/memory/adapters/backup-status.ts": "18a8b887c977734560c4f20159989e3dad7190395c4f4dcf5fdb6377d69e09f0",
+    "src/memory/adapters/host.ts": "5cd9d271fd22c5aadbe4d0f1202a5b21bd5769d7dcba974296a3daff7ca40a97",
+    "src/memory/adapters/model-routes.ts": "ce071738f77ff56bc671710f0e4a44e600ce8457e1159fa3f3f06e1f399f7ee8",
+    "src/memory/adapters/schema.ts": "50feacee54e1dcee246dd67e5eaf6a5c3d39df71890f882aa554eaa9e661c2c0",
+    "src/memory/adapters/sqlite.ts": "325c9109d0949eba4a697de6007861821481384472ffa1887259ba9ad73f741d",
+    "src/memory/adapters/summary-lifecycle.ts": "bd74db4752b40eb3a6350aec7f0f63939ed1901b8591bd59eaf7e09b62de33ed",
+    "src/memory/application.ts": "df6dd25e914a069d9608ec40c636408c11af6ae52b5f5dc91b9f4656a43a7251",
+    "src/memory/backup-discovery.machine.ts": "73cfce0208ae20f06a631fba6fe5b009551aabfe53a4a7077989081bd4fac973",
+    "src/memory/backup-dispatch.machine.ts": "50384fed2383b9ae33c958024dacb373ebba51b57818f199446a21bd8b691d70",
+    "src/memory/backup-publication.machine.ts": "b075099514b8a6387671fa6caabe54558ae2308771a1d6c5bb9cc09862f7d099",
+    "src/memory/backup-status.ts": "3c470d7ef52f232189e0ec0c7fd63d5da297c7480fbcff7c31c83cb128bdd428",
+    "src/memory/backup.machine.ts": "cbf7528a7b2643184cda13e4a7c4641f180ac7ac58890478a41d91d96f90c589",
+    "src/memory/backup.ts": "d2707798c5b888a137a9621236a48bbd5888076ffa583c9492d0115b4c547dfe",
+    "src/memory/compaction.machine.ts": "e3b24c4ececb001dd948f3556f663021c00201913d027c42f075de5185c73fc1",
+    "src/memory/compaction.ts": "cc8986c1aa2cba4af08e4f5d34647f32f5e42d8e9cad90854d52e775b48075a5",
+    "src/memory/domain.ts": "51e6b7b7ccfe3dd76f90037317b8dbecc88a2496486296063061bb6076704e92",
+    "src/memory/ledger.ts": "7d5ead7d85ed258fba13577aef1a7c3ca8572ce0d0e441b8917e6e10f8c8aa5b",
+    "src/memory/policy.ts": "96ba4bf4b5f1b49f909e90036529ccebafc9395b4532495cedcf7b82ce682f77",
+    "src/memory/repository.ts": "2a16fe94b1fbc1744ab6918df3f45cb4aa1406d53cff1e9c1a7526d20a59cb35",
+    "src/memory/retry.ts": "7f8c48fe7c54d8a3b9955bd43f7facf526670ffdcfe96a64e148b5e563f38899",
+    "src/memory/routing.ts": "dc2c3eee3a0c244e08d57a130a108db98c88ea645e4361d0d494f8eab698ef4c",
+    "src/memory/service.ts": "c018dc7429fb9abf9ea09a951c298fc1f815d3afcb48fd81e18be083d1cfbce1",
+    "src/memory/summary-correction.machine.ts": "6e90f8750833f1ad7f84ce6d083076789b174b5715b5af397cceb374be3312a3",
+    "src/memory/summary-discovery.machine.ts": "c07d00be6416b4b4aa88443dfbd394fa1221a4f67399fb296f056d77041dce35",
+    "src/memory/summary-effects.ts": "00bc7cc8880cdb3a1c732807ebaadf076e2ff39a840901b4f5583a5d27d8b291",
+    "src/memory/summary-execution.machine.ts": "14aa295a21b83afe25f54473e8ba2e7f6075a83b427d6334f492e0e98afcc90c",
+    "src/memory/summary-execution.ts": "43ff228e69703658d84e5de73dff19fef7f6d0d212f62601e04b214baeb620c3",
+    "src/memory/summary-retry.machine.ts": "d36e50defdb294df181f983cf87c43c53aa2ead3afff217cf10c42f725fecedb",
+    "src/memory/summary.machine.ts": "f901ce56b034993b2a19bb34e143d4e047f8a1bbc49a9ce0d23f2456a8c24d49",
+    "src/storage/migration-manifest.ts": "c7cc644057aa608ad6ec9ad43e49acffd004e64ca255a3f03c395a0ef27b044c",
+    "tests/admission-wake.test.ts": "b18aace1c40e304831cac16e6598a7a2556e8279eea8dd2eb086619e92fe49d3",
+    "tests/browser/memory-recovery.spec.ts": "a1143dde800a12e64c4ce6c6fae9e8ca70947647f3d3165ff13b45f96879077f",
+    "tests/compactor.test.ts": "c4e12e4369f7cba173db2dd8ce90da951f644a5bb96e472596c359c6a5c48487",
+    "tests/conversation-fixture.ts": "abd7fa4bd337e254523b64293f116139e1f5c7813183f69fce83c8895fca84b5",
+    "tests/conversation-journal.test.ts": "89339973b3f276b660864f137aa0d4d3922534f07d8e282f36d59699aee3464d",
+    "tests/conversation-memory-admission.test.ts": "45b2ee918054a3ca700e8a5de5b7a27702dce7c1e6107059d60b8448321f3d31",
+    "tests/memory-application.test.ts": "afe07d6de863be7af05953768f67b5777fc927ed6f3fea740d7353aab26d1298",
+    "tests/memory-backup-lifecycle.test.ts": "cd4a46898eb5750fc7f76f363b20194036019958e462f9ee87994c45a9db5dd6",
+    "tests/memory-backup-recovery-ui.test.ts": "5044edaefb901754a609ec923ba5f2298a16e8119446949156f42c79785d7a88",
+    "tests/memory-backup-runner.test.ts": "be62b0c3224def6340f9f0847f6356bb0de39170646da7e5daed6486cf63fda6",
+    "tests/memory-boundary.test.ts": "20456f58c7c157dee07fa78668e4834cd2b5ac0fecead833c25dc8ca1ceca361",
+    "tests/memory-runtime.test.ts": "f60e571242852e6aaf339730104667871c9c62c2ed18ab0060a2d34e9b14e76a",
+    "tests/memory-summary-host.test.ts": "ef196ea9b389922d48c89485e0458fa9e99360fc469b6670d016a00caa2ea17e",
+    "tests/memory-summary-ledger.test.ts": "878b548b949e35711c0f3e64b4c59ba5adfb13907a1cbc2d37a9b66b3b0e390f",
+    "tests/memory-summary-ownership.test.ts": "abac2ac2f0bcd41584e5a1f5962de9a0f646f7376448400f396d419b1c48b7e8",
+    "tests/memory-summary-recovery-ui.test.ts": "1fe54222640a5b51626ded6e28e89fd6092eb0d0552578d8965cac0dffa07e62",
+    "tests/memory-summary-retry.test.ts": "e521d7ab64e5d9c78d48ad6ae99165d197c7a56353f17ff18294e7fac67d28ae",
+    "tests/memory-summary-runner.test.ts": "be10e7fb6fdb7fe38a59269566d0e642d8ce1050329fa235e51b0371ec589a97",
+    "tests/runtime/conversation-control-worker.ts": "88ecc465aed981fbb39591213c395c6be60c8a215c81e96d61e30dfe440f4987",
+    "tests/runtime/maintenance-worker.ts": "b1bb2901240229531d2d27b3971f10667e1d97534e47249cce02be8d25e46357",
+    "tests/runtime/memory-backup-worker.ts": "aa1041c5e2d6088c5b2f016cad7efce21e7461fa62351a201bdd760e569c2811",
+    "tests/runtime/memory-summary-worker.ts": "ded3a37b781fee642648579474274613f8818d614ee8dba1e2181fd628ba72ea",
+    "tests/runtime/routines-worker.ts": "28c5c00f343c4f67a5208044b97befc34e65a7c782a20ab232f3344b32d82d88"
+  },
+  "deletedSources": {
+    "src/agent/adapters/maintenance-runner.ts": "e07e4b1c5f5bcb310564dc73c51b287bd6fbe7e55af7776ff012382e7d3cfa0f"
+  },
+  "artifacts": [
+    {
+      "path": "docs/evidence/xstate-effect/memory-composed-static-2.log.txt",
+      "original": "/private/tmp/memory-composed-static-2.log",
+      "sha256": "f5d6bfee7b7bf5b05d2cbcc038802a957463b6eeaead8176da0110a60821c6fd",
+      "bytes": 655,
+      "recordedExitCode": 0
+    },
+    {
+      "path": "docs/evidence/xstate-effect/memory-composed-unit-1.log.txt",
+      "original": "/private/tmp/memory-composed-unit-1.log",
+      "sha256": "c5a204fd65e877bf33d53f05cfd23c8ba274f5a32470d848e4f6a4464cf9bd61",
+      "bytes": 532,
+      "recordedExitCode": 0
+    },
+    {
+      "path": "docs/evidence/xstate-effect/memory-composed-build-1.log.txt",
+      "original": "/private/tmp/memory-composed-build-1.log",
+      "sha256": "8b9d1201d9cf6cc9197647e8ece5a047752438141c439e58fea078022a52637a",
+      "bytes": 24467,
+      "recordedExitCode": 0
+    },
+    {
+      "path": "docs/evidence/xstate-effect/memory-composed-native-1.log.txt",
+      "original": "/private/tmp/memory-composed-native-1.log",
+      "sha256": "e92132ce6a7ebf611d2c14bc8b899b7446fd8fdc3eb06c47d0ca11a8afd29917",
+      "bytes": 39079,
+      "recordedExitCode": 0
+    },
+    {
+      "path": "docs/evidence/xstate-effect/memory-composed-browser-1.log.txt",
+      "original": "/private/tmp/memory-composed-browser-1.log",
+      "sha256": "869ee051a3efb346ea05485de11bf8c16c6843e30b498f0f558e2b9921e50e49",
+      "bytes": 44202,
+      "recordedExitCode": 0
+    },
+    {
+      "path": "docs/evidence/xstate-effect/memory-composed-final-static-2.log.txt",
+      "original": "/private/tmp/memory-composed-final-static-2.log",
+      "sha256": "a33a9aa35faa387c35ee85cdaf5dd6d9f3d800abe09c79d8bed3902bf2df7b15",
+      "bytes": 655,
+      "recordedExitCode": 0
+    },
+    {
+      "path": "docs/evidence/xstate-effect/memory-final-communication-native.log.txt",
+      "original": "/private/tmp/memory-final-communication-native.log",
+      "sha256": "694079f5526bb475f5a87f6f2f55077e25c09d36c92cbd27f0a018b4fac6f4b8",
+      "bytes": 5496,
+      "recordedExitCode": 0
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-composed-negative-1.log.txt",
+      "original": "/private/tmp/b13-composed-negative-1.log",
+      "sha256": "fee82dcad7b43a08e5f7b23c6fa8a1152980bbe35066473b354a2bb9fe45eee0",
+      "bytes": 833,
+      "recordedExitCode": 1
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b18-composed-native-evidence.json.txt",
+      "original": "/var/folders/s2/80_kxn9s19s1gyb6ylqwdh680000gn/T/durable-pi-memory-backup-eCTr3R/evidence.json",
+      "sha256": "763c98906549328f9b80cf69d87c9da7e0edf239f1174fd6d13d1834b124b0fc",
+      "bytes": 74490
+    }
+  ],
+  "historicalArtifactManifest": "docs/evidence/xstate-effect/b13-b18-2026-10-23/manifest.json",
+  "verification": {
+    "unit": {
+      "files": 283,
+      "passed": 3220
+    },
+    "browser": {
+      "passed": 108,
+      "passkeys": true,
+      "twoBuildRecovery": true
+    },
+    "nativeSuites": 15,
+    "nativeAfterObsoleteRunnerRemoval": "Complete Communication suite passed against production SummaryRunner fairness fixture. Other native inputs unchanged.",
+    "negativeControl": "Final B13 --break-uncertainty fails at cold uncertainty: claimed instead of paused."
+  },
+  "limits": [
+    "Historical source manifests retain their original scope; B13 runner/read-outage and journal capability fixes plus inherited worker composition are reflected in these current hashes.",
+    "Native tests use actual local workerd/Lifecycle/SQLite with synthetic authority/providers and local conditional storage. No live model, hosted R2, external exactly-once claim, merge or deployment.",
+    "Full composed unit/build preceded deletion of the unused MaintenanceRunner and its replacement in the native test fixture. Final static and complete affected native Communication suite passed after that retirement.",
+    "All fifteen required native suites and full browser gate passed locally; exact published-commit hosted CI remains required. F13 coverage here is only summary/backup recovery UI."
+  ]
+}

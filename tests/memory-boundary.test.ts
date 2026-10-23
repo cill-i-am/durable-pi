@@ -16,7 +16,6 @@ import { MemoryTransaction } from "../src/memory/ledger"
 import {
   memoryRestorePlan,
   summarySavePlan,
-  summaryFailure,
   memoryAncestors,
 } from "../src/memory/policy"
 import { StoredPart } from "../src/memory/records"
@@ -48,7 +47,7 @@ it.effect(
       )
     })
 )
-it("summary plans preserve aligned ranges and the three-failure limit", () => {
+it("summary plans preserve aligned ranges", () => {
   for (let total = 1; total <= 32; total++)
     for (let count = 1; count <= total; count *= 2)
       for (let start = 0; start + count <= total; start += count) {
@@ -60,10 +59,6 @@ it("summary plans preserve aligned ranges and the three-failure limit", () => {
         expect(plan.parent.count).toBe(count * 2)
         expect(plan.parent.start).toBeLessThanOrEqual(start)
       }
-  for (let attempts = 0; attempts <= 20; attempts++)
-    expect(summaryFailure(attempts || undefined, 100).attempts).toBe(
-      Math.min(3, attempts + 1)
-    )
   expect(() => memoryAncestors([{ start: 0, count: 0 }], 1)).toThrow()
   expect(() =>
     Schema.decodeUnknownSync(StoredPart)({ start: 1, count: 2 })
@@ -132,7 +127,7 @@ it.effect(
         },
         {
           sql: "UPDATE memory_failures SET attempts=0",
-          read: (m) => m.paused({ start: 0, count: 1 }),
+          read: (m) => m.paused({ start: 1, count: 1 }),
         },
         {
           sql: "UPDATE memory_notes SET path='../private.md'",
@@ -144,7 +139,8 @@ it.effect(
           memory = yield* makeSqliteMemory(db)
         yield* memory.append("source", "user", "Original")
         yield* memory.saveNode({ start: 0, count: 1 }, "Summary")
-        yield* memory.failNode({ start: 0, count: 1 }, 10000)
+        yield* memory.append("pending", "user", "Pending original")
+        yield* memory.failNode({ start: 1, count: 1 }, 10000)
         yield* memory.writeNote("notes.md", "Decision", 0)
         corrupt(db, mutation.sql)
         const exit = yield* mutation.read(memory).pipe(Effect.exit)

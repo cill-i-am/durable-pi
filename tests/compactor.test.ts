@@ -191,7 +191,13 @@ describe("Effect memory compaction", () => {
         )
         yield* Deferred.await(started)
         yield* TestClock.adjust("60 seconds")
-        expect(yield* Fiber.join(fiber)).toBe(70_000)
+        expect(yield* Fiber.join(fiber)).toBeUndefined()
+        expect(yield* memory.issues()).toMatchObject([
+          { attempts: 1, retryAt: null },
+        ])
+        expect(
+          yield* memory.next(new Set(), Number.MAX_SAFE_INTEGER)
+        ).toBeUndefined()
         expect(signal?.aborted).toBe(true)
         expect(yield* memory.nodeCount()).toBe(0)
       })

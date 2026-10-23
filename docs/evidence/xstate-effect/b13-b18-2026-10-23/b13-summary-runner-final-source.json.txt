@@ -1,0 +1,39 @@
+{
+  "capturedAt": "2026-10-23T15:21:48.525520+00:00",
+  "root": "/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi",
+  "owned": {
+    "src/memory/summary-discovery.machine.ts": "c07d00be6416b4b4aa88443dfbd394fa1221a4f67399fb296f056d77041dce35",
+    "src/memory/adapters/summary-lifecycle.ts": "83c15e9b49ee30d86a5be2080bfac9183e8588863394b0fe13d438d5c25494df",
+    "src/memory/adapters/host.ts": "5cd9d271fd22c5aadbe4d0f1202a5b21bd5769d7dcba974296a3daff7ca40a97",
+    "src/agent/worker.ts": "65ca2053004f1d12d8c1568b6e6682dbceed93fe1cb93c34ddb50575651292cb",
+    "tests/memory-summary-runner.test.ts": "b9d139f57e0bc1f7e0d622e1029717f2fb0f4db81f7b555b86d4feda27893209",
+    "tests/memory-summary-host.test.ts": "ef196ea9b389922d48c89485e0458fa9e99360fc469b6670d016a00caa2ea17e"
+  },
+  "dependencySnapshot": {
+    "src/memory/application.ts": "df6dd25e914a069d9608ec40c636408c11af6ae52b5f5dc91b9f4656a43a7251",
+    "src/memory/adapters/backup-lifecycle.ts": "75a5c817e28d79ff25d10ba23880e76346d85d165052d7fd4c819edfc5362f38",
+    "src/conversations/journal.ts": "3740b61ccfac4ecf6b1b7445aba4fe6defa8ac2acd141220d40a10dca94c05c8"
+  },
+  "verification": {
+    "tests": "137 tests / 7 files passed",
+    "types": "tsc --noEmit passed",
+    "lint": "scoped oxlint passed",
+    "format": "scoped oxfmt --check passed",
+    "shutdownFix": "140 tests / 7 files passed; full tsc, scoped lint passed; independent unchanged shutdown probes 3 passed"
+  },
+  "logs": [
+    "/private/tmp/b13-memory-integration-final-tests.log",
+    "/private/tmp/b13-memory-integration-final-types.log",
+    "/private/tmp/b13-memory-integration-final-lint.log",
+    "/private/tmp/b13-memory-integration-final-format.log",
+    "/private/tmp/b13-summary-negative-spent.log",
+    "/private/tmp/b13-summary-negative-cleanup.log",
+    "/private/tmp/b13-summary-runner-after-controls.log",
+    "/private/tmp/b13-summary-shutdown-before.log",
+    "/private/tmp/b13-summary-shutdown-after.log",
+    "/private/tmp/b13-summary-shutdown-focused.log",
+    "/private/tmp/b13-summary-shutdown-final-tests.log",
+    "/private/tmp/b13-summary-shutdown-types.log",
+    "/private/tmp/b13-summary-shutdown-lint.log"
+  ]
+}

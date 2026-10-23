@@ -16,7 +16,7 @@ import {
   sql,
 } from "drizzle-orm"
 import { alias } from "drizzle-orm/sqlite-core"
-import { Effect, Layer, Schema } from "effect"
+import { Clock, Effect, Layer, Schema } from "effect"
 
 import { MessageProvenance } from "../../messages/identity"
 import {
@@ -43,6 +43,7 @@ import {
   LogEntry,
   type MemoryNode,
   type Part,
+  type SummaryClaim,
 } from "../domain"
 import { MemoryTransaction, type MemoryLedger } from "../ledger"
 import * as Policy from "../policy"
@@ -59,6 +60,12 @@ import {
   StoredArchiveRecord,
 } from "../records"
 import { makeMemoryRepository, memoryApplication } from "../service"
+import {
+  advanceSummary,
+  readSummaryControl,
+  ownsSummary,
+  type SummaryControl,
+} from "../summary.machine"
 import * as t from "./schema"
 
 // Two columns per row/range: 32 keeps every batch below workerd's 100 binds.
@@ -109,6 +116,8 @@ const attempt = <TValue>(body: () => TValue) =>
   })
 const key = (part: Part) =>
   and(eq(t.memoryNodes.start, part.start), eq(t.memoryNodes.count, part.count))
+const readyKey = (part: Part) =>
+  and(eq(t.memoryReady.start, part.start), eq(t.memoryReady.count, part.count))
 const failureKey = (part: Part) =>
   and(
     eq(t.memoryFailures.start, part.start),
@@ -167,7 +176,7 @@ class SqliteMemory implements MemoryLedger {
             .where(eq(t.memoryMigrations.name, "effect-memory-v1"))
             .limit(1)
         )
-        if (applied.length) return
+        if (applied.length) return yield* this.upgradeSummaries()
         yield* this.readyLeaves()
         yield* this.readyParents()
         const view = yield* this.query((orm) => orm.select().from(t.memoryView))
@@ -186,8 +195,23 @@ class SqliteMemory implements MemoryLedger {
         yield* this.query((orm) =>
           orm.insert(t.memoryMigrations).values({ name: "effect-memory-v1" })
         )
+        yield* this.upgradeSummaries()
       })
     )
+  }
+  private upgradeSummaries() {
+    return Effect.gen({ self: this }, function* () {
+      const rows = yield* this.query((orm) => orm.select().from(t.memoryReady))
+      for (const row of rows) {
+        const part = Schema.decodeUnknownSync(StoredPart)(row)
+        if (row.control === null)
+          yield* this.saveControl(
+            part,
+            readSummaryControl(null, yield* this.failure(part))
+          )
+        else readSummaryControl(row.control)
+      }
+    })
   }
   private readyLeaves() {
     return Effect.gen({ self: this }, function* () {
@@ -282,6 +306,25 @@ class SqliteMemory implements MemoryLedger {
         )
     })
   }
+  hasSources(
+    sources: readonly string[]
+  ): ReturnType<MemoryLedger["hasSources"]> {
+    const unique = [...new Set(sources)]
+    if (!unique.length) return Effect.succeed(true)
+    return this.query((orm) =>
+      orm
+        .select({ n: countRows() })
+        .from(t.memoryLog)
+        .where(
+          inArray(
+            t.memoryLog.source,
+            orm
+              .select({ source: sql<string>`value` })
+              .from(sql`json_each(${JSON.stringify(unique)})`)
+          )
+        )
+    ).pipe(Effect.map((rows) => rows[0]!.n === unique.length))
+  }
   append(
     source: string,
     kind: LogKind,
@@ -329,7 +372,11 @@ class SqliteMemory implements MemoryLedger {
           orm.insert(t.memoryCompactionView).values({ start: id, count: 1 })
         )
         yield* this.query((orm) =>
-          orm.insert(t.memoryReady).values({ start: id, count: 1 })
+          orm.insert(t.memoryReady).values({
+            start: id,
+            count: 1,
+            control: JSON.stringify(readSummaryControl(null)),
+          })
         )
         yield* this.fitViews()
         return entry
@@ -461,9 +508,50 @@ class SqliteMemory implements MemoryLedger {
       return true
     })
   }
-  saveNode(part: Part, text: string): ReturnType<MemoryLedger["saveNode"]> {
+  saveNode(
+    part: Part,
+    text: string,
+    claim?: SummaryClaim
+  ): ReturnType<MemoryLedger["saveNode"]> {
     return this.atomic(() =>
       Effect.gen({ self: this }, function* () {
+        const control = yield* this.control(part)
+        if (!control) {
+          if (!claim && (yield* this.node(part))) return
+          return yield* new InvalidMemory({
+            message: "This summary claim is no longer current.",
+          })
+        }
+        if (claim && control.routeRevision !== null) {
+          const latest = yield* this.query((orm) =>
+            orm
+              .select({ revision: max(t.summaryRoutes.revision) })
+              .from(t.summaryRoutes)
+              .where(
+                and(
+                  eq(t.summaryRoutes.start, part.start),
+                  eq(t.summaryRoutes.count, part.count)
+                )
+              )
+          )
+          if (latest[0]?.revision !== control.routeRevision)
+            return yield* new InvalidMemory({
+              message: "The summary route changed before completion.",
+            })
+        }
+        const next = advanceSummary(
+          control,
+          claim
+            ? { type: "COMPLETE", token: claim.token, revision: claim.revision }
+            : { type: "LEGACY_COMPLETE" }
+        )
+        if (
+          next.state !== "complete" ||
+          (claim && (claim.start !== part.start || claim.count !== part.count))
+        )
+          return yield* new InvalidMemory({
+            message: "This summary claim is no longer current.",
+          })
         const total = yield* this.total(),
           plan = yield* attempt(() => Policy.summarySavePlan(part, text, total))
         const children = yield* Effect.forEach(plan.children, (child) =>
@@ -493,7 +581,13 @@ class SqliteMemory implements MemoryLedger {
           )
         if (Policy.parentReady(!!parent, siblings))
           yield* this.query((orm) =>
-            orm.insert(t.memoryReady).values(plan.parent).onConflictDoNothing()
+            orm
+              .insert(t.memoryReady)
+              .values({
+                ...plan.parent,
+                control: JSON.stringify(readSummaryControl(null)),
+              })
+              .onConflictDoNothing()
           )
         yield* this.fitViews()
         yield* this.query((orm) =>
@@ -507,69 +601,236 @@ class SqliteMemory implements MemoryLedger {
       orm.select().from(t.memoryFailures).where(failureKey(part)).limit(1)
     ).pipe(Effect.map((rows) => rows[0]))
   }
-  failNode(part: Part, retryAt: number): ReturnType<MemoryLedger["failNode"]> {
-    return this.atomic(() =>
-      Effect.gen({ self: this }, function* () {
-        const before = yield* this.failure(part),
-          plan = Policy.summaryFailure(before?.attempts, retryAt)
+  private control(part: Part) {
+    return Effect.gen({ self: this }, function* () {
+      const rows = yield* this.query((orm) =>
+        orm.select().from(t.memoryReady).where(readyKey(part)).limit(1)
+      )
+      // Validate the old projection, but only null-control rows derive authority from it.
+      const failure = yield* this.failure(part)
+      if (!rows[0]) return
+      Schema.decodeUnknownSync(StoredPart)(rows[0])
+      return readSummaryControl(rows[0].control, failure)
+    })
+  }
+  private controls(
+    states: readonly ("claimed" | "retry" | "paused")[],
+    limit = 2147483647
+  ) {
+    return this.query((orm) =>
+      orm
+        .select({
+          start: t.memoryReady.start,
+          count: t.memoryReady.count,
+          control: t.memoryReady.control,
+          failureStart: t.memoryFailures.start,
+          attempts: t.memoryFailures.attempts,
+          retry_at: t.memoryFailures.retry_at,
+        })
+        .from(t.memoryReady)
+        .leftJoin(
+          t.memoryFailures,
+          and(
+            eq(t.memoryFailures.start, t.memoryReady.start),
+            eq(t.memoryFailures.count, t.memoryReady.count)
+          )
+        )
+        .where(
+          or(
+            ...states.map(
+              (state) =>
+                sql`json_extract(${t.memoryReady.control}, '$.state') = ${state}`
+            ),
+            ...(states.some((state) => state === "retry" || state === "paused")
+              ? [
+                  and(
+                    isNull(t.memoryReady.control),
+                    sql`${t.memoryFailures.start} is not null`
+                  ),
+                ]
+              : [])
+          )
+        )
+        .orderBy(asc(t.memoryReady.start), asc(t.memoryReady.count))
+        .limit(limit)
+    ).pipe(
+      Effect.map((rows) =>
+        rows.map((row) => ({
+          ...Schema.decodeUnknownSync(StoredPart)(row),
+          control: readSummaryControl(
+            row.control,
+            row.failureStart === null
+              ? undefined
+              : Schema.decodeUnknownSync(StoredFailure)(row)
+          ),
+        }))
+      )
+    )
+  }
+  private saveControl(part: Part, control: SummaryControl) {
+    return Effect.gen({ self: this }, function* () {
+      yield* this.query((orm) =>
+        orm
+          .update(t.memoryReady)
+          .set({ control: JSON.stringify(control) })
+          .where(readyKey(part))
+      )
+      if (control.state === "retry" || control.state === "paused") {
         yield* this.query((orm) =>
           orm
             .insert(t.memoryFailures)
             .values({
               ...part,
-              retry_at: plan.retryAt,
-              attempts: plan.attempts,
+              attempts: control.attempts,
+              retry_at: control.retryAt ?? 0,
             })
             .onConflictDoUpdate({
               target: [t.memoryFailures.start, t.memoryFailures.count],
-              set: { retry_at: plan.retryAt, attempts: plan.attempts },
+              set: {
+                attempts: control.attempts,
+                retry_at: control.retryAt ?? 0,
+              },
             })
         )
-        return plan.first
+      } else
+        yield* this.query((orm) =>
+          orm.delete(t.memoryFailures).where(failureKey(part))
+        )
+    })
+  }
+  claimSummary(
+    part: Part,
+    now: number
+  ): ReturnType<MemoryLedger["claimSummary"]> {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const before = yield* this.control(part)
+        if (!before || (yield* this.node(part))) return
+        const token = crypto.randomUUID(),
+          next = advanceSummary(before, { type: "CLAIM", token, now })
+        if (next.state !== "claimed" || next.owner !== token) return
+        yield* this.saveControl(part, next)
+        return { ...part, token, revision: next.revision }
+      })
+    )
+  }
+  pauseSummary(claim: SummaryClaim): ReturnType<MemoryLedger["pauseSummary"]> {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const before = yield* this.control(claim)
+        if (!before || !ownsSummary(before, claim)) return false
+        yield* this.saveControl(
+          claim,
+          advanceSummary(before, {
+            type: "PAUSE",
+            token: claim.token,
+            revision: claim.revision,
+          })
+        )
+        return true
+      })
+    )
+  }
+  restoreSummaryClaims(): ReturnType<MemoryLedger["restoreSummaryClaims"]> {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        for (const { control, ...part } of yield* this.controls(["claimed"]))
+          if (control.state === "claimed")
+            yield* this.saveControl(
+              part,
+              advanceSummary(control, { type: "RESTORE" })
+            )
+      })
+    )
+  }
+  failNode(
+    part: Part,
+    retryAt: number,
+    claim?: SummaryClaim
+  ): ReturnType<MemoryLedger["failNode"]> {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const before = yield* this.control(part)
+        if (
+          !before ||
+          (claim && (claim.start !== part.start || claim.count !== part.count))
+        )
+          return false
+        const next = advanceSummary(
+          before,
+          claim
+            ? {
+                type: "FAIL",
+                token: claim.token,
+                revision: claim.revision,
+                retryAt,
+              }
+            : { type: "LEGACY_FAIL", retryAt }
+        )
+        if (next.revision === before.revision) return false
+        yield* this.saveControl(part, next)
+        return next.attempts === 1
       })
     )
   }
   retryAt(): ReturnType<MemoryLedger["retryAt"]> {
-    return this.rows(StoredFailure, (orm) =>
-      orm
-        .select()
-        .from(t.memoryFailures)
-        .where(lt(t.memoryFailures.attempts, Policy.SUMMARY_FAILURES))
-        .orderBy(asc(t.memoryFailures.retry_at))
-        .limit(1)
-    ).pipe(Effect.map((rows) => rows[0]?.retry_at))
+    return this.atomic(() =>
+      this.controls(["retry"]).pipe(
+        Effect.map(
+          (rows) =>
+            rows
+              .filter(({ control }) => control.state === "retry")
+              .map(({ control }) => control.retryAt!)
+              .sort((a, b) => a - b)[0]
+        )
+      )
+    )
   }
   issues(): ReturnType<MemoryLedger["issues"]> {
-    return this.query((orm) =>
-      orm
-        .select()
-        .from(t.memoryFailures)
-        .orderBy(asc(t.memoryFailures.start), asc(t.memoryFailures.count))
-        .limit(100)
-    ).pipe(
-      Effect.map((rows) =>
-        rows.map((row) =>
-          Schema.decodeUnknownSync(StoredIssue)({
-            ...row,
-            retryAt:
-              row.attempts < Policy.SUMMARY_FAILURES ? row.retry_at : null,
-          })
+    return this.atomic(() =>
+      this.controls(["retry", "paused"], 100).pipe(
+        Effect.map((rows) =>
+          rows
+            .filter(
+              ({ control }) =>
+                control.state === "retry" || control.state === "paused"
+            )
+            .slice(0, 100)
+            .map(({ control, ...part }) =>
+              Schema.decodeUnknownSync(StoredIssue)({
+                ...part,
+                attempts: control.attempts,
+                retryAt: control.retryAt,
+              })
+            )
         )
       )
     )
   }
   paused(part: Part): ReturnType<MemoryLedger["paused"]> {
-    return this.failure(part).pipe(
-      Effect.map((row) => (row?.attempts ?? 0) >= Policy.SUMMARY_FAILURES)
+    return this.atomic(() =>
+      this.control(part).pipe(
+        Effect.map((control) => control?.state === "paused")
+      )
     )
   }
-  retrySummary(part: Part): ReturnType<MemoryLedger["retrySummary"]> {
+  retrySummary(
+    part: Part,
+    admission?: { deadline: number }
+  ): ReturnType<MemoryLedger["retrySummary"]> {
     return this.atomic(() =>
       Effect.gen({ self: this }, function* () {
-        if (!(yield* this.paused(part))) return false
-        yield* this.query((orm) =>
-          orm.delete(t.memoryFailures).where(failureKey(part))
+        if (
+          admission &&
+          (!Number.isFinite(admission.deadline) ||
+            (yield* Clock.currentTimeMillis) >= admission.deadline)
         )
+          return yield* new InvalidMemory({
+            message: "Memory retry discovery expired before admission.",
+          })
+        const before = yield* this.control(part)
+        if (!before || before.state !== "paused") return false
+        yield* this.saveControl(part, advanceSummary(before, { type: "RETRY" }))
         return true
       })
     )
@@ -595,11 +856,18 @@ class SqliteMemory implements MemoryLedger {
         )
         const first = missing[0]?.start ?? (yield* this.total())
         const eligible = or(
-          isNull(t.memoryFailures.start),
           and(
-            lt(t.memoryFailures.attempts, Policy.SUMMARY_FAILURES),
-            lte(t.memoryFailures.retry_at, now)
-          )
+            isNull(t.memoryReady.control),
+            or(
+              isNull(t.memoryFailures.start),
+              and(
+                lt(t.memoryFailures.attempts, Policy.SUMMARY_FAILURES),
+                lte(t.memoryFailures.retry_at, now)
+              )
+            )
+          ),
+          sql`json_extract(${t.memoryReady.control}, '$.state') = 'queued'`,
+          sql`json_extract(${t.memoryReady.control}, '$.state') = 'retry' AND json_extract(${t.memoryReady.control}, '$.retryAt') <= ${now}`
         )
         const leaves = yield* this.rows(LogEntry, (orm) =>
           orm
@@ -668,37 +936,24 @@ class SqliteMemory implements MemoryLedger {
             .orderBy(asc(t.memoryReady.count), asc(t.memoryReady.start))
             .limit(busy.size + 1)
         )
-        return Policy.summaryJob(leaves, parents, busy, view)
+        const job = Policy.summaryJob(leaves, parents, busy, view)
+        if (job) yield* this.control(job)
+        return job
       })
     )
   }
   blocked(): ReturnType<MemoryLedger["blocked"]> {
-    return this.query((orm) =>
-      orm
-        .select({ start: t.memoryFailures.start })
-        .from(t.memoryView)
-        .innerJoin(
-          t.memoryFailures,
-          and(
-            eq(t.memoryFailures.start, t.memoryView.start),
-            eq(t.memoryFailures.count, t.memoryView.count)
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        for (const part of yield* this.parts())
+          if (
+            !(yield* this.node(part)) &&
+            (yield* this.control(part))?.state === "paused"
           )
-        )
-        .leftJoin(
-          t.memoryNodes,
-          and(
-            eq(t.memoryNodes.start, t.memoryView.start),
-            eq(t.memoryNodes.count, t.memoryView.count)
-          )
-        )
-        .where(
-          and(
-            gte(t.memoryFailures.attempts, Policy.SUMMARY_FAILURES),
-            isNull(t.memoryNodes.start)
-          )
-        )
-        .limit(1)
-    ).pipe(Effect.map((rows) => rows.length > 0))
+            return true
+        return false
+      })
+    )
   }
   settled(): ReturnType<MemoryLedger["settled"]> {
     return this.atomic(() =>

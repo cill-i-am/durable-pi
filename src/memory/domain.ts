@@ -29,7 +29,14 @@ export const MemoryNode = Schema.Struct({
   bytes: NonNegativeInteger,
 })
 export type MemoryNode = typeof MemoryNode.Type
-export type SummaryJob = Part & { source: string; context: string }
+export const SummaryClaim = Schema.Struct({
+  ...Part.fields,
+  token: Schema.String.check(Schema.isMinLength(1)),
+  revision: NonNegativeInteger,
+})
+export type SummaryClaim = typeof SummaryClaim.Type
+export type SummaryWork = Part & { claim?: SummaryClaim }
+export type SummaryJob = SummaryWork & { source: string; context: string }
 export const SummaryIssue = Schema.Struct({
   ...Part.fields,
   attempts: NonNegativeInteger,

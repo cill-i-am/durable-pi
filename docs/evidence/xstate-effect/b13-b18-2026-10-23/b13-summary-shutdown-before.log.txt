@@ -1,0 +1,33 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi
+
+ ❯ ../../../../../../private/tmp/b13-review-runner/final-probe.test.ts (19 tests | 1 failed | 17 skipped) 18ms
+   × review: disposal must join in-flight cleanup-only settlement 14ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  ../../../../../../private/tmp/b13-review-runner/final-probe.test.ts > review: disposal must join in-flight cleanup-only settlement
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ ../../../../../../private/tmp/b13-review-runner/final-probe.test.ts:509:25
+    507|  const disposing=f.runner.dispose().catch(()=>{}).finally(()=>{dispose…
+    508|  await new Promise(resolve=>setTimeout(resolve,0))
+    509|  try { expect(disposed).toBe(false) }
+       |                         ^
+    510|  finally {release.release();await Promise.all([settling,disposing])}
+    511| })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 passed | 17 skipped (19)
+   Start at  16:16:44
+   Duration  304ms (import 67%, transform 21%, tests 8%, setup 3%, worker 1%)
+

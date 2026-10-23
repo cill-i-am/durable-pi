@@ -1,0 +1,37 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi
+
+ ❯ tests/memory-backup-runner.test.ts (15 tests | 1 failed | 14 skipped) 15ms
+   × explicit domain retry prearm rejects a live owner even before any scheduler failure 15ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/memory-backup-runner.test.ts > explicit domain retry prearm rejects a live owner even before any scheduler failure
+AssertionError: promise resolved "{ deadline: 1792767944802, …(1) }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "current": [Function current],
++   "deadline": 1792767944802,
+  }
+
+ ❯ tests/memory-backup-runner.test.ts:554:41
+    552|   await entered.wait
+    553|   try {
+    554|     await expect(f.runner.armRecovery()).rejects.toThrow("still runnin…
+       |                                         ^
+    555|     expect(f.job()).toBe(job)
+    556|     expect(f.step).toHaveBeenCalledTimes(1)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 14 skipped (15)
+   Start at  16:04:44
+   Duration  287ms (import 74%, transform 14%, tests 8%, setup 3%, worker 1%)
+

@@ -1,0 +1,9 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi
+
+
+ Test Files  1 passed (1)
+      Tests  3 passed | 17 skipped (20)
+   Start at  16:18:21
+   Duration  525ms (import 50%, tests 26%, transform 21%, setup 2%, worker 1%)
+

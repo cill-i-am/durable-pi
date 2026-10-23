@@ -6,7 +6,10 @@ import type {
   ConversationExecution,
   ConversationObservation,
 } from "../src/conversations/execution"
-import { makeConversationJournal } from "../src/conversations/journal"
+import {
+  makeConversationJournal,
+  type ConversationJournalMaintenance,
+} from "../src/conversations/journal"
 import type { ConversationPumpHost } from "../src/conversations/pump"
 import { makeConversations } from "../src/conversations/service"
 import { sqliteMemoryLayer } from "../src/memory/adapters/sqlite"
@@ -48,10 +51,22 @@ export const conversationFixture = Effect.fn("Test.conversationFixture")(
       )
     const conversations = makeConversations(store)
     const materialization = sqliteConversationMaterialization(db)
+    // Unit fixtures assume maintenance discovery is already retained. The
+    // dedicated admission/native suites prove the queue lease and physical wake.
+    const maintenance: ConversationJournalMaintenance = {
+      arm: () =>
+        Clock.currentTimeMillis.pipe(
+          Effect.map((now) => {
+            const lease = { deadline: now + 60_000, current: () => true }
+            return { summary: lease, backup: lease }
+          })
+        ),
+    }
     const journal = makeConversationJournal(
       store,
       memoryLedger,
-      materialization
+      materialization,
+      maintenance
     )
     const events: string[] = []
     const record = (event: string) =>
@@ -114,6 +129,7 @@ export const conversationFixture = Effect.fn("Test.conversationFixture")(
       memory,
       memoryLedger,
       materialization,
+      maintenance,
       journal,
       execution,
       host,

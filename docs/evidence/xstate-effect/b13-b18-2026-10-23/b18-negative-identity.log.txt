@@ -1,0 +1,30 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi
+
+ ❯ tests/memory-backup-lifecycle.test.ts (11 tests | 1 failed | 10 skipped) 110ms
+   × restart after checkpoint reuses immutable manifest identity and publishes latest without duplicating batches 110ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/memory-backup-lifecycle.test.ts > restart after checkpoint reuses immutable manifest identity and publishes latest without duplicating batches
+AssertionError: expected '{"version":1,"head":"p/batches/8e3b00…' to be '{"version":1,"head":"p/batches/8e3b00…' // Object.is equality
+
+Expected: "{"version":1,"head":"p/batches/8e3b00e1f8c490333c6364a8f610c20a87ba9c4552e302f1d9b4dec2d4836203.json","until":{"messages":1,"nodes":0,"notes":0},"parts":[{"start":0,"count":1}],"date":"2026-10-23T14:45:43.977Z"}"
+Received: "{"version":1,"head":"p/batches/8e3b00e1f8c490333c6364a8f610c20a87ba9c4552e302f1d9b4dec2d4836203.json","until":{"messages":1,"nodes":0,"notes":0},"parts":[{"start":0,"count":1}],"date":"2026-10-23T14:45:43.995Z"}"
+
+ ❯ tests/memory-backup-lifecycle.test.ts:269:49
+    267|     backupMemory("p").pipe(Effect.provideService(MemoryRepository, res…
+    268|   )
+    269|   expect(f.bucket.objects.get("p/latest.json")).toBe(checkpoint)
+       |                                                 ^
+    270|   expect(f.bucket.writes.filter((key) => key.includes("/batches/"))).t…
+    271|     batches
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 10 skipped (11)
+   Start at  15:45:43
+   Duration  489ms (import 57%, tests 28%, transform 13%, setup 2%, worker 1%)
+

@@ -28,15 +28,21 @@ export function makeMemoryRepository(
     node: (part) => read("node", () => storage.node(part)),
     nodeCount: () => read("nodeCount", () => storage.nodeCount()),
     entry: (id) => read("entry", () => storage.entry(id)),
-    saveNode: (part, text) =>
-      read("saveNode", () => storage.saveNode(part, text)),
-    failNode: (part, retryAt) =>
-      read("failNode", () => storage.failNode(part, retryAt)),
+    saveNode: (part, text, claim) =>
+      read("saveNode", () => storage.saveNode(part, text, claim)),
+    failNode: (part, retryAt, claim) =>
+      read("failNode", () => storage.failNode(part, retryAt, claim)),
+    claimSummary: (part, now) =>
+      read("claimSummary", () => storage.claimSummary(part, now)),
+    pauseSummary: (claim) =>
+      read("pauseSummary", () => storage.pauseSummary(claim)),
+    restoreSummaryClaims: () =>
+      read("restoreSummaryClaims", () => storage.restoreSummaryClaims()),
     retryAt: () => read("retryAt", () => storage.retryAt()),
     issues: () => read("issues", () => storage.issues()),
     paused: (part) => read("paused", () => storage.paused(part)),
-    retrySummary: (part) =>
-      read("retrySummary", () => storage.retrySummary(part)),
+    retrySummary: (part, admission) =>
+      read("retrySummary", () => storage.retrySummary(part, admission)),
     next: (busy = new Set(), now) =>
       Clock.currentTimeMillis.pipe(
         Effect.flatMap((current) =>

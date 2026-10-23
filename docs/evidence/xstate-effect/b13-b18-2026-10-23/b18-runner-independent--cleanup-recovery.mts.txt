@@ -1,0 +1,36 @@
+import assert from 'node:assert/strict'
+import { DatabaseSync } from 'node:sqlite'
+import { Lifecycle } from 'agents/lifecycle'
+import { Effect } from 'effect'
+import { BackupRunner } from '/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/src/memory/adapters/backup-lifecycle.ts'
+const db = new DatabaseSync(`/private/tmp/b18-runner-independent/cleanup-${process.pid}.sqlite`)
+const kv = new Map(), retained: Promise<void>[] = [], claims: any[] = [], cleanups: any[] = [], attempts: any[] = []
+let now = Date.now(), rejectCleanup = true
+Date.now = () => now
+class Observed extends BackupRunner<unknown> { override async onJob(context: any) { attempts.push({ fn:context.job.fn, phase:context.job.payload?.phase, attempt:context.attempt }); return super.onJob(context) } }
+const storage = { sql: { exec: (sql: string, ...params: any[]) => db.prepare(sql).all(...params) }, get: async (key: string) => kv.get(key), put: async (key: string, value: any) => { kv.set(key, value) }, delete: async (key: string) => kv.delete(key), setAlarm: async () => {}, deleteAlarm: async () => {}, sync: async () => {} }
+const runner = new Observed({ run: Effect.runPromise,
+  restore: () => Effect.void,
+  step: onClaim => Effect.gen(function* () { const claim = {attemptId:`claim-${claims.length+1}`,target:'same-watermark',attempts:claims.length+1}; claims.push(claim); yield* onClaim(claim); if (claims.length === 1) yield* Effect.die(new Error('claimed publication failure')); return undefined }),
+  exhaust: (claim, current) => Effect.suspend(() => { cleanups.push({claim,current:current(),rejectCleanup}); return rejectCleanup ? Effect.die(new Error('cleanup status outage')) : Effect.void }),
+  retain: work => { retained.push(work) },
+})
+const lifecycle = new Lifecycle({ ctx: { id: { name: 'b18-cleanup' }, storage, blockConcurrencyWhile: (work: any) => work(), waitUntil: (work: any) => retained.push(work) } } as any)
+lifecycle.use(runner)
+await lifecycle.start(); await runner.wake(); await lifecycle.alarm(); await Promise.all(retained)
+await lifecycle.alarm()
+now += 1001
+await lifecycle.alarm()
+const recovery = await runner.recovery()
+assert.ok(recovery)
+assert.equal(attempts.filter(x => x.phase === 'cleanup').length, 3)
+assert.equal(claims.length, 1)
+assert.equal(db.prepare('SELECT count(*) AS n FROM cf_agents_jobs').get()?.n, 0)
+console.log('CLEANUP_BUDGET_EXHAUSTED', JSON.stringify({recovery,claims,cleanups,attempts,controller:kv.get('memory-backups:failure')}))
+rejectCleanup = false
+const lease = await runner.armSchedulerRecovery(recovery.epoch)
+assert.equal(await runner.retrySchedulerRecovery(recovery.epoch,lease),true)
+await lifecycle.alarm(); await Promise.all(retained); await lifecycle.alarm(); await Promise.all(retained)
+console.log('RECOVERED_TO_NEW_WORK', JSON.stringify({claims,cleanups,attempts,jobs:db.prepare('SELECT * FROM cf_agents_jobs').all()}))
+db.close()
+assert.equal(claims.length,1,'explicit scheduler recovery must finish retained cleanup claim before new provider work')
