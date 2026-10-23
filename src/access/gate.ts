@@ -1,11 +1,11 @@
 import { createEffectActor, waitFor } from "@xstate/effect"
 import { Cause, Clock, Deferred, Effect, Exit, Ref } from "effect"
 
-import type {
+import {
   AccessDenied,
-  AccessConflict,
-  AccessStorageError,
-  AccessMode,
+  type AccessConflict,
+  type AccessStorageError,
+  type AccessMode,
 } from "./contracts"
 import type { AccessLedger, ToolIntent, ToolOperation } from "./ledger"
 import { scopedReceiptFact, type ReceiptQuery } from "./receipt"
@@ -151,6 +151,10 @@ export class AccessGate {
           ),
         execute: Effect.gen({ self: this }, function* () {
           yield* observe("tool.dispatched")
+          // Claim and execution are distinct actor turns. Recheck the current
+          // run at the consequential boundary after that mailbox gap.
+          if (!(yield* this.canRun(intent.turnId, intent.tool)))
+            return yield* new AccessDenied({ message: "The reply has ended." })
           const result = yield* work
           yield* this.store.finish(intent.id, JSON.stringify(result))
           yield* observe("tool.finished")

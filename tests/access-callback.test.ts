@@ -48,7 +48,10 @@ async function fixture(
   options: {
     controller?: AbortController
     active?: (turn: string) => Effect.Effect<string | undefined>
-    execute?: () => Promise<ToolExecutionResult>
+    canRun?: () => Effect.Effect<boolean>
+    args?: Record<string, unknown>
+    afterInvoke?: () => void
+    execute?: (args: Record<string, unknown>) => Promise<ToolExecutionResult>
     release?: () => void
     legacyReceipt?: {
       content: { type: "text"; text: string }[]
@@ -64,7 +67,10 @@ async function fixture(
       { name: "checked", description: "Synthetic operation", mode: "allow" },
     ])
   )
-  const gate = new AccessGate(store, () => Effect.sync(() => true))
+  const gate = new AccessGate(
+    store,
+    options.canRun ?? (() => Effect.sync(() => true))
+  )
   const active = vi.fn(() =>
     options.active ? options.active(turn) : Effect.succeed(turn)
   )
@@ -86,7 +92,7 @@ async function fixture(
   const called = deferred<{
     work: Promise<ToolExecutionResult>
     id: string
-    retry: () => Promise<ToolExecutionResult>
+    retry: (args?: Record<string, unknown>) => Promise<ToolExecutionResult>
   }>()
   const registry = createRegistry()
   registry.install({
@@ -109,15 +115,16 @@ async function fixture(
                 Effect.succeed(options.legacyReceipt)
               )
             )
-          const work = checked.execute({}, api, {
+          const work = checked.execute(options.args ?? {}, api, {
             ...context,
             abortSignal: controller.signal,
           })
+          options.afterInvoke?.()
           called.resolve({
             work,
             id: String(api.taskId),
-            retry: () =>
-              checked.execute({}, api, {
+            retry: (args) =>
+              checked.execute(args ?? options.args ?? {}, api, {
                 ...context,
                 abortSignal: new AbortController().signal,
               }),
@@ -225,6 +232,7 @@ it("joins a non-cooperative tool, shares its pending invocation and retains the 
   })
   f.controller.abort()
   await Promise.resolve()
+  expect(f.retry()).toBe(f.work)
   expect(settled).toBe(false)
   expect(Effect.runSync(f.store.get(f.id))?.status).toBe("running")
   pending.resolve({ output: [{ type: "text", text: "late result" }] })
@@ -300,4 +308,64 @@ it("replays a completed Pi 1.0 receipt through the current harness without repea
   expect(JSON.parse(Effect.runSync(f.store.get(f.id))!.result!)).toEqual(
     legacyReceipt
   )
+})
+
+it("preserves the exact admitted tool input while authority lookup is deferred", async () => {
+  const args = { value: "accepted" }
+  const f = await fixture({
+    args,
+    afterInvoke: () => {
+      args.value = "mutated"
+    },
+  })
+  await f.work
+  expect(f.execute.mock.calls[0]?.[0]).toEqual({ value: "accepted" })
+  expect(Effect.runSync(f.store.get(f.id))?.input).toBe(
+    JSON.stringify({ value: "accepted" })
+  )
+})
+
+it("rejects conflicting input while retaining the original joined callback", async () => {
+  const pending = deferred<ToolExecutionResult>(),
+    entered = deferred<void>()
+  const f = await fixture({
+    args: { value: "original" },
+    execute: () => {
+      entered.resolve()
+      return pending.promise
+    },
+    release: () => pending.resolve({ output: [] }),
+  })
+  await entered.promise
+  await expect(f.retry({ value: "changed" })).rejects.toThrow(
+    "Tool identity conflict"
+  )
+  expect(f.retry({ value: "original" })).toBe(f.work)
+  expect(f.execute).toHaveBeenCalledOnce()
+  pending.resolve({ output: [] })
+  await f.work
+})
+
+it("rechecks current authority after the ledger claim before native dispatch", async () => {
+  let allowed = true,
+    checks = 0
+  const f = await fixture({
+    canRun: () =>
+      Effect.sync(() => {
+        checks++
+        const current = allowed
+        if (checks === 2)
+          queueMicrotask(() => {
+            allowed = false
+          })
+        return current
+      }),
+  })
+  await expect(f.work).rejects.toSatisfy((cause: unknown) =>
+    tags(cause).includes("Fail")
+  )
+  expect(allowed).toBe(false)
+  expect(checks).toBe(3)
+  expect(f.execute).not.toHaveBeenCalled()
+  expect(Effect.runSync(f.store.get(f.id))?.result).toBeNull()
 })

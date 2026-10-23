@@ -1,0 +1,34 @@
+  private readonly upstreamObservation = this.actorRuntime.runPromise(
+    makeUpstreamObserver.pipe(
+      Effect.provideService(Scope.Scope, this.storageScope)
+    )
+  )
+  readonly shutdownUpstream = Effect.promise(
+    () => this.upstreamObservation
+  ).pipe(Effect.flatMap((observer) => observer.shutdown))
+  async observeUpstream(id: string, sink: WritableStream<Uint8Array>) {
+    const observer = await this.upstreamObservation
+    const admitted = await this.actorRuntime.runPromise(
+      observer.observe(id, sink)
+    )
+    if (admitted)
+      this.ctx.waitUntil(this.actorRuntime.runPromiseExit(observer.settled(id)))
+    return admitted
+  }
+  async releaseUpstream(id: string) {
+    const observer = await this.upstreamObservation
+    await this.actorRuntime.runPromise(observer.release(id))
+  }
+  readonly models = createAgentModels(this.credentials, {
+    fetch: async (fallback, input, init, correlation) => {
+      if (!correlation) return fallback(input, init)
+      const observer = await this.upstreamObservation
+      const sink = await this.actorRuntime.runPromise(observer.consume)
+      if (!sink) return fallback(input, init)
+      return observedUpstreamFetch(
+        this.ctx.exports.UpstreamRelay,
+        new Request(input, init),
+        sink,
+        correlation
+      )
+    },

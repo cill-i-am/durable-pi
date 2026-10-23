@@ -1,0 +1,21 @@
+{
+  "beforeRelease": {
+    "same": true,
+    "sharedDuringRecovery": true,
+    "conflict": true,
+    "immediateStatus": 503,
+    "settled": false,
+    "videos": 0,
+    "snapshots": 1,
+    "recoveries": 1,
+    "inspected": 1
+  },
+  "afterRelease": {
+    "postStatus": 503,
+    "settled": true,
+    "videos": 0,
+    "snapshots": 1,
+    "recoveries": 1,
+    "inspected": 2
+  }
+}

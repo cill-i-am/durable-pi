@@ -1,0 +1,14 @@
+{
+  "src/agent/upstream.machine.ts": "67e85ddfacd1845740a2f4a0dddb9e9840144f15c40148fe0fb8e92575186837",
+  "src/agent/adapters/upstream.ts": "f814b40715025f33e708022e6c36ad8f7d035b641456f329416f86d03ec43ed2",
+  "src/inference/upstream-cleanup.ts": "4f58275673a3abe283dc8f247c1ba96a356bb7ea17467dc84a3374cfe602157f",
+  "src/inference/upstream.machine.ts": "095b7dcdfbbb92665d3d67183011cb151294d67b6da892ed24bb6647b1bd9d77",
+  "src/inference/adapters/upstream.ts": "591d668a453b2ebf6b76fa5eb36756527e0c3d6dccfb97de280d591f6db28420",
+  "src/inference/adapters/upstream-worker.ts": "24685909753f94c7394b01ae968dd5d427473c295a30a17e60c5f1007dc9e4ce",
+  "tests/upstream-lifecycle.test.ts": "f55cb2e274b72193871a3f54fc00d66c163a7b6eb13d7895b0ded06e1cb11a5a",
+  "tests/upstream-lease.test.ts": "88b7f4d3387f0d68e60a1b8c43281765987b4df9923c43aa0f615aec8fe42716",
+  "tests/upstream-observer.test.ts": "6a9c2832ee31e7d9e6f690dcbdafbf1875cf6862077c6e1b541db722355d5d46",
+  "scripts/test-upstream-runtime.mjs": "a252c7570a3b08a4e1f253669cb9928711755b7fee162c17f00cb64b4c93ac94",
+  "tests/runtime/upstream-worker.ts": "f157fa84e68f9888ab26725da28b037b88d4a87c29d9b332fa1085b9ea90e6b2",
+  "src/agent/worker.ts#upstream-block": "67ab6fd2da5a2f5fdb9e86650da0d1390eb5311208f2c1f300a4ce89bc98349e"
+}

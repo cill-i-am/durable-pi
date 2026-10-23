@@ -1,0 +1,28 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+ ❯ ../../../../../../private/tmp/b16-inference-independent.test.ts (1 test | 1 failed) 102ms
+   × retains an original compound provider reader Cause before SDK normalization 102ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  ../../../../../../private/tmp/b16-inference-independent.test.ts > retains an original compound provider reader Cause before SDK normalization
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ ../../../../../../private/tmp/b16-inference-independent.test.ts:15:109
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  17:02:43
+   Duration  467ms (import 44%, tests 27%, transform 26%, setup 2%, worker 1%)
+

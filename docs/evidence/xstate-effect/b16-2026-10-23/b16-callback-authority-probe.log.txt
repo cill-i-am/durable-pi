@@ -1,0 +1,42 @@
+[16:56:39.348] INFO (#207): tool.dispatched {
+  botId: null,
+  runId: 'turn',
+  operationId: '42',
+  tool: 'synthetic',
+  event: 'tool.dispatched'
+}
+[16:56:39.350] INFO (#207): tool.finished {
+  botId: null,
+  runId: 'turn',
+  operationId: '42',
+  tool: 'synthetic',
+  event: 'tool.finished'
+}
+{
+  "allowed": false,
+  "checks": 2,
+  "dispatches": 1,
+  "outcome": {
+    "output": [
+      {
+        "type": "text",
+        "text": "done"
+      }
+    ]
+  },
+  "operation": {
+    "id": "42",
+    "turnId": "turn",
+    "tool": "synthetic",
+    "input": "{}",
+    "createdAt": 1792770999343,
+    "expiresAt": 1792771899343,
+    "status": "done",
+    "revision": 2,
+    "schemaVersion": 1,
+    "workflowVersion": 1,
+    "grantRevision": 0,
+    "result": "{\"output\":[{\"type\":\"text\",\"text\":\"done\"}]}",
+    "decision": null
+  }
+}

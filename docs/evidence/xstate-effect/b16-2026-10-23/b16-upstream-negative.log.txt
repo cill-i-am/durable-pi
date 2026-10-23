@@ -1,0 +1,27 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+B16_MUTATION_SERIAL_CLEANUP_APPLIED
+ ❯ tests/upstream-lifecycle.test.ts (4 tests | 1 failed | 3 skipped) 23ms
+   × starts peer release while the diagnostic reader cancellation is held, and joins both 23ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/upstream-lifecycle.test.ts > starts peer release while the diagnostic reader cancellation is held, and joins both
+AssertionError: expected "vi.fn()" to be called 1 times, but got 0 times
+ ❯ tests/upstream-lifecycle.test.ts:53:34
+     51|   await turn()
+     52|   try {
+     53|     expect(peer.releaseUpstream).toHaveBeenCalledTimes(1)
+       |                                  ^
+     54|     expect(joined).toBe(false)
+     55|   } finally {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 skipped (4)
+   Start at  16:52:37
+   Duration  293ms (import 70%, transform 15%, tests 11%, setup 3%, worker 1%)
+

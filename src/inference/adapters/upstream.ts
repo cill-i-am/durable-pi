@@ -1,4 +1,10 @@
-import { Deferred, Effect, Exit, Queue, Schema } from "effect"
+import { createEffectActor, waitFor } from "@xstate/effect"
+import { Deferred, Effect, Exit, Queue, Schema, Scope } from "effect"
+
+import { fatalCause, orDieAll } from "../../shared/effect"
+import { nativeOperation } from "../../shared/interop"
+import { joinUpstreamCleanup } from "../upstream-cleanup"
+import { upstreamPumpMachine } from "../upstream.machine"
 
 export interface UpstreamCorrelation {
   turnId: string
@@ -12,6 +18,13 @@ export interface UpstreamObservationPeer {
   ): Promise<boolean>
   releaseUpstream(id: string): Promise<void>
 }
+
+/** Workerd rejects an outstanding native read after its owner cancels it.
+ * Only this raw platform acknowledgement is expected; an Effect Cause, even
+ * one containing an AbortError, must retain every checked/defect reason. */
+export const upstreamNativeCancellation = (cause: unknown) =>
+  (cause instanceof Error || cause instanceof DOMException) &&
+  (cause.name === "AbortError" || cause.message === "Stream was cancelled.")
 
 /** Inspect bounded SSE lines without retaining or reporting provider content. */
 export const upstreamTextDetector = Effect.sync(() => {
@@ -73,13 +86,6 @@ export const upstreamResponse = Effect.fn("Inference.upstreamResponse")(
     const queue = yield* Queue.bounded<Uint8Array | null>(4)
     const detector = yield* upstreamTextDetector
     const reader = response.body.getReader()
-    let ended = false
-    yield* Effect.addFinalizer(() =>
-      Effect.promise(async () => {
-        if (!ended) await reader.cancel().catch(() => {})
-        reader.releaseLock()
-      })
-    )
     const body = new ReadableStream<Uint8Array>({
       type: "bytes",
       async pull(controller) {
@@ -91,32 +97,62 @@ export const upstreamResponse = Effect.fn("Inference.upstreamResponse")(
       cancel: () => Effect.runPromise(Queue.shutdown(queue)).then(() => {}),
     })
     yield* Deferred.succeed(ready, new Response(body, response))
-    yield* Effect.gen(function* () {
-      for (;;) {
-        const next = yield* Effect.promise(() => reader.read())
-        if (next.done) {
-          ended = true
-          yield* Queue.offer(queue, null)
-          return
-        }
-        const bytes = Schema.decodeUnknownSync(Schema.Uint8Array)(next.value)
-        if (bytes.byteLength > 1024 * 1024)
-          return yield* Effect.die(
-            new Error("Upstream chunk exceeds probe bound")
-          )
-        if (detector(bytes)) mark("upstream-text")
-        for (let offset = 0; offset < bytes.length; offset += 16_384) {
-          const accepted = yield* Queue.offer(
-            queue,
-            bytes.slice(offset, offset + 16_384)
-          )
-          if (!accepted) return
-        }
-      }
-    }).pipe(
+    const scope = yield* Scope.make()
+    let reading: Promise<ReadableStreamReadResult<Uint8Array>> | undefined
+    const actor = yield* createEffectActor(
+      upstreamPumpMachine({
+        read: Effect.promise(() => (reading = reader.read())),
+        write: (chunk) =>
+          Effect.gen(function* () {
+            const bytes = Schema.decodeUnknownSync(Schema.Uint8Array)(chunk)
+            if (bytes.byteLength > 1024 * 1024)
+              return yield* Effect.die(
+                new Error("Upstream chunk exceeds probe bound")
+              )
+            if (detector(bytes)) mark("upstream-text")
+            for (let offset = 0; offset < bytes.length; offset += 16_384) {
+              const accepted = yield* Queue.offer(
+                queue,
+                bytes.slice(offset, offset + 16_384)
+              )
+              if (!accepted) return false
+            }
+            return true
+          }),
+        end: Queue.offer(queue, null),
+        close: nativeOperation(
+          async () => {
+            const cancelled = reader.cancel()
+            await joinUpstreamCleanup(
+              [
+                cancelled.catch((cause: unknown) => {
+                  if (!upstreamNativeCancellation(cause)) throw cause
+                }),
+                reading?.catch((cause: unknown) => {
+                  if (!upstreamNativeCancellation(cause)) throw cause
+                }) ?? Promise.resolve(),
+              ],
+              [() => reader.releaseLock()]
+            )
+          },
+          (cause) => cause
+        ),
+      })
+    ).pipe(Effect.provideService(Scope.Scope, scope))
+    const done = waitFor(actor, (state) => state.status === "done").pipe(
+      Effect.orDie,
+      Effect.flatMap((state) => state.output!)
+    )
+    yield* Effect.addFinalizer(() =>
+      Effect.gen(function* () {
+        if (actor.getSnapshot().status !== "done") actor.send({ type: "CLOSE" })
+        yield* done
+      }).pipe(Effect.ensuring(Scope.close(scope, Exit.void)), orDieAll)
+    )
+    yield* done.pipe(
       Effect.onExit((exit) =>
         Exit.isFailure(exit)
-          ? Queue.failCause(queue, exit.cause).pipe(Effect.asVoid)
+          ? Queue.failCause(queue, fatalCause(exit.cause)).pipe(Effect.asVoid)
           : Effect.void
       )
     )

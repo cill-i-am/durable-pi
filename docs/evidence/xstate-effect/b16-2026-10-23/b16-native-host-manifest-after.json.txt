@@ -1,0 +1,14 @@
+{
+  "src/terminal/adapters/native-worker.ts": "793952d40339504d18ace54df8072753a2b76535bf8d5e59eead096d1524e09c",
+  "src/terminal/native-host.machine.ts": "57bb12da61493284a05ca0c18d826407e372f3ba1f5560df32330a8aaae411ba",
+  "src/terminal/native-host.ts": "cfbe999d46c7fb2cf1c4a10762e82ddf8a954d1cc6b5dd1250fc32863429538e",
+  "tests/terminal-native-host.test.ts": "5d84e2fd645951376d15ea4b2f9dfac00a9ae59b85be111ce115abc848baa4a6",
+  "src/terminal/host.machine.ts": "60cff4b6dcb4fbdeaa2169ef2b14064e57e5d3b4c024559c535593e9749a7560",
+  "src/terminal/host.ts": "d3664a1be0ee0c39da5d5fdec46f292d238325eead2a36fb114ea56ade123f9f",
+  "src/terminal/adapters/migration.ts": "69d259e3d9154b6aa8b56fa26d280be2e3874c430e9e47967781efcbe2cf6602",
+  "src/terminal/adapters/capacity.ts": "23a1e2504c2b56f3f3c8f4e82cf8350621d2adb3e5f98c6e081c603993b9e731",
+  "src/terminal/adapters/native-sandbox.ts": "8fdca54966340eb1428e48ce14ef195c48361888da861d8cdf11a98823acc57a",
+  "src/terminal/adapters/native-process.ts": "c4e3cb6c3eac0a74800f90dd764cf899ce7ce7e21e4ef803c611ef8ad5f9c3b5",
+  "package.json": "64d05bf51f0db65b44eedd78c0c9aadd2dbe7f7273387e3e7ed31f8965213f15",
+  "pnpm-lock.yaml": "3ce4fba0856c9038e8cbb9327cb557c1975d6c594eb23a0f2db2a4e5123056e2"
+}

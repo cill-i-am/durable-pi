@@ -1,0 +1,41 @@
+# B16 native terminal host follow-up handoff
+
+Worktree: /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+Node: /opt/homebrew/opt/node@24/bin
+
+Owned changes: src/terminal/adapters/native-worker.ts (import/video sharing only), src/terminal/native-host.machine.ts, src/terminal/native-host.ts, tests/terminal-native-host.test.ts.
+
+## Contract
+
+The official Effect-backed import reservation machine owns admission, exact active import sharing, all-five-field identity conflicts, and token-fenced joined release. The existing terminalHostLeaseMachine owns video reservation; the new import work machine joins admitted video before native import. Scoped Effect actors own live work and cleanup. Promise maps hold native handles only.
+
+Receipt owner/name/key/sha256/size are copied and frozen before any await or native dispatch. Active exact repeats share the same Promise, including the non-async public importMigration facade. Persisted receipt comparisons read the existing migration marker without writing a new ledger. A conflict fails before dispatch.
+
+An import reservation immediately denies new video admission, even before the runtime or importer starts. Any admitted video scope is joined before native import. A failed video teardown prevents that import and retains the full failure; an explicit later request can retry subject to the same ledger/identity rules. Native import stays occupied until its genuine Promise settles, including interruption and late cleanup. Fresh original/done ledger state governs video reopening; copying/frozen/sealed/snapshot/moved deny video.
+
+Native host runExit maps directly to ManagedRuntime.runPromiseExit. Internal Promise joins preserve annotated checked failures, defects and interruption. No runPromise Cause squashing or local synthetic Exit recorder remains.
+
+## Evidence
+
+Before fix: /private/tmp/b16-native-host-before.log records both concrete prototype-boundary defects: frozen/copying video returned 200 and called extraction; same owner/hash with changed key/size returned success while the native import was held.
+
+After fix: /private/tmp/b16-native-host-positive.log records 23/23 focused cases passing. Coverage includes actual fetch/importMigration delegation, all five immutable fields for active and restored imports, exact Promise sharing, mutable caller input, held runner admission, freeze before native dispatch, all existing ledger phases, joined video finalizers, cancellation before admission, cancellation during native work, late annotated Fail+Die plus interruption, malformed input, and old-token join fencing.
+
+Failure-sensitive control: /private/tmp/b16-native-host-negative.log records the exact conflict test failing when a Vite transform removes key/size comparisons. Mutation sentinel B16_NATIVE_PARTIAL_IDENTITY_MUTATION_APPLIED proves the transform ran. /private/tmp/b16-native-host-negative.config.mts is the temporary control. Production sources were never edited for it.
+
+Static checks: full tsc --noEmit clean at /private/tmp/b16-native-host-types.log; scoped oxlint --deny-warnings clean at /private/tmp/b16-native-host-lint.log; oxfmt --check clean at /private/tmp/b16-native-host-format.log.
+
+Frozen SHA-256 manifests before/after checks are identical: /private/tmp/b16-native-host-manifest-before.json and /private/tmp/b16-native-host-manifest-after.json. They include the four owned files and reused host files plus excluded migration/capacity/native SDK/package/lock paths.
+
+## Boundaries
+
+No migration ledger/capacity/native SDK modifications, no new durable journal or retry policy, no existing reviewed terminal host edits, no package/auth/schema changes, no Git writes. The migration ledger and existing terminal command admission remain unchanged. The new host freezes video locally during pending native import; it does not add another durable phase or a new physical shutdown owner. The production facade retains the existing native object identity validation before host admission and retains video/import work with ctx.waitUntil.
+
+No native duplicate or broad test runs were performed for this follow-up. These focused tests use real official Effect actors and ManagedRuntime with synthetic native capabilities and prototype-level worker boundaries; they are not a claim of a fresh workerd/container run. Parent owns composed validation and independent review.
+
+## Frozen file hashes
+
+- src/terminal/adapters/native-worker.ts: 793952d40339504d18ace54df8072753a2b76535bf8d5e59eead096d1524e09c
+- src/terminal/native-host.machine.ts: 57bb12da61493284a05ca0c18d826407e372f3ba1f5560df32330a8aaae411ba
+- src/terminal/native-host.ts: cfbe999d46c7fb2cf1c4a10762e82ddf8a954d1cc6b5dd1250fc32863429538e
+- tests/terminal-native-host.test.ts: 5d84e2fd645951376d15ea4b2f9dfac00a9ae59b85be111ce115abc848baa4a6

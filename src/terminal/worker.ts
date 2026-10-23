@@ -29,6 +29,7 @@ import { TerminalStore } from "./adapters/sqlite"
 import { readBounded } from "./adapters/stream"
 import { extractVideoRequest, sandboxVideo } from "./adapters/video"
 import { TerminalFailure } from "./contracts"
+import { TerminalTransportHost } from "./host"
 import { TerminalService, terminalLayer } from "./terminal"
 
 export class LinuxSandbox extends BaseSandbox<TerminalEnv> {
@@ -41,37 +42,12 @@ export class LinuxSandbox extends BaseSandbox<TerminalEnv> {
       put: (marker) => this.ctx.storage.kv.put("terminal:migration", marker),
     }
   )
-  private snapshotting: Promise<MigrationReceipt> | undefined
   async prepareMigration(name: string): Promise<MigrationReceipt> {
     if (this.env.SANDBOX.idFromName(name).toString() !== this.ctx.id.toString())
       throw new Error("Legacy migration identity mismatch")
-    this.snapshotting ??= this.migration
-      .snapshot(name, async () => {
-        const deadline = Date.now() + 60000
-        for (;;) {
-          const state = await this.terminalRuntime.runPromise(
-            this.terminal.state()
-          )
-          if (state.session)
-            await this.terminalRuntime.runPromise(
-              this.terminal.cancel(state.session.id)
-            )
-          if (!state.busy && !this.videoBusy) break
-          if (Date.now() >= deadline)
-            throw new Error("Legacy terminal did not drain")
-          await new Promise((resolve) => setTimeout(resolve, 250))
-        }
-        await this.terminalRuntime.runPromise(this.terminal.recover())
-        const state = await this.terminalRuntime.runPromise(
-          this.terminal.state()
-        )
-        if (state.cleanupError || this.ctx.container?.running)
-          throw new Error("Legacy teardown is unconfirmed")
-      })
-      .finally(() => {
-        this.snapshotting = undefined
-      })
-    return this.snapshotting
+    const snapshot = this.transportHost.snapshot(name)
+    this.ctx.waitUntil(snapshot)
+    return snapshot
   }
   commitMigration(receipt: MigrationReceipt) {
     this.migration.commitSource(receipt)
@@ -135,25 +111,31 @@ export class LinuxSandbox extends BaseSandbox<TerminalEnv> {
     super(ctx, env)
     this.ctx.waitUntil(this.terminalRuntime.runPromise(this.terminal.recover()))
   }
-  private videoBusy = false
+  private readonly transportHost = new TerminalTransportHost({
+    run: <T, E>(
+      work: Effect.Effect<T, E>,
+      options?: { signal?: AbortSignal }
+    ) => this.terminalRuntime.runPromise(work, options),
+    writable: () =>
+      !this.env.LEGACY_FROZEN && this.migration.status() === "original",
+    state: this.terminal.state(),
+    cancel: (id) => this.terminal.cancel(id),
+    recover: this.terminal.recover(),
+    containerRunning: () => this.ctx.container?.running ?? false,
+    snapshot: (name, drain) => this.migration.snapshot(name, drain),
+  })
   private readonly extractVideo = sandboxVideo(legacyVideoRuntime(this))
   override async fetch(request: Request): Promise<Response> {
     const path = new URL(request.url).pathname
     if (path === "/video" && request.method === "POST") {
-      if (this.videoBusy) return new Response("Busy", { status: 503 })
-      this.videoBusy = true
-      try {
-        const response = this.terminalRuntime.runPromise(
-          extractVideoRequest(this.extractVideo, request).pipe(
-            Effect.provide(WorkerTelemetry)
-          ),
-          { signal: request.signal }
-        )
-        this.ctx.waitUntil(response)
-        return await response
-      } finally {
-        this.videoBusy = false
-      }
+      const response = this.transportHost.video(
+        extractVideoRequest(this.extractVideo, request).pipe(
+          Effect.provide(WorkerTelemetry)
+        ),
+        request.signal
+      )
+      this.ctx.waitUntil(response)
+      return response
     }
     if (
       path !== "/authority" &&

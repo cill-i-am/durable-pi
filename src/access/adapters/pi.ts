@@ -3,9 +3,17 @@ import type {
   ToolExecutionResult,
   ToolExecutionApi,
 } from "@earendil-works/pi-durable"
-import { Cause, Effect, Exit, Schema } from "effect"
+import { createEffectActor, waitFor } from "@xstate/effect"
+import { Cause, Effect, Equal, Exit, Schema } from "effect"
 
 import { nativeOperation } from "../../shared/interop"
+import {
+  beginToolCallback,
+  settleToolCallback,
+  shareToolCallback,
+  toolCallbackMachine,
+  type ToolCallbackLease,
+} from "../callback.machine"
 import {
   ConnectionError,
   ConnectionStorageError,
@@ -82,23 +90,35 @@ export function guardedTools<TError>(
 ) {
   const running = new Map<
     string,
-    { input: string; promise: Promise<ToolExecutionResult> }
+    { lease: ToolCallbackLease; promise: Promise<ToolExecutionResult> }
   >()
   return (tool: ToolRegistration): ToolRegistration => ({
     ...tool,
     replay: "safe",
     execute: (args, api, context) => {
       const id = String(api.taskId),
-        input = JSON.stringify({ tool: tool.name, args })
+        serialized = JSON.stringify(args),
+        input = JSON.stringify({ tool: tool.name, args: serialized })
       const existing = running.get(id)
       if (existing) {
-        if (existing.input !== input)
+        if (!shareToolCallback(existing.lease, input))
           return Promise.reject(new Error("Tool identity conflict"))
         return existing.promise
       }
-      const promise = run(
+      // Capture the native value with the same bytes used for admission. The
+      // caller may reuse or mutate its argument object while authority waits.
+      const admittedArgs = JSON.parse(serialized) as typeof args
+      const failures: Cause.Cause<unknown>[] = []
+      const observe = <T, E>(work: Effect.Effect<T, E>) =>
+        work.pipe(
+          Effect.onExit((exit) =>
+            Effect.sync(() => {
+              if (Exit.isFailure(exit)) failures.push(exit.cause)
+            })
+          )
+        )
+      const authority = observe(
         Effect.gen(function* () {
-          yield* Effect.yieldNow
           const previous = yield* gate.operation(id)
           const resolved = yield* activeTurn(api)
           if (previous && resolved !== previous.turnId)
@@ -108,27 +128,73 @@ export function guardedTools<TError>(
           const turnId = previous?.turnId ?? resolved
           if (!turnId)
             return yield* new AccessDenied({ message: "The reply has ended." })
-          return yield* gate
-            .run(
-              { id, turnId, tool: tool.name, input: JSON.stringify(args) },
-              nativeOperation(
-                (signal) =>
-                  tool.execute(args, api, { ...context, abortSignal: signal }),
-                (cause) => cause
-              ).pipe(Effect.map(toolReceipt)),
-              recoverableTools.has(tool.name)
+          return turnId
+        })
+      )
+      const program = Effect.gen(function* () {
+        const actor = yield* createEffectActor(
+          toolCallbackMachine({
+            authority,
+            execute: (turnId) =>
+              observe(
+                gate
+                  .run(
+                    { id, turnId, tool: tool.name, input: serialized },
+                    nativeOperation(
+                      (signal) =>
+                        tool.execute(admittedArgs, api, {
+                          ...context,
+                          abortSignal: signal,
+                        }),
+                      (cause) => cause
+                    ).pipe(Effect.map(toolReceipt)),
+                    recoverableTools.has(tool.name)
+                  )
+                  .pipe(Effect.map(toolReceipt))
+              ),
+          })
+        )
+        const done = yield* waitFor(
+          actor,
+          (snapshot) => snapshot.status === "done"
+        ).pipe(Effect.orDie)
+        return yield* done.output!
+      }).pipe(
+        Effect.scoped,
+        Effect.onExit((exit) => {
+          if (!Exit.isFailure(exit) || !Cause.hasInterrupts(exit.cause))
+            return Effect.void
+          const reasons = failures
+            .flatMap((cause) => cause.reasons)
+            .filter(
+              (reason, index, all) =>
+                reason._tag !== "Interrupt" &&
+                !exit.cause.reasons.some((present) =>
+                  Equal.equals(present, reason)
+                ) &&
+                !all
+                  .slice(0, index)
+                  .some((present) => Equal.equals(present, reason))
             )
-            .pipe(Effect.map(toolReceipt))
-        }),
-        { signal: context.abortSignal }
-      ).then((exit) => {
-        if (Exit.isFailure(exit)) throw publicToolCause(exit.cause)
-        return exit.value
-      })
-      running.set(id, { input, promise })
+          return reasons.length
+            ? Effect.failCause(Cause.fromReasons(reasons))
+            : Effect.void
+        })
+      )
+      const promise = Promise.resolve()
+        .then(() => run(program, { signal: context.abortSignal }))
+        .then((exit) => {
+          if (Exit.isFailure(exit)) throw publicToolCause(exit.cause)
+          return exit.value
+        })
+      const resource = { lease: beginToolCallback(input), promise }
+      running.set(id, resource)
       void promise
         .finally(() => {
-          if (running.get(id)?.promise === promise) running.delete(id)
+          // The callback runner resolves only after its complete actor/native
+          // scope joins. Until then duplicates keep this exact pending Promise.
+          resource.lease = settleToolCallback(resource.lease)
+          if (running.get(id) === resource) running.delete(id)
         })
         .catch(() => {})
       return promise

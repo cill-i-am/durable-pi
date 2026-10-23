@@ -1,0 +1,14 @@
+import base from '/Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/vitest.config.ts'
+export default {
+  ...base,
+  plugins: [{
+    name: 'b16-remove-live-auth-fence',
+    enforce: 'pre',
+    transform(source, id) {
+      if (!id.endsWith('/src/auth/session-socket.machine.ts')) return
+      const guard = 'event.output && work.now() < context.deadline'
+      if (!source.includes(guard)) throw new Error('The B16 mutation anchor changed')
+      return source.replace(guard, 'event.output')
+    },
+  }],
+}

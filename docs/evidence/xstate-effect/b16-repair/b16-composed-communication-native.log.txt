@@ -1,0 +1,47 @@
+$ node scripts/test-communication-runtime.mjs
+PASS native agent coordination: authenticated human provenance, nonblocking spawn, child discovery/question, addressed reply, automatic findings, resuming the original native session, and atomic membership fencing of 25 completed main sessions with queued mail and retained history.
+PASS native maintenance: foreground progress during held IO, no overlapping attempts, wake during completion retained, and persisted recovery after SIGKILL.
+PASS native chat: production admission, context pinning, Pi reply and turn completion all finish while the summary model and backup IO remain held.
+PASS native ChatGPT sign-in: default Workers fetch, PKCE exchange, remote JWKS identity validation, durable credential install, one-use replay and refused redirects.
+PASS native voice: shared original/transcript storage, agent transcript input and text reply, dedupe and restart without resend; AI/provider inference is synthetic.
+PASS native WhatsApp images: production workspace upload and vision admission, common share_image tool, complete multipart text and a private image send, dedupe and restart persistence.
+PASS native WhatsApp: production actor admission, one Pi reply, webhook dedupe and sent restart without resend.
+PASS native email: MIME to production actor, one Pi reply, webhook dedupe, sent restart, and SIGKILL during provider send without resend.
+PASS website SSE gzip: small initial event and later heartbeat arrive before EOF, cloned Response is encoded once, cancellation reaches the source exactly once and a late source error fails the native body reader.
+PASS native Effect SQLite DO driver: rollback/nesting/interruption/defect, automatic yields with a queued reader, native synchronous writes, query-only rejection, pre-commit failure, lost acknowledgement with committed state and real commit-failure recovery.
+PASS native Terminal client and relay: one original command/replay, real WebSocket binary/resize relay, disconnect/reconnect, invalid input closes, and session Save/checkpoint.
+PASS native PersonalAgent HTTP proxy: actual retained host, Terminal session admission, WebSocket upgrade, binary/resize relay and Save.
+PASS native Dynamic Worker Loader: production Execution handler, bundled runner/code loading, bounded JSON/logs, outbound network denied.
+PASS native loop recovery: SIGKILL at third failure, same committed round replayed once, fifth failure stops, blocked restart dispatches no new calls.
+PASS native Effect SQL read compatibility with the actual committed Pi journal, without mutation or a second harness.
+PASS native retained HttpApi catalog: preserved wire/status, safe expected failure, fatal defect/interruption/compound cause and invalid-result rejection.
+PASS native Objects/Planning/Delegation commits: callback rollback, separate raw/compound settlement faults and joined late defects retain both causes without changing Pi journal entries.
+PASS native BackgroundGroup RPC: explicit Exit preserves expected failures, defects, interruption and compound Causes; legacy Promise projection demonstrates the lost meanings.
+PASS native reverse parent/account RPC: retained host handlers preserve complete Causes through actual DO calls in both directions.
+PASS native connection/tool/skill owner RPC: actual retained handlers preserve complete outcomes, reject invalid operations and redact private diagnostics across DO calls.
+PASS native profile/status/configuration/connection RPC: complete outcomes and actual previous-version DO fallback, including owner and mailbox identity arguments.
+PASS native task controls: original records, queued cancellation before model dispatch, exact retry and a newer request preserved.
+PASS native read-only deployment revisions through the production Worker and actual PersonalAgent catalogue/actors.
+PASS native Activity/webhook outcomes, actual previous-version read fallback and composed gateway routing through real PersonalAgent objects.
+PASS native website -> Agent gateway -> PersonalAgent -> Terminal: private HTTP, actual generated app execution and replay, real upgraded binary/resize relay, fresh session revocation and stopped rechecks.
+PASS native Pi run_command completion/Stop fencing and BackgroundGroup active provider shutdown joins held reader cleanup before runtime disposal.
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert(disposed.provider.interrupted)
+
+    at file:///Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/scripts/test-communication-runtime.mjs:1966:3
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v24.21.0
+[ELIFECYCLE] Command failed with exit code 1.

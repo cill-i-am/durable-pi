@@ -1,4 +1,12 @@
-import { Cause, Effect, Exit, Layer, ManagedRuntime, Schema } from "effect"
+import {
+  Cause,
+  Effect,
+  Exit,
+  Layer,
+  ManagedRuntime,
+  Schema,
+  Scope,
+} from "effect"
 import { afterEach, expect, it, vi } from "vitest"
 
 import {
@@ -20,6 +28,7 @@ import {
   AgentRequestUnavailable,
 } from "../src/agent/adapters/http"
 import { proxyTerminalRequest } from "../src/agent/adapters/terminal"
+import { makeUpstreamObserver } from "../src/agent/adapters/upstream"
 import { PersonalAgent } from "../src/agent/worker"
 import { appsRequest } from "../src/apps/adapters/http"
 import { AppStore } from "../src/apps/adapters/sqlite"
@@ -646,6 +655,12 @@ it("composes routine prearm effects without admitting work after a defect", asyn
 
 it("bounds the upstream lease, fences unrelated releases and joins unused-channel cleanup", async () => {
   const f = fixture()
+  const scope = Effect.runSync(Scope.make())
+  Object.assign(f.host, {
+    upstreamObservation: Effect.runPromise(
+      makeUpstreamObserver.pipe(Effect.provideService(Scope.Scope, scope))
+    ),
+  })
   let firstAborted = 0
   let refusedAborted = 0
   const first = new WritableStream<Uint8Array>({
@@ -659,18 +674,22 @@ it("bounds the upstream lease, fences unrelated releases and joins unused-channe
     },
   })
   try {
-    expect(await f.host.observeUpstream("first", first)).toBe(true)
-    expect(await f.host.observeUpstream("refused", refused)).toBe(false)
-    expect(refusedAborted).toBe(1)
-    await f.host.releaseUpstream("unrelated")
-    expect(firstAborted).toBe(0)
+    try {
+      expect(await f.host.observeUpstream("first", first)).toBe(true)
+      expect(await f.host.observeUpstream("refused", refused)).toBe(false)
+      expect(refusedAborted).toBe(1)
+      await f.host.releaseUpstream("unrelated")
+      expect(firstAborted).toBe(0)
+    } finally {
+      await f.host.releaseUpstream("first")
+    }
+    expect(firstAborted).toBe(1)
+    const next = new WritableStream<Uint8Array>()
+    expect(await f.host.observeUpstream("next", next)).toBe(true)
+    await f.host.releaseUpstream("next")
   } finally {
-    await f.host.releaseUpstream("first")
+    await Effect.runPromise(Scope.close(scope, Exit.void))
   }
-  expect(firstAborted).toBe(1)
-  const next = new WritableStream<Uint8Array>()
-  expect(await f.host.observeUpstream("next", next)).toBe(true)
-  await f.host.releaseUpstream("next")
 })
 
 it("returns an actionable 503 for an unconfirmed Conversation control timeout", async () => {

@@ -1,0 +1,47 @@
+{
+  "observations": [
+    [
+      {
+        "tag": "Fail",
+        "sameChecked": true,
+        "sameDefect": false,
+        "annotations": [
+          [
+            "probe/annotation",
+            "checked annotation"
+          ]
+        ]
+      },
+      {
+        "tag": "Die",
+        "sameChecked": false,
+        "sameDefect": true,
+        "annotations": [
+          [
+            "probe/annotation",
+            "defect annotation"
+          ]
+        ]
+      }
+    ],
+    [
+      {
+        "tag": "Die",
+        "sameChecked": false,
+        "sameDefect": false,
+        "annotations": [
+          [
+            "effect/Cause/StackTrace",
+            {
+              "name": "createEffectLogic"
+            }
+          ]
+        ]
+      }
+    ]
+  ],
+  "rejectedIsCause": false,
+  "rejectedChecked": true,
+  "rejectedDefect": false,
+  "rejectedString": "Error: checked drain failure"
+}

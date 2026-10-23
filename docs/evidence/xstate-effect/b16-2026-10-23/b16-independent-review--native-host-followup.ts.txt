@@ -1,0 +1,39 @@
+import assert from 'node:assert/strict'
+import { Cause, Context, Effect, Exit, Layer, ManagedRuntime } from 'effect'
+import { NativeTerminalHost } from '/Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/src/terminal/native-host.ts'
+const runtime=ManagedRuntime.make(Layer.empty)
+const receipt={owner:'owner',name:'native',key:'key',sha256:'digest',size:9}
+const checked=new Error('checked teardown'), defect=new Error('cleanup defect')
+const Note=Context.Reference<string>('independent/native-cleanup',{defaultValue:()=>''})
+const cause=Cause.fromReasons([Cause.makeFailReason(checked).annotate(Context.make(Note,'annotation')),Cause.makeDieReason(defect)])
+let release!:()=>void, cleaning=false, started=false, imports=0
+const barrier=new Promise<void>(resolve=>{release=resolve})
+const host=new NativeTerminalHost({runExit:(work,options)=>runtime.runPromiseExit(work,options),writable:()=>true,receipt:()=>undefined,import:async value=>{imports++;assert.deepEqual(value,receipt);return 'imported'}})
+const controller=new AbortController()
+const video=host.video(Effect.sync(()=>{started=true}).pipe(Effect.andThen(Effect.never),Effect.ensuring(Effect.sync(()=>{cleaning=true}).pipe(Effect.andThen(Effect.promise(()=>barrier)),Effect.andThen(Effect.failCause(cause))))),controller.signal)
+const videoExit=video.then(()=>null,error=>error)
+while(!started) await new Promise(resolve=>setImmediate(resolve))
+const input={...receipt}
+const importing=host.import(input)
+const importExit=importing.then(()=>null,error=>error)
+assert.equal(host.import({...receipt}),importing)
+input.key='changed after admission'
+assert.equal((await host.video(Effect.succeed(new Response('bad')),new AbortController().signal)).status,503)
+for(const field of ['owner','name','key','sha256','size'] as const) await assert.rejects(host.import({...receipt,[field]:field==='size'?10:'different'}))
+controller.abort()
+while(!cleaning) await new Promise(resolve=>setImmediate(resolve))
+let settled=false;void importExit.then(()=>{settled=true})
+await new Promise(resolve=>setImmediate(resolve))
+assert.equal(imports,0);assert.equal(settled,false)
+release()
+const a=await videoExit,b=await importExit
+for(const failed of [a,b]) {
+ assert.ok(Cause.isCause(failed))
+ assert.ok(failed.reasons.some(r=>r._tag==='Die'&&r.defect===defect))
+ assert.ok(failed.reasons.some(r=>r._tag==='Fail'&&r.error===checked&&Context.get(Context.makeUnsafe(r.annotations),Note)==='annotation'||r._tag==='Die'&&Cause.isFailReason(r.defect)&&r.defect.error===checked&&Context.get(Context.makeUnsafe(r.defect.annotations),Note)==='annotation'))
+}
+assert.equal(imports,0)
+assert.equal(await host.import({...receipt}),'imported')
+assert.equal(imports,1)
+await runtime.dispose()
+console.log(JSON.stringify({fiveIdentityFields:'conflicts',exactPromise:'shared',captured:'immutable',videoFreeze:503,joinedCleanup:true,lateAnnotatedCompoundCause:'preserved',automaticImports:0,explicitImports:imports}))

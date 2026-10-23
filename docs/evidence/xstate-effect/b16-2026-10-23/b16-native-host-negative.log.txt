@@ -1,0 +1,40 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+B16_NATIVE_PARTIAL_IDENTITY_MUTATION_APPLIED
+ ❯ tests/terminal-native-host.test.ts (23 tests | 1 failed | 22 skipped) 46ms
+   × actual native host rejects changed immutable receipt while import is held 43ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/terminal-native-host.test.ts > actual native host rejects changed immutable receipt while import is held
+AssertionError: expected { Object (status, value) } to match object { status: 'rejected', …(1) }
+(4 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "reason": Error {
+-     "message": "Conflicting terminal migration",
+-   },
+-   "status": "rejected",
++   "status": "fulfilled",
+  }
+
+ ❯ tests/terminal-native-host.test.ts:109:23
+    107|   const outcomes = await settled
+    108|   expect(outcomes[0]).toEqual({ status: "fulfilled", value: result })
+    109|   expect(outcomes[1]).toMatchObject({
+       |                       ^
+    110|     status: "rejected",
+    111|     reason: new Error("Conflicting terminal migration"),
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 22 skipped (23)
+   Start at  17:11:43
+   Duration  2.55s (transform 64%, import 32%, tests 2%, setup 1%)
+

@@ -1,0 +1,31 @@
+# B16 inference request ownership — frozen for independent review
+
+Worktree: `/Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi`.
+Owned source only: `src/inference/adapters/streams-pi.ts`, new `src/inference/model-stream.machine.ts`, new `tests/inference-stream-ownership.test.ts`. No existing inference tests, worker composition, shared tracking, package/schema, Git publication, native service or live-provider edits/actions.
+
+## Contract and implementation
+
+The scoped official Effect request actor owns checking, acquisition, each native read, bounded publication, closing and completed progression. The owner actor serializes admission with shutdown and tracks native occupancy separately from refused-request completion. Sixteen provider slots remain the maximum; declined completions are joined before shutdown returns without taking provider slots. A distinct owned request scope stays open until queued, accepted and refused work drains, then closes after the owner actor. Both explicit shutdown and direct runtime disposal are covered.
+
+The ten-minute request deadline is anchored to admission time; mailbox delay cannot extend it. It continues across joined cleanup. Existing 128-pending-event and 16 MiB provider-body limits remain. Overflow retains precedence over timeout while native release joins. No local cancellation releases occupancy before native callbacks, iterator return, body cancellation/release and the final completion callback settle.
+
+A synchronous official machine reserves each request object once before its SDK facade queues admission. A separate synchronous consumer machine admits either the iterator or result-only drain; a competing consumer fails without aborting the admitted consumer. These are immediate facade decisions; all request and owner work runs through `createEffectActor` in explicit Effect scopes. Mutable native SDK event/partial objects stay outside snapshots because XState freezes snapshot data; only progression classifications enter the actor.
+
+Cleanup retains every original Effect Cause reason using the repository's fatal mapping (a checked Fail remains a complete Fail reason carried as a Die payload). Iterator/body cleanup no longer wraps an entire Cause as one opaque Die. Existing final authority/catalog/credential hooks in `models-pi.ts` remain at their original consequential dispatch boundary. Diagnostic observation expiry remains in the separate upstream owner and cannot abort this inference owner.
+
+## Characterized defects and controls
+
+All three initial regressions failed before implementation: (1) shutdown returned while the capacity-refused completion callback remained held, (2) iterator return nested the complete Cause in one Die, (3) repeating start on one request dispatched its source twice. Original red log: `/private/tmp/b16-inference-before.log`. The final versions of these same three assertions were rerun against a read-only temporary copy of HEAD's original adapter and failed all three again: `/private/tmp/b16-inference-negative.log`. The negative control used a temporary Vitest alias and did not modify production source.
+
+Additional migration probes cover a queued request stopped before acquisition, runtime disposal before actor launch, exclusive result draining, malformed admission / unrelated release fencing, deadline expiry while cleanup is held, and overflow diagnostic precedence. The direct-disposal probe caught and corrected launching queued work into an already-closing layer scope. The existing deadline test caught and corrected a timer starting after asynchronous mailbox admission.
+
+## Final verification
+
+58 tests across five files pass: inference-stream, inference-stream-ownership (9), inference-native, inference-routing, inference-usage. `/private/tmp/b16-inference-final-tests.log`.
+Full `tsc --noEmit` passes: `/private/tmp/b16-inference-types.log` (empty successful log).
+Scoped Oxlint with deny-warnings passes: `/private/tmp/b16-inference-lint.log` (empty successful log).
+Scoped Oxfmt check passes.
+
+These are local tests using actual installed Pi SDK/SQLite where the existing native suite does so, with synthetic provider responses. No new workerd restart, live provider, browser, hosted deployment or cost claim follows. Native upstream relay/observer proof is owned separately by the upstream agent. Pi remains the durable inference/recovery owner; no durable scheduler, table, snapshot persistence or retry policy was added.
+
+Final independent SDK correction: the Response reader's rejected Effect Cause is retained before forwarding to the SDK's normalizer. Only Effect Causes enter retain; ordinary network errors remain ordinary model error responses. Unchanged independent actual-SDK test passed in /private/tmp/b16-inference-independent-after.log; original red retained in /private/tmp/b16-inference-independent.log. Repository coverage adds both compound Cause preservation and ordinary network-error compatibility. Final 60 tests / 5 files pass and scoped lint passes. Fresh full types has only concurrent tests/terminal-native-host.test.ts errors at 175 and 303; no inference errors. Source hashes refreshed in /private/tmp/b16-inference-manifest.txt.
