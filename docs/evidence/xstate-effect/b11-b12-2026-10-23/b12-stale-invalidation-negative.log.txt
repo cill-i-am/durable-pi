@@ -1,0 +1,36 @@
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v5.0.5 /private/tmp/b12-independent-review
+
+ ❯ tests/configuration.test.ts (10 tests | 1 failed | 9 skipped) 106ms
+   × independent review stale local archive invalidation must not abort a fresh restored render 106ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/configuration.test.ts > independent review stale local archive invalidation must not abort a fresh restored render
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/configuration.test.ts:356:34
+    354|   finish({result:JSON.stringify(output),logs:"",error:null})
+    355|   const result=await running
+    356|   expect(Exit.isSuccess(result)).toBe(true)
+       |                                  ^
+    357|   expect(pending(f)).toHaveLength(1)
+    358| })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 9 skipped (10)
+   Start at  15:22:17
+   Duration  552ms (import 46%, transform 29%, tests 23%, setup 1%, worker 1%)
+
