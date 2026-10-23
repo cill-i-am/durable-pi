@@ -36,10 +36,33 @@ import { makeDurableObjectSqlite } from "../../src/storage/durable-object"
 import { migrateSqlite } from "../../src/storage/migrations"
 import type { Sqlite } from "../../src/storage/sqlite"
 import { accessOperationProbe } from "./access-operation"
+import { agentAvailabilityProbe } from "./agent-availability"
 import { conversationActivitiesProbe } from "./conversation-activities"
 import { conversationHandoffProbe } from "./conversation-handoff"
 import { conversationStreamProbe } from "./conversation-stream"
 import { drizzleProbeRows } from "./drizzle-schema"
+
+function persistedMachineProbe(mode: string, storage: DurableObjectStorage) {
+  if (
+    ![
+      "agent-availability",
+      "agent-restore",
+      "access-operation",
+      "access-restore",
+    ].includes(mode)
+  )
+    return undefined
+  return Effect.gen(function* () {
+    const db = yield* makeDurableObjectSqlite(storage)
+    if (mode === "agent-availability" || mode === "agent-restore")
+      return yield* agentAvailabilityProbe(
+        db,
+        storage,
+        mode === "agent-restore"
+      )
+    return yield* accessOperationProbe(db, mode === "access-restore")
+  }).pipe(Effect.scoped)
+}
 
 declare const DRIZZLE_PROBE_MIGRATIONS: Record<string, string>
 
@@ -166,17 +189,11 @@ export class DrizzleProbe extends DurableObject<Record<string, never>> {
         await this.runtime.runPromise(conversationHandoffProbe())
       )
     const storage = this.ctx.storage
-    if (
-      guardedMode &&
-      (mode === "access-operation" || mode === "access-restore")
-    )
-      return Response.json(
-        await this.runtime.runPromise(
-          Effect.flatMap(makeDurableObjectSqlite(storage), (db) =>
-            accessOperationProbe(db, mode === "access-restore")
-          ).pipe(Effect.scoped)
-        )
-      )
+    const persisted = guardedMode
+      ? persistedMachineProbe(mode, storage)
+      : undefined
+    if (persisted)
+      return Response.json(await this.runtime.runPromise(persisted))
     if (guardedMode && mode === "conversation-activities")
       return Response.json(
         await this.runtime.runPromise(
