@@ -1,6 +1,14 @@
-# XState Effect standard: implementation evidence
+# XState Effect standard and migration evidence
 
 Implementation base: `6ce50c15ee9af99fbe7e0c09f3e064ad0b81e1b1`, freshly fetched from `cill-i-am/durable-pi/main`. Work is isolated on `codex/xstate-effect-standard`. The original working checkout's unrelated changes were retained. Before publication the branch was rebased onto `696aca98000a6e82a9cb202acc18f92f2c8e987e` after #198 merged; both upstream and XState native gates were retained. The refreshed open-PR check found #199 (idle observer cleanup) and #163, with no equivalent standards PR. Open PRs inspected before edits: #198 (upstream observer) and #163 (local Worker startup/cache isolation); neither implements this standard.
+
+## Current review stack — 23 October 2026
+
+B01 Access is implemented at `0a309bd27a64b6cc97ed75609f1b09579f99012f`. [PR #201](https://github.com/cill-i-am/durable-pi/pull/201) has a completed, successful [Check and deploy run 39950948740](https://github.com/cill-i-am/durable-pi/actions/runs/39950948740) for that exact commit. This is Access CI evidence, not a result for the Terminal candidate or the repository-wide migration.
+
+B04 Terminal is extracted on `codex/xstate-terminal` above that Access commit. Its 14 source files and 10 tests match the frozen implementation archive byte-for-byte; [the extraction manifest](evidence/xstate-effect/terminal-extraction.json) records their SHA-256 values and archive provenance. The four preserved Terminal focused/negative-control logs also match the archive. [Terminal evidence](xstate-effect-terminal.md) records the implemented boundary, retained legacy data, historical combined-tree checks and remaining extracted-head verification. After frozen offline installation and Effect preparation, this candidate passed `pnpm verify:static` and the 169-test Terminal suite in 16 files with default timeouts and one worker. Preserved outputs: [preparation](evidence/xstate-effect/terminal-candidate-prepare.log), [static](evidence/xstate-effect/terminal-candidate-static.log), [focused tests](evidence/xstate-effect/terminal-candidate-focused.log). No full-unit, build, native-runtime, browser or hosted CI result is inferred from these scoped candidate checks.
+
+Only B01 and the B04 candidate are added to the standards base in this review stack. B02/B03/B05–B18 and F01–F15 remain open here. The following standard/witness sections preserve their original verification context; they are not new checks of the extracted Terminal branch.
 
 ## Provenance and versions
 
@@ -59,4 +67,4 @@ Static, unit/build and the complete native suite were rerun locally after rebase
 | `pnpm verify:browser` | Exit 0; 66 desktop/mobile tests, built passkey journeys and two-build stale-client recovery passed. |
 | Required remote CI | All required jobs and aggregate `check` passed for `87ff00f` in [run 39867469758](https://github.com/cill-i-am/durable-pi/actions/runs/39867469758): static (including actionlint/complexity), unit/build, native and browser. Container jobs succeeded with builds skipped for unchanged inputs; deploy skipped. Final documentation-only updates are subject to the same [PR #200 head checks](https://github.com/cill-i-am/durable-pi/pull/200/checks). |
 
-No merge, deployment, production reset, live email/WhatsApp send, or production provider exactly-once claim is part of this evidence. The [repository-wide goal](../BUILD.md#xstate-effect-lifecycle-refactor) remains open; all B01–B18 and F01–F15 migration items require their own implementation and proof.
+No merge, deployment, production reset, live email/WhatsApp send, or production provider exactly-once claim is part of this evidence. The [repository-wide goal](../BUILD.md#xstate-effect-lifecycle-refactor) remains open. B01 and the extracted B04 candidate have the distinct statuses recorded above; the remaining backend/frontend migration items still require their own implementation and proof.

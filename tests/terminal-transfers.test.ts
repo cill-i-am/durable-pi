@@ -29,7 +29,8 @@ function fileSource(
   return { content }
 }
 function fixture() {
-  const repository = new TerminalStore(database())
+  const db = database()
+  const repository = new TerminalStore(db)
   const runtime = {
     close: vi.fn(async () => {}),
     restore: vi.fn(async () => {}),
@@ -54,7 +55,7 @@ function fixture() {
     exports
   )
   terminal.configure(0, true)
-  return { terminal, repository, runtime, backups, exports }
+  return { db, terminal, repository, runtime, backups, exports }
 }
 describe("private terminal file transfer", () => {
   it("accepts only unambiguous paths inside the workspace", () => {
@@ -141,6 +142,60 @@ describe("private terminal file transfer", () => {
         f.terminal.startTransfer(crypto.randomUUID(), plan, new Uint8Array([2]))
       )
     ).rejects.toThrow("do not match")
+  })
+  it("returns the same public import receipt through HTTP before and after restoration", async () => {
+    const f = fixture()
+    const completions: Promise<void>[] = []
+    const request = (terminal: Terminal, path: string, body?: FormData) =>
+      Effect.runPromise(
+        terminalRequest(
+          terminal.service,
+          new Request(`https://terminal.internal/${path}`, {
+            method: body ? "POST" : "GET",
+            body,
+          }),
+          path,
+          (task) => completions.push(terminal.runtime.runPromise(task))
+        )
+      )
+    const form = () => {
+      const value = new FormData()
+      value.set("id", id)
+      value.set("fileId", sourceId)
+      value.set("file", new File([bytes], "notes.txt"))
+      return value
+    }
+    const admitted = await request(f.terminal, "terminal/import", form())
+    expect(admitted.status).toBe(202)
+    const first = await admitted.json()
+    expect(first).toEqual(Schema.decodeUnknownSync(CommandRun)(first))
+    await Promise.all(completions)
+    const receipt = await (await request(f.terminal, `terminal/${id}`)).json()
+    expect(receipt).toEqual(Schema.decodeUnknownSync(CommandRun)(receipt))
+    expect(receipt).toMatchObject({ status: "succeeded", kind: "import" })
+    await f.terminal.runtime.dispose()
+    const restored = new Terminal(
+      new TerminalStore(f.db),
+      f.runtime,
+      f.backups,
+      relayTerminal,
+      f.exports
+    )
+    await restored.recover()
+    expect(await (await request(restored, `terminal/${id}`)).json()).toEqual(
+      receipt
+    )
+    const replay = await request(restored, "terminal/import", form())
+    expect(replay.status).toBe(202)
+    expect(await replay.json()).toEqual(receipt)
+    await Promise.all(completions)
+    expect(f.runtime.importFile).toHaveBeenCalledOnce()
+    expect(Effect.runSync(f.repository.get(id))).toMatchObject({
+      schemaVersion: 1,
+      workflowVersion: 1,
+      attemptId: expect.any(String),
+      occupancy: { state: "free", ownerId: null },
+    })
   })
   it("exports an immutable result without replacing the workspace checkpoint", async () => {
     const f = fixture(),

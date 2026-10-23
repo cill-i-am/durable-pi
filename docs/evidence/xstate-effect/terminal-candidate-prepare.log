@@ -1,0 +1,5 @@
+$ effect-tsgo patch --oxlint
+Patched typescript at /Users/cillianbarron/.codex/worktrees/xstate-review-stack/durable-pi/node_modules/.pnpm/@typescript+typescript-darwin-arm64@7.0.2/node_modules/@typescript/typescript-darwin-arm64/lib/tsc
+Patched oxlint at /Users/cillianbarron/.codex/worktrees/xstate-review-stack/durable-pi/node_modules/.pnpm/@oxlint+binding-darwin-arm64@1.88.0/node_modules/@oxlint/binding-darwin-arm64/oxlint.darwin-arm64.node
+Patched oxlint-dts at /Users/cillianbarron/.codex/worktrees/xstate-review-stack/durable-pi/node_modules/.pnpm/oxlint@1.88.0_oxlint-tsgolint@7.0.2004/node_modules/oxlint/dist/index.d.ts
+Patched oxlint-tsgolint at /Users/cillianbarron/.codex/worktrees/xstate-review-stack/durable-pi/node_modules/.pnpm/@oxlint-tsgolint+darwin-arm64@7.0.2004/node_modules/@oxlint-tsgolint/darwin-arm64/tsgolint

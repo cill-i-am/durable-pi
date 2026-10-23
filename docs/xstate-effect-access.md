@@ -40,4 +40,4 @@ Local verification passed on Node 24:
 - `pnpm verify:browser`: 66 desktop/mobile journeys, built passkey checks, and two-build client-upgrade/draft preservation checks.
 - The [negative grant-fence control](evidence/xstate-effect/access-grant-negative.log) failed as intended; the restored implementation passes the positive property suite.
 
-Container inputs are unchanged; the required CI workflow applies its existing container-input gate. Hosted checks are recorded on the associated migration PR. No merge, deployment, real-provider send or completed repository-wide migration is claimed.
+Access was published as unsigned commit `0a309bd27a64b6cc97ed75609f1b09579f99012f` on [PR #201](https://github.com/cill-i-am/durable-pi/pull/201). The [Check and deploy workflow 39950948740](https://github.com/cill-i-am/durable-pi/actions/runs/39950948740) completed successfully for that exact commit. Container inputs are unchanged; the workflow applies its existing container-input gate. This delivery result covers Access, not subsequent migration layers. No merge, deployment, real-provider send or completed repository-wide migration is claimed.

@@ -1,8 +1,9 @@
-import { Effect, Schema } from "effect"
+import { createEffectActor, waitFor } from "@xstate/effect"
+import { Cause, Effect, Equal, Exit, Ref, Schema } from "effect"
 
-import { observeCleanup, orDieAll, preserveFatal } from "../shared/effect"
+import { fatalCause, orDieAll, preserveFatal } from "../shared/effect"
+import { commandClientMachine } from "./client.machine"
 import {
-  COMMAND_TIMEOUT,
   CommandInput,
   type CommandRun,
   type TerminalState,
@@ -22,7 +23,7 @@ export function completeCommand(
   input: CommandInput,
   client: CommandClient
 ): Effect.Effect<CommandRun, TerminalFailure | TerminalRuntimeError> {
-  const work = Effect.gen(function* () {
+  return Effect.gen(function* () {
     yield* Effect.yieldNow
     const command = yield* Schema.decodeUnknownEffect(CommandInput)(input).pipe(
       preserveFatal,
@@ -30,43 +31,66 @@ export function completeCommand(
         () => new TerminalFailure({ message: "Invalid command request." })
       )
     )
-    const receipt = (run: CommandRun) =>
-      run.id === command.id &&
-      run.command === command.command &&
-      (run.kind ?? "command") === "command"
-        ? Effect.succeed(run)
-        : Effect.fail(
-            new TerminalFailure({
-              message: "This command identity belongs to different input.",
-            })
-          )
-    return yield* Effect.gen(function* () {
-      let result = yield* receipt(yield* client.start)
-      for (;;) {
-        if (result.status !== "running") {
-          const state = yield* client.state
-          if (state.cleanupError)
-            return { ...result, error: state.cleanupError }
-          if (!state.busy) return result
-        }
-        yield* Effect.sleep("500 millis")
-        result = yield* receipt(yield* client.read)
-      }
-    }).pipe(
-      Effect.onInterrupt(() => client.cancel.pipe(Effect.asVoid, orDieAll))
+    // Once Stop starts, its acknowledgement remains owned even if the caller
+    // interrupts the deadline cancellation itself.
+    const cancelled = yield* Effect.cached(
+      client.cancel.pipe(Effect.uninterruptible)
     )
-  })
-  return observeCleanup(work, (observed) =>
-    Effect.timeout(observed, COMMAND_TIMEOUT + 15_000)
-  ).pipe(
-    preserveFatal,
-    Effect.catchTag("TimeoutError", () =>
-      Effect.fail(
-        new TerminalFailure({
-          message:
-            "The command status could not be confirmed within its observation window. Inspect Terminal before starting another command.",
+    const failed = yield* Ref.make<Cause.Cause<TerminalRuntimeError>[]>([])
+    const observe = <A>(work: Effect.Effect<A, TerminalRuntimeError>) =>
+      work.pipe(
+        Effect.onExit((exit) =>
+          Exit.isFailure(exit)
+            ? Ref.update(failed, (causes) => [...causes, exit.cause])
+            : Effect.void
+        )
+      )
+    return yield* Effect.gen(function* () {
+      const actor = yield* createEffectActor(
+        commandClientMachine(command, {
+          start: observe(client.start),
+          read: observe(client.read),
+          state: observe(client.state),
+          cancel: observe(cancelled),
         })
       )
+      const done = yield* waitFor(
+        actor,
+        (state) => state.status === "done"
+      ).pipe(
+        Effect.orDie,
+        // Fence before scope closure joins a possibly held acknowledgement.
+        Effect.onInterrupt(() => cancelled.pipe(Effect.asVoid, orDieAll))
+      )
+      return yield* done.output!
+    }).pipe(
+      Effect.scoped,
+      Effect.onExit((exit) =>
+        Effect.gen(function* () {
+          // Stopping an official invocation joins its cleanup but can discard
+          // its late Exit. Preserve every missing non-interruption reason.
+          const retained = Exit.isFailure(exit) ? exit.cause.reasons : []
+          const failures = yield* Ref.get(failed)
+          const missing = failures.flatMap((cause) =>
+            cause.reasons.filter(
+              (reason) =>
+                reason._tag !== "Interrupt" &&
+                !retained.some(
+                  (present) =>
+                    Equal.equals(present, reason) ||
+                    (present._tag === "Die" &&
+                      reason._tag === "Fail" &&
+                      Equal.equals(present.defect, reason))
+                )
+            )
+          )
+          if (missing.length)
+            return yield* Effect.failCause(
+              fatalCause(Cause.fromReasons(missing))
+            )
+        })
+      ),
+      preserveFatal
     )
-  )
+  })
 }
