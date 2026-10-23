@@ -1,0 +1,42 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi
+
+ ❯ tests/objects-lifecycle.test.ts (11 tests | 1 failed | 10 skipped) 26ms
+   × rechecks cancellation authority after native reads and rolls back an unauthorized sentinel 26ms
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 10 skipped (11)
+   Start at  15:48:38
+   Duration  467ms (import 81%, transform 9%, tests 7%, setup 2%, worker 1%)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/objects-lifecycle.test.ts > rechecks cancellation authority after native reads and rolls back an unauthorized sentinel
+AssertionError: expected { Object (success) } to match object { _tag: 'Failure', …(1) }
+(2 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "_tag": "Failure",
+-   "failure": {
+-     "code": "read_only",
++   "_id": "Result",
++   "_tag": "Success",
++   "value": {
++     "applied": false,
+    },
+  }
+
+ ❯ tests/objects-lifecycle.test.ts:394:25
+    392|   writable = false
+    393|   release.resolve()
+    394|   expect(await pending).toMatchObject({
+       |                         ^
+    395|     _tag: "Failure",
+    396|     failure: { code: "read_only" },
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

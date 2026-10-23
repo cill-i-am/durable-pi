@@ -1,0 +1,29 @@
+import assert from 'node:assert/strict'
+import { mkdtemp } from 'node:fs/promises'
+import { BACKGROUND_CONTEXT as ctx } from '@earendil-works/chord/context'
+import { createModels } from '@earendil-works/pi-ai'
+import { Harness, createRegistry, defineDoc, defineDocFamily } from '@earendil-works/pi-durable'
+import { openNodeSqliteStorage } from '@earendil-works/pi-durable/storage/sqlite/node'
+import { Cause, Effect, Exit } from 'effect'
+import { piPlans, planBlockerStatus } from '/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/planning/adapters/pi.ts'
+import { plansRequest } from '/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/planning/adapters/http.ts'
+const root = '/private/tmp/b14-independent-planning'
+const run = Effect.runPromise
+const Catalog = defineDoc({kind:'plans.catalog',scope:'session',version:1,initial:()=>({ids:[] as string[]})})
+const Task = defineDocFamily({kind:'plans.task',scope:'session',family:true,version:1,initial:(_:null)=>({value:''})})
+const Binding = defineDocFamily({kind:'plans.turn',scope:'session',family:true,version:1,initial:(_:null)=>({planId:'',cancelled:false})})
+const History = defineDocFamily({kind:'plans.revision',scope:'session',family:true,version:1,initial:(_:null)=>({value:''})})
+export async function fixture() {
+ const directory=await mkdtemp(`${root}/case-`),path=`${directory}/pi.sqlite`, storage=await openNodeSqliteStorage(path)
+ const harness=await Harness.open(storage,{models:createModels(),registry:createRegistry()},ctx)
+ const origin={turnId:crypto.randomUUID(),inputRevision:0,inputIds:[crypto.randomUUID()]}
+ const state={evidenceCalls:0}
+ const authority={current:()=>Effect.succeed(origin),cancelled:()=>Effect.succeed(false),receipts:()=>Effect.succeed([]),evidence:(ref:any)=>Effect.sync(()=>{state.evidenceCalls++;return {...ref,state:'valid',detail:'Saved'}})}
+ const plans=piPlans(async()=>harness,authority)
+ const id=crypto.randomUUID()
+ const input={id,operationId:'tool:1',relation:'new' as const,expectedRevision:0,inputRevision:0,reason:'Review probe',draft:{objective:'Keep draft private',constraints:[],criteria:['Saved'],steps:[{id:'saved',title:'Save draft',status:'completed' as const,evidence:[],note:''}],nextAction:'',blocker:'',complete:true}}
+ const plan={...input.draft,id,schemaVersion:1,revision:1,state:'completed',rootTurns:[origin.turnId],inputIds:origin.inputIds,reviewedTurn:origin.turnId,inputRevision:0,createdAt:'2026-10-23T00:00:00Z',updatedAt:'2026-10-23T00:00:00Z'}
+ const stored=async(kind:string,key?:string)=>{const rec=await storage.findDocument({kind,scope:{kind:'session'},...(key?{key}:{})},'current',ctx);return rec?storage.document(rec.id,'current',ctx):undefined}
+ const seed=async(value=plan)=>harness.commit(async tx=>{(await tx.doc(Catalog)).ids.push(id);(await tx.doc(Task,id,null)).value=JSON.stringify(value);Object.assign(await tx.doc(Binding,origin.turnId,null),{planId:id,cancelled:false});(await tx.doc(History,`${id}:1`,null)).value=JSON.stringify({plan:value,actor:'agent',reason:'Seed',turnId:origin.turnId})},ctx)
+ return {path,storage,harness,origin,state,plans,id,input,plan,stored,seed}
+}

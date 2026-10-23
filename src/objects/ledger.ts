@@ -1,11 +1,7 @@
 import type { Effect } from "effect"
 
-import type {
-  Checklist,
-  MutationReceipt,
-  ObjectEvent,
-  ObjectFailure,
-} from "./contracts"
+import type { Checklist, ObjectEvent, ObjectFailure } from "./contracts"
+import type { ObjectOperationRecord } from "./operation.machine"
 
 export interface ObjectCatalog {
   ids: string[]
@@ -13,10 +9,8 @@ export interface ObjectCatalog {
   offeredThrough: number
   operations: number
 }
-export interface ObjectOperation {
-  digest: string
-  cancelled: boolean
-  receipt: MutationReceipt | null
+export type ObjectOperation = {
+  -readonly [K in keyof ObjectOperationRecord]: ObjectOperationRecord[K]
 }
 /** Mutable views belong exclusively to this native commit callback. */
 export interface ObjectTransaction {

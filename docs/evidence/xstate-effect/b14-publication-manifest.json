@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-10-23T15:31:25.060679+00:00",
+  "baseCommit": "9f99504e657b50a4f0dab30f4d920a8678685255",
+  "sources": {
+    "src/planning/adapters/http.ts": "5186c86e425b69864e496999a8b1aefcb33f7899df297426c59d097df689fc87",
+    "src/planning/adapters/pi.ts": "adeef4c2f7641b12bc3d362827d36b8813a43ec066e81502c8b1b9729acd5073",
+    "src/planning/adapters/tools.ts": "5c308e837cd97589447256f1f725ab9f17a3b49bb2813f1ae75c6d17b4157a8c",
+    "src/planning/authority.machine.ts": "e470377fb14e9f04560e78a143930510d2a323ec722e1cdf6ee1a27db44d41ff",
+    "src/planning/contracts.ts": "ee116b95e6ca874544912f464513c5588423eb6961a882f2129d35f9fe64283b",
+    "src/planning/domain.ts": "0c396c87f1007dab37f7d5793b5080165f061536c880eeed940abc7b5354eea9",
+    "src/planning/evidence.ts": "d827d7f34491a13933bffc59a6a68539c18eff12e2308921783853803ee4aab4",
+    "src/planning/ledger.ts": "c167c15b90086cf1e94fc5ea02f4dd9533ddbd6a04d5f40805b085e4dcfedfef",
+    "src/planning/plan.machine.ts": "f2a4423006c2f9880bb3473c533e50c24738ac1f56c9229ca040c7e80b585705",
+    "src/planning/plan.ts": "a1c2f012815cd7d2ff9b367be440a13dbf17acd560a9f7fa368a5d2b0fc98cdc",
+    "src/planning/plans.ts": "008218528f745036ff7510da9f01c338d389ebfa9f406e6bc5300add4d5723b3",
+    "src/planning/service.ts": "6760e10ea688a582063eb6f87d940ed2676fb82a38a9630a2b8900b8d0f26e73",
+    "src/objects/adapters/http.ts": "f66908e5ed819a5d7e339c8bb553e9e00f57b533ad254fec5ed96e1a5a8eb5d0",
+    "src/objects/adapters/pi.ts": "e757bdcb31ce7cb59262ea800a35e76d32089594f5f0f25895da85f899673b93",
+    "src/objects/adapters/tools.ts": "4bb109b1771bfebce2107ebd8caeb06387e46da3514e19982deea1bd50b7e492",
+    "src/objects/checklist.ts": "089b2e34a48ffdecaead2e12c41094087af7f4f086d323a4fc2cd8c6f39c2743",
+    "src/objects/contracts.ts": "60c59bd65f67d50d2f6a0e0c23878f27490d4e1152db2b30441305960c86969a",
+    "src/objects/domain.ts": "97713427f64445c897f397bf6ed5638f885bf33004b3b1343ca3e2b3bb80dd9f",
+    "src/objects/ledger.ts": "3dabeeed915cf44c76c085357901d880bb953e9018b26a5f4f63e6549541ad61",
+    "src/objects/objects.ts": "de022383144347130afe3519c5d28ecf184d11c15270ff294f888d833cbebb03",
+    "src/objects/operation.machine.ts": "34567eec7f30693c9a148f4e8095d1cac74f48e008d22a9598a6845e68d66dea",
+    "src/objects/service.ts": "a7da0b0f217deb6ca02409ca657fdd1abaa080f116af1d622729ca531defec08",
+    "tests/planning-lifecycle.test.ts": "ecd6b0590eca7c25b656afcff5b0fb10d87d6919ea7520c02e5113a2065e4257",
+    "tests/objects-lifecycle.test.ts": "2dd3a496465f031914551c1944827d419fbe9a56507e3d7093bfd3c83cacff4a",
+    "tests/planning-boundary.test.ts": "fe30ebf94e79b3b0e7a5d798f0c25e943e2a86a20d1c1c4859f33981534d08fd",
+    "tests/working-objects.test.ts": "e18163ea23f9b9dc3e384735df0d6867a9b74150e64e4f8e7d0671336848a069",
+    "src/shared/adapters/native-commit.ts": "ad3bb23a94071bb5ef2227629a4c17fb8b0d46a49245bba08a8773350a96ea15",
+    "src/shared/interop.ts": "e26c8e53d77156a55eb47b4ca25b0b0c7f93eb5740ba652e862e4950b868662c",
+    ".github/workflows/check.yml": "05d39a5aee0dd141e8a846ccaec1c1c832888e48d4e8b0efe876f33a4f82e86d",
+    "package.json": "4b51919c00f2abbaf8c7315fb628a9c917b2dbc72df6c651a9db99cde283b688",
+    "src/agent/worker.ts": "d1dd65b6d86a956a3e73be92723d5a18288684b6a80d03491f62174032cac105",
+    "src/storage/migration-manifest.ts": "90f7beb766cb08d83672a23e45a954dca968a3547819b89c1e7d6c0181df0448"
+  },
+  "artifacts": [
+    {
+      "path": "docs/evidence/xstate-effect/b14-composed-static.log.txt",
+      "original": "/private/tmp/b14-composed-static-1.log",
+      "sha256": "acfcb9ed7e0de9e40950e199beaea752f06f3f0249e89ed76cfd69f449dcb9b1",
+      "bytes": 655,
+      "recordedExitCode": 0
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b14-composed-unit.log.txt",
+      "original": "/private/tmp/b14-composed-unit-1.log",
+      "sha256": "5f129e15a96db6b0079a188a845d5bac823c7c91c4ad6c470f9b7202fa61ced8",
+      "bytes": 571,
+      "recordedExitCode": 0
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b14-composed-build.log.txt",
+      "original": "/private/tmp/b14-composed-build-1.log",
+      "sha256": "f94b1f7e17352a481a85032a9410fd0c1ef6001d9ca7cf5b9c60366ca7918ade",
+      "bytes": 24337,
+      "recordedExitCode": 0
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b14-composed-final-types.log.txt",
+      "original": "/private/tmp/b14-composed-final-types.log",
+      "sha256": "8366207267355d3e3d5bf3bf6e8c94c5f93f6078c34f08973fa2b38cdda6cc92",
+      "bytes": 15,
+      "recordedExitCode": 0
+    }
+  ],
+  "reviewedSourceDriftAfterComposition": [],
+  "limits": [
+    "Historical B14 probes used actual Node SQLite/Pi with synthetic authority on base8304a30 plus the domain changes. All captured reviewed domain/shared hashes still match after composition.",
+    "Composed static,3079tests/274files and all builds passed before CI-only inheritance; final typecheck passed after restoring generated route output. Only workflow job allowances differ from that composed checkpoint.",
+    "Full hosted CI on the published commit remains required. No live providers, merge or deployment."
+  ]
+}

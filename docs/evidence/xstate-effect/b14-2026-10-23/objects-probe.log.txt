@@ -1,0 +1,7 @@
+{"name":"strict migration matrix","passed":true,"valid":3,"invalid":12,"rejectedVersions":4}
+{"name":"native failed post-migration callback preserves every document and revision","passed":true,"documents":1,"revisions":1}
+{"name":"successful conversion retains native address and detached public receipt","passed":true,"nativeOperationId":2,"publicReceipt":{"objectId":"d477ba45-f027-47c4-b26d-5a74d2e03235","revision":1,"eventId":"d477ba45-f027-47c4-b26d-5a74d2e03235:1"}}
+{"name":"authority loss after operation acquisition rolls back cancellation sentinel","passed":true}
+{"name":"interruption during actual SQLite settlement is joined and retains one applied receipt after reopen","passed":true}
+LATE_NATIVE_EXIT {"_id":"Exit","_tag":"Failure","cause":{"_id":"Cause","failures":[{"_tag":"Interrupt"},{"_tag":"Die","defect":{"_tag":"Fail","error":{"_tag":"ObjectFailure","code":"unavailable","message":"independent checked native failure"}}},{"_tag":"Die","defect":{}},{"_tag":"Interrupt"},{"_tag":"Interrupt"},{"_tag":"Interrupt"},{"_tag":"Interrupt"}]}}
+{"name":"late mixed Cause survives interrupted failed native settlement with no partial operation","passed":true}

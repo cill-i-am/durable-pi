@@ -1,0 +1,157 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-10-23T15:07:02.145286+00:00",
+  "head": "8304a30d3f9a3e5284a255bb1cabc321c767f2a6",
+  "result": "Independent B14 review clear within scoped Node SQLite/Pi evidence after owner correction.",
+  "finding": "Resolved P2: Planning migration invariant Errors and future native document versions were converted into generic retry guidance.",
+  "sources": {
+    "src/planning/adapters/http.ts": "5186c86e425b69864e496999a8b1aefcb33f7899df297426c59d097df689fc87",
+    "src/planning/adapters/pi.ts": "adeef4c2f7641b12bc3d362827d36b8813a43ec066e81502c8b1b9729acd5073",
+    "src/planning/adapters/tools.ts": "5c308e837cd97589447256f1f725ab9f17a3b49bb2813f1ae75c6d17b4157a8c",
+    "src/planning/authority.machine.ts": "e470377fb14e9f04560e78a143930510d2a323ec722e1cdf6ee1a27db44d41ff",
+    "src/planning/contracts.ts": "ee116b95e6ca874544912f464513c5588423eb6961a882f2129d35f9fe64283b",
+    "src/planning/domain.ts": "0c396c87f1007dab37f7d5793b5080165f061536c880eeed940abc7b5354eea9",
+    "src/planning/evidence.ts": "d827d7f34491a13933bffc59a6a68539c18eff12e2308921783853803ee4aab4",
+    "src/planning/ledger.ts": "c167c15b90086cf1e94fc5ea02f4dd9533ddbd6a04d5f40805b085e4dcfedfef",
+    "src/planning/plan.machine.ts": "f2a4423006c2f9880bb3473c533e50c24738ac1f56c9229ca040c7e80b585705",
+    "src/planning/plan.ts": "a1c2f012815cd7d2ff9b367be440a13dbf17acd560a9f7fa368a5d2b0fc98cdc",
+    "src/planning/plans.ts": "008218528f745036ff7510da9f01c338d389ebfa9f406e6bc5300add4d5723b3",
+    "src/planning/service.ts": "6760e10ea688a582063eb6f87d940ed2676fb82a38a9630a2b8900b8d0f26e73",
+    "src/objects/adapters/http.ts": "f66908e5ed819a5d7e339c8bb553e9e00f57b533ad254fec5ed96e1a5a8eb5d0",
+    "src/objects/adapters/pi.ts": "e757bdcb31ce7cb59262ea800a35e76d32089594f5f0f25895da85f899673b93",
+    "src/objects/adapters/tools.ts": "4bb109b1771bfebce2107ebd8caeb06387e46da3514e19982deea1bd50b7e492",
+    "src/objects/checklist.ts": "089b2e34a48ffdecaead2e12c41094087af7f4f086d323a4fc2cd8c6f39c2743",
+    "src/objects/contracts.ts": "60c59bd65f67d50d2f6a0e0c23878f27490d4e1152db2b30441305960c86969a",
+    "src/objects/domain.ts": "97713427f64445c897f397bf6ed5638f885bf33004b3b1343ca3e2b3bb80dd9f",
+    "src/objects/ledger.ts": "3dabeeed915cf44c76c085357901d880bb953e9018b26a5f4f63e6549541ad61",
+    "src/objects/objects.ts": "de022383144347130afe3519c5d28ecf184d11c15270ff294f888d833cbebb03",
+    "src/objects/operation.machine.ts": "34567eec7f30693c9a148f4e8095d1cac74f48e008d22a9598a6845e68d66dea",
+    "src/objects/service.ts": "a7da0b0f217deb6ca02409ca657fdd1abaa080f116af1d622729ca531defec08",
+    "tests/planning-lifecycle.test.ts": "ecd6b0590eca7c25b656afcff5b0fb10d87d6919ea7520c02e5113a2065e4257",
+    "tests/objects-lifecycle.test.ts": "2dd3a496465f031914551c1944827d419fbe9a56507e3d7093bfd3c83cacff4a",
+    "tests/planning-boundary.test.ts": "fe30ebf94e79b3b0e7a5d798f0c25e943e2a86a20d1c1c4859f33981534d08fd"
+  },
+  "changedSinceFinding": {
+    "src/planning/adapters/pi.ts": "adeef4c2f7641b12bc3d362827d36b8813a43ec066e81502c8b1b9729acd5073",
+    "src/planning/authority.machine.ts": "e470377fb14e9f04560e78a143930510d2a323ec722e1cdf6ee1a27db44d41ff",
+    "src/planning/plan.machine.ts": "f2a4423006c2f9880bb3473c533e50c24738ac1f56c9229ca040c7e80b585705",
+    "tests/planning-lifecycle.test.ts": "ecd6b0590eca7c25b656afcff5b0fb10d87d6919ea7520c02e5113a2065e4257"
+  },
+  "artifacts": [
+    {
+      "path": "/private/tmp/b14-independent-planning/probe.mts",
+      "bytes": 7121,
+      "sha256": "4d32720f4673a416c130e11055ad1c352357e46a2fb00c53042098d5b62dc82f"
+    },
+    {
+      "path": "/private/tmp/b14-independent-planning/probe.log",
+      "bytes": 1054,
+      "sha256": "b7fe6c557cc0d77758ecaae9bcc8afacd81d16c1a44a26958ace8b270547f198"
+    },
+    {
+      "path": "/private/tmp/b14-independent-planning/probe-extended.mts",
+      "bytes": 7935,
+      "sha256": "509ffb248a0ac1ad146f645890f36f66e19c03c5e89a6f9e3e238987b1f0b930"
+    },
+    {
+      "path": "/private/tmp/b14-independent-planning/probe-extended.log",
+      "bytes": 1296,
+      "sha256": "a3098c699357130463f16058dd07fda06b06be4a5716c16f6352033b09f9a1a0"
+    },
+    {
+      "path": "/private/tmp/b14-independent-planning/assert-fixed.mts",
+      "bytes": 8594,
+      "sha256": "40013852272d28e4b5ee1b5c54a6c16c137c9118761c3b6542501263bd9d4fac"
+    },
+    {
+      "path": "/private/tmp/b14-independent-planning/assert-before-fix.log",
+      "bytes": 404,
+      "sha256": "cfb22475540b79e33124cb2a26cbf740916cd52265c0b563d771ebfa3a2455cb"
+    },
+    {
+      "path": "/private/tmp/b14-independent-planning/assert-after-fix.log",
+      "bytes": 765,
+      "sha256": "b67191e88220f77738fa13e0556c62ebf55d52423a1f7cf4105aa5216fc9b31a"
+    },
+    {
+      "path": "/private/tmp/b14-independent-planning/old-head.mts",
+      "bytes": 2849,
+      "sha256": "84833cb2736a5d427d53d380e50eae1355d253279ad3c82c46d98d98050c62f0"
+    },
+    {
+      "path": "/private/tmp/b14-independent-planning/old-head.log",
+      "bytes": 379,
+      "sha256": "15c79361757ecf833440f8ef9a941bbc4b1d32a6f7c27b3f8d9d08be447be831"
+    },
+    {
+      "path": "/private/tmp/b14-independent-planning/old-head-after-fix.log",
+      "bytes": 379,
+      "sha256": "15c79361757ecf833440f8ef9a941bbc4b1d32a6f7c27b3f8d9d08be447be831"
+    },
+    {
+      "path": "/private/tmp/b14-independent-planning/support.mts",
+      "bytes": 3186,
+      "sha256": "8386e29a04dc19961aa248c7f3b70d4b06af065542a5b7e3e585d0902b9dcd1a"
+    },
+    {
+      "path": "/private/tmp/b14-independent-planning/before-fix-source.json",
+      "bytes": 3167,
+      "sha256": "13ef3703336867dfb736a1034f2c61a41edaab7a3578f7a3c837a1b725ccd295"
+    },
+    {
+      "path": "/private/tmp/b14-independent-focused.log",
+      "bytes": 529,
+      "sha256": "2690eb3e0cad0bac9071c4cf2d1562a617b593ccc3955d0e9d2c42abe506e113"
+    },
+    {
+      "path": "/private/tmp/b14-independent-focused-after-fix.log",
+      "bytes": 529,
+      "sha256": "8f44e19a1d86292480b8207b9f9b81878c9d8e6e0b414f18934426b1ea81ff89"
+    },
+    {
+      "path": "/private/tmp/b14-objects-independent/manifest.json",
+      "bytes": 4941,
+      "sha256": "a0b0aa19d034f4bef44035957871c59e85c04407429e8e98a3bdda46859c7530"
+    },
+    {
+      "path": "/private/tmp/b14-objects-independent/handoff.md",
+      "bytes": 2646,
+      "sha256": "d9d026caf765c204a825f55da30c9c2320d1b1326c0ed3de72b8b81aa1b238af"
+    }
+  ],
+  "baselineSource": {
+    "head": "8304a30d3f9a3e5284a255bb1cabc321c767f2a6",
+    "files": {
+      "legacy-src/planning/adapters/http.ts": "5186c86e425b69864e496999a8b1aefcb33f7899df297426c59d097df689fc87",
+      "legacy-src/planning/adapters/pi.ts": "81baaf24cc78478cc502c46697519eaa6d382ced5e2568152cf65ec4da720378",
+      "legacy-src/planning/adapters/tools.ts": "5c308e837cd97589447256f1f725ab9f17a3b49bb2813f1ae75c6d17b4157a8c",
+      "legacy-src/planning/contracts.ts": "ee116b95e6ca874544912f464513c5588423eb6961a882f2129d35f9fe64283b",
+      "legacy-src/planning/domain.ts": "c590f2627881557ba98f0a927b45499cf08db736fe466031b74718959933fd80",
+      "legacy-src/planning/evidence.ts": "d827d7f34491a13933bffc59a6a68539c18eff12e2308921783853803ee4aab4",
+      "legacy-src/planning/ledger.ts": "c167c15b90086cf1e94fc5ea02f4dd9533ddbd6a04d5f40805b085e4dcfedfef",
+      "legacy-src/planning/plan.ts": "3a27f12e818c9080200e07f2adfd1d9707400c49921ace3cb47a5a55de07dfc5",
+      "legacy-src/planning/plans.ts": "008218528f745036ff7510da9f01c338d389ebfa9f406e6bc5300add4d5723b3",
+      "legacy-src/planning/service.ts": "7a0d51567808f59a6d9338c18dfd1d5b252e79f584150c47151d69dc08b443be"
+    },
+    "note": "Planning files extracted read-only from git show HEAD; shared adapter dependencies use the current unchanged shared implementation. A type:module package marker permits standalone execution."
+  },
+  "verification": {
+    "runtime": "Node24.21.0",
+    "focused": {
+      "files": 6,
+      "tests": 69,
+      "exitCode": 0
+    },
+    "sameDesiredBehaviorProbe": {
+      "beforeCorrectionExitCode": 1,
+      "afterCorrectionExitCode": 0
+    },
+    "oldHeadCompatibilityExitCode": 0,
+    "objectsIndependentManifest": "/private/tmp/b14-objects-independent/manifest.json"
+  },
+  "limits": [
+    "No provider effects, browser journeys, workerd eviction/alarm or hosted CI tested.",
+    "Public schemas remain version1; tested native migration records preserve IDs, receipts and history.",
+    "No production or Git mutations by reviewers; source correction performed by owner."
+  ]
+}

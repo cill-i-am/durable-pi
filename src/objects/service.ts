@@ -14,13 +14,13 @@ import {
 import {
   objectEventId,
   objectOfferedThrough,
-  objectReplay,
   requireObjectCapacity,
   requireObjectCancellationCapacity,
   requireObjectWritable,
 } from "./domain"
 import type { ObjectDigest, ObjectLedger } from "./ledger"
 import type { WorkingObjects } from "./objects"
+import { decideObjectOperation } from "./operation.machine"
 
 export class Objects extends Context.Service<Objects, WorkingObjects>()(
   "durable-pi/objects/Objects"
@@ -111,10 +111,18 @@ export function makeWorkingObjects(
         Effect.gen(function* () {
           yield* writable(source)
           const operation = yield* tx.operation(input.operationId)
-          const replay = yield* decision(() =>
-            objectReplay(operation, fingerprint)
+          const admission = yield* decision(() =>
+            decideObjectOperation(operation, {
+              type: "INSPECT",
+              digest: fingerprint,
+            })
           )
-          if (replay) return replay
+          if (admission.result.type === "replay")
+            return admission.result.receipt
+          if (admission.result.type !== "admit")
+            return yield* Effect.die(
+              new Error("Unexpected object mutation decision")
+            )
           const catalog = yield* tx.catalog()
           const stored = yield* tx.checklist(input.id)
           yield* decision(() =>
@@ -160,8 +168,12 @@ export function makeWorkingObjects(
               revision: value.revision,
               eventId: id,
             }
-            operation.digest = fingerprint
-            operation.receipt = receipt
+            const committed = decideObjectOperation(operation, {
+              type: "COMMIT",
+              digest: fingerprint,
+              receipt,
+            })
+            Object.assign(operation, committed.state)
             return receipt
           })
         })
@@ -180,14 +192,19 @@ export function makeWorkingObjects(
           yield* writable(source)
           const operation = yield* tx.operation(id)
           const catalog = yield* tx.catalog()
-          if (operation.receipt) return { applied: true }
+          yield* writable(source)
           return yield* decision(() => {
-            if (!operation.cancelled) {
+            const cancelled = decideObjectOperation(operation, {
+              type: "CANCEL",
+            })
+            if (cancelled.result.type !== "cancel")
+              throw new Error("Unexpected object cancellation decision")
+            if (cancelled.changed) {
               requireObjectCancellationCapacity(catalog.operations)
-              operation.cancelled = true
+              Object.assign(operation, cancelled.state)
               catalog.operations++
             }
-            return { applied: false }
+            return { applied: cancelled.result.applied }
           })
         })
       )

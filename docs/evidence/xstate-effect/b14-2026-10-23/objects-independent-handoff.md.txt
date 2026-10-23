@@ -1,0 +1,17 @@
+# B14 Objects independent review
+
+No concrete Objects counterexample remains in the reviewed scope. Production files and Git were not mutated. The Objects source hashes were stable throughout the review; see `manifest.json`.
+
+The independent review inspected all five changed/new Objects source files, the new lifecycle and existing working-object/boundary tests, production worker composition, and installed Pi document materialization/transaction/settlement implementation plus the existing nativeCommit/Cause bridge.
+
+## Independently executed proof
+
+- Focused existing suites: 27 tests in 2 files passed (`/private/tmp/b14-objects-independent-suites.log`). These were a baseline; the additional probes below were independently authored.
+- `probe.mts` / `probe-verified.log`: strict v1 conversion matrix (3 valid states, 12 invalid inputs, 4 unsupported versions); actual SQLite rollback after a successful in-memory conversion followed by an injected callback defect; stable native document identity and detached receipt; authority revoked while operation acquisition is held; interruption during actual `Storage.commit` settlement remains joined and one applied receipt survives cold reopen; late checked failure + defect + interruption survive through native settlement, with no partial persisted operation.
+- `compatibility.mts` / `compatibility-final.log`: archived pre-refactor Objects code from HEAD 8304a30 created a checklist, edit, no-op receipt and cancellation sentinel. Current code reopened and migrated all four operation documents. All eight native document identities, exact public receipts, public Checklist schema/data, catalog/offered projection and both immutable history events survived. Checklist/catalog/event document revisions were byte-for-byte unchanged by operation migration. Archive, cold reopen, unarchive and exact replay reached revision 4 without changing prior history/tasks. A partially versioned legacy record was rejected and preserved unchanged across reopen.
+
+`manifest.json` records the exact source/artifact SHA-256s and commands. Final successful exit codes were 0. Earlier logs retain setup/probe-harness corrections (tsx CLI sandbox socket, baseline ESM package declaration, encoded native SQL selector, and a schema-cloned checked-error identity assertion); none was a production finding.
+
+## Scope limits
+
+Actual installed Pi and Node SQLite, with synthetic injected holds/failures and no external model/provider. No claim about Cloudflare eviction, physical alarms, browser journeys, broad repository gates or other B14 Planning findings. Objects adds no external dispatch or alarm dependency.

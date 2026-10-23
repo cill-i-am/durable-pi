@@ -1,0 +1,8 @@
+{
+  "extends": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tsconfig.json",
+  "include": ["/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/planning/**/*.ts", "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/planning-lifecycle.test.ts", "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/planning-boundary.test.ts"],
+  "compilerOptions": {
+    "types": ["node"],
+    "typeRoots": ["/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/node_modules/@types"]
+  }
+}
