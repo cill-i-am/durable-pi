@@ -139,7 +139,9 @@ test("a retired settings chunk keeps chat intact and offers full reload instead 
   retired = false
   await page.getByRole("button", { name: "Reload page", exact: true }).click()
   await expect(page).toHaveURL(/\/agents\/navi\/settings\/access$/)
-  await expect(page.getByText("Tool access", { exact: true })).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: "Tool access", exact: true })
+  ).toBeVisible()
   await expect(composer(page)).toHaveValue(
     "Retain the draft while settings cannot load."
   )

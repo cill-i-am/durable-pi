@@ -876,7 +876,7 @@ for (const reference of ["missing-assistant", "research"]) {
     ).toBeVisible()
     await expect(
       page.getByText("Your workspace is unavailable.", { exact: true })
-    ).toBeVisible()
+    ).toHaveCount(0)
     await expectGlobalShell(page)
     expect(new URL(page.url()).searchParams.get("returnTo")).toBe(returnTo)
     await expect(
