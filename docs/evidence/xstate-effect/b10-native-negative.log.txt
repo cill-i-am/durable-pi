@@ -1,0 +1,24 @@
+WAIT actual sixty-second retained Workspace discovery after SIGKILL; health-only startup and no object requests during recovery.
+service fixture: The compatibility flag nodejs_compat became the default as of 2026-08-04 so does not need to be specified anymore.
+service fixture: The compatibility flag nodejs_compat became the default as of 2026-08-04 so does not need to be specified anymore.
+
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: accepted preparation remained undiscovered after retained wake and SIGKILL
+
+'pending' !== 'ready'
+
+    at assertReady (file:///Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/scripts/test-workspace-runtime.mjs:103:10)
+    at file:///Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/scripts/test-workspace-runtime.mjs:333:5
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 'pending',
+  expected: 'ready',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.21.0

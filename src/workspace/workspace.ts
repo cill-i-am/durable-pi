@@ -11,6 +11,13 @@ import type {
 } from "./files"
 import type { VideoResult } from "./video"
 
+export type PreparationClaim = {
+  id: string
+  kind: "document" | "video"
+  attemptId: string
+  attempts: number
+}
+
 export type FileContent = {
   info: FileInfo
   body: Stream.Stream<Uint8Array, WorkspaceUnavailable>
@@ -28,8 +35,19 @@ export class Workspace extends Context.Service<
     ) => Effect.Effect<ReadonlyMap<string, FileInfo[]>, FileError>
     video: (id: FileId) => Effect.Effect<VideoResult, FileError>
     list: () => Effect.Effect<FileInfo[], FileError>
+    /** Actual cold activation only; never call on facade construction. */
+    restorePreparation: () => Effect.Effect<void, FileError>
     extractionPending: () => Effect.Effect<boolean, FileError>
-    extractNext: () => Effect.Effect<boolean, FileError>
+    extractNext: (
+      onClaim?: (
+        claim: PreparationClaim
+      ) => Effect.Effect<void, WorkspaceUnavailable>
+    ) => Effect.Effect<boolean, FileError>
+    nextPreparationWake: () => Effect.Effect<number | undefined, FileError>
+    exhaustPreparation: (
+      claim: PreparationClaim | undefined,
+      current?: () => boolean
+    ) => Effect.Effect<number | undefined, FileError>
     retryExtraction: (id: FileId) => Effect.Effect<FileInfo, FileError>
     readText: (
       id: FileId,

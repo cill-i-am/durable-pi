@@ -1,0 +1,232 @@
+{
+  "syntheticExtractors": true,
+  "bucket": "separate durable SQLite DO behind production r2WorkspaceAssets; not hosted R2",
+  "negative": true,
+  "snapshots": {
+    "early-documentBeforeRestart": {
+      "files": [
+        {
+          "id": "10000000-0000-4000-8000-000000000001",
+          "name": "native.pdf",
+          "mime": "application/pdf",
+          "kind": "document",
+          "size": 34,
+          "createdAt": "2026-10-23T14:14:33.387Z",
+          "status": "ready",
+          "trashed": 0,
+          "hash": "d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb",
+          "visionHash": null,
+          "audio": null,
+          "lifecycle_version": 1,
+          "attempt_id": "eef8bbac-7416-407c-a2a1-79022c2dd7f6"
+        }
+      ],
+      "documents": [
+        {
+          "id": "10000000-0000-4000-8000-000000000001",
+          "status": "pending",
+          "attempts": 0,
+          "pages": 0,
+          "readPages": 0,
+          "characters": 0,
+          "truncated": 0,
+          "error": null,
+          "lifecycle_version": 1,
+          "attempt_id": null,
+          "artifact_hash": null,
+          "recovery_deadline": 1792765473399
+        }
+      ],
+      "videos": [],
+      "assets": [
+        {
+          "key": "synthetic-workspace/10000000-0000-4000-8000-000000000001/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb",
+          "bytes": [
+            37,
+            80,
+            68,
+            70,
+            45,
+            49,
+            46,
+            55,
+            32,
+            115,
+            121,
+            110,
+            116,
+            104,
+            101,
+            116,
+            105,
+            99,
+            32,
+            110,
+            97,
+            116,
+            105,
+            118,
+            101,
+            32,
+            100,
+            111,
+            99,
+            117,
+            109,
+            101,
+            110,
+            116
+          ],
+          "puts": 1
+        }
+      ],
+      "events": [
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:recovery\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"09c10669-72fe-403b-adfb-43955fae4a59\",\"armedUntil\":1792764933382}}"
+        },
+        {
+          "value": "empty-scan",
+          "detail": ""
+        },
+        {
+          "value": "put-entered",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000001/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        },
+        {
+          "value": "put-settled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000001/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        },
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:recovery\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"622234d0-0e9a-438f-bf0f-7a15d391cd08\",\"armedUntil\":1792764933395}}"
+        },
+        {
+          "value": "empty-scan",
+          "detail": ""
+        }
+      ],
+      "jobs": [],
+      "physicalAlarm": null,
+      "held": false,
+      "now": 1792764873402,
+      "discoveryDeadline": 1792764933395
+    },
+    "early-documentAfterRestart": {
+      "files": [
+        {
+          "id": "10000000-0000-4000-8000-000000000001",
+          "name": "native.pdf",
+          "mime": "application/pdf",
+          "kind": "document",
+          "size": 34,
+          "createdAt": "2026-10-23T14:14:33.387Z",
+          "status": "ready",
+          "trashed": 0,
+          "hash": "d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb",
+          "visionHash": null,
+          "audio": null,
+          "lifecycle_version": 1,
+          "attempt_id": "eef8bbac-7416-407c-a2a1-79022c2dd7f6"
+        }
+      ],
+      "documents": [
+        {
+          "id": "10000000-0000-4000-8000-000000000001",
+          "status": "pending",
+          "attempts": 0,
+          "pages": 0,
+          "readPages": 0,
+          "characters": 0,
+          "truncated": 0,
+          "error": null,
+          "lifecycle_version": 1,
+          "attempt_id": null,
+          "artifact_hash": null,
+          "recovery_deadline": 1792765473399
+        }
+      ],
+      "videos": [],
+      "assets": [
+        {
+          "key": "synthetic-workspace/10000000-0000-4000-8000-000000000001/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb",
+          "bytes": [
+            37,
+            80,
+            68,
+            70,
+            45,
+            49,
+            46,
+            55,
+            32,
+            115,
+            121,
+            110,
+            116,
+            104,
+            101,
+            116,
+            105,
+            99,
+            32,
+            110,
+            97,
+            116,
+            105,
+            118,
+            101,
+            32,
+            100,
+            111,
+            99,
+            117,
+            109,
+            101,
+            110,
+            116
+          ],
+          "puts": 1
+        }
+      ],
+      "events": [
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:recovery\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"09c10669-72fe-403b-adfb-43955fae4a59\",\"armedUntil\":1792764933382}}"
+        },
+        {
+          "value": "empty-scan",
+          "detail": ""
+        },
+        {
+          "value": "put-entered",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000001/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        },
+        {
+          "value": "put-settled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000001/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        },
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:recovery\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"622234d0-0e9a-438f-bf0f-7a15d391cd08\",\"armedUntil\":1792764933395}}"
+        },
+        {
+          "value": "empty-scan",
+          "detail": ""
+        }
+      ],
+      "jobs": [],
+      "physicalAlarm": null,
+      "held": false,
+      "now": 1792764943448,
+      "discoveryDeadline": 1792764933395
+    }
+  },
+  "noPoke": {
+    "start": 1792764873407,
+    "end": 1792764943397,
+    "discoveryDeadlines": [
+      1792764933395
+    ]
+  }
+}

@@ -1,5 +1,5 @@
 import { it as effectIt } from "@effect/vitest"
-import { Cause, Effect, Exit, ManagedRuntime, Semaphore } from "effect"
+import { Clock, Cause, Effect, Exit, ManagedRuntime, Semaphore } from "effect"
 import { TestClock } from "effect/testing"
 import { afterEach, expect, it } from "vitest"
 
@@ -10,10 +10,7 @@ import {
 import { SqliteWorkspace } from "../src/workspace/adapters/sqlite"
 import { workspaceLayer } from "../src/workspace/adapters/storage"
 import { WorkspaceAdmission } from "../src/workspace/admission"
-import {
-  workspaceExtractionCycle,
-  workspaceExtractionFailure,
-} from "../src/workspace/application"
+import { workspaceExtractionCycle } from "../src/workspace/application"
 import {
   DocumentUnreadable,
   type ExtractDocument,
@@ -88,7 +85,12 @@ function fixture(
       ledger,
       assets,
       () => Effect.sync(() => state.writable),
-      { document: extract, video: video }
+      {
+        document: extract,
+        video: video,
+        arm: () =>
+          Clock.currentTimeMillis.pipe(Effect.map((now) => now + 60_000)),
+      }
     ),
   }
 }
@@ -451,7 +453,7 @@ it("interrupted upload joins its native write, retains an exact reservation, and
 })
 
 effectIt.effect(
-  "preparation scheduling uses invocation Clock for active, idle and failed cycles",
+  "preparation scheduling projects the durable next wake after either an active or idle cycle",
   () =>
     Effect.gen(function* () {
       const f = fixture(),
@@ -461,12 +463,13 @@ effectIt.effect(
       const workspace = {
         ...f.workspace,
         extractNext: () => Effect.succeed(false),
+        nextPreparationWake: () => Effect.succeed(456000),
       }
       expect(
         yield* workspaceExtractionCycle().pipe(
           Effect.provideService(Workspace, workspace)
         )
-      ).toBe(153000)
+      ).toBe(456000)
       expect(
         yield* workspaceExtractionCycle().pipe(
           Effect.provideService(Workspace, {
@@ -474,8 +477,7 @@ effectIt.effect(
             extractNext: () => Effect.succeed(true),
           })
         )
-      ).toBe(124000)
-      expect(yield* workspaceExtractionFailure).toBe(183000)
+      ).toBe(456000)
       yield* f.workspace.extractNext()
       expect(
         yield* workspaceExtractionCycle().pipe(

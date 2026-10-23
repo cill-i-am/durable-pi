@@ -1,10 +1,16 @@
-import { Clock, Effect, Schema, Semaphore } from "effect"
+import { createEffectActor, waitFor } from "@xstate/effect"
+import { Clock, Effect, Exit, Schema } from "effect"
 
 import { preserveFatal } from "../shared/effect"
 import type { WorkspaceAssets, WorkspaceAsset } from "./assets"
 import { type ExtractDocument, ExtractedDocument } from "./documents"
 import { requireWorkspaceFile } from "./domain"
-import { workspaceOperation as attempt } from "./effects"
+import {
+  workspaceOperation as attempt,
+  workspaceOccupancy,
+  workspaceScope,
+} from "./effects"
+import { extractionMachine, type PreparedArtifact } from "./extraction.machine"
 import {
   FileNotFound,
   FileRejected,
@@ -18,11 +24,17 @@ import type {
   VideoJob,
 } from "./ledger"
 import {
+  WORKSPACE_RECOVERY_MS,
+  decidePreparation,
+  type PreparationEvent,
+} from "./preparation.machine"
+import {
   type ExtractVideo,
   VideoResult,
   VIDEO_RESULT_BYTES,
   VIDEO_FRAME_BYTES,
 } from "./video"
+import type { PreparationClaim } from "./workspace"
 
 export const fileAsset = (
   file: WorkspaceFile,
@@ -55,9 +67,11 @@ export function workspacePreparation(
   assets: WorkspaceAssets,
   canWrite: () => Effect.Effect<boolean, WorkspaceUnavailable>,
   extractDocument: ExtractDocument,
-  extractVideo: ExtractVideo
+  extractVideo: ExtractVideo,
+  arm: () => Effect.Effect<number, WorkspaceUnavailable>
 ) {
-  const processing = Semaphore.makeUnsafe(1)
+  const occupancy = workspaceOccupancy(ledger.transactionGroup)
+  const processing = occupancy.preparation
   const active = (id: string) =>
     ledger
       .read(id)
@@ -99,7 +113,10 @@ export function workspacePreparation(
       return yield* new FileRejected({
         message: "Prepare this video's frames from Files before attaching it.",
       })
-    const bytes = yield* assets.read(fileAsset(source, "video-v1"))
+    const bytes = yield* assets.read({
+      ...fileAsset(source, "video-v1"),
+      hash: prepared.artifactHash ?? source.hash,
+    })
     if (bytes.byteLength > VIDEO_RESULT_BYTES)
       return yield* new WorkspaceUnavailable()
     yield* videoSource(id)
@@ -107,29 +124,16 @@ export function workspacePreparation(
       validatedVideo(JSON.parse(new TextDecoder().decode(bytes)))
     )
   })
+  const validateDiscovery = (deadline: number) =>
+    Effect.gen(function* () {
+      const now = yield* Clock.currentTimeMillis
+      if (!Number.isFinite(deadline) || deadline <= now)
+        return yield* new WorkspaceUnavailable()
+    })
   const retry = Effect.fn("Workspace.retryPreparation")(function* (id: string) {
     yield* writable()
     const file = yield* active(id)
-    if (file.kind === "video") {
-      yield* ledger.atomic(() =>
-        Effect.gen(function* () {
-          yield* writable()
-          yield* videoSource(id)
-          const existing = yield* ledger.video(id)
-          if (!existing) yield* ledger.enqueueVideo(id)
-          else if (existing.status === "failed")
-            yield* ledger.saveVideo({
-              ...existing,
-              status: "pending",
-              attempts: 0,
-              error: null,
-              retryAt: 0,
-            })
-        })
-      )
-      return
-    }
-    if (file.mime !== "application/pdf") {
+    if (file.kind !== "video" && file.mime !== "application/pdf") {
       if (file.kind !== "document" || file.mime !== "application/octet-stream")
         return yield* new FileRejected({
           message: "Text extraction currently supports PDFs.",
@@ -138,189 +142,294 @@ export function workspacePreparation(
       if (new TextDecoder().decode(bytes.subarray(0, 5)) !== "%PDF-")
         return yield* new FileRejected({ message: "This file is not a PDF." })
     }
+    const deadline = yield* arm()
     yield* ledger.atomic(() =>
       Effect.gen(function* () {
         yield* writable()
         yield* active(id)
-        yield* ledger.promotePdf(id)
-        const existing = yield* ledger.document(id)
-        if (!existing) yield* ledger.enqueueDocument(id)
-        else if (existing.status === "failed" || existing.status === "empty")
-          yield* ledger.saveDocument({
-            ...existing,
-            status: "pending",
-            attempts: 0,
-            error: null,
-          })
-      })
-    )
-  })
-  const nextVideo = Effect.fn("Workspace.prepareVideo")(function* () {
-    const pending = yield* pendingVideo(),
-      now = yield* Clock.currentTimeMillis
-    if (!pending || pending.retryAt > now) return false
-    const running: VideoJob = {
-      ...pending,
-      status: "running",
-      attempts: pending.attempts + 1,
-    }
-    if (!(yield* ledger.claimVideo(running))) return false
-    const update = (
-      status: VideoJob["status"],
-      error: string | null,
-      retryAt = 0
-    ) =>
-      ledger.saveVideo({ ...running, status, error, retryAt }, running.attempts)
-    if (running.attempts > 3) {
-      yield* update(
-        "failed",
-        "Video preparation was interrupted. Retry from Files."
-      )
-      return true
-    }
-    yield* Effect.gen(function* () {
-      const source = yield* videoSource(pending.id)
-      const fence = () =>
-        Effect.gen(function* () {
-          yield* videoSource(pending.id)
-          yield* writable()
-          if ((yield* ledger.video(pending.id))?.attempts !== running.attempts)
-            return yield* new FileNotFound()
-        })
-      const original = yield* assets.read(fileAsset(source))
-      yield* fence()
-      const raw = yield* extractVideo(original)
-      const result = yield* Effect.sync(() => validatedVideo(raw))
-      yield* fence()
-      yield* assets.write(
-        fileAsset(source, "video-v1"),
-        new TextEncoder().encode(JSON.stringify(result))
-      )
-      yield* ledger.atomic(() =>
-        Effect.gen(function* () {
-          yield* fence()
-          yield* ledger.saveVideo(
-            {
-              ...running,
-              status: "ready",
-              duration: result.duration,
-              frames: result.frames.length,
-              captions: !!result.captions,
-              error: null,
-            },
-            running.attempts
-          )
-        })
-      )
-    }).pipe(
-      preserveFatal,
-      Effect.catchTags({
-        VideoUnreadable: () =>
-          update(
-            "failed",
-            "Could not prepare this video. Use MP4/WebM up to 8 MB, ten minutes and 4096 pixels per side; damaged or complex clips may exceed the decoding limit."
-          ),
-        WorkspaceUnavailable: () =>
-          Clock.currentTimeMillis.pipe(
-            Effect.flatMap((current) =>
-              update(
-                running.attempts < 3 ? "pending" : "failed",
-                running.attempts < 3
-                  ? null
-                  : "Video preparation is unavailable or exceeded its resource limit. Retry from Files.",
-                current + 60_000
-              )
+        yield* validateDiscovery(deadline)
+        if (file.kind === "video") {
+          const existing = yield* ledger.video(id)
+          if (!existing)
+            yield* ledger.enqueueVideo(
+              id,
+              (yield* Clock.currentTimeMillis) + WORKSPACE_RECOVERY_MS
             )
-          ),
-        WorkspaceReadOnly: () => update("pending", null),
-        FileNotFound: () => update("pending", null),
+          else {
+            const next = decidePreparation(existing, {
+              type: "RETRY",
+              now: yield* Clock.currentTimeMillis,
+            })
+            if (next.status === "empty")
+              throw new Error("Invalid video preparation")
+            yield* ledger.saveVideo(
+              { ...existing, ...next, status: next.status },
+              existing
+            )
+          }
+        } else {
+          yield* ledger.promotePdf(id)
+          const existing = yield* ledger.document(id)
+          if (!existing)
+            yield* ledger.enqueueDocument(
+              id,
+              (yield* Clock.currentTimeMillis) + WORKSPACE_RECOVERY_MS
+            )
+          else
+            yield* ledger.saveDocument(
+              {
+                ...existing,
+                ...decidePreparation(existing, {
+                  type: "RETRY",
+                  now: yield* Clock.currentTimeMillis,
+                }),
+              },
+              existing
+            )
+        }
       })
     )
-    return true
   })
-  const next = Effect.fn("Workspace.prepareNext")(function* () {
-    const pending = yield* pendingDocument()
-    if (!pending) return yield* nextVideo()
-    if (pending.attempts >= 3) {
-      yield* ledger.saveDocument(
-        {
-          ...pending,
-          status: "failed",
-          error: "Extraction was interrupted. Retry from Files.",
-        },
-        pending.attempts
-      )
-      return true
-    }
-    const running: DocumentJob = {
-      ...pending,
-      status: "running",
-      attempts: pending.attempts + 1,
-    }
-    if (!(yield* ledger.claimDocument(running))) return false
-    const update = (status: DocumentJob["status"], error: string | null) =>
-      ledger.saveDocument({ ...running, status, error }, running.attempts)
-    yield* Effect.gen(function* () {
-      const source = yield* active(pending.id)
-      const fence = () =>
-        Effect.gen(function* () {
-          yield* active(pending.id)
-          yield* writable()
-          if (
-            (yield* ledger.document(pending.id))?.attempts !== running.attempts
-          )
-            return yield* new FileNotFound()
-        })
-      const original = yield* assets.read(fileAsset(source))
-      yield* fence()
-      const raw = yield* extractDocument(original)
-      const result = yield* Effect.sync(() =>
-        Schema.decodeUnknownSync(ExtractedDocument)(raw)
-      )
-      yield* fence()
-      if (result.text)
-        yield* assets.write(
-          fileAsset(source, "pdf-text-v1"),
-          new TextEncoder().encode(result.text)
+  const next = Effect.fn("Workspace.prepareNext")(function* (
+    onClaim?: (
+      claim: PreparationClaim
+    ) => Effect.Effect<void, WorkspaceUnavailable>,
+    own: (id: string, token: string) => void = () => {}
+  ) {
+    // Selection is a projection. Only CLAIM inside the transaction admits work.
+    const document = yield* pendingDocument()
+    const pending = document ?? (yield* pendingVideo())
+    if (!pending) return false
+    const isVideo = !document
+    const readJob = () =>
+      isVideo ? ledger.video(pending.id) : ledger.document(pending.id)
+    const save = (
+      job: DocumentJob | VideoJob,
+      event: PreparationEvent,
+      result?: PreparedArtifact
+    ) => {
+      const next = decidePreparation(job, event)
+      if (isVideo) {
+        if (next.status === "empty")
+          throw new Error("Invalid video preparation")
+        return ledger.saveVideo(
+          {
+            ...(job as VideoJob),
+            ...next,
+            status: next.status,
+            ...(result?.video
+              ? {
+                  duration: result.video.duration,
+                  frames: result.video.frames.length,
+                  captions: !!result.video.captions,
+                }
+              : {}),
+          },
+          job
         )
-      yield* ledger.atomic(() =>
+      }
+      return ledger.saveDocument(
+        {
+          ...(job as DocumentJob),
+          ...next,
+          ...(result?.document
+            ? {
+                pages: result.document.pages,
+                readPages: result.document.readPages,
+                characters: result.document.text.length,
+                truncated: result.document.truncated,
+              }
+            : {}),
+        },
+        job
+      )
+    }
+    const attemptId = crypto.randomUUID()
+    const claimed = yield* ledger.atomic(() =>
+      Effect.gen(function* () {
+        yield* writable()
+        yield* active(pending.id)
+        const current = yield* readJob()
+        if (!current) return undefined
+        const event = {
+          type: "CLAIM",
+          attemptId,
+          now: yield* Clock.currentTimeMillis,
+        } as const
+        const next = decidePreparation(current, event)
+        yield* save(current, event)
+        if (next.status !== "running" || next.attemptId !== attemptId)
+          return undefined
+        yield* Effect.sync(() => own(pending.id, attemptId))
+        return { ...current, ...next }
+      })
+    )
+    if (!claimed) return false
+    if (onClaim)
+      yield* onClaim({
+        id: pending.id,
+        kind: isVideo ? "video" : "document",
+        attemptId,
+        attempts: claimed.attempts,
+      })
+    const fence = () =>
+      Effect.gen(function* () {
+        const source = yield* active(pending.id)
+        yield* writable()
+        const current = yield* readJob()
+        if (
+          current?.status !== "running" ||
+          current.attempts !== claimed.attempts ||
+          current.attemptId !== attemptId
+        )
+          return yield* new FileNotFound()
+        return source
+      })
+    const update = (event: PreparationEvent, result?: PreparedArtifact) =>
+      ledger.atomic(() =>
         Effect.gen(function* () {
-          yield* fence()
-          yield* ledger.saveDocument(
-            {
-              ...running,
-              status: result.text ? "ready" : "empty",
-              pages: result.pages,
-              readPages: result.readPages,
-              characters: result.text.length,
-              truncated: result.truncated,
-              error: result.text
-                ? null
-                : "No readable text was found. This PDF may be scanned; OCR is not available yet.",
-            },
-            running.attempts
+          const current = yield* readJob()
+          if (
+            current?.status !== "running" ||
+            current.attempts !== claimed.attempts ||
+            current.attemptId !== attemptId
           )
+            return
+          yield* save(current, event, result)
         })
       )
-    }).pipe(
-      preserveFatal,
-      Effect.catchTags({
-        DocumentUnreadable: (cause) =>
-          update(
-            "failed",
-            cause.reason === "encrypted"
-              ? "This PDF is password protected. Upload an unlocked copy."
-              : "This PDF could not be read. Upload a different copy."
+    const failure = (retryable: boolean, error: string, retryAt = 0) =>
+      Clock.currentTimeMillis.pipe(
+        Effect.flatMap((now) =>
+          update({ type: "FAILURE", attemptId, retryable, retryAt, error, now })
+        )
+      )
+    yield* workspaceScope((observe) =>
+      Effect.gen(function* () {
+        const machine = extractionMachine({
+          read: observe(
+            Effect.gen(function* () {
+              const source = yield* fence()
+              return yield* assets.read(fileAsset(source))
+            })
           ),
-        WorkspaceUnavailable: () =>
-          update(
-            running.attempts < 3 ? "pending" : "failed",
-            running.attempts < 3
-              ? null
-              : "Extraction was unavailable or exceeded its resource limit. Retry from Files."
-          ),
-        WorkspaceReadOnly: () => update("pending", null),
-        FileNotFound: () => update("pending", null),
+          decode: (bytes) =>
+            observe(
+              Effect.gen(function* () {
+                yield* fence()
+                if (isVideo) {
+                  const raw = yield* extractVideo(bytes)
+                  const result = yield* Effect.sync(() => validatedVideo(raw))
+                  return {
+                    video: result,
+                    document: null,
+                    bytes: new TextEncoder().encode(JSON.stringify(result)),
+                  }
+                }
+                const raw = yield* extractDocument(bytes)
+                const result = yield* Effect.sync(() =>
+                  Schema.decodeUnknownSync(ExtractedDocument)(raw)
+                )
+                return {
+                  document: result,
+                  video: null,
+                  bytes: result.text
+                    ? new TextEncoder().encode(result.text)
+                    : null,
+                }
+              })
+            ),
+          publish: (result) =>
+            observe(
+              Effect.gen(function* () {
+                const source = yield* fence()
+                if (!result.bytes) return null
+                // Output hash, never the original hash: a late put cannot overwrite a
+                // different published result, even after a cold recovery and retry.
+                const hash = yield* assets.digest(result.bytes)
+                yield* assets.write(
+                  {
+                    id: source.id,
+                    hash,
+                    variant: isVideo ? "video-v1" : "pdf-text-v1",
+                  },
+                  result.bytes
+                )
+                return hash
+              })
+            ),
+          commit: (result, artifactHash) =>
+            observe(
+              ledger.atomic(() =>
+                Effect.gen(function* () {
+                  yield* fence()
+                  const empty = !isVideo && !result.document?.text
+                  yield* update(
+                    {
+                      type: "COMPLETE",
+                      attemptId,
+                      artifactHash,
+                      empty,
+                      error: empty
+                        ? "No readable text was found. This PDF may be scanned; OCR is not available yet."
+                        : null,
+                    },
+                    result
+                  )
+                })
+              )
+            ),
+          recover: (cause) =>
+            observe(
+              Effect.failCause(cause).pipe(
+                preserveFatal,
+                Effect.catchTags({
+                  DocumentUnreadable: (cause) =>
+                    failure(
+                      false,
+                      cause.reason === "encrypted"
+                        ? "This PDF is password protected. Upload an unlocked copy."
+                        : "This PDF could not be read. Upload a different copy."
+                    ),
+                  VideoUnreadable: () =>
+                    failure(
+                      false,
+                      "Could not prepare this video. Use MP4/WebM up to 8 MB, ten minutes and 4096 pixels per side; damaged or complex clips may exceed the decoding limit."
+                    ),
+                  WorkspaceUnavailable: () =>
+                    Clock.currentTimeMillis.pipe(
+                      Effect.flatMap((now) =>
+                        failure(
+                          true,
+                          isVideo
+                            ? "Video preparation is unavailable or exceeded its resource limit. Retry from Files."
+                            : "Extraction was unavailable or exceeded its resource limit. Retry from Files.",
+                          isVideo ? now + 60_000 : 0
+                        )
+                      )
+                    ),
+                  WorkspaceReadOnly: () =>
+                    Clock.currentTimeMillis.pipe(
+                      Effect.flatMap((now) =>
+                        update({ type: "DEFER", attemptId, now })
+                      )
+                    ),
+                  FileNotFound: () =>
+                    Clock.currentTimeMillis.pipe(
+                      Effect.flatMap((now) =>
+                        update({ type: "DEFER", attemptId, now })
+                      )
+                    ),
+                })
+              )
+            ),
+        })
+        const actor = yield* createEffectActor(machine)
+        const done = yield* waitFor(
+          actor,
+          (snapshot) => snapshot.status === "done"
+        ).pipe(Effect.orDie)
+        return yield* done.output!
       })
     )
     return true
@@ -328,7 +437,84 @@ export function workspacePreparation(
   return {
     video,
     retry,
-    next: () => processing.withPermits(1)(next()),
+    next: (
+      onClaim?: (
+        claim: PreparationClaim
+      ) => Effect.Effect<void, WorkspaceUnavailable>
+    ) =>
+      Effect.suspend(() => {
+        let owned: string | undefined
+        return processing.withPermits(1)(
+          next(onClaim, (id, token) => {
+            owned = token
+            occupancy.start(id, token)
+          }).pipe(
+            Effect.onExit((exit) =>
+              Effect.sync(() => {
+                // workspaceScope has closed and joined every native invocation before
+                // this callback. Absence from this map is never evidence of release.
+                if (owned) occupancy.finish(owned, Exit.isFailure(exit))
+              })
+            )
+          )
+        )
+      }),
+    nextWake: () =>
+      Effect.gen(function* () {
+        if (!(yield* canWrite())) return undefined
+        const now = yield* Clock.currentTimeMillis
+        if (yield* ledger.pendingDocument()) return now
+        const video = yield* ledger.pendingVideo()
+        return video ? Math.max(now, video.retryAt) : undefined
+      }),
+    exhaust: (
+      claim: PreparationClaim | undefined,
+      eligible: () => boolean = () => true
+    ) =>
+      ledger.atomic(() =>
+        Effect.gen(function* () {
+          if (!eligible()) return undefined
+          if (!claim) return yield* ledger.pendingRecoveryDeadline()
+          if (claim.kind === "document") {
+            const current = yield* ledger.document(claim.id)
+            if (
+              !current ||
+              current.attemptId !== claim.attemptId ||
+              current.attempts !== claim.attempts
+            )
+              return yield* ledger.pendingRecoveryDeadline()
+            yield* ledger.saveDocument(
+              {
+                ...current,
+                ...decidePreparation(current, {
+                  type: "EXHAUST",
+                  attemptId: claim.attemptId,
+                }),
+              },
+              current
+            )
+          } else {
+            const current = yield* ledger.video(claim.id)
+            if (
+              !current ||
+              current.attemptId !== claim.attemptId ||
+              current.attempts !== claim.attempts
+            )
+              return yield* ledger.pendingRecoveryDeadline()
+            const next = decidePreparation(current, {
+              type: "EXHAUST",
+              attemptId: claim.attemptId,
+            })
+            if (next.status === "empty")
+              throw new Error("Invalid video preparation")
+            yield* ledger.saveVideo(
+              { ...current, ...next, status: next.status },
+              current
+            )
+          }
+          return yield* ledger.pendingRecoveryDeadline()
+        })
+      ),
     pending: () =>
       Effect.gen(function* () {
         return !!(yield* pendingDocument()) || !!(yield* pendingVideo())
