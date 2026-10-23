@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto"
 
-import { Effect, Logger, ManagedRuntime, Redacted } from "effect"
+import { Effect, Logger, ManagedRuntime, Redacted, Schema } from "effect"
 import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from "jose"
 import { afterEach, beforeAll, expect, it, vi } from "vitest"
 
@@ -12,8 +12,10 @@ import {
 import { SqliteCredentials } from "../src/inference/adapters/credential-sqlite"
 import {
   ModelCredentials,
+  OAuthCredential,
   CredentialUnavailable,
   credentialApplication,
+  type CredentialRefresh,
 } from "../src/inference/credentials"
 import { database } from "./database"
 
@@ -30,7 +32,9 @@ afterEach(async () => {
   for (const dispose of disposals.splice(0)) await dispose()
 })
 const pendingKey = "chatgpt-pending-sign-in-v1"
-function fixture() {
+function fixture(
+  refresh: CredentialRefresh = () => Effect.die("Unexpected refresh")
+) {
   const saved = new Map<string, unknown>()
   let tail = Promise.resolve()
   const storage: Pick<DurableObjectStorage, "transaction"> = {
@@ -69,9 +73,7 @@ function fixture() {
       })
     )
   )
-  const runtime = ManagedRuntime.make(
-    credentialApplication(ledger, () => Effect.die("Unexpected refresh"))
-  )
+  const runtime = ManagedRuntime.make(credentialApplication(ledger, refresh))
   disposals.push(() => runtime.dispose())
   const service = runtime.runSync(ModelCredentials)
   let membership = "admin-membership",
@@ -82,7 +84,12 @@ function fixture() {
   const warnings: unknown[] = []
   const transport = vi.fn(
     async (_url: string | URL | Request, init?: RequestInit) => {
-      expect(saved.has(pendingKey)).toBe(false)
+      expect(saved.get(pendingKey)).toMatchObject({
+        phase: "exchanging",
+        schemaVersion: 1,
+        workflowVersion: 1,
+      })
+      expect(saved.get(pendingKey)).not.toHaveProperty("pending")
       expect(init?.redirect).toBe("manual")
       const params = new URLSearchParams(init?.body as string)
       const url = new URL(started.authorizationUrl)
@@ -168,6 +175,8 @@ function fixture() {
           )
         )
       ),
+    finishWithSignal: (signal: AbortSignal) =>
+      Effect.runPromise(host.finish(started.id, address()), { signal }),
     submit: (value: string) =>
       Effect.runPromise(host.finish(started.id, value)),
     request: (request: Request) =>
@@ -278,7 +287,12 @@ it("rejects a token endpoint redirect without installing credentials or replayin
   await expect(f.finish()).rejects.toThrow("existing connection has been kept")
   await expect(f.finish()).rejects.toThrow("already used")
   expect(f.transport).toHaveBeenCalledTimes(1)
-  expect(f.current()).toBeUndefined()
+  expect(f.current()).toMatchObject({
+    value: {
+      access: Redacted.make("old-access"),
+      refresh: Redacted.make("old-refresh"),
+    },
+  })
   expect(JSON.stringify(f.warnings)).toContain("token_exchange")
   expect(JSON.stringify(f.warnings)).toContain("302")
   expect(JSON.stringify(f.warnings)).not.toContain("unexpected.invalid")
@@ -324,7 +338,11 @@ it("rejects an expired attempt or a different membership generation", async () =
   const f = fixture()
   await f.start()
   const pending = f.saved.get(pendingKey) as Record<string, unknown>
-  f.saved.set(pendingKey, { ...pending, expiresAt: 1 })
+  f.saved.set(pendingKey, {
+    ...pending,
+    expiresAt: 1,
+    pending: { ...(pending.pending as Record<string, unknown>), expiresAt: 1 },
+  })
   await expect(f.finish()).rejects.toThrow("expired")
   expect((await f.status()).pending).toBeNull()
   await f.start()
@@ -359,4 +377,162 @@ it("bounds and validates HTTP input, and exposes no sign-in state to an unauthor
   )
   expect(denied.status).toBe(403)
   expect(await denied.text()).not.toContain("authorizationUrl")
+})
+
+it("an accepted sign-in exchange belongs to the account after its browser leaves", async () => {
+  const f = fixture()
+  await f.start()
+  let entered!: () => void
+  let release!: () => void
+  const started = new Promise<void>((resolve) => {
+    entered = resolve
+  })
+  const finish = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  f.exchange(async () => {
+    entered()
+    await finish
+  })
+  const browser = new AbortController()
+  const result = f.finishWithSignal(browser.signal).then(
+    () => "connected",
+    () => "interrupted"
+  )
+  await started
+  try {
+    browser.abort()
+    expect(f.transport.mock.calls[0]?.[1]?.signal?.aborted).toBe(false)
+    release()
+    await result
+    expect(f.current()).toMatchObject({
+      value: { refresh: Redacted.make("new-refresh") },
+    })
+    expect(f.transport).toHaveBeenCalledTimes(1)
+    expect(f.saved.get(pendingKey)).toMatchObject({ phase: "connected" })
+  } finally {
+    release()
+    await result
+  }
+})
+
+it("restores legacy waiting sign-in without changing its PKCE challenge or attempt identity", async () => {
+  const f = fixture(),
+    started = await f.start()
+  const saved = f.saved.get(pendingKey) as { pending: unknown }
+  f.saved.set(pendingKey, saved.pending)
+  f.restart()
+  expect(await f.status()).toEqual({ pending: started })
+  expect(f.saved.get(pendingKey)).toMatchObject({
+    schemaVersion: 1,
+    workflowVersion: 1,
+    id: started.id,
+    phase: "waiting",
+  })
+  await f.finish()
+  expect(f.saved.get(pendingKey)).toMatchObject({
+    id: started.id,
+    phase: "connected",
+  })
+  expect(f.saved.get(pendingKey)).not.toHaveProperty("pending")
+})
+it("future sign-in data is retained and blocks start instead of resetting the attempt", async () => {
+  const f = fixture()
+  await f.start()
+  const saved = { ...(f.saved.get(pendingKey) as object), workflowVersion: 2 }
+  f.saved.set(pendingKey, saved)
+  await expect(f.status()).rejects.toThrow("newer lifecycle")
+  await expect(f.start()).rejects.toThrow("newer lifecycle")
+  expect(f.saved.get(pendingKey)).toEqual(saved)
+  expect(f.transport).not.toHaveBeenCalled()
+})
+it("known corrupted sign-in data is a sanitized defect", async () => {
+  const f = fixture()
+  await f.start()
+  const saved = f.saved.get(pendingKey) as { pending: object }
+  f.saved.set(pendingKey, {
+    ...saved,
+    pending: { ...saved.pending, verifier: { secret: "private-verifier" } },
+  })
+  const result = await f.status().then(
+    () => undefined,
+    (error: unknown) => error
+  )
+  expect(String(result)).toContain("stored sign-in lifecycle is invalid")
+  expect(String(result)).not.toContain("private-verifier")
+  expect(f.transport).not.toHaveBeenCalled()
+})
+it("a late sign-in cannot replace a newer connection installed by another account host", async () => {
+  const f = fixture()
+  await f.start()
+  f.exchange(async () => {
+    await Effect.runPromise(
+      f.ledger.install(
+        "openai",
+        Schema.decodeUnknownSync(OAuthCredential)({
+          type: "oauth",
+          access: "newer-access",
+          refresh: "newer-refresh",
+          expires: Date.now() + 900_000,
+          clientId: "oaiapp_synthetic",
+          connectionId: "newer-connection",
+        })
+      )
+    )
+  })
+  await expect(f.finish()).rejects.toThrow("model connection changed")
+  expect(f.current()).toMatchObject({
+    value: {
+      access: Redacted.make("newer-access"),
+      connectionId: "newer-connection",
+    },
+  })
+  expect(f.saved.get(pendingKey)).toMatchObject({ phase: "unconfirmed" })
+})
+
+it("browser departure before account admission leaves the authorization code unconsumed", async () => {
+  let entered!: () => void, release!: () => void, queued!: () => void
+  const rotating = new Promise<void>((resolve) => {
+    entered = resolve
+  })
+  const complete = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  const admitted = new Promise<void>((resolve) => {
+    queued = resolve
+  })
+  const f = fixture((current) =>
+    Effect.promise(async () => {
+      entered()
+      await complete
+      return { ...current, expires: Date.now() + 900_000 }
+    })
+  )
+  await f.start()
+  const current = f.current()!
+  if (!current.seedCurrent || current.value.type !== "oauth")
+    throw new Error("missing fixture grant")
+  await Effect.runPromise(
+    f.ledger.put("openai", { ...current.value, expires: 0 })
+  )
+  const rotation = f.runtime.runPromise(f.service.resolve("openai", true))
+  await rotating
+  const original = f.service.connect
+  const observe = vi
+    .spyOn(f.service, "connect")
+    .mockImplementation((...args) =>
+      Effect.sync(queued).pipe(Effect.andThen(original(...args)))
+    )
+  const browser = new AbortController()
+  const finish = f.finishWithSignal(browser.signal).catch(() => undefined)
+  await admitted
+  browser.abort()
+  expect(f.saved.get(pendingKey)).toMatchObject({ phase: "waiting" })
+  expect(f.transport).not.toHaveBeenCalled()
+  release()
+  await Promise.all([rotation, finish])
+  observe.mockRestore()
+  expect(f.saved.get(pendingKey)).toMatchObject({ phase: "waiting" })
+  await f.finish()
+  expect(f.transport).toHaveBeenCalledTimes(1)
 })

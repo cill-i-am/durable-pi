@@ -1,0 +1,37 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-review-stack/durable-pi
+
+ ❯ tests/chatgpt-sign-in.test.ts (20 tests | 1 failed | 19 skipped) 143ms
+   × a late sign-in cannot replace a newer connection installed by another account host 84ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/chatgpt-sign-in.test.ts > a late sign-in cannot replace a newer connection installed by another account host
+AssertionError: promise resolved "{ status: 'connected', …(1) }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "email": "owner@example.invalid",
++   "status": "connected",
+  }
+
+ ❯ tests/chatgpt-sign-in.test.ts:483:27
+    481|     )
+    482|   })
+    483|   await expect(f.finish()).rejects.toThrow("model connection changed")
+       |                           ^
+    484|   expect(f.current()).toMatchObject({
+    485|     value: {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 19 skipped (20)
+   Start at  16:48:16
+   Duration  500ms (import 54%, tests 35%, transform 10%, setup 2%, worker 1%)
+

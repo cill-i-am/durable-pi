@@ -1,0 +1,34 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-review-stack/durable-pi
+
+ ❯ tests/sign-in-deadline.test.ts (1 test | 1 failed) 58ms
+   × sign-in admission rechecks expiry after acquiring the KV transaction 57ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/sign-in-deadline.test.ts > sign-in admission rechecks expiry after acquiring the KV transaction
+TypeError: clock.currentTimeNanosUnsafe is not a function
+ ❯ makeSpanUnsafe node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:6037:40
+ ❯ PrimitiveImpl.~effect/Effect/args node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:6178:18
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/core.ts:644:22
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+ ❯ node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:5689:9
+ ❯ node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:5767:19
+ ❯ Module.<anonymous> node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:5786:5
+ ❯ tests/sign-in-deadline.test.ts:73:34
+     71|   )
+     72|   try {
+     73|     const pending = await Effect.runPromise(
+       |                                  ^
+     74|       host
+     75|         .start("owner@example.invalid")
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 2 passed (3)
+      Tests  1 failed | 27 passed (28)
+   Start at  16:56:10
+   Duration  1.27s (tests 55%, import 39%, transform 4%, setup 1%)
+

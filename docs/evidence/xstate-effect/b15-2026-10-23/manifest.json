@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "scope": "Frozen domain and independent review evidence before parent composition and broad gates; original source hashes and limits retained.",
+  "artifacts": [
+    {
+      "path": "docs/evidence/xstate-effect/b15-2026-10-23/b15-source-freeze.json.txt",
+      "original": "/private/tmp/b15-source-freeze.json",
+      "sha256": "b081d08c36e29672f121385f1c33b0ee7f4358046f7423cc7ab280d41181c5c1",
+      "bytes": 1702
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b15-2026-10-23/b15-independent-review.json.txt",
+      "original": "/private/tmp/b15-independent-review.json",
+      "sha256": "c76cfe9fc76ccf069a679f96791be7c037d4cff36d880692d01f1151dcd466f6",
+      "bytes": 2665
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b15-2026-10-23/b15-focused-final.log.txt",
+      "original": "/private/tmp/b15-focused-final.log",
+      "sha256": "0f1395ca95176f0b93180936d2ccf41b5e548442d8dd6d34a994f14f85b61082",
+      "bytes": 428
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b15-2026-10-23/b15-types-final.log.txt",
+      "original": "/private/tmp/b15-types-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b15-2026-10-23/b15-lint-final.log.txt",
+      "original": "/private/tmp/b15-lint-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b15-2026-10-23/b15-format-final.log.txt",
+      "original": "/private/tmp/b15-format-final.log",
+      "sha256": "807f0c257cb7c2e177dcc67c4925426beaa72bbbee50a7de0b3df1776c82b83e",
+      "bytes": 113
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b15-2026-10-23/b15-sign-in-cancellation-negative.log.txt",
+      "original": "/private/tmp/b15-sign-in-cancellation-negative.log",
+      "sha256": "a03e917be3f880ecf70d8ff14735cc8f3460bcacb2a6b2d3ae1c007bccad1d6d",
+      "bytes": 1069
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b15-2026-10-23/b15-generation-negative.log.txt",
+      "original": "/private/tmp/b15-generation-negative.log",
+      "sha256": "27507fd8ff07af012316f7f0368857645a0315a4da454d945c370617f209dd93",
+      "bytes": 1177
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b15-2026-10-23/b15-generation-restored.log.txt",
+      "original": "/private/tmp/b15-generation-restored.log",
+      "sha256": "1caf842d6b6d6b2bd74a02075c35e9bca0ddd8bcf833901433fb0c66b8465380",
+      "bytes": 252
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b15-2026-10-23/b15-independent-deadline.test.ts.txt",
+      "original": "/private/tmp/b15-independent-deadline.test.ts",
+      "sha256": "d9115dce40a8aeb128bb1fc47b48ca2aa5d14c1244eaf2ec5939745e7a746fbb",
+      "bytes": 2725
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b15-2026-10-23/b15-independent-deadline.log.txt",
+      "original": "/private/tmp/b15-independent-deadline.log",
+      "sha256": "02a9f4bb024387c15e2dbd998e2f54f80c600c5e33105403c486b758f513d2a6",
+      "bytes": 1376
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b15-2026-10-23/b15-independent-deadline-after.log.txt",
+      "original": "/private/tmp/b15-independent-deadline-after.log",
+      "sha256": "c51d880407198350cab488efa751c4a7d2e0856697d695663aaffe66c0ab6b70",
+      "bytes": 238
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b15-2026-10-23/b15-deadline-fix.log.txt",
+      "original": "/private/tmp/b15-deadline-fix.log",
+      "sha256": "099bd51be63ca011960149105cec4f4420c21f9b7ac6a83197f3922f4a1a91a1",
+      "bytes": 1768
+    }
+  ]
+}
