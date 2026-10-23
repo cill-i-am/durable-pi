@@ -1,0 +1,41 @@
+{
+  "passed": true,
+  "directory": "/private/tmp/b14-objects-independent/compat-9e6MqE",
+  "baselineHead": "8304a30d3f9a3e5284a255bb1cabc321c767f2a6",
+  "nativeDocumentIdsPreserved": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "migratedOperationIds": [
+    2,
+    6,
+    8,
+    9
+  ],
+  "baselinePublicReceipt": [
+    {
+      "objectId": "e0c42ec8-02dd-4202-ab6a-c27161038367",
+      "revision": 1,
+      "eventId": "e0c42ec8-02dd-4202-ab6a-c27161038367:1"
+    },
+    {
+      "objectId": "e0c42ec8-02dd-4202-ab6a-c27161038367",
+      "revision": 2,
+      "eventId": "e0c42ec8-02dd-4202-ab6a-c27161038367:2"
+    },
+    {
+      "objectId": "e0c42ec8-02dd-4202-ab6a-c27161038367",
+      "revision": 2,
+      "eventId": "e0c42ec8-02dd-4202-ab6a-c27161038367:2"
+    }
+  ],
+  "finalRevision": 4,
+  "immutableHistoryEvents": 2,
+  "invalidLegacyRetainedAcrossReopen": true
+}

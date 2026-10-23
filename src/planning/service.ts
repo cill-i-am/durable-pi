@@ -1,6 +1,11 @@
 import { Clock, Context, Effect, Layer, Schema } from "effect"
 
 import {
+  advancePlanBinding,
+  advancePlanOperation,
+  planReplay,
+} from "./authority.machine"
+import {
   PlanFailure,
   PlanId,
   PlanUpdate,
@@ -12,9 +17,6 @@ import {
 } from "./contracts"
 import {
   planHistoryKey,
-  planReplay,
-  reconcilePlan,
-  requirePlanBinding,
   requirePlanCapacity,
   requirePlanEvidence,
   requirePlanInputRevision,
@@ -22,7 +24,7 @@ import {
   requireUncancelledPlan,
 } from "./domain"
 import type { PlanBinding, PlanDigest, PlanLedger } from "./ledger"
-import { revisePlan } from "./plan"
+import { reconcilePlan, revisePlan } from "./plan.machine"
 import type { PlanControl, PlanSource, Plans } from "./plans"
 
 export class Planning extends Context.Service<Planning, Plans>()(
@@ -161,7 +163,9 @@ export function makePlans<TRequirements>(
         Effect.gen(function* () {
           yield* writable(source, true)
           const binding = yield* tx.binding(source.turnId)
-          yield* decision(() => requirePlanBinding(binding, input.id))
+          yield* decision(() =>
+            advancePlanBinding(binding, { type: "CHECK", id: input.id })
+          )
           const operation = yield* tx.operation(input.operationId)
           const replay = yield* decision(() =>
             planReplay(operation, fingerprint)
@@ -213,7 +217,10 @@ export function makePlans<TRequirements>(
               turnId: source.turnId,
             }
             doc.value = next
-            binding.planId = next.id
+            Object.assign(
+              binding,
+              advancePlanBinding(binding, { type: "BIND", id: next.id })
+            )
             if (!previous) catalog.ids.push(next.id)
             const receipt: PlanReceipt = {
               id: next.id,
@@ -225,8 +232,14 @@ export function makePlans<TRequirements>(
                 )
                 .map((step) => step.id),
             }
-            operation.digest = fingerprint
-            operation.receipt = receipt
+            Object.assign(
+              operation,
+              advancePlanOperation(operation, {
+                type: "COMMIT",
+                digest: fingerprint,
+                receipt,
+              })
+            )
             return receipt
           })
         })
@@ -236,7 +249,10 @@ export function makePlans<TRequirements>(
       const id = yield* ledger.atomic((tx) =>
         tx.binding(turnId).pipe(
           Effect.map((binding) => {
-            binding.cancelled = true
+            Object.assign(
+              binding,
+              advancePlanBinding(binding, { type: "CANCEL" })
+            )
             return binding.planId
           })
         )

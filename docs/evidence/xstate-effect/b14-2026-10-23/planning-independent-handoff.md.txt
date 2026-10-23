@@ -1,0 +1,36 @@
+# B14 independent review — final scoped result
+
+Reviewed frozen Planning/Objects implementation above HEAD 8304a30 in the xstate-browser-execution worktree. No production edits, external provider effects, or Git mutations by this reviewer.
+
+## Reproduced P2: Planning migration failure classification
+
+`src/planning/adapters/pi.ts` invokes `restorePlan` and `restorePlanOperation` inside native Pi `migrate` callbacks. Their ordinary invariant Errors reject the native Promise and reach `planRejected`'s generic unavailable conversion. A schema-valid v1 plan whose `state` is `completed` but `complete` is false, and a v1 operation whose digest has no receipt, therefore become checked `PlanFailure(unavailable)` instead of fatal corruption. The actual Plans HTTP adapter returns 503 and tells the caller to retry the same update. A native version-3 Planning document receives the same generic response rather than compatible-version recovery guidance. All raw documents remained unchanged.
+
+- `probe-extended.mts` / `probe-extended.log`: original independent real SQLite/Pi/HTTP reproduction, three classification cases.
+- `assert-fixed.mts` / `assert-before-fix.log`: desired classification assertions fail before correction with `Corrupt legacy plan must retain fatal diagnosis` (exit 1).
+- `before-fix-source.json`: exact 25 source/test hashes and original probe evidence.
+
+The source owner repaired the classification boundary. The exact same desired-behavior probe now passes (exit 0); the prior failure remains preserved. Corrupt legacy completion and receipt consistency now remain fatal through the migration and actual HTTP boundary. Unsupported native versions return compatible-version guidance. Data remains unchanged. Independent review is clear within the stated scope.
+
+## Independently passing controls
+
+- Six focused domain suites: 66 tests passed in `/private/tmp/b14-independent-focused.log`.
+- Actual v1 read-only blocker materialization: zero commits, one owned close, no evidence work; task/binding/history remain native version 1.
+- Cancellation sentinel survives a synthetic storage failure in the subsequent reconciliation transaction. Exact prior receipt replay is rejected as cancelled; read repair produces precisely one cancellation history revision.
+- `old-head.mts` / `old-head.log`: actual pre-refactor Planning code extracted read-only from HEAD created completed and cancelled plans, then current code cold-opened them. All native document IDs, raw plan and receipt JSON, and immutable history survived. Completed controls migrated to version 2; untouched cancelled binding/operation remained version 1 until needed.
+- Objects independently clear: `/private/tmp/b14-objects-independent/handoff.md` and `manifest.json`. 27 existing tests plus six new SQLite/Pi probe groups and old-HEAD-created compatibility data passed, including actual native settlement ownership and mixed Cause retention.
+
+## Limits
+
+Actual Node24.21.0 / installed Pi / Node SQLite with synthetic authority and injected holds/failures. No workerd eviction, alarm, live-provider, browser, full integration, hosted CI or deployment claim. B14 creates no external dispatch or alarm dependency.
+
+## Final recheck
+
+The owner's frozen hashes were independently checked before and after rerunning the probe:
+
+- planning/adapters/pi.ts: adeef4c2f7641b12bc3d362827d36b8813a43ec066e81502c8b1b9729acd5073
+- planning/authority.machine.ts: e470377fb14e9f04560e78a143930510d2a323ec722e1cdf6ee1a27db44d41ff
+- planning/plan.machine.ts: f2a4423006c2f9880bb3473c533e50c24738ac1f56c9229ca040c7e80b585705
+- tests/planning-lifecycle.test.ts: ecd6b0590eca7c25b656afcff5b0fb10d87d6919ea7520c02e5113a2065e4257
+
+`assert-after-fix.log` records the unchanged independent probe passing all five cases; `old-head-after-fix.log` records both compatibility cases still passing. `/private/tmp/b14-independent-focused-after-fix.log` records 69 tests in six files passed. `final-manifest.json` contains source hashes, artifact hashes and the four-file correction delta. No additional concrete finding remains in the reviewed scope.

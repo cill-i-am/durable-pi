@@ -1,9 +1,4 @@
-import {
-  ObjectFailure,
-  type ChangeSource,
-  type MutationReceipt,
-} from "./contracts"
-import type { ObjectOperation } from "./ledger"
+import { ObjectFailure, type ChangeSource } from "./contracts"
 
 export function requireObjectWritable(
   canWrite: (source: ChangeSource) => boolean,
@@ -14,24 +9,6 @@ export function requireObjectWritable(
       code: "read_only",
       message: "This bot or agent run can no longer change objects.",
     })
-}
-export function objectReplay(
-  operation: ObjectOperation,
-  digest: string
-): MutationReceipt | undefined {
-  if (operation.cancelled)
-    throw new ObjectFailure({
-      code: "cancelled",
-      message: "This change was cancelled. Start a new edit.",
-    })
-  if (!operation.receipt) return undefined
-  if (operation.digest !== digest)
-    throw new ObjectFailure({
-      code: "conflict",
-      message: "This operation ID belongs to another change.",
-    })
-  // Native mutable views expire when their commit settles.
-  return { ...operation.receipt }
 }
 export function requireObjectCapacity(
   operations: number,
