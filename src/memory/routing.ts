@@ -2,7 +2,12 @@ import { Context, Effect, Layer, Schema } from "effect"
 
 import { ResolvedRoute } from "../inference/policy"
 import type { MemoryStorageError } from "./domain"
-import { InvalidMemory, NonNegativeInteger, Part } from "./domain"
+import {
+  InvalidMemory,
+  NonNegativeInteger,
+  Part,
+  type SummaryWork,
+} from "./domain"
 
 export const SUMMARY_REQUESTS = 15
 export const SummaryRouteRecord = Schema.Struct({
@@ -27,18 +32,22 @@ export interface SummaryRouteLedger {
     part: Part
   ) => Effect.Effect<boolean, InvalidMemory | MemoryStorageError>
   pin: (
-    part: Part,
+    part: SummaryWork,
     candidate: ResolvedRoute
   ) => Effect.Effect<ResolvedRoute, InvalidMemory | MemoryStorageError>
   budget: (
-    part: Part,
+    part: SummaryWork,
     contextWindow: number,
     expectedRevision?: number
   ) => Effect.Effect<ResolvedRoute, InvalidMemory | MemoryStorageError>
   beginRequest: (
-    part: Part,
+    part: SummaryWork,
     expectedRevision?: number
   ) => Effect.Effect<boolean, InvalidMemory | MemoryStorageError>
+  finishRequest: (
+    part: SummaryWork,
+    expectedRevision?: number
+  ) => Effect.Effect<void, InvalidMemory | MemoryStorageError>
   replace: (
     part: Part,
     operation: string,
@@ -74,34 +83,12 @@ export function requireSummaryRevision(
       message: "The summary route changed before request admission.",
     })
 }
-export function summaryRetryTransition(facts: {
-  applied: boolean
-  archived: boolean
-  revision: number
-  expectedRevision: number
-  paused: boolean
-}) {
-  if (facts.applied) return "replay" as const
-  if (facts.archived)
-    throw new InvalidMemory({
-      message: "Restore this bot before retrying memory.",
-    })
-  if (facts.revision !== facts.expectedRevision)
-    throw new InvalidMemory({
-      message: "This summary has a newer retry. Refresh its status.",
-    })
-  if (!facts.paused)
-    throw new InvalidMemory({
-      message: "This summary is not paused. Refresh its status.",
-    })
-  return "retry" as const
-}
 type Operations = Omit<SummaryRouteLedger, "transactionGroup" | "atomic">
 export class SummaryRouting extends Context.Service<
   SummaryRouting,
   Operations & {
     capture: (
-      part: Part,
+      part: SummaryWork,
       candidate: ResolvedRoute
     ) => Effect.Effect<
       { route: ResolvedRoute; revision: number },
@@ -112,7 +99,7 @@ export class SummaryRouting extends Context.Service<
 export const summaryRoutingApplication = (ledger: SummaryRouteLedger) =>
   Layer.succeed(SummaryRouting, {
     capture: Effect.fn("Memory.captureSummaryRoute")(
-      (part: Part, candidate: ResolvedRoute) =>
+      (part: SummaryWork, candidate: ResolvedRoute) =>
         ledger.atomic(() =>
           Effect.gen(function* () {
             return {
@@ -129,6 +116,7 @@ export const summaryRoutingApplication = (ledger: SummaryRouteLedger) =>
     budget: (part, contextWindow, revision) =>
       ledger.budget(part, contextWindow, revision),
     beginRequest: (part, revision) => ledger.beginRequest(part, revision),
+    finishRequest: (part, revision) => ledger.finishRequest(part, revision),
     replace: (part, operation, candidate) =>
       ledger.replace(part, operation, candidate),
   })

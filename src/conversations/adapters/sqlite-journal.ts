@@ -8,6 +8,7 @@ import {
   ConversationJournal,
   makeConversationJournal,
   type ConversationMaterialization,
+  type ConversationJournalMaintenance,
 } from "../journal"
 import type { ConversationLedger } from "../ledger"
 import { ConversationStorageError } from "../turns"
@@ -106,13 +107,18 @@ export function sqliteConversationMaterialization(
 export const sqliteConversationJournal = (
   db: Sqlite,
   conversations: ConversationLedger,
-  memory: Pick<MemoryLedger, "transactionGroup" | "append" | "render" | "notes">
+  memory: Pick<
+    MemoryLedger,
+    "transactionGroup" | "hasSources" | "append" | "render" | "notes"
+  >,
+  maintenance: ConversationJournalMaintenance
 ) =>
   Layer.succeed(
     ConversationJournal,
     makeConversationJournal(
       conversations,
       memory,
-      sqliteConversationMaterialization(db)
+      sqliteConversationMaterialization(db),
+      maintenance
     )
   )

@@ -42,7 +42,12 @@ it.effect(
           queries++
           return use(body)
         })
-      const layer = sqliteConversationJournal(f.db, f.store, f.memoryLedger)
+      const layer = sqliteConversationJournal(
+        f.db,
+        f.store,
+        f.memoryLedger,
+        f.maintenance
+      )
       expect(queries).toBe(0)
       const journal = yield* ConversationJournal.pipe(Effect.provide(layer))
       expect(queries).toBe(0)
@@ -192,11 +197,13 @@ it.effect("rejects a separate Memory transaction group before writes", () =>
       f.store,
       {
         transactionGroup: {},
+        hasSources: (sources) => f.memoryLedger.hasSources(sources),
         append: (...args) => f.memoryLedger.append(...args),
         render: () => f.memoryLedger.render(),
         notes: () => f.memoryLedger.notes(),
       },
-      f.materialization
+      f.materialization,
+      f.maintenance
     )
     expect(
       yield* journal.prompt(root.id, "").pipe(Effect.result)
@@ -332,13 +339,15 @@ it.effect(
         f.store,
         {
           transactionGroup: f.db,
+          hasSources: (sources) => f.memoryLedger.hasSources(sources),
           append: f.memoryLedger.append.bind(f.memoryLedger),
           notes: f.memoryLedger.notes.bind(f.memoryLedger),
           render: () => {
             throw new Error("programming defect")
           },
         },
-        f.materialization
+        f.materialization,
+        f.maintenance
       )
       const exit = yield* journal.prompt(root.id, "").pipe(Effect.exit)
       expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)

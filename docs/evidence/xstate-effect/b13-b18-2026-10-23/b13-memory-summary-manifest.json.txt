@@ -1,0 +1,37 @@
+{
+  "worktree": "/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi",
+  "files": {
+    "src/memory/summary.machine.ts": "f901ce56b034993b2a19bb34e143d4e047f8a1bbc49a9ce0d23f2456a8c24d49",
+    "src/memory/summary-execution.machine.ts": "14aa295a21b83afe25f54473e8ba2e7f6075a83b427d6334f492e0e98afcc90c",
+    "src/memory/summary-correction.machine.ts": "6e90f8750833f1ad7f84ce6d083076789b174b5715b5af397cceb374be3312a3",
+    "src/memory/compaction.machine.ts": "e3b24c4ececb001dd948f3556f663021c00201913d027c42f075de5185c73fc1",
+    "src/memory/summary-retry.machine.ts": "d36e50defdb294df181f983cf87c43c53aa2ead3afff217cf10c42f725fecedb",
+    "src/memory/summary-effects.ts": "00bc7cc8880cdb3a1c732807ebaadf076e2ff39a840901b4f5583a5d27d8b291",
+    "src/memory/summary-execution.ts": "43ff228e69703658d84e5de73dff19fef7f6d0d212f62601e04b214baeb620c3",
+    "src/memory/compaction.ts": "cc8986c1aa2cba4af08e4f5d34647f32f5e42d8e9cad90854d52e775b48075a5",
+    "src/memory/retry.ts": "7f8c48fe7c54d8a3b9955bd43f7facf526670ffdcfe96a64e148b5e563f38899",
+    "src/memory/domain.ts": "51e6b7b7ccfe3dd76f90037317b8dbecc88a2496486296063061bb6076704e92",
+    "src/memory/ledger.ts": "1fbe6837b6ab24d1945fa9b2a9b3f3dd86ae34eb94bf7dca9ea5a7e13fcd400b",
+    "src/memory/repository.ts": "2a16fe94b1fbc1744ab6918df3f45cb4aa1406d53cff1e9c1a7526d20a59cb35",
+    "src/memory/service.ts": "c018dc7429fb9abf9ea09a951c298fc1f815d3afcb48fd81e18be083d1cfbce1",
+    "src/memory/policy.ts": "96ba4bf4b5f1b49f909e90036529ccebafc9395b4532495cedcf7b82ce682f77",
+    "src/memory/routing.ts": "dc2c3eee3a0c244e08d57a130a108db98c88ea645e4361d0d494f8eab698ef4c",
+    "src/memory/adapters/sqlite.ts": "54899f1531c57f0e3e13edd1483ac3e729024659ad967c502178292cb7056f38",
+    "src/memory/adapters/model-routes.ts": "ce071738f77ff56bc671710f0e4a44e600ce8457e1159fa3f3f06e1f399f7ee8",
+    "tests/memory-summary-ledger.test.ts": "878b548b949e35711c0f3e64b4c59ba5adfb13907a1cbc2d37a9b66b3b0e390f",
+    "tests/memory-summary-ownership.test.ts": "abac2ac2f0bcd41584e5a1f5962de9a0f646f7376448400f396d419b1c48b7e8",
+    "tests/memory-summary-retry.test.ts": "e521d7ab64e5d9c78d48ad6ae99165d197c7a56353f17ff18294e7fac67d28ae",
+    "tests/memory-runtime.test.ts": "f60e571242852e6aaf339730104667871c9c62c2ed18ab0060a2d34e9b14e76a",
+    "tests/compactor.test.ts": "c4e12e4369f7cba173db2dd8ce90da951f644a5bb96e472596c359c6a5c48487",
+    "tests/memory-boundary.test.ts": "20456f58c7c157dee07fa78668e4834cd2b5ac0fecead833c25dc8ca1ceca361",
+    "tests/admission-wake.test.ts": "b18aace1c40e304831cac16e6598a7a2556e8279eea8dd2eb086619e92fe49d3",
+    "docs/xstate-effect-memory-summary.md": "486b233058d2d7d25fb45331e4bb73b29e1860c90f2fbac2a4fbc7cc9b94c40d"
+  },
+  "evidence": {
+    "focused": "/private/tmp/b13-focused-final.log",
+    "lint": "/private/tmp/b13-scoped-lint-final.log",
+    "types": "/private/tmp/b13-types-final2.log",
+    "cleanup_negative": "/private/tmp/b13-control-cleanup.log",
+    "receipt_before": "/private/tmp/b13-receipt-independent-before.log"
+  }
+}

@@ -1,0 +1,21 @@
+{"schedule":"old progress read1; hold old latest read; independent newer SQLite owner publishes2; old latest read observes2 then publishes","lateExit":"Success","latestBeforeOldSettlement":{"messages":2,"nodes":0,"notes":0},"latestAfterOldSettlement":{"messages":1,"nodes":0,"notes":0},"progress":{"messages":2,"nodes":0,"notes":0},"oldStatus":{"date":"2026-10-23T15:11:23.470Z","watermark":"{\"messages\":1,\"nodes\":0,\"notes\":0}","error":null,"schemaVersion":1,"workflowVersion":1,"phase":"idle","target":"{\"messages\":1,\"nodes\":0,\"notes\":0}","attempts":0,"attemptId":"55bbcc83-ee30-487a-9e35-6eb41bea38aa","retryAt":0},"latestWrites":[{"until":{"messages":1,"nodes":0,"notes":0},"conditional":true},{"until":{"messages":2,"nodes":0,"notes":0},"conditional":true},{"until":{"messages":1,"nodes":0,"notes":0},"conditional":true}],"readBackupUntil":{"messages":1,"nodes":0,"notes":0}}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: An observed newer latest must not be replaced by older local memory
++ actual - expected
+
++ '{"version":1,"head":"p/batches/b64dc35e070e5961b077744fad7808210e8da8a07f0318bc6ba70596f798438a.json","until":{"messages":1,"nodes":0,"notes":0},"parts":[{"start":0,"count":1}],"date":"2026-10-23T15:11:23.470Z"}'
+- '{"version":1,"head":"p/batches/521ac0e42121e37304ecd27fc82e003a190aa1ce5a05c2cadf0adaf01a7794f4.json","until":{"messages":2,"nodes":0,"notes":0},"parts":[{"start":0,"count":1},{"start":1,"count":1}],"date":"2026-10-23T15:11:23.486Z"}'
+
+    at <anonymous> (/private/tmp/b18-independent/latest-skew.mts:37:9) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: '{"version":1,"head":"p/batches/b64dc35e070e5961b077744fad7808210e8da8a07f0318bc6ba70596f798438a.json","until":{"messages":1,"nodes":0,"notes":0},"parts":[{"start":0,"count":1}],"date":"2026-10-23T15:11:23.470Z"}',
+  expected: '{"version":1,"head":"p/batches/521ac0e42121e37304ecd27fc82e003a190aa1ce5a05c2cadf0adaf01a7794f4.json","until":{"messages":2,"nodes":0,"notes":0},"parts":[{"start":0,"count":1},{"start":1,"count":1}],"date":"2026-10-23T15:11:23.486Z"}',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.21.0

@@ -1,0 +1,43 @@
+# B13 Summary runner and B18 worker integration handoff
+
+Source frozen in `/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi`. Exact owned/dependency hashes: `/private/tmp/b13-summary-runner-final-source.json`.
+
+## Owned paths
+- `src/memory/summary-discovery.machine.ts`
+- `src/memory/adapters/summary-lifecycle.ts`
+- `src/memory/adapters/host.ts` (generic `memoryWake<A>` only)
+- `src/agent/worker.ts` (Summary/Backup Memory integration, discovery admission, report/recovery routes, joined shutdown)
+- `tests/memory-summary-runner.test.ts`
+- `tests/memory-summary-host.test.ts`
+
+## Behavior
+Official XState/Effect machines decide Summary discovery, dispatch and scheduler recovery. Domain claims remain the sole per-summary authority. The native scope is retained with `ctx.waitUntil`, interrupted on disposal and joined before runtime/storage shutdown; complete Causes survive cleanup failures. Failed joined passes retry exact receipt settlement and idempotent handoffs, without another provider scan. Cold restore is called only from actual onStart; warm facades/status/reconcile never restore claims.
+
+The literal legacy pump ID is `memory-compactor:pump`, capability `memory-compactor`; discovery uses `memory-compactor:discovery`. Versioned controller diagnostic uses Lifecycle storage key `memory-compactor:failure`. `armDiscovery()` returns an actual finite 60-second deadline; `discoveryCurrent(deadline)` verifies the retained job synchronously inside the import/journal SQL transaction. Exhaustion blocks ordinary wakes/admission and exposes `{epoch,failedAt,message}`. Exact `armRecovery(epoch)` then `retryRecovery(epoch,deadline)` grants recovery; stale epochs or expired/replaced leases cannot clear diagnosis. A held producer retains its original token during discovery exhaustion/recovery, so no replacement native producer starts before join.
+
+Worker now wires SummaryRunner and BackupRunner instead of MaintenanceRunner subclasses; actual startup restores their domain state once. Import and Conversation journal publication prearm both owners and validate actual current leases after shared SQL acquisition. Application receipt replay repeats notify, backup wake and active conversation wake even after publication already committed.
+
+Authenticated Memory routes: `POST memory/retry_compaction {epoch}`, `POST memory/backup/retry {attemptId,target}`, `POST memory/backup/recover {epoch}`. Successful exact admission is 202; stale/expired/live-owner conflicts are 409. Report projects optional `memory.compactionRecovery` and `memory.backup.schedulerRecovery`; domain owns `memory.backup.recovery`. UI scheduler extension is owned separately by mailbox_recovery_ui.
+
+## Verification
+Final focused command: 137 tests in 7 files passed (Summary runner/host, admission wake, HTTP, Backup runner, Memory application, Conversation Memory admission). Full `tsc --noEmit`, scoped oxlint and scoped oxfmt check passed.
+- `/private/tmp/b13-memory-integration-final-tests.log`
+- `/private/tmp/b13-memory-integration-final-types.log`
+- `/private/tmp/b13-memory-integration-final-lint.log`
+- `/private/tmp/b13-memory-integration-final-format.log`
+
+Meaningful negative controls failed at the intended assertions, and production source was restored:
+- Removed spent-token guard: fourth callback dispatched twice, expected once (`/private/tmp/b13-summary-negative-spent.log`).
+- Replaced cleanup-only settlement with provider step: retry redispatched uncertain provider (`/private/tmp/b13-summary-negative-cleanup.log`).
+- Restored source pass: `/private/tmp/b13-summary-runner-after-controls.log`.
+
+Independent preserved real-SQLite handoff probes and held-live-producer recovery probe failed before fixes and passed unchanged afterward. Reviewer confirmed both corrections and malformed-controller rejection. Evidence lives in `/private/tmp/b13-independent-probes-{before,after}.log` and `/private/tmp/b13-live-discovery-{before,after}.log`; source probes were not edited.
+
+## Precise limits
+Installed SDK transport maxAttempts=3 is per retry episode, not a globally durable read-only scan debit. A process kill before any exhaustion marker is acknowledged may repeat a preclaim scan. Acknowledged exhausted diagnosis/retired token blocks the old callback after restart. Persisted business claims and request debits remain durable; killed native Summary work pauses uncertain and cannot automatically redispatch. Total unacknowledged storage write outage followed by process loss cannot guarantee a retained diagnostic. No extra scheduler journal/debit engine was added.
+
+Actual native proof is owned by mailbox_independent_review and parent. These focused tests include synthetic native effects and real SQLite; they are not live-provider or alarm proofs. No Git mutations, commits, publication, live providers or broad/native gates were performed in this slice.
+
+## Final shutdown review correction
+
+Independent final review reproduced cleanup-only settlement outliving dispose. The runner now retains and joins the whole cleanup callback, prevents duplicate same-token settlement, skips post-stop discovery/scheduling, and preserves the original producer plus complete late settlement Cause. The pure dispatch machine retains settlement failure without resetting provider authority. Three new repository regressions and the unchanged independent probe pass. Final integration: 140 tests/7 files, full typecheck and scoped lint pass. Reviewer confirmed source hashes in the updated final manifest; the pre-fix native proof remains prior-tree evidence and native author was notified. Red/green logs: `/private/tmp/b13-summary-shutdown-{before,after}.log`.

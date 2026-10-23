@@ -1,0 +1,25 @@
+# B18 independent review — findings checkpoint
+
+Review of frozen domain/runner source in xstate-memory above the current integration base. No production or Git writes by these reviewers; all probes are isolated under /private/tmp. Native workerd execution is reserved for the implementation owner.
+
+## P1: publication can replace an already observed newer latest
+
+`backup.ts` loads progress/latest independently and checks only progress for an ahead watermark. With two actual SQLite transaction groups sharing one backup prefix, an old owner reads progress1; its latest GET is held; a newer owner publishes2; the old latest read then returns2. The old snapshot remains1. It reuses the complete checkpoint identity and skips progress CAS, then conditionally overwrites the observed latest2 with latest1. The actual `runMemoryBackup` returns success/idle and `readBackup` exposes1 again.
+
+`latest-skew.mts` and `latest-skew.log` are the failing desired-behavior probe. Both manifests and every R2-equivalent write come from production code. The local fake bucket enforces the exact supplied ETag/absence conditions; no fabricated manifest is seeded. `before-fix-manifest.json` records frozen source and log hashes.
+
+Scope: this requires independent transaction groups sharing a prefix. It is a cross-publisher protocol counterexample, not a claim that the shared in-process permit allows two producers for one SQLite object. The existing latest-write barrier test does not cover a later latest read paired with older progress.
+
+## P1: scheduler recovery loses the joined exact cleanup claim
+
+Separate independent reviewer used actual installed `agents/lifecycle` and a real Node SQLite `cf_agents_jobs` table. Only its side-effect import of `cloudflare:workers` is shimmed; this is not workerd. `probe.mts` / `probe-confirmed.log` under `/private/tmp/b18-runner-independent` hold a claimed producer while discovery exhausts three SDK reads. Once that producer joins failed, the next pump completes under exhausted control; the SDK deletes its row. Explicit scheduler recovery cannot find the old owner through `current()` and starts a new work job instead of exhausting the exact retained claim. Two step/claim admissions occur; original exhaustion never occurs.
+
+A second trigger, `cleanup-recovery.mts` / `cleanup-recovery.log`, exhausts the finite cleanup-only job itself. Its SDK row is deleted and the diagnostic does not retain its claim. Explicit scheduler recovery starts provider work again without successfully completing original cleanup. Repair must retain the exact joined cleanup obligation durably, not merely preserve an in-memory map entry.
+
+## P1: dispose can return before deferred restoration admits new work
+
+`dispose.mts` / `dispose.log` hold restore during `onJob`. `dispose()` returns while no owner exists. Releasing restore resumes `onJob`, which checks queue ownership but not shutdown and starts a producer after disposal resolved. This violates the host ordering contract that runtime/storage can close after awaiting disposal. The probe records `disposed:true`, `startedAfterDispose:true`, `stepCalls:1` and fails the no-new-work assertion.
+
+## Baseline and limits
+
+Independent domain suites passed 59 tests across four files in `domain-focused.log`. Prior passing suites were context, not substitutes for the counterexamples above. No remote provider, hosted bucket, browser, alarm eviction, deployment or Git operation was performed. All findings are reported to the parent/implementation owner; review remains open pending owner repairs and unchanged-probe recheck.

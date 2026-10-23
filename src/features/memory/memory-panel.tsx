@@ -27,11 +27,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { ChatState } from "@/conversations/contracts"
 import { agentApi, agentUrl } from "@/http/client"
 
+import { BackupRecovery } from "./backup-recovery"
 import { SummaryRecovery } from "./summary-recovery"
 
 export function MemoryWorkbench({
   state,
   agentId,
+  refresh,
   tab,
   onTabChange: setTab,
   query,
@@ -42,6 +44,7 @@ export function MemoryWorkbench({
   tab: "notes" | "history" | "tree" | "files"
   onTabChange: (tab: "notes" | "history" | "tree" | "files") => void
   state: ChatState | null
+  refresh: () => void
   agentId: string
 }) {
   const api = useMemo(() => agentApi(agentId), [agentId])
@@ -92,7 +95,12 @@ export function MemoryWorkbench({
           {state?.memory.notes.length ?? 0} memory notes
         </p>
       </header>
-      <SummaryRecovery agentId={agentId} issues={state?.memory.issues ?? []} />
+      <SummaryRecovery
+        agentId={agentId}
+        issues={state?.memory.issues ?? []}
+        recovery={state?.memory.compactionRecovery}
+        refresh={refresh}
+      />
       <form onSubmit={search} className="memory-search">
         <Field>
           <FieldLabel htmlFor="memory-search" className="sr-only">
@@ -209,7 +217,11 @@ export function MemoryWorkbench({
           <MemoryTree agentId={agentId} />
         </TabsContent>
         <TabsContent value="files">
-          <MemoryFiles memory={state?.memory} agentId={agentId} />
+          <MemoryFiles
+            memory={state?.memory}
+            agentId={agentId}
+            refresh={refresh}
+          />
         </TabsContent>
       </Tabs>
     </section>
@@ -416,8 +428,10 @@ function MemoryTree({ agentId }: { agentId: string }) {
 function MemoryFiles({
   memory,
   agentId,
+  refresh,
 }: {
   memory: ChatState["memory"] | undefined
+  refresh: () => void
   agentId: string
 }) {
   const api = agentApi(agentId)
@@ -481,6 +495,12 @@ function MemoryFiles({
               ? `Last complete backup: ${new Date(memory.backup.date).toLocaleString()}`
               : "Waiting for the first backup.")}
         </p>
+        <BackupRecovery
+          agentId={agentId}
+          recovery={memory?.backup?.recovery ?? null}
+          schedulerRecovery={memory?.backup?.schedulerRecovery ?? null}
+          refresh={refresh}
+        />
       </article>
       <article>
         <h3>Import older history</h3>

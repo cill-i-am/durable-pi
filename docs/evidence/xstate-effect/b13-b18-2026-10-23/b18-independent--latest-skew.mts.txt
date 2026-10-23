@@ -1,0 +1,38 @@
+import assert from 'node:assert/strict'
+import { Effect, Exit, Layer, Scope } from 'effect'
+import { makeNodeSqlite } from '/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/src/storage/node.ts'
+import { migrateSqlite } from '/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/src/storage/migrations.ts'
+import { makeSqliteMemory } from '/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/src/memory/adapters/sqlite.ts'
+import { SqliteBackupStatus } from '/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/src/memory/adapters/backup-status.ts'
+import { backupStatusApplication } from '/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/src/memory/backup-status.ts'
+import { bucketLayer } from '/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/src/memory/adapters/bucket.ts'
+import { webCryptoLayer } from '/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/src/memory/adapters/crypto.ts'
+import { MemoryRepository } from '/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/src/memory/repository.ts'
+import { runMemoryBackup } from '/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/src/memory/application.ts'
+import { backupMemory, readBackup } from '/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/src/memory/backup.ts'
+const gate=()=>{let release!:()=>void;const wait=new Promise<void>(r=>release=r);return {release,wait}}
+class Bucket {
+ objects=new Map<string,string>();writes:any[]=[];holdLatest=false;entered=gate();release=gate()
+ async get(key:string){if(key==='p/latest.json'&&this.holdLatest){this.holdLatest=false;this.entered.release();await this.release.wait}const text=this.objects.get(key);return text===undefined?null:{etag:text,text:async()=>text}}
+ async put(key:string,data:string,options?:any){const old=this.objects.get(key);if(options?.onlyIf?.etagMatches!==undefined&&old!==options.onlyIf.etagMatches)return null;if(options?.onlyIf?.etagDoesNotMatch==='*'&&old!==undefined)return null;this.objects.set(key,data);this.writes.push({key,until:JSON.parse(data).until,condition:options?.onlyIf});return {etag:data}}
+}
+const run=Effect.runPromise,bucket=new Bucket(),scopes:Scope.Scope[]=[]
+async function fixture(messages:number){const scope=Scope.makeUnsafe();scopes.push(scope);const db=await run(makeNodeSqlite().pipe(Effect.provideService(Scope.Scope,scope)));await run(migrateSqlite(db));const memory=await run(makeSqliteMemory(db)),status=new SqliteBackupStatus(db);for(let i=0;i<messages;i++)await run(memory.append(`message:${i}`,'user',`retained:${i}`));const layer=Layer.mergeAll(Layer.succeed(MemoryRepository,memory),backupStatusApplication(status),bucketLayer(bucket),webCryptoLayer);return {memory,status,run:<A,E,R>(effect:Effect.Effect<A,E,R>)=>run(effect.pipe(Effect.provide(layer)) as Effect.Effect<A,E>)} }
+try {
+ const old=await fixture(1),newer=await fixture(2)
+ // Actual publication before local completion acknowledgment represents retained remote state.
+ await old.run(backupMemory('p'))
+ const baseline=bucket.objects.get('p/latest.json')!
+ assert.equal(JSON.parse(baseline).until.messages,1)
+ bucket.holdLatest=true
+ const late=old.run(Effect.exit(runMemoryBackup('p')))
+ await bucket.entered.wait
+ await newer.run(runMemoryBackup('p'))
+ const fresh=bucket.objects.get('p/latest.json')!
+ assert.equal(JSON.parse(fresh).until.messages,2)
+ bucket.release.release()
+ const lateExit=await late
+ const final=bucket.objects.get('p/latest.json')!
+ console.log(JSON.stringify({schedule:'old progress read1; hold old latest read; independent newer SQLite owner publishes2; old latest read observes2 then publishes',lateExit:lateExit._tag,latestBeforeOldSettlement:JSON.parse(fresh).until,latestAfterOldSettlement:JSON.parse(final).until,progress:JSON.parse(bucket.objects.get('p/progress.json')!).until,oldStatus:await run(old.status.control()),latestWrites:bucket.writes.filter(x=>x.key==='p/latest.json').map(x=>({until:x.until,conditional:!!x.condition})),readBackupUntil:(await old.run(readBackup('p'))).until}))
+ assert.equal(final,fresh,'An observed newer latest must not be replaced by older local memory')
+}finally{for(const scope of scopes)await run(Scope.close(scope,Exit.void))}

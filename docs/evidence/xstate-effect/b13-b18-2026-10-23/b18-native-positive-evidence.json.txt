@@ -1,0 +1,2080 @@
+{
+  "directory": "/var/folders/s2/80_kxn9s19s1gyb6ylqwdh680000gn/T/durable-pi-memory-backup-Iw1j6v",
+  "broken": false,
+  "sources": {
+    "src/memory/backup.ts": "d2707798c5b888a137a9621236a48bbd5888076ffa583c9492d0115b4c547dfe",
+    "src/memory/backup.machine.ts": "cbf7528a7b2643184cda13e4a7c4641f180ac7ac58890478a41d91d96f90c589",
+    "src/memory/backup-publication.machine.ts": "b075099514b8a6387671fa6caabe54558ae2308771a1d6c5bb9cc09862f7d099",
+    "src/memory/backup-dispatch.machine.ts": "50384fed2383b9ae33c958024dacb373ebba51b57818f199446a21bd8b691d70",
+    "src/memory/backup-discovery.machine.ts": "73cfce0208ae20f06a631fba6fe5b009551aabfe53a4a7077989081bd4fac973",
+    "src/memory/adapters/backup-lifecycle.ts": "4717bcfea235454ce315f8c5c155407b199f085ea48d4f07f25ea8dc6ab34fa7",
+    "src/memory/adapters/backup-status.ts": "18a8b887c977734560c4f20159989e3dad7190395c4f4dcf5fdb6377d69e09f0",
+    "src/memory/backup-status.ts": "3c470d7ef52f232189e0ec0c7fd63d5da297c7480fbcff7c31c83cb128bdd428",
+    "src/memory/application.ts": "df6dd25e914a069d9608ec40c636408c11af6ae52b5f5dc91b9f4656a43a7251",
+    "tests/runtime/memory-backup-worker.ts": "aa1041c5e2d6088c5b2f016cad7efce21e7461fa62351a201bdd760e569c2811",
+    "scripts/test-memory-backup-runtime.mjs": "93d494c7e8bfc78060e74f8f009c34bb68459fc010c79dfa7ae882c8aff374de"
+  },
+  "cases": {
+    "live": {
+      "control": {
+        "id": 1,
+        "date": "2026-10-23T15:45:56.176Z",
+        "watermark": "{\"messages\":1,\"nodes\":0,\"notes\":0}",
+        "error": null,
+        "schema_version": 1,
+        "workflow_version": 1,
+        "phase": "idle",
+        "target": "{\"messages\":1,\"nodes\":0,\"notes\":0}",
+        "attempts": 0,
+        "attempt_id": "1ea147d1-b2ee-4ec8-b3d4-af4e8aaf87cd",
+        "retry_at": 0
+      },
+      "memory": [
+        {
+          "id": 0,
+          "source": "native-source",
+          "kind": "user",
+          "text": "Native backup exact 🍀 original",
+          "date": "2026-10-23T00:00:00Z",
+          "provenance": null
+        }
+      ],
+      "objects": [
+        {
+          "key": "p/batches/8b55cb3e5732286b9c8a7271bbe20e3165ddb43a9249648fb3fd10ff2421fda6.json",
+          "body": "{\"version\":1,\"previous\":null,\"records\":[{\"type\":\"message\",\"id\":0,\"source\":\"native-source\",\"kind\":\"user\",\"text\":\"Native backup exact 🍀 original\",\"date\":\"2026-10-23T00:00:00Z\"}]}",
+          "etag": "63837371-e529-4ace-86a1-661ffa495a5f",
+          "puts": 1
+        },
+        {
+          "key": "p/latest.json",
+          "body": "{\"version\":1,\"head\":\"p/batches/8b55cb3e5732286b9c8a7271bbe20e3165ddb43a9249648fb3fd10ff2421fda6.json\",\"until\":{\"messages\":1,\"nodes\":0,\"notes\":0},\"parts\":[{\"start\":0,\"count\":1}],\"date\":\"2026-10-23T15:45:56.176Z\"}",
+          "etag": "cd06120b-b5e2-4390-91ec-124cbeca9360",
+          "puts": 1
+        },
+        {
+          "key": "p/progress.json",
+          "body": "{\"version\":1,\"head\":\"p/batches/8b55cb3e5732286b9c8a7271bbe20e3165ddb43a9249648fb3fd10ff2421fda6.json\",\"until\":{\"messages\":1,\"nodes\":0,\"notes\":0},\"parts\":[{\"start\":0,\"count\":1}],\"date\":\"2026-10-23T15:45:56.176Z\"}",
+          "etag": "5ef5c87b-b82e-4771-a3d4-29660e7bea21",
+          "puts": 1
+        },
+        {
+          "key": "p/snapshots/6e6728544f1b57573acec703c7d523553b4fdf99a7b76accaa68d63fa012fac6.json",
+          "body": "{\"version\":1,\"head\":\"p/batches/8b55cb3e5732286b9c8a7271bbe20e3165ddb43a9249648fb3fd10ff2421fda6.json\",\"until\":{\"messages\":1,\"nodes\":0,\"notes\":0},\"parts\":[{\"start\":0,\"count\":1}],\"date\":\"2026-10-23T15:45:56.176Z\"}",
+          "etag": "c4773c9a-b9ad-4b9a-98bb-90a03ea58945",
+          "puts": 1
+        }
+      ],
+      "events": [
+        {
+          "event": "start",
+          "detail": "",
+          "at": 1792770356143
+        },
+        {
+          "event": "alarm",
+          "detail": "",
+          "at": 1792770356159
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:pump\",\"fn\":\"pump\",\"attempt\":1,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"c09a6de9-7d28-4e5a-b33e-55d868064d06\",\"phase\":\"work\",\"claim\":null,\"discoveryDeadline\":0}}",
+          "at": 1792770356159
+        },
+        {
+          "event": "claim",
+          "detail": "{\"attemptId\":\"1ea147d1-b2ee-4ec8-b3d4-af4e8aaf87cd\",\"target\":\"{\\\"messages\\\":1,\\\"nodes\\\":0,\\\"notes\\\":0}\",\"attempts\":1}",
+          "at": 1792770356163
+        },
+        {
+          "event": "get",
+          "detail": "p/progress.json",
+          "at": 1792770356168
+        },
+        {
+          "event": "get",
+          "detail": "p/latest.json",
+          "at": 1792770356168
+        },
+        {
+          "event": "put-entered",
+          "detail": "p/batches/8b55cb3e5732286b9c8a7271bbe20e3165ddb43a9249648fb3fd10ff2421fda6.json",
+          "at": 1792770356173
+        },
+        {
+          "event": "put-committed",
+          "detail": "p/batches/8b55cb3e5732286b9c8a7271bbe20e3165ddb43a9249648fb3fd10ff2421fda6.json",
+          "at": 1792770356174
+        },
+        {
+          "event": "put-entered",
+          "detail": "p/progress.json",
+          "at": 1792770356177
+        },
+        {
+          "event": "put-entered",
+          "detail": "p/snapshots/6e6728544f1b57573acec703c7d523553b4fdf99a7b76accaa68d63fa012fac6.json",
+          "at": 1792770356177
+        },
+        {
+          "event": "put-committed",
+          "detail": "p/progress.json",
+          "at": 1792770356178
+        },
+        {
+          "event": "put-committed",
+          "detail": "p/snapshots/6e6728544f1b57573acec703c7d523553b4fdf99a7b76accaa68d63fa012fac6.json",
+          "at": 1792770356178
+        },
+        {
+          "event": "put-entered",
+          "detail": "p/latest.json",
+          "at": 1792770356180
+        },
+        {
+          "event": "latest-held",
+          "detail": "",
+          "at": 1792770356180
+        },
+        {
+          "event": "alarm",
+          "detail": "",
+          "at": 1792770356281
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:discovery\",\"fn\":\"discover\",\"attempt\":1,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"e9caa654-c877-4211-adea-f604b910a482\",\"deadline\":1792770416279}}",
+          "at": 1792770356281
+        },
+        {
+          "event": "wake-failed",
+          "detail": "",
+          "at": 1792770356282
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:discovery\",\"fn\":\"discover\",\"attempt\":2,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"e9caa654-c877-4211-adea-f604b910a482\",\"deadline\":1792770416279}}",
+          "at": 1792770356356
+        },
+        {
+          "event": "wake-failed",
+          "detail": "",
+          "at": 1792770356356
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:discovery\",\"fn\":\"discover\",\"attempt\":3,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"e9caa654-c877-4211-adea-f604b910a482\",\"deadline\":1792770416279}}",
+          "at": 1792770356722
+        },
+        {
+          "event": "wake-failed",
+          "detail": "",
+          "at": 1792770356723
+        },
+        {
+          "event": "notify",
+          "detail": "",
+          "at": 1792770356727
+        },
+        {
+          "event": "put-committed",
+          "detail": "p/latest.json",
+          "at": 1792770356823
+        },
+        {
+          "event": "alarm",
+          "detail": "",
+          "at": 1792770356829
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:pump\",\"fn\":\"pump\",\"attempt\":1,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"c09a6de9-7d28-4e5a-b33e-55d868064d06\",\"phase\":\"work\",\"claim\":null,\"discoveryDeadline\":0}}",
+          "at": 1792770356830
+        },
+        {
+          "event": "alarm",
+          "detail": "",
+          "at": 1792770356832
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:discovery\",\"fn\":\"discover\",\"attempt\":1,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"05d0d456-8ac7-4aa0-a42e-7a73ae2d196a\",\"deadline\":1792770416830}}",
+          "at": 1792770356832
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:pump\",\"fn\":\"pump\",\"attempt\":1,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"57a1672f-46e7-4505-babc-f6a0c70574b8\",\"phase\":\"cleanup\",\"claim\":{\"attemptId\":\"1ea147d1-b2ee-4ec8-b3d4-af4e8aaf87cd\",\"target\":\"{\\\"messages\\\":1,\\\"nodes\\\":0,\\\"notes\\\":0}\",\"attempts\":1},\"discoveryDeadline\":0}}",
+          "at": 1792770356833
+        }
+      ],
+      "jobs": [
+        {
+          "id": "memory-backups:discovery",
+          "capability": "memory-backups",
+          "fn": "discover",
+          "time": 1792770416830,
+          "payload": {
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "token": "05d0d456-8ac7-4aa0-a42e-7a73ae2d196a",
+            "deadline": 1792770416830
+          },
+          "retry": {
+            "maxAttempts": 3,
+            "baseDelayMs": 100,
+            "maxDelayMs": 1000
+          },
+          "singleflight": true,
+          "exclusive": false,
+          "recoveryLoop": true,
+          "createdAt": 1792770356
+        }
+      ],
+      "alarm": 1792770416830,
+      "held": false,
+      "now": 1792770356835,
+      "discoveryDeadline": 0,
+      "diagnostic": {
+        "schemaVersion": 1,
+        "workflowVersion": 1,
+        "phase": "available",
+        "retiredToken": "e9caa654-c877-4211-adea-f604b910a482",
+        "recovery": {
+          "epoch": "7b19f671-2887-4eb2-b60e-343175a53dda",
+          "failedAt": 1792770356724,
+          "message": "Backup scheduling could not persist or discover its work. Retry backup recovery when storage is available."
+        },
+        "claim": null
+      }
+    },
+    "schedulerBefore": {
+      "control": {
+        "id": 1,
+        "date": null,
+        "watermark": "",
+        "error": null,
+        "schema_version": 1,
+        "workflow_version": 1,
+        "phase": "idle",
+        "target": "",
+        "attempts": 0,
+        "attempt_id": null,
+        "retry_at": 0
+      },
+      "memory": [],
+      "objects": [],
+      "events": [
+        {
+          "event": "start",
+          "detail": "",
+          "at": 1792770356886
+        },
+        {
+          "event": "alarm",
+          "detail": "",
+          "at": 1792770356891
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:discovery\",\"fn\":\"discover\",\"attempt\":1,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"9ffa6b6e-884e-4310-a579-55bb30dfd8b1\",\"deadline\":1792770416890}}",
+          "at": 1792770356891
+        },
+        {
+          "event": "wake-failed",
+          "detail": "",
+          "at": 1792770356891
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:discovery\",\"fn\":\"discover\",\"attempt\":2,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"9ffa6b6e-884e-4310-a579-55bb30dfd8b1\",\"deadline\":1792770416890}}",
+          "at": 1792770357045
+        },
+        {
+          "event": "wake-failed",
+          "detail": "",
+          "at": 1792770357045
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:discovery\",\"fn\":\"discover\",\"attempt\":3,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"9ffa6b6e-884e-4310-a579-55bb30dfd8b1\",\"deadline\":1792770416890}}",
+          "at": 1792770357328
+        },
+        {
+          "event": "wake-failed",
+          "detail": "",
+          "at": 1792770357329
+        },
+        {
+          "event": "notify",
+          "detail": "",
+          "at": 1792770357331
+        }
+      ],
+      "jobs": [],
+      "alarm": null,
+      "held": false,
+      "now": 1792770357426,
+      "discoveryDeadline": 0,
+      "diagnostic": {
+        "schemaVersion": 1,
+        "workflowVersion": 1,
+        "phase": "exhausted",
+        "retiredToken": "9ffa6b6e-884e-4310-a579-55bb30dfd8b1",
+        "recovery": {
+          "epoch": "4cc02dba-2dcb-4745-bd19-e723963e2a58",
+          "failedAt": 1792770357330,
+          "message": "Backup scheduling could not persist or discover its work. Retry backup recovery when storage is available."
+        },
+        "claim": null
+      }
+    },
+    "budgetBefore": {
+      "control": {
+        "id": 1,
+        "date": null,
+        "watermark": "",
+        "error": "Backup paused after repeated failures. Retry backup or change memory to start a new attempt.",
+        "schema_version": 1,
+        "workflow_version": 1,
+        "phase": "failed",
+        "target": "{\"messages\":1,\"nodes\":0,\"notes\":0}",
+        "attempts": 3,
+        "attempt_id": "fef5fce7-8a2b-4010-abc3-533d9e8e6598",
+        "retry_at": 0
+      },
+      "memory": [
+        {
+          "id": 0,
+          "source": "native-source",
+          "kind": "user",
+          "text": "Native backup exact 🍀 original",
+          "date": "2026-10-23T00:00:00Z",
+          "provenance": null
+        }
+      ],
+      "objects": [],
+      "events": [
+        {
+          "event": "start",
+          "detail": "",
+          "at": 1792770357498
+        },
+        {
+          "event": "alarm",
+          "detail": "",
+          "at": 1792770357505
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:pump\",\"fn\":\"pump\",\"attempt\":1,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"b9f7cf4e-050f-4cf6-ac05-ef0a64759986\",\"phase\":\"work\",\"claim\":null,\"discoveryDeadline\":0}}",
+          "at": 1792770357505
+        },
+        {
+          "event": "claim",
+          "detail": "{\"attemptId\":\"15564cbf-422d-4fa1-bf73-38067a8875dc\",\"target\":\"{\\\"messages\\\":1,\\\"nodes\\\":0,\\\"notes\\\":0}\",\"attempts\":1}",
+          "at": 1792770357506
+        },
+        {
+          "event": "get",
+          "detail": "p/progress.json",
+          "at": 1792770357507
+        },
+        {
+          "event": "get-failed",
+          "detail": "p/progress.json",
+          "at": 1792770357507
+        },
+        {
+          "event": "get",
+          "detail": "p/latest.json",
+          "at": 1792770357507
+        },
+        {
+          "event": "get-failed",
+          "detail": "p/latest.json",
+          "at": 1792770357507
+        },
+        {
+          "event": "alarm",
+          "detail": "",
+          "at": 1792770357514
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:pump\",\"fn\":\"pump\",\"attempt\":1,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"b9f7cf4e-050f-4cf6-ac05-ef0a64759986\",\"phase\":\"work\",\"claim\":null,\"discoveryDeadline\":0}}",
+          "at": 1792770357514
+        },
+        {
+          "event": "alarm",
+          "detail": "",
+          "at": 1792770367512
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:pump\",\"fn\":\"pump\",\"attempt\":1,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"b9f7cf4e-050f-4cf6-ac05-ef0a64759986\",\"phase\":\"work\",\"claim\":null,\"discoveryDeadline\":0}}",
+          "at": 1792770367512
+        },
+        {
+          "event": "claim",
+          "detail": "{\"attemptId\":\"ed8117b1-536d-4221-a44a-b485aa012cef\",\"target\":\"{\\\"messages\\\":1,\\\"nodes\\\":0,\\\"notes\\\":0}\",\"attempts\":2}",
+          "at": 1792770367514
+        },
+        {
+          "event": "get",
+          "detail": "p/progress.json",
+          "at": 1792770367516
+        },
+        {
+          "event": "get-failed",
+          "detail": "p/progress.json",
+          "at": 1792770367516
+        },
+        {
+          "event": "get",
+          "detail": "p/latest.json",
+          "at": 1792770367516
+        },
+        {
+          "event": "get-failed",
+          "detail": "p/latest.json",
+          "at": 1792770367516
+        },
+        {
+          "event": "alarm",
+          "detail": "",
+          "at": 1792770367520
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:pump\",\"fn\":\"pump\",\"attempt\":1,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"b9f7cf4e-050f-4cf6-ac05-ef0a64759986\",\"phase\":\"work\",\"claim\":null,\"discoveryDeadline\":0}}",
+          "at": 1792770367520
+        },
+        {
+          "event": "alarm",
+          "detail": "",
+          "at": 1792770377517
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:pump\",\"fn\":\"pump\",\"attempt\":1,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"b9f7cf4e-050f-4cf6-ac05-ef0a64759986\",\"phase\":\"work\",\"claim\":null,\"discoveryDeadline\":0}}",
+          "at": 1792770377517
+        },
+        {
+          "event": "claim",
+          "detail": "{\"attemptId\":\"fef5fce7-8a2b-4010-abc3-533d9e8e6598\",\"target\":\"{\\\"messages\\\":1,\\\"nodes\\\":0,\\\"notes\\\":0}\",\"attempts\":3}",
+          "at": 1792770377519
+        },
+        {
+          "event": "get",
+          "detail": "p/progress.json",
+          "at": 1792770377521
+        },
+        {
+          "event": "get-failed",
+          "detail": "p/progress.json",
+          "at": 1792770377521
+        },
+        {
+          "event": "get",
+          "detail": "p/latest.json",
+          "at": 1792770377521
+        },
+        {
+          "event": "get-failed",
+          "detail": "p/latest.json",
+          "at": 1792770377521
+        },
+        {
+          "event": "alarm",
+          "detail": "",
+          "at": 1792770377526
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:pump\",\"fn\":\"pump\",\"attempt\":1,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"b9f7cf4e-050f-4cf6-ac05-ef0a64759986\",\"phase\":\"work\",\"claim\":null,\"discoveryDeadline\":0}}",
+          "at": 1792770377526
+        }
+      ],
+      "jobs": [],
+      "alarm": null,
+      "held": false,
+      "now": 1792770377575,
+      "discoveryDeadline": 0
+    },
+    "cas": {
+      "control": {
+        "id": 1,
+        "date": null,
+        "watermark": "",
+        "error": null,
+        "schema_version": 1,
+        "workflow_version": 1,
+        "phase": "idle",
+        "target": "",
+        "attempts": 0,
+        "attempt_id": null,
+        "retry_at": 0
+      },
+      "memory": [
+        {
+          "id": 0,
+          "source": "native-source",
+          "kind": "user",
+          "text": "Native backup exact 🍀 original",
+          "date": "2026-10-23T00:00:00Z",
+          "provenance": null
+        },
+        {
+          "id": 1,
+          "source": "new-source",
+          "kind": "user",
+          "text": "Newer native backup",
+          "date": "2026-10-23T00:00:01Z",
+          "provenance": null
+        }
+      ],
+      "objects": [
+        {
+          "key": "p/batches/8b55cb3e5732286b9c8a7271bbe20e3165ddb43a9249648fb3fd10ff2421fda6.json",
+          "body": "{\"version\":1,\"previous\":null,\"records\":[{\"type\":\"message\",\"id\":0,\"source\":\"native-source\",\"kind\":\"user\",\"text\":\"Native backup exact 🍀 original\",\"date\":\"2026-10-23T00:00:00Z\"}]}",
+          "etag": "0d7c1744-ed44-4d29-bc2b-3f350e7c7d98",
+          "puts": 1
+        },
+        {
+          "key": "p/batches/f1fd9491e438b6fadc9376e0ee0a0491aa02cfaa6a4f80373e84587af911f53a.json",
+          "body": "{\"version\":1,\"previous\":\"p/batches/8b55cb3e5732286b9c8a7271bbe20e3165ddb43a9249648fb3fd10ff2421fda6.json\",\"records\":[{\"type\":\"message\",\"id\":1,\"source\":\"new-source\",\"kind\":\"user\",\"text\":\"Newer native backup\",\"date\":\"2026-10-23T00:00:01Z\"}]}",
+          "etag": "4399b0f4-74a1-42b2-99da-363459d3eb35",
+          "puts": 1
+        },
+        {
+          "key": "p/latest.json",
+          "body": "{\"version\":1,\"head\":\"p/batches/f1fd9491e438b6fadc9376e0ee0a0491aa02cfaa6a4f80373e84587af911f53a.json\",\"until\":{\"messages\":2,\"nodes\":0,\"notes\":0},\"parts\":[{\"start\":0,\"count\":1},{\"start\":1,\"count\":1}],\"date\":\"2026-10-23T15:46:18.286Z\"}",
+          "etag": "c2ba8dca-194b-488b-b13e-a289babc0ab3",
+          "puts": 1
+        },
+        {
+          "key": "p/progress.json",
+          "body": "{\"version\":1,\"head\":\"p/batches/f1fd9491e438b6fadc9376e0ee0a0491aa02cfaa6a4f80373e84587af911f53a.json\",\"until\":{\"messages\":2,\"nodes\":0,\"notes\":0},\"parts\":[{\"start\":0,\"count\":1},{\"start\":1,\"count\":1}],\"date\":\"2026-10-23T15:46:18.286Z\"}",
+          "etag": "ce437d8d-137f-4e7d-8608-ce08f06d2ed6",
+          "puts": 2
+        },
+        {
+          "key": "p/snapshots/44f6b2e66697accfce2894d9849ddb6e63892864a878cb928257c52795ee1a4c.json",
+          "body": "{\"version\":1,\"head\":\"p/batches/f1fd9491e438b6fadc9376e0ee0a0491aa02cfaa6a4f80373e84587af911f53a.json\",\"until\":{\"messages\":2,\"nodes\":0,\"notes\":0},\"parts\":[{\"start\":0,\"count\":1},{\"start\":1,\"count\":1}],\"date\":\"2026-10-23T15:46:18.286Z\"}",
+          "etag": "ca3febe9-4aa9-459d-af21-249119222298",
+          "puts": 1
+        },
+        {
+          "key": "p/snapshots/c0af662151ae01ad454f45af2c0416bcfc3a896a0cb8ec76ae87dbb550100aa4.json",
+          "body": "{\"version\":1,\"head\":\"p/batches/8b55cb3e5732286b9c8a7271bbe20e3165ddb43a9249648fb3fd10ff2421fda6.json\",\"until\":{\"messages\":1,\"nodes\":0,\"notes\":0},\"parts\":[{\"start\":0,\"count\":1}],\"date\":\"2026-10-23T15:46:18.169Z\"}",
+          "etag": "e5f7bf68-8bc1-42be-8db2-4bf3cae9fedc",
+          "puts": 1
+        }
+      ],
+      "events": [
+        {
+          "event": "start",
+          "detail": "",
+          "at": 1792770378157
+        },
+        {
+          "event": "get",
+          "detail": "p/progress.json",
+          "at": 1792770378165
+        },
+        {
+          "event": "get",
+          "detail": "p/latest.json",
+          "at": 1792770378165
+        },
+        {
+          "event": "put-entered",
+          "detail": "p/batches/8b55cb3e5732286b9c8a7271bbe20e3165ddb43a9249648fb3fd10ff2421fda6.json",
+          "at": 1792770378167
+        },
+        {
+          "event": "put-committed",
+          "detail": "p/batches/8b55cb3e5732286b9c8a7271bbe20e3165ddb43a9249648fb3fd10ff2421fda6.json",
+          "at": 1792770378168
+        },
+        {
+          "event": "put-entered",
+          "detail": "p/progress.json",
+          "at": 1792770378169
+        },
+        {
+          "event": "put-entered",
+          "detail": "p/snapshots/c0af662151ae01ad454f45af2c0416bcfc3a896a0cb8ec76ae87dbb550100aa4.json",
+          "at": 1792770378169
+        },
+        {
+          "event": "put-committed",
+          "detail": "p/progress.json",
+          "at": 1792770378170
+        },
+        {
+          "event": "put-committed",
+          "detail": "p/snapshots/c0af662151ae01ad454f45af2c0416bcfc3a896a0cb8ec76ae87dbb550100aa4.json",
+          "at": 1792770378170
+        },
+        {
+          "event": "put-entered",
+          "detail": "p/latest.json",
+          "at": 1792770378171
+        },
+        {
+          "event": "latest-held",
+          "detail": "",
+          "at": 1792770378171
+        },
+        {
+          "event": "get",
+          "detail": "p/progress.json",
+          "at": 1792770378277
+        },
+        {
+          "event": "get",
+          "detail": "p/latest.json",
+          "at": 1792770378277
+        },
+        {
+          "event": "put-entered",
+          "detail": "p/batches/f1fd9491e438b6fadc9376e0ee0a0491aa02cfaa6a4f80373e84587af911f53a.json",
+          "at": 1792770378282
+        },
+        {
+          "event": "put-committed",
+          "detail": "p/batches/f1fd9491e438b6fadc9376e0ee0a0491aa02cfaa6a4f80373e84587af911f53a.json",
+          "at": 1792770378283
+        },
+        {
+          "event": "put-entered",
+          "detail": "p/progress.json",
+          "at": 1792770378286
+        },
+        {
+          "event": "put-entered",
+          "detail": "p/snapshots/44f6b2e66697accfce2894d9849ddb6e63892864a878cb928257c52795ee1a4c.json",
+          "at": 1792770378286
+        },
+        {
+          "event": "put-committed",
+          "detail": "p/progress.json",
+          "at": 1792770378287
+        },
+        {
+          "event": "put-committed",
+          "detail": "p/snapshots/44f6b2e66697accfce2894d9849ddb6e63892864a878cb928257c52795ee1a4c.json",
+          "at": 1792770378287
+        },
+        {
+          "event": "put-entered",
+          "detail": "p/latest.json",
+          "at": 1792770378289
+        },
+        {
+          "event": "put-committed",
+          "detail": "p/latest.json",
+          "at": 1792770378290
+        },
+        {
+          "event": "put-conflict",
+          "detail": "p/latest.json",
+          "at": 1792770378295
+        },
+        {
+          "event": "cas-old-exit",
+          "detail": "{\"failed\":true,\"reasons\":[{\"_tag\":\"Fail\",\"error\":{\"_tag\":\"BackupFailure\",\"reason\":\"conflict\",\"message\":\"Backup head changed concurrently\"}}]}",
+          "at": 1792770378298
+        }
+      ],
+      "jobs": [],
+      "alarm": null,
+      "held": false,
+      "now": 1792770378301,
+      "discoveryDeadline": 0,
+      "archive": {
+        "records": [
+          {
+            "type": "message",
+            "id": 0,
+            "source": "native-source",
+            "kind": "user",
+            "text": "Native backup exact 🍀 original",
+            "date": "2026-10-23T00:00:00Z"
+          },
+          {
+            "type": "message",
+            "id": 1,
+            "source": "new-source",
+            "kind": "user",
+            "text": "Newer native backup",
+            "date": "2026-10-23T00:00:01Z"
+          }
+        ],
+        "parts": [
+          {
+            "start": 0,
+            "count": 1
+          },
+          {
+            "start": 1,
+            "count": 1
+          }
+        ],
+        "until": {
+          "messages": 2,
+          "nodes": 0,
+          "notes": 0
+        }
+      }
+    },
+    "checkpointBefore": {
+      "control": {
+        "id": 1,
+        "date": null,
+        "watermark": "",
+        "error": null,
+        "schema_version": 1,
+        "workflow_version": 1,
+        "phase": "running",
+        "target": "{\"messages\":1,\"nodes\":0,\"notes\":0}",
+        "attempts": 1,
+        "attempt_id": "976b9eb0-a9cf-4a81-9d70-f96dd5284a77",
+        "retry_at": 0
+      },
+      "memory": [
+        {
+          "id": 0,
+          "source": "native-source",
+          "kind": "user",
+          "text": "Native backup exact 🍀 original",
+          "date": "2026-10-23T00:00:00Z",
+          "provenance": null
+        }
+      ],
+      "objects": [
+        {
+          "key": "p/batches/8b55cb3e5732286b9c8a7271bbe20e3165ddb43a9249648fb3fd10ff2421fda6.json",
+          "body": "{\"version\":1,\"previous\":null,\"records\":[{\"type\":\"message\",\"id\":0,\"source\":\"native-source\",\"kind\":\"user\",\"text\":\"Native backup exact 🍀 original\",\"date\":\"2026-10-23T00:00:00Z\"}]}",
+          "etag": "fd43fedd-df74-432e-bc0b-b44f0d531e93",
+          "puts": 1
+        },
+        {
+          "key": "p/progress.json",
+          "body": "{\"version\":1,\"head\":\"p/batches/8b55cb3e5732286b9c8a7271bbe20e3165ddb43a9249648fb3fd10ff2421fda6.json\",\"until\":{\"messages\":1,\"nodes\":0,\"notes\":0},\"parts\":[{\"start\":0,\"count\":1}],\"date\":\"2026-10-23T15:46:18.371Z\"}",
+          "etag": "ba4ae66a-c035-4d56-a561-1fe22d6ff46e",
+          "puts": 1
+        },
+        {
+          "key": "p/snapshots/d6b594c312e8c180ec6d28d5cbf43a59b925e6c1f315c362c87dcf9953e950f6.json",
+          "body": "{\"version\":1,\"head\":\"p/batches/8b55cb3e5732286b9c8a7271bbe20e3165ddb43a9249648fb3fd10ff2421fda6.json\",\"until\":{\"messages\":1,\"nodes\":0,\"notes\":0},\"parts\":[{\"start\":0,\"count\":1}],\"date\":\"2026-10-23T15:46:18.371Z\"}",
+          "etag": "6b22b717-19ef-4802-aa06-b4bc5b567d80",
+          "puts": 1
+        }
+      ],
+      "events": [
+        {
+          "event": "start",
+          "detail": "",
+          "at": 1792770378357
+        },
+        {
+          "event": "alarm",
+          "detail": "",
+          "at": 1792770378363
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:pump\",\"fn\":\"pump\",\"attempt\":1,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"9dc409e1-ac10-4555-aa17-c5b7ebb94886\",\"phase\":\"work\",\"claim\":null,\"discoveryDeadline\":0}}",
+          "at": 1792770378363
+        },
+        {
+          "event": "claim",
+          "detail": "{\"attemptId\":\"976b9eb0-a9cf-4a81-9d70-f96dd5284a77\",\"target\":\"{\\\"messages\\\":1,\\\"nodes\\\":0,\\\"notes\\\":0}\",\"attempts\":1}",
+          "at": 1792770378364
+        },
+        {
+          "event": "get",
+          "detail": "p/progress.json",
+          "at": 1792770378366
+        },
+        {
+          "event": "get",
+          "detail": "p/latest.json",
+          "at": 1792770378366
+        },
+        {
+          "event": "put-entered",
+          "detail": "p/batches/8b55cb3e5732286b9c8a7271bbe20e3165ddb43a9249648fb3fd10ff2421fda6.json",
+          "at": 1792770378369
+        },
+        {
+          "event": "put-committed",
+          "detail": "p/batches/8b55cb3e5732286b9c8a7271bbe20e3165ddb43a9249648fb3fd10ff2421fda6.json",
+          "at": 1792770378369
+        },
+        {
+          "event": "put-entered",
+          "detail": "p/progress.json",
+          "at": 1792770378371
+        },
+        {
+          "event": "put-entered",
+          "detail": "p/snapshots/d6b594c312e8c180ec6d28d5cbf43a59b925e6c1f315c362c87dcf9953e950f6.json",
+          "at": 1792770378371
+        },
+        {
+          "event": "put-committed",
+          "detail": "p/progress.json",
+          "at": 1792770378372
+        },
+        {
+          "event": "put-committed",
+          "detail": "p/snapshots/d6b594c312e8c180ec6d28d5cbf43a59b925e6c1f315c362c87dcf9953e950f6.json",
+          "at": 1792770378372
+        },
+        {
+          "event": "put-entered",
+          "detail": "p/latest.json",
+          "at": 1792770378374
+        },
+        {
+          "event": "latest-held",
+          "detail": "",
+          "at": 1792770378374
+        }
+      ],
+      "jobs": [
+        {
+          "id": "memory-backups:pump",
+          "capability": "memory-backups",
+          "fn": "pump",
+          "time": 1792770408363,
+          "payload": {
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "token": "9dc409e1-ac10-4555-aa17-c5b7ebb94886",
+            "phase": "work",
+            "claim": null,
+            "discoveryDeadline": 0
+          },
+          "retry": {
+            "maxAttempts": 3,
+            "baseDelayMs": 100,
+            "maxDelayMs": 1000
+          },
+          "singleflight": true,
+          "exclusive": false,
+          "recoveryLoop": true,
+          "createdAt": 1792770378
+        }
+      ],
+      "alarm": 1792770408363,
+      "held": true,
+      "now": 1792770378467,
+      "discoveryDeadline": 0
+    },
+    "admitted": {
+      "baseline": {
+        "control": {
+          "id": 1,
+          "date": "2026-10-23T15:46:18.528Z",
+          "watermark": "{\"messages\":0,\"nodes\":0,\"notes\":0}",
+          "error": null,
+          "schema_version": 1,
+          "workflow_version": 1,
+          "phase": "idle",
+          "target": "{\"messages\":0,\"nodes\":0,\"notes\":0}",
+          "attempts": 0,
+          "attempt_id": "cfc4dd22-bd84-4410-92a3-e540fd540a2c",
+          "retry_at": 0
+        },
+        "memory": [],
+        "objects": [
+          {
+            "key": "p/latest.json",
+            "body": "{\"version\":1,\"head\":null,\"until\":{\"messages\":0,\"nodes\":0,\"notes\":0},\"parts\":[],\"date\":\"2026-10-23T15:46:18.528Z\"}",
+            "etag": "ba928b11-92c6-46fb-ac4e-98dd0cd04788",
+            "puts": 1
+          },
+          {
+            "key": "p/progress.json",
+            "body": "{\"version\":1,\"head\":null,\"until\":{\"messages\":0,\"nodes\":0,\"notes\":0},\"parts\":[],\"date\":\"2026-10-23T15:46:18.528Z\"}",
+            "etag": "2db94948-1f29-4ef9-a7be-ff6d1b5087bf",
+            "puts": 1
+          },
+          {
+            "key": "p/snapshots/5b0907c4c2cbde7bc96f26fc65902bc2749be8e232ced1eb4803364faaaf5bb3.json",
+            "body": "{\"version\":1,\"head\":null,\"until\":{\"messages\":0,\"nodes\":0,\"notes\":0},\"parts\":[],\"date\":\"2026-10-23T15:46:18.528Z\"}",
+            "etag": "9685addf-fc43-4911-8444-ee33b12cf8fd",
+            "puts": 1
+          }
+        ],
+        "events": [
+          {
+            "event": "start",
+            "detail": "",
+            "at": 1792770378520
+          },
+          {
+            "event": "get",
+            "detail": "p/progress.json",
+            "at": 1792770378524
+          },
+          {
+            "event": "get",
+            "detail": "p/latest.json",
+            "at": 1792770378525
+          },
+          {
+            "event": "put-entered",
+            "detail": "p/progress.json",
+            "at": 1792770378528
+          },
+          {
+            "event": "put-entered",
+            "detail": "p/snapshots/5b0907c4c2cbde7bc96f26fc65902bc2749be8e232ced1eb4803364faaaf5bb3.json",
+            "at": 1792770378528
+          },
+          {
+            "event": "put-committed",
+            "detail": "p/progress.json",
+            "at": 1792770378529
+          },
+          {
+            "event": "put-committed",
+            "detail": "p/snapshots/5b0907c4c2cbde7bc96f26fc65902bc2749be8e232ced1eb4803364faaaf5bb3.json",
+            "at": 1792770378529
+          },
+          {
+            "event": "put-entered",
+            "detail": "p/latest.json",
+            "at": 1792770378531
+          },
+          {
+            "event": "put-committed",
+            "detail": "p/latest.json",
+            "at": 1792770378531
+          }
+        ],
+        "jobs": [],
+        "alarm": null,
+        "held": false,
+        "now": 1792770378534,
+        "discoveryDeadline": 0
+      },
+      "control": {
+        "id": 1,
+        "date": "2026-10-23T15:46:18.528Z",
+        "watermark": "{\"messages\":0,\"nodes\":0,\"notes\":0}",
+        "error": null,
+        "schema_version": 1,
+        "workflow_version": 1,
+        "phase": "idle",
+        "target": "{\"messages\":0,\"nodes\":0,\"notes\":0}",
+        "attempts": 0,
+        "attempt_id": "cfc4dd22-bd84-4410-92a3-e540fd540a2c",
+        "retry_at": 0
+      },
+      "memory": [
+        {
+          "id": 0,
+          "source": "import:217b15c7f1dd311029b83baaecd7d8301b1ec61703f1db67fa1b72b7a62e12a1:0",
+          "kind": "user",
+          "text": "Native backup exact 🍀 original",
+          "date": "2026-10-23T00:00:00Z",
+          "provenance": null
+        }
+      ],
+      "objects": [
+        {
+          "key": "p/latest.json",
+          "body": "{\"version\":1,\"head\":null,\"until\":{\"messages\":0,\"nodes\":0,\"notes\":0},\"parts\":[],\"date\":\"2026-10-23T15:46:18.528Z\"}",
+          "etag": "ba928b11-92c6-46fb-ac4e-98dd0cd04788",
+          "puts": 1
+        },
+        {
+          "key": "p/progress.json",
+          "body": "{\"version\":1,\"head\":null,\"until\":{\"messages\":0,\"nodes\":0,\"notes\":0},\"parts\":[],\"date\":\"2026-10-23T15:46:18.528Z\"}",
+          "etag": "2db94948-1f29-4ef9-a7be-ff6d1b5087bf",
+          "puts": 1
+        },
+        {
+          "key": "p/snapshots/5b0907c4c2cbde7bc96f26fc65902bc2749be8e232ced1eb4803364faaaf5bb3.json",
+          "body": "{\"version\":1,\"head\":null,\"until\":{\"messages\":0,\"nodes\":0,\"notes\":0},\"parts\":[],\"date\":\"2026-10-23T15:46:18.528Z\"}",
+          "etag": "9685addf-fc43-4911-8444-ee33b12cf8fd",
+          "puts": 1
+        }
+      ],
+      "events": [
+        {
+          "event": "start",
+          "detail": "",
+          "at": 1792770378520
+        },
+        {
+          "event": "get",
+          "detail": "p/progress.json",
+          "at": 1792770378524
+        },
+        {
+          "event": "get",
+          "detail": "p/latest.json",
+          "at": 1792770378525
+        },
+        {
+          "event": "put-entered",
+          "detail": "p/progress.json",
+          "at": 1792770378528
+        },
+        {
+          "event": "put-entered",
+          "detail": "p/snapshots/5b0907c4c2cbde7bc96f26fc65902bc2749be8e232ced1eb4803364faaaf5bb3.json",
+          "at": 1792770378528
+        },
+        {
+          "event": "put-committed",
+          "detail": "p/progress.json",
+          "at": 1792770378529
+        },
+        {
+          "event": "put-committed",
+          "detail": "p/snapshots/5b0907c4c2cbde7bc96f26fc65902bc2749be8e232ced1eb4803364faaaf5bb3.json",
+          "at": 1792770378529
+        },
+        {
+          "event": "put-entered",
+          "detail": "p/latest.json",
+          "at": 1792770378531
+        },
+        {
+          "event": "put-committed",
+          "detail": "p/latest.json",
+          "at": 1792770378531
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:discovery\",\"fn\":\"discover\",\"attempt\":1,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"2b5acd32-0d21-4aa1-94d5-ce016246259d\",\"deadline\":1792770438534}}",
+          "at": 1792770378535
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:pump\",\"fn\":\"pump\",\"attempt\":1,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"91fb1411-09eb-42e1-9530-c8834e57e194\",\"phase\":\"work\",\"claim\":null,\"discoveryDeadline\":0}}",
+          "at": 1792770378548
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:pump\",\"fn\":\"pump\",\"attempt\":1,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"91fb1411-09eb-42e1-9530-c8834e57e194\",\"phase\":\"work\",\"claim\":null,\"discoveryDeadline\":0}}",
+          "at": 1792770378562
+        },
+        {
+          "event": "empty-scan",
+          "detail": "",
+          "at": 1792770378563
+        },
+        {
+          "event": "postcommit-wake-dropped",
+          "detail": "",
+          "at": 1792770378564
+        },
+        {
+          "event": "import-committed",
+          "detail": "{\"added\":1}",
+          "at": 1792770378564
+        }
+      ],
+      "jobs": [
+        {
+          "id": "memory-backups:discovery",
+          "capability": "memory-backups",
+          "fn": "discover",
+          "time": 1792770438534,
+          "payload": {
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "token": "2b5acd32-0d21-4aa1-94d5-ce016246259d",
+            "deadline": 1792770438534
+          },
+          "retry": {
+            "maxAttempts": 3,
+            "baseDelayMs": 100,
+            "maxDelayMs": 1000
+          },
+          "singleflight": true,
+          "exclusive": false,
+          "recoveryLoop": true,
+          "createdAt": 1792770378
+        }
+      ],
+      "alarm": 1792770438534,
+      "held": false,
+      "now": 1792770378565,
+      "discoveryDeadline": 1792770438534
+    },
+    "recovered": {
+      "control": {
+        "id": 1,
+        "date": "2026-10-23T15:47:18.579Z",
+        "watermark": "{\"messages\":1,\"nodes\":0,\"notes\":0}",
+        "error": null,
+        "schema_version": 1,
+        "workflow_version": 1,
+        "phase": "idle",
+        "target": "{\"messages\":1,\"nodes\":0,\"notes\":0}",
+        "attempts": 0,
+        "attempt_id": "a4dd0e91-862a-4707-ac7f-80e31668ec43",
+        "retry_at": 0
+      },
+      "memory": [
+        {
+          "id": 0,
+          "source": "import:217b15c7f1dd311029b83baaecd7d8301b1ec61703f1db67fa1b72b7a62e12a1:0",
+          "kind": "user",
+          "text": "Native backup exact 🍀 original",
+          "date": "2026-10-23T00:00:00Z",
+          "provenance": null
+        }
+      ],
+      "objects": [
+        {
+          "key": "p/batches/8b609bbb1e01e2254ea2412e1c06313902ee38974dd2156b3658ac7abd37e7a6.json",
+          "body": "{\"version\":1,\"previous\":null,\"records\":[{\"type\":\"message\",\"id\":0,\"source\":\"import:217b15c7f1dd311029b83baaecd7d8301b1ec61703f1db67fa1b72b7a62e12a1:0\",\"kind\":\"user\",\"text\":\"Native backup exact 🍀 original\",\"date\":\"2026-10-23T00:00:00Z\"}]}",
+          "etag": "9fc58489-78de-4522-8e0c-0e40a6d12233",
+          "puts": 1
+        },
+        {
+          "key": "p/latest.json",
+          "body": "{\"version\":1,\"head\":\"p/batches/8b609bbb1e01e2254ea2412e1c06313902ee38974dd2156b3658ac7abd37e7a6.json\",\"until\":{\"messages\":1,\"nodes\":0,\"notes\":0},\"parts\":[{\"start\":0,\"count\":1}],\"date\":\"2026-10-23T15:47:18.579Z\"}",
+          "etag": "28907d92-2988-4577-9835-96ee266928c0",
+          "puts": 2
+        },
+        {
+          "key": "p/progress.json",
+          "body": "{\"version\":1,\"head\":\"p/batches/8b609bbb1e01e2254ea2412e1c06313902ee38974dd2156b3658ac7abd37e7a6.json\",\"until\":{\"messages\":1,\"nodes\":0,\"notes\":0},\"parts\":[{\"start\":0,\"count\":1}],\"date\":\"2026-10-23T15:47:18.579Z\"}",
+          "etag": "ff233d62-b586-4352-baea-4cbe0bc497b5",
+          "puts": 2
+        },
+        {
+          "key": "p/snapshots/5b0907c4c2cbde7bc96f26fc65902bc2749be8e232ced1eb4803364faaaf5bb3.json",
+          "body": "{\"version\":1,\"head\":null,\"until\":{\"messages\":0,\"nodes\":0,\"notes\":0},\"parts\":[],\"date\":\"2026-10-23T15:46:18.528Z\"}",
+          "etag": "9685addf-fc43-4911-8444-ee33b12cf8fd",
+          "puts": 1
+        },
+        {
+          "key": "p/snapshots/aab12abf3894c7f8b1086d276231c003cf81d449a8c8206ef162cfd78dc54166.json",
+          "body": "{\"version\":1,\"head\":\"p/batches/8b609bbb1e01e2254ea2412e1c06313902ee38974dd2156b3658ac7abd37e7a6.json\",\"until\":{\"messages\":1,\"nodes\":0,\"notes\":0},\"parts\":[{\"start\":0,\"count\":1}],\"date\":\"2026-10-23T15:47:18.579Z\"}",
+          "etag": "2aa03561-01b1-47e8-8b97-5ded443dfd25",
+          "puts": 1
+        }
+      ],
+      "events": [
+        {
+          "event": "start",
+          "detail": "",
+          "at": 1792770378520
+        },
+        {
+          "event": "get",
+          "detail": "p/progress.json",
+          "at": 1792770378524
+        },
+        {
+          "event": "get",
+          "detail": "p/latest.json",
+          "at": 1792770378525
+        },
+        {
+          "event": "put-entered",
+          "detail": "p/progress.json",
+          "at": 1792770378528
+        },
+        {
+          "event": "put-entered",
+          "detail": "p/snapshots/5b0907c4c2cbde7bc96f26fc65902bc2749be8e232ced1eb4803364faaaf5bb3.json",
+          "at": 1792770378528
+        },
+        {
+          "event": "put-committed",
+          "detail": "p/progress.json",
+          "at": 1792770378529
+        },
+        {
+          "event": "put-committed",
+          "detail": "p/snapshots/5b0907c4c2cbde7bc96f26fc65902bc2749be8e232ced1eb4803364faaaf5bb3.json",
+          "at": 1792770378529
+        },
+        {
+          "event": "put-entered",
+          "detail": "p/latest.json",
+          "at": 1792770378531
+        },
+        {
+          "event": "put-committed",
+          "detail": "p/latest.json",
+          "at": 1792770378531
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:discovery\",\"fn\":\"discover\",\"attempt\":1,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"2b5acd32-0d21-4aa1-94d5-ce016246259d\",\"deadline\":1792770438534}}",
+          "at": 1792770378535
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:pump\",\"fn\":\"pump\",\"attempt\":1,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"91fb1411-09eb-42e1-9530-c8834e57e194\",\"phase\":\"work\",\"claim\":null,\"discoveryDeadline\":0}}",
+          "at": 1792770378548
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:pump\",\"fn\":\"pump\",\"attempt\":1,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"91fb1411-09eb-42e1-9530-c8834e57e194\",\"phase\":\"work\",\"claim\":null,\"discoveryDeadline\":0}}",
+          "at": 1792770378562
+        },
+        {
+          "event": "empty-scan",
+          "detail": "",
+          "at": 1792770378563
+        },
+        {
+          "event": "postcommit-wake-dropped",
+          "detail": "",
+          "at": 1792770378564
+        },
+        {
+          "event": "import-committed",
+          "detail": "{\"added\":1}",
+          "at": 1792770378564
+        },
+        {
+          "event": "alarm",
+          "detail": "",
+          "at": 1792770438550
+        },
+        {
+          "event": "start",
+          "detail": "",
+          "at": 1792770438551
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:discovery\",\"fn\":\"discover\",\"attempt\":1,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"2b5acd32-0d21-4aa1-94d5-ce016246259d\",\"deadline\":1792770438534}}",
+          "at": 1792770438554
+        },
+        {
+          "event": "alarm",
+          "detail": "",
+          "at": 1792770438558
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:pump\",\"fn\":\"pump\",\"attempt\":1,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"b174be31-ea4a-4d99-b104-dfc1f772f55d\",\"phase\":\"work\",\"claim\":null,\"discoveryDeadline\":0}}",
+          "at": 1792770438559
+        },
+        {
+          "event": "claim",
+          "detail": "{\"attemptId\":\"a4dd0e91-862a-4707-ac7f-80e31668ec43\",\"target\":\"{\\\"messages\\\":1,\\\"nodes\\\":0,\\\"notes\\\":0}\",\"attempts\":1}",
+          "at": 1792770438561
+        },
+        {
+          "event": "get",
+          "detail": "p/progress.json",
+          "at": 1792770438567
+        },
+        {
+          "event": "get",
+          "detail": "p/latest.json",
+          "at": 1792770438569
+        },
+        {
+          "event": "put-entered",
+          "detail": "p/batches/8b609bbb1e01e2254ea2412e1c06313902ee38974dd2156b3658ac7abd37e7a6.json",
+          "at": 1792770438575
+        },
+        {
+          "event": "put-committed",
+          "detail": "p/batches/8b609bbb1e01e2254ea2412e1c06313902ee38974dd2156b3658ac7abd37e7a6.json",
+          "at": 1792770438576
+        },
+        {
+          "event": "put-entered",
+          "detail": "p/progress.json",
+          "at": 1792770438580
+        },
+        {
+          "event": "put-entered",
+          "detail": "p/snapshots/aab12abf3894c7f8b1086d276231c003cf81d449a8c8206ef162cfd78dc54166.json",
+          "at": 1792770438580
+        },
+        {
+          "event": "put-committed",
+          "detail": "p/progress.json",
+          "at": 1792770438581
+        },
+        {
+          "event": "put-committed",
+          "detail": "p/snapshots/aab12abf3894c7f8b1086d276231c003cf81d449a8c8206ef162cfd78dc54166.json",
+          "at": 1792770438581
+        },
+        {
+          "event": "put-entered",
+          "detail": "p/latest.json",
+          "at": 1792770438584
+        },
+        {
+          "event": "put-committed",
+          "detail": "p/latest.json",
+          "at": 1792770438585
+        },
+        {
+          "event": "alarm",
+          "detail": "",
+          "at": 1792770438592
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:pump\",\"fn\":\"pump\",\"attempt\":1,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"b174be31-ea4a-4d99-b104-dfc1f772f55d\",\"phase\":\"work\",\"claim\":null,\"discoveryDeadline\":0}}",
+          "at": 1792770438592
+        }
+      ],
+      "jobs": [],
+      "alarm": null,
+      "held": false,
+      "now": 1792770448539,
+      "discoveryDeadline": 1792770438534
+    },
+    "checkpointAfter": {
+      "control": {
+        "id": 1,
+        "date": "2026-10-23T15:46:18.371Z",
+        "watermark": "{\"messages\":1,\"nodes\":0,\"notes\":0}",
+        "error": null,
+        "schema_version": 1,
+        "workflow_version": 1,
+        "phase": "idle",
+        "target": "{\"messages\":1,\"nodes\":0,\"notes\":0}",
+        "attempts": 0,
+        "attempt_id": "ecdbf75e-9f9f-4cb8-8b46-2ddb8ea686e8",
+        "retry_at": 0
+      },
+      "memory": [
+        {
+          "id": 0,
+          "source": "native-source",
+          "kind": "user",
+          "text": "Native backup exact 🍀 original",
+          "date": "2026-10-23T00:00:00Z",
+          "provenance": null
+        }
+      ],
+      "objects": [
+        {
+          "key": "p/batches/8b55cb3e5732286b9c8a7271bbe20e3165ddb43a9249648fb3fd10ff2421fda6.json",
+          "body": "{\"version\":1,\"previous\":null,\"records\":[{\"type\":\"message\",\"id\":0,\"source\":\"native-source\",\"kind\":\"user\",\"text\":\"Native backup exact 🍀 original\",\"date\":\"2026-10-23T00:00:00Z\"}]}",
+          "etag": "fd43fedd-df74-432e-bc0b-b44f0d531e93",
+          "puts": 1
+        },
+        {
+          "key": "p/latest.json",
+          "body": "{\"version\":1,\"head\":\"p/batches/8b55cb3e5732286b9c8a7271bbe20e3165ddb43a9249648fb3fd10ff2421fda6.json\",\"until\":{\"messages\":1,\"nodes\":0,\"notes\":0},\"parts\":[{\"start\":0,\"count\":1}],\"date\":\"2026-10-23T15:46:18.371Z\"}",
+          "etag": "3eb22467-a515-4ed0-84d8-f69a0625f3dd",
+          "puts": 1
+        },
+        {
+          "key": "p/progress.json",
+          "body": "{\"version\":1,\"head\":\"p/batches/8b55cb3e5732286b9c8a7271bbe20e3165ddb43a9249648fb3fd10ff2421fda6.json\",\"until\":{\"messages\":1,\"nodes\":0,\"notes\":0},\"parts\":[{\"start\":0,\"count\":1}],\"date\":\"2026-10-23T15:46:18.371Z\"}",
+          "etag": "ba4ae66a-c035-4d56-a561-1fe22d6ff46e",
+          "puts": 1
+        },
+        {
+          "key": "p/snapshots/d6b594c312e8c180ec6d28d5cbf43a59b925e6c1f315c362c87dcf9953e950f6.json",
+          "body": "{\"version\":1,\"head\":\"p/batches/8b55cb3e5732286b9c8a7271bbe20e3165ddb43a9249648fb3fd10ff2421fda6.json\",\"until\":{\"messages\":1,\"nodes\":0,\"notes\":0},\"parts\":[{\"start\":0,\"count\":1}],\"date\":\"2026-10-23T15:46:18.371Z\"}",
+          "etag": "5db84526-424e-45e4-af7c-34b2393a1113",
+          "puts": 2
+        }
+      ],
+      "events": [
+        {
+          "event": "start",
+          "detail": "",
+          "at": 1792770378357
+        },
+        {
+          "event": "alarm",
+          "detail": "",
+          "at": 1792770378363
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:pump\",\"fn\":\"pump\",\"attempt\":1,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"9dc409e1-ac10-4555-aa17-c5b7ebb94886\",\"phase\":\"work\",\"claim\":null,\"discoveryDeadline\":0}}",
+          "at": 1792770378363
+        },
+        {
+          "event": "claim",
+          "detail": "{\"attemptId\":\"976b9eb0-a9cf-4a81-9d70-f96dd5284a77\",\"target\":\"{\\\"messages\\\":1,\\\"nodes\\\":0,\\\"notes\\\":0}\",\"attempts\":1}",
+          "at": 1792770378364
+        },
+        {
+          "event": "get",
+          "detail": "p/progress.json",
+          "at": 1792770378366
+        },
+        {
+          "event": "get",
+          "detail": "p/latest.json",
+          "at": 1792770378366
+        },
+        {
+          "event": "put-entered",
+          "detail": "p/batches/8b55cb3e5732286b9c8a7271bbe20e3165ddb43a9249648fb3fd10ff2421fda6.json",
+          "at": 1792770378369
+        },
+        {
+          "event": "put-committed",
+          "detail": "p/batches/8b55cb3e5732286b9c8a7271bbe20e3165ddb43a9249648fb3fd10ff2421fda6.json",
+          "at": 1792770378369
+        },
+        {
+          "event": "put-entered",
+          "detail": "p/progress.json",
+          "at": 1792770378371
+        },
+        {
+          "event": "put-entered",
+          "detail": "p/snapshots/d6b594c312e8c180ec6d28d5cbf43a59b925e6c1f315c362c87dcf9953e950f6.json",
+          "at": 1792770378371
+        },
+        {
+          "event": "put-committed",
+          "detail": "p/progress.json",
+          "at": 1792770378372
+        },
+        {
+          "event": "put-committed",
+          "detail": "p/snapshots/d6b594c312e8c180ec6d28d5cbf43a59b925e6c1f315c362c87dcf9953e950f6.json",
+          "at": 1792770378372
+        },
+        {
+          "event": "put-entered",
+          "detail": "p/latest.json",
+          "at": 1792770378374
+        },
+        {
+          "event": "latest-held",
+          "detail": "",
+          "at": 1792770378374
+        },
+        {
+          "event": "alarm",
+          "detail": "",
+          "at": 1792770408397
+        },
+        {
+          "event": "start",
+          "detail": "",
+          "at": 1792770408398
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:pump\",\"fn\":\"pump\",\"attempt\":1,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"9dc409e1-ac10-4555-aa17-c5b7ebb94886\",\"phase\":\"work\",\"claim\":null,\"discoveryDeadline\":0}}",
+          "at": 1792770408408
+        },
+        {
+          "event": "claim",
+          "detail": "{\"attemptId\":\"ecdbf75e-9f9f-4cb8-8b46-2ddb8ea686e8\",\"target\":\"{\\\"messages\\\":1,\\\"nodes\\\":0,\\\"notes\\\":0}\",\"attempts\":2}",
+          "at": 1792770408411
+        },
+        {
+          "event": "get",
+          "detail": "p/progress.json",
+          "at": 1792770408418
+        },
+        {
+          "event": "get",
+          "detail": "p/latest.json",
+          "at": 1792770408420
+        },
+        {
+          "event": "put-entered",
+          "detail": "p/snapshots/d6b594c312e8c180ec6d28d5cbf43a59b925e6c1f315c362c87dcf9953e950f6.json",
+          "at": 1792770408430
+        },
+        {
+          "event": "put-committed",
+          "detail": "p/snapshots/d6b594c312e8c180ec6d28d5cbf43a59b925e6c1f315c362c87dcf9953e950f6.json",
+          "at": 1792770408431
+        },
+        {
+          "event": "put-entered",
+          "detail": "p/latest.json",
+          "at": 1792770408433
+        },
+        {
+          "event": "put-committed",
+          "detail": "p/latest.json",
+          "at": 1792770408433
+        },
+        {
+          "event": "alarm",
+          "detail": "",
+          "at": 1792770408441
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:pump\",\"fn\":\"pump\",\"attempt\":1,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"9dc409e1-ac10-4555-aa17-c5b7ebb94886\",\"phase\":\"work\",\"claim\":null,\"discoveryDeadline\":0}}",
+          "at": 1792770408441
+        }
+      ],
+      "jobs": [],
+      "alarm": null,
+      "held": false,
+      "now": 1792770448545,
+      "discoveryDeadline": 0
+    },
+    "budgetAfter": {
+      "control": {
+        "id": 1,
+        "date": "2026-10-23T15:47:29.070Z",
+        "watermark": "{\"messages\":1,\"nodes\":0,\"notes\":0}",
+        "error": null,
+        "schema_version": 1,
+        "workflow_version": 1,
+        "phase": "idle",
+        "target": "{\"messages\":1,\"nodes\":0,\"notes\":0}",
+        "attempts": 0,
+        "attempt_id": "6549e87c-c790-4a61-8fb3-f3b6ca0ca565",
+        "retry_at": 0
+      },
+      "memory": [
+        {
+          "id": 0,
+          "source": "native-source",
+          "kind": "user",
+          "text": "Native backup exact 🍀 original",
+          "date": "2026-10-23T00:00:00Z",
+          "provenance": null
+        }
+      ],
+      "objects": [
+        {
+          "key": "p/batches/8b55cb3e5732286b9c8a7271bbe20e3165ddb43a9249648fb3fd10ff2421fda6.json",
+          "body": "{\"version\":1,\"previous\":null,\"records\":[{\"type\":\"message\",\"id\":0,\"source\":\"native-source\",\"kind\":\"user\",\"text\":\"Native backup exact 🍀 original\",\"date\":\"2026-10-23T00:00:00Z\"}]}",
+          "etag": "f72fb2a1-c0f2-4d4e-86fb-99501218a641",
+          "puts": 1
+        },
+        {
+          "key": "p/latest.json",
+          "body": "{\"version\":1,\"head\":\"p/batches/8b55cb3e5732286b9c8a7271bbe20e3165ddb43a9249648fb3fd10ff2421fda6.json\",\"until\":{\"messages\":1,\"nodes\":0,\"notes\":0},\"parts\":[{\"start\":0,\"count\":1}],\"date\":\"2026-10-23T15:47:29.070Z\"}",
+          "etag": "722dc196-1348-4148-9aa4-6de68d84c1a4",
+          "puts": 1
+        },
+        {
+          "key": "p/progress.json",
+          "body": "{\"version\":1,\"head\":\"p/batches/8b55cb3e5732286b9c8a7271bbe20e3165ddb43a9249648fb3fd10ff2421fda6.json\",\"until\":{\"messages\":1,\"nodes\":0,\"notes\":0},\"parts\":[{\"start\":0,\"count\":1}],\"date\":\"2026-10-23T15:47:29.070Z\"}",
+          "etag": "ce2060a8-fc1d-466b-866b-953ddaf05b45",
+          "puts": 1
+        },
+        {
+          "key": "p/snapshots/badf815d1d6f62cb731e94223984a03e6b72a0619fe731d3e0569015b80a438a.json",
+          "body": "{\"version\":1,\"head\":\"p/batches/8b55cb3e5732286b9c8a7271bbe20e3165ddb43a9249648fb3fd10ff2421fda6.json\",\"until\":{\"messages\":1,\"nodes\":0,\"notes\":0},\"parts\":[{\"start\":0,\"count\":1}],\"date\":\"2026-10-23T15:47:29.070Z\"}",
+          "etag": "c52218e7-8971-44ff-acf0-a9c86607957c",
+          "puts": 1
+        }
+      ],
+      "events": [
+        {
+          "event": "start",
+          "detail": "",
+          "at": 1792770357498
+        },
+        {
+          "event": "alarm",
+          "detail": "",
+          "at": 1792770357505
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:pump\",\"fn\":\"pump\",\"attempt\":1,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"b9f7cf4e-050f-4cf6-ac05-ef0a64759986\",\"phase\":\"work\",\"claim\":null,\"discoveryDeadline\":0}}",
+          "at": 1792770357505
+        },
+        {
+          "event": "claim",
+          "detail": "{\"attemptId\":\"15564cbf-422d-4fa1-bf73-38067a8875dc\",\"target\":\"{\\\"messages\\\":1,\\\"nodes\\\":0,\\\"notes\\\":0}\",\"attempts\":1}",
+          "at": 1792770357506
+        },
+        {
+          "event": "get",
+          "detail": "p/progress.json",
+          "at": 1792770357507
+        },
+        {
+          "event": "get-failed",
+          "detail": "p/progress.json",
+          "at": 1792770357507
+        },
+        {
+          "event": "get",
+          "detail": "p/latest.json",
+          "at": 1792770357507
+        },
+        {
+          "event": "get-failed",
+          "detail": "p/latest.json",
+          "at": 1792770357507
+        },
+        {
+          "event": "alarm",
+          "detail": "",
+          "at": 1792770357514
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:pump\",\"fn\":\"pump\",\"attempt\":1,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"b9f7cf4e-050f-4cf6-ac05-ef0a64759986\",\"phase\":\"work\",\"claim\":null,\"discoveryDeadline\":0}}",
+          "at": 1792770357514
+        },
+        {
+          "event": "alarm",
+          "detail": "",
+          "at": 1792770367512
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:pump\",\"fn\":\"pump\",\"attempt\":1,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"b9f7cf4e-050f-4cf6-ac05-ef0a64759986\",\"phase\":\"work\",\"claim\":null,\"discoveryDeadline\":0}}",
+          "at": 1792770367512
+        },
+        {
+          "event": "claim",
+          "detail": "{\"attemptId\":\"ed8117b1-536d-4221-a44a-b485aa012cef\",\"target\":\"{\\\"messages\\\":1,\\\"nodes\\\":0,\\\"notes\\\":0}\",\"attempts\":2}",
+          "at": 1792770367514
+        },
+        {
+          "event": "get",
+          "detail": "p/progress.json",
+          "at": 1792770367516
+        },
+        {
+          "event": "get-failed",
+          "detail": "p/progress.json",
+          "at": 1792770367516
+        },
+        {
+          "event": "get",
+          "detail": "p/latest.json",
+          "at": 1792770367516
+        },
+        {
+          "event": "get-failed",
+          "detail": "p/latest.json",
+          "at": 1792770367516
+        },
+        {
+          "event": "alarm",
+          "detail": "",
+          "at": 1792770367520
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:pump\",\"fn\":\"pump\",\"attempt\":1,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"b9f7cf4e-050f-4cf6-ac05-ef0a64759986\",\"phase\":\"work\",\"claim\":null,\"discoveryDeadline\":0}}",
+          "at": 1792770367520
+        },
+        {
+          "event": "alarm",
+          "detail": "",
+          "at": 1792770377517
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:pump\",\"fn\":\"pump\",\"attempt\":1,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"b9f7cf4e-050f-4cf6-ac05-ef0a64759986\",\"phase\":\"work\",\"claim\":null,\"discoveryDeadline\":0}}",
+          "at": 1792770377517
+        },
+        {
+          "event": "claim",
+          "detail": "{\"attemptId\":\"fef5fce7-8a2b-4010-abc3-533d9e8e6598\",\"target\":\"{\\\"messages\\\":1,\\\"nodes\\\":0,\\\"notes\\\":0}\",\"attempts\":3}",
+          "at": 1792770377519
+        },
+        {
+          "event": "get",
+          "detail": "p/progress.json",
+          "at": 1792770377521
+        },
+        {
+          "event": "get-failed",
+          "detail": "p/progress.json",
+          "at": 1792770377521
+        },
+        {
+          "event": "get",
+          "detail": "p/latest.json",
+          "at": 1792770377521
+        },
+        {
+          "event": "get-failed",
+          "detail": "p/latest.json",
+          "at": 1792770377521
+        },
+        {
+          "event": "alarm",
+          "detail": "",
+          "at": 1792770377526
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:pump\",\"fn\":\"pump\",\"attempt\":1,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"b9f7cf4e-050f-4cf6-ac05-ef0a64759986\",\"phase\":\"work\",\"claim\":null,\"discoveryDeadline\":0}}",
+          "at": 1792770377526
+        },
+        {
+          "event": "alarm",
+          "detail": "",
+          "at": 1792770377578
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:pump\",\"fn\":\"pump\",\"attempt\":1,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"f49de7a2-212b-49c0-a2c5-14bd7c9fa187\",\"phase\":\"work\",\"claim\":null,\"discoveryDeadline\":0}}",
+          "at": 1792770377579
+        },
+        {
+          "event": "alarm",
+          "detail": "",
+          "at": 1792770377584
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:pump\",\"fn\":\"pump\",\"attempt\":1,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"f49de7a2-212b-49c0-a2c5-14bd7c9fa187\",\"phase\":\"work\",\"claim\":null,\"discoveryDeadline\":0}}",
+          "at": 1792770377584
+        },
+        {
+          "event": "start",
+          "detail": "",
+          "at": 1792770448552
+        },
+        {
+          "event": "alarm",
+          "detail": "",
+          "at": 1792770448555
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:pump\",\"fn\":\"pump\",\"attempt\":1,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"df808b5e-63e4-43dd-ac72-952d54a1d72a\",\"phase\":\"work\",\"claim\":null,\"discoveryDeadline\":0}}",
+          "at": 1792770448555
+        },
+        {
+          "event": "alarm",
+          "detail": "",
+          "at": 1792770448559
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:pump\",\"fn\":\"pump\",\"attempt\":1,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"df808b5e-63e4-43dd-ac72-952d54a1d72a\",\"phase\":\"work\",\"claim\":null,\"discoveryDeadline\":0}}",
+          "at": 1792770448559
+        },
+        {
+          "event": "alarm",
+          "detail": "",
+          "at": 1792770449062
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:pump\",\"fn\":\"pump\",\"attempt\":1,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"af1d7e7a-9b38-400b-ad3c-3dc2640000f1\",\"phase\":\"work\",\"claim\":null,\"discoveryDeadline\":1792770509060}}",
+          "at": 1792770449062
+        },
+        {
+          "event": "claim",
+          "detail": "{\"attemptId\":\"6549e87c-c790-4a61-8fb3-f3b6ca0ca565\",\"target\":\"{\\\"messages\\\":1,\\\"nodes\\\":0,\\\"notes\\\":0}\",\"attempts\":1}",
+          "at": 1792770449064
+        },
+        {
+          "event": "get",
+          "detail": "p/progress.json",
+          "at": 1792770449065
+        },
+        {
+          "event": "get",
+          "detail": "p/latest.json",
+          "at": 1792770449066
+        },
+        {
+          "event": "put-entered",
+          "detail": "p/batches/8b55cb3e5732286b9c8a7271bbe20e3165ddb43a9249648fb3fd10ff2421fda6.json",
+          "at": 1792770449067
+        },
+        {
+          "event": "put-committed",
+          "detail": "p/batches/8b55cb3e5732286b9c8a7271bbe20e3165ddb43a9249648fb3fd10ff2421fda6.json",
+          "at": 1792770449068
+        },
+        {
+          "event": "put-entered",
+          "detail": "p/progress.json",
+          "at": 1792770449070
+        },
+        {
+          "event": "put-entered",
+          "detail": "p/snapshots/badf815d1d6f62cb731e94223984a03e6b72a0619fe731d3e0569015b80a438a.json",
+          "at": 1792770449070
+        },
+        {
+          "event": "put-committed",
+          "detail": "p/progress.json",
+          "at": 1792770449071
+        },
+        {
+          "event": "put-committed",
+          "detail": "p/snapshots/badf815d1d6f62cb731e94223984a03e6b72a0619fe731d3e0569015b80a438a.json",
+          "at": 1792770449071
+        },
+        {
+          "event": "put-entered",
+          "detail": "p/latest.json",
+          "at": 1792770449072
+        },
+        {
+          "event": "put-committed",
+          "detail": "p/latest.json",
+          "at": 1792770449073
+        },
+        {
+          "event": "alarm",
+          "detail": "",
+          "at": 1792770449078
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:pump\",\"fn\":\"pump\",\"attempt\":1,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"af1d7e7a-9b38-400b-ad3c-3dc2640000f1\",\"phase\":\"work\",\"claim\":null,\"discoveryDeadline\":1792770509060}}",
+          "at": 1792770449078
+        }
+      ],
+      "jobs": [
+        {
+          "id": "memory-backups:pump",
+          "capability": "memory-backups",
+          "fn": "pump",
+          "time": 1792770509060,
+          "payload": {
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "token": "af1d7e7a-9b38-400b-ad3c-3dc2640000f1",
+            "phase": "work",
+            "claim": null,
+            "discoveryDeadline": 1792770509060
+          },
+          "retry": {
+            "maxAttempts": 3,
+            "baseDelayMs": 100,
+            "maxDelayMs": 1000
+          },
+          "singleflight": true,
+          "exclusive": false,
+          "recoveryLoop": true,
+          "createdAt": 1792770449
+        }
+      ],
+      "alarm": 1792770509060,
+      "held": false,
+      "now": 1792770449167,
+      "discoveryDeadline": 0
+    },
+    "schedulerAfter": {
+      "control": {
+        "id": 1,
+        "date": "2026-10-23T15:47:29.491Z",
+        "watermark": "{\"messages\":0,\"nodes\":0,\"notes\":0}",
+        "error": null,
+        "schema_version": 1,
+        "workflow_version": 1,
+        "phase": "idle",
+        "target": "{\"messages\":0,\"nodes\":0,\"notes\":0}",
+        "attempts": 0,
+        "attempt_id": "fd2795e8-cd26-4411-94a4-9bb844641865",
+        "retry_at": 0
+      },
+      "memory": [],
+      "objects": [
+        {
+          "key": "p/latest.json",
+          "body": "{\"version\":1,\"head\":null,\"until\":{\"messages\":0,\"nodes\":0,\"notes\":0},\"parts\":[],\"date\":\"2026-10-23T15:47:29.491Z\"}",
+          "etag": "b2006600-f226-47e1-9ed7-1b0d5696c0fb",
+          "puts": 1
+        },
+        {
+          "key": "p/progress.json",
+          "body": "{\"version\":1,\"head\":null,\"until\":{\"messages\":0,\"nodes\":0,\"notes\":0},\"parts\":[],\"date\":\"2026-10-23T15:47:29.491Z\"}",
+          "etag": "6b6e18d2-397a-4d0f-b8fd-364a43bf52cc",
+          "puts": 1
+        },
+        {
+          "key": "p/snapshots/81fd936b1f54464d69e94c17b92798f3ceaa3edf646909c857ace388f324f20a.json",
+          "body": "{\"version\":1,\"head\":null,\"until\":{\"messages\":0,\"nodes\":0,\"notes\":0},\"parts\":[],\"date\":\"2026-10-23T15:47:29.491Z\"}",
+          "etag": "6d0bd725-1c9f-489a-9653-1f04fe2df783",
+          "puts": 1
+        }
+      ],
+      "events": [
+        {
+          "event": "start",
+          "detail": "",
+          "at": 1792770356886
+        },
+        {
+          "event": "alarm",
+          "detail": "",
+          "at": 1792770356891
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:discovery\",\"fn\":\"discover\",\"attempt\":1,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"9ffa6b6e-884e-4310-a579-55bb30dfd8b1\",\"deadline\":1792770416890}}",
+          "at": 1792770356891
+        },
+        {
+          "event": "wake-failed",
+          "detail": "",
+          "at": 1792770356891
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:discovery\",\"fn\":\"discover\",\"attempt\":2,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"9ffa6b6e-884e-4310-a579-55bb30dfd8b1\",\"deadline\":1792770416890}}",
+          "at": 1792770357045
+        },
+        {
+          "event": "wake-failed",
+          "detail": "",
+          "at": 1792770357045
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:discovery\",\"fn\":\"discover\",\"attempt\":3,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"9ffa6b6e-884e-4310-a579-55bb30dfd8b1\",\"deadline\":1792770416890}}",
+          "at": 1792770357328
+        },
+        {
+          "event": "wake-failed",
+          "detail": "",
+          "at": 1792770357329
+        },
+        {
+          "event": "notify",
+          "detail": "",
+          "at": 1792770357331
+        },
+        {
+          "event": "start",
+          "detail": "",
+          "at": 1792770449175
+        },
+        {
+          "event": "alarm",
+          "detail": "",
+          "at": 1792770449486
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:discovery\",\"fn\":\"discover\",\"attempt\":1,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"9ed0f8da-2fa2-4ff4-a23e-08cd3ff43ca0\",\"deadline\":1792770509483}}",
+          "at": 1792770449486
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:pump\",\"fn\":\"pump\",\"attempt\":1,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"18ad1198-0bf2-456b-857b-b6d50612a8e5\",\"phase\":\"work\",\"claim\":null,\"discoveryDeadline\":0}}",
+          "at": 1792770449486
+        },
+        {
+          "event": "claim",
+          "detail": "{\"attemptId\":\"fd2795e8-cd26-4411-94a4-9bb844641865\",\"target\":\"{\\\"messages\\\":0,\\\"nodes\\\":0,\\\"notes\\\":0}\",\"attempts\":1}",
+          "at": 1792770449488
+        },
+        {
+          "event": "get",
+          "detail": "p/progress.json",
+          "at": 1792770449489
+        },
+        {
+          "event": "get",
+          "detail": "p/latest.json",
+          "at": 1792770449489
+        },
+        {
+          "event": "put-entered",
+          "detail": "p/progress.json",
+          "at": 1792770449491
+        },
+        {
+          "event": "put-entered",
+          "detail": "p/snapshots/81fd936b1f54464d69e94c17b92798f3ceaa3edf646909c857ace388f324f20a.json",
+          "at": 1792770449491
+        },
+        {
+          "event": "put-committed",
+          "detail": "p/progress.json",
+          "at": 1792770449492
+        },
+        {
+          "event": "put-committed",
+          "detail": "p/snapshots/81fd936b1f54464d69e94c17b92798f3ceaa3edf646909c857ace388f324f20a.json",
+          "at": 1792770449492
+        },
+        {
+          "event": "put-entered",
+          "detail": "p/latest.json",
+          "at": 1792770449493
+        },
+        {
+          "event": "put-committed",
+          "detail": "p/latest.json",
+          "at": 1792770449494
+        },
+        {
+          "event": "alarm",
+          "detail": "",
+          "at": 1792770449500
+        },
+        {
+          "event": "job",
+          "detail": "{\"id\":\"memory-backups:pump\",\"fn\":\"pump\",\"attempt\":1,\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"18ad1198-0bf2-456b-857b-b6d50612a8e5\",\"phase\":\"work\",\"claim\":null,\"discoveryDeadline\":0}}",
+          "at": 1792770449500
+        }
+      ],
+      "jobs": [
+        {
+          "id": "memory-backups:discovery",
+          "capability": "memory-backups",
+          "fn": "discover",
+          "time": 1792770509483,
+          "payload": {
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "token": "9ed0f8da-2fa2-4ff4-a23e-08cd3ff43ca0",
+            "deadline": 1792770509483
+          },
+          "retry": {
+            "maxAttempts": 3,
+            "baseDelayMs": 100,
+            "maxDelayMs": 1000
+          },
+          "singleflight": true,
+          "exclusive": false,
+          "recoveryLoop": true,
+          "createdAt": 1792770449
+        }
+      ],
+      "alarm": 1792770509483,
+      "held": false,
+      "now": 1792770449591,
+      "discoveryDeadline": 0,
+      "diagnostic": {
+        "schemaVersion": 1,
+        "workflowVersion": 1,
+        "phase": "available",
+        "retiredToken": "9ffa6b6e-884e-4310-a579-55bb30dfd8b1",
+        "recovery": {
+          "epoch": "4cc02dba-2dcb-4745-bd19-e723963e2a58",
+          "failedAt": 1792770357330,
+          "message": "Backup scheduling could not persist or discover its work. Retry backup recovery when storage is available."
+        },
+        "claim": null
+      }
+    },
+    "secondRestart": "stable control, memory, remote immutable objects, and exact claims"
+  },
+  "noPoke": [
+    {
+      "start": 1792770378642,
+      "deadline": 1792770448534,
+      "end": 1792770448535
+    }
+  ]
+}

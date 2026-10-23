@@ -1,6 +1,7 @@
 import { expect, it } from "@effect/vitest"
-import { Cause, Context, Deferred, Effect, Exit, Fiber } from "effect"
+import { Cause, Clock, Context, Deferred, Effect, Exit, Fiber } from "effect"
 import { SqlError, UnknownError } from "effect/sql/SqlError"
+import { TestClock } from "effect/testing"
 
 import { BotConfigurationStore } from "../src/agents/adapters/configuration"
 import { homeAgentId, type AgentError } from "../src/agents/domain"
@@ -19,7 +20,6 @@ import {
   summaryRoutingApplication,
   summaryBudget,
   summaryRequestAllowed,
-  summaryRetryTransition,
 } from "../src/memory/routing"
 import { migrateSqlite } from "../src/storage/migrations"
 import { database, type TestSqlite, corrupt } from "./database"
@@ -61,10 +61,12 @@ const fixture = (db: TestSqlite = database()) =>
         ModelCatalog,
         WakeFailure | AgentError | MemoryError
       >
+      arm: () => Effect.Effect<number, WakeFailure>
       wake: () => Effect.Effect<void, WakeFailure>
       notify: () => Effect.Effect<void, WakeFailure>
     } = {
       catalog: () => Effect.succeed(catalog),
+      arm: () => Clock.currentTimeMillis.pipe(Effect.map((now) => now + 1000)),
       wake: () =>
         Effect.sync(() => {
           wakes++
@@ -103,39 +105,6 @@ it("keeps request limits, pinned budgets and replay precedence in pure Memory po
   const route = { ...resolveRoute("memory"), contextWindow: 32000 }
   expect(summaryBudget(route, 16000)).toBe(route)
   expect(summaryBudget(resolveRoute("memory"), 16000).contextWindow).toBe(16000)
-  for (const archived of [false, true])
-    for (const paused of [false, true])
-      for (let revision = 0; revision < 10; revision++) {
-        expect(
-          summaryRetryTransition({
-            applied: true,
-            archived,
-            paused,
-            revision,
-            expectedRevision: 1,
-          })
-        ).toBe("replay")
-        if (!archived && paused && revision === 1)
-          expect(
-            summaryRetryTransition({
-              applied: false,
-              archived,
-              paused,
-              revision,
-              expectedRevision: 1,
-            })
-          ).toBe("retry")
-        else
-          expect(() =>
-            summaryRetryTransition({
-              applied: false,
-              archived,
-              paused,
-              revision,
-              expectedRevision: 1,
-            })
-          ).toThrow()
-      }
 })
 it.effect(
   "rolls the cleared failure and route revision back together on a route insert failure",
@@ -513,5 +482,208 @@ it.effect(
       expect(yield* f.ledger.paused(f.part)).toBe(true)
       expect(yield* f.routes.revision(f.part)).toBe(1)
       expect(f.counters()).toEqual({ wakes: 0, notifications: 0 })
+    })
+)
+
+it.effect(
+  "failed discovery prearm preserves the paused control and exact route budget",
+  () =>
+    Effect.gen(function* () {
+      const f = yield* fixture()
+      f.db.run("UPDATE summary_routes SET requests=1")
+      const before = f.db.all("SELECT * FROM memory_ready")
+      f.host.arm = () => Effect.fail({ _tag: "WakeFailure" })
+      expect(yield* f.retry(f.input).pipe(Effect.result)).toMatchObject(
+        failed("WakeFailure")
+      )
+      expect(f.db.all("SELECT * FROM memory_ready")).toEqual(before)
+      expect(f.db.all("SELECT revision,requests FROM summary_routes")).toEqual([
+        { revision: 1, requests: 1 },
+      ])
+      expect(yield* f.ledger.paused(f.part)).toBe(true)
+      expect(f.counters()).toEqual({ wakes: 0, notifications: 0 })
+    })
+)
+
+it.effect(
+  "a discovery lease expiring behind the real SQLite owner cannot clear paused state",
+  () =>
+    Effect.gen(function* () {
+      const f = yield* fixture(),
+        arming = yield* Deferred.make<void>(),
+        armed = yield* Deferred.make<void>(),
+        held = yield* Deferred.make<void>(),
+        release = yield* Deferred.make<void>(),
+        queued = yield* Deferred.make<void>()
+      const before = f.db.all("SELECT * FROM memory_ready")
+      f.host.arm = () =>
+        Effect.gen(function* () {
+          const now = yield* Clock.currentTimeMillis
+          yield* Deferred.succeed(arming, undefined)
+          yield* Deferred.await(armed)
+          return now + 1000
+        })
+      const pending = yield* f.retry(f.input).pipe(Effect.forkChild)
+      yield* Deferred.await(arming)
+      const holder = yield* f.db
+        .transaction(() =>
+          Deferred.succeed(held, undefined).pipe(
+            Effect.andThen(Deferred.await(release))
+          )
+        )
+        .pipe(Effect.forkChild)
+      yield* Deferred.await(held)
+      const atomic = f.ledger.atomic.bind(f.ledger)
+      f.ledger.atomic = (body) =>
+        Deferred.succeed(queued, undefined).pipe(Effect.andThen(atomic(body)))
+      yield* Deferred.succeed(armed, undefined)
+      yield* Deferred.await(queued)
+      yield* TestClock.adjust(1000)
+      yield* Deferred.succeed(release, undefined)
+      yield* Fiber.join(holder)
+      expect(yield* Fiber.join(pending).pipe(Effect.result)).toMatchObject({
+        _tag: "Failure",
+        failure: {
+          _tag: "InvalidMemory",
+          message: "Memory retry discovery expired. Try again.",
+        },
+      })
+      expect(f.db.all("SELECT * FROM memory_ready")).toEqual(before)
+      expect(yield* f.routes.revision(f.part)).toBe(1)
+      expect(yield* f.routes.applied(f.input.operationId, f.part)).toBe(false)
+      expect(f.counters()).toEqual({ wakes: 0, notifications: 0 })
+    })
+)
+
+it.effect(
+  "exact retry replay skips configuration, catalog and prearm without changing its debit",
+  () =>
+    Effect.gen(function* () {
+      const f = yield* fixture()
+      yield* f.retry(f.input)
+      f.db.run("UPDATE summary_routes SET requests=7 WHERE revision=2")
+      f.conversations.jobSetting = () =>
+        Effect.die("Replay must not read configuration")
+      f.host.catalog = () => Effect.die("Replay must not query the catalog")
+      f.host.arm = () => Effect.die("Replay must not renew discovery")
+      yield* f.retry(f.input)
+      expect(
+        f.db.all(
+          "SELECT revision,requests FROM summary_routes ORDER BY revision"
+        )
+      ).toEqual([
+        { revision: 1, requests: 0 },
+        { revision: 2, requests: 7 },
+      ])
+      expect(f.counters()).toEqual({ wakes: 2, notifications: 1 })
+    })
+)
+
+it.effect(
+  "cancelled discovery joins cleanup and retains annotated checked and defect causes",
+  () =>
+    Effect.gen(function* () {
+      const f = yield* fixture(),
+        entered = yield* Deferred.make<void>(),
+        releasing = yield* Deferred.make<void>(),
+        release = yield* Deferred.make<void>()
+      class Marker extends Context.Service<Marker, string>()(
+        "test/MemoryRetryCauseMarker"
+      ) {}
+      const checked = Cause.makeFailReason<WakeFailure>({
+          _tag: "WakeFailure",
+        }).annotate(Context.make(Marker, "checked")),
+        defect = Cause.makeDieReason(
+          new Error("Retry discovery cleanup defect")
+        ).annotate(Context.make(Marker, "defect"))
+      let settled = false
+      f.host.catalog = () =>
+        Effect.acquireUseRelease(
+          Deferred.succeed(entered, undefined),
+          () => Effect.never,
+          () =>
+            Deferred.succeed(releasing, undefined).pipe(
+              Effect.andThen(Deferred.await(release)),
+              Effect.andThen(
+                Effect.failCause(Cause.fromReasons([checked, defect]))
+              )
+            )
+        )
+      const pending = yield* f.retry(f.input).pipe(
+        Effect.ensuring(
+          Effect.sync(() => {
+            settled = true
+          })
+        ),
+        Effect.forkChild
+      )
+      yield* Deferred.await(entered)
+      const interrupting = yield* Fiber.interrupt(pending).pipe(
+        Effect.forkChild
+      )
+      yield* Deferred.await(releasing)
+      expect(settled).toBe(false)
+      yield* Deferred.succeed(release, undefined)
+      yield* Fiber.join(interrupting)
+      const exit = yield* Fiber.await(pending)
+      expect(Exit.isFailure(exit) && Cause.hasInterrupts(exit.cause)).toBe(true)
+      if (Exit.isFailure(exit)) {
+        expect(
+          exit.cause.reasons.some(
+            (reason) =>
+              reason._tag === "Fail" &&
+              reason.error === checked.error &&
+              reason.annotations.get(Marker.key) === "checked"
+          )
+        ).toBe(true)
+        expect(
+          exit.cause.reasons.some(
+            (reason) =>
+              reason._tag === "Die" &&
+              reason.defect === defect.defect &&
+              reason.annotations.get(Marker.key) === "defect"
+          )
+        ).toBe(true)
+      }
+      expect(yield* f.ledger.paused(f.part)).toBe(true)
+      expect(yield* f.routes.revision(f.part)).toBe(1)
+    })
+)
+
+it.effect(
+  "a lost postcommit wake retains the host's prearmed durable discovery intent",
+  () =>
+    Effect.gen(function* () {
+      const f = yield* fixture()
+      // This fixture records the scheduler capability's receipt in real SQLite;
+      // native Lifecycle alarm delivery is covered by the host runtime suite.
+      f.db.run("CREATE TABLE retry_test_discovery(deadline INTEGER NOT NULL)")
+      f.host.arm = () =>
+        Clock.currentTimeMillis.pipe(
+          Effect.tap((now) =>
+            Effect.sync(() =>
+              f.db.run(
+                "INSERT INTO retry_test_discovery(deadline) VALUES (?)",
+                now + 1000
+              )
+            )
+          ),
+          Effect.map((now) => now + 1000)
+        )
+      f.host.wake = () => Effect.fail({ _tag: "WakeFailure" })
+      expect(yield* f.retry(f.input).pipe(Effect.result)).toMatchObject(
+        failed("WakeFailure")
+      )
+      const restored = yield* MemoryRepository.pipe(
+        Effect.provide(sqliteMemoryLayer(f.db))
+      )
+      expect(yield* restored.paused(f.part)).toBe(false)
+      expect(
+        yield* new SummaryRoutes(f.db).applied(f.input.operationId, f.part)
+      ).toBe(true)
+      expect(f.db.all("SELECT deadline FROM retry_test_discovery")).toEqual([
+        { deadline: (yield* Clock.currentTimeMillis) + 1000 },
+      ])
+      expect(yield* restored.next()).toMatchObject(f.part)
     })
 )

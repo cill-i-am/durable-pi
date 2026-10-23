@@ -8,7 +8,7 @@ import { Harness, createRegistry } from "@earendil-works/pi-durable"
 import { PiHarness } from "agents/harness/pi"
 import { Lifecycle } from "agents/lifecycle"
 import { DurableObject } from "cloudflare:workers"
-import { Context, Effect, Scope } from "effect"
+import { Clock, Context, Effect, Scope } from "effect"
 
 import {
   ConversationRunner,
@@ -99,7 +99,18 @@ export class RoutinesProbe extends DurableObject<Record<string, never>> {
   readonly journal = makeConversationJournal(
     this.store,
     this.memoryBundle.ledger,
-    sqliteConversationMaterialization(this.db)
+    sqliteConversationMaterialization(this.db),
+    {
+      // This isolated fixture proves routine/conversation admission; the Memory
+      // native fixtures separately exercise physical maintenance discovery.
+      arm: () =>
+        Clock.currentTimeMillis.pipe(
+          Effect.map((now) => {
+            const lease = { deadline: now + 60_000, current: () => true }
+            return { summary: lease, backup: lease }
+          })
+        ),
+    }
   )
   private holdDispatch = false
   private holdRoutineDispatch = false

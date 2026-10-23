@@ -98,13 +98,6 @@ export const fitMemory = Effect.fn("Memory.fit")(function* (
     changed: view.length !== parts.length,
   }
 })
-export function summaryFailure(previous: number | undefined, retryAt: number) {
-  return {
-    attempts: Math.min(SUMMARY_FAILURES, (previous ?? 0) + 1),
-    retryAt,
-    first: previous === undefined,
-  }
-}
 export type MergeSource = Part & { left_text: string; right_text: string }
 export function summaryJob(
   leaves: readonly LogEntry[],

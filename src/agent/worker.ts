@@ -205,7 +205,10 @@ import {
   ConversationExecution,
   ConversationExecutionError,
 } from "../conversations/execution"
-import { ConversationJournal } from "../conversations/journal"
+import {
+  ConversationJournal,
+  type ConversationMemoryDiscovery,
+} from "../conversations/journal"
 import {
   conversationPump,
   type ConversationControlAttempt,
@@ -400,6 +403,10 @@ import {
   validateRoute,
 } from "../inference/policy"
 import { InferenceUsage, usageApplication } from "../inference/usage"
+import {
+  BackupRunner,
+  BackupRecoveryChanged,
+} from "../memory/adapters/backup-lifecycle"
 import { SqliteBackupStatus } from "../memory/adapters/backup-status"
 import { bucketLayer } from "../memory/adapters/bucket"
 import { webCryptoLayer } from "../memory/adapters/crypto"
@@ -414,11 +421,18 @@ import { piModelSummaryProvider } from "../memory/adapters/pi-model"
 import { summaryRetryAuthority } from "../memory/adapters/retry-authority"
 import { sqliteMemoryLayer } from "../memory/adapters/sqlite"
 import { summaryInput } from "../memory/adapters/summary-input"
+import {
+  SummaryRunner,
+  SummaryRecoveryChanged,
+} from "../memory/adapters/summary-lifecycle"
 import { memoryTools } from "../memory/adapters/tools"
 import {
   memoryMaintenance,
   memoryImport,
   runMemoryBackup,
+  restoreMemoryBackup,
+  exhaustMemoryBackup,
+  retryMemoryBackup,
   memoryReport,
   type MemorySchedulingError,
   type MemoryHost,
@@ -427,7 +441,8 @@ import {
   MemoryBackupStatus,
   backupStatusApplication,
 } from "../memory/backup-status"
-import { Part } from "../memory/domain"
+import { BackupRetry } from "../memory/backup.machine"
+import { Part, type MemoryError } from "../memory/domain"
 import { ImportInput } from "../memory/import"
 import { MemoryTransaction } from "../memory/ledger"
 import { MemoryRepository } from "../memory/repository"
@@ -490,7 +505,7 @@ import {
   type RoutineError,
   routineApplication,
 } from "../routines/service"
-import { preserveFatal } from "../shared/effect"
+import { preserveFatal, fatalCause } from "../shared/effect"
 import { importSkillsRequest } from "../skills/adapters/hosted"
 import {
   readSkillJson,
@@ -553,7 +568,6 @@ import {
 import { Workspace } from "../workspace/workspace"
 import { agentGateway } from "./adapters/gateway"
 import { agentJson, agentNative, agentResponse } from "./adapters/http"
-import { MaintenanceRunner } from "./adapters/maintenance-runner"
 import { proxyTerminalRequest } from "./adapters/terminal"
 import { agentSettings, contextProjectionBytes } from "./compaction"
 import { SYSTEM_PROMPT } from "./prompts"
@@ -589,27 +603,15 @@ abstract class TurnRunner extends LifecycleCapability {
   abstract onJob(): Promise<LifecycleJobOutcome>
 }
 
-class MemoryRunner extends MaintenanceRunner {
-  constructor(owner: PersonalAgent, retain: (work: Promise<void>) => void) {
-    super(
-      "memory-compactor",
-      async () => {
-        if (!(await owner.familyAdmission())) return
-        return owner.actorRuntime.runPromise(
-          owner.memoryMaintenance
-            .compact()
-            .pipe(Effect.provide(WorkerTelemetry))
-        )
-      },
-      retain
-    )
-  }
-}
 class ActorServices extends LifecycleCapability {
   constructor(readonly owner: PersonalAgent) {
     super("effect-services")
   }
   async dispose() {
+    const maintenance = await Promise.allSettled([
+      this.owner.compactor.dispose(),
+      this.owner.backups.dispose(),
+    ])
     // Stop provider admission and accepted account refreshes together: provider
     // waiters must join refresh settlement, which requires its owner to stop too.
     await Effect.runPromise(
@@ -634,22 +636,23 @@ class ActorServices extends LifecycleCapability {
           }),
           Effect.ensuring(this.owner.communication.runtime.disposeEffect),
           Effect.ensuring(this.owner.actorRuntime.disposeEffect),
-          Effect.ensuring(Scope.close(this.owner.storageScope, Exit.void))
-        )
-    )
-  }
-}
-class BackupRunner extends MaintenanceRunner {
-  constructor(owner: PersonalAgent, retain: (work: Promise<void>) => void) {
-    super(
-      "memory-backups",
-      () =>
-        owner.actorRuntime.runPromise(
-          runMemoryBackup(owner.backupPrefix()).pipe(
-            Effect.provide(WorkerTelemetry)
+          Effect.ensuring(Scope.close(this.owner.storageScope, Exit.void)),
+          Effect.ensuring(
+            Effect.suspend(() => {
+              const failures = maintenance.flatMap((result) =>
+                result.status === "rejected"
+                  ? (Cause.isCause(result.reason)
+                      ? result.reason
+                      : Cause.die(result.reason)
+                    ).reasons
+                  : []
+              )
+              return failures.length
+                ? Effect.failCause(fatalCause(Cause.fromReasons(failures)))
+                : Effect.void
+            })
           )
-        ),
-      retain
+        )
     )
   }
 }
@@ -1186,7 +1189,9 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       ),
       Layer.unwrap(
         Effect.map(MemoryTransaction, (memory) =>
-          sqliteConversationJournal(this.db, this.conversations, memory)
+          sqliteConversationJournal(this.db, this.conversations, memory, {
+            arm: () => this.memoryDiscoveryProgram(),
+          })
         )
       ).pipe(Layer.provideMerge(sqliteMemoryLayer(this.db))),
       webCryptoLayer,
@@ -1267,6 +1272,15 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     active: () =>
       this.conversationService.active().pipe(Effect.map((turn) => !!turn)),
     notify: () => Effect.sync(() => this.notifyConversation()),
+    armCompactor: () =>
+      memoryWake("arm compactor", () => this.compactor.armDiscovery()).pipe(
+        Effect.map((deadline) => ({
+          deadline,
+          current: () => this.compactor.discoveryCurrent(deadline),
+        }))
+      ),
+    armBackup: () =>
+      memoryWake("arm backup", () => this.backups.armDiscovery()),
     wakeCompactor: () =>
       memoryWake("wake compactor", () => this.compactor.wake()),
     wakeBackup: () => memoryWake("wake backup", () => this.backups.wake()),
@@ -2100,6 +2114,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     this.conversationService,
     {
       catalog: () => this.catalogProgram(),
+      arm: () =>
+        conversationNativeOperation("arm memory compaction", () =>
+          this.compactor.armDiscovery()
+        ),
       wake: () =>
         conversationNativeOperation("wake memory compaction", () =>
           this.compactor.wake()
@@ -3468,10 +3486,45 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           ),
       notify: () => this.notifyConversation(),
     })
-  readonly compactor = new MemoryRunner(this, (work) =>
-    this.ctx.waitUntil(work)
-  )
-  readonly backups = new BackupRunner(this, (work) => this.ctx.waitUntil(work))
+  readonly compactor: SummaryRunner<
+    MemoryError | MemorySchedulingError | ConversationError,
+    MemoryRepository | SummaryModel
+  > = new SummaryRunner({
+    run: (work, options) =>
+      this.actorRuntime.runPromise(
+        work.pipe(Effect.provide(WorkerTelemetry)),
+        options
+      ),
+    step: () =>
+      Effect.promise(() => this.familyAdmission()).pipe(
+        Effect.flatMap((active) =>
+          active ? this.memoryMaintenance.compact() : Effect.succeed(undefined)
+        )
+      ),
+    settle: () => this.memoryMaintenance.reconcile(),
+    nextWake: () => this.memoryMaintenance.nextWake(),
+    restore: () => this.memory.restoreSummaryClaims(),
+    notify: () => this.notifyConversation(),
+    retain: (work) => this.ctx.waitUntil(work),
+  })
+  readonly backups: BackupRunner<
+    Effect.Error<ReturnType<typeof runMemoryBackup>>,
+    Effect.Services<ReturnType<typeof runMemoryBackup>>
+  > = new BackupRunner<
+    Effect.Error<ReturnType<typeof runMemoryBackup>>,
+    Effect.Services<ReturnType<typeof runMemoryBackup>>
+  >({
+    run: (work, options) =>
+      this.actorRuntime.runPromise(
+        work.pipe(Effect.provide(WorkerTelemetry)),
+        options
+      ),
+    step: (onClaim) => runMemoryBackup(this.backupPrefix(), onClaim),
+    restore: () => restoreMemoryBackup(),
+    notify: () => this.notifyConversation(),
+    exhaust: (claim, current) => exhaustMemoryBackup(claim, current),
+    retain: (work) => this.ctx.waitUntil(work),
+  })
   readonly extraction: WorkspaceRunner<FileError> =
     new WorkspaceRunner<FileError>({
       run: (work) => this.actorRuntime.runPromise(work),
@@ -3591,6 +3644,8 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     if (await this.run(this.browser.maintenancePending()))
       await this.browserCleanup.wake()
     await this.extraction.reconcile()
+    await this.compactor.restore()
+    await this.backups.reconcile()
     await this.actorRuntime.runPromise(
       this.memoryMaintenance.recover().pipe(Effect.provide(WorkerTelemetry))
     )
@@ -4665,6 +4720,138 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       )
     })
   }
+  private memoryDiscoveryProgram(): Effect.Effect<
+    ConversationMemoryDiscovery,
+    ConversationStorageError
+  > {
+    return Effect.gen({ self: this }, function* () {
+      const summary = yield* this.memoryHost.armCompactor()
+      const backup = yield* this.memoryHost.armBackup()
+      return { summary, backup }
+    }).pipe(
+      preserveFatal,
+      Effect.mapError(
+        (cause) =>
+          new ConversationStorageError({
+            operation: "arm memory publication discovery",
+            cause,
+          })
+      )
+    )
+  }
+  private memoryActionProgram(request: Request, path: string) {
+    return Effect.gen({ self: this }, function* () {
+      if (`${request.method} ${path}` === "POST memory/backup/retry") {
+        const input = yield* agentJson(request, BackupRetry)
+        const lease = yield* conversationNativeOperation(
+          "arm backup recovery",
+          () =>
+            this.backups.armRecovery().catch((error: unknown) => {
+              if (error instanceof BackupRecoveryChanged) return undefined
+              throw error
+            })
+        )
+        if (!lease)
+          return Response.json(
+            {
+              error:
+                "Backup recovery changed or is still running. Refresh its status.",
+            },
+            { status: 409 }
+          )
+        const accepted = yield* Effect.uninterruptible(
+          Effect.gen({ self: this }, function* () {
+            if (!(yield* retryMemoryBackup(input, lease))) return false
+            yield* conversationNativeOperation("wake backup recovery", () =>
+              this.backups.wake()
+            )
+            this.notifyConversation()
+            return true
+          })
+        )
+        return accepted
+          ? Response.json({ ok: true }, { status: 202 })
+          : Response.json(
+              {
+                error:
+                  "Backup recovery changed or expired. Refresh its status and try again.",
+              },
+              { status: 409 }
+            )
+      }
+      if (`${request.method} ${path}` === "POST memory/backup/recover") {
+        const { epoch } = yield* agentJson(
+          request,
+          Schema.Struct({ epoch: Schema.String.check(Schema.isNonEmpty()) })
+        )
+        const lease = yield* conversationNativeOperation(
+          "arm backup scheduler recovery",
+          () =>
+            this.backups.armSchedulerRecovery(epoch).catch((error: unknown) => {
+              if (error instanceof BackupRecoveryChanged) return undefined
+              throw error
+            })
+        )
+        const accepted =
+          lease !== undefined &&
+          (yield* conversationNativeOperation(
+            "retry backup scheduler recovery",
+            () => this.backups.retrySchedulerRecovery(epoch, lease)
+          ))
+        if (!accepted)
+          return Response.json(
+            {
+              error:
+                "Backup scheduler recovery changed or expired. Refresh its status and try again.",
+            },
+            { status: 409 }
+          )
+        this.notifyConversation()
+        return Response.json({ ok: true }, { status: 202 })
+      }
+      if (`${request.method} ${path}` === "POST memory/retry_compaction") {
+        const { epoch } = yield* agentJson(
+          request,
+          Schema.Struct({ epoch: Schema.String.check(Schema.isNonEmpty()) })
+        )
+        const deadline = yield* conversationNativeOperation(
+          "arm compaction recovery",
+          () =>
+            this.compactor.armRecovery(epoch).catch((error: unknown) => {
+              if (error instanceof SummaryRecoveryChanged) return undefined
+              throw error
+            })
+        )
+        const accepted =
+          deadline !== undefined &&
+          (yield* conversationNativeOperation("retry compaction recovery", () =>
+            this.compactor.retryRecovery(epoch, deadline)
+          ))
+        if (!accepted)
+          return Response.json(
+            {
+              error:
+                "Compaction recovery changed or expired. Refresh its status and try again.",
+            },
+            { status: 409 }
+          )
+        this.notifyConversation()
+        return Response.json({ ok: true }, { status: 202 })
+      }
+      if (`${request.method} ${path}` === "POST memory/retry") {
+        const input = yield* agentJson(
+          request,
+          Schema.Struct({
+            ...Part.fields,
+            operationId: CancelInput.fields.operationId,
+          })
+        )
+        yield* this.retrySummary(input)
+        return Response.json({ ok: true })
+      }
+      return new Response("Not found", { status: 404 })
+    })
+  }
   private conversationHttpProgram(request: Request, path: string) {
     return Effect.gen({ self: this }, function* () {
       // Revocation retains a busy owner. A failed cleanup release must not
@@ -4694,17 +4881,8 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         return yield* this.conversationEventsProgram(request)
       if (`${request.method} ${path}` === "GET state")
         return Response.json(yield* this.snapshotProgram())
-      if (`${request.method} ${path}` === "POST memory/retry") {
-        const input = yield* agentJson(
-          request,
-          Schema.Struct({
-            ...Part.fields,
-            operationId: CancelInput.fields.operationId,
-          })
-        )
-        yield* this.retrySummary(input)
-        return Response.json({ ok: true })
-      }
+      if (path.startsWith("memory/"))
+        return yield* this.memoryActionProgram(request, path)
       if (`${request.method} ${path}` === "POST import") {
         const input = yield* agentJson(request, ImportInput, 1_100_000)
         return yield* memoryImportResponse(this.importMemory(input.jsonl))
@@ -4958,6 +5136,14 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         Effect.provideService(MemoryRepository, this.memory),
         Effect.provideService(MemoryBackupStatus, this.backupStatus)
       )
+      const compactionRecovery = yield* conversationNativeOperation(
+        "read compaction recovery",
+        () => this.compactor.recovery()
+      )
+      const backupSchedulerRecovery = yield* conversationNativeOperation(
+        "read backup scheduler recovery",
+        () => this.backups.recovery()
+      )
       const usage = yield* this.inferenceUsage.accountTotals().pipe(
         preserveFatal,
         Effect.mapError(
@@ -4972,7 +5158,17 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         runtime,
         access,
         connected,
-        memory: { ...memory, usage },
+        memory: {
+          ...memory,
+          backup: {
+            ...memory.backup,
+            ...(backupSchedulerRecovery
+              ? { schedulerRecovery: backupSchedulerRecovery }
+              : {}),
+          },
+          usage,
+          ...(compactionRecovery ? { compactionRecovery } : {}),
+        },
       }
     })
   }

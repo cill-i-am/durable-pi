@@ -1,0 +1,23 @@
+import assert from 'node:assert/strict'
+import { DatabaseSync } from 'node:sqlite'
+import { Lifecycle } from 'agents/lifecycle'
+import { Cause, Effect } from 'effect'
+import { BackupRunner } from '/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/src/memory/adapters/backup-lifecycle.ts'
+import { nativeOperation } from '/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/src/shared/interop.ts'
+const db=new DatabaseSync(`/private/tmp/b18-runner-independent/cleanup-dispose-${process.pid}.sqlite`),kv=new Map(),entered=Promise.withResolvers<void>(),release=Promise.withResolvers<void>()
+let disposed=false, nativeCalls=0, stepCalls=0
+const defect=new Error('independent late cleanup defect'),checked='independent checked cleanup failure',cause=Cause.fromReasons([Cause.makeFailReason(checked),Cause.makeDieReason(defect),Cause.makeInterruptReason()])
+const storage={sql:{exec:(sql:string,...params:any[])=>db.prepare(sql).all(...params)},get:async(key:string)=>kv.get(key),put:async(key:string,value:any)=>{kv.set(key,value)},delete:async(key:string)=>kv.delete(key),setAlarm:async()=>{},deleteAlarm:async()=>{},sync:async()=>{}}
+const runner=new BackupRunner<unknown>({run:Effect.runPromise,restore:()=>Effect.void,step:()=>Effect.sync(()=>{stepCalls++;return undefined}),exhaust:()=>nativeOperation(async()=>{nativeCalls++;entered.resolve();await release.promise;throw cause},error=>error),retain:()=>{}})
+const lifecycle=new Lifecycle({ctx:{id:{name:'cleanup-dispose-independent'},storage,blockConcurrencyWhile:(body:any)=>body(),waitUntil:()=>{}}} as any)
+lifecycle.use(runner);await lifecycle.start()
+await runner.lifecycleServices!.jobs.push({id:'memory-backups:pump',fn:'pump',time:Date.now(),payload:{schemaVersion:1,workflowVersion:1,token:'held-cleanup',phase:'cleanup',claim:{attemptId:'owned',target:'watermark',attempts:1},discoveryDeadline:0},singleflight:true,retry:{maxAttempts:3,baseDelayMs:100,maxDelayMs:1000}})
+const dispatch=lifecycle.alarm();await entered.promise
+const disposal=runner.dispose().then(()=>{disposed=true;return undefined},error=>{disposed=true;return error})
+await new Promise(resolve=>setImmediate(resolve));assert.equal(disposed,false)
+release.resolve();const result=await disposal;await dispatch
+assert.ok(Cause.isCause(result))
+if(Cause.isCause(result)){assert.ok(Cause.hasInterrupts(result));assert.ok(result.reasons.some(r=>r._tag==='Fail'&&r.error===checked));assert.ok(result.reasons.some(r=>r._tag==='Die'&&r.defect===defect))}
+assert.equal(nativeCalls,1);assert.equal(stepCalls,0)
+console.log('HELD_CLEANUP_JOINED_WITH_FULL_CAUSE',JSON.stringify({disposed,nativeCalls,stepCalls,result}))
+db.close()

@@ -1,0 +1,73 @@
+import assert from 'node:assert/strict'
+import { DatabaseSync } from 'node:sqlite'
+import { Lifecycle } from 'agents/lifecycle'
+import { Cause, Effect } from 'effect'
+import { BackupRunner } from '/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/src/memory/adapters/backup-lifecycle.ts'
+
+const pump = 'memory-backups:pump', discovery = 'memory-backups:discovery', key = 'memory-backups:failure'
+const db = new DatabaseSync(`/private/tmp/b18-runner-independent/queue-${process.pid}.sqlite`)
+const kv = new Map<string, unknown>(), retained: Promise<void>[] = [], attempts: any[] = [], claims: any[] = [], exhausted: any[] = []
+let alarm: number | undefined, activeJob: string | undefined, failDiscovery = false, next = 0
+const entered = Promise.withResolvers<void>(), release = Promise.withResolvers<void>()
+class ObservedRunner extends BackupRunner<unknown> {
+  override async onJob(context: any) {
+    activeJob = context.job.id
+    attempts.push({ id: context.job.id, attempt: context.attempt, payload: context.job.payload })
+    try { return await super.onJob(context) } finally { activeJob = undefined }
+  }
+}
+const storage = {
+  sql: { exec: (sql: string, ...params: any[]) => db.prepare(sql).all(...params) },
+  get: async (key: string) => { if (failDiscovery && activeJob === discovery && key === 'memory-backups:failure') throw new Error('independent discovery read outage'); return kv.get(key) },
+  put: async (key: string, value: unknown) => { kv.set(key, value) },
+  delete: async (key: string) => kv.delete(key),
+  setAlarm: async (at: number) => { alarm = at },
+  deleteAlarm: async () => { alarm = undefined },
+  sync: async () => {},
+}
+const runner = new ObservedRunner({
+  run: Effect.runPromise,
+  step: onClaim => Effect.gen(function* () {
+    const claim = { attemptId: `independent-${++next}`, target: 'watermark-1', attempts: next }
+    claims.push(claim)
+    yield* onClaim(claim)
+    if (next === 1) {
+      yield* Effect.promise(async () => { entered.resolve(); await release.promise })
+      yield* Effect.die(new Error('independent claimed publisher failed'))
+    }
+    return undefined
+  }),
+  restore: () => Effect.void,
+  exhaust: (claim, current) => Effect.sync(() => { if (current()) exhausted.push(claim) }),
+  retain: work => { retained.push(work) },
+})
+const lifecycle = new Lifecycle({ ctx: { id: { name: 'b18-independent' }, storage, blockConcurrencyWhile: (work: any) => work(), waitUntil: (work: any) => retained.push(work) } } as any)
+lifecycle.use(runner)
+await lifecycle.start()
+await runner.wake()
+await lifecycle.alarm()
+await entered.promise
+await runner.armDiscovery()
+failDiscovery = true
+await lifecycle.alarm()
+failDiscovery = false
+const recovery = await runner.recovery()
+assert.ok(recovery)
+assert.equal(attempts.filter(row => row.id === discovery).length, 3)
+console.log('EXHAUSTED_WHILE_NATIVE_HELD', JSON.stringify({ recovery, claims, jobs: db.prepare('SELECT * FROM cf_agents_jobs').all() }))
+release.resolve()
+await Promise.all(retained)
+await lifecycle.alarm()
+console.log('AFTER_JOIN_AND_PUMP_DRAIN', JSON.stringify({ claims, exhausted, control: kv.get(key), jobs: db.prepare('SELECT * FROM cf_agents_jobs').all() }))
+const lease = await runner.armSchedulerRecovery(recovery.epoch)
+assert.equal(await runner.retrySchedulerRecovery(recovery.epoch, lease), true)
+console.log('AFTER_EXPLICIT_RECOVERY', JSON.stringify({ claims, exhausted, jobs: db.prepare('SELECT * FROM cf_agents_jobs').all() }))
+await lifecycle.alarm()
+await Promise.all(retained)
+await lifecycle.alarm()
+await Promise.all(retained)
+console.log('AFTER_RECOVERY_DISPATCH', JSON.stringify({ claims, exhausted, attempts, jobs: db.prepare('SELECT * FROM cf_agents_jobs').all() }))
+assert.equal(claims.length, 1, 'scheduler recovery must clean the joined failed exact claim before new provider admission')
+assert.deepEqual(exhausted, [claims[0]])
+await runner.dispose()
+db.close()
