@@ -7,6 +7,7 @@ import type { Apps } from "./service"
 export interface AppEventHost<TError, TRequirements = never> {
   active: () => Effect.Effect<boolean, TError, TRequirements>
   modelConnected: () => Effect.Effect<boolean, TError, TRequirements>
+  prearm: () => Effect.Effect<number, TError, TRequirements>
   wakeConversation: () => Effect.Effect<void, TError, TRequirements>
   admission: AppAdmission
   notify: () => Effect.Effect<void, TError, TRequirements>
@@ -22,15 +23,18 @@ export function appEventPump<TError, TRequirements>(
       if (!(yield* host.active()) || !(yield* apps.pending()).length) return
       if (!(yield* host.modelConnected()))
         return (yield* Clock.currentTimeMillis) + 60_000
-      // Wake is persisted before atomic event-to-conversation admission.
-      yield* host.wakeConversation()
-      const delivered = yield* apps.deliverNext(host.admission).pipe(
-        preserveFatal,
-        Effect.catchTag("ConversationFull", () =>
-          Effect.succeed("full" as const)
+      // Retained discovery survives an empty scan before this admission commits.
+      const discoveryDeadline = yield* host.prearm()
+      const delivered = yield* apps
+        .deliverNext(host.admission, discoveryDeadline)
+        .pipe(
+          preserveFatal,
+          Effect.catchTag("ConversationFull", () =>
+            Effect.succeed("full" as const)
+          )
         )
-      )
       if (delivered === "full") return (yield* Clock.currentTimeMillis) + 10_000
+      if (delivered) yield* host.wakeConversation()
       yield* host.notify()
       return (yield* apps.pending()).length
         ? (yield* Clock.currentTimeMillis) + 100

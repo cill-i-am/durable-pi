@@ -1,5 +1,14 @@
 import { expect, it } from "@effect/vitest"
-import { Cause, Context, Deferred, Effect, Exit, Fiber, Layer } from "effect"
+import {
+  Cause,
+  Clock,
+  Context,
+  Deferred,
+  Effect,
+  Exit,
+  Fiber,
+  Layer,
+} from "effect"
 
 import { BotConfigurationStore } from "../src/agents/adapters/configuration"
 import { homeAgentId } from "../src/agents/domain"
@@ -68,6 +77,7 @@ const fixture = Effect.gen(function* () {
       Effect.succeed(
         Effect.runSync(configuration.read())?.status === "archived"
       ),
+    prearm: () => Effect.sync(() => Date.now() + 60_000),
     catalog: () => Effect.succeed(catalog),
     wake: () =>
       Effect.sync(() => {
@@ -130,7 +140,11 @@ it.effect(
   () =>
     Effect.gen(function* () {
       const f = yield* fixture,
-        root = Effect.runSync(f.ledger.admit(input())).turn
+        root = Effect.runSync(
+          f.ledger.admit(input(), undefined, undefined, undefined, {
+            discoveryDeadline: Date.now() + 60_000,
+          })
+        ).turn
       f.effects.catalog = () =>
         Effect.sync(() => {
           Effect.runSync(
@@ -141,7 +155,11 @@ it.effect(
               null
             )
           )
-          Effect.runSync(f.ledger.admit(input()))
+          Effect.runSync(
+            f.ledger.admit(input(), undefined, undefined, undefined, {
+              discoveryDeadline: Date.now() + 60_000,
+            })
+          )
           return catalog
         })
       const steer = { ...input(), mode: "steer" as const }
@@ -177,7 +195,8 @@ it.effect(
           { files: [], content: [] },
           resolveRoute("conversation"),
           null,
-          catalog
+          catalog,
+          Date.now() + 60_000
         ).pipe(Effect.result)
       ).toMatchObject(failure("ConversationConflict"))
       expect(transactions).toBe(0)
@@ -236,7 +255,11 @@ it.effect(
         submission = input()
       f.effects.catalog = () =>
         Effect.sync(() => {
-          Effect.runSync(f.ledger.admit(submission))
+          Effect.runSync(
+            f.ledger.admit(submission, undefined, undefined, undefined, {
+              discoveryDeadline: Date.now() + 60_000,
+            })
+          )
           Effect.runSync(
             f.configuration.configure("owner", {
               ...profile,
@@ -391,5 +414,122 @@ it.effect(
       expect(settled).toBe(true)
       expect(f.counters().notifications).toBe(1)
       expect(Effect.runSync(f.ledger.recent())).toHaveLength(1)
+    })
+)
+
+it.effect("failed discovery arming cannot accept a fresh message", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    f.effects.prearm = () => Effect.die("discovery unavailable")
+    const exit = yield* f.admit(input()).pipe(Effect.exit)
+    expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)
+    expect(yield* f.ledger.recent()).toEqual([])
+    expect(f.counters()).toEqual({ wakes: 0, notifications: 0 })
+  })
+)
+
+it.effect("expired discovery is rejected in the final transaction", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture
+    f.effects.prearm = () =>
+      Clock.currentTimeMillis.pipe(Effect.map((now) => now - 1))
+    expect(yield* f.admit(input()).pipe(Effect.result)).toMatchObject(
+      failure("ConversationStorageError")
+    )
+    expect(yield* f.ledger.recent()).toEqual([])
+    expect(f.counters()).toEqual({ wakes: 0, notifications: 0 })
+  })
+)
+
+it.effect("exact replay never asks for another discovery budget", () =>
+  Effect.gen(function* () {
+    const f = yield* fixture,
+      submission = input()
+    yield* f.admit(submission)
+    f.effects.prearm = () => Effect.die("replay cannot renew discovery")
+    expect(yield* f.admit(submission)).toMatchObject({ accepted: false })
+    expect(f.counters()).toEqual({ wakes: 2, notifications: 1 })
+  })
+)
+
+it.effect(
+  "interrupted preparation joins cleanup and preserves a late defect",
+  () =>
+    Effect.gen(function* () {
+      const f = yield* fixture,
+        entered = yield* Deferred.make<void>(),
+        cleaning = yield* Deferred.make<void>(),
+        release = yield* Deferred.make<void>()
+      let settled = false
+      f.effects.catalog = () =>
+        Deferred.succeed(entered, undefined).pipe(
+          Effect.andThen(Effect.never),
+          Effect.ensuring(
+            Deferred.succeed(cleaning, undefined).pipe(
+              Effect.andThen(Deferred.await(release)),
+              Effect.andThen(Effect.die("late preparation cleanup"))
+            )
+          )
+        )
+      const pending = yield* f.admit(input()).pipe(
+        Effect.ensuring(
+          Effect.sync(() => {
+            settled = true
+          })
+        ),
+        Effect.forkChild
+      )
+      yield* Deferred.await(entered)
+      const interruption = yield* Fiber.interrupt(pending).pipe(
+        Effect.forkChild
+      )
+      yield* Deferred.await(cleaning)
+      expect(settled).toBe(false)
+      yield* Deferred.succeed(release, undefined)
+      yield* Fiber.join(interruption)
+      const exit = yield* Fiber.await(pending)
+      expect(Exit.isFailure(exit) && Cause.hasInterrupts(exit.cause)).toBe(true)
+      expect(
+        Exit.isFailure(exit) &&
+          exit.cause.reasons.some(
+            (reason) =>
+              reason._tag === "Die" &&
+              reason.defect === "late preparation cleanup"
+          )
+      ).toBe(true)
+      expect(yield* f.ledger.recent()).toEqual([])
+    })
+)
+
+it.effect(
+  "interrupted accepted admission retains a late wake failure after joining",
+  () =>
+    Effect.gen(function* () {
+      const f = yield* fixture,
+        entered = yield* Deferred.make<void>(),
+        release = yield* Deferred.make<void>(),
+        submission = input()
+      f.effects.wake = () =>
+        Deferred.succeed(entered, undefined).pipe(
+          Effect.andThen(Deferred.await(release)),
+          Effect.andThen(Effect.die("late admission wake"))
+        )
+      const pending = yield* f.admit(submission).pipe(Effect.forkChild)
+      yield* Deferred.await(entered)
+      const interruption = yield* Fiber.interrupt(pending).pipe(
+        Effect.forkChild
+      )
+      yield* Effect.yieldNow
+      yield* Deferred.succeed(release, undefined)
+      yield* Fiber.join(interruption)
+      const exit = yield* Fiber.await(pending)
+      expect(Exit.isFailure(exit) && Cause.hasInterrupts(exit.cause)).toBe(true)
+      expect(Exit.isFailure(exit) && Cause.pretty(exit.cause)).toContain(
+        "late admission wake"
+      )
+      expect(yield* f.ledger.get(submission.operationId)).toMatchObject({
+        status: "queued",
+      })
+      expect(f.counters().notifications).toBe(0)
     })
 )

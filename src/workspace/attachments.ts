@@ -1,5 +1,6 @@
 import { Effect } from "effect"
 
+import { preserveFatal } from "../shared/effect"
 import type { FileInfo } from "./files"
 import type { Workspace } from "./workspace"
 
@@ -37,6 +38,7 @@ export const prepareAttachments = Effect.fn("Workspace.prepareAttachments")(
       if (pending) return { files, content: [], pending: true }
       return { ...(yield* workspace.attach(ids)), pending: false }
     }).pipe(
+      preserveFatal,
       Effect.catchTag("FileRejected", (error) =>
         Effect.succeed({
           files,

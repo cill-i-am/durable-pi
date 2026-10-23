@@ -1,4 +1,4 @@
-import { Effect } from "effect"
+import { Clock, Effect } from "effect"
 
 import { sqliteConversationMaterialization } from "../src/conversations/adapters/sqlite-journal"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
@@ -24,6 +24,28 @@ export const conversationFixture = Effect.fn("Test.conversationFixture")(
       }
     }).pipe(Effect.provide(sqliteMemoryLayer(db)))
     const store = new ConversationStore(db, { model: "test", thinking: "off" })
+    // Unit fixtures stand in for an already pre-armed discovery lease. Native
+    // Lifecycle tests prove the physical wake before these domain admissions.
+    const admit = store.admit.bind(store)
+    store.admit = (input, prepared, skills, resolved, options) =>
+      Clock.currentTimeMillis.pipe(
+        Effect.flatMap((now) =>
+          admit(
+            input,
+            prepared,
+            skills,
+            resolved,
+            options ?? { discoveryDeadline: now + 60_000 }
+          )
+        )
+      )
+    const stop = store.requestStop.bind(store)
+    store.requestStop = (id, options) =>
+      Clock.currentTimeMillis.pipe(
+        Effect.flatMap((now) =>
+          stop(id, options ?? { discoveryDeadline: now + 60_000 })
+        )
+      )
     const conversations = makeConversations(store)
     const materialization = sqliteConversationMaterialization(db)
     const journal = makeConversationJournal(

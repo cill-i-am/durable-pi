@@ -24,7 +24,15 @@ const failure = (id: number): Observation => ({
 function fixture() {
   const db = database(),
     turns = new ConversationStore(db, { model: "test", thinking: "off" })
-  Effect.runSync(turns.admit({ operationId: "root", text: "hello" }))
+  Effect.runSync(
+    turns.admit(
+      { operationId: "root", text: "hello" },
+      undefined,
+      [],
+      undefined,
+      { discoveryDeadline: Date.now() + 60000 }
+    )
+  )
   Effect.runSync(turns.submitted("root", "session"))
   const ledger = new RunRecoveryStore(db)
   const recovery = makeRunRecovery(ledger, webCryptoRecoveryFingerprint)

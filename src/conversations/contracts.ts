@@ -27,6 +27,13 @@ export const SendInput = Schema.Struct({
 export const CancelInput = Schema.Struct({
   operationId: Schema.String.check(Schema.isPattern(/^[a-f0-9-]{36}$/i)),
 })
+export const RecoveryInput = Schema.Struct({
+  ...CancelInput.fields,
+  revision: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+})
+export const ControlUnconfirmed = Schema.NullOr(
+  Schema.Literals(["handoff", "observe", "stop"])
+)
 export type ChatTurn = {
   id: string
   text: string
@@ -108,6 +115,10 @@ export const TimelineItem = Schema.Union([
 ])
 export type TimelineItem = typeof TimelineItem.Type
 const VisibleTurn = Schema.Struct({
+  // Older snapshots remain readable, but cannot authorize revision-fenced recovery.
+  revision: Schema.optional(RecoveryInput.fields.revision),
+  controlUnconfirmed: Schema.optional(ControlUnconfirmed),
+  controlBusy: Schema.optional(Schema.Boolean),
   preparingFiles: Schema.optional(Schema.Boolean),
   provenance: Schema.optional(MessageProvenance),
   origin: Schema.optional(TurnOrigin),

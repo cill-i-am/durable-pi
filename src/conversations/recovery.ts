@@ -27,6 +27,21 @@ export const recoveryPolicy: RecoveryPolicy = {
   stopAfter: 5,
   recoveryAttempts: 3,
 }
+export const ObservationRecord = Schema.Struct({
+  resultId: counter,
+  invocation: Schema.String,
+  tool: Schema.String,
+  fingerprint: Schema.String,
+  outcome: Schema.Literals([
+    "failure",
+    "success",
+    "poll",
+    "ignored",
+    "denied",
+    "uncertain",
+  ]),
+  receiptId: Schema.NullOr(Schema.String),
+})
 export type Observation = {
   resultId: number
   invocation: string
@@ -37,6 +52,7 @@ export type Observation = {
 }
 export type RecoveryState = {
   version: 1
+  workflowVersion: 1
   epoch: string
   cursor: number
   buckets: { fingerprint: string; count: number }[]
@@ -44,6 +60,7 @@ export type RecoveryState = {
 }
 export const RecoveryStateRecord = Schema.Struct({
   version: Schema.Literal(1),
+  workflowVersion: Schema.Literal(1),
   epoch: Schema.String,
   cursor: counter,
   buckets: Schema.Array(
@@ -110,6 +127,7 @@ export function recoveryOutcome(input: {
 }
 export const initialRecovery = (epoch: string): RecoveryState => ({
   version: 1,
+  workflowVersion: 1,
   epoch,
   cursor: 0,
   buckets: [],
@@ -128,66 +146,6 @@ export function recoveryDetail(view: Omit<RecoveryView, "detail">): string {
   return "The same tool and inputs repeatedly failed. Inspect the saved error, correct the inputs or use another permitted approach. Do not repeat an external action whose outcome is uncertain."
 }
 
-export function observeRound(
-  saved: RecoveryState,
-  epoch: string,
-  requestEpoch: string,
-  observations: readonly Observation[],
-  policy: RecoveryPolicy = recoveryPolicy
-): RecoveryState {
-  if (saved.view?.phase === "blocked") return saved
-  const state: RecoveryState = structuredClone(saved)
-  if (state.epoch !== epoch) {
-    state.epoch = epoch
-    state.buckets = []
-    state.view = null
-  }
-  const seen = new Set<string>()
-  const fresh = [...observations]
-    .sort((a, b) => a.resultId - b.resultId)
-    .filter((o) => {
-      if (o.resultId <= saved.cursor || seen.has(o.invocation)) return false
-      seen.add(o.invocation)
-      return true
-    })
-  state.cursor = Math.max(state.cursor, ...observations.map((o) => o.resultId))
-  const authority =
-    fresh.find((o) => o.outcome === "uncertain") ??
-    fresh.find((o) => o.outcome === "denied")
-  if (authority) {
-    const view = {
-      phase: "blocked" as const,
-      reason: authority.outcome as "denied" | "uncertain",
-      tool: authority.tool,
-      failures: 0,
-      remaining: 0,
-      resultId: authority.resultId,
-      receiptId: authority.receiptId,
-    }
-    state.view = { ...view, detail: recoveryDetail(view) }
-    return state
-  }
-  const wasRecovering = state.view?.phase === "recovering"
-  let recovered = false
-  for (const o of fresh) {
-    if (
-      requestEpoch !== epoch ||
-      o.outcome === "ignored" ||
-      o.outcome === "poll"
-    )
-      continue
-    if (wasRecovering && state.view)
-      state.view.remaining = Math.max(0, state.view.remaining - 1)
-    if (o.outcome === "success") {
-      recovered = true
-      continue
-    }
-    if (observeFailure(state, o, policy, wasRecovering)) break
-  }
-  finalizeRecovery(state, wasRecovering, recovered)
-  return state
-}
-
 export function recoveryIdentity(value: unknown): string {
   const canonical = (v: unknown): unknown =>
     Array.isArray(v)
@@ -202,48 +160,32 @@ export function recoveryIdentity(value: unknown): string {
   return JSON.stringify(canonical(value)) || ""
 }
 
-function observeFailure(
-  state: RecoveryState,
-  o: Observation,
-  policy: RecoveryPolicy,
-  wasRecovering: boolean
-) {
-  let bucket = state.buckets.find((b) => b.fingerprint === o.fingerprint)
-  if (!bucket) {
-    bucket = { fingerprint: o.fingerprint, count: 0 }
-    state.buckets.push(bucket)
-    if (state.buckets.length > 32) state.buckets.shift()
+/** Version 1 historically had no workflow marker. Conversion preserves all
+ * receipt/cursor/history metadata; the next observation persists it atomically. */
+export function decodeRecoveryState(raw: unknown): RecoveryState {
+  const historical = Schema.decodeUnknownSync(
+    Schema.Record(Schema.String, Schema.Unknown)
+  )(raw)
+  const decoded = Schema.decodeUnknownSync(RecoveryStateRecord)({
+    ...historical,
+    workflowVersion: Object.hasOwn(historical, "workflowVersion")
+      ? historical.workflowVersion
+      : 1,
+  })
+  if (
+    decoded.buckets.length > 32 ||
+    new Set(decoded.buckets.map((bucket) => bucket.fingerprint)).size !==
+      decoded.buckets.length ||
+    (decoded.view &&
+      (decoded.view.resultId > decoded.cursor ||
+        (decoded.view.reason !== "repetition" &&
+          decoded.view.phase !== "blocked")))
+  )
+    throw new Error("Invalid tool recovery state")
+  return {
+    ...historical,
+    ...decoded,
+    buckets: decoded.buckets.map((bucket) => ({ ...bucket })),
+    view: decoded.view ? { ...decoded.view } : null,
   }
-  bucket.count = Math.min(policy.stopAfter, bucket.count + 1)
-  if (bucket.count >= policy.warnAfter) {
-    const view = {
-      phase: "recovering" as const,
-      reason: "repetition" as const,
-      tool: o.tool,
-      failures: bucket.count,
-      remaining: wasRecovering
-        ? state.view!.remaining
-        : policy.recoveryAttempts,
-      resultId: o.resultId,
-      receiptId: o.receiptId,
-    }
-    state.view = { ...view, detail: recoveryDetail(view) }
-    if (wasRecovering && bucket.count >= policy.stopAfter) {
-      state.view.phase = "blocked"
-      return true
-    }
-  }
-  return false
-}
-
-function finalizeRecovery(
-  state: RecoveryState,
-  wasRecovering: boolean,
-  recovered: boolean
-) {
-  if (wasRecovering && state.view?.phase === "recovering") {
-    if (recovered) state.view.phase = "recovered"
-    else if (state.view.remaining === 0) state.view.phase = "blocked"
-  }
-  if (state.view) state.view.detail = recoveryDetail(state.view)
 }

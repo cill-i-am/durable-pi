@@ -1,4 +1,4 @@
-import { Cause, Effect, Exit, ManagedRuntime } from "effect"
+import { Cause, Clock, Effect, Exit, ManagedRuntime } from "effect"
 import { describe, expect, it, vi } from "vitest"
 
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
@@ -315,16 +315,30 @@ describe("private video preparation", () => {
         `CREATE TRIGGER video_budget_${action} BEFORE ${action} ON chat_turns WHEN length(CAST(coalesce(NEW.prompt,'') || NEW.input || NEW.answer || NEW.skill_context AS BLOB)) > 2000000 BEGIN SELECT RAISE(ABORT,'row too large'); END`
       )
     const turn = Effect.runSync(
-      store.admit(
-        { operationId: crypto.randomUUID(), text: "Inspect these" },
-        attached
+      Clock.currentTimeMillis.pipe(
+        Effect.flatMap((now) =>
+          store.admit(
+            { operationId: crypto.randomUUID(), text: "Inspect these" },
+            attached,
+            undefined,
+            undefined,
+            { discoveryDeadline: now + 60_000 }
+          )
+        )
       )
     ).turn
     Effect.runSync(store.savePrompt(turn.id, JSON.stringify(attached.content)))
     const follow = Effect.runSync(
-      store.admit(
-        { operationId: crypto.randomUUID(), text: "Follow-up" },
-        attached
+      Clock.currentTimeMillis.pipe(
+        Effect.flatMap((now) =>
+          store.admit(
+            { operationId: crypto.randomUUID(), text: "Follow-up" },
+            attached,
+            undefined,
+            undefined,
+            { discoveryDeadline: now + 60_000 }
+          )
+        )
       )
     ).turn
     expect(follow.input.filter((c) => c.type === "image")).toHaveLength(24)
@@ -345,16 +359,34 @@ describe("private video preparation", () => {
       )
     )
     const parent = Effect.runSync(
-      store.admit({
-        operationId: crypto.randomUUID(),
-        text: "Start",
-      })
+      Clock.currentTimeMillis.pipe(
+        Effect.flatMap((now) =>
+          store.admit(
+            { operationId: crypto.randomUUID(), text: "Start" },
+            undefined,
+            undefined,
+            undefined,
+            { discoveryDeadline: now + 60_000 }
+          )
+        )
+      )
     ).turn
     Effect.runSync(store.prepare(parent.id))
     const steered = Effect.runSync(
-      store.admit(
-        { operationId: crypto.randomUUID(), text: "Use these", mode: "steer" },
-        attached
+      Clock.currentTimeMillis.pipe(
+        Effect.flatMap((now) =>
+          store.admit(
+            {
+              operationId: crypto.randomUUID(),
+              text: "Use these",
+              mode: "steer",
+            },
+            attached,
+            undefined,
+            undefined,
+            { discoveryDeadline: now + 60_000 }
+          )
+        )
       )
     ).turn
     expect(steered.parent_id).toBe(parent.id)

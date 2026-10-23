@@ -9,10 +9,17 @@ export class ConversationExecutionError extends Schema.TaggedError<ConversationE
   { operation: Schema.String, cause: Schema.Unknown }
 ) {}
 
+export class ConversationControlTimeout extends Schema.TaggedError<ConversationControlTimeout>()(
+  "ConversationControlTimeout",
+  { phase: Schema.Literals(["handoff", "observe", "stop"]) }
+) {}
+
 /** Facts from one captured transcript and its committed submission receipts.
  * A newer completion receipt does not establish that this transcript is settled. */
 export interface ConversationObservation {
   readonly settled: boolean
+  /** Native request receipts captured with this observation; absent only in legacy test adapters. */
+  readonly accepted?: readonly string[]
   readonly answer: string
   readonly liveAnswer: string
   readonly activity: readonly TimelineItem[]

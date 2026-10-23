@@ -1,6 +1,9 @@
 import { Clock, Context, Effect, Schema } from "effect"
 
-import { type ConversationFailure } from "../conversations/turns"
+import {
+  type ConversationFailure,
+  type StopDiscovery,
+} from "../conversations/turns"
 import { BackgroundHandoff } from "./background"
 import * as Domain from "./background-domain"
 import {
@@ -23,9 +26,13 @@ export interface BackgroundAdmission {
   readonly transactionGroup: object
   readonly admit: (
     handoff: BackgroundHandoff,
-    report: string
+    report: string,
+    discoveryDeadline: number
   ) => Effect.Effect<string, ConversationFailure>
-  readonly stop: (reportId: string) => Effect.Effect<void, ConversationFailure>
+  readonly stop: (
+    reportId: string,
+    options?: StopDiscovery
+  ) => Effect.Effect<void, ConversationFailure>
 }
 export type BackgroundMailboxService = ReturnType<typeof makeBackgroundMailbox>
 export class BackgroundMailbox extends Context.Service<
@@ -167,7 +174,8 @@ export function makeBackgroundMailbox(
       (
         id: number,
         admission: BackgroundAdmission | undefined,
-        discoveryDeadline: number
+        discoveryDeadline: number,
+        conversationStop?: StopDiscovery
       ) =>
         records.atomic(() =>
           Effect.gen(function* () {
@@ -182,7 +190,8 @@ export function makeBackgroundMailbox(
               )
             const next = cancelled(row, at, true)
             yield* persist(row, next)
-            if (admission) yield* admission.stop(row.handoff.reportId)
+            if (admission)
+              yield* admission.stop(row.handoff.reportId, conversationStop)
           })
         )
     ),
@@ -337,7 +346,7 @@ export function makeBackgroundMailbox(
       )
     }),
     deliver: Effect.fn("BackgroundMailbox.deliver")(
-      (admission: BackgroundAdmission) =>
+      (admission: BackgroundAdmission, discoveryDeadline: number) =>
         records.atomic(() =>
           Effect.gen(function* () {
             yield* shared(admission)
@@ -364,8 +373,11 @@ export function makeBackgroundMailbox(
             if (row.report === null)
               throw new Error("Ready background handoff has no report.")
             if (
-              (yield* admission.admit(row.handoff, row.report)) !==
-              row.handoff.reportId
+              (yield* admission.admit(
+                row.handoff,
+                row.report,
+                discoveryDeadline
+              )) !== row.handoff.reportId
             )
               throw new Error(
                 "Background admission returned a different turn identity."

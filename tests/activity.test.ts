@@ -1,4 +1,4 @@
-import { Effect, Schema } from "effect"
+import { Clock, Effect, Schema } from "effect"
 import { expect, it } from "vitest"
 
 import { toolOperations } from "../src/access/adapters/schema"
@@ -31,10 +31,16 @@ it("paginates tied timestamps with stable domain and bot keys; new rows do not r
   const { db, turns } = fixture()
   for (let n = 0; n < 85; n++) {
     const turn = Effect.runSync(
-      turns.admit({
-        operationId: crypto.randomUUID(),
-        text: `Task ${n}`,
-      })
+      turns.admit(
+        {
+          operationId: crypto.randomUUID(),
+          text: `Task ${n}`,
+        },
+        undefined,
+        undefined,
+        undefined,
+        { discoveryDeadline: Effect.runSync(Clock.currentTimeMillis) + 60_000 }
+      )
     ).turn
     Effect.runSync(
       turns.finish(
@@ -57,10 +63,16 @@ it("paginates tied timestamps with stable domain and bot keys; new rows do not r
   )
   expect(first.entries).toHaveLength(40)
   const newTurn = Effect.runSync(
-    turns.admit({
-      operationId: crypto.randomUUID(),
-      text: "Newer",
-    })
+    turns.admit(
+      {
+        operationId: crypto.randomUUID(),
+        text: "Newer",
+      },
+      undefined,
+      undefined,
+      undefined,
+      { discoveryDeadline: Effect.runSync(Clock.currentTimeMillis) + 60_000 }
+    )
   ).turn
   db.run(
     "UPDATE chat_turns SET created_at='2026-10-11T11:00:00.000Z' WHERE id=?",
@@ -165,10 +177,16 @@ it("shows expiry without mutating approval receipts and excludes obsolete failur
     db.all<{ status: string }>("SELECT status FROM tool_operations")[0]?.status
   ).toBe("pending")
   const turn = Effect.runSync(
-    turns.admit({
-      operationId: crypto.randomUUID(),
-      text: "A request",
-    })
+    turns.admit(
+      {
+        operationId: crypto.randomUUID(),
+        text: "A request",
+      },
+      undefined,
+      undefined,
+      undefined,
+      { discoveryDeadline: Effect.runSync(Clock.currentTimeMillis) + 60_000 }
+    )
   ).turn
   Effect.runSync(
     turns.finish(turn, [{ id: turn.id, delivery: "unanswered" }], "", "Failed")
@@ -179,11 +197,17 @@ it("shows expiry without mutating approval receipts and excludes obsolete failur
     )
   ).toHaveLength(1)
   Effect.runSync(
-    turns.admit({
-      operationId: crypto.randomUUID(),
-      text: turn.text,
-      retryOf: turn.id,
-    })
+    turns.admit(
+      {
+        operationId: crypto.randomUUID(),
+        text: turn.text,
+        retryOf: turn.id,
+      },
+      undefined,
+      undefined,
+      undefined,
+      { discoveryDeadline: Effect.runSync(Clock.currentTimeMillis) + 60_000 }
+    )
   )
   expect(
     Effect.runSync(
@@ -266,10 +290,16 @@ it.each([
 it("shows recovery and blocked states while cancellation remains authoritative", () => {
   const { db, turns } = fixture()
   const { turn } = Effect.runSync(
-    turns.admit({
-      operationId: crypto.randomUUID(),
-      text: "Recover this task",
-    })
+    turns.admit(
+      {
+        operationId: crypto.randomUUID(),
+        text: "Recover this task",
+      },
+      undefined,
+      undefined,
+      undefined,
+      { discoveryDeadline: Effect.runSync(Clock.currentTimeMillis) + 60_000 }
+    )
   )
   db.run(
     "UPDATE chat_turns SET status='running',recovery=? WHERE id=?",

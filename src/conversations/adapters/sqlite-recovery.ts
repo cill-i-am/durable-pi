@@ -1,18 +1,18 @@
 import { and, eq, isNull } from "drizzle-orm"
-import { Effect, Schema } from "effect"
+import { Effect } from "effect"
 
 import { mapSqliteError, type Sqlite } from "../../storage/sqlite"
 import {
   initialRecovery,
-  observeRound,
   recoveryPolicy,
   requireRecoveryPolicy,
   canObserveRecovery,
-  RecoveryStateRecord,
+  decodeRecoveryState,
   type Observation,
   type RecoveryPolicy,
 } from "../recovery"
 import type { RecoveryLedger } from "../recovery-service"
+import { observeRound } from "../tool-recovery.machine"
 import { ConversationStorageError } from "../turns"
 import { chatTurns, chatRecoveryHistory } from "./schema"
 
@@ -39,16 +39,7 @@ export class RunRecoveryStore implements RecoveryLedger {
     ).pipe(
       Effect.map((rows) => {
         if (!rows[0]?.recovery) return
-        const historical = Schema.decodeUnknownSync(
-            Schema.Record(Schema.String, Schema.Unknown)
-          )(JSON.parse(rows[0].recovery)),
-          decoded = Schema.decodeUnknownSync(RecoveryStateRecord)(historical)
-        return {
-          ...historical,
-          ...decoded,
-          buckets: decoded.buckets.map((bucket) => ({ ...bucket })),
-          view: decoded.view ? { ...decoded.view } : null,
-        }
+        return decodeRecoveryState(JSON.parse(rows[0].recovery))
       })
     )
   }

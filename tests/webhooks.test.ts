@@ -165,7 +165,7 @@ describe("inbound webhook authority and durable receipts", () => {
       operationId: crypto.randomUUID(),
     })
     f.store.accept(f.id, f.hash, "event-2", f.payload, f.payloadHash)
-    f.routines.deliver(() => {})
+    f.routines.deliver(() => {}, Date.now() + 60_000)
     f.store.configure({
       ...f.change,
       expectedRevision: 3,
@@ -216,8 +216,16 @@ describe("inbound webhook authority and durable receipts", () => {
     expect(f.routines.inFlight()).toBeUndefined()
     f.db.run("DROP TRIGGER fail_event")
     f.store.accept(f.id, f.hash, "event-1", f.payload, f.payloadHash)
-    f.routines.deliver((run) =>
-      conversations.admit({ operationId: run.turnId, text: run.prompt })
+    f.routines.deliver(
+      (run, discoveryDeadline) =>
+        conversations.admit(
+          { operationId: run.turnId, text: run.prompt },
+          undefined,
+          [],
+          undefined,
+          { discoveryDeadline }
+        ),
+      Date.now() + 60_000
     )
     expect(Effect.runSync(conversations.recent())[0]?.text).toContain(
       "untrusted source material"

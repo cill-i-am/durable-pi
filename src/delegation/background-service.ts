@@ -1,5 +1,6 @@
 import { Context, Effect, Layer, Schema } from "effect"
 
+import { stopConversation } from "../conversations/commands"
 import type { ConversationFailure } from "../conversations/turns"
 import { observeCleanup, preserveFatal } from "../shared/effect"
 import { backgroundBrief } from "./background"
@@ -43,6 +44,7 @@ export interface BackgroundRemote {
 export interface BackgroundHost {
   readonly active: () => Effect.Effect<boolean, BackgroundError>
   readonly backgroundActive: () => Effect.Effect<boolean, BackgroundError>
+  readonly prearm: () => Effect.Effect<number, DelegationFailure>
   readonly wakeConversation: () => Effect.Effect<void, DelegationFailure>
   readonly armBackground: (
     deadline: number
@@ -111,8 +113,28 @@ export function makeBackgroundDelegation(
       accept: write,
       wake: host.wakeBackground(),
     })
-  const requestStop = (id: number) =>
-    accept((deadline) => mailbox.cancel(id, host.admission, deadline))
+  const requestStop = Effect.fn("Background.requestStop")(function* (
+    id: number
+  ) {
+    const row = yield* required(id)
+    // Conversations and Background retain separate discovery and retry budgets.
+    // The command machine preserves a failed conversation arm while the existing
+    // background admission machine commits both revocations in their shared tx.
+    return yield* stopConversation(
+      {
+        requestStop: (_reportId, options) =>
+          accept((deadline) =>
+            mailbox.cancel(id, host.admission, deadline, options)
+          ),
+      },
+      {
+        prearm: host.prearm,
+        wake: host.wakeConversation,
+        wakeBackground: () => Effect.void,
+        notify: host.notify,
+      }
+    )(row.handoff.reportId)
+  })
   const attemptStop = (id: number) =>
     runBackgroundAttempt({
       kind: "stop",
@@ -177,7 +199,6 @@ export function makeBackgroundDelegation(
       yield* Effect.yieldNow
       yield* requestStop(id)
       yield* attemptStop(id)
-      yield* host.wakeConversation()
       return { accepted: true }
     }),
     retry: Effect.fn("Background.retry")(function* (
@@ -241,9 +262,12 @@ export function makeBackgroundDelegation(
               : mailbox.observed(current.id, group, current.revision),
         })
       }
-      if (!(yield* host.active()) && (yield* mailbox.deliver(host.admission))) {
-        yield* host.wakeConversation()
-        yield* host.notify()
+      if (!(yield* host.active())) {
+        const discoveryDeadline = yield* host.prearm()
+        if (yield* mailbox.deliver(host.admission, discoveryDeadline)) {
+          yield* host.wakeConversation()
+          yield* host.notify()
+        }
       }
       if (yield* host.backgroundActive()) yield* host.wakeConversation()
       return yield* mailbox.nextWake()

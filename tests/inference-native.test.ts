@@ -6,7 +6,7 @@ import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context"
 import { Type } from "@earendil-works/pi-ai"
 import { Harness, createRegistry, defineTool } from "@earendil-works/pi-durable"
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
-import { Effect } from "effect"
+import { Clock, Effect } from "effect"
 import { expect, it, vi } from "vitest"
 
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
@@ -38,7 +38,15 @@ it("carries a composer override into native Pi Responses and preserves selection
     ...resolveRoute("conversation", undefined, command.profile),
     contextWindow: 272000,
   }
-  const turn = Effect.runSync(store.admit(command, undefined, [], route)).turn
+  const turn = Effect.runSync(
+    Clock.currentTimeMillis.pipe(
+      Effect.flatMap((now) =>
+        store.admit(command, undefined, [], route, {
+          discoveryDeadline: now + 60_000,
+        })
+      )
+    )
+  ).turn
   const payloads: Record<string, unknown>[] = []
   const telemetry: Promise<unknown>[] = []
   let toolCalls = 0,
