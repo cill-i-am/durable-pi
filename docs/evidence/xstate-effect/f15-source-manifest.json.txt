@@ -1,0 +1,74 @@
+{
+  "base": "2c13994f478c38f9549000eaa13106df4c94203b",
+  "sourceAndTests": [
+    {
+      "path": "src/features/rich-results/places-map.tsx",
+      "sha256": "bfce88317726dc0af132b8b802af78fdcac4c5de7d300dee9713a4989ee51cf0"
+    },
+    {
+      "path": "src/features/rich-results/places-map.machine.ts",
+      "sha256": "ef00a7c622951ddf9eaa97c79feb6e2d13fa36c5eea23d79b64f938c3bf48646"
+    },
+    {
+      "path": "src/features/rich-results/places-map-resource.ts",
+      "sha256": "efceb06c8592158ef55db14ce4d1d7300fe7fa2b6561a73c1914e76be656b865"
+    },
+    {
+      "path": "src/features/rich-results/question.tsx",
+      "sha256": "16ad7537dc40e3dbb19c2ba3fb280f2c749227b1e2b4e9f94cfa9a3d8bc2b39d"
+    },
+    {
+      "path": "src/features/rich-results/question.machine.ts",
+      "sha256": "d046248adf46463da31ac2a7c7cd47cca850baf6f704e83b17738c8263863703"
+    },
+    {
+      "path": "src/hooks/use-highlighted-code.ts",
+      "sha256": "abc4f21fe9e3cc737c01031163421b119a6b871b81e878ba4b7d9ecb5c3284de"
+    },
+    {
+      "path": "src/hooks/highlighted-code.machine.ts",
+      "sha256": "4307b2d87375aded99b15a097437233a798c0d298f81cbaf1cbf2045da7b1be8"
+    },
+    {
+      "path": "src/hooks/use-interaction-sound.ts",
+      "sha256": "adddc4ae0d3ee39fb2b19a12fe42866c0566e9af508e0e5aeabc94827b89f956"
+    },
+    {
+      "path": "src/hooks/interaction-sound.machine.ts",
+      "sha256": "e446bf1b345552845a500ab9486010e049bec112bd11351d5540af18999a2cc4"
+    },
+    {
+      "path": "src/hooks/interaction-sound-resource.ts",
+      "sha256": "b3efe28757d4b99218722e048a07576134b11fa4d7aa2d63e7727134c7ab5079"
+    },
+    {
+      "path": "tests/places-map.test.tsx",
+      "sha256": "074f756c09b61aece1510a0d87dc2922d0b1a65448b4342a1cb5220e21bcca86"
+    },
+    {
+      "path": "tests/question.test.tsx",
+      "sha256": "1357d37f48c28aac382bd0f7d9fb3a3c44d0b4b6024e29d5dff1750828d142a3"
+    },
+    {
+      "path": "tests/highlighted-code.test.ts",
+      "sha256": "f38d9aae83c426bccc6b70177e77e204dd4635347fbcf48ed8c61081d51bb732"
+    },
+    {
+      "path": "tests/interaction-sound.test.ts",
+      "sha256": "3fe835071cf5aa720dac4083cc4b175a9171a6eb84dabd2b7e327176cb8d244b"
+    },
+    {
+      "path": "tests/browser/rich-results.spec.ts",
+      "sha256": "282b5a1be5d3caf8f14405df716d30580a02c514ca903f69663fd32e7a773d43"
+    },
+    {
+      "path": "tests/browser/interaction-sound.spec.ts",
+      "sha256": "094b63ca51b940e78459f6fad7ee5988ee2474d76f41dc6d0721e0d31a081a7b"
+    }
+  ],
+  "notes": [
+    "Source/test bytes used by final full browser, production build, passkeys and two-build gates.",
+    "Documentation and evidence are excluded from this source/test hash list.",
+    "No dependency or preference-storage changes."
+  ]
+}

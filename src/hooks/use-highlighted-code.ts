@@ -1,32 +1,74 @@
+import { createEffectActor, send, type EffectActor } from "@xstate/effect"
+import { Cause, Effect, Exit, Fiber } from "effect"
 import * as React from "react"
+import type { SnapshotFrom } from "xstate"
 
-import type { loadHighlighter } from "@/lib/highlighter"
+import { highlightedCodeMachine } from "./highlighted-code.machine"
+
+type HighlightMachine = ReturnType<typeof highlightedCodeMachine>
 
 export function useHighlightedCode(value: string, language: string) {
   // A trailing newline would render as an extra empty line.
   const code = value.endsWith("\n") ? value.slice(0, -1) : value
-  const [loaded, setLoaded] = React.useState<{
-    language: string
-    highlighter: Awaited<ReturnType<typeof loadHighlighter>>
-  } | null>(null)
-  const highlighter = loaded?.language === language ? loaded.highlighter : null
-
+  const [actor, setActor] =
+    React.useState<EffectActor<HighlightMachine> | null>(null)
+  const [snapshot, setSnapshot] =
+    React.useState<SnapshotFrom<HighlightMachine> | null>(null)
   React.useEffect(() => {
-    let cancelled = false
-
-    import("@/lib/highlighter")
-      .then(({ loadHighlighter }) => loadHighlighter(language))
-      .then((next) => {
-        if (!cancelled) {
-          setLoaded({ language, highlighter: next })
+    let mounted = true
+    const fiber = Effect.runFork(
+      Effect.gen(function* () {
+        const owned = yield* createEffectActor(
+          highlightedCodeMachine((language) =>
+            Effect.tryPromise({
+              try: () =>
+                import("@/lib/highlighter").then((module) =>
+                  module.loadHighlighter(language)
+                ),
+              catch: (cause) => cause,
+            })
+          ),
+          { input: { language } }
+        )
+        yield* Effect.acquireRelease(
+          Effect.sync(() =>
+            owned.subscribe((value) => {
+              if (mounted) setSnapshot(value)
+            })
+          ),
+          (subscription) => Effect.sync(() => subscription.unsubscribe())
+        )
+        if (mounted) {
+          setActor(owned)
+          setSnapshot(owned.getSnapshot())
         }
-      })
-      .catch(() => {})
-
+        return yield* Effect.never
+      }).pipe(Effect.scoped)
+    )
     return () => {
-      cancelled = true
+      mounted = false
+      Effect.runFork(
+        Fiber.interrupt(fiber).pipe(
+          Effect.andThen(Fiber.await(fiber)),
+          Effect.flatMap((exit) =>
+            Exit.isFailure(exit) && !Cause.hasInterruptsOnly(exit.cause)
+              ? Effect.logError(exit.cause)
+              : Effect.void
+          )
+        )
+      )
     }
-  }, [language])
+    // Language changes replace the actor's invocation, not its React owner.
+    // oxlint-disable-next-line react/exhaustive-deps
+  }, [])
+  React.useEffect(() => {
+    if (actor) Effect.runFork(send(actor, { type: "LANGUAGE", language }))
+  }, [actor, language])
+  // React can render the next language before its event reaches the mailbox.
+  const highlighter =
+    snapshot?.context.language === language
+      ? snapshot.context.highlighter
+      : null
 
   // The complete lines, highlighted. While the code streams, only the new
   // lines are tokenized, starting from the grammar state of the last one.

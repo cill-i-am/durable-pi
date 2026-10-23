@@ -1,0 +1,55 @@
+[WebServer] (node:97957) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] [plugin builtin:vite-reporter] 
+[WebServer] (!) Some chunks are larger than 500 kB after minification. Consider:
+[WebServer] - Using dynamic import() to code-split the application
+[WebServer] - Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+[WebServer] - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[WebServer] [INEFFECTIVE_DYNAMIC_IMPORT] src/features/files/files-panel.tsx is dynamically imported by src/app/workspace.tsx but also statically imported by src/features/files/index.ts, dynamic import will not move module into another chunk.
+[WebServer] 
+
+Running 14 tests using 1 worker
+
+(node:97964) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [desktop] › tests/browser/interaction-sound.spec.ts:76:1 › native pointer and keyboard sound preserve gesture, mute, preview and context cleanup (4.2s)
+  ✓   2 [desktop] › tests/browser/interaction-sound.spec.ts:147:1 › blocked audio and failed preference writes never block password visibility (1.5s)
+  ✓   3 [desktop] › tests/browser/rich-results.spec.ts:30:1 › a shopping shortlist survives workspace expansion and questions append to an unsent draft (3.9s)
+  ✓   4 [desktop] › tests/browser/rich-results.spec.ts:101:1 › table search and sorting survive expansion and govern the exported CSV (2.9s)
+  ✓   5 [desktop] › tests/browser/rich-results.spec.ts:144:1 › weather adapts from a dated weekend comparison to a detailed day and a compact week (2.5s)
+  ✓   6 [desktop] › tests/browser/rich-results.spec.ts:217:1 › map leases survive selection, theme replacement and route teardown without stale canvases (3.7s)
+  ✓   7 [desktop] › tests/browser/rich-results.spec.ts:268:1 › closing a map during a held style request releases it and leaves the next map usable (3.1s)
+(node:98239) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   8 [mobile] › tests/browser/interaction-sound.spec.ts:76:1 › native pointer and keyboard sound preserve gesture, mute, preview and context cleanup (4.0s)
+  ✓   9 [mobile] › tests/browser/interaction-sound.spec.ts:147:1 › blocked audio and failed preference writes never block password visibility (1.4s)
+  ✓  10 [mobile] › tests/browser/rich-results.spec.ts:30:1 › a shopping shortlist survives workspace expansion and questions append to an unsent draft (5.1s)
+  ✓  11 [mobile] › tests/browser/rich-results.spec.ts:101:1 › table search and sorting survive expansion and govern the exported CSV (3.2s)
+  ✓  12 [mobile] › tests/browser/rich-results.spec.ts:144:1 › weather adapts from a dated weekend comparison to a detailed day and a compact week (2.5s)
+  ✘  13 [mobile] › tests/browser/rich-results.spec.ts:217:1 › map leases survive selection, theme replacement and route teardown without stale canvases (30.2s)
+(node:98883) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  14 [mobile] › tests/browser/rich-results.spec.ts:268:1 › closing a map during a held style request releases it and leaves the next map usable (4.0s)
+
+
+  1) [mobile] › tests/browser/rich-results.spec.ts:217:1 › map leases survive selection, theme replacement and route teardown without stale canvases 
+
+    Test timeout of 30000ms exceeded.
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/rich-results-map-leases-su-d0412-down-without-stale-canvases-mobile/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/rich-results-map-leases-su-d0412-down-without-stale-canvases-mobile/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/rich-results-map-leases-su-d0412-down-without-stale-canvases-mobile/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/rich-results-map-leases-su-d0412-down-without-stale-canvases-mobile/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [mobile] › tests/browser/rich-results.spec.ts:217:1 › map leases survive selection, theme replacement and route teardown without stale canvases 
+  13 passed (1.3m)
