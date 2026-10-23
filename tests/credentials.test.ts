@@ -196,7 +196,9 @@ describe("private model credentials", () => {
     const f = fixture()
     await f.resolve()
     f.db.run("UPDATE model_credentials SET value='{}'")
-    Effect.runSync(f.ledger.claim("openai", true))
+    f.db.run(
+      "INSERT INTO model_credential_refresh (provider) VALUES ('openai')"
+    )
     const next = JSON.stringify({
       ...seedValue,
       access: "replacement",
@@ -220,6 +222,13 @@ describe("private model credentials", () => {
     )[0]!
     expect(JSON.parse(row.value)).toEqual({
       connectionId: expect.any(String),
+      credentialLifecycle: {
+        schemaVersion: 1,
+        workflowVersion: 1,
+        phase: "ready",
+        connectionId: expect.any(String),
+        attemptId: null,
+      },
       ...seedValue,
       access: "rotated-access",
       refresh: "rotated-refresh",

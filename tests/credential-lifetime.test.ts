@@ -113,6 +113,10 @@ for (const failed of [false, true])
       closed = true
       return exit
     })
+    if (!signal.aborted)
+      await new Promise<void>((resolve) =>
+        signal.addEventListener("abort", () => resolve(), { once: true })
+      )
     expect(signal.aborted).toBe(true)
     response.resolve(
       new Response(
@@ -320,7 +324,17 @@ test("a late rotation cannot overwrite a newer deployment seed", async () => {
         db.all<{ value: string }>("SELECT value FROM model_credentials")[0]!
           .value
       )
-    ).toEqual({ ...newer, connectionId: expect.any(String) })
+    ).toEqual({
+      ...newer,
+      connectionId: expect.any(String),
+      credentialLifecycle: {
+        schemaVersion: 1,
+        workflowVersion: 1,
+        phase: "ready",
+        connectionId: expect.any(String),
+        attemptId: null,
+      },
+    })
   } finally {
     release.resolve()
     await first.runPromise(service.shutdown())

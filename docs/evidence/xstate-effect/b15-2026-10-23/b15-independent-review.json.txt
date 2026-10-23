@@ -1,0 +1,34 @@
+{
+  "reviewedAt": "2026-10-23T15:58:14.913451+00:00",
+  "root": "/Users/cillianbarron/.codex/worktrees/xstate-review-stack/durable-pi",
+  "files": {
+    "src/inference/credentials.ts": "c329e12a741478969cf53e46e902261192072b3c89335c753196148bed8e5e02",
+    "src/inference/credential-domain.ts": "43ffb34e03016c0d84da1e755cadfca8b7c598fea312b0aeb0b35392ffe62297",
+    "src/inference/credential-host.machine.ts": "e809c78dd2dfc66c66d82689525248a61fa9fd2932f9cb302ee4ec2c042955e1",
+    "src/inference/credential-rotation.machine.ts": "1a182b4500a456e05bc3383604670b2905b11016c7eb3b568c6f1bbb68fa14cd",
+    "src/inference/sign-in.machine.ts": "a900864faa8c677f80ea95264d42702f902e899d8f068d3bce1586b3d3b33aa2",
+    "src/inference/adapters/chatgpt-sign-in.ts": "f77f45a3fe9d9b7e746782addb4bba1d8df81489d6bb1495c717a9e16b1d3b62",
+    "src/inference/adapters/credential-sqlite.ts": "6b97a64c53318cb1cac1fd315189743fcd94cc23848df28cd792f9bd5229404f",
+    "src/inference/adapters/oauth.ts": "045631ecdb853ec2504e601a7c5d2d64146d421188e682362456933a7de9e11c",
+    "tests/credentials.test.ts": "3aae2af97258f5417210da198d56f566ec0b4e18e52a52b80f53dbffa3cecc2e",
+    "tests/credential-lifetime.test.ts": "b29856df9a93c041ee32ce1e2ae49d60d386c86e543421ac9d2f7388f5007370",
+    "tests/credential-machines.test.ts": "0baaf325b792672ac77b24a8bcc78fba8c88e6972ed7adb94caa6343f4290643",
+    "tests/chatgpt-sign-in.test.ts": "adab9220076d8ddffbd26bb5db931b0fad31444b40f5f075ac9b2668629dfaf5",
+    "docs/xstate-effect-model-credentials.md": "f1d190288667e4e58f8ad8f232179c49c3a8d940b25b2c42218b9bdceca6fc03"
+  },
+  "finding": {
+    "priority": "P2",
+    "path": "src/inference/adapters/chatgpt-sign-in.ts",
+    "originalLines": "323-337",
+    "counterexample": "Hold the CLAIM KV transaction after account acceptance; advance the live clock past pending.expiresAt; release acquisition. Before the fix a token POST dispatched once and consumed the expired code.",
+    "resolution": "Read injected Clock.currentTimeMillisUnsafe inside the acquired transaction after reading the latest record.",
+    "before": "/private/tmp/b15-independent-deadline.log",
+    "after": "/private/tmp/b15-independent-deadline-after.log",
+    "probe": "/private/tmp/b15-independent-deadline.test.ts"
+  },
+  "limits": [
+    "No live provider, real OAuth account, native Worker, or broad gate run.",
+    "Reviewed existing focused coverage for shutdown/late compound Cause, provider-success commit fencing, accepted-account ownership, legacy/future records and projection consistency.",
+    "No additional concrete defect found in the inspected frozen paths; not proof of arbitrary multi-host takeover."
+  ]
+}

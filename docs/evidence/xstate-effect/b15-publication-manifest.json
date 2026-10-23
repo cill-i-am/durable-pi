@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-10-23T16:25:38.265243+00:00",
+  "baseCommit": "aacaa677c491badd8d8bfdc8356f0c29bf4f04b9",
+  "sources": {
+    "src/inference/adapters/chatgpt-sign-in.ts": "f77f45a3fe9d9b7e746782addb4bba1d8df81489d6bb1495c717a9e16b1d3b62",
+    "src/inference/adapters/credential-sqlite.ts": "6b97a64c53318cb1cac1fd315189743fcd94cc23848df28cd792f9bd5229404f",
+    "src/inference/credential-domain.ts": "43ffb34e03016c0d84da1e755cadfca8b7c598fea312b0aeb0b35392ffe62297",
+    "src/inference/credential-host.machine.ts": "e809c78dd2dfc66c66d82689525248a61fa9fd2932f9cb302ee4ec2c042955e1",
+    "src/inference/credential-rotation.machine.ts": "1a182b4500a456e05bc3383604670b2905b11016c7eb3b568c6f1bbb68fa14cd",
+    "src/inference/credentials.ts": "c329e12a741478969cf53e46e902261192072b3c89335c753196148bed8e5e02",
+    "src/inference/sign-in.machine.ts": "a900864faa8c677f80ea95264d42702f902e899d8f068d3bce1586b3d3b33aa2",
+    "tests/chatgpt-sign-in.test.ts": "adab9220076d8ddffbd26bb5db931b0fad31444b40f5f075ac9b2668629dfaf5",
+    "tests/credential-lifetime.test.ts": "b29856df9a93c041ee32ce1e2ae49d60d386c86e543421ac9d2f7388f5007370",
+    "tests/credential-machines.test.ts": "0baaf325b792672ac77b24a8bcc78fba8c88e6972ed7adb94caa6343f4290643",
+    "tests/credentials.test.ts": "3aae2af97258f5417210da198d56f566ec0b4e18e52a52b80f53dbffa3cecc2e",
+    "tests/sign-in-deadline.test.ts": "f2c4d690961a2197188480b2d35c338cb129a339cf96073ead5177d8d3259e19"
+  },
+  "artifacts": [
+    {
+      "path": "docs/evidence/xstate-effect/b15-composed-static-1.log.txt",
+      "original": "/private/tmp/b15-composed-static-1.log",
+      "sha256": "7608ff0de07c3b53947c4da50b735c2c56b7358f4dcf5b637420cca6f0285bcc",
+      "bytes": 655,
+      "recordedExitCode": 0
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b15-composed-unit-1.log.txt",
+      "original": "/private/tmp/b15-composed-unit-1.log",
+      "sha256": "d61cf01e69fe06d6d3921e447172c2f9045f93ca57736025fef757fc757bf156",
+      "bytes": 539,
+      "recordedExitCode": 0
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b15-composed-build-1.log.txt",
+      "original": "/private/tmp/b15-composed-build-1.log",
+      "sha256": "db0a63ae9703a1f57483a93c1377268b7255b7716952d8756ff0dd6245225fbc",
+      "bytes": 24468,
+      "recordedExitCode": 0
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b15-composed-communication-native.log.txt",
+      "original": "/private/tmp/b15-composed-communication-native.log",
+      "sha256": "694079f5526bb475f5a87f6f2f55077e25c09d36c92cbd27f0a018b4fac6f4b8",
+      "bytes": 5496,
+      "recordedExitCode": 0
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b15-composed-final-types.log.txt",
+      "original": "/private/tmp/b15-composed-final-types.log",
+      "sha256": "8366207267355d3e3d5bf3bf6e8c94c5f93f6078c34f08973fa2b38cdda6cc92",
+      "bytes": 15,
+      "recordedExitCode": 0
+    }
+  ],
+  "historicalArtifactManifest": "docs/evidence/xstate-effect/b15-2026-10-23/manifest.json",
+  "reviewedExecutableSourceDrift": [],
+  "limits": [
+    "Independent synthetic-provider tests and immutable reviewed sources; no real OAuth login or external exactly-once claim.",
+    "Composed static,3234 tests/285 files,website/routing/all Worker builds and final types pass. Complete affected Communication/PersonalAgent native suite passes, including rotation SIGKILL and joined shutdown.",
+    "Other inherited native/browser suites retain their published-commit provenance. Full hosted CI on this commit remains required; no merge/deployment."
+  ]
+}
