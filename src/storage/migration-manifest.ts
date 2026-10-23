@@ -312,6 +312,27 @@ export const agentMigrationManifest = {
         "UPDATE `routine_runs`\nSET `record` = json_set(`record`, '$.schemaVersion', 1, '$.workflowVersion', 1,\n  '$.controlRevision', 0, '$.admissionDeadline', json_extract(`record`, '$.createdAt') + 86400000)\nWHERE json_type(`record`, '$.schemaVersion') IS NULL\n  AND json_type(`record`, '$.workflowVersion') IS NULL;",
       ],
     },
+    {
+      id: "20261023142600_memory_lifecycle",
+      checksum:
+        "eefc3a3828fed72025dca2182f3a9b0078cd26be9a9cfcc0c9ff8578acc47d8e",
+      statements: [
+        "ALTER TABLE `memory_backup_status` ADD `schema_version` integer DEFAULT 0 NOT NULL;",
+        "ALTER TABLE `memory_backup_status` ADD `workflow_version` integer DEFAULT 0 NOT NULL;",
+        "ALTER TABLE `memory_backup_status` ADD `phase` text DEFAULT 'idle' NOT NULL;",
+        "ALTER TABLE `memory_backup_status` ADD `target` text DEFAULT '' NOT NULL;",
+        "ALTER TABLE `memory_backup_status` ADD `attempts` integer DEFAULT 0 NOT NULL;",
+        "ALTER TABLE `memory_backup_status` ADD `attempt_id` text;",
+        "ALTER TABLE `memory_backup_status` ADD `retry_at` integer DEFAULT 0 NOT NULL;",
+        "ALTER TABLE `memory_ready` ADD `control` text;",
+        "PRAGMA foreign_keys=OFF;",
+        'CREATE TABLE `__new_memory_ready` (\n\t`start` integer NOT NULL,\n\t`count` integer NOT NULL,\n\t`control` text,\n\tCONSTRAINT `memory_ready_pk` PRIMARY KEY(`count`, `start`),\n\tCONSTRAINT "memory_ready_start_check" CHECK("start" >= 0),\n\tCONSTRAINT "memory_ready_count_check" CHECK("count" > 0),\n\tCONSTRAINT "memory_ready_control_json" CHECK("control" is null or json_valid("control"))\n);',
+        "INSERT INTO `__new_memory_ready`(`start`, `count`) SELECT `start`, `count` FROM `memory_ready`;",
+        "DROP TABLE `memory_ready`;",
+        "ALTER TABLE `__new_memory_ready` RENAME TO `memory_ready`;",
+        "PRAGMA foreign_keys=ON;",
+      ],
+    },
   ],
   schema: [
     {
@@ -552,7 +573,7 @@ export const agentMigrationManifest = {
     {
       type: "table",
       name: "memory_backup_status",
-      sql: 'CREATE TABLE `memory_backup_status` (\n\t`id` integer PRIMARY KEY,\n\t`date` text,\n\t`watermark` text NOT NULL,\n\t`error` text,\n\tCONSTRAINT "memory_backup_status_id_singleton" CHECK("id" = 1)\n)',
+      sql: "CREATE TABLE `memory_backup_status` (\n\t`id` integer PRIMARY KEY,\n\t`date` text,\n\t`watermark` text NOT NULL,\n\t`error` text, `schema_version` integer DEFAULT 0 NOT NULL, `workflow_version` integer DEFAULT 0 NOT NULL, `phase` text DEFAULT 'idle' NOT NULL, `target` text DEFAULT '' NOT NULL, `attempts` integer DEFAULT 0 NOT NULL, `attempt_id` text, `retry_at` integer DEFAULT 0 NOT NULL,\n\tCONSTRAINT \"memory_backup_status_id_singleton\" CHECK(\"id\" = 1)\n)",
     },
     {
       type: "table",
@@ -602,7 +623,7 @@ export const agentMigrationManifest = {
     {
       type: "table",
       name: "memory_ready",
-      sql: 'CREATE TABLE `memory_ready` (\n\t`start` integer NOT NULL,\n\t`count` integer NOT NULL,\n\tCONSTRAINT `memory_ready_pk` PRIMARY KEY(`count`, `start`),\n\tCONSTRAINT "memory_ready_start_check" CHECK("start" >= 0),\n\tCONSTRAINT "memory_ready_count_check" CHECK("count" > 0)\n)',
+      sql: 'CREATE TABLE "memory_ready" (\n\t`start` integer NOT NULL,\n\t`count` integer NOT NULL,\n\t`control` text,\n\tCONSTRAINT `memory_ready_pk` PRIMARY KEY(`count`, `start`),\n\tCONSTRAINT "memory_ready_start_check" CHECK("start" >= 0),\n\tCONSTRAINT "memory_ready_count_check" CHECK("count" > 0),\n\tCONSTRAINT "memory_ready_control_json" CHECK("control" is null or json_valid("control"))\n)',
     },
     {
       type: "table",

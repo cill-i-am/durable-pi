@@ -23,7 +23,7 @@ export function memoryImportAuthority(
   }
 }
 /** Lifecycle wake is a native foreign callback. Join its actual acknowledgment. */
-export const memoryWake = (operation: string, wake: () => Promise<void>) =>
+export const memoryWake = <A>(operation: string, wake: () => Promise<A>) =>
   nativeOperation(wake, (cause, channel) => {
     const expected = Schema.decodeUnknownOption(MemorySchedulingError)(cause)
     if (expected._tag === "Some") return expected.value

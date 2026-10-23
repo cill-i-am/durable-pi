@@ -1,0 +1,38 @@
+import assert from 'node:assert/strict'
+import { DatabaseSync } from 'node:sqlite'
+import { Lifecycle } from 'agents/lifecycle'
+import { Effect } from 'effect'
+import { BackupRunner } from '/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/src/memory/adapters/backup-lifecycle.ts'
+const path = `/private/tmp/b18-runner-independent/cold-read-failure-${process.pid}.sqlite`
+let db = new DatabaseSync(path)
+db.exec('CREATE TABLE review_kv (key TEXT PRIMARY KEY, value TEXT NOT NULL)')
+const retained: Promise<void>[] = [], claims: any[] = [], cleanups: any[] = []
+let now = Date.now(), rejectCleanup = true, controllerReadFailure = false
+Date.now = () => now
+const storage = { sql: { exec: (sql: string, ...params: any[]) => db.prepare(sql).all(...params) }, get: async (key: string) => { if (controllerReadFailure && key === 'memory-backups:failure') throw new Error('cold diagnostic read outage'); const row:any=db.prepare('SELECT value FROM review_kv WHERE key=?').get(key); return row ? JSON.parse(row.value) : undefined }, put: async (key: string, value: any) => { db.prepare('INSERT OR REPLACE INTO review_kv VALUES(?,?)').run(key,JSON.stringify(value)) }, delete: async (key: string) => { db.prepare('DELETE FROM review_kv WHERE key=?').run(key) }, setAlarm: async () => {}, deleteAlarm: async () => {}, sync: async () => {} }
+function make() {
+  const runner = new BackupRunner<unknown>({run:Effect.runPromise,restore:()=>Effect.void,
+    step:onClaim=>Effect.gen(function*(){ const claim={attemptId:`cold-claim-${claims.length+1}`,target:'same-watermark',attempts:claims.length+1};claims.push(claim);yield* onClaim(claim);yield* Effect.die(new Error('publication failed'));return undefined }),
+    exhaust:(claim,current)=>Effect.suspend(()=>{cleanups.push({claim,current:current(),rejectCleanup});return rejectCleanup?Effect.die(new Error('storage outage')):Effect.void}),retain:work=>{retained.push(work)}})
+  const lifecycle=new Lifecycle({ctx:{id:{name:'cold-independent'},storage,blockConcurrencyWhile:(body:any)=>body(),waitUntil:(work:any)=>retained.push(work)}} as any)
+  lifecycle.use(runner)
+  return {runner,lifecycle}
+}
+let current=make()
+await current.lifecycle.start();await current.runner.wake();await current.lifecycle.alarm();await Promise.all(retained);await current.lifecycle.alarm();now+=1001;await current.lifecycle.alarm()
+const recovery=await current.runner.recovery()
+assert.ok(recovery)
+assert.equal(db.prepare('SELECT count(*) AS n FROM cf_agents_jobs').get()?.n,0)
+const persisted=await storage.get('memory-backups:failure')
+assert.deepEqual(persisted.claim,claims[0])
+await current.runner.armSchedulerRecovery(recovery.epoch)
+await current.runner.dispose()
+db.close();db=new DatabaseSync(path)
+current=make();await current.lifecycle.start()
+controllerReadFailure=true
+await current.lifecycle.alarm()
+controllerReadFailure=false
+const after=await storage.get('memory-backups:failure')
+console.log('COLD_DIAGNOSTIC_READ_FAILURE',JSON.stringify({before:persisted,after,claims,cleanups,jobs:db.prepare('SELECT * FROM cf_agents_jobs').all()}))
+await current.runner.dispose();db.close()
+assert.deepEqual(after.claim,persisted.claim,'diagnostic read failure must not discard an existing exact cleanup claim')

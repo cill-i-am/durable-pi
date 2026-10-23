@@ -7,7 +7,7 @@ import { Harness, createRegistry } from "@earendil-works/pi-durable"
 import { PiHarness } from "agents/harness/pi"
 import { Lifecycle } from "agents/lifecycle"
 import { DurableObject } from "cloudflare:workers"
-import { Effect, Exit, Scope } from "effect"
+import { Clock, Effect, Exit, Scope } from "effect"
 
 import {
   ConversationRunner,
@@ -93,7 +93,18 @@ export class ConversationControlProbe extends DurableObject<
   readonly journal = makeConversationJournal(
     this.store,
     this.memoryBundle.ledger,
-    sqliteConversationMaterialization(this.db)
+    sqliteConversationMaterialization(this.db),
+    {
+      // This isolated fixture proves conversation control; Memory maintenance
+      // discovery is exercised by the dedicated Memory native host.
+      arm: () =>
+        Clock.currentTimeMillis.pipe(
+          Effect.map((now) => {
+            const lease = { deadline: now + 60_000, current: () => true }
+            return { summary: lease, backup: lease }
+          })
+        ),
+    }
   )
   readonly harness = new PiHarness({
     coordinateStorage: this.db.coordinatePi,

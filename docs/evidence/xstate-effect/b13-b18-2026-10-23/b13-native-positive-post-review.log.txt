@@ -1,0 +1,2 @@
+{"workerd":"2026-10-02","queued":{"calls":1,"alarmDriven":true},"uncertain":{"originalClaim":{"start":0,"count":1,"token":"f21713af-4c01-4348-bdb3-2c6538a5524c","revision":1},"callsBeforeRetry":1,"callsAfterRetry":2},"budget":{"attempts":3,"requests":15,"retriedRequests":[15,1]},"publication":{"calls":1,"steps":1,"settlements":2,"failedSdkAttempts":[1,2,3]},"cleanup":{"joined":1,"paused":"paused","causeRetained":true}}
+PASS B13 native retained alarm, SIGKILL uncertainty, exact explicit retry, bounded request budget, joined receipt cleanup and second restart

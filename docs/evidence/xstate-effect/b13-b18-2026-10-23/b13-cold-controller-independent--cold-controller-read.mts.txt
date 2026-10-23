@@ -1,0 +1,63 @@
+import assert from 'node:assert/strict'
+import { DatabaseSync } from 'node:sqlite'
+import { Lifecycle } from 'agents/lifecycle'
+import { Effect } from 'effect'
+import { SummaryRunner } from '/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/src/memory/adapters/summary-lifecycle.ts'
+const path = `/private/tmp/b13-cold-controller-independent/cold-read-${process.pid}.sqlite`
+let db = new DatabaseSync(path)
+db.exec('CREATE TABLE review_kv (key TEXT PRIMARY KEY, value TEXT NOT NULL)')
+const key = 'memory-compactor:failure'
+const retained: Promise<void>[] = []
+let controllerReadFailure = false, failedReads = 0, controllerWrites = 0, scanCalls = 0, stepCalls = 0
+const storage = {
+  sql: { exec: (sql: string, ...params: any[]) => db.prepare(sql).all(...params) },
+  get: async (name: string) => {
+    if (controllerReadFailure && name === key) { failedReads++; throw new Error('cold diagnostic read outage') }
+    const row: any = db.prepare('SELECT value FROM review_kv WHERE key=?').get(name)
+    return row ? JSON.parse(row.value) : undefined
+  },
+  put: async (name: string, value: any) => { if (name === key) controllerWrites++; db.prepare('INSERT OR REPLACE INTO review_kv VALUES(?,?)').run(name, JSON.stringify(value)) },
+  delete: async (name: string) => { db.prepare('DELETE FROM review_kv WHERE key=?').run(name) },
+  setAlarm: async () => {}, deleteAlarm: async () => {}, sync: async () => {}
+}
+function make() {
+  const runner = new SummaryRunner<unknown>({
+    run: Effect.runPromise,
+    restore: () => Effect.void,
+    settle: () => Effect.void,
+    step: () => Effect.sync(() => { stepCalls++; return undefined }),
+    nextWake: () => Effect.suspend(() => { scanCalls++; return Effect.die(new Error('initial discovery unavailable')) }),
+    retain: work => { retained.push(work) }
+  })
+  const lifecycle = new Lifecycle({ctx: {id: {name:'summary-cold-independent'}, storage, blockConcurrencyWhile: (body: any) => body(), waitUntil: (work: any) => retained.push(work)}} as any)
+  lifecycle.use(runner)
+  return {runner, lifecycle}
+}
+let current = make()
+await current.lifecycle.start()
+await current.runner.armDiscovery()
+await current.lifecycle.alarm()
+const recovery = await current.runner.recovery()
+assert.ok(recovery)
+const before = await storage.get(key)
+assert.equal(scanCalls, 3, 'actual SDK exhausts initial discovery after three callbacks')
+assert.equal(db.prepare('SELECT count(*) AS n FROM cf_agents_jobs').get()?.n, 0)
+const deadline = await current.runner.armRecovery(recovery.epoch)
+const survivingJob = db.prepare('SELECT * FROM cf_agents_jobs').all()
+await current.runner.dispose()
+db.close()
+db = new DatabaseSync(path)
+current = make()
+await current.lifecycle.start()
+const writesBefore = controllerWrites
+controllerReadFailure = true
+await current.lifecycle.alarm()
+controllerReadFailure = false
+const after = await storage.get(key)
+const oldRecoveryAccepted = await current.runner.retryRecovery(recovery.epoch, deadline)
+console.log('COLD_SUMMARY_DIAGNOSTIC_READ_FAILURE', JSON.stringify({before, after, survivingJob, failedReads, writesDuringOutage: controllerWrites - writesBefore, scanCalls, stepCalls, oldRecoveryAccepted, jobs: db.prepare('SELECT * FROM cf_agents_jobs').all()}))
+await current.runner.dispose()
+db.close()
+assert.equal(failedReads, 4, 'three actual SDK dispatch reads plus terminal hook read')
+assert.equal(stepCalls, 0, 'no business work admitted')
+assert.deepEqual(after, before, 'unavailable controller read must not overwrite exact recovery epoch and retired token')

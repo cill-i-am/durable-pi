@@ -215,6 +215,10 @@ function wireSummaryRetry(
           conversationNativeOperation("read summary model catalog", () =>
             host.accountModelCatalog()
           ),
+        arm: () =>
+          conversationNativeOperation("arm memory discovery", () =>
+            host.compactor.armDiscovery()
+          ),
         wake: () =>
           conversationNativeOperation("wake memory compaction", () =>
             host.compactor.wake()
@@ -352,12 +356,18 @@ it("repairs a failed summary retry wake on exact replay, without another route r
   for (let attempt = 0; attempt < 3; attempt++)
     Effect.runSync(memory.failNode(part, 10000))
   let wakes = 0
+  const prearmed: number[] = []
   Object.defineProperty(host, "memory", { value: memory })
   Object.assign(host, {
     db,
     summaryRoutes,
     lifecycle: { start: async () => {} },
     compactor: {
+      armDiscovery: async () => {
+        const deadline = Date.now() + 60_000
+        prearmed.push(deadline)
+        return deadline
+      },
       wake: async () => {
         if (++wakes === 1) throw new Error("Wake acknowledgement lost")
       },
@@ -372,10 +382,13 @@ it("repairs a failed summary retry wake on exact replay, without another route r
     })
   try {
     expect((await host.fetch(request())).ok).toBe(false)
+    expect(prearmed).toHaveLength(1)
+    expect(prearmed[0]).toBeGreaterThan(Date.now())
     expect(Effect.runSync(memory.issues())).toEqual([])
     expect(db.all("SELECT * FROM summary_routes")).toHaveLength(2)
     expect(await (await host.fetch(request())).json()).toEqual({ ok: true })
     expect(wakes).toBe(2)
+    expect(prearmed).toHaveLength(1)
     expect(db.all("SELECT * FROM summary_routes")).toHaveLength(2)
     expect(Effect.runSync(memory.entry(0))?.text).toBe("Original source")
   } finally {
@@ -452,7 +465,10 @@ it("rejects a delayed retry for an older summary revision after the newer retry 
     db,
     summaryRoutes,
     lifecycle: { start: async () => {} },
-    compactor: { wake: async () => {} },
+    compactor: {
+      armDiscovery: async () => Date.now() + 60_000,
+      wake: async () => {},
+    },
   })
   wireSummaryRetry(host, db, ledger, summaryRoutes)
   let lookups = 0,

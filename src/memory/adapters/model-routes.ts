@@ -14,6 +14,7 @@ import {
   MemoryStorageError,
   NonNegativeInteger,
   Part,
+  type SummaryWork,
 } from "../domain"
 import {
   SummaryRouteRecord,
@@ -23,7 +24,13 @@ import {
   requireSummaryRevision,
   type SummaryRouteLedger,
 } from "../routing"
-import { summaryRoutes } from "./schema"
+import {
+  advanceSummary,
+  readSummaryControl,
+  ownsSummary,
+  type SummaryControl,
+} from "../summary.machine"
+import { memoryReady, summaryRoutes } from "./schema"
 
 const attempt = <T>(body: () => T) =>
   Effect.try({
@@ -53,6 +60,57 @@ export class SummaryRoutes implements SummaryRouteLedger {
       this.db.transaction(body),
       () => new MemoryStorageError({ operation: "summary route transaction" })
     )
+  }
+  private claimControl(part: SummaryWork, request = false) {
+    return Effect.gen({ self: this }, function* () {
+      const rows = yield* this.query((orm) =>
+        orm
+          .select({ control: memoryReady.control })
+          .from(memoryReady)
+          .where(
+            and(
+              eq(memoryReady.start, part.start),
+              eq(memoryReady.count, part.count)
+            )
+          )
+          .limit(1)
+      )
+      const control = rows[0]?.control
+        ? readSummaryControl(rows[0].control)
+        : undefined
+      if (part.claim) {
+        if (
+          !control ||
+          part.claim.start !== part.start ||
+          part.claim.count !== part.count ||
+          !ownsSummary(control, part.claim)
+        )
+          return yield* new InvalidMemory({
+            message: "This summary claim is no longer current.",
+          })
+      } else if (
+        (request && rows.length > 0) ||
+        control?.state === "claimed" ||
+        control?.state === "paused"
+      )
+        return yield* new InvalidMemory({
+          message: "A current summary claim is required.",
+        })
+      return control
+    })
+  }
+  private saveClaimControl(part: Part, control: SummaryControl) {
+    return this.query((orm) =>
+      orm
+        .update(memoryReady)
+        .set({ control: JSON.stringify(control) })
+        .where(
+          and(
+            eq(memoryReady.start, part.start),
+            eq(memoryReady.count, part.count)
+          )
+        )
+    ).pipe(Effect.asVoid)
   }
   private record(part: Part) {
     return this.query((orm) =>
@@ -126,26 +184,46 @@ export class SummaryRoutes implements SummaryRouteLedger {
     )
   }
   pin(
-    part: Part,
+    part: SummaryWork,
     candidate: ResolvedRoute
   ): ReturnType<SummaryRouteLedger["pin"]> {
     return this.atomic(() =>
       Effect.gen({ self: this }, function* () {
-        return (
+        const control = yield* this.claimControl(part)
+        const route =
           (yield* this.current(part)) ??
           (yield* this.replace(part, crypto.randomUUID(), candidate))
-        )
+        if (part.claim && control) {
+          const revision = yield* this.revision(part)
+          const next = advanceSummary(control, {
+            type: "BIND_ROUTE",
+            token: part.claim.token,
+            revision: part.claim.revision,
+            routeRevision: revision,
+          })
+          if (next.routeRevision !== revision)
+            return yield* new InvalidMemory({
+              message: "The summary route changed before request admission.",
+            })
+          yield* this.saveClaimControl(part, next)
+        }
+        return route
       })
     )
   }
   budget(
-    part: Part,
+    part: SummaryWork,
     contextWindow: number,
     expectedRevision?: number
   ): ReturnType<SummaryRouteLedger["budget"]> {
     return this.atomic(() =>
       Effect.gen({ self: this }, function* () {
+        const control = yield* this.claimControl(part)
         const current = yield* this.record(part)
+        if (part.claim && control?.routeRevision !== current?.revision)
+          return yield* new InvalidMemory({
+            message: "The summary route changed before request admission.",
+          })
         yield* attempt(() =>
           requireSummaryRevision(current?.revision, expectedRevision)
         )
@@ -175,16 +253,30 @@ export class SummaryRoutes implements SummaryRouteLedger {
     )
   }
   beginRequest(
-    part: Part,
+    part: SummaryWork,
     expectedRevision?: number
   ): ReturnType<SummaryRouteLedger["beginRequest"]> {
     return this.atomic(() =>
       Effect.gen({ self: this }, function* () {
+        const control = yield* this.claimControl(part, true)
         const record = yield* this.record(part)
         yield* attempt(() =>
           requireSummaryRevision(record?.revision, expectedRevision)
         )
         if (!summaryRequestAllowed(record)) return false
+        if (part.claim && control) {
+          const next = advanceSummary(control, {
+            type: "BEGIN_REQUEST",
+            token: part.claim.token,
+            revision: part.claim.revision,
+            routeRevision: record!.revision,
+          })
+          if (control.requestInFlight || !next.requestInFlight)
+            return yield* new InvalidMemory({
+              message: "This summary already has an unconfirmed model request.",
+            })
+          yield* this.saveClaimControl(part, next)
+        }
         yield* this.query((orm) =>
           orm
             .update(summaryRoutes)
@@ -198,6 +290,33 @@ export class SummaryRoutes implements SummaryRouteLedger {
             )
         )
         return true
+      })
+    )
+  }
+  finishRequest(
+    part: SummaryWork,
+    expectedRevision?: number
+  ): ReturnType<SummaryRouteLedger["finishRequest"]> {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const control = yield* this.claimControl(part),
+          current = yield* this.revision(part)
+        yield* attempt(() => requireSummaryRevision(current, expectedRevision))
+        if (!part.claim || !control) return
+        if (control.routeRevision !== current)
+          return yield* new InvalidMemory({
+            message:
+              "The summary route changed before request acknowledgement.",
+          })
+        yield* this.saveClaimControl(
+          part,
+          advanceSummary(control, {
+            type: "FINISH_REQUEST",
+            token: part.claim.token,
+            revision: part.claim.revision,
+            routeRevision: current,
+          })
+        )
       })
     )
   }

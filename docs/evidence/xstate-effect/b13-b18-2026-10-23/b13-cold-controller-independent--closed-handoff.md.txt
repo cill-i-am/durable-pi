@@ -1,0 +1,7 @@
+# B13 narrow review closure
+
+Cleared on SummaryRunner SHA-256 `bd74db4752b40eb3a6350aec7f0f63939ed1901b8591bd59eaf7e09b62de33ed`; unchanged controller `c07d00be6416b4b4aa88443dfbd394fa1221a4f67399fb296f056d77041dce35`.
+
+The byte-identical actual-Lifecycle probe now exits 0: after cold database reopen, three failed dispatch reads plus the failed terminal read produce zero controller writes and preserve the entire existing epoch/retiredToken/diagnostic record exactly. No business step ran. Original failing evidence remains in `manifest.json` and `cold-controller-read.log`; passing evidence and source hashes are in `closed-manifest.json` and `cold-controller-read-repaired.log`.
+
+This is the requested same-defect-family cross-check only, not a broader B13 review. Actual installed Lifecycle SDK uses Node SQLite with synthetic host Effects/platform shim; no workerd, provider or physical alarm claim. Reviewer changed no production or Git files.

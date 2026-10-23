@@ -1,7 +1,8 @@
 import { Lifecycle, LifecycleCapability } from "agents/lifecycle"
 import { DurableObject } from "cloudflare:workers"
+import { Effect } from "effect"
 
-import { MaintenanceRunner } from "../../src/agent/adapters/maintenance-runner"
+import { SummaryRunner } from "../../src/memory/adapters/summary-lifecycle"
 
 class ForegroundProbe extends LifecycleCapability {
   constructor(private readonly tick: () => void) {
@@ -19,26 +20,37 @@ class ForegroundProbe extends LifecycleCapability {
   }
 }
 
-/** Real Lifecycle alarms and SQLite, with a deliberately held maintenance IO. */
+/** Production summary runner alarm fairness with synthetic, replayable work.
+ * Summary claim/uncertainty semantics are proved by memory-summary-worker. */
 export class MaintenanceProbe extends DurableObject<Record<string, never>> {
   private release: (() => void) | undefined
-  readonly maintenance = new MaintenanceRunner(
-    "maintenance-probe",
-    async () => {
-      const requested = this.info().requested
-      this.ctx.storage.sql.exec("UPDATE maintenance_fixture SET calls=calls+1")
-      if (this.info().held)
-        await new Promise<void>((resolve) => {
-          this.release = resolve
-        })
-      this.ctx.storage.sql.exec(
-        "UPDATE maintenance_fixture SET applied=?",
-        requested
-      )
-      return undefined
-    },
-    (work) => this.ctx.waitUntil(work)
-  )
+  readonly maintenance = new SummaryRunner<never>({
+    run: (work, options) => Effect.runPromise(work, options),
+    step: () =>
+      Effect.promise(async () => {
+        const requested = this.info().requested
+        this.ctx.storage.sql.exec(
+          "UPDATE maintenance_fixture SET calls=calls+1"
+        )
+        if (this.info().held)
+          await new Promise<void>((resolve) => {
+            this.release = resolve
+          })
+        this.ctx.storage.sql.exec(
+          "UPDATE maintenance_fixture SET applied=?",
+          requested
+        )
+        return undefined
+      }),
+    settle: () => Effect.void,
+    nextWake: () =>
+      Effect.sync(() => {
+        const state = this.info()
+        return state.requested > state.applied ? Date.now() : undefined
+      }),
+    restore: () => Effect.void,
+    retain: (work) => this.ctx.waitUntil(work),
+  })
   readonly foreground = new ForegroundProbe(() => {
     this.ctx.storage.sql.exec("UPDATE maintenance_fixture SET ticks=ticks+1")
   })
@@ -90,7 +102,7 @@ export class MaintenanceProbe extends DurableObject<Record<string, never>> {
       ...this.info(),
       jobs: [
         ...this.ctx.storage.sql.exec<{ id: string; time: number }>(
-          "SELECT id,time FROM cf_agents_jobs WHERE capability='maintenance-probe'"
+          "SELECT id,time FROM cf_agents_jobs WHERE capability='memory-compactor'"
         ),
       ],
     })

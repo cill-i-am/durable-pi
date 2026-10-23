@@ -1,0 +1,50 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi
+
+ ❯ tests/memory-summary-ownership.test.ts (4 tests | 1 failed | 3 skipped) 113ms
+   × cancellation retains the warm claim through joined cleanup and preserves its compound failure 112ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/memory-summary-ownership.test.ts > cancellation retains the warm claim through joined cleanup and preserves its compound failure
+AssertionError: expected 'InterruptError: All fibers interrupte…' to contain 'native cleanup defect'
+
+- Expected
++ Received
+
+- native cleanup defect
++ InterruptError: All fibers interrupted without error
++     at Memory.compact (/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/tests/memory-summary-ownership.test.ts:22:77)
++     at Memory.compact (definition) (/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/src/memory/compaction.ts:79:37) {
++   [cause]: InterruptCause: The fiber was interrupted by:
++       at fiber (#272)
++       at fiber (#272)
++       at fiber (#272)
++       at fiber (#272)
++       at fiber (#272)
++       at fiber (#272)
++ }
+
+ ❯ tests/memory-summary-ownership.test.ts:97:38
+     95|   expect(Exit.isFailure(exit)).toBe(true)
+     96|   if (Exit.isFailure(exit)) {
+     97|     expect(Cause.pretty(exit.cause)).toContain("native cleanup defect")
+       |                                      ^
+     98|     expect(Cause.pretty(exit.cause)).toContain("unavailable")
+     99|   }
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:971:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:589:27
+ ❯ Array.<anonymous> node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1159:17
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:618:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 skipped (4)
+   Start at  15:34:51
+   Duration  542ms (import 62%, tests 26%, transform 9%, setup 2%, worker 1%)
+

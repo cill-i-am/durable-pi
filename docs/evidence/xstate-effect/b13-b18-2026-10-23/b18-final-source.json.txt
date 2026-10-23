@@ -1,0 +1,61 @@
+{
+  "createdUtc": "2026-10-23T15:49:04.443426+00:00",
+  "worktree": "/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi",
+  "tests": {
+    "files": 5,
+    "passed": 82,
+    "log": "/private/tmp/b18-review-fixes-final.log"
+  },
+  "checks": {
+    "type": "/private/tmp/b18-native-tsc.log",
+    "lint": "/private/tmp/b18-final-lint.log",
+    "format": "/private/tmp/b18-final-format.log"
+  },
+  "independentReview": "/private/tmp/b18-runner-independent/closed-manifest.json",
+  "native": {
+    "positive": {
+      "exit": 0,
+      "log": "/private/tmp/b18-native-positive-verified.log",
+      "directory": "/var/folders/s2/80_kxn9s19s1gyb6ylqwdh680000gn/T/durable-pi-memory-backup-Iw1j6v",
+      "noPoke": [
+        {
+          "start": 1792770378642,
+          "deadline": 1792770448534,
+          "end": 1792770448535
+        }
+      ]
+    },
+    "negative": {
+      "exit": 1,
+      "expectedFailure": "AssertionError [ERR_ASSERTION]: retained empty-scan discovery must publish admitted memory after SIGKILL without a poke\n\n0 !== 1\n",
+      "log": "/private/tmp/b18-native-negative-final.log",
+      "directory": "/var/folders/s2/80_kxn9s19s1gyb6ylqwdh680000gn/T/durable-pi-memory-backup-V140aG",
+      "noPoke": [
+        {
+          "start": 1792770234560,
+          "deadline": 1792770304448,
+          "end": 1792770304451
+        }
+      ]
+    },
+    "sourceChecks": "Positive evidence hashes all match final files; negative production+fixture hashes match. Only positive scheduler assertion was strengthened after negative script began; negative branch is unchanged."
+  },
+  "limits": "Isolated Memory branch before parent stack composition; actual local workerd/Lifecycle/SQLite with synthetic local durable conditional bucket, no hosted R2/provider. Compactor lease is synthetic and contributes no alarm. SDK transport3 budget per installed episode; killed preclaim scans can rerun before exhaustion marker. No Git/staging/commit/merge/deployment.",
+  "sha256": {
+    "src/memory/backup.ts": "d2707798c5b888a137a9621236a48bbd5888076ffa583c9492d0115b4c547dfe",
+    "src/memory/application.ts": "df6dd25e914a069d9608ec40c636408c11af6ae52b5f5dc91b9f4656a43a7251",
+    "src/memory/backup-status.ts": "3c470d7ef52f232189e0ec0c7fd63d5da297c7480fbcff7c31c83cb128bdd428",
+    "src/memory/backup.machine.ts": "cbf7528a7b2643184cda13e4a7c4641f180ac7ac58890478a41d91d96f90c589",
+    "src/memory/backup-publication.machine.ts": "b075099514b8a6387671fa6caabe54558ae2308771a1d6c5bb9cc09862f7d099",
+    "src/memory/backup-dispatch.machine.ts": "50384fed2383b9ae33c958024dacb373ebba51b57818f199446a21bd8b691d70",
+    "src/memory/backup-discovery.machine.ts": "73cfce0208ae20f06a631fba6fe5b009551aabfe53a4a7077989081bd4fac973",
+    "src/memory/adapters/backup-status.ts": "18a8b887c977734560c4f20159989e3dad7190395c4f4dcf5fdb6377d69e09f0",
+    "src/memory/adapters/backup-lifecycle.ts": "4717bcfea235454ce315f8c5c155407b199f085ea48d4f07f25ea8dc6ab34fa7",
+    "tests/memory-backup-lifecycle.test.ts": "cd4a46898eb5750fc7f76f363b20194036019958e462f9ee87994c45a9db5dd6",
+    "tests/memory-backup-runner.test.ts": "be62b0c3224def6340f9f0847f6356bb0de39170646da7e5daed6486cf63fda6",
+    "tests/memory-application.test.ts": "afe07d6de863be7af05953768f67b5777fc927ed6f3fea740d7353aab26d1298",
+    "docs/xstate-effect-memory-backup.md": "1dcd6e54e32ac871164f687aef8d4a3799fb7727053087b98021e596c0dccf53",
+    "tests/runtime/memory-backup-worker.ts": "aa1041c5e2d6088c5b2f016cad7efce21e7461fa62351a201bdd760e569c2811",
+    "scripts/test-memory-backup-runtime.mjs": "93d494c7e8bfc78060e74f8f009c34bb68459fc010c79dfa7ae882c8aff374de"
+  }
+}

@@ -1,6 +1,7 @@
 import { expect, it } from "@effect/vitest"
 import {
   Cause,
+  Clock,
   Context,
   Crypto,
   Deferred,
@@ -96,6 +97,14 @@ const rows = [
 ]
 const jsonl = rows.map((row) => JSON.stringify(row)).join("\n")
 const wakeHost = (events: string[]) => ({
+  armCompactor: () =>
+    Clock.currentTimeMillis.pipe(
+      Effect.map((now) => ({ deadline: now + 60_000, current: () => true }))
+    ),
+  armBackup: () =>
+    Clock.currentTimeMillis.pipe(
+      Effect.map((now) => ({ deadline: now + 60_000, current: () => true }))
+    ),
   wakeCompactor: () =>
     Effect.sync(() => {
       events.push("compact")
@@ -264,7 +273,7 @@ it.effect(
       const f = yield* fixture
       yield* f.memory.append("source", "user", "original")
       f.db.run(
-        "CREATE TRIGGER reject_status BEFORE INSERT ON memory_backup_status BEGIN SELECT RAISE(ABORT,'private detail'); END"
+        "CREATE TRIGGER reject_status BEFORE INSERT ON memory_backup_status WHEN NEW.phase='idle' BEGIN SELECT RAISE(ABORT,'private detail'); END"
       )
       expect(
         yield* runMemoryBackup("p").pipe(Effect.provide(f.layer), Effect.result)
@@ -272,7 +281,16 @@ it.effect(
         _tag: "Failure",
         failure: { _tag: "MemoryStorageError" },
       })
-      expect(Effect.runSync(f.status.read())).toBeUndefined()
+      expect(Effect.runSync(f.status.read())).toEqual({
+        date: null,
+        watermark: "",
+        error: null,
+      })
+      expect(yield* f.status.control()).toMatchObject({
+        phase: "running",
+        attempts: 1,
+        target: JSON.stringify(yield* f.memory.watermark()),
+      })
       const batches = f.bucket.writes.filter((key) => key.includes("/batches/"))
       expect(batches).toHaveLength(1)
       f.db.run("DROP TRIGGER reject_status")
@@ -305,7 +323,7 @@ it.effect(
     })
 )
 it.effect(
-  "compaction wakes backup only after durable change and preserves caller Context and notification order",
+  "compaction replays completion handoffs after prior publication and preserves caller Context and order",
   () =>
     Effect.gen(function* () {
       class Request extends Context.Service<Request, string>()(
@@ -346,7 +364,7 @@ it.effect(
           Effect.provide(f.layer),
           Effect.provideService(Request, "this request")
         )
-      expect(events).toEqual(["notify", "conversation"])
+      expect(events).toEqual(["notify", "backup", "conversation"])
     })
 )
 it.effect(
@@ -449,6 +467,7 @@ it.effect(
         f.ledger,
         { transactionGroup: f.db, active: () => Effect.succeed(false) },
         {
+          ...wakeHost(events),
           wakeCompactor: () =>
             Deferred.succeed(entered, undefined).pipe(
               Effect.andThen(Deferred.await(release)),
@@ -566,7 +585,7 @@ it.effect(
 )
 
 it.effect(
-  "summary cleanup defects do not consume a cooldown/failure attempt",
+  "summary cleanup defects retain the joined attempt as uncertain without automatic retry",
   () =>
     Effect.gen(function* () {
       const f = yield* fixture,
@@ -592,7 +611,18 @@ it.effect(
             (reason) => reason._tag === "Die" && reason.defect === cleanup
           )
       ).toBe(true)
-      expect(f.db.all("SELECT * FROM memory_failures")).toEqual([])
+      expect(yield* f.memory.issues()).toEqual([
+        { start: 0, count: 1, attempts: 1, retryAt: null },
+      ])
+      expect(
+        JSON.parse(
+          f.db.all<{ control: string }>("SELECT control FROM memory_ready")[0]!
+            .control
+        )
+      ).toMatchObject({ state: "paused", pauseReason: "uncertain" })
+      expect(
+        yield* f.memory.next(new Set(), Number.MAX_SAFE_INTEGER)
+      ).toBeUndefined()
     })
 )
 
@@ -622,5 +652,184 @@ it.effect(
           )
       ).toBe(true)
       expect(Effect.runSync(f.status.read())).toEqual(prior)
+    })
+)
+
+it.effect(
+  "import prearm failure cannot publish any history or postcommit wake",
+  () =>
+    Effect.gen(function* () {
+      const f = yield* fixture,
+        events: string[] = []
+      const command = memoryImport(
+        f.ledger,
+        { transactionGroup: f.db, active: () => Effect.succeed(false) },
+        {
+          ...wakeHost(events),
+          armBackup: () =>
+            Effect.fail(new MemorySchedulingError({ operation: "arm backup" })),
+        }
+      )
+      expect(
+        yield* command(jsonl).pipe(Effect.provide(f.layer), Effect.result)
+      ).toMatchObject({
+        _tag: "Failure",
+        failure: { _tag: "MemorySchedulingError" },
+      })
+      expect(yield* f.memory.total()).toBe(0)
+      expect(events).toEqual([])
+    })
+)
+for (const invalid of [
+  "summary-expired",
+  "backup-expired",
+  "backup-replaced",
+] as const)
+  it.effect(
+    `import validates ${invalid} only after acquiring the shared SQL coordinator`,
+    () =>
+      Effect.gen(function* () {
+        const f = yield* fixture,
+          events: string[] = []
+        yield* TestClock.setTime(1000)
+        const entered = yield* Deferred.make<void>(),
+          release = yield* Deferred.make<void>(),
+          armed = yield* Deferred.make<void>()
+        let current = true
+        const blocker = yield* f.db
+          .transaction(() =>
+            Deferred.succeed(entered, undefined).pipe(
+              Effect.andThen(Deferred.await(release))
+            )
+          )
+          .pipe(Effect.forkChild)
+        yield* Deferred.await(entered)
+        const command = memoryImport(
+          f.ledger,
+          { transactionGroup: f.db, active: () => Effect.succeed(false) },
+          {
+            ...wakeHost(events),
+            armCompactor: () =>
+              Effect.succeed({
+                deadline: invalid === "summary-expired" ? 2000 : 100000,
+                current: () => true,
+              }),
+            armBackup: () =>
+              Deferred.succeed(armed, undefined).pipe(
+                Effect.as({
+                  deadline: invalid === "backup-expired" ? 2000 : 100000,
+                  current: () => current,
+                })
+              ),
+          }
+        )
+        const pending = yield* command(jsonl).pipe(
+          Effect.provide(f.layer),
+          Effect.result,
+          Effect.forkChild
+        )
+        yield* Deferred.await(armed)
+        if (invalid === "backup-replaced") current = false
+        else yield* TestClock.setTime(2001)
+        yield* Deferred.succeed(release, undefined)
+        yield* Fiber.join(blocker)
+        expect(yield* Fiber.join(pending)).toMatchObject({
+          _tag: "Failure",
+          failure: { _tag: "MemorySchedulingError" },
+        })
+        expect(yield* f.memory.total()).toBe(0)
+        expect(events).toEqual([])
+      })
+  )
+it.effect(
+  "receipt-only summary recovery replays completion handoffs without another model request",
+  () =>
+    Effect.gen(function* () {
+      const f = yield* fixture,
+        events: string[] = []
+      let calls = 0
+      const maintenance = memoryMaintenance({
+        ...wakeHost(events),
+        active: () => Effect.succeed(true),
+        notify: () =>
+          Effect.sync(() => {
+            events.push("notify")
+          }),
+        wakeConversation: () =>
+          Effect.sync(() => {
+            events.push("conversation")
+          }),
+      })
+      yield* f.memory.append("source", "user", "Original ".repeat(100))
+      f.db.run(
+        "CREATE TRIGGER reject_summary_handoff BEFORE INSERT ON memory_nodes BEGIN SELECT RAISE(ABORT,'held publication'); END"
+      )
+      const first = yield* maintenance.compact().pipe(
+        Effect.provideService(SummaryModel, {
+          complete: () =>
+            Effect.sync(() => {
+              calls++
+              return "retained summary"
+            }),
+        }),
+        Effect.provide(f.layer),
+        Effect.exit
+      )
+      expect(Exit.isFailure(first)).toBe(true)
+      expect(calls).toBe(1)
+      expect(events).toEqual([])
+      f.db.run("DROP TRIGGER reject_summary_handoff")
+      yield* maintenance.reconcile().pipe(Effect.provide(f.layer))
+      expect((yield* f.memory.node({ start: 0, count: 1 }))?.text).toBe(
+        "retained summary"
+      )
+      expect(events).toEqual(["notify", "backup", "conversation"])
+      expect(calls).toBe(1)
+    })
+)
+it.effect(
+  "lost summary completion handoff acknowledgment replays after the receipt has already committed",
+  () =>
+    Effect.gen(function* () {
+      const f = yield* fixture,
+        events: string[] = []
+      let fail = true
+      const maintenance = memoryMaintenance({
+        ...wakeHost(events),
+        active: () => Effect.succeed(true),
+        notify: () =>
+          Effect.sync(() => {
+            events.push("notify")
+          }),
+        wakeBackup: () =>
+          fail
+            ? Effect.fail(
+                new MemorySchedulingError({ operation: "backup handoff" })
+              )
+            : Effect.sync(() => {
+                events.push("backup")
+              }),
+        wakeConversation: () =>
+          Effect.sync(() => {
+            events.push("conversation")
+          }),
+      })
+      yield* f.memory.append("source", "user", "short summary")
+      expect(
+        yield* maintenance
+          .compact()
+          .pipe(Effect.provide(f.layer), Effect.result)
+      ).toMatchObject({
+        _tag: "Failure",
+        failure: { _tag: "MemorySchedulingError" },
+      })
+      expect(yield* f.memory.nodeCount()).toBe(1)
+      expect(events).toEqual(["notify"])
+      fail = false
+      yield* maintenance.reconcile().pipe(Effect.provide(f.layer))
+      expect(events).toEqual(["notify", "notify", "backup", "conversation"])
+      expect(
+        yield* maintenance.nextWake().pipe(Effect.provide(f.layer))
+      ).toBeUndefined()
     })
 )

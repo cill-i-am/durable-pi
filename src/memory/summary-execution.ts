@@ -1,3 +1,4 @@
+import { createEffectActor, waitFor } from "@xstate/effect"
 import { Schema, Effect, Layer } from "effect"
 
 import {
@@ -10,6 +11,8 @@ import {
 import type { ModelSettings } from "../inference/selection"
 import type { MemoryError, SummaryJob } from "./domain"
 import { SummaryRouting } from "./routing"
+import { summaryScope } from "./summary-effects"
+import { summaryExecutionMachine } from "./summary-execution.machine"
 import {
   SummaryFailure,
   SummaryModel,
@@ -51,30 +54,69 @@ export function makeSummaryModel<TRequirements>(
 ): SummaryCompletion<TRequirements> {
   return {
     complete: Effect.fn("Memory.completeSummary")(function* (messages, job) {
-      const captured = yield* routing.capture(
-        job,
-        resolveRoute("memory", yield* inputs.settings())
+      const services = yield* Effect.context<TRequirements>()
+      const provide = <A, E>(work: Effect.Effect<A, E, TRequirements>) =>
+        Effect.provide(work, services)
+      return yield* summaryScope((observe) =>
+        Effect.gen(function* () {
+          const machine = summaryExecutionMachine({
+            capture: observe(
+              Effect.gen(function* () {
+                return yield* routing.capture(
+                  job,
+                  resolveRoute("memory", yield* provide(inputs.settings()))
+                )
+              })
+            ),
+            budget: (captured) =>
+              observe(
+                Effect.gen(function* () {
+                  const catalog = yield* provide(inputs.catalog())
+                  const capability = yield* Effect.try({
+                    try: () => validateRoute(captured.route, catalog),
+                    catch: (cause) => {
+                      const modelUnavailable =
+                        Schema.decodeUnknownOption(ModelUnavailable)(cause)
+                      if (modelUnavailable._tag === "Some")
+                        return new SummaryFailure({ reason: "unavailable" })
+                      throw cause
+                    },
+                  })
+                  return yield* routing.budget(
+                    job,
+                    capability.contextWindow,
+                    captured.revision
+                  )
+                })
+              ),
+            prepare: (route) =>
+              observe(
+                provide(provider.prepare(route, job)).pipe(
+                  Effect.map((prepared) => ({
+                    complete: (nextMessages, nextJob) =>
+                      provide(prepared.complete(nextMessages, nextJob)),
+                  }))
+                )
+              ),
+            admit: (revision) =>
+              observe(
+                Effect.gen(function* () {
+                  if (!(yield* routing.beginRequest(job, revision)))
+                    return yield* new SummaryFailure({ reason: "unavailable" })
+                })
+              ),
+            dispatch: (prepared) => observe(prepared.complete(messages, job)),
+            acknowledge: (revision) =>
+              observe(routing.finishRequest(job, revision)),
+          })
+          const actor = yield* createEffectActor(machine)
+          const done = yield* waitFor(
+            actor,
+            (snapshot) => snapshot.status === "done"
+          ).pipe(Effect.orDie)
+          return yield* done.output!
+        })
       )
-      const catalog = yield* inputs.catalog()
-      const capability = yield* Effect.try({
-        try: () => validateRoute(captured.route, catalog),
-        catch: (cause) => {
-          const modelUnavailable =
-            Schema.decodeUnknownOption(ModelUnavailable)(cause)
-          if (modelUnavailable._tag === "Some")
-            return new SummaryFailure({ reason: "unavailable" })
-          throw cause
-        },
-      })
-      const route = yield* routing.budget(
-        job,
-        capability.contextWindow,
-        captured.revision
-      )
-      const prepared = yield* provider.prepare(route, job)
-      if (!(yield* routing.beginRequest(job, captured.revision)))
-        return yield* new SummaryFailure({ reason: "unavailable" })
-      return yield* prepared.complete(messages, job)
     }),
   }
 }

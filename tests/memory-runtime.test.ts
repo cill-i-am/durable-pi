@@ -69,7 +69,15 @@ it("supports synchronous host transactions and disposes active model requests", 
     expect(Exit.isFailure(await job)).toBe(true)
     expect(signal?.aborted).toBe(true)
     expect(db.all("SELECT * FROM memory_nodes")).toHaveLength(0)
-    expect(db.all("SELECT * FROM memory_failures")).toHaveLength(0)
+    expect(db.all("SELECT * FROM memory_failures")).toMatchObject([
+      { attempts: 1 },
+    ])
+    expect(
+      JSON.parse(
+        db.all<{ control: string }>("SELECT control FROM memory_ready")[0]!
+          .control
+      )
+    ).toMatchObject({ state: "paused", pauseReason: "uncertain", attempts: 1 })
   } finally {
     await runtime.dispose()
   }
@@ -123,13 +131,27 @@ it("actor disposal joins a noncooperative summary before releasing Layers and dr
     await cancellation
     expect(disposed).toBe(false)
     expect(events).toEqual([])
+    expect(
+      JSON.parse(
+        db.all<{ control: string }>("SELECT control FROM memory_ready")[0]!
+          .control
+      )
+    ).toMatchObject({ state: "claimed", attempts: 1 })
     release(fauxAssistantMessage("Late summary"))
     await closing
     const exit = await work
     expect(Exit.isFailure(exit) && Cause.hasInterrupts(exit.cause)).toBe(true)
     expect(events).toEqual(["request.settled", "layer.closed"])
     expect(db.all("SELECT * FROM memory_nodes")).toEqual([])
-    expect(db.all("SELECT * FROM memory_failures")).toEqual([])
+    expect(db.all("SELECT * FROM memory_failures")).toMatchObject([
+      { attempts: 1 },
+    ])
+    expect(
+      JSON.parse(
+        db.all<{ control: string }>("SELECT control FROM memory_ready")[0]!
+          .control
+      )
+    ).toMatchObject({ state: "paused", pauseReason: "uncertain", attempts: 1 })
     expect(db.all("SELECT * FROM memory_ready")).toHaveLength(1)
   } finally {
     release(fauxAssistantMessage("Cleanup"))
@@ -137,7 +159,7 @@ it("actor disposal joins a noncooperative summary before releasing Layers and dr
     await work
   }
 })
-it("summary storage failures propagate without spending the provider failure budget", async () => {
+it("summary storage failures propagate and pause the owned attempt without automatic replay", async () => {
   const db = database(),
     memory = await Effect.runPromise(makeSqliteMemory(db))
   await Effect.runPromise(memory.append("source", "user", "x".repeat(600)))
@@ -156,7 +178,15 @@ it("summary storage failures propagate without spending the provider failure bud
     _tag: "Failure",
     failure: { _tag: "MemoryStorageError", operation: "summary route" },
   })
-  expect(db.all("SELECT * FROM memory_failures")).toEqual([])
+  expect(db.all("SELECT * FROM memory_failures")).toMatchObject([
+    { attempts: 1 },
+  ])
+  expect(
+    JSON.parse(
+      db.all<{ control: string }>("SELECT control FROM memory_ready")[0]!
+        .control
+    )
+  ).toMatchObject({ state: "paused", pauseReason: "uncertain", attempts: 1 })
   expect(db.all("SELECT * FROM memory_nodes")).toEqual([])
 })
 it("synchronous summary callback and result interpretation failures remain defects", async () => {

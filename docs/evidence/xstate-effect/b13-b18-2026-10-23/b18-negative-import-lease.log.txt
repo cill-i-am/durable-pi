@@ -1,0 +1,74 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi
+
+stdout | tests/memory-application.test.ts > import validates summary-expired only after acquiring the shared SQL coordinator
+[16:04:44.205] ERROR (#1): Error [AssertionError]: expected { Object (success) } to match object { _tag: 'Failure', …(1) }
+(2 matching properties omitted from actual)
+    at Proxy.<anonymous> (file:///Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/node_modules/.pnpm/vitest@5.0.5_@types+node@24.19.2_vite@8.3.4_@types+node@24.19.2_esbuild@0.28.2_jiti@2.7.0_tsx@4.23.15_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.aTZaPVhf.js:2066:10)
+    at Proxy.<anonymous> (file:///Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/node_modules/.pnpm/vitest@5.0.5_@types+node@24.19.2_vite@8.3.4_@types+node@24.19.2_esbuild@0.28.2_jiti@2.7.0_tsx@4.23.15_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.aTZaPVhf.js:1958:14)
+    at Proxy.methodWrapper (file:///Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/node_modules/.pnpm/chai@6.3.0/node_modules/chai/index.js:1737:25)
+    at /Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/tests/memory-application.test.ts:736:44 {
+  showDiff: true,
+  expected: { _tag: 'Failure', failure: { _tag: 'MemorySchedulingError' } },
+  actual: { _id: 'Result', _tag: 'Success', value: { added: 2 } },
+  [cause]: undefined
+}
+
+stdout | tests/memory-application.test.ts > import validates backup-expired only after acquiring the shared SQL coordinator
+[16:04:44.261] ERROR (#236): Error [AssertionError]: expected { Object (success) } to match object { _tag: 'Failure', …(1) }
+(2 matching properties omitted from actual)
+    at Proxy.<anonymous> (file:///Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/node_modules/.pnpm/vitest@5.0.5_@types+node@24.19.2_vite@8.3.4_@types+node@24.19.2_esbuild@0.28.2_jiti@2.7.0_tsx@4.23.15_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.aTZaPVhf.js:2066:10)
+    at Proxy.<anonymous> (file:///Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/node_modules/.pnpm/vitest@5.0.5_@types+node@24.19.2_vite@8.3.4_@types+node@24.19.2_esbuild@0.28.2_jiti@2.7.0_tsx@4.23.15_yaml@2.9.1_/node_modules/vitest/dist/chunks/index.aTZaPVhf.js:1958:14)
+    at Proxy.methodWrapper (file:///Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/node_modules/.pnpm/chai@6.3.0/node_modules/chai/index.js:1737:25)
+    at /Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/tests/memory-application.test.ts:736:44 {
+  showDiff: true,
+  expected: { _tag: 'Failure', failure: { _tag: 'MemorySchedulingError' } },
+  actual: { _id: 'Result', _tag: 'Success', value: { added: 2 } },
+  [cause]: undefined
+}
+
+ ❯ tests/memory-application.test.ts (23 tests | 2 failed | 21 skipped) 136ms
+   × import validates summary-expired only after acquiring the shared SQL coordinator 82ms
+   × import validates backup-expired only after acquiring the shared SQL coordinator 53ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/memory-application.test.ts > import validates summary-expired only after acquiring the shared SQL coordinator
+ FAIL  tests/memory-application.test.ts > import validates backup-expired only after acquiring the shared SQL coordinator
+AssertionError: expected { Object (success) } to match object { _tag: 'Failure', …(1) }
+(2 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "_tag": "Failure",
+-   "failure": {
+-     "_tag": "MemorySchedulingError",
++   "_id": "Result",
++   "_tag": "Success",
++   "value": {
++     "added": 2,
+    },
+  }
+
+ ❯ tests/memory-application.test.ts:736:44
+    734|         yield* Deferred.succeed(release, undefined)
+    735|         yield* Fiber.join(blocker)
+    736|         expect(yield* Fiber.join(pending)).toMatchObject({
+       |                                            ^
+    737|           _tag: "Failure",
+    738|           failure: { _tag: "MemorySchedulingError" },
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:971:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 21 skipped (23)
+   Start at  16:04:43
+   Duration  517ms (import 52%, tests 33%, transform 12%, setup 1%, worker 1%)
+

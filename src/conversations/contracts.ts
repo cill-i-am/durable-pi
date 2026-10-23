@@ -159,6 +159,17 @@ const VisibleTurn = Schema.Struct({
     )
   ),
 })
+export const BackupRecovery = Schema.Struct({
+  attemptId: Schema.String,
+  target: Schema.String,
+})
+export type BackupRecovery = typeof BackupRecovery.Type
+export const CompactionRecovery = Schema.Struct({
+  epoch: Schema.String,
+  failedAt: Schema.Number,
+  message: Schema.String,
+})
+export type CompactionRecovery = typeof CompactionRecovery.Type
 export const ConversationMetadata = Schema.Struct({
   runtime: Schema.optional(RuntimeStatus),
   access: Schema.optional(AccessState),
@@ -171,10 +182,13 @@ export const ConversationMetadata = Schema.Struct({
     summaries: Schema.Number,
     ready: Schema.Boolean,
     issues: Schema.optional(Schema.Array(SummaryIssue)),
+    compactionRecovery: Schema.optional(CompactionRecovery),
     backup: Schema.optional(
       Schema.Struct({
         date: Schema.NullOr(Schema.String),
         error: Schema.NullOr(Schema.String),
+        recovery: Schema.optional(Schema.NullOr(BackupRecovery)),
+        schedulerRecovery: Schema.optional(Schema.NullOr(CompactionRecovery)),
       })
     ),
     usage: Schema.optional(

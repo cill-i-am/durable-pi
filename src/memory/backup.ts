@@ -1,32 +1,24 @@
-import { Clock, Effect, Schema } from "effect"
+import { createEffectActor, waitFor } from "@xstate/effect"
+import { Cause, Clock, Crypto, Equal, Effect, Exit, Schema } from "effect"
 
+import { fatalCause } from "../shared/effect"
+import {
+  BackupManifest,
+  backupPublicationMachine,
+  sameBackupWatermark as same,
+} from "./backup-publication.machine"
 import { BackupFailure, BackupStore } from "./backup-store"
 import { sha256 } from "./checksum"
-import {
-  advance,
-  ArchiveRecord,
-  emptyWatermark,
-  PartSchema,
-  WatermarkSchema,
-  type Watermark,
-} from "./records"
+import { advance, ArchiveRecord, emptyWatermark } from "./records"
 import { MemoryRepository } from "./repository"
 
-const ManifestSchema = Schema.Struct({
-  version: Schema.Literal(1),
-  head: Schema.NullOr(Schema.String),
-  until: WatermarkSchema,
-  parts: Schema.Array(PartSchema),
-  date: Schema.String,
-})
-type Manifest = typeof ManifestSchema.Type
 const BatchSchema = Schema.Struct({
   version: Schema.Literal(1),
   previous: Schema.NullOr(Schema.String),
   records: Schema.Array(ArchiveRecord),
 })
 const decodeManifest = (text: string) =>
-  Schema.decodeUnknownEffect(Schema.fromJsonString(ManifestSchema))(text).pipe(
+  Schema.decodeUnknownEffect(Schema.fromJsonString(BackupManifest))(text).pipe(
     Effect.mapError(
       () =>
         new BackupFailure({
@@ -45,65 +37,164 @@ const decodeBatch = (text: string) =>
         })
     )
   )
-const same = (a: Watermark, b: Watermark) =>
-  a.messages === b.messages && a.nodes === b.nodes && a.notes === b.notes
-
+/** The actor scope must join both parallel writes before exposing completion.
+ * Preserve late cleanup Causes from invocations stopped by alpha.8. */
 export const backupMemory = Effect.fn("Memory.backup")(function* (
   prefix: string
 ) {
-  const memory = yield* MemoryRepository
-  const bucket = yield* BackupStore
-  const object = yield* bucket.get(`${prefix}/progress.json`)
-  const prior = object ? yield* decodeManifest(object.text) : undefined
-  const { until, parts } = yield* memory.snapshot()
-  let after = prior?.until ?? emptyWatermark,
-    head = prior?.head ?? null
-  if (
-    after.messages > until.messages ||
-    after.nodes > until.nodes ||
-    after.notes > until.notes
-  )
-    return yield* new BackupFailure({
-      reason: "ahead",
-      message: "Backup is ahead of local memory; recovery is required",
-    })
-
-  for (let i = 0; i < 8; i++) {
-    const records = yield* memory.archivePage(after, until)
-    if (!records.length) break
-    const data = JSON.stringify({ version: 1, previous: head, records })
-    const key = `${prefix}/batches/${yield* sha256(data)}.json`
-    yield* bucket.put(key, data)
-    head = key
-    after = advance(after, records)
-  }
-  const complete = same(after, until)
-  const manifest: Manifest = {
-    version: 1,
-    head,
-    until: after,
-    parts: complete ? parts : (prior?.parts ?? []),
-    date: new Date(yield* Clock.currentTimeMillis).toISOString(),
-  }
-  const checkpoint = bucket.put(
-    `${prefix}/progress.json`,
-    JSON.stringify(manifest),
-    object ? { etag: object.etag } : { absent: true }
-  )
-  if (complete) {
-    const data = JSON.stringify(manifest)
-    // Both writes depend on the uploaded batches. Publish latest only once
-    // the conditional checkpoint and immutable snapshot have both succeeded.
-    yield* Effect.all(
-      [
-        checkpoint,
-        bucket.put(`${prefix}/snapshots/${yield* sha256(data)}.json`, data),
-      ],
-      { concurrency: 2 }
+  const memory = yield* MemoryRepository,
+    bucket = yield* BackupStore
+  const crypto = yield* Crypto.Crypto
+  const digest = (data: string) =>
+    sha256(data).pipe(Effect.provideService(Crypto.Crypto, crypto))
+  const failures: Cause.Cause<unknown>[] = []
+  const observe = <A, E>(effect: Effect.Effect<A, E>) =>
+    effect.pipe(
+      Effect.onExit((exit) =>
+        Effect.sync(() => {
+          if (Exit.isFailure(exit)) failures.push(exit.cause)
+        })
+      )
     )
-    yield* bucket.put(`${prefix}/latest.json`, data)
-  } else yield* checkpoint
-  return { pending: !complete, date: manifest.date }
+  const machine = backupPublicationMachine({
+    load: observe(
+      Effect.gen(function* () {
+        const [object, latest] = yield* Effect.all(
+          [
+            bucket.get(`${prefix}/progress.json`),
+            bucket.get(`${prefix}/latest.json`),
+          ],
+          { concurrency: 2 }
+        )
+        const prior = object ? yield* decodeManifest(object.text) : null
+        const published = latest ? yield* decodeManifest(latest.text) : null
+        const { until, parts } = yield* memory.snapshot()
+        if (
+          [prior, published].some(
+            (manifest) =>
+              manifest !== null &&
+              (manifest.until.messages > until.messages ||
+                manifest.until.nodes > until.nodes ||
+                manifest.until.notes > until.notes)
+          )
+        )
+          return yield* new BackupFailure({
+            reason: "ahead",
+            message: "Backup is ahead of local memory; recovery is required",
+          })
+        return {
+          prior,
+          checkpointEtag: object?.etag ?? null,
+          latest: published,
+          latestEtag: latest?.etag ?? null,
+          until,
+          parts,
+        }
+      })
+    ),
+    page: (observation, cursor) =>
+      observe(memory.archivePage(cursor.after, observation.until)),
+    batch: (cursor, records) =>
+      observe(
+        Effect.gen(function* () {
+          const data = JSON.stringify({
+            version: 1,
+            previous: cursor.head,
+            records,
+          })
+          const key = `${prefix}/batches/${yield* digest(data)}.json`
+          yield* bucket.put(key, data)
+          return key
+        })
+      ),
+    manifest: (observation, cursor, complete) =>
+      observe(
+        Effect.gen(function* () {
+          // A restart after checkpoint must reuse the immutable publication identity.
+          if (
+            complete &&
+            observation.prior &&
+            same(observation.prior.until, observation.until) &&
+            JSON.stringify(observation.prior.parts) ===
+              JSON.stringify(observation.parts)
+          )
+            return observation.prior
+          return {
+            version: 1 as const,
+            head: cursor.head,
+            until: cursor.after,
+            parts: complete
+              ? observation.parts
+              : (observation.prior?.parts ?? []),
+            date: new Date(yield* Clock.currentTimeMillis).toISOString(),
+          }
+        })
+      ),
+    checkpoint: (observation, manifest, complete) =>
+      observe(
+        Effect.gen(function* () {
+          const data = JSON.stringify(manifest)
+          const checkpoint =
+            observation.prior === manifest
+              ? Effect.void
+              : bucket.put(
+                  `${prefix}/progress.json`,
+                  data,
+                  observation.checkpointEtag === null
+                    ? { absent: true }
+                    : { etag: observation.checkpointEtag }
+                )
+          if (complete)
+            yield* Effect.all(
+              [
+                checkpoint,
+                bucket.put(
+                  `${prefix}/snapshots/${yield* digest(data)}.json`,
+                  data
+                ),
+              ],
+              { concurrency: 2 }
+            )
+          else yield* checkpoint
+        })
+      ),
+    publish: (observation, manifest) =>
+      observe(
+        JSON.stringify(observation.latest) === JSON.stringify(manifest)
+          ? Effect.void
+          : bucket.put(
+              `${prefix}/latest.json`,
+              JSON.stringify(manifest),
+              observation.latestEtag === null
+                ? { absent: true }
+                : { etag: observation.latestEtag }
+            )
+      ),
+  })
+  return yield* Effect.gen(function* () {
+    const actor = yield* createEffectActor(machine)
+    const done = yield* waitFor(
+      actor,
+      (snapshot) => snapshot.status === "done"
+    ).pipe(Effect.orDie)
+    return yield* done.output!
+  }).pipe(
+    Effect.scoped,
+    Effect.onExit((exit) => {
+      if (!Exit.isFailure(exit) || !Cause.hasInterrupts(exit.cause))
+        return Effect.void
+      const reasons = failures
+        .flatMap((cause) => cause.reasons)
+        .filter(
+          (reason) =>
+            reason._tag !== "Interrupt" &&
+            !exit.cause.reasons.some((present) => Equal.equals(present, reason))
+        )
+      return reasons.length
+        ? Effect.failCause(fatalCause(Cause.fromReasons(reasons)))
+        : Effect.void
+    })
+  )
 })
 
 export const readBackup = Effect.fn("Memory.readBackup")(function* (

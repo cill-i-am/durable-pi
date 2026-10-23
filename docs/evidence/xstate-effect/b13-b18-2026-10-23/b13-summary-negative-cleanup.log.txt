@@ -1,0 +1,23 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi
+
+ ❯ tests/memory-summary-runner.test.ts (17 tests | 1 failed | 16 skipped) 12ms
+   ❯ Summary scheduler invariants (14)
+     × retries only joined receipt persistence after a failed pass, then permits unrelated ready work 11ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/memory-summary-runner.test.ts > Summary scheduler invariants > retries only joined receipt persistence after a failed pass, then permits unrelated ready work
+{
+  _id: 'Cause',
+  failures: [ { _tag: 'Fail', error: 'provider uncertain' } ],
+  stacks: []
+}
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 16 skipped (17)
+   Start at  16:05:04
+   Duration  299ms (import 76%, transform 14%, tests 6%, setup 3%, worker 1%)
+

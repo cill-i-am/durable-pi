@@ -1,0 +1,360 @@
+{
+  "schemaVersion": 1,
+  "scope": "Historical domain/review/native/UI checkpoints before final composed gates; preserve original source manifests and explicit limits. Current publication hashes and combined gates are recorded separately.",
+  "artifacts": [
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b13-memory-summary-manifest.json.txt",
+      "original": "/private/tmp/b13-memory-summary-manifest.json",
+      "sha256": "cdecb02e470153894a314d7e5514086f5fa712111086cc8a400dcca3dea64f65",
+      "bytes": 3033
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b13-focused-final.log.txt",
+      "original": "/private/tmp/b13-focused-final.log",
+      "sha256": "07ced6208182c52998bd68dfc905efcb4d69895877795f55ddfc86434433444f",
+      "bytes": 228
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b13-control-cleanup.log.txt",
+      "original": "/private/tmp/b13-control-cleanup.log",
+      "sha256": "bfc1bb26031e819ecee2d8c154a173e4f90137832102382d6146eddc76d6e892",
+      "bytes": 2510
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b13-receipt-independent-before.log.txt",
+      "original": "/private/tmp/b13-receipt-independent-before.log",
+      "sha256": "b703a1d1fb991b6d7313e8c02343819b89215802a509d63ca9d07dca52002d12",
+      "bytes": 1787
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b13-summary-runner-final-source.json.txt",
+      "original": "/private/tmp/b13-summary-runner-final-source.json",
+      "sha256": "732c0402e889275e113cb169622d07e3a7e72574a11072934e39a7278bb22aae",
+      "bytes": 2186
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b13-summary-runner-handoff.md.txt",
+      "original": "/private/tmp/b13-summary-runner-handoff.md",
+      "sha256": "28b432a49a1c8e035b8bee640a756ba387b2acfc46d18256a5a95434629735c3",
+      "bytes": 5677
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b13-summary-negative-spent.log.txt",
+      "original": "/private/tmp/b13-summary-negative-spent.log",
+      "sha256": "b3859188a687158ccbf0a50a8c6944c084bd38565478c5cfb2d30649ed152166",
+      "bytes": 1381
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b13-summary-negative-cleanup.log.txt",
+      "original": "/private/tmp/b13-summary-negative-cleanup.log",
+      "sha256": "bb773b5260cc270ecc0e25f576133433d1433c018bb581a2cb8a9616effdf38c",
+      "bytes": 886
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b13-summary-shutdown-before.log.txt",
+      "original": "/private/tmp/b13-summary-shutdown-before.log",
+      "sha256": "0339a0ad660308310c4dbc4c7b6a6125b42c6c0ba308e7ea343e4f1f9ff42957",
+      "bytes": 1223
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b13-summary-shutdown-after.log.txt",
+      "original": "/private/tmp/b13-summary-shutdown-after.log",
+      "sha256": "799107bee38061e6cc9b609ef70fa53e88e2cc22d3004339a8b1ff1ad5f64437",
+      "bytes": 247
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b13-summary-shutdown-final-tests.log.txt",
+      "original": "/private/tmp/b13-summary-shutdown-final-tests.log",
+      "sha256": "5c058c65459f07cd95ab857d3e6e45380e798726933f788690d23e50ee4e262e",
+      "bytes": 215
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b13-cold-controller-final-focused.log.txt",
+      "original": "/private/tmp/b13-cold-controller-final-focused.log",
+      "sha256": "883f311c1ba7bd0588a13127a1aca1c3a77d96dfc512e816b53783130d7b2e48",
+      "bytes": 215
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b13-native-source-manifest.json.txt",
+      "original": "/private/tmp/b13-native-source-manifest.json",
+      "sha256": "544895dffc86d5b4832056bba19fdc17c1325b358ec714e6cf42823de505f1d7",
+      "bytes": 4581
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b13-native-positive-post-review.log.txt",
+      "original": "/private/tmp/b13-native-positive-post-review.log",
+      "sha256": "04582448e56d2149163921ba1db66134a116a345b03154d44e2787416a43a127",
+      "bytes": 564
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b13-native-negative-post-review.log.txt",
+      "original": "/private/tmp/b13-native-negative-post-review.log",
+      "sha256": "fee82dcad7b43a08e5f7b23c6fa8a1152980bbe35066473b354a2bb9fe45eee0",
+      "bytes": 833
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b13-memory-recovery-ui-manifest.txt.txt",
+      "original": "/private/tmp/b13-memory-recovery-ui-manifest.txt",
+      "sha256": "d869cef3dc47a35b9e30227a84c5672f784a98ddffb6a7dba652184cc9361f17",
+      "bytes": 1268
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b13-memory-recovery-ui-unit.log.txt",
+      "original": "/private/tmp/b13-memory-recovery-ui-unit.log",
+      "sha256": "db0ee6bc15afa31e27f849c34ecce4bb13569f612019318e2029f547f1f22bfa",
+      "bytes": 234
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b13-memory-recovery-ui-browser.log.txt",
+      "original": "/private/tmp/b13-memory-recovery-ui-browser.log",
+      "sha256": "b408d1f136ede29d1ac0e04f6f3cf72537f31f0f952ce170a963c8d6d932846b",
+      "bytes": 3011
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b13-b18-migration-legacy-proof.log.txt",
+      "original": "/private/tmp/b13-b18-migration-legacy-proof.log",
+      "sha256": "2f7c4d187e8c8c4f679318f86a63ad68eb04d7cadb4587dc6e2e17ef545e9d65",
+      "bytes": 412
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b18-final-source.json.txt",
+      "original": "/private/tmp/b18-final-source.json",
+      "sha256": "b1ddd905e7bab65cdcd54a8718173347e7cb722b57bd9992d54126a4db64ce38",
+      "bytes": 3635
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b18-review-fixes-final.log.txt",
+      "original": "/private/tmp/b18-review-fixes-final.log",
+      "sha256": "9599aacbc341c0ccdd3b0ee5323069c19a7fea0abe1b217ad6448afadcb8b2d2",
+      "bytes": 223
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b18-negative-latest.log.txt",
+      "original": "/private/tmp/b18-negative-latest.log",
+      "sha256": "c9561c4d2b7306cfc713b394184bdc67f60245d6f5f063cf0876274ad63be707",
+      "bytes": 1157
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b18-negative-budget.log.txt",
+      "original": "/private/tmp/b18-negative-budget.log",
+      "sha256": "4c3ed9fd8e80a9226a6bcfbb9a74c0b8396416d1f474a2134b05a0f5a268a254",
+      "bytes": 3082
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b18-negative-identity.log.txt",
+      "original": "/private/tmp/b18-negative-identity.log",
+      "sha256": "f6d9d223437cc9ace3fd1dc2a1aad11c4689ed40c216f44cd65d9aa9b85f8765",
+      "bytes": 1724
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b18-negative-import-lease.log.txt",
+      "original": "/private/tmp/b18-negative-import-lease.log",
+      "sha256": "8d0ad14bc74c7546fc041cea5fb7dacdbeece8729c62bc507c42ccfcf817bd71",
+      "bytes": 4701
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b18-negative-live-retry.log.txt",
+      "original": "/private/tmp/b18-negative-live-retry.log",
+      "sha256": "7210a835682afd9763c1fb5c9d2fd0407354ab5de52443b171dc1792145b6a01",
+      "bytes": 1249
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b18-native-positive-verified.log.txt",
+      "original": "/private/tmp/b18-native-positive-verified.log",
+      "sha256": "51d05680d98384ec6a94e0f95e635de17f7307da850c74a3f65dfb85fef30761",
+      "bytes": 269
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b18-native-negative-final.log.txt",
+      "original": "/private/tmp/b18-native-negative-final.log",
+      "sha256": "47caf2feff138315464af03c721abae2b5d86bbe33aa52235a0a7ee4610f3f83",
+      "bytes": 718
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b18-native-positive-evidence.json.txt",
+      "original": "/private/tmp/b18-native-positive-evidence.json",
+      "sha256": "dd50af222791e12a6d4e02ae9c10e4d0d183d2592e1ea4585cbcf51e24e93455",
+      "bytes": 74490
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b18-native-negative-evidence.json.txt",
+      "original": "/private/tmp/b18-native-negative-evidence.json",
+      "sha256": "9466bf2d9a679dcecada6007a85a116d55a04557b79113c5ae72345d8b161546",
+      "bytes": 13406
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b13-cold-controller-independent--cold-controller-read.mts.txt",
+      "original": "/private/tmp/b13-cold-controller-independent/cold-controller-read.mts",
+      "sha256": "18ba1a9ba29b5f0cc8064baf085a9b8da9bee207510c388b3e9e4f100d9eb4ee",
+      "bytes": 3543
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b13-cold-controller-independent--cold-controller-read.log.txt",
+      "original": "/private/tmp/b13-cold-controller-independent/cold-controller-read.log",
+      "sha256": "7ec291b956669bb6815714bb567e1b43e3487d6ad9027cf87e910b4c4dad92fd",
+      "bytes": 3861
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b13-cold-controller-independent--cold-controller-read-repaired.log.txt",
+      "original": "/private/tmp/b13-cold-controller-independent/cold-controller-read-repaired.log",
+      "sha256": "d503205eb60a5b420a70f96757bfe99d7d46a73e5fe82799aee498ea4072cfb0",
+      "bytes": 2000
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b13-cold-controller-independent--closed-manifest.json.txt",
+      "original": "/private/tmp/b13-cold-controller-independent/closed-manifest.json",
+      "sha256": "cf35456657bf26968f3e54f7d440f5aa47ba4b378f93af8f763cd585fac529e3",
+      "bytes": 3201
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b13-cold-controller-independent--closed-handoff.md.txt",
+      "original": "/private/tmp/b13-cold-controller-independent/closed-handoff.md",
+      "sha256": "226e3c8f7d0c7ea09c3f42e4c6fa765ebaf8cc294a2b2d3a7fa7aee942c70af2",
+      "bytes": 952
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b13-cold-controller-independent--cloudflare-shim.mjs.txt",
+      "original": "/private/tmp/b13-cold-controller-independent/cloudflare-shim.mjs",
+      "sha256": "847f877fd8f63aece17b8191ff5e9979b54112494eacacb9b5b4453a593146a9",
+      "bytes": 246
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b18-independent--latest-skew.mts.txt",
+      "original": "/private/tmp/b18-independent/latest-skew.mts",
+      "sha256": "629c35af14f6b336772038f9ccc9d461871fe15c6e4d193999bd4213f870d1a4",
+      "bytes": 4254
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b18-independent--latest-skew.log.txt",
+      "original": "/private/tmp/b18-independent/latest-skew.log",
+      "sha256": "1ca495ba9f5e00f44011d0db85c302ad6d50e5688f1e2139ffbd90a17c5e92d5",
+      "bytes": 2203
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b18-independent--latest-skew-fixed.log.txt",
+      "original": "/private/tmp/b18-independent/latest-skew-fixed.log",
+      "sha256": "080f5c89ff983bba83aa23a0cd2e178feacd90a04d3463f745d4279d5ccb40f9",
+      "bytes": 839
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b18-independent--domain-recheck-manifest.json.txt",
+      "original": "/private/tmp/b18-independent/domain-recheck-manifest.json",
+      "sha256": "ed1d44640eabec5d79a6369d25b0ae370850fb0e1c63b60255fa1234857e565d",
+      "bytes": 2337
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b18-independent--handoff.md.txt",
+      "original": "/private/tmp/b18-independent/handoff.md",
+      "sha256": "bbe568ac3467345d9d89bb1086095314270f3b0cde5c5cc53c07e6612c70185a",
+      "bytes": 3600
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b18-runner-independent--closed-manifest.json.txt",
+      "original": "/private/tmp/b18-runner-independent/closed-manifest.json",
+      "sha256": "fd1e538313fe9fd590d0035b05ff40666bdf4175c1e11fa2f48f97a966d6c9be",
+      "bytes": 5256
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b18-runner-independent--closed-handoff.md.txt",
+      "original": "/private/tmp/b18-runner-independent/closed-handoff.md",
+      "sha256": "c210526da43966f3af87298b7826f7cd5885a0bdd7872329fbf2b378e6086fbb",
+      "bytes": 1920
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b18-runner-independent--cloudflare-shim.mjs.txt",
+      "original": "/private/tmp/b18-runner-independent/cloudflare-shim.mjs",
+      "sha256": "847f877fd8f63aece17b8191ff5e9979b54112494eacacb9b5b4453a593146a9",
+      "bytes": 246
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b18-runner-independent--probe.mts.txt",
+      "original": "/private/tmp/b18-runner-independent/probe.mts",
+      "sha256": "a2d5bbed933448362147b50ec507b754e822156f1ee3895ffac3402fe8a2ea83",
+      "bytes": 3913
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b18-runner-independent--cleanup-recovery.mts.txt",
+      "original": "/private/tmp/b18-runner-independent/cleanup-recovery.mts",
+      "sha256": "232657cc9097e01fcdbecc09731be9e7e73f758c7d044e458e323a8862d07bfa",
+      "bytes": 3019
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b18-runner-independent--retry-prearm.mts.txt",
+      "original": "/private/tmp/b18-runner-independent/retry-prearm.mts",
+      "sha256": "1312fa3fa47dc2e8bfa89d18998e96d6f5cf3bd38dffbf53f24e437d615aea5c",
+      "bytes": 2611
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b18-runner-independent--dispose-recheck.mts.txt",
+      "original": "/private/tmp/b18-runner-independent/dispose-recheck.mts",
+      "sha256": "9310112e58744d4087eb070d072450c833bf24576b72e8d6ea483bb1ae5a29ea",
+      "bytes": 2439
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b18-runner-independent--cleanup-dispose.mts.txt",
+      "original": "/private/tmp/b18-runner-independent/cleanup-dispose.mts",
+      "sha256": "ec0de7a6551a0a1acdc573eea90b17f4223df4ab98dc9aaa8b5f3c6cae1b3aa5",
+      "bytes": 2672
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b18-runner-independent--cold-cleanup.mts.txt",
+      "original": "/private/tmp/b18-runner-independent/cold-cleanup.mts",
+      "sha256": "c2e54281d22e85f1e562ec78d8709981b1fcc54ac7cd7eaec780d3d38f4a3d7f",
+      "bytes": 3411
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b18-runner-independent--cold-controller-read.mts.txt",
+      "original": "/private/tmp/b18-runner-independent/cold-controller-read.mts",
+      "sha256": "238c2eabc93846f695f54a67c9ab2066e4a35a94396b6c7900060ef8c243f50f",
+      "bytes": 3249
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b18-runner-independent--closed-probe.log.txt",
+      "original": "/private/tmp/b18-runner-independent/closed-probe.log",
+      "sha256": "6722780215ffe5730940265146899d79ef54d3a82bd76e7e21de61a87397c1d4",
+      "bytes": 4865
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b18-runner-independent--closed-cleanup-recovery.log.txt",
+      "original": "/private/tmp/b18-runner-independent/closed-cleanup-recovery.log",
+      "sha256": "e5add06ae4accfcca50b428170d5d855e01dbc465d5e66a1d2f359ac42e70a54",
+      "bytes": 3229
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b18-runner-independent--closed-retry-prearm.log.txt",
+      "original": "/private/tmp/b18-runner-independent/closed-retry-prearm.log",
+      "sha256": "55a4bbfcb14f7475fe37ff8d7dd091ed87553eca111c2b3e0ede315984c730a6",
+      "bytes": 1213
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b18-runner-independent--closed-dispose-recheck.log.txt",
+      "original": "/private/tmp/b18-runner-independent/closed-dispose-recheck.log",
+      "sha256": "a54b092135c4b6738695db648c6079b2fa053c0e8f8eb88001dde1f19ad2859e",
+      "bytes": 100
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b18-runner-independent--closed-cleanup-dispose.log.txt",
+      "original": "/private/tmp/b18-runner-independent/closed-cleanup-dispose.log",
+      "sha256": "771c3870cc50f761d3e3a278cbcdf5d610ff9e6b1d690501f95b35d103d21d12",
+      "bytes": 232
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b18-runner-independent--closed-cold-cleanup.log.txt",
+      "original": "/private/tmp/b18-runner-independent/closed-cold-cleanup.log",
+      "sha256": "e0353931d3e2d7f8522372d09f21fdc54a5aba89a0c63c4907a82e94399fbc85",
+      "bytes": 1683
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b18-runner-independent--closed-cold-controller-read.log.txt",
+      "original": "/private/tmp/b18-runner-independent/closed-cold-controller-read.log",
+      "sha256": "e6b3b98ddd34af8c78020925e0c2edff9336d110860648cfdd33264b0998be51",
+      "bytes": 2089
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b13-b18-2026-10-23/b18-runner-independent--closed-runner-suite.log.txt",
+      "original": "/private/tmp/b18-runner-independent/closed-runner-suite.log",
+      "sha256": "93bf369041ff5897c4d4781e39bb1950d16f2c55d02b4c2ee7aab14ffedb459d",
+      "bytes": 235
+    }
+  ]
+}

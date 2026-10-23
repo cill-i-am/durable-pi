@@ -1000,6 +1000,7 @@ function WorkspaceTool({
     case "memory":
       return (
         <MemoryWorkbench
+          refresh={conversation.reload}
           query={renderedSearch.query ?? ""}
           onQueryChange={(query) =>
             location.update({ query: query || undefined }, true)

@@ -1,0 +1,58 @@
+[16:43:20.821] ERROR (#8): Memory compaction scheduler exhausted Error: initial discovery unavailable
+[16:43:21.257] ERROR (#13): Memory compaction scheduler exhausted Error: cold diagnostic read outage
+    at Object.get (/private/tmp/b13-cold-controller-independent/cold-controller-read.mts:15:71)
+    at SummaryRunner.control (/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/src/memory/adapters/summary-lifecycle.ts:124:46)
+    at <anonymous> (/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/src/memory/adapters/summary-lifecycle.ts:405:50)
+COLD_SUMMARY_DIAGNOSTIC_READ_FAILURE {"before":{"schemaVersion":1,"workflowVersion":1,"phase":"exhausted","retiredToken":"598b789a-e3bd-42bc-b2c6-4244c6096ad7","recovery":{"epoch":"0fdc547b-54d4-4ced-abf1-1f5cfc30f87f","failedAt":1792770200813,"message":"Memory compaction could not persist or discover its work. Retry compaction recovery after storage is available. Paused summaries still require their own retry."}},"after":{"schemaVersion":1,"workflowVersion":1,"phase":"exhausted","retiredToken":"f67e132c-76c8-437e-9508-823d8d1b2d27","recovery":{"epoch":"dcb5d3b3-f978-4257-9037-8a99b15eec73","failedAt":1792770201255,"message":"Memory compaction could not persist or discover its work. Retry compaction recovery after storage is available. Paused summaries still require their own retry."}},"survivingJob":[{"id":"memory-compactor:discovery","capability":"memory-compactor","fn":"discover","time":1792770200830,"payload":"{\"schemaVersion\":1,\"workflowVersion\":1,\"armedUntil\":1792770260830,\"token\":\"f67e132c-76c8-437e-9508-823d8d1b2d27\",\"recoveryEpoch\":\"0fdc547b-54d4-4ced-abf1-1f5cfc30f87f\"}","retry_options":"{\"maxAttempts\":3,\"baseDelayMs\":100,\"maxDelayMs\":1000}","singleflight":1,"hung_timeout_seconds":null,"exclusive":0,"recovery_loop":1,"running":0,"execution_started_at":null,"created_at":1792770200}],"failedReads":4,"writesDuringOutage":1,"scanCalls":3,"stepCalls":0,"oldRecoveryAccepted":false,"jobs":[]}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: unavailable controller read must not overwrite exact recovery epoch and retired token
++ actual - expected
+
+  {
+    phase: 'exhausted',
+    recovery: {
++     epoch: 'dcb5d3b3-f978-4257-9037-8a99b15eec73',
++     failedAt: 1792770201255,
+-     epoch: '0fdc547b-54d4-4ced-abf1-1f5cfc30f87f',
+-     failedAt: 1792770200813,
+      message: 'Memory compaction could not persist or discover its work. Retry compaction recovery after storage is available. Paused summaries still require their own retry.'
+    },
++   retiredToken: 'f67e132c-76c8-437e-9508-823d8d1b2d27',
+-   retiredToken: '598b789a-e3bd-42bc-b2c6-4244c6096ad7',
+    schemaVersion: 1,
+    workflowVersion: 1
+  }
+
+    at <anonymous> (/private/tmp/b13-cold-controller-independent/cold-controller-read.mts:63:8) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: {
+    schemaVersion: 1,
+    workflowVersion: 1,
+    phase: 'exhausted',
+    retiredToken: 'f67e132c-76c8-437e-9508-823d8d1b2d27',
+    recovery: {
+      epoch: 'dcb5d3b3-f978-4257-9037-8a99b15eec73',
+      failedAt: 1792770201255,
+      message: 'Memory compaction could not persist or discover its work. Retry compaction recovery after storage is available. Paused summaries still require their own retry.'
+    }
+  },
+  expected: {
+    schemaVersion: 1,
+    workflowVersion: 1,
+    phase: 'exhausted',
+    retiredToken: '598b789a-e3bd-42bc-b2c6-4244c6096ad7',
+    recovery: {
+      epoch: '0fdc547b-54d4-4ced-abf1-1f5cfc30f87f',
+      failedAt: 1792770200813,
+      message: 'Memory compaction could not persist or discover its work. Retry compaction recovery after storage is available. Paused summaries still require their own retry.'
+    }
+  },
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.21.0

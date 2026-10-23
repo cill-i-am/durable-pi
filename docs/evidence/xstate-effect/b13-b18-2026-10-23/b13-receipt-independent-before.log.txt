@@ -1,0 +1,39 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi
+
+ ❯ tests/memory-summary-ownership.test.ts (5 tests | 1 failed | 4 skipped) 114ms
+   × cleanup-only reconciliation publishes unrelated joined receipts when one row still rejects writes 113ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/memory-summary-ownership.test.ts > cleanup-only reconciliation publishes unrelated joined receipts when one row still rejects writes
+AssertionError: expected undefined to match object { text: 'Joined result' }
+
+- Expected:
+{
+  "text": "Joined result",
+}
+
++ Received:
+undefined
+
+ ❯ tests/memory-summary-ownership.test.ts:264:56
+    262|   f.db.run("CREATE TRIGGER reject_one_summary BEFORE INSERT ON memory_…
+    263|   expect(yield* reconcileSummaryReceipts(memory).pipe(Effect.result)).…
+    264|   expect(yield* f.memory.node({ start: 2, count: 2 })).toMatchObject({…
+       |                                                        ^
+    265|   expect(yield* f.memory.node({ start: 0, count: 2 })).toBeUndefined()
+    266|   expect(calls).toBe(2)
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/core.ts:585:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 4 skipped (5)
+   Start at  15:42:16
+   Duration  517ms (import 56%, tests 28%, transform 13%, setup 2%, worker 1%)
+
