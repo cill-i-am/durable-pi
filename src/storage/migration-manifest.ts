@@ -191,6 +191,17 @@ export const agentMigrationManifest = {
         "ALTER TABLE `tool_operations` ADD `workflowVersion` integer DEFAULT 1 NOT NULL;",
       ],
     },
+    {
+      id: "20261023074535_amusing_union_jack",
+      checksum:
+        "124dc1f299ce307e47638f1b89359656c994d9ef21f476e131a8c6693e32fafd",
+      statements: [
+        "ALTER TABLE `agent_catalog` ADD `schemaVersion` integer DEFAULT 1 NOT NULL;",
+        "ALTER TABLE `agent_catalog` ADD `workflowVersion` integer DEFAULT 1 NOT NULL;",
+        "ALTER TABLE `bot_admission` ADD `schemaVersion` integer DEFAULT 1 NOT NULL;",
+        "ALTER TABLE `bot_admission` ADD `workflowVersion` integer DEFAULT 1 NOT NULL;",
+      ],
+    },
   ],
   schema: [
     {
@@ -206,7 +217,7 @@ export const agentMigrationManifest = {
     {
       type: "table",
       name: "agent_catalog",
-      sql: 'CREATE TABLE `agent_catalog` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`name` text NOT NULL,\n\t`instructions` text NOT NULL,\n\t`status` text NOT NULL,\n\t`createdAt` text NOT NULL,\n\t`updatedAt` text NOT NULL,\n\t`creation` text NOT NULL,\n\t`revision` integer DEFAULT 0 NOT NULL, `slug` text,\n\tCONSTRAINT "agent_catalog_status" CHECK("status" in (\'active\', \'archived\')),\n\tCONSTRAINT "agent_catalog_revision_check" CHECK("revision" >= 0)\n)',
+      sql: 'CREATE TABLE `agent_catalog` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`name` text NOT NULL,\n\t`instructions` text NOT NULL,\n\t`status` text NOT NULL,\n\t`createdAt` text NOT NULL,\n\t`updatedAt` text NOT NULL,\n\t`creation` text NOT NULL,\n\t`revision` integer DEFAULT 0 NOT NULL, `slug` text, `schemaVersion` integer DEFAULT 1 NOT NULL, `workflowVersion` integer DEFAULT 1 NOT NULL,\n\tCONSTRAINT "agent_catalog_status" CHECK("status" in (\'active\', \'archived\')),\n\tCONSTRAINT "agent_catalog_revision_check" CHECK("revision" >= 0)\n)',
     },
     {
       type: "index",
@@ -256,7 +267,7 @@ export const agentMigrationManifest = {
     {
       type: "table",
       name: "bot_admission",
-      sql: 'CREATE TABLE `bot_admission` (\n\t`id` integer PRIMARY KEY,\n\t`revision` integer NOT NULL,\n\t`status` text NOT NULL,\n\tCONSTRAINT "bot_admission_status_check" CHECK("status" in (\'active\', \'archived\')),\n\tCONSTRAINT "bot_admission_revision_check" CHECK("revision" >= 0),\n\tCONSTRAINT "bot_admission_id_singleton" CHECK("id" = 1)\n)',
+      sql: 'CREATE TABLE `bot_admission` (\n\t`id` integer PRIMARY KEY,\n\t`revision` integer NOT NULL,\n\t`status` text NOT NULL, `schemaVersion` integer DEFAULT 1 NOT NULL, `workflowVersion` integer DEFAULT 1 NOT NULL,\n\tCONSTRAINT "bot_admission_status_check" CHECK("status" in (\'active\', \'archived\')),\n\tCONSTRAINT "bot_admission_revision_check" CHECK("revision" >= 0),\n\tCONSTRAINT "bot_admission_id_singleton" CHECK("id" = 1)\n)',
     },
     {
       type: "table",

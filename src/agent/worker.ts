@@ -126,6 +126,11 @@ import {
   AgentSynchronizationError,
   AgentRuntimeUnavailable,
 } from "../agents/domain"
+import type { FamilyState, FamilyAdmissionError } from "../agents/family"
+import {
+  FamilyAdmission,
+  familyAdmissionApplication,
+} from "../agents/family-admission"
 import { webExecutor } from "../apps/adapters/code"
 import { appsRequest } from "../apps/adapters/http"
 import { appTools } from "../apps/adapters/pi"
@@ -963,6 +968,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   private readonly catalogLayer = sqliteAgentCatalog(this.db)
   readonly actorRuntime = ManagedRuntime.make(
     Layer.mergeAll(
+      this.familyAdmissionLayer(),
       terminalAuthoritySyncLayer(
         this.env.TERMINAL_SERVICE,
         this.ctx.id.toString()
@@ -2341,104 +2347,76 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       )
     )
   }
-  /** Every execution boundary reads live membership. The persisted membership
-   * generation also prevents old scheduled work resuming after a new invite. */
-  private familyTransition?: Promise<void>
-  private familyRevision?: symbol
-  async familyAdmission() {
-    for (;;) {
-      const revision = this.familyRevision
-      const state = await this.run(this.familyStateProgram())
-      const previous = await this.ctx.storage.get<string | null>(
-        "family-membership-generation"
-      )
-      // Discard lookups begun before another admission changed the generation.
-      if (revision !== this.familyRevision) continue
-      if (this.familyTransition) {
-        await this.familyTransition
-        continue
-      }
-      if (
-        (!state && previous !== null) ||
-        (state && previous !== undefined && previous !== state.membershipId)
-      ) {
-        this.familyRevision = Symbol()
-        // Join only generation changes. A waiter rechecks live membership and
-        // cannot admit new work before an older cleanup finishes.
-        const transition = (async () => {
-          const sessions = await this.run(
-            Effect.gen({ self: this }, function* () {
-              const sessions: string[] = []
-              for (const routine of yield* this.routines.list()) {
-                if (routine.status !== "active") continue
-                yield* this.routines.setStatus({
-                  id: routine.id,
-                  expectedRevision: routine.revision,
-                  operationId: crypto.randomUUID(),
-                  status: "paused",
-                })
-                const run = yield* this.routines.cancelPendingRun(routine.id)
-                if (run?.status === "queued") {
-                  yield* this.conversations.requestStop(run.turnId)
-                  yield* this.access.cancel(run.turnId)
-                }
-              }
-              for (const turn of yield* this.conversations.unfinished()) {
-                yield* this.conversations.requestStop(turn.id)
-                yield* this.access.cancel(turn.id)
-                if (turn.session_id) sessions.push(turn.session_id)
-              }
-              yield* this.coordination.store.closeAll()
-              for (const id of yield* this.delegationLedger.catalog()) {
-                const group = yield* this.delegationLedger.group(id)
-                yield* this.coordination.store.close(group.turnId)
-                this.ctx.waitUntil(
-                  this.run(this.delegations.reconcile(group.turnId))
-                )
-              }
-              let offset = 0
-              while (true) {
-                const groups = yield* this.backgroundMailbox.list(offset)
-                if (!groups.length) break
-                for (const group of groups) {
-                  if (["done", "failed", "cancelled"].includes(group.status))
-                    continue
-                  yield* this.background.requestStop(group.id)
-                  this.ctx.waitUntil(this.run(this.background.stop(group.id)))
-                }
-                offset += groups.length
-              }
-              return sessions
-            })
-          )
-          // Abort after recording stop intent. Owned cleanup can finish after a
-          // revoked tool callback returns, rather than waiting on that callback.
-          for (const session of sessions)
-            this.ctx.waitUntil(
-              this.run(this.conversationExecution.abort(session))
-            )
-          await this.ctx.storage.put(
-            "family-membership-generation",
-            state?.membershipId ?? null
-          )
-        })()
-        this.familyTransition = transition
-        try {
-          await transition
-        } finally {
-          this.familyTransition = undefined
+  protected familyAdmissionLayer(): ReturnType<
+    typeof familyAdmissionApplication
+  > {
+    return familyAdmissionApplication({
+      read: () => this.familyStateProgram(),
+      generation: () =>
+        Effect.promise(() =>
+          this.ctx.storage.get("family-membership-generation")
+        ),
+      write: (record) =>
+        Effect.promise(() =>
+          this.ctx.storage.put("family-membership-generation", record)
+        ),
+      fence: () => this.fenceFamilyGeneration(),
+    })
+  }
+  private fenceFamilyGeneration(): Effect.Effect<void, FamilyAdmissionError> {
+    return Effect.gen({ self: this }, function* () {
+      const sessions: string[] = []
+      for (const routine of yield* this.routines.list()) {
+        if (routine.status !== "active") continue
+        yield* this.routines.setStatus({
+          id: routine.id,
+          expectedRevision: routine.revision,
+          operationId: crypto.randomUUID(),
+          status: "paused",
+        })
+        const run = yield* this.routines.cancelPendingRun(routine.id)
+        if (run?.status === "queued") {
+          yield* this.conversations.requestStop(run.turnId)
+          yield* this.access.cancel(run.turnId)
         }
-        continue
       }
-      if (previous !== (state?.membershipId ?? null)) {
-        this.familyRevision = Symbol()
-        await this.ctx.storage.put(
-          "family-membership-generation",
-          state?.membershipId ?? null
-        )
+      for (const turn of yield* this.conversations.unfinished()) {
+        yield* this.conversations.requestStop(turn.id)
+        yield* this.access.cancel(turn.id)
+        if (turn.session_id) sessions.push(turn.session_id)
       }
-      return state
-    }
+      yield* this.coordination.store.closeAll()
+      for (const id of yield* this.delegationLedger.catalog()) {
+        const group = yield* this.delegationLedger.group(id)
+        yield* this.coordination.store.close(group.turnId)
+        this.ctx.waitUntil(this.run(this.delegations.reconcile(group.turnId)))
+      }
+      let offset = 0
+      while (true) {
+        const groups = yield* this.backgroundMailbox.list(offset)
+        if (!groups.length) break
+        for (const group of groups) {
+          if (["done", "failed", "cancelled"].includes(group.status)) continue
+          yield* this.background.requestStop(group.id)
+          this.ctx.waitUntil(this.run(this.background.stop(group.id)))
+        }
+        offset += groups.length
+      }
+      // Native abort may re-enter admission, so only durable fences are
+      // joined here. Lifecycle's existing waitUntil owns remote cleanup.
+      for (const session of sessions)
+        this.ctx.waitUntil(this.run(this.conversationExecution.abort(session)))
+    })
+  }
+  /** Every boundary gets a fresh lookup. Generation changes are owned by the
+   * host scope and survive an individual caller leaving. */
+  familyAdmission(signal?: AbortSignal): Promise<FamilyState | null> {
+    return this.actorRuntime.runPromise(
+      FamilyAdmission.use((service) => service.admit).pipe(
+        Effect.provide(WorkerTelemetry)
+      ),
+      { signal }
+    )
   }
   protected familyModelOwnerProgram() {
     return accountNative(async () => {

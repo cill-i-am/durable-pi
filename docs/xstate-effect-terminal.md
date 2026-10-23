@@ -1,6 +1,6 @@
 # Terminal lifecycle migration (B04)
 
-This B04 candidate restores the frozen Terminal implementation on `codex/xstate-terminal`, above Access commit `0a309bd27a64b6cc97ed75609f1b09579f99012f`. Its 14 source files and 10 tests match the archived implementation hashes. The extracted candidate passed static verification and 169 focused tests; full-unit/build/native/browser and hosted CI gates remain pending. The prior combined-tree evidence below demonstrates the W3 correction and Terminal-owned command, resource, lease and observation progression through the pinned official `@xstate/effect` integration; it is not relabeled as an extracted-head result. No production incident or deployed container verification is claimed.
+This B04 candidate restores the frozen Terminal implementation on `codex/xstate-terminal`, above Access commit `0a309bd27a64b6cc97ed75609f1b09579f99012f`. Its 14 source files and 10 tests match the archived implementation hashes. The extracted candidate passed local static verification and 169 focused tests. Unsigned commit `c92d5c3137db304b587ea9bf0962a9b0e3fe2fd8` is published in [draft PR #204](https://github.com/cill-i-am/durable-pi/pull/204), and all required jobs and aggregate `check` passed for that exact head in [CI run 39953819759](https://github.com/cill-i-am/durable-pi/actions/runs/39953819759). B04 delivery is complete; the draft remains unmerged and no deployment is claimed. The prior combined-tree evidence below demonstrates the W3 correction and Terminal-owned command, resource, lease and observation progression through the pinned official `@xstate/effect` integration; it is not relabeled as an extracted-head result. No production incident or deployed container verification is claimed.
 
 The [extraction manifest](evidence/xstate-effect/terminal-extraction.json) records source/test/log hashes and archive provenance. The existing standards and Access commits provide the shared baseline. Other lifecycle migrations from the combined tree are outside this candidate, and the [repository-wide goal](../BUILD.md#xstate-effect-lifecycle-refactor) remains open.
 
@@ -48,9 +48,9 @@ The candidate was installed from its frozen lockfile with `pnpm install --offlin
 | `pnpm verify:static` | Passed; credential scan, route generation, migration manifest, typecheck, lint and repository formatting. [Output](evidence/xstate-effect/terminal-candidate-static.log). |
 | `pnpm exec vitest run tests/terminal*.test.ts tests/native-terminal-addon.test.ts --maxWorkers=1` | Passed **169 tests in 16 files**, 9.18 seconds, repository default timeouts. [Output](evidence/xstate-effect/terminal-candidate-focused.log). |
 
-The checked source/test tree is unchanged from extraction. Evidence-only updates after these runs were formatted and checked for whitespace. Full-unit/build/native/browser and required hosted CI gates have not run on this candidate here; the publication workflow must establish those results on the eventual exact head. No commit, push, merge or deployment is part of this local verification.
+The checked source/test tree is unchanged from extraction. Evidence-only updates after these runs were formatted and checked for whitespace. Full-unit/build/native/browser were not run as local candidate gates here. The subsequent required hosted workflow passed for the published exact head, as linked above; it supplies the complete PR contract separately from these scoped local results. No merge or deployment is claimed.
 
-## Historical combined-tree verification and remaining gates
+## Historical combined-tree verification
 
 `tests/terminal-claim.test.ts` drives the production store/service with real Node SQLite at scheduler budgets 128 and 32, both with and without a held transaction. It checks one duplicate dispatch behind one row, bounded distinct-command occupancy, held final close, stale cleanup ownership, interrupted legacy restoration, current authority after a held restore, compound failure preservation, shutdown during held admission, and Stop/archive write/read failures. The recovery fixture also proves unconfirmed outcomes block another command.
 
@@ -68,6 +68,6 @@ The final scoped run after the public receipt correction passed **169 tests in 1
 
 The combined implementation tree also passed static/unit/build checks and the unchanged native Terminal HTTP/PTY/receipt/restart assertions before this extraction. Those runs included other migration layers and do not verify this candidate head. The preserved focused/negative logs above support only their named historical scopes; temporary paths record additional historical diagnostic runs and are not portable evidence artifacts.
 
-The candidate checks recorded above supersede the extraction-time absence of local static/focused results. They do not replace the remaining full-unit, build, native-runtime, browser or required hosted checks.
+The candidate checks recorded above supersede the extraction-time absence of local static/focused results. The passing exact-head hosted workflow separately establishes the required PR gates; historical combined-tree results remain limited to their recorded scope.
 
 No live provider send, real container action, merge or deployment was performed by this lane. Frontend lease/socket lifecycles remain separately tracked in F04; Terminal migration/transport host lifecycles outside this B04 boundary retain their own inventory entries.

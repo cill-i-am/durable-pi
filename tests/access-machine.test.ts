@@ -26,7 +26,12 @@ const policy = {
 describe("Access machine persistence and event admission", () => {
   it("converts every legacy state without changing identities, revisions, decisions, grants or receipts", () => {
     const db = database({ migrate: false })
-    for (const version of agentMigrationManifest.versions.slice(0, -1)) {
+    for (const version of agentMigrationManifest.versions.slice(
+      0,
+      agentMigrationManifest.versions.findIndex(
+        (version) => version.id === "20261023071529_tiny_korvac"
+      )
+    )) {
       for (const statement of version.statements) db.run(statement)
       db.run(
         "INSERT INTO __durable_pi_migrations VALUES (?,?)",

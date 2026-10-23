@@ -1,6 +1,6 @@
 import { Context, Effect, Layer, Schema } from "effect"
 
-import { AgentConflict } from "./domain"
+import type { AgentConflict } from "./domain"
 import type { AgentStorageError, AgentProfile } from "./domain"
 
 export const AgentConfiguration = Schema.Struct({
@@ -18,15 +18,6 @@ export interface ConfigurationLedger {
     owner: string,
     profile: AgentProfile
   ) => Effect.Effect<void, AgentConflict | AgentStorageError>
-}
-export function configurationChange(
-  current: AgentConfiguration | undefined,
-  owner: string,
-  profile: AgentProfile
-) {
-  if (current && current.owner !== owner)
-    throw new AgentConflict({ message: "Owner mismatch" })
-  return !current || current.revision < profile.revision
 }
 export class BotConfiguration extends Context.Service<
   BotConfiguration,

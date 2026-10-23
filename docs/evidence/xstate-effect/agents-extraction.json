@@ -1,0 +1,165 @@
+{
+  "candidate_parent": "c92d5c3137db304b587ea9bf0962a9b0e3fe2fd8",
+  "candidate_branch": "codex/xstate-agents",
+  "extraction_base": "0a309bd27a64b6cc97ed75609f1b09579f99012f",
+  "archive": "durable-pi-lifecycles-verified-bcsyeo0t/working-files.tar.gz",
+  "archive_sha256": "341b6ccf1ff68ca2d17380f31c51804e5fcd229d5c3434f9790f2db408dd9a92",
+  "archive_manifest_sha256": "f342a793ba8ead3556c8ee6dc93e645293811b2e28a8ae88884abe84f425f891",
+  "note": "27 files match the frozen archive. Worker and manifest retain the Access baseline plus only exact frozen B05 blocks. All 29 candidate hashes and the migration prefix manifest were checked after materialization. Candidate static, 65 focused tests and native Drizzle checks pass; full-unit/build, remaining native suites, browser and hosted CI remain pending.",
+  "shared_worker_blocks": [
+    "FamilyState/FamilyAdmissionError and FamilyAdmission/familyAdmissionApplication imports",
+    "familyAdmissionLayer in actorRuntime",
+    "familyAdmissionLayer, fenceFamilyGeneration and scoped familyAdmission methods"
+  ],
+  "manifest_scope": "Append amusing_union_jack and its exact agent_catalog/bot_admission schema entries; no later migrations.",
+  "files": {
+    "migrations/agent/20261023074535_amusing_union_jack/migration.sql": {
+      "baseline_sha256": null,
+      "materialized_sha256": "124dc1f299ce307e47638f1b89359656c994d9ef21f476e131a8c6693e32fafd",
+      "source": "frozen-whole-file"
+    },
+    "migrations/agent/20261023074535_amusing_union_jack/snapshot.json": {
+      "baseline_sha256": null,
+      "materialized_sha256": "5c3e274dcefaad7606c8ffce1c6b4c40a1180894158a90bdc5a4a2be036955b6",
+      "source": "frozen-whole-file"
+    },
+    "scripts/test-drizzle-runtime.mjs": {
+      "baseline_sha256": "85e62928d9155b47983978b315675bf9df3346226bc348da9d9e399a9462d58c",
+      "materialized_sha256": "dbda09b84d4288ae9ad4524c341c5c9def16b070fc4c3d669d96c4b1fa0e0ae9",
+      "source": "frozen-whole-file"
+    },
+    "src/agent/worker.ts": {
+      "baseline_sha256": "1373b11af2250ab264302940b129f8c0138df0db68d4818af1493f72484b1be2",
+      "materialized_sha256": "e7879a64c0a6179a7828ea8180cfbd1ab3e821edcda3829bda357003830507cd",
+      "source": "baseline-plus-exact-frozen-blocks"
+    },
+    "src/agents/adapters/configuration.ts": {
+      "baseline_sha256": "7a60a8bd68a8f54b69f7953d0d87d951f6d0eb2fd2c5cf0cf6fa6d08a24e1493",
+      "materialized_sha256": "3bb30741fb79becac6a899ab9c945c4c245332aebc44832dc1380890913c1b6f",
+      "source": "frozen-whole-file"
+    },
+    "src/agents/adapters/schema.ts": {
+      "baseline_sha256": "14dd106763cacb2e3092f643b0d87f8f41f3f205b8fb8d490e24f502d64d649e",
+      "materialized_sha256": "83c03bc1b31742833066070c2c617c56df0112f9abe7e5f8916f3dd28e614bd4",
+      "source": "frozen-whole-file"
+    },
+    "src/agents/adapters/sqlite.ts": {
+      "baseline_sha256": "0d752d1ddefb0a8b26bc37e94dbd8ca490adf3b9f08b0de15b0412524b439917",
+      "materialized_sha256": "2d06f54c4ff4dc4a8f2fbed71f485385f4e1513c15539f930396217e47febcf4",
+      "source": "frozen-whole-file"
+    },
+    "src/agents/application.ts": {
+      "baseline_sha256": "1a74ef575e47de188ca3e70740383af5d58e2de9ec128fe0634099f0b4d0945b",
+      "materialized_sha256": "9d32445112876e6d1ec4999f1606cd58658696f8c47729574a591eb707df2e86",
+      "source": "frozen-whole-file"
+    },
+    "src/agents/archive.machine.ts": {
+      "baseline_sha256": null,
+      "materialized_sha256": "4a358252d76d100819234a6c025b4d6bde232c90376ffc2b4e1b81d88d29d163",
+      "source": "frozen-whole-file"
+    },
+    "src/agents/configuration.machine.ts": {
+      "baseline_sha256": null,
+      "materialized_sha256": "8c19eadfa3119b0d9cc07c198362cea02290453558e7129819a933c40823cdf7",
+      "source": "frozen-whole-file"
+    },
+    "src/agents/configuration.ts": {
+      "baseline_sha256": "10dfa8e91ba72bd1b039307b2b595b28ac00257b11cc0da157661dbfc9b428fd",
+      "materialized_sha256": "ca69c25fe9881240a9b1fe7501504e0dacf4e7f95f7cf4a45b108e63b10a0637",
+      "source": "frozen-whole-file"
+    },
+    "src/agents/domain.ts": {
+      "baseline_sha256": "01cd4d02bb7058041a0ddabd259d9cbc78ff2f3aaccf00f67119b090963deee2",
+      "materialized_sha256": "aeff4b66e80ad80ba2319e53a35259fe37753fe7c8833829b3980129b530f6bb",
+      "source": "frozen-whole-file"
+    },
+    "src/agents/family-admission.machine.ts": {
+      "baseline_sha256": null,
+      "materialized_sha256": "03833b7a64f77c73fea5a688cc7589602276e8da250297f58924607f02636458",
+      "source": "frozen-whole-file"
+    },
+    "src/agents/family-admission.ts": {
+      "baseline_sha256": null,
+      "materialized_sha256": "d13576e53dd355142e2d27a9651f495321fef81400bb565afcd877e27ffcbc68",
+      "source": "frozen-whole-file"
+    },
+    "src/agents/family-generation.machine.ts": {
+      "baseline_sha256": null,
+      "materialized_sha256": "2d7f4293100a88e6aec009c9e5a77f4e42c01e6d4c2a5a904572fc274c43072c",
+      "source": "frozen-whole-file"
+    },
+    "src/agents/family.ts": {
+      "baseline_sha256": null,
+      "materialized_sha256": "087861a0c8c1dbed41f049719a7adc6411d7ddabf881461c446c22919ed95d29",
+      "source": "frozen-whole-file"
+    },
+    "src/agents/ledger.ts": {
+      "baseline_sha256": "b4f3cdc614cb4b93c076842c4bc339d80e8665463f12b1e2b9572467ea66bf8c",
+      "materialized_sha256": "61866f70e9aecbf526a05555ed8a4f8b05d442e310a5d9ee08ec4e2752140fa6",
+      "source": "frozen-whole-file"
+    },
+    "src/agents/profile.machine.ts": {
+      "baseline_sha256": null,
+      "materialized_sha256": "ef7f52356411dfe1713a0d200d3496562c728259fda040f888e7a095395fb352",
+      "source": "frozen-whole-file"
+    },
+    "src/agents/service.ts": {
+      "baseline_sha256": "e1b65aa2cc51a030c88e3fc75ea50d0865138e8f0fbf1fbeb8c6b3e83c2898ac",
+      "materialized_sha256": "af7e6829ccec0f5ed0d9e3edcc1dd2ec6be27a3c5799326d181fcb34d570c50f",
+      "source": "frozen-whole-file"
+    },
+    "src/agents/synchronization.machine.ts": {
+      "baseline_sha256": null,
+      "materialized_sha256": "357633eccc92f555ec6121030842f97657fadca82d7de59c385ad56da4f16c0a",
+      "source": "frozen-whole-file"
+    },
+    "src/storage/migration-manifest.ts": {
+      "baseline_sha256": "d316d5fa1ffc8c783dfdf4fbd1b4aa27fc5a4b3757104db8bdfa239bdf951a2c",
+      "materialized_sha256": "6515a8fb7c7c5fdf93a40db8f9785ea942f68f49f6784dce8e18fa58ec70a5e2",
+      "source": "baseline-plus-exact-frozen-blocks"
+    },
+    "tests/access-machine.test.ts": {
+      "baseline_sha256": "7589437a7cfd760818e3278329659702f773da7edcc0a33041626f066de2fb0d",
+      "materialized_sha256": "7a5be02751f52419055ae87c8adc1c08dad75611950a5ca73eef8fb7add45623",
+      "source": "frozen-whole-file"
+    },
+    "tests/agent-boundary.test.ts": {
+      "baseline_sha256": "201cd8205e03475d7199f3f7c920c8e1da06a4aac4b3fd59d2bd2aefda87fe98",
+      "materialized_sha256": "09bd018ab148a45d6741ac25fccc30f16e1b0d071d6595eeafe6ea7818f119f1",
+      "source": "frozen-whole-file"
+    },
+    "tests/agent-machine.test.ts": {
+      "baseline_sha256": null,
+      "materialized_sha256": "553934e0e2140fbd79a5057524f5ec6f954919064e819778b42c86e77cf3990f",
+      "source": "frozen-whole-file"
+    },
+    "tests/configuration-boundary.test.ts": {
+      "baseline_sha256": "4e0adc160026f1d1eded8df172e234d7bd8123839117f1406248aaf7cf4d4c37",
+      "materialized_sha256": "c3d5d7677f0bed7b7f6a30fef455f8f3d4bda25162365191544a631626eb9187",
+      "source": "frozen-whole-file"
+    },
+    "tests/family-admission-machine.test.ts": {
+      "baseline_sha256": null,
+      "materialized_sha256": "f923af76a46a07e29207035be02f3050c3c20842732f51abb40f95cd9d76a9e1",
+      "source": "frozen-whole-file"
+    },
+    "tests/family-model-authority.test.ts": {
+      "baseline_sha256": "9e80cb0fa290df136b5043214116c31a1cece9712da9e7696f4ddb8f9b74da7a",
+      "materialized_sha256": "15364d2fae7ffc0005faf607a42965c9edad54b6531348ca4894599f90a8b11f",
+      "source": "frozen-whole-file"
+    },
+    "tests/runtime/agent-availability.ts": {
+      "baseline_sha256": null,
+      "materialized_sha256": "bd2acd894944263bcb5bb0b328ee6eca8dc91cdbbadd7b9142a542c6c84266f1",
+      "source": "frozen-whole-file"
+    },
+    "tests/runtime/drizzle-worker.ts": {
+      "baseline_sha256": "d464cbe5d57cecefdabf4fb50397973aac0f718b35dda33ed7f2b0d723902c97",
+      "materialized_sha256": "8009cb2dd8a0e9641f1b4e73f002f2d59d3806137069a9538e41cfcbd29b5699",
+      "source": "frozen-whole-file"
+    }
+  },
+  "historical_evidence": {
+    "docs/evidence/xstate-effect/family-epoch-negative.log": "d0d0f908fe096763d9ac0a91e7fb212deb302c36678d93dea7bbd480274783c7"
+  }
+}

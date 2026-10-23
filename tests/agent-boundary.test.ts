@@ -35,14 +35,16 @@ import {
 import {
   AgentId,
   AgentSynchronizationError,
-  agentArchiveChange,
-  agentCreationReplay,
   requireAgentCapacity,
   homeAgentId,
   type AgentProfile,
   type AgentConflict,
   type AgentStorageError,
 } from "../src/agents/domain"
+import {
+  advanceAgentRecord,
+  newAgentRecord,
+} from "../src/agents/profile.machine"
 import { agentCatalogApplication } from "../src/agents/service"
 import { agentStatuses } from "../src/agents/statuses"
 import { migrateSqlite } from "../src/storage/migrations"
@@ -141,30 +143,58 @@ it.effect(
   "generated archive/capacity policy preserves home and only charges a restored slot",
   () =>
     Effect.sync(() => {
+      const record = (status: "active" | "archived") => ({
+        ...profile(1, status),
+        schemaVersion: 1,
+        workflowVersion: 1,
+        creation: "key",
+      })
       for (let active = 0; active <= 34; active++) {
         if (active >= 32) expect(() => requireAgentCapacity(active)).toThrow()
         else expect(() => requireAgentCapacity(active)).not.toThrow()
-        expect(agentArchiveChange(profile(1, "active"), false, active)).toBe(
-          "active"
-        )
-        expect(agentArchiveChange(profile(1, "archived"), true, active)).toBe(
-          "archived"
-        )
-        if (active >= 32)
-          expect(() =>
-            agentArchiveChange(profile(1, "archived"), false, active)
-          ).toThrow()
-        else
-          expect(
-            agentArchiveChange(profile(1, "archived"), false, active)
-          ).toBe("active")
+        expect(
+          advanceAgentRecord(record("active"), {
+            type: "RESTORE",
+            now: "new",
+            active,
+          }).status
+        ).toBe("active")
+        expect(
+          advanceAgentRecord(record("archived"), {
+            type: "ARCHIVE",
+            now: "new",
+          }).status
+        ).toBe("archived")
+        const restore = () =>
+          advanceAgentRecord(record("archived"), {
+            type: "RESTORE",
+            now: "new",
+            active,
+          })
+        if (active >= 32) expect(restore).toThrow()
+        else expect(restore().status).toBe("active")
       }
       expect(() =>
-        agentArchiveChange({ ...profile(), id: homeAgentId }, true, 0)
+        advanceAgentRecord(
+          { ...record("active"), id: homeAgentId },
+          { type: "ARCHIVE", now: "new" }
+        )
       ).toThrow("original")
-      expect(agentCreationReplay(undefined, "key")).toBe(false)
-      expect(agentCreationReplay("key", "key")).toBe(true)
-      expect(() => agentCreationReplay("", "key")).toThrow("another bot")
+      expect(newAgentRecord(profile(), "key", 0).status).toBe("active")
+      expect(
+        advanceAgentRecord(record("active"), {
+          type: "CREATE",
+          creation: "key",
+          active: 32,
+        })
+      ).toEqual(record("active"))
+      expect(() =>
+        advanceAgentRecord(record("active"), {
+          type: "CREATE",
+          creation: "changed",
+          active: 0,
+        })
+      ).toThrow("another bot")
     })
 )
 it.effect(
