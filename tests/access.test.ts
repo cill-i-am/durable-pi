@@ -1,4 +1,4 @@
-import { Effect } from "effect"
+import { Deferred, Effect } from "effect"
 import { describe, expect, it } from "vitest"
 
 import { AccessStore } from "../src/access/adapters/sqlite"
@@ -33,9 +33,16 @@ describe("durable tool authorization", () => {
     expect(Effect.runSync(store.claim(intent.id))).toBe("execute")
   })
   it("waits for explicit approval, persists results, and replays without repeating effects", async () => {
+    const admitted = Deferred.makeUnsafe<void>()
     const store = fixture(),
       intent = input(),
-      gate = new AccessGate(store, () => Effect.sync(() => true))
+      gate = new AccessGate(
+        store,
+        () => Effect.sync(() => true),
+        () => {
+          Deferred.doneUnsafe(admitted, Effect.void)
+        }
+      )
     let calls = 0
     const run = Effect.runPromise(
       gate.run(
@@ -49,6 +56,7 @@ describe("durable tool authorization", () => {
         })
       )
     )
+    await Effect.runPromise(Deferred.await(admitted))
     expect(calls).toBe(0)
     expect(Effect.runSync(store.pending())[0]?.status).toBe("pending")
     Effect.runSync(
@@ -142,7 +150,14 @@ describe("durable tool authorization", () => {
     const store = fixture(),
       intent = input(),
       controller = new AbortController()
-    const first = new AccessGate(store, () => Effect.sync(() => true))
+    const admitted = Deferred.makeUnsafe<void>()
+    const first = new AccessGate(
+      store,
+      () => Effect.sync(() => true),
+      () => {
+        Deferred.doneUnsafe(admitted, Effect.void)
+      }
+    )
     const interrupted = Effect.runPromise(
       first.run(
         intent,
@@ -153,6 +168,7 @@ describe("durable tool authorization", () => {
       ),
       { signal: controller.signal }
     )
+    await Effect.runPromise(Deferred.await(admitted))
     controller.abort()
     await expect(interrupted).rejects.toBeDefined()
     expect(Effect.runSync(store.get(intent.id))?.status).toBe("pending")

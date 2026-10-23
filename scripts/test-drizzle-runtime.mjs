@@ -189,9 +189,11 @@ const config :Workerd.Config = (
           "activity",
           "conversation-members",
           "conversation-activities",
+          "access-operation",
         ].map((mode) => `guarded-${mode}`),
       ]
   const snapshots = new Map()
+  let accessOperations
   for (const mode of selected) {
     const response = await fetch(`${origin}/${mode}`, {
       signal: AbortSignal.timeout(15000),
@@ -287,6 +289,14 @@ const config :Workerd.Config = (
         abortReleased: true,
         privateDataAbsent: true,
       })
+    if (kind === "access-operation") {
+      assert.equal(result.result, "saved receipt")
+      assert.deepEqual(
+        result.operations.map((operation) => operation.status),
+        ["pending", "running", "running", "running", "done"]
+      )
+      accessOperations = result.operations
+    }
     if (guarded) {
       if (kind === "conversation-activities") {
         assert.deepEqual(result.counts, [48, 49, 100])
@@ -450,6 +460,31 @@ const config :Workerd.Config = (
       (await response.json()).rows,
       rows,
       `${mode}: state survives native process restart`
+    )
+  }
+  if (accessOperations) {
+    const response = await fetch(
+      `${origin}/guarded-access-operation/guarded-access-restore`,
+      { signal: AbortSignal.timeout(10000) }
+    )
+    assert.equal(response.status, 200, "Access restoration after SIGKILL")
+    const result = await response.json()
+    assert.deepEqual(result.before, accessOperations)
+    assert.equal(result.receipt, "saved receipt")
+    assert.equal(result.pending, "pending")
+    assert.equal(result.recovered, "execute")
+    assert.equal(result.uncertain, true)
+    assert.equal(result.revoked, true)
+    assert.deepEqual(
+      result.after.map((operation) => operation.status),
+      ["denied", "interrupted", "done", "denied", "done"]
+    )
+    const retained = await (
+      await fetch(`${origin}/guarded-access-operation/inspect`)
+    ).json()
+    assert.deepEqual(retained.rows, [{ id: 1, value: "one external effect" }])
+    console.log(
+      "PASS Access machine: native restart preserves receipts, waiting approval, recovery and revocation fences; one external effect."
     )
   }
   console.log(

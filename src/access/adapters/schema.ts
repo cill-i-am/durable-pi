@@ -67,6 +67,8 @@ export const toolOperations = sqliteTable(
     result: text("result"),
     revision: integer("revision").notNull().default(0),
     decision: text("decision"),
+    schemaVersion: integer("schemaVersion").notNull().default(1),
+    workflowVersion: integer("workflowVersion").notNull().default(1),
   },
   (t) => [
     primaryKey({ columns: [t.id] }),

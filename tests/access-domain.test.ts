@@ -2,8 +2,33 @@ import { expect, it } from "@effect/vitest"
 import { Effect, Schema } from "effect"
 
 import { AccessDenied } from "../src/access/contracts"
-import { claimOperation } from "../src/access/domain"
 import type { ToolOperation } from "../src/access/ledger"
+import { advanceOperation } from "../src/access/operation.machine"
+
+const claimOperation = (
+  operation: ToolOperation,
+  policy: import("../src/access/contracts").ToolPolicy,
+  recoverable: boolean,
+  now: number
+) => {
+  const next = advanceOperation(operation, {
+    type: "CLAIM",
+    policy,
+    recoverable,
+    now,
+    runnable: true,
+  })
+  const command = next.commands[0]!
+  return {
+    update: next.operation,
+    decision:
+      command.type === "reject"
+        ? new AccessDenied({ message: command.message })
+        : command.type === "dispatch"
+          ? command.decision
+          : undefined,
+  }
+}
 
 const revision = Schema.Number.check(
   Schema.isInt(),
@@ -11,6 +36,8 @@ const revision = Schema.Number.check(
 )
 const mode = Schema.Literals(["ask", "allow"])
 const operation: ToolOperation = {
+  schemaVersion: 1,
+  workflowVersion: 1,
   id: "operation",
   turnId: "turn",
   tool: "test",
