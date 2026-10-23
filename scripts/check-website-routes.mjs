@@ -65,4 +65,23 @@ assert.equal(
 )
 assert.equal(diagnostic.headers.get("cache-control"), "private, no-store")
 await diagnostic.body?.cancel()
-console.log("Built website family and diagnostic API routing passed.")
+for (const path of ["/family", "/family/model-access", "/settings/security"]) {
+  const response = await website.fetch(new Request(origin + path))
+  assert.equal(response.status, 200, path)
+  assert.match(response.headers.get("content-type") ?? "", /text\/html/)
+  assert.ok(!(await response.text()).includes("Not Found"), path)
+}
+for (const section of ["family", "model-access", "security", ""]) {
+  const response = await website.fetch(
+    new Request(
+      origin +
+        `/agents/navi/settings${section ? `/${section}` : ""}?panel=files&tab=trash`
+    )
+  )
+  assert.equal(response.status, 404, section)
+  assert.equal(response.headers.get("location"), null, section)
+  await response.body?.cancel()
+}
+console.log(
+  "Built website global settings, removed URLs, family and diagnostic API routing passed."
+)

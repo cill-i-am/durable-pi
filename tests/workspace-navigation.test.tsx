@@ -25,11 +25,16 @@ const selectedAgent: AgentProfile = {
 }
 vi.mock("@tanstack/react-router", async (original) => ({
   ...(await original<typeof Router>()),
-  useParams: () =>
-    harness.pathname.startsWith("/agents/home")
-      ? { agentId: "home", panel: "files" }
-      : {},
-  useSearch: () => ({}),
+  useMatches: ({ select }: { select: (matches: unknown[]) => unknown }) =>
+    select([
+      {
+        pathname: harness.pathname,
+        params: harness.pathname.startsWith("/agents/home")
+          ? { agentId: "home", panel: "files" }
+          : {},
+        search: {},
+      },
+    ]),
   useLocation: ({ select }: { select: (location: unknown) => unknown }) =>
     select({ pathname: harness.pathname, href: harness.pathname }),
   useNavigate: () => harness.navigate,

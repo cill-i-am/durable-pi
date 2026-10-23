@@ -4456,10 +4456,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     return this.run(
       Effect.succeed({
         status: "sign_in_required",
-        url: new URL(
-          "/agents/home/settings/model-access",
-          this.env.EMAIL_REVIEW_URL
-        ).href,
+        url: new URL("/family/model-access", this.env.EMAIL_REVIEW_URL).href,
         instructions:
           "Open Model access, sign in with ChatGPT, then paste the final return address into the secure field there. Never paste it into chat. Completing this restores the family connection; this link has not reconnected it yet.",
       }),

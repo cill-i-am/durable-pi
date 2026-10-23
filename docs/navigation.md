@@ -2,6 +2,8 @@
 
 TanStack Start’s file routes own page and resource identity. `src/navigation/workspace.ts` owns the Effect Schema contracts and typed destinations; `src/app/use-workspace-location.ts` adapts those destinations to the router. Features receive controlled selections and report changes to this boundary. They do not maintain a second selected resource in local storage.
 
+The workspace reads pathname, parameters and validated search together from the committed leaf match. The router publishes its pending location before committing matches; mixing those phases can briefly select a different assistant or close a workbench during navigation.
+
 | Screen                   | Path                                 |
 | ------------------------ | ------------------------------------ |
 | Active agents            | `/agents`                            |
@@ -11,16 +13,22 @@ TanStack Start’s file routes own page and resource identity. `src/navigation/w
 | Edit an agent            | `/agents/$agentId/edit`              |
 | Workbench screen         | `/agents/$agentId/$panel`            |
 | Saved workbench resource | `/agents/$agentId/$panel/$itemId`    |
-| Settings section         | `/agents/$agentId/settings/$section` |
-| Account security         | `/agents/$agentId/settings/security` |
+| Assistant settings       | `/agents/$agentId/settings/$section` |
+| Account security         | `/settings/security`                 |
+| Family                   | `/family`                            |
+| Shared model access      | `/family/model-access`               |
 
 Panels are Browser, Terminal, Files, Apps, Activity, Checklists, Memory, Code and Routines. A selected app, file, checklist, command, execution result, routine, plan or activity record belongs in the resource path. Browser and Memory currently have no independent saved-detail screen. Source disclosure and tree expansion inside Memory remain local interactions.
 
-`/` is a bootstrap location that replaces itself with the last owned active agent. `/agents/$agentId/settings` redirects to General. A valid unknown bot or missing resource remains unavailable at its requested location; it does not substitute another bot. Opening a link to an archived agent replaces that location with `/agents/archived`. Restore is a separate operation.
+`/` is a bootstrap location that replaces itself with the last owned active agent. Assistant-scoped Family, Model access and Security URLs and the implicit settings index are removed; they return 404 without redirects. A valid unknown bot or missing resource remains unavailable at its requested location; it does not substitute another bot. Opening a link to an archived agent replaces that location with `/agents/archived`. Restore is a separate operation.
+
+This route refactor retains the current settings dialog, nested security dialog, mobile bottom sheets and visual components. General, Models, Connections, Skills, Access and Memory remain assistant-scoped: their existing screens include assistant configuration or assignments. Separating the shared controls within those mixed screens belongs to the later UI refactor.
 
 ## Search state
 
 Use validated query parameters for tabs, the `q` agent filter, file `preview=source`, Memory’s `query`, and Activity’s `scope`, `filter`, `cursor`, and task `offset`. Settings can retain `panel` and `item` as the underlying workbench view, and `settingsView=sections` selects its mobile section list. Editor and authentication routes use a validated `returnTo`.
+
+Global settings accept `settingsView` and an optional `returnTo` containing a validated assistant conversation or resource URL. This records the overlay backdrop, not the owner of the global setting. The same assistant ID key, conversation, draft, file selection and workbench stay mounted; closing restores the backdrop. Same-origin validation strips action parameters and rejects fragments, API URLs, nested overlays and editor URLs. A direct global link uses the last active assistant as its backdrop. An explicit unknown or archived backdrop remains unavailable while the global settings themselves stay accessible. Authentication return URLs accept these global destinations under the same restrictions.
 
 Resource identity in a workbench path cannot be overridden by query parameters. View state must belong to its panel. Use TanStack’s search codec for structured cursors and strings that resemble JSON. Query typing is generated from the file routes. Editing filters replaces the history entry; changing a screen or selected resource creates an entry.
 

@@ -15,7 +15,7 @@ Protect your own account with passwords, passkeys, two-factor authentication, an
 
 - Open `/agents` while signed out. Use **Sign in**, passkey sign-in, or **First time? Set up your account** where offered.
 - Open `/forgot-password`, `/reset-password` from its email link, or `/two-factor` during sign-in.
-- In an agent, open `/agents/AGENT_SLUG/settings/security` for Account security. Profile photo controls are in General settings.
+- Open `/settings/security` for Account security. Profile photo controls remain in General settings.
 - Invited members enter through their invitation link; see [Family](family.md).
 
 ## Driving it with the verification harness

@@ -4,6 +4,7 @@ import {
   createRouter,
   RouterProvider,
   Outlet,
+  useRouterState,
 } from "@tanstack/react-router"
 import { ThemeProvider } from "next-themes"
 import { useState } from "react"
@@ -22,20 +23,33 @@ import {
 } from "../../src/components/ui/input-group"
 import { JoinFamily } from "../../src/features/family/join"
 import { UpdateRecovery } from "../../src/features/updates/update-recovery"
+import { workspaceView } from "../../src/navigation/workspace"
 import { reportClientError } from "../../src/observability/browser"
+import { Route as PanelRoute } from "../../src/routes/_workspace.agents.$agentId.$panel.index"
+import { Route as SettingsRoute } from "../../src/routes/_workspace.agents.$agentId.settings.$section"
+import { Route as FamilyRoute } from "../../src/routes/_workspace.family"
+import { Route as ModelAccessRoute } from "../../src/routes/_workspace.family.model-access"
+import { Route as SecurityRoute } from "../../src/routes/_workspace.settings.security"
 
 import "./styles.css"
 
 // The actual workspace, with only its transport and route shell replaced.
 // No Cloudflare credentials or real provider/tool calls enter this fixture.
-const root = createRootRoute({ component: Outlet })
+const root = createRootRoute({
+  component: Outlet,
+  notFoundComponent: () => <h1>Page not found</h1>,
+})
+const workspace = createRoute({
+  getParentRoute: () => root,
+  id: "_workspace",
+  errorComponent: WorkspaceLinkError,
+  component: FixtureWorkspace,
+})
 const paths = [
   "/",
   "/agents",
   "/agents/archived",
   "/agents/$agentId",
-  "/agents/$agentId/settings/$section",
-  "/agents/$agentId/$panel",
   "/agents/$agentId/$panel/$itemId",
 ] as const
 const router = createRouter({
@@ -43,9 +57,53 @@ const router = createRouter({
     void reportClientError(error, info)
   },
   routeTree: root.addChildren([
-    ...paths.map((path) =>
-      createRoute({ getParentRoute: () => root, path, component: ChatApp })
-    ),
+    workspace.addChildren([
+      ...paths.map((path) =>
+        createRoute({
+          getParentRoute: () => workspace,
+          path,
+          component: () => null,
+        })
+      ),
+      createRoute({
+        validateSearch: FamilyRoute.options.validateSearch,
+        component: FamilyRoute.options.component,
+        getParentRoute: () => workspace,
+        path: "/family",
+      }),
+      createRoute({
+        validateSearch: ModelAccessRoute.options.validateSearch,
+        component: ModelAccessRoute.options.component,
+        getParentRoute: () => workspace,
+        path: "/family/model-access",
+      }),
+      createRoute({
+        validateSearch: SecurityRoute.options.validateSearch,
+        component: SecurityRoute.options.component,
+        getParentRoute: () => workspace,
+        path: "/settings/security",
+      }),
+      createRoute({
+        params: PanelRoute.options.params,
+        validateSearch: PanelRoute.options.validateSearch,
+        beforeLoad: ({ params, search }) => {
+          workspaceView(params, search)
+        },
+        getParentRoute: () => workspace,
+        path: "/agents/$agentId/$panel",
+        component: () => null,
+      }),
+      createRoute({
+        params: SettingsRoute.options.params,
+        validateSearch: SettingsRoute.options.validateSearch,
+        beforeLoad: ({ params, search }) => {
+          workspaceView(params, search)
+        },
+        component: SettingsRoute.options.component,
+        getParentRoute: () => workspace,
+        path: "/agents/$agentId/settings/$section",
+      }),
+    ]),
     createRoute({
       getParentRoute: () => root,
       path: "/__client-error",
@@ -69,6 +127,22 @@ const router = createRouter({
     }),
   ]),
 })
+function FixtureWorkspace() {
+  const failed = useRouterState({
+    select: (state) =>
+      state.matches.some(
+        (match) => match.status === "error" || match.status === "notFound"
+      ),
+  })
+  return failed ? (
+    <Outlet />
+  ) : (
+    <>
+      <ChatApp />
+      <Outlet />
+    </>
+  )
+}
 function ClientErrorFixture() {
   const [failed, setFailed] = useState(false)
   if (failed)

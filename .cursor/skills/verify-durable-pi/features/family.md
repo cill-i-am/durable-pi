@@ -13,8 +13,8 @@ Invite family members to their own private workspaces while sharing the admin's 
 
 ## How to get to it (user POV)
 
-- Open `/agents/AGENT_SLUG/settings/family` or **Settings → Family**.
-- Open `/agents/AGENT_SLUG/settings/model-access` for the shared ChatGPT connection.
+- Open `/family` or **Settings → Family**.
+- Open `/family/model-access` for the shared ChatGPT connection.
 - Open the private invitation link at `/join` to accept. Keep its URL fragment private.
 - In chat, ask who belongs to the family or ask for an invitation; the agent can use `read_family` and `manage_family`.
 

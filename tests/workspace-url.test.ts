@@ -19,6 +19,14 @@ import {
   workspaceReturnLink,
   validateAuthSearch,
   editorDestination,
+  workspaceRouteSearch,
+  workspaceContext,
+  parseWorkspaceParams,
+  parseAgentReference,
+  validateGlobalSettingsSearch,
+  workspaceBackdrop,
+  globalSettingsView,
+  globalSettingsSection,
 } from "../src/navigation/workspace"
 
 const id = parseAgentId("home")
@@ -43,19 +51,38 @@ describe("canonical workspace locations", () => {
       `/agents/home/${panel}`
     )
   })
-  it.each([
-    "general",
-    "models",
-    "access",
-    "skills",
-    "memory",
-    "connections",
-    "security",
-  ])("uses a page path for Settings %s", (section) => {
-    expect(workspaceReturnPath(`/agents/home/settings/${section}`)).toBe(
-      `/agents/home/settings/${section}`
-    )
-  })
+  it.each(["general", "models", "access", "skills", "memory", "connections"])(
+    "uses a page path for Settings %s",
+    (section) => {
+      expect(workspaceReturnPath(`/agents/home/settings/${section}`)).toBe(
+        `/agents/home/settings/${section}`
+      )
+    }
+  )
+  it.each(["family", "model-access", "security"])(
+    "rejects removed assistant-scoped %s settings instead of redirecting",
+    (section) => {
+      const path = `/agents/home/settings/${section}`
+      expect(() => parseSection(section)).toThrow()
+      expect(workspaceReturnPath(path)).toBe("/")
+      expect(
+        workspaceReturnPath(`${path}?panel=files&item=file_1&tab=trash`)
+      ).toBe("/")
+      expect(workspaceReturnLink(path)).toEqual({ to: "/", search: {} })
+      expect(validateAuthSearch({ returnTo: path })).toEqual({ returnTo: "/" })
+    }
+  )
+  it.each(["/family", "/family/model-access", "/settings/security"])(
+    "addresses global %s settings directly without an assistant",
+    (path) => {
+      expect(workspaceReturnPath(path)).toBe(path)
+      expect(workspaceReturnLink(path)).toEqual({
+        to: path,
+        search: { returnTo: undefined },
+      })
+      expect(validateAuthSearch({ returnTo: path })).toEqual({ returnTo: path })
+    }
+  )
   it("keeps resource identity in the path and selected views in query parameters", () => {
     const path = "/agents/home/files/file_1?tab=trash"
     expect(workspaceReturnPath(path)).toBe(path)
@@ -71,18 +98,22 @@ describe("canonical workspace locations", () => {
     })
   })
   it("retains an underlying resource when nested Settings opens, and restores it on close", () => {
-    const view = workspaceView(
-      { agentId: id, section: "security" },
-      { panel: "files", item: "file_1", tab: "trash" }
-    )
+    const view = globalSettingsView("security", {
+      returnTo: "/agents/home/files/file_1?tab=trash",
+    })
     expect(view).toMatchObject({
       settings: "general",
       security: true,
       panel: "files",
       item: "file_1",
     })
-    expect(workspaceDestination(id, view).params).toMatchObject({
-      section: "security",
+    expect(workspaceDestination(id, view)).toEqual({
+      to: "/settings/security",
+      params: {},
+      search: {
+        returnTo: "/agents/home/files/file_1?tab=trash",
+        settingsView: undefined,
+      },
     })
     expect(
       workspaceDestination(id, {
@@ -92,12 +123,14 @@ describe("canonical workspace locations", () => {
       }).to
     ).toBe("/agents/$agentId/$panel/$itemId")
   })
-  it("normalizes a Settings index return to its canonical General page", () => {
+  it("rejects the removed Settings index alias instead of selecting General", () => {
     expect(
       workspaceReturnPath("/agents/home/settings?panel=files&item=file_1")
-    ).toBe("/agents/home/settings/general?panel=files&item=file_1")
-    expect(workspaceReturnLink("/agents/home/settings")).toMatchObject({
-      params: { section: "general" },
+    ).toBe("/")
+    expect(workspaceReturnPath("/agents/home/settings")).toBe("/")
+    expect(workspaceReturnLink("/agents/home/settings")).toEqual({
+      to: "/",
+      search: {},
     })
   })
   it("provides a distinct archive collection with bookmarkable filtering", () => {
@@ -250,9 +283,162 @@ describe("validated view state and auth return", () => {
     expect(validateAuthSearch({ returnTo: "https://evil.example" })).toEqual({
       returnTo: "/",
     })
-    expect(workspaceReturnLink("/agents/home/settings/security")).toMatchObject(
-      { params: { agentId: "home", section: "security" } }
-    )
+    expect(
+      workspaceReturnLink("/settings/security?returnTo=%2Fagents%2Fhome")
+    ).toEqual({
+      to: "/settings/security",
+      search: { returnTo: "/agents/home" },
+    })
+  })
+})
+
+describe("global settings and retained assistant backdrops", () => {
+  it("strips raw query keys before they can override a global backdrop", () => {
+    const query = {
+      returnTo: "/agents/research/terminal",
+      panel: "files",
+      item: "file_1",
+      approve: true,
+    }
+    expect(globalSettingsView("family", query)).toMatchObject({
+      panel: "terminal",
+      settings: "family",
+    })
+    expect(globalSettingsView("family", query).item).toBeUndefined()
+    expect(globalSettingsView("family", query)).not.toHaveProperty("approve")
+  })
+  it.each([
+    ["/family", "family"],
+    ["/family/model-access", "model-access"],
+    ["/settings/security", "security"],
+  ] as const)(
+    "recognizes the canonical %s route and preserves an auth return",
+    (path, section) => {
+      const returnTo =
+        "/agents/meal-planning/terminal/command%3Atask_123?tab=interactive"
+      const query = { returnTo, settingsView: "detail" as const }
+      const destination = `${path}${defaultStringifySearch(query)}`
+      expect(globalSettingsSection(path)).toBe(section)
+      expect(workspaceReturnPath(destination)).toBe(destination)
+      expect(workspaceReturnLink(destination)).toEqual({
+        to: path,
+        search: query,
+      })
+      expect(validateAuthSearch({ returnTo: destination })).toEqual({
+        returnTo: destination,
+      })
+    }
+  )
+
+  it.each([
+    "/family/nope",
+    "/family/model-access/extra",
+    "/settings/general",
+    "/settings/security/extra",
+  ])("does not treat unsupported global path %s as settings", (path) => {
+    expect(globalSettingsSection(path)).toBeUndefined()
+    expect(workspaceReturnPath(path)).toBe("/")
+  })
+
+  it("restores the full resource view while keeping global selection separate", () => {
+    const returnTo =
+      "/agents/meal-planning/files/file_1?tab=trash&preview=source"
+    expect(workspaceBackdrop(returnTo)).toMatchObject({
+      params: { agentId: "meal-planning", panel: "files", itemId: "file_1" },
+      view: { panel: "files", item: "file_1", tab: "trash", preview: "source" },
+      path: returnTo,
+    })
+    expect(globalSettingsView("security", { returnTo })).toMatchObject({
+      returnTo,
+      settings: "general",
+      security: true,
+      panel: "files",
+      item: "file_1",
+      tab: "trash",
+      preview: "source",
+    })
+    for (const section of ["family", "model-access"] as const) {
+      expect(globalSettingsView(section, { returnTo })).toMatchObject({
+        settings: section,
+        security: undefined,
+        panel: "files",
+        item: "file_1",
+      })
+    }
+  })
+
+  it("retains native activity filters and removes action parameters from both query levels", () => {
+    const cursor = { at: "2026-10-12T12:00:00.000Z", key: "synthetic-record" }
+    const view = {
+      tab: "timeline",
+      scope: "all",
+      filter: "attention",
+      cursor,
+      offset: 2,
+    }
+    const safe = `/agents/home/activity${defaultStringifySearch(view)}`
+    const query = validateGlobalSettingsSearch({
+      returnTo: `${safe}&approve=true&token=private`,
+      settingsView: "sections",
+      panel: "terminal",
+      token: "private",
+    })
+    expect(query).toEqual({ returnTo: safe, settingsView: "sections" })
+    expect(globalSettingsView("family", query)).toMatchObject({
+      ...view,
+      panel: "activity",
+      settings: "family",
+    })
+  })
+
+  it("retains an explicit unknown assistant instead of substituting home", () => {
+    const reference = "11111111-1111-4111-8111-111111111111"
+    const returnTo = `/agents/${reference}/files/file_1`
+    expect(validateGlobalSettingsSearch({ returnTo })).toEqual({ returnTo })
+    expect(workspaceBackdrop(returnTo)?.params.agentId).toBe(reference)
+    const destination = `/family${defaultStringifySearch({ returnTo })}`
+    expect(workspaceReturnPath(destination)).toBe(destination)
+  })
+
+  it.each([
+    "https://evil.example/agents/home",
+    "//evil.example/agents/home",
+    "/\\evil.example/agents/home",
+    "javascript:alert(1)",
+    "/api/agent/send",
+    "/agents",
+    "/agents/new",
+    "/agents/archived",
+    "/agents/home/edit",
+    "/agents/home/settings/general",
+    "/agents/home#private-reset",
+    "/agents/home/files?tab=webhook",
+    "/agents/home/browser/file_1",
+    "/agents/home/terminal/a%2Fb",
+    "/family?returnTo=%2Fagents%2Fhome",
+    "/settings/security?returnTo=%2Ffamily",
+  ])("rejects unsafe, inconsistent or recursive backdrop %s", (returnTo) => {
+    expect(workspaceBackdrop(returnTo)).toBeUndefined()
+    expect(validateGlobalSettingsSearch({ returnTo })).toEqual({
+      returnTo: undefined,
+    })
+  })
+
+  it("validates global query types and leaves direct global routes without invented context", () => {
+    expect(validateGlobalSettingsSearch({})).toEqual({ returnTo: undefined })
+    expect(globalSettingsView("family", {})).toEqual({
+      settings: "family",
+      security: undefined,
+    })
+    expect(() =>
+      validateGlobalSettingsSearch({ returnTo: ["/agents/home"] })
+    ).toThrow()
+    expect(() =>
+      validateGlobalSettingsSearch({ returnTo: "x".repeat(2001) })
+    ).toThrow()
+    expect(() =>
+      validateGlobalSettingsSearch({ settingsView: "unknown" })
+    ).toThrow()
   })
 })
 
@@ -266,7 +452,9 @@ function routerAt(initialPath: string) {
       params: {
         parse: (params: Record<string, string>) => ({
           ...params,
-          ...(params.agentId ? { agentId: parseAgentId(params.agentId) } : {}),
+          ...(params.agentId
+            ? { agentId: parseAgentReference(params.agentId) }
+            : {}),
           ...(params.panel ? { panel: parsePanel(params.panel) } : {}),
           ...(params.itemId ? { itemId: parseResourceId(params.itemId) } : {}),
           ...(params.section ? { section: parseSection(params.section) } : {}),
@@ -276,6 +464,12 @@ function routerAt(initialPath: string) {
         workspaceView(params, search)
       },
     })
+  const global = (path: string) =>
+    createRoute({
+      getParentRoute: () => root,
+      path,
+      validateSearch: validateGlobalSettingsSearch,
+    })
   return createRouter({
     routeTree: root.addChildren([
       route("/agents"),
@@ -284,12 +478,49 @@ function routerAt(initialPath: string) {
       route("/agents/$agentId/$panel"),
       route("/agents/$agentId/$panel/$itemId"),
       route("/agents/$agentId/settings/$section"),
+      global("/family"),
+      global("/family/model-access"),
+      global("/settings/security"),
     ]),
     history: createMemoryHistory({ initialEntries: [initialPath] }),
     isServer: true,
   })
 }
 describe("native TanStack routing", () => {
+  it.each([
+    "/agents/home/settings",
+    "/agents/home/settings/family",
+    "/agents/home/settings/model-access",
+    "/agents/home/settings/security",
+  ])(
+    "rejects removed settings route %s without navigating to a replacement",
+    async (path) => {
+      const router = routerAt(path)
+      await router.load()
+      expect(router.state.matches.at(-1)?.status).toBe("notFound")
+      expect(router.state.location.pathname).toBe(path)
+    }
+  )
+  it("revalidates merged router search before choosing a global overlay's backdrop", async () => {
+    const router = routerAt(
+      `/family${defaultStringifySearch({ returnTo: "/agents/home/terminal", panel: "files", item: "file_1", approve: true })}`
+    )
+    await router.load()
+    const match = router.state.matches.at(-1)!
+    const query = workspaceRouteSearch(match.pathname, match.search)
+    const context = workspaceContext(
+      match.pathname,
+      parseWorkspaceParams(match.params),
+      query
+    )
+    expect(context.params).toMatchObject({ agentId: "home", panel: "terminal" })
+    expect(context.view).toMatchObject({
+      panel: "terminal",
+      settings: "family",
+    })
+    expect(context.view.item).toBeUndefined()
+    expect(context.view).not.toHaveProperty("approve")
+  })
   it.each(["terminal", "code"] as const)(
     "round-trips a Pi %s receipt through resource, Settings and history navigation",
     async (panel) => {
@@ -340,24 +571,86 @@ describe("native TanStack routing", () => {
       itemId: "file_1",
     })
     expect(router.state.matches.at(-1)?.search).toMatchObject({ tab: "trash" })
-    router.history.push(
-      "/agents/home/settings/security?panel=files&item=file_1&tab=trash"
-    )
+    const settingsUrl = router.buildLocation(
+      workspaceDestination(id, {
+        security: true,
+        panel: "files",
+        item: "file_1",
+        tab: "trash",
+      })
+    ).href
+    router.history.push(settingsUrl)
     await router.load()
-    expect(router.state.matches.at(-1)?.params).toMatchObject({
-      section: "security",
+    expect(router.state.location.pathname).toBe("/settings/security")
+    expect(router.state.matches.at(-1)?.params).toEqual({})
+    expect(router.state.matches.at(-1)?.search).toEqual({
+      returnTo: "/agents/home/files/file_1?tab=trash",
     })
     router.history.back()
     await router.load()
     expect(router.state.location.pathname).toBe("/agents/home/files/file_1")
     router.history.forward()
     await router.load()
-    expect(router.state.matches.at(-1)?.search).toMatchObject({
+    expect(router.state.location.href).toBe(settingsUrl)
+    const globalQuery = validateGlobalSettingsSearch(
+      router.state.matches.at(-1)?.search
+    )
+    expect(workspaceBackdrop(globalQuery.returnTo ?? "")?.view).toMatchObject({
       panel: "files",
       item: "file_1",
       tab: "trash",
     })
   })
+  it.each(["family", "model-access", "security"] as const)(
+    "round-trips the same non-default terminal backdrop through global %s and native history",
+    async (section) => {
+      const reference = parseAgentReference("meal-planning")
+      const backdrop =
+        "/agents/meal-planning/terminal/command%3Atask_123?tab=interactive"
+      const router = routerAt(backdrop)
+      await router.load()
+      const view = {
+        panel: "terminal" as const,
+        item: "command:task_123",
+        tab: "interactive" as const,
+      }
+      const destination = workspaceDestination(reference, {
+        ...view,
+        ...(section === "security"
+          ? { security: true }
+          : { settings: section }),
+      })
+      router.history.push(router.buildLocation(destination).href)
+      await router.load()
+      expect(router.state.matches.at(-1)?.status).toBe("success")
+      expect(router.state.matches.at(-1)?.params).toEqual({})
+      expect(router.state.matches.at(-1)?.search).toEqual({
+        returnTo: backdrop,
+      })
+      expect(
+        globalSettingsView(
+          section,
+          validateGlobalSettingsSearch(router.state.matches.at(-1)?.search)
+        )
+      ).toMatchObject(view)
+      const overlayUrl = router.state.location.href
+      router.history.back()
+      await router.load()
+      expect(router.state.location.href).toBe(backdrop)
+      router.history.forward()
+      await router.load()
+      expect(router.state.location.href).toBe(overlayUrl)
+      router.history.push(
+        router.buildLocation(workspaceReturnLink(backdrop)).href
+      )
+      await router.load()
+      expect(router.state.location.href).toBe(backdrop)
+      expect(router.state.matches.at(-1)?.params).toMatchObject({
+        agentId: "meal-planning",
+        itemId: "command:task_123",
+      })
+    }
+  )
   it("matches the archive collection before the dynamic agent path", async () => {
     const router = routerAt("/agents/archived?q=Studio")
     await router.load()

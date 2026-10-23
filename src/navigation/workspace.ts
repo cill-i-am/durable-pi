@@ -1,6 +1,7 @@
 import {
   defaultParseSearch,
   defaultStringifySearch,
+  notFound,
 } from "@tanstack/react-router"
 import { Schema } from "effect"
 
@@ -36,15 +37,12 @@ export const SettingsCategory = Schema.Literals([
 ])
 export type SettingsCategory = typeof SettingsCategory.Type
 export const SettingsSection = Schema.Literals([
-  "family",
-  "model-access",
   "general",
   "models",
   "access",
   "skills",
   "memory",
   "connections",
-  "security",
 ])
 export const ResourceId = Schema.String.check(
   Schema.isPattern(/^[a-zA-Z0-9_:-]{1,200}$/)
@@ -87,12 +85,166 @@ export type WorkspaceQuery = typeof Search.Type
 export type WorkspaceSearch = WorkspaceQuery & {
   settings?: SettingsCategory
   security?: boolean
+  returnTo?: string
 }
 export const validateWorkspaceSearch = Schema.decodeUnknownSync(Search)
 export const parseAgentId = Schema.decodeUnknownSync(AgentId)
-export const parsePanel = Schema.decodeUnknownSync(Workbench)
-export const parseSection = Schema.decodeUnknownSync(SettingsSection)
+const decodePanel = Schema.decodeUnknownSync(Workbench)
+export function parsePanel(value: unknown) {
+  try {
+    return decodePanel(value)
+  } catch {
+    throw notFound()
+  }
+}
+const decodeSection = Schema.decodeUnknownSync(SettingsSection)
+export function parseSection(value: unknown) {
+  try {
+    return decodeSection(value)
+  } catch {
+    throw notFound()
+  }
+}
 export const parseResourceId = Schema.decodeUnknownSync(ResourceId)
+export type GlobalSettingsSection = "family" | "model-access" | "security"
+const globalSettingsPaths = {
+  family: "/family",
+  "model-access": "/family/model-access",
+  security: "/settings/security",
+} as const
+export function isGlobalSettingsSection(
+  section: string | undefined
+): section is GlobalSettingsSection {
+  return section !== undefined && Object.hasOwn(globalSettingsPaths, section)
+}
+export function globalSettingsSection(pathname: string) {
+  return (Object.keys(globalSettingsPaths) as GlobalSettingsSection[]).find(
+    (section) => globalSettingsPaths[section] === pathname.replace(/\/$/, "")
+  )
+}
+const GlobalSettingsSearch = Schema.Struct({
+  returnTo: Schema.optional(Schema.String.check(Schema.isMaxLength(2000))),
+  settingsView: Schema.optional(Schema.Literals(["sections", "detail"])),
+})
+export type GlobalSettingsQuery = typeof GlobalSettingsSearch.Type
+export function validateGlobalSettingsSearch(
+  input: unknown
+): GlobalSettingsQuery {
+  const query = Schema.decodeUnknownSync(GlobalSettingsSearch)(input)
+  return {
+    ...query,
+    returnTo: query.returnTo
+      ? workspaceBackdrop(query.returnTo)?.path
+      : undefined,
+  }
+}
+
+/** A global overlay may retain an assistant view, never an action or another overlay. */
+export function workspaceBackdrop(value: string) {
+  try {
+    const url = new URL(value, "https://workspace.invalid")
+    if (url.origin !== "https://workspace.invalid" || url.hash) return
+    const parts = url.pathname
+      .split("/")
+      .filter(Boolean)
+      .map(decodeURIComponent)
+    if (parts[0] !== "agents" || ![2, 3, 4].includes(parts.length)) return
+    if (!parts[1] || ["new", "archived"].includes(parts[1])) return
+    const agentId = parseAgentReference(parts[1])
+    const params: WorkspaceParams = {
+      agentId,
+      ...(parts[2] ? { panel: parsePanel(parts[2]) } : {}),
+      ...(parts[3] ? { itemId: parseResourceId(parts[3]) } : {}),
+    }
+    const query = validateWorkspaceSearch(defaultParseSearch(url.search))
+    const view = workspaceView(params, query)
+    return {
+      params,
+      view,
+      path: `${url.pathname}${defaultStringifySearch(query)}`,
+    }
+  } catch {
+    return
+  }
+}
+
+export function globalSettingsView(
+  section: GlobalSettingsSection,
+  query: GlobalSettingsQuery
+): WorkspaceSearch {
+  const search = validateGlobalSettingsSearch(query)
+  return {
+    ...(search.returnTo ? workspaceBackdrop(search.returnTo)?.view : {}),
+    ...search,
+    settings: section === "security" ? "general" : section,
+    security: section === "security" || undefined,
+  }
+}
+
+export function workspaceRouteSearch(pathname: string, input: unknown) {
+  if (globalSettingsSection(pathname))
+    return validateGlobalSettingsSearch(input)
+  if (/^\/agents\/(?:new|[^/]+\/edit)\/?$/.test(pathname))
+    return validateAuthSearch(input)
+  return validateWorkspaceSearch(input)
+}
+
+export function workspaceContext(
+  pathname: string,
+  params: WorkspaceParams,
+  query: WorkspaceQuery & GlobalSettingsQuery
+) {
+  const globalSection = globalSettingsSection(pathname)
+  const background =
+    globalSection && query.returnTo
+      ? workspaceBackdrop(query.returnTo)
+      : undefined
+  return {
+    globalSection,
+    params: background?.params ?? params,
+    view: globalSection
+      ? globalSettingsView(globalSection, query)
+      : workspaceView(params, query),
+    backgroundPath: background?.path,
+  }
+}
+
+export function globalSettingsLink(
+  section: GlobalSettingsSection,
+  search: GlobalSettingsQuery = {}
+) {
+  return {
+    to: globalSettingsPaths[section],
+    params: {},
+    search: validateGlobalSettingsSearch(search),
+  }
+}
+
+function globalSettingsDestination(
+  section: GlobalSettingsSection,
+  agentId: AgentReference,
+  view: WorkspaceSearch
+) {
+  const {
+    settings: _settings,
+    security: _security,
+    returnTo,
+    settingsView,
+    connections: _connections,
+    ...background
+  } = view
+  const destination = agentWorkspaceDestination(agentId, background)
+  const path =
+    destination.to.replace(/\$(\w+)/g, (_, key: string) =>
+      encodeURIComponent(
+        String((destination.params as Record<string, string | undefined>)[key])
+      )
+    ) + defaultStringifySearch(destination.search)
+  return globalSettingsLink(section, {
+    returnTo: returnTo ?? path,
+    settingsView,
+  })
+}
 const tabs: Record<Workbench, readonly NonNullable<WorkspaceQuery["tab"]>[]> = {
   browser: [],
   code: [],
@@ -111,6 +263,7 @@ const WorkspaceParams = Schema.Struct({
   section: Schema.optional(SettingsSection),
 })
 export type WorkspaceParams = typeof WorkspaceParams.Type
+export const parseWorkspaceParams = Schema.decodeUnknownSync(WorkspaceParams)
 
 export function workspaceView(
   params: WorkspaceParams,
@@ -122,8 +275,7 @@ export function workspaceView(
     ...query,
     panel: params.section ? query.panel : params.panel,
     item: params.section ? query.item : params.itemId,
-    settings: params.section === "security" ? "general" : params.section,
-    security: params.section === "security" || undefined,
+    settings: params.section,
   }
   validatePanelSelection(view)
   validateWorkspaceFilters(view, params)
@@ -165,7 +317,27 @@ export function workspaceDestination(
   agentId: AgentReference,
   view: WorkspaceSearch = {}
 ) {
-  const { panel, item, settings, security, ...query } = view
+  if (view.security || isGlobalSettingsSection(view.settings))
+    return globalSettingsDestination(
+      view.security ? "security" : (view.settings as GlobalSettingsSection),
+      agentId,
+      view
+    )
+  return agentWorkspaceDestination(agentId, view)
+}
+
+function agentWorkspaceDestination(
+  agentId: AgentReference,
+  view: WorkspaceSearch
+) {
+  const {
+    panel,
+    item,
+    settings,
+    security,
+    returnTo: _returnTo,
+    ...query
+  } = view
   if (settings || security) {
     return {
       to: "/agents/$agentId/settings/$section" as const,
@@ -200,6 +372,11 @@ export function workspaceReturnPath(value: string, depth = 0): string {
       .split("/")
       .filter(Boolean)
       .map(decodeURIComponent)
+    const globalSection = globalSettingsSection(url.pathname)
+    if (globalSection) {
+      const query = validateGlobalSettingsSearch(defaultParseSearch(url.search))
+      return `${globalSettingsPaths[globalSection]}${defaultStringifySearch(query)}`
+    }
     const query = validateWorkspaceSearch(defaultParseSearch(url.search))
     if (parts[0] !== "agents") return "/"
     if (parts.length === 1 || (parts.length === 2 && parts[1] === "archived")) {
@@ -207,25 +384,29 @@ export function workspaceReturnPath(value: string, depth = 0): string {
       return `${parts.length === 1 ? "/agents" : "/agents/archived"}${q}`
     }
     if (parts.length === 2 && parts[1] === "new") {
-      const returnTo = url.searchParams.get("returnTo")
-      return `/agents/new${defaultStringifySearch({ returnTo: returnTo ? workspaceReturnPath(returnTo, depth + 1) : undefined })}`
+      return editorReturnPath(url, "/agents/new", depth)
     }
     const agentId = parseAgentReference(parts[1])
     if (parts.length === 3 && parts[2] === "edit") {
-      const returnTo = url.searchParams.get("returnTo")
-      return `/agents/${agentId}/edit${defaultStringifySearch({ returnTo: returnTo ? workspaceReturnPath(returnTo, depth + 1) : undefined })}`
+      return editorReturnPath(url, `/agents/${agentId}/edit`, depth)
     }
     if (![2, 3, 4].includes(parts.length)) return "/"
-    if (parts.length === 3 && parts[2] === "settings") {
-      workspaceView({ agentId, section: "general" }, query)
-      return `/agents/${agentId}/settings/general${defaultStringifySearch(query)}`
-    }
     const params = agentWorkspaceParams(parts, agentId)
     workspaceView(params, query)
     return `${url.pathname}${defaultStringifySearch(query)}`
   } catch {
     return "/"
   }
+}
+
+function editorReturnPath(url: URL, path: string, depth: number) {
+  const returnTo = url.searchParams.get("returnTo")
+  return (
+    path +
+    defaultStringifySearch({
+      returnTo: returnTo ? workspaceReturnPath(returnTo, depth + 1) : undefined,
+    })
+  )
 }
 
 function agentWorkspaceParams(
@@ -259,6 +440,12 @@ export function authReturnPath(value: string) {
 export function workspaceReturnLink(value: string) {
   const url = new URL(workspaceReturnPath(value), "https://workspace.invalid")
   const parts = url.pathname.split("/").filter(Boolean).map(decodeURIComponent)
+  const section = globalSettingsSection(url.pathname)
+  if (section)
+    return {
+      to: globalSettingsPaths[section],
+      search: validateGlobalSettingsSearch(defaultParseSearch(url.search)),
+    }
   const search = validateWorkspaceSearch(defaultParseSearch(url.search))
   if (!parts.length) return { to: "/" as const, search: {} }
   if (parts.length === 1)

@@ -42,7 +42,7 @@ export function passkeyAgentAction(
         throw new PasskeyActionFailed({
           message: "Your family access has ended.",
         })
-      const url = new URL("/agents/home/settings/security", env.APP_URL).href
+      const url = new URL("/settings/security", env.APP_URL).href
       if (action.action === "setup")
         return {
           status: "device_confirmation_required",

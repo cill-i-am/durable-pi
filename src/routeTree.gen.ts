@@ -15,12 +15,15 @@ import { Route as JoinRouteImport } from './routes/join'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as TwoFactorRouteImport } from './routes/two-factor'
 import { Route as WorkspaceIndexRouteImport } from './routes/_workspace.index'
+import { Route as WorkspaceFamilyRouteImport } from './routes/_workspace.family'
 import { Route as ApiDeploymentRouteImport } from './routes/api.deployment'
 import { Route as ApiSetupRouteImport } from './routes/api.setup'
 import { Route as ApiVersionRouteImport } from './routes/api.version'
 import { Route as WorkspaceAgentsIndexRouteImport } from './routes/_workspace.agents.index'
 import { Route as WorkspaceAgentsArchivedRouteImport } from './routes/_workspace.agents.archived'
 import { Route as WorkspaceAgentsNewRouteImport } from './routes/_workspace.agents.new'
+import { Route as WorkspaceFamilyModelAccessRouteImport } from './routes/_workspace.family.model-access'
+import { Route as WorkspaceSettingsSecurityRouteImport } from './routes/_workspace.settings.security'
 import { Route as ApiAccountAvatarRouteImport } from './routes/api.account.avatar'
 import { Route as ApiAgentSplatRouteImport } from './routes/api.agent.$'
 import { Route as ApiAuthSplatRouteImport } from './routes/api.auth.$'
@@ -31,7 +34,6 @@ import { Route as WorkspaceAgentsAgentIdEditRouteImport } from './routes/_worksp
 import { Route as ApiHooksAgentRoutineRouteImport } from './routes/api.hooks.$agent.$routine'
 import { Route as WorkspaceAgentsAgentIdPanelIndexRouteImport } from './routes/_workspace.agents.$agentId.$panel.index'
 import { Route as WorkspaceAgentsAgentIdPanelItemIdRouteImport } from './routes/_workspace.agents.$agentId.$panel.$itemId'
-import { Route as WorkspaceAgentsAgentIdSettingsIndexRouteImport } from './routes/_workspace.agents.$agentId.settings.index'
 import { Route as WorkspaceAgentsAgentIdSettingsSectionRouteImport } from './routes/_workspace.agents.$agentId.settings.$section'
 
 const WorkspaceRoute = WorkspaceRouteImport.update({
@@ -61,6 +63,11 @@ const TwoFactorRoute = TwoFactorRouteImport.update({
 const WorkspaceIndexRoute = WorkspaceIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => WorkspaceRoute,
+} as any)
+const WorkspaceFamilyRoute = WorkspaceFamilyRouteImport.update({
+  id: '/family',
+  path: '/family',
   getParentRoute: () => WorkspaceRoute,
 } as any)
 const ApiDeploymentRoute = ApiDeploymentRouteImport.update({
@@ -93,6 +100,18 @@ const WorkspaceAgentsNewRoute = WorkspaceAgentsNewRouteImport.update({
   path: '/agents/new',
   getParentRoute: () => WorkspaceRoute,
 } as any)
+const WorkspaceFamilyModelAccessRoute =
+  WorkspaceFamilyModelAccessRouteImport.update({
+    id: '/model-access',
+    path: '/model-access',
+    getParentRoute: () => WorkspaceFamilyRoute,
+  } as any)
+const WorkspaceSettingsSecurityRoute =
+  WorkspaceSettingsSecurityRouteImport.update({
+    id: '/settings/security',
+    path: '/settings/security',
+    getParentRoute: () => WorkspaceRoute,
+  } as any)
 const ApiAccountAvatarRoute = ApiAccountAvatarRouteImport.update({
   id: '/api/account/avatar',
   path: '/api/account/avatar',
@@ -148,12 +167,6 @@ const WorkspaceAgentsAgentIdPanelItemIdRoute =
     path: '/agents/$agentId/$panel/$itemId',
     getParentRoute: () => WorkspaceRoute,
   } as any)
-const WorkspaceAgentsAgentIdSettingsIndexRoute =
-  WorkspaceAgentsAgentIdSettingsIndexRouteImport.update({
-    id: '/agents/$agentId/settings/',
-    path: '/agents/$agentId/settings/',
-    getParentRoute: () => WorkspaceRoute,
-  } as any)
 const WorkspaceAgentsAgentIdSettingsSectionRoute =
   WorkspaceAgentsAgentIdSettingsSectionRouteImport.update({
     id: '/agents/$agentId/settings/$section',
@@ -167,11 +180,14 @@ export interface FileRoutesByFullPath {
   '/join': typeof JoinRoute
   '/reset-password': typeof ResetPasswordRoute
   '/two-factor': typeof TwoFactorRoute
+  '/family': typeof WorkspaceFamilyRouteWithChildren
   '/api/deployment': typeof ApiDeploymentRoute
   '/api/setup': typeof ApiSetupRoute
   '/api/version': typeof ApiVersionRoute
   '/agents/archived': typeof WorkspaceAgentsArchivedRoute
   '/agents/new': typeof WorkspaceAgentsNewRoute
+  '/family/model-access': typeof WorkspaceFamilyModelAccessRoute
+  '/settings/security': typeof WorkspaceSettingsSecurityRoute
   '/api/account/avatar': typeof ApiAccountAvatarRoute
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -184,19 +200,21 @@ export interface FileRoutesByFullPath {
   '/agents/$agentId/$panel/$itemId': typeof WorkspaceAgentsAgentIdPanelItemIdRoute
   '/agents/$agentId/settings/$section': typeof WorkspaceAgentsAgentIdSettingsSectionRoute
   '/agents/$agentId/$panel/': typeof WorkspaceAgentsAgentIdPanelIndexRoute
-  '/agents/$agentId/settings/': typeof WorkspaceAgentsAgentIdSettingsIndexRoute
 }
 export interface FileRoutesByTo {
   '/forgot-password': typeof ForgotPasswordRoute
   '/join': typeof JoinRoute
   '/reset-password': typeof ResetPasswordRoute
   '/two-factor': typeof TwoFactorRoute
+  '/family': typeof WorkspaceFamilyRouteWithChildren
   '/api/deployment': typeof ApiDeploymentRoute
   '/api/setup': typeof ApiSetupRoute
   '/api/version': typeof ApiVersionRoute
   '/': typeof WorkspaceIndexRoute
   '/agents/archived': typeof WorkspaceAgentsArchivedRoute
   '/agents/new': typeof WorkspaceAgentsNewRoute
+  '/family/model-access': typeof WorkspaceFamilyModelAccessRoute
+  '/settings/security': typeof WorkspaceSettingsSecurityRoute
   '/api/account/avatar': typeof ApiAccountAvatarRoute
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -209,7 +227,6 @@ export interface FileRoutesByTo {
   '/agents/$agentId/$panel/$itemId': typeof WorkspaceAgentsAgentIdPanelItemIdRoute
   '/agents/$agentId/settings/$section': typeof WorkspaceAgentsAgentIdSettingsSectionRoute
   '/agents/$agentId/$panel': typeof WorkspaceAgentsAgentIdPanelIndexRoute
-  '/agents/$agentId/settings': typeof WorkspaceAgentsAgentIdSettingsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -218,12 +235,15 @@ export interface FileRoutesById {
   '/join': typeof JoinRoute
   '/reset-password': typeof ResetPasswordRoute
   '/two-factor': typeof TwoFactorRoute
+  '/_workspace/family': typeof WorkspaceFamilyRouteWithChildren
   '/api/deployment': typeof ApiDeploymentRoute
   '/api/setup': typeof ApiSetupRoute
   '/api/version': typeof ApiVersionRoute
   '/_workspace/': typeof WorkspaceIndexRoute
   '/_workspace/agents/archived': typeof WorkspaceAgentsArchivedRoute
   '/_workspace/agents/new': typeof WorkspaceAgentsNewRoute
+  '/_workspace/family/model-access': typeof WorkspaceFamilyModelAccessRoute
+  '/_workspace/settings/security': typeof WorkspaceSettingsSecurityRoute
   '/api/account/avatar': typeof ApiAccountAvatarRoute
   '/api/agent/$': typeof ApiAgentSplatRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -236,7 +256,6 @@ export interface FileRoutesById {
   '/_workspace/agents/$agentId/$panel/$itemId': typeof WorkspaceAgentsAgentIdPanelItemIdRoute
   '/_workspace/agents/$agentId/settings/$section': typeof WorkspaceAgentsAgentIdSettingsSectionRoute
   '/_workspace/agents/$agentId/$panel/': typeof WorkspaceAgentsAgentIdPanelIndexRoute
-  '/_workspace/agents/$agentId/settings/': typeof WorkspaceAgentsAgentIdSettingsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -246,11 +265,14 @@ export interface FileRouteTypes {
     | '/join'
     | '/reset-password'
     | '/two-factor'
+    | '/family'
     | '/api/deployment'
     | '/api/setup'
     | '/api/version'
     | '/agents/archived'
     | '/agents/new'
+    | '/family/model-access'
+    | '/settings/security'
     | '/api/account/avatar'
     | '/api/agent/$'
     | '/api/auth/$'
@@ -263,19 +285,21 @@ export interface FileRouteTypes {
     | '/agents/$agentId/$panel/$itemId'
     | '/agents/$agentId/settings/$section'
     | '/agents/$agentId/$panel/'
-    | '/agents/$agentId/settings/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/forgot-password'
     | '/join'
     | '/reset-password'
     | '/two-factor'
+    | '/family'
     | '/api/deployment'
     | '/api/setup'
     | '/api/version'
     | '/'
     | '/agents/archived'
     | '/agents/new'
+    | '/family/model-access'
+    | '/settings/security'
     | '/api/account/avatar'
     | '/api/agent/$'
     | '/api/auth/$'
@@ -288,7 +312,6 @@ export interface FileRouteTypes {
     | '/agents/$agentId/$panel/$itemId'
     | '/agents/$agentId/settings/$section'
     | '/agents/$agentId/$panel'
-    | '/agents/$agentId/settings'
   id:
     | '__root__'
     | '/_workspace'
@@ -296,12 +319,15 @@ export interface FileRouteTypes {
     | '/join'
     | '/reset-password'
     | '/two-factor'
+    | '/_workspace/family'
     | '/api/deployment'
     | '/api/setup'
     | '/api/version'
     | '/_workspace/'
     | '/_workspace/agents/archived'
     | '/_workspace/agents/new'
+    | '/_workspace/family/model-access'
+    | '/_workspace/settings/security'
     | '/api/account/avatar'
     | '/api/agent/$'
     | '/api/auth/$'
@@ -314,7 +340,6 @@ export interface FileRouteTypes {
     | '/_workspace/agents/$agentId/$panel/$itemId'
     | '/_workspace/agents/$agentId/settings/$section'
     | '/_workspace/agents/$agentId/$panel/'
-    | '/_workspace/agents/$agentId/settings/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -378,6 +403,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceIndexRouteImport
       parentRoute: typeof WorkspaceRoute
     }
+    '/_workspace/family': {
+      id: '/_workspace/family'
+      path: '/family'
+      fullPath: '/family'
+      preLoaderRoute: typeof WorkspaceFamilyRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
     '/api/deployment': {
       id: '/api/deployment'
       path: '/api/deployment'
@@ -418,6 +450,20 @@ declare module '@tanstack/react-router' {
       path: '/agents/new'
       fullPath: '/agents/new'
       preLoaderRoute: typeof WorkspaceAgentsNewRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
+    '/_workspace/family/model-access': {
+      id: '/_workspace/family/model-access'
+      path: '/model-access'
+      fullPath: '/family/model-access'
+      preLoaderRoute: typeof WorkspaceFamilyModelAccessRouteImport
+      parentRoute: typeof WorkspaceFamilyRoute
+    }
+    '/_workspace/settings/security': {
+      id: '/_workspace/settings/security'
+      path: '/settings/security'
+      fullPath: '/settings/security'
+      preLoaderRoute: typeof WorkspaceSettingsSecurityRouteImport
       parentRoute: typeof WorkspaceRoute
     }
     '/api/account/avatar': {
@@ -490,13 +536,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceAgentsAgentIdPanelItemIdRouteImport
       parentRoute: typeof WorkspaceRoute
     }
-    '/_workspace/agents/$agentId/settings/': {
-      id: '/_workspace/agents/$agentId/settings/'
-      path: '/agents/$agentId/settings'
-      fullPath: '/agents/$agentId/settings/'
-      preLoaderRoute: typeof WorkspaceAgentsAgentIdSettingsIndexRouteImport
-      parentRoute: typeof WorkspaceRoute
-    }
     '/_workspace/agents/$agentId/settings/$section': {
       id: '/_workspace/agents/$agentId/settings/$section'
       path: '/agents/$agentId/settings/$section'
@@ -507,23 +546,38 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface WorkspaceFamilyRouteChildren {
+  WorkspaceFamilyModelAccessRoute: typeof WorkspaceFamilyModelAccessRoute
+}
+
+const WorkspaceFamilyRouteChildren: WorkspaceFamilyRouteChildren = {
+  WorkspaceFamilyModelAccessRoute: WorkspaceFamilyModelAccessRoute,
+}
+
+const WorkspaceFamilyRouteWithChildren = WorkspaceFamilyRoute._addFileChildren(
+  WorkspaceFamilyRouteChildren,
+)
+
 interface WorkspaceRouteChildren {
+  WorkspaceFamilyRoute: typeof WorkspaceFamilyRouteWithChildren
   WorkspaceIndexRoute: typeof WorkspaceIndexRoute
   WorkspaceAgentsArchivedRoute: typeof WorkspaceAgentsArchivedRoute
   WorkspaceAgentsNewRoute: typeof WorkspaceAgentsNewRoute
+  WorkspaceSettingsSecurityRoute: typeof WorkspaceSettingsSecurityRoute
   WorkspaceAgentsIndexRoute: typeof WorkspaceAgentsIndexRoute
   WorkspaceAgentsAgentIdEditRoute: typeof WorkspaceAgentsAgentIdEditRoute
   WorkspaceAgentsAgentIdIndexRoute: typeof WorkspaceAgentsAgentIdIndexRoute
   WorkspaceAgentsAgentIdPanelItemIdRoute: typeof WorkspaceAgentsAgentIdPanelItemIdRoute
   WorkspaceAgentsAgentIdSettingsSectionRoute: typeof WorkspaceAgentsAgentIdSettingsSectionRoute
   WorkspaceAgentsAgentIdPanelIndexRoute: typeof WorkspaceAgentsAgentIdPanelIndexRoute
-  WorkspaceAgentsAgentIdSettingsIndexRoute: typeof WorkspaceAgentsAgentIdSettingsIndexRoute
 }
 
 const WorkspaceRouteChildren: WorkspaceRouteChildren = {
+  WorkspaceFamilyRoute: WorkspaceFamilyRouteWithChildren,
   WorkspaceIndexRoute: WorkspaceIndexRoute,
   WorkspaceAgentsArchivedRoute: WorkspaceAgentsArchivedRoute,
   WorkspaceAgentsNewRoute: WorkspaceAgentsNewRoute,
+  WorkspaceSettingsSecurityRoute: WorkspaceSettingsSecurityRoute,
   WorkspaceAgentsIndexRoute: WorkspaceAgentsIndexRoute,
   WorkspaceAgentsAgentIdEditRoute: WorkspaceAgentsAgentIdEditRoute,
   WorkspaceAgentsAgentIdIndexRoute: WorkspaceAgentsAgentIdIndexRoute,
@@ -532,8 +586,6 @@ const WorkspaceRouteChildren: WorkspaceRouteChildren = {
   WorkspaceAgentsAgentIdSettingsSectionRoute:
     WorkspaceAgentsAgentIdSettingsSectionRoute,
   WorkspaceAgentsAgentIdPanelIndexRoute: WorkspaceAgentsAgentIdPanelIndexRoute,
-  WorkspaceAgentsAgentIdSettingsIndexRoute:
-    WorkspaceAgentsAgentIdSettingsIndexRoute,
 }
 
 const WorkspaceRouteWithChildren = WorkspaceRoute._addFileChildren(
@@ -559,3 +611,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

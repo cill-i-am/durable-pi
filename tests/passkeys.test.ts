@@ -142,7 +142,7 @@ it("chat projects safe key metadata, uses native ownership and never fabricates 
   ).toMatchObject({ status: "renamed", name: "My phone key" })
   expect(await run(f.person, { action: "setup" })).toMatchObject({
     status: "device_confirmation_required",
-    url: "http://localhost:1337/agents/home/settings/security",
+    url: "http://localhost:1337/settings/security",
   })
   expect(
     f.sql.prepare("SELECT count(*) AS count FROM passkey").get()
