@@ -1,0 +1,62 @@
+# B17 independent review
+
+Review target: /Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi.
+Original frozen manifest: /private/tmp/b17-core-frozen-source.json (captured 2026-10-23T15:35:00Z).
+No production edits, Git mutations, native provider/authentication requests, or network requests.
+
+## Confirmed original findings
+
+1. A delayed ConnectionLedger.get after asynchronous family authorization allows register/connect/discover, and an actual mcpConnectionClient remote-tool invocation, to start after authority is revoked. The postcheck detects failure only after the external stage has run. Original service SHA256 c6ad28b058944b455ed80e5b89070d44beea16fc4589b61556d181e54103422c. Original service lines 129-147.
+2. A connection activation admitted before waiting for the SQLite transaction coordinator can persist active revision 1 after family authority is revoked. Native dispatch then fails, but the unauthorized durable row remains. The required correction is a synchronous current-authority check inside the acquired original SQL transaction, not asynchronous owner/RPC work in SQL.
+3. Child independent native-SDK callback review: a stale invalid OAuth state after reconnect can report success from a currently connected SDK state and cause extra initialize/discover. A swallowed cleanup failure can retain old state/PKCE and exchange an old callback into a new revision when the same client ID is reused. Callback arrival-time candidates do not establish issuing-generation provenance.
+
+## Independent evidence
+
+Original authority-before.test.ts.txt preserved verbatim; authority-before.log has 5 failing safety tests and one passing converse-generation guard. The latter delays asynchronous authorization, changes durable revision, then ensures the old generation cannot dispatch. It prevents a simple ordering fix from exchanging one race for another.
+
+ownership.test.ts: 2 passing independent tests. Real native adapter, interrupted held connect, two queued mutations during shutdown, exact annotated compound failure retention, joined host disposal; plus repository reconstruction without inactive-row rewrite and explicit reconnect into a new revision.
+
+post-stage.test.ts: additional receipt-contract probes prepared for corrected source. Checks authority revocation immediately after register/connect/discover; checks revocation and expiry after entering the real SQLite queue, before activation commit.
+
+Child artifacts: /private/tmp/b17-callback-review/expected-safety.test.ts and expected-safety-before.log, 2 failing safety tests plus 2 passing controls. Stubs only native transport/persistence leaves; uses installed SDK callback and OAuth provider paths.
+
+Existing implementation baseline: 59 tests in 5 files passed despite original findings.
+
+## Commands
+
+Run from review worktree:
+
+    /opt/homebrew/opt/node@24/bin/node node_modules/vitest/vitest.mjs run --config /private/tmp/b17-route-review/vitest.config.mjs --configLoader native --cache false /private/tmp/b17-route-review/authority.test.ts
+    /opt/homebrew/opt/node@24/bin/node node_modules/vitest/vitest.mjs run --config /private/tmp/b17-route-review/vitest.config.mjs --configLoader native --cache false /private/tmp/b17-route-review/ownership.test.ts
+    /opt/homebrew/opt/node@24/bin/node node_modules/vitest/vitest.mjs run --configLoader native --cache false tests/connection-lifecycle.test.ts tests/connections.test.ts tests/connection-http.test.ts tests/mcp-failures.test.ts tests/mcp-oauth.test.ts
+
+## Scope limits
+
+Existing active/revision columns remain the sole durable representation. No real provider, native Worker restart/alarm, live authentication, or deployment proof is claimed. Same expectedRevision reconnect replay intentionally preserves an existing SDK registration after setup/cleanup uncertainty; explicit reconnect with the current revision is the recovery action. This establishes durable-row restoration, not SDK registration provenance across a crash between revision acceptance and native replacement.
+
+## Corrected freeze: bounded clear
+
+All original findings are closed on /private/tmp/b17-authority-oauth-frozen-source.json. All 17 hashes matched both before and after acceptance reruns. Key hashes:
+
+- connection-service.ts: 789b51b56a8b1714923241bd7792225c31b9003b941102109d158ca6bf05e1ab
+- adapters/connections.ts: a99192b4552214994a9ef14826bb9942845214bf30a8f4cdf491786cc6483b28
+- adapters/mcp.ts: b5c6875b03b0a18ce17756dbea52e3e51cdcafa1d5834a24de1d0dbfcf2bc208
+- adapters/oauth.ts: d3907dd2010dfa2fafb5302290ad33d068d97c954d0f17e0cd6de3aeace58f85
+- family-admission.ts: c7d52fbab72a6a7c1e0266c6100e44a8e0e28d4d3177132e8e9726658edbb5e8
+
+Fresh source review confirms a finite synchronous receipt is checked in the acquired SQL transaction and after the final ledger read. A second ledger read preserves the generation fence if fresh asynchronous family authorization waits. The sole worker callsite obtains the receipt from the existing FamilyAdmission owner; no asynchronous authorization was moved into SQL. OAuth providers retain immutable generation, pending state/verifier namespaces include revision, and the native callback adapter validates state before dispatching to the SDK. Existing credentials remain compatible; unversioned pending callbacks fail closed.
+
+Independent acceptance: 13/13 authority, ownership, and post-stage tests pass; 5/5 native callback tests pass. Original authority and callback safety assertions are intact. Only capability fixtures changed (boolean -> nullable receipt) and delayed-read counters were moved to the same final native stage after the new double ledger read. Original probes/logs remain preserved. The extra current-generation callback control verifies one successful verifier exchange followed by rejected replay, avoiding a false pass from blanket rejection.
+
+Repository acceptance rerun: 82 tests in 6 files pass, including connection lifecycle, connections, HTTP, MCP failures, MCP OAuth, and family-admission-machine. Logs: corrected-tests-final.log, /private/tmp/b17-callback-review/expected-safety-final.log, implementation-final.log. The owner separately reports full typecheck and scoped lint passing; this review did not independently rerun those broad checks.
+
+Exact final commands (from worktree unless noted):
+
+    /opt/homebrew/opt/node@24/bin/node node_modules/vitest/vitest.mjs run --config /private/tmp/b17-route-review/vitest.config.mjs --configLoader native --cache false /private/tmp/b17-route-review/authority.test.ts /private/tmp/b17-route-review/ownership.test.ts /private/tmp/b17-route-review/post-stage.test.ts
+    /opt/homebrew/opt/node@24/bin/node node_modules/vitest/vitest.mjs run --configLoader native --cache false tests/connection-lifecycle.test.ts tests/connections.test.ts tests/connection-http.test.ts tests/mcp-failures.test.ts tests/mcp-oauth.test.ts tests/family-admission-machine.test.ts
+
+From /private/tmp/b17-callback-review:
+
+    /opt/homebrew/opt/node@24/bin/node /Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/node_modules/vitest/vitest.mjs run --config /private/tmp/b17-callback-review/vitest.config.mts --configLoader native --cache false /private/tmp/b17-callback-review/expected-safety.test.ts
+
+No remaining concrete defect found within this reviewed scope. The native deployment/provider and uncertain-registration restoration limits above remain.

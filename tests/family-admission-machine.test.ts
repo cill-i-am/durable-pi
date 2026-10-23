@@ -1,4 +1,6 @@
+import { it as effectIt } from "@effect/vitest"
 import { Cause, Deferred, Effect, Exit, Layer, ManagedRuntime } from "effect"
+import { TestClock } from "effect/testing"
 import { expect, it } from "vitest"
 
 import type { FamilyGeneration, FamilyState } from "../src/agents/family"
@@ -247,3 +249,59 @@ it("preserves compound typed failures and defects from generation cleanup", asyn
     await runtime.dispose()
   }
 })
+
+it("binds admission receipts to the generation owner before asynchronous revocation cleanup", async () => {
+  const f = fixture(versioned(member.membershipId)),
+    runtime = f.runtime(),
+    entered = Deferred.makeUnsafe<void>(),
+    release = Deferred.makeUnsafe<void>()
+  f.host.fence = () =>
+    Deferred.succeed(entered, undefined).pipe(
+      Effect.andThen(Deferred.await(release))
+    )
+  try {
+    const receipt = await runtime.runPromise(
+      FamilyAdmission.use((service) => service.receipt)
+    )
+    expect(receipt?.current()).toBe(true)
+    f.host.read = () => Effect.succeed(null)
+    const removed = runtime.runPromise(admit)
+    await Effect.runPromise(Deferred.await(entered))
+    expect(receipt?.current()).toBe(false)
+    expect(f.saved()).toEqual(versioned(member.membershipId))
+    await Effect.runPromise(Deferred.succeed(release, undefined))
+    expect(await removed).toBeNull()
+    expect(
+      await runtime.runPromise(
+        FamilyAdmission.use((service) => service.receipt)
+      )
+    ).toBeNull()
+  } finally {
+    await Effect.runPromise(Deferred.succeed(release, undefined))
+    await runtime.dispose()
+  }
+})
+it("reacquires a fresh receipt after legacy generation conversion and invalidates it on host close", async () => {
+  const f = fixture("new-membership"),
+    runtime = f.runtime()
+  const receipt = await runtime.runPromise(
+    FamilyAdmission.use((service) => service.receipt)
+  )
+  expect(receipt?.state).toEqual(member)
+  expect(receipt?.current()).toBe(true)
+  expect(f.writes()).toBe(1)
+  await runtime.dispose()
+  expect(receipt?.current()).toBe(false)
+})
+effectIt.effect(
+  "expires a receipt at its finite Effect-clock deadline without a new directory lookup",
+  () => {
+    const f = fixture(versioned(member.membershipId))
+    return Effect.gen(function* () {
+      const receipt = yield* FamilyAdmission.use((service) => service.receipt)
+      expect(receipt?.current()).toBe(true)
+      yield* TestClock.adjust("10 seconds")
+      expect(receipt?.current()).toBe(false)
+    }).pipe(Effect.provide(familyAdmissionApplication(f.host)))
+  }
+)

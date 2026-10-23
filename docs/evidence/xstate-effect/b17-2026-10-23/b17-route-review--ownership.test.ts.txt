@@ -1,0 +1,72 @@
+import { Cause, Context, Effect, Exit, ManagedRuntime } from 'effect';
+import { expect, it, vi } from 'vitest';
+import { ConnectionStore } from '/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/src/access/adapters/connections';
+import { connectionApplication, RemoteConnections } from '/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/src/access/connection-service';
+import { mcpConnectionClient, type McpManager } from '/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/src/access/adapters/mcp';
+import { ConnectionTransportError } from '/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/src/access/connections';
+import { database } from '/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/tests/database';
+const input = { id: `mcp-${'c'.repeat(32)}`, name: 'Independent owner fixture', url: 'https://mcp.example.com/mcp' };
+const gate = () => { let release!: () => void; const wait = new Promise<void>(resolve => { release = resolve; }); return {wait,release}; };
+function fixture(store = new ConnectionStore(database())) {
+  const calls: string[] = [];
+  let registered = false;
+  const manager = {
+    listServers: () => registered ? [{id:input.id,auth_url:null}] : [], mcpConnections: {}, listTools: () => [],
+    registerServer: async () => { calls.push('register'); registered = true; return input.id; },
+    connectToServer: async () => { calls.push('connect'); return {state:'connected'}; },
+    discoverIfConnected: async () => { calls.push('discover'); return {}; },
+    removeServer: async () => { calls.push('remove'); registered = false; },
+    isCallbackRequest: () => true, handleCallbackRequest: async () => ({authSuccess:true,serverId:input.id}),
+    establishConnection: async () => {calls.push('establish');}, waitForConnections: async () => {}, callTool: async () => ({content:[]}),
+  } as unknown as McpManager;
+  return {store,manager,calls};
+}
+it('drains an interrupted native connect and rejects both queued mutations, preserving annotated compound failure', async () => {
+  const f = fixture(), entered = gate(), release = gate();
+  class Marker extends Context.Service<Marker,string>()('b17/probe/Marker') {}
+  const checked = Cause.makeFailReason(new ConnectionTransportError({operation:'independent connect',cause:'checked'})).annotate(Context.make(Marker,'checked marker'));
+  const defect = new Error('independent native teardown defect');
+  const die = Cause.makeDieReason(defect).annotate(Context.make(Marker,'die marker'));
+  f.manager.connectToServer = async () => { f.calls.push('connect'); entered.release(); await release.wait; throw Cause.fromReasons([checked,die]); };
+  const client = mcpConnectionClient(f.manager);
+  const settle = client.settle;
+  client.settle = () => Effect.sync(() => f.calls.push('settle')).pipe(Effect.andThen(settle()));
+  const runtime = ManagedRuntime.make(connectionApplication(f.store,client,() => Effect.sync(() => {const deadline=Date.now()+10_000;return {deadline,current:() => Date.now()<deadline};})));
+  const service = runtime.runSync(RemoteConnections), controller = new AbortController();
+  const active = Effect.runPromiseExit(service.connect(input,'https://app.example.com'),{signal:controller.signal});
+  await entered.wait;
+  const queuedDisconnect = Effect.runPromiseExit(service.disconnect(input.id,1));
+  const queuedReconnect = Effect.runPromiseExit(service.reconnect(input.id,1,'https://app.example.com'));
+  controller.abort();
+  let closed = false;
+  const closing = Effect.runPromiseExit(runtime.disposeEffect).then(exit => {closed = true; return exit;});
+  await vi.waitFor(async () => { expect((await Effect.runPromiseExit(service.list()))._tag).toBe('Failure'); });
+  expect(closed).toBe(false); expect(f.calls).toEqual(['register','connect']);
+  release.release();
+  const [operation,a,b,shutdown] = await Promise.all([active,queuedDisconnect,queuedReconnect,closing]);
+  expect([operation._tag,a._tag,b._tag,shutdown._tag]).toEqual(['Failure','Failure','Failure','Failure']);
+  expect(f.calls).toEqual(['register','connect','settle']);
+  for (const exit of [operation,shutdown]) {
+    if (!Exit.isFailure(exit)) throw new Error('expected failure');
+    expect(exit.cause.reasons.some(reason => reason._tag === 'Die' && reason.defect === defect && reason.annotations.get(Marker.key) === 'die marker')).toBe(true);
+    expect(exit.cause.reasons.some(reason => reason._tag === 'Die' && typeof reason.defect === 'object' && reason.defect !== null && '_tag' in reason.defect && reason.defect._tag === 'Fail' && reason.defect.annotations.get(Marker.key) === 'checked marker')).toBe(true);
+  }
+  expect(Effect.runSync(f.store.get(input.id))).toMatchObject({active:true,revision:1});
+});
+it('reconstructed inactive durable authority remains inactive until explicit new generation activation', async () => {
+  const db = database(), store = new ConnectionStore(db);
+  Effect.runSync(store.add(input));
+  Effect.runSync(store.change(input.id,1,false));
+  const before = db.all('SELECT * FROM access_connections');
+  const f = fixture(new ConnectionStore(db));
+  const runtime = ManagedRuntime.make(connectionApplication(f.store,mcpConnectionClient(f.manager),() => Effect.sync(() => {const deadline=Date.now()+10_000;return {deadline,current:() => Date.now()<deadline};})));
+  const service = runtime.runSync(RemoteConnections);
+  expect(await Effect.runPromise(service.list())).toMatchObject([{active:false,revision:2,status:'disconnected',tools:[]}]);
+  expect((await Effect.runPromiseExit(service.connect(input,'https://app.example.com')))._tag).toBe('Failure');
+  expect(f.calls).toEqual([]);
+  expect(db.all('SELECT * FROM access_connections')).toEqual(before);
+  await Effect.runPromise(service.reconnect(input.id,2,'https://app.example.com'));
+  expect(f.calls).toEqual(['remove','register','connect','discover']);
+  expect(Effect.runSync(f.store.get(input.id))).toMatchObject({active:true,revision:3});
+  await runtime.dispose();
+});

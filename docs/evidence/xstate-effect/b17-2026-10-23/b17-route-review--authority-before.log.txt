@@ -1,0 +1,128 @@
+
+ RUN  v5.0.5 /private/tmp/b17-route-review
+
+ ❯ authority.test.ts (6 tests | 5 failed) 310ms
+   × does not dispatch register if authority is revoked while its final ledger read waits 77ms
+   × does not dispatch connect if authority is revoked while its final ledger read waits 49ms
+   × does not dispatch discover if authority is revoked while its final ledger read waits 47ms
+   × does not commit a new connection after authority is revoked behind SQLite coordination 43ms
+   × does not invoke a remote tool when authority is revoked behind its last connection read 48ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  authority.test.ts > does not dispatch register if authority is revoked while its final ledger read waits
+AssertionError: expected [ 'register' ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "register",
++ ]
+
+ ❯ authority.test.ts:47:19
+     45|   await runtime.dispose();
+     46|   expect(outcome._tag).toBe('Failure');
+     47|   expect(f.calls).toEqual(allowed);
+       |                   ^
+     48| });
+     49| it('does not commit a new connection after authority is revoked behind…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  authority.test.ts > does not dispatch connect if authority is revoked while its final ledger read waits
+AssertionError: expected [ 'register', 'connect' ] to deeply equal [ 'register' ]
+
+- Expected
++ Received
+
+  [
+    "register",
++   "connect",
+  ]
+
+ ❯ authority.test.ts:47:19
+     45|   await runtime.dispose();
+     46|   expect(outcome._tag).toBe('Failure');
+     47|   expect(f.calls).toEqual(allowed);
+       |                   ^
+     48| });
+     49| it('does not commit a new connection after authority is revoked behind…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  authority.test.ts > does not dispatch discover if authority is revoked while its final ledger read waits
+AssertionError: expected [ 'register', 'connect', 'discover' ] to deeply equal [ 'register', 'connect' ]
+
+- Expected
++ Received
+
+  [
+    "register",
+    "connect",
++   "discover",
+  ]
+
+ ❯ authority.test.ts:47:19
+     45|   await runtime.dispose();
+     46|   expect(outcome._tag).toBe('Failure');
+     47|   expect(f.calls).toEqual(allowed);
+       |                   ^
+     48| });
+     49| it('does not commit a new connection after authority is revoked behind…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+ FAIL  authority.test.ts > does not commit a new connection after authority is revoked behind SQLite coordination
+AssertionError: expected { …(5) } to be undefined
+
+- Expected:
+undefined
+
++ Received:
+{
+  "active": true,
+  "id": "mcp-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "name": "Independent fixture",
+  "revision": 1,
+  "url": "https://mcp.example.com/mcp",
+}
+
+ ❯ authority.test.ts:62:49
+     60|   expect(outcome._tag).toBe('Failure');
+     61|   expect(f.calls).toEqual([]);
+     62|   expect(Effect.runSync(f.store.get(input.id))).toBeUndefined();
+       |                                                 ^
+     63| });
+     64| it('does not invoke a remote tool when authority is revoked behind its…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯
+
+ FAIL  authority.test.ts > does not invoke a remote tool when authority is revoked behind its last connection read
+AssertionError: expected [ 'remote action' ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "remote action",
++ ]
+
+ ❯ authority.test.ts:82:19
+     80|   await entered.wait;f.revoke();release.release();
+     81|   const result=await work;await runtime.dispose();
+     82|   expect(f.calls).toEqual([]);
+       |                   ^
+     83|   expect(result.isError).toBe(true);
+     84| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  5 failed | 1 passed (6)
+   Start at  16:41:31
+   Duration  762ms (tests 47%, import 37%, transform 14%, setup 1%)
+

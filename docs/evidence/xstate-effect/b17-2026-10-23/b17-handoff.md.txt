@@ -1,0 +1,31 @@
+# B17 MCP connection lifecycle handoff
+
+Worktree: /Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi
+Branch established by parent: codex/xstate-mcp-connections. No staging, commit, push, deployment, schema or package changes.
+
+## Source
+
+Final source hashes: /private/tmp/b17-final-source.json. The correction review freeze is /private/tmp/b17-authority-oauth-frozen-source.json; its 17 hashes still match exactly. The final manifest adds documentation only.
+
+Three official Effect machines own activation, command progression and independent host drain. Existing active/revision rows remain sole durable activation state; there is no new snapshot ledger or migration. Effect joins native registration/connect/discover/callback/tool work and preserves complete Causes through scope disposal. Disconnect commits inactive before native removal. SDK protocol and OAuth internals remain installed and unmodified.
+
+## Review corrections
+
+1. Fresh family authority returns a receipt bound to the existing family generation actor's epoch, ready state and a ten-second Effect-clock deadline. A known revocation invalidates it before asynchronous fencing. Receipt acquisition repeats fresh admission if its owner changes. ConnectionStore add/change validate the receipt after SQLite coordinator acquisition, without async lookup in the native transaction.
+2. Consequential SDK stages read the exact connection generation, obtain fresh family authority, reread the generation, and synchronously validate the receipt. This fences revocation behind storage and generation changes behind authorization.
+3. OAuth provider captures its initial revision immutably. Existing pending-state/PKCE key families are revision-namespaced while IDs, credentials/client/discovery keys and public SDK state format remain unchanged. Strict provider.checkState preflight precedes the SDK callback handler, which otherwise accepts invalid stale state for connected/ready connections. Callback acceptance compares verified issuing revision with the captured candidate.
+
+## Checks
+
+- /private/tmp/b17-receipt-oauth-tests-3.log: 133 tests, nine files pass (connection lifecycle/connections/OAuth/failures/HTTP, family admission/model/routine authority, agent HTTP).
+- /private/tmp/b17-receipt-oauth-types.log: full TypeScript pass.
+- /private/tmp/b17-receipt-oauth-lint.log: scoped lint pass.
+- /private/tmp/b17-final-negative-sql.log: source-preserving test transform removes transaction guard, expected failure (two rows instead of one).
+- /private/tmp/b17-final-negative-oauth.log: source-preserving test transform removes state revision namespace, expected failure (old state accepted).
+- Independent review CLOSED bounded clear: 18 independent acceptance tests (13 authority/ownership/post-stage plus five installed-SDK callback tests, including a valid current-generation exchange and rejected replay), and 82 repository tests/six files pass. All 17 review hashes unchanged before/after. Report: /private/tmp/b17-route-review/review.md; original failing probes/logs retained.
+
+## Limits / compatibility
+
+Receipt is bounded observed family authority, not cross-database atomicity. Already-started native work may complete after revocation; stale continuations are rejected and no automatic tool replay is introduced. Registered same-revision replay does not prove SDK registration provenance; interrupted registration may require explicit reconnect using the current revision. SDK OAuth cleanup can fail; generation namespace prevents stale pending state/verifier reuse but makes no credential-deletion guarantee. Legacy unversioned pending OAuth is rejected and requires fresh authorization via reconnect; existing credentials and records are retained. Tests use real local SQLite and installed SDK methods with synthetic transports, not live MCP providers, real auth mutation, or native no-request alarm proof.
+
+Parent owns broad integration gates, shared tracking/evidence capture and publication. Earlier initial freeze and tests are historical; use final manifest for source attribution.

@@ -1,0 +1,2 @@
+import { defineConfig } from 'vitest/config'
+export default defineConfig({test:{include:['/private/tmp/b17-callback-review/*.test.ts'],setupFiles:['/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/tests/agents-platform-stubs.ts']}})

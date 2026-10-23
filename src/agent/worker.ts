@@ -131,6 +131,7 @@ import {
 import type { FamilyState, FamilyAdmissionError } from "../agents/family"
 import {
   FamilyAdmission,
+  type FamilyAdmissionReceipt,
   familyAdmissionApplication,
 } from "../agents/family-admission"
 import { webExecutor } from "../apps/adapters/code"
@@ -1210,7 +1211,9 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         () => this.env.MODEL_ID,
         () => this.coordinationTools
       ),
-      connectionApplication(this.connectionStore, this.connectionClient),
+      connectionApplication(this.connectionStore, this.connectionClient, () =>
+        connectionNative(() => this.connectionAuthority())
+      ),
       appApplication(this.apps),
       skillApplication(this.skills),
       planningApplication(
@@ -2612,6 +2615,14 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       ),
       { signal }
     )
+  }
+  private connectionAuthority(): Promise<FamilyAdmissionReceipt | null> {
+    return this.actorRuntime
+      .runPromiseExit(FamilyAdmission.use((service) => service.receipt))
+      .then((exit) => {
+        if (Exit.isFailure(exit)) throw exit.cause
+        return exit.value
+      })
   }
   protected familyModelOwnerProgram() {
     return accountNative(async () => {
