@@ -1,0 +1,17 @@
+import { Cause, Effect, ManagedRuntime } from "effect"
+import { expect, it } from "vitest"
+import { accountCredentials } from "/Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/src/inference/adapters/credentials-pi"
+import { createAgentModels } from "/Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/src/inference/adapters/models-pi"
+import { PiModelStreams, piModelStreamsLayer } from "/Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/src/inference/adapters/streams-pi"
+import { credential } from "/Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/tests/inference-fixture"
+it("retains an original compound provider reader Cause before SDK normalization", async () => {
+ const runtime=ManagedRuntime.make(piModelStreamsLayer), streams=runtime.runSync(PiModelStreams)
+ const models=createAgentModels(accountCredentials(async()=>credential),{start:request=>runtime.runSync(streams.start(request))})
+ const model=models.getModel("openai","gpt-6.1-sol")!
+ const defect=new Error("reader cleanup defect")
+ const failure=Cause.combine(Cause.fail("reader unavailable"),Cause.die(defect))
+ try {
+  const outcome=await models.completeSimple(model,{messages:[{role:"user",content:"synthetic",timestamp:0}]},{reasoning:"medium",fetch:async()=>new Response(new ReadableStream({pull(target){target.error(failure)}}),{headers:{"content-type":"text/event-stream"}})}).then(()=>undefined,(cause:unknown)=>cause)
+  expect(Cause.isCause(outcome)&&outcome.reasons.some(reason=>reason._tag==="Die"&&reason.defect===defect)).toBe(true)
+ } finally {await Effect.runPromiseExit(runtime.disposeEffect)}
+})

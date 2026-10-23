@@ -1,12 +1,17 @@
-import { Deferred, Effect } from "effect"
-import { expect, it, vi } from "vitest"
+import { Cause, Deferred, Effect } from "effect"
+import { afterEach, expect, it, vi } from "vitest"
 
-import { observedUpstreamFetch } from "../src/inference/adapters/upstream-worker"
+import {
+  observedUpstreamFetch,
+  UpstreamRelay,
+} from "../src/inference/adapters/upstream-worker"
 
 vi.mock("cloudflare:workers", () => ({
   WorkerEntrypoint: class {},
   RpcTarget: class {},
 }))
+
+afterEach(() => vi.unstubAllGlobals())
 
 function deferred() {
   let resolve!: () => void
@@ -196,4 +201,377 @@ it("fences cleanup reentry when native reader cancellation aborts the request", 
   await response.body!.cancel()
   expect(remote.cancel).toHaveBeenCalledTimes(1)
   expect(remote[Symbol.dispose]).toHaveBeenCalledTimes(1)
+})
+
+it("owns the actual relay through response bytes and a separate marker flush", async () => {
+  const markers: string[] = [],
+    retained: Promise<void>[] = []
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(
+      async () =>
+        new Response(
+          'data: {"type":"response.output_text.delta","delta":"synthetic"}\n\n',
+          { status: 202 }
+        )
+    )
+  )
+  const relay = new UpstreamRelay({} as ExecutionContext, {})
+  Object.defineProperty(relay, "ctx", {
+    value: { waitUntil: (work: Promise<void>) => retained.push(work) },
+  })
+  const remote = relay.start(
+    {
+      url: "https://api.openai.com/v1/responses",
+      method: "POST",
+      headers: [],
+      body: null,
+    },
+    new WritableStream({
+      write(bytes) {
+        markers.push(new TextDecoder().decode(bytes))
+      },
+    }),
+    { turnId: "turn", attemptId: "attempt" }
+  )
+  const response = await remote.response()
+  expect(response.status).toBe(202)
+  expect(await response.text()).toContain('"delta":"synthetic"')
+  await remote.cancel()
+  await Promise.all(retained)
+  expect(markers.map((line) => JSON.parse(line.slice(6)).stage)).toEqual([
+    "dispatch",
+    "headers",
+    "upstream-text",
+    "complete",
+  ])
+})
+
+it("the actual relay joins interrupted dispatch and retains a late compound Cause", async () => {
+  const entered = deferred(),
+    interrupted = deferred(),
+    held = deferred()
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (request: Request) => {
+      entered.resolve()
+      await new Promise<void>((resolve) =>
+        request.signal.addEventListener(
+          "abort",
+          () => {
+            interrupted.resolve()
+            resolve()
+          },
+          { once: true }
+        )
+      )
+      await held.promise
+      throw Cause.combine(
+        Cause.fail("late checked dispatch"),
+        Cause.combine(
+          Cause.die("late dispatch defect"),
+          Cause.die(new DOMException("compound abort remains", "AbortError"))
+        )
+      )
+    })
+  )
+  const relay = new UpstreamRelay({} as ExecutionContext, {})
+  const retained: Promise<void>[] = []
+  Object.defineProperty(relay, "ctx", {
+    value: { waitUntil: (work: Promise<void>) => retained.push(work) },
+  })
+  const remote = relay.start(
+    {
+      url: "https://api.openai.com/v1/responses",
+      method: "POST",
+      headers: [],
+      body: null,
+    },
+    new WritableStream(),
+    { turnId: "turn", attemptId: "attempt" }
+  )
+  await entered.promise
+  let joined = false
+  const closing = remote
+    .cancel()
+    .then(
+      () => undefined,
+      (cause: unknown) => cause
+    )
+    .finally(() => {
+      joined = true
+    })
+  await interrupted.promise
+  await Promise.resolve()
+  expect(joined).toBe(false)
+  held.resolve()
+  const cause = await closing
+  expect(Cause.isCause(cause)).toBe(true)
+  if (Cause.isCause(cause)) {
+    expect(Cause.pretty(cause)).toContain("late checked dispatch")
+    expect(Cause.pretty(cause)).toContain("late dispatch defect")
+    expect(Cause.pretty(cause)).toContain("compound abort remains")
+    expect(cause.reasons.length).toBeGreaterThanOrEqual(3)
+  }
+  await Promise.all(retained)
+})
+
+it("joins admission cancellation before releasing its late remote handle", async () => {
+  const admitted = deferred(),
+    started = deferred(),
+    closed = deferred()
+  const remote = {
+    response: async () =>
+      new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.close()
+          },
+        })
+      ),
+    cancel: vi.fn(async () => {
+      closed.resolve()
+    }),
+    [Symbol.dispose]: vi.fn(),
+  }
+  const abort = new AbortController()
+  const pending = observedUpstreamFetch(
+    {
+      start: async () => {
+        started.resolve()
+        await admitted.promise
+        return remote
+      },
+    },
+    new Request("https://api.openai.com/v1/responses", {
+      method: "POST",
+      signal: abort.signal,
+    }),
+    new WritableStream(),
+    { turnId: "turn", attemptId: "attempt" }
+  )
+  const rejected = pending.then(
+    () => false,
+    () => true
+  )
+  await started.promise
+  abort.abort()
+  await Promise.resolve()
+  expect(remote.cancel).not.toHaveBeenCalled()
+  admitted.resolve()
+  await closed.promise
+  expect(await rejected).toBe(true)
+  expect(remote.cancel).toHaveBeenCalledTimes(1)
+  expect(remote[Symbol.dispose]).toHaveBeenCalledTimes(1)
+})
+
+it("remote cleanup joins both failures and keeps the full native Cause", async () => {
+  const held = deferred(),
+    cancelled = deferred()
+  const remote = {
+    response: async () =>
+      new Response(
+        new ReadableStream({
+          cancel: async () => {
+            cancelled.resolve()
+            await held.promise
+            throw Cause.combine(
+              Cause.fail("reader checked"),
+              Cause.die("reader defect")
+            )
+          },
+        })
+      ),
+    cancel: vi.fn(async () => {
+      throw Cause.die("remote defect")
+    }),
+    [Symbol.dispose]: vi.fn(),
+  }
+  const response = await observedUpstreamFetch(
+    { start: async () => remote },
+    new Request("https://api.openai.com/v1/responses", { method: "POST" }),
+    new WritableStream(),
+    { turnId: "turn", attemptId: "attempt" }
+  )
+  let joined = false
+  const closing = response
+    .body!.cancel()
+    .then(
+      () => undefined,
+      (cause: unknown) => cause
+    )
+    .finally(() => {
+      joined = true
+    })
+  await cancelled.promise
+  expect(remote.cancel).toHaveBeenCalledTimes(1)
+  expect(joined).toBe(false)
+  held.resolve()
+  const cause = await closing
+  expect(Cause.isCause(cause)).toBe(true)
+  if (Cause.isCause(cause)) {
+    expect(Cause.pretty(cause)).toContain("reader checked")
+    expect(Cause.pretty(cause)).toContain("reader defect")
+    expect(Cause.pretty(cause)).toContain("remote defect")
+  }
+  expect(remote[Symbol.dispose]).toHaveBeenCalledTimes(1)
+})
+
+it("acknowledges body cancellation across the actual relay and caller while a native read is pending", async () => {
+  const cancelled = vi.fn()
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(
+      async () =>
+        new Response(
+          new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(new TextEncoder().encode(": headers\n\n"))
+            },
+            cancel: cancelled,
+          })
+        )
+    )
+  )
+  const retained: Promise<void>[] = []
+  const relay = new UpstreamRelay({} as ExecutionContext, {})
+  Object.defineProperty(relay, "ctx", {
+    value: { waitUntil: (work: Promise<void>) => retained.push(work) },
+  })
+  const response = await observedUpstreamFetch(
+    { start: async (...args) => relay.start(...args) },
+    new Request("https://api.openai.com/v1/responses", { method: "POST" }),
+    new WritableStream(),
+    { turnId: "turn", attemptId: "attempt" }
+  )
+  await response.body!.cancel()
+  await Promise.all(retained)
+  expect(cancelled).toHaveBeenCalledTimes(1)
+})
+
+it("acknowledges the native pending-read cancellation rejection after joining that read", async () => {
+  const read = deferred(),
+    joined = deferred()
+  let rejectRead!: (cause: unknown) => void
+  const pending = new Promise<ReadableStreamReadResult<Uint8Array>>(
+    (_resolve, reject) => {
+      rejectRead = reject
+    }
+  )
+  const released = vi.fn()
+  const source = new Response()
+  Object.defineProperty(source, "body", {
+    value: {
+      getReader: () => ({
+        read: () => {
+          read.resolve()
+          return pending
+        },
+        cancel: async () => {
+          rejectRead(new Error("Stream was cancelled."))
+          joined.resolve()
+        },
+        releaseLock: released,
+      }),
+    },
+  })
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => source)
+  )
+  const retained: Promise<void>[] = []
+  const relay = new UpstreamRelay({} as ExecutionContext, {})
+  Object.defineProperty(relay, "ctx", {
+    value: { waitUntil: (work: Promise<void>) => retained.push(work) },
+  })
+  const response = await observedUpstreamFetch(
+    { start: async (...args) => relay.start(...args) },
+    new Request("https://api.openai.com/v1/responses", { method: "POST" }),
+    new WritableStream(),
+    { turnId: "turn", attemptId: "attempt" }
+  )
+  await read.promise
+  await response.body!.cancel()
+  await joined.promise
+  await Promise.all(retained)
+  expect(released).toHaveBeenCalledTimes(1)
+})
+
+it("acknowledges expected native cancellation but reports an interrupted diagnostic outcome", async () => {
+  const entered = deferred(),
+    markers: string[] = [],
+    retained: Promise<void>[] = []
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (request: Request) => {
+      entered.resolve()
+      await new Promise<void>((resolve) =>
+        request.signal.addEventListener("abort", () => resolve(), {
+          once: true,
+        })
+      )
+      throw new DOMException("The operation was aborted.", "AbortError")
+    })
+  )
+  const relay = new UpstreamRelay({} as ExecutionContext, {})
+  Object.defineProperty(relay, "ctx", {
+    value: { waitUntil: (work: Promise<void>) => retained.push(work) },
+  })
+  const remote = relay.start(
+    {
+      url: "https://api.openai.com/v1/responses",
+      method: "POST",
+      headers: [],
+      body: null,
+    },
+    new WritableStream({
+      write(bytes) {
+        markers.push(JSON.parse(new TextDecoder().decode(bytes).slice(6)).stage)
+      },
+    }),
+    { turnId: "turn", attemptId: "attempt" }
+  )
+  await entered.promise
+  await remote.cancel()
+  await Promise.all(retained)
+  expect(markers).toEqual(["dispatch", "failed"])
+})
+
+it("does not acknowledge an arbitrary native rejection as cancellation", async () => {
+  const entered = deferred(),
+    retained: Promise<void>[] = []
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (request: Request) => {
+      entered.resolve()
+      await new Promise<void>((resolve) =>
+        request.signal.addEventListener("abort", () => resolve(), {
+          once: true,
+        })
+      )
+      throw new Error("Unrelated native failure")
+    })
+  )
+  const relay = new UpstreamRelay({} as ExecutionContext, {})
+  Object.defineProperty(relay, "ctx", {
+    value: { waitUntil: (work: Promise<void>) => retained.push(work) },
+  })
+  const remote = relay.start(
+    {
+      url: "https://api.openai.com/v1/responses",
+      method: "POST",
+      headers: [],
+      body: null,
+    },
+    new WritableStream(),
+    { turnId: "turn", attemptId: "attempt" }
+  )
+  await entered.promise
+  const cause = await remote.cancel().then(
+    () => undefined,
+    (cause: unknown) => cause
+  )
+  expect(Cause.isCause(cause)).toBe(true)
+  if (Cause.isCause(cause)) expect(Cause.hasDies(cause)).toBe(true)
+  await Promise.all(retained)
 })

@@ -1,0 +1,1 @@
+{"fiveIdentityFields":"conflicts","exactPromise":"shared","captured":"immutable","videoFreeze":503,"joinedCleanup":true,"lateAnnotatedCompoundCause":"preserved","automaticImports":0,"explicitImports":1}

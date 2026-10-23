@@ -1,0 +1,3 @@
+tests/terminal-native-host.test.ts(175,52): error TS2493: Tuple type '[]' of length '0' has no element at index '0'.
+tests/terminal-native-host.test.ts(303,11): error TS2345: Argument of type 'Effect<never, Error, never>' is not assignable to parameter of type 'Effect<never, never, never>'.
+  Type 'Error' is not assignable to type 'never'.

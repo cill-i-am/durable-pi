@@ -331,3 +331,55 @@ it("retains response projection defects and releases their native body", async (
   )
   expect(closed).toHaveBeenCalledOnce()
 })
+
+it("retains joined socket settlement with the host after a successful handoff", async () => {
+  const f = fixture(),
+    upstream = upgrade(),
+    native = deferred<void>()
+  f.forward.mockResolvedValue(upstream.response)
+  f.connect.mockReturnValue({
+    response: f.connected,
+    close: f.close,
+    settled: native.promise,
+  })
+  expect(await agentProxy(upgradedRequest(), f.bindings)).toBe(f.connected)
+  expect(f.owned).toContain(native.promise)
+  expect(f.close).not.toHaveBeenCalled()
+  native.resolve(undefined)
+  await native.promise
+})
+
+it("joins socket settlement and retains late defects if host registration fails", async () => {
+  const f = fixture(),
+    upstream = upgrade(),
+    native = deferred<void>()
+  const registration = new Error("socket registration"),
+    late = new Error("late socket cleanup")
+  f.forward.mockResolvedValue(upstream.response)
+  f.connect.mockReturnValue({
+    response: f.connected,
+    close: f.close,
+    settled: native.promise,
+  })
+  let finished = false
+  const pending = agentProxy(upgradedRequest(), {
+    ...f.bindings,
+    own: (work) => {
+      if (work === native.promise) throw registration
+      f.bindings.own(work)
+    },
+  }).catch((cause: unknown) => {
+    finished = true
+    return cause
+  })
+  await vi.waitFor(() => expect(f.close).toHaveBeenCalledOnce())
+  expect(finished).toBe(false)
+  native.reject(Cause.die(late))
+  const result = await pending
+  expect(
+    Cause.isCause(result) &&
+      result.reasons.map((reason) =>
+        reason._tag === "Die" ? reason.defect : reason._tag
+      )
+  ).toEqual(expect.arrayContaining([registration, late]))
+})

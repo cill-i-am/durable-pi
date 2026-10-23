@@ -1,0 +1,36 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+B16_OWNER_SHUTDOWN_INTERRUPT_MUTATION_APPLIED
+ ❯ tests/inference-stream-ownership.test.ts (13 tests | 2 failed | 11 skipped) 133ms
+   × owner shutdown preserves native interruption after joined provider cleanup (defect=false) 126ms
+   × owner shutdown preserves native interruption after joined provider cleanup (defect=true) 6ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/inference-stream-ownership.test.ts > owner shutdown preserves native interruption after joined provider cleanup (defect=false)
+ FAIL  tests/inference-stream-ownership.test.ts > owner shutdown preserves native interruption after joined provider cleanup (defect=true)
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/inference-stream-ownership.test.ts:469:9
+    467|           Cause.isCause(settled.cause) &&
+    468|           Cause.hasInterrupts(settled.cause)
+    469|       ).toBe(true)
+       |         ^
+    470|       expect(outcomes).toEqual(["cancelled"])
+    471|       if (cleanupFails) {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 11 skipped (13)
+   Start at  17:43:23
+   Duration  786ms (import 61%, tests 19%, transform 18%, setup 1%)
+

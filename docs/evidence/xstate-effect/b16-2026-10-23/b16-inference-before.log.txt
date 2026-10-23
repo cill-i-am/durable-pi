@@ -1,0 +1,66 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+ ❯ tests/inference-stream-ownership.test.ts (3 tests | 3 failed) 25ms
+   × shutdown joins an admitted refusal's completion callback 22ms
+   × joined iterator release keeps every original Cause reason 1ms
+   × one request object has one native dispatch even when start is repeated 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/inference-stream-ownership.test.ts > shutdown joins an admitted refusal's completion callback
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ tests/inference-stream-ownership.test.ts:41:21
+     39|     await Promise.all(active.map((request) => request.settled))
+     40|     await new Promise((resolve) => setTimeout(resolve, 10))
+     41|     expect(stopped).toBe(false)
+       |                     ^
+     42|     release.resolve()
+     43|     expect(Exit.isSuccess(await shutdown)).toBe(true)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  tests/inference-stream-ownership.test.ts > joined iterator release keeps every original Cause reason
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/inference-stream-ownership.test.ts:66:140
+     64|   try {
+     65|     const result = await request.stream.result().then(() => undefined,…
+     66|     expect(Cause.isCause(result) && result.reasons.some((reason) => re…
+       |                                                                                                                                            ^
+     67|     expect(Cause.isCause(result) && result.reasons.some((reason) => re…
+     68|   } finally {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  tests/inference-stream-ownership.test.ts > one request object has one native dispatch even when start is repeated
+AssertionError: expected "vi.fn()" to be called once, but got 2 times
+ ❯ tests/inference-stream-ownership.test.ts:85:22
+     83|     runtime.runSync(streams.start(request))
+     84|     await request.stream.result()
+     85|     expect(dispatch).toHaveBeenCalledOnce()
+       |                      ^
+     86|     expect(finish).toHaveBeenCalledOnce()
+     87|   } finally {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed (3)
+   Start at  16:29:35
+   Duration  496ms (import 83%, transform 8%, tests 6%, setup 2%, worker 1%)
+

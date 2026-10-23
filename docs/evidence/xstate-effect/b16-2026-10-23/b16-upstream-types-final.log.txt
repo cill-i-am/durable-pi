@@ -1,0 +1,1 @@
+src/inference/adapters/streams-pi.ts(69,43): error TS2353: Object literal may only specify known properties, and 'terminal' does not exist in type 'ModelStreamOutcome'.

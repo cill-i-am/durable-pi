@@ -1,0 +1,54 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+B16_CALLBACK_MUTATION_APPLIED
+stdout | tests/access-callback.test.ts > preserves the exact admitted tool input while authority lookup is deferred
+[16:42:38.434] INFO (#206): tool.dispatched {
+  botId: null,
+  runId: '3f29b91e-10c1-4d4f-85dd-cbd4790c368b',
+  operationId: '12',
+  tool: 'checked',
+  event: 'tool.dispatched'
+}
+
+stdout | tests/access-callback.test.ts > preserves the exact admitted tool input while authority lookup is deferred
+[16:42:38.437] INFO (#206): tool.finished {
+  botId: null,
+  runId: '3f29b91e-10c1-4d4f-85dd-cbd4790c368b',
+  operationId: '12',
+  tool: 'checked',
+  event: 'tool.finished'
+}
+
+ ❯ tests/access-callback.test.ts (9 tests | 1 failed | 8 skipped) 109ms
+   × preserves the exact admitted tool input while authority lookup is deferred 108ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/access-callback.test.ts > preserves the exact admitted tool input while authority lookup is deferred
+AssertionError: expected { value: 'mutated' } to deeply equal { value: 'accepted' }
+
+- Expected
++ Received
+
+  {
+-   "value": "accepted",
++   "value": "mutated",
+  }
+
+ ❯ tests/access-callback.test.ts:318:40
+    316|   })
+    317|   await f.work
+    318|   expect(f.execute.mock.calls[0]?.[0]).toEqual({ value: "accepted" })
+       |                                        ^
+    319|   expect(Effect.runSync(f.store.get(f.id))?.input).toBe(
+    320|     JSON.stringify({ value: "accepted" })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 8 skipped (9)
+   Start at  16:42:37
+   Duration  745ms (import 65%, transform 17%, tests 17%, setup 1%)
+

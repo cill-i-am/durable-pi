@@ -1,0 +1,49 @@
+# B16 transport hosts — composed handoff
+
+Worktree: `/Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi`.
+Branch: `codex/xstate-transport-hosts`; base `2c5e6f66e25b9985a6915e78dce4de66a1952031`.
+All implementation is uncommitted. No Git writes, package/schema/migration changes, live providers, credentials, deployment or external messages.
+
+## Frozen result
+
+`/private/tmp/b16-composed-source-final.json` lists all 32 changed source/test/doc hashes and key evidence hashes. The only change since the composed focused run was recording results in the domain document; it passed a fresh format check. All executable/test hashes match the tested tree.
+
+Domain document: `docs/xstate-effect-transport-hosts.md`.
+
+Official machines now own authenticated socket authority/close, gateway admission/handoff, upstream observation lease, relay/client/pump/marker lifetime, model request/host/consumer lifetime, exact Access callback sharing, and legacy/native Terminal video/snapshot/import ownership. Effect owns native scopes and cleanup. SSE, Pi execution, existing Access/domain ledgers and the SDK protocols remain intact. No new durable journal or retry engine was introduced.
+
+Rediscovery included `src/inference/adapters/streams-pi.ts` and `src/terminal/adapters/native-worker.ts`, omitted from the initial B16 inventory. Parent approved both. Credential lifecycle remains B15; MCP lifetime remains B17. Terminal migration ledger/capacity/SDK internals are unchanged. Delegation worker consumes the same model-host owner and required no new controller.
+
+PersonalAgent integration is narrow: observer capability replaces upstreamProbe; `shutdownUpstream` joins concurrently with model/credential drains; existing communication/runtime/storage cleanup order remains. Parent must compose B11/B13/B18 worker changes from their separate lanes; this branch intentionally did not copy those host compositions.
+
+## Verification
+
+- Final composed focused gate: 176 tests / 16 files pass, `/private/tmp/b16-composed-focused.log`.
+- Full `tsc --noEmit` passes on the final executable tree, `/private/tmp/b16-native-host-types.log`.
+- Scoped deny-warning lint and format pass for all 32 changed files, `/private/tmp/b16-composed-lint.log`, `/private/tmp/b16-composed-format.log`. The final doc-only result edit passed `/private/tmp/b16-doc-format-final.log`.
+- Actual unchanged workerd upstream suite passes, `/private/tmp/b16-upstream-native-final.log`: native cancellation, slow observer and 61,240 ms inference beyond the one-minute observer expiry. Synthetic provider only. Owned upstream sources and script/fixture hashes match before/after that run. No additional native duplicate was launched while parent Memory lanes ran.
+- Bundle-only meaningful negatives fail the corresponding assertions: socket expired-auth renewal, mutable callback arguments, frozen Terminal admission, serial upstream cancellation, final Access authority, nested Terminal Cause, inference HEAD-original regression alias, native partial import identity. No source reset/mutation was used for final controls.
+
+Focused command:
+`PATH=/opt/homebrew/opt/node@24/bin:$PATH pnpm exec vitest run tests/access-callback.test.ts tests/access-callback-machine.test.ts tests/access-coordination.test.ts tests/access.test.ts tests/terminal-host.test.ts tests/terminal-native-host.test.ts tests/session-socket.test.ts tests/agent-proxy.test.ts tests/upstream-lifecycle.test.ts tests/upstream-lease.test.ts tests/upstream-observer.test.ts tests/inference-stream.test.ts tests/inference-stream-ownership.test.ts tests/inference-native.test.ts tests/inference-routing.test.ts tests/inference-usage.test.ts`
+
+## Independent findings and closure
+
+- Access/legacy Terminal: fresh reviewer mailbox_recovery_ui inspected the final nine-path manifest. Its unchanged real AccessStore/Gate probe now reports checks=3/dispatches=0 after claim-to-execute revocation, retaining the claimed row without result. Its actual ManagedRuntime nested drain probe now retains original annotated Fail and Die. `/private/tmp/b16-callback-authority-after.log`, `/private/tmp/b16-terminal-production-cause-after.log`. Reviewer reported no remaining concrete finding.
+- Inference: coordinator did not author this slice. Actual SDK provider-read compound Cause was normalized into ordinary model error; retain-before-forward fixed it without reclassifying ordinary network failures. Unchanged independent probe passed `/private/tmp/b16-inference-independent-recheck.log` on adapter `983b1de473cde629e96e7df124cf72ea1eef6c954ed6be9a6f487e53f3663e92`. No further concrete owner/request/consumer finding.
+- Upstream: coordinator review reproduced loss when releaseLock overwrote an earlier compound cleanup failure and loss on declined observer sink cleanup. Author corrected both, including raw workerd cancellation acknowledgement classification; focused/negative/native gates pass.
+- Native Terminal: fresh reviewer mailbox_recovery_ui closed the four-file review without findings. Its authored actual-ManagedRuntime probe confirms all five immutable fields, exact Promise sharing, immediate freeze, joined cleanup, late annotated Cause and explicit retry; `/private/tmp/b16-native-followup-independent.log`. Independently rerun 23/23 focused tests pass at `/private/tmp/b16-native-followup-reviewed.log`; every frozen hash matches. No remaining concrete review finding.
+
+## Lane manifests and detailed evidence
+
+- `/private/tmp/b16-access-terminal-source-manifest.json` (nine paths; original pre-review manifest retained separately).
+- `/private/tmp/b16-session-socket-handoff.md`, `/private/tmp/b16-socket-source-manifest.json`.
+- `/private/tmp/b16-upstream-handoff.md`, `/private/tmp/b16-upstream-source-manifest-final-before.json`, `/private/tmp/b16-upstream-source-manifest-final-after.json`.
+- `/private/tmp/b16-inference-handoff.md`, `/private/tmp/b16-inference-manifest.txt`.
+- `/private/tmp/b16-native-host-handoff.md`, `/private/tmp/b16-native-host-manifest-before.json`, `/private/tmp/b16-native-host-manifest-after.json`.
+
+## Compatibility and limits
+
+Socket close is still a synchronous signal, with joined cleanup now observed through `close.settled`/`session.settled`; production proxy retains and joins it. Partial synchronous acquisition failure preserves complete Cause. Native import exact active repeats return the same joined Promise; all five immutable receipt fields must match. Failed video cleanup prevents the waiting import; only a later explicit request may retry subject to the existing ledger.
+
+No broad repository build/browser/native-composition, hosted CI, real-container, real OAuth or production provider claim is made by this lane. Parent owns those gates, commit/publication and shared inventory updates. No deployment or merge is authorized here.

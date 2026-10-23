@@ -1,0 +1,14 @@
+import original from "/Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/vitest.config.ts"
+export default {
+  ...original,
+  plugins: [{
+    name: "b16-native-import-identity-negative",
+    enforce: "pre",
+    transform(code, id) {
+      if (id !== "/Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/src/terminal/native-host.machine.ts") return
+      if (!code.includes("left.key === right.key &&") || !code.includes("left.size === right.size")) throw new Error("Native identity mutation anchors missing")
+      console.error("B16_NATIVE_PARTIAL_IDENTITY_MUTATION_APPLIED")
+      return code.replace("left.key === right.key &&", "").replace("left.size === right.size", "true")
+    },
+  }],
+}
