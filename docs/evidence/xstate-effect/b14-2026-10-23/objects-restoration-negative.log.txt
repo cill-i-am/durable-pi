@@ -1,0 +1,44 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi
+
+ ❯ tests/objects-lifecycle.test.ts (11 tests | 1 failed | 10 skipped) 42ms
+   × lets cancellation win the native commit race and fences the held mutation after restart 42ms
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 10 skipped (11)
+   Start at  15:48:37
+   Duration  589ms (import 77%, transform 12%, tests 9%, setup 2%, worker 1%)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/objects-lifecycle.test.ts > lets cancellation win the native commit race and fences the held mutation after restart
+AssertionError: expected { Object (success) } to match object { _tag: 'Failure', …(1) }
+(4 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "_tag": "Failure",
+-   "failure": {
+-     "code": "cancelled",
++   "_id": "Result",
++   "_tag": "Success",
++   "value": {
++     "eventId": "6563123e-3911-42f9-b4fe-da149911ad30:1",
++     "objectId": "6563123e-3911-42f9-b4fe-da149911ad30",
++     "revision": 1,
+    },
+  }
+
+ ❯ tests/objects-lifecycle.test.ts:302:25
+    300|   release.resolve()
+    301|   expect(await cancellation).toEqual({ applied: false })
+    302|   expect(await pending).toMatchObject({
+       |                         ^
+    303|     _tag: "Failure",
+    304|     failure: { code: "cancelled" },
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

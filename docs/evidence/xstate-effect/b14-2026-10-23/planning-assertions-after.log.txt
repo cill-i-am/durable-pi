@@ -1,0 +1,5 @@
+{"probe":"legacy-projection","preserved":true,"hasDies":true,"hasFails":false,"httpFatal":true}
+{"probe":"future-native","preserved":true,"httpStatus":503,"body":{"error":"This saved plan requires a compatible application version. Keep the saved data and use a compatible version before continuing.","code":"unavailable"}}
+{"probe":"legacy-receipt-consistency","preserved":true,"hasDies":true,"hasFails":false}
+{"probe":"legacy-readonly","blocked":true,"commits":0,"closes":1,"versions":[1,1,1],"evidenceCalls":0}
+{"probe":"sentinel-before-reconciliation-failure","cancelledPersisted":true,"replay":{"_id":"Result","_tag":"Failure","failure":{"_tag":"PlanFailure","code":"cancelled","message":"This run was cancelled."}},"history":2,"revision":2,"repairOnce":true}

@@ -1,0 +1,115 @@
+{
+  "review": "B14 Objects independent read-only review",
+  "finding": "No concrete counterexample reproduced within the reviewed Objects scope.",
+  "head": "8304a30d3f9a3e5284a255bb1cabc321c767f2a6",
+  "sources": [
+    {
+      "path": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/objects/operation.machine.ts",
+      "bytes": 6299,
+      "sha256": "34567eec7f30693c9a148f4e8095d1cac74f48e008d22a9598a6845e68d66dea"
+    },
+    {
+      "path": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/objects/service.ts",
+      "bytes": 7816,
+      "sha256": "a7da0b0f217deb6ca02409ca657fdd1abaa080f116af1d622729ca531defec08"
+    },
+    {
+      "path": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/objects/adapters/pi.ts",
+      "bytes": 5907,
+      "sha256": "e757bdcb31ce7cb59262ea800a35e76d32089594f5f0f25895da85f899673b93"
+    },
+    {
+      "path": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/objects/domain.ts",
+      "bytes": 1121,
+      "sha256": "97713427f64445c897f397bf6ed5638f885bf33004b3b1343ca3e2b3bb80dd9f"
+    },
+    {
+      "path": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/objects/ledger.ts",
+      "bytes": 1287,
+      "sha256": "3dabeeed915cf44c76c085357901d880bb953e9018b26a5f4f63e6549541ad61"
+    },
+    {
+      "path": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/objects-lifecycle.test.ts",
+      "bytes": 17918,
+      "sha256": "2dd3a496465f031914551c1944827d419fbe9a56507e3d7093bfd3c83cacff4a"
+    },
+    {
+      "path": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/working-objects.test.ts",
+      "bytes": 25079,
+      "sha256": "e18163ea23f9b9dc3e384735df0d6867a9b74150e64e4f8e7d0671336848a069"
+    },
+    {
+      "path": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/shared/adapters/native-commit.ts",
+      "bytes": 3277,
+      "sha256": "ad3bb23a94071bb5ef2227629a4c17fb8b0d46a49245bba08a8773350a96ea15"
+    },
+    {
+      "path": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/shared/interop.ts",
+      "bytes": 3166,
+      "sha256": "e26c8e53d77156a55eb47b4ca25b0b0c7f93eb5740ba652e862e4950b868662c"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "/private/tmp/b14-objects-independent/probe.mts",
+      "bytes": 9183,
+      "sha256": "929b68f64091be77a2b78733c5a9273e7ac4f8b9dad5dc7ada41fad31c856bd9"
+    },
+    {
+      "path": "/private/tmp/b14-objects-independent/probe-verified.log",
+      "bytes": 1173,
+      "sha256": "23c300dea3a72eeb267b861746a6c49fef298d4ae0e04c20bbf7b78b58922818"
+    },
+    {
+      "path": "/private/tmp/b14-objects-independent/results.json",
+      "bytes": 1158,
+      "sha256": "bc09d9585e7c25af3ae1b015e931261b868d940013323e9e8bf4ff40df2cff1b"
+    },
+    {
+      "path": "/private/tmp/b14-objects-independent/compatibility.mts",
+      "bytes": 5961,
+      "sha256": "3062ed607a772a68ba10a65096fe399b226070de1d236e41e0aa96839361edde"
+    },
+    {
+      "path": "/private/tmp/b14-objects-independent/compatibility-final.log",
+      "bytes": 679,
+      "sha256": "e4482310e0f418ec8d3ddfbab868d7fc0e31fa9fe177f162b36ce0327c11f2c1"
+    },
+    {
+      "path": "/private/tmp/b14-objects-independent/compatibility-results.json",
+      "bytes": 886,
+      "sha256": "3abdd73ba04698e2f7e74f85a9d84caabcc80665158a585974d3226159e58094"
+    },
+    {
+      "path": "/private/tmp/b14-objects-independent-suites.log",
+      "bytes": 235,
+      "sha256": "687c94df15491d896b35ce491a68013a02a8e7f3b07d000a01abc112a7a001d3"
+    }
+  ],
+  "commands": [
+    "PATH=/opt/homebrew/opt/node@24/bin:$PATH node node_modules/vitest/vitest.mjs run --configLoader native --cache false tests/objects-lifecycle.test.ts tests/working-objects.test.ts --maxWorkers=2",
+    "PATH=/opt/homebrew/opt/node@24/bin:$PATH node --import tsx /private/tmp/b14-objects-independent/probe.mts",
+    "PATH=/opt/homebrew/opt/node@24/bin:$PATH node --import tsx /private/tmp/b14-objects-independent/compatibility.mts"
+  ],
+  "limits": [
+    "Actual installed Pi backed by Node SQLite; no external provider, workerd eviction, browser interaction or broad integration gate.",
+    "Objects source hashes remained unchanged from initial review to final execution.",
+    "Legacy compatibility data was created using src/objects archived from current HEAD 8304a30, with unchanged current shared native bridge.",
+    "Early script logs preserve setup/probe corrections; verified/final logs named above are final successful runs."
+  ],
+  "suiteResult": {
+    "testFiles": 2,
+    "tests": 27,
+    "exitCode": 0
+  },
+  "probeResult": {
+    "groups": 6,
+    "exitCode": 0
+  },
+  "compatibilityResult": {
+    "exitCode": 0,
+    "nativeDocumentIdsPreserved": 8,
+    "operationDocumentsMigrated": 4,
+    "immutablePublicHistoryEvents": 2
+  }
+}

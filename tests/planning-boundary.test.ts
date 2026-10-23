@@ -193,15 +193,15 @@ it("keeps corrupt plan, history and operation payloads out of expected HTTP fail
     kind: "plans.task",
     scope: "session",
     family: true,
-    version: 1,
-    initial: (_: null) => ({ value: "" }),
+    version: 2,
+    initial: (_: null) => ({ value: "", workflowVersion: 1 }),
   })
   const RawOperation = defineDocFamily({
     kind: "plans.operation",
     scope: "session",
     family: true,
-    version: 1,
-    initial: (_: null) => ({ digest: "", receipt: "" }),
+    version: 2,
+    initial: (_: null) => ({ digest: "", receipt: "", workflowVersion: 1 }),
   })
   let originalHistory = "",
     originalPlan = ""

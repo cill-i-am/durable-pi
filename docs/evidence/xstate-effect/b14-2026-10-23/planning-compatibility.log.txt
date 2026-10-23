@@ -1,0 +1,2 @@
+{"probe":"actual-old-HEAD-write-cold-current-read","cancelled":false,"state":"completed","idsPreserved":true,"rawPlanAndReceiptPreserved":true,"historyUnchanged":true,"versions":[2,2,2,1]}
+{"probe":"actual-old-HEAD-write-cold-current-read","cancelled":true,"state":"cancelled","idsPreserved":true,"rawPlanAndReceiptPreserved":true,"historyUnchanged":true,"versions":[2,1,1,1,1]}

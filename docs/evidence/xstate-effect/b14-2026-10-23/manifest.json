@@ -1,0 +1,316 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-10-23T15:13:26.038184+00:00",
+  "worktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+  "branchAtCapture": "codex/xstate-planning-objects",
+  "headAtCapture": "8304a30d3f9a3e5284a255bb1cabc321c767f2a6",
+  "evidenceBaseHead": "8304a30d3f9a3e5284a255bb1cabc321c767f2a6",
+  "candidate": "B14 Planning/Objects changes above historical B09 base 8304a30; B11/B12 runtime inheritance and parent composed gates are separate later work.",
+  "provenance": "Raw artifacts copied byte for byte. Original reviewer manifests retained unchanged. Source hashes attest the reviewed domain/shared inputs and were rechecked at capture, not every transitive dependency or a later composed Git tree. Stored exit codes come from executing-owner/reviewer records; this capture reran only missing scoped checks, not the behavioral probes.",
+  "reviewedSourceDriftAtCapture": [],
+  "verifiedOriginalArtifactHashes": 19,
+  "reviewedSourceHashes": {
+    "src/planning/adapters/http.ts": "5186c86e425b69864e496999a8b1aefcb33f7899df297426c59d097df689fc87",
+    "src/planning/adapters/pi.ts": "adeef4c2f7641b12bc3d362827d36b8813a43ec066e81502c8b1b9729acd5073",
+    "src/planning/adapters/tools.ts": "5c308e837cd97589447256f1f725ab9f17a3b49bb2813f1ae75c6d17b4157a8c",
+    "src/planning/authority.machine.ts": "e470377fb14e9f04560e78a143930510d2a323ec722e1cdf6ee1a27db44d41ff",
+    "src/planning/contracts.ts": "ee116b95e6ca874544912f464513c5588423eb6961a882f2129d35f9fe64283b",
+    "src/planning/domain.ts": "0c396c87f1007dab37f7d5793b5080165f061536c880eeed940abc7b5354eea9",
+    "src/planning/evidence.ts": "d827d7f34491a13933bffc59a6a68539c18eff12e2308921783853803ee4aab4",
+    "src/planning/ledger.ts": "c167c15b90086cf1e94fc5ea02f4dd9533ddbd6a04d5f40805b085e4dcfedfef",
+    "src/planning/plan.machine.ts": "f2a4423006c2f9880bb3473c533e50c24738ac1f56c9229ca040c7e80b585705",
+    "src/planning/plan.ts": "a1c2f012815cd7d2ff9b367be440a13dbf17acd560a9f7fa368a5d2b0fc98cdc",
+    "src/planning/plans.ts": "008218528f745036ff7510da9f01c338d389ebfa9f406e6bc5300add4d5723b3",
+    "src/planning/service.ts": "6760e10ea688a582063eb6f87d940ed2676fb82a38a9630a2b8900b8d0f26e73",
+    "src/objects/adapters/http.ts": "f66908e5ed819a5d7e339c8bb553e9e00f57b533ad254fec5ed96e1a5a8eb5d0",
+    "src/objects/adapters/pi.ts": "e757bdcb31ce7cb59262ea800a35e76d32089594f5f0f25895da85f899673b93",
+    "src/objects/adapters/tools.ts": "4bb109b1771bfebce2107ebd8caeb06387e46da3514e19982deea1bd50b7e492",
+    "src/objects/checklist.ts": "089b2e34a48ffdecaead2e12c41094087af7f4f086d323a4fc2cd8c6f39c2743",
+    "src/objects/contracts.ts": "60c59bd65f67d50d2f6a0e0c23878f27490d4e1152db2b30441305960c86969a",
+    "src/objects/domain.ts": "97713427f64445c897f397bf6ed5638f885bf33004b3b1343ca3e2b3bb80dd9f",
+    "src/objects/ledger.ts": "3dabeeed915cf44c76c085357901d880bb953e9018b26a5f4f63e6549541ad61",
+    "src/objects/objects.ts": "de022383144347130afe3519c5d28ecf184d11c15270ff294f888d833cbebb03",
+    "src/objects/operation.machine.ts": "34567eec7f30693c9a148f4e8095d1cac74f48e008d22a9598a6845e68d66dea",
+    "src/objects/service.ts": "a7da0b0f217deb6ca02409ca657fdd1abaa080f116af1d622729ca531defec08",
+    "tests/planning-lifecycle.test.ts": "ecd6b0590eca7c25b656afcff5b0fb10d87d6919ea7520c02e5113a2065e4257",
+    "tests/objects-lifecycle.test.ts": "2dd3a496465f031914551c1944827d419fbe9a56507e3d7093bfd3c83cacff4a",
+    "tests/planning-boundary.test.ts": "fe30ebf94e79b3b0e7a5d798f0c25e943e2a86a20d1c1c4859f33981534d08fd",
+    "tests/working-objects.test.ts": "e18163ea23f9b9dc3e384735df0d6867a9b74150e64e4f8e7d0671336848a069",
+    "src/shared/adapters/native-commit.ts": "ad3bb23a94071bb5ef2227629a4c17fb8b0d46a49245bba08a8773350a96ea15",
+    "src/shared/interop.ts": "e26c8e53d77156a55eb47b4ca25b0b0c7f93eb5740ba652e862e4950b868662c"
+  },
+  "commands": {
+    "focused": "PATH=/opt/homebrew/opt/node@24/bin:$PATH ./node_modules/.bin/vitest run tests/planning.test.ts tests/planning-boundary.test.ts tests/planning-evidence.test.ts tests/planning-lifecycle.test.ts tests/planning-compaction.test.ts tests/planning-pages.test.ts tests/working-objects.test.ts tests/objects-lifecycle.test.ts tests/object-boundary.test.ts tests/native-failures.test.ts tests/pi-commit-failure.test.ts",
+    "planningTypes": "PATH=/opt/homebrew/opt/node@24/bin:$PATH ./node_modules/.bin/tsc --noEmit -p /private/tmp/planning-b14-tsconfig.json",
+    "objectsTypes": "PATH=/opt/homebrew/opt/node@24/bin:$PATH ./node_modules/.bin/tsc --noEmit -p /private/tmp/objects-typecheck.json",
+    "planningCorrectionLint": "PATH=/opt/homebrew/opt/node@24/bin:$PATH ./node_modules/.bin/oxlint --config oxlint.config.ts --deny-warnings src/planning/adapters/pi.ts src/planning/authority.machine.ts src/planning/plan.machine.ts tests/planning-lifecycle.test.ts"
+  },
+  "limits": [
+    "Node 24.21.0, installed Pi and actual Node SQLite with synthetic authority/holds/failures. No live providers, workerd eviction/alarms, browser, hosted CI or deployment proof.",
+    "123 owner tests, 69 independent tests and 27 independent Objects tests are overlapping executions and must not be added together. Six Objects probe groups are not Vitest test counts.",
+    "Archived scripts retain their original absolute import paths. Legacy source extraction is identified by the reviewer manifests and historical Git HEAD; reproducing elsewhere requires those paths/dependencies.",
+    "Only selected successful final and meaningful failure controls are copied. Original temporary artifacts remain untouched; setup failures and duplicate historical logs are not all duplicated."
+  ],
+  "artifacts": [
+    {
+      "file": "focused-123.log.txt",
+      "origin": "/private/tmp/b14-review-composed-focused.log",
+      "bytes": 238,
+      "sha256": "ad85d8bbd96438d462dd763019ae6f2dfc4522b097c3dd3cb08e8739c385f86b",
+      "description": "Final owner focused run: 123 tests in eleven files.",
+      "recordedExitCode": 0
+    },
+    {
+      "file": "planning-regression-before.log.txt",
+      "origin": "/private/tmp/b14-planning-review-negative.log",
+      "bytes": 4492,
+      "sha256": "b58141ef5f1057faa62e62d620c0594bf3c173edb6f672cfe1856c1156ae1a1f",
+      "description": "Meaningful pre-repair control: nine persisted-state/version classification assertions failed.",
+      "recordedExitCode": 1
+    },
+    {
+      "file": "planning-regression-after.log.txt",
+      "origin": "/private/tmp/b14-planning-review-fixed.log",
+      "bytes": 234,
+      "sha256": "05b0c3466eb4d2ed8ff6c7c4e2138fcbe8b063f608aeb89817ceb0b2bf2a15b5",
+      "description": "Same retained regression suite after repair: all eighteen cases passed.",
+      "recordedExitCode": 0
+    },
+    {
+      "file": "planning-scoped-types.log.txt",
+      "origin": "/private/tmp/b14-planning-review-types.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Final Planning scoped typecheck; successful command produced no output.",
+      "recordedExitCode": 0
+    },
+    {
+      "file": "planning-scoped-types.json.txt",
+      "origin": "/private/tmp/planning-b14-tsconfig.json",
+      "bytes": 605,
+      "sha256": "aa6bb9eaa6f560162e9e203ad2dd1605f28df2af4a5224378f99b7432ef2f506",
+      "description": "Exact scoped Planning typecheck configuration."
+    },
+    {
+      "file": "planning-scoped-lint.log.txt",
+      "origin": "/private/tmp/b14-planning-review-lint.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Final correction lint; successful command produced no output.",
+      "recordedExitCode": 0
+    },
+    {
+      "file": "objects-scoped-types.log.txt",
+      "origin": "/private/tmp/b14-objects-final-types.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "description": "Objects scoped typecheck repeated at capture to retain raw evidence; no output on success.",
+      "recordedExitCode": 0
+    },
+    {
+      "file": "objects-scoped-types.json.txt",
+      "origin": "/private/tmp/objects-typecheck.json",
+      "bytes": 776,
+      "sha256": "39e10594ee994907e1be2109e703c232651438a40f5cfc3d0d0c1be7dc65b28e",
+      "description": "Exact scoped Objects typecheck configuration."
+    },
+    {
+      "file": "planning-independent-manifest.json.txt",
+      "origin": "/private/tmp/b14-independent-planning/final-manifest.json",
+      "bytes": 8493,
+      "sha256": "dfc90cd05b5c5c612f9a36e4499cdc0f5a31cb1fc9fed2f14aa414b0f084585e",
+      "description": "Original independent final manifest; all source and selected artifact hashes verified at capture."
+    },
+    {
+      "file": "planning-independent-handoff.md.txt",
+      "origin": "/private/tmp/b14-independent-planning/handoff.md",
+      "bytes": 4106,
+      "sha256": "656ed9d611ed0ab7884c37c6d20ce085152557ca9e4648a8b5ab8dcba0de0262",
+      "description": "Original reviewer handoff and final correction recheck."
+    },
+    {
+      "file": "planning-independent-suites.log.txt",
+      "origin": "/private/tmp/b14-independent-focused-after-fix.log",
+      "bytes": 529,
+      "sha256": "8f44e19a1d86292480b8207b9f9b81878c9d8e6e0b414f18934426b1ea81ff89",
+      "description": "Independent final run: 69 tests in six files; overlaps owner suites.",
+      "recordedExitCode": 0
+    },
+    {
+      "file": "planning-original-probe.mts.txt",
+      "origin": "/private/tmp/b14-independent-planning/probe-extended.mts",
+      "bytes": 7935,
+      "sha256": "509ffb248a0ac1ad146f645890f36f66e19c03c5e89a6f9e3e238987b1f0b930",
+      "description": "Independent original actual SQLite/Pi/HTTP repro for completion, native version and receipt consistency."
+    },
+    {
+      "file": "planning-original-probe.log.txt",
+      "origin": "/private/tmp/b14-independent-planning/probe-extended.log",
+      "bytes": 1296,
+      "sha256": "a3098c699357130463f16058dd07fda06b06be4a5716c16f6352033b09f9a1a0",
+      "description": "Diagnostic probe succeeded while recording the incorrect pre-repair classifications.",
+      "recordedExitCode": 0
+    },
+    {
+      "file": "planning-before-source.json.txt",
+      "origin": "/private/tmp/b14-independent-planning/before-fix-source.json",
+      "bytes": 3167,
+      "sha256": "13ef3703336867dfb736a1034f2c61a41edaab7a3578f7a3c837a1b725ccd295",
+      "description": "Independent pre-repair source hashes."
+    },
+    {
+      "file": "planning-assertions.mts.txt",
+      "origin": "/private/tmp/b14-independent-planning/assert-fixed.mts",
+      "bytes": 8594,
+      "sha256": "40013852272d28e4b5ee1b5c54a6c16c137c9118761c3b6542501263bd9d4fac",
+      "description": "Unchanged desired-behavior independent probe used before and after repair."
+    },
+    {
+      "file": "planning-assertions-before.log.txt",
+      "origin": "/private/tmp/b14-independent-planning/assert-before-fix.log",
+      "bytes": 404,
+      "sha256": "cfb22475540b79e33124cb2a26cbf740916cd52265c0b563d771ebfa3a2455cb",
+      "description": "Expected failed fatal-corruption assertion before repair.",
+      "recordedExitCode": 1
+    },
+    {
+      "file": "planning-assertions-after.log.txt",
+      "origin": "/private/tmp/b14-independent-planning/assert-after-fix.log",
+      "bytes": 765,
+      "sha256": "b67191e88220f77738fa13e0556c62ebf55d52423a1f7cf4105aa5216fc9b31a",
+      "description": "Same probe passed after repair: corruption, version guidance, read-only migration and sentinel repair.",
+      "recordedExitCode": 0
+    },
+    {
+      "file": "planning-compatibility.mts.txt",
+      "origin": "/private/tmp/b14-independent-planning/old-head.mts",
+      "bytes": 2849,
+      "sha256": "84833cb2736a5d427d53d380e50eae1355d253279ad3c82c46d98d98050c62f0",
+      "description": "Creates completed/cancelled data using pre-refactor HEAD code then cold-opens with current implementation."
+    },
+    {
+      "file": "planning-compatibility-support.mts.txt",
+      "origin": "/private/tmp/b14-independent-planning/support.mts",
+      "bytes": 3186,
+      "sha256": "8386e29a04dc19961aa248c7f3b70d4b06af065542a5b7e3e585d0902b9dcd1a",
+      "description": "Independent legacy compatibility probe support."
+    },
+    {
+      "file": "planning-compatibility.log.txt",
+      "origin": "/private/tmp/b14-independent-planning/old-head-after-fix.log",
+      "bytes": 379,
+      "sha256": "15c79361757ecf833440f8ef9a941bbc4b1d32a6f7c27b3f8d9d08be447be831",
+      "description": "Both old-HEAD-created completed and cancelled compatibility cases passed after repair.",
+      "recordedExitCode": 0
+    },
+    {
+      "file": "objects-independent-manifest.json.txt",
+      "origin": "/private/tmp/b14-objects-independent/manifest.json",
+      "bytes": 4941,
+      "sha256": "a0b0aa19d034f4bef44035957871c59e85c04407429e8e98a3bdda46859c7530",
+      "description": "Original independent Objects manifest and exact commands."
+    },
+    {
+      "file": "objects-independent-handoff.md.txt",
+      "origin": "/private/tmp/b14-objects-independent/handoff.md",
+      "bytes": 2646,
+      "sha256": "d9d026caf765c204a825f55da30c9c2320d1b1326c0ed3de72b8b81aa1b238af",
+      "description": "Original Objects review scope and limits."
+    },
+    {
+      "file": "objects-independent-suites.log.txt",
+      "origin": "/private/tmp/b14-objects-independent-suites.log",
+      "bytes": 235,
+      "sha256": "687c94df15491d896b35ce491a68013a02a8e7f3b07d000a01abc112a7a001d3",
+      "description": "Independent Objects run: 27 tests in two files; overlaps other runs.",
+      "recordedExitCode": 0
+    },
+    {
+      "file": "objects-probe.mts.txt",
+      "origin": "/private/tmp/b14-objects-independent/probe.mts",
+      "bytes": 9183,
+      "sha256": "929b68f64091be77a2b78733c5a9273e7ac4f8b9dad5dc7ada41fad31c856bd9",
+      "description": "Six independently authored SQLite/Pi probe groups."
+    },
+    {
+      "file": "objects-probe.log.txt",
+      "origin": "/private/tmp/b14-objects-independent/probe-verified.log",
+      "bytes": 1173,
+      "sha256": "23c300dea3a72eeb267b861746a6c49fef298d4ae0e04c20bbf7b78b58922818",
+      "description": "Final verified Objects probe output; the differently named probe-final.log is an earlier harness assertion failure and is not this successful artifact.",
+      "recordedExitCode": 0
+    },
+    {
+      "file": "objects-probe-results.json.txt",
+      "origin": "/private/tmp/b14-objects-independent/results.json",
+      "bytes": 1158,
+      "sha256": "bc09d9585e7c25af3ae1b015e931261b868d940013323e9e8bf4ff40df2cff1b",
+      "description": "Original structured Objects probe results."
+    },
+    {
+      "file": "objects-compatibility.mts.txt",
+      "origin": "/private/tmp/b14-objects-independent/compatibility.mts",
+      "bytes": 5961,
+      "sha256": "3062ed607a772a68ba10a65096fe399b226070de1d236e41e0aa96839361edde",
+      "description": "Actual pre-refactor Objects-created data reopened by current code."
+    },
+    {
+      "file": "objects-compatibility.log.txt",
+      "origin": "/private/tmp/b14-objects-independent/compatibility-final.log",
+      "bytes": 679,
+      "sha256": "e4482310e0f418ec8d3ddfbab868d7fc0e31fa9fe177f162b36ce0327c11f2c1",
+      "description": "Eight native document identities, four migrated operations and two immutable history events preserved.",
+      "recordedExitCode": 0
+    },
+    {
+      "file": "objects-compatibility-results.json.txt",
+      "origin": "/private/tmp/b14-objects-independent/compatibility-results.json",
+      "bytes": 886,
+      "sha256": "3abdd73ba04698e2f7e74f85a9d84caabcc80665158a585974d3226159e58094",
+      "description": "Original structured Objects compatibility results."
+    },
+    {
+      "file": "objects-authority-negative.log.txt",
+      "origin": "/private/tmp/objects-negative-cancellation-authority.log",
+      "bytes": 1295,
+      "sha256": "73d65ecdc1a9550425432e145f18d6e168fa366dfb582705888da6fc9e82559b",
+      "description": "Historical owner mutation control: removing final authority check accepts an unauthorized cancellation sentinel. Eleven-case test-file stage; no exact mutated-source manifest was captured.",
+      "recordedExitCode": 1
+    },
+    {
+      "file": "objects-restoration-negative.log.txt",
+      "origin": "/private/tmp/objects-negative-cancellation-restoration.log",
+      "bytes": 1442,
+      "sha256": "8b574503d51db203e17a8c1a8f46262ad16bd9979912712966e01ac03f4e07ba",
+      "description": "Historical owner mutation control: restoring cancelled operation as open admits the held mutation. Eleven-case test-file stage; no exact mutated-source manifest was captured.",
+      "recordedExitCode": 1
+    },
+    {
+      "file": "scoped-lint.log.txt",
+      "origin": "/private/tmp/b14-final-scoped-lint.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "recordedExitCode": 0,
+      "description": "Capture-time scoped check; command result directly observed.",
+      "command": "./node_modules/.bin/oxlint --config oxlint.config.ts --deny-warnings src/planning src/objects tests/planning-lifecycle.test.ts tests/planning-boundary.test.ts tests/objects-lifecycle.test.ts"
+    },
+    {
+      "file": "scoped-format.log.txt",
+      "origin": "/private/tmp/b14-final-scoped-format.log",
+      "bytes": 113,
+      "sha256": "1261be11f528d95ddacb7c9dd8c2a180c8c2b6b1dbae1a75f2dd54f49a52c302",
+      "recordedExitCode": 0,
+      "description": "Capture-time scoped check; command result directly observed.",
+      "command": "./node_modules/.bin/oxfmt --check src/planning src/objects tests/planning-lifecycle.test.ts tests/planning-boundary.test.ts tests/objects-lifecycle.test.ts docs/xstate-effect-planning-objects.md"
+    },
+    {
+      "file": "scoped-whitespace.log.txt",
+      "origin": "/private/tmp/b14-final-scoped-whitespace.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "recordedExitCode": 0,
+      "description": "Capture-time scoped check; command result directly observed.",
+      "command": "git diff --check -- src/planning src/objects tests/planning-lifecycle.test.ts tests/planning-boundary.test.ts tests/objects-lifecycle.test.ts docs/xstate-effect-planning-objects.md docs/evidence/xstate-effect/b14-2026-10-23"
+    }
+  ]
+}

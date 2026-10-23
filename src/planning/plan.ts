@@ -19,19 +19,13 @@ function requirePlanRevision(previous: Plan | null, input: PlanUpdate) {
     })
 }
 
-export function revisePlan(
+export function preparePlanRevision(
   previous: Plan | null,
   input: PlanUpdate,
   source: PlanSource,
   evidence: Evidence[],
   now: string
-): Plan {
-  if (previous?.state === "cancelled")
-    throw new PlanFailure({
-      code: "cancelled",
-      message:
-        "This task was cancelled. Only a new user request can start a new task.",
-    })
+): Omit<Plan, "state" | "complete"> {
   requirePlanRevision(previous, input)
   const requirementsChanged =
     !!previous &&
@@ -57,20 +51,17 @@ export function revisePlan(
           : step.status,
     }
   })
-  const complete =
-    input.draft.complete && steps.every((step) => step.status === "completed")
+  const { complete: _, ...draft } = input.draft
   return {
-    ...input.draft,
+    ...draft,
     steps,
-    complete,
     nextAction:
-      input.draft.complete && !complete
+      input.draft.complete && steps.some((step) => step.status !== "completed")
         ? "Reassess reopened steps against current requirements and evidence."
         : input.draft.nextAction,
     id: input.id,
     schemaVersion: 1,
     revision: (previous?.revision ?? 0) + 1,
-    state: complete ? "completed" : "open",
     rootTurns: [...new Set([...(previous?.rootTurns ?? []), source.turnId])],
     inputIds: [...new Set([...(previous?.inputIds ?? []), ...source.inputIds])],
     reviewedTurn: source.turnId,

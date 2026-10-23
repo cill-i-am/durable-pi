@@ -14,13 +14,18 @@ import {
   ObjectEvent,
   ObjectFailure,
   ObjectId,
-  MutationReceipt,
   Revision,
   type ChecklistTask,
   type FieldChange,
   type ChangeSource,
 } from "../contracts"
 import type { ObjectLedger, ObjectTransaction } from "../ledger"
+import {
+  incompatibleObjectOperation,
+  restoreObjectOperation,
+  migrateObjectOperation,
+  newObjectOperation,
+} from "../operation.machine"
 import { makeWorkingObjects } from "../service"
 
 const Catalog = defineDoc({
@@ -60,14 +65,9 @@ const Operations = defineDocFamily({
   kind: "working-objects.operation",
   scope: "session",
   family: true,
-  version: 1,
-  initial: (
-    _seed: null
-  ): {
-    digest: string
-    cancelled: boolean
-    receipt: MutationReceipt | null
-  } => ({ digest: "", cancelled: false, receipt: null }),
+  version: 2,
+  initial: (_seed: null) => newObjectOperation(),
+  migrate: migrateObjectOperation,
 })
 const CatalogRecord = Schema.Struct({
   ids: Schema.Array(ObjectId),
@@ -75,16 +75,19 @@ const CatalogRecord = Schema.Struct({
   offeredThrough: Revision,
   operations: Revision,
 })
-const OperationRecord = Schema.Struct({
-  digest: Schema.String,
-  cancelled: Schema.Boolean,
-  receipt: Schema.NullOr(MutationReceipt),
-})
-
 /** Join native I/O on cancellation; decoding belongs outside this conversion. */
 const objectRejected = (cause: unknown, channel: "failure" | "rejection") => {
   const expected = Schema.decodeUnknownOption(ObjectFailure)(cause)
   if (expected._tag === "Some") return expected.value
+  // The pinned Pi SDK reports document version mismatches as ordinary Errors.
+  if (
+    channel === "rejection" &&
+    cause instanceof Error &&
+    /^Document [0-9]+ \(working-objects\.operation\) has newer version [0-9]+ than 2$/.test(
+      cause.message
+    )
+  )
+    return incompatibleObjectOperation()
   if (
     channel === "failure" ||
     Schema.isSchemaError(cause) ||
@@ -130,10 +133,15 @@ const transaction = (tx: Tx): ObjectTransaction => ({
     ),
   operation: (id) =>
     objectNativeOperation(() => tx.doc(Operations, id, null)).pipe(
-      Effect.map((doc) => {
-        Schema.decodeUnknownSync(OperationRecord)(doc)
-        return doc
-      })
+      Effect.flatMap((doc) =>
+        Effect.try({
+          try: () => {
+            restoreObjectOperation(doc)
+            return doc
+          },
+          catch: (cause) => objectRejected(cause, "failure"),
+        })
+      )
     ),
 })
 

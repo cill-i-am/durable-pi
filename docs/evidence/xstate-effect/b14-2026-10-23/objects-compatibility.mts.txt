@@ -1,0 +1,72 @@
+import assert from 'node:assert/strict'
+import { mkdtemp, writeFile } from 'node:fs/promises'
+import { DatabaseSync } from 'node:sqlite'
+import { BACKGROUND_CONTEXT as ctx } from '@earendil-works/chord/context'
+import { createModels } from '@earendil-works/pi-ai'
+import { Harness, createRegistry, defineDocFamily } from '@earendil-works/pi-durable'
+import { openNodeSqliteStorage } from '@earendil-works/pi-durable/storage/sqlite/node'
+import { Effect, Exit } from 'effect'
+import { piWorkingObjects as previousObjects } from './baseline/src/objects/adapters/pi.ts'
+import { piWorkingObjects as currentObjects } from '/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/objects/adapters/pi.ts'
+const run = Effect.runPromise
+const user = { actor: 'user', surface: 'workbench', turnId: null, toolCallId: null } as const
+const directory = await mkdtemp('/private/tmp/b14-objects-independent/compat-')
+const path = `${directory}/pi.sqlite`
+const options = { models: createModels(), registry: createRegistry() }
+let harness = await Harness.open(await openNodeSqliteStorage(path), options, ctx)
+const raw = () => {
+  const db = new DatabaseSync(path, { readOnly: true })
+  try { return { documents: db.prepare('SELECT * FROM documents ORDER BY id').all(), revisions: db.prepare('SELECT * FROM document_revisions ORDER BY document_id, seq').all() } }
+  finally { db.close() }
+}
+const reopen = async () => { await harness.close(ctx); harness = await Harness.open(await openNodeSqliteStorage(path), options, ctx) }
+const id = crypto.randomUUID(), taskId = crypto.randomUUID()
+const create = { id, operationId: crypto.randomUUID(), expectedRevision: 0, action: { type: 'create', title: 'Baseline-created checklist', notes: 'Retain history', tasks: [{ id: taskId, title: 'Keep this task', status: 'pending', dueDate: null, notes: '' }] } } as const
+const edit = { id, operationId: crypto.randomUUID(), expectedRevision: 1, action: { type: 'update', changes: [{ type: 'edit_task', taskId, patch: { status: 'completed' } }] } } as const
+const noop = { ...edit, operationId: crypto.randomUUID(), expectedRevision: 2 }
+const cancelled = { ...edit, operationId: crypto.randomUUID(), expectedRevision: 2 }
+try {
+  const old = previousObjects(async () => harness, () => true)
+  const receipts = [await run(old.mutate(create, user)), await run(old.mutate(edit, user)), await run(old.mutate(noop, user))]
+  await run(old.cancel(cancelled.operationId))
+  await run(old.offered(2))
+  const beforeDetail = await run(old.read(id)), beforeContext = await run(old.context()), beforeRaw = raw()
+  await reopen()
+  const objects = currentObjects(async () => harness, () => true)
+  assert.deepEqual(await run(objects.read(id)), beforeDetail)
+  assert.deepEqual(await run(objects.context()), beforeContext)
+  for (const [index, mutation] of [create, edit, noop].entries()) assert.deepEqual(await run(objects.mutate(mutation, user)), receipts[index])
+  assert.deepEqual(await run(objects.cancel(create.operationId)), { applied: true })
+  assert.deepEqual(await run(objects.cancel(cancelled.operationId)), { applied: false })
+  assert.ok(Exit.isFailure(await Effect.runPromiseExit(objects.mutate(cancelled, user))))
+  assert.deepEqual(await run(objects.read(id)), beforeDetail)
+  assert.deepEqual(await run(objects.context()), beforeContext)
+  const afterRaw = raw()
+  assert.deepEqual(afterRaw.documents, beforeRaw.documents)
+  const operationIds = beforeRaw.documents.filter((row: any) => JSON.parse(row.record).kind === 'working-objects.operation').map((row: any) => row.id)
+  assert.equal(operationIds.length, 4)
+  assert.deepEqual(afterRaw.revisions.filter((row: any) => !operationIds.includes(row.document_id)), beforeRaw.revisions.filter((row: any) => !operationIds.includes(row.document_id)))
+  for (const op of operationIds) assert.equal(afterRaw.revisions.filter((row: any) => row.document_id === op).at(-1)?.version, 2)
+  const archive = { id, operationId: crypto.randomUUID(), expectedRevision: 2, action: { type: 'update', changes: [{ type: 'archive', archived: true }] } } as const
+  await run(objects.mutate(archive, user))
+  await reopen()
+  const reopenMutation = { ...archive, operationId: crypto.randomUUID(), expectedRevision: 3, action: { type: 'update', changes: [{ type: 'archive', archived: false }] } } as const
+  await run(objects.mutate(reopenMutation, user))
+  assert.deepEqual((await run(objects.read(id))).object.tasks, beforeDetail.object.tasks)
+  assert.deepEqual((await run(objects.read(id))).events.slice(-2), beforeDetail.events)
+  assert.equal((await run(objects.read(id))).object.revision, 4)
+  await reopen()
+  assert.deepEqual(await run(objects.mutate(reopenMutation, user)), { objectId: id, revision: 4, eventId: `${id}:4` })
+
+  const Unknown = defineDocFamily({ kind: 'working-objects.operation', scope: 'session', family: true, version: 1, initial: (_: null) => ({ digest: '', receipt: null, cancelled: false, workflowVersion: 99 }) })
+  const unknownId = crypto.randomUUID()
+  await harness.commit(async tx => { await tx.doc(Unknown, unknownId, null) }, ctx)
+  const beforeRejected = raw()
+  assert.ok(Exit.isFailure(await Effect.runPromiseExit(objects.cancel(unknownId))))
+  assert.deepEqual(raw(), beforeRejected)
+  await reopen()
+  assert.deepEqual(await harness.snapshot(Unknown, unknownId, ctx), { digest: '', receipt: null, cancelled: false, workflowVersion: 99 })
+  const result = { passed: true, directory, baselineHead: '8304a30d3f9a3e5284a255bb1cabc321c767f2a6', nativeDocumentIdsPreserved: afterRaw.documents.map((row: any) => row.id), migratedOperationIds: operationIds, baselinePublicReceipt: receipts, finalRevision: 4, immutableHistoryEvents: beforeDetail.events.length, invalidLegacyRetainedAcrossReopen: true }
+  console.log(JSON.stringify(result))
+  await writeFile('/private/tmp/b14-objects-independent/compatibility-results.json', JSON.stringify(result, null, 2))
+} finally { await harness.close(ctx) }

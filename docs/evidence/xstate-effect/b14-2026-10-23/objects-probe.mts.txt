@@ -1,0 +1,139 @@
+import assert from 'node:assert/strict'
+import { mkdtemp, writeFile } from 'node:fs/promises'
+import { DatabaseSync } from 'node:sqlite'
+import { BACKGROUND_CONTEXT as ctx } from '@earendil-works/chord/context'
+import { createModels } from '@earendil-works/pi-ai'
+import { Harness, createRegistry, defineDocFamily } from '@earendil-works/pi-durable'
+import { openNodeSqliteStorage } from '@earendil-works/pi-durable/storage/sqlite/node'
+import { Cause, Effect, Exit } from 'effect'
+import { objectDigest, piObjectLedger } from '/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/objects/adapters/pi.ts'
+import { ObjectFailure } from '/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/objects/contracts.ts'
+import { makeWorkingObjects } from '/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/objects/service.ts'
+import { migrateObjectOperation, newObjectOperation } from '/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/objects/operation.machine.ts'
+
+const user = { actor: 'user', surface: 'workbench', turnId: null, toolCallId: null } as const
+const run = Effect.runPromise
+const barrier = () => Promise.withResolvers<void>()
+const input = () => ({ id: crypto.randomUUID(), operationId: crypto.randomUUID(), expectedRevision: 0, action: { type: 'create', title: 'Independent object', notes: '', tasks: [] } } as const)
+const Legacy = defineDocFamily({ kind: 'working-objects.operation', scope: 'session', family: true, version: 1, initial: (_: null): any => ({ digest: '', cancelled: false, receipt: null }) })
+const Current = defineDocFamily({ kind: 'working-objects.operation', scope: 'session', family: true, version: 2, initial: (_: null) => newObjectOperation() })
+const observations: any[] = []
+const check = (name: string, details: any = {}) => { observations.push({ name, passed: true, ...details }); console.log(JSON.stringify(observations.at(-1))) }
+const directory = await mkdtemp('/private/tmp/b14-objects-independent/sqlite-')
+const path = `${directory}/pi.sqlite`
+const options = { models: createModels(), registry: createRegistry() }
+let storage = await openNodeSqliteStorage(path)
+let harness = await Harness.open(storage, options, ctx)
+const ledger = piObjectLedger(async () => harness)
+const objects = makeWorkingObjects(ledger, () => true, objectDigest)
+const raw = () => {
+  const db = new DatabaseSync(path, { readOnly: true })
+  try { return { documents: db.prepare('SELECT * FROM documents ORDER BY id').all(), revisions: db.prepare('SELECT * FROM document_revisions ORDER BY document_id, seq').all() } }
+  finally { db.close() }
+}
+const reopen = async () => { await harness.close(ctx); storage = await openNodeSqliteStorage(path); harness = await Harness.open(storage, options, ctx) }
+try {
+  const valid = [
+    { digest: '', cancelled: false, receipt: null },
+    { digest: '', cancelled: true, receipt: null },
+    { digest: 'd', cancelled: false, receipt: { objectId: crypto.randomUUID(), revision: 1, eventId: 'id:1' } },
+  ]
+  for (const value of valid) {
+    const saved = JSON.stringify(value)
+    assert.ok(migrateObjectOperation(value, 1))
+    assert.equal(JSON.stringify(value), saved)
+  }
+  const invalid = [
+    ...['schemaVersion', 'workflowVersion', 'libraryVersion', 'piVersion', 'value', 'future'].map(key => ({ ...valid[0], [key]: 99 })),
+    { ...valid[0], digest: 'not empty' },
+    { ...valid[1], receipt: valid[2].receipt },
+    { ...valid[2], digest: '' },
+    { ...valid[2], receipt: { ...valid[2].receipt, future: 99 } },
+    { digest: '', receipt: null }, { ...valid[0], cancelled: 0 },
+  ]
+  for (const value of invalid) assert.throws(() => migrateObjectOperation(value, 1))
+  for (const version of [0, 2, 3, NaN]) assert.throws(() => migrateObjectOperation(valid[0], version))
+  check('strict migration matrix', { valid: valid.length, invalid: invalid.length, rejectedVersions: 4 })
+
+  const mutation = input()
+  await harness.commit(async tx => { await tx.doc(Legacy, mutation.operationId, null) }, ctx)
+  const beforeFailure = raw()
+  const poison = new Error('independent publication defect')
+  const failing = makeWorkingObjects({ ...ledger, atomic: change => ledger.atomic(tx => change({ ...tx, event: id => tx.event(id).pipe(Effect.andThen(Effect.die(poison))) })) }, () => true, objectDigest)
+  const failure = await Effect.runPromiseExit(failing.mutate(mutation, user))
+  assert.ok(Exit.isFailure(failure) && failure.cause.reasons.some(r => r._tag === 'Die' && r.defect === poison))
+  assert.deepEqual(raw(), beforeFailure)
+  await reopen()
+  assert.deepEqual(await harness.snapshot(Legacy, mutation.operationId, ctx), valid[0])
+  check('native failed post-migration callback preserves every document and revision', { documents: beforeFailure.documents.length, revisions: beforeFailure.revisions.length })
+
+  const created = await run(objects.mutate(mutation, user))
+  const afterCreate = raw()
+  assert.equal(afterCreate.documents.find((d: any) => JSON.parse(d.record).key === mutation.operationId)?.id, beforeFailure.documents[0]?.id)
+  assert.equal((await run(objects.read(mutation.id))).object.schemaVersion, 1)
+  assert.equal((await run(objects.read(mutation.id))).events.length, 1)
+  const returned = await run(objects.mutate(mutation, user))
+  returned.revision = 999
+  assert.deepEqual(await run(objects.mutate(mutation, user)), created)
+  assert.deepEqual(raw(), afterCreate)
+  check('successful conversion retains native address and detached public receipt', { nativeOperationId: beforeFailure.documents[0]?.id, publicReceipt: created })
+
+  const pendingMutation = input(), entered = barrier(), release = barrier()
+  let writable = true
+  const held = makeWorkingObjects({ ...ledger, atomic: change => ledger.atomic(tx => change({ ...tx, operation: id => tx.operation(id).pipe(Effect.tap(() => Effect.promise(async () => { entered.resolve(); await release.promise }))) })) }, () => writable, objectDigest)
+  const pendingCancel = Effect.runPromiseExit(held.cancel(pendingMutation.operationId))
+  await entered.promise
+  writable = false
+  release.resolve()
+  const denied = await pendingCancel
+  assert.ok(Exit.isFailure(denied) && denied.cause.reasons.some(r => r._tag === 'Fail' && r.error.code === 'read_only'))
+  assert.equal(await harness.snapshot(Current, pendingMutation.operationId, ctx), undefined)
+  await run(objects.mutate(pendingMutation, user))
+  check('authority loss after operation acquisition rolls back cancellation sentinel')
+
+  const next = input(), nativeEntered = barrier(), nativeRelease = barrier()
+  const actualCommit = storage.commit.bind(storage)
+  let heldNative = true
+  storage.commit = async (writes, context) => {
+    if (heldNative) { heldNative = false; nativeEntered.resolve(); await nativeRelease.promise }
+    return actualCommit(writes, context)
+  }
+  const controller = new AbortController()
+  let settled = false
+  const pending = Effect.runPromiseExit(objects.mutate(next, user), { signal: controller.signal }).then(exit => { settled = true; return exit })
+  await nativeEntered.promise
+  controller.abort()
+  await new Promise(resolve => setImmediate(resolve))
+  assert.equal(settled, false)
+  nativeRelease.resolve()
+  const interrupted = await pending
+  assert.ok(Exit.isFailure(interrupted) && Cause.hasInterrupts(interrupted.cause))
+  storage.commit = actualCommit
+  await reopen()
+  assert.deepEqual(await run(objects.cancel(next.operationId)), { applied: true })
+  assert.equal((await run(objects.mutate(next, user))).revision, 1)
+  assert.equal((await run(objects.read(next.id))).events.length, 1)
+  check('interruption during actual SQLite settlement is joined and retains one applied receipt after reopen')
+
+  const late = input(), failEntered = barrier(), failRelease = barrier()
+  const checked = new ObjectFailure({ code: 'unavailable', message: 'independent checked native failure' }), defect = new Error('independent native defect')
+  storage.commit = async () => { failEntered.resolve(); await failRelease.promise; throw Cause.fromReasons([Cause.makeFailReason(checked), Cause.makeDieReason(defect), Cause.makeInterruptReason()]) }
+  const aborted = new AbortController()
+  const failed = Effect.runPromiseExit(objects.mutate(late, user), { signal: aborted.signal })
+  await failEntered.promise
+  aborted.abort()
+  failRelease.resolve()
+  const lateExit = await failed
+  console.log('LATE_NATIVE_EXIT', JSON.stringify(lateExit))
+  assert.ok(Exit.isFailure(lateExit) && Cause.hasInterrupts(lateExit.cause))
+  if (Exit.isFailure(lateExit)) {
+    assert.ok(lateExit.cause.reasons.some(r => r._tag === 'Die' && r.defect === defect))
+    assert.ok(lateExit.cause.reasons.some(r => r._tag === 'Die' && r.defect?._tag === 'Fail' && r.defect.error?.message === checked.message))
+  }
+  await reopen()
+  assert.equal(await harness.snapshot(Current, late.operationId, ctx), undefined)
+  check('late mixed Cause survives interrupted failed native settlement with no partial operation')
+} finally {
+  await harness.close(ctx)
+  await writeFile('/private/tmp/b14-objects-independent/results.json', JSON.stringify({ directory, observations }, null, 2))
+}
