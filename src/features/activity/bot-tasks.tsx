@@ -80,7 +80,10 @@ export function BotTasks({
       stop()
     }
   }, [agentId, retry])
-  async function control(id: string, action: "cancel" | "retry") {
+  async function control(
+    id: string,
+    action: "cancel" | "retry" | "retry_mailbox"
+  ) {
     setPending(id)
     setError("")
     try {
@@ -96,6 +99,7 @@ export function BotTasks({
       setPending(null)
     }
   }
+  const recovery = state?.recovery
   const name = (id: string) =>
     agents.find((a) => a.id === id)?.name ?? "Archived bot"
   return (
@@ -111,6 +115,24 @@ export function BotTasks({
         Recent requests between your bots. Accepted means saved; completed means
         a result is available. No files or action permissions are shared.
       </p>
+      {recovery && (
+        <Alert>
+          <AlertTitle>Mailbox needs attention</AlertTitle>
+          <AlertDescription>
+            {recovery.message}
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={pending !== null}
+              aria-busy={pending === recovery.epoch}
+              onClick={() => void control(recovery.epoch, "retry_mailbox")}
+            >
+              <RotateCw data-icon="inline-start" />
+              Retry mailbox
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
       {error && (
         <Alert>
           <AlertTitle>Updates interrupted</AlertTitle>
@@ -187,6 +209,29 @@ export function BotTasks({
                   <p className="whitespace-pre-wrap">{task.outcome.text}</p>
                 </div>
               )}
+              {task.direction === "outgoing" &&
+                terminal(task) &&
+                !task.resumed &&
+                task.control.unconfirmed && (
+                  <Alert>
+                    <AlertTitle>Result not confirmed</AlertTitle>
+                    <AlertDescription>
+                      The result is saved, but returning it to this bot could
+                      not be confirmed. Retrying uses the saved result and
+                      original task.
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={pending !== null}
+                        aria-busy={pending === task.id}
+                        onClick={() => void control(task.id, "retry")}
+                      >
+                        <RotateCw data-icon="inline-start" />
+                        Retry result
+                      </Button>
+                    </AlertDescription>
+                  </Alert>
+                )}
               {(payload.kind === "task" || payload.kind === "question") &&
                 payload.context && (
                   <details>

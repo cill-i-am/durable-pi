@@ -54,6 +54,10 @@ export interface DelegationLedger {
     child: number,
     request: string
   ) => Effect.Effect<boolean, DelegationFailure>
+  submission: (
+    child: number,
+    request: string
+  ) => Effect.Effect<number | undefined, DelegationFailure>
   submit: (
     child: number,
     text: string,

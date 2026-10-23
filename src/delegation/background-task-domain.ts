@@ -6,7 +6,7 @@ import { Control, NativeId, type Group, type TaskBrief } from "./contracts"
 import { REQUEST_LIMIT } from "./delegation"
 import type { ChildFacts } from "./domain"
 
-export const BackgroundChild = Schema.Struct({
+export const LegacyBackgroundChild = Schema.Struct({
   id: NativeId,
   provider: Schema.String,
   requests: Schema.Number.check(
@@ -15,8 +15,8 @@ export const BackgroundChild = Schema.Struct({
   ),
   stopped: Schema.Boolean,
 })
-export type BackgroundChild = typeof BackgroundChild.Type
-export const BackgroundState = Schema.Struct({
+export type LegacyBackgroundChild = typeof LegacyBackgroundChild.Type
+export const LegacyBackgroundState = Schema.Struct({
   handoff: BackgroundHandoff,
   stopped: Schema.Boolean,
   sealed: Schema.Boolean,
@@ -24,12 +24,108 @@ export const BackgroundState = Schema.Struct({
     Schema.isInt(),
     Schema.isGreaterThanOrEqualTo(0)
   ),
-  children: Schema.Array(BackgroundChild),
+  children: Schema.Array(LegacyBackgroundChild),
   controls: Schema.Array(Control),
   applied: Schema.Array(Schema.String),
 })
+export type LegacyBackgroundState = typeof LegacyBackgroundState.Type
+
+export const BackgroundChild = Schema.Struct({
+  id: NativeId,
+  provider: Schema.String,
+  requests: Schema.Number.check(
+    Schema.isInt(),
+    Schema.isGreaterThanOrEqualTo(0)
+  ),
+  authority: Schema.Literals(["active", "revoked"]),
+  stop: Schema.Literals(["none", "pending", "confirmed", "unconfirmed"]),
+  stopAttempt: Schema.Number.check(
+    Schema.isInt(),
+    Schema.isGreaterThanOrEqualTo(0)
+  ),
+})
+export type BackgroundChild = typeof BackgroundChild.Type
+export const BackgroundSubmission = Schema.Struct({
+  child: NativeId,
+  request: Schema.String,
+  text: Schema.String,
+  steer: Schema.Boolean,
+  status: Schema.Literals(["pending", "claimed", "submitted", "unconfirmed"]),
+  claim: Schema.Number.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(0)),
+})
+export const BackgroundState = Schema.Struct({
+  schemaVersion: Schema.Literal(2),
+  workflowVersion: Schema.Literal(1),
+  libraryVersion: Schema.Literal("6.0.0-alpha.68/1.0.0-alpha.8"),
+  piVersion: Schema.Literal("1.3.0"),
+  handoff: BackgroundHandoff,
+  outcome: Schema.Literals(["working", "completed", "cancelled"]),
+  authority: Schema.Literals(["active", "revoked"]),
+  revision: Schema.Number.check(
+    Schema.isInt(),
+    Schema.isGreaterThanOrEqualTo(0)
+  ),
+  children: Schema.Array(BackgroundChild),
+  controls: Schema.Array(Control),
+  applied: Schema.Array(Schema.String),
+  submissions: Schema.Array(BackgroundSubmission),
+})
 export type BackgroundState = typeof BackgroundState.Type
 
+/** Pure, explicit v1 conversion. Legacy flags never acknowledge native cleanup. */
+export function migrateBackgroundState(raw: unknown): BackgroundState {
+  if (
+    typeof raw === "object" &&
+    raw !== null &&
+    ["schemaVersion", "workflowVersion", "libraryVersion", "piVersion"].some(
+      (key) => key in raw
+    )
+  )
+    return restoreBackgroundState(raw)
+  const old = Schema.decodeUnknownSync(LegacyBackgroundState)(raw)
+  return restoreBackgroundState({
+    schemaVersion: 2,
+    workflowVersion: 1,
+    libraryVersion: "6.0.0-alpha.68/1.0.0-alpha.8",
+    piVersion: "1.3.0",
+    handoff: old.handoff,
+    outcome: old.stopped ? "cancelled" : old.sealed ? "completed" : "working",
+    authority: old.stopped || old.sealed ? "revoked" : "active",
+    revision: old.revision,
+    controls: old.controls,
+    applied: old.applied,
+    children: old.children.map(({ stopped, ...child }) => ({
+      ...child,
+      authority: stopped || old.stopped ? "revoked" : "active",
+      stop: stopped || old.stopped ? "pending" : "none",
+      stopAttempt: 0,
+    })),
+    submissions: [
+      ...old.children.map((child, index) => ({
+        child: child.id,
+        request: backgroundInitialId(child.id),
+        text: old.handoff.input.tasks[index]!.task,
+        steer: false,
+        status: "pending",
+        claim: 0,
+      })),
+      ...old.controls.flatMap((control) =>
+        control.action.type === "steer"
+          ? [
+              {
+                child: control.childId,
+                request: backgroundControlId(control),
+                text: control.action.text,
+                steer: true,
+                status: "pending",
+                claim: 0,
+              },
+            ]
+          : []
+      ),
+    ],
+  })
+}
 export const backgroundChildInstructions = (
   handoff: BackgroundHandoff,
   task: TaskBrief
@@ -39,6 +135,33 @@ export const backgroundChildInstructions = (
 export function restoreBackgroundState(raw: unknown): BackgroundState {
   const state = Schema.decodeUnknownSync(BackgroundState)(raw)
   if (
+    (state.outcome === "working"
+      ? state.authority !== "active"
+      : state.authority !== "revoked") ||
+    state.submissions.length !==
+      state.children.length +
+        state.controls.filter((control) => control.action.type === "steer")
+          .length ||
+    new Set(state.submissions.map((command) => command.request)).size !==
+      state.submissions.length ||
+    state.submissions.some((command) => {
+      const index = state.children.findIndex(
+        (child) => child.id === command.child
+      )
+      if (index < 0) return true
+      if (!command.steer)
+        return (
+          command.request !== backgroundInitialId(command.child) ||
+          command.text !== state.handoff.input.tasks[index]!.task
+        )
+      return !state.controls.some(
+        (control) =>
+          control.childId === command.child &&
+          control.action.type === "steer" &&
+          backgroundControlId(control) === command.request &&
+          control.action.text === command.text
+      )
+    }) ||
     state.children.length !== state.handoff.input.tasks.length ||
     new Set(state.children.map((child) => child.id)).size !==
       state.children.length ||
@@ -81,79 +204,6 @@ export const backgroundChild = (state: BackgroundState, id: number) => {
     throw backgroundRejected("not_found", "Child unavailable in this group.")
   return child
 }
-export function acceptBackgroundControl(
-  state: BackgroundState,
-  input: Control,
-  now: number
-): BackgroundState {
-  if (input.groupId !== state.handoff.id)
-    throw backgroundRejected("not_found", "Child unavailable in this group.")
-  const child = backgroundChild(state, input.childId)
-  const prior = state.controls.find(
-    (value) => value.operationId === input.operationId
-  )
-  if (prior) {
-    if (JSON.stringify(prior) !== JSON.stringify(input))
-      throw backgroundRejected(
-        "conflict",
-        "This control ID belongs to another operation."
-      )
-    return state
-  }
-  if (
-    state.sealed ||
-    state.stopped ||
-    now >= state.handoff.deadline ||
-    child.stopped
-  )
-    throw backgroundRejected(
-      "cancelled",
-      "This background group has finished or stopped."
-    )
-  if (
-    input.action.type === "steer" &&
-    state.controls.filter(
-      (value) =>
-        value.childId === input.childId && value.action.type === "steer"
-    ).length >= 8
-  )
-    throw backgroundRejected("limit", "This child reached its steering limit.")
-  return {
-    ...state,
-    revision: state.revision + 1,
-    controls: [...state.controls, input],
-    children: state.children.map((value) =>
-      value.id === input.childId && input.action.type === "stop"
-        ? { ...value, stopped: true }
-        : value
-    ),
-  }
-}
-export function consumeBackgroundRequest(
-  state: BackgroundState,
-  provider: string,
-  now: number
-): BackgroundState {
-  const child = state.children.find((value) => value.provider === provider)
-  if (!child || child.stopped || state.stopped || state.sealed)
-    throw backgroundRejected("cancelled", "This background task has stopped.")
-  if (now >= state.handoff.deadline || child.requests >= REQUEST_LIMIT)
-    throw backgroundRejected(
-      "limit",
-      "This background task reached its execution limit."
-    )
-  return {
-    ...state,
-    revision: state.revision + 1,
-    children: state.children.map((value) =>
-      value.id === child.id ? { ...value, requests: value.requests + 1 } : value
-    ),
-  }
-}
-export const stopBackgroundState = (state: BackgroundState): BackgroundState =>
-  state.sealed
-    ? state
-    : { ...state, stopped: true, revision: state.revision + 1 }
 export function trimBackgroundText(value: string, limit = 12000) {
   const bytes = new TextEncoder().encode(value)
   return bytes.length <= limit
@@ -174,17 +224,13 @@ export function projectBackgroundTasks(
     route: state.handoff.route,
     createdAt: state.handoff.createdAt,
     deadline: state.handoff.deadline,
-    status: state.stopped
-      ? "cancelled"
-      : state.sealed
-        ? "completed"
-        : "working",
+    status: state.outcome,
     children: state.children.map((child, index) => {
       const fact = facts[index]!
       const stopped =
-        state.stopped ||
-        child.stopped ||
-        (!state.sealed && now >= state.handoff.deadline)
+        state.outcome === "cancelled" ||
+        child.authority === "revoked" ||
+        (state.outcome === "working" && now >= state.handoff.deadline)
       const pending = fact.inputs.some(
         (value) =>
           value?.status === "queued" ||
@@ -197,15 +243,18 @@ export function projectBackgroundTasks(
       return {
         ...state.handoff.input.tasks[index]!,
         id: child.id,
-        status: pending
-          ? stopped
+        status:
+          child.stop === "pending" || child.stop === "unconfirmed"
             ? "stopping"
-            : "working"
-          : stopped
-            ? "cancelled"
-            : failed
-              ? "failed"
-              : "completed",
+            : pending
+              ? stopped
+                ? "stopping"
+                : "working"
+              : stopped
+                ? "cancelled"
+                : failed
+                  ? "failed"
+                  : "completed",
         answer: trimBackgroundText(fact.answer),
         requests: child.requests,
         inputTokens: fact.inputTokens,
@@ -219,11 +268,13 @@ export function projectBackgroundTasks(
             control.action.type === "steer" ? control.action.text : ""
           ),
         error:
-          failed && !pending && !stopped
-            ? child.requests >= REQUEST_LIMIT
-              ? "This child reached its request limit."
-              : "The model did not complete this task."
-            : null,
+          child.stop === "unconfirmed"
+            ? "Native Stop remains unconfirmed. Retry Stop to reconcile cleanup."
+            : failed && !pending && !stopped
+              ? child.requests >= REQUEST_LIMIT
+                ? "This child reached its request limit."
+                : "The model did not complete this task."
+              : null,
       }
     }),
   }

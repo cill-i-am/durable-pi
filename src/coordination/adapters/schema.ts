@@ -23,6 +23,15 @@ export const agentMessages = sqliteTable(
     state: text("state", {
       enum: ["accepted", "delivered", "failed"],
     }).notNull(),
+    schema_version: integer("schema_version").notNull().default(1),
+    workflow_version: integer("workflow_version").notNull().default(1),
+    revision: integer("revision").notNull().default(0),
+    phase: text("phase", {
+      enum: ["pending", "dispatching", "delivered", "failed", "unconfirmed"],
+    })
+      .notNull()
+      .default("pending"),
+    attempt_id: text("attempt_id"),
     attempts: integer("attempts").notNull().default(0),
     retry_at: integer("retry_at").notNull(),
     error: text("error"),

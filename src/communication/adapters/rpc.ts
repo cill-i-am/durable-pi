@@ -79,7 +79,7 @@ export function mailboxTransport(
 export function mailboxHandler(
   mailbox: Mailbox["Service"],
   transport: Layer.Layer<MailboxTransport>,
-  arm: () => Effect.Effect<void, CommunicationError>,
+  arm: () => Effect.Effect<number, CommunicationError>,
   permit: (
     envelope: Envelope
   ) => Effect.Effect<boolean, CommunicationError> = () => Effect.succeed(false)

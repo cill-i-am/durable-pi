@@ -1,7 +1,8 @@
-import { Effect, Schema } from "effect"
+import { Effect, Exit, Schema } from "effect"
 
 import { preserveFatal } from "../shared/effect"
 import type { CoordinationStore } from "./adapters/sqlite"
+import { admitCoordination } from "./admission"
 import {
   CoordinationFailure,
   SendMessage,
@@ -24,7 +25,8 @@ export interface CoordinationHost {
     before?: string
   ) => Work<{ id: string; title: string; status: string }[]>
   latest: (agent: Agent) => Work<AgentReply | null>
-  deliver: (message: Message, target: Agent) => Work<void>
+  deliver: (message: Message, target: Agent, attempt: string) => Work<void>
+  prearm: () => Work<number>
   wake: () => Work<void>
   enabled: () => Work<boolean>
 }
@@ -143,26 +145,38 @@ export class AgentCoordination {
       }
       yield* this.source(nativeId)
       const now = this.now()
-      const row = yield* this.store.accept({
-        ...input,
-        id: this.uuid(),
-        operationId,
-        from: source.address,
-        provenance: {
-          author: agentActor(this.host.bot, source.address),
-          recipients: [agentActor(this.host.bot, target.address)],
-          conversationId: this.host.bot,
-          ...(input.replyTo ? { replyTo: input.replyTo } : {}),
-          causedBy: operationId,
-        },
-        createdAt: now,
-        deadline: Math.min(
-          now + 600000,
-          source.deadline ?? Infinity,
-          target.deadline ?? Infinity
-        ),
+      const row = yield* admitCoordination({
+        arm: this.host.prearm(),
+        accept: (deadline) =>
+          Effect.gen({ self: this }, function* () {
+            const latestSource = yield* this.source(nativeId)
+            yield* this.requireLive(yield* this.target(latestSource, input.to))
+            return yield* this.store.accept(
+              {
+                ...input,
+                id: this.uuid(),
+                operationId,
+                from: source.address,
+                provenance: {
+                  author: agentActor(this.host.bot, source.address),
+                  recipients: [agentActor(this.host.bot, target.address)],
+                  conversationId: this.host.bot,
+                  ...(input.replyTo ? { replyTo: input.replyTo } : {}),
+                  causedBy: operationId,
+                },
+                createdAt: now,
+                deadline: Math.min(
+                  now + 600000,
+                  source.deadline ?? Infinity,
+                  target.deadline ?? Infinity
+                ),
+              },
+              deadline,
+              this.now
+            )
+          }),
+        wake: this.host.wake(),
       })
-      yield* this.host.wake()
       return {
         id: row.message.id,
         status: row.state,
@@ -171,7 +185,7 @@ export class AgentCoordination {
       }
     })
   }
-  private deliver(message: Message) {
+  private deliver(message: Message, attempt: string) {
     return Effect.gen({ self: this }, function* () {
       const source = yield* this.requireLive(
         (yield* this.host.agents(message.from.sessionId)).find((agent) =>
@@ -181,28 +195,38 @@ export class AgentCoordination {
       const target = yield* this.requireLive(
         yield* this.target(source, message.to)
       )
-      yield* this.host.deliver(message, target)
-      yield* this.store.delivered(message.id)
+      yield* this.host.deliver(message, target, attempt)
+      yield* this.store.delivered(message.id, attempt)
     }).pipe(
       preserveFatal,
       Effect.catchTag("CoordinationFailure", (cause) =>
         cause.code === "busy" || cause.code === "unavailable"
-          ? this.store.retry(message.id, this.now())
-          : this.store.failed(message.id, cause.message)
+          ? this.store.retry(message.id, attempt, this.now())
+          : this.store.failed(message.id, attempt, cause.message)
+      ),
+      Effect.onExit((exit) =>
+        Exit.isFailure(exit)
+          ? this.store.retry(message.id, attempt, this.now())
+          : Effect.void
       )
     )
   }
   pump() {
     return Effect.gen({ self: this }, function* () {
-      for (const { message } of yield* this.store.pending(this.now())) {
-        if (message.deadline <= this.now())
-          yield* this.store.failed(
-            message.id,
-            "Message expired before delivery."
-          )
-        else yield* this.deliver(message)
+      for (const row of yield* this.store.pending(this.now())) {
+        const claimed = yield* this.store.claim(
+          row.id,
+          row.revision,
+          this.now(),
+          this.uuid()
+        )
+        if (claimed?.phase === "dispatching" && claimed.attempt_id)
+          yield* this.deliver(claimed.message, claimed.attempt_id)
       }
       return yield* this.store.nextWake()
     })
+  }
+  restore() {
+    return this.store.restore(this.now())
   }
 }

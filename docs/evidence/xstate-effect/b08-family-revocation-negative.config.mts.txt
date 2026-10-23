@@ -1,0 +1,11 @@
+import { defineConfig } from "vitest/config"
+export default defineConfig({
+ root: "/Users/cillianbarron/.codex/worktrees/xstate-review-stack/durable-pi",
+ plugins: [{ name: "omit-known-revocation", enforce: "pre", transform(code,id) {
+  if (!id.endsWith('/src/delegation/service.ts')) return
+  const needle='if (parent.group) yield* revokeGroup(tx, parent.group)'
+  if (code.split(needle).length !== 2) throw new Error('Explicit revoke seam missing')
+  return code.replace(needle,'if (false) yield* revokeGroup(tx, parent.group)')
+ }}],
+ test: { maxWorkers:2 }
+})

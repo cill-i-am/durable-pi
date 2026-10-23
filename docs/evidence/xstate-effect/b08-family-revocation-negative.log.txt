@@ -1,0 +1,48 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-review-stack/durable-pi
+
+ ❯ tests/delegation-family-revocation.test.ts (5 tests | 1 failed | 4 skipped) 57ms
+   × known family revocation stops a live detached child after its actual parent completed 56ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/delegation-family-revocation.test.ts > known family revocation stops a live detached child after its actual parent completed
+AssertionError: expected { schemaVersion: 1, …(16) } to match object { lifecycle: 'closing', …(3) }
+(24 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "children": [
+      {
+        "id": 11,
+-       "lifecycle": "stopping",
++       "lifecycle": "active",
+        "requests": 0,
+-       "stopped": true,
++       "stopped": false,
+      },
+    ],
+    "closed": false,
+    "controls": [],
+-   "lifecycle": "closing",
++   "lifecycle": "open",
+  }
+
+ ❯ tests/delegation-family-revocation.test.ts:279:21
+    277|     await run(f.app.revoke(saved.turnId))
+    278|     const revoked = await run(f.ledger.group(saved.id))
+    279|     expect(revoked).toMatchObject({
+       |                     ^
+    280|       lifecycle: "closing",
+    281|       closed: false,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 4 skipped (5)
+   Start at  15:38:20
+   Duration  562ms (import 67%, transform 21%, tests 12%, worker 1%)
+

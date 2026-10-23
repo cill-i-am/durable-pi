@@ -1,0 +1,3 @@
+{"case":"retained-native-restart","emptySteps":1,"restores":2,"message":"389663f9-3307-4c75-9e5d-88fbe1fe615a","initial":19,"addressed":24,"calls":2}
+{"case":"held-native-stop","trace":["admitted:delegation:7:7","submit-held","admitted:f97ccc2a-cdb6-4b3a-8fc6-d8e90be3cdfe","abort-started","abort-acknowledged","stop-returned"],"child":7,"message":"f97ccc2a-cdb6-4b3a-8fc6-d8e90be3cdfe","receipt":25,"stopFirstPhase":"failed"}
+PASS B08 actual Lifecycle/SQLite/Pi retained discovery, original identities, joined Stop and two SIGKILL/restarts; workerd 1.20261002.1. Synthetic authority/provider; no full PersonalAgent authorization claim.

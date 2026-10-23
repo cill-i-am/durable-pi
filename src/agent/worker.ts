@@ -21,6 +21,7 @@ import { DurableObject } from "cloudflare:workers"
 import {
   Scheduler,
   Cause,
+  Clock,
   Exit,
   Layer,
   ManagedRuntime,
@@ -148,6 +149,7 @@ import { browserTools } from "../browser/adapters/tools"
 import { Browser } from "../browser/browser"
 import { BrowserStorageError } from "../browser/repository"
 import { communicationRequest } from "../communication/adapters/http"
+import { CommunicationRunner } from "../communication/adapters/lifecycle"
 import { personalCommunication } from "../communication/adapters/personal-agent"
 import { isMailboxRequest } from "../communication/adapters/rpc"
 import {
@@ -155,6 +157,7 @@ import {
   communicationInstructions,
 } from "../communication/adapters/tools"
 import { Communication } from "../communication/communication"
+import type { CommunicationError } from "../communication/contracts"
 import { webCryptoRecoveryLayer } from "../conversations/adapters/crypto"
 import {
   ConversationCheckpoint,
@@ -223,6 +226,11 @@ import {
   type Submission,
   type Turn,
 } from "../conversations/turns"
+import {
+  CoordinationRunner,
+  observeCoordinationSchedule,
+} from "../coordination/adapters/lifecycle"
+import type { CoordinationFailure } from "../coordination/contracts"
 import { personalCoordination } from "../coordination/personal-agent"
 import {
   coordinationTools,
@@ -571,43 +579,6 @@ abstract class TurnRunner extends LifecycleCapability {
     })
   }
   abstract onJob(): Promise<LifecycleJobOutcome>
-}
-
-class CommunicationRunner extends TurnRunner {
-  constructor(owner: PersonalAgent) {
-    super(owner, "bot-communication")
-  }
-  async wake() {
-    await this.lifecycle.jobs.push({
-      id: "bot-communication:pump",
-      fn: "pump",
-      time: Date.now() + 1000,
-      singleflight: true,
-      recoveryLoop: true,
-      hungTimeoutSeconds: 30,
-    })
-  }
-  async onJob(): Promise<LifecycleJobOutcome> {
-    if (!(await this.owner.familyAdmission())) return
-    const next = await this.owner.communication.runtime.runPromise(
-      Effect.flatMap(Communication, (app) => app.pump())
-    )
-    return next === undefined ? undefined : { rescheduleAt: next }
-  }
-}
-
-class CoordinationRunner extends TurnRunner {
-  constructor(owner: PersonalAgent) {
-    super(owner, "agent-coordination")
-  }
-  async onJob(): Promise<LifecycleJobOutcome> {
-    if (!(await this.owner.familyAdmission())) return
-    const next = await this.owner.actorRuntime.runPromise(
-      this.owner.coordination.pump().pipe(Effect.provide(WorkerTelemetry))
-    )
-    this.owner.notifyConversation()
-    return next === undefined ? undefined : { rescheduleAt: next }
-  }
 }
 
 class AppEventRunner extends TurnRunner {
@@ -1100,45 +1071,75 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           },
         }
       ),
-      delegationApplication(this.delegationLedger, {
-        current: (id, conversationId) =>
-          Effect.gen({ self: this }, function* () {
-            const turn = yield* this.conversations.get(id)
-            return (
-              turn?.status === "running" &&
-              turn.session_id === String(conversationId) &&
-              (yield* this.routineAuthority.canRun(id)) &&
-              (yield* this.botConfiguration.read())?.status !== "archived"
-            )
-          }).pipe(
-            Effect.mapError(
-              () =>
-                new DelegationFailure({
-                  code: "unavailable",
-                  message: "Could not confirm the parent request.",
-                })
-            )
-          ),
-        cancelled: (id) =>
-          Effect.gen({ self: this }, function* () {
-            return (
-              ["stopping", "cancelled", "failed"].includes(
-                (yield* this.conversations.get(id))?.status ?? "cancelled"
-              ) ||
-              (yield* this.botConfiguration.read())?.status === "archived" ||
-              (yield* this.coordination.store.closed(id)) ||
-              !(yield* this.routineAuthority.canRun(id))
-            )
-          }).pipe(
-            Effect.mapError(
-              () =>
-                new DelegationFailure({
-                  code: "unavailable",
-                  message: "Could not confirm the parent request.",
-                })
-            )
-          ),
-      }),
+      delegationApplication(
+        this.delegationLedger,
+        {
+          current: (id, conversationId) =>
+            Effect.gen({ self: this }, function* () {
+              const turn = yield* this.conversations.get(id)
+              return (
+                turn?.status === "running" &&
+                turn.session_id === String(conversationId) &&
+                (yield* this.routineAuthority.canRun(id)) &&
+                (yield* this.botConfiguration.read())?.status !== "archived"
+              )
+            }).pipe(
+              Effect.mapError(
+                () =>
+                  new DelegationFailure({
+                    code: "unavailable",
+                    message: "Could not confirm the parent request.",
+                  })
+              )
+            ),
+          cancelled: (id) =>
+            Effect.gen({ self: this }, function* () {
+              return (
+                ["stopping", "cancelled", "failed"].includes(
+                  (yield* this.conversations.get(id))?.status ?? "cancelled"
+                ) ||
+                (yield* this.botConfiguration.read())?.status === "archived" ||
+                (yield* this.coordination.store.closed(id)) ||
+                !(yield* this.routineAuthority.canRun(id))
+              )
+            }).pipe(
+              Effect.mapError(
+                () =>
+                  new DelegationFailure({
+                    code: "unavailable",
+                    message: "Could not confirm the parent request.",
+                  })
+              )
+            ),
+        },
+        {
+          arm: () =>
+            observeCoordinationSchedule("arm coordination discovery", () =>
+              this.coordinationRunner.armDiscovery()
+            ).pipe(
+              Effect.mapError(
+                () =>
+                  new DelegationFailure({
+                    code: "unavailable",
+                    message:
+                      "Could not retain recovery for the delegated task.",
+                  })
+              )
+            ),
+          wake: () =>
+            observeCoordinationSchedule("wake coordination", () =>
+              this.coordinationRunner.wake()
+            ).pipe(
+              Effect.mapError(
+                () =>
+                  new DelegationFailure({
+                    code: "unavailable",
+                    message: "Could not wake the delegated task.",
+                  })
+              )
+            ),
+        }
+      ),
       credentialApplication(
         this.credentialLedger,
         this.createCredentialRefresher(),
@@ -2580,8 +2581,13 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       yield* this.coordination.store.closeAll()
       for (const id of yield* this.delegationLedger.catalog()) {
         const group = yield* this.delegationLedger.group(id)
+        yield* this.delegations.revoke(group.turnId)
         yield* this.coordination.store.close(group.turnId)
-        this.ctx.waitUntil(this.run(this.delegations.reconcile(group.turnId)))
+        this.ctx.waitUntil(
+          this.run(
+            this.delegations.reconcile(group.turnId, { allowDispatch: false })
+          )
+        )
       }
       let offset = 0
       while (true) {
@@ -3217,7 +3223,24 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       thinkingLevel: "medium",
     },
   })
-  readonly communicationRunner = new CommunicationRunner(this)
+  readonly communicationRunner: CommunicationRunner<CommunicationError> =
+    new CommunicationRunner<CommunicationError>({
+      run: (work) => this.actorRuntime.runPromise(work),
+      step: (onAttempt) =>
+        this.communication.runtime.runPromise(
+          Effect.flatMap(Communication, (app) => app.pump(onAttempt))
+        ),
+      exhaust: (attempt, _error, eligible) =>
+        Effect.flatMap(Clock.currentTimeMillis, (now) =>
+          this.communication.mailbox.exhaustControl(attempt, now, eligible)
+        ),
+      restore: () =>
+        Effect.flatMap(Clock.currentTimeMillis, (now) =>
+          this.communication.mailbox.restoreControl(now)
+        ),
+      nextWake: () => this.communication.mailbox.nextWake(),
+      notify: () => this.notifyConversation(),
+    })
   readonly conversationPump = conversationPump<
     | ConversationExecutionError
     | PlanFailure
@@ -3406,7 +3429,32 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     this.conversationPump
       .reconcile()
       .pipe(Effect.andThen(this.readConversationSnapshot()))
-  readonly coordinationRunner = new CoordinationRunner(this)
+  readonly coordinationRunner: CoordinationRunner<CoordinationFailure> =
+    new CoordinationRunner<CoordinationFailure>({
+      run: (work) => this.actorRuntime.runPromise(work),
+      step: async () => {
+        let allowDispatch = false
+        try {
+          allowDispatch = !!(await this.familyAdmission())
+        } catch (cause) {
+          await this.actorRuntime.runPromise(
+            Effect.logError(
+              "Coordination authority refresh failed; continuing cleanup only",
+              cause
+            ).pipe(Effect.provide(WorkerTelemetry))
+          )
+        }
+        return this.actorRuntime.runPromise(
+          this.coordination
+            .pump({ allowDispatch })
+            .pipe(Effect.provide(WorkerTelemetry))
+        )
+      },
+      restore: () => this.coordination.restore(),
+      exhaust: (current) => this.coordination.exhaust(current),
+      nextWake: () => this.coordination.nextWake(),
+      notify: () => this.notifyConversation(),
+    })
   readonly runner: ConversationRunner<unknown> =
     new ConversationRunner<unknown>({
       run: (work) => this.actorRuntime.runPromise(work),
@@ -3507,7 +3555,8 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
 
   async onStart() {
     await this.runner.reconcile()
-    await this.coordinationRunner.wake()
+    await this.communicationRunner.reconcile()
+    await this.coordinationRunner.reconcile()
     await this.run(this.whatsappStore.recover())
     await this.whatsappRunner.reconcile()
     if ((await this.run(this.whatsappStore.pending())).length)
@@ -3516,8 +3565,6 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     await this.emailRunner.reconcile()
     if ((await this.run(this.emailStore.pending())).length)
       await this.emailRunner.wake()
-    if ((await this.run(this.communication.mailbox.nextWake())) !== undefined)
-      await this.communicationRunner.wake()
     await this.backgroundRunner.wake()
     if ((await this.run(this.routineAuthority.nextWake())) !== undefined)
       await this.routineRunner.wake()

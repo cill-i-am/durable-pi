@@ -1,0 +1,198 @@
+{
+  "syntheticProvider": true,
+  "negative": true,
+  "snapshots": {
+    "earlyBeforeRestart": {
+      "tasks": [
+        {
+          "id": "early-empty",
+          "direction": "outgoing",
+          "request": {
+            "version": 1,
+            "id": "early-empty",
+            "owner": "communication-early-empty",
+            "from": "home",
+            "to": "00000000-0000-4000-8000-000000000001",
+            "taskId": "early-empty",
+            "correlationId": "turn:early-empty",
+            "causationId": "tool:early-empty",
+            "createdAt": 1792762295999,
+            "deadline": 1792762895999,
+            "depth": 1,
+            "payload": {
+              "kind": "question",
+              "objective": "What is 2 + 2?",
+              "context": "Synthetic native fixture only."
+            }
+          },
+          "status": "waiting",
+          "outcome": null,
+          "revision": 0,
+          "leaseUntil": null,
+          "resumed": false,
+          "cancelRequested": false,
+          "schemaVersion": 1,
+          "workflowVersion": 1,
+          "control": {
+            "owner": null,
+            "phase": "submit",
+            "deadline": null,
+            "attempts": 0,
+            "unconfirmed": false
+          },
+          "stop": {
+            "status": "none",
+            "attempts": 0,
+            "deadline": null,
+            "nextAt": null
+          }
+        }
+      ],
+      "deliveries": [
+        {
+          "envelope": {
+            "version": 1,
+            "id": "early-empty",
+            "owner": "communication-early-empty",
+            "from": "home",
+            "to": "00000000-0000-4000-8000-000000000001",
+            "taskId": "early-empty",
+            "correlationId": "turn:early-empty",
+            "causationId": "tool:early-empty",
+            "createdAt": 1792762295999,
+            "deadline": 1792762895999,
+            "depth": 1,
+            "payload": {
+              "kind": "question",
+              "objective": "What is 2 + 2?",
+              "context": "Synthetic native fixture only."
+            }
+          },
+          "status": "pending",
+          "attempts": 0,
+          "attemptLimit": 8,
+          "nextAt": 1792762296053,
+          "error": null,
+          "receipt": null,
+          "schemaVersion": 1,
+          "workflowVersion": 1
+        }
+      ],
+      "events": [],
+      "native": [],
+      "inbox": [],
+      "jobs": [],
+      "physicalAlarm": null,
+      "pins": [],
+      "held": null,
+      "now": 1792762296057,
+      "deadline": 1792762356001
+    },
+    "earlyAfterRestart": {
+      "sender": {
+        "tasks": [
+          {
+            "id": "early-empty",
+            "direction": "outgoing",
+            "request": {
+              "version": 1,
+              "id": "early-empty",
+              "owner": "communication-early-empty",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "early-empty",
+              "correlationId": "turn:early-empty",
+              "causationId": "tool:early-empty",
+              "createdAt": 1792762295999,
+              "deadline": 1792762895999,
+              "depth": 1,
+              "payload": {
+                "kind": "question",
+                "objective": "What is 2 + 2?",
+                "context": "Synthetic native fixture only."
+              }
+            },
+            "status": "waiting",
+            "outcome": null,
+            "revision": 0,
+            "leaseUntil": null,
+            "resumed": false,
+            "cancelRequested": false,
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "control": {
+              "owner": null,
+              "phase": "submit",
+              "deadline": null,
+              "attempts": 0,
+              "unconfirmed": false
+            },
+            "stop": {
+              "status": "none",
+              "attempts": 0,
+              "deadline": null,
+              "nextAt": null
+            }
+          }
+        ],
+        "deliveries": [
+          {
+            "envelope": {
+              "version": 1,
+              "id": "early-empty",
+              "owner": "communication-early-empty",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "early-empty",
+              "correlationId": "turn:early-empty",
+              "causationId": "tool:early-empty",
+              "createdAt": 1792762295999,
+              "deadline": 1792762895999,
+              "depth": 1,
+              "payload": {
+                "kind": "question",
+                "objective": "What is 2 + 2?",
+                "context": "Synthetic native fixture only."
+              }
+            },
+            "status": "pending",
+            "attempts": 0,
+            "attemptLimit": 8,
+            "nextAt": 1792762296053,
+            "error": null,
+            "receipt": null,
+            "schemaVersion": 1,
+            "workflowVersion": 1
+          }
+        ],
+        "events": [],
+        "native": [],
+        "inbox": [],
+        "jobs": [],
+        "physicalAlarm": null,
+        "pins": [],
+        "held": null,
+        "now": 1792762371053,
+        "deadline": 1792762356001
+      },
+      "recipient": {
+        "tasks": [],
+        "deliveries": [],
+        "events": [],
+        "native": [],
+        "inbox": [],
+        "jobs": [],
+        "physicalAlarm": null,
+        "pins": [],
+        "held": null,
+        "now": 1792762371064,
+        "deadline": 0
+      }
+    }
+  },
+  "noPoke": {
+    "start": 1792762296061,
+    "end": 1792762371007,
+    "discoveryDeadline": 1792762356001
+  }
+}

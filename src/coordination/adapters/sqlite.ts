@@ -5,32 +5,54 @@ import {
   desc,
   eq,
   inArray,
+  isNotNull,
+  isNull,
   lt,
   lte,
   min,
   notExists,
   or,
-  sql,
 } from "drizzle-orm"
 import { alias } from "drizzle-orm/sqlite-core"
 import { Effect, Schema } from "effect"
 
 import { chatTurns } from "../../conversations/adapters/schema"
-import { increment } from "../../storage/expressions"
 import {
   mapSqliteError,
   type Sqlite,
   type SqliteOrm,
 } from "../../storage/sqlite"
 import { Message, fail, type Address } from "../contracts"
+import {
+  advanceMessage,
+  MessageControl,
+  messageStatus,
+  type MessageEvent,
+} from "../message.machine"
+import { advanceSession } from "../session.machine"
 import { agentMessages as t, agentSessionLimits as limits } from "./schema"
 
 type Row = typeof t.$inferSelect
 const MessageJson = Schema.fromJsonString(Message)
-const decode = (row: Row) => ({
-  ...row,
-  message: Schema.decodeUnknownSync(MessageJson)(row.payload),
-})
+const decode = (row: Row) => {
+  const control = Schema.decodeUnknownSync(MessageControl)(row)
+  if (messageStatus(control) !== row.state)
+    throw new Error(
+      "Coordination message projection does not match its lifecycle"
+    )
+  if (
+    (control.phase === "dispatching") !== (control.attempt_id !== null) &&
+    control.phase !== "unconfirmed"
+  )
+    throw new Error(
+      "Coordination message has an inconsistent dispatch identity"
+    )
+  return {
+    ...row,
+    ...control,
+    message: Schema.decodeUnknownSync(MessageJson)(row.payload),
+  }
+}
 const accepted = eq(t.state, "accepted")
 const addressed = (from: Address, to: Address) =>
   and(
@@ -111,7 +133,7 @@ export class CoordinationStore {
         return yield* fail("limit", "This bot's message archive is full.")
     })
   }
-  accept(message: Message) {
+  accept(message: Message, discoveryDeadline: number, now = Date.now) {
     return this.atomic(() =>
       Effect.gen({ self: this }, function* () {
         const old = yield* this.operation(message.operationId)
@@ -130,6 +152,11 @@ export class CoordinationStore {
             )
           return old
         }
+        if (!Number.isFinite(discoveryDeadline) || discoveryDeadline <= now())
+          return yield* fail(
+            "unavailable",
+            "Agent message discovery must be armed before acceptance."
+          )
         yield* this.capacity(message)
         const rows = yield* this.query((orm) =>
           orm
@@ -156,7 +183,7 @@ export class CoordinationStore {
       orm
         .select()
         .from(t)
-        .where(and(accepted, lte(t.retry_at, now), head(orm)))
+        .where(and(eq(t.phase, "pending"), lte(t.retry_at, now), head(orm)))
         .orderBy(asc(t.sequence))
         .limit(20)
     ).pipe(Effect.map((rows) => rows.map(decode)))
@@ -166,44 +193,78 @@ export class CoordinationStore {
       orm
         .select({ next: min(t.retry_at) })
         .from(t)
-        .where(and(accepted, head(orm)))
+        .where(and(eq(t.phase, "pending"), head(orm)))
     ).pipe(Effect.map((rows) => rows[0]?.next ?? undefined))
   }
-  delivered(id: string) {
-    return this.query((orm) =>
-      orm
-        .update(t)
-        .set({ state: "delivered", error: null })
-        .where(and(eq(t.id, id), accepted))
-    ).pipe(Effect.asVoid)
-  }
-  failed(id: string, error: string) {
-    return this.query((orm) =>
-      orm
-        .update(t)
-        .set({ state: "failed", error })
-        .where(and(eq(t.id, id), accepted))
-    ).pipe(Effect.asVoid)
-  }
-  retry(id: string, now: number) {
+  private advance(id: string, event: MessageEvent, revision?: number) {
     return this.atomic(() =>
       Effect.gen({ self: this }, function* () {
         const row = yield* this.get(id)
-        if (!row) return
-        if (row.attempts >= 7)
-          return yield* this.failed(
-            id,
-            "Delivery could not be confirmed after eight attempts."
-          )
-        yield* this.query((orm) =>
+        if (!row || (revision !== undefined && row.revision !== revision))
+          return
+        const next = advanceMessage(row, row.message.deadline, event)
+        if (!next) return
+        const rows = yield* this.query((orm) =>
           orm
             .update(t)
-            .set({
-              attempts: increment(t.attempts),
-              retry_at: now + Math.min(30000, 1000 * 2 ** row.attempts),
-            })
-            .where(and(eq(t.id, id), accepted))
+            .set({ ...next, state: messageStatus(next) })
+            .where(and(eq(t.id, id), eq(t.revision, row.revision)))
+            .returning()
         )
+        return rows[0] ? decode(rows[0]) : undefined
+      })
+    )
+  }
+  claim(id: string, revision: number, now: number, attempt: string) {
+    return this.advance(id, { type: "CLAIM", now, attempt }, revision)
+  }
+  owns(id: string, attempt: string) {
+    return this.get(id).pipe(
+      Effect.map(
+        (row) => row?.phase === "dispatching" && row.attempt_id === attempt
+      )
+    )
+  }
+  delivered(id: string, attempt: string) {
+    return this.advance(id, { type: "ACCEPTED", attempt }).pipe(Effect.asVoid)
+  }
+  failed(id: string, attempt: string, error: string) {
+    return this.advance(id, { type: "REJECTED", attempt, error }).pipe(
+      Effect.asVoid
+    )
+  }
+  retry(id: string, attempt: string, now: number) {
+    return this.advance(id, { type: "RETRY", attempt, now }).pipe(Effect.asVoid)
+  }
+  /** Only cold activation calls this. Warm owners are never stolen on a timer. */
+  restore(now: number) {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const rows = yield* this.query((orm) =>
+          orm.select().from(t).where(eq(t.phase, "dispatching"))
+        )
+        for (const row of rows)
+          yield* this.advance(row.id, { type: "RESTORE", now }, row.revision)
+      })
+    )
+  }
+  exhaust(current: () => boolean) {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        if (!current()) return
+        const rows = yield* this.query((orm) =>
+          orm.select().from(t).where(accepted)
+        )
+        for (const row of rows)
+          yield* this.advance(
+            row.id,
+            {
+              type: "EXHAUST",
+              error:
+                "Agent message recovery is unconfirmed. Retry from the original session.",
+            },
+            row.revision
+          )
       })
     )
   }
@@ -256,19 +317,30 @@ export class CoordinationStore {
         .limit(1)
     ).pipe(Effect.map((rows) => rows[0]?.closed ?? false))
   }
+  private closeSession(id: string) {
+    return Effect.gen({ self: this }, function* () {
+      const rows = yield* this.query((orm) =>
+        orm.select().from(limits).where(eq(limits.id, id)).limit(1)
+      )
+      const current = rows[0] ?? { closed: false, requests: 0 }
+      const next = advanceSession(current, { type: "CLOSE" })
+      if (!next) return
+      yield* this.query((orm) =>
+        orm
+          .insert(limits)
+          .values({ id, ...next })
+          .onConflictDoUpdate({ target: limits.id, set: next })
+      )
+    })
+  }
   close(id: string) {
     return this.atomic(() =>
       Effect.gen({ self: this }, function* () {
-        yield* this.query((orm) =>
+        yield* this.closeSession(id)
+        const rows = yield* this.query((orm) =>
           orm
-            .insert(limits)
-            .values({ id, closed: true })
-            .onConflictDoUpdate({ target: limits.id, set: { closed: true } })
-        )
-        yield* this.query((orm) =>
-          orm
-            .update(t)
-            .set({ state: "failed", error: "Session stopped." })
+            .select()
+            .from(t)
             .where(
               and(
                 accepted,
@@ -276,6 +348,18 @@ export class CoordinationStore {
               )
             )
         )
+        for (const row of rows)
+          yield* this.advance(
+            row.id,
+            {
+              type: "CLOSE",
+              error:
+                row.phase === "dispatching"
+                  ? "Session stopped; message delivery is unconfirmed."
+                  : "Session stopped.",
+            },
+            row.revision
+          )
       })
     )
   }
@@ -284,20 +368,30 @@ export class CoordinationStore {
   closeAll() {
     return this.atomic(() =>
       Effect.gen({ self: this }, function* () {
-        yield* this.query((orm) =>
-          orm.run(sql`
-          INSERT INTO ${limits} (id, closed, requests)
-          SELECT ${chatTurns.id}, 1, 0 FROM ${chatTurns}
-          WHERE ${chatTurns.parent_id} IS NULL AND ${chatTurns.session_id} IS NOT NULL
-          ON CONFLICT (id) DO UPDATE SET closed = 1
-        `)
-        )
-        yield* this.query((orm) =>
+        const roots = yield* this.query((orm) =>
           orm
-            .update(t)
-            .set({ state: "failed", error: "Membership changed." })
-            .where(accepted)
+            .select({ id: chatTurns.id })
+            .from(chatTurns)
+            .where(
+              and(isNull(chatTurns.parent_id), isNotNull(chatTurns.session_id))
+            )
         )
+        for (const root of roots) yield* this.closeSession(root.id)
+        const rows = yield* this.query((orm) =>
+          orm.select().from(t).where(accepted)
+        )
+        for (const row of rows)
+          yield* this.advance(
+            row.id,
+            {
+              type: "CLOSE",
+              error:
+                row.phase === "dispatching"
+                  ? "Membership changed; message delivery is unconfirmed."
+                  : "Membership changed.",
+            },
+            row.revision
+          )
       })
     )
   }
@@ -307,18 +401,22 @@ export class CoordinationStore {
         const rows = yield* this.query((orm) =>
           orm.select().from(limits).where(eq(limits.id, turnId)).limit(1)
         )
-        if ((rows[0]?.requests ?? 0) >= 12)
+        const current = rows[0] ?? { closed: false, requests: 0 }
+        const next = advanceSession(current, { type: "REQUEST" })
+        if (!next)
           return yield* fail(
-            "limit",
-            "This message continuation reached its model-request limit."
+            current.closed ? "closed" : "limit",
+            current.closed
+              ? "This message session has stopped."
+              : "This message continuation reached its model-request limit."
           )
         yield* this.query((orm) =>
           orm
             .insert(limits)
-            .values({ id: turnId, requests: 1 })
+            .values({ id: turnId, ...next })
             .onConflictDoUpdate({
               target: limits.id,
-              set: { requests: increment(limits.requests) },
+              set: next,
             })
         )
       })

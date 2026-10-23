@@ -20,7 +20,14 @@ import { Effect, Schema } from "effect"
 import { identityInstructions } from "../../messages/identity"
 import { DelegationFailure, NativeId } from "../contracts"
 import type { DelegationAuthority } from "../delegations"
-import { SavedGroup, controlId, failure, missing, requestId } from "../domain"
+import {
+  SavedGroup,
+  controlId,
+  failure,
+  missing,
+  requestId,
+  restoreGroup,
+} from "../domain"
 import type { DelegationLedger, DelegationTransaction } from "../ledger"
 import { makeDelegations } from "../service"
 import { delegationCommit, delegationNative } from "./interop"
@@ -99,10 +106,14 @@ const readGroup = (doc: { value: string }, id: number) => {
     throw new Error(
       "Stored delegation identity does not match its document key."
     )
-  return group
+  return group ? restoreGroup(group) : null
 }
 const groupView = (doc: { value: string }, id: number) => {
   let value = readGroup(doc, id)
+  if (value) {
+    const encoded = Schema.encodeSync(JsonGroup)(value)
+    if (doc.value !== encoded) doc.value = encoded
+  }
   return {
     get value() {
       return value
@@ -232,13 +243,12 @@ export function piDelegationLedger(
         context
       )
     )
+  const atomic: DelegationLedger["atomic"] = (body) =>
+    delegationNative(open).pipe(
+      Effect.flatMap((h) => delegationCommit(h, (tx) => body(transaction(tx))))
+    )
   return {
-    atomic: (body) =>
-      delegationNative(open).pipe(
-        Effect.flatMap((h) =>
-          delegationCommit(h, (tx) => body(transaction(tx)))
-        )
-      ),
+    atomic,
     availableTools: () =>
       delegationNative(open).pipe(
         Effect.map(() => readTools().map((tool) => tool.name))
@@ -247,7 +257,20 @@ export function piDelegationLedger(
       snapshot((h, context) => h.snapshot(Groups, String(id), context)).pipe(
         Effect.flatMap((doc) => {
           const value = doc ? readGroup(doc, id) : null
-          return value ? Effect.succeed(value) : Effect.fail(missing())
+          if (!value) return Effect.fail(missing())
+          if (doc!.value === Schema.encodeSync(JsonGroup)(value))
+            return Effect.succeed(value)
+          return atomic((tx) =>
+            tx
+              .group(id)
+              .pipe(
+                Effect.flatMap((current) =>
+                  current.value
+                    ? Effect.succeed(current.value)
+                    : Effect.fail(missing())
+                )
+              )
+          )
         })
       ),
     catalog: () =>
@@ -363,6 +386,11 @@ export function piDelegationLedger(
       delegationNative(open).pipe(
         Effect.flatMap((h) => submission(h, child, request)),
         Effect.map((value) => value !== undefined)
+      ),
+    submission: (child, request) =>
+      delegationNative(open).pipe(
+        Effect.flatMap((h) => submission(h, child, request)),
+        Effect.map((value) => (value ? Number(value.id) : undefined))
       ),
     submit: (child, text, request, steer) =>
       delegationNative(open).pipe(

@@ -2,6 +2,7 @@ import { Schema } from "effect"
 
 import { ResolvedRoute } from "../inference/policy"
 import { attributedText } from "../messages/identity"
+import { ChildDispatch } from "./child-dispatch.machine"
 import {
   Control,
   DelegateInput,
@@ -10,10 +11,15 @@ import {
   TaskBrief,
   type Group,
 } from "./contracts"
-import { REPORT_BYTES, REQUEST_LIMIT } from "./delegation"
+import { REPORT_BYTES } from "./delegation"
 import type { DelegationFacts } from "./delegations"
+import { advanceChild, ChildLifecycle, GroupLifecycle } from "./group.machine"
 
 export const SavedGroup = Schema.Struct({
+  schemaVersion: Schema.optional(Schema.Literal(1)),
+  workflowVersion: Schema.optional(Schema.Literal(1)),
+  lifecycle: Schema.optional(GroupLifecycle),
+  dispatches: Schema.optional(Schema.Array(ChildDispatch)),
   botId: Schema.optional(Schema.String),
   detached: Schema.optional(Schema.Boolean),
   id: NativeId,
@@ -32,6 +38,7 @@ export const SavedGroup = Schema.Struct({
       id: NativeId,
       requests: Schema.Number,
       stopped: Schema.Boolean,
+      lifecycle: Schema.optional(ChildLifecycle),
     })
   ),
   controls: Schema.Array(Control),
@@ -96,28 +103,25 @@ export function acceptControl(
   now: number,
   authority: DelegationFacts
 ): SavedGroup {
-  requireCurrent(group, authority)
-  const child = requireChild(group, input.childId, now)
-  if (
-    input.action.type === "steer" &&
-    group.controls.filter(
-      (value) => value.childId === child.id && value.action.type === "steer"
-    ).length >= 8
+  if (input.action.type === "steer") {
+    requireCurrent(group, authority)
+    requireChild(group, input.childId, now)
+  } else if (!group.children.some((child) => child.id === input.childId))
+    throw missing()
+  if (input.action.type === "stop" && group.closed)
+    return {
+      ...group,
+      controls: [...group.controls, input],
+      revision: group.revision + 1,
+    }
+  const next = advanceChild(
+    group,
+    input.childId,
+    input.action.type === "stop"
+      ? { type: "STOP" }
+      : { type: "STEER", authorized: now < group.deadline }
   )
-    throw failure(
-      "limit",
-      "This child reached its steering limit. Continue in a new parent request."
-    )
-  return {
-    ...group,
-    revision: group.revision + 1,
-    controls: [...group.controls, input],
-    children: group.children.map((value) =>
-      value.id === input.childId && input.action.type === "stop"
-        ? { ...value, stopped: true }
-        : value
-    ),
-  }
+  return { ...next, controls: [...next.controls, input] }
 }
 export function consumeRequest(
   group: SavedGroup,
@@ -129,16 +133,74 @@ export function consumeRequest(
   const child = group.children.find((value) => value.id === childId)
   if (!child || child.stopped)
     throw failure("cancelled", "This child has stopped.")
-  if (now >= group.deadline || child.requests >= REQUEST_LIMIT)
-    throw failure("limit", "This delegated task reached its execution limit.")
+  return advanceChild(group, childId, {
+    type: "REQUEST",
+    authorized: now < group.deadline,
+  })
+}
+
+/** Version zero is the original Pi document JSON. Conversion retains every ID,
+ * immutable brief and native request key, and conservatively reopens cleanup
+ * for old Stop flags whose dispatch settlement was never durably represented. */
+export function restoreGroup(value: SavedGroup): SavedGroup {
+  if (value.schemaVersion === 1) {
+    if (
+      value.workflowVersion !== 1 ||
+      value.lifecycle === undefined ||
+      value.dispatches === undefined ||
+      value.children.some((child) => child.lifecycle === undefined)
+    )
+      throw new Error(
+        "Incomplete delegation lifecycle version; restore the original record before retrying."
+      )
+    if (
+      value.closed !== (value.lifecycle === "closed") ||
+      value.children.some(
+        (child) => child.stopped !== (child.lifecycle !== "active")
+      )
+    )
+      throw new Error(
+        "Delegation lifecycle projection conflicts with its authoritative state."
+      )
+    return value
+  }
+  const cleanup = value.children.some((child) => child.stopped)
   return {
-    ...group,
-    revision: group.revision + 1,
-    children: group.children.map((value) =>
-      value.id === child.id ? { ...value, requests: value.requests + 1 } : value
-    ),
+    ...value,
+    schemaVersion: 1,
+    workflowVersion: 1,
+    lifecycle:
+      cleanup && value.closed ? "closing" : value.closed ? "closed" : "open",
+    closed: value.closed && !cleanup,
+    children: value.children.map((child) => ({
+      ...child,
+      lifecycle: child.stopped ? "stopping" : "active",
+    })),
+    dispatches: [
+      ...value.children.map((child): ChildDispatch => ({
+        request: requestId(value, child.id),
+        childId: child.id,
+        text: initialMessage(value, child),
+        steer: false,
+        state: "accepted",
+      })),
+      ...value.controls.flatMap((control): ChildDispatch[] =>
+        control.action.type === "steer"
+          ? [
+              {
+                request: controlId(control),
+                childId: control.childId,
+                text: attributedText(control.action.text, control.provenance),
+                steer: true,
+                state: "accepted",
+              },
+            ]
+          : []
+      ),
+    ],
   }
 }
+
 export interface ChildFacts {
   readonly inputs: readonly (
     | { readonly status: "queued" | "placed" | "done" | "unanswered" }
@@ -174,12 +236,16 @@ export function projectGroup(
       const fact = facts[index]!
       const stopped =
         child.stopped || cancelled || (!group.closed && now >= group.deadline)
-      const pending = fact.inputs.some(
-        (value) =>
-          (!value && !stopped) ||
-          value?.status === "queued" ||
-          value?.status === "placed"
-      )
+      const pending =
+        (child.stopped &&
+          child.lifecycle !== undefined &&
+          child.lifecycle !== "stopped") ||
+        fact.inputs.some(
+          (value) =>
+            (!value && !stopped) ||
+            value?.status === "queued" ||
+            value?.status === "placed"
+        )
       const failed = fact.inputs.some(
         (value) => value?.status === "unanswered" || (!value && stopped)
       )
@@ -212,11 +278,13 @@ export function projectGroup(
               ? "failed"
               : "completed",
         error:
-          failed && !stopped
-            ? child.requests >= REQUEST_LIMIT
-              ? "This child reached its request limit."
-              : "This child ended before answering all its inputs."
-            : null,
+          child.lifecycle === "unconfirmed"
+            ? "Stop could not be confirmed. Retry the original Stop operation."
+            : failed && !stopped
+              ? child.requests >= 12
+                ? "This child reached its request limit."
+                : "This child ended before answering all its inputs."
+              : null,
       }
     }),
   }

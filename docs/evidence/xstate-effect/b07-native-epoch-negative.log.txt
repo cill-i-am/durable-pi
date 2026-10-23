@@ -1,0 +1,35 @@
+service fixture: The compatibility flag nodejs_compat became the default as of 2026-08-04 so does not need to be specified anymore.
+[15:18:57.853] ERROR (#76): Communication job exhausted { job: 'bot-communication:pump' } {
+  _tag: 'CommunicationError',
+  code: 'storage',
+  message: 'Synthetic failure before any domain claim.'
+}
+service fixture: The compatibility flag nodejs_compat became the default as of 2026-08-04 so does not need to be specified anymore.
+Forcing reset of hung job bot-communication:pump (started 1s ago)
+[15:18:59.066] ERROR (#23): Communication job exhausted { job: 'bot-communication:pump' } {
+  _tag: 'CommunicationError',
+  code: 'storage',
+  message: 'Synthetic failure before any domain claim.'
+}
+Job bot-communication:pump (bot-communication/pump) has been dispatching for over 1s. Long dispatches starve every other job on this object; onJob must detach unbounded work and return.
+
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: an exhausted surviving epoch must never dispatch a fourth callback
+
+6 !== 3
+
+    at exhaustedEpochRecovery (file:///Users/cillianbarron/.codex/worktrees/xstate-review-stack/durable-pi/scripts/test-communication-control-runtime.mjs:293:10)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async file:///Users/cillianbarron/.codex/worktrees/xstate-review-stack/durable-pi/scripts/test-communication-control-runtime.mjs:471:23 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 6,
+  expected: 3,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.21.0
