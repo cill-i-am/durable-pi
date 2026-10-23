@@ -60,6 +60,9 @@ export const Group = Schema.Struct({
       delivery: Schema.String,
       error: Schema.NullOr(Schema.String),
       reportId: Schema.String,
+      stop: Schema.optional(
+        Schema.Literals(["none", "pending", "confirmed", "unconfirmed"])
+      ),
     })
   ),
   id: NativeId,

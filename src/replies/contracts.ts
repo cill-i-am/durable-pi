@@ -13,6 +13,45 @@ export const ReplyProgress = Schema.Struct({
   receipts: Schema.Array(Schema.String),
 })
 export type ReplyProgress = typeof ReplyProgress.Type
+export const REPLY_LEASE_MS = 60_000
+const counter = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0))
+export const ReplyOwnership = {
+  schemaVersion: Schema.Literal(1),
+  workflowVersion: Schema.Literal(1),
+  revision: counter,
+  attemptId: Schema.NullOr(Schema.String),
+  sendIndex: Schema.NullOr(counter),
+  sendDeadline: Schema.NullOr(Schema.Number),
+  workDeadline: Schema.NullOr(Schema.Number),
+}
+export const ReplyMessage = Schema.Struct({
+  ...ReplyOwnership,
+  state: Schema.Literals([
+    "queued",
+    "waiting",
+    "sending",
+    "sent",
+    "failed",
+    "uncertain",
+    "cancelled",
+    "expired",
+  ]),
+  reply: Schema.String,
+  delivery: Schema.NullOr(ReplyProgress),
+  providerId: Schema.NullOr(Schema.String),
+  error: Schema.NullOr(Schema.String),
+})
+export type ReplyMessage = typeof ReplyMessage.Type
+export interface ReplyWork<Record = unknown> {
+  record: Record
+  revision: number
+  state: "queued" | "waiting"
+  deadline: number
+}
+export interface ReplyLease {
+  attemptId: string
+  deadline: number
+}
 export class ReplySendFailed extends Schema.TaggedError<ReplySendFailed>()(
   "ReplySendFailed",
   { uncertain: Schema.Boolean }
@@ -21,6 +60,19 @@ export const replyComplete = (progress?: ReplyProgress | null) =>
   !!progress &&
   progress.parts.length > 0 &&
   progress.receipts.length === progress.parts.length
+
+export const ReplyDraft = Schema.Struct({
+  text: Schema.String,
+  files: Schema.Array(Schema.String),
+  includeFiles: Schema.Boolean,
+})
+export type ReplyDraft = typeof ReplyDraft.Type
+export const ReplyObservation = Schema.Struct({
+  ready: Schema.Boolean,
+  notify: Schema.Boolean,
+  draft: ReplyDraft,
+})
+export type ReplyObservation = typeof ReplyObservation.Type
 
 /** Preserve every UTF-16 code unit without splitting a surrogate pair. */
 export function splitReply(text: string, maximum: number): string[] {

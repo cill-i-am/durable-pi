@@ -1,0 +1,20 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: old terminal callback consumed newer admission
+
+'failed' !== 'queued'
+
+    at prepareOutages (file:///private/tmp/durable-pi-reply-negative-owner.mjs:110:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async file:///private/tmp/durable-pi-reply-negative-owner.mjs:378:5 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 'failed',
+  expected: 'queued',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.21.0

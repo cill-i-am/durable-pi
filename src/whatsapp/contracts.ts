@@ -16,7 +16,7 @@ export class WhatsAppUnavailable extends Schema.TaggedError<WhatsAppUnavailable>
 ) {}
 export class WhatsAppStorageError extends Schema.TaggedError<WhatsAppStorageError>()(
   "WhatsAppStorageError",
-  { operation: Schema.String }
+  { operation: Schema.String, cause: Schema.optionalKey(Schema.Unknown) }
 ) {}
 export type WhatsAppFailure =
   | WhatsAppRejected

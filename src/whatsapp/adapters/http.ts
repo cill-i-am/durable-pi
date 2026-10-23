@@ -9,14 +9,12 @@ import {
   type WhatsAppFailure,
 } from "../contracts"
 import { whatsappResponse, type whatsappApplication } from "../service"
-import type { WhatsAppStore } from "./sqlite"
 
 export function whatsappRequest(
   request: Request,
   path: string,
   id: AgentId,
   app: ReturnType<typeof whatsappApplication>,
-  store: WhatsAppStore,
   wake: () => Effect.Effect<unknown, WhatsAppFailure>
 ) {
   return whatsappResponse(
@@ -37,12 +35,7 @@ export function whatsappRequest(
           2048,
           () => new WhatsAppRejected({ message: "Invalid WhatsApp retry." })
         )
-        yield* store.retry(
-          input.id,
-          input.acknowledgeDuplicateRisk,
-          input.operationId
-        )
-        yield* wake()
+        yield* app.retry(input)
       } else if (request.method !== "GET" || path !== "whatsapp")
         return new Response("Not found", { status: 404 })
       return Response.json(yield* app.view(), {

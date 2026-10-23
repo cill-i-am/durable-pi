@@ -65,6 +65,8 @@ async function fixture() {
       )
   )
   const app = whatsappApplication(store, {
+    reconcile: () => Effect.void,
+    armReply: () => Effect.void,
     configured: () => true,
     contactUrl: () => null,
     wake: () => Effect.void,
@@ -157,12 +159,20 @@ describe("images through the shared workspace and WhatsApp", () => {
       input = await imageReceipt()
     f.state.temporary = true
     await run(f.app.receive(input))
-    for (let n = 0; n < 8; n++) await run(f.app.pump())
+    for (let n = 0; n < 5; n++)
+      await expect(run(f.app.pump())).rejects.toMatchObject({
+        _tag: "WhatsAppUnavailable",
+      })
+    // The preparation budget remains finite if a caller explicitly retries.
+    // Ordinary durable pump failures now reach Lifecycle's smaller job budget.
+    for (let n = 0; n < 3; n++) await run(f.app.pump())
     expect(f.state.downloaded).toBe(5)
     expect((await run(f.store.get(input.id)))?.state).toBe("failed")
     expect(f.admitted).toEqual([])
     f.state.temporary = false
-    await run(f.store.retry(input.id, false, crypto.randomUUID()))
+    await run(
+      f.store.retry(input.id, false, crypto.randomUUID(), Date.now() + 60_000)
+    )
     await run(f.app.pump())
     expect(f.admitted).toHaveLength(1)
   })
@@ -206,10 +216,14 @@ describe("images through the shared workspace and WhatsApp", () => {
     const image = (await run(f.store.get(input.id)))!
     expect(image.state).toBe("uncertain")
     await expect(
-      run(f.store.retry(image.id, false, crypto.randomUUID()))
+      run(
+        f.store.retry(image.id, false, crypto.randomUUID(), Date.now() + 60_000)
+      )
     ).rejects.toThrow()
     f.state.uncertain = false
-    await run(f.store.retry(image.id, true, crypto.randomUUID()))
+    await run(
+      f.store.retry(image.id, true, crypto.randomUUID(), Date.now() + 60_000)
+    )
     await run(f.app.pump())
     expect(f.sends.filter((record) => !record.outboundFileId)).toHaveLength(1)
     expect(f.sends.filter((record) => record.outboundFileId)).toHaveLength(2)

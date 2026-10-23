@@ -71,8 +71,16 @@ export function localTaskControls(owner: PersonalAgent) {
     id: String(row.id),
     kind: "background",
     title: row.handoff.input.objective,
-    state: row.status === "cancelled" ? "cancellation-requested" : row.status,
-    terminal: ["delivered", "cancelled"].includes(row.status),
+    state:
+      row.stop_state === "unconfirmed"
+        ? "stop-unconfirmed"
+        : row.stop_state === "pending"
+          ? "stopping"
+          : row.status,
+    terminal:
+      row.stop_state !== "pending" &&
+      row.stop_state !== "unconfirmed" &&
+      ["delivered", "cancelled"].includes(row.status),
   })
   const get = (ref: TaskReference) =>
     Effect.gen(function* () {
@@ -125,11 +133,7 @@ export function localTaskControls(owner: PersonalAgent) {
         for (let offset = 0; ;) {
           const rows = yield* owner.backgroundMailbox.list(offset)
           if (!rows.length) break
-          groups.push(
-            ...rows
-              .filter((row) => !["delivered", "cancelled"].includes(row.status))
-              .map(background)
-          )
+          groups.push(...rows.map(background).filter((task) => !task.terminal))
           offset += rows.length
         }
         return [...requests, ...tasks, ...groups]
