@@ -2,6 +2,8 @@
 
 This guide explains the product's source-of-truth boundaries at revision `a133e4b` (October 19, 2026). Start with the [feature map](../FEATURES.md) for user-visible capabilities and verification recipes. Domains are modules with durable ownership, not a requirement for one service per module.
 
+The mandatory [XState Effect lifecycle standard](decisions/xstate-effect-state-machines.md) governs existing and future application-owned lifecycles, including frontend interaction/resource flows. XState through `@xstate/effect` owns states, events, guards and transitions; Effect owns work and live resource lifetimes; pure functions own computation. Pi owns durable agent/task execution and recovery, domain storage owns application records, Lifecycle owns durable wakes, and Access owns authorization. The [refactor inventory](xstate-effect-inventory.md) tracks implementation against that standard; the domain descriptions below do not imply that every current lifecycle already conforms.
+
 ## How the application fits together
 
 The browser renders the workspace. The website Worker checks your session and forwards authenticated requests to a private agent Worker. That Worker resolves the owning bot before accessing its Durable Object: a Cloudflare instance with persistent SQLite storage and a lifecycle that can resume unfinished work.

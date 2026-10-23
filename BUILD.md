@@ -1,5 +1,23 @@
 # Durable Pi — build tracker
 
+## XState Effect lifecycle refactor
+
+**Goal: open.** All application-owned lifecycles meeting the [applicability definition](docs/decisions/xstate-effect-state-machines.md) are implemented as explicit XState machines through the official `@xstate/effect` integration. Effect or pure functions implement their work; Pi remains the durable execution engine where required. Each lifecycle has one authoritative owner, explicit recovery semantics and executable behavioral tests. Superseded handwritten lifecycle control paths are removed.
+
+The [source-backed inventory](docs/xstate-effect-inventory.md) records each backend/frontend candidate, exclusions, control paths to replace, ownership, preserved guarantees, required corrections, state conversions, dependencies and acceptance tests. The [evidence record](docs/xstate-effect-evidence.md) separates historical observations, new checks and outstanding proof.
+
+- [x] Establish the mandatory standard and agent entry point; pin the compatible official integration and provide compiled local/durable reference machines.
+- [x] Verify the scoped actor lifetime and native Pi/storage/Lifecycle handoff, including forced restart and a broken-wake negative control.
+- [x] Revalidate the three historical witnesses on their original SHA and current implementation baseline; keep unresolved defects explicit in B02–B04.
+- [x] Extend architecture lint with AST/import rules and positive/negative tests through its actual CLI; keep semantic coverage as inventory/review work.
+- [x] Review the standards source and pass the complete PR verification contract: [PR #200](https://github.com/cill-i-am/durable-pi/pull/200), [CI run 39867469758](https://github.com/cill-i-am/durable-pi/actions/runs/39867469758) at `87ff00f`. Final documentation updates retain the same required head checks.
+- [ ] Migrate authority and high-risk ownership items B01–B05 with preserved approval/receipt fences and corrected reply/Stop/Terminal witnesses.
+- [ ] Migrate coupled durable protocols B06–B12 and remaining owned workflows B13–B18, following the inventory's dependency order.
+- [ ] Migrate frontend lifecycles F01–F15, preserving draft/attempt identities and proving resource cleanup and browser behavior.
+- [ ] Rescan the complete application; implement every remaining in-scope candidate, substantiate every exclusion, remove obsolete competing controls, pass restoration/migration tests and all required checks, and link completion evidence for every inventory item.
+
+The standards PR is not completion of this goal. Existing lifecycles are not grandfathered; sequencing follows shared contracts, failure risk and coupling. Throughput, retention, unrelated query optimization and product features are outside this goal unless a specific lifecycle migration requires them.
+
 ## WhatsApp through Chat SDK — 17 October 2026
 
 - [x] Build from current main (`3d001f0`) using the official WhatsApp adapter and Cloudflare's native Chat SDK state, with the existing Pi harness.
