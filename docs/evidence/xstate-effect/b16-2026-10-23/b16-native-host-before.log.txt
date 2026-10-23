@@ -1,0 +1,59 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+ ❯ tests/terminal-native-host.test.ts (2 tests | 2 failed) 15ms
+   × actual native host rejects video while migration is frozen 12ms
+   × actual native host rejects changed immutable receipt while import is held 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/terminal-native-host.test.ts > actual native host rejects video while migration is frozen
+AssertionError: expected 200 to be 503 // Object.is equality
+
+- Expected
++ Received
+
+- 503
++ 200
+
+ ❯ tests/terminal-native-host.test.ts:26:27
+     24|   }
+     25|   const response = await Reflect.apply(LinuxSandboxV1.prototype.fetch,…
+     26|   expect(response.status).toBe(503)
+       |                           ^
+     27|   expect(extract).not.toHaveBeenCalled()
+     28| })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/terminal-native-host.test.ts > actual native host rejects changed immutable receipt while import is held
+AssertionError: expected { Object (status, value) } to match object { status: 'rejected', …(1) }
+(4 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "reason": Error {
+-     "message": "Conflicting terminal migration",
+-   },
+-   "status": "rejected",
++   "status": "fulfilled",
+  }
+
+ ❯ tests/terminal-native-host.test.ts:39:23
+     37|   const outcomes = await settled
+     38|   expect(outcomes[0]).toEqual({ status: "fulfilled", value: result })
+     39|   expect(outcomes[1]).toMatchObject({ status: "rejected", reason: new …
+       |                       ^
+     40|   expect(importing).toHaveBeenCalledTimes(1)
+     41| })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed (2)
+   Start at  17:01:28
+   Duration  383ms (import 69%, transform 22%, tests 5%, setup 2%, worker 1%)
+

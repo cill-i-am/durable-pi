@@ -1,0 +1,59 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+stdout | tests/access-callback.test.ts > rechecks current authority after the ledger claim before native dispatch
+[17:01:10.386] INFO (#206): tool.dispatched {
+  botId: null,
+  runId: '6c8bde2c-c638-421d-88eb-af5784f26e01',
+  operationId: '12',
+  tool: 'checked',
+  event: 'tool.dispatched'
+}
+
+stdout | tests/access-callback.test.ts > rechecks current authority after the ledger claim before native dispatch
+[17:01:10.389] INFO (#206): tool.finished {
+  botId: null,
+  runId: '6c8bde2c-c638-421d-88eb-af5784f26e01',
+  operationId: '12',
+  tool: 'checked',
+  event: 'tool.finished'
+}
+
+ ❯ tests/access-callback.test.ts (10 tests | 1 failed | 9 skipped) 110ms
+   × rechecks current authority after the ledger claim before native dispatch 110ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/access-callback.test.ts > rechecks current authority after the ledger claim before native dispatch
+AssertionError: promise resolved "{ output: [ { type: 'text', …(1) } ] }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "output": [
++     {
++       "text": "done",
++       "type": "text",
++     },
++   ],
+  }
+
+ ❯ tests/access-callback.test.ts:355:23
+    353|     return current
+    354|   }) })
+    355|   await expect(f.work).rejects.toSatisfy((cause: unknown) => tags(caus…
+       |                       ^
+    356|   expect(allowed).toBe(false)
+    357|   expect(checks).toBe(3)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 9 skipped (10)
+   Start at  17:01:09
+   Duration  615ms (import 69%, tests 21%, transform 9%, setup 1%)
+

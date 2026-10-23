@@ -1,0 +1,246 @@
+$ node scripts/test-upstream-runtime.mjs
+service fixture: The compatibility flag nodejs_compat became the default as of 2026-08-04 so does not need to be specified anymore.
+service upstream: The compatibility flag nodejs_compat became the default as of 2026-08-04 so does not need to be specified anymore.
+workerd/server/server.c++:6895: error: Uncaught exception: workerd/jsg/_virtual_includes/iterator/workerd/jsg/value.h:1489: failed: remote.jsg.Error: [object Object]
+stack: 10416649f 1041669db 103dba9db 103daf158 103dafd0f 1061d3b5f 103b4a343 103b4b11b 103b4b6df 102ff9dcf 105f81edf 105f82be3 105f83577 105f494ec
+[
+  {
+    "mode": "baseline",
+    "actorDoneMs": 225.71862500000003,
+    "markers": [
+      {
+        "stage": "ready",
+        "id": "e252531d-d411-43d2-9714-21f3a460d7bd",
+        "at": 351.259208,
+        "afterSendMs": -11.122624999999971
+      },
+      {
+        "stage": "dispatch",
+        "turnId": "baseline",
+        "attemptId": "attempt",
+        "at": 373.53725,
+        "afterSendMs": 11.155417
+      },
+      {
+        "stage": "headers",
+        "turnId": "baseline",
+        "attemptId": "attempt",
+        "at": 378.971625,
+        "afterSendMs": 16.589792000000045
+      },
+      {
+        "stage": "upstream-text",
+        "turnId": "baseline",
+        "attemptId": "attempt",
+        "at": 581.238166,
+        "afterSendMs": 218.856333
+      },
+      {
+        "stage": "complete",
+        "turnId": "baseline",
+        "attemptId": "attempt",
+        "at": 585.696333,
+        "afterSendMs": 223.3145
+      }
+    ]
+  },
+  {
+    "mode": "gate",
+    "actorDoneMs": 718.626166,
+    "markers": [
+      {
+        "stage": "ready",
+        "id": "bf13427f-a19e-46ea-bd7a-daaf412f9d99",
+        "at": 646.046166,
+        "afterSendMs": -12.09883400000001
+      },
+      {
+        "stage": "dispatch",
+        "turnId": "gate",
+        "attemptId": "attempt",
+        "at": 666.641333,
+        "afterSendMs": 8.49633300000005
+      },
+      {
+        "stage": "headers",
+        "turnId": "gate",
+        "attemptId": "attempt",
+        "at": 670.301333,
+        "afterSendMs": 12.156333000000018
+      },
+      {
+        "stage": "upstream-text",
+        "turnId": "gate",
+        "attemptId": "attempt",
+        "at": 878.65425,
+        "afterSendMs": 220.50925000000007
+      },
+      {
+        "stage": "complete",
+        "turnId": "gate",
+        "attemptId": "attempt",
+        "at": 884.728958,
+        "afterSendMs": 226.58395800000005
+      }
+    ]
+  },
+  {
+    "mode": "unread",
+    "actorDoneMs": 723.2158749999999,
+    "markers": [
+      {
+        "stage": "ready",
+        "id": "4d7207e8-0e5b-4ced-869b-ab14f6061b77",
+        "at": 1435.423166,
+        "afterSendMs": -12.077499999999873
+      },
+      {
+        "stage": "dispatch",
+        "turnId": "unread",
+        "attemptId": "attempt",
+        "at": 1454.535625,
+        "afterSendMs": 7.034959000000072
+      },
+      {
+        "stage": "headers",
+        "turnId": "unread",
+        "attemptId": "attempt",
+        "at": 1455.511166,
+        "afterSendMs": 8.010500000000093
+      },
+      {
+        "stage": "upstream-text",
+        "turnId": "unread",
+        "attemptId": "attempt",
+        "at": 1657.83375,
+        "afterSendMs": 210.3330840000001
+      },
+      {
+        "stage": "complete",
+        "turnId": "unread",
+        "attemptId": "attempt",
+        "at": 1660.86525,
+        "afterSendMs": 213.36458400000015
+      }
+    ]
+  },
+  {
+    "mode": "abort-headers",
+    "actorDoneMs": 63.14649999999983,
+    "markers": [
+      {
+        "stage": "ready",
+        "id": "0e3654fa-5950-4ecd-827e-a831a36c9870",
+        "at": 2239.225208,
+        "afterSendMs": -11.238708000000315
+      },
+      {
+        "stage": "dispatch",
+        "turnId": "abort-headers",
+        "attemptId": "attempt",
+        "at": 2264.195541,
+        "afterSendMs": 13.731624999999894
+      },
+      {
+        "stage": "failed",
+        "turnId": "abort-headers",
+        "attemptId": "attempt",
+        "at": 2309.528083,
+        "afterSendMs": 59.064167
+      }
+    ]
+  },
+  {
+    "mode": "cancel-body",
+    "actorDoneMs": 29.430374999999913,
+    "markers": [
+      {
+        "stage": "ready",
+        "id": "4b44e616-ffb8-4eda-87eb-d3031f598cb6",
+        "at": 2383.786958,
+        "afterSendMs": -12.544875000000047
+      },
+      {
+        "stage": "dispatch",
+        "turnId": "cancel-body",
+        "attemptId": "attempt",
+        "at": 2408.066625,
+        "afterSendMs": 11.734791999999743
+      },
+      {
+        "stage": "headers",
+        "turnId": "cancel-body",
+        "attemptId": "attempt",
+        "at": 2410.451708,
+        "afterSendMs": 14.119874999999865
+      },
+      {
+        "stage": "failed",
+        "turnId": "cancel-body",
+        "attemptId": "attempt",
+        "at": 2423.898375,
+        "afterSendMs": 27.566542000000027
+      }
+    ]
+  },
+  {
+    "mode": "slow-observer",
+    "actorDoneMs": 232.0122080000001,
+    "markers": [
+      {
+        "stage": "ready",
+        "id": "e225db1f-3ce9-4bda-9d05-de8031eedea2",
+        "at": 2490.846375,
+        "afterSendMs": -12.137707999999748
+      },
+      {
+        "stage": "dispatch",
+        "turnId": "slow-observer",
+        "attemptId": "attempt",
+        "at": 3023.177958,
+        "afterSendMs": 520.1938750000004
+      },
+      {
+        "stage": "headers",
+        "turnId": "slow-observer",
+        "attemptId": "attempt",
+        "at": 3527.631875,
+        "afterSendMs": 1024.6477920000002
+      },
+      {
+        "stage": "upstream-text",
+        "turnId": "slow-observer",
+        "attemptId": "attempt",
+        "at": 4029.625375,
+        "afterSendMs": 1526.6412920000002
+      },
+      {
+        "stage": "complete",
+        "turnId": "slow-observer",
+        "attemptId": "attempt",
+        "at": 4533.094083,
+        "afterSendMs": 2030.1100000000001
+      }
+    ]
+  },
+  {
+    "mode": "past-expiry",
+    "actorDoneMs": 61221.73575000001,
+    "markers": [
+      {
+        "stage": "ready",
+        "id": "2c8f03b9-89a0-40c4-9ee7-e709eeb236ca",
+        "at": 4597.456125,
+        "afterSendMs": -12.107875000000604
+      },
+      {
+        "stage": "dispatch",
+        "turnId": "past-expiry",
+        "attemptId": "attempt",
+        "at": 4616.96775,
+        "afterSendMs": 7.403749999999491
+      }
+    ]
+  }
+]
+Independent upstream, actor gate, unread consumer, pre-header abort and body cancellation controls passed.

@@ -569,6 +569,7 @@ import { Workspace } from "../workspace/workspace"
 import { agentGateway } from "./adapters/gateway"
 import { agentJson, agentNative, agentResponse } from "./adapters/http"
 import { proxyTerminalRequest } from "./adapters/terminal"
+import { makeUpstreamObserver } from "./adapters/upstream"
 import { agentSettings, contextProjectionBytes } from "./compaction"
 import { SYSTEM_PROMPT } from "./prompts"
 
@@ -615,44 +616,48 @@ class ActorServices extends LifecycleCapability {
     // Stop provider admission and accepted account refreshes together: provider
     // waiters must join refresh settlement, which requires its owner to stop too.
     await Effect.runPromise(
-      this.owner.actorRuntime
-        .runSync(PiModelStreams)
-        .shutdown()
-        .pipe(
-          Effect.exit,
-          Effect.zip(
-            this.owner.credentialService.shutdown().pipe(Effect.exit),
-            { concurrent: true }
-          ),
-          Effect.flatMap(([streams, credentials]) => {
-            if (Exit.isFailure(streams) && Exit.isFailure(credentials))
-              return Effect.failCause(
-                Cause.combine(streams.cause, credentials.cause)
-              )
-            if (Exit.isFailure(streams)) return Effect.failCause(streams.cause)
-            if (Exit.isFailure(credentials))
-              return Effect.failCause(credentials.cause)
-            return Effect.void
-          }),
-          Effect.ensuring(this.owner.communication.runtime.disposeEffect),
-          Effect.ensuring(this.owner.actorRuntime.disposeEffect),
-          Effect.ensuring(Scope.close(this.owner.storageScope, Exit.void)),
-          Effect.ensuring(
-            Effect.suspend(() => {
-              const failures = maintenance.flatMap((result) =>
-                result.status === "rejected"
-                  ? (Cause.isCause(result.reason)
-                      ? result.reason
-                      : Cause.die(result.reason)
-                    ).reasons
-                  : []
-              )
-              return failures.length
-                ? Effect.failCause(fatalCause(Cause.fromReasons(failures)))
-                : Effect.void
-            })
+      Effect.all(
+        [
+          this.owner.actorRuntime
+            .runSync(PiModelStreams)
+            .shutdown()
+            .pipe(Effect.exit),
+          this.owner.credentialService.shutdown().pipe(Effect.exit),
+          this.owner.shutdownUpstream.pipe(Effect.exit),
+        ],
+        { concurrency: "unbounded" }
+      ).pipe(
+        Effect.flatMap((outcomes) => {
+          const cause = outcomes.reduce(
+            (combined, outcome) =>
+              Exit.isFailure(outcome)
+                ? Cause.combine(combined, outcome.cause)
+                : combined,
+            Cause.empty as Cause.Cause<unknown>
           )
+          return cause.reasons.length === 0
+            ? Effect.void
+            : Effect.failCause(cause)
+        }),
+        Effect.ensuring(this.owner.communication.runtime.disposeEffect),
+        Effect.ensuring(this.owner.actorRuntime.disposeEffect),
+        Effect.ensuring(Scope.close(this.owner.storageScope, Exit.void)),
+        Effect.ensuring(
+          Effect.suspend(() => {
+            const failures = maintenance.flatMap((result) =>
+              result.status === "rejected"
+                ? (Cause.isCause(result.reason)
+                    ? result.reason
+                    : Cause.die(result.reason)
+                  ).reasons
+                : []
+            )
+            return failures.length
+              ? Effect.failCause(fatalCause(Cause.fromReasons(failures)))
+              : Effect.void
+          })
         )
+      )
     )
   }
 }
@@ -2721,56 +2726,37 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     )
   }
   private readonly conversationLatency = new ConversationLatency()
-  private upstreamProbe?: {
-    id: string
-    sink: WritableStream<Uint8Array>
-    claimed: boolean
-    abort: AbortController
-    work: Promise<unknown>
-  }
-  async observeUpstream(id: string, sink: WritableStream<Uint8Array>) {
-    if (this.upstreamProbe) {
-      await sink.abort().catch(() => {})
-      return false
-    }
-    const abort = new AbortController()
-    const lease = {
-      id,
-      sink,
-      claimed: false,
-      abort,
-      work: Promise.resolve() as Promise<unknown>,
-    }
-    this.upstreamProbe = lease
-    lease.work = this.actorRuntime.runPromiseExit(
-      Effect.sleep(60_000).pipe(
-        Effect.ensuring(
-          Effect.promise(async () => {
-            if (this.upstreamProbe === lease) this.upstreamProbe = undefined
-            if (!lease.claimed) await sink.abort().catch(() => {})
-          })
-        )
-      ),
-      { signal: abort.signal }
+  private readonly upstreamObservation = this.actorRuntime.runPromise(
+    makeUpstreamObserver.pipe(
+      Effect.provideService(Scope.Scope, this.storageScope)
     )
-    this.ctx.waitUntil(lease.work)
-    return true
+  )
+  readonly shutdownUpstream = Effect.promise(
+    () => this.upstreamObservation
+  ).pipe(Effect.flatMap((observer) => observer.shutdown))
+  async observeUpstream(id: string, sink: WritableStream<Uint8Array>) {
+    const observer = await this.upstreamObservation
+    const admitted = await this.actorRuntime.runPromise(
+      observer.observe(id, sink)
+    )
+    if (admitted)
+      this.ctx.waitUntil(this.actorRuntime.runPromiseExit(observer.settled(id)))
+    return admitted
   }
   async releaseUpstream(id: string) {
-    const lease = this.upstreamProbe
-    if (lease?.id !== id) return
-    lease.abort.abort()
-    await lease.work
+    const observer = await this.upstreamObservation
+    await this.actorRuntime.runPromise(observer.release(id))
   }
   readonly models = createAgentModels(this.credentials, {
-    fetch: (fallback, input, init, correlation) => {
-      const probe = this.upstreamProbe
-      if (!probe || probe.claimed || !correlation) return fallback(input, init)
-      probe.claimed = true
+    fetch: async (fallback, input, init, correlation) => {
+      if (!correlation) return fallback(input, init)
+      const observer = await this.upstreamObservation
+      const sink = await this.actorRuntime.runPromise(observer.consume)
+      if (!sink) return fallback(input, init)
       return observedUpstreamFetch(
         this.ctx.exports.UpstreamRelay,
         new Request(input, init),
-        probe.sink,
+        sink,
         correlation
       )
     },

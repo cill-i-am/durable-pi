@@ -1,0 +1,46 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+ ❯ tests/terminal-host.test.ts (6 tests | 1 failed | 5 skipped) 24ms
+   × preserves the drain Cause through the production ManagedRuntime promise boundary 23ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/terminal-host.test.ts > preserves the drain Cause through the production ManagedRuntime promise boundary
+AssertionError: expected [ Die(Error: checked drain failure) ] to deeply equal [ …(2) ]
+
+- Expected
++ Received
+
+  [
+    {
+-     "_tag": "Fail",
+-     "error": Error {
+-       "message": "checked drain failure",
+-     },
+-   },
+-   {
+      "_tag": "Die",
+      "defect": Error {
+-       "message": "drain cleanup defect",
++       "message": "checked drain failure",
+      },
+    },
+  ]
+
+ ❯ tests/terminal-host.test.ts:275:38
+    273|   try {
+    274|     await expect(host.snapshot("source")).rejects.toThrow()
+    275|     expect(failures.at(-1)?.reasons).toEqual(failure.reasons)
+       |                                      ^
+    276|   } finally { await runtime.dispose() }
+    277| })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 5 skipped (6)
+   Start at  16:54:07
+   Duration  428ms (import 66%, transform 24%, tests 7%, setup 2%, worker 1%)
+

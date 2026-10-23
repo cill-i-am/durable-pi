@@ -1,0 +1,10 @@
+{
+  "head": "2c5e6f66e25b9985a6915e78dce4de66a1952031",
+  "files": {
+    "src/auth/session-socket.machine.ts": "6961c38ec8a7746e0f0a0d35d1bcdac69faec66f5b4717ed67ef1a1c2bda0023",
+    "src/auth/adapters/session-socket.ts": "c45c119c918fbf66738a484b880f2ce7275139cd97529044cc6160285e359f1a",
+    "src/auth/adapters/agent-proxy.ts": "7e75c61eb083fa316ba53cc47aa7ed5404781bcebe4c29ed108159aaebcdf57d",
+    "tests/session-socket.test.ts": "10ce3a189f297f6e034a0229fb0c07c1c1c6d45d39bf79420cff71e041293ef7",
+    "tests/agent-proxy.test.ts": "e896147fb9a6228e3c05b561370844aab7bc0de843e156259f447a44425a445d"
+  }
+}

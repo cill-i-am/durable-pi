@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "scope": "Integration failures and narrow owner-shutdown repair, with original safety assertions retained. Native rerun and final combined gates tracked separately.",
+  "artifacts": [
+    {
+      "path": "docs/evidence/xstate-effect/b16-repair/b16-composed-communication-native.log.txt",
+      "original": "/private/tmp/b16-composed-communication-native.log",
+      "sha256": "2107856a50efcfe6eb337022635058911f24428af8179219fe7554f5036eb449",
+      "bytes": 4912
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-repair/b16-owner-shutdown-interruption-before.log.txt",
+      "original": "/private/tmp/b16-owner-shutdown-interruption-before.log",
+      "sha256": "743fc5062203bf39950782bee017a24b1ab55988e3f4d27f9f95cbe112587561",
+      "bytes": 1485
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-repair/b16-owner-shutdown-interruption-after.log.txt",
+      "original": "/private/tmp/b16-owner-shutdown-interruption-after.log",
+      "sha256": "123f962de43076daf203f9d232b7c4a6bb9c49f80ee0fd28b2f167c1bf6f3d4a",
+      "bytes": 239
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-repair/b16-owner-shutdown-focused.log.txt",
+      "original": "/private/tmp/b16-owner-shutdown-focused.log",
+      "sha256": "3f9ba286a628e56377ed2abed15dfe1f3e590784bde9619d5312df9038915f53",
+      "bytes": 226
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-repair/b16-owner-shutdown-types.log.txt",
+      "original": "/private/tmp/b16-owner-shutdown-types.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-repair/b16-owner-shutdown-lint.log.txt",
+      "original": "/private/tmp/b16-owner-shutdown-lint.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-repair/b16-owner-shutdown-format.log.txt",
+      "original": "/private/tmp/b16-owner-shutdown-format.log",
+      "sha256": "74b9b6f9a932eee9fe116a9282bcb4b8aecb3487982409509cc8db74abe8bacf",
+      "bytes": 46
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-repair/b16-owner-shutdown-negative.log.txt",
+      "original": "/private/tmp/b16-owner-shutdown-negative.log",
+      "sha256": "ddd5b545f9605d09892e11f48d4e70bdb53ce9e6b9813ec2c118eba1fd726009",
+      "bytes": 1394
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-repair/b16-owner-shutdown-repair-manifest.json.txt",
+      "original": "/private/tmp/b16-owner-shutdown-repair-manifest.json",
+      "sha256": "cf6975edf531ed64537a1a87252bb31ea7c9bcac40922065522d7e31521595ec",
+      "bytes": 1612
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-repair/b16-composed-unit-1.log.txt",
+      "original": "/private/tmp/b16-composed-unit-1.log",
+      "sha256": "3f614a6815df07f087bee3ef0d008b6cf9684ba497255f6c6582efb2403938d4",
+      "bytes": 1465
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-repair/b16-agent-http-fixture-fixed.log.txt",
+      "original": "/private/tmp/b16-agent-http-fixture-fixed.log",
+      "sha256": "66d55a7d25bf3b9fa62167bfdce3723bf1fc4aa7b6e3fc04b679099f9ed971c6",
+      "bytes": 217
+    }
+  ]
+}

@@ -1,0 +1,73 @@
+[
+  {
+    "mode": "baseline",
+    "actorDoneMs": 232.86179200000004,
+    "stages": [
+      "ready",
+      "dispatch",
+      "headers",
+      "upstream-text",
+      "complete"
+    ]
+  },
+  {
+    "mode": "gate",
+    "actorDoneMs": 729.7354169999999,
+    "stages": [
+      "ready",
+      "dispatch",
+      "headers",
+      "upstream-text",
+      "complete"
+    ]
+  },
+  {
+    "mode": "unread",
+    "actorDoneMs": 726.0715420000001,
+    "stages": [
+      "ready",
+      "dispatch",
+      "headers",
+      "upstream-text",
+      "complete"
+    ]
+  },
+  {
+    "mode": "abort-headers",
+    "actorDoneMs": 60.06245799999988,
+    "stages": [
+      "ready",
+      "dispatch",
+      "failed"
+    ]
+  },
+  {
+    "mode": "cancel-body",
+    "actorDoneMs": 29.09633299999996,
+    "stages": [
+      "ready",
+      "dispatch",
+      "headers",
+      "failed"
+    ]
+  },
+  {
+    "mode": "slow-observer",
+    "actorDoneMs": 235.24020900000005,
+    "stages": [
+      "ready",
+      "dispatch",
+      "headers",
+      "upstream-text",
+      "complete"
+    ]
+  },
+  {
+    "mode": "past-expiry",
+    "actorDoneMs": 61240.331042,
+    "stages": [
+      "ready",
+      "dispatch"
+    ]
+  }
+]

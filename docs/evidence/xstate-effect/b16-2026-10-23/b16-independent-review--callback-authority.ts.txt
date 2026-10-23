@@ -1,0 +1,24 @@
+import { Effect, Exit, Scope } from "effect"
+import { guardedTools } from "/Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/src/access/adapters/pi.ts"
+import { AccessGate } from "/Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/src/access/gate.ts"
+import { AccessStore } from "/Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/src/access/adapters/sqlite.ts"
+import { makeNodeSqlite } from "/Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/src/storage/node.ts"
+import { migrateSqlite } from "/Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/src/storage/migrations.ts"
+const scope = Effect.runSync(Scope.make())
+const db = Effect.runSync(makeNodeSqlite().pipe(Scope.provide(scope)))
+Effect.runSync(migrateSqlite(db))
+let allowed = true, checks = 0, dispatches = 0
+const store = new AccessStore(db, () => Effect.succeed([{name:"synthetic",description:"Synthetic",mode:"allow" as const}]))
+const gate = new AccessGate(store, () => Effect.sync(() => {
+  checks++
+  const current = allowed
+  if (checks === 2) queueMicrotask(() => { allowed = false })
+  return current
+}))
+const callback = guardedTools(gate, () => Effect.succeed("turn"))({
+  name:"synthetic", description:"Synthetic", parameters: {} as never,
+  execute: async () => { dispatches++; return {output:[{type:"text" as const,text:"done"}]} },
+} as never)
+const outcome = await callback.execute({}, {taskId:42} as never, {abortSignal:new AbortController().signal} as never).catch((error:unknown) => String(error))
+console.log(JSON.stringify({allowed, checks, dispatches, outcome, operation:Effect.runSync(store.get("42"))},null,2))
+await Effect.runPromise(Scope.close(scope, Exit.void))

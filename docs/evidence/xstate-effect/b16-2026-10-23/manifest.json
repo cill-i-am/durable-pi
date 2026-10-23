@@ -1,0 +1,474 @@
+{
+  "schemaVersion": 1,
+  "scope": "Independent domain/native subtree checkpoints before parent composition. Original manifests and exact limits retained; broad composed gates and hosted CI separate.",
+  "artifacts": [
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-access-dispatch-before.log.txt",
+      "original": "/private/tmp/b16-access-dispatch-before.log",
+      "sha256": "ef39654879b80c643f1780bf427653f6dfb82631eb9747e4e33cb3e4e9b71c53",
+      "bytes": 1776
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-access-dispatch-negative.log.txt",
+      "original": "/private/tmp/b16-access-dispatch-negative.log",
+      "sha256": "756579cfae6dd9a7b7e7255343d10413fcdb2a0cf0e3cbc973927f1faff5e5fd",
+      "bytes": 1771
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-access-terminal-source-manifest.json.txt",
+      "original": "/private/tmp/b16-access-terminal-source-manifest.json",
+      "sha256": "1ab2f34899649c7a837e5291fa9f7a92af85c0ff68ec84696881b99619c10436",
+      "bytes": 2448
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-callback-authority-after.log.txt",
+      "original": "/private/tmp/b16-callback-authority-after.log",
+      "sha256": "eaaf02bd99a53cd5b0ad65ca919f0193da4c881b576820727cd82e2826a2534a",
+      "bytes": 599
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-callback-authority-probe.log.txt",
+      "original": "/private/tmp/b16-callback-authority-probe.log",
+      "sha256": "1d5854658985631d600dbe4b10cedb718650f92463842f1dd99f6aa8229753f0",
+      "bytes": 830
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-callback-characterization.log.txt",
+      "original": "/private/tmp/b16-callback-characterization.log",
+      "sha256": "9522d02879c3999e9882fa30682c130c592e36f283cb31c5e55847901ea509c4",
+      "bytes": 1701
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-callback-negative.log.txt",
+      "original": "/private/tmp/b16-callback-negative.log",
+      "sha256": "598328934d232351a0b88373bcf0e13542074fbdbf8da5592837b225b08af873",
+      "bytes": 1766
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-composed-focused.log.txt",
+      "original": "/private/tmp/b16-composed-focused.log",
+      "sha256": "8fd66e724f67c88beab0120929669aff4063739753f38f3e9d0eaafda2ad83f4",
+      "bytes": 230
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-composed-format.log.txt",
+      "original": "/private/tmp/b16-composed-format.log",
+      "sha256": "96d7567f740788c00a3e91a1ed8f52cd257f4710acd32ff818657b9933317505",
+      "bytes": 113
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-composed-lint.log.txt",
+      "original": "/private/tmp/b16-composed-lint.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-composed-source-final.json.txt",
+      "original": "/private/tmp/b16-composed-source-final.json",
+      "sha256": "62d68a4cbe2bc76d3e3f309687d75ff033d83e646d11644ac6cdb4c24bc505b2",
+      "bytes": 5243
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-doc-format-final.log.txt",
+      "original": "/private/tmp/b16-doc-format-final.log",
+      "sha256": "652f33110168fdea90ef335e0cc21019ffff632f3f3b319cf2cb2b134cd793cb",
+      "bytes": 112
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-host-baseline.log.txt",
+      "original": "/private/tmp/b16-host-baseline.log",
+      "sha256": "0e0836be2451b788a7ed6a03416fa3371910af3de22573c85088920616272b63",
+      "bytes": 226
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-independent-review--callback-authority.ts.txt",
+      "original": "/private/tmp/b16-independent-review/callback-authority.ts",
+      "sha256": "89cd7a54ed23c973862e84c5b156f3bc284d5d2cfdc1237c04dcf80deb3c2212",
+      "bytes": 1727
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-independent-review--native-host-followup.ts.txt",
+      "original": "/private/tmp/b16-independent-review/native-host-followup.ts",
+      "sha256": "afc6163993275ad014077f5cdc45d16686c3b42e0844e41c637747bb07536b7f",
+      "bytes": 2959
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-independent-review--terminal-cause.ts.txt",
+      "original": "/private/tmp/b16-independent-review/terminal-cause.ts",
+      "sha256": "cf57a906324d7d31eb1d686d6183c15cd660d2a2453883101fe34bec348d36c1",
+      "bytes": 1722
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-inference-before.log.txt",
+      "original": "/private/tmp/b16-inference-before.log",
+      "sha256": "d0b25332bc325825a638e7baee53b50306e3a47790dbf7167c2dea7bdbd7b733",
+      "bytes": 2606
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-inference-final-tests.log.txt",
+      "original": "/private/tmp/b16-inference-final-tests.log",
+      "sha256": "28c8d924905b1d85d2ff10f9cf0593cea2df97a061abfad835d25d6da56c0d19",
+      "bytes": 227
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-inference-handoff.md.txt",
+      "original": "/private/tmp/b16-inference-handoff.md",
+      "sha256": "c28ffd55c2a79c021bfc070eff720b15f626d4d5aef202122813808048718b33",
+      "bytes": 5212
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-inference-independent-after.log.txt",
+      "original": "/private/tmp/b16-inference-independent-after.log",
+      "sha256": "c268d4c55cc21aab7abe8542b002bf7cbb3724f319a5a196a2f7c389f126408e",
+      "bytes": 225
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-inference-independent-recheck.log.txt",
+      "original": "/private/tmp/b16-inference-independent-recheck.log",
+      "sha256": "3cb10826e88deada5f602ab6a4a2eeeb4f864f73f3c1219a79bee90f6bcd54c0",
+      "bytes": 236
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-inference-independent.log.txt",
+      "original": "/private/tmp/b16-inference-independent.log",
+      "sha256": "c7e393b57823fa3aaf5a3a949ca0cc87d0665e2ff672d8c92d523dba94c644c7",
+      "bytes": 893
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-inference-independent.test.ts.txt",
+      "original": "/private/tmp/b16-inference-independent.test.ts",
+      "sha256": "211c3af6c4743eeba9ee942db366b45e14962624d36ba573d43e9e10a377ee35",
+      "bytes": 1648
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-inference-lint.log.txt",
+      "original": "/private/tmp/b16-inference-lint.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-inference-manifest.txt.txt",
+      "original": "/private/tmp/b16-inference-manifest.txt",
+      "sha256": "3c9bfd6893cfc66ec8463b18bfd659de5e1b4e4025dcb0354bd12bc8a31eeda1",
+      "bytes": 314
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-inference-negative.log.txt",
+      "original": "/private/tmp/b16-inference-negative.log",
+      "sha256": "f458208ca0c105a05192cfa47c363583f455bbc5e83fe3ea01cc58ba4e1e76c5",
+      "bytes": 2389
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-inference-types.log.txt",
+      "original": "/private/tmp/b16-inference-types.log",
+      "sha256": "96eee4674e6bac003e061c96332850f387f549c7249a66e5987dc37a28a3b2b1",
+      "bytes": 342
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-native-followup-independent.log.txt",
+      "original": "/private/tmp/b16-native-followup-independent.log",
+      "sha256": "bfabf95d4b2c7783e41d5dd40f9c8b6b64f7ccbe85e70f230b950ff1caf7baa9",
+      "bytes": 203
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-native-followup-reviewed.log.txt",
+      "original": "/private/tmp/b16-native-followup-reviewed.log",
+      "sha256": "d3ee7331a7ac6f35885df3083f5d44ea4772e726ff1754e03d92ed205c66176c",
+      "bytes": 238
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-native-host-before.log.txt",
+      "original": "/private/tmp/b16-native-host-before.log",
+      "sha256": "ccef6dbfa28d927265f1d4967aa9c66cbf0e2ae0a3af4268dfcddeefd39953d8",
+      "bytes": 1945
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-native-host-format.log.txt",
+      "original": "/private/tmp/b16-native-host-format.log",
+      "sha256": "2bb2f4f625c8e892895861da5f7e7fc04b9e378a79c74b73195e9c2e852ae870",
+      "bytes": 112
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-native-host-handoff.md.txt",
+      "original": "/private/tmp/b16-native-host-handoff.md",
+      "sha256": "bc70132d10ff54ee667daeef3d249eff73f9c7a6e544583dcabbde40dc5da3dd",
+      "bytes": 4812
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-native-host-lint.log.txt",
+      "original": "/private/tmp/b16-native-host-lint.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-native-host-manifest-after.json.txt",
+      "original": "/private/tmp/b16-native-host-manifest-after.json",
+      "sha256": "5952636663149b46bdfefa81f0a2b204817314d5750bbe4812cf0810b0967323",
+      "bytes": 1244
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-native-host-manifest-before.json.txt",
+      "original": "/private/tmp/b16-native-host-manifest-before.json",
+      "sha256": "5952636663149b46bdfefa81f0a2b204817314d5750bbe4812cf0810b0967323",
+      "bytes": 1244
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-native-host-negative.config.mts.txt",
+      "original": "/private/tmp/b16-native-host-negative.config.mts",
+      "sha256": "1f47214bc5582916d7e8c97aaf63781a946a287f046fbf31c45a422bfe977da6",
+      "bytes": 723
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-native-host-negative.log.txt",
+      "original": "/private/tmp/b16-native-host-negative.log",
+      "sha256": "10ba91a003f4d78f610a6eed053309cfbd4c777c9b1cb2d8971ceba92245b2b6",
+      "bytes": 1366
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-native-host-positive.log.txt",
+      "original": "/private/tmp/b16-native-host-positive.log",
+      "sha256": "7470089e92faff08159bdef8ba933246e9f75dd0ebc99dac8cbf5268ce70e145",
+      "bytes": 227
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-native-host-types.log.txt",
+      "original": "/private/tmp/b16-native-host-types.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-owned-expanded.log.txt",
+      "original": "/private/tmp/b16-owned-expanded.log",
+      "sha256": "cf0c042df8de1043a3c69456e8ab7d04c5390248e365a7d256fd5757a4cfbaed",
+      "bytes": 227
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-owned-format-reviewed.log.txt",
+      "original": "/private/tmp/b16-owned-format-reviewed.log",
+      "sha256": "d13a6b8d4485ccefe033a30b547c4f5f7d24414c791d74e70271a29e0236fe10",
+      "bytes": 112
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-owned-format.log.txt",
+      "original": "/private/tmp/b16-owned-format.log",
+      "sha256": "0571fe0b39c99b0371180318aaeae9ec3d633d912fad901527a101d1f92fd1ee",
+      "bytes": 112
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-owned-lint-reviewed.log.txt",
+      "original": "/private/tmp/b16-owned-lint-reviewed.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-owned-lint.log.txt",
+      "original": "/private/tmp/b16-owned-lint.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-owned-reviewed.log.txt",
+      "original": "/private/tmp/b16-owned-reviewed.log",
+      "sha256": "527c55f71d2a4a57bf89be90b83c0e9936bdfe1d395418374894fee5e7b94f5f",
+      "bytes": 237
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-owned-types-reviewed.log.txt",
+      "original": "/private/tmp/b16-owned-types-reviewed.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-owned-types.log.txt",
+      "original": "/private/tmp/b16-owned-types.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-session-socket-handoff.md.txt",
+      "original": "/private/tmp/b16-session-socket-handoff.md",
+      "sha256": "be6a600ccb5b1d4d8473161d2ce3add68e9e9fc812e76fd7583034e73c7c21df",
+      "bytes": 5306
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-socket-baseline.log.txt",
+      "original": "/private/tmp/b16-socket-baseline.log",
+      "sha256": "d7ece1acda90ff002eaf0cde32cf4942aadd46925affbe2e5fba392e5d5acf24",
+      "bytes": 234
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-socket-characterization.log.txt",
+      "original": "/private/tmp/b16-socket-characterization.log",
+      "sha256": "926b2d835d4db83c9657fe86fe505e94a104186c618515376a76008c6d40f64d",
+      "bytes": 1164
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-socket-final-format.log.txt",
+      "original": "/private/tmp/b16-socket-final-format.log",
+      "sha256": "28b99bc141e9ecd2342815e50140318bcc624f9e2d6c82acdbb7cb515ea3c943",
+      "bytes": 112
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-socket-final-lint.log.txt",
+      "original": "/private/tmp/b16-socket-final-lint.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-socket-final-tests.log.txt",
+      "original": "/private/tmp/b16-socket-final-tests.log",
+      "sha256": "3ee435ed84fe399dfa97666efedf9935b71c1a25038a0f716f1138273b10309b",
+      "bytes": 238
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-socket-final-types.log.txt",
+      "original": "/private/tmp/b16-socket-final-types.log",
+      "sha256": "0214b34510ed5ea8ed482c80e08163cb1d0f14921544115b8f44eea1cb518b37",
+      "bytes": 103
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-socket-negative-final.log.txt",
+      "original": "/private/tmp/b16-socket-negative-final.log",
+      "sha256": "c4e3ba7cb0d6c4eebba53f7f6fea93b0474b3f6662f0bcdff0430a35c09a6e60",
+      "bytes": 1186
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-socket-negative.config.mjs.txt",
+      "original": "/private/tmp/b16-socket-negative.config.mjs",
+      "sha256": "590ceffab9e3e8dd4272e8700bcfe88e00172b7a4f35a0bf058aad7bb0d48164",
+      "bytes": 522
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-socket-source-manifest.json.txt",
+      "original": "/private/tmp/b16-socket-source-manifest.json",
+      "sha256": "6283158439795918e749a488299065599c2a1021cd71801e6ecff7e056b4e67e",
+      "bytes": 608
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-terminal-admission-probe.log.txt",
+      "original": "/private/tmp/b16-terminal-admission-probe.log",
+      "sha256": "dca3cf9f426a76fa797909c5abe25c94fb6bc8a9f64643f6cceb9aa7db81a6cf",
+      "bytes": 376
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-terminal-cause-negative.log.txt",
+      "original": "/private/tmp/b16-terminal-cause-negative.log",
+      "sha256": "34c4b86270bd71741651320d8333039a8d2cd29ed8f527068b47e2bd492193ec",
+      "bytes": 1507
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-terminal-characterization.log.txt",
+      "original": "/private/tmp/b16-terminal-characterization.log",
+      "sha256": "66f12f11ba0cf3d0b18e01d7f8967f07f07d8743304fa44fd28d30e37aae6f42",
+      "bytes": 987
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-terminal-negative.log.txt",
+      "original": "/private/tmp/b16-terminal-negative.log",
+      "sha256": "fec35949c7b9e9b9753ad646740ec2b9c91f6b6d6c4ef08ce839a07ff2b4e50f",
+      "bytes": 976
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-terminal-nested-cause-after.log.txt",
+      "original": "/private/tmp/b16-terminal-nested-cause-after.log",
+      "sha256": "6646d9332b452ace7f849346cc583146c8c2cd99d634f5a4a23f02d16b2fcd76",
+      "bytes": 225
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-terminal-nested-cause-before.log.txt",
+      "original": "/private/tmp/b16-terminal-nested-cause-before.log",
+      "sha256": "51dc858a4ab0a57bcbf169948596467e3c76f4fd5d1bd9a6adb658d0ba1b5198",
+      "bytes": 1366
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-terminal-production-cause-after.log.txt",
+      "original": "/private/tmp/b16-terminal-production-cause-after.log",
+      "sha256": "ae9664ba14278664689a099a250f58fbab8addf00bb7b86b616ba2f5dac67745",
+      "bytes": 883
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-terminal-production-cause-probe.log.txt",
+      "original": "/private/tmp/b16-terminal-production-cause-probe.log",
+      "sha256": "4a51e2956fbf33730035900568f57254b3759c7107468e08dba540873b642eae",
+      "bytes": 893
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-transport-hosts-handoff.md.txt",
+      "original": "/private/tmp/b16-transport-hosts-handoff.md",
+      "sha256": "cc6943811586426ee99965fe452aa79410d36b4fb04b4b77d4b16077f5d9fabe",
+      "bytes": 6828
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-upstream-format-final.log.txt",
+      "original": "/private/tmp/b16-upstream-format-final.log",
+      "sha256": "b7eeebd7c96f62f3c1d246155046a594a92576761fcd325bbb1586bf9da81bda",
+      "bytes": 113
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-upstream-handoff.md.txt",
+      "original": "/private/tmp/b16-upstream-handoff.md",
+      "sha256": "0c3cbadeac22d5aa2820ebbb67640a197419dd108afd6dd77015c0422fdf72a0",
+      "bytes": 6823
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-upstream-lint-final.log.txt",
+      "original": "/private/tmp/b16-upstream-lint-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-upstream-native-final.log.txt",
+      "original": "/private/tmp/b16-upstream-native-final.log",
+      "sha256": "3cc3c7256b4b927c8fe4c9aafa6d967628a04c6854de854dbbf61a6a7aea4ded",
+      "bytes": 6415
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-upstream-native-summary.json.txt",
+      "original": "/private/tmp/b16-upstream-native-summary.json",
+      "sha256": "568b96a84304a50f272fb790063f42e93897165045b65cd115210023398e5174",
+      "bytes": 1166
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-upstream-negative.config.mts.txt",
+      "original": "/private/tmp/b16-upstream-negative.config.mts",
+      "sha256": "70340336ad6ce5ebc385b37fb9fc3a5c914e7fe95889e6ae680fcc879c152c54",
+      "bytes": 599
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-upstream-negative.log.txt",
+      "original": "/private/tmp/b16-upstream-negative.log",
+      "sha256": "36b3e354925e50d1ffed8f0f1945a49fade604fc029fdc8253965af9d84b0acc",
+      "bytes": 1059
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-upstream-personal-agent-block.txt.txt",
+      "original": "/private/tmp/b16-upstream-personal-agent-block.txt",
+      "sha256": "67ab6fd2da5a2f5fdb9e86650da0d1390eb5311208f2c1f300a4ce89bc98349e",
+      "bytes": 1310
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-upstream-positive.log.txt",
+      "original": "/private/tmp/b16-upstream-positive.log",
+      "sha256": "505a762c0d52b5854c78a706558f75374354031f479f9f71c70a65fccc2427c6",
+      "bytes": 238
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-upstream-source-manifest-final-after.json.txt",
+      "original": "/private/tmp/b16-upstream-source-manifest-final-after.json",
+      "sha256": "9ce2a5bb5a4b8cc8d628f62f630a76bad737ee02c4e56d042af4d904cb8ad75d",
+      "bytes": 1281
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-upstream-source-manifest-final-before.json.txt",
+      "original": "/private/tmp/b16-upstream-source-manifest-final-before.json",
+      "sha256": "9ce2a5bb5a4b8cc8d628f62f630a76bad737ee02c4e56d042af4d904cb8ad75d",
+      "bytes": 1281
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b16-2026-10-23/b16-upstream-types-final.log.txt",
+      "original": "/private/tmp/b16-upstream-types-final.log",
+      "sha256": "541b75e07616e2bac3cd494de97ab20c708b7ff1b1672c197212a7b44505cbf4",
+      "bytes": 169
+    }
+  ]
+}

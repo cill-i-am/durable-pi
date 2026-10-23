@@ -15,6 +15,7 @@ import { reportTerminal } from "../../observability/events"
 import { WorkerTelemetry } from "../../observability/worker"
 import { makeDurableObjectSqlite } from "../../storage/durable-object"
 import { migrateSqlite } from "../../storage/migrations"
+import { NativeTerminalHost } from "../native-host"
 import { TerminalService, terminalLayer } from "../terminal"
 import {
   NativeContainerOwner,
@@ -52,37 +53,15 @@ export class LinuxSandboxV1 extends DurableObject<NativeTerminalEnv> {
       put: (marker) => this.ctx.storage.kv.put("terminal:migration", marker),
     }
   )
-  private importing:
-    | {
-        owner: string
-        sha256: string
-        work: Promise<{
-          verified: boolean
-          sha256: string
-          counts: Record<string, number>
-        }>
-      }
-    | undefined
-  async importMigration(receipt: MigrationReceipt) {
+  importMigration(receipt: MigrationReceipt) {
     if (
       this.env.SANDBOX.idFromName(receipt.name).toString() !==
       this.ctx.id.toString()
     )
-      throw new Error("Native migration identity mismatch")
-    if (
-      this.importing &&
-      (this.importing.owner !== receipt.owner ||
-        this.importing.sha256 !== receipt.sha256)
-    )
-      throw new Error("Conflicting terminal migration")
-    this.importing ??= {
-      owner: receipt.owner,
-      sha256: receipt.sha256,
-      work: this.migration.import(receipt).finally(() => {
-        this.importing = undefined
-      }),
-    }
-    return this.importing.work
+      return Promise.reject(new Error("Native migration identity mismatch"))
+    const pending = this.transportHost.import(receipt)
+    this.ctx.waitUntil(pending)
+    return pending
   }
   private readonly capacityOwner = new NativeContainerOwner(
     this.ctx.id.toString(),
@@ -150,6 +129,17 @@ export class LinuxSandboxV1 extends DurableObject<NativeTerminalEnv> {
     )
   )
   private readonly terminal = this.terminalRuntime.runSync(TerminalService)
+  private readonly transportHost = new NativeTerminalHost({
+    runExit: (work, options) =>
+      this.terminalRuntime.runPromiseExit(work, options),
+    writable: () => {
+      const phase = this.migration.status()
+      return phase === "original" || phase === "done"
+    },
+    receipt: () =>
+      this.ctx.storage.kv.get<MigrationMarker>("terminal:migration")?.receipt,
+    import: (receipt) => this.migration.import(receipt),
+  })
 
   constructor(ctx: DurableObjectState, env: NativeTerminalEnv) {
     super(ctx, env)
@@ -159,7 +149,6 @@ export class LinuxSandboxV1 extends DurableObject<NativeTerminalEnv> {
       this.terminalRuntime.runPromise(this.terminal.recover())
     )
   }
-  private videoBusy = false
   private readonly extractVideo = sandboxVideo({
     destroy: () => this.capacityOwner.close(),
     start: () => this.capacityOwner.start(),
@@ -176,20 +165,14 @@ export class LinuxSandboxV1 extends DurableObject<NativeTerminalEnv> {
   async fetch(request: Request): Promise<Response> {
     const path = new URL(request.url).pathname
     if (path === "/video" && request.method === "POST") {
-      if (this.videoBusy) return new Response("Busy", { status: 503 })
-      this.videoBusy = true
-      try {
-        const response = this.terminalRuntime.runPromise(
-          extractVideoRequest(this.extractVideo, request).pipe(
-            Effect.provide(WorkerTelemetry)
-          ),
-          { signal: request.signal }
-        )
-        this.ctx.waitUntil(response)
-        return await response
-      } finally {
-        this.videoBusy = false
-      }
+      const response = this.transportHost.video(
+        extractVideoRequest(this.extractVideo, request).pipe(
+          Effect.provide(WorkerTelemetry)
+        ),
+        request.signal
+      )
+      this.ctx.waitUntil(response)
+      return response
     }
     if (
       path !== "/authority" &&

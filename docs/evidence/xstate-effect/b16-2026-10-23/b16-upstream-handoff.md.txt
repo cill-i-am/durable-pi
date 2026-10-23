@@ -1,0 +1,35 @@
+# B16 upstream lifecycle handoff
+
+Final upstream source is frozen in `/Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi` (base task HEAD `2c5e6f6`). No Git, dependency, schema, authorization, durable journal or real-provider changes were made. Parent owns general worker shutdown, documentation and the combined gate.
+
+## Ownership and retained contracts
+
+- `src/agent/upstream.machine.ts` owns gateway admission, handoff, closing and the PersonalAgent one-shot observer lease. The observer's parent leased state owns the 60-second timer; claiming does not reset it. An exact matching ID releases its lease; stale release cannot affect a replacement. The active lease remains occupied through unused-sink cleanup. Claimed observation never owns inference cancellation.
+- `src/agent/adapters/upstream.ts` supplies native gateway/lease capabilities, explicit Effect scopes, joined cleanup and response ownership. Local reader cancellation starts immediately even if admission is held. Remote release waits that original admission, starts independently of local cancellation and is joined before scope completion.
+- `src/inference/upstream.machine.ts` owns bounded response pump read/write/EOF/close progression, RPC admission/headers/body/close, provider relay dispatch/stream/close, and the independent marker observation/flush lease.
+- `src/inference/adapters/upstream.ts` retains the pure bounded SSE parser and bytes. The copy remains bounded to four 16 KiB slices plus one <=1 MiB transport chunk; oversized input still fails. Native source cancellation and its pending read join before reader lock release.
+- `src/inference/adapters/upstream-worker.ts` retains the exact internal OpenAI POST capability restriction, request/body/status/header transparency, independent marker queue (16 pending) and three-second flush/60-second observation lease. No public proxy, SDK rewrite or retry owner was added. Explicit Stop is an interrupted diagnostic outcome, while successful cancellation acknowledgement resolves after joining the actual remote work.
+- `src/inference/upstream-cleanup.ts` starts independent releases before joining, then runs native lock/dispose finalizers in order, combining all failures. A throwing lock release no longer overwrites the earlier compound Cause.
+- `src/agent/worker.ts` changes are limited to the `makeUpstreamObserver` import and the `upstreamObservation` / `shutdownUpstream` / `observeUpstream` / `releaseUpstream` / `models.fetch` block. Exact final block is captured in `/private/tmp/b16-upstream-personal-agent-block.txt`. Parent integrated `shutdownUpstream` into the general host drain.
+
+Supporting parser state, byte slices, queue capacity, pending marker counts, native handles and joined invocation receipts remain mechanics. No native handles or local machine snapshots are persisted. Existing Pi execution, consequential authority and final response authority remain outside these observation machines.
+
+## Characterization and fixes
+
+1. Existing seven upstream tests passed before edits. The added concurrent reader/peer cleanup characterization failed: peer release had not started while reader cancellation was held (`b16-upstream-baseline.log`).
+2. Held admission coupled to reader cancellation failed before its fix: local cancellation had not started (`b16-upstream-admission-characterization.log`). Local cancellation now starts immediately; the original admission still fences peer release.
+3. Native body cancellation exposed workerd's raw `Error("Stream was cancelled.")` pending-read acknowledgement. The native run returned internal error instead of `cancelled`; an in-process native-reader contract fixture reproduced it (`b16-upstream-native-characterization.log`). The acknowledgement is now recognized only after this owner initiates cancellation; expected fetch AbortError additionally requires its AbortSignal to be aborted. Full Effect Causes are not treated as these raw acknowledgements. Tests include a compound Cause containing an AbortError, checked reason and independent defect, plus an unrelated raw native rejection; both remain failures.
+4. Independent review controls reproduced both lock-release overwriting previous cleanup reasons and rejected-observer cleanup being swallowed (`b16-upstream-review-characterization.log`). Both now preserve all reasons, without replacing the current observer lease.
+5. Cancellation acknowledgement and command outcome are separate: native abort/body-cancel controls report `failed`, successful completed inference reports `complete`.
+
+## Final evidence
+
+- Focused command: `PATH=/opt/homebrew/opt/node@24/bin:$PATH pnpm exec vitest run tests/upstream-lifecycle.test.ts tests/upstream-lease.test.ts tests/upstream-observer.test.ts` — 24 tests in three files passed; `/private/tmp/b16-upstream-positive.log`.
+- Same-invariant negative: `/private/tmp/b16-upstream-negative.config.mts` changes the module in Vite memory only to wait for reader cancellation before peer release. `B16_MUTATION_SERIAL_CLEANUP_APPLIED` is logged and the unchanged concurrency assertion fails (expected peer calls 1, actual 0); `/private/tmp/b16-upstream-negative.log`. No disk source mutation.
+- Scoped lint and format checks pass; `/private/tmp/b16-upstream-lint-final.log`, `/private/tmp/b16-upstream-format-final.log`.
+- Latest full-tree TypeScript invocation has no upstream errors; the single concurrent-owner error is `src/inference/adapters/streams-pi.ts:69` (`terminal` absent from ModelStreamOutcome), recorded in `/private/tmp/b16-upstream-types-final.log`. Earlier integration checkpoint passed whole-tree tsc; parent owns final combined static proof.
+- Unchanged native command: `PATH=/opt/homebrew/opt/node@24/bin:$PATH node scripts/test-upstream-runtime.mjs` — passed; `/private/tmp/b16-upstream-native-final.log`. Covers EOF/cancel reentry and baseline, actor-gated, unread, pre-header abort, body cancellation, slow observer and 61-second inference beyond observation expiry. No real provider was called.
+- Final native timings are fixture evidence, not production latency: baseline 232.86 ms; gate 729.74 ms; unread 726.07 ms; abort before headers 60.06 ms; body cancel 29.10 ms; slow observer 235.24 ms; inference beyond expiry 61,240.33 ms. The last response retains its bytes/status after observer expiry; its marker stream ends with only ready/dispatch. `/private/tmp/b16-upstream-native-summary.json`.
+- `/private/tmp/b16-upstream-source-manifest-final-before.json` and `...-final-after.json` match exactly across the final native run, including each owned source/test file, unchanged native fixture/script and the production PersonalAgent block.
+
+These are local synthetic/native proofs. They do not claim deployment, live provider measurements or completion of the other B16 host slices.

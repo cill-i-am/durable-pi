@@ -1,0 +1,25 @@
+import { Cause, Context, Effect, Exit, Layer, ManagedRuntime } from "effect"
+import { TerminalTransportHost } from "/Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/src/terminal/host.ts"
+class Annotation extends Context.Service<Annotation, string>()("probe/annotation") {}
+const checked = new Error("checked drain failure")
+const defect = new Error("drain cleanup defect")
+const failure = Cause.fromReasons([
+  Cause.makeFailReason(checked).annotate(Context.make(Annotation, "checked annotation")),
+  Cause.makeDieReason(defect).annotate(Context.make(Annotation, "defect annotation")),
+])
+const runtime = ManagedRuntime.make(Layer.empty)
+const observations: unknown[] = []
+const host = new TerminalTransportHost({
+  run: <T, E>(work: Effect.Effect<T, E>, options?: {signal?: AbortSignal}) => runtime.runPromise(work.pipe(Effect.onExit((exit) => Effect.sync(() => {
+    if (Exit.isFailure(exit)) observations.push(exit.cause.reasons.map(reason => ({tag:reason._tag, sameChecked:reason._tag === 'Fail' && reason.error === checked, sameDefect:reason._tag === 'Die' && reason.defect === defect, annotations:[...reason.annotations]})))
+  }))), options),
+  writable: () => true,
+  state: Effect.failCause(failure),
+  cancel: () => Effect.void,
+  recover: Effect.void,
+  containerRunning: () => false,
+  snapshot: async (_name: string, drain: () => Promise<void>) => { await drain(); return "receipt" },
+})
+const rejected = await host.snapshot("source").catch((error: unknown) => error)
+console.log(JSON.stringify({observations, rejectedIsCause:Cause.isCause(rejected), rejectedChecked:rejected === checked, rejectedDefect:rejected === defect, rejectedString:String(rejected)}, null, 2))
+await runtime.dispose()

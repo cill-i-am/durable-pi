@@ -1,0 +1,28 @@
+[17:05:07.881] INFO (#207): tool.dispatched {
+  botId: null,
+  runId: 'turn',
+  operationId: '42',
+  tool: 'synthetic',
+  event: 'tool.dispatched'
+}
+{
+  "allowed": false,
+  "checks": 3,
+  "dispatches": 0,
+  "outcome": "Cause([Fail(AccessDenied: The reply has ended.)])",
+  "operation": {
+    "id": "42",
+    "turnId": "turn",
+    "tool": "synthetic",
+    "input": "{}",
+    "createdAt": 1792771507876,
+    "expiresAt": 1792772407876,
+    "status": "running",
+    "revision": 1,
+    "schemaVersion": 1,
+    "workflowVersion": 1,
+    "grantRevision": 0,
+    "result": null,
+    "decision": null
+  }
+}
