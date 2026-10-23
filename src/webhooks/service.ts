@@ -37,7 +37,8 @@ export class Webhooks extends Context.Service<
       keyHash: string,
       eventId: string,
       payload: string,
-      payloadHash: string
+      payloadHash: string,
+      discoveryDeadline: number
     ) => Effect.Effect<{ runId: string; duplicate: boolean }, WebhookError>
   }
 >()("durable-pi/webhooks/Webhooks") {}
@@ -63,8 +64,9 @@ export function makeWebhooks(
         hash: string,
         eventId: string,
         payload: string,
-        payloadHash: string
-      ) => tx.accept(id, hash, eventId, payload, payloadHash)
+        payloadHash: string,
+        discoveryDeadline: number
+      ) => tx.accept(id, hash, eventId, payload, payloadHash, discoveryDeadline)
     ),
   })
 }

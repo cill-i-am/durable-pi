@@ -1,0 +1,262 @@
+{
+  "capturedAt": "2026-10-23T15:00:42.831092+00:00",
+  "worktree": "/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi",
+  "branch": "codex/xstate-routines-apps",
+  "baseHead": "0cf6861ab5a89686d3956e0f85f480446c1f9bf8",
+  "candidate": "Uncommitted B11/B12 branch changes plus schema prerequisites 17-19. B07-B10 runtime inheritance is pending; these are not final composed-stack exact-tree gates.",
+  "provenance": "Raw artifacts are byte-for-byte copies. Exit codes were reported by their gate/fixture owners and success or expected-failure text was inspected; this capture does not rerun the gates. Source hashes below attest capture-time files, not a retroactive hash of every gate input.",
+  "nativePairChecks": {
+    "B11": {
+      "sourceCount": 73,
+      "sameBundle": "158126c8f2f1c0eb71ab939903af06f5fe07677df4cc11372652c208d575d2c2",
+      "currentSourceDrift": []
+    },
+    "B12": {
+      "sourceCount": 9,
+      "positive": "b12-final-positive-evidence.json.txt",
+      "negative": "b12-negative-evidence.json.txt",
+      "sameCapturedSources": true,
+      "currentSourceDrift": [],
+      "scope": "Nine selected source paths, not a complete transitive bundle manifest. The negative bundle deliberately removes discovery retention."
+    },
+    "earlierB12Positive": {
+      "superseded": true,
+      "differentPath": "src/apps/adapters/sqlite.ts",
+      "earlierSha256": "0d7158c4365edc8b7cd793dccf160374a27c668ed9f62be7c887705938ff00a0",
+      "finalSha256": "ecca8fc529689fb057a3076188f109b156765577677a5bca8b2bd6828de94b48"
+    }
+  },
+  "limits": [
+    "Synthetic providers and authority in B11/B12 native fixtures; no live provider delivery, full PersonalAgent authorization, merge or deployment claim.",
+    "Native B12 uses a checklist interaction; remote renderer lifetimes are covered by deterministic local tests, not its native fixture.",
+    "Independent helper review ran in a scratch copy; the final repository unit gate includes the retained production configuration tests.",
+    "Focused HTTP and UI counts are subsets of the full gates and are not added to their totals."
+  ],
+  "artifacts": [
+    {
+      "file": "final-static.log",
+      "origin": "/private/tmp/b11-b12-final-static-2.log",
+      "bytes": 655,
+      "sha256": "668e2285cd6f762490087d8eca797a1cbf960edee6dd545d198a9d07d7fdfee9",
+      "description": "Final branch static gates; exit confirmed by parent gate runner.",
+      "reportedExitCode": 0
+    },
+    {
+      "file": "final-unit-build.log",
+      "origin": "/private/tmp/b11-b12-final-unit-build-2.log",
+      "bytes": 25114,
+      "sha256": "8e433ec1531e923548a08a0ad9c14ace1cacc6e0d2e19bbc7fa69a06a87f1ed1",
+      "description": "254 files, 2771 tests; website routing and Worker builds.",
+      "reportedExitCode": 0
+    },
+    {
+      "file": "final-browser.log",
+      "origin": "/private/tmp/b11-b12-final-browser-1.log",
+      "bytes": 40943,
+      "sha256": "0e93077fdfe4895d19ad760a9795ec5df3aaa6997d585d0d995135a0c7dff869",
+      "description": "90 browser cases, passkeys and two-build client upgrade; six lifecycle UI cases included.",
+      "reportedExitCode": 0
+    },
+    {
+      "file": "final-native.log",
+      "origin": "/private/tmp/b11-b12-final-native-1.log",
+      "bytes": 34045,
+      "sha256": "6ee1a241dde842274a2829bca5203cb3e17834ee8e43ca7e4c0b5b2f485b2238",
+      "description": "All ten native suite commands; includes final B11 and B12 positives.",
+      "reportedExitCode": 0
+    },
+    {
+      "file": "b11-positive.log",
+      "origin": "/private/tmp/b11-native-positive.log",
+      "bytes": 8211,
+      "sha256": "cfeb678602348434b3ddd463a924ca0bb7705e257d228ecf31ae9c091e469adf",
+      "description": "Final authority-aware B11 positive.",
+      "reportedExitCode": 0
+    },
+    {
+      "file": "b11-broken-wake.log",
+      "origin": "/private/tmp/b11-native-broken-wake.log",
+      "bytes": 8220,
+      "sha256": "ffcbbbbbd7f0142033c8d5e21827b9cecc160ea77dba88b780f57ac89ff718d3",
+      "description": "Expected missing-alarm pending-versus-done assertion.",
+      "reportedExitCode": 1
+    },
+    {
+      "file": "b11-native-evidence.json.txt",
+      "origin": "/private/tmp/b11-native-final-evidence.json",
+      "bytes": 8558,
+      "sha256": "84fc01091733b416dc189b777993555b4236ce714925f0b81abe38ad92513fd9",
+      "description": "Original B11 provenance manifest, copied byte for byte."
+    },
+    {
+      "file": "b12-final-positive-evidence.json.txt",
+      "origin": "/var/folders/s2/80_kxn9s19s1gyb6ylqwdh680000gn/T/apps-native-positive-47899-evidence.json",
+      "bytes": 37500,
+      "sha256": "356597f625f0979de342f7c254e462115d906c46dfeddea85d0521b328ce24a0",
+      "description": "Final-native log names this positive artifact; source hashes match the negative control and frozen branch."
+    },
+    {
+      "file": "b12-final-positive-workerd.log",
+      "origin": "/var/folders/s2/80_kxn9s19s1gyb6ylqwdh680000gn/T/apps-native-positive-47899-workerd.log",
+      "bytes": 962,
+      "sha256": "b0d66365aadbe3d064e4319a4831790543a1553d38c428cfd6a088bd3960aac6",
+      "description": "Raw native output for the final B12 positive."
+    },
+    {
+      "file": "b12-negative.log",
+      "origin": "/private/tmp/b12-apps-native-negative.log",
+      "bytes": 796,
+      "sha256": "097cc7a0f18afd36a9ef7f018a4bc4af42a8f27992753b29b6fc3916914cba05",
+      "description": "Expected missing discovery pending-versus-queued assertion.",
+      "reportedExitCode": 1
+    },
+    {
+      "file": "b12-negative-evidence.json.txt",
+      "origin": "/private/tmp/b12-apps-native-negative-evidence.json",
+      "bytes": 10930,
+      "sha256": "6c578eff8e6cfdce2fccca35649bf0eeefb0e3326f0a664de370b0091aaab69b",
+      "description": "Original negative snapshots and nine original source hashes; discovery expression changed only in the negative bundle."
+    },
+    {
+      "file": "b12-negative-workerd.log",
+      "origin": "/private/tmp/b12-apps-native-negative-workerd.log",
+      "bytes": 264,
+      "sha256": "7d7adcdb6b08845f1fb80ead8cd8945a662cb26b545e57164614e6d51d65e89d",
+      "description": "Raw native output for the B12 negative."
+    },
+    {
+      "file": "b12-earlier-positive.log",
+      "origin": "/private/tmp/b12-apps-native-positive.log",
+      "bytes": 372,
+      "sha256": "39f626b206c800f7a8989c8415e7e7d2f0d3466cb359f20877295924d10e6c18",
+      "description": "Historical positive before the archive authority revision fence; superseded by final-native positive.",
+      "reportedExitCode": 0
+    },
+    {
+      "file": "b12-earlier-positive-evidence.json.txt",
+      "origin": "/private/tmp/b12-apps-native-positive-evidence.json",
+      "bytes": 37500,
+      "sha256": "60a8a8e64ae45664d1f30e3ce3feb5f81531a072a5777c24eb8244ea923f44ae",
+      "description": "Historical evidence: sqlite.ts hash differs; retained without relabeling as final source."
+    },
+    {
+      "file": "b12-earlier-positive-workerd.log",
+      "origin": "/private/tmp/b12-apps-native-positive-workerd.log",
+      "bytes": 962,
+      "sha256": "066feff331efff2a13307f6341857439e71d8e2295e1f9beed9c82b5661a0361",
+      "description": "Raw native output for the historical positive."
+    },
+    {
+      "file": "b12-native-handoff.md.txt",
+      "origin": "/private/tmp/b12-apps-native-handoff/handoff.md",
+      "bytes": 2385,
+      "sha256": "f77490d15981c1b67e4b4f99b8b623a370a64a9bdf536eb6dfd18b7d1cff8711",
+      "description": "Original fixture handoff; describes the earlier standalone pair."
+    },
+    {
+      "file": "b12-native-handoff-manifest.json.txt",
+      "origin": "/private/tmp/b12-apps-native-handoff/manifest.json",
+      "bytes": 929,
+      "sha256": "d204f53733df1fec1ead8cc30e4571b06728b8cc3298209d323ac4a12988b849",
+      "description": "Original fixture handoff provenance."
+    },
+    {
+      "file": "b12-agent-http.log",
+      "origin": "/private/tmp/b12-agent-http-fixed.log",
+      "bytes": 226,
+      "sha256": "99bef8a925bae672d58eae91c16172ab3510a420bb7b0cd958fc7bdaa0b7dff0",
+      "description": "30 actual Agent HTTP cases after preserving compound App prearm Causes.",
+      "reportedExitCode": 0
+    },
+    {
+      "file": "b12-archive-helper-review.log",
+      "origin": "/private/tmp/b12-archive-production-helper.log",
+      "bytes": 572,
+      "sha256": "53d9a69d3b50dc6075b284d3e0b125ffda08cc7816e0e9bb97360fc5cab3e7db",
+      "description": "Independent scratch copy: nine configuration tests plus two direct production-helper coordination probes; 11 passed.",
+      "reportedExitCode": 0
+    },
+    {
+      "file": "b12-stale-invalidation-negative.log",
+      "origin": "/private/tmp/b12-archive-invalidation-negative.log",
+      "bytes": 1449,
+      "sha256": "11b004512ed45bc5ba1f3d6e68cec556fac9172efc76855ce1f39e1c2f7550f4",
+      "description": "Expected regression failure: delayed unguarded archive callback aborts a fresh restored render.",
+      "reportedExitCode": 1
+    },
+    {
+      "file": "lifecycle-recovery-ui.log",
+      "origin": "/private/tmp/b12-recovery-ui-browser.log",
+      "bytes": 2225,
+      "sha256": "f54a6646de28862d8d8c4efd18c1d72b927a39de641f67134d4767183252de45",
+      "description": "Six desktop/mobile recovery cases; also included in final browser total of 90.",
+      "reportedExitCode": 0
+    }
+  ],
+  "capturedSourceHashes": {
+    "migrations/agent/20261023130802_coordination_lifecycle/migration.sql": "5f0c1da4f388055d7cc986b0ae1b30176dec8131187add6719224e1ada68c9fa",
+    "migrations/agent/20261023130802_coordination_lifecycle/snapshot.json": "af76744164ab5cfacb59b4845cb343e1466b5d05d430c4b0a7da7dfde15730f2",
+    "migrations/agent/20261023134558_workspace_lifecycle/migration.sql": "9c9afeb13f15b4ebe51215e1d1df32d91e3d92165226f31df4e3b0a9c7fa6781",
+    "migrations/agent/20261023134558_workspace_lifecycle/snapshot.json": "8e65d94a568f318a2101920996a29501f2954bf55f5f662243e87874d10862aa",
+    "migrations/agent/20261023140049_routines_webhooks_lifecycle/migration.sql": "6c7aba9f49a08baa1313a6304a576e39ab43f1c603cac60ff46f3ca50400cd34",
+    "migrations/agent/20261023140049_routines_webhooks_lifecycle/snapshot.json": "607ba3604cac4a3955cd1b5bf7ace64887f7c1662ed373a305617555925528ed",
+    "package.json": "94c52858952726460c99e3a05895511ac0210fe760921f01a367384f7d26fae8",
+    "pnpm-lock.yaml": "3ce4fba0856c9038e8cbb9327cb557c1975d6c594eb23a0f2db2a4e5123056e2",
+    "src/agent/worker.ts": "1effc1135a912395311020a163a27b487c75c6d4e83c2553e97791f0b232dba7",
+    "src/apps/adapters/code.ts": "bdcaa7ab1f45fd33e72899aa6b0785b8f32ee8d778033e1c297edc4ffc472a66",
+    "src/apps/adapters/configuration.ts": "2a898f1b87268cf92d2842b9ade6baaee00d341760eddd057abc7d9bd40ab789",
+    "src/apps/adapters/http.ts": "4bf78b64e47c9e04fd0432697e76873f4b7e7f691a5bd6d5e55e483250eafa9a",
+    "src/apps/adapters/lifecycle.ts": "d7c6152d7beedbd7682281e3a2fdb15c9060546b88b410632dbe68296b1d99c2",
+    "src/apps/adapters/pi.ts": "11613c3d7d6ab82fc4490a76a69e898fd948c6c63c8d272e4e20f744a1fcb4a2",
+    "src/apps/adapters/schema.ts": "c58b4995e382710d1560579345fcebc39eea870527e138ea789beec005385665",
+    "src/apps/adapters/sqlite.ts": "ecca8fc529689fb057a3076188f109b156765577677a5bca8b2bd6828de94b48",
+    "src/apps/app.ts": "5a598af9a4dccc8f01155bd2ef0131e42403161a349ccc7cebaf4a7c01b072bf",
+    "src/apps/contracts.ts": "bbcc69624a820f67e17d0f6ccf275038517b6046883c9acb515faf1d33bc7ae4",
+    "src/apps/delivery.machine.ts": "ab3360c0310dfbd046c6836b27bd98986e89828e318fa758c6552bd74018229d",
+    "src/apps/discovery.machine.ts": "c314770fdbdfa71619b9564fb879f0d231f52934befb1db6f3e8c6cfdf1d1308",
+    "src/apps/html.ts": "3bd406bfd8798e52b3cdc825844d2d21858f7c807ec1350985ad0845df4f3e23",
+    "src/apps/pump.machine.ts": "f42c595d009f141fce2a1e334282d1859869ad172f367ef3497fa2d34a300414",
+    "src/apps/pump.ts": "05b750fccccbcf4a5c14dd00582b00858e449ca23630ee89429b1757ab6ac81f",
+    "src/apps/render.machine.ts": "a1160853edb83fc39e80b2a0e7236c4d3ac6f0662944cc5ebffbcee650e78e9a",
+    "src/apps/repository.ts": "505cf053f0ee2568482b12ca1bb550cf5c7f1a820f65968c18ece734e84d8934",
+    "src/apps/service.ts": "3f1c5ad2eb4670f1fffe4e9c255b90ad51a5c6905fc086140bd0324183e1d4a8",
+    "src/apps/web.ts": "ce3f5dd8019c33924699c33c5cece208a72388ad8a2cd7e4254b5826174c4c46",
+    "src/coordination/adapters/schema.ts": "339c40d161f97f06490d3d6a6c815705b0aa8810ecfa4d19f99e7685fb1cb0ff",
+    "src/features/apps/app-view.tsx": "465cfc0e1b6973cd9a8d7883dfb9b0d25ae9049082a64c9f8125a5b6b63f4b38",
+    "src/features/routines/routines-workbench.tsx": "a4b9ee96b7ddb192db26c21624b74280dcf2fae2990b7c11641d4a99a37d69ad",
+    "src/routines/adapters/http.ts": "3ab2e01b5b536a46e22f77876e95dc2e4aa205e79502a456d0cf42bdd7ad27e6",
+    "src/routines/adapters/lifecycle.ts": "9909d9d951278d52c7596b316facb678298759933f593da14c44198b34ff92d2",
+    "src/routines/adapters/pi.ts": "d67c7e0f311cf90e5bbd4e79a9189a39ded65eb800176967096a09029d6a6955",
+    "src/routines/adapters/schema.ts": "1f0d2b11e13f7f9ddc6005c2e2120c48ce1d137c12edc3b6d6e38ba1dec75cbd",
+    "src/routines/adapters/sqlite.ts": "bb77be8e7cffb95ee783d6a2e49db5a8da5fc6f8103438cf6e49fa418c0b6700",
+    "src/routines/application.ts": "55e794df2347a24afc782cb1f9c44f09353f958e23047a5c591e278ca5c1cce2",
+    "src/routines/command.machine.ts": "d48450f6349222f9e7e48e47a883a8aeb2ff11367554a4ee3ed240623505bf50",
+    "src/routines/contracts.ts": "0a47bd4b0edafb0841cfa72fb79bd43eb52c18e3a4e30a0ce85eb64927882dd6",
+    "src/routines/discovery.machine.ts": "383ff921c2b4ff9df29e1c566096248c83969647452f24b578c977c43b3fcee3",
+    "src/routines/domain.ts": "12e914fc0fa56618c3e79605b01df8586615d87cf3b2f638b5d685eb881db7b4",
+    "src/routines/persistence.ts": "a32a21eef9b21ce601da197ee32496769af641b87397c4c85cf0fc4a35dd6492",
+    "src/routines/pump.machine.ts": "5fa343acc4a6579b005eecef3eae5d06b5257debe1b841c2b3144c389946d108",
+    "src/routines/pump.ts": "07a00374942e18d89164165ebbe82ccd2c06b17435c07f60d6a45b4a7ca0fc1f",
+    "src/routines/routine.machine.ts": "9b6ff1be6d1d8da4a36ac0dc165031307c9cf5ce73ce79ac124f6c0e962728fa",
+    "src/routines/run.machine.ts": "42b9dabb7cbf6290986ddd6ee89d6572587780e49eb0d1a268d3c81a584cb29b",
+    "src/routines/service.ts": "0ff636f95beae2d40090f9593aad12eddc8116c51f7212654ed22ec5cf1a2587",
+    "src/storage/migration-manifest.ts": "90f7beb766cb08d83672a23e45a954dca968a3547819b89c1e7d6c0181df0448",
+    "src/webhooks/activation.machine.ts": "0f438507684e8fb0676e4983d7c3f8fa9ffa9f66c05988dcfb3ff5424e164376",
+    "src/webhooks/adapters/authorization-rpc.ts": "267b00cc8f5489af0d83c478f7b038bcb92fdf5f664d3265baa6dd919045f502",
+    "src/webhooks/adapters/crypto.ts": "95e9838e041b03ffed9bb1a162a098ff8e88a2c8c2b6d597cb065d4304b6b864",
+    "src/webhooks/adapters/http.ts": "3dfa677116a5cd001d4300ee3d6dc83299e40b45e09324b427240dbfc6add494",
+    "src/webhooks/adapters/public.ts": "ebd0f76afd803ed60a846bead369461d093f9216c16043388773228b2244ff99",
+    "src/webhooks/adapters/schema.ts": "dd061fa40823893b4ee049047d608b8977ff37fa4b83719c9e2af04830f2f674",
+    "src/webhooks/adapters/sqlite.ts": "c1f5d7feb7545d49d6c6ba3394b8a346955aec5e57eebf6658aea653ea99a00b",
+    "src/webhooks/admission.machine.ts": "ae1050455e3d1c510d8c2aa9ecdce287e85493c9468b6e035916c3f0cda9ea7d",
+    "src/webhooks/application.ts": "c5791a2c8d9c6c4587be965e2291dc3a07382085e6274656c4335b3378e59a34",
+    "src/webhooks/contracts.ts": "d642f432ec8077283b65b598774152dce12c1f814924982d6c781b36bcc6181b",
+    "src/webhooks/ingress.machine.ts": "be6ca0c8c934a2eb6dc4d6780edaf5623ef514eb9211f23381edbcb54e3de104",
+    "src/webhooks/persistence.ts": "179eda4c7cc4efdfad485656f641d5451864fc83a1fed3a79ab35d951c2d8627",
+    "src/webhooks/service.ts": "52620927db38b555168d7751a66e7d0c5e6d7ee4fbc6ba45cbecb9b93bb74137",
+    "src/workspace/adapters/schema.ts": "f61bf560ec0cbf03de7999fc75f4d001c80b53ca46ce8aa3317d47fdaddc5251",
+    "tests/agent-http.test.ts": "831ffa01be894b9fb339e8fb40ba6b2c57b4ffd251519e7bcedd9a157c24fba2",
+    "tests/apps-configuration.test.ts": "34491e917ebec8524f8c3ac640c977113dccb2c6de2f8a4dd532d1ae078dfc51",
+    "tests/browser/lifecycle-recovery.spec.ts": "86a5715665b272a52d67ba46ee633a6f80c4e8fb996c90e76754e1dd93e5c7d1"
+  }
+}

@@ -2,7 +2,12 @@ import { Context, Schema, type Effect } from "effect"
 
 import type { OperationReceipt } from "../routines/persistence"
 
-export type WebhookKeyRecord = { revision: number; hash: string | null }
+export type WebhookKeyRecord = {
+  revision: number
+  hash: string | null
+  schemaVersion: 1
+  workflowVersion: 1
+}
 export type WebhookEventReceipt = { hash: string; run_id: string }
 export class WebhookStorageError extends Schema.TaggedError<WebhookStorageError>()(
   "WebhookStorageError",

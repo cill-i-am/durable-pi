@@ -103,51 +103,138 @@ const retryRequest = (signal?: AbortSignal) =>
 const reasonTags = (cause: unknown) =>
   Cause.isCause(cause) ? cause.reasons.map((reason) => reason._tag) : []
 
-for (const path of ["routines/save", "apps/interact"]) {
-  it.each(["defect", "interruption"])(
-    `preserves a compound wake %s through the actual ${path} host route`,
-    async (mode) => {
-      const f = fixture()
-      Object.assign(f.host, {
-        routineRunner: { wake: async () => {} },
-        appEvents: { wake: async () => {} },
-      })
-      const defect = new Error("private compound wake defect")
-      const bridge = vi
-        .spyOn(AgentHttp, "agentNative")
-        .mockReturnValueOnce(
-          Effect.failCause(
-            Cause.fromReasons([
-              Cause.makeFailReason(
-                new AgentRequestUnavailable({ operation: "wake" })
-              ),
-              mode === "defect"
-                ? Cause.makeDieReason(defect)
-                : Cause.makeInterruptReason(),
-            ])
-          )
-        )
-      try {
-        await expect(
-          f.host.fetch(
-            new Request(`https://internal/api/agent/${path}`, {
-              method: "POST",
-              body: "{}",
-            })
-          )
-        ).rejects.toSatisfy((cause: unknown) =>
-          mode === "defect"
-            ? Cause.isCause(cause) &&
-              cause.reasons.some(
-                (reason) => reason._tag === "Die" && reason.defect === defect
-              )
-            : reasonTags(cause).includes("Interrupt")
-        )
-      } finally {
-        bridge.mockRestore()
-      }
+function admissionFixture(path: "routines/save" | "apps/interact") {
+  const operationId = crypto.randomUUID()
+  if (path === "routines/save") {
+    const store = routineFixture(database(), () => true).service
+    return {
+      properties: { routines: store },
+      input: {
+        id: crypto.randomUUID(),
+        operationId,
+        expectedRevision: 0,
+        title: "Wake boundary fixture",
+        prompt: "Review the retained fixture.",
+        schedule: { type: "once", at: Date.now() + 3_600_000 },
+        status: "active",
+      },
+      receipt: () => Effect.runSync(store.operationExists(operationId)),
+      writes: () => Effect.runSync(store.list()).length,
     }
+  }
+  const store = makeApps(new AppStore(database(), () => Effect.succeed(true)))
+  const draft = Effect.runSync(
+    store.save({
+      id: crypto.randomUUID(),
+      operationId: crypto.randomUUID(),
+      expectedRevision: 0,
+      definition: {
+        title: "Wake boundary fixture",
+        description: "Retained app values",
+        blocks: [
+          {
+            type: "checklist",
+            id: "tasks",
+            title: "Tasks",
+            items: [{ id: "one", label: "One" }],
+          },
+        ],
+      },
+    })
   )
+  const app = Effect.runSync(
+    store.publish({
+      id: draft.id,
+      operationId: crypto.randomUUID(),
+      expectedRevision: draft.revision,
+      version: 1,
+    })
+  )
+  const input = {
+    id: app.id,
+    operationId,
+    expectedRevision: app.revision,
+    version: 1,
+    action: {
+      type: "check" as const,
+      blockId: "tasks",
+      itemId: "one",
+      checked: true,
+    },
+  }
+  return {
+    properties: { appService: store },
+    input,
+    receipt: () => !!Effect.runSync(store.interactionReceipt(input)),
+    writes: () => Effect.runSync(store.pending()).length,
+  }
+}
+
+for (const path of ["routines/save", "apps/interact"] as const) {
+  for (const stage of ["prearm", "acknowledgement"] as const) {
+    it.each(["defect", "interruption"])(
+      `preserves a compound ${stage} %s through the actual ${path} host route`,
+      async (mode) => {
+        const f = fixture()
+        const admission = admissionFixture(path)
+        const deadline = Date.now() + 60_000
+        Object.assign(f.host, admission.properties, {
+          routineRunner: { armDiscovery: async () => deadline },
+          appEvents: {
+            armDiscovery: async () => deadline,
+            wake: async () => {},
+          },
+        })
+        const defect = new Error("private compound wake defect")
+        const failure = Effect.failCause(
+          Cause.fromReasons([
+            Cause.makeFailReason(
+              new AgentRequestUnavailable({ operation: stage })
+            ),
+            mode === "defect"
+              ? Cause.makeDieReason(defect)
+              : Cause.makeInterruptReason(),
+          ])
+        )
+        const bridge = vi.spyOn(AgentHttp, "agentNative")
+        if (stage === "acknowledgement")
+          bridge.mockReturnValueOnce(Effect.succeed(deadline))
+        bridge.mockReturnValueOnce(failure)
+        try {
+          await expect(
+            f.host.fetch(
+              new Request(`https://internal/api/agent/${path}`, {
+                method: "POST",
+                body: JSON.stringify(admission.input),
+              })
+            )
+          ).rejects.toSatisfy((cause: unknown) =>
+            mode === "defect"
+              ? Cause.isCause(cause) &&
+                cause.reasons.some(
+                  (reason) => reason._tag === "Die" && reason.defect === defect
+                )
+              : reasonTags(cause).includes("Interrupt")
+          )
+          expect(bridge.mock.calls.map(([operation]) => operation)).toEqual(
+            path === "routines/save"
+              ? stage === "prearm"
+                ? ["arm routine discovery"]
+                : ["arm routine discovery", "arm routine discovery"]
+              : stage === "prearm"
+                ? ["arm app delivery discovery"]
+                : ["arm app delivery discovery", "wake app events"]
+          )
+          // Failed prearm cannot accept work. Failed acknowledgement retains the
+          // already committed event/routine and its exact operation receipt.
+          expect(admission.receipt()).toBe(stage === "acknowledgement")
+          expect(admission.writes()).toBe(stage === "acknowledgement" ? 1 : 0)
+        } finally {
+          bridge.mockRestore()
+        }
+      }
+    )
+  }
 }
 
 it("runs the actual host request through one retained runtime and pins its mutation", async () => {
@@ -489,7 +576,7 @@ it("does not turn connection request cleanup failure into an ordinary conflict",
   expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)
 })
 
-it("composes app wake effects without boxing a tagged defect as an HTTP conflict", async () => {
+it("composes app prearm effects without boxing a tagged defect as an HTTP conflict", async () => {
   const store = makeApps(
     new AppStore(database(), () => Effect.sync(() => true))
   )
@@ -497,8 +584,24 @@ it("composes app wake effects without boxing a tagged defect as an HTTP conflict
   const exit = await Effect.runPromiseExit(
     appsRequest(
       store,
-      new Request("https://internal/", { method: "POST", body: "{}" }),
+      new Request("https://internal/", {
+        method: "POST",
+        body: JSON.stringify({
+          id: crypto.randomUUID(),
+          operationId: crypto.randomUUID(),
+          version: 1,
+          expectedRevision: 0,
+          action: {
+            type: "check",
+            blockId: "tasks",
+            itemId: "one",
+            checked: true,
+          },
+        }),
+      }),
       "apps/interact",
+      () => Effect.die("A failed prearm must not reach the post-commit wake"),
+      undefined,
       () => Effect.die(defect)
     )
   )
@@ -510,13 +613,24 @@ it("composes app wake effects without boxing a tagged defect as an HTTP conflict
   expect(Effect.runSync(store.list())).toEqual([])
 })
 
-it("composes routine wake effects without admitting work after a defect", async () => {
+it("composes routine prearm effects without admitting work after a defect", async () => {
   const store = routineFixture(database(), () => true).service
   const defect = new RoutineConflict({ message: "private wake defect" })
   const exit = await Effect.runPromiseExit(
     routinesRequest(
       store,
-      new Request("https://internal/", { method: "POST", body: "{}" }),
+      new Request("https://internal/", {
+        method: "POST",
+        body: JSON.stringify({
+          id: crypto.randomUUID(),
+          operationId: crypto.randomUUID(),
+          expectedRevision: 0,
+          title: "Prearm fixture",
+          prompt: "Do not accept before discovery is armed.",
+          status: "active",
+          schedule: { type: "once", at: Date.now() + 3_600_000 },
+        }),
+      }),
       "routines/save",
       () => Effect.die(defect),
       () => Effect.void

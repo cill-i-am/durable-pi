@@ -38,7 +38,7 @@ export const routineRuns = sqliteTable(
     unique().on(t.turn_id),
     check(
       "routine_runs_status_check",
-      sql`${t.status} in ('pending', 'queued', 'done', 'failed', 'cancelled')`
+      sql`${t.status} in ('pending', 'queued', 'stopping', 'unconfirmed', 'done', 'failed', 'cancelled')`
     ),
     check("routine_runs_record_json", sql`json_valid(${t.record})`),
     foreignKey({

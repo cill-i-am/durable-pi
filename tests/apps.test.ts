@@ -693,3 +693,34 @@ describe("private generated apps", () => {
     })
   })
 })
+it("returns an exact interaction receipt without requiring available discovery scheduling", async () => {
+  const f = fixture(),
+    app = publish(f),
+    input = click(app)
+  const applied = Effect.runSync(f.store.interact(input))
+  const response = await Effect.runPromise(
+    appsRequest(
+      makeApps(f.store),
+      new Request("https://fixture/apps/interact", {
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
+      "apps/interact",
+      () => Effect.die("A replay does not wake"),
+      undefined,
+      () => Effect.die("A replay does not arm")
+    )
+  )
+  expect(response.status).toBe(200)
+  expect(await response.json()).toEqual(applied)
+})
+it("rejects an interaction whose retained discovery lease expires before its transaction", () => {
+  const f = fixture(),
+    app = publish(f),
+    input = click(app)
+  expect(() => Effect.runSync(f.store.interact(input, undefined, 0))).toThrow(
+    "discovery expired"
+  )
+  expect(Effect.runSync(f.store.get(app.id))).toEqual(app)
+  expect(Effect.runSync(f.store.pending())).toHaveLength(0)
+})

@@ -293,6 +293,25 @@ export const agentMigrationManifest = {
         "ALTER TABLE `workspace_video_preparations` ADD `recovery_deadline` integer DEFAULT 0 NOT NULL;",
       ],
     },
+    {
+      id: "20261023140049_routines_webhooks_lifecycle",
+      checksum:
+        "6c7aba9f49a08baa1313a6304a576e39ab43f1c603cac60ff46f3ca50400cd34",
+      statements: [
+        "ALTER TABLE `webhooks` ADD `schema_version` integer DEFAULT 1 NOT NULL;",
+        "ALTER TABLE `webhooks` ADD `workflow_version` integer DEFAULT 1 NOT NULL;",
+        "PRAGMA foreign_keys=OFF;",
+        "CREATE TABLE `__new_routine_runs` (\n\t`sequence` integer PRIMARY KEY AUTOINCREMENT,\n\t`id` text NOT NULL UNIQUE,\n\t`routine_id` text NOT NULL,\n\t`turn_id` text NOT NULL UNIQUE,\n\t`status` text NOT NULL,\n\t`record` text NOT NULL,\n\tCONSTRAINT `fk_routine_runs_routine_id_routines_id_fk` FOREIGN KEY (`routine_id`) REFERENCES `routines`(`id`) ON DELETE RESTRICT,\n\tCONSTRAINT \"routine_runs_status_check\" CHECK(\"status\" in ('pending', 'queued', 'stopping', 'unconfirmed', 'done', 'failed', 'cancelled')),\n\tCONSTRAINT \"routine_runs_record_json\" CHECK(json_valid(\"record\"))\n);",
+        "INSERT INTO `__new_routine_runs`(`sequence`, `id`, `routine_id`, `turn_id`, `status`, `record`) SELECT `sequence`, `id`, `routine_id`, `turn_id`, `status`, `record` FROM `routine_runs`;",
+        "DROP TABLE `routine_runs`;",
+        "ALTER TABLE `__new_routine_runs` RENAME TO `routine_runs`;",
+        "PRAGMA foreign_keys=ON;",
+        "CREATE INDEX `routine_runs_routine_sequence` ON `routine_runs` (`routine_id`,`sequence`);",
+        "CREATE INDEX `routine_runs_status_sequence` ON `routine_runs` (`status`,`sequence`);",
+        "UPDATE `routines`\nSET `record` = json_set(`record`, '$.schemaVersion', 1, '$.workflowVersion', 1)\nWHERE json_type(`record`, '$.schemaVersion') IS NULL\n  AND json_type(`record`, '$.workflowVersion') IS NULL;",
+        "UPDATE `routine_runs`\nSET `record` = json_set(`record`, '$.schemaVersion', 1, '$.workflowVersion', 1,\n  '$.controlRevision', 0, '$.admissionDeadline', json_extract(`record`, '$.createdAt') + 86400000)\nWHERE json_type(`record`, '$.schemaVersion') IS NULL\n  AND json_type(`record`, '$.workflowVersion') IS NULL;",
+      ],
+    },
   ],
   schema: [
     {
@@ -623,7 +642,7 @@ export const agentMigrationManifest = {
     {
       type: "table",
       name: "routine_runs",
-      sql: "CREATE TABLE `routine_runs` (\n\t`sequence` integer PRIMARY KEY AUTOINCREMENT,\n\t`id` text NOT NULL UNIQUE,\n\t`routine_id` text NOT NULL,\n\t`turn_id` text NOT NULL UNIQUE,\n\t`status` text NOT NULL,\n\t`record` text NOT NULL,\n\tCONSTRAINT `fk_routine_runs_routine_id_routines_id_fk` FOREIGN KEY (`routine_id`) REFERENCES `routines`(`id`) ON DELETE RESTRICT,\n\tCONSTRAINT \"routine_runs_status_check\" CHECK(\"status\" in ('pending', 'queued', 'done', 'failed', 'cancelled')),\n\tCONSTRAINT \"routine_runs_record_json\" CHECK(json_valid(\"record\"))\n)",
+      sql: "CREATE TABLE \"routine_runs\" (\n\t`sequence` integer PRIMARY KEY AUTOINCREMENT,\n\t`id` text NOT NULL UNIQUE,\n\t`routine_id` text NOT NULL,\n\t`turn_id` text NOT NULL UNIQUE,\n\t`status` text NOT NULL,\n\t`record` text NOT NULL,\n\tCONSTRAINT `fk_routine_runs_routine_id_routines_id_fk` FOREIGN KEY (`routine_id`) REFERENCES `routines`(`id`) ON DELETE RESTRICT,\n\tCONSTRAINT \"routine_runs_status_check\" CHECK(\"status\" in ('pending', 'queued', 'stopping', 'unconfirmed', 'done', 'failed', 'cancelled')),\n\tCONSTRAINT \"routine_runs_record_json\" CHECK(json_valid(\"record\"))\n)",
     },
     {
       type: "index",
@@ -713,7 +732,7 @@ export const agentMigrationManifest = {
     {
       type: "table",
       name: "webhooks",
-      sql: 'CREATE TABLE `webhooks` (\n\t`routine_id` text PRIMARY KEY NOT NULL,\n\t`revision` integer NOT NULL,\n\t`hash` text,\n\tCONSTRAINT "webhooks_revision_check" CHECK("revision" >= 0)\n)',
+      sql: 'CREATE TABLE `webhooks` (\n\t`routine_id` text PRIMARY KEY NOT NULL,\n\t`revision` integer NOT NULL,\n\t`hash` text, `schema_version` integer DEFAULT 1 NOT NULL, `workflow_version` integer DEFAULT 1 NOT NULL,\n\tCONSTRAINT "webhooks_revision_check" CHECK("revision" >= 0)\n)',
     },
     {
       type: "table",
