@@ -180,7 +180,7 @@ export function WorkspaceNavigation({
                   Search agents and commands
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  disabled={locked || !selected}
+                  disabled={locked}
                   onClick={() => run("settings")}
                 >
                   <Settings2 />
@@ -339,6 +339,7 @@ export function WorkspaceNavigation({
                       locked ||
                       (!selected &&
                         item.id !== "create" &&
+                        item.id !== "settings" &&
                         item.id !== "security")
                     }
                     onSelect={() => run(item.id)}

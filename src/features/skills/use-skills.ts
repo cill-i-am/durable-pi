@@ -11,7 +11,7 @@ import {
   type SkillDocument,
 } from "@/skills/contracts"
 
-export function useSkills(agentId: string) {
+export function useSkills(agentId?: string) {
   const [library, setLibrary] = useState<readonly Skill[]>([])
   const [selection, setSelection] = useState<SkillSelection>({
     revision: 0,
@@ -30,13 +30,15 @@ export function useSkills(agentId: string) {
     try {
       const [loadedLibrary, loadedSelection] = await Promise.all([
         agentApi("home")("skills").then(Schema.decodeUnknownSync(SkillLibrary)),
-        agentApi(agentId)("skill-selection").then(
-          Schema.decodeUnknownSync(SkillSelection)
-        ),
+        agentId
+          ? agentApi(agentId)("skill-selection").then(
+              Schema.decodeUnknownSync(SkillSelection)
+            )
+          : Promise.resolve(null),
       ])
       if (revision !== sequence.current) return
       setLibrary(loadedLibrary.skills)
-      setSelection(loadedSelection)
+      setSelection(loadedSelection ?? { revision: 0, skills: [] })
       setReady(true)
       setError("")
     } catch (cause) {
@@ -102,15 +104,17 @@ export function useSkills(agentId: string) {
           }).then(Schema.decodeUnknownSync(Skill)),
         put
       ),
-    select: (skills: readonly Pick<SkillDocument, "id" | "revision">[]) =>
-      mutate(
+    select: (skills: readonly Pick<SkillDocument, "id" | "revision">[]) => {
+      if (!agentId) return
+      return mutate(
         () =>
           agentApi(agentId)("skill-selection", {
             expectedRevision: selection.revision,
             skills,
           }).then(Schema.decodeUnknownSync(SkillSelection)),
         setSelection
-      ),
+      )
+    },
     versions: (id: string) =>
       agentApi("home")(`skills/${id}`).then(
         Schema.decodeUnknownSync(SkillVersions)

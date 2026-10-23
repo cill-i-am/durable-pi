@@ -1,5 +1,5 @@
 import { LockKeyhole, RefreshCw } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -9,11 +9,20 @@ import { useModelCatalog } from "@/features/conversation/use-model-catalog"
 import { ChatGPTReconnect } from "./chatgpt-sign-in"
 import { useFamily } from "./context"
 
-export function ModelAccess() {
+export function ModelAccess({
+  onPendingChange,
+}: {
+  onPendingChange?: (pending: boolean) => void
+}) {
   const { family } = useFamily()
   const { catalog, catalogError, refresh } = useModelCatalog("home", 0)
   const [pending, setPending] = useState(false)
   const [savedConnection, setSavedConnection] = useState(false)
+  const [reconnectPending, setReconnectPending] = useState(false)
+  useEffect(() => {
+    onPendingChange?.(pending || reconnectPending)
+    return () => onPendingChange?.(false)
+  }, [pending, reconnectPending, onPendingChange])
   const owner = family.role === "owner"
   return (
     <section
@@ -44,6 +53,7 @@ export function ModelAccess() {
           </p>
           {owner && (
             <ChatGPTReconnect
+              onPendingChange={setReconnectPending}
               defaultEmail={
                 family.members.find((member) => member.role === "owner")
                   ?.email ?? ""

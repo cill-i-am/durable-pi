@@ -20,27 +20,37 @@ import type { SaveSkill, Skill, SkillDocument } from "@/skills/contracts"
 import { HostedSkillImport, SkillSourceLabel } from "./hosted-skill-import"
 import { useSkills, type SkillsState } from "./use-skills"
 
-export function SkillsPanel({
-  embedded = false,
-  onPendingChange,
-  agentId,
-  agentName,
-  open,
-  onOpenChange: setOpen,
-}: {
+type SkillsPanelProps = {
   embedded?: boolean
   onPendingChange?: (pending: boolean) => void
-  agentId: string
-  agentName: string
+  agentId?: string
+  agentName?: string
+  onManageLibrary?: () => void
   open: boolean
   onOpenChange: (open: boolean) => void
-}) {
-  const state = useSkills(agentId)
+}
+
+export function SkillsPanel({ agentId, ...props }: SkillsPanelProps) {
+  return agentId ? (
+    <AssignedSkillsPanel {...props} agentId={agentId} />
+  ) : (
+    <SkillLibraryPanel {...props} />
+  )
+}
+
+function SkillLibraryPanel({
+  embedded = false,
+  onPendingChange,
+  open,
+  onOpenChange: setOpen,
+}: SkillsPanelProps) {
+  const state = useSkills()
   const { refresh } = state
   useEffect(() => {
     if (open) void refresh()
   }, [open, refresh])
   const [tab, setTab] = useState("library")
+  const showArchived = tab === "archived"
   const [draft, setDraft] = useState<SaveSkill | null>(null)
   const [history, setHistory] = useState<{
     skill: Skill
@@ -104,9 +114,7 @@ export function SkillsPanel({
         if (!value) leaveView()
       }}
       title="Skills"
-      description={
-        <>Reusable instructions. Each bot keeps the revisions you choose.</>
-      }
+      description="Reusable instructions for your assistants."
     >
       <div className="flex items-center justify-between gap-2 border-y px-4 py-2">
         <Tabs
@@ -223,71 +231,6 @@ export function SkillsPanel({
         {state.loading && (
           <p className="text-sm text-muted-foreground">Loading skills…</p>
         )}
-        <section aria-label="Selected skills" className="space-y-2">
-          <h3 className="text-xs font-medium text-muted-foreground">
-            FOR {agentName.toUpperCase()} · {state.selection.skills.length}/4
-          </h3>
-          {!state.selection.skills.length && (
-            <p className="text-sm text-muted-foreground">
-              Choose skills below to guide new replies.
-            </p>
-          )}
-          {state.selection.skills.map((skill) => {
-            const latest = state.library.find((item) => item.id === skill.id)
-            return (
-              <div
-                key={skill.id}
-                className="flex items-center gap-2 rounded-md border px-3 py-2"
-              >
-                <span className="min-w-0 flex-1 truncate text-sm">
-                  {skill.name}{" "}
-                  <span className="text-muted-foreground">
-                    v{skill.revision}
-                    {latest?.archived ? " · archived" : ""}
-                  </span>
-                </span>
-                {latest &&
-                  !latest.archived &&
-                  latest.revision > skill.revision && (
-                    <Button
-                      aria-label={`Update ${skill.name} to version ${latest.revision}`}
-                      size="xs"
-                      variant="ghost"
-                      disabled={state.busy || !state.ready}
-                      onClick={() =>
-                        void state.select(
-                          state.selection.skills.map((value) => ({
-                            id: value.id,
-                            revision:
-                              value.id === skill.id
-                                ? latest.revision
-                                : value.revision,
-                          }))
-                        )
-                      }
-                    >
-                      <ArrowUpRight />v{latest.revision}
-                    </Button>
-                  )}
-                <Button
-                  size="icon-xs"
-                  variant="ghost"
-                  disabled={state.busy || !state.ready}
-                  aria-label={`Remove ${skill.name} from this bot`}
-                  onClick={() =>
-                    void state.select(
-                      state.selection.skills
-                        .filter((value) => value.id !== skill.id)
-                        .map(({ id, revision }) => ({ id, revision }))
-                    )
-                  }
-                >
-                  <X />
-                </Button>
-              </div>
-            )
-          })}
-        </section>
         {hostedImport ? (
           <HostedSkillImport
             onCancel={() => setHostedImport(false)}
@@ -347,12 +290,13 @@ export function SkillsPanel({
         ) : (
           <div className="divide-y">
             {state.library
-              .filter((skill) => skill.archived === (tab === "archived"))
+              .filter((skill) => skill.archived === showArchived)
               .map((skill) => (
                 <SkillRow
                   key={skill.id}
                   skill={skill}
                   state={state}
+                  assignment={false}
                   historyBusy={historyBusy || importing}
                   onEdit={() => {
                     leaveView()
@@ -370,10 +314,10 @@ export function SkillsPanel({
               ))}
             {state.ready &&
               !state.library.some(
-                (skill) => skill.archived === (tab === "archived")
+                (skill) => skill.archived === showArchived
               ) && (
                 <p className="py-6 text-center text-sm text-muted-foreground">
-                  {tab === "archived"
+                  {showArchived
                     ? "No archived skills."
                     : "No skills yet. Create a skill or import instructions."}
                 </p>
@@ -382,24 +326,169 @@ export function SkillsPanel({
         )}
       </div>
       <p className="border-t p-4 text-xs text-muted-foreground">
-        Skills apply to new replies. They never grant tool access. Editing or
-        archiving a library skill leaves pinned bot revisions intact.
+        Editing or archiving a library skill leaves pinned assistant revisions
+        intact.
       </p>
     </SettingsSection>
   )
 }
+function AssignedSkillsPanel({
+  embedded = false,
+  onPendingChange,
+  agentId,
+  agentName = "this assistant",
+  onManageLibrary,
+  open,
+  onOpenChange,
+}: SkillsPanelProps & { agentId: string }) {
+  const state = useSkills(agentId)
+  const { refresh } = state
+  useEffect(() => {
+    if (open) void refresh()
+  }, [open, refresh])
+  useEffect(() => {
+    onPendingChange?.(state.busy)
+  }, [state.busy, onPendingChange])
+  return (
+    <SettingsSection
+      embedded={embedded}
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Skills"
+      description={<>Choose the revisions {agentName} uses.</>}
+    >
+      {onManageLibrary && (
+        <div className="flex justify-end border-y px-4 py-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={state.busy || !state.ready || state.loading}
+            onClick={onManageLibrary}
+          >
+            Manage library
+          </Button>
+        </div>
+      )}
+      <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-4">
+        {state.error && (
+          <Alert>
+            <AlertDescription>
+              {state.error}
+              <Button
+                size="xs"
+                variant="link"
+                disabled={state.busy}
+                onClick={() => void refresh()}
+              >
+                Reload
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+        {state.loading && (
+          <p className="text-sm text-muted-foreground">Loading skills…</p>
+        )}
+        <section aria-label="Selected skills" className="space-y-2">
+          <h3 className="text-xs font-medium text-muted-foreground">
+            For {agentName ?? "this assistant"} ·{" "}
+            {state.selection.skills.length}/4
+          </h3>
+          {!state.selection.skills.length && (
+            <p className="text-sm text-muted-foreground">
+              Choose skills below to guide new replies.
+            </p>
+          )}
+          {state.selection.skills.map((skill) => {
+            const latest = state.library.find((item) => item.id === skill.id)
+            return (
+              <div
+                key={skill.id}
+                className="flex items-center gap-2 rounded-md border px-3 py-2"
+              >
+                <span className="min-w-0 flex-1 truncate text-sm">
+                  {skill.name}{" "}
+                  <span className="text-muted-foreground">
+                    v{skill.revision}
+                    {latest?.archived ? " · archived" : ""}
+                  </span>
+                </span>
+                {latest &&
+                  !latest.archived &&
+                  latest.revision > skill.revision && (
+                    <Button
+                      aria-label={`Update ${skill.name} to version ${latest.revision}`}
+                      size="xs"
+                      variant="ghost"
+                      disabled={state.busy || !state.ready}
+                      onClick={() =>
+                        void state.select(
+                          state.selection.skills.map((value) => ({
+                            id: value.id,
+                            revision:
+                              value.id === skill.id
+                                ? latest.revision
+                                : value.revision,
+                          }))
+                        )
+                      }
+                    >
+                      <ArrowUpRight />v{latest.revision}
+                    </Button>
+                  )}
+                <Button
+                  size="icon-xs"
+                  variant="ghost"
+                  disabled={state.busy || !state.ready}
+                  aria-label={`Remove ${skill.name} from this assistant`}
+                  onClick={() =>
+                    void state.select(
+                      state.selection.skills
+                        .filter((value) => value.id !== skill.id)
+                        .map(({ id, revision }) => ({ id, revision }))
+                    )
+                  }
+                >
+                  <X />
+                </Button>
+              </div>
+            )
+          })}
+        </section>
+
+        <div className="divide-y">
+          {state.library
+            .filter((skill) => !skill.archived)
+            .map((skill) => (
+              <SkillRow key={skill.id} skill={skill} state={state} assignment />
+            ))}
+          {state.ready && !state.library.some((skill) => !skill.archived) && (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              No active skills in the library.
+            </p>
+          )}
+        </div>
+      </div>
+      <p className="border-t p-4 text-xs text-muted-foreground">
+        Skills apply to new replies. They never grant tool access.
+      </p>
+    </SettingsSection>
+  )
+}
+
 function SkillRow({
   skill,
   state,
-  historyBusy,
+  assignment,
+  historyBusy = false,
   onEdit,
   onHistory,
 }: {
   skill: Skill
   state: SkillsState
-  historyBusy: boolean
-  onEdit: () => void
-  onHistory: () => void
+  assignment: boolean
+  historyBusy?: boolean
+  onEdit?: () => void
+  onHistory?: () => void
 }) {
   const selected = state.selection.skills.some((value) => value.id === skill.id)
   return (
@@ -411,55 +500,63 @@ function SkillRow({
       <p className="line-clamp-2 text-sm text-muted-foreground">{skill.body}</p>
       <SkillSourceLabel source={skill.source} />
       <div className="flex flex-wrap justify-end gap-1">
-        <Button
-          size="xs"
-          variant="ghost"
-          disabled={state.busy || historyBusy}
-          onClick={onHistory}
-        >
-          History
-        </Button>
+        {!assignment && (
+          <Button
+            size="xs"
+            variant="ghost"
+            disabled={state.busy || historyBusy}
+            onClick={onHistory}
+          >
+            History
+          </Button>
+        )}
         {!skill.archived && (
           <>
-            <Button
-              size="xs"
-              variant="ghost"
-              disabled={state.busy}
-              onClick={onEdit}
-            >
-              Edit
-            </Button>
-            <Button
-              size="xs"
-              variant="outline"
-              disabled={
-                state.busy ||
-                !state.ready ||
-                selected ||
-                state.selection.skills.length >= 4
-              }
-              onClick={() =>
-                void state.select([
-                  ...state.selection.skills.map(({ id, revision }) => ({
-                    id,
-                    revision,
-                  })),
-                  { id: skill.id, revision: skill.revision },
-                ])
-              }
-            >
-              {selected ? "Selected" : "Use for this bot"}
-            </Button>
+            {!assignment && (
+              <Button
+                size="xs"
+                variant="ghost"
+                disabled={state.busy}
+                onClick={onEdit}
+              >
+                Edit
+              </Button>
+            )}
+            {assignment && (
+              <Button
+                size="xs"
+                variant="outline"
+                disabled={
+                  state.busy ||
+                  !state.ready ||
+                  selected ||
+                  state.selection.skills.length >= 4
+                }
+                onClick={() =>
+                  void state.select([
+                    ...state.selection.skills.map(({ id, revision }) => ({
+                      id,
+                      revision,
+                    })),
+                    { id: skill.id, revision: skill.revision },
+                  ])
+                }
+              >
+                {selected ? "Selected" : "Use for this assistant"}
+              </Button>
+            )}
           </>
         )}
-        <Button
-          size="xs"
-          variant="ghost"
-          disabled={state.busy}
-          onClick={() => void state.archive(skill)}
-        >
-          {skill.archived ? "Restore" : "Archive"}
-        </Button>
+        {!assignment && (
+          <Button
+            size="xs"
+            variant="ghost"
+            disabled={state.busy}
+            onClick={() => void state.archive(skill)}
+          >
+            {skill.archived ? "Restore" : "Archive"}
+          </Button>
+        )}
       </div>
     </article>
   )

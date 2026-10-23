@@ -14,7 +14,7 @@ Choose a model profile for a message or job, inspect usage, and let long request
 ## How to get to it (user POV)
 
 - Open the model controls above the composer for the next message.
-- Open `/agents/AGENT_SLUG/settings/models` for job defaults, or `/agents/AGENT_SLUG/settings/model-access` for connection status.
+- Open agent **Models** at `/agents/AGENT_SLUG/settings/models` for that agent's model/thinking defaults per job. Open `/family/model-access` for the shared ChatGPT connection status and the admin's reconnection flow.
 - Inspect model records through Activity. Use Memory for older originals rather than treating a compacted context as deletion.
 
 ## Driving it with the verification harness
@@ -31,5 +31,6 @@ Preconditions: The account must have model access. Tests use synthetic model res
 
 - There is no API-key fallback. A subscription connection does not establish every public API model entitlement.
 - Settings changes affect new work; they do not rewrite a running request's pinned route.
+- Model defaults are per agent; provider credentials and shared connection recovery belong to Family Model access. Moving between those screens does not share private agent data or grant provider-management authority to a family member.
 - OpenAI server-side compaction is not enabled. Native working-context compaction and long-term memory are separate features.
 - Usage can be absent; the UI does not invent token counts or API-dollar costs.

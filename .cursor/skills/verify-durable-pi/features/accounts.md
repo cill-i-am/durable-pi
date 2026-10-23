@@ -15,7 +15,8 @@ Protect your own account with passwords, passkeys, two-factor authentication, an
 
 - Open `/agents` while signed out. Use **Sign in**, passkey sign-in, or **First time? Set up your account** where offered.
 - Open `/forgot-password`, `/reset-password` from its email link, or `/two-factor` during sign-in.
-- Open `/settings/security` for Account security. Profile photo controls remain in General settings.
+- Open Settings from the account menu. `/settings/account` owns the profile photo; `/settings/security` owns passkeys, two-factor authentication and browser sessions.
+- Open `/settings/preferences` for appearance, activity animations, interaction sounds and default message delivery. These preferences are saved in this browser/device, not separately for each agent or synchronized across devices.
 - Invited members enter through their invitation link; see [Family](family.md).
 
 ## Driving it with the verification harness
@@ -34,3 +35,4 @@ Preconditions: Use disposable identities and a virtual authenticator for automat
 - Removing a passkey does not sign out existing sessions. Session revocation is a separate action.
 - Signing out does not stop durable agent work or revoke the shared ChatGPT connection.
 - Password reset preserves an enabled second factor. Passkeys remain bound to the app's relying-party hostname.
+- Personal settings have no selected-agent prerequisite. Existing sign-in and family-admission checks still apply; moving settings does not grant family access or change account permissions.

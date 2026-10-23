@@ -26,13 +26,18 @@ export const Workbench = Schema.Literals([
 ])
 export type Workbench = typeof Workbench.Type
 export const SettingsCategory = Schema.Literals([
+  "account",
+  "preferences",
+  "security",
+  "connection-library",
+  "skill-library",
+  "channels",
   "family",
   "model-access",
   "general",
   "models",
   "access",
   "skills",
-  "memory",
   "connections",
 ])
 export type SettingsCategory = typeof SettingsCategory.Type
@@ -41,7 +46,6 @@ export const SettingsSection = Schema.Literals([
   "models",
   "access",
   "skills",
-  "memory",
   "connections",
 ])
 export const ResourceId = Schema.String.check(
@@ -77,7 +81,6 @@ const Search = Schema.Struct({
   query: Schema.optional(Schema.String.check(Schema.isMaxLength(500))),
   q: Schema.optional(Schema.String.check(Schema.isMaxLength(200))),
   activityAgent: Schema.optional(AgentId),
-  connections: Schema.optional(Schema.Literals(["connected", "failed"])),
   panel: Schema.optional(Workbench),
   item: Schema.optional(ResourceId),
 })
@@ -85,6 +88,7 @@ export type WorkspaceQuery = typeof Search.Type
 export type WorkspaceSearch = WorkspaceQuery & {
   settings?: SettingsCategory
   security?: boolean
+  connections?: "connected" | "failed"
   returnTo?: string
 }
 export const validateWorkspaceSearch = Schema.decodeUnknownSync(Search)
@@ -106,8 +110,21 @@ export function parseSection(value: unknown) {
   }
 }
 export const parseResourceId = Schema.decodeUnknownSync(ResourceId)
-export type GlobalSettingsSection = "family" | "model-access" | "security"
+export type GlobalSettingsSection =
+  | "account"
+  | "preferences"
+  | "security"
+  | "connection-library"
+  | "skill-library"
+  | "channels"
+  | "family"
+  | "model-access"
 const globalSettingsPaths = {
+  account: "/settings/account",
+  preferences: "/settings/preferences",
+  "connection-library": "/settings/connections",
+  "skill-library": "/settings/skills",
+  channels: "/settings/channels",
   family: "/family",
   "model-access": "/family/model-access",
   security: "/settings/security",
@@ -126,7 +143,11 @@ const GlobalSettingsSearch = Schema.Struct({
   returnTo: Schema.optional(Schema.String.check(Schema.isMaxLength(2000))),
   settingsView: Schema.optional(Schema.Literals(["sections", "detail"])),
 })
-export type GlobalSettingsQuery = typeof GlobalSettingsSearch.Type
+const ConnectionSettingsSearch = Schema.Struct({
+  ...GlobalSettingsSearch.fields,
+  connections: Schema.optional(Schema.Literals(["connected", "failed"])),
+})
+export type GlobalSettingsQuery = typeof ConnectionSettingsSearch.Type
 export function validateGlobalSettingsSearch(
   input: unknown
 ): GlobalSettingsQuery {
@@ -137,6 +158,22 @@ export function validateGlobalSettingsSearch(
       ? workspaceBackdrop(query.returnTo)?.path
       : undefined,
   }
+}
+
+export function validateConnectionSettingsSearch(
+  input: unknown
+): GlobalSettingsQuery {
+  const query = Schema.decodeUnknownSync(ConnectionSettingsSearch)(input)
+  return {
+    ...validateGlobalSettingsSearch(query),
+    connections: query.connections,
+  }
+}
+
+function globalSettingsSearch(section: GlobalSettingsSection, input: unknown) {
+  return section === "connection-library"
+    ? validateConnectionSettingsSearch(input)
+    : validateGlobalSettingsSearch(input)
 }
 
 /** A global overlay may retain an assistant view, never an action or another overlay. */
@@ -172,18 +209,18 @@ export function globalSettingsView(
   section: GlobalSettingsSection,
   query: GlobalSettingsQuery
 ): WorkspaceSearch {
-  const search = validateGlobalSettingsSearch(query)
+  const search = globalSettingsSearch(section, query)
   return {
     ...(search.returnTo ? workspaceBackdrop(search.returnTo)?.view : {}),
     ...search,
-    settings: section === "security" ? "general" : section,
+    settings: section,
     security: section === "security" || undefined,
   }
 }
 
 export function workspaceRouteSearch(pathname: string, input: unknown) {
-  if (globalSettingsSection(pathname))
-    return validateGlobalSettingsSearch(input)
+  const section = globalSettingsSection(pathname)
+  if (section) return globalSettingsSearch(section, input)
   if (/^\/agents\/(?:new|[^/]+\/edit)\/?$/.test(pathname))
     return validateAuthSearch(input)
   return validateWorkspaceSearch(input)
@@ -216,7 +253,7 @@ export function globalSettingsLink(
   return {
     to: globalSettingsPaths[section],
     params: {},
-    search: validateGlobalSettingsSearch(search),
+    search: globalSettingsSearch(section, search),
   }
 }
 
@@ -230,7 +267,7 @@ function globalSettingsDestination(
     security: _security,
     returnTo,
     settingsView,
-    connections: _connections,
+    connections,
     ...background
   } = view
   const destination = agentWorkspaceDestination(agentId, background)
@@ -243,6 +280,7 @@ function globalSettingsDestination(
   return globalSettingsLink(section, {
     returnTo: returnTo ?? path,
     settingsView,
+    connections,
   })
 }
 const tabs: Record<Workbench, readonly NonNullable<WorkspaceQuery["tab"]>[]> = {
@@ -286,8 +324,6 @@ function validateWorkspaceFilters(
   view: WorkspaceSearch,
   params: WorkspaceParams
 ) {
-  if (view.connections && params.agentId && !params.section)
-    throw new Error("Connection results belong to Settings.")
   if (view.settingsView && !params.section)
     throw new Error("Settings presentation belongs to Settings.")
   if (
@@ -334,16 +370,17 @@ function agentWorkspaceDestination(
     panel,
     item,
     settings,
-    security,
+    security: _security,
+    connections: _connections,
     returnTo: _returnTo,
     ...query
   } = view
-  if (settings || security) {
+  if (settings) {
     return {
       to: "/agents/$agentId/settings/$section" as const,
       params: {
         agentId,
-        section: security ? ("security" as const) : (settings ?? "general"),
+        section: parseSection(settings),
       },
       search: { ...query, panel, item },
     }
@@ -374,7 +411,10 @@ export function workspaceReturnPath(value: string, depth = 0): string {
       .map(decodeURIComponent)
     const globalSection = globalSettingsSection(url.pathname)
     if (globalSection) {
-      const query = validateGlobalSettingsSearch(defaultParseSearch(url.search))
+      const query = globalSettingsSearch(
+        globalSection,
+        defaultParseSearch(url.search)
+      )
       return `${globalSettingsPaths[globalSection]}${defaultStringifySearch(query)}`
     }
     const query = validateWorkspaceSearch(defaultParseSearch(url.search))
@@ -444,7 +484,7 @@ export function workspaceReturnLink(value: string) {
   if (section)
     return {
       to: globalSettingsPaths[section],
-      search: validateGlobalSettingsSearch(defaultParseSearch(url.search)),
+      search: globalSettingsSearch(section, defaultParseSearch(url.search)),
     }
   const search = validateWorkspaceSearch(defaultParseSearch(url.search))
   if (!parts.length) return { to: "/" as const, search: {} }

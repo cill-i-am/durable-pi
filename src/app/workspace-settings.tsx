@@ -2,7 +2,6 @@ import { Link } from "@tanstack/react-router"
 import { Schema } from "effect"
 import {
   ArrowLeft,
-  ArrowUpRight,
   BookOpen,
   ChevronRight,
   Globe,
@@ -13,16 +12,19 @@ import {
   Volume2,
   X,
   Users,
+  User,
+  MessageCircle,
 } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 
 import type { AgentProfile } from "@/agents/contracts"
+import { authClient } from "@/auth/client"
 import { AgentMark, agentTone } from "@/components/agent-mark"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
-import { Separator } from "@/components/ui/separator"
 import { useSidebar } from "@/components/ui/sidebar"
 import { Switch } from "@/components/ui/switch"
+import { UserAvatar } from "@/components/user-avatar"
 import { AccessPanel } from "@/features/access"
 import { AppearanceSettings } from "@/features/appearance/appearance-settings"
 import { AccountSecurity } from "@/features/auth/account-security"
@@ -36,138 +38,78 @@ import { useFamily } from "@/features/family/context"
 import { FamilySettings } from "@/features/family/family-settings"
 import { ModelAccess } from "@/features/family/model-access"
 import { SkillsPanel } from "@/features/skills"
-import { WhatsAppSettings } from "@/features/whatsapp/whatsapp-settings"
+import { ChannelSettings } from "@/features/whatsapp/channel-settings"
 import { useInteractionSoundPreference } from "@/hooks/interaction-sound-preference"
 import { useInteractionSound } from "@/hooks/use-interaction-sound"
 import { ThinkingLevel } from "@/inference/selection"
 import {
   workspaceDestination,
   globalSettingsLink,
+  isGlobalSettingsSection,
 } from "@/navigation/workspace"
 import type { SettingsCategory } from "@/navigation/workspace"
 
 import { useWorkspaceLocation } from "./use-workspace-location"
 import type { Workbench } from "./workspace-navigation"
 
-const settingsSections = [
-  {
-    id: "general",
-    title: "General",
-    description: "Appearance, messages and security",
-    icon: Settings2,
-  },
-  {
-    id: "models",
-    title: "Models & connections",
-    description: "Subscription and job defaults",
-    icon: Plug,
-  },
-  {
-    id: "access",
-    title: "Agents & tools",
-    description: "Capabilities and permissions",
-    icon: ShieldCheck,
-  },
-  {
-    id: "skills",
-    title: "Skills",
-    description: "Instructions and revisions",
-    icon: BookOpen,
-  },
-  {
-    id: "family",
-    title: "Family",
-    description: "People and invitations",
-    icon: Users,
-  },
-  {
-    id: "model-access",
-    title: "Model access",
-    description: "Shared ChatGPT connection",
-    icon: Plug,
-  },
-  {
-    id: "memory",
-    title: "Memory & data",
-    description: "Notes, original sources and files",
-    icon: BookOpen,
-  },
+const personalSections = [
+  { id: "account", title: "Account", icon: User },
+  { id: "preferences", title: "Preferences", icon: Settings2 },
+  { id: "security", title: "Account security", icon: ShieldCheck },
+  { id: "connection-library", title: "Connections", icon: Plug },
+  { id: "skill-library", title: "Skills", icon: BookOpen },
+  { id: "channels", title: "Channels", icon: MessageCircle },
+  { id: "family", title: "Family", icon: Users },
+  { id: "model-access", title: "Model access", icon: Plug },
+] as const
+const agentSections = [
+  { id: "general", title: "General", icon: Settings2 },
+  { id: "models", title: "Models", icon: Plug },
+  { id: "connections", title: "Connections", icon: Plug },
+  { id: "access", title: "Tool access", icon: ShieldCheck },
+  { id: "skills", title: "Skills", icon: BookOpen },
 ] as const
 export type { SettingsCategory } from "@/navigation/workspace"
 
 export function WorkspaceSettings({
   category,
-  connectionResult,
-  onConnectionResultConsumed,
   onCategoryChange,
   agent,
+  agents,
   conversation,
   onPendingChange,
-  securityOpen,
-  onSecurityOpenChange,
   onWorkbench,
 }: {
-  connectionResult?: "connected" | "failed"
-  onConnectionResultConsumed: () => void
   category: SettingsCategory | null
   onCategoryChange: (category: SettingsCategory | null) => void
   agent?: AgentProfile
+  agents: readonly AgentProfile[]
   conversation: ReturnType<typeof useConversation>
   onPendingChange: (pending: boolean) => void
-  securityOpen: boolean
-  onSecurityOpenChange: (open: boolean) => void
   onWorkbench: (workbench: Workbench) => void
 }) {
   const location = useWorkspaceLocation(agent ? [agent] : [], agent)
   const { family } = useFamily()
-  const [familyPending, setFamilyPending] = useState(false)
-  const [securityPending, setSecurityPending] = useState(false)
-  const [profilePending, setProfilePending] = useState(false)
-  const [modelsPending, setModelsPending] = useState(false)
-  const [accessPending, setAccessPending] = useState(false)
-  const [connectionsPending, setConnectionsPending] = useState(false)
-  const [skillsPending, setSkillsPending] = useState(false)
-  const [emailPending, setEmailPending] = useState(false)
-  const [whatsappPending, setWhatsAppPending] = useState(false)
+  const { data: session } = authClient.useSession()
+  const [locked, setLocked] = useState(false)
+  const global = isGlobalSettingsSection(category ?? undefined)
   const mobileDetail = location.search.settingsView !== "sections"
-  const setMobileDetail = (detail: boolean) =>
-    location.update({ settingsView: detail ? undefined : "sections" })
-  const sound = useInteractionSoundPreference()
-  const playInteractionSound = useInteractionSound()
   const { state: sidebarState } = useSidebar()
-  const locked = [
-    familyPending,
-    modelsPending,
-    accessPending,
-    connectionsPending,
-    skillsPending,
-    emailPending,
-    whatsappPending,
-    profilePending,
-    securityPending,
-  ].some(Boolean)
+  const { update } = location
+  const consumeConnectionCallback = useCallback(
+    () => update({ connections: undefined }, true),
+    [update]
+  )
   useEffect(() => {
     onPendingChange(locked)
+    return () => onPendingChange(false)
   }, [locked, onPendingChange])
   function close() {
-    if (!locked) {
-      onCategoryChange(null)
-    }
+    if (!locked) onCategoryChange(null)
   }
-  function leave(action: () => void) {
-    if (!locked) {
-      close()
-      action()
-    }
-  }
-  const section = settingsSections.find(
-    (item) => item.id === (category === "connections" ? "models" : category)
-  )
-  const { state, reload } = conversation
   return (
     <Dialog
       open={category !== null}
-      modal={!securityOpen}
       dismissible={!locked}
       onOpenChange={(open) => {
         if (!open) close()
@@ -181,13 +123,69 @@ export function WorkspaceSettings({
         data-detail={mobileDetail}
         data-sidebar={sidebarState}
         data-family={category === "family" || category === "model-access"}
+        data-settings-scope={global ? "personal" : "agent"}
       >
-        <SettingsNavigation
-          agent={agent}
-          location={location}
-          section={section}
-          locked={locked}
-        />
+        <aside className="settings-navigation">
+          <div className="settings-agent">
+            {global ? (
+              <>
+                <UserAvatar
+                  name={session?.user.name ?? "Account"}
+                  image={session?.user.image}
+                />
+                <span>{session?.user.name ?? "Account"}</span>
+              </>
+            ) : (
+              agent && (
+                <>
+                  <AgentMark tone={agentTone(agent.id)} />
+                  <span>{agent.name}</span>
+                </>
+              )
+            )}
+          </div>
+          <div className="settings-nav-content">
+            <DialogTitle className="settings-title">
+              {global ? "Settings" : "Agent settings"}
+            </DialogTitle>
+            <nav aria-label="Settings sections">
+              {(global
+                ? personalSections.filter(
+                    (item) => item.id !== "channels" || family.role === "owner"
+                  )
+                : agentSections
+              ).map((item) => (
+                <Link
+                  {...(isGlobalSettingsSection(item.id)
+                    ? globalSettingsLink(item.id, {
+                        returnTo: location.search.returnTo,
+                      })
+                    : workspaceDestination(agent!.slug, {
+                        ...location.search,
+                        settings: item.id,
+                        security: undefined,
+                        settingsView: undefined,
+                        connections: undefined,
+                      }))}
+                  data-slot="button"
+                  className={buttonVariants({
+                    variant: "ghost",
+                    className: "settings-nav-item",
+                  })}
+                  key={item.id}
+                  aria-current={category === item.id ? "page" : undefined}
+                  disabled={locked}
+                >
+                  <item.icon />
+                  <span>
+                    <strong>{item.title}</strong>
+                  </span>
+                  <ChevronRight />
+                </Link>
+              ))}
+            </nav>
+          </div>
+        </aside>
         <div className="settings-detail">
           <div className="settings-detail-bar">
             <Button
@@ -196,16 +194,10 @@ export function WorkspaceSettings({
               className="settings-back"
               aria-label="All settings"
               disabled={locked}
-              onClick={() => setMobileDetail(false)}
+              onClick={() => update({ settingsView: "sections" })}
             >
               <ArrowLeft />
             </Button>
-            <ModelNavigation
-              agent={agent}
-              category={category}
-              location={location}
-              locked={locked}
-            />
             <Button
               variant="ghost"
               size="icon-sm"
@@ -218,194 +210,35 @@ export function WorkspaceSettings({
             </Button>
           </div>
           <div className="settings-detail-content">
-            {category === "family" && (
-              <FamilySettings
-                onPendingChange={setFamilyPending}
-                onModelAccess={() => onCategoryChange("model-access")}
+            {global ? (
+              <PersonalSettings
+                key={category}
+                category={category}
+                agents={agents}
+                onPendingChange={setLocked}
+                onCategoryChange={onCategoryChange}
+                connectionResult={location.search.connections}
+                onConnectionResultConsumed={consumeConnectionCallback}
               />
-            )}
-            {category === "model-access" && <ModelAccess />}
-            {agent && (
-              <section
-                hidden={category !== "general"}
-                className="settings-section"
-              >
-                <header className="settings-section-heading">
-                  <h2>General</h2>
-                </header>
-                <div className="settings-section-body">
-                  <ProfilePhoto onPendingChange={setProfilePending} />
-                  <Separator />
-                  <div className="settings-preference">
-                    <div>
-                      <h3>{agent.name}</h3>
-                      <p>{agent.instructions || "Your personal assistant"}</p>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => location.openEditor(agent.id)}
-                    >
-                      Edit agent
-                    </Button>
-                  </div>
-                  <AppearanceSettings />
-                  <MessageDeliverySettings />
-                  {family.role === "owner" && (
-                    <EmailSettings
-                      key={agent.id}
-                      agentId={agent.id}
-                      archived={agent.status === "archived"}
-                      onPendingChange={setEmailPending}
-                    />
-                  )}
-                  {family.role === "owner" && (
-                    <WhatsAppSettings
-                      key={`whatsapp-${agent.id}`}
-                      agentId={agent.id}
-                      agentName={agent.name}
-                      archived={agent.status === "archived"}
-                      open={category === "general"}
-                      onPendingChange={setWhatsAppPending}
-                    />
-                  )}
-                  <div className="settings-preference">
-                    <Volume2 />
-                    <div>
-                      <h3>Interaction sounds</h3>
-                      <p>Play a click when copying or showing passwords.</p>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="mt-3"
-                        onClick={() =>
-                          void playInteractionSound({ preview: true })
-                        }
-                      >
-                        <Play data-icon="inline-start" />
-                        Test sound
-                      </Button>
-                    </div>
-                    <Switch
-                      aria-label="Interaction sounds"
-                      checked={sound.enabled}
-                      onCheckedChange={sound.setEnabled}
-                    />
-                  </div>
-                  <SettingsLink
-                    title="Account security"
-                    detail="Two-factor authentication, recovery codes and signed-in devices."
-                    onClick={() => onSecurityOpenChange(true)}
-                  />
-                </div>
-              </section>
-            )}
-            {agent && (
-              <>
-                <div
-                  hidden={category !== "models" && category !== "connections"}
-                  className="settings-models"
-                >
-                  <div hidden={category !== "models"}>
-                    {state ? (
-                      <ModelDefaults
-                        agentId={agent.id}
-                        selection={{
-                          model: state.model,
-                          thinking: Schema.is(ThinkingLevel)(state.thinking)
-                            ? state.thinking
-                            : "medium",
-                          settingsRevision: state.settingsRevision ?? 0,
-                        }}
-                        onSaved={reload}
-                        onPendingChange={setModelsPending}
-                      />
-                    ) : (
-                      <p className="p-6 text-sm">Loading model settings…</p>
-                    )}
-                  </div>
-                </div>
-                <ConnectionsPanel
-                  callbackResult={connectionResult}
-                  onCallbackConsumed={onConnectionResultConsumed}
-                  embedded
-                  agentId={agent.id}
-                  agentName={agent.name}
-                  open={category === "connections"}
-                  onOpenChange={(open) => {
-                    if (open) onCategoryChange("connections")
+            ) : (
+              agent && (
+                <AgentSettings
+                  key={agent.id + ":" + category}
+                  category={category}
+                  agent={agent}
+                  conversation={conversation}
+                  onPendingChange={setLocked}
+                  onEdit={() => location.openEditor(agent.id)}
+                  onManageConnections={() =>
+                    onCategoryChange("connection-library")
+                  }
+                  onManageSkills={() => onCategoryChange("skill-library")}
+                  onModelAccess={() => onCategoryChange("model-access")}
+                  onWorkbench={(panel) => {
+                    if (!locked) onWorkbench(panel)
                   }}
-                  onSaved={reload}
-                  onPendingChange={setConnectionsPending}
                 />
-                <div
-                  hidden={category !== "access"}
-                  className="settings-network-link"
-                >
-                  <Globe />
-                  <span>Browser and terminal internet access</span>
-                  <Button
-                    size="sm"
-                    variant="link"
-                    disabled={locked}
-                    onClick={() => leave(() => onWorkbench("browser"))}
-                  >
-                    Browser
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="link"
-                    disabled={locked}
-                    onClick={() => leave(() => onWorkbench("terminal"))}
-                  >
-                    Terminal
-                  </Button>
-                </div>
-                <AccessPanel
-                  embedded
-                  agentId={agent.id}
-                  agentName={agent.name}
-                  open={category === "access"}
-                  onOpenChange={() => {}}
-                  onSaved={reload}
-                  onPendingChange={setAccessPending}
-                />
-                <SkillsPanel
-                  embedded
-                  agentId={agent.id}
-                  agentName={agent.name}
-                  open={category === "skills"}
-                  onOpenChange={() => {}}
-                  onPendingChange={setSkillsPending}
-                />
-                <section
-                  hidden={category !== "memory"}
-                  className="settings-section"
-                >
-                  <header className="settings-section-heading">
-                    <h2>Memory & data</h2>
-                    <p>{agent.name} keeps its own memory and files.</p>
-                  </header>
-                  <div className="settings-section-body">
-                    <SettingsLink
-                      title="Memory"
-                      detail="Read saved notes and find their original sources."
-                      onClick={() => leave(() => onWorkbench("memory"))}
-                    />
-                    <SettingsLink
-                      title="Files"
-                      detail="View, download or restore this agent’s files."
-                      onClick={() => leave(() => onWorkbench("files"))}
-                    />
-                    <SettingsLink
-                      title="Checklists"
-                      detail="Open working objects and their change history."
-                      onClick={() => leave(() => onWorkbench("objects"))}
-                    />
-                  </div>
-                </section>
-              </>
+              )
             )}
           </div>
           {locked && (
@@ -420,146 +253,254 @@ export function WorkspaceSettings({
             size="icon-sm"
             className="settings-mobile-close"
             aria-label="Close settings"
+            disabled={locked}
             onClick={close}
           >
             <X />
           </Button>
         )}
       </DialogContent>
-      {securityOpen && (
-        <AccountSecurity
-          onClose={() => onSecurityOpenChange(false)}
-          onPendingChange={setSecurityPending}
-        />
-      )}
     </Dialog>
   )
 }
-function ModelNavigation({
-  agent,
+
+function PersonalSettings({
   category,
-  location,
-  locked,
+  agents,
+  onPendingChange,
+  onCategoryChange,
+  connectionResult,
+  onConnectionResultConsumed,
 }: {
-  agent?: AgentProfile
   category: SettingsCategory | null
-  location: ReturnType<typeof useWorkspaceLocation>
-  locked: boolean
+  agents: readonly AgentProfile[]
+  onPendingChange: (value: boolean) => void
+  onCategoryChange: (category: SettingsCategory | null) => void
+  connectionResult?: "connected" | "failed"
+  onConnectionResultConsumed: () => void
 }) {
-  return agent && (category === "models" || category === "connections") ? (
-    <div className="settings-subnav" aria-label="Models and connections">
-      <Link
-        {...workspaceDestination(agent.id, {
-          ...location.search,
-          settings: "models",
-          security: undefined,
-          settingsView: undefined,
-          connections: undefined,
-        })}
-        data-slot="button"
-        className={buttonVariants({
-          variant: category === "models" ? "secondary" : "ghost",
-          size: "sm",
-        })}
-        disabled={locked}
-      >
-        Models
-      </Link>
-      <Link
-        {...workspaceDestination(agent.id, {
-          ...location.search,
-          settings: "connections",
-          security: undefined,
-          settingsView: undefined,
-          connections: undefined,
-        })}
-        data-slot="button"
-        className={buttonVariants({
-          variant: category === "connections" ? "secondary" : "ghost",
-          size: "sm",
-        })}
-        disabled={locked}
-      >
-        Connected tools
-      </Link>
-    </div>
-  ) : null
+  const { family } = useFamily()
+  if (category === "account")
+    return (
+      <section className="settings-section">
+        <header className="settings-section-heading">
+          <h2>Account</h2>
+        </header>
+        <div className="settings-section-body">
+          <ProfilePhoto onPendingChange={onPendingChange} />
+        </div>
+      </section>
+    )
+  if (category === "preferences") return <Preferences />
+  if (category === "security")
+    return (
+      <AccountSecurity
+        embedded
+        onClose={() => onCategoryChange(null)}
+        onPendingChange={onPendingChange}
+      />
+    )
+  if (category === "family")
+    return (
+      <FamilySettings
+        onPendingChange={onPendingChange}
+        onModelAccess={() => onCategoryChange("model-access")}
+      />
+    )
+  if (category === "model-access")
+    return <ModelAccess onPendingChange={onPendingChange} />
+  if (category === "connection-library")
+    return (
+      <ConnectionsPanel
+        embedded
+        open
+        onOpenChange={() => {}}
+        onSaved={() => {}}
+        callbackResult={connectionResult}
+        onCallbackConsumed={onConnectionResultConsumed}
+        onPendingChange={onPendingChange}
+      />
+    )
+  if (category === "skill-library")
+    return (
+      <SkillsPanel
+        embedded
+        open
+        onOpenChange={() => {}}
+        onPendingChange={onPendingChange}
+      />
+    )
+  if (category === "channels")
+    return family.role === "owner" ? (
+      <ChannelSettings agents={agents} onPendingChange={onPendingChange} />
+    ) : (
+      <p className="p-6">Only the family admin can manage channels.</p>
+    )
+  return null
 }
-function SettingsNavigation({
-  agent,
-  location,
-  section,
-  locked,
-}: {
-  agent?: AgentProfile
-  location: ReturnType<typeof useWorkspaceLocation>
-  section: (typeof settingsSections)[number] | undefined
-  locked: boolean
-}) {
+
+function Preferences() {
+  const sound = useInteractionSoundPreference()
+  const playInteractionSound = useInteractionSound()
   return (
-    <aside className="settings-navigation">
-      <div className="settings-agent">
-        {agent && <AgentMark tone={agentTone(agent.id)} />}
-        <span>{agent?.name ?? "Settings"}</span>
-      </div>
-      <div className="settings-nav-content">
-        <DialogTitle className="settings-title">Settings</DialogTitle>
-        <nav aria-label="Settings sections">
-          {settingsSections.map((item) => (
-            <Link
-              {...(agent
-                ? workspaceDestination(agent.slug, {
-                    ...location.search,
-                    settings: item.id,
-                    security: undefined,
-                    settingsView: undefined,
-                    connections: undefined,
-                  })
-                : globalSettingsLink(
-                    item.id === "model-access" ? "model-access" : "family",
-                    location.search
-                  ))}
-              data-slot="button"
-              className={buttonVariants({
-                variant: "ghost",
-                className: "settings-nav-item",
-              })}
-              key={item.id}
-              aria-current={section?.id === item.id ? "page" : undefined}
-              disabled={
-                locked ||
-                (!agent && item.id !== "family" && item.id !== "model-access")
-              }
+    <section className="settings-section">
+      <header className="settings-section-heading">
+        <h2>Preferences</h2>
+      </header>
+      <div className="settings-section-body">
+        <AppearanceSettings />
+        <MessageDeliverySettings />
+        <div className="settings-preference">
+          <Volume2 />
+          <div>
+            <h3>Interaction sounds</h3>
+            <p>Play a click when copying or showing passwords.</p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-3"
+              onClick={() => void playInteractionSound({ preview: true })}
             >
-              <item.icon />
-              <span>
-                <strong>{item.title}</strong>
-                <small>{item.description}</small>
-              </span>
-              <ChevronRight />
-            </Link>
-          ))}
-        </nav>
+              <Play data-icon="inline-start" />
+              Test sound
+            </Button>
+          </div>
+          <Switch
+            aria-label="Interaction sounds"
+            checked={sound.enabled}
+            onCheckedChange={sound.setEnabled}
+          />
+        </div>
       </div>
-    </aside>
+    </section>
   )
 }
-function SettingsLink({
-  title,
-  detail,
-  onClick,
+
+function AgentSettings({
+  category,
+  agent,
+  conversation,
+  onPendingChange,
+  onEdit,
+  onManageConnections,
+  onManageSkills,
+  onModelAccess,
+  onWorkbench,
 }: {
-  title: string
-  detail: string
-  onClick: () => void
+  category: SettingsCategory | null
+  agent: AgentProfile
+  conversation: ReturnType<typeof useConversation>
+  onPendingChange: (value: boolean) => void
+  onEdit: () => void
+  onManageConnections: () => void
+  onManageSkills: () => void
+  onModelAccess: () => void
+  onWorkbench: (panel: Workbench) => void
 }) {
-  return (
-    <Button variant="ghost" className="settings-link" onClick={onClick}>
-      <span>
-        <strong>{title}</strong>
-        <small>{detail}</small>
-      </span>
-      <ArrowUpRight />
-    </Button>
-  )
+  const { family } = useFamily()
+  const { state, reload } = conversation
+  if (category === "general")
+    return (
+      <section className="settings-section">
+        <header className="settings-section-heading">
+          <h2>General</h2>
+        </header>
+        <div className="settings-section-body">
+          <div className="settings-preference">
+            <div>
+              <h3>{agent.name}</h3>
+              <p>{agent.instructions || "Your personal assistant"}</p>
+            </div>
+            <Button variant="outline" size="sm" onClick={onEdit}>
+              Edit agent
+            </Button>
+          </div>
+          {family.role === "owner" && (
+            <EmailSettings
+              agentId={agent.id}
+              archived={agent.status === "archived"}
+              onPendingChange={onPendingChange}
+            />
+          )}
+        </div>
+      </section>
+    )
+  if (category === "models")
+    return state ? (
+      <ModelDefaults
+        agentId={agent.id}
+        selection={{
+          model: state.model,
+          thinking: Schema.is(ThinkingLevel)(state.thinking)
+            ? state.thinking
+            : "medium",
+          settingsRevision: state.settingsRevision ?? 0,
+        }}
+        onSaved={reload}
+        onPendingChange={onPendingChange}
+        onModelAccess={onModelAccess}
+      />
+    ) : (
+      <p className="p-6 text-sm">Loading model settings…</p>
+    )
+  if (category === "connections")
+    return (
+      <ConnectionsPanel
+        embedded
+        open
+        agentId={agent.id}
+        agentName={agent.name}
+        onOpenChange={() => {}}
+        onSaved={reload}
+        onPendingChange={onPendingChange}
+        onCallbackConsumed={() => {}}
+        onManageLibrary={onManageConnections}
+      />
+    )
+  if (category === "skills")
+    return (
+      <SkillsPanel
+        embedded
+        open
+        agentId={agent.id}
+        agentName={agent.name}
+        onOpenChange={() => {}}
+        onPendingChange={onPendingChange}
+        onManageLibrary={onManageSkills}
+      />
+    )
+  if (category === "access")
+    return (
+      <>
+        <div className="settings-network-link">
+          <Globe />
+          <span>Browser and terminal internet access</span>
+          <Button
+            size="sm"
+            variant="link"
+            onClick={() => onWorkbench("browser")}
+          >
+            Browser
+          </Button>
+          <Button
+            size="sm"
+            variant="link"
+            onClick={() => onWorkbench("terminal")}
+          >
+            Terminal
+          </Button>
+        </div>
+        <AccessPanel
+          embedded
+          open
+          agentId={agent.id}
+          agentName={agent.name}
+          onOpenChange={() => {}}
+          onSaved={reload}
+          onPendingChange={onPendingChange}
+        />
+      </>
+    )
+  return null
 }

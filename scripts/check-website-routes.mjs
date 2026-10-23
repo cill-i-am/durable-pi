@@ -65,13 +65,33 @@ assert.equal(
 )
 assert.equal(diagnostic.headers.get("cache-control"), "private, no-store")
 await diagnostic.body?.cancel()
-for (const path of ["/family", "/family/model-access", "/settings/security"]) {
+for (const path of [
+  "/settings/account",
+  "/settings/preferences",
+  "/settings/security",
+  "/settings/connections",
+  "/settings/skills",
+  "/settings/channels",
+  "/family",
+  "/family/model-access",
+]) {
   const response = await website.fetch(new Request(origin + path))
   assert.equal(response.status, 200, path)
   assert.match(response.headers.get("content-type") ?? "", /text\/html/)
   assert.ok(!(await response.text()).includes("Not Found"), path)
 }
-for (const section of ["family", "model-access", "security", ""]) {
+for (const section of [
+  "family",
+  "model-access",
+  "security",
+  "account",
+  "preferences",
+  "connection-library",
+  "skill-library",
+  "channels",
+  "memory",
+  "",
+]) {
   const response = await website.fetch(
     new Request(
       origin +

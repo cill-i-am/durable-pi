@@ -1,9 +1,8 @@
 import { Schema } from "effect"
-import { Check, RefreshCw } from "lucide-react"
+import { Check } from "lucide-react"
 import { useEffect, useId, useState } from "react"
 
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import {
@@ -15,7 +14,6 @@ import {
   SelectItem,
 } from "@/components/ui/select"
 import { ModelSelection, type ModelSettings } from "@/conversations/turns"
-import { useFamily } from "@/features/family/context"
 import { agentApi } from "@/http/client"
 import { resolveRoute, type JobType } from "@/inference/policy"
 
@@ -35,14 +33,15 @@ export function ModelDefaults({
   selection,
   onSaved,
   onPendingChange,
+  onModelAccess,
 }: {
   agentId: string
   selection: ModelSelection
   onSaved: () => void
   onPendingChange: (pending: boolean) => void
+  onModelAccess?: () => void
 }) {
   const labels = useId()
-  const { family } = useFamily()
   const { model, thinking } = selection
   const [error, setError] = useState("")
   const { catalog, catalogError, refresh, unavailable, setCatalog, cancel } =
@@ -105,48 +104,25 @@ export function ModelDefaults({
   }
   return (
     <section className="settings-section" aria-label="Models">
-      <header className="settings-section-heading">
-        <h2>Models & connections</h2>
+      <header className="settings-section-heading flex flex-wrap items-center justify-between gap-3">
+        <h2>Models</h2>
+        {onModelAccess && (
+          <Button
+            size="sm"
+            variant="link"
+            disabled={dirty || saving}
+            onClick={onModelAccess}
+          >
+            Model access
+          </Button>
+        )}
       </header>
       <div className="settings-section-body">
-        <h3 className="settings-eyebrow">Model connection</h3>
-        <div className="settings-provider">
-          <div className="flex items-center justify-between gap-3">
-            <strong>ChatGPT</strong>
-            <Badge variant="secondary">
-              {catalog?.checkedAt && !catalog.error
-                ? "Connected"
-                : catalogError
-                  ? "Needs attention"
-                  : "Checking…"}
-            </Badge>
-          </div>
-          <p>
-            Uses the family’s ChatGPT connection, provided by{" "}
-            {{ owner: "you", member: family.ownerName }[family.role]}. Your
-            model choices stay personal.
-          </p>
-          {family.role === "owner" && (
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={saving}
-              onClick={() => {
-                setError("")
-                void refresh()
-              }}
-            >
-              <RefreshCw />
-              Refresh connection
-            </Button>
-          )}
-        </div>
         {(error || catalogError) && (
           <Alert>
             <AlertDescription>{error || catalogError}</AlertDescription>
           </Alert>
         )}
-        <div className="settings-rule" />
         <div>
           <h3>Defaults for this agent</h3>
           <p className="settings-description">
