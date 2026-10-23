@@ -61,6 +61,7 @@ it.effect(
                 id: n === 0 ? input.id : `run-${n}`,
                 status: "interrupted",
                 finishedAt: 200,
+                occupancy: { state: "free", ownerId: null },
               })
           })
         )

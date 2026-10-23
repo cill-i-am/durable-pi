@@ -150,12 +150,17 @@ describe("per-bot browser authority and lifetime", () => {
     const f = fixture()
     await run(f.browser.configure(policy))
     let deliver!: (session: BrowserSession) => void
+    let entered!: () => void
+    const acquiring = new Promise<void>((resolve) => {
+      entered = resolve
+    })
     f.driver.open = () =>
       new Promise((resolve) => {
         deliver = resolve
+        entered()
       })
     const opening = run(f.browser.inspect(1, "https://example.com"))
-    await Promise.resolve()
+    await acquiring
     await run(f.browser.close(1))
     deliver({
       id: "late-session",
@@ -196,8 +201,12 @@ describe("per-bot browser authority and lifetime", () => {
     await run(f.browser.configure(policy))
     await run(f.browser.inspect(1, "https://example.com"))
     const session = Effect.runSync(f.repository.read()).session!
-    Effect.runSync(
-      f.repository.update(1, { session: { ...session, expiresAt: 1 } })
+    f.db.run(
+      "UPDATE bot_browser SET record = ? WHERE id = 1",
+      JSON.stringify({
+        ...Effect.runSync(f.repository.read()),
+        session: { ...session, expiresAt: 1 },
+      })
     )
     expect(
       browserState(Effect.runSync(new BrowserStore(f.db).read()), Date.now())
@@ -547,13 +556,23 @@ describe("unrestricted browser internet settings", () => {
       "INSERT INTO bot_browser VALUES (1,?)",
       JSON.stringify({
         ...Effect.runSync(f.repository.read()),
+        schemaVersion: undefined,
+        workflowVersion: undefined,
+        attemptId: undefined,
         unrestricted: undefined,
       })
     )
     expect(Effect.runSync(new BrowserStore(f.db).read()).unrestricted).toBe(
       false
     )
-    Effect.runSync(f.repository.reset(0, [], true))
+    Effect.runSync(
+      f.repository.advance({
+        type: "RESET",
+        generation: 0,
+        hosts: [],
+        unrestricted: true,
+      })
+    )
     expect(Effect.runSync(new BrowserStore(f.db).read()).unrestricted).toBe(
       true
     )

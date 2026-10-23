@@ -15,7 +15,6 @@ import {
   allowedBrowserUrl,
   browserState,
   browserDeadline,
-  BROWSER_IDLE_MS,
   type BrowserPolicy,
   type BrowserController,
   type BrowserAction,
@@ -24,7 +23,10 @@ import {
 } from "./contracts"
 import { requireBrowserGeneration } from "./domain"
 import type { BrowserDriver, BrowserUnavailable } from "./driver"
+import { runBrowserOperation } from "./operation"
 import { BrowserStorageError, type BrowserRepository } from "./repository"
+import { retireBrowser } from "./retirement"
+import { interruptedBrowserMessage } from "./session.machine"
 
 export type { BrowserRepository } from "./repository"
 export type { BrowserDriver } from "./driver"
@@ -39,8 +41,6 @@ const attempt = <T>(body: () => T) =>
       throw cause
     },
   })
-const interruptedMessage =
-  "The browser operation was interrupted and may have run. Inspect the page before trying again."
 
 export class BrowserWorkspace {
   private readonly operations = Semaphore.makeUnsafe(1)
@@ -90,11 +90,12 @@ export class BrowserWorkspace {
       yield* this.repository.atomic(() =>
         Effect.gen({ self: this }, function* () {
           yield* this.check(policy.generation)
-          yield* this.repository.reset(
-            policy.generation,
-            policy.hosts,
-            policy.unrestricted ?? false
-          )
+          yield* this.repository.advance({
+            type: "RESET",
+            generation: policy.generation,
+            hosts: policy.hosts,
+            unrestricted: policy.unrestricted ?? false,
+          })
         })
       )
       yield* this.wake()
@@ -106,11 +107,12 @@ export class BrowserWorkspace {
       yield* this.repository.atomic(() =>
         Effect.gen({ self: this }, function* () {
           const current = yield* this.repository.read()
-          yield* this.repository.reset(
+          yield* this.repository.advance({
+            type: "RESET",
             generation,
-            current.hosts,
-            current.unrestricted
-          )
+            hosts: current.hosts,
+            unrestricted: current.unrestricted,
+          })
         })
       )
       yield* this.wake()
@@ -123,12 +125,13 @@ export class BrowserWorkspace {
         const now = yield* Clock.currentTimeMillis
         const record = yield* this.repository.atomic(() =>
           Effect.gen({ self: this }, function* () {
-            const current = yield* this.check(generation)
-            if (!current.session || browserDeadline(current.session) <= now)
-              return yield* new BrowserFailure({
-                message: "Open a page before taking control.",
-              })
-            return yield* this.repository.transfer(generation, controller)
+            yield* this.check(generation)
+            return yield* this.repository.advance({
+              type: "TRANSFER",
+              generation,
+              controller,
+              now,
+            })
           })
         )
         yield* this.inspect(record.generation, undefined, undefined, "owner")
@@ -136,17 +139,7 @@ export class BrowserWorkspace {
       })
   )
   recover = Effect.fn("Browser.recover")(() =>
-    this.repository.atomic(() =>
-      Effect.gen({ self: this }, function* () {
-        const record = yield* this.repository.read()
-        if (record.status === "loading")
-          yield* this.repository.update(record.generation, {
-            status: "error",
-            capture: null,
-            error: interruptedMessage,
-          })
-      })
-    )
+    this.repository.advance({ type: "RECOVER" }).pipe(Effect.asVoid)
   )
   inspect(
     generation: number,
@@ -183,10 +176,8 @@ export class BrowserWorkspace {
     signal?: AbortSignal
   ) {
     return Effect.suspend(() => {
-      let dispatched = false,
-        started = false,
-        error: BrowserFailure | undefined
-      const failure = (cause?: BrowserFailure) =>
+      const attemptId = crypto.randomUUID()
+      const failure = (dispatched: boolean, cause?: BrowserFailure) =>
         new BrowserFailure({
           message:
             cause?.message ??
@@ -201,7 +192,28 @@ export class BrowserWorkspace {
               ? "rejected"
               : "uncertain"),
         })
-      const check = () =>
+      const classify = <A>(
+        work: Effect.Effect<
+          A,
+          BrowserFailure | BrowserUnavailable | BrowserStorageError
+        >,
+        dispatched: boolean
+      ) =>
+        work.pipe(
+          Effect.catchCause((cause) =>
+            Effect.failCause(
+              Cause.map(cause, (reason) =>
+                reason._tag === "BrowserStorageError"
+                  ? reason
+                  : failure(
+                      dispatched,
+                      reason._tag === "BrowserFailure" ? reason : undefined
+                    )
+              )
+            )
+          )
+        )
+      const check = (owned = false) =>
         this.check(generation).pipe(
           Effect.flatMap((record) =>
             attempt(() => {
@@ -210,182 +222,189 @@ export class BrowserWorkspace {
                   message:
                     "The owner has browser control. Wait for them to return control before using browser tools.",
                 })
-              if (
-                operation.kind === "interact" &&
-                actor === "owner" &&
-                record.controller !== "owner"
-              )
-                throw new BrowserFailure({
-                  message: "Take control before interacting with this page.",
-                })
               if (signal?.aborted)
                 throw new BrowserFailure({
                   message: "This browser action was stopped.",
+                })
+              if (owned && record.attemptId !== attemptId)
+                throw new BrowserFailure({
+                  message:
+                    "This browser operation was superseded. Inspect the page before continuing.",
+                  outcome: "uncertain",
                 })
               return record
             })
           )
         )
-      const work = Effect.scoped(
-        Effect.gen({ self: this }, function* () {
-          let record = yield* check()
-          if (!record.unrestricted && !record.hosts.length)
-            return yield* new BrowserFailure({
-              message:
-                "Add allowed sites or enable unrestricted internet in Browser settings before browsing.",
-            })
-          const destination = yield* attempt(() =>
-            operation.kind === "navigate"
-              ? allowedBrowserUrl(
-                  operation.url,
-                  record.hosts,
-                  record.unrestricted
-                )
-              : undefined
+      const admit = Effect.gen({ self: this }, function* () {
+        const record = yield* check()
+        if (!record.unrestricted && !record.hosts.length)
+          return yield* new BrowserFailure({
+            message:
+              "Add allowed sites or enable unrestricted internet in Browser settings before browsing.",
+          })
+        if (operation.kind === "navigate")
+          yield* attempt(() =>
+            allowedBrowserUrl(operation.url, record.hosts, record.unrestricted)
           )
-          if (!destination && !record.session)
-            return yield* new BrowserFailure({ message: "Open a page first." })
-          const now = yield* Clock.currentTimeMillis
-          if (record.session && browserDeadline(record.session) <= now) {
-            yield* this.repository
-              .reset(generation, record.hosts, record.unrestricted)
-              .pipe(Effect.andThen(this.wake()), Effect.uninterruptible)
-            return yield* new BrowserFailure({
-              message:
-                "This browser session expired. Reopen the page to start a fresh session.",
+        else if (!record.session)
+          return yield* new BrowserFailure({ message: "Open a page first." })
+        const now = yield* Clock.currentTimeMillis
+        if (record.session && browserDeadline(record.session) <= now) {
+          yield* this.repository
+            .advance({
+              type: "RESET",
+              generation,
+              hosts: record.hosts,
+              unrestricted: record.unrestricted,
             })
-          }
-          if (
-            operation.kind === "interact" &&
-            (record.status !== "ready" ||
-              operation.version !== record.version ||
-              !record.capture ||
-              now - record.capture.page.capturedAt > 60000)
-          )
-            return yield* new BrowserFailure({
-              message:
-                "The page view changed or is older than one minute. Refresh it before interacting.",
+            .pipe(Effect.andThen(this.wake()), Effect.uninterruptible)
+          return yield* new BrowserFailure({
+            message:
+              "This browser session expired. Reopen the page to start a fresh session.",
+          })
+        }
+        return yield* this.repository.atomic(() =>
+          Effect.gen({ self: this }, function* () {
+            yield* check()
+            return yield* this.repository.advance({
+              type: "BEGIN",
+              generation,
+              attemptId,
+              kind: operation.kind,
+              version: operation.kind === "interact" ? operation.version : null,
+              actor,
+              now: yield* Clock.currentTimeMillis,
             })
-          record = yield* this.repository.atomic(() =>
-            Effect.gen({ self: this }, function* () {
-              yield* check()
-              const value = yield* this.repository.update(generation, {
-                status: "loading",
-                error: null,
-                session: record.session
-                  ? { ...record.session, idleExpiresAt: now + BROWSER_IDLE_MS }
-                  : null,
-              })
-              started = true
-              return value
-            })
-          )
-          if (!record.session) {
-            let adopted = false
-            // Acquisition must finish so an otherwise orphaned session can be retired.
-            const session = yield* Effect.acquireRelease(
-              this.driver.open(record.hosts, record.unrestricted),
-              (value) =>
-                adopted
-                  ? Effect.void
-                  : this.repository.retire(value.id).pipe(
-                      Effect.onError(() =>
-                        this.driver.close(value.id).pipe(orDieAll)
-                      ),
-                      orDieAll,
-                      Effect.andThen(this.wake().pipe(orDieAll))
-                    )
-            )
-            const acquiredAt = yield* Clock.currentTimeMillis
-            record = yield* this.repository
-              .atomic(() =>
-                Effect.gen({ self: this }, function* () {
-                  yield* check()
-                  const value = yield* this.repository.update(generation, {
-                    session: {
-                      ...session,
-                      idleExpiresAt: acquiredAt + BROWSER_IDLE_MS,
-                    },
-                  })
-                  adopted = true
-                  return value
-                })
-              )
-              .pipe(
-                Effect.tap(() => this.wake()),
-                Effect.uninterruptible
-              )
-          }
-          yield* check()
-          dispatched = true
-          const capture: BrowserCapture = yield* destination
-            ? this.driver.navigate(
-                record.session!,
-                destination,
-                record.hosts,
-                record.unrestricted
-              )
-            : operation.kind === "interact"
-              ? this.driver.interact(
-                  record.session!,
-                  operation.action,
-                  record.capture!.page.url,
-                  record.hosts,
-                  actor,
-                  record.unrestricted
-                )
-              : this.driver.capture(
-                  record.session!,
-                  record.hosts,
-                  record.unrestricted
-                )
-          const completedAt = yield* Clock.currentTimeMillis
-          return yield* this.repository.atomic(() =>
-            Effect.gen({ self: this }, function* () {
-              yield* check()
-              const next = yield* this.repository.update(generation, {
-                status: "ready",
-                session: {
-                  ...record.session!,
-                  idleExpiresAt: completedAt + BROWSER_IDLE_MS,
-                },
-                capture,
-                error: null,
-              })
-              return { ...capture, generation, version: next.version }
-            })
-          )
-        })
-      ).pipe(
-        Effect.catchCause((cause) =>
-          Effect.failCause(
-            Cause.map(cause, (reason) => {
-              if (reason._tag === "BrowserStorageError") return reason
-              error = failure(
-                reason._tag === "BrowserFailure" ? reason : undefined
-              )
-              return error
-            })
-          )
-        ),
-        Effect.onExit((exit) =>
-          Exit.isFailure(exit) && started
-            ? this.repository
-                .atomic(() =>
-                  Effect.gen({ self: this }, function* () {
-                    if (
-                      (yield* this.repository.read()).generation === generation
-                    )
-                      yield* this.repository.update(generation, {
-                        status: "error",
-                        capture: null,
-                        error: error?.message ?? interruptedMessage,
-                      })
-                  })
-                )
-                .pipe(orDieAll)
-            : Effect.void
+          })
         )
+      })
+      const work = runBrowserOperation<BrowserFailure | BrowserStorageError>({
+        admit: classify(admit, false),
+        acquire: (record) =>
+          classify(
+            Effect.scoped(
+              Effect.gen({ self: this }, function* () {
+                let adopted = false
+                const session = yield* Effect.acquireRelease(
+                  this.driver.open(record.hosts, record.unrestricted),
+                  (value) =>
+                    adopted
+                      ? Effect.void
+                      : this.repository.retire(value.id).pipe(
+                          Effect.onError(() =>
+                            this.driver.close(value.id).pipe(orDieAll)
+                          ),
+                          orDieAll,
+                          Effect.andThen(this.wake().pipe(orDieAll))
+                        )
+                )
+                const now = yield* Clock.currentTimeMillis
+                return yield* this.repository
+                  .atomic(() =>
+                    Effect.gen({ self: this }, function* () {
+                      yield* check(true)
+                      const value = yield* this.repository.advance({
+                        type: "ADOPT",
+                        generation,
+                        attemptId,
+                        session,
+                        now,
+                      })
+                      return value
+                    })
+                  )
+                  .pipe(
+                    Effect.tap(() =>
+                      Effect.sync(() => {
+                        adopted = true
+                      })
+                    ),
+                    Effect.tap(() => this.wake()),
+                    Effect.uninterruptible
+                  )
+              })
+            ),
+            false
+          ),
+        dispatch: (record) =>
+          Effect.gen({ self: this }, function* () {
+            yield* classify(check(true), false)
+            const native =
+              operation.kind === "navigate"
+                ? this.driver.navigate(
+                    record.session!,
+                    allowedBrowserUrl(
+                      operation.url,
+                      record.hosts,
+                      record.unrestricted
+                    ),
+                    record.hosts,
+                    record.unrestricted
+                  )
+                : operation.kind === "interact"
+                  ? this.driver.interact(
+                      record.session!,
+                      operation.action,
+                      record.capture!.page.url,
+                      record.hosts,
+                      actor,
+                      record.unrestricted
+                    )
+                  : this.driver.capture(
+                      record.session!,
+                      record.hosts,
+                      record.unrestricted
+                    )
+            return yield* classify(native, true)
+          }),
+        publish: (record, capture: BrowserCapture) =>
+          Effect.gen({ self: this }, function* () {
+            const now = yield* Clock.currentTimeMillis
+            return yield* this.repository.atomic(() =>
+              Effect.gen({ self: this }, function* () {
+                yield* check(true)
+                const next = yield* this.repository.advance({
+                  type: "CAPTURED",
+                  generation,
+                  attemptId,
+                  session: record.session!,
+                  capture,
+                  now,
+                })
+                return { ...capture, generation, version: next.version }
+              })
+            )
+          }),
+      }).pipe(
+        Effect.onExit((exit) => {
+          if (Exit.isSuccess(exit)) return Effect.void
+          const failure = exit.cause.reasons.find(
+            (reason) =>
+              reason._tag === "Fail" && reason.error._tag === "BrowserFailure"
+          )
+          const message =
+            failure?._tag === "Fail" && failure.error._tag === "BrowserFailure"
+              ? failure.error.message
+              : interruptedBrowserMessage
+          return this.repository
+            .atomic(() =>
+              Effect.gen({ self: this }, function* () {
+                const current = yield* this.repository.read()
+                if (
+                  current.generation === generation &&
+                  current.attemptId === attemptId
+                )
+                  yield* this.repository.advance({
+                    type: "FAILED",
+                    generation,
+                    attemptId,
+                    message,
+                  })
+              })
+            )
+            .pipe(orDieAll)
+        })
       )
       return this.operations.withPermit(work)
     }).pipe(
@@ -407,36 +426,25 @@ export class BrowserWorkspace {
       })
     )
   }
+
   cleanup = Effect.fn("Browser.cleanup")(() =>
     Effect.gen({ self: this }, function* () {
       const now = yield* Clock.currentTimeMillis
       yield* this.repository.atomic(() =>
         Effect.gen({ self: this }, function* () {
-          const current = yield* this.repository.read()
-          if (
-            current.session &&
-            (browserDeadline(current.session) <= now ||
-              !(yield* this.writable()))
-          )
-            yield* this.repository.reset(
-              current.generation,
-              current.hosts,
-              current.unrestricted
-            )
+          yield* this.repository.advance({
+            type: "MAINTAIN",
+            now,
+            writable: yield* this.writable(),
+          })
         })
       )
       let retry = false
       for (const id of yield* this.repository.retired()) {
-        const closed = yield* this.driver.close(id).pipe(
-          Effect.as(true),
-          Effect.catchCause((cause) =>
-            Cause.hasDies(cause) || Cause.hasInterrupts(cause)
-              ? Effect.failCause(cause).pipe(orDieAll)
-              : Effect.succeed(false)
-          )
-        )
-        if (closed) yield* this.repository.forget(id)
-        else retry = true
+        const closed = yield* retireBrowser<
+          BrowserFailure | BrowserUnavailable | BrowserStorageError
+        >(this.driver.close(id), this.repository.forget(id))
+        if (!closed) retry = true
       }
       const session = (yield* this.repository.read()).session
       const deadline = session ? browserDeadline(session) : undefined

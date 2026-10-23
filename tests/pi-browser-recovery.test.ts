@@ -105,8 +105,12 @@ it.each(["restricted", "launch", "read", "failed", "uncertain"] as const)(
         browser.configure({ generation: 0, hosts: [], unrestricted: false })
       )
     if (scenario === "read")
-      await Effect.runPromise(
-        browserStore.update(0, { session: await driver.open([], true) })
+      db.run(
+        "INSERT INTO bot_browser VALUES (1,?)",
+        JSON.stringify({
+          ...(await Effect.runPromise(browserStore.read())),
+          session: await driver.open([], true),
+        })
       )
     let access = new AccessStore(db, () =>
       Effect.sync(() => [
