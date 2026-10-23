@@ -19,7 +19,7 @@ Find an agent, move between chat and saved work, and reopen the same view from a
 
 - Open `/agents`, `/agents/archived`, or an agent's `/agents/AGENT_SLUG` page.
 - Use the agent sidebar, agent search, or Cmd/Ctrl+K. Use **Tools** or the **Workbench tool** selector for saved work.
-- Open Settings from the agent controls. Direct settings links use `/agents/AGENT_SLUG/settings/SECTION`.
+- Open Settings from the agent controls. Assistant settings use `/agents/AGENT_SLUG/settings/SECTION`; Family, shared Model access and Account security use `/family`, `/family/model-access` and `/settings/security`. Removed URLs return 404. Global sheets retain a validated assistant/workbench `returnTo` backdrop.
 - On a narrow screen, use Agents, Chat, and Workspace navigation.
 
 ## Driving it with the verification harness
@@ -29,6 +29,7 @@ Preconditions: Use the disposable browser fixture or a signed-in account. Substi
 - **Open an agent.** In Playwright, open `/agents`, sign in, and select the **Navi** link in **Your agents**. The fixture reaches `/agents/navi` and enables **Message Navi**.
 - **Reopen a view.** Run `pnpm test:browser tests/browser/agent-slugs.spec.ts --project=desktop`. The test opens settings and Files directly, checks canonical links, and retains the Trash query.
 - **Check mobile.** Run the same spec with `--project=mobile`. The view must fit the viewport and resolve the same agent.
+- **Global ownership.** Run `pnpm test:browser tests/browser/route-ownership.spec.ts` for global URLs, removed-route rejection, draft/file and mounted-composer preservation, safe return locations, browser history and nested mobile sheets.
 - **Inspect other panels.** On the real app, open each mapped panel through **Workbench tool**, reload, and confirm the selected panel remains visible. The fixture does not supply every panel's data.
 - **Proof.** Keep the trace and URL before and after navigation; a screenshot alone does not establish draft or route preservation.
 

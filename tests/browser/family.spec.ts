@@ -75,7 +75,7 @@ test("admin can invite and remove with safe focus and retained private data copy
     await route.fulfill({ json: { member } })
   })
   await signIn(page)
-  await page.goto("/agents/home/settings/family")
+  await page.goto("/family")
   await expect(
     page.getByRole("heading", { name: "Family", exact: true })
   ).toBeVisible()
@@ -115,7 +115,7 @@ test("member family screen is read only, and a shared model outage preserves an 
     route.fulfill({ json: { ...family, role: "member" } })
   )
   await signIn(page)
-  await page.goto("/agents/home/settings/family")
+  await page.goto("/family?returnTo=%2Fagents%2Fnavi")
   await expect(
     page.getByRole("heading", { name: "Family", exact: true })
   ).toBeVisible()
@@ -374,7 +374,7 @@ test("admin reconnects ChatGPT in Settings with a private return-address field a
     return route.fulfill({ json: { status: "connected", email: owner.email } })
   })
   await signIn(page)
-  await page.goto("/agents/home/settings/model-access")
+  await page.goto("/family/model-access")
   await expect(page.getByLabel("ChatGPT email", { exact: true })).toHaveValue(
     owner.email
   )
@@ -495,7 +495,7 @@ test("model access recovers automatically after a transient catalog polling fail
   })
   await page.clock.install()
   await signIn(page)
-  await page.goto("/agents/home/settings/model-access")
+  await page.goto("/family/model-access")
   const access = page.getByRole("region", { name: "Model access", exact: true })
   await expect(access.getByText("Connected", { exact: true })).toBeVisible()
   unavailable = true

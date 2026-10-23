@@ -115,7 +115,9 @@ export function Conversation({
   conversation: ReturnType<typeof useConversation>
   sending: boolean
   setSending: (value: boolean) => void
-  onSettings: (category: "models" | "access" | "connections" | "skills") => void
+  onSettings: (
+    category: "models" | "access" | "connections" | "skills" | "model-access"
+  ) => void
   onOpenWorkbench: (value: "files" | "memory") => void
   onAppPendingChange?: (key: string, pending: boolean) => void
 }) {
@@ -493,6 +495,7 @@ export function Conversation({
       </MessageScrollerProvider>
       <div className="composer-area">
         <ConversationConnection
+          onModelAccess={() => onSettings("model-access")}
           state={state}
           archived={archived}
           error={error}
@@ -755,12 +758,14 @@ function Composer({
 }
 
 function ConversationConnection({
+  onModelAccess,
   state,
   archived,
   error,
   connectionError,
   reload,
 }: {
+  onModelAccess: () => void
   state: ReturnType<typeof useConversation>["state"]
   archived: boolean
   error: string
@@ -795,12 +800,7 @@ function ConversationConnection({
               <Button
                 variant="outline"
                 className="mt-3"
-                render={
-                  <a
-                    href="/agents/home/settings/model-access"
-                    aria-label="Reconnect ChatGPT"
-                  />
-                }
+                onClick={onModelAccess}
               >
                 Reconnect ChatGPT
               </Button>

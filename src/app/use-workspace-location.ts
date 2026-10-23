@@ -1,8 +1,8 @@
 import {
   useNavigate,
-  useParams,
-  useSearch,
+  useMatches,
   useLocation,
+  defaultStringifySearch,
 } from "@tanstack/react-router"
 import { useCallback, useMemo, useEffect } from "react"
 
@@ -11,30 +11,81 @@ import {
   workspaceDestination,
   editorDestination,
   workspaceReturnLink,
-  workspaceView,
+  workspaceContext,
+  globalSettingsLink,
+  parseWorkspaceParams,
+  workspaceRouteSearch,
   type SettingsCategory,
   type Workbench,
   type WorkspaceSearch,
+  type WorkspaceQuery,
+  type GlobalSettingsQuery,
 } from "@/navigation/workspace"
 
 const noAgents: readonly AgentProfile[] = []
-export function useWorkspaceLocation(
-  agents: readonly AgentProfile[] = noAgents
-) {
-  const params = useParams({ strict: false })
-  const query = useSearch({ strict: false })
-  const href = useLocation({ select: (location) => location.href })
-  const pathname = useLocation({ select: (location) => location.pathname })
-  const search = useMemo(() => workspaceView(params, query), [params, query])
-  const navigate = useNavigate()
-  const profile = agents.find(
-    (agent) => agent.id === params.agentId || agent.slug === params.agentId
+/** Location advances before matches commit; identity and view must share one snapshot. */
+export function useWorkspaceRoute() {
+  const match = useMatches({ select: (matches) => matches.at(-1)! })
+  const params = useMemo(
+    () => parseWorkspaceParams(match.params),
+    [match.params]
   )
+  const query: WorkspaceQuery & GlobalSettingsQuery = useMemo(
+    () => workspaceRouteSearch(match.pathname, match.search),
+    [match.pathname, match.search]
+  )
+  const pathname = match.pathname
+  return {
+    params,
+    query,
+    pathname,
+    href: pathname + defaultStringifySearch(query),
+  }
+}
+
+export function useWorkspaceLocation(
+  agents: readonly AgentProfile[] = noAgents,
+  selected?: AgentProfile
+) {
+  const { params, query, href, pathname } = useWorkspaceRoute()
+  const {
+    globalSection,
+    params: contextParams,
+    view: search,
+    backgroundPath,
+  } = useMemo(
+    () => workspaceContext(pathname, params, query),
+    [pathname, params, query]
+  )
+  const navigate = useNavigate()
+  const profile =
+    agents.find(
+      (agent) =>
+        agent.id === contextParams.agentId ||
+        agent.slug === contextParams.agentId
+    ) ?? (globalSection && !contextParams.agentId ? selected : undefined)
   const agentId = profile?.id
-  const reference = profile?.slug ?? params.agentId
+  const reference = profile?.slug ?? contextParams.agentId
   const hash = useLocation({ select: (location) => location.hash })
   useEffect(() => {
-    if (!profile || params.agentId === profile.slug) return
+    if (!profile || contextParams.agentId === profile.slug) return
+    if (globalSection) {
+      void navigate({
+        to: pathname,
+        search: {
+          ...query,
+          returnTo: backgroundPath
+            ? backgroundPath.replace(
+                /^\/agents\/[^/?]+/,
+                `/agents/${profile.slug}`
+              )
+            : `/agents/${profile.slug}`,
+        },
+        replace: true,
+        ignoreBlocker: true,
+      })
+      return
+    }
     void navigate({
       to: pathname.replace(/^\/agents\/[^/]+/, `/agents/${profile.slug}`),
       search: query,
@@ -42,17 +93,43 @@ export function useWorkspaceLocation(
       replace: true,
       ignoreBlocker: true,
     })
-  }, [profile, params.agentId, pathname, query, hash, navigate])
+  }, [
+    profile,
+    contextParams.agentId,
+    globalSection,
+    backgroundPath,
+    pathname,
+    query,
+    hash,
+    navigate,
+  ])
   const update = useCallback(
     (change: Partial<WorkspaceSearch>, replace = false) => {
-      if (!reference) return
+      if (!reference) {
+        const next = { ...search, ...change }
+        const section = next.security ? "security" : next.settings
+        if (
+          globalSection &&
+          (section === "family" ||
+            section === "model-access" ||
+            section === "security")
+        )
+          void navigate({
+            ...globalSettingsLink(section, next),
+            replace,
+            ignoreBlocker: true,
+          })
+        else if (globalSection && !section)
+          void navigate({ to: "/agents", search: {}, ignoreBlocker: true })
+        return
+      }
       void navigate({
         ...workspaceDestination(reference, { ...search, ...change }),
         replace,
         ignoreBlocker: true,
       })
     },
-    [reference, navigate, search]
+    [reference, navigate, search, globalSection]
   )
   const openAgent = useCallback(
     (id: AgentId, next: WorkspaceSearch = {}, replace = false) => {
@@ -116,6 +193,7 @@ export function useWorkspaceLocation(
         security: undefined,
         settingsView: undefined,
         connections: undefined,
+        returnTo: undefined,
         item: undefined,
         tab: undefined,
         activityAgent: undefined,
@@ -142,13 +220,20 @@ export function useWorkspaceLocation(
   )
   const setSecurity = useCallback(
     (open: boolean) => {
+      if (!open && globalSection && !profile) {
+        void navigate({
+          ...workspaceReturnLink(query.returnTo ?? "/agents"),
+          ignoreBlocker: true,
+        })
+        return
+      }
       update({
         settings: "general",
         security: open || undefined,
         settingsView: undefined,
       })
     },
-    [update]
+    [update, globalSection, profile, navigate, query.returnTo]
   )
   const setItem = useCallback(
     (item: string | null) =>
@@ -168,6 +253,7 @@ export function useWorkspaceLocation(
   )
   return {
     agentId,
+    reference,
     search,
     pathname,
     href,

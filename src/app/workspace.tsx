@@ -1,4 +1,4 @@
-import { useBlocker, useParams } from "@tanstack/react-router"
+import { useBlocker } from "@tanstack/react-router"
 import { PanelRight } from "lucide-react"
 import { lazy, Suspense, useCallback, useEffect, useState, useRef } from "react"
 
@@ -30,10 +30,14 @@ import {
   useReloadGuard,
 } from "@/features/updates/update-recovery"
 import { api } from "@/http/client"
+import { globalSettingsSection, workspaceContext } from "@/navigation/workspace"
 import { listenForClientErrors } from "@/observability/browser"
 
 import { MobileNavigation } from "./mobile-navigation"
-import { useWorkspaceLocation } from "./use-workspace-location"
+import {
+  useWorkspaceLocation,
+  useWorkspaceRoute,
+} from "./use-workspace-location"
 import { WorkbenchPanel } from "./workbench"
 import {
   WorkspaceNavigation,
@@ -153,9 +157,11 @@ function Workspace({
   name: string
   image?: string | null
 }) {
-  const params = useParams({ strict: false })
-  const catalog = useAgentCatalog(ownerId, params.agentId)
-  const location = useWorkspaceLocation(catalog.agents)
+  const { params, query, pathname } = useWorkspaceRoute()
+  const context = workspaceContext(pathname, params, query)
+  const globalSection = context.globalSection
+  const catalog = useAgentCatalog(ownerId, context.params.agentId)
+  const location = useWorkspaceLocation(catalog.agents, catalog.selected)
   const {
     collection,
     archived,
@@ -281,7 +287,8 @@ function Workspace({
     catalog,
     conversation,
     collection,
-    editor !== null
+    editor !== null,
+    !!globalSection
   )
   if (!startupComplete && starting) return <WorkspaceStartup />
   if (!startupComplete) setStartupComplete(true)
@@ -369,7 +376,7 @@ function Workspace({
                 onCreate={() => act("create")}
                 onArchive={(agent) => void archive(agent)}
               />
-            ) : catalog.selected ? (
+            ) : canRenderAgent(catalog.selected, globalSection) ? (
               <AgentWorkspace
                 key={catalog.selected.id}
                 ownerId={ownerId}
@@ -398,19 +405,34 @@ function Workspace({
                 }}
               />
             ) : (
-              <div className="loading-view">
-                <p className="text-sm text-muted-foreground">
-                  Your workspace is unavailable.
-                </p>
-                {!catalog.loading && (
-                  <Button
-                    variant="outline"
-                    onClick={() => selectAgent(homeAgentId)}
-                  >
-                    Open home agent
-                  </Button>
+              <>
+                <div className="loading-view">
+                  <p className="text-sm text-muted-foreground">
+                    Your workspace is unavailable.
+                  </p>
+                  {!catalog.loading && (
+                    <Button
+                      variant="outline"
+                      onClick={() => selectAgent(homeAgentId)}
+                    >
+                      Open home agent
+                    </Button>
+                  )}
+                </div>
+                {globalSection && (
+                  <WorkspaceSettingsOverlay
+                    settings={settings}
+                    securityOpen={securityOpen}
+                    location={location}
+                    consumeConnectionCallback={() => {}}
+                    setSettings={setSettings}
+                    conversation={conversation}
+                    onSettingsPending={setSettingsPending}
+                    onSecurityOpenChange={setSecurityOpen}
+                    openWorkbench={setWorkbench}
+                  />
                 )}
-              </div>
+              </>
             )}
           </main>
         </div>
@@ -707,7 +729,9 @@ function workspaceRoute(
   selected: AgentProfile | null | undefined
 ) {
   const archived =
-    location.pathname === "/agents/archived" || selected?.status === "archived"
+    location.pathname === "/agents/archived" ||
+    (!globalSettingsSection(location.pathname) &&
+      selected?.status === "archived")
   const collection = location.pathname === "/agents" || archived
   const editor =
     location.pathname === "/agents/new"
@@ -725,20 +749,32 @@ function workspaceRoute(
       (location.search.connections ? ("connections" as const) : null),
     workbench: location.search.panel ?? null,
     conversationId: location.agentId ?? selected?.id ?? homeAgentId,
-    conversationEnabled: !collection && (!!location.agentId || !!selected),
+    conversationEnabled:
+      !collection &&
+      (globalSettingsSection(location.pathname)
+        ? selected?.status === "active"
+        : !!(location.agentId || selected)),
   }
+}
+function canRenderAgent(
+  agent: AgentProfile | undefined | null,
+  globalSection: string | undefined
+): agent is AgentProfile {
+  return !!agent && (!globalSection || agent.status === "active")
 }
 function workspaceStarting(
   catalog: ReturnType<typeof useAgentCatalog>,
   conversation: ReturnType<typeof useConversation>,
   collection: boolean,
-  editing: boolean
+  editing: boolean,
+  globalSettings: boolean
 ) {
   const starting =
     !catalog.error &&
     (catalog.loading ||
       (!collection &&
         !editing &&
+        !globalSettings &&
         !!catalog.selected &&
         !conversation.state &&
         !conversation.error))
@@ -984,11 +1020,11 @@ function WorkspaceSettingsOverlay({
   | "securityOpen"
   | "location"
   | "setSettings"
-  | "agent"
   | "conversation"
   | "onSettingsPending"
   | "onSecurityOpenChange"
 > & {
+  agent?: AgentProfile
   consumeConnectionCallback: () => void
   openWorkbench: (value: Workbench | null) => void
 }) {

@@ -40,7 +40,10 @@ import { WhatsAppSettings } from "@/features/whatsapp/whatsapp-settings"
 import { useInteractionSoundPreference } from "@/hooks/interaction-sound-preference"
 import { useInteractionSound } from "@/hooks/use-interaction-sound"
 import { ThinkingLevel } from "@/inference/selection"
-import { workspaceDestination } from "@/navigation/workspace"
+import {
+  workspaceDestination,
+  globalSettingsLink,
+} from "@/navigation/workspace"
 import type { SettingsCategory } from "@/navigation/workspace"
 
 import { useWorkspaceLocation } from "./use-workspace-location"
@@ -108,14 +111,14 @@ export function WorkspaceSettings({
   onConnectionResultConsumed: () => void
   category: SettingsCategory | null
   onCategoryChange: (category: SettingsCategory | null) => void
-  agent: AgentProfile
+  agent?: AgentProfile
   conversation: ReturnType<typeof useConversation>
   onPendingChange: (pending: boolean) => void
   securityOpen: boolean
   onSecurityOpenChange: (open: boolean) => void
   onWorkbench: (workbench: Workbench) => void
 }) {
-  const location = useWorkspaceLocation()
+  const location = useWorkspaceLocation(agent ? [agent] : [], agent)
   const { family } = useFamily()
   const [familyPending, setFamilyPending] = useState(false)
   const [securityPending, setSecurityPending] = useState(false)
@@ -179,43 +182,12 @@ export function WorkspaceSettings({
         data-sidebar={sidebarState}
         data-family={category === "family" || category === "model-access"}
       >
-        <aside className="settings-navigation">
-          <div className="settings-agent">
-            <AgentMark tone={agentTone(agent.id)} />
-            <span>{agent.name}</span>
-          </div>
-          <div className="settings-nav-content">
-            <DialogTitle className="settings-title">Settings</DialogTitle>
-            <nav aria-label="Settings sections">
-              {settingsSections.map((item) => (
-                <Link
-                  {...workspaceDestination(agent.id, {
-                    ...location.search,
-                    settings: item.id,
-                    security: undefined,
-                    settingsView: undefined,
-                    connections: undefined,
-                  })}
-                  data-slot="button"
-                  className={buttonVariants({
-                    variant: "ghost",
-                    className: "settings-nav-item",
-                  })}
-                  key={item.id}
-                  aria-current={section?.id === item.id ? "page" : undefined}
-                  disabled={locked}
-                >
-                  <item.icon />
-                  <span>
-                    <strong>{item.title}</strong>
-                    <small>{item.description}</small>
-                  </span>
-                  <ChevronRight />
-                </Link>
-              ))}
-            </nav>
-          </div>
-        </aside>
+        <SettingsNavigation
+          agent={agent}
+          location={location}
+          section={section}
+          locked={locked}
+        />
         <div className="settings-detail">
           <div className="settings-detail-bar">
             <Button
@@ -228,47 +200,12 @@ export function WorkspaceSettings({
             >
               <ArrowLeft />
             </Button>
-            {category === "models" || category === "connections" ? (
-              <div
-                className="settings-subnav"
-                aria-label="Models and connections"
-              >
-                <Link
-                  {...workspaceDestination(agent.id, {
-                    ...location.search,
-                    settings: "models",
-                    security: undefined,
-                    settingsView: undefined,
-                    connections: undefined,
-                  })}
-                  data-slot="button"
-                  className={buttonVariants({
-                    variant: category === "models" ? "secondary" : "ghost",
-                    size: "sm",
-                  })}
-                  disabled={locked}
-                >
-                  Models
-                </Link>
-                <Link
-                  {...workspaceDestination(agent.id, {
-                    ...location.search,
-                    settings: "connections",
-                    security: undefined,
-                    settingsView: undefined,
-                    connections: undefined,
-                  })}
-                  data-slot="button"
-                  className={buttonVariants({
-                    variant: category === "connections" ? "secondary" : "ghost",
-                    size: "sm",
-                  })}
-                  disabled={locked}
-                >
-                  Connected tools
-                </Link>
-              </div>
-            ) : null}
+            <ModelNavigation
+              agent={agent}
+              category={category}
+              location={location}
+              locked={locked}
+            />
             <Button
               variant="ghost"
               size="icon-sm"
@@ -288,182 +225,188 @@ export function WorkspaceSettings({
               />
             )}
             {category === "model-access" && <ModelAccess />}
-            <section
-              hidden={category !== "general"}
-              className="settings-section"
-            >
-              <header className="settings-section-heading">
-                <h2>General</h2>
-              </header>
-              <div className="settings-section-body">
-                <ProfilePhoto onPendingChange={setProfilePending} />
-                <Separator />
-                <div className="settings-preference">
-                  <div>
-                    <h3>{agent.name}</h3>
-                    <p>{agent.instructions || "Your personal assistant"}</p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => location.openEditor(agent.id)}
-                  >
-                    Edit agent
-                  </Button>
-                </div>
-                <AppearanceSettings />
-                <MessageDeliverySettings />
-                {family.role === "owner" && (
-                  <EmailSettings
-                    key={agent.id}
-                    agentId={agent.id}
-                    archived={agent.status === "archived"}
-                    onPendingChange={setEmailPending}
-                  />
-                )}
-                {family.role === "owner" && (
-                  <WhatsAppSettings
-                    key={`whatsapp-${agent.id}`}
-                    agentId={agent.id}
-                    agentName={agent.name}
-                    archived={agent.status === "archived"}
-                    open={category === "general"}
-                    onPendingChange={setWhatsAppPending}
-                  />
-                )}
-                <div className="settings-preference">
-                  <Volume2 />
-                  <div>
-                    <h3>Interaction sounds</h3>
-                    <p>Play a click when copying or showing passwords.</p>
+            {agent && (
+              <section
+                hidden={category !== "general"}
+                className="settings-section"
+              >
+                <header className="settings-section-heading">
+                  <h2>General</h2>
+                </header>
+                <div className="settings-section-body">
+                  <ProfilePhoto onPendingChange={setProfilePending} />
+                  <Separator />
+                  <div className="settings-preference">
+                    <div>
+                      <h3>{agent.name}</h3>
+                      <p>{agent.instructions || "Your personal assistant"}</p>
+                    </div>
                     <Button
-                      type="button"
                       variant="outline"
                       size="sm"
-                      className="mt-3"
-                      onClick={() =>
-                        void playInteractionSound({ preview: true })
-                      }
+                      onClick={() => location.openEditor(agent.id)}
                     >
-                      <Play data-icon="inline-start" />
-                      Test sound
+                      Edit agent
                     </Button>
                   </div>
-                  <Switch
-                    aria-label="Interaction sounds"
-                    checked={sound.enabled}
-                    onCheckedChange={sound.setEnabled}
+                  <AppearanceSettings />
+                  <MessageDeliverySettings />
+                  {family.role === "owner" && (
+                    <EmailSettings
+                      key={agent.id}
+                      agentId={agent.id}
+                      archived={agent.status === "archived"}
+                      onPendingChange={setEmailPending}
+                    />
+                  )}
+                  {family.role === "owner" && (
+                    <WhatsAppSettings
+                      key={`whatsapp-${agent.id}`}
+                      agentId={agent.id}
+                      agentName={agent.name}
+                      archived={agent.status === "archived"}
+                      open={category === "general"}
+                      onPendingChange={setWhatsAppPending}
+                    />
+                  )}
+                  <div className="settings-preference">
+                    <Volume2 />
+                    <div>
+                      <h3>Interaction sounds</h3>
+                      <p>Play a click when copying or showing passwords.</p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="mt-3"
+                        onClick={() =>
+                          void playInteractionSound({ preview: true })
+                        }
+                      >
+                        <Play data-icon="inline-start" />
+                        Test sound
+                      </Button>
+                    </div>
+                    <Switch
+                      aria-label="Interaction sounds"
+                      checked={sound.enabled}
+                      onCheckedChange={sound.setEnabled}
+                    />
+                  </div>
+                  <SettingsLink
+                    title="Account security"
+                    detail="Two-factor authentication, recovery codes and signed-in devices."
+                    onClick={() => onSecurityOpenChange(true)}
                   />
                 </div>
-                <SettingsLink
-                  title="Account security"
-                  detail="Two-factor authentication, recovery codes and signed-in devices."
-                  onClick={() => onSecurityOpenChange(true)}
+              </section>
+            )}
+            {agent && (
+              <>
+                <div
+                  hidden={category !== "models" && category !== "connections"}
+                  className="settings-models"
+                >
+                  <div hidden={category !== "models"}>
+                    {state ? (
+                      <ModelDefaults
+                        agentId={agent.id}
+                        selection={{
+                          model: state.model,
+                          thinking: Schema.is(ThinkingLevel)(state.thinking)
+                            ? state.thinking
+                            : "medium",
+                          settingsRevision: state.settingsRevision ?? 0,
+                        }}
+                        onSaved={reload}
+                        onPendingChange={setModelsPending}
+                      />
+                    ) : (
+                      <p className="p-6 text-sm">Loading model settings…</p>
+                    )}
+                  </div>
+                </div>
+                <ConnectionsPanel
+                  callbackResult={connectionResult}
+                  onCallbackConsumed={onConnectionResultConsumed}
+                  embedded
+                  agentId={agent.id}
+                  agentName={agent.name}
+                  open={category === "connections"}
+                  onOpenChange={(open) => {
+                    if (open) onCategoryChange("connections")
+                  }}
+                  onSaved={reload}
+                  onPendingChange={setConnectionsPending}
                 />
-              </div>
-            </section>
-            <div
-              hidden={category !== "models" && category !== "connections"}
-              className="settings-models"
-            >
-              <div hidden={category !== "models"}>
-                {state ? (
-                  <ModelDefaults
-                    agentId={agent.id}
-                    selection={{
-                      model: state.model,
-                      thinking: Schema.is(ThinkingLevel)(state.thinking)
-                        ? state.thinking
-                        : "medium",
-                      settingsRevision: state.settingsRevision ?? 0,
-                    }}
-                    onSaved={reload}
-                    onPendingChange={setModelsPending}
-                  />
-                ) : (
-                  <p className="p-6 text-sm">Loading model settings…</p>
-                )}
-              </div>
-            </div>
-            <ConnectionsPanel
-              callbackResult={connectionResult}
-              onCallbackConsumed={onConnectionResultConsumed}
-              embedded
-              agentId={agent.id}
-              agentName={agent.name}
-              open={category === "connections"}
-              onOpenChange={(open) => {
-                if (open) onCategoryChange("connections")
-              }}
-              onSaved={reload}
-              onPendingChange={setConnectionsPending}
-            />
-            <div
-              hidden={category !== "access"}
-              className="settings-network-link"
-            >
-              <Globe />
-              <span>Browser and terminal internet access</span>
-              <Button
-                size="sm"
-                variant="link"
-                disabled={locked}
-                onClick={() => leave(() => onWorkbench("browser"))}
-              >
-                Browser
-              </Button>
-              <Button
-                size="sm"
-                variant="link"
-                disabled={locked}
-                onClick={() => leave(() => onWorkbench("terminal"))}
-              >
-                Terminal
-              </Button>
-            </div>
-            <AccessPanel
-              embedded
-              agentId={agent.id}
-              agentName={agent.name}
-              open={category === "access"}
-              onOpenChange={() => {}}
-              onSaved={reload}
-              onPendingChange={setAccessPending}
-            />
-            <SkillsPanel
-              embedded
-              agentId={agent.id}
-              agentName={agent.name}
-              open={category === "skills"}
-              onOpenChange={() => {}}
-              onPendingChange={setSkillsPending}
-            />
-            <section
-              hidden={category !== "memory"}
-              className="settings-section"
-            >
-              <header className="settings-section-heading">
-                <h2>Memory & data</h2>
-                <p>{agent.name} keeps its own memory and files.</p>
-              </header>
-              <div className="settings-section-body">
-                <SettingsLink
-                  title="Memory"
-                  detail="Read saved notes and find their original sources."
-                  onClick={() => leave(() => onWorkbench("memory"))}
+                <div
+                  hidden={category !== "access"}
+                  className="settings-network-link"
+                >
+                  <Globe />
+                  <span>Browser and terminal internet access</span>
+                  <Button
+                    size="sm"
+                    variant="link"
+                    disabled={locked}
+                    onClick={() => leave(() => onWorkbench("browser"))}
+                  >
+                    Browser
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="link"
+                    disabled={locked}
+                    onClick={() => leave(() => onWorkbench("terminal"))}
+                  >
+                    Terminal
+                  </Button>
+                </div>
+                <AccessPanel
+                  embedded
+                  agentId={agent.id}
+                  agentName={agent.name}
+                  open={category === "access"}
+                  onOpenChange={() => {}}
+                  onSaved={reload}
+                  onPendingChange={setAccessPending}
                 />
-                <SettingsLink
-                  title="Files"
-                  detail="View, download or restore this agent’s files."
-                  onClick={() => leave(() => onWorkbench("files"))}
+                <SkillsPanel
+                  embedded
+                  agentId={agent.id}
+                  agentName={agent.name}
+                  open={category === "skills"}
+                  onOpenChange={() => {}}
+                  onPendingChange={setSkillsPending}
                 />
-                <SettingsLink
-                  title="Checklists"
-                  detail="Open working objects and their change history."
-                  onClick={() => leave(() => onWorkbench("objects"))}
-                />
-              </div>
-            </section>
+                <section
+                  hidden={category !== "memory"}
+                  className="settings-section"
+                >
+                  <header className="settings-section-heading">
+                    <h2>Memory & data</h2>
+                    <p>{agent.name} keeps its own memory and files.</p>
+                  </header>
+                  <div className="settings-section-body">
+                    <SettingsLink
+                      title="Memory"
+                      detail="Read saved notes and find their original sources."
+                      onClick={() => leave(() => onWorkbench("memory"))}
+                    />
+                    <SettingsLink
+                      title="Files"
+                      detail="View, download or restore this agent’s files."
+                      onClick={() => leave(() => onWorkbench("files"))}
+                    />
+                    <SettingsLink
+                      title="Checklists"
+                      detail="Open working objects and their change history."
+                      onClick={() => leave(() => onWorkbench("objects"))}
+                    />
+                  </div>
+                </section>
+              </>
+            )}
           </div>
           {locked && (
             <p role="status" className="settings-draft-notice">
@@ -490,6 +433,115 @@ export function WorkspaceSettings({
         />
       )}
     </Dialog>
+  )
+}
+function ModelNavigation({
+  agent,
+  category,
+  location,
+  locked,
+}: {
+  agent?: AgentProfile
+  category: SettingsCategory | null
+  location: ReturnType<typeof useWorkspaceLocation>
+  locked: boolean
+}) {
+  return agent && (category === "models" || category === "connections") ? (
+    <div className="settings-subnav" aria-label="Models and connections">
+      <Link
+        {...workspaceDestination(agent.id, {
+          ...location.search,
+          settings: "models",
+          security: undefined,
+          settingsView: undefined,
+          connections: undefined,
+        })}
+        data-slot="button"
+        className={buttonVariants({
+          variant: category === "models" ? "secondary" : "ghost",
+          size: "sm",
+        })}
+        disabled={locked}
+      >
+        Models
+      </Link>
+      <Link
+        {...workspaceDestination(agent.id, {
+          ...location.search,
+          settings: "connections",
+          security: undefined,
+          settingsView: undefined,
+          connections: undefined,
+        })}
+        data-slot="button"
+        className={buttonVariants({
+          variant: category === "connections" ? "secondary" : "ghost",
+          size: "sm",
+        })}
+        disabled={locked}
+      >
+        Connected tools
+      </Link>
+    </div>
+  ) : null
+}
+function SettingsNavigation({
+  agent,
+  location,
+  section,
+  locked,
+}: {
+  agent?: AgentProfile
+  location: ReturnType<typeof useWorkspaceLocation>
+  section: (typeof settingsSections)[number] | undefined
+  locked: boolean
+}) {
+  return (
+    <aside className="settings-navigation">
+      <div className="settings-agent">
+        {agent && <AgentMark tone={agentTone(agent.id)} />}
+        <span>{agent?.name ?? "Settings"}</span>
+      </div>
+      <div className="settings-nav-content">
+        <DialogTitle className="settings-title">Settings</DialogTitle>
+        <nav aria-label="Settings sections">
+          {settingsSections.map((item) => (
+            <Link
+              {...(agent
+                ? workspaceDestination(agent.slug, {
+                    ...location.search,
+                    settings: item.id,
+                    security: undefined,
+                    settingsView: undefined,
+                    connections: undefined,
+                  })
+                : globalSettingsLink(
+                    item.id === "model-access" ? "model-access" : "family",
+                    location.search
+                  ))}
+              data-slot="button"
+              className={buttonVariants({
+                variant: "ghost",
+                className: "settings-nav-item",
+              })}
+              key={item.id}
+              aria-current={section?.id === item.id ? "page" : undefined}
+              disabled={
+                locked ||
+                (!agent && item.id !== "family" && item.id !== "model-access")
+              }
+            >
+              <item.icon />
+              <span>
+                <strong>{item.title}</strong>
+                <small>{item.description}</small>
+              </span>
+              <ChevronRight />
+            </Link>
+          ))}
+        </nav>
+      </div>
+    </aside>
   )
 }
 function SettingsLink({

@@ -188,6 +188,8 @@ export function clientFailure(
   }
 }
 export function errorPage(path: string): ClientErrorReport["page"] {
+  if (/^\/(?:family(?:\/model-access)?|settings\/security)\/?$/.test(path))
+    return "settings"
   if (/^\/agents\/(?:new|[^/]+\/edit)\/?$/.test(path)) return "editor"
   if (/^\/agents(?:\/archived)?\/?$/.test(path)) return "agents"
   if (/^\/agents\/[^/]+\/settings\//.test(path)) return "settings"

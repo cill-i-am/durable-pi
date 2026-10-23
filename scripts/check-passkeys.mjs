@@ -92,7 +92,7 @@ try {
       },
     }
   )
-  await page.goto(origin + "/agents/home/settings/security")
+  await page.goto(origin + "/settings/security")
   await page.getByLabel("Email", { exact: true }).fill(passkeyOwnerEmail)
   await page.getByLabel("Password", { exact: true }).fill(passkeyPassword)
   await page.getByRole("button", { name: "Sign in", exact: true }).click()

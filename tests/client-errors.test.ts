@@ -113,6 +113,9 @@ it("classifies pages without retaining resource identifiers", () => {
   expect(errorPage(`/agents/${sentinel}/settings/family`)).toBe("settings")
   expect(errorPage(`/agents/${sentinel}/edit`)).toBe("editor")
   expect(errorPage("/agents")).toBe("agents")
+  expect(errorPage("/family")).toBe("settings")
+  expect(errorPage("/family/model-access")).toBe("settings")
+  expect(errorPage("/settings/security")).toBe("settings")
 })
 it("logs one validated report with native error severity and no private input", async () => {
   const log = vi.spyOn(console, "error").mockImplementation(() => {})

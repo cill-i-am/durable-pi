@@ -13,7 +13,10 @@ export const Route = createFileRoute("/_workspace")({
 })
 function WorkspaceLayout() {
   const failed = useRouterState({
-    select: (state) => state.matches.some((match) => match.status === "error"),
+    select: (state) =>
+      state.matches.some(
+        (match) => match.status === "error" || match.status === "notFound"
+      ),
   })
   return failed ? (
     <Outlet />
