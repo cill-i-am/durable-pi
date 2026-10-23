@@ -12,6 +12,7 @@ import {
   identifyRemoteTool,
   type RemoteToolResult,
 } from "../connections"
+import { ConnectionOAuthProvider } from "./oauth"
 import { toolReceipt } from "./receipt"
 
 export type McpManager = Pick<
@@ -136,7 +137,7 @@ export function mcpConnectionClient(mcp: McpManager): ConnectionClient {
         )
         return normalized.filter((tool) => tool !== null)
       }),
-    connect: (record, origin) =>
+    register: (record, origin) =>
       Effect.gen(function* () {
         yield* native("register", () =>
           mcp.registerServer(record.id, {
@@ -159,28 +160,45 @@ export function mcpConnectionClient(mcp: McpManager): ConnectionClient {
             retry: { maxAttempts: 1 },
           })
         )
-        const result = yield* native("connect", () =>
-          mcp.connectToServer(record.id)
-        )
-        if (result.state === "connected") yield* discover(record.id)
       }),
+    connect: (record) =>
+      native("connect", () => mcp.connectToServer(record.id)).pipe(
+        Effect.map((result) => result.state === "connected")
+      ),
     remove: (id) => native("remove", () => mcp.removeServer(id)),
     discover,
     isCallback: (request) =>
       read("inspect callback", () => mcp.isCallbackRequest(request)),
-    callback: (request) =>
-      native("authorize", (signal) =>
-        mcp.handleCallbackRequest(
+    callback: (request, eligible) =>
+      native("authorize", async (signal) => {
+        const state = new URL(request.url).searchParams.get("state")
+        // Routing only: the installed provider validates the complete state.
+        const id = state?.split(".")[1]
+        const provider = id
+          ? mcp.mcpConnections[id]?.options.transport.authProvider
+          : undefined
+        const revision =
+          state && provider instanceof ConnectionOAuthProvider
+            ? await provider.callbackRevision(state)
+            : undefined
+        if (revision === undefined || !eligible())
+          throw new ConnectionTransportError({
+            operation: "authorize",
+            cause: new Error(
+              "Authorization expired or its connection changed. Reconnect before authorizing it."
+            ),
+          })
+        const result = await mcp.handleCallbackRequest(
           new Request(request, {
             signal: AbortSignal.any([request.signal, signal]),
           })
         )
-      ).pipe(
-        Effect.map((result) => ({
-          authenticated: result.authSuccess,
-          connectionId: result.serverId,
-        }))
-      ),
+        return {
+          authenticated: result.authSuccess && result.serverId === id,
+          connectionId: id,
+          revision,
+        }
+      }),
     establish: (id) => native("establish", () => mcp.establishConnection(id)),
     ready: () =>
       native("await connections", () =>

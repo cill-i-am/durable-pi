@@ -86,7 +86,7 @@ export class ConnectionStore implements ConnectionLedger {
         )
       )
   }
-  add(input: NewConnection) {
+  add(input: NewConnection, eligible: () => boolean = () => true) {
     return this.atomic(() =>
       Effect.gen({ self: this }, function* () {
         const previous = yield* this.get(input.id),
@@ -95,6 +95,7 @@ export class ConnectionStore implements ConnectionLedger {
           Domain.addConnection(input, previous, records.length)
         )
         if (next === previous) return previous
+        yield* decision(() => Domain.requireConnectionWrite(eligible()))
         yield* this.db.use((orm) =>
           query(
             "write",
@@ -107,14 +108,20 @@ export class ConnectionStore implements ConnectionLedger {
       })
     )
   }
-  change(id: string, revision: number, active: boolean) {
+  change(
+    id: string,
+    revision: number,
+    active: boolean,
+    eligible: () => boolean = () => true
+  ) {
     return this.atomic(() =>
       Effect.gen({ self: this }, function* () {
         const current = yield* this.get(id),
           next = yield* decision(() =>
             Domain.changeConnection(current, revision, active)
           )
-        if (next !== current)
+        if (next !== current) {
+          yield* decision(() => Domain.requireConnectionWrite(eligible()))
           yield* this.db.use((orm) =>
             query(
               "write",
@@ -124,6 +131,7 @@ export class ConnectionStore implements ConnectionLedger {
                 .where(eq(connections.id, id))
             )
           )
+        }
         return next
       })
     )

@@ -15,12 +15,14 @@ export interface ConnectionLedger {
     id: string
   ) => Effect.Effect<SavedConnection | undefined, ConnectionFailure>
   add: (
-    input: NewConnection
+    input: NewConnection,
+    eligible: () => boolean
   ) => Effect.Effect<SavedConnection, ConnectionFailure>
   change: (
     id: string,
     expectedRevision: number,
-    active: boolean
+    active: boolean,
+    eligible: () => boolean
   ) => Effect.Effect<SavedConnection, ConnectionFailure>
   selection: () => Effect.Effect<ToolSelection, ConnectionFailure>
   select: (

@@ -1,0 +1,144 @@
+{
+  "schemaVersion": 1,
+  "scope": "Frozen domain and independent review evidence before parent composition and broad gates; original source hashes and limits retained.",
+  "artifacts": [
+    {
+      "path": "docs/evidence/xstate-effect/b17-2026-10-23/b17-final-source.json.txt",
+      "original": "/private/tmp/b17-final-source.json",
+      "sha256": "f6e08a9c3a8d54c0f5391b6376aaedb4f83a929e2081c8aebc2fcdc275fd56c3",
+      "bytes": 2096
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b17-2026-10-23/b17-handoff.md.txt",
+      "original": "/private/tmp/b17-handoff.md",
+      "sha256": "c2f33b4ab09bacad1a9d9edd660f7ba3065108fcf72e4c040d6ed126d84b6ddd",
+      "bytes": 4089
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b17-2026-10-23/b17-receipt-oauth-tests-3.log.txt",
+      "original": "/private/tmp/b17-receipt-oauth-tests-3.log",
+      "sha256": "b89bee63d01cbf97f325e293a3fef824fdbeb05c44797fa02daa08fd03dedaf0",
+      "bytes": 239
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b17-2026-10-23/b17-receipt-oauth-types.log.txt",
+      "original": "/private/tmp/b17-receipt-oauth-types.log",
+      "sha256": "8366207267355d3e3d5bf3bf6e8c94c5f93f6078c34f08973fa2b38cdda6cc92",
+      "bytes": 15
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b17-2026-10-23/b17-receipt-oauth-lint.log.txt",
+      "original": "/private/tmp/b17-receipt-oauth-lint.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b17-2026-10-23/b17-final-negative-sql.log.txt",
+      "original": "/private/tmp/b17-final-negative-sql.log",
+      "sha256": "797ad84463c4e4eec91e93eeeb3336d53205f594bd57737f4ff4bda238364bc3",
+      "bytes": 1160
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b17-2026-10-23/b17-final-negative-oauth.log.txt",
+      "original": "/private/tmp/b17-final-negative-oauth.log",
+      "sha256": "385682e58d3a819f400c149cc16b3e7c3280e5d867a79c459970ec3940b8d018",
+      "bytes": 1260
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b17-2026-10-23/b17-route-review--review.md.txt",
+      "original": "/private/tmp/b17-route-review/review.md",
+      "sha256": "170646d5ac04e6bacbaf81df267bf9d775c05ae74a55edf83f94d779baad1ad2",
+      "bytes": 7422
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b17-2026-10-23/b17-route-review--authority-before.test.ts.txt.txt",
+      "original": "/private/tmp/b17-route-review/authority-before.test.ts.txt",
+      "sha256": "26d69fb6595c0ff4930c701c91933d8ccfe9284851c77f724e0cb02a38e984e3",
+      "bytes": 6439
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b17-2026-10-23/b17-route-review--authority-before.log.txt",
+      "original": "/private/tmp/b17-route-review/authority-before.log",
+      "sha256": "aceae36d4c58e42237304e2ceadb41dc228cb74e9b06034921aa438b8c6138fc",
+      "bytes": 4066
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b17-2026-10-23/b17-route-review--authority.test.ts.txt",
+      "original": "/private/tmp/b17-route-review/authority.test.ts",
+      "sha256": "4949943b0b4131d2e97f8836aebfa518d9d82a265d2495a3cc187016027e1fa9",
+      "bytes": 6628
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b17-2026-10-23/b17-route-review--ownership.test.ts.txt",
+      "original": "/private/tmp/b17-route-review/ownership.test.ts",
+      "sha256": "9f409a21f2e59c3d8089ffcc1eb14118937c8cdd6eb8fa0e8ff2057213dd7f83",
+      "bytes": 6055
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b17-2026-10-23/b17-route-review--post-stage.test.ts.txt",
+      "original": "/private/tmp/b17-route-review/post-stage.test.ts",
+      "sha256": "6e84c454fb7bfa40e7b8f955090840f40d42b30f9b3eda06026ac776fe06ed62",
+      "bytes": 4317
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b17-2026-10-23/b17-route-review--vitest.config.mjs.txt",
+      "original": "/private/tmp/b17-route-review/vitest.config.mjs",
+      "sha256": "398d1fde980eb1b000cbabaff3992f30ab71bb54421a11f09ac27e6242fba8d7",
+      "bytes": 367
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b17-2026-10-23/b17-route-review--corrected-tests-final.log.txt",
+      "original": "/private/tmp/b17-route-review/corrected-tests-final.log",
+      "sha256": "2633c42a865c881d46bb4d810db87621ed4236199deeaa3b8e60667011b7fa78",
+      "bytes": 191
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b17-2026-10-23/b17-route-review--implementation-final.log.txt",
+      "original": "/private/tmp/b17-route-review/implementation-final.log",
+      "sha256": "086ab3c416bb55cc464a09161c6a6b3efea2f200f822b85c5258fc598452b40a",
+      "bytes": 236
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b17-2026-10-23/b17-route-review--corrected-hashes.json.txt",
+      "original": "/private/tmp/b17-route-review/corrected-hashes.json",
+      "sha256": "705bc6e514f49a7dc11c001d4331716a4fe98cabba9a2d74260e7b9089f57888",
+      "bytes": 737
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b17-2026-10-23/b17-callback-review--expected-safety-original.test.ts.txt.txt",
+      "original": "/private/tmp/b17-callback-review/expected-safety-original.test.ts.txt",
+      "sha256": "39c18cea12135f912efcc0527bad8ace33c31992bedda04dfe1edd7cfa41b4eb",
+      "bytes": 7032
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b17-2026-10-23/b17-callback-review--expected-safety-before.log.txt",
+      "original": "/private/tmp/b17-callback-review/expected-safety-before.log",
+      "sha256": "52b532324b14d4a64ae63d7a135beec4eb5d9e44b2fc9da7fd646a483416d333",
+      "bytes": 2259
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b17-2026-10-23/b17-callback-review--expected-safety.test.ts.txt",
+      "original": "/private/tmp/b17-callback-review/expected-safety.test.ts",
+      "sha256": "b8c8dd1fcac91b8642b9aa338875bcd345d6ed808d38c87a2576774d63801acb",
+      "bytes": 8325
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b17-2026-10-23/b17-callback-review--expected-safety-final.log.txt",
+      "original": "/private/tmp/b17-callback-review/expected-safety-final.log",
+      "sha256": "b0a7f0e68f73fc0cb5830cd2340abe1f2fa95054fb032b1843cd62206e2eb4a5",
+      "bytes": 192
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b17-2026-10-23/b17-callback-review--vitest.config.mts.txt",
+      "original": "/private/tmp/b17-callback-review/vitest.config.mts",
+      "sha256": "f36902d9818cf701b3937f39346509b4705ea6b17041a2e912030a6ac9e0e952",
+      "bytes": 259
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b17-2026-10-23/b17-callback-review--observed-source-hashes-before.json.txt",
+      "original": "/private/tmp/b17-callback-review/observed-source-hashes-before.json",
+      "sha256": "32c574dc2f1d3eb694553997e89c2cc5167e1c990628d1dd6b404191bdf93ae6",
+      "bytes": 1627
+    }
+  ]
+}

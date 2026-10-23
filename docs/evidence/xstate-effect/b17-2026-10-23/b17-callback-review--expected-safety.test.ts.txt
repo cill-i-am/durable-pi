@@ -1,0 +1,125 @@
+import { MCPClientManager } from 'agents/mcp/client'
+import { Effect, ManagedRuntime } from 'effect'
+import { expect, it, vi } from 'vitest'
+import { ConnectionStore } from '/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/src/access/adapters/connections'
+import { ConnectionOAuthProvider } from '/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/src/access/adapters/oauth'
+import { mcpConnectionClient } from '/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/src/access/adapters/mcp'
+import { connectionApplication, RemoteConnections } from '/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/src/access/connection-service'
+import { database } from '/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/tests/database'
+const input = { id: `mcp-${'a'.repeat(32)}`, name:'Synthetic', url:'https://mcp.example.com/mcp' }, origin = 'https://app.example.com'
+async function fixture(nextPhase: 'authenticating'|'ready'|'connected', failCleanup = false) {
+  const store = new ConnectionStore(database()), values = new Map<string, unknown>(), rows = new Map<string, any>()
+  let failList = false, registration = 0
+  const storage = {
+    get: async (key: string) => values.get(key),
+    put: async (key: string,value:unknown) => { values.set(key,value) },
+    delete: async (key:string|string[]) => { for(const k of Array.isArray(key)?key:[key]) values.delete(k) },
+    list: async ({prefix}:{prefix:string}) => {
+      if(failList) {failList=false; throw new Error('synthetic cleanup storage failure')}
+      return new Map([...values].filter(([key])=>key.startsWith(prefix)))
+    },
+  } as unknown as DurableObjectStorage
+  const manager = new MCPClientManager('durable-pi','1.0.0',{
+    createAuthProvider: (callbackUrl) => new ConnectionOAuthProvider(storage,store,callbackUrl),
+  })
+  const internal = manager as any
+  internal.getServersFromStorage=()=>[...rows.values()]
+  internal.saveServerToStorage=(row:any)=>rows.set(row.id,{...row})
+  internal.removeServerFromStorage=(id:string)=>rows.delete(id)
+  internal.clearServerAuthUrl=(id:string)=>{const row=rows.get(id);if(row)row.auth_url=null}
+  internal.getStoredServerOptions=(id:string)=>rows.get(id)?.server_options ? JSON.parse(rows.get(id).server_options):undefined
+  const init=vi.fn(), discovery=vi.fn(), exchange=vi.fn()
+  internal.createConnection=(id:string,url:string,options:any)=>{
+    registration++
+    const first=registration===1, provider=options.transport.authProvider as ConnectionOAuthProvider
+    const conn:any={url:new URL(url),options,connectionState:'new',connectionError:null,
+      cancelDiscovery(){},async close(){},
+      async init(){
+        init()
+        await provider.saveClientInformation({client_id:'synthetic-client'})
+        if(first || nextPhase==='authenticating') {
+          conn.connectionState='authenticating'
+          if(!provider.authUrl) await provider.redirectToAuthorization(new URL('https://auth.example.com/authorize?state='+await provider.state()))
+        }else conn.connectionState='connected'
+      },
+      async discover(){
+        discovery()
+        if(nextPhase==='connected') { conn.connectionState='connected';return {success:false,reason:'error',error:'synthetic discovery failure'} }
+        conn.connectionState='ready';return {success:true}
+      },
+      async completeAuthorization(){
+        exchange(await provider.codeVerifier())
+        await provider.saveTokens({access_token:'synthetic-late-token',token_type:'Bearer'})
+        conn.connectionState='connected'
+      },
+    }
+    internal.mcpConnections[id]=conn
+    return conn
+  }
+  const establish=vi.spyOn(manager,'establishConnection')
+  const runtime=ManagedRuntime.make(connectionApplication(store,mcpConnectionClient(manager),()=>Effect.sync(()=>{const deadline=Date.now()+10_000;return {deadline,current:()=>Date.now()<deadline}}))), service=runtime.runSync(RemoteConnections)
+  await Effect.runPromise(service.connect(input,origin))
+  const oldProvider=internal.mcpConnections[input.id].options.transport.authProvider as ConnectionOAuthProvider
+  await oldProvider.saveCodeVerifier('synthetic-old-verifier')
+  const oldState=await oldProvider.state()
+  const challenge=Buffer.from(await crypto.subtle.digest('SHA-256',new TextEncoder().encode('synthetic-old-verifier'))).toString('base64url')
+  await oldProvider.redirectToAuthorization(new URL('https://auth.example.com/authorize?state='+oldState+'&code_challenge='+challenge))
+  failList=failCleanup
+  await Effect.runPromise(service.disconnect(input.id,1))
+  await Effect.runPromise(service.reconnect(input.id,2,origin))
+  expect(Effect.runSync(store.get(input.id))).toMatchObject({active:true,revision:3})
+  const currentProvider=internal.mcpConnections[input.id].options.transport.authProvider as ConnectionOAuthProvider
+  return {service,runtime,manager,store,values,currentProvider,request:new Request(origin+'/api/agent/connections/callback?code=synthetic-old-code&state='+oldState),oldState,init,discovery,exchange,establish}
+}
+it('control: stale callback arriving after clean reconnect while authenticating is rejected',async()=>{
+ const f=await fixture('authenticating')
+ try {
+   expect((await f.currentProvider.checkState(f.oldState)).valid).toBe(false)
+   expect((await Effect.runPromiseExit(f.service.callback(f.request)))._tag).toBe('Failure')
+   expect(f.establish).not.toHaveBeenCalled();expect(f.exchange).not.toHaveBeenCalled()
+ }finally {await f.runtime.dispose()}
+})
+it('documents stale callback arriving after clean reconnect ready is accepted and dispatched',async()=>{
+ const f=await fixture('ready')
+ try {
+   expect((await f.currentProvider.checkState(f.oldState)).valid).toBe(false)
+   const before=f.init.mock.calls.length
+   await Effect.runPromiseExit(f.service.callback(f.request))
+   expect(f.init).toHaveBeenCalledTimes(before);expect(f.exchange).not.toHaveBeenCalled()
+ }finally {await f.runtime.dispose()}
+})
+it('reproduces stale callback arriving after clean reconnect triggering a new init after discovery failure',async()=>{
+ const f=await fixture('connected')
+ try {
+   expect((await f.currentProvider.checkState(f.oldState)).valid).toBe(false)
+   const before=f.init.mock.calls.length, discoveries=f.discovery.mock.calls.length
+   await Effect.runPromiseExit(f.service.callback(f.request))
+   expect(f.init).toHaveBeenCalledTimes(before);expect(f.discovery).toHaveBeenCalledTimes(discoveries);expect(f.establish).not.toHaveBeenCalled();expect(f.exchange).not.toHaveBeenCalled()
+ }finally {await f.runtime.dispose()}
+})
+it('reproduces cleanup failure leaving an old callback able to exchange into the new revision',async()=>{
+ const warn=vi.spyOn(console,'warn').mockImplementation(()=>{}), f=await fixture('authenticating',true)
+ try {
+   await Effect.runPromiseExit(f.service.callback(f.request))
+   expect(f.exchange).not.toHaveBeenCalled();expect(f.establish).not.toHaveBeenCalled()
+   expect(await f.currentProvider.tokens()).toBeUndefined()
+ }finally {await f.runtime.dispose();warn.mockRestore()}
+})
+it('positive control: a current-generation OAuth callback exchanges once and replay cannot exchange again',async()=>{
+ const f=await fixture('authenticating')
+ try {
+   const verifier='synthetic-current-verifier'
+   await f.currentProvider.saveCodeVerifier(verifier)
+   const state=await f.currentProvider.state()
+   const challenge=Buffer.from(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(verifier))).toString('base64url')
+   await f.currentProvider.redirectToAuthorization(new URL('https://auth.example.com/authorize?state='+state+'&code_challenge='+challenge))
+   const request=new Request(origin+'/api/agent/connections/callback?code=synthetic-current-code&state='+state)
+   expect((await Effect.runPromiseExit(f.service.callback(request)))._tag).toBe('Success')
+   expect(f.exchange).toHaveBeenCalledExactlyOnceWith(verifier)
+   expect(f.establish).toHaveBeenCalledTimes(1)
+   expect((await f.currentProvider.tokens())?.access_token).toBe('synthetic-late-token')
+   expect((await Effect.runPromiseExit(f.service.callback(request)))._tag).toBe('Failure')
+   expect(f.exchange).toHaveBeenCalledTimes(1)
+   expect(f.establish).toHaveBeenCalledTimes(1)
+ }finally {await f.runtime.dispose()}
+})

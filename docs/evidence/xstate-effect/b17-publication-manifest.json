@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-10-23T19:52:31.876852+00:00",
+  "baseCommit": "55001de10b7b7a88126888854f42569f4cdd036f",
+  "sources": {
+    "src/access/connection-service.ts": "789b51b56a8b1714923241bd7792225c31b9003b941102109d158ca6bf05e1ab",
+    "src/access/connection-domain.ts": "925c23202e68f0ed3330fdd4d404471ccd9c63c9efb26b885ef87c35290c1a1c",
+    "src/access/connection-client.ts": "88fbd280f4ce9ad9a73e4836b848e5e4977b3cb6b5303cc5cd0b9f0f6621b16e",
+    "src/access/connection.machine.ts": "a21d3fc09a0dd510c7ae37a1a3167f397b14715edace4aa8e3d3c9fd16bedaa7",
+    "src/access/connection-host.machine.ts": "30d3571b745a4ab4ff350328a75e46888fe0d15fc3a6516de1b9faf4c6b9422a",
+    "src/access/connection-command.machine.ts": "0603b59b630759014638f94d44999e325a0b3999b809f535a67eb2556170aabf",
+    "src/access/adapters/mcp.ts": "b5c6875b03b0a18ce17756dbea52e3e51cdcafa1d5834a24de1d0dbfcf2bc208",
+    "src/access/adapters/connections.ts": "a99192b4552214994a9ef14826bb9942845214bf30a8f4cdf491786cc6483b28",
+    "src/access/adapters/connection-http.ts": "9beced174f3165032cf4cacada08e100a0da8e405bda142f7e422a11c8fbc008",
+    "src/agent/worker.ts": "eb5144f241e20884b367cccf78804b4e990773c0ceaffec3402be1d1a390fa3a",
+    "tests/connection-lifecycle.test.ts": "df9b06bd9691bcef2bcf122b26115986f1b9ef98130c312d57384a7029bf5604",
+    "tests/connection-fixture.ts": "94b92af069e1e152f02d94aed105f420d6e9c530b76076d29311416f57f317a4",
+    "src/access/connection-ledger.ts": "791ef8c7e5c6d5327c38a06b4944d0fafee01083c6469f033b4429e73389e3c8",
+    "src/access/adapters/oauth.ts": "d3907dd2010dfa2fafb5302290ad33d068d97c954d0f17e0cd6de3aeace58f85",
+    "src/agents/family-admission.ts": "c7d52fbab72a6a7c1e0266c6100e44a8e0e28d4d3177132e8e9726658edbb5e8",
+    "tests/mcp-oauth.test.ts": "ce6c92f4ec8a3e3a26261b69c29728d56a6dc632085374f17cb088b7eb6d7486",
+    "tests/family-admission-machine.test.ts": "2fa19217c9a5ac6c7a6cc5ce01d7e4e510ab5ae8ec751dd7b2e81daa8b7cb8bf"
+  },
+  "artifacts": [
+    {
+      "path": "docs/evidence/xstate-effect/b17-composed-static-1.log.txt",
+      "original": "/private/tmp/b17-composed-static-1.log",
+      "sha256": "840115ca7119c3723e4450024f328aa0816daf02e043685c79e3076fee28a323",
+      "bytes": 655,
+      "recordedExitCode": 0
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b17-composed-unit-1.log.txt",
+      "original": "/private/tmp/b17-composed-unit-1.log",
+      "sha256": "aba75b0e250dbeb5fdb8dd4e0a9bc73d1876fc83128465299ee36954cf50f039",
+      "bytes": 545,
+      "recordedExitCode": 0
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b17-composed-build-1.log.txt",
+      "original": "/private/tmp/b17-composed-build-1.log",
+      "sha256": "e97c945c107ac85c501bf69c1d39b3c0ff428d24455c3ea416ec661aea8b26e3",
+      "bytes": 24468,
+      "recordedExitCode": 0
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b17-composed-communication-native.log.txt",
+      "original": "/private/tmp/b17-composed-communication-native.log",
+      "sha256": "694079f5526bb475f5a87f6f2f55077e25c09d36c92cbd27f0a018b4fac6f4b8",
+      "bytes": 5496,
+      "recordedExitCode": 0
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b17-composed-final-types.log.txt",
+      "original": "/private/tmp/b17-composed-final-types.log",
+      "sha256": "8366207267355d3e3d5bf3bf6e8c94c5f93f6078c34f08973fa2b38cdda6cc92",
+      "bytes": 15,
+      "recordedExitCode": 0
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b17-composed-focused-1.log.txt",
+      "original": "/private/tmp/b17-composed-focused-1.log",
+      "sha256": "60b2c2c4bf7b88b29d54b3143cc170fc94aac87f42c42c031e32848cd7f32b83",
+      "bytes": 235,
+      "recordedExitCode": 0
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b17-composed-types-1.log.txt",
+      "original": "/private/tmp/b17-composed-types-1.log",
+      "sha256": "8366207267355d3e3d5bf3bf6e8c94c5f93f6078c34f08973fa2b38cdda6cc92",
+      "bytes": 15,
+      "recordedExitCode": 0
+    }
+  ],
+  "historicalArtifactManifest": "docs/evidence/xstate-effect/b17-2026-10-23/manifest.json",
+  "reviewedExecutableSourceDrift": [
+    "src/agent/worker.ts: expected composition of published lifecycle owners with unchanged reviewed MCP capabilities"
+  ],
+  "limits": [
+    "Full static,3337 tests/292 files,two local workers,all website/Worker builds,final types and unchanged Communication/PersonalAgent native suite pass.",
+    "Local native workerd/SQLite and synthetic transports. Finite observed authority is not cross-database atomicity; uncertain SDK registration provenance requires explicit new-revision reconnect. No live provider/merge/deployment claim.",
+    "Exact-commit hosted CI remains required."
+  ]
+}
