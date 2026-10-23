@@ -182,6 +182,15 @@ export const agentMigrationManifest = {
         "CREATE INDEX `agent_messages_sender` ON `agent_messages` (`sender_session`,`sender_agent`);",
       ],
     },
+    {
+      id: "20261023071529_tiny_korvac",
+      checksum:
+        "bce02e40420c68f93f0a47ce1956fb5d15076f5a39b2fdfd89b72562144d017a",
+      statements: [
+        "ALTER TABLE `tool_operations` ADD `schemaVersion` integer DEFAULT 1 NOT NULL;",
+        "ALTER TABLE `tool_operations` ADD `workflowVersion` integer DEFAULT 1 NOT NULL;",
+      ],
+    },
   ],
   schema: [
     {
@@ -582,7 +591,7 @@ export const agentMigrationManifest = {
     {
       type: "table",
       name: "tool_operations",
-      sql: "CREATE TABLE `tool_operations` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`turnId` text NOT NULL,\n\t`tool` text NOT NULL,\n\t`input` text NOT NULL,\n\t`createdAt` integer NOT NULL,\n\t`expiresAt` integer NOT NULL,\n\t`status` text NOT NULL,\n\t`grantRevision` integer NOT NULL,\n\t`result` text,\n\t`revision` integer DEFAULT 0 NOT NULL,\n\t`decision` text,\n\tCONSTRAINT \"tool_operations_status_check\" CHECK(\"status\" in ('pending', 'approved', 'running', 'done', 'denied', 'cancelled', 'expired', 'interrupted')),\n\tCONSTRAINT \"tool_operations_revision_check\" CHECK(\"revision\" >= 0),\n\tCONSTRAINT \"tool_operations_grantRevision_check\" CHECK(\"grantRevision\" >= 0)\n)",
+      sql: "CREATE TABLE `tool_operations` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`turnId` text NOT NULL,\n\t`tool` text NOT NULL,\n\t`input` text NOT NULL,\n\t`createdAt` integer NOT NULL,\n\t`expiresAt` integer NOT NULL,\n\t`status` text NOT NULL,\n\t`grantRevision` integer NOT NULL,\n\t`result` text,\n\t`revision` integer DEFAULT 0 NOT NULL,\n\t`decision` text, `schemaVersion` integer DEFAULT 1 NOT NULL, `workflowVersion` integer DEFAULT 1 NOT NULL,\n\tCONSTRAINT \"tool_operations_status_check\" CHECK(\"status\" in ('pending', 'approved', 'running', 'done', 'denied', 'cancelled', 'expired', 'interrupted')),\n\tCONSTRAINT \"tool_operations_revision_check\" CHECK(\"revision\" >= 0),\n\tCONSTRAINT \"tool_operations_grantRevision_check\" CHECK(\"grantRevision\" >= 0)\n)",
     },
     {
       type: "index",

@@ -129,3 +129,66 @@ it.effect(
       ).toBe(42)
     })
 )
+
+it.effect(
+  "joins executing work cleanup before releasing its caller scope",
+  () =>
+    Effect.gen(function* () {
+      const { store, gate } = yield* fixture
+      yield* store.begin(intent)
+      yield* store.decide(intent.id, true, 0)
+      const started = yield* Deferred.make<void>()
+      const cleaning = yield* Deferred.make<void>()
+      const release = yield* Deferred.make<void>()
+      const work = Deferred.succeed(started, undefined).pipe(
+        Effect.andThen(Effect.never),
+        Effect.ensuring(
+          Deferred.succeed(cleaning, undefined).pipe(
+            Effect.andThen(Deferred.await(release))
+          )
+        )
+      )
+      const caller = yield* Effect.forkChild(gate.run(intent, work))
+      yield* Deferred.await(started)
+      const interruption = yield* Effect.forkChild(Fiber.interrupt(caller))
+      yield* Deferred.await(cleaning)
+      expect(caller.pollUnsafe()).toBeUndefined()
+      expect(interruption.pollUnsafe()).toBeUndefined()
+      expect((yield* store.get(intent.id))?.status).toBe("running")
+      yield* Deferred.succeed(release, undefined)
+      yield* Fiber.join(interruption)
+      const stopped = yield* Fiber.await(caller)
+      expect(
+        Exit.isFailure(stopped) && Cause.hasInterrupts(stopped.cause)
+      ).toBe(true)
+      expect((yield* store.get(intent.id))?.status).toBe("running")
+    })
+)
+
+it.effect("rechecks authority after approval before dispatching work", () =>
+  Effect.gen(function* () {
+    const { store, started } = yield* fixture
+    let runnable = true
+    let calls = 0
+    const gate = new AccessGate(
+      store,
+      () => Effect.sync(() => runnable),
+      () => {
+        Deferred.doneUnsafe(started, Effect.void)
+      }
+    )
+    const caller = yield* Effect.forkChild(
+      gate.run(
+        intent,
+        Effect.sync(() => ++calls)
+      )
+    )
+    yield* Deferred.await(started)
+    yield* store.decide(intent.id, true, 0)
+    runnable = false
+    gate.notify()
+    const outcome = yield* Fiber.await(caller)
+    expect(Exit.isFailure(outcome)).toBe(true)
+    expect(calls).toBe(0)
+  })
+)
