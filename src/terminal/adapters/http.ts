@@ -102,7 +102,7 @@ export function terminalRequest(
       })
     }
     if (action === "cancel" && request.method === "POST")
-      return Response.json((yield* terminal.cancel(id)) ?? { ok: true })
+      return Response.json(yield* terminal.cancel(id))
     if (!action && request.method === "GET") {
       const run = yield* terminal.get(id)
       return run

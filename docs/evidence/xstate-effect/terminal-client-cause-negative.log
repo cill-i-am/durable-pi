@@ -1,0 +1,84 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-effect-standard/durable-pi
+
+stdout | tests/terminal-command-client-machine.test.ts > deadline cancellation joins a held observation cleanup and preserves its late defect
+[11:11:15.204] ERROR (#1): Error [AssertionError]: expected [ …(1) ] to deep equally contain ObjectContaining{…}
+    at /Users/cillianbarron/.codex/worktrees/xstate-effect-standard/durable-pi/tests/terminal-command-client-machine.test.ts:96:29 {
+  actual: [
+    Fail(TerminalFailure: The command status could not be confirmed within its observation window. Inspect Terminal before starting another command.)
+  ],
+  expected: ObjectContaining {
+    sample: {
+      _tag: 'Die',
+      defect: Error: held observation cleanup
+          at /Users/cillianbarron/.codex/worktrees/xstate-effect-standard/durable-pi/tests/terminal-command-client-machine.test.ts:63:22
+          at Generator.next (<anonymous>)
+          at ~effect/Effect/successCont (file:///Users/cillianbarron/.codex/worktrees/xstate-effect-standard/durable-pi/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:979:28)
+          at ~effect/Effect/evaluate (file:///Users/cillianbarron/.codex/worktrees/xstate-effect-standard/durable-pi/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:702:30)
+          at FiberImpl.runLoop (file:///Users/cillianbarron/.codex/worktrees/xstate-effect-standard/durable-pi/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:453:97)
+          at FiberImpl.evaluate (file:///Users/cillianbarron/.codex/worktrees/xstate-effect-standard/durable-pi/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:402:23)
+          at file:///Users/cillianbarron/.codex/worktrees/xstate-effect-standard/durable-pi/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:2474:9
+          at file:///Users/cillianbarron/.codex/worktrees/xstate-effect-standard/durable-pi/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:2526:19
+          at Module.<anonymous> (file:///Users/cillianbarron/.codex/worktrees/xstate-effect-standard/durable-pi/node_modules/.pnpm/effect@4.0.5/node_modules/effect/dist/internal/effect.js:2537:31)
+          at Array.<anonymous> (file:///Users/cillianbarron/.codex/worktrees/xstate-effect-standard/durable-pi/node_modules/.pnpm/@effect+vitest@4.0.5_effect@4.0.5_vitest@5.0.5_@types+node@24.19.2_vite@8.3.4_@types+no_9fb6d95e6d6d02e4a7a8a5aaed1afcac/node_modules/@effect/vitest/dist/internal/internal.js:26:31)
+    },
+    inverse: false,
+    '$$typeof': Symbol(jest.asymmetricMatcher)
+  },
+  showDiff: true,
+  operator: 'deepStrictEqual',
+  [cause]: undefined
+}
+
+ ❯ tests/terminal-command-client-machine.test.ts (7 tests | 1 failed | 6 skipped) 35ms
+   × deadline cancellation joins a held observation cleanup and preserves its late defect 34ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/terminal-command-client-machine.test.ts > deadline cancellation joins a held observation cleanup and preserves its late defect
+AssertionError: expected [ …(1) ] to deep equally contain ObjectContaining{…}
+
+- Expected:
+ObjectContaining {
+  "_tag": "Die",
+  "defect": Error {
+    "message": "held observation cleanup",
+  },
+}
+
++ Received:
+[
+  Fail {
+    "_tag": "Fail",
+    "annotations": Map {},
+    "error": TerminalFailure {
+      "message": "The command status could not be confirmed within its observation window. Inspect Terminal before starting another command.",
+      "_tag": "TerminalFailure",
+    },
+    "~effect/Cause/Reason": "~effect/Cause/Reason",
+  },
+]
+
+ ❯ tests/terminal-command-client-machine.test.ts:96:29
+     94|       yield* Deferred.succeed(release, undefined)
+     95|       const exit = yield* Fiber.join(fiber)
+     96|       expect(reasons(exit)).toContainEqual(
+       |                             ^
+     97|         expect.objectContaining({ _tag: "Die", defect })
+     98|       )
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:971:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:589:27
+ ❯ Array.<anonymous> node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1025:13
+ ❯ MixedSchedulerDispatcher.runTasks node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/Scheduler.ts:254:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 6 skipped (7)
+   Start at  11:11:14
+   Duration  466ms (import 76%, tests 10%, transform 10%, setup 3%, worker 1%)
+

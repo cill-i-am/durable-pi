@@ -7,7 +7,7 @@ import {
   validTerminalInput,
   relayTerminal,
 } from "../src/terminal/adapters/socket"
-import { InteractiveSession } from "../src/terminal/session"
+import { makeInteractiveSession } from "../src/terminal/session"
 
 describe("terminal transport boundary", () => {
   it("accepts only bounded binary input and a bounded resize control", () => {
@@ -29,13 +29,12 @@ describe("terminal transport boundary", () => {
     () =>
       Effect.gen(function* () {
         const controller = new AbortController()
-        const session = new InteractiveSession(
+        const session = yield* makeInteractiveSession(
           "id",
           controller,
           relayTerminal,
           yield* Clock.Clock
         )
-        yield* Effect.forkScoped(session.watchLease())
         const maximum = session.maximumAt
         for (let i = 0; i < 59; i++) {
           yield* TestClock.adjust("10 seconds")

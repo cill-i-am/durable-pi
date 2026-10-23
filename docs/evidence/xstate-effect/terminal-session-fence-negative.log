@@ -1,0 +1,51 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-effect-standard/durable-pi
+
+stdout | tests/terminal-session-machine.test.ts > owned terminal session machine > fences a prior relay close callback after a new panel acquired ownership
+[11:09:35.915] ERROR (#1): Error [AssertionError]: expected false to be true // Object.is equality
+    at /Users/cillianbarron/.codex/worktrees/xstate-effect-standard/durable-pi/tests/terminal-session-machine.test.ts:165:11 {
+  actual: false,
+  expected: true,
+  showDiff: true,
+  operator: 'strictEqual',
+  [cause]: undefined
+}
+
+ ❯ tests/terminal-session-machine.test.ts (6 tests | 1 failed | 5 skipped) 29ms
+   ❯ owned terminal session machine (6)
+     × fences a prior relay close callback after a new panel acquired ownership 28ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/terminal-session-machine.test.ts > owned terminal session machine > fences a prior relay close callback after a new panel acquired ownership
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/terminal-session-machine.test.ts:165:11
+    163|         expect(
+    164|           Exit.isFailure(yield* Effect.exit(session.connect(request())…
+    165|         ).toBe(true)
+       |           ^
+    166|         expect(closed).toHaveLength(2)
+    167|       }).pipe(Effect.scoped)
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ FiberImpl.succeedWith node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:711:30
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:3791:20
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/core.ts:585:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:589:27
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 5 skipped (6)
+   Start at  11:09:35
+   Duration  446ms (import 66%, transform 22%, tests 9%, setup 2%, worker 1%)
+
