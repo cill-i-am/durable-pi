@@ -203,7 +203,8 @@ export const AppEvent = Schema.Struct({
   version: Revision,
   text: text(16000),
   createdAt: Schema.String,
-  delivery: Schema.Literals(["pending", "queued"]),
+  delivery: Schema.Literals(["pending", "queued", "cancelled", "exhausted"]),
+  deliveryMessage: Schema.optionalKey(Schema.String),
 })
 export type AppEvent = typeof AppEvent.Type
 export const AppDetail = Schema.Struct({

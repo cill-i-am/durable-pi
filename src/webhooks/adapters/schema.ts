@@ -13,6 +13,8 @@ export const webhooks = sqliteTable(
     routine_id: text("routine_id").notNull(),
     revision: integer("revision").notNull(),
     hash: text("hash"),
+    schemaVersion: integer("schema_version").notNull().default(1),
+    workflowVersion: integer("workflow_version").notNull().default(1),
   },
   (t) => [
     primaryKey({ columns: [t.routine_id] }),

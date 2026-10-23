@@ -1,6 +1,7 @@
 import { Context, Schema, type Effect } from "effect"
 
-import type { Routine, RoutineRun } from "./contracts"
+import type { RoutineRecord as Routine } from "./routine.machine"
+import type { RoutineRunRecord as RoutineRun } from "./run.machine"
 
 export class RoutineStorageError extends Schema.TaggedError<RoutineStorageError>()(
   "RoutineStorageError",

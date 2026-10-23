@@ -1,5 +1,5 @@
 import { and, count, eq } from "drizzle-orm"
-import { Effect, Layer } from "effect"
+import { Effect, Layer, Schema } from "effect"
 
 import type { OperationReceipt } from "../../routines/persistence"
 import {
@@ -7,6 +7,7 @@ import {
   type Sqlite,
   type EffectSqliteDatabase,
 } from "../../storage/sqlite"
+import { WebhookActivation } from "../activation.machine"
 import {
   WebhookPersistence,
   WebhookStorageError,
@@ -42,10 +43,21 @@ export class SqliteWebhookPersistence implements Records {
   key(id: string) {
     return this.query((orm) =>
       orm
-        .select({ revision: webhooks.revision, hash: webhooks.hash })
+        .select({
+          revision: webhooks.revision,
+          hash: webhooks.hash,
+          schemaVersion: webhooks.schemaVersion,
+          workflowVersion: webhooks.workflowVersion,
+        })
         .from(webhooks)
         .where(eq(webhooks.routine_id, id))
-    ).pipe(Effect.map((rows) => rows[0]))
+    ).pipe(
+      Effect.map((rows) =>
+        rows[0]
+          ? Schema.decodeUnknownSync(WebhookActivation)(rows[0])
+          : undefined
+      )
+    )
   }
   putKey(id: string, key: WebhookKeyRecord) {
     return this.query((orm) =>

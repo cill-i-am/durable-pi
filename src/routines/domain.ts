@@ -5,6 +5,12 @@ import {
   type SaveRoutine,
   type SetRoutineStatus,
 } from "./contracts"
+import {
+  advanceRoutine,
+  newRoutineRecord,
+  routineAllows,
+} from "./routine.machine"
+import { routineRunWake } from "./run.machine"
 
 export function currentRoutine(
   routine: Routine | undefined,
@@ -50,7 +56,7 @@ export function saveRoutine(
       message: "A routine with this name already exists. Edit it instead.",
     })
   const nextAt = nextRoutineTime(input, previous, pending, now)
-  return {
+  const candidate = {
     id: input.id,
     title: input.title.trim(),
     prompt: input.prompt.trim(),
@@ -61,6 +67,9 @@ export function saveRoutine(
     createdAt: previous?.createdAt ?? now,
     updatedAt: now,
   }
+  return previous
+    ? advanceRoutine(previous, { type: "SAVE", routine: candidate })
+    : newRoutineRecord(candidate)
 }
 
 function nextRoutineTime(
@@ -103,14 +112,13 @@ export function changeRoutineStatus(
     throw new RoutineConflict({
       message: "Another active routine uses this name.",
     })
-  return {
-    ...current,
+  return advanceRoutine(current, {
+    type: "STATUS",
     status: input.status,
-    revision: current.revision + 1,
-    updatedAt: now,
+    now,
     nextAt:
       pending?.trigger === "scheduled" ? pending.scheduledAt : current.nextAt,
-  }
+  })
 }
 
 export const pendingFor = (run: RoutineRun | undefined, id: string) =>
@@ -121,17 +129,16 @@ export const admissionAllowed = (
   run: RoutineRun
 ) =>
   !!routine &&
-  routine.status !== "archived" &&
-  routine.revision === run.routineRevision &&
-  (run.trigger !== "scheduled" || routine.status === "active")
+  routineAllows(routine, {
+    type: "ADMIT",
+    trigger: run.trigger,
+    revision: run.routineRevision,
+  })
 
 export const dueRoutine = (all: readonly Routine[], now: number) =>
   all
-    .filter(
-      (value) =>
-        value.status === "active" &&
-        value.nextAt !== null &&
-        value.nextAt <= now
+    .filter((value) =>
+      routineAllows(value, { type: "TRIGGER", trigger: "scheduled", now })
     )
     .sort((a, b) => a.nextAt! - b.nextAt!)[0]
 
@@ -139,14 +146,18 @@ export const canRun = (
   run: RoutineRun | undefined,
   turnId: string,
   now: number
-) => run?.turnId !== turnId || run.deadline === null || run.deadline > now
+) =>
+  run?.turnId !== turnId ||
+  (run.status !== "stopping" &&
+    run.status !== "unconfirmed" &&
+    (run.deadline === null || run.deadline > now))
 
 export function nextWake(
   all: readonly Routine[],
   run: RoutineRun | undefined,
   now: number
 ) {
-  if (run) return now + (run.status === "pending" ? 60_000 : 5000)
+  if (run) return routineRunWake(run, now)
   return all
     .filter((value) => value.status === "active" && value.nextAt !== null)
     .reduce<number | undefined>(

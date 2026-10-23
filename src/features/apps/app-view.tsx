@@ -177,8 +177,13 @@ export function AppView({
                     {new Date(event.createdAt).toLocaleString()} ·{" "}
                     {event.delivery === "queued"
                       ? "Sent to conversation"
-                      : "Waiting for bot"}
+                      : event.delivery === "cancelled"
+                        ? "Cancelled"
+                        : event.delivery === "exhausted"
+                          ? "Delivery stopped"
+                          : "Waiting for bot"}
                   </span>
+                  {event.deliveryMessage && <p>{event.deliveryMessage}</p>}
                   <p className="max-h-28 overflow-auto break-words whitespace-pre-wrap">
                     {event.text}
                   </p>

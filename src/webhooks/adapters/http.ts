@@ -1,3 +1,4 @@
+import { createEffectActor, waitFor } from "@xstate/effect"
 import { Effect, Schema } from "effect"
 
 import { RoutineId } from "../../routines/contracts"
@@ -6,6 +7,7 @@ import { jsonRequest, requestBytes } from "../../shared/http"
 import { nativeOperation } from "../../shared/interop"
 import type { WebhookRejected } from "../contracts"
 import { ConfigureWebhook, EventId, MAX_EVENT_BYTES } from "../contracts"
+import { webhookIngressMachine } from "../ingress.machine"
 import type { Webhooks } from "../service"
 import { bearer, digest } from "./crypto"
 
@@ -83,6 +85,7 @@ export function webhookOwnerRequest(
     const hash = key ? yield* webhookNative(() => digest(key)) : null
     return Response.json(yield* store.configure({ ...input, hash }))
   }).pipe(
+    Effect.scoped,
     preserveFatal,
     Effect.catchTag("WebhookRejected", (error) =>
       respond(
@@ -104,9 +107,9 @@ export function webhookOwnerRequest(
 export function webhookIncoming<TRequirements>(
   store: Webhooks["Service"],
   request: Request,
-  wake: () => Effect.Effect<void, WebhookHttpError, TRequirements>
+  wake: () => Effect.Effect<number, WebhookHttpError, TRequirements>
 ) {
-  return Effect.gen(function* () {
+  const prepare = Effect.gen(function* () {
     const id = yield* decode(
       RoutineId,
       new URL(request.url).searchParams.get("routine")
@@ -154,11 +157,32 @@ export function webhookIncoming<TRequirements>(
         message: "The normalized JSON event exceeds 16 KB.",
       })
     const hash = yield* webhookNative(() => digest(payload))
-    yield* wake()
-    const result = yield* store.accept(id, keyHash, eventId, payload, hash)
-    yield* wake()
+    return { id, keyHash, eventId, payload, hash }
+  })
+  return Effect.gen(function* () {
+    const actor = yield* createEffectActor(
+      webhookIngressMachine({
+        prepare,
+        arm: Effect.suspend(wake),
+        accept: (input, deadline) =>
+          store.accept(
+            input.id,
+            input.keyHash,
+            input.eventId,
+            input.payload,
+            input.hash,
+            deadline
+          ),
+        acknowledge: Effect.suspend(wake),
+      })
+    )
+    const done = yield* waitFor(actor, (state) => state.status === "done").pipe(
+      Effect.orDie
+    )
+    const result = yield* done.output!
     return Response.json(result, { status: result.duplicate ? 200 : 202 })
   }).pipe(
+    Effect.scoped,
     preserveFatal,
     Effect.catchTag("WebhookRejected", (error) =>
       respond(

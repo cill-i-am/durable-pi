@@ -7,11 +7,19 @@ import {
   SaveRoutine,
   SetRoutineStatus,
   RunRoutineNow,
-  followingTime,
-  ROUTINE_BUDGET_MS,
 } from "./contracts"
 import * as Domain from "./domain"
 import type { RoutinePersistence, RoutineStorageError } from "./persistence"
+import {
+  advanceRoutine,
+  readRoutineRecord,
+  routineAllows,
+} from "./routine.machine"
+import {
+  advanceRoutineRun,
+  newRoutineRunRecord,
+  readRoutineRunRecord,
+} from "./run.machine"
 import type { RoutineError } from "./service"
 
 const decision = <TValue>(body: () => TValue) =>
@@ -43,10 +51,23 @@ export class RoutineTransactions {
     return this.records.inFlight()
   }
   private put(routine: Routine) {
-    return this.records.put(routine)
+    return this.records.put(readRoutineRecord(routine))
   }
   private putRun(run: RoutineRun) {
-    return this.records.putRun(run)
+    return this.records.putRun(readRoutineRunRecord(run))
+  }
+  private discovered(deadline: number | undefined) {
+    return decision(() => {
+      if (
+        deadline === undefined ||
+        !Number.isFinite(deadline) ||
+        deadline <= this.now()
+      )
+        throw new RoutineConflict({
+          message:
+            "Routine recovery discovery expired. Retry the same request to arm recovery before accepting work.",
+        })
+    })
   }
   private available() {
     return this.active().pipe(
@@ -97,7 +118,7 @@ export class RoutineTransactions {
           input: encoded,
           result: JSON.stringify(result),
         })
-        return result
+        return Schema.decodeUnknownSync(RoutineChange)(result)
       })
     )
   }
@@ -123,21 +144,24 @@ export class RoutineTransactions {
     return Effect.gen({ self: this }, function* () {
       const run = yield* this.inFlight()
       if (run?.routineId === id && run.status === "pending") {
-        yield* this.putRun({
-          ...run,
-          status: "cancelled",
-          finishedAt: this.now(),
-          error: "Routine changed before its run was admitted.",
-        })
+        yield* this.putRun(
+          advanceRoutineRun(run, {
+            type: "CANCEL",
+            now: this.now(),
+            reason: "Routine changed before its run was admitted.",
+          })
+        )
         return run
       }
     })
   }
-  save(raw: SaveRoutine) {
+  save(raw: SaveRoutine, discoveryDeadline?: number) {
     return Effect.suspend(() => {
       const input = Schema.decodeUnknownSync(SaveRoutine)(raw)
       return this.operation(input.operationId, { type: "save", ...input }, () =>
         Effect.gen({ self: this }, function* () {
+          if (input.status === "active")
+            yield* this.discovered(discoveryDeadline)
           const pending = Domain.pendingFor(yield* this.inFlight(), input.id)
           const current = yield* this.get(input.id),
             routines = yield* this.list()
@@ -150,7 +174,7 @@ export class RoutineTransactions {
       )
     })
   }
-  setStatus(raw: SetRoutineStatus) {
+  setStatus(raw: SetRoutineStatus, discoveryDeadline?: number) {
     return Effect.suspend(() => {
       const input = Schema.decodeUnknownSync(SetRoutineStatus)(raw)
       return this.operation(
@@ -158,6 +182,8 @@ export class RoutineTransactions {
         { type: "status", ...input },
         () =>
           Effect.gen({ self: this }, function* () {
+            if (input.status === "active")
+              yield* this.discovered(discoveryDeadline)
             const current = yield* this.current(
               input.id,
               input.expectedRevision
@@ -190,32 +216,41 @@ export class RoutineTransactions {
           message:
             "This bot already has a routine waiting or running. Finish or stop it first.",
         })
-      const run = yield* this.putRun({
-        id: this.uuid(),
-        turnId: this.uuid(),
-        routineId: routine.id,
-        routineRevision: routine.revision,
-        title: routine.title,
-        prompt: routine.prompt,
-        trigger,
-        scheduledAt,
-        createdAt: this.now(),
-        status: "pending",
-        deadline: null,
-        finishedAt: null,
-        error: null,
-      })
+      const run = yield* this.putRun(
+        newRoutineRunRecord({
+          id: this.uuid(),
+          turnId: this.uuid(),
+          routineId: routine.id,
+          routineRevision: routine.revision,
+          title: routine.title,
+          prompt: routine.prompt,
+          trigger,
+          scheduledAt,
+          createdAt: this.now(),
+          status: "pending",
+          deadline: null,
+          finishedAt: null,
+          error: null,
+        })
+      )
       yield* this.records.pruneRuns()
       return run
     })
   }
-  runNow(raw: RunRoutineNow) {
+  runNow(raw: RunRoutineNow, discoveryDeadline: number) {
     return Effect.suspend(() => {
       const input = Schema.decodeUnknownSync(RunRoutineNow)(raw)
       return this.operation(input.operationId, { type: "run", ...input }, () =>
         Effect.gen({ self: this }, function* () {
+          yield* this.discovered(discoveryDeadline)
           const routine = yield* this.current(input.id, input.expectedRevision)
-          if (routine.status === "archived")
+          if (
+            !routineAllows(routine, {
+              type: "TRIGGER",
+              trigger: "manual",
+              now: this.now(),
+            })
+          )
             return yield* new RoutineConflict({
               message: "Restore this routine before running it.",
             })
@@ -227,11 +262,19 @@ export class RoutineTransactions {
       )
     })
   }
-  acceptWebhook(id: string, payload: string) {
+  acceptWebhook(id: string, payload: string, discoveryDeadline: number) {
     return Effect.gen({ self: this }, function* () {
       yield* this.available()
+      yield* this.discovered(discoveryDeadline)
       const routine = yield* this.get(id)
-      if (!routine || routine.status !== "active")
+      if (
+        !routine ||
+        !routineAllows(routine, {
+          type: "TRIGGER",
+          trigger: "webhook",
+          now: this.now(),
+        })
+      )
         return yield* new RoutineConflict({
           message: "Activate this routine before accepting events.",
         })
@@ -254,10 +297,13 @@ export class RoutineTransactions {
           routine = Domain.dueRoutine(routines, now)
         if (!routine) return
         const run = yield* this.createRun(routine, "scheduled", routine.nextAt!)
-        yield* this.put({
-          ...routine,
-          nextAt: followingTime(routine.schedule, routine.nextAt!, now),
-        })
+        yield* this.put(
+          advanceRoutine(routine, {
+            type: "TRIGGER",
+            trigger: "scheduled",
+            now,
+          })
+        )
         return run
       })
     )
@@ -269,21 +315,17 @@ export class RoutineTransactions {
         const run = yield* this.inFlight()
         if (!run || run.status !== "pending") return
         const routine = yield* this.get(run.routineId)
-        if (!Domain.admissionAllowed(routine, run)) {
-          yield* this.putRun({
-            ...run,
-            status: "cancelled",
-            finishedAt: this.now(),
-            error: "Routine changed before admission.",
-          })
+        const next = advanceRoutineRun(run, {
+          type: "ADMIT",
+          allowed: Domain.admissionAllowed(routine, run),
+          now: this.now(),
+        })
+        if (next.status !== "queued") {
+          yield* this.putRun(next)
           return
         }
         yield* admit(run)
-        return yield* this.putRun({
-          ...run,
-          status: "queued",
-          deadline: this.now() + ROUTINE_BUDGET_MS,
-        })
+        return yield* this.putRun(next)
       })
     )
   }
@@ -295,13 +337,16 @@ export class RoutineTransactions {
     return this.records.atomic(() =>
       Effect.gen({ self: this }, function* () {
         const run = yield* this.inFlight()
-        if (run?.turnId === turnId && run.status === "queued")
-          yield* this.putRun({
-            ...run,
-            status,
-            error: error?.slice(0, 1000) ?? null,
-            finishedAt: this.now(),
-          })
+        if (run?.turnId === turnId)
+          yield* this.putRun(
+            advanceRoutineRun(run, {
+              type: "FINISH",
+              turnId,
+              status,
+              error,
+              now: this.now(),
+            })
+          )
       })
     )
   }
@@ -311,13 +356,70 @@ export class RoutineTransactions {
         yield* this.available()
         const run = yield* this.inFlight()
         if (run?.id === id && run.status === "pending")
-          return yield* this.putRun({
-            ...run,
-            status: "cancelled",
-            finishedAt: this.now(),
-            error: "Stopped before admission.",
-          })
+          return yield* this.putRun(
+            advanceRoutineRun(run, {
+              type: "CANCEL",
+              now: this.now(),
+              reason: "Stopped before admission.",
+            })
+          )
         return run?.id === id ? run : undefined
+      })
+    )
+  }
+  requestStopRun(id: string) {
+    return this.records.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        yield* this.available()
+        const run = yield* this.inFlight()
+        if (run?.id !== id) return undefined
+        return yield* this.putRun(
+          advanceRoutineRun(
+            run,
+            run.status === "pending"
+              ? {
+                  type: "CANCEL",
+                  now: this.now(),
+                  reason: "Stopped before admission.",
+                }
+              : { type: "STOP", now: this.now() }
+          )
+        )
+      })
+    )
+  }
+  exhaust(
+    attempt: { id: string; controlRevision: number },
+    eligible: () => boolean
+  ) {
+    return this.records.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const run = yield* this.inFlight()
+        if (
+          !eligible() ||
+          run?.id !== attempt.id ||
+          run.controlRevision !== attempt.controlRevision
+        )
+          return false
+        yield* this.putRun(
+          advanceRoutineRun(run, { type: "EXHAUSTED", now: this.now() })
+        )
+        return true
+      })
+    )
+  }
+  reconcile() {
+    return this.records.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const run = yield* this.inFlight()
+        if (!run) return undefined
+        const next = advanceRoutineRun(run, {
+          type: "DEADLINE",
+          now: this.now(),
+        })
+        if (JSON.stringify(run) !== JSON.stringify(next))
+          yield* this.putRun(next)
+        return next.status === "failed" ? undefined : next
       })
     )
   }
@@ -329,9 +431,10 @@ export class RoutineTransactions {
   nextWake() {
     return this.records.atomic(() =>
       Effect.gen({ self: this }, function* () {
-        if (!(yield* this.active())) return undefined
-        const run = yield* this.inFlight(),
-          routines = run ? [] : yield* this.list()
+        const run = yield* this.inFlight()
+        if (!(yield* this.active()) && (!run || run.status === "pending"))
+          return undefined
+        const routines = run ? [] : yield* this.list()
         return Domain.nextWake(routines, run, this.now())
       })
     )

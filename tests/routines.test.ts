@@ -369,7 +369,7 @@ describe("durable bot routines", () => {
     }
     const first = f.store.runNow(input).run!
     expect(f.store.runNow(input).run?.id).toBe(first.id)
-    f.advance(86400000)
+    f.advance(12 * 3600000)
     expect(f.store.canRun(first.turnId)).toBe(true)
     f.store.deliver(() => {}, Date.now() + 60_000)
     f.advance(ROUTINE_BUDGET_MS - 1)
@@ -434,6 +434,7 @@ describe("routine alarm reconciliation", () => {
       notify: vi.fn(),
     }
     const reconciliation = routinePump(f.store.service, {
+      canAdmit: () => Effect.succeed(true),
       getTurn: (id) => host.getTurn(id),
       modelConnected: () =>
         Effect.tryPromise({
@@ -460,23 +461,19 @@ describe("routine alarm reconciliation", () => {
         Effect.runPromise(
           reconciliation.run().pipe(Effect.provideService(Clock.Clock, clock))
         ),
-      retry: () =>
-        Effect.runSync(
-          reconciliation.retry().pipe(Effect.provideService(Clock.Clock, clock))
-        ),
     }
     f.advance(60000)
     return { f, conversations, host, pump }
   }
   it.each(["modelConnected", "prearm"] as const)(
-    "retains a future wake after exhausted %s errors and resumes once",
+    "retains domain work after one %s failure and resumes once within the Lifecycle budget",
     async (method) => {
       const { f, conversations, host, pump } = scheduled()
       host[method].mockRejectedValueOnce(
         new Error("Temporary transport failure")
       )
       await expect(pump.run()).rejects.toThrow("Temporary")
-      const retryAt = pump.retry()!
+      const retryAt = f.store.nextWake()!
       expect(retryAt).toBe(f.now() + 60000)
       expect(Effect.runSync(conversations.recent())).toHaveLength(0)
       expect(f.store.inFlight()?.status).toBe("pending")
@@ -487,7 +484,7 @@ describe("routine alarm reconciliation", () => {
       expect(host.admit).toHaveBeenCalledOnce()
       expect(f.store.inFlight()?.status).toBe("queued")
       f.archive()
-      expect(pump.retry()).toBeUndefined()
+      expect(f.store.nextWake()).toBeDefined()
     }
   )
   it("rolls back both owners when the supplied discovery lease has expired", async () => {
@@ -563,6 +560,7 @@ describe("routine alarm reconciliation", () => {
       )
       let stops = 0
       const reconciliation = routinePump(f.store.service, {
+        canAdmit: () => Effect.succeed(true),
         getTurn: (id) => conversations.get(id),
         modelConnected: () => Effect.succeed(true),
         prearm: () => Effect.failCause(Cause.fromReasons(prearmReasons)),

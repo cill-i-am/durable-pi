@@ -19,6 +19,10 @@ type AppError = AppConflict | AppStorageError
 
 /** Interaction commands fence the published version after remote rendering. */
 export interface WebAppRepository {
+  renderSnapshot: (
+    id: string,
+    version: number
+  ) => Effect.Effect<AppDocument, AppError>
   detail: (id: string) => Effect.Effect<AppDetail, AppError>
   version: (id: string, version: number) => Effect.Effect<AppVersion, AppError>
   interactionReceipt: (
@@ -29,7 +33,8 @@ export interface WebAppRepository {
   ) => Effect.Effect<AppDocument, AppError>
   interact: (
     input: InteractApp,
-    result: WebResult
+    result: WebResult,
+    discoveryDeadline?: number
   ) => Effect.Effect<AppDocument, AppError>
 }
 export type WebAppRecords = WebAppRepository
@@ -50,9 +55,25 @@ export interface AppLedger extends WebAppRepository {
   archive: (input: ArchiveApp) => Effect.Effect<AppDocument, AppError>
   interact: (
     input: InteractApp,
-    result?: WebResult
+    result?: WebResult,
+    discoveryDeadline?: number
   ) => Effect.Effect<AppDocument, AppError>
   pending: () => Effect.Effect<AppEvent[], AppError>
+  exhaustDelivery: (
+    eligible: () => boolean,
+    expiredOnly: boolean
+  ) => Effect.Effect<void, AppError>
+  nextDelivery: () => Effect.Effect<number | undefined, AppError>
+  deferDelivery: (
+    id: string,
+    reason: "model" | "capacity" | "storage",
+    now: number
+  ) => Effect.Effect<void, AppError>
+  cancelPending: (message: string) => Effect.Effect<void, AppError>
+  renderSnapshot: (
+    id: string,
+    version: number
+  ) => Effect.Effect<AppDocument, AppError>
   cancelOperation: (id: string) => Effect.Effect<{ applied: boolean }, AppError>
   deliverNext: (
     admission: AppAdmission,

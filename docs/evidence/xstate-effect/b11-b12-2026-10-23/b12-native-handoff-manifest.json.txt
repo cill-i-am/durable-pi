@@ -1,0 +1,15 @@
+{
+  "capturedAt": "2026-10-23T14:23:12.468708+00:00",
+  "worktree": "/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi",
+  "head": "0cf6861ab5a89686d3956e0f85f480446c1f9bf8",
+  "files": {
+    "tests/runtime/apps-worker.ts": "8498fb3b353519304962e90a8c1fc62b89af065c695565eec1a0b73fd0e4bcea",
+    "scripts/test-apps-runtime.mjs": "a13be353a382b7b7c7afcc90b9dc2180e5e43f4e90bf29440500a5cb98be42dd"
+  },
+  "positiveEvidence": "/private/tmp/b12-apps-native-positive-evidence.json",
+  "negativeEvidence": "/private/tmp/b12-apps-native-negative-evidence.json",
+  "focusedTypes": "/private/tmp/b12-apps-fixture-types.txt",
+  "lint": "/private/tmp/b12-apps-fixture-lint.txt",
+  "format": "/private/tmp/b12-apps-fixture-format.txt",
+  "result": "Positive passed; negative failed as intended at pending-vs-queued recovery assertion with zero alarms/admissions/native receipts after real no-poke lease interval."
+}

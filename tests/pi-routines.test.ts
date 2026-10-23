@@ -73,7 +73,7 @@ it("requires durable approval to arm a native Pi routine and replays it once aft
       name: "routines",
       tools: routineTools(
         routines.service,
-        async () => {},
+        async () => Date.now() + 60_000,
         (operation, signal) => Effect.runPromise(operation, { signal })
       ).map(guardedTools(gate, () => Effect.succeed(turnId))),
     })

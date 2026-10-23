@@ -441,3 +441,114 @@ it("keeps corrupt owned state fatal before executing code", async () => {
   expect(calls).toBe(0)
   expect(Effect.runSync(f.store.pending())).toEqual([])
 })
+it("rejects a preview started after its bot was archived without dispatching generated code", async () => {
+  let calls = 0
+  const f = setup(async () => {
+    calls++
+    return { result: JSON.stringify(output()), logs: "", error: null }
+  })
+  f.archiveBot()
+  await expect(
+    Effect.runPromise(f.web.render({ id: f.app.id, version: 1 }, signal()))
+  ).rejects.toMatchObject({ _tag: "AppConflict" })
+  expect(calls).toBe(0)
+})
+it("times out a bounded render and joins native teardown before the lease can be reused", async () => {
+  const f = setup()
+  let aborted = false,
+    entered!: () => void,
+    finish!: () => void
+  const started = new Promise<void>((resolve) => {
+    entered = resolve
+  })
+  const web = new WebApps(
+    makeApps(f.store),
+    (_, resourceSignal) =>
+      nativeOperation(
+        () => {
+          entered()
+          resourceSignal.addEventListener("abort", () => {
+            aborted = true
+          })
+          return new Promise<CodeOutput>((resolve) => {
+            finish = () =>
+              resolve({
+                result: JSON.stringify(output()),
+                logs: "",
+                error: null,
+              })
+          })
+        },
+        () => new AppConflict({ message: "fixture" })
+      ),
+    20
+  )
+  const running = Effect.runPromiseExit(web.interact(f.input, signal()))
+  await started
+  await new Promise((resolve) => setTimeout(resolve, 35))
+  const overlapping = await Effect.runPromiseExit(
+    web.render({ id: f.app.id, version: 1 }, signal())
+  )
+  expect(Exit.isFailure(overlapping)).toBe(true)
+  expect(aborted).toBe(true)
+  finish()
+  const exit = await running
+  expect(Exit.isFailure(exit) && Cause.hasFails(exit.cause)).toBe(true)
+  expect(aborted).toBe(true)
+  expect(Effect.runSync(f.store.pending())).toHaveLength(0)
+})
+it("fences synchronous archive/restore from the executor completion callback", async () => {
+  const f = setup()
+  const web = new WebApps(makeApps(f.store), () =>
+    Effect.sync(() => {
+      web.invalidate()
+      return { result: JSON.stringify(output()), logs: "", error: null }
+    })
+  )
+  const exit = await Effect.runPromiseExit(web.interact(f.input, signal()))
+  expect(Exit.isFailure(exit)).toBe(true)
+  expect(Effect.runSync(f.store.pending())).toHaveLength(0)
+})
+
+it("retains late compound native cause on caller cancellation", async () => {
+  const f = setup()
+  const controller = new AbortController()
+  let entered!: () => void, reject!: (cause: unknown) => void
+  const started = new Promise<void>((resolve) => {
+    entered = resolve
+  })
+  const late = Cause.fromReasons([
+    Cause.makeFailReason(new AppConflict({ message: "late checked" })),
+    Cause.makeDieReason("late renderer defect"),
+    Cause.makeInterruptReason(919),
+  ])
+  const web = new WebApps(makeApps(f.store), () =>
+    nativeOperation(
+      () => {
+        entered()
+        return new Promise<CodeOutput>((_, no) => {
+          reject = no
+        })
+      },
+      (cause) => Schema.decodeUnknownSync(AppConflict)(cause)
+    )
+  )
+  const running = Effect.runPromiseExit(
+    web.interact(f.input, controller.signal)
+  )
+  await started
+  controller.abort()
+  const blocked = await Effect.runPromiseExit(
+    web.render({ id: f.app.id, version: 1 }, signal())
+  )
+  expect(Exit.isFailure(blocked)).toBe(true)
+  reject(late)
+  const exit = await running
+  expect(Exit.isFailure(exit)).toBe(true)
+  if (Exit.isFailure(exit)) {
+    expect(Cause.hasDies(exit.cause)).toBe(true)
+    expect(JSON.stringify(exit.cause)).toContain("late renderer defect")
+    expect(JSON.stringify(exit.cause)).toContain("late checked")
+  }
+  expect(Effect.runSync(f.store.pending())).toEqual([])
+})
