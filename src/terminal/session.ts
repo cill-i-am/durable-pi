@@ -1,15 +1,21 @@
-import { Cause, Deferred, Effect, Exit, Option, Schema } from "effect"
-import type { Clock } from "effect"
+import {
+  createEffectActor,
+  send,
+  waitFor,
+  type EffectActor,
+} from "@xstate/effect"
+import { Cause, Clock, Deferred, Effect, Exit } from "effect"
 
 import { fatalCause, orDieAll } from "../shared/effect"
 import { TerminalFailure } from "./contracts"
 import type { InteractiveState } from "./contracts"
-import { SESSION_LIFETIME, sessionExpiry, sessionLive } from "./domain"
+import { sessionLive } from "./domain"
 import type {
   InteractiveRuntime,
   TerminalRuntimeError,
   TerminalSocket,
 } from "./runtime"
+import { terminalSessionMachine } from "./session.machine"
 
 export { SESSION_LEASE, SESSION_LIFETIME } from "./domain"
 export type TerminalRelay = (
@@ -29,50 +35,75 @@ export interface TerminalSession {
   ) => Effect.Effect<Response, TerminalFailure | TerminalRuntimeError>
 }
 
-const expected = Schema.decodeUnknownOption(TerminalFailure)
-const attempt = <T>(body: () => T) =>
-  Effect.try({
-    try: body,
-    catch: (cause) => {
-      const error = expected(cause)
-      if (Option.isSome(error)) return error.value
-      throw cause
-    },
-  })
-
-/** Owns lease and connection decisions. Its monitor is forked in the command
- * scope; the runtime adapter additionally joins noncooperative socket startup. */
+/** The command scope owns the machine. Native socket acquisition and its
+ * noncooperative cleanup retain the machine reservation until settlement. */
 export class InteractiveSession implements TerminalSession {
-  readonly maximumAt: number
-  expiresAt: number
-  phase: "starting" | "ready" | "saving" = "starting"
+  private actor!: EffectActor<ReturnType<typeof terminalSessionMachine>>
+  get maximumAt() {
+    return this.actor.getSnapshot().context.maximumAt
+  }
+  get expiresAt() {
+    return this.actor.getSnapshot().context.expiresAt
+  }
+  get phase(): "starting" | "ready" | "saving" {
+    const state = this.actor.getSnapshot()
+    return state.matches("ready")
+      ? "ready"
+      : state.matches("saving")
+        ? "saving"
+        : "starting"
+  }
   private readonly finished = Deferred.makeUnsafe<void>()
   readonly completion = Deferred.await(this.finished)
   private changed = Deferred.makeUnsafe<void>()
-  private runtime: InteractiveRuntime | null = null
+  private get runtime() {
+    return this.actor.getSnapshot().context.runtime
+  }
   private disconnect: (() => void) | null = null
   private inputBytes = 0
   private outputBytes = 0
   private pending = 0
-  private connection: symbol | null = null
-  private disposed = false
   private readonly relayFailures: unknown[] = []
-  private readonly stopped = () => this.dispose()
-  constructor(
+  private readonly stopped = () => {
+    this.actor.send({ type: "END" })
+    this.closeRelay()
+  }
+  private constructor(
     readonly id: string,
     private readonly controller: AbortController,
     private readonly relay: TerminalRelay,
     private readonly clock: Clock.Clock
+  ) {}
+  static make(
+    id: string,
+    controller: AbortController,
+    relay: TerminalRelay,
+    clock: Clock.Clock
   ) {
-    const now = clock.currentTimeMillisUnsafe()
-    this.maximumAt = now + SESSION_LIFETIME
-    this.expiresAt = sessionExpiry(now, this.maximumAt)
-    controller.signal.addEventListener("abort", this.stopped, { once: true })
-    if (controller.signal.aborted) this.dispose()
+    return Effect.gen(function* () {
+      const session = new InteractiveSession(id, controller, relay, clock)
+      session.actor = yield* createEffectActor(
+        terminalSessionMachine({
+          now: () => clock.currentTimeMillisUnsafe(),
+          stopped: () => controller.signal.aborted,
+          complete: Effect.sync(() => {
+            session.closeRelay()
+            Deferred.doneUnsafe(session.finished, Effect.void)
+          }),
+          end: Effect.sync(() => session.dispose()),
+        })
+      ).pipe(Effect.provideService(Clock.Clock, clock))
+      controller.signal.addEventListener("abort", session.stopped, {
+        once: true,
+      })
+      if (controller.signal.aborted) session.stopped()
+      yield* Effect.addFinalizer(() => Effect.sync(() => session.dispose()))
+      return session
+    })
   }
   get live() {
     return (
-      !this.disposed &&
+      this.actor.getSnapshot().status === "active" &&
       sessionLive(
         this.clock.currentTimeMillisUnsafe(),
         this.expiresAt,
@@ -93,58 +124,50 @@ export class InteractiveSession implements TerminalSession {
     this.changed = Deferred.makeUnsafe<void>()
     Deferred.doneUnsafe(previous, Effect.void)
   }
-  watchLease = Effect.fn("Terminal.sessionLease")(() =>
-    Effect.gen({ self: this }, function* () {
-      while (!this.disposed && this.phase !== "saving") {
-        const changed = this.changed
-        const expired = yield* Effect.raceFirst(
-          Effect.sleep(
-            Math.max(0, this.expiresAt - this.clock.currentTimeMillisUnsafe())
-          ).pipe(Effect.as(true)),
-          Deferred.await(changed).pipe(Effect.as(false))
-        )
-        if (expired) {
-          this.controller.abort()
-          return
-        }
-      }
-    })
-  )
-  renew = Effect.fn("Terminal.renewSession")(() =>
-    attempt(() => {
-      if (!this.live || this.phase === "saving")
-        throw new TerminalFailure({
+  private request(
+    event:
+      | { type: "RENEW" | "SAVE" }
+      | { type: "READY"; runtime: InteractiveRuntime }
+      | { type: "CLAIM"; connection: string }
+  ) {
+    return Effect.gen({ self: this }, function* () {
+      if (this.actor.getSnapshot().status !== "active")
+        return yield* new TerminalFailure({
           message: "This terminal session has ended.",
         })
-      this.expiresAt = sessionExpiry(
-        this.clock.currentTimeMillisUnsafe(),
-        this.maximumAt
+      const reply = yield* Deferred.make<void, TerminalFailure>()
+      yield* send(this.actor, { ...event, reply })
+      yield* Effect.raceFirst(
+        Deferred.await(reply),
+        waitFor(this.actor, (state) => state.status !== "active").pipe(
+          Effect.catchTag("ActorStoppedError", (error) =>
+            error.snapshot.status === "error"
+              ? Effect.die(error.snapshot.error)
+              : Effect.fail(
+                  new TerminalFailure({
+                    message: "This terminal session has ended.",
+                  })
+                )
+          ),
+          Effect.flatMap((state) =>
+            state.status === "error"
+              ? Effect.die(state.error)
+              : Effect.fail(
+                  new TerminalFailure({
+                    message: "This terminal session has ended.",
+                  })
+                )
+          )
+        )
       )
-      this.notify()
     })
+  }
+  renew = Effect.fn("Terminal.renewSession")(() =>
+    this.request({ type: "RENEW" })
   )
   ready = (runtime: InteractiveRuntime) =>
-    attempt(() => {
-      if (!this.live)
-        throw new TerminalFailure({
-          message: "This terminal session has ended.",
-        })
-      this.runtime = runtime
-      this.phase = "ready"
-    })
-  save = Effect.fn("Terminal.saveSession")(() =>
-    attempt(() => {
-      if (!this.live || this.phase !== "ready")
-        throw new TerminalFailure({
-          message: "Wait for the terminal to be ready before saving.",
-        })
-      this.phase = "saving"
-      this.disconnect?.()
-      this.disconnect = null
-      this.notify()
-      Deferred.doneUnsafe(this.finished, Effect.void)
-    })
-  )
+    this.request({ type: "READY", runtime })
+  save = Effect.fn("Terminal.saveSession")(() => this.request({ type: "SAVE" }))
   settleConnections = Effect.fn("Terminal.settleConnections")(() =>
     Effect.gen({ self: this }, function* () {
       while (this.pending) yield* Deferred.await(this.changed)
@@ -166,25 +189,15 @@ export class InteractiveSession implements TerminalSession {
     })
   )
   connect = Effect.fn("Terminal.connectSession")((request: Request) => {
-    const generation = Symbol()
+    const generation = crypto.randomUUID()
     let installed = false
     return Effect.acquireUseRelease(
-      attempt(() => {
-        if (
-          !this.live ||
-          this.phase !== "ready" ||
-          !this.runtime ||
-          request.signal.aborted
-        )
-          throw new TerminalFailure({
+      Effect.gen({ self: this }, function* () {
+        if (!this.runtime || request.signal.aborted)
+          return yield* new TerminalFailure({
             message: "This terminal session is not ready.",
           })
-        if (this.connection)
-          throw new TerminalFailure({
-            message:
-              "This terminal is open in another panel. Close it before reconnecting here.",
-          })
-        this.connection = generation
+        yield* this.request({ type: "CLAIM", connection: generation })
         this.pending++
         return this.runtime
       }),
@@ -222,10 +235,9 @@ export class InteractiveSession implements TerminalSession {
                 return true
               },
               () => {
-                if (this.connection === generation) {
-                  this.connection = null
+                this.actor.send({ type: "RELEASE", connection: generation })
+                if (this.actor.getSnapshot().context.connection === generation)
                   this.disconnect = null
-                }
               },
               (cause) => {
                 this.relayFailures.push(cause)
@@ -248,8 +260,8 @@ export class InteractiveSession implements TerminalSession {
         (installed ? Effect.void : runtime.settle()).pipe(
           Effect.ensuring(
             Effect.sync(() => {
-              if (!installed && this.connection === generation)
-                this.connection = null
+              if (!installed)
+                this.actor.send({ type: "RELEASE", connection: generation })
               this.pending--
               this.notify()
             })
@@ -266,17 +278,32 @@ export class InteractiveSession implements TerminalSession {
       )
     )
   })
-  private current(generation: symbol) {
-    return this.connection === generation && this.live && this.phase === "ready"
+  private current(generation: string) {
+    return (
+      this.actor.getSnapshot().context.connection === generation &&
+      this.live &&
+      this.phase === "ready"
+    )
   }
   closeRuntime = () => (this.runtime ? this.runtime.close() : Effect.void)
-  dispose() {
-    this.disposed = true
-    this.controller.signal.removeEventListener("abort", this.stopped)
-    this.disconnect?.()
+  private closeRelay() {
+    const disconnect = this.disconnect
     this.disconnect = null
-    this.connection = null
+    try {
+      disconnect?.()
+    } catch (cause) {
+      this.relayFailures.push(cause)
+      this.controller.abort()
+    }
+  }
+  dispose() {
+    this.controller.signal.removeEventListener("abort", this.stopped)
+    this.controller.abort()
+    if (this.actor.getSnapshot().status === "active")
+      this.actor.send({ type: "END" })
+    this.closeRelay()
     this.notify()
     Deferred.doneUnsafe(this.finished, Effect.void)
   }
 }
+export const makeInteractiveSession = InteractiveSession.make

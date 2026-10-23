@@ -1,7 +1,7 @@
 import { it as effectIt } from "@effect/vitest"
-import { Cause, Clock, Deferred, Effect, Exit, Fiber } from "effect"
+import { Cause, Clock, Deferred, Effect, Exit, Fiber, Scope } from "effect"
 import { TestClock } from "effect/testing"
-import { expect, it, vi } from "vitest"
+import { expect, it, onTestFinished, vi } from "vitest"
 
 import { effectInteractiveRuntime } from "../src/terminal/adapters/interop"
 import { runCommand } from "../src/terminal/adapters/service"
@@ -13,7 +13,22 @@ import {
 import { TerminalFailure } from "../src/terminal/contracts"
 import type { CommandRun } from "../src/terminal/contracts"
 import { TerminalRuntimeError } from "../src/terminal/runtime"
-import { InteractiveSession, type TerminalRelay } from "../src/terminal/session"
+import {
+  makeInteractiveSession,
+  type TerminalRelay,
+} from "../src/terminal/session"
+
+async function ownedSession(
+  ...args: Parameters<typeof makeInteractiveSession>
+) {
+  const scope = Effect.runSync(Scope.make())
+  onTestFinished(() => Effect.runPromise(Scope.close(scope, Exit.void)))
+  return Effect.runPromise(
+    makeInteractiveSession(...args).pipe(
+      Effect.provideService(Scope.Scope, scope)
+    )
+  )
+}
 
 const input = { id: "command:original", command: "printf hello" }
 const running: CommandRun = {
@@ -268,7 +283,7 @@ it.each(["unavailable", "wrong identity"] as const)(
 it("rejects an already aborted socket request before acquiring a native upgrade", async () => {
   const requestController = new AbortController(),
     connect = vi.fn(async () => new Response())
-  const session = new InteractiveSession(
+  const session = await ownedSession(
     "session",
     new AbortController(),
     () => {
@@ -481,7 +496,7 @@ it("partial relay installation releases the socket and ends the unsafe session",
       connect: async () => upstream.response,
       close: async () => {},
     })
-  const session = new InteractiveSession(
+  const session = await ownedSession(
     "session",
     new AbortController(),
     (open) => {
@@ -546,7 +561,7 @@ it("records native relay callback failures in the session's owned settlement and
       },
     }
   }
-  const session = new InteractiveSession(
+  const session = await ownedSession(
     "session",
     controller,
     relay,
@@ -574,7 +589,7 @@ it("records native relay callback failures in the session's owned settlement and
 it("uses an abstract interactive connection without inspecting a platform upgrade response", async () => {
   const reply = new Response(null),
     transfer = vi.fn()
-  const session = new InteractiveSession(
+  const session = await ownedSession(
     "abstract",
     new AbortController(),
     () => ({ response: reply, close: () => {} }),

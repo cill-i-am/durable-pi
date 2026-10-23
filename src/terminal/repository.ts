@@ -1,5 +1,6 @@
 import type { Effect } from "effect"
 
+import type { CommandRecord } from "./command.machine"
 import type {
   CommandInput,
   CommandRun,
@@ -31,34 +32,50 @@ export interface TerminalLedger {
   configure: (
     revision: number,
     active: boolean,
-    revokeThrough?: number
+    revokeThrough?: number,
+    committed?: (authority: TerminalAuthority) => void
   ) => Effect.Effect<void, TerminalStorageError | TerminalFailure>
   authorized: (run: CommandRun) => Effect.Effect<boolean, TerminalStorageError>
   get: (
     id: string
-  ) => Effect.Effect<CommandRun | undefined, TerminalStorageError>
+  ) => Effect.Effect<CommandRecord | undefined, TerminalStorageError>
   list: () => Effect.Effect<CommandSummary[], TerminalStorageError>
   checkpoint: () => Effect.Effect<Checkpoint | null, TerminalStorageError>
   exported: (
     id: string
   ) => Effect.Effect<Checkpoint | null, TerminalStorageError>
-  admit: (
+  claim: (
     input: CommandInput,
-    kind?: NonNullable<CommandRun["kind"]>,
-    transfer?: CommandRun["transfer"]
-  ) => Effect.Effect<CommandRun, TerminalFailure | TerminalStorageError>
+    kind: NonNullable<CommandRun["kind"]>,
+    transfer: CommandRun["transfer"],
+    attemptId: string
+  ) => Effect.Effect<
+    { run: CommandRecord; fresh: boolean },
+    TerminalFailure | TerminalStorageError
+  >
+  blocked: () => Effect.Effect<boolean, TerminalStorageError>
+  occupied: () => Effect.Effect<boolean, TerminalStorageError>
+  cleaning: (ownerId: string) => Effect.Effect<void, TerminalStorageError>
+  release: (
+    ownerId: string,
+    confirmed: boolean
+  ) => Effect.Effect<void, TerminalStorageError>
   progress: (
     id: string,
-    output: string
+    output: string,
+    attemptId: string
   ) => Effect.Effect<void, TerminalStorageError | TerminalFailure>
   finish: (
     id: string,
     result: Pick<CommandRun, "status" | "exitCode" | "error">,
     checkpoint?: Checkpoint,
-    exported?: Checkpoint
+    exported?: Checkpoint,
+    attemptId?: string
   ) => Effect.Effect<CommandRun, TerminalFailure | TerminalStorageError>
+  cancelled: (id: string) => Effect.Effect<boolean, TerminalStorageError>
   cancel: (
-    id: string
+    id: string,
+    committed?: () => void
   ) => Effect.Effect<CommandRun | null, TerminalFailure | TerminalStorageError>
-  recover: () => Effect.Effect<void, TerminalStorageError>
+  recover: (ownerId?: string) => Effect.Effect<void, TerminalStorageError>
 }

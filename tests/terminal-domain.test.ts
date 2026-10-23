@@ -1,10 +1,10 @@
 import { expect, it } from "@effect/vitest"
 import { Effect, Schema } from "effect"
 
+import { advanceCommandRecord } from "../src/terminal/command.machine"
 import type { CommandRun } from "../src/terminal/contracts"
 import {
   authorized,
-  finishCommand,
   SESSION_LIFETIME,
   sessionExpiry,
 } from "../src/terminal/domain"
@@ -38,14 +38,16 @@ it.effect.prop(
         revokedThrough: value,
       })
       expect(allowed).toBe(false)
-      const finished = finishCommand(
-        command,
-        { status: "succeeded", exitCode: 0, error: null },
-        true,
+      const finished = advanceCommandRecord(command, {
+        type: "FINISH",
+        attemptId: `legacy:${command.id}`,
+        result: { status: "succeeded", exitCode: 0, error: null },
+        cancelled: false,
+        publishing: true,
         allowed,
-        42,
-        100
-      )
+        savedAt: 42,
+        now: 100,
+      })
       expect(finished.status).toBe("cancelled")
       expect(finished.savedAt).toBeNull()
     })

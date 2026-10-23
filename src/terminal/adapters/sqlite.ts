@@ -1,22 +1,32 @@
 import { count, desc, eq } from "drizzle-orm"
 import { Effect, Schema } from "effect"
 
-import { jsonField } from "../../storage/expressions"
 import {
   mapSqliteError,
   type Sqlite,
   type EffectSqliteDatabase,
 } from "../../storage/sqlite"
 import {
+  advanceCommandRecord,
+  newCommandRecord,
+  restoreCommandRecord,
+  type CommandRecord,
+} from "../command.machine"
+import {
   TerminalFailure,
   TerminalStorageError,
   type CommandInput,
-  CommandRun,
+  CommandRun as CommandRunResult,
+  type CommandRun,
   Checkpoint,
   type CommandSummary,
   type TerminalNetworkPolicy,
 } from "../contracts"
 import * as Domain from "../domain"
+import {
+  advanceTerminalOccupancy,
+  type OccupancyEvent,
+} from "../occupancy.machine"
 import type { TerminalAuthority, TerminalLedger } from "../repository"
 import {
   terminalAuthority,
@@ -35,8 +45,9 @@ const decision = <TValue>(body: () => TValue) =>
       throw cause
     },
   })
+const commandResult = Schema.decodeUnknownSync(CommandRunResult)
 const decode = (row: { record: string }) =>
-  Schema.decodeUnknownSync(CommandRun)(JSON.parse(row.record))
+  restoreCommandRecord(JSON.parse(row.record))
 export class TerminalStore implements TerminalLedger {
   constructor(
     private readonly db: Sqlite,
@@ -80,6 +91,11 @@ export class TerminalStore implements TerminalLedger {
     return this.atomic(() =>
       Effect.gen({ self: this }, function* () {
         yield* decision(() => this.writable?.())
+        if (yield* this.occupied())
+          return yield* new TerminalFailure({
+            message:
+              "Stop or save the active terminal session and wait for cleanup before changing internet access.",
+          })
         const current = yield* this.networkPolicy()
         const authority = yield* this.authority()
         const next = yield* decision(() =>
@@ -114,7 +130,15 @@ export class TerminalStore implements TerminalLedger {
       )
     )
   }
-  cancel(id: string) {
+  cancelled(id: string) {
+    return this.query((orm) =>
+      orm
+        .select({ id: terminalCancellations.id })
+        .from(terminalCancellations)
+        .where(eq(terminalCancellations.id, id))
+    ).pipe(Effect.map((rows) => rows.length > 0))
+  }
+  cancel(id: string, committed?: () => void) {
     // The cancellation fence commits before finalization. A failed outcome
     // publication must retain that fence, and observers run after its own commit.
     return this.db.use(() =>
@@ -130,6 +154,7 @@ export class TerminalStore implements TerminalLedger {
             )
           })
         )
+        yield* Effect.sync(() => committed?.())
         return (yield* this.get(id))
           ? yield* this.finish(id, {
               status: "cancelled",
@@ -159,7 +184,8 @@ export class TerminalStore implements TerminalLedger {
   configure(
     revision: number,
     active: boolean,
-    revokeThrough = active ? -1 : revision
+    revokeThrough = active ? -1 : revision,
+    committed?: (authority: TerminalAuthority) => void
   ) {
     return this.atomic(() =>
       Effect.gen({ self: this }, function* () {
@@ -186,7 +212,15 @@ export class TerminalStore implements TerminalLedger {
             .values(values)
             .onConflictDoUpdate({ target: terminalAuthority.id, set: values })
         )
+        return {
+          revision: values.revision,
+          active: values.active,
+          revokedThrough: values.revoked_through,
+        }
       })
+    ).pipe(
+      Effect.tap((authority) => Effect.sync(() => committed?.(authority))),
+      Effect.asVoid
     )
   }
   authorized(run: CommandRun) {
@@ -239,7 +273,7 @@ export class TerminalStore implements TerminalLedger {
       )
     )
   }
-  private put(value: CommandRun) {
+  private put(value: CommandRecord) {
     const record = JSON.stringify(value)
     return this.query((orm) =>
       orm
@@ -248,10 +282,11 @@ export class TerminalStore implements TerminalLedger {
         .onConflictDoUpdate({ target: terminalRuns.id, set: { record } })
     ).pipe(Effect.as(value))
   }
-  admit(
+  claim(
     input: CommandInput,
-    kind: NonNullable<CommandRun["kind"]> = "command",
-    transfer?: CommandRun["transfer"]
+    kind: NonNullable<CommandRun["kind"]>,
+    transfer: CommandRun["transfer"],
+    attemptId: string
   ) {
     return this.atomic(() =>
       Effect.gen({ self: this }, function* () {
@@ -260,7 +295,12 @@ export class TerminalStore implements TerminalLedger {
         const previous = yield* decision(() =>
           Domain.replayCommand(stored, input, kind, transfer)
         )
-        if (previous) return previous
+        if (previous) return { run: stored!, fresh: false }
+        const occupied = yield* this.occupied()
+        if (occupied)
+          return yield* new TerminalFailure({
+            message: "Wait for the active command and its cleanup to finish.",
+          })
         const authority = yield* this.authority()
         const counts = yield* this.query((orm) =>
           orm.select({ n: count() }).from(terminalRuns)
@@ -272,8 +312,8 @@ export class TerminalStore implements TerminalLedger {
             .where(eq(terminalCancellations.id, input.id))
         )
         const policy = yield* this.networkPolicy()
-        const run = yield* decision(() =>
-          Domain.admitCommand(
+        const next = yield* decision(() =>
+          newCommandRecord(
             input,
             kind,
             transfer,
@@ -281,18 +321,77 @@ export class TerminalStore implements TerminalLedger {
             counts[0]!.n,
             cancellations.length > 0,
             policy.unrestricted,
-            Date.now()
+            Date.now(),
+            attemptId
           )
         )
-        return yield* this.put(run)
+        return { run: yield* this.put(next), fresh: next.status === "running" }
       })
     )
   }
-  progress(id: string, output: string) {
+  blocked() {
+    return this.query((orm) =>
+      orm.select({ record: terminalRuns.record }).from(terminalRuns)
+    ).pipe(
+      Effect.map((rows) =>
+        rows.some((row) => {
+          const run = decode(row)
+          return (
+            run.occupancy.state === "blocked" ||
+            (run.status === "running" && run.occupancy.state === "free")
+          )
+        })
+      )
+    )
+  }
+  occupied() {
+    return this.query((orm) =>
+      orm.select({ record: terminalRuns.record }).from(terminalRuns)
+    ).pipe(
+      Effect.map((rows) =>
+        rows.some((row) => {
+          const run = decode(row)
+          return run.occupancy.state !== "free" || run.status === "running"
+        })
+      )
+    )
+  }
+  private occupancy(event: OccupancyEvent) {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const rows = yield* this.query((orm) =>
+          orm.select({ record: terminalRuns.record }).from(terminalRuns)
+        )
+        for (const row of rows) {
+          const run = decode(row)
+          const occupancy = advanceTerminalOccupancy(run.occupancy, event)
+          if (
+            occupancy.state !== run.occupancy.state ||
+            occupancy.ownerId !== run.occupancy.ownerId
+          )
+            yield* this.put({ ...run, occupancy, revision: run.revision + 1 })
+        }
+      })
+    )
+  }
+  cleaning(ownerId: string) {
+    return this.occupancy({ type: "CLEAN", ownerId })
+  }
+  release(ownerId: string, confirmed: boolean) {
+    return this.occupancy({ type: "RELEASE", ownerId, confirmed })
+  }
+  progress(id: string, output: string, attemptId: string) {
     return this.atomic(() =>
       Effect.gen({ self: this }, function* () {
         const run = yield* this.get(id)
-        if (run?.status === "running") yield* this.put({ ...run, output })
+        if (run) {
+          const next = advanceCommandRecord(run, {
+            type: "PROGRESS",
+            attemptId,
+            output,
+          })
+          if (next.revision !== run.revision) yield* this.put(next)
+        }
       })
     )
   }
@@ -300,7 +399,8 @@ export class TerminalStore implements TerminalLedger {
     id: string,
     result: Pick<CommandRun, "status" | "exitCode" | "error">,
     checkpoint?: Checkpoint,
-    exported?: Checkpoint
+    exported?: Checkpoint,
+    attemptId?: string
   ) {
     return this.atomic(() =>
       Effect.gen({ self: this }, function* () {
@@ -309,14 +409,29 @@ export class TerminalStore implements TerminalLedger {
           return yield* new TerminalFailure({ message: "Command not found." })
         if (run.status !== "running") return { run, changed: false }
         const allowed = yield* this.authorized(run)
-        const next = Domain.finishCommand(
-          run,
-          result,
-          !!(checkpoint || exported),
+        const cancelled = yield* this.cancelled(id)
+        const next = advanceCommandRecord(run, {
+          type: "FINISH",
+          attemptId: attemptId ?? run.attemptId,
+          result: Schema.decodeUnknownSync(
+            Schema.Struct({
+              status: Schema.Literals([
+                "succeeded",
+                "failed",
+                "cancelled",
+                "interrupted",
+              ]),
+              exitCode: CommandRunResult.fields.exitCode,
+              error: CommandRunResult.fields.error,
+            })
+          )(result),
+          cancelled,
+          publishing: !!(checkpoint || exported),
           allowed,
-          checkpoint?.savedAt ?? null,
-          Date.now()
-        )
+          savedAt: checkpoint?.savedAt ?? null,
+          now: Date.now(),
+        })
+        if (next.revision === run.revision) return { run, changed: false }
         if (next.status !== "cancelled") {
           if (exported)
             yield* this.query((orm) =>
@@ -341,35 +456,45 @@ export class TerminalStore implements TerminalLedger {
       Effect.tap(({ run, changed }) =>
         changed ? Effect.sync(() => this.observe(run)) : Effect.void
       ),
-      Effect.map(({ run }) => run)
+      Effect.map(({ run }) => commandResult(run))
     )
   }
   private observe(run: CommandRun) {
     try {
-      this.onFinished?.(run)
+      this.onFinished?.(commandResult(run))
     } catch {}
   }
-  recover() {
+  recover(ownerId: string = crypto.randomUUID()) {
     return this.atomic(() =>
       Effect.gen({ self: this }, function* () {
         const rows = yield* this.query((orm) =>
-          orm
-            .select({ record: terminalRuns.record })
-            .from(terminalRuns)
-            .where(
-              eq(jsonField<string>(terminalRuns.record, "$.status"), "running")
-            )
+          orm.select({ record: terminalRuns.record }).from(terminalRuns)
         )
-        const now = Date.now()
-        const interrupted = rows.map((row) => ({
-          ...decode(row),
-          status: "interrupted" as const,
-          finishedAt: now,
-          error:
-            "The runtime restarted. This command was not repeated. Workspace recovery uses the last saved checkpoint.",
-        }))
-        for (const run of interrupted) yield* this.put(run)
-        return interrupted
+        const changed: CommandRecord[] = []
+        for (const row of rows) {
+          const run = decode(row)
+          const next = advanceCommandRecord(run, {
+            type: "RECOVER",
+            now: Date.now(),
+          })
+          const occupancy = advanceTerminalOccupancy(next.occupancy, {
+            type: "RECOVER",
+            ownerId,
+          })
+          if (
+            next.revision !== run.revision ||
+            occupancy.state !== run.occupancy.state ||
+            occupancy.ownerId !== run.occupancy.ownerId
+          ) {
+            const saved = yield* this.put({
+              ...next,
+              occupancy,
+              revision: next.revision + 1,
+            })
+            if (next.status !== run.status) changed.push(saved)
+          }
+        }
+        return changed
       })
     ).pipe(
       Effect.flatMap((runs) =>

@@ -1,12 +1,16 @@
 import type { Sandbox } from "@cloudflare/sandbox-v0"
-import { Cause, Effect, Exit, Fiber } from "effect"
+import { Cause, Effect, Exit, Fiber, Schema } from "effect"
 import { describe, expect, it, vi } from "vitest"
 
 import { readCommand, sandboxRuntime } from "../src/terminal/adapters/sandbox"
 import { relayTerminal } from "../src/terminal/adapters/socket"
 import { TerminalStore } from "../src/terminal/adapters/sqlite"
 import { readBounded } from "../src/terminal/adapters/stream"
-import { MAX_OUTPUT, TerminalFailure } from "../src/terminal/contracts"
+import {
+  CommandRun,
+  MAX_OUTPUT,
+  TerminalFailure,
+} from "../src/terminal/contracts"
 import { database } from "./database"
 import { Terminal, type TerminalRuntime } from "./terminal-fixture"
 
@@ -110,6 +114,10 @@ describe("Linux commands", () => {
     await expect(task.completion).rejects.toBeDefined()
     expect(f.runtime.close).toHaveBeenCalledTimes(3)
     expect(f.terminal.state().busy).toBe(false)
+    expect(f.terminal.state().cleanupError).toContain("command outcome")
+    await expect(
+      run(f.terminal.start({ ...input, id: "blocked-by-unconfirmed" }))
+    ).rejects.toThrow("cleanup")
     f.db.run("DROP TRIGGER fail_finish")
     await f.terminal.recover()
     expect(Effect.runSync(f.repository.get(input.id))?.status).toBe(
@@ -125,7 +133,9 @@ describe("Linux commands", () => {
         await closed.promise
       }),
     })
-    Effect.runSync(f.repository.admit(input))
+    Effect.runSync(
+      f.repository.claim(input, "command", undefined, crypto.randomUUID())
+    )
     const recovery = f.terminal.recover().catch(() => {})
     await closing.promise
     let disposed = false
@@ -180,7 +190,9 @@ describe("Linux commands", () => {
   })
   it("fences checkpoint commit even when authority revocation is applied directly", () => {
     const f = fixture()
-    Effect.runSync(f.repository.admit(input))
+    Effect.runSync(
+      f.repository.claim(input, "command", undefined, crypto.randomUUID())
+    )
     Effect.runSync(f.repository.configure(3, true, 2))
     Effect.runSync(
       f.repository.finish(
@@ -285,7 +297,9 @@ describe("Linux commands", () => {
   })
   it("keeps terminal outcomes immutable and never replays interrupted work", async () => {
     const f = fixture()
-    Effect.runSync(f.repository.admit(input))
+    Effect.runSync(
+      f.repository.claim(input, "command", undefined, crypto.randomUUID())
+    )
     await f.terminal.recover()
     await (
       await run(f.terminal.start(input))
@@ -302,7 +316,9 @@ describe("Linux commands", () => {
   it("destroys a surviving container after restart before reporting idle or admitting", async () => {
     const closed = deferred<void>()
     const f = fixture({ close: vi.fn(() => closed.promise) })
-    Effect.runSync(f.repository.admit(input))
+    Effect.runSync(
+      f.repository.claim(input, "command", undefined, crypto.randomUUID())
+    )
     const recovering = f.terminal.recover()
     expect(f.terminal.state().busy).toBe(true)
     expect(Effect.runSync(f.repository.get(input.id))?.status).toBe(
@@ -525,6 +541,7 @@ describe("Pi command service", () => {
     release.resolve()
     const exit = await pending
     expect(Exit.isFailure(exit) && Cause.hasInterrupts(exit.cause)).toBe(true)
+    expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(false)
     expect(Effect.runSync(f.repository.get(input.id))?.status).toBe("cancelled")
     expect(f.runtime.execute).not.toHaveBeenCalled()
   })
@@ -705,7 +722,8 @@ it("revokes a pre-archive PTY after restore while preserving a newly admitted PT
 it.each(["cancel", "save"] as const)(
   "holds admission and destroys late PTY startup during %s",
   async (action) => {
-    const gate = deferred<void>()
+    const gate = deferred<void>(),
+      entered = deferred<void>()
     let alive = false
     const socket = { accept: vi.fn(), close: vi.fn() }
     const f = fixture({
@@ -714,6 +732,7 @@ it.each(["cancel", "save"] as const)(
       },
       openInteractive: async () => ({
         connect: async () => {
+          entered.resolve()
           await gate.promise
           alive = true
           return { webSocket: socket } as unknown as Response
@@ -730,6 +749,7 @@ it.each(["cancel", "save"] as const)(
       session.connect(new Request("https://terminal.internal"))
     )
     const rejected = expect(pending).rejects.toThrow("ended")
+    await entered.promise
     if (action === "cancel") await run(f.terminal.cancel("interactive"))
     else await run(session.save())
     await new Promise((resolve) => setTimeout(resolve, 5))
@@ -865,10 +885,11 @@ it("reports only newly committed terminal outcomes and restart interruptions", (
     observed = vi.fn()
   const store = new TerminalStore(db, observed)
   Effect.runSync(store.configure(0, true))
-  Effect.runSync(store.admit(input))
-  Effect.runSync(
+  Effect.runSync(store.claim(input, "command", undefined, crypto.randomUUID()))
+  const finished = Effect.runSync(
     store.finish(input.id, { status: "succeeded", exitCode: 0, error: null })
   )
+  expect(finished).toEqual(Schema.decodeUnknownSync(CommandRun)(finished))
   Effect.runSync(
     store.finish(input.id, {
       status: "failed",
@@ -881,7 +902,17 @@ it("reports only newly committed terminal outcomes and restart interruptions", (
     id: input.id,
     status: "succeeded",
   })
-  Effect.runSync(store.admit({ ...input, id: "interrupted" }))
+  Effect.runSync(
+    store.release(Effect.runSync(store.get(input.id))!.attemptId, true)
+  )
+  Effect.runSync(
+    store.claim(
+      { ...input, id: "interrupted" },
+      "command",
+      undefined,
+      crypto.randomUUID()
+    )
+  )
   Effect.runSync(new TerminalStore(db, observed).recover())
   Effect.runSync(new TerminalStore(db, observed).recover())
   expect(observed).toHaveBeenCalledTimes(2)
@@ -889,13 +920,15 @@ it("reports only newly committed terminal outcomes and restart interruptions", (
     id: "interrupted",
     status: "interrupted",
   })
+  for (const [run] of observed.mock.calls)
+    expect(run).toEqual(Schema.decodeUnknownSync(CommandRun)(run))
 })
 it("does not let failed telemetry change a committed command result", () => {
   const store = new TerminalStore(database(), () => {
     throw new Error("telemetry failed")
   })
   Effect.runSync(store.configure(0, true))
-  Effect.runSync(store.admit(input))
+  Effect.runSync(store.claim(input, "command", undefined, crypto.randomUUID()))
   expect(
     Effect.runSync(
       store.finish(input.id, { status: "succeeded", exitCode: 0, error: null })
@@ -908,7 +941,7 @@ it("retains a cancellation fence when outcome publication fails and observes onl
     observed = vi.fn(),
     store = new TerminalStore(db, observed)
   Effect.runSync(store.configure(0, true))
-  Effect.runSync(store.admit(input))
+  Effect.runSync(store.claim(input, "command", undefined, crypto.randomUUID()))
   db.run(
     "CREATE TRIGGER reject_cancelled_command BEFORE UPDATE ON terminal_runs WHEN json_extract(NEW.record,'$.status')='cancelled' BEGIN SELECT RAISE(ABORT,'completion unavailable'); END"
   )

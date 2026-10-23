@@ -84,3 +84,76 @@ it.effect(
       expect((yield* terminal.state()).busy).toBe(false)
     }).pipe(Effect.scoped)
 )
+
+it.effect(
+  "joins every independent cleanup and retains their defects before releasing occupancy",
+  () =>
+    Effect.gen(function* () {
+      const repository = new TerminalStore(database())
+      yield* repository.configure(0, true)
+      const calls: string[] = []
+      const runtimeDefect = new Error("runtime settlement defect")
+      const backupDefect = new Error("backup settlement defect")
+      const mark = (name: string) =>
+        Effect.sync(() => {
+          calls.push(name)
+        })
+      const runtime: TerminalRuntime = {
+        restore: () => Effect.void,
+        execute: () => Effect.succeed(0),
+        snapshot: () => Effect.succeed(new Uint8Array([1])),
+        importFile: () => Effect.void,
+        exportFile: () => Effect.succeed(new Uint8Array([1])),
+        openInteractive: () => Effect.die("Unexpected shell"),
+        close: () => mark("close"),
+        settle: () =>
+          mark("runtime").pipe(Effect.andThen(Effect.die(runtimeDefect))),
+      }
+      const backup = { key: "saved", sha256: "digest", size: 1, savedAt: 1 }
+      const services = yield* Layer.build(
+        terminalLayer({
+          repository,
+          runtime,
+          backups: {
+            read: () => Effect.succeed(new Uint8Array([1])),
+            write: () => Effect.succeed(backup),
+            settle: () =>
+              mark("backups").pipe(Effect.andThen(Effect.die(backupDefect))),
+          },
+          exports: {
+            read: () => Effect.succeed(new Uint8Array([1])),
+            write: () => Effect.succeed(backup),
+            settle: () => mark("exports"),
+          },
+          relay: () => {
+            throw new Error("Unexpected socket")
+          },
+          digest: () => Effect.succeed("digest"),
+        })
+      )
+      const terminal = yield* TerminalService.pipe(
+        Effect.provideContext(services)
+      )
+      const task = yield* terminal.start({
+        id: "cleanup-defects",
+        command: "true",
+      })
+      const exit = yield* Effect.exit(task.completion)
+      expect(exit._tag).toBe("Failure")
+      if (exit._tag === "Failure") {
+        const defects = exit.cause.reasons.flatMap((reason) =>
+          reason._tag === "Die" ? [reason.defect] : []
+        )
+        expect(defects).toContain(runtimeDefect)
+        expect(defects).toContain(backupDefect)
+      }
+      expect(calls).toEqual(["close", "runtime", "backups", "exports", "close"])
+      expect(yield* repository.get("cleanup-defects")).toMatchObject({
+        status: "succeeded",
+        occupancy: { state: "blocked" },
+      })
+      expect((yield* terminal.state()).cleanupError).toContain(
+        "cleanup could not be confirmed"
+      )
+    }).pipe(Effect.scoped)
+)
