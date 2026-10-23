@@ -589,7 +589,8 @@ it("completes foreground work despite blocked summaries, then delivers a ready b
         taskId: 73,
         route,
         memory: "",
-      }
+      },
+      Number.MAX_SAFE_INTEGER
     )
   ).handoff
   parentDone = true
@@ -626,6 +627,7 @@ it("completes foreground work despite blocked summaries, then delivers a ready b
         backgroundActive: () =>
           conversations.active().pipe(Effect.map((turn) => !!turn?.origin)),
         wakeConversation: () => Effect.promise(() => host.runner.wake()),
+        armBackground: () => Effect.void,
         wakeBackground: () => Effect.void,
         notify: () => Effect.sync(() => host.notifyConversation()),
         admission: {

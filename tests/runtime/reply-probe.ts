@@ -35,10 +35,11 @@ export async function probeReplies(
             body: "Reply",
             references: "",
           },
-          (await Effect.runPromise(email.settings())).generation
+          (await Effect.runPromise(email.settings())).generation,
+          Date.now() + 60_000
         )
       )
-      await Effect.runPromise(email.update(id, "queued", "waiting"))
+      await Effect.runPromise(email.prepared(id))
       await Effect.runPromise(
         whatsapp.configure(
           { operationId: crypto.randomUUID(), revision: 0, enabled: true },
@@ -56,10 +57,12 @@ export async function probeReplies(
             body: "Reply",
             timestamp: Date.now(),
           },
-          homeAgentId
+          homeAgentId,
+          {},
+          Date.now() + 60_000
         )
       )
-      await Effect.runPromise(whatsapp.update(id, "queued", "waiting"))
+      await Effect.runPromise(whatsapp.prepared(id))
     }
     const result = []
     for (const channel of ["email", "whatsapp"] as const) {
@@ -73,14 +76,6 @@ export async function probeReplies(
       const whatsappRecord = await Effect.runPromise(
         whatsapp.get(id).pipe(Effect.orDie)
       )
-      const update = (
-        from: "sending",
-        state: "sending" | "sent" | "failed" | "uncertain",
-        details: { delivery?: ReplyProgress; providerId?: string | null }
-      ) =>
-        channel === "email"
-          ? email.update(id, from, state, details).pipe(Effect.orDie)
-          : whatsapp.update(id, from, state, details).pipe(Effect.orDie)
       const progress: ReplyProgress = initial!.delivery ?? {
         version: 1,
         generation: (
@@ -106,12 +101,21 @@ export async function probeReplies(
         if (phase === 2)
           await Effect.runPromise(
             channel === "email"
-              ? email.retry(id, true, crypto.randomUUID()).pipe(Effect.orDie)
-              : whatsapp.retry(id, true, crypto.randomUUID()).pipe(Effect.orDie)
+              ? email
+                  .retry(id, true, crypto.randomUUID(), Date.now() + 60_000)
+                  .pipe(Effect.orDie)
+              : whatsapp
+                  .retry(id, true, crypto.randomUUID(), Date.now() + 60_000)
+                  .pipe(Effect.orDie)
           )
         const exit = await Effect.runPromiseExit(
           deliverReply(progress, {
-            claim: (delivery, from) =>
+            arm: () => Effect.void,
+            recover: (attemptId) =>
+              channel === "email"
+                ? email.recoverAttempt(id, attemptId).pipe(Effect.orDie)
+                : whatsapp.recoverAttempt(id, attemptId).pipe(Effect.orDie),
+            claim: (delivery, from, lease) =>
               channel === "email"
                 ? email
                     .claim(
@@ -119,7 +123,8 @@ export async function probeReplies(
                       "complete answer",
                       () => Effect.succeed(true),
                       delivery,
-                      from
+                      from,
+                      lease
                     )
                     .pipe(Effect.orDie)
                 : whatsapp
@@ -128,7 +133,8 @@ export async function probeReplies(
                       "complete answer",
                       () => Effect.succeed(true),
                       delivery,
-                      from
+                      from,
+                      lease
                     )
                     .pipe(Effect.orDie),
             send: (part) =>
@@ -140,14 +146,24 @@ export async function probeReplies(
                 )
                 return `provider-${db.all("SELECT body FROM fixture_reply_sends WHERE channel=?", channel).length}`
               }),
-            checkpoint: (delivery) =>
+            checkpoint: (delivery, attemptId) =>
               phase === 0 && delivery.receipts.length === 2
                 ? Effect.die(
                     "Synthetic lost checkpoint after provider acceptance"
                   )
-                : update("sending", "sending", { delivery }),
-            finish: (state, providerId) =>
-              update("sending", state, { providerId }),
+                : channel === "email"
+                  ? email.checkpoint(id, attemptId, delivery).pipe(Effect.orDie)
+                  : whatsapp
+                      .checkpoint(id, attemptId, delivery)
+                      .pipe(Effect.orDie),
+            finish: (state, providerId, attemptId) =>
+              channel === "email"
+                ? email
+                    .finish(id, attemptId, state, providerId, null)
+                    .pipe(Effect.orDie)
+                : whatsapp
+                    .finish(id, attemptId, state, providerId, null)
+                    .pipe(Effect.orDie),
           })
         )
         if (phase === 0 && !Exit.isFailure(exit))

@@ -366,3 +366,46 @@ it("keeps mixed sources in one globally bounded page when timestamps tie", () =>
   ).toEqual([])
   expect(JSON.stringify(candidates)).not.toContain("PRIVATE INPUT")
 })
+
+it("keeps unconfirmed background cleanup in attention and pending cleanup in active records", () => {
+  const { db } = fixture()
+  Effect.runSync(
+    db.use((orm) =>
+      orm.insert(backgroundHandoffs).values(
+        (["pending", "unconfirmed", "confirmed"] as const).map(
+          (stop_state, index) => ({
+            id: index + 1,
+            turn_id: `stopped-${index}`,
+            status: "cancelled",
+            stop_state,
+            handoff: JSON.stringify({
+              createdAt: Date.now(),
+              input: { objective: "Stopped task" },
+            }),
+          })
+        )
+      )
+    )
+  )
+  const all = Effect.runSync(activityEntries(db, bot, query, Date.now()))
+  expect(all.find((entry) => entry.reference === "1")).toMatchObject({
+    status: "stopping",
+    running: true,
+    attention: false,
+  })
+  expect(all.find((entry) => entry.reference === "2")).toMatchObject({
+    status: "stop-unconfirmed",
+    running: false,
+    attention: true,
+  })
+  expect(all.find((entry) => entry.reference === "3")).toMatchObject({
+    status: "cancelled",
+    running: false,
+    attention: false,
+  })
+  expect(
+    Effect.runSync(
+      activityEntries(db, bot, { ...query, filter: "attention" }, Date.now())
+    ).map((entry) => entry.reference)
+  ).toEqual(["2"])
+})

@@ -1,0 +1,19 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: expired recovery did not settle within one delayed native dispatch
+
+'queued' !== 'failed'
+
+    at file:///private/tmp/durable-pi-reply-negative-expiry.mjs:345:12
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 'queued',
+  expected: 'failed',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.21.0

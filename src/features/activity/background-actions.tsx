@@ -34,7 +34,9 @@ export function BackgroundActions({
           action="stop"
           active={
             !!group.background &&
-            !["delivered", "cancelled"].includes(group.background.delivery)
+            (group.background.stop === "pending" ||
+              group.background.stop === "unconfirmed" ||
+              !["delivered", "cancelled"].includes(group.background.delivery))
           }
         />
         <BackgroundAction
@@ -132,7 +134,10 @@ function BackgroundAction({
               ? "Retry stop"
               : "Retry connection"
             : action === "stop"
-              ? "Stop group"
+              ? group.background?.stop === "pending" ||
+                group.background?.stop === "unconfirmed"
+                ? "Retry stop"
+                : "Stop group"
               : "Retry connection"}
       </Button>
       {saved && (

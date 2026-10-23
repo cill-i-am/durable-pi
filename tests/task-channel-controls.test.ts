@@ -34,13 +34,14 @@ it("email controls bypass a held conversation and checkpoint their reply before 
       operationId: crypto.randomUUID(),
     })
   )
-  await run(records.receive(email, 1))
+  await run(records.receive(email, 1, Date.now() + 60_000))
   const admit = vi.fn(() => Effect.void)
   const control = vi.fn(() =>
     Effect.succeed("Stop requested for original-request.")
   )
   const send = vi.fn(() => Effect.succeed("provider-receipt"))
   const host = {
+    armReply: () => Effect.void,
     active: () => Effect.succeed(true),
     admit,
     turn: () => Effect.succeed(undefined),
@@ -70,17 +71,17 @@ it("a lost email checkpoint repeats only the exact original stop, never the newe
       operationId: crypto.randomUUID(),
     })
   )
-  await run(records.receive(email, 1))
-  const update = records.update.bind(records)
+  await run(records.receive(email, 1, Date.now() + 60_000))
+  const prepared = records.prepared.bind(records)
   let lose = true
-  vi.spyOn(records, "update").mockImplementation((...args) => {
-    if (lose && args[2] === "waiting") {
+  vi.spyOn(records, "prepared").mockImplementation((...args) => {
+    if (lose) {
       lose = false
       return Effect.fail(
         new EmailStorageError({ operation: "lost checkpoint" })
       )
     }
-    return update(...args)
+    return prepared(...args)
   })
   const stopped: string[] = []
   const control = vi.fn((record: { body: string }) =>
@@ -90,6 +91,7 @@ it("a lost email checkpoint repeats only the exact original stop, never the newe
     })
   )
   const pump = emailPump(records, {
+    armReply: () => Effect.void,
     active: () => Effect.succeed(true),
     admit: () => Effect.die("must not admit control"),
     turn: () => Effect.succeed(undefined),
@@ -121,13 +123,14 @@ it("WhatsApp controls retain the original routed agent and survive adapter recre
     body: "/status all",
     timestamp: Date.now(),
   }
-  await run(records.receive(input, homeAgentId))
+  await run(records.receive(input, homeAgentId, {}, Date.now() + 60_000))
   const control = vi.fn(() =>
     Effect.succeed("Personal assistant: original-request is running.")
   )
   const send = vi.fn(() => Effect.succeed("wamid.control"))
   const admit = vi.fn(() => Effect.void)
   const host = {
+    armReply: () => Effect.void,
     active: () => Effect.succeed(true),
     admit,
     turn: () => Effect.succeed(undefined),
@@ -162,13 +165,15 @@ it("attachment-bearing email remains ordinary conversation input even when its t
         body: "STATUS",
         files: ["00000000-0000-4000-8000-000000000001"],
       },
-      1
+      1,
+      Date.now() + 60_000
     )
   )
   const admit = vi.fn(() => Effect.void),
     control = vi.fn(() => Effect.succeed("status"))
   await run(
     emailPump(records, {
+      armReply: () => Effect.void,
       active: () => Effect.succeed(true),
       admit,
       control,
@@ -195,9 +200,11 @@ it("an old actor's already-admitted STATUS email keeps its original conversation
       operationId: crypto.randomUUID(),
     })
   )
-  await run(records.receive({ ...email, body: "STATUS all" }, 1))
+  await run(
+    records.receive({ ...email, body: "STATUS all" }, 1, Date.now() + 60_000)
+  )
   await run(conversations.admit({ operationId: email.id, text: "STATUS all" }))
-  await run(records.update(email.id, "queued", "waiting"))
+  await run(records.prepared(email.id))
   const turn = await run(conversations.get(email.id))
   if (!turn) throw new Error("Legacy conversation is missing")
   const control = vi.fn(() => Effect.succeed("new control reply"))
@@ -206,6 +213,7 @@ it("an old actor's already-admitted STATUS email keeps its original conversation
   )
   await run(
     emailPump(records, {
+      armReply: () => Effect.void,
       active: () => Effect.succeed(true),
       admit: () => Effect.die("already admitted"),
       turn: () =>

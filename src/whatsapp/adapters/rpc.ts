@@ -1,6 +1,6 @@
-import { Schema } from "effect"
+import { Effect, Schema } from "effect"
 
-import { nativeOperation } from "../../shared/interop"
+import { nativeFailure, nativeOperation } from "../../shared/interop"
 import { rpcOutcome } from "../../shared/rpc-outcome"
 import { FileId, FileSelection } from "../../workspace/files"
 import {
@@ -47,6 +47,11 @@ export const WhatsAppRequest = Schema.Union([
     id: IncomingWhatsApp.fields.id,
   }),
 ])
+const WhatsAppFailure = Schema.Union([
+  WhatsAppRejected,
+  WhatsAppStorageError,
+  WhatsAppUnavailable,
+])
 export const WhatsAppOutcome = rpcOutcome(
   Schema.Union([
     Schema.Boolean,
@@ -54,16 +59,37 @@ export const WhatsAppOutcome = rpcOutcome(
     FileId,
     WhatsAppMediaExport,
   ]),
-  Schema.Union([WhatsAppRejected, WhatsAppStorageError, WhatsAppUnavailable]),
+  WhatsAppFailure,
   "WhatsApp operation failed unexpectedly."
 )
 export interface WhatsAppRpc {
   whatsappV1: (input: typeof WhatsAppRequest.Type) => Promise<unknown>
 }
+const whatsappFailure = (cause: unknown, channel: "failure" | "rejection") => {
+  if (channel === "failure" || Schema.isSchemaError(cause)) throw cause
+  return new WhatsAppUnavailable()
+}
 export const whatsappNative = <T>(work: () => Promise<T>) =>
-  nativeOperation(work, (cause, channel) => {
-    if (channel === "failure" || Schema.isSchemaError(cause)) throw cause
-    return new WhatsAppUnavailable()
+  nativeOperation(work, whatsappFailure)
+
+const whatsappRemoteFailure = (
+  cause: unknown,
+  channel: "failure" | "rejection"
+) => {
+  const known = Schema.decodeUnknownOption(WhatsAppFailure)(cause)
+  return known._tag === "Some" ? known.value : whatsappFailure(cause, channel)
+}
+
+/** These remote RPCs expose no local resource or cancellation handle. A reply
+ * deadline may stop observing; remote acceptance remains correlated by the
+ * existing message/operation ID and must never be treated as confirmed. */
+export const whatsappRemote = <T>(work: () => Promise<T>) =>
+  Effect.suspend(() => {
+    const pending = work()
+    return Effect.tryPromise({
+      try: () => pending,
+      catch: (cause) => nativeFailure(cause, whatsappRemoteFailure),
+    }).pipe(Effect.catch((cause) => Effect.failCause(cause)))
   })
 export const whatsappRpc = (peer: WhatsAppRpc) => ({
   importMedia: (owner: string, id: string, media: WhatsAppMedia) =>

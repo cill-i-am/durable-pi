@@ -8,6 +8,7 @@ import {
 import {
   agentRpc,
   agentRpcNative,
+  observeAgentRpc,
   type AgentRpc,
 } from "../../agents/adapters/rpc"
 import { agentRuntimeReader } from "../../agents/adapters/statuses"
@@ -55,6 +56,11 @@ const native = <T>(start: (signal: AbortSignal) => Promise<T>) =>
     if (channel === "failure" || Schema.isSchemaError(cause)) throw cause
     return new AgentGatewayUnavailable()
   })
+
+// Task controls have a caller-owned deadline. These value-only remote
+// observations can end without acquiring a response or cancellation handle.
+const gatewayAgentCall = (path: string) =>
+  path === "tasks" || path === "tasks/stop" ? observeAgentRpc : agentRpcNative
 
 const forward = (peer: Peer, request: Request) =>
   Effect.gen(function* () {
@@ -242,9 +248,8 @@ export function agentGatewayProgram(
       )
     )
       return yield* forward(root, request)
-    const agent = yield* agentRpcNative(() =>
-      agentRpc(root).profile(decoded.value)
-    )
+    const callAgent = gatewayAgentCall(path)
+    const agent = yield* callAgent(() => agentRpc(root).profile(decoded.value))
     if (!agent) return new Response("Not found", { status: 404 })
     const target = env.AGENT.getByName(agentObjectName(owner, agent.id))
     if (path === "webhooks/incoming") {
@@ -261,7 +266,7 @@ export function agentGatewayProgram(
       )
         return new Response("Unauthorized", { status: 401 })
     }
-    yield* agentRpcNative(() =>
+    yield* callAgent(() =>
       agentRpc(target).configure(
         agent.id === homeAgentId ? "" : owner,
         agent,

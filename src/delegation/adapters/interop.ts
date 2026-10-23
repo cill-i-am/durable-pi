@@ -15,19 +15,22 @@ const decodeBackgroundFailure = Schema.decodeUnknownOption(DelegationFailure)
 /** Pi may reject with a complete local Cause. Preserve its failure meanings and
  * retain late defects while joining settlement after caller interruption. Native
  * DO RPC serialization remains a separate transport boundary. */
+export const backgroundFailure = (
+  cause: unknown,
+  channel: "failure" | "rejection"
+) => {
+  const error = Option.getOrUndefined(decodeBackgroundFailure(cause))
+  if (error) return error
+  if (channel === "failure") throw cause
+  return new DelegationFailure({
+    code: "unavailable",
+    message:
+      "Background task state could not be confirmed. Retry the same operation.",
+  })
+}
 export const backgroundNative = <T>(
   body: (signal: AbortSignal) => Promise<T>
-) =>
-  nativeOperation(body, (cause, channel) => {
-    const error = Option.getOrUndefined(decodeBackgroundFailure(cause))
-    if (error) return error
-    if (channel === "failure") throw cause
-    return new DelegationFailure({
-      code: "unavailable",
-      message:
-        "Background task state could not be confirmed. Retry the same operation.",
-    })
-  })
+) => nativeOperation(body, backgroundFailure)
 
 const unavailable = () =>
   new DelegationFailure({

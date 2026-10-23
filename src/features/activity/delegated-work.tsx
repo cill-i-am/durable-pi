@@ -175,7 +175,11 @@ export function DelegationGroup({
           <p className="text-sm text-foreground">{group.objective}</p>
           <p className="text-xs">
             {group.background
-              ? group.background.delivery
+              ? group.background.stop === "unconfirmed"
+                ? "Stop unconfirmed"
+                : group.background.stop === "pending"
+                  ? "Stop pending"
+                  : group.background.delivery
               : group.status === "completed"
                 ? "Report ready"
                 : group.status === "cancelled"
@@ -218,9 +222,13 @@ function childPresentation(child: Child, group: Group) {
     (unsettled || (!!group.detached && child.status === "completed"))
   const label =
     unsettled && group.status !== "working"
-      ? group.status === "cancelled"
-        ? "Stopped with parent"
-        : "Interrupted"
+      ? group.background?.stop === "unconfirmed"
+        ? "Stop unconfirmed"
+        : group.background?.stop === "pending"
+          ? "Stop pending"
+          : group.status === "cancelled"
+            ? "Stopped with parent"
+            : "Interrupted"
       : group.detached && running && child.status === "completed"
         ? "Idle · available for messages"
         : child.status

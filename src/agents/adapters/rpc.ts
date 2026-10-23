@@ -1,7 +1,7 @@
-import { Cause, Schema } from "effect"
+import { Cause, Effect, Schema } from "effect"
 
 import { RuntimeStatus } from "../../conversations/status"
-import { nativeOperation } from "../../shared/interop"
+import { nativeFailure, nativeOperation } from "../../shared/interop"
 import { rpcOutcome } from "../../shared/rpc-outcome"
 import { AgentProfileResponse } from "../contracts"
 import {
@@ -152,10 +152,22 @@ export function agentRpc(stub: AgentRpc) {
       ),
   }
 }
+const agentRpcFailure = (cause: unknown, channel: "failure" | "rejection") => {
+  const known = Schema.decodeUnknownOption(AgentFailure)(cause)
+  if (known._tag === "Some") return known.value
+  if (channel === "failure" || Schema.isSchemaError(cause)) throw cause
+  return new AgentSynchronizationError({ operation: "call agent owner" })
+}
 export const agentRpcNative = <T>(start: () => Promise<T>) =>
-  nativeOperation(start, (cause, channel) => {
-    const known = Schema.decodeUnknownOption(AgentFailure)(cause)
-    if (known._tag === "Some") return known.value
-    if (channel === "failure" || Schema.isSchemaError(cause)) throw cause
-    return new AgentSynchronizationError({ operation: "call agent owner" })
+  nativeOperation(start, agentRpcFailure)
+
+/** Bounded observation of independently owned remote profile/configuration
+ * work. Local transactions and resource cleanup retain the joined bridge. */
+export const observeAgentRpc = <T>(start: () => Promise<T>) =>
+  Effect.suspend(() => {
+    const pending = start()
+    return Effect.tryPromise({
+      try: () => pending,
+      catch: (cause) => nativeFailure(cause, agentRpcFailure),
+    }).pipe(Effect.catch((cause) => Effect.failCause(cause)))
   })

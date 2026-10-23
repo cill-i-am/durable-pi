@@ -61,6 +61,7 @@ function fixture() {
   const request = (signal?: AbortSignal, path = "state") =>
     new Request(`https://internal/api/agent/${path}?agent=${profile.id}`, {
       headers: { "x-owner-id": "owner" },
+      method: path === "tasks/stop" ? "POST" : "GET",
       signal,
     })
   const env = { AGENT: { getByName } }
@@ -140,53 +141,60 @@ it.each(["expected", "defect", "interrupt", "mixed"])(
     expect(f.target.fetch).not.toHaveBeenCalled()
   }
 )
-it("joins a late forwarded response and held unread-body cleanup after cancellation", async () => {
-  const f = fixture(),
-    entered = deferred<void>(),
-    reply = deferred<Response>(),
-    cancelling = deferred<void>(),
-    close = deferred<void>(),
-    controller = new AbortController()
-  f.target.fetch.mockImplementation(async (request) => {
-    expect(request.signal.aborted).toBe(false)
-    entered.resolve()
-    return reply.promise
-  })
-  let settled = false
-  const work = agentGateway(f.request(controller.signal), f.env, f.ctx).then(
-    () => {
-      settled = true
-    },
-    (cause: unknown) => {
-      settled = true
-      return cause
-    }
-  )
-  await entered.promise
-  controller.abort()
-  reply.resolve(
-    new Response(
-      new ReadableStream<Uint8Array>({
-        cancel: () => {
-          cancelling.resolve()
-          return close.promise
-        },
-      })
+it.each(["state", "tasks", "tasks/stop"])(
+  "joins a late forwarded %s response and held unread-body cleanup after cancellation",
+  async (path) => {
+    const f = fixture(),
+      entered = deferred<void>(),
+      reply = deferred<Response>(),
+      cancelling = deferred<void>(),
+      close = deferred<void>(),
+      controller = new AbortController()
+    f.target.fetch.mockImplementation(async (request) => {
+      expect(request.signal.aborted).toBe(false)
+      entered.resolve()
+      return reply.promise
+    })
+    let settled = false
+    const work = agentGateway(
+      f.request(controller.signal, path),
+      f.env,
+      f.ctx
+    ).then(
+      () => {
+        settled = true
+      },
+      (cause: unknown) => {
+        settled = true
+        return cause
+      }
     )
-  )
-  await cancelling.promise
-  expect(settled).toBe(false)
-  const defect = new Error("Private cleanup failure")
-  close.reject(defect)
-  const cause = await work
-  expect(Cause.isCause(cause) && Cause.hasInterrupts(cause)).toBe(true)
-  expect(
-    Cause.isCause(cause) &&
-      cause.reasons.some(
-        (reason) => reason._tag === "Die" && reason.defect === defect
+    await entered.promise
+    controller.abort()
+    reply.resolve(
+      new Response(
+        new ReadableStream<Uint8Array>({
+          cancel: () => {
+            cancelling.resolve()
+            return close.promise
+          },
+        })
       )
-  ).toBe(true)
-})
+    )
+    await cancelling.promise
+    expect(settled).toBe(false)
+    const defect = new Error("Private cleanup failure")
+    close.reject(defect)
+    const cause = await work
+    expect(Cause.isCause(cause) && Cause.hasInterrupts(cause)).toBe(true)
+    expect(
+      Cause.isCause(cause) &&
+        cause.reasons.some(
+          (reason) => reason._tag === "Die" && reason.defect === defect
+        )
+    ).toBe(true)
+  }
+)
 it("attempts socket accept, close and body cleanup even when each fails", async () => {
   const f = fixture(),
     entered = deferred<void>(),
@@ -394,5 +402,126 @@ it.each([false, true])(
     expect(response === original).toBe(!diagnostic)
     expect(f.target.configureBot).toHaveBeenCalledOnce()
     expect(await response.text()).toBe("data: unchanged\n\n")
+  }
+)
+
+for (const path of ["tasks", "tasks/stop"])
+  for (const stage of ["profile", "configure"])
+    it.each(["success", "rejection"])(
+      `aborts ${path} during held ${stage} before a late remote %s without forwarding the action`,
+      async (late) => {
+        const f = fixture(),
+          entered = deferred<void>(),
+          reply = deferred<AgentProfile>(),
+          controller = new AbortController()
+        if (stage === "profile")
+          f.root.agentProfile.mockImplementation(() => {
+            entered.resolve()
+            return reply.promise
+          })
+        else
+          f.target.configureBot.mockImplementation(() => {
+            entered.resolve()
+            return reply.promise.then(() => undefined)
+          })
+        const running = agentGateway(
+          f.request(controller.signal, path),
+          f.env,
+          f.ctx
+        ).catch((cause: unknown) => cause)
+        await entered.promise
+        controller.abort()
+        // This must settle while the independently owned RPC remains pending.
+        const cause = await running
+        expect(Cause.isCause(cause) && Cause.hasInterrupts(cause)).toBe(true)
+        expect(f.target.fetch).not.toHaveBeenCalled()
+        if (stage === "profile")
+          expect(f.target.configureBot).not.toHaveBeenCalled()
+        if (late === "success") reply.resolve(profile)
+        else reply.reject(new Error("Late task RPC rejection"))
+        await reply.promise.catch(() => undefined)
+        await Promise.all(f.owned)
+        await Promise.resolve()
+        expect(f.target.fetch).not.toHaveBeenCalled()
+        expect(f.root.agentProfile).toHaveBeenCalledOnce()
+        if (stage === "profile")
+          expect(f.target.configureBot).not.toHaveBeenCalled()
+        else expect(f.target.configureBot).toHaveBeenCalledOnce()
+      }
+    )
+
+for (const path of ["tasks", "tasks/stop"])
+  it.each(["profile", "configure"])(
+    `preserves the full active ${path} %s failure Cause`,
+    async (stage) => {
+      const f = fixture(),
+        error = new AgentStorageError(),
+        defect = new Error("Task RPC defect"),
+        original = Cause.fromReasons([
+          Cause.makeFailReason(error),
+          Cause.makeDieReason(defect),
+          Cause.makeInterruptReason(73),
+        ])
+      Object.assign(stage === "profile" ? f.root : f.target, {
+        agentV1: () => Promise.reject(original),
+      })
+      const cause: unknown = await agentGateway(
+        f.request(undefined, path),
+        f.env,
+        f.ctx
+      ).catch((cause: unknown) => cause)
+      expect(Cause.isCause(cause)).toBe(true)
+      if (Cause.isCause(cause)) {
+        expect(Cause.hasInterrupts(cause)).toBe(true)
+        expect(
+          cause.reasons.some(
+            (reason) => reason._tag === "Die" && reason.defect === defect
+          )
+        ).toBe(true)
+        expect(
+          cause.reasons.some(
+            (reason) =>
+              reason._tag === "Die" &&
+              Cause.isReason(reason.defect) &&
+              Cause.isFailReason(reason.defect) &&
+              reason.defect.error instanceof AgentStorageError
+          )
+        ).toBe(true)
+        expect(cause.reasons).toHaveLength(3)
+      }
+      expect(f.target.fetch).not.toHaveBeenCalled()
+      expect(f.target.configureBot).not.toHaveBeenCalled()
+    }
+  )
+
+it.each(["tasks/history", "tasks/stop/extra"])(
+  "retains joined configuration for non-task route %s",
+  async (path) => {
+    const f = fixture(),
+      entered = deferred<void>(),
+      reply = deferred<void>(),
+      controller = new AbortController()
+    f.target.configureBot.mockImplementation(() => {
+      entered.resolve()
+      return reply.promise
+    })
+    let settled = false
+    const running = agentGateway(
+      f.request(controller.signal, path),
+      f.env,
+      f.ctx
+    )
+      .catch((cause: unknown) => cause)
+      .finally(() => {
+        settled = true
+      })
+    await entered.promise
+    controller.abort()
+    await Promise.resolve()
+    expect(settled).toBe(false)
+    reply.resolve()
+    const cause = await running
+    expect(Cause.isCause(cause) && Cause.hasInterrupts(cause)).toBe(true)
+    expect(f.target.fetch).not.toHaveBeenCalled()
   }
 )

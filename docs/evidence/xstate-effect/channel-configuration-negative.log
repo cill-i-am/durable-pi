@@ -1,0 +1,45 @@
+Negative control: remove email CONFIGURE cancel-pending emission.
+Source SHA256 before: 386056d662e65bf8a7d6e6f2b222425d6f3e069ec6314f48417c2a9a3ecca433
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-effect-standard/durable-pi
+
+ ❯ tests/channel-configuration.test.ts (15 tests | 1 failed | 13 skipped) 107ms
+   ❯ email configuration (5)
+     × cancels only queued/waiting replies in the same configuration commit, preserving a live sender 61ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/channel-configuration.test.ts > email configuration > cancels only queued/waiting replies in the same configuration commit, preserving a live sender
+AssertionError: expected [ Array(4) ] to deeply equal [ 'cancelled', 'cancelled', …(2) ]
+
+- Expected
++ Received
+
+  [
+-   "cancelled",
+-   "cancelled",
++   "queued",
++   "waiting",
+    "sending",
+    "failed",
+  ]
+
+ ❯ tests/channel-configuration.test.ts:176:43
+    174|     f.configure(disable)
+    175|     const after = f.rows()
+    176|     expect(after.map((row) => row.state)).toEqual([
+       |                                           ^
+    177|       "cancelled",
+    178|       "cancelled",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 passed | 13 skipped (15)
+   Start at  11:06:55
+   Duration  489ms (import 55%, tests 27%, transform 15%, setup 2%, worker 1%)
+
+
+Exit: 1
+Source restored byte-for-byte.

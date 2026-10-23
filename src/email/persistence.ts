@@ -1,13 +1,12 @@
 import type { Effect } from "effect"
 
-import type { ReplyProgress } from "../replies/contracts"
+import type { ReplyProgress, ReplyLease, ReplyWork } from "../replies/contracts"
 import type {
   ConfigureEmail,
   EmailFailure,
   EmailSettings,
   EmailRecord,
   IncomingEmail,
-  EmailDelivery,
 } from "./contracts"
 
 export interface EmailPersistence {
@@ -19,14 +18,16 @@ export interface EmailPersistence {
   notice: (
     parent: EmailRecord,
     key: string,
-    reply: string
+    reply: string,
+    discoveryDeadline: number
   ) => Effect.Effect<void, EmailFailure>
   claim: (
     id: string,
     reply: string,
     allowed: () => Effect.Effect<boolean, EmailFailure>,
     delivery?: ReplyProgress,
-    from?: "waiting" | "sending"
+    from?: "waiting" | "sending",
+    lease?: ReplyLease
   ) => Effect.Effect<boolean, EmailFailure>
   settings: () => Effect.Effect<EmailSettings, EmailFailure>
   configure: (
@@ -37,17 +38,39 @@ export interface EmailPersistence {
   pending: () => Effect.Effect<readonly EmailRecord[], EmailFailure>
   receive: (
     input: IncomingEmail,
-    generation: number
+    generation: number,
+    discoveryDeadline: number
   ) => Effect.Effect<boolean, EmailFailure>
-  update: (
+  prepared: (
     id: string,
-    from: EmailDelivery,
-    state: EmailDelivery,
-    details?: {
-      reply?: string
-      delivery?: ReplyProgress
-      error?: string | null
-      providerId?: string | null
-    }
+    reply?: string,
+    revision?: number
   ) => Effect.Effect<boolean, EmailFailure>
+  cancel: (id: string, error: string) => Effect.Effect<boolean, EmailFailure>
+  checkpoint: (
+    id: string,
+    attemptId: string,
+    delivery: ReplyProgress
+  ) => Effect.Effect<boolean, EmailFailure>
+  finish: (
+    id: string,
+    attemptId: string,
+    state: "sent" | "failed" | "uncertain",
+    providerId: string | null,
+    error: string | null
+  ) => Effect.Effect<boolean, EmailFailure>
+  recoverAttempt: (
+    id: string,
+    attemptId: string
+  ) => Effect.Effect<boolean, EmailFailure>
+  recover: (force?: boolean) => Effect.Effect<void, EmailFailure>
+  getPendingWork: (
+    id: string
+  ) => Effect.Effect<ReplyWork<EmailRecord> | undefined, EmailFailure>
+  renewWork: (
+    id: string,
+    revision: number,
+    deadline: number
+  ) => Effect.Effect<boolean, EmailFailure>
+  nextRecovery: () => Effect.Effect<number | undefined, EmailFailure>
 }

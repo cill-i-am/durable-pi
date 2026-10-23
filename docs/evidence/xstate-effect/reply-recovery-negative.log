@@ -1,0 +1,69 @@
+Negative control: remove the owned-attempt recovery finalizer. Both channel same-instance tests must fail with sending rather than uncertain.
+
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-effect-standard/durable-pi
+
+ ❯ tests/reply-recovery.test.ts (16 tests | 2 failed | 14 skipped) 97ms
+   ❯ email reply recovery (8)
+     × reconciles provider acceptance followed by a lost checkpoint in the same instance without resending 62ms
+   ❯ whatsapp reply recovery (8)
+     × reconciles provider acceptance followed by a lost checkpoint in the same instance without resending 33ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/reply-recovery.test.ts > email reply recovery > reconciles provider acceptance followed by a lost checkpoint in the same instance without resending
+AssertionError: expected { …(16) } to match object { state: 'uncertain', …(1) }
+(14 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "delivery": {
+      "receipts": [],
+    },
+-   "state": "uncertain",
++   "state": "sending",
+  }
+
+ ❯ tests/reply-recovery.test.ts:239:30
+    237|       f.faults.checkpoint = 1
+    238|       await expect(f.deliver()).rejects.toThrow("checkpoint failed")
+    239|       expect(await f.read()).toMatchObject({
+       |                              ^
+    240|         state: "uncertain",
+    241|         delivery: { receipts: [] },
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/reply-recovery.test.ts > whatsapp reply recovery > reconciles provider acceptance followed by a lost checkpoint in the same instance without resending
+AssertionError: expected { …(20) } to match object { state: 'uncertain', …(1) }
+(18 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "delivery": {
+      "receipts": [],
+    },
+-   "state": "uncertain",
++   "state": "sending",
+  }
+
+ ❯ tests/reply-recovery.test.ts:239:30
+    237|       f.faults.checkpoint = 1
+    238|       await expect(f.deliver()).rejects.toThrow("checkpoint failed")
+    239|       expect(await f.read()).toMatchObject({
+       |                              ^
+    240|         state: "uncertain",
+    241|         delivery: { receipts: [] },
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 14 skipped (16)
+   Start at  09:49:51
+   Duration  470ms (import 54%, tests 26%, transform 17%, setup 2%, worker 1%)
+
