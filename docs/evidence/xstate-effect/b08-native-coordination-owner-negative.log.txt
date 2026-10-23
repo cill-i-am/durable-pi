@@ -1,0 +1,18 @@
+service fixture: The compatibility flag nodejs_compat became the default as of 2026-08-04 so does not need to be specified anymore.
+
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Native admission must settle before abort and Stop acknowledgement: ["admitted:delegation:7:7","submit-held","abort-started","abort-acknowledged","stop-returned","admitted:623e96fb-b675-4040-bfb7-fcc0fe6c6fc1"]
+    at file:///Users/cillianbarron/.codex/worktrees/xstate-review-stack/durable-pi/scripts/test-coordination-runtime.mjs:191:3
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v24.21.0

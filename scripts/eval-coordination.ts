@@ -47,6 +47,7 @@ const declarations = coordinationTools(
       agents: unused,
       latest: unused,
       deliver: unused,
+      prearm: unused,
       wake: unused,
     }
   )
@@ -61,6 +62,11 @@ const delegation: Delegations = {
   root: noWork,
   request: noWork,
   reconcile: noWork,
+  revoke: noWork,
+  nextWake: noWork,
+  restore: noWork,
+  exhaustRecovery: noWork,
+  deliverMessage: noWork,
 }
 declarations.push(delegationTool(delegation, unused, unused, { wake: unused }))
 const tools: Tool[] = declarations.map(({ name, description, parameters }) => ({

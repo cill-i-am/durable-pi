@@ -16,9 +16,12 @@ import {
   piBackgroundLedger,
 } from "../src/delegation/adapters/background-pi"
 import {
-  acceptBackgroundControl,
+  migrateBackgroundState,
   backgroundControlId,
+  backgroundInitialId,
 } from "../src/delegation/background-task-domain"
+import { makeBackgroundTaskOwner } from "../src/delegation/background-task-owner"
+import { advanceBackgroundTask } from "../src/delegation/background-task.machine"
 import { makeBackgroundTasks } from "../src/delegation/background-tasks"
 import { DelegationFailure, type Control } from "../src/delegation/contracts"
 import { resolveRoute } from "../src/inference/policy"
@@ -105,7 +108,7 @@ it.effect(
                 at = yield* Clock.currentTimeMillis
               const pin = { ...handoff(), memory, createdAt: at }
               const child = yield* tx.createChild(pin, pin.input.tasks[0]!)
-              ;(yield* tx.state()).value = {
+              ;(yield* tx.state()).value = migrateBackgroundState({
                 handoff: pin,
                 children: [{ ...child, requests: 0, stopped: false }],
                 revision: 0,
@@ -113,7 +116,7 @@ it.effect(
                 sealed: false,
                 controls: [],
                 applied: [],
-              }
+              })
               return { memory, at }
             })
           )
@@ -139,7 +142,7 @@ it.effect(
               const pin = handoff(),
                 child = yield* tx.createChild(pin, pin.input.tasks[0]!)
               allocated = child.id
-              ;(yield* tx.state()).value = {
+              ;(yield* tx.state()).value = migrateBackgroundState({
                 handoff: pin,
                 children: [{ ...child, requests: 0, stopped: false }],
                 revision: 0,
@@ -147,7 +150,7 @@ it.effect(
                 sealed: false,
                 controls: [],
                 applied: [],
-              }
+              })
               return yield* new DelegationFailure({
                 code: "invalid",
                 message: "Reject native admission",
@@ -181,7 +184,7 @@ it.effect(
         expect((yield* ledger.state())!.children[0]!.requests).toBe(12)
         yield* TestClock.adjust(10000)
         yield* app.advance()
-        expect((yield* ledger.state())?.stopped).toBe(true)
+        expect((yield* ledger.state())?.authority).toBe("revoked")
         expect((yield* ledger.state())!.children[0]!.requests).toBe(12)
       })
     )
@@ -265,7 +268,7 @@ it.effect(
             "cancelled"
           )
         ).toBe(true)
-        expect((yield* ledger.state())!.children[0]!.stopped).toBe(true)
+        expect((yield* ledger.state())!.children[0]!.authority).toBe("revoked")
       })
     )
 )
@@ -300,8 +303,13 @@ it.effect(
           authority
         )
         yield* app.initialize(handoff())
-        yield* app.advance()
         const child = (yield* ledger.state())!.children[0]!
+        yield* ledger.submit(
+          child.id,
+          handoff().input.tasks[0]!.task,
+          backgroundInitialId(child.id),
+          false
+        )
         const input: Control = {
           groupId: 97,
           childId: child.id,
@@ -349,16 +357,16 @@ it.effect(
                     Effect.gen(function* () {
                       const document = yield* tx.state(),
                         current = document.value!
-                      document.value = acceptBackgroundControl(
-                        current,
-                        {
+                      document.value = advanceBackgroundTask(current, {
+                        type: "CONTROL",
+                        input: {
                           groupId: 97,
                           childId: current.children[0]!.id,
                           operationId: crypto.randomUUID(),
                           action: { type: "steer", text: "Later constraints" },
                         },
-                        0
-                      )
+                        now: 0,
+                      })
                     })
                   )
                 }
@@ -377,7 +385,7 @@ it.effect(
         )
         yield* app.initialize(handoff())
         expect((yield* app.advance()).status).toBe("working")
-        expect((yield* ledger.state())!.sealed).toBe(false)
+        expect((yield* ledger.state())!.outcome).toBe("working")
         expect((yield* ledger.state())!.controls).toHaveLength(1)
       })
     )
@@ -522,3 +530,362 @@ test("already cancelled initialization allocates no durable background state", a
     )
   )
 })
+
+// Stop revokes immediately but joins an already owned native admission before acknowledging cleanup.
+test.each(["held-dispatch", "stop-first"] as const)(
+  "remote native dispatch and Stop retain one owner: %s",
+  async (ordering) => {
+    await Effect.runPromise(
+      fixture((h) =>
+        Effect.promise(async () => {
+          let markEntered!: () => void
+          let releaseSubmit!: () => void
+          const entered = new Promise<void>((resolve) => {
+            markEntered = resolve
+          })
+          const held = new Promise<void>((resolve) => {
+            releaseSubmit = resolve
+          })
+          const trace: string[] = []
+          const owner = makeBackgroundTaskOwner()
+          let markRevoked!: () => void
+          const revoked = new Promise<void>((resolve) => {
+            markRevoked = resolve
+          })
+          const ledger = piBackgroundLedger(async () => h, {
+            submit: async (child, text, requestId, steer) => {
+              const conversation = (await h.conversation(
+                child as ConversationId,
+                context
+              ))!
+              // This barrier is inside the actual native bridge, after all
+              // BackgroundTasks state/authority reads and before Pi admission.
+              trace.push("bridge-entered")
+              markEntered()
+              await held
+              trace.push("native-submit-called")
+              const receipt = await conversation.submit(
+                {
+                  type: "input",
+                  content: text,
+                  requestId,
+                  whenBusy: steer ? "steer" : "followUp",
+                },
+                context
+              )
+              trace.push("native-submit-accepted")
+              return receipt
+            },
+            abort: async (child) => {
+              await (await h.conversation(
+                child as ConversationId,
+                context
+              ))!.abort(context)
+              trace.push("native-abort-joined")
+            },
+          })
+          const app = makeBackgroundTasks(
+            {
+              ...ledger,
+              atomic: (body) =>
+                ledger.atomic(body).pipe(
+                  Effect.tap(() =>
+                    ledger.state().pipe(
+                      Effect.tap((state) =>
+                        Effect.sync(() => {
+                          if (state?.authority === "revoked") markRevoked()
+                        })
+                      )
+                    )
+                  )
+                ),
+            },
+            authority,
+            Effect.succeed(0),
+            owner
+          )
+          await Effect.runPromise(app.initialize(handoff()))
+          const initial = (await Effect.runPromise(ledger.state()))!
+          const child = initial.children[0]!
+          const requestId = backgroundInitialId(child.id)
+          const nativeSubmission = () =>
+            h.commit(
+              (tx) =>
+                tx.submissionByRequest(child.id as ConversationId, requestId),
+              context
+            )
+          let advancing: Promise<unknown> | undefined
+          try {
+            if (ordering === "stop-first") {
+              await Effect.runPromise(app.stop())
+              trace.push("stop-returned")
+              advancing = Effect.runPromise(app.advance())
+              await advancing
+              expect(trace).not.toContain("bridge-entered")
+              expect(trace).not.toContain("native-submit-called")
+              expect(await nativeSubmission()).toBeUndefined()
+            } else {
+              advancing = Effect.runPromise(app.advance())
+              await Promise.race([
+                entered,
+                advancing.then(() => {
+                  throw new Error(
+                    "Advance finished before entering held submit"
+                  )
+                }),
+              ])
+              expect(await nativeSubmission()).toBeUndefined()
+              const stopping = Effect.runPromise(app.stop()).then(() => {
+                trace.push("stop-returned")
+              })
+              await revoked
+              expect(await Effect.runPromise(owner.available)).toBe(false)
+              expect((await Effect.runPromise(ledger.state()))!.authority).toBe(
+                "revoked"
+              )
+              expect(trace).toEqual(["bridge-entered"])
+              expect(await nativeSubmission()).toBeUndefined()
+              releaseSubmit()
+              await Promise.all([advancing, stopping])
+              expect(await nativeSubmission()).toMatchObject({
+                requestId,
+                type: "input",
+              })
+              expect(trace).toEqual([
+                "bridge-entered",
+                "native-submit-called",
+                "native-submit-accepted",
+                "native-abort-joined",
+                "stop-returned",
+              ])
+              expect(
+                (await Effect.runPromise(ledger.state()))!.children[0]!.stop
+              ).toBe("confirmed")
+            }
+            const final = (await Effect.runPromise(ledger.state()))!
+            expect(final.authority).toBe("revoked")
+            expect(final.children[0]!.id).toBe(child.id)
+            expect(final.children[0]!.provider).toBe(child.provider)
+            expect(final.children[0]!.requests).toBe(0)
+          } finally {
+            // Release and join the in-flight call before fixture closes Pi,
+            // including on an assertion failure. The original failure escapes.
+            releaseSubmit()
+            if (advancing) await advancing.catch(() => undefined)
+          }
+        })
+      )
+    )
+  }
+)
+
+test("Stop while steering checks its native predecessor denies the stale dispatch", async () => {
+  await Effect.runPromise(
+    fixture((h, ledger) =>
+      Effect.promise(async () => {
+        let entered!: () => void, release!: () => void
+        const checking = new Promise<void>((resolve) => {
+          entered = resolve
+        })
+        const hold = new Promise<void>((resolve) => {
+          release = resolve
+        })
+        const submitted: string[] = []
+        const owner = makeBackgroundTaskOwner()
+        let markRevoked!: () => void
+        const revoked = new Promise<void>((resolve) => {
+          markRevoked = resolve
+        })
+        const app = makeBackgroundTasks(
+          {
+            ...ledger,
+            atomic: (body) =>
+              ledger.atomic(body).pipe(
+                Effect.tap(() =>
+                  ledger.state().pipe(
+                    Effect.tap((state) =>
+                      Effect.sync(() => {
+                        if (state?.authority === "revoked") markRevoked()
+                      })
+                    )
+                  )
+                )
+              ),
+            hasSubmission: (child, request) =>
+              ledger.hasSubmission(child, request).pipe(
+                Effect.flatMap((found) =>
+                  Effect.promise(async () => {
+                    entered()
+                    await hold
+                    return found
+                  })
+                )
+              ),
+            submit: (child, text, request, steer) =>
+              Effect.sync(() => submitted.push(request)).pipe(
+                Effect.andThen(ledger.submit(child, text, request, steer))
+              ),
+          },
+          authority,
+          Effect.succeed(0),
+          owner
+        )
+        await Effect.runPromise(app.initialize(handoff()))
+        const child = (await Effect.runPromise(ledger.state()))!.children[0]!
+        await Effect.runPromise(
+          ledger.submit(
+            child.id,
+            handoff().input.tasks[0]!.task,
+            backgroundInitialId(child.id),
+            false
+          )
+        )
+        const input: Control = {
+          groupId: 97,
+          childId: child.id,
+          operationId: crypto.randomUUID(),
+          action: { type: "steer", text: "Must not launch after Stop" },
+        }
+        const steering = Effect.runPromise(app.control(input))
+        let stopping: Promise<void> | undefined
+        try {
+          await checking
+          stopping = Effect.runPromise(app.stop())
+          await revoked
+          expect(await Effect.runPromise(owner.available)).toBe(false)
+          expect((await Effect.runPromise(ledger.state()))!.authority).toBe(
+            "revoked"
+          )
+          release()
+          await Promise.all([steering, stopping])
+          expect(submitted).toEqual([])
+          expect(
+            await h.commit(
+              (tx) =>
+                tx.submissionByRequest(
+                  child.id as ConversationId,
+                  backgroundControlId(input)
+                ),
+              context
+            )
+          ).toBeUndefined()
+          expect(
+            (await Effect.runPromise(ledger.state()))!.applied
+          ).not.toContain(input.operationId)
+          expect(
+            (await Effect.runPromise(ledger.state()))!.children[0]!.stop
+          ).toBe("confirmed")
+        } finally {
+          release()
+          await Promise.allSettled([steering, ...(stopping ? [stopping] : [])])
+        }
+      })
+    )
+  )
+})
+
+it.effect(
+  "native Stop failure retains revoked authority and an explicit retryable obligation",
+  () =>
+    fixture((_h, ledger) =>
+      Effect.gen(function* () {
+        let unavailable = true
+        const app = makeBackgroundTasks(
+          {
+            ...ledger,
+            abort: (child) =>
+              unavailable
+                ? Effect.fail(
+                    new DelegationFailure({
+                      code: "unavailable",
+                      message: "Lost native Stop acknowledgement",
+                    })
+                  )
+                : ledger.abort(child),
+          },
+          authority
+        )
+        yield* app.initialize(handoff())
+        const child = (yield* ledger.state())!.children[0]!
+        expect(
+          failedWith(yield* app.stop().pipe(Effect.exit), "unavailable")
+        ).toBe(true)
+        expect((yield* ledger.state())!.children[0]).toMatchObject({
+          id: child.id,
+          provider: child.provider,
+          authority: "revoked",
+          stop: "unconfirmed",
+          stopAttempt: 1,
+        })
+        expect((yield* app.read()).children[0]).toMatchObject({
+          status: "stopping",
+          error:
+            "Native Stop remains unconfirmed. Retry Stop to reconcile cleanup.",
+        })
+        expect(
+          failedWith(
+            yield* app.request(child.provider).pipe(Effect.exit),
+            "cancelled"
+          )
+        ).toBe(true)
+        unavailable = false
+        yield* app.stop()
+        expect((yield* ledger.state())!.children[0]).toMatchObject({
+          id: child.id,
+          authority: "revoked",
+          stop: "confirmed",
+          stopAttempt: 2,
+        })
+      })
+    )
+)
+
+it.effect(
+  "deadline crossing during native observation joins newly required cleanup",
+  () =>
+    fixture((_h, ledger) =>
+      Effect.gen(function* () {
+        let at = 0
+        const aborted: number[] = []
+        const app = makeBackgroundTasks(
+          {
+            ...ledger,
+            facts: (state) =>
+              ledger.facts(state).pipe(
+                Effect.tap(() =>
+                  Effect.sync(() => {
+                    at = handoff().deadline
+                  })
+                )
+              ),
+            abort: (child) =>
+              ledger.abort(child).pipe(
+                Effect.tap(() =>
+                  Effect.sync(() => {
+                    aborted.push(child)
+                  })
+                )
+              ),
+          },
+          authority,
+          Effect.sync(() => at)
+        )
+        yield* app.initialize(handoff())
+        const child = (yield* ledger.state())!.children[0]!
+        yield* app.advance()
+        expect(aborted).toEqual([child.id])
+        expect(yield* ledger.state()).toMatchObject({
+          outcome: "cancelled",
+          authority: "revoked",
+          children: [
+            {
+              id: child.id,
+              authority: "revoked",
+              stop: "confirmed",
+              stopAttempt: 1,
+            },
+          ],
+        })
+      })
+    )
+)

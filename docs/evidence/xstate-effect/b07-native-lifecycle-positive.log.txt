@@ -1,0 +1,7 @@
+WAIT held native submit: cross the real thirty-second owner deadline before Stop and a replacement pass.
+PASS native held submit: real lease expiry cannot steal ownership; Stop revokes model authority, waits for joined handoff, then confirms one abort without another submission.
+PASS native held abort: duplicate pass and wake retain one Stop owner until actual Pi abort joins.
+WAIT native Communication SIGKILL recovery: health-only startup, no object request until the actual sixty-second discovery lease expires.
+PASS native admission no-request recovery: the real sixty-second retained discovery dispatches one original envelope and commits exactly one matching recipient inbox receipt.
+PASS native result no-request recovery: accepted native result reconciles after lost acknowledgement with the same receipt, one continuation and no model call or resubmission.
+PASS second SIGKILL: exact completed task and delivery rows retained; continuation remains consumed once. All model responses are synthetic.

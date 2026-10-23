@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-10-23T14:52:06.067518+00:00",
+  "baseCommit": "8304a30d3f9a3e5284a255bb1cabc321c767f2a6",
+  "sourceCaptureNote": "The base is inherited B09. These hashes identify the uncommitted family-revocation correction and composed worker, not a published commit. Existing evidence remains unchanged; raw new evidence is copied byte-for-byte with .txt suffixes.",
+  "sources": {
+    "src/delegation/delegations.ts": "937539312cd4d97dda8a4f4d9bf7d2349e5ba4eaf93ef249330f4723f9409a2b",
+    "src/delegation/service.ts": "5e1e68bf22e61e77b20429639a53e2d8af8430230c8b0584a19a68435a757d21",
+    "tests/delegation-family-revocation.test.ts": "be15a5777269f920ace17d31d1e5cd6db326416aeb10104ab5a3a6fcedce8140",
+    "tests/family-model-authority.test.ts": "dbeb2098293bf2f92cb51aed195394bc61314aa46abb09ae6cfbe56989d93a4a",
+    "src/agent/worker.ts": "9f5c24ebb1275e19af08487728829c5e2dfcfcaaf26fea5d6cac26fc37111aca"
+  },
+  "positive": {
+    "tests": 35,
+    "files": 4,
+    "result": "passed",
+    "reproductionCommand": "PATH=/opt/homebrew/opt/node@24/bin:$PATH node node_modules/vitest/vitest.mjs run --configLoader native --cache false tests/delegation-family-revocation.test.ts tests/delegation-recovery.test.ts tests/delegation-held-dispatch.test.ts tests/family-model-authority.test.ts --maxWorkers=2"
+  },
+  "negative": {
+    "transform": "if (parent.group) yield* revokeGroup(tx, parent.group) -> if (false) yield* revokeGroup(tx, parent.group)",
+    "selectedTest": "known family revocation stops a live detached child after its actual parent completed",
+    "result": "expected assertion failure: open/active instead of closing/stopping"
+  },
+  "independentReview": {
+    "status": "clear",
+    "reportedTests": 20,
+    "files": [
+      "tests/delegation-family-revocation.test.ts",
+      "tests/family-model-authority.test.ts"
+    ],
+    "probeResult": "One abort closes/stops the original group/child; repeated reconcile leaves abort count at one.",
+    "sourceHashVerified": "5e1e68bf22e61e77b20429639a53e2d8af8430230c8b0584a19a68435a757d21"
+  },
+  "limits": [
+    "The new revocation regression uses actual Node SQLite/Pi and synthetic model responses. The worker await/order barrier is unit coverage.",
+    "The independent small probe seeds an existing group; the five-test regression additionally proves revocation of a live detached child after its actual parent completed.",
+    "Earlier native Coordination proof covers actual Lifecycle/DO SQLite/Pi ownership and restart with synthetic authority/providers. It does not constitute full PersonalAgent authentication or remote BackgroundGroup RPC composition.",
+    "Current composed static/unit/build/native gates passed above inherited B09. The 92 browser journeys, passkeys and two-build recovery belong to the earlier 0cf6861 checkpoint; frontend sources are unchanged.",
+    "PR publication and exact-head hosted CI remain open."
+  ],
+  "reviewedHandoff": {
+    "original": "/private/tmp/b08-family-revocation-handoff.md",
+    "sha256": "23f074814704d05b5675d14ea35f398aac48eb6ed7203f273d2a55c8094017a3"
+  },
+  "artifacts": [
+    {
+      "path": "docs/evidence/xstate-effect/b08-family-revocation-positive.log.txt",
+      "original": "/private/tmp/b08-family-revocation-positive.log",
+      "bytes": 220,
+      "sha256": "d89ca55107e852ce57f56aeb64db7f6006e787ef663253447651475176c55200",
+      "scope": "35 tests in four files passed against actual Node SQLite/Pi adapters and worker composition unit tests."
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b08-family-revocation-negative.log.txt",
+      "original": "/private/tmp/b08-family-revocation-negative.log",
+      "bytes": 1494,
+      "sha256": "f2ea1d2ba97429c82a404890d35a6414a3cb89c3f7160d62ee197a9a1a357419",
+      "scope": "Expected failure: omitting only durable explicit revocation leaves the live child active and group open."
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b08-family-revocation-negative.config.mts.txt",
+      "original": "/private/tmp/b08-family-revocation-check/negative.config.mts",
+      "bytes": 564,
+      "sha256": "fc4f8153ea58e8d3666470f6045460123934874abfabd1f382b62ee3ae0bfb94",
+      "scope": "Isolated Vitest transform; repository source was not mutated."
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b08-family-revocation-source.sha256.txt",
+      "original": "/private/tmp/b08-family-revocation-sha256.txt",
+      "bytes": 400,
+      "sha256": "4c2519ab39c01fcfd76bdd01e1391f3a9b80c027a30bba2613bd3ab64574d566",
+      "scope": "Frozen four-file correction hashes, rechecked during this capture."
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b08-family-revocation-independent-probe.mts.txt",
+      "original": "/private/tmp/b08-final-review-probes/family-fixed.mts",
+      "bytes": 5537,
+      "sha256": "4df792692bf52f8ff11925cfc83e18c76fb68d4605c9de481a51aa183c1dfbde",
+      "scope": "Independent reviewer corrected counterexample: explicit revoke, cleanup-only reconcile, then repeated ordinary reconcile."
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b07-b08-final-static-7.log.txt",
+      "original": "/private/tmp/b07-b08-final-static-7.log",
+      "bytes": 655,
+      "sha256": "b2a80a2ba6d7d4a98f5b7c25ecba00c1d948c0ca3153fb8ed7fcd4aaf4a9daf0",
+      "scope": "Current composed candidate: secret scan, generated routes, migration manifest, TypeScript, lint and formatting passed."
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b07-b08-final-unit-build-2.log.txt",
+      "original": "/private/tmp/b07-b08-final-unit-build-2.log",
+      "bytes": 25109,
+      "sha256": "bcea4232407f030783573b2a217265c07870ae99f0dba0a12dd211a918145cf4",
+      "scope": "Current composed candidate: 2936 tests in 262 files, production routing/build and all seven Worker bundles passed."
+    }
+  ]
+}

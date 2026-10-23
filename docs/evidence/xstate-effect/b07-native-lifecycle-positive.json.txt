@@ -1,0 +1,3613 @@
+{
+  "syntheticProvider": true,
+  "negative": false,
+  "snapshots": {
+    "held-submit": {
+      "entered": {
+        "tasks": [
+          {
+            "id": "held-submit",
+            "direction": "incoming",
+            "request": {
+              "version": 1,
+              "id": "held-submit",
+              "owner": "communication-held-submit",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "held-submit",
+              "correlationId": "turn:held-submit",
+              "causationId": "tool:held-submit",
+              "createdAt": 1792762161409,
+              "deadline": 1792762761409,
+              "depth": 1,
+              "payload": {
+                "kind": "question",
+                "objective": "What is 2 + 2?",
+                "context": "Synthetic native fixture only."
+              }
+            },
+            "status": "running",
+            "outcome": null,
+            "revision": 1,
+            "leaseUntil": 1792762191490,
+            "resumed": false,
+            "cancelRequested": false,
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "control": {
+              "owner": "ba6cf5f5-e2b5-47a4-8fe9-a410efb3e4ab",
+              "phase": "submit",
+              "deadline": 1792762191490,
+              "attempts": 0,
+              "unconfirmed": false
+            },
+            "stop": {
+              "status": "none",
+              "attempts": 0,
+              "deadline": null,
+              "nextAt": null
+            }
+          }
+        ],
+        "deliveries": [],
+        "events": [
+          {
+            "value": "submit"
+          },
+          {
+            "value": "pi-request"
+          },
+          {
+            "value": "submit-held"
+          }
+        ],
+        "native": [
+          {
+            "conversationId": 8,
+            "requestId": "communication:held-submit",
+            "type": "input",
+            "status": "done",
+            "entry": 15,
+            "id": 16,
+            "answer": 19
+          }
+        ],
+        "inbox": [
+          {
+            "id": "held-submit",
+            "content": {
+              "version": 1,
+              "id": "held-submit",
+              "owner": "communication-held-submit",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "held-submit",
+              "correlationId": "turn:held-submit",
+              "causationId": "tool:held-submit",
+              "createdAt": 1792762161409,
+              "deadline": 1792762761409,
+              "depth": 1,
+              "payload": {
+                "kind": "question",
+                "objective": "What is 2 + 2?",
+                "context": "Synthetic native fixture only."
+              }
+            },
+            "receipt": {
+              "id": "held-submit",
+              "taskId": "held-submit",
+              "acceptedAt": 1792762161459
+            }
+          }
+        ],
+        "jobs": [
+          {
+            "id": "bot-communication:recovery",
+            "capability": "bot-communication",
+            "fn": "recover",
+            "time": 1792762161459,
+            "payload": {
+              "schemaVersion": 1,
+              "workflowVersion": 1,
+              "armedUntil": 1792762221459,
+              "token": "77b91885-517f-4ef8-a70b-f050bd54d602"
+            },
+            "retry": {
+              "maxAttempts": 3,
+              "baseDelayMs": 100,
+              "maxDelayMs": 1000
+            },
+            "singleflight": true,
+            "exclusive": false,
+            "recoveryLoop": true,
+            "createdAt": 1792762161
+          }
+        ],
+        "physicalAlarm": null,
+        "pins": [
+          {
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "nativeVersion": "pi-durable@1.3.0",
+            "conversation": 8,
+            "provider": "01a168f3-a964-715a-a2e3-6fd5908f06cc",
+            "route": {
+              "model": "gpt-6-luna",
+              "thinking": "low",
+              "job": "conversation",
+              "profile": "auto",
+              "policyVersion": "jobs-v1",
+              "reason": "agent setting",
+              "contextWindow": 8192
+            },
+            "requests": 0,
+            "taskId": "held-submit"
+          }
+        ],
+        "held": "submit",
+        "now": 1792762161563,
+        "deadline": 0
+      },
+      "held": {
+        "tasks": [
+          {
+            "id": "held-submit",
+            "direction": "incoming",
+            "request": {
+              "version": 1,
+              "id": "held-submit",
+              "owner": "communication-held-submit",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "held-submit",
+              "correlationId": "turn:held-submit",
+              "causationId": "tool:held-submit",
+              "createdAt": 1792762161409,
+              "deadline": 1792762761409,
+              "depth": 1,
+              "payload": {
+                "kind": "question",
+                "objective": "What is 2 + 2?",
+                "context": "Synthetic native fixture only."
+              }
+            },
+            "status": "cancelling",
+            "outcome": null,
+            "revision": 2,
+            "leaseUntil": 1792762191490,
+            "resumed": false,
+            "cancelRequested": true,
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "control": {
+              "owner": "ba6cf5f5-e2b5-47a4-8fe9-a410efb3e4ab",
+              "phase": "submit",
+              "deadline": 1792762191490,
+              "attempts": 0,
+              "unconfirmed": false
+            },
+            "stop": {
+              "status": "pending",
+              "attempts": 0,
+              "deadline": 1792762491652,
+              "nextAt": 1792762191652
+            }
+          }
+        ],
+        "deliveries": [],
+        "events": [
+          {
+            "value": "submit"
+          },
+          {
+            "value": "pi-request"
+          },
+          {
+            "value": "submit-held"
+          }
+        ],
+        "native": [
+          {
+            "conversationId": 8,
+            "requestId": "communication:held-submit",
+            "type": "input",
+            "status": "done",
+            "entry": 15,
+            "id": 16,
+            "answer": 19
+          }
+        ],
+        "inbox": [
+          {
+            "id": "cancel:held-submit",
+            "content": {
+              "version": 1,
+              "id": "cancel:held-submit",
+              "owner": "communication-held-submit",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "held-submit",
+              "correlationId": "turn:held-submit",
+              "causationId": "held-submit",
+              "createdAt": 1792762191608,
+              "deadline": 1792848591608,
+              "depth": 1,
+              "payload": {
+                "kind": "cancel",
+                "reason": "The owner or originating task requested cancellation."
+              }
+            },
+            "receipt": {
+              "id": "cancel:held-submit",
+              "taskId": "held-submit",
+              "acceptedAt": 1792762191652
+            }
+          },
+          {
+            "id": "held-submit",
+            "content": {
+              "version": 1,
+              "id": "held-submit",
+              "owner": "communication-held-submit",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "held-submit",
+              "correlationId": "turn:held-submit",
+              "causationId": "tool:held-submit",
+              "createdAt": 1792762161409,
+              "deadline": 1792762761409,
+              "depth": 1,
+              "payload": {
+                "kind": "question",
+                "objective": "What is 2 + 2?",
+                "context": "Synthetic native fixture only."
+              }
+            },
+            "receipt": {
+              "id": "held-submit",
+              "taskId": "held-submit",
+              "acceptedAt": 1792762161459
+            }
+          }
+        ],
+        "jobs": [
+          {
+            "id": "bot-communication:recovery",
+            "capability": "bot-communication",
+            "fn": "recover",
+            "time": 1792762161459,
+            "payload": {
+              "schemaVersion": 1,
+              "workflowVersion": 1,
+              "armedUntil": 1792762251651,
+              "token": "a66064f5-f39e-4d89-a864-1d10ae6caf5f"
+            },
+            "retry": {
+              "maxAttempts": 3,
+              "baseDelayMs": 100,
+              "maxDelayMs": 1000
+            },
+            "singleflight": true,
+            "exclusive": false,
+            "recoveryLoop": true,
+            "createdAt": 1792762161
+          }
+        ],
+        "physicalAlarm": null,
+        "pins": [
+          {
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "nativeVersion": "pi-durable@1.3.0",
+            "conversation": 8,
+            "provider": "01a168f3-a964-715a-a2e3-6fd5908f06cc",
+            "route": {
+              "model": "gpt-6-luna",
+              "thinking": "low",
+              "job": "conversation",
+              "profile": "auto",
+              "policyVersion": "jobs-v1",
+              "reason": "agent setting",
+              "contextWindow": 8192
+            },
+            "requests": 0,
+            "taskId": "held-submit"
+          }
+        ],
+        "held": "submit",
+        "now": 1792762191738,
+        "deadline": 0
+      },
+      "joined": {
+        "tasks": [
+          {
+            "id": "held-submit",
+            "direction": "incoming",
+            "request": {
+              "version": 1,
+              "id": "held-submit",
+              "owner": "communication-held-submit",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "held-submit",
+              "correlationId": "turn:held-submit",
+              "causationId": "tool:held-submit",
+              "createdAt": 1792762161409,
+              "deadline": 1792762761409,
+              "depth": 1,
+              "payload": {
+                "kind": "question",
+                "objective": "What is 2 + 2?",
+                "context": "Synthetic native fixture only."
+              }
+            },
+            "status": "cancelling",
+            "outcome": null,
+            "revision": 3,
+            "leaseUntil": null,
+            "resumed": false,
+            "cancelRequested": true,
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "control": {
+              "owner": null,
+              "phase": "stop",
+              "deadline": null,
+              "attempts": 1,
+              "unconfirmed": false
+            },
+            "stop": {
+              "status": "pending",
+              "attempts": 0,
+              "deadline": 1792762491652,
+              "nextAt": 1792762192752
+            }
+          }
+        ],
+        "deliveries": [],
+        "events": [
+          {
+            "value": "submit"
+          },
+          {
+            "value": "pi-request"
+          },
+          {
+            "value": "submit-held"
+          },
+          {
+            "value": "pass-settled"
+          },
+          {
+            "value": "pass-failure:Cause([Interrupt(undefined)])"
+          },
+          {
+            "value": "pass-settled"
+          }
+        ],
+        "native": [
+          {
+            "conversationId": 8,
+            "requestId": "communication:held-submit",
+            "type": "input",
+            "status": "done",
+            "entry": 15,
+            "id": 16,
+            "answer": 19
+          }
+        ],
+        "inbox": [
+          {
+            "id": "cancel:held-submit",
+            "content": {
+              "version": 1,
+              "id": "cancel:held-submit",
+              "owner": "communication-held-submit",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "held-submit",
+              "correlationId": "turn:held-submit",
+              "causationId": "held-submit",
+              "createdAt": 1792762191608,
+              "deadline": 1792848591608,
+              "depth": 1,
+              "payload": {
+                "kind": "cancel",
+                "reason": "The owner or originating task requested cancellation."
+              }
+            },
+            "receipt": {
+              "id": "cancel:held-submit",
+              "taskId": "held-submit",
+              "acceptedAt": 1792762191652
+            }
+          },
+          {
+            "id": "held-submit",
+            "content": {
+              "version": 1,
+              "id": "held-submit",
+              "owner": "communication-held-submit",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "held-submit",
+              "correlationId": "turn:held-submit",
+              "causationId": "tool:held-submit",
+              "createdAt": 1792762161409,
+              "deadline": 1792762761409,
+              "depth": 1,
+              "payload": {
+                "kind": "question",
+                "objective": "What is 2 + 2?",
+                "context": "Synthetic native fixture only."
+              }
+            },
+            "receipt": {
+              "id": "held-submit",
+              "taskId": "held-submit",
+              "acceptedAt": 1792762161459
+            }
+          }
+        ],
+        "jobs": [
+          {
+            "id": "bot-communication:recovery",
+            "capability": "bot-communication",
+            "fn": "recover",
+            "time": 1792762161459,
+            "payload": {
+              "schemaVersion": 1,
+              "workflowVersion": 1,
+              "armedUntil": 1792762251651,
+              "token": "a66064f5-f39e-4d89-a864-1d10ae6caf5f"
+            },
+            "retry": {
+              "maxAttempts": 3,
+              "baseDelayMs": 100,
+              "maxDelayMs": 1000
+            },
+            "singleflight": true,
+            "exclusive": false,
+            "recoveryLoop": true,
+            "createdAt": 1792762161
+          }
+        ],
+        "physicalAlarm": null,
+        "pins": [
+          {
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "nativeVersion": "pi-durable@1.3.0",
+            "conversation": 8,
+            "provider": "01a168f3-a964-715a-a2e3-6fd5908f06cc",
+            "route": {
+              "model": "gpt-6-luna",
+              "thinking": "low",
+              "job": "conversation",
+              "profile": "auto",
+              "policyVersion": "jobs-v1",
+              "reason": "agent setting",
+              "contextWindow": 8192
+            },
+            "requests": 0,
+            "taskId": "held-submit"
+          }
+        ],
+        "held": null,
+        "now": 1792762191772,
+        "deadline": 0
+      },
+      "released": {
+        "tasks": [
+          {
+            "id": "held-submit",
+            "direction": "incoming",
+            "request": {
+              "version": 1,
+              "id": "held-submit",
+              "owner": "communication-held-submit",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "held-submit",
+              "correlationId": "turn:held-submit",
+              "causationId": "tool:held-submit",
+              "createdAt": 1792762161409,
+              "deadline": 1792762761409,
+              "depth": 1,
+              "payload": {
+                "kind": "question",
+                "objective": "What is 2 + 2?",
+                "context": "Synthetic native fixture only."
+              }
+            },
+            "status": "cancelled",
+            "outcome": {
+              "status": "cancelled",
+              "text": "Execution stopped: the request expired, was cancelled, or its current authority could not be confirmed."
+            },
+            "revision": 5,
+            "leaseUntil": null,
+            "resumed": false,
+            "cancelRequested": true,
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "control": {
+              "owner": null,
+              "phase": "stop",
+              "deadline": null,
+              "attempts": 0,
+              "unconfirmed": false
+            },
+            "stop": {
+              "status": "confirmed",
+              "attempts": 1,
+              "deadline": 1792762491652,
+              "nextAt": null
+            }
+          }
+        ],
+        "deliveries": [
+          {
+            "envelope": {
+              "version": 1,
+              "id": "result:held-submit",
+              "owner": "communication-held-submit",
+              "from": "00000000-0000-4000-8000-000000000001",
+              "to": "home",
+              "taskId": "held-submit",
+              "correlationId": "turn:held-submit",
+              "causationId": "held-submit",
+              "createdAt": 1792762192820,
+              "deadline": 1792848592820,
+              "depth": 1,
+              "payload": {
+                "kind": "result",
+                "outcome": {
+                  "status": "cancelled",
+                  "text": "Execution stopped: the request expired, was cancelled, or its current authority could not be confirmed."
+                }
+              }
+            },
+            "status": "pending",
+            "attempts": 0,
+            "attemptLimit": 8,
+            "nextAt": 1792762192820,
+            "error": null,
+            "receipt": null,
+            "schemaVersion": 1,
+            "workflowVersion": 1
+          }
+        ],
+        "events": [
+          {
+            "value": "submit"
+          },
+          {
+            "value": "pi-request"
+          },
+          {
+            "value": "submit-held"
+          },
+          {
+            "value": "pass-settled"
+          },
+          {
+            "value": "pass-failure:Cause([Interrupt(undefined)])"
+          },
+          {
+            "value": "pass-settled"
+          },
+          {
+            "value": "abort-entered"
+          },
+          {
+            "value": "abort-confirmed"
+          },
+          {
+            "value": "execution"
+          }
+        ],
+        "native": [
+          {
+            "conversationId": 8,
+            "requestId": "communication:held-submit",
+            "type": "input",
+            "status": "done",
+            "entry": 15,
+            "id": 16,
+            "answer": 19
+          }
+        ],
+        "inbox": [
+          {
+            "id": "cancel:held-submit",
+            "content": {
+              "version": 1,
+              "id": "cancel:held-submit",
+              "owner": "communication-held-submit",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "held-submit",
+              "correlationId": "turn:held-submit",
+              "causationId": "held-submit",
+              "createdAt": 1792762191608,
+              "deadline": 1792848591608,
+              "depth": 1,
+              "payload": {
+                "kind": "cancel",
+                "reason": "The owner or originating task requested cancellation."
+              }
+            },
+            "receipt": {
+              "id": "cancel:held-submit",
+              "taskId": "held-submit",
+              "acceptedAt": 1792762191652
+            }
+          },
+          {
+            "id": "held-submit",
+            "content": {
+              "version": 1,
+              "id": "held-submit",
+              "owner": "communication-held-submit",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "held-submit",
+              "correlationId": "turn:held-submit",
+              "causationId": "tool:held-submit",
+              "createdAt": 1792762161409,
+              "deadline": 1792762761409,
+              "depth": 1,
+              "payload": {
+                "kind": "question",
+                "objective": "What is 2 + 2?",
+                "context": "Synthetic native fixture only."
+              }
+            },
+            "receipt": {
+              "id": "held-submit",
+              "taskId": "held-submit",
+              "acceptedAt": 1792762161459
+            }
+          }
+        ],
+        "jobs": [
+          {
+            "id": "bot-communication:pump",
+            "capability": "bot-communication",
+            "fn": "pump",
+            "time": 1792762193828,
+            "payload": {
+              "schemaVersion": 1,
+              "workflowVersion": 1,
+              "token": "0f35f343-a2cf-4a37-8791-a9cc410cbeeb"
+            },
+            "retry": {
+              "maxAttempts": 3,
+              "baseDelayMs": 100,
+              "maxDelayMs": 1000
+            },
+            "singleflight": true,
+            "exclusive": false,
+            "recoveryLoop": true,
+            "createdAt": 1792762192
+          },
+          {
+            "id": "bot-communication:recovery",
+            "capability": "bot-communication",
+            "fn": "recover",
+            "time": 1792762251651,
+            "payload": {
+              "schemaVersion": 1,
+              "workflowVersion": 1,
+              "armedUntil": 1792762251651,
+              "token": "a66064f5-f39e-4d89-a864-1d10ae6caf5f"
+            },
+            "retry": {
+              "maxAttempts": 3,
+              "baseDelayMs": 100,
+              "maxDelayMs": 1000
+            },
+            "singleflight": true,
+            "exclusive": false,
+            "recoveryLoop": true,
+            "createdAt": 1792762161
+          }
+        ],
+        "physicalAlarm": 1792762193828,
+        "pins": [],
+        "held": null,
+        "now": 1792762192829,
+        "deadline": 0
+      }
+    },
+    "heldSubmit": {
+      "entered": {
+        "tasks": [
+          {
+            "id": "held-submit",
+            "direction": "incoming",
+            "request": {
+              "version": 1,
+              "id": "held-submit",
+              "owner": "communication-held-submit",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "held-submit",
+              "correlationId": "turn:held-submit",
+              "causationId": "tool:held-submit",
+              "createdAt": 1792762161409,
+              "deadline": 1792762761409,
+              "depth": 1,
+              "payload": {
+                "kind": "question",
+                "objective": "What is 2 + 2?",
+                "context": "Synthetic native fixture only."
+              }
+            },
+            "status": "running",
+            "outcome": null,
+            "revision": 1,
+            "leaseUntil": 1792762191490,
+            "resumed": false,
+            "cancelRequested": false,
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "control": {
+              "owner": "ba6cf5f5-e2b5-47a4-8fe9-a410efb3e4ab",
+              "phase": "submit",
+              "deadline": 1792762191490,
+              "attempts": 0,
+              "unconfirmed": false
+            },
+            "stop": {
+              "status": "none",
+              "attempts": 0,
+              "deadline": null,
+              "nextAt": null
+            }
+          }
+        ],
+        "deliveries": [],
+        "events": [
+          {
+            "value": "submit"
+          },
+          {
+            "value": "pi-request"
+          },
+          {
+            "value": "submit-held"
+          }
+        ],
+        "native": [
+          {
+            "conversationId": 8,
+            "requestId": "communication:held-submit",
+            "type": "input",
+            "status": "done",
+            "entry": 15,
+            "id": 16,
+            "answer": 19
+          }
+        ],
+        "inbox": [
+          {
+            "id": "held-submit",
+            "content": {
+              "version": 1,
+              "id": "held-submit",
+              "owner": "communication-held-submit",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "held-submit",
+              "correlationId": "turn:held-submit",
+              "causationId": "tool:held-submit",
+              "createdAt": 1792762161409,
+              "deadline": 1792762761409,
+              "depth": 1,
+              "payload": {
+                "kind": "question",
+                "objective": "What is 2 + 2?",
+                "context": "Synthetic native fixture only."
+              }
+            },
+            "receipt": {
+              "id": "held-submit",
+              "taskId": "held-submit",
+              "acceptedAt": 1792762161459
+            }
+          }
+        ],
+        "jobs": [
+          {
+            "id": "bot-communication:recovery",
+            "capability": "bot-communication",
+            "fn": "recover",
+            "time": 1792762161459,
+            "payload": {
+              "schemaVersion": 1,
+              "workflowVersion": 1,
+              "armedUntil": 1792762221459,
+              "token": "77b91885-517f-4ef8-a70b-f050bd54d602"
+            },
+            "retry": {
+              "maxAttempts": 3,
+              "baseDelayMs": 100,
+              "maxDelayMs": 1000
+            },
+            "singleflight": true,
+            "exclusive": false,
+            "recoveryLoop": true,
+            "createdAt": 1792762161
+          }
+        ],
+        "physicalAlarm": null,
+        "pins": [
+          {
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "nativeVersion": "pi-durable@1.3.0",
+            "conversation": 8,
+            "provider": "01a168f3-a964-715a-a2e3-6fd5908f06cc",
+            "route": {
+              "model": "gpt-6-luna",
+              "thinking": "low",
+              "job": "conversation",
+              "profile": "auto",
+              "policyVersion": "jobs-v1",
+              "reason": "agent setting",
+              "contextWindow": 8192
+            },
+            "requests": 0,
+            "taskId": "held-submit"
+          }
+        ],
+        "held": "submit",
+        "now": 1792762161563,
+        "deadline": 0
+      },
+      "held": {
+        "tasks": [
+          {
+            "id": "held-submit",
+            "direction": "incoming",
+            "request": {
+              "version": 1,
+              "id": "held-submit",
+              "owner": "communication-held-submit",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "held-submit",
+              "correlationId": "turn:held-submit",
+              "causationId": "tool:held-submit",
+              "createdAt": 1792762161409,
+              "deadline": 1792762761409,
+              "depth": 1,
+              "payload": {
+                "kind": "question",
+                "objective": "What is 2 + 2?",
+                "context": "Synthetic native fixture only."
+              }
+            },
+            "status": "cancelling",
+            "outcome": null,
+            "revision": 2,
+            "leaseUntil": 1792762191490,
+            "resumed": false,
+            "cancelRequested": true,
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "control": {
+              "owner": "ba6cf5f5-e2b5-47a4-8fe9-a410efb3e4ab",
+              "phase": "submit",
+              "deadline": 1792762191490,
+              "attempts": 0,
+              "unconfirmed": false
+            },
+            "stop": {
+              "status": "pending",
+              "attempts": 0,
+              "deadline": 1792762491652,
+              "nextAt": 1792762191652
+            }
+          }
+        ],
+        "deliveries": [],
+        "events": [
+          {
+            "value": "submit"
+          },
+          {
+            "value": "pi-request"
+          },
+          {
+            "value": "submit-held"
+          }
+        ],
+        "native": [
+          {
+            "conversationId": 8,
+            "requestId": "communication:held-submit",
+            "type": "input",
+            "status": "done",
+            "entry": 15,
+            "id": 16,
+            "answer": 19
+          }
+        ],
+        "inbox": [
+          {
+            "id": "cancel:held-submit",
+            "content": {
+              "version": 1,
+              "id": "cancel:held-submit",
+              "owner": "communication-held-submit",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "held-submit",
+              "correlationId": "turn:held-submit",
+              "causationId": "held-submit",
+              "createdAt": 1792762191608,
+              "deadline": 1792848591608,
+              "depth": 1,
+              "payload": {
+                "kind": "cancel",
+                "reason": "The owner or originating task requested cancellation."
+              }
+            },
+            "receipt": {
+              "id": "cancel:held-submit",
+              "taskId": "held-submit",
+              "acceptedAt": 1792762191652
+            }
+          },
+          {
+            "id": "held-submit",
+            "content": {
+              "version": 1,
+              "id": "held-submit",
+              "owner": "communication-held-submit",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "held-submit",
+              "correlationId": "turn:held-submit",
+              "causationId": "tool:held-submit",
+              "createdAt": 1792762161409,
+              "deadline": 1792762761409,
+              "depth": 1,
+              "payload": {
+                "kind": "question",
+                "objective": "What is 2 + 2?",
+                "context": "Synthetic native fixture only."
+              }
+            },
+            "receipt": {
+              "id": "held-submit",
+              "taskId": "held-submit",
+              "acceptedAt": 1792762161459
+            }
+          }
+        ],
+        "jobs": [
+          {
+            "id": "bot-communication:recovery",
+            "capability": "bot-communication",
+            "fn": "recover",
+            "time": 1792762161459,
+            "payload": {
+              "schemaVersion": 1,
+              "workflowVersion": 1,
+              "armedUntil": 1792762251651,
+              "token": "a66064f5-f39e-4d89-a864-1d10ae6caf5f"
+            },
+            "retry": {
+              "maxAttempts": 3,
+              "baseDelayMs": 100,
+              "maxDelayMs": 1000
+            },
+            "singleflight": true,
+            "exclusive": false,
+            "recoveryLoop": true,
+            "createdAt": 1792762161
+          }
+        ],
+        "physicalAlarm": null,
+        "pins": [
+          {
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "nativeVersion": "pi-durable@1.3.0",
+            "conversation": 8,
+            "provider": "01a168f3-a964-715a-a2e3-6fd5908f06cc",
+            "route": {
+              "model": "gpt-6-luna",
+              "thinking": "low",
+              "job": "conversation",
+              "profile": "auto",
+              "policyVersion": "jobs-v1",
+              "reason": "agent setting",
+              "contextWindow": 8192
+            },
+            "requests": 0,
+            "taskId": "held-submit"
+          }
+        ],
+        "held": "submit",
+        "now": 1792762191738,
+        "deadline": 0
+      },
+      "denied": {
+        "tasks": [
+          {
+            "id": "held-submit",
+            "direction": "incoming",
+            "request": {
+              "version": 1,
+              "id": "held-submit",
+              "owner": "communication-held-submit",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "held-submit",
+              "correlationId": "turn:held-submit",
+              "causationId": "tool:held-submit",
+              "createdAt": 1792762161409,
+              "deadline": 1792762761409,
+              "depth": 1,
+              "payload": {
+                "kind": "question",
+                "objective": "What is 2 + 2?",
+                "context": "Synthetic native fixture only."
+              }
+            },
+            "status": "cancelling",
+            "outcome": null,
+            "revision": 2,
+            "leaseUntil": 1792762191490,
+            "resumed": false,
+            "cancelRequested": true,
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "control": {
+              "owner": "ba6cf5f5-e2b5-47a4-8fe9-a410efb3e4ab",
+              "phase": "submit",
+              "deadline": 1792762191490,
+              "attempts": 0,
+              "unconfirmed": false
+            },
+            "stop": {
+              "status": "pending",
+              "attempts": 0,
+              "deadline": 1792762491652,
+              "nextAt": 1792762191652
+            }
+          }
+        ],
+        "deliveries": [],
+        "events": [
+          {
+            "value": "submit"
+          },
+          {
+            "value": "pi-request"
+          },
+          {
+            "value": "submit-held"
+          }
+        ],
+        "native": [
+          {
+            "conversationId": 8,
+            "requestId": "communication:held-submit",
+            "type": "input",
+            "status": "done",
+            "entry": 15,
+            "id": 16,
+            "answer": 19
+          }
+        ],
+        "inbox": [
+          {
+            "id": "cancel:held-submit",
+            "content": {
+              "version": 1,
+              "id": "cancel:held-submit",
+              "owner": "communication-held-submit",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "held-submit",
+              "correlationId": "turn:held-submit",
+              "causationId": "held-submit",
+              "createdAt": 1792762191608,
+              "deadline": 1792848591608,
+              "depth": 1,
+              "payload": {
+                "kind": "cancel",
+                "reason": "The owner or originating task requested cancellation."
+              }
+            },
+            "receipt": {
+              "id": "cancel:held-submit",
+              "taskId": "held-submit",
+              "acceptedAt": 1792762191652
+            }
+          },
+          {
+            "id": "held-submit",
+            "content": {
+              "version": 1,
+              "id": "held-submit",
+              "owner": "communication-held-submit",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "held-submit",
+              "correlationId": "turn:held-submit",
+              "causationId": "tool:held-submit",
+              "createdAt": 1792762161409,
+              "deadline": 1792762761409,
+              "depth": 1,
+              "payload": {
+                "kind": "question",
+                "objective": "What is 2 + 2?",
+                "context": "Synthetic native fixture only."
+              }
+            },
+            "receipt": {
+              "id": "held-submit",
+              "taskId": "held-submit",
+              "acceptedAt": 1792762161459
+            }
+          }
+        ],
+        "jobs": [
+          {
+            "id": "bot-communication:recovery",
+            "capability": "bot-communication",
+            "fn": "recover",
+            "time": 1792762161459,
+            "payload": {
+              "schemaVersion": 1,
+              "workflowVersion": 1,
+              "armedUntil": 1792762251651,
+              "token": "a66064f5-f39e-4d89-a864-1d10ae6caf5f"
+            },
+            "retry": {
+              "maxAttempts": 3,
+              "baseDelayMs": 100,
+              "maxDelayMs": 1000
+            },
+            "singleflight": true,
+            "exclusive": false,
+            "recoveryLoop": true,
+            "createdAt": 1792762161
+          }
+        ],
+        "physicalAlarm": null,
+        "pins": [
+          {
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "nativeVersion": "pi-durable@1.3.0",
+            "conversation": 8,
+            "provider": "01a168f3-a964-715a-a2e3-6fd5908f06cc",
+            "route": {
+              "model": "gpt-6-luna",
+              "thinking": "low",
+              "job": "conversation",
+              "profile": "auto",
+              "policyVersion": "jobs-v1",
+              "reason": "agent setting",
+              "contextWindow": 8192
+            },
+            "requests": 0,
+            "taskId": "held-submit"
+          }
+        ],
+        "held": "submit",
+        "now": 1792762191749,
+        "deadline": 0,
+        "permitted": false
+      },
+      "released": {
+        "tasks": [
+          {
+            "id": "held-submit",
+            "direction": "incoming",
+            "request": {
+              "version": 1,
+              "id": "held-submit",
+              "owner": "communication-held-submit",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "held-submit",
+              "correlationId": "turn:held-submit",
+              "causationId": "tool:held-submit",
+              "createdAt": 1792762161409,
+              "deadline": 1792762761409,
+              "depth": 1,
+              "payload": {
+                "kind": "question",
+                "objective": "What is 2 + 2?",
+                "context": "Synthetic native fixture only."
+              }
+            },
+            "status": "cancelled",
+            "outcome": {
+              "status": "cancelled",
+              "text": "Execution stopped: the request expired, was cancelled, or its current authority could not be confirmed."
+            },
+            "revision": 5,
+            "leaseUntil": null,
+            "resumed": false,
+            "cancelRequested": true,
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "control": {
+              "owner": null,
+              "phase": "stop",
+              "deadline": null,
+              "attempts": 0,
+              "unconfirmed": false
+            },
+            "stop": {
+              "status": "confirmed",
+              "attempts": 1,
+              "deadline": 1792762491652,
+              "nextAt": null
+            }
+          }
+        ],
+        "deliveries": [
+          {
+            "envelope": {
+              "version": 1,
+              "id": "result:held-submit",
+              "owner": "communication-held-submit",
+              "from": "00000000-0000-4000-8000-000000000001",
+              "to": "home",
+              "taskId": "held-submit",
+              "correlationId": "turn:held-submit",
+              "causationId": "held-submit",
+              "createdAt": 1792762192820,
+              "deadline": 1792848592820,
+              "depth": 1,
+              "payload": {
+                "kind": "result",
+                "outcome": {
+                  "status": "cancelled",
+                  "text": "Execution stopped: the request expired, was cancelled, or its current authority could not be confirmed."
+                }
+              }
+            },
+            "status": "pending",
+            "attempts": 0,
+            "attemptLimit": 8,
+            "nextAt": 1792762192820,
+            "error": null,
+            "receipt": null,
+            "schemaVersion": 1,
+            "workflowVersion": 1
+          }
+        ],
+        "events": [
+          {
+            "value": "submit"
+          },
+          {
+            "value": "pi-request"
+          },
+          {
+            "value": "submit-held"
+          },
+          {
+            "value": "pass-settled"
+          },
+          {
+            "value": "pass-failure:Cause([Interrupt(undefined)])"
+          },
+          {
+            "value": "pass-settled"
+          },
+          {
+            "value": "abort-entered"
+          },
+          {
+            "value": "abort-confirmed"
+          },
+          {
+            "value": "execution"
+          }
+        ],
+        "native": [
+          {
+            "conversationId": 8,
+            "requestId": "communication:held-submit",
+            "type": "input",
+            "status": "done",
+            "entry": 15,
+            "id": 16,
+            "answer": 19
+          }
+        ],
+        "inbox": [
+          {
+            "id": "cancel:held-submit",
+            "content": {
+              "version": 1,
+              "id": "cancel:held-submit",
+              "owner": "communication-held-submit",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "held-submit",
+              "correlationId": "turn:held-submit",
+              "causationId": "held-submit",
+              "createdAt": 1792762191608,
+              "deadline": 1792848591608,
+              "depth": 1,
+              "payload": {
+                "kind": "cancel",
+                "reason": "The owner or originating task requested cancellation."
+              }
+            },
+            "receipt": {
+              "id": "cancel:held-submit",
+              "taskId": "held-submit",
+              "acceptedAt": 1792762191652
+            }
+          },
+          {
+            "id": "held-submit",
+            "content": {
+              "version": 1,
+              "id": "held-submit",
+              "owner": "communication-held-submit",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "held-submit",
+              "correlationId": "turn:held-submit",
+              "causationId": "tool:held-submit",
+              "createdAt": 1792762161409,
+              "deadline": 1792762761409,
+              "depth": 1,
+              "payload": {
+                "kind": "question",
+                "objective": "What is 2 + 2?",
+                "context": "Synthetic native fixture only."
+              }
+            },
+            "receipt": {
+              "id": "held-submit",
+              "taskId": "held-submit",
+              "acceptedAt": 1792762161459
+            }
+          }
+        ],
+        "jobs": [
+          {
+            "id": "bot-communication:pump",
+            "capability": "bot-communication",
+            "fn": "pump",
+            "time": 1792762193828,
+            "payload": {
+              "schemaVersion": 1,
+              "workflowVersion": 1,
+              "token": "0f35f343-a2cf-4a37-8791-a9cc410cbeeb"
+            },
+            "retry": {
+              "maxAttempts": 3,
+              "baseDelayMs": 100,
+              "maxDelayMs": 1000
+            },
+            "singleflight": true,
+            "exclusive": false,
+            "recoveryLoop": true,
+            "createdAt": 1792762192
+          },
+          {
+            "id": "bot-communication:recovery",
+            "capability": "bot-communication",
+            "fn": "recover",
+            "time": 1792762251651,
+            "payload": {
+              "schemaVersion": 1,
+              "workflowVersion": 1,
+              "armedUntil": 1792762251651,
+              "token": "a66064f5-f39e-4d89-a864-1d10ae6caf5f"
+            },
+            "retry": {
+              "maxAttempts": 3,
+              "baseDelayMs": 100,
+              "maxDelayMs": 1000
+            },
+            "singleflight": true,
+            "exclusive": false,
+            "recoveryLoop": true,
+            "createdAt": 1792762161
+          }
+        ],
+        "physicalAlarm": 1792762193828,
+        "pins": [],
+        "held": null,
+        "now": 1792762192829,
+        "deadline": 0
+      }
+    },
+    "held-abort": {
+      "entered": {
+        "tasks": [
+          {
+            "id": "held-abort",
+            "direction": "incoming",
+            "request": {
+              "version": 1,
+              "id": "held-abort",
+              "owner": "communication-held-abort",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "held-abort",
+              "correlationId": "turn:held-abort",
+              "causationId": "tool:held-abort",
+              "createdAt": 1792762192921,
+              "deadline": 1792762792921,
+              "depth": 1,
+              "payload": {
+                "kind": "question",
+                "objective": "What is 2 + 2?",
+                "context": "Synthetic native fixture only."
+              }
+            },
+            "status": "cancelling",
+            "outcome": null,
+            "revision": 4,
+            "leaseUntil": 1792762223078,
+            "resumed": false,
+            "cancelRequested": true,
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "control": {
+              "owner": "78339c8c-c577-4e3d-9d51-0f45fff491cc",
+              "phase": "stop",
+              "deadline": 1792762223078,
+              "attempts": 0,
+              "unconfirmed": false
+            },
+            "stop": {
+              "status": "pending",
+              "attempts": 1,
+              "deadline": 1792762493057,
+              "nextAt": null
+            }
+          }
+        ],
+        "deliveries": [],
+        "events": [
+          {
+            "value": "submit"
+          },
+          {
+            "value": "pi-request"
+          },
+          {
+            "value": "abort-entered"
+          },
+          {
+            "value": "abort-held"
+          }
+        ],
+        "native": [
+          {
+            "conversationId": 8,
+            "requestId": "communication:held-abort",
+            "type": "input",
+            "status": "placed",
+            "entry": 15,
+            "id": 16
+          }
+        ],
+        "inbox": [
+          {
+            "id": "cancel:held-abort",
+            "content": {
+              "version": 1,
+              "id": "cancel:held-abort",
+              "owner": "communication-held-abort",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "held-abort",
+              "correlationId": "turn:held-abort",
+              "causationId": "held-abort",
+              "createdAt": 1792762193036,
+              "deadline": 1792848593036,
+              "depth": 1,
+              "payload": {
+                "kind": "cancel",
+                "reason": "The owner or originating task requested cancellation."
+              }
+            },
+            "receipt": {
+              "id": "cancel:held-abort",
+              "taskId": "held-abort",
+              "acceptedAt": 1792762193057
+            }
+          },
+          {
+            "id": "held-abort",
+            "content": {
+              "version": 1,
+              "id": "held-abort",
+              "owner": "communication-held-abort",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "held-abort",
+              "correlationId": "turn:held-abort",
+              "causationId": "tool:held-abort",
+              "createdAt": 1792762192921,
+              "deadline": 1792762792921,
+              "depth": 1,
+              "payload": {
+                "kind": "question",
+                "objective": "What is 2 + 2?",
+                "context": "Synthetic native fixture only."
+              }
+            },
+            "receipt": {
+              "id": "held-abort",
+              "taskId": "held-abort",
+              "acceptedAt": 1792762192944
+            }
+          }
+        ],
+        "jobs": [
+          {
+            "id": "bot-communication:recovery",
+            "capability": "bot-communication",
+            "fn": "recover",
+            "time": 1792762192943,
+            "payload": {
+              "schemaVersion": 1,
+              "workflowVersion": 1,
+              "armedUntil": 1792762253057,
+              "token": "1029a622-dfd5-4041-a136-aef4c82270eb"
+            },
+            "retry": {
+              "maxAttempts": 3,
+              "baseDelayMs": 100,
+              "maxDelayMs": 1000
+            },
+            "singleflight": true,
+            "exclusive": false,
+            "recoveryLoop": true,
+            "createdAt": 1792762192
+          }
+        ],
+        "physicalAlarm": null,
+        "pins": [
+          {
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "nativeVersion": "pi-durable@1.3.0",
+            "conversation": 8,
+            "provider": "01a168f4-245d-715a-a2e3-6fda8e7bb6eb",
+            "route": {
+              "model": "gpt-6-luna",
+              "thinking": "low",
+              "job": "conversation",
+              "profile": "auto",
+              "policyVersion": "jobs-v1",
+              "reason": "agent setting",
+              "contextWindow": 8192
+            },
+            "requests": 0,
+            "taskId": "held-abort"
+          }
+        ],
+        "held": "abort",
+        "now": 1792762193101,
+        "deadline": 0
+      },
+      "held": {
+        "tasks": [
+          {
+            "id": "held-abort",
+            "direction": "incoming",
+            "request": {
+              "version": 1,
+              "id": "held-abort",
+              "owner": "communication-held-abort",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "held-abort",
+              "correlationId": "turn:held-abort",
+              "causationId": "tool:held-abort",
+              "createdAt": 1792762192921,
+              "deadline": 1792762792921,
+              "depth": 1,
+              "payload": {
+                "kind": "question",
+                "objective": "What is 2 + 2?",
+                "context": "Synthetic native fixture only."
+              }
+            },
+            "status": "cancelling",
+            "outcome": null,
+            "revision": 4,
+            "leaseUntil": 1792762223078,
+            "resumed": false,
+            "cancelRequested": true,
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "control": {
+              "owner": "78339c8c-c577-4e3d-9d51-0f45fff491cc",
+              "phase": "stop",
+              "deadline": 1792762223078,
+              "attempts": 0,
+              "unconfirmed": false
+            },
+            "stop": {
+              "status": "pending",
+              "attempts": 1,
+              "deadline": 1792762493057,
+              "nextAt": null
+            }
+          }
+        ],
+        "deliveries": [],
+        "events": [
+          {
+            "value": "submit"
+          },
+          {
+            "value": "pi-request"
+          },
+          {
+            "value": "abort-entered"
+          },
+          {
+            "value": "abort-held"
+          }
+        ],
+        "native": [
+          {
+            "conversationId": 8,
+            "requestId": "communication:held-abort",
+            "type": "input",
+            "status": "placed",
+            "entry": 15,
+            "id": 16
+          }
+        ],
+        "inbox": [
+          {
+            "id": "cancel:held-abort",
+            "content": {
+              "version": 1,
+              "id": "cancel:held-abort",
+              "owner": "communication-held-abort",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "held-abort",
+              "correlationId": "turn:held-abort",
+              "causationId": "held-abort",
+              "createdAt": 1792762193036,
+              "deadline": 1792848593036,
+              "depth": 1,
+              "payload": {
+                "kind": "cancel",
+                "reason": "The owner or originating task requested cancellation."
+              }
+            },
+            "receipt": {
+              "id": "cancel:held-abort",
+              "taskId": "held-abort",
+              "acceptedAt": 1792762193057
+            }
+          },
+          {
+            "id": "held-abort",
+            "content": {
+              "version": 1,
+              "id": "held-abort",
+              "owner": "communication-held-abort",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "held-abort",
+              "correlationId": "turn:held-abort",
+              "causationId": "tool:held-abort",
+              "createdAt": 1792762192921,
+              "deadline": 1792762792921,
+              "depth": 1,
+              "payload": {
+                "kind": "question",
+                "objective": "What is 2 + 2?",
+                "context": "Synthetic native fixture only."
+              }
+            },
+            "receipt": {
+              "id": "held-abort",
+              "taskId": "held-abort",
+              "acceptedAt": 1792762192944
+            }
+          }
+        ],
+        "jobs": [
+          {
+            "id": "bot-communication:recovery",
+            "capability": "bot-communication",
+            "fn": "recover",
+            "time": 1792762192943,
+            "payload": {
+              "schemaVersion": 1,
+              "workflowVersion": 1,
+              "armedUntil": 1792762253057,
+              "token": "1029a622-dfd5-4041-a136-aef4c82270eb"
+            },
+            "retry": {
+              "maxAttempts": 3,
+              "baseDelayMs": 100,
+              "maxDelayMs": 1000
+            },
+            "singleflight": true,
+            "exclusive": false,
+            "recoveryLoop": true,
+            "createdAt": 1792762192
+          },
+          {
+            "id": "bot-communication:pump",
+            "capability": "bot-communication",
+            "fn": "pump",
+            "time": 1792762193103,
+            "payload": {
+              "schemaVersion": 1,
+              "workflowVersion": 1,
+              "token": "02a756fd-8361-45d3-accf-0a0436f21629"
+            },
+            "retry": {
+              "maxAttempts": 3,
+              "baseDelayMs": 100,
+              "maxDelayMs": 1000
+            },
+            "singleflight": true,
+            "exclusive": false,
+            "recoveryLoop": true,
+            "createdAt": 1792762193
+          }
+        ],
+        "physicalAlarm": null,
+        "pins": [
+          {
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "nativeVersion": "pi-durable@1.3.0",
+            "conversation": 8,
+            "provider": "01a168f4-245d-715a-a2e3-6fda8e7bb6eb",
+            "route": {
+              "model": "gpt-6-luna",
+              "thinking": "low",
+              "job": "conversation",
+              "profile": "auto",
+              "policyVersion": "jobs-v1",
+              "reason": "agent setting",
+              "contextWindow": 8192
+            },
+            "requests": 0,
+            "taskId": "held-abort"
+          }
+        ],
+        "held": "abort",
+        "now": 1792762193159,
+        "deadline": 0
+      },
+      "released": {
+        "tasks": [
+          {
+            "id": "held-abort",
+            "direction": "incoming",
+            "request": {
+              "version": 1,
+              "id": "held-abort",
+              "owner": "communication-held-abort",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "held-abort",
+              "correlationId": "turn:held-abort",
+              "causationId": "tool:held-abort",
+              "createdAt": 1792762192921,
+              "deadline": 1792762792921,
+              "depth": 1,
+              "payload": {
+                "kind": "question",
+                "objective": "What is 2 + 2?",
+                "context": "Synthetic native fixture only."
+              }
+            },
+            "status": "cancelled",
+            "outcome": {
+              "status": "cancelled",
+              "text": "Execution stopped: the request expired, was cancelled, or its current authority could not be confirmed."
+            },
+            "revision": 5,
+            "leaseUntil": null,
+            "resumed": false,
+            "cancelRequested": true,
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "control": {
+              "owner": null,
+              "phase": "stop",
+              "deadline": null,
+              "attempts": 0,
+              "unconfirmed": false
+            },
+            "stop": {
+              "status": "confirmed",
+              "attempts": 1,
+              "deadline": 1792762493057,
+              "nextAt": null
+            }
+          }
+        ],
+        "deliveries": [
+          {
+            "envelope": {
+              "version": 1,
+              "id": "result:held-abort",
+              "owner": "communication-held-abort",
+              "from": "00000000-0000-4000-8000-000000000001",
+              "to": "home",
+              "taskId": "held-abort",
+              "correlationId": "turn:held-abort",
+              "causationId": "held-abort",
+              "createdAt": 1792762193170,
+              "deadline": 1792848593170,
+              "depth": 1,
+              "payload": {
+                "kind": "result",
+                "outcome": {
+                  "status": "cancelled",
+                  "text": "Execution stopped: the request expired, was cancelled, or its current authority could not be confirmed."
+                }
+              }
+            },
+            "status": "accepted",
+            "attempts": 1,
+            "attemptLimit": 8,
+            "nextAt": null,
+            "error": null,
+            "receipt": {
+              "id": "result:held-abort",
+              "taskId": "held-abort",
+              "acceptedAt": 1792762193191
+            },
+            "schemaVersion": 1,
+            "workflowVersion": 1
+          }
+        ],
+        "events": [
+          {
+            "value": "submit"
+          },
+          {
+            "value": "pi-request"
+          },
+          {
+            "value": "abort-entered"
+          },
+          {
+            "value": "abort-held"
+          },
+          {
+            "value": "abort-confirmed"
+          },
+          {
+            "value": "execution"
+          },
+          {
+            "value": "pass-settled"
+          },
+          {
+            "value": "pass-settled"
+          }
+        ],
+        "native": [
+          {
+            "conversationId": 8,
+            "requestId": "communication:held-abort",
+            "type": "input",
+            "status": "unanswered",
+            "entry": 15,
+            "id": 16,
+            "reason": "aborted"
+          }
+        ],
+        "inbox": [
+          {
+            "id": "cancel:held-abort",
+            "content": {
+              "version": 1,
+              "id": "cancel:held-abort",
+              "owner": "communication-held-abort",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "held-abort",
+              "correlationId": "turn:held-abort",
+              "causationId": "held-abort",
+              "createdAt": 1792762193036,
+              "deadline": 1792848593036,
+              "depth": 1,
+              "payload": {
+                "kind": "cancel",
+                "reason": "The owner or originating task requested cancellation."
+              }
+            },
+            "receipt": {
+              "id": "cancel:held-abort",
+              "taskId": "held-abort",
+              "acceptedAt": 1792762193057
+            }
+          },
+          {
+            "id": "held-abort",
+            "content": {
+              "version": 1,
+              "id": "held-abort",
+              "owner": "communication-held-abort",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "held-abort",
+              "correlationId": "turn:held-abort",
+              "causationId": "tool:held-abort",
+              "createdAt": 1792762192921,
+              "deadline": 1792762792921,
+              "depth": 1,
+              "payload": {
+                "kind": "question",
+                "objective": "What is 2 + 2?",
+                "context": "Synthetic native fixture only."
+              }
+            },
+            "receipt": {
+              "id": "held-abort",
+              "taskId": "held-abort",
+              "acceptedAt": 1792762192944
+            }
+          }
+        ],
+        "jobs": [
+          {
+            "id": "bot-communication:recovery",
+            "capability": "bot-communication",
+            "fn": "recover",
+            "time": 1792762192943,
+            "payload": {
+              "schemaVersion": 1,
+              "workflowVersion": 1,
+              "armedUntil": 1792762253057,
+              "token": "1029a622-dfd5-4041-a136-aef4c82270eb"
+            },
+            "retry": {
+              "maxAttempts": 3,
+              "baseDelayMs": 100,
+              "maxDelayMs": 1000
+            },
+            "singleflight": true,
+            "exclusive": false,
+            "recoveryLoop": true,
+            "createdAt": 1792762192
+          },
+          {
+            "id": "bot-communication:pump",
+            "capability": "bot-communication",
+            "fn": "pump",
+            "time": 1792762193103,
+            "payload": {
+              "schemaVersion": 1,
+              "workflowVersion": 1,
+              "token": "02a756fd-8361-45d3-accf-0a0436f21629"
+            },
+            "retry": {
+              "maxAttempts": 3,
+              "baseDelayMs": 100,
+              "maxDelayMs": 1000
+            },
+            "singleflight": true,
+            "exclusive": false,
+            "recoveryLoop": true,
+            "createdAt": 1792762193
+          }
+        ],
+        "physicalAlarm": null,
+        "pins": [],
+        "held": null,
+        "now": 1792762193206,
+        "deadline": 0
+      }
+    },
+    "heldAbort": {
+      "entered": {
+        "tasks": [
+          {
+            "id": "held-abort",
+            "direction": "incoming",
+            "request": {
+              "version": 1,
+              "id": "held-abort",
+              "owner": "communication-held-abort",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "held-abort",
+              "correlationId": "turn:held-abort",
+              "causationId": "tool:held-abort",
+              "createdAt": 1792762192921,
+              "deadline": 1792762792921,
+              "depth": 1,
+              "payload": {
+                "kind": "question",
+                "objective": "What is 2 + 2?",
+                "context": "Synthetic native fixture only."
+              }
+            },
+            "status": "cancelling",
+            "outcome": null,
+            "revision": 4,
+            "leaseUntil": 1792762223078,
+            "resumed": false,
+            "cancelRequested": true,
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "control": {
+              "owner": "78339c8c-c577-4e3d-9d51-0f45fff491cc",
+              "phase": "stop",
+              "deadline": 1792762223078,
+              "attempts": 0,
+              "unconfirmed": false
+            },
+            "stop": {
+              "status": "pending",
+              "attempts": 1,
+              "deadline": 1792762493057,
+              "nextAt": null
+            }
+          }
+        ],
+        "deliveries": [],
+        "events": [
+          {
+            "value": "submit"
+          },
+          {
+            "value": "pi-request"
+          },
+          {
+            "value": "abort-entered"
+          },
+          {
+            "value": "abort-held"
+          }
+        ],
+        "native": [
+          {
+            "conversationId": 8,
+            "requestId": "communication:held-abort",
+            "type": "input",
+            "status": "placed",
+            "entry": 15,
+            "id": 16
+          }
+        ],
+        "inbox": [
+          {
+            "id": "cancel:held-abort",
+            "content": {
+              "version": 1,
+              "id": "cancel:held-abort",
+              "owner": "communication-held-abort",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "held-abort",
+              "correlationId": "turn:held-abort",
+              "causationId": "held-abort",
+              "createdAt": 1792762193036,
+              "deadline": 1792848593036,
+              "depth": 1,
+              "payload": {
+                "kind": "cancel",
+                "reason": "The owner or originating task requested cancellation."
+              }
+            },
+            "receipt": {
+              "id": "cancel:held-abort",
+              "taskId": "held-abort",
+              "acceptedAt": 1792762193057
+            }
+          },
+          {
+            "id": "held-abort",
+            "content": {
+              "version": 1,
+              "id": "held-abort",
+              "owner": "communication-held-abort",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "held-abort",
+              "correlationId": "turn:held-abort",
+              "causationId": "tool:held-abort",
+              "createdAt": 1792762192921,
+              "deadline": 1792762792921,
+              "depth": 1,
+              "payload": {
+                "kind": "question",
+                "objective": "What is 2 + 2?",
+                "context": "Synthetic native fixture only."
+              }
+            },
+            "receipt": {
+              "id": "held-abort",
+              "taskId": "held-abort",
+              "acceptedAt": 1792762192944
+            }
+          }
+        ],
+        "jobs": [
+          {
+            "id": "bot-communication:recovery",
+            "capability": "bot-communication",
+            "fn": "recover",
+            "time": 1792762192943,
+            "payload": {
+              "schemaVersion": 1,
+              "workflowVersion": 1,
+              "armedUntil": 1792762253057,
+              "token": "1029a622-dfd5-4041-a136-aef4c82270eb"
+            },
+            "retry": {
+              "maxAttempts": 3,
+              "baseDelayMs": 100,
+              "maxDelayMs": 1000
+            },
+            "singleflight": true,
+            "exclusive": false,
+            "recoveryLoop": true,
+            "createdAt": 1792762192
+          }
+        ],
+        "physicalAlarm": null,
+        "pins": [
+          {
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "nativeVersion": "pi-durable@1.3.0",
+            "conversation": 8,
+            "provider": "01a168f4-245d-715a-a2e3-6fda8e7bb6eb",
+            "route": {
+              "model": "gpt-6-luna",
+              "thinking": "low",
+              "job": "conversation",
+              "profile": "auto",
+              "policyVersion": "jobs-v1",
+              "reason": "agent setting",
+              "contextWindow": 8192
+            },
+            "requests": 0,
+            "taskId": "held-abort"
+          }
+        ],
+        "held": "abort",
+        "now": 1792762193101,
+        "deadline": 0
+      },
+      "held": {
+        "tasks": [
+          {
+            "id": "held-abort",
+            "direction": "incoming",
+            "request": {
+              "version": 1,
+              "id": "held-abort",
+              "owner": "communication-held-abort",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "held-abort",
+              "correlationId": "turn:held-abort",
+              "causationId": "tool:held-abort",
+              "createdAt": 1792762192921,
+              "deadline": 1792762792921,
+              "depth": 1,
+              "payload": {
+                "kind": "question",
+                "objective": "What is 2 + 2?",
+                "context": "Synthetic native fixture only."
+              }
+            },
+            "status": "cancelling",
+            "outcome": null,
+            "revision": 4,
+            "leaseUntil": 1792762223078,
+            "resumed": false,
+            "cancelRequested": true,
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "control": {
+              "owner": "78339c8c-c577-4e3d-9d51-0f45fff491cc",
+              "phase": "stop",
+              "deadline": 1792762223078,
+              "attempts": 0,
+              "unconfirmed": false
+            },
+            "stop": {
+              "status": "pending",
+              "attempts": 1,
+              "deadline": 1792762493057,
+              "nextAt": null
+            }
+          }
+        ],
+        "deliveries": [],
+        "events": [
+          {
+            "value": "submit"
+          },
+          {
+            "value": "pi-request"
+          },
+          {
+            "value": "abort-entered"
+          },
+          {
+            "value": "abort-held"
+          }
+        ],
+        "native": [
+          {
+            "conversationId": 8,
+            "requestId": "communication:held-abort",
+            "type": "input",
+            "status": "placed",
+            "entry": 15,
+            "id": 16
+          }
+        ],
+        "inbox": [
+          {
+            "id": "cancel:held-abort",
+            "content": {
+              "version": 1,
+              "id": "cancel:held-abort",
+              "owner": "communication-held-abort",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "held-abort",
+              "correlationId": "turn:held-abort",
+              "causationId": "held-abort",
+              "createdAt": 1792762193036,
+              "deadline": 1792848593036,
+              "depth": 1,
+              "payload": {
+                "kind": "cancel",
+                "reason": "The owner or originating task requested cancellation."
+              }
+            },
+            "receipt": {
+              "id": "cancel:held-abort",
+              "taskId": "held-abort",
+              "acceptedAt": 1792762193057
+            }
+          },
+          {
+            "id": "held-abort",
+            "content": {
+              "version": 1,
+              "id": "held-abort",
+              "owner": "communication-held-abort",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "held-abort",
+              "correlationId": "turn:held-abort",
+              "causationId": "tool:held-abort",
+              "createdAt": 1792762192921,
+              "deadline": 1792762792921,
+              "depth": 1,
+              "payload": {
+                "kind": "question",
+                "objective": "What is 2 + 2?",
+                "context": "Synthetic native fixture only."
+              }
+            },
+            "receipt": {
+              "id": "held-abort",
+              "taskId": "held-abort",
+              "acceptedAt": 1792762192944
+            }
+          }
+        ],
+        "jobs": [
+          {
+            "id": "bot-communication:recovery",
+            "capability": "bot-communication",
+            "fn": "recover",
+            "time": 1792762192943,
+            "payload": {
+              "schemaVersion": 1,
+              "workflowVersion": 1,
+              "armedUntil": 1792762253057,
+              "token": "1029a622-dfd5-4041-a136-aef4c82270eb"
+            },
+            "retry": {
+              "maxAttempts": 3,
+              "baseDelayMs": 100,
+              "maxDelayMs": 1000
+            },
+            "singleflight": true,
+            "exclusive": false,
+            "recoveryLoop": true,
+            "createdAt": 1792762192
+          },
+          {
+            "id": "bot-communication:pump",
+            "capability": "bot-communication",
+            "fn": "pump",
+            "time": 1792762193103,
+            "payload": {
+              "schemaVersion": 1,
+              "workflowVersion": 1,
+              "token": "02a756fd-8361-45d3-accf-0a0436f21629"
+            },
+            "retry": {
+              "maxAttempts": 3,
+              "baseDelayMs": 100,
+              "maxDelayMs": 1000
+            },
+            "singleflight": true,
+            "exclusive": false,
+            "recoveryLoop": true,
+            "createdAt": 1792762193
+          }
+        ],
+        "physicalAlarm": null,
+        "pins": [
+          {
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "nativeVersion": "pi-durable@1.3.0",
+            "conversation": 8,
+            "provider": "01a168f4-245d-715a-a2e3-6fda8e7bb6eb",
+            "route": {
+              "model": "gpt-6-luna",
+              "thinking": "low",
+              "job": "conversation",
+              "profile": "auto",
+              "policyVersion": "jobs-v1",
+              "reason": "agent setting",
+              "contextWindow": 8192
+            },
+            "requests": 0,
+            "taskId": "held-abort"
+          }
+        ],
+        "held": "abort",
+        "now": 1792762193159,
+        "deadline": 0
+      },
+      "released": {
+        "tasks": [
+          {
+            "id": "held-abort",
+            "direction": "incoming",
+            "request": {
+              "version": 1,
+              "id": "held-abort",
+              "owner": "communication-held-abort",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "held-abort",
+              "correlationId": "turn:held-abort",
+              "causationId": "tool:held-abort",
+              "createdAt": 1792762192921,
+              "deadline": 1792762792921,
+              "depth": 1,
+              "payload": {
+                "kind": "question",
+                "objective": "What is 2 + 2?",
+                "context": "Synthetic native fixture only."
+              }
+            },
+            "status": "cancelled",
+            "outcome": {
+              "status": "cancelled",
+              "text": "Execution stopped: the request expired, was cancelled, or its current authority could not be confirmed."
+            },
+            "revision": 5,
+            "leaseUntil": null,
+            "resumed": false,
+            "cancelRequested": true,
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "control": {
+              "owner": null,
+              "phase": "stop",
+              "deadline": null,
+              "attempts": 0,
+              "unconfirmed": false
+            },
+            "stop": {
+              "status": "confirmed",
+              "attempts": 1,
+              "deadline": 1792762493057,
+              "nextAt": null
+            }
+          }
+        ],
+        "deliveries": [
+          {
+            "envelope": {
+              "version": 1,
+              "id": "result:held-abort",
+              "owner": "communication-held-abort",
+              "from": "00000000-0000-4000-8000-000000000001",
+              "to": "home",
+              "taskId": "held-abort",
+              "correlationId": "turn:held-abort",
+              "causationId": "held-abort",
+              "createdAt": 1792762193170,
+              "deadline": 1792848593170,
+              "depth": 1,
+              "payload": {
+                "kind": "result",
+                "outcome": {
+                  "status": "cancelled",
+                  "text": "Execution stopped: the request expired, was cancelled, or its current authority could not be confirmed."
+                }
+              }
+            },
+            "status": "accepted",
+            "attempts": 1,
+            "attemptLimit": 8,
+            "nextAt": null,
+            "error": null,
+            "receipt": {
+              "id": "result:held-abort",
+              "taskId": "held-abort",
+              "acceptedAt": 1792762193191
+            },
+            "schemaVersion": 1,
+            "workflowVersion": 1
+          }
+        ],
+        "events": [
+          {
+            "value": "submit"
+          },
+          {
+            "value": "pi-request"
+          },
+          {
+            "value": "abort-entered"
+          },
+          {
+            "value": "abort-held"
+          },
+          {
+            "value": "abort-confirmed"
+          },
+          {
+            "value": "execution"
+          },
+          {
+            "value": "pass-settled"
+          },
+          {
+            "value": "pass-settled"
+          }
+        ],
+        "native": [
+          {
+            "conversationId": 8,
+            "requestId": "communication:held-abort",
+            "type": "input",
+            "status": "unanswered",
+            "entry": 15,
+            "id": 16,
+            "reason": "aborted"
+          }
+        ],
+        "inbox": [
+          {
+            "id": "cancel:held-abort",
+            "content": {
+              "version": 1,
+              "id": "cancel:held-abort",
+              "owner": "communication-held-abort",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "held-abort",
+              "correlationId": "turn:held-abort",
+              "causationId": "held-abort",
+              "createdAt": 1792762193036,
+              "deadline": 1792848593036,
+              "depth": 1,
+              "payload": {
+                "kind": "cancel",
+                "reason": "The owner or originating task requested cancellation."
+              }
+            },
+            "receipt": {
+              "id": "cancel:held-abort",
+              "taskId": "held-abort",
+              "acceptedAt": 1792762193057
+            }
+          },
+          {
+            "id": "held-abort",
+            "content": {
+              "version": 1,
+              "id": "held-abort",
+              "owner": "communication-held-abort",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "held-abort",
+              "correlationId": "turn:held-abort",
+              "causationId": "tool:held-abort",
+              "createdAt": 1792762192921,
+              "deadline": 1792762792921,
+              "depth": 1,
+              "payload": {
+                "kind": "question",
+                "objective": "What is 2 + 2?",
+                "context": "Synthetic native fixture only."
+              }
+            },
+            "receipt": {
+              "id": "held-abort",
+              "taskId": "held-abort",
+              "acceptedAt": 1792762192944
+            }
+          }
+        ],
+        "jobs": [
+          {
+            "id": "bot-communication:recovery",
+            "capability": "bot-communication",
+            "fn": "recover",
+            "time": 1792762192943,
+            "payload": {
+              "schemaVersion": 1,
+              "workflowVersion": 1,
+              "armedUntil": 1792762253057,
+              "token": "1029a622-dfd5-4041-a136-aef4c82270eb"
+            },
+            "retry": {
+              "maxAttempts": 3,
+              "baseDelayMs": 100,
+              "maxDelayMs": 1000
+            },
+            "singleflight": true,
+            "exclusive": false,
+            "recoveryLoop": true,
+            "createdAt": 1792762192
+          },
+          {
+            "id": "bot-communication:pump",
+            "capability": "bot-communication",
+            "fn": "pump",
+            "time": 1792762193103,
+            "payload": {
+              "schemaVersion": 1,
+              "workflowVersion": 1,
+              "token": "02a756fd-8361-45d3-accf-0a0436f21629"
+            },
+            "retry": {
+              "maxAttempts": 3,
+              "baseDelayMs": 100,
+              "maxDelayMs": 1000
+            },
+            "singleflight": true,
+            "exclusive": false,
+            "recoveryLoop": true,
+            "createdAt": 1792762193
+          }
+        ],
+        "physicalAlarm": null,
+        "pins": [],
+        "held": null,
+        "now": 1792762193206,
+        "deadline": 0
+      }
+    },
+    "lostAckBeforeRestart": {
+      "tasks": [
+        {
+          "id": "lost-native-ack",
+          "direction": "incoming",
+          "request": {
+            "version": 1,
+            "id": "lost-native-ack",
+            "owner": "communication-lost-native-ack",
+            "from": "home",
+            "to": "00000000-0000-4000-8000-000000000001",
+            "taskId": "lost-native-ack",
+            "correlationId": "turn:lost-native-ack",
+            "causationId": "tool:lost-native-ack",
+            "createdAt": 1792762193324,
+            "deadline": 1792762793324,
+            "depth": 1,
+            "payload": {
+              "kind": "question",
+              "objective": "What is 2 + 2?",
+              "context": "Synthetic native fixture only."
+            }
+          },
+          "status": "running",
+          "outcome": null,
+          "revision": 1,
+          "leaseUntil": 1792762223373,
+          "resumed": false,
+          "cancelRequested": false,
+          "schemaVersion": 1,
+          "workflowVersion": 1,
+          "control": {
+            "owner": "2651648c-8c30-4e89-b6a0-58d688ddf5e3",
+            "phase": "submit",
+            "deadline": 1792762223373,
+            "attempts": 0,
+            "unconfirmed": false
+          },
+          "stop": {
+            "status": "none",
+            "attempts": 0,
+            "deadline": null,
+            "nextAt": null
+          }
+        }
+      ],
+      "deliveries": [],
+      "events": [
+        {
+          "value": "submit"
+        },
+        {
+          "value": "pi-request"
+        },
+        {
+          "value": "submit-held"
+        }
+      ],
+      "native": [
+        {
+          "conversationId": 8,
+          "requestId": "communication:lost-native-ack",
+          "type": "input",
+          "status": "done",
+          "entry": 15,
+          "id": 16,
+          "answer": 19
+        }
+      ],
+      "inbox": [
+        {
+          "id": "lost-native-ack",
+          "content": {
+            "version": 1,
+            "id": "lost-native-ack",
+            "owner": "communication-lost-native-ack",
+            "from": "home",
+            "to": "00000000-0000-4000-8000-000000000001",
+            "taskId": "lost-native-ack",
+            "correlationId": "turn:lost-native-ack",
+            "causationId": "tool:lost-native-ack",
+            "createdAt": 1792762193324,
+            "deadline": 1792762793324,
+            "depth": 1,
+            "payload": {
+              "kind": "question",
+              "objective": "What is 2 + 2?",
+              "context": "Synthetic native fixture only."
+            }
+          },
+          "receipt": {
+            "id": "lost-native-ack",
+            "taskId": "lost-native-ack",
+            "acceptedAt": 1792762193349
+          }
+        }
+      ],
+      "jobs": [
+        {
+          "id": "bot-communication:recovery",
+          "capability": "bot-communication",
+          "fn": "recover",
+          "time": 1792762193349,
+          "payload": {
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "armedUntil": 1792762253349,
+            "token": "2bba62a0-45f7-44b6-921e-e9c62892898a"
+          },
+          "retry": {
+            "maxAttempts": 3,
+            "baseDelayMs": 100,
+            "maxDelayMs": 1000
+          },
+          "singleflight": true,
+          "exclusive": false,
+          "recoveryLoop": true,
+          "createdAt": 1792762193
+        }
+      ],
+      "physicalAlarm": null,
+      "pins": [
+        {
+          "schemaVersion": 1,
+          "workflowVersion": 1,
+          "nativeVersion": "pi-durable@1.3.0",
+          "conversation": 8,
+          "provider": "01a168f4-25ec-715a-a2e3-6fe0248dfddc",
+          "route": {
+            "model": "gpt-6-luna",
+            "thinking": "low",
+            "job": "conversation",
+            "profile": "auto",
+            "policyVersion": "jobs-v1",
+            "reason": "agent setting",
+            "contextWindow": 8192
+          },
+          "requests": 0,
+          "taskId": "lost-native-ack"
+        }
+      ],
+      "held": "submit",
+      "now": 1792762193444,
+      "deadline": 0
+    },
+    "earlyBeforeRestart": {
+      "tasks": [
+        {
+          "id": "early-empty",
+          "direction": "outgoing",
+          "request": {
+            "version": 1,
+            "id": "early-empty",
+            "owner": "communication-early-empty",
+            "from": "home",
+            "to": "00000000-0000-4000-8000-000000000001",
+            "taskId": "early-empty",
+            "correlationId": "turn:early-empty",
+            "causationId": "tool:early-empty",
+            "createdAt": 1792762193525,
+            "deadline": 1792762793525,
+            "depth": 1,
+            "payload": {
+              "kind": "question",
+              "objective": "What is 2 + 2?",
+              "context": "Synthetic native fixture only."
+            }
+          },
+          "status": "waiting",
+          "outcome": null,
+          "revision": 0,
+          "leaseUntil": null,
+          "resumed": false,
+          "cancelRequested": false,
+          "schemaVersion": 1,
+          "workflowVersion": 1,
+          "control": {
+            "owner": null,
+            "phase": "submit",
+            "deadline": null,
+            "attempts": 0,
+            "unconfirmed": false
+          },
+          "stop": {
+            "status": "none",
+            "attempts": 0,
+            "deadline": null,
+            "nextAt": null
+          }
+        }
+      ],
+      "deliveries": [
+        {
+          "envelope": {
+            "version": 1,
+            "id": "early-empty",
+            "owner": "communication-early-empty",
+            "from": "home",
+            "to": "00000000-0000-4000-8000-000000000001",
+            "taskId": "early-empty",
+            "correlationId": "turn:early-empty",
+            "causationId": "tool:early-empty",
+            "createdAt": 1792762193525,
+            "deadline": 1792762793525,
+            "depth": 1,
+            "payload": {
+              "kind": "question",
+              "objective": "What is 2 + 2?",
+              "context": "Synthetic native fixture only."
+            }
+          },
+          "status": "pending",
+          "attempts": 0,
+          "attemptLimit": 8,
+          "nextAt": 1792762193571,
+          "error": null,
+          "receipt": null,
+          "schemaVersion": 1,
+          "workflowVersion": 1
+        }
+      ],
+      "events": [],
+      "native": [],
+      "inbox": [],
+      "jobs": [
+        {
+          "id": "bot-communication:recovery",
+          "capability": "bot-communication",
+          "fn": "recover",
+          "time": 1792762253526,
+          "payload": {
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "armedUntil": 1792762253526,
+            "token": "063da6f4-a8a8-4f7f-b4a8-9b306dd576de"
+          },
+          "retry": {
+            "maxAttempts": 3,
+            "baseDelayMs": 100,
+            "maxDelayMs": 1000
+          },
+          "singleflight": true,
+          "exclusive": false,
+          "recoveryLoop": true,
+          "createdAt": 1792762193
+        }
+      ],
+      "physicalAlarm": 1792762253526,
+      "pins": [],
+      "held": null,
+      "now": 1792762193573,
+      "deadline": 1792762253526
+    },
+    "lostAckBeforeRestartAlarm": {
+      "tasks": [
+        {
+          "id": "lost-native-ack",
+          "direction": "incoming",
+          "request": {
+            "version": 1,
+            "id": "lost-native-ack",
+            "owner": "communication-lost-native-ack",
+            "from": "home",
+            "to": "00000000-0000-4000-8000-000000000001",
+            "taskId": "lost-native-ack",
+            "correlationId": "turn:lost-native-ack",
+            "causationId": "tool:lost-native-ack",
+            "createdAt": 1792762193324,
+            "deadline": 1792762793324,
+            "depth": 1,
+            "payload": {
+              "kind": "question",
+              "objective": "What is 2 + 2?",
+              "context": "Synthetic native fixture only."
+            }
+          },
+          "status": "running",
+          "outcome": null,
+          "revision": 1,
+          "leaseUntil": 1792762223373,
+          "resumed": false,
+          "cancelRequested": false,
+          "schemaVersion": 1,
+          "workflowVersion": 1,
+          "control": {
+            "owner": "2651648c-8c30-4e89-b6a0-58d688ddf5e3",
+            "phase": "submit",
+            "deadline": 1792762223373,
+            "attempts": 0,
+            "unconfirmed": false
+          },
+          "stop": {
+            "status": "none",
+            "attempts": 0,
+            "deadline": null,
+            "nextAt": null
+          }
+        }
+      ],
+      "deliveries": [],
+      "events": [
+        {
+          "value": "submit"
+        },
+        {
+          "value": "pi-request"
+        },
+        {
+          "value": "submit-held"
+        }
+      ],
+      "native": [
+        {
+          "conversationId": 8,
+          "requestId": "communication:lost-native-ack",
+          "type": "input",
+          "status": "done",
+          "entry": 15,
+          "id": 16,
+          "answer": 19
+        }
+      ],
+      "inbox": [
+        {
+          "id": "lost-native-ack",
+          "content": {
+            "version": 1,
+            "id": "lost-native-ack",
+            "owner": "communication-lost-native-ack",
+            "from": "home",
+            "to": "00000000-0000-4000-8000-000000000001",
+            "taskId": "lost-native-ack",
+            "correlationId": "turn:lost-native-ack",
+            "causationId": "tool:lost-native-ack",
+            "createdAt": 1792762193324,
+            "deadline": 1792762793324,
+            "depth": 1,
+            "payload": {
+              "kind": "question",
+              "objective": "What is 2 + 2?",
+              "context": "Synthetic native fixture only."
+            }
+          },
+          "receipt": {
+            "id": "lost-native-ack",
+            "taskId": "lost-native-ack",
+            "acceptedAt": 1792762193349
+          }
+        }
+      ],
+      "jobs": [
+        {
+          "id": "bot-communication:recovery",
+          "capability": "bot-communication",
+          "fn": "recover",
+          "time": 1792762195574,
+          "payload": {
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "armedUntil": 1792762253349,
+            "token": "2bba62a0-45f7-44b6-921e-e9c62892898a"
+          },
+          "retry": {
+            "maxAttempts": 3,
+            "baseDelayMs": 100,
+            "maxDelayMs": 1000
+          },
+          "singleflight": true,
+          "exclusive": false,
+          "recoveryLoop": true,
+          "createdAt": 1792762193
+        }
+      ],
+      "physicalAlarm": 1792762195574,
+      "pins": [
+        {
+          "schemaVersion": 1,
+          "workflowVersion": 1,
+          "nativeVersion": "pi-durable@1.3.0",
+          "conversation": 8,
+          "provider": "01a168f4-25ec-715a-a2e3-6fe0248dfddc",
+          "route": {
+            "model": "gpt-6-luna",
+            "thinking": "low",
+            "job": "conversation",
+            "profile": "auto",
+            "policyVersion": "jobs-v1",
+            "reason": "agent setting",
+            "contextWindow": 8192
+          },
+          "requests": 0,
+          "taskId": "lost-native-ack"
+        }
+      ],
+      "held": "submit",
+      "now": 1792762193575,
+      "deadline": 0
+    },
+    "earlyAfterRestart": {
+      "sender": {
+        "tasks": [
+          {
+            "id": "early-empty",
+            "direction": "outgoing",
+            "request": {
+              "version": 1,
+              "id": "early-empty",
+              "owner": "communication-early-empty",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "early-empty",
+              "correlationId": "turn:early-empty",
+              "causationId": "tool:early-empty",
+              "createdAt": 1792762193525,
+              "deadline": 1792762793525,
+              "depth": 1,
+              "payload": {
+                "kind": "question",
+                "objective": "What is 2 + 2?",
+                "context": "Synthetic native fixture only."
+              }
+            },
+            "status": "waiting",
+            "outcome": null,
+            "revision": 0,
+            "leaseUntil": null,
+            "resumed": false,
+            "cancelRequested": false,
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "control": {
+              "owner": null,
+              "phase": "submit",
+              "deadline": null,
+              "attempts": 0,
+              "unconfirmed": false
+            },
+            "stop": {
+              "status": "none",
+              "attempts": 0,
+              "deadline": null,
+              "nextAt": null
+            }
+          }
+        ],
+        "deliveries": [
+          {
+            "envelope": {
+              "version": 1,
+              "id": "early-empty",
+              "owner": "communication-early-empty",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "early-empty",
+              "correlationId": "turn:early-empty",
+              "causationId": "tool:early-empty",
+              "createdAt": 1792762193525,
+              "deadline": 1792762793525,
+              "depth": 1,
+              "payload": {
+                "kind": "question",
+                "objective": "What is 2 + 2?",
+                "context": "Synthetic native fixture only."
+              }
+            },
+            "status": "accepted",
+            "attempts": 1,
+            "attemptLimit": 8,
+            "nextAt": null,
+            "error": null,
+            "receipt": {
+              "id": "early-empty",
+              "taskId": "early-empty",
+              "acceptedAt": 1792762253565
+            },
+            "schemaVersion": 1,
+            "workflowVersion": 1
+          }
+        ],
+        "events": [
+          {
+            "value": "automatic"
+          },
+          {
+            "value": "automatic"
+          }
+        ],
+        "native": [],
+        "inbox": [],
+        "jobs": [
+          {
+            "id": "bot-communication:pump",
+            "capability": "bot-communication",
+            "fn": "pump",
+            "time": 1792762793525,
+            "payload": {
+              "schemaVersion": 1,
+              "workflowVersion": 1,
+              "token": "c5a38cae-4c76-4757-ac03-3f553087b0ba"
+            },
+            "retry": {
+              "maxAttempts": 3,
+              "baseDelayMs": 100,
+              "maxDelayMs": 1000
+            },
+            "singleflight": true,
+            "exclusive": false,
+            "recoveryLoop": true,
+            "createdAt": 1792762253
+          }
+        ],
+        "physicalAlarm": 1792762793525,
+        "pins": [],
+        "held": null,
+        "now": 1792762268546,
+        "deadline": 1792762253526
+      },
+      "recipient": {
+        "tasks": [
+          {
+            "id": "early-empty",
+            "direction": "incoming",
+            "request": {
+              "version": 1,
+              "id": "early-empty",
+              "owner": "communication-early-empty",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "early-empty",
+              "correlationId": "turn:early-empty",
+              "causationId": "tool:early-empty",
+              "createdAt": 1792762193525,
+              "deadline": 1792762793525,
+              "depth": 1,
+              "payload": {
+                "kind": "question",
+                "objective": "What is 2 + 2?",
+                "context": "Synthetic native fixture only."
+              }
+            },
+            "status": "running",
+            "outcome": null,
+            "revision": 2,
+            "leaseUntil": 1792762283653,
+            "resumed": false,
+            "cancelRequested": false,
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "control": {
+              "owner": null,
+              "phase": "observe",
+              "deadline": null,
+              "attempts": 0,
+              "unconfirmed": false
+            },
+            "stop": {
+              "status": "none",
+              "attempts": 0,
+              "deadline": null,
+              "nextAt": null
+            }
+          }
+        ],
+        "deliveries": [],
+        "events": [
+          {
+            "value": "automatic"
+          },
+          {
+            "value": "automatic"
+          },
+          {
+            "value": "submit"
+          },
+          {
+            "value": "automatic"
+          },
+          {
+            "value": "pi-request"
+          },
+          {
+            "value": "automatic"
+          }
+        ],
+        "native": [
+          {
+            "conversationId": 8,
+            "requestId": "communication:early-empty",
+            "type": "input",
+            "status": "done",
+            "entry": 15,
+            "id": 16,
+            "answer": 19
+          }
+        ],
+        "inbox": [
+          {
+            "id": "early-empty",
+            "content": {
+              "version": 1,
+              "id": "early-empty",
+              "owner": "communication-early-empty",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "early-empty",
+              "correlationId": "turn:early-empty",
+              "causationId": "tool:early-empty",
+              "createdAt": 1792762193525,
+              "deadline": 1792762793525,
+              "depth": 1,
+              "payload": {
+                "kind": "question",
+                "objective": "What is 2 + 2?",
+                "context": "Synthetic native fixture only."
+              }
+            },
+            "receipt": {
+              "id": "early-empty",
+              "taskId": "early-empty",
+              "acceptedAt": 1792762253565
+            }
+          }
+        ],
+        "jobs": [
+          {
+            "id": "bot-communication:pump",
+            "capability": "bot-communication",
+            "fn": "pump",
+            "time": 1792762283653,
+            "payload": {
+              "schemaVersion": 1,
+              "workflowVersion": 1,
+              "token": "41ac9971-d227-45dd-9520-4d88355c36b2"
+            },
+            "retry": {
+              "maxAttempts": 3,
+              "baseDelayMs": 100,
+              "maxDelayMs": 1000
+            },
+            "singleflight": true,
+            "exclusive": false,
+            "recoveryLoop": true,
+            "createdAt": 1792762253
+          },
+          {
+            "id": "bot-communication:recovery",
+            "capability": "bot-communication",
+            "fn": "recover",
+            "time": 1792762313565,
+            "payload": {
+              "schemaVersion": 1,
+              "workflowVersion": 1,
+              "armedUntil": 1792762313565,
+              "token": "a2e4cad7-38b3-49ce-8e20-37ef2b21c23b"
+            },
+            "retry": {
+              "maxAttempts": 3,
+              "baseDelayMs": 100,
+              "maxDelayMs": 1000
+            },
+            "singleflight": true,
+            "exclusive": false,
+            "recoveryLoop": true,
+            "createdAt": 1792762253
+          }
+        ],
+        "physicalAlarm": 1792762283653,
+        "pins": [
+          {
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "nativeVersion": "pi-durable@1.3.0",
+            "conversation": 8,
+            "provider": "01a168f5-112c-71c7-8eee-a1e7cb196f54",
+            "route": {
+              "model": "gpt-6-luna",
+              "thinking": "low",
+              "job": "conversation",
+              "profile": "auto",
+              "policyVersion": "jobs-v1",
+              "reason": "agent setting",
+              "contextWindow": 8192
+            },
+            "requests": 0,
+            "taskId": "early-empty"
+          }
+        ],
+        "held": null,
+        "now": 1792762268551,
+        "deadline": 0
+      }
+    },
+    "lostAckAfterRestart": {
+      "sender": {
+        "tasks": [
+          {
+            "id": "lost-native-ack",
+            "direction": "outgoing",
+            "request": {
+              "version": 1,
+              "id": "lost-native-ack",
+              "owner": "communication-lost-native-ack",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "lost-native-ack",
+              "correlationId": "turn:lost-native-ack",
+              "causationId": "tool:lost-native-ack",
+              "createdAt": 1792762193324,
+              "deadline": 1792762793324,
+              "depth": 1,
+              "payload": {
+                "kind": "question",
+                "objective": "What is 2 + 2?",
+                "context": "Synthetic native fixture only."
+              }
+            },
+            "status": "completed",
+            "outcome": {
+              "status": "completed",
+              "text": "Native Pi result: 4"
+            },
+            "revision": 2,
+            "leaseUntil": null,
+            "resumed": true,
+            "cancelRequested": false,
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "control": {
+              "owner": null,
+              "phase": "submit",
+              "deadline": null,
+              "attempts": 0,
+              "unconfirmed": false
+            },
+            "stop": {
+              "status": "none",
+              "attempts": 0,
+              "deadline": null,
+              "nextAt": null
+            }
+          }
+        ],
+        "deliveries": [
+          {
+            "envelope": {
+              "version": 1,
+              "id": "lost-native-ack",
+              "owner": "communication-lost-native-ack",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "lost-native-ack",
+              "correlationId": "turn:lost-native-ack",
+              "causationId": "tool:lost-native-ack",
+              "createdAt": 1792762193324,
+              "deadline": 1792762793324,
+              "depth": 1,
+              "payload": {
+                "kind": "question",
+                "objective": "What is 2 + 2?",
+                "context": "Synthetic native fixture only."
+              }
+            },
+            "status": "accepted",
+            "attempts": 1,
+            "attemptLimit": 8,
+            "nextAt": null,
+            "error": null,
+            "receipt": {
+              "id": "lost-native-ack",
+              "taskId": "lost-native-ack",
+              "acceptedAt": 1792762193349
+            },
+            "schemaVersion": 1,
+            "workflowVersion": 1
+          }
+        ],
+        "events": [
+          {
+            "value": "automatic"
+          },
+          {
+            "value": "automatic"
+          },
+          {
+            "value": "automatic"
+          },
+          {
+            "value": "automatic"
+          },
+          {
+            "value": "continuation"
+          },
+          {
+            "value": "automatic"
+          }
+        ],
+        "native": [],
+        "inbox": [
+          {
+            "id": "result:lost-native-ack",
+            "content": {
+              "version": 1,
+              "id": "result:lost-native-ack",
+              "owner": "communication-lost-native-ack",
+              "from": "00000000-0000-4000-8000-000000000001",
+              "to": "home",
+              "taskId": "lost-native-ack",
+              "correlationId": "turn:lost-native-ack",
+              "causationId": "lost-native-ack",
+              "createdAt": 1792762195676,
+              "deadline": 1792848595676,
+              "depth": 1,
+              "payload": {
+                "kind": "result",
+                "outcome": {
+                  "status": "completed",
+                  "text": "Native Pi result: 4"
+                }
+              }
+            },
+            "receipt": {
+              "id": "result:lost-native-ack",
+              "taskId": "lost-native-ack",
+              "acceptedAt": 1792762196714
+            }
+          }
+        ],
+        "jobs": [],
+        "physicalAlarm": null,
+        "pins": [],
+        "held": null,
+        "now": 1792762268560,
+        "deadline": 0
+      },
+      "recipient": {
+        "tasks": [
+          {
+            "id": "lost-native-ack",
+            "direction": "incoming",
+            "request": {
+              "version": 1,
+              "id": "lost-native-ack",
+              "owner": "communication-lost-native-ack",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "lost-native-ack",
+              "correlationId": "turn:lost-native-ack",
+              "causationId": "tool:lost-native-ack",
+              "createdAt": 1792762193324,
+              "deadline": 1792762793324,
+              "depth": 1,
+              "payload": {
+                "kind": "question",
+                "objective": "What is 2 + 2?",
+                "context": "Synthetic native fixture only."
+              }
+            },
+            "status": "completed",
+            "outcome": {
+              "status": "completed",
+              "text": "Native Pi result: 4"
+            },
+            "revision": 4,
+            "leaseUntil": null,
+            "resumed": false,
+            "cancelRequested": false,
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "control": {
+              "owner": null,
+              "phase": "observe",
+              "deadline": null,
+              "attempts": 0,
+              "unconfirmed": false
+            },
+            "stop": {
+              "status": "none",
+              "attempts": 0,
+              "deadline": null,
+              "nextAt": null
+            }
+          }
+        ],
+        "deliveries": [
+          {
+            "envelope": {
+              "version": 1,
+              "id": "result:lost-native-ack",
+              "owner": "communication-lost-native-ack",
+              "from": "00000000-0000-4000-8000-000000000001",
+              "to": "home",
+              "taskId": "lost-native-ack",
+              "correlationId": "turn:lost-native-ack",
+              "causationId": "lost-native-ack",
+              "createdAt": 1792762195676,
+              "deadline": 1792848595676,
+              "depth": 1,
+              "payload": {
+                "kind": "result",
+                "outcome": {
+                  "status": "completed",
+                  "text": "Native Pi result: 4"
+                }
+              }
+            },
+            "status": "accepted",
+            "attempts": 1,
+            "attemptLimit": 8,
+            "nextAt": null,
+            "error": null,
+            "receipt": {
+              "id": "result:lost-native-ack",
+              "taskId": "lost-native-ack",
+              "acceptedAt": 1792762196714
+            },
+            "schemaVersion": 1,
+            "workflowVersion": 1
+          }
+        ],
+        "events": [
+          {
+            "value": "submit"
+          },
+          {
+            "value": "pi-request"
+          },
+          {
+            "value": "submit-held"
+          },
+          {
+            "value": "automatic"
+          },
+          {
+            "value": "automatic"
+          },
+          {
+            "value": "execution"
+          },
+          {
+            "value": "automatic"
+          },
+          {
+            "value": "automatic"
+          }
+        ],
+        "native": [
+          {
+            "conversationId": 8,
+            "requestId": "communication:lost-native-ack",
+            "type": "input",
+            "status": "done",
+            "entry": 15,
+            "id": 16,
+            "answer": 19
+          }
+        ],
+        "inbox": [
+          {
+            "id": "lost-native-ack",
+            "content": {
+              "version": 1,
+              "id": "lost-native-ack",
+              "owner": "communication-lost-native-ack",
+              "from": "home",
+              "to": "00000000-0000-4000-8000-000000000001",
+              "taskId": "lost-native-ack",
+              "correlationId": "turn:lost-native-ack",
+              "causationId": "tool:lost-native-ack",
+              "createdAt": 1792762193324,
+              "deadline": 1792762793324,
+              "depth": 1,
+              "payload": {
+                "kind": "question",
+                "objective": "What is 2 + 2?",
+                "context": "Synthetic native fixture only."
+              }
+            },
+            "receipt": {
+              "id": "lost-native-ack",
+              "taskId": "lost-native-ack",
+              "acceptedAt": 1792762193349
+            }
+          }
+        ],
+        "jobs": [],
+        "physicalAlarm": null,
+        "pins": [],
+        "held": null,
+        "now": 1792762268564,
+        "deadline": 0
+      }
+    }
+  },
+  "noPoke": {
+    "start": 1792762193582,
+    "end": 1792762268528,
+    "discoveryDeadline": 1792762253526
+  }
+}

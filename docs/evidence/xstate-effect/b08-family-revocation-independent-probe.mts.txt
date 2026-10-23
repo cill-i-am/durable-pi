@@ -1,0 +1,138 @@
+import { BACKGROUND_CONTEXT as ctx } from "@earendil-works/chord/context"
+import {
+  createModels,
+  fauxAssistantMessage,
+  fauxProvider,
+} from "@earendil-works/pi-ai"
+import {
+  Harness,
+  createRegistry,
+  type ConversationId,
+} from "@earendil-works/pi-durable"
+import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
+import { Cause, Effect, Exit, Schema } from "effect"
+import assert from "node:assert/strict"
+
+import { piDelegationLedger } from "/Users/cillianbarron/.codex/worktrees/xstate-review-stack/durable-pi/src/delegation/adapters/pi"
+import { DelegationFailure, type Control } from "/Users/cillianbarron/.codex/worktrees/xstate-review-stack/durable-pi/src/delegation/contracts"
+import type { DelegationRecovery } from "/Users/cillianbarron/.codex/worktrees/xstate-review-stack/durable-pi/src/delegation/delegations"
+import { restoreGroup, requestId, SavedGroup } from "/Users/cillianbarron/.codex/worktrees/xstate-review-stack/durable-pi/src/delegation/domain"
+import { advanceChild, advanceGroup } from "/Users/cillianbarron/.codex/worktrees/xstate-review-stack/durable-pi/src/delegation/group.machine"
+import { makeDelegations } from "/Users/cillianbarron/.codex/worktrees/xstate-review-stack/durable-pi/src/delegation/service"
+import { resolveRoute } from "/Users/cillianbarron/.codex/worktrees/xstate-review-stack/durable-pi/src/inference/policy"
+
+const authority = { current: () => true, cancelled: () => false }
+const unknownAuthority = {
+  current: () => {
+    throw new Error("Cleanup must not renew dispatch authority")
+  },
+  cancelled: () => {
+    throw new Error(
+      "Cleanup must not interpret unknown authority as cancellation"
+    )
+  },
+}
+const unavailable = () =>
+  new DelegationFailure({
+    code: "unavailable",
+    message: "Recovery unavailable",
+  })
+const modelFixture = async () => {
+  const models = createModels(),
+    registry = createRegistry()
+  const provider = fauxProvider({
+    provider: "openai",
+    models: [
+      { id: "test", reasoning: false, contextWindow: 32000, maxTokens: 2000 },
+    ],
+    tokensPerSecond: 1000000,
+  })
+  provider.setResponses([fauxAssistantMessage("Private answer")])
+  models.setProvider(provider.provider)
+  registry.install({ name: "reader" })
+  const h = await Harness.open(
+    await openNodeSqliteStorage("/private/tmp/b08-final-review-probes/family-fixed-independent.sqlite"),
+    {
+      models,
+      registry,
+      settings: { retry: { enabled: false }, compaction: { enabled: false } },
+    },
+    ctx
+  )
+  const ledger = piDelegationLedger(
+    async () => h,
+    () => registry.snapshot().extension("reader")!,
+    () => []
+  )
+  const parent = await h.root(ctx)
+  const task = { name: "Draft", task: "Keep private", tools: [] }
+  const source = {
+    detached: true,
+    taskId: 7,
+    turnId: "recovery-root",
+    conversationId: Number(parent.id),
+    route: resolveRoute("conversation", { model: "test", thinking: "off" }),
+    memory: "Private source",
+  }
+  const seed = () =>
+    Effect.runPromise(
+      ledger.atomic((tx) =>
+        Effect.gen(function* () {
+          const child = yield* tx.createChild(source, task)
+          const value = restoreGroup({
+            id: 7,
+            turnId: source.turnId,
+            conversationId: source.conversationId,
+            detached: true,
+            input: { objective: "Draft", tasks: [task] },
+            route: source.route,
+            memory: source.memory,
+            createdAt: 1000,
+            deadline: 601000,
+            revision: 0,
+            closed: false,
+            children: [{ ...task, id: child, requests: 0, stopped: false }],
+            controls: [],
+          })
+          ;(yield* tx.group(7)).value = value
+          ;(yield* tx.parent(value.turnId)).group = 7
+          ;(yield* tx.catalog()).ids.push(7)
+          return value
+        })
+      )
+    )
+  return { h, ledger, source, task, seed }
+}
+const stopFor = (group: SavedGroup): Control => ({
+  groupId: group.id,
+  childId: group.children[0]!.id,
+  operationId: "00000000-0000-4000-8000-000000000010",
+  action: { type: "stop" },
+})
+const run = Effect.runPromise
+
+
+const f = await modelFixture()
+try {
+  const saved = await f.seed()
+  let aborts = 0
+  const app = makeDelegations({
+    ...f.ledger,
+    abort: child => Effect.sync(() => { aborts++ }).pipe(Effect.andThen(f.ledger.abort(child))),
+  }, { current: () => false, cancelled: () => true }, Effect.succeed(2000))
+  await run(app.revoke(saved.turnId))
+  const revoked = await run(f.ledger.group(saved.id))
+  assert.equal(revoked.lifecycle, "closing")
+  assert.equal(revoked.children[0].lifecycle, "stopping")
+  assert.equal(aborts, 0)
+  await run(app.reconcile(saved.turnId, { allowDispatch: false }))
+  const afterCleanupOnly = await run(f.ledger.group(saved.id))
+  console.log(JSON.stringify({schedule: "known revoked root before deadline -> explicit revoke -> worker cleanup-only reconcile", aborts, lifecycle: afterCleanupOnly.lifecycle, child: afterCleanupOnly.children[0], nextWake: await run(app.nextWake())}))
+  assert.equal(aborts, 1)
+  assert.equal(afterCleanupOnly.children[0].lifecycle, "stopped")
+  await run(app.reconcile(saved.turnId))
+  const afterOrdinary = await run(f.ledger.group(saved.id))
+  console.log(JSON.stringify({schedule: "same state -> ordinary reconcile control", aborts, lifecycle: afterOrdinary.lifecycle, child: afterOrdinary.children[0]}))
+  assert.equal(aborts, 1)
+  assert.equal(afterOrdinary.children[0].lifecycle, "stopped")
+} finally { await f.h.close(ctx) }

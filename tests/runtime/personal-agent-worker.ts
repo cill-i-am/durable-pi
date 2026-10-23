@@ -3376,20 +3376,23 @@ export class PersonalAgentProbe extends PersonalAgent {
               id
             )
           }
-          yield* this.coordination.store.accept({
-            id: "membership-message",
-            operationId: "membership-operation",
-            from: { sessionId: ids[0]!, agentId: "main" },
-            to: { sessionId: ids[24]!, agentId: "main" },
-            text: "Queued before membership changed",
-            provenance: {
-              author: { kind: "agent", id: "synthetic" },
-              conversationId: "synthetic",
-              recipients: [],
+          yield* this.coordination.store.accept(
+            {
+              id: "membership-message",
+              operationId: "membership-operation",
+              from: { sessionId: ids[0]!, agentId: "main" },
+              to: { sessionId: ids[24]!, agentId: "main" },
+              text: "Queued before membership changed",
+              provenance: {
+                author: { kind: "agent", id: "synthetic" },
+                conversationId: "synthetic",
+                recipients: [],
+              },
+              createdAt: Date.now(),
+              deadline: Date.now() + 600000,
             },
-            createdAt: Date.now(),
-            deadline: Date.now() + 600000,
-          })
+            yield* Effect.promise(() => this.coordinationRunner.armDiscovery())
+          )
           yield* this.coordination.store.closeAll()
           return {
             closed: yield* Effect.forEach(ids, (id) =>

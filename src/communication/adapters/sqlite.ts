@@ -1,7 +1,7 @@
-import { and, count, desc, eq, inArray, lte, or } from "drizzle-orm"
+import { and, count, desc, eq, inArray, lte } from "drizzle-orm"
 import type { EffectDrizzleQueryError } from "drizzle-orm/effect-core/errors"
 import type { SQLiteTable } from "drizzle-orm/sqlite-core"
-import { Cause, Effect, Layer, Schema } from "effect"
+import { Cause, Clock, Effect, Layer, Schema } from "effect"
 
 import { mapSqliteError, type Sqlite } from "../../storage/sqlite"
 import {
@@ -9,7 +9,6 @@ import {
   Delivery,
   Envelope,
   Identity,
-  type Outcome,
   Receipt,
   Task,
   canonicalEnvelope,
@@ -18,6 +17,7 @@ import {
 } from "../contracts"
 import * as Domain from "../domain"
 import { Mailbox } from "../mailbox"
+import { advanceTask } from "../task.machine"
 import {
   communicationIdentity as identities,
   communicationOutbox as outbox,
@@ -70,8 +70,8 @@ export function sqliteMailbox(db: Sqlite) {
     db
       .use((orm) => q(orm.select().from(outbox).where(eq(outbox.id, id))))
       .pipe(
-        Effect.map(([row]) =>
-          row ? Schema.decodeUnknownSync(DeliveryJson)(row.body) : undefined
+        Effect.flatMap(([row]) =>
+          decide(() => (row ? readDeliveryRow(row) : undefined))
         )
       )
   const task = (id: string) =>
@@ -80,7 +80,7 @@ export function sqliteMailbox(db: Sqlite) {
       .pipe(
         Effect.flatMap(([row]) =>
           row
-            ? Effect.sync(() => Schema.decodeUnknownSync(TaskJson)(row.body))
+            ? decide(() => readTaskRow(row))
             : Effect.fail(failure("not_found", "Task unavailable in this bot."))
         )
       )
@@ -144,23 +144,28 @@ export function sqliteMailbox(db: Sqlite) {
         q(orm.select().from(taskTable).orderBy(desc(taskTable.sequence)))
       )
       .pipe(
-        Effect.map((rows) =>
-          rows.map((row) => Schema.decodeUnknownSync(TaskJson)(row.body))
+        Effect.flatMap((rows) =>
+          decide(() => rows.map((row) => readTaskRow(row)))
         )
       )
   const open = (t: Task) =>
     ["accepted", "running", "waiting", "cancelling"].includes(t.status)
+  const recovering = (t: Task) =>
+    t.direction === "incoming" &&
+    (open(t) ||
+      t.control.owner !== null ||
+      t.control.unconfirmed ||
+      t.stop.status === "pending" ||
+      t.stop.status === "unconfirmed")
+  const selectedPriority = (t: Task) =>
+    recovering(t) || open(t) || (t.direction === "outgoing" && !t.resumed)
   const selectedTasks = () =>
     allTasks().pipe(
       Effect.map((tasks) => {
         const selected = new Set(
           [
-            ...tasks.filter(
-              (t) => open(t) || (t.direction === "outgoing" && !t.resumed)
-            ),
-            ...tasks.filter(
-              (t) => !open(t) && !(t.direction === "outgoing" && !t.resumed)
-            ),
+            ...tasks.filter(selectedPriority),
+            ...tasks.filter((task) => !selectedPriority(task)),
           ]
             .slice(0, 100)
             .map((t) => t.id)
@@ -194,12 +199,6 @@ export function sqliteMailbox(db: Sqlite) {
       yield* saveDelivery(value)
       return value
     })
-  const finish = (t: Task, outcome: Outcome, now: number) =>
-    Effect.gen(function* () {
-      const result = yield* decide(() => Domain.taskResult(t, outcome, now))
-      yield* put(result.envelope, now)
-      yield* saveTask(result.task)
-    })
   const capacity = (direction: Task["direction"]) =>
     Effect.gen(function* () {
       yield* requireSpace(taskTable)
@@ -226,7 +225,7 @@ export function sqliteMailbox(db: Sqlite) {
   const service = Mailbox.of({
     transactionGroup: db,
     identity: () => atomic(identity),
-    enqueue: (raw, now) =>
+    enqueue: (raw, now, options) =>
       atomic(() =>
         Effect.gen(function* () {
           const e = yield* decide(() => Domain.validateEnvelope(raw)),
@@ -238,7 +237,9 @@ export function sqliteMailbox(db: Sqlite) {
               "invalid",
               "Only task requests can be admitted here."
             )
-          yield* decide(() => Domain.requireTimely(e, now, "Task"))
+          const admissionNow = Math.max(now, yield* Clock.currentTimeMillis)
+          yield* decide(() => Domain.requireTimely(e, admissionNow, "Task"))
+          yield* decide(() => Domain.requireDiscovery(options, admissionNow))
           const tasks = yield* allTasks()
           yield* decide(() =>
             Domain.requireFanout(
@@ -268,7 +269,25 @@ export function sqliteMailbox(db: Sqlite) {
           )
         })
       ),
-    accept: (raw, now) =>
+    accepted: (raw) =>
+      atomic(() =>
+        Effect.gen(function* () {
+          const e = yield* decide(() => Domain.validateEnvelope(raw))
+          const self = yield* identity()
+          yield* decide(() => Domain.requireParty(e, self, "recipient"))
+          const [row] = yield* db.use((orm) =>
+            q(orm.select().from(inbox).where(eq(inbox.id, e.id)))
+          )
+          if (!row) return undefined
+          if (row.content !== canonicalEnvelope(e))
+            return yield* failure(
+              "conflict",
+              "Message identity already has different content."
+            )
+          return Schema.decodeUnknownSync(ReceiptJson)(row.receipt)
+        })
+      ),
+    accept: (raw, now, options) =>
       atomic(() =>
         Effect.gen(function* () {
           const e = yield* decide(() => Domain.validateEnvelope(raw)),
@@ -285,7 +304,10 @@ export function sqliteMailbox(db: Sqlite) {
               )
             return Schema.decodeUnknownSync(ReceiptJson)(existing.receipt)
           }
-          yield* decide(() => Domain.requireTimely(e, now, "Message"))
+          const admissionNow = Math.max(now, yield* Clock.currentTimeMillis)
+          yield* decide(() => Domain.requireTimely(e, admissionNow, "Message"))
+          if (e.payload.kind !== "cancel")
+            yield* decide(() => Domain.requireDiscovery(options, admissionNow))
           yield* requireSpace(inbox)
           if (isRequest(e)) {
             yield* capacity("incoming")
@@ -302,11 +324,15 @@ export function sqliteMailbox(db: Sqlite) {
                   false
                 )
               )
-              yield* finish(
-                { ...t, cancelRequested: true },
-                { status: "cancelled", text: "Cancelled before execution." },
+              const cancelledTask = yield* decide(() =>
+                advanceTask(t, { type: "BEFORE_START_CANCEL", now })
+              )
+              yield* put(
+                Domain.taskResult(cancelledTask, cancelledTask.outcome!, now)
+                  .envelope,
                 now
               )
+              yield* saveTask(cancelledTask)
             } else yield* saveTask(t)
           } else if (e.payload.kind === "cancel") {
             const prior = yield* readCancellation(e.taskId)
@@ -328,7 +354,7 @@ export function sqliteMailbox(db: Sqlite) {
             const priorTask = (yield* allTasks()).find((t) => t.id === e.taskId)
             if (priorTask) {
               const transition = yield* decide(() =>
-                Domain.receiveCancellation(priorTask, e)
+                Domain.receiveCancellation(priorTask, e, admissionNow)
               )
               if (transition) yield* saveTask(transition)
             }
@@ -355,6 +381,10 @@ export function sqliteMailbox(db: Sqlite) {
         })
       ),
     tasks: () => atomic(selectedTasks),
+    recovery: () =>
+      atomic(() =>
+        allTasks().pipe(Effect.map((tasks) => tasks.filter(recovering)))
+      ),
     task: (id) => atomic(() => task(id)),
     byTurn: (id) =>
       atomic(() =>
@@ -378,8 +408,11 @@ export function sqliteMailbox(db: Sqlite) {
               .filter(
                 (t) =>
                   (t.direction === "incoming" &&
-                    ["accepted", "running", "cancelling"].includes(t.status)) ||
-                  (t.direction === "outgoing" && !t.resumed)
+                    (["accepted", "running", "cancelling"].includes(t.status) ||
+                      t.stop.status === "pending")) ||
+                  (t.direction === "outgoing" &&
+                    !t.resumed &&
+                    !t.control.unconfirmed)
               )
             return [
               ...eligible.filter((t) => open(t)),
@@ -398,6 +431,9 @@ export function sqliteMailbox(db: Sqlite) {
             )
           const t = yield* task(id)
           if (!Domain.resumable(t)) return
+          const consumed = yield* decide(() =>
+            Domain.consumeResult(t, admission.control)
+          )
           const result = yield* Effect.catchCause(admission.admit(t), (cause) =>
             Effect.failCause(
               Cause.map(cause, (error) =>
@@ -425,14 +461,19 @@ export function sqliteMailbox(db: Sqlite) {
               "conflict",
               "Continuation admission changed its operation identity."
             )
-          yield* saveTask(Domain.consumeResult(t))
+          yield* saveTask(consumed)
         })
       ),
-    discard: (id) =>
+    discard: (id, control) =>
       atomic(() =>
         Effect.gen(function* () {
           const t = yield* task(id)
-          if (Domain.resumable(t)) yield* saveTask(Domain.consumeResult(t))
+          if (t.direction === "outgoing" && t.outcome !== null && !t.resumed) {
+            const consumed = yield* decide(() =>
+              Domain.consumeResult(t, control, true)
+            )
+            yield* saveTask(consumed)
+          }
         })
       ),
     deliveries: () =>
@@ -442,8 +483,7 @@ export function sqliteMailbox(db: Sqlite) {
           const rows = yield* db.use((orm) =>
             q(orm.select().from(outbox).orderBy(desc(outbox.sequence)))
           )
-          return rows
-            .map((row) => Schema.decodeUnknownSync(DeliveryJson)(row.body))
+          return (yield* decide(() => rows.map((row) => readDeliveryRow(row))))
             .filter((d) => selected.has(d.envelope.taskId))
             .slice(0, 300)
         })
@@ -467,7 +507,7 @@ export function sqliteMailbox(db: Sqlite) {
             )
           )
           if (!row) return undefined
-          const d = Schema.decodeUnknownSync(DeliveryJson)(row.body),
+          const d = yield* decide(() => readDeliveryRow(row)),
             claimed = yield* decide(() => Domain.claimDelivery(d, now))
           yield* saveDelivery(claimed)
           return claimed.status === "delivering" ? claimed : undefined
@@ -494,46 +534,97 @@ export function sqliteMailbox(db: Sqlite) {
           if (transition) yield* saveDelivery(transition)
         })
       ),
-    claimTask: (now) =>
+    claimContinuation: (id, now, options) =>
       atomic(() =>
         Effect.gen(function* () {
-          const [row] = yield* db.use((orm) =>
+          const current = yield* task(id)
+          const claimNow = Math.max(now, yield* Clock.currentTimeMillis)
+          const next = yield* decide(() =>
+            advanceTask(current, {
+              type: "CLAIM_CONTINUATION",
+              now: claimNow,
+              ...options,
+            })
+          )
+          if (next.revision === current.revision) return undefined
+          yield* saveTask(next)
+          return next.control.owner === options.owner ? next : undefined
+        })
+      ),
+    claimTask: (now, options) =>
+      atomic(() =>
+        Effect.gen(function* () {
+          const rows = yield* db.use((orm) =>
             q(
               orm
                 .select()
                 .from(taskTable)
-                .where(
-                  and(
-                    eq(taskTable.direction, "incoming"),
-                    or(
-                      inArray(taskTable.status, ["accepted", "cancelling"]),
-                      and(
-                        eq(taskTable.status, "running"),
-                        or(
-                          lte(taskTable.lease_until, now),
-                          lte(taskTable.deadline, now)
-                        )
-                      )
-                    )
-                  )
-                )
+                .where(eq(taskTable.direction, "incoming"))
                 .orderBy(taskTable.sequence)
-                .limit(1)
             )
           )
-          if (!row) return undefined
-          const t = Schema.decodeUnknownSync(TaskJson)(row.body),
-            claimed = yield* decide(() => Domain.claimTask(t, now))
-          yield* saveTask(claimed)
-          return claimed
+          for (const row of rows) {
+            const previous = yield* decide(() => readTaskRow(row))
+            const claimed = yield* decide(() =>
+              Domain.claimTask(previous, now, options)
+            )
+            if (!claimed) continue
+            yield* saveTask(claimed)
+            if (claimed.control.owner === options.owner) return claimed
+          }
+          return undefined
         })
       ),
-    finish: (id, revision, outcome, now) =>
+    finish: (id, revision, outcome, now, owner) =>
       atomic(() =>
         Effect.gen(function* () {
           const t = yield* task(id)
-          yield* decide(() => Domain.requireFinish(t, revision, outcome, now))
-          yield* finish(t, outcome, now)
+          const next = yield* decide(() =>
+            Domain.requireFinish(t, revision, outcome, now, owner)
+          )
+          yield* put(Domain.taskResult(next, outcome, now).envelope, now)
+          yield* saveTask(next)
+        })
+      ),
+    releaseTask: (receipt) =>
+      atomic(() =>
+        Effect.gen(function* () {
+          const t = yield* task(receipt.taskId)
+          const next = yield* decide(() =>
+            advanceTask(t, { type: "RELEASE", receipt })
+          )
+          if (next.revision === t.revision) return false
+          if (t.outcome === null && next.outcome !== null)
+            yield* put(
+              Domain.taskResult(next, next.outcome, receipt.now).envelope,
+              receipt.now
+            )
+          yield* saveTask(next)
+          return true
+        })
+      ),
+    restoreControl: (now) =>
+      atomic(() =>
+        Effect.gen(function* () {
+          for (const t of yield* allTasks()) {
+            const next = yield* decide(() =>
+              advanceTask(t, { type: "RESTORE", now })
+            )
+            if (next.revision !== t.revision) yield* saveTask(next)
+          }
+        })
+      ),
+    exhaustControl: (attempt, now, current) =>
+      atomic(() =>
+        Effect.gen(function* () {
+          if (!current()) return false
+          const t = yield* task(attempt.taskId)
+          const next = yield* decide(() =>
+            advanceTask(t, { type: "EXHAUST", ...attempt, now })
+          )
+          if (next.revision === t.revision) return false
+          yield* saveTask(next)
+          return true
         })
       ),
     cancel: (id, now) =>
@@ -547,17 +638,48 @@ export function sqliteMailbox(db: Sqlite) {
           return transition.task
         })
       ),
-    retry: (id, now) =>
+    retry: (id, now, options) =>
       atomic(() =>
         Effect.gen(function* () {
+          const admissionNow = Math.max(now, yield* Clock.currentTimeMillis)
+          const [row] = yield* db.use((orm) =>
+            q(orm.select().from(taskTable).where(eq(taskTable.id, id)))
+          )
+          if (row) {
+            const continuation = yield* decide(() => readTaskRow(row))
+            if (
+              continuation.direction === "outgoing" &&
+              continuation.outcome !== null &&
+              !continuation.resumed &&
+              continuation.control.phase === "continuation" &&
+              continuation.control.unconfirmed
+            ) {
+              yield* decide(() =>
+                Domain.requireDiscovery(options, admissionNow)
+              )
+              const next = yield* decide(() =>
+                advanceTask(continuation, { type: "RETRY_CONTINUATION" })
+              )
+              if (next.revision === continuation.revision)
+                return yield* failure(
+                  "stale",
+                  "This continuation still has a live owner."
+                )
+              yield* saveTask(next)
+              return
+            }
+          }
           const d = yield* delivery(id)
           if (!d)
             return yield* failure(
               "not_found",
               "Message unavailable in this bot."
             )
-          const transition = yield* decide(() => Domain.retryDelivery(d, now))
+          const transition = yield* decide(() =>
+            Domain.retryDelivery(d, admissionNow)
+          )
           if (!transition) return
+          yield* decide(() => Domain.requireDiscovery(options, admissionNow))
           if (isRequest(d.envelope)) {
             const t = yield* task(d.envelope.taskId)
             yield* decide(() => Domain.requireRetryableTask(t))
@@ -593,27 +715,28 @@ export function sqliteMailbox(db: Sqlite) {
             row.next_at === null ? [] : [row.next_at]
           )
           for (const t of yield* allTasks()) {
-            if (
-              t.direction === "incoming" &&
-              ["accepted", "running", "cancelling"].includes(t.status)
-            )
-              times.push(
-                t.status === "running"
-                  ? Math.min(t.leaseUntil ?? Infinity, t.request.deadline)
-                  : 0
+            if (t.direction === "incoming") {
+              if (t.control.owner !== null && !t.control.unconfirmed)
+                times.push(t.control.deadline ?? t.request.deadline)
+              else if (t.stop.status === "pending")
+                times.push(t.stop.nextAt ?? 0)
+              else if (
+                !t.control.unconfirmed &&
+                t.stop.status !== "unconfirmed" &&
+                ![
+                  "completed",
+                  "failed",
+                  "expired",
+                  "cancelled",
+                  "awaiting_input",
+                ].includes(t.status)
               )
-            if (
-              t.direction === "outgoing" &&
-              [
-                "completed",
-                "failed",
-                "expired",
-                "cancelled",
-                "awaiting_input",
-              ].includes(t.status) &&
-              !t.resumed
-            )
-              times.push(0)
+                times.push(t.leaseUntil ?? 0)
+            }
+            if (Domain.resumable(t))
+              times.push(
+                t.control.owner === null ? 0 : (t.control.deadline ?? 0)
+              )
             if (t.direction === "outgoing" && open(t))
               times.push(t.request.deadline)
           }
@@ -621,7 +744,7 @@ export function sqliteMailbox(db: Sqlite) {
         })
       ),
   })
-  const initialize = Effect.succeed(service)
+  const initialize = migrateCommunication(db).pipe(Effect.as(service))
   return {
     layer: Layer.effect(Mailbox, initialize),
     initialize,
@@ -656,4 +779,101 @@ export function sqliteMailbox(db: Sqlite) {
         })
       ),
   }
+}
+
+function readTaskRow(row: typeof taskTable.$inferSelect): Task {
+  let raw: unknown
+  try {
+    raw = JSON.parse(row.body)
+  } catch {
+    throw failure(
+      "incompatible",
+      "Invalid communication task JSON; retain the row for recovery."
+    )
+  }
+  const task = Domain.readTask(raw)
+  if (
+    task.id !== row.id ||
+    task.status !== row.status ||
+    task.leaseUntil !== row.lease_until ||
+    task.request.deadline !== row.deadline ||
+    task.direction !== row.direction
+  )
+    throw failure(
+      "incompatible",
+      "Communication task projection does not match its authoritative record."
+    )
+  return task
+}
+function readDeliveryRow(row: typeof outbox.$inferSelect): Delivery {
+  let raw: unknown
+  try {
+    raw = JSON.parse(row.body)
+  } catch {
+    throw failure(
+      "incompatible",
+      "Invalid communication delivery JSON; retain the row for recovery."
+    )
+  }
+  const delivery = Domain.readDelivery(raw)
+  if (
+    delivery.envelope.id !== row.id ||
+    delivery.status !== row.status ||
+    delivery.nextAt !== row.next_at
+  )
+    throw failure(
+      "incompatible",
+      "Communication delivery projection does not match its authoritative record."
+    )
+  return delivery
+}
+
+/** Register after schema migration. Conversion preserves sequence/projections and inbox bytes. */
+export function migrateCommunication(db: Sqlite) {
+  return mapSqliteError(
+    db.transaction(() =>
+      Effect.gen(function* () {
+        const tasks = yield* db.use((orm) => orm.select().from(taskTable))
+        const deliveries = yield* db.use((orm) => orm.select().from(outbox))
+        // Validate every row before the first conversion, then commit both families together.
+        const taskBodies = yield* decide(() =>
+          tasks.map((row) => ({ row, value: readTaskRow(row) }))
+        )
+        const deliveryBodies = yield* decide(() =>
+          deliveries.map((row) => ({ row, value: readDeliveryRow(row) }))
+        )
+        for (const { row, value } of taskBodies) {
+          if (
+            (JSON.parse(row.body) as { schemaVersion?: unknown })
+              .schemaVersion === 1
+          )
+            continue
+          yield* db.use((orm) =>
+            orm
+              .update(taskTable)
+              .set({ body: Schema.encodeSync(TaskJson)(value) })
+              .where(eq(taskTable.id, row.id))
+          )
+        }
+        for (const { row, value } of deliveryBodies) {
+          if (
+            (JSON.parse(row.body) as { schemaVersion?: unknown })
+              .schemaVersion === 1
+          )
+            continue
+          yield* db.use((orm) =>
+            orm
+              .update(outbox)
+              .set({ body: Schema.encodeSync(DeliveryJson)(value) })
+              .where(eq(outbox.id, row.id))
+          )
+        }
+      })
+    ),
+    () =>
+      failure(
+        "storage",
+        "Communication data conversion failed; the transaction retained its original rows."
+      )
+  )
 }

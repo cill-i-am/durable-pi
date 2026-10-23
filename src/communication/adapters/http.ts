@@ -22,6 +22,8 @@ export function communicationRequest(request: Request, path: string) {
         catch: () => failure("invalid", "Invalid task control."),
       })
       if (input.action === "cancel") yield* app.cancel(input.id)
+      else if (input.action === "retry_mailbox")
+        yield* app.retryMailbox(input.id)
       else yield* app.retry(input.id)
       return Response.json({ ok: true })
     }

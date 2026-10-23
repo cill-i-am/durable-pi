@@ -1,4 +1,4 @@
-import { Effect, Layer, Schema } from "effect"
+import { Clock, Effect, Layer, Schema } from "effect"
 import { describe, expect, it } from "vitest"
 
 import { AgentId } from "../src/agents/domain"
@@ -37,7 +37,18 @@ const request = (patch: Partial<Envelope> = {}): Envelope => ({
   },
   ...patch,
 })
-const run = Effect.runPromise
+const liveClock = Effect.runSync(Clock.Clock)
+const testClock: Clock.Clock = {
+  currentTimeNanos: liveClock.currentTimeNanos,
+  currentTimeNanosUnsafe: () => liveClock.currentTimeNanosUnsafe(),
+  monotonicTimeNanos: liveClock.monotonicTimeNanos,
+  monotonicTimeNanosUnsafe: () => liveClock.monotonicTimeNanosUnsafe(),
+  sleep: (duration) => liveClock.sleep(duration),
+  currentTimeMillis: Effect.succeed(1000),
+  currentTimeMillisUnsafe: () => 1000,
+}
+const run = <A, E>(work: Effect.Effect<A, E>) =>
+  Effect.runPromise(work.pipe(Effect.provideService(Clock.Clock, testClock)))
 function fixture(identity: Identity) {
   const db = database(),
     repository = sqliteMailbox(db)
@@ -58,11 +69,15 @@ describe("durable bot mailbox", () => {
   it("commits acceptance once across concurrent duplicate deliveries and reopen", async () => {
     const { sender, recipient } = pair(),
       e = request()
-    await run(sender.service.enqueue(e, 1000))
+    await run(
+      sender.service.enqueue(e, 1000, { discoveryDeadline: 1000 + 60000 })
+    )
     expect(await run(sender.reopen().prove(e))).toBe(true)
     const receipts = await run(
       Effect.all(
-        Array.from({ length: 8 }, () => recipient.service.accept(e, 1010)),
+        Array.from({ length: 8 }, () =>
+          recipient.service.accept(e, 1010, { discoveryDeadline: 1010 + 60000 })
+        ),
         { concurrency: 8 }
       )
     )
@@ -70,15 +85,21 @@ describe("durable bot mailbox", () => {
       receipts.every((r) => JSON.stringify(r) === JSON.stringify(receipts[0]))
     ).toBe(true)
     expect(await run(recipient.reopen().tasks())).toHaveLength(1)
-    expect(await run(recipient.reopen().accept(e, 2000000))).toEqual(
-      receipts[0]
-    )
+    expect(
+      await run(
+        recipient
+          .reopen()
+          .accept(e, 2000000, { discoveryDeadline: 2000000 + 60000 })
+      )
+    ).toEqual(receipts[0])
     const bad = {
       ...e,
       payload: { ...e.payload, objective: "Different content" },
     }
     const result = await run(
-      recipient.service.accept(bad, 1010).pipe(Effect.result)
+      recipient.service
+        .accept(bad, 1010, { discoveryDeadline: 1010 + 60000 })
+        .pipe(Effect.result)
     )
     expect(result).toMatchObject({
       _tag: "Failure",
@@ -112,7 +133,9 @@ describe("durable bot mailbox", () => {
     expect(
       await run(
         recipient.service
-          .accept({ ...e, owner: "other-owner" }, 1010)
+          .accept({ ...e, owner: "other-owner" }, 1010, {
+            discoveryDeadline: 1010 + 60000,
+          })
           .pipe(Effect.result)
       )
     ).toMatchObject({ _tag: "Failure", failure: { code: "forbidden" } })
@@ -122,14 +145,22 @@ describe("durable bot mailbox", () => {
   it("recovers sender lease after lost acknowledgment without duplicate recipient admission", async () => {
     const { sender, recipient } = pair(),
       e = request()
-    await run(sender.service.enqueue(e, 1000))
+    await run(
+      sender.service.enqueue(e, 1000, { discoveryDeadline: 1000 + 60000 })
+    )
     const first = (await run(sender.service.claimDelivery(1000)))!
-    const receipt = await run(recipient.service.accept(e, 1001))
+    const receipt = await run(
+      recipient.service.accept(e, 1001, { discoveryDeadline: 1001 + 60000 })
+    )
     expect(await run(sender.reopen().claimDelivery(1001))).toBeUndefined()
     const second = (await run(sender.reopen().claimDelivery(1000 + LEASE_MS)))!
     expect(second.attempts).toBe(first.attempts + 1)
     expect(
-      await run(recipient.reopen().accept(second.envelope, 40000))
+      await run(
+        recipient
+          .reopen()
+          .accept(second.envelope, 40000, { discoveryDeadline: 40000 + 60000 })
+      )
     ).toEqual(receipt)
     await run(sender.service.delivered(e.id, first.attempts, receipt))
     expect((await run(sender.service.deliveries()))[0]!.status).toBe(
@@ -143,11 +174,31 @@ describe("durable bot mailbox", () => {
   it("atomically seals the result and outgoing message, and fences stale executions", async () => {
     const { sender, recipient } = pair(),
       e = request()
-    await run(sender.service.enqueue(e, 1000))
-    await run(recipient.service.accept(e, 1001))
-    const first = (await run(recipient.service.claimTask(1010)))!
+    await run(
+      sender.service.enqueue(e, 1000, { discoveryDeadline: 1000 + 60000 })
+    )
+    await run(
+      recipient.service.accept(e, 1001, { discoveryDeadline: 1001 + 60000 })
+    )
+    const first = (await run(
+      recipient.service.claimTask(1010, {
+        owner: crypto.randomUUID(),
+        deadline: 1010 + LEASE_MS,
+      })
+    ))!
+    expect(
+      await run(
+        recipient
+          .reopen()
+          .claimTask(1010 + LEASE_MS, { owner: "warm", deadline: 90000 })
+      )
+    ).toBeUndefined()
+    await run(recipient.service.restoreControl(1010 + LEASE_MS))
     const recovered = (await run(
-      recipient.reopen().claimTask(1010 + LEASE_MS)
+      recipient.reopen().claimTask(1010 + LEASE_MS, {
+        owner: crypto.randomUUID(),
+        deadline: 1010 + LEASE_MS + LEASE_MS,
+      })
     ))!
     expect(
       await run(
@@ -156,7 +207,8 @@ describe("durable bot mailbox", () => {
             e.taskId,
             first.revision,
             { status: "completed", text: "4" },
-            40000
+            40000,
+            first.control.owner!
           )
           .pipe(Effect.result)
       )
@@ -166,23 +218,42 @@ describe("durable bot mailbox", () => {
         e.taskId,
         recovered.revision,
         { status: "completed", text: "4" },
-        40001
+        40001,
+        recovered.control.owner!
       )
     )
     const out = (await run(recipient.reopen().deliveries()))[0]!
     expect((await run(recipient.reopen().task(e.taskId))).outcome?.text).toBe(
       "4"
     )
-    await run(sender.reopen().accept(out.envelope, 40002))
+    await run(
+      sender
+        .reopen()
+        .accept(out.envelope, 40002, { discoveryDeadline: 40002 + 60000 })
+    )
     expect((await run(sender.service.task(e.taskId))).status).toBe("completed")
-    expect(await run(recipient.service.claimTask(90000))).toBeUndefined()
+    expect(
+      await run(
+        recipient.service.claimTask(90000, {
+          owner: crypto.randomUUID(),
+          deadline: 90000 + LEASE_MS,
+        })
+      )
+    ).toBeUndefined()
   })
 
   it("rolls back completion if its result outbox cannot be written", async () => {
     const { recipient } = pair(),
       e = request()
-    await run(recipient.service.accept(e, 1001))
-    const claimed = (await run(recipient.service.claimTask(1010)))!
+    await run(
+      recipient.service.accept(e, 1001, { discoveryDeadline: 1001 + 60000 })
+    )
+    const claimed = (await run(
+      recipient.service.claimTask(1010, {
+        owner: crypto.randomUUID(),
+        deadline: 1010 + LEASE_MS,
+      })
+    ))!
     recipient.db.run(
       "CREATE TRIGGER fail_result BEFORE INSERT ON communication_outbox BEGIN SELECT RAISE(ABORT,'fixture failure'); END"
     )
@@ -193,7 +264,8 @@ describe("durable bot mailbox", () => {
             e.taskId,
             claimed.revision,
             { status: "completed", text: "4" },
-            1011
+            1011,
+            claimed.control.owner!
           )
           .pipe(Effect.result)
       )
@@ -205,17 +277,32 @@ describe("durable bot mailbox", () => {
   it("retains cancellation arriving before the request and never starts that work", async () => {
     const { sender, recipient } = pair(),
       e = request()
-    await run(sender.service.enqueue(e, 1000))
+    await run(
+      sender.service.enqueue(e, 1000, { discoveryDeadline: 1000 + 60000 })
+    )
     await run(sender.service.cancel(e.taskId, 1010))
     const cancellation = (await run(sender.service.deliveries())).find(
       (d) => d.envelope.payload.kind === "cancel"
     )!
-    await run(recipient.service.accept(cancellation.envelope, 1020))
-    await run(recipient.reopen().accept(e, 1030))
+    await run(
+      recipient.service.accept(cancellation.envelope, 1020, {
+        discoveryDeadline: 1020 + 60000,
+      })
+    )
+    await run(
+      recipient.reopen().accept(e, 1030, { discoveryDeadline: 1030 + 60000 })
+    )
     expect((await run(recipient.service.task(e.taskId))).status).toBe(
       "cancelled"
     )
-    expect(await run(recipient.service.claimTask(1040))).toBeUndefined()
+    expect(
+      await run(
+        recipient.service.claimTask(1040, {
+          owner: crypto.randomUUID(),
+          deadline: 1040 + LEASE_MS,
+        })
+      )
+    ).toBeUndefined()
     expect(
       (await run(recipient.service.deliveries()))[0]!.envelope.payload.kind
     ).toBe("result")
@@ -227,30 +314,41 @@ describe("durable bot mailbox", () => {
       await run(
         sender.service.enqueue(
           request({ id: `request-${n}`, taskId: `request-${n}` }),
-          1000
+          1000,
+          { discoveryDeadline: 1000 + 60000 }
         )
       )
     expect(
       await run(
         sender.service
-          .enqueue(request({ id: "excess", taskId: "excess" }), 1000)
+          .enqueue(request({ id: "excess", taskId: "excess" }), 1000, {
+            discoveryDeadline: 1000 + 60000,
+          })
           .pipe(Effect.result)
       )
     ).toMatchObject({ _tag: "Failure", failure: { code: "limit" } })
     expect(
       await run(
-        recipient.service.accept(request({ to: a }), 1000).pipe(Effect.result)
+        recipient.service
+          .accept(request({ to: a }), 1000, { discoveryDeadline: 1000 + 60000 })
+          .pipe(Effect.result)
       )
     ).toMatchObject({ _tag: "Failure" })
     expect(
       await run(
         recipient.service
-          .accept(request({ deadline: 2000 }), 3000)
+          .accept(request({ deadline: 2000 }), 3000, {
+            discoveryDeadline: 3000 + 60000,
+          })
           .pipe(Effect.result)
       )
     ).toMatchObject({ _tag: "Failure", failure: { code: "expired" } })
     const single = pair().sender
-    await run(single.service.enqueue(request(), 1000))
+    await run(
+      single.service.enqueue(request(), 1000, {
+        discoveryDeadline: 1000 + 60000,
+      })
+    )
     for (let n = 0; n < MAX_ATTEMPTS; n++) {
       const d = (await run(single.service.claimDelivery(1000 + n * 1000)))!
       await run(
@@ -269,9 +367,11 @@ describe("durable bot mailbox", () => {
 
   it("the Effect pump preserves a delivery identity when transport fails", async () => {
     const { sender } = pair(),
-      now = Date.now(),
+      now = 1000,
       e = request({ createdAt: now, deadline: now + 60000 })
-    await run(sender.service.enqueue(e, now))
+    await run(
+      sender.service.enqueue(e, now, { discoveryDeadline: now + 60000 })
+    )
     const layer = Layer.merge(
       Layer.succeed(Mailbox, sender.service),
       Layer.succeed(MailboxTransport, {
@@ -293,27 +393,45 @@ it("enforces lifetime per-turn fan-out atomically even when previous tasks compl
   const { sender, recipient } = pair()
   for (let n = 0; n < 2; n++) {
     const e = request({ id: `prior-${n}`, taskId: `prior-${n}` })
-    await run(sender.service.enqueue(e, 1000))
-    await run(recipient.service.accept(e, 1001))
-    const claim = (await run(recipient.service.claimTask(1002)))!
+    await run(
+      sender.service.enqueue(e, 1000, { discoveryDeadline: 1000 + 60000 })
+    )
+    await run(
+      recipient.service.accept(e, 1001, { discoveryDeadline: 1001 + 60000 })
+    )
+    const claim = (await run(
+      recipient.service.claimTask(1002, {
+        owner: crypto.randomUUID(),
+        deadline: 1002 + LEASE_MS,
+      })
+    ))!
     await run(
       recipient.service.finish(
         e.id,
         claim.revision,
         { status: "completed", text: "4" },
-        1003
+        1003,
+        claim.control.owner!
       )
     )
     const result = (await run(recipient.service.deliveries())).find(
       (d) => d.envelope.taskId === e.id
     )!
-    await run(sender.service.accept(result.envelope, 1004))
+    await run(
+      sender.service.accept(result.envelope, 1004, {
+        discoveryDeadline: 1004 + 60000,
+      })
+    )
   }
   const attempts = await run(
     Effect.all(
       [2, 3].map((n) =>
         sender.service
-          .enqueue(request({ id: `racing-${n}`, taskId: `racing-${n}` }), 1010)
+          .enqueue(
+            request({ id: `racing-${n}`, taskId: `racing-${n}` }),
+            1010,
+            { discoveryDeadline: 1010 + 60000 }
+          )
           .pipe(Effect.result)
       ),
       { concurrency: 2 }
@@ -328,10 +446,12 @@ it("enforces lifetime per-turn fan-out atomically even when previous tasks compl
 it("fences acknowledgments across manual retries and refuses a mismatched receipt", async () => {
   const { sender } = pair(),
     e = request()
-  await run(sender.service.enqueue(e, 1000))
+  await run(
+    sender.service.enqueue(e, 1000, { discoveryDeadline: 1000 + 60000 })
+  )
   const old = (await run(sender.service.claimDelivery(1000)))!
   await run(sender.service.deliveryFailed(e.id, old.attempts, 1001, 100, true))
-  await run(sender.service.retry(e.id, 1002))
+  await run(sender.service.retry(e.id, 1002, { discoveryDeadline: 61002 }))
   const fresh = (await run(sender.service.claimDelivery(1002)))!
   const receipt = { id: e.id, taskId: e.taskId, acceptedAt: 1003 }
   await run(sender.service.delivered(e.id, old.attempts, receipt))
@@ -350,17 +470,34 @@ it("fences acknowledgments across manual retries and refuses a mismatched receip
 it("makes deadline expiry terminal and retains its original receipt; cancellation fences the running claim", async () => {
   const { sender, recipient } = pair(),
     e = request({ deadline: 2000 })
-  await run(sender.service.enqueue(e, 1000))
-  await run(recipient.service.accept(e, 1001))
-  const active = (await run(recipient.service.claimTask(1002)))!
-  const expired = (await run(recipient.service.claimTask(2000)))!
-  expect(expired.revision).toBeGreaterThan(active.revision)
+  await run(
+    sender.service.enqueue(e, 1000, { discoveryDeadline: 1000 + 60000 })
+  )
+  await run(
+    recipient.service.accept(e, 1001, { discoveryDeadline: 1001 + 60000 })
+  )
+  const active = (await run(
+    recipient.service.claimTask(1002, {
+      owner: crypto.randomUUID(),
+      deadline: 1002 + LEASE_MS,
+    })
+  ))!
+  expect(
+    await run(
+      recipient.service.claimTask(2000, {
+        owner: crypto.randomUUID(),
+        deadline: 2000 + LEASE_MS,
+      })
+    )
+  ).toBeUndefined()
+  const expired = active
   await run(
     recipient.service.finish(
       e.id,
       expired.revision,
       { status: "expired", text: "Deadline passed." },
-      2000
+      2000,
+      expired.control.owner!
     )
   )
   await run(sender.service.expire(2001))
@@ -369,13 +506,28 @@ it("makes deadline expiry terminal and retains its original receipt; cancellatio
   expect(
     await run(sender.service.retry(e.id, 2002).pipe(Effect.result))
   ).toMatchObject({ _tag: "Failure", failure: { code: "expired" } })
-  expect((await run(recipient.service.accept(e, 3000))).acceptedAt).toBe(1001)
+  expect(
+    (
+      await run(
+        recipient.service.accept(e, 3000, { discoveryDeadline: 3000 + 60000 })
+      )
+    ).acceptedAt
+  ).toBe(1001)
 })
 
 it("reserves result capacity beyond retained request deliveries", async () => {
   const { recipient } = pair()
-  await run(recipient.service.accept(request(), 1001))
-  const claimed = (await run(recipient.service.claimTask(1010)))!
+  await run(
+    recipient.service.accept(request(), 1001, {
+      discoveryDeadline: 1001 + 60000,
+    })
+  )
+  const claimed = (await run(
+    recipient.service.claimTask(1010, {
+      owner: crypto.randomUUID(),
+      deadline: 1010 + LEASE_MS,
+    })
+  ))!
   recipient.db
     .run(`WITH RECURSIVE retained(n) AS (SELECT 1 UNION ALL SELECT n+1 FROM retained WHERE n<10000)
     INSERT INTO communication_outbox(id,body,status,next_at) SELECT 'old-'||n,'{}','accepted',0 FROM retained`)
@@ -384,7 +536,8 @@ it("reserves result capacity beyond retained request deliveries", async () => {
       claimed.id,
       claimed.revision,
       { status: "completed", text: "4" },
-      1011
+      1011,
+      claimed.control.owner!
     )
   )
   expect((await run(recipient.service.task(claimed.id))).status).toBe(
@@ -399,7 +552,9 @@ it("reserves result capacity beyond retained request deliveries", async () => {
 
 it("keeps old unfinished work and all deliveries for each inspected task together", async () => {
   const { sender } = pair()
-  await run(sender.service.enqueue(request(), 1000))
+  await run(
+    sender.service.enqueue(request(), 1000, { discoveryDeadline: 1000 + 60000 })
+  )
   const pending = await run(sender.service.task("request-1"))
   const original = (await run(sender.service.deliveries()))[0]!
   for (let n = 0; n < 110; n++) {
@@ -425,9 +580,19 @@ it("keeps old unfinished work and all deliveries for each inspected task togethe
       sender.db.run(
         "INSERT INTO communication_outbox(id,body,status,next_at) VALUES (?,?,?,?)",
         envelope.id,
-        JSON.stringify({ ...original, envelope, status: "accepted" }),
+        JSON.stringify({
+          ...original,
+          envelope,
+          status: "accepted",
+          nextAt: null,
+          receipt: {
+            id: envelope.id,
+            taskId: envelope.taskId,
+            acceptedAt: 1000,
+          },
+        }),
         "accepted",
-        0
+        null
       )
     }
   }
@@ -453,7 +618,9 @@ it("rejects request identities which would not leave room for terminal message p
   expect(
     await run(
       sender.service
-        .enqueue(request({ id, taskId: id }), 1000)
+        .enqueue(request({ id, taskId: id }), 1000, {
+          discoveryDeadline: 1000 + 60000,
+        })
         .pipe(Effect.result)
     )
   ).toMatchObject({ _tag: "Failure", failure: { code: "invalid" } })
@@ -489,8 +656,17 @@ it("never hides live incoming jobs behind an unresumed result backlog during res
       "outgoing"
     )
   }
-  await run(recipient.service.accept(request(), 1000))
-  const running = (await run(recipient.service.claimTask(1001)))!
+  await run(
+    recipient.service.accept(request(), 1000, {
+      discoveryDeadline: 1000 + 60000,
+    })
+  )
+  const running = (await run(
+    recipient.service.claimTask(1001, {
+      owner: crypto.randomUUID(),
+      deadline: 1001 + LEASE_MS,
+    })
+  ))!
   const recovered = await run(recipient.reopen().pending())
   expect(recovered).toHaveLength(100)
   expect(recovered[0]?.id).toBe(running.id)

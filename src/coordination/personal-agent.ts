@@ -9,9 +9,11 @@ import { Effect, Schema } from "effect"
 import type { PersonalAgent } from "../agent/worker"
 import { observeConversationSchedule } from "../conversations/adapters/lifecycle"
 import { ConversationConflict, ConversationFull } from "../conversations/turns"
+import { DelegationFailure } from "../delegation/contracts"
 import { attributedText } from "../messages/identity"
 import { preserveFatal } from "../shared/effect"
 import { nativeOperation } from "../shared/interop"
+import { observeCoordinationSchedule } from "./adapters/lifecycle"
 import { CoordinationStore } from "./adapters/sqlite"
 import {
   CoordinationFailure,
@@ -40,10 +42,17 @@ export interface PersonalCoordination {
   rootLive: (id: string) => Work<boolean>
   stop: (id: string) => Work<void>
   beforeRequest: (nativeId: number) => Work<void>
-  pump: () => Work<number | undefined>
+  pump: (options?: { allowDispatch?: boolean }) => Work<number | undefined>
+  nextWake: () => Work<number | undefined>
+  restore: () => Work<void>
+  exhaust: (current: () => boolean) => Work<void>
 }
 const isSession = (origin: { kind: string } | undefined) =>
   !origin || origin.kind === "email" || origin.kind === "whatsapp"
+const earliestWake = (...times: (number | undefined)[]) => {
+  const next = Math.min(...times.map((time) => time ?? Infinity))
+  return Number.isFinite(next) ? next : undefined
+}
 export function personalCoordination(
   owner: PersonalAgent
 ): PersonalCoordination {
@@ -199,8 +208,15 @@ export function personalCoordination(
           )
         })
       ),
-    wake: () => native(() => owner.coordinationRunner.wake()),
-    deliver: (message, target) => {
+    wake: () =>
+      observeCoordinationSchedule("wake coordination", () =>
+        owner.coordinationRunner.wake()
+      ),
+    prearm: () =>
+      observeCoordinationSchedule("arm coordination discovery", () =>
+        owner.coordinationRunner.armDiscovery()
+      ),
+    deliver: (message, target, attempt) => {
       if (target.role === "main")
         return boundary(
           Effect.gen(function* () {
@@ -211,6 +227,7 @@ export function personalCoordination(
             yield* store.atomic(() =>
               Effect.gen(function* () {
                 if (
+                  !(yield* store.owns(message.id, attempt)) ||
                   !(yield* rootLive(target.address.sessionId)) ||
                   !(yield* rootLive(message.from.sessionId))
                 )
@@ -232,7 +249,7 @@ export function personalCoordination(
                   },
                   { discoveryDeadline }
                 )
-                yield* store.delivered(message.id)
+                yield* store.delivered(message.id, attempt)
               })
             )
           }).pipe(
@@ -243,36 +260,41 @@ export function personalCoordination(
                   ? fail("closed", "The addressed session has stopped.")
                   : cause
             ),
-            Effect.andThen(native(() => owner.runner.wake())),
+            Effect.andThen(
+              observeConversationSchedule("wake addressed conversation", () =>
+                owner.runner.wake()
+              )
+            ),
             Effect.tap(() => Effect.sync(() => owner.notifyConversation()))
           )
         )
-      return native(async (signal) => {
-        const pi = await owner.harness.pi(),
-          child = await pi.conversation(
-            target.nativeId as ConversationId,
-            BACKGROUND_CONTEXT
-          )
-        signal.throwIfAborted()
-        if (!child)
-          throw fail("closed", "The addressed agent no longer exists.")
-        await child.submit(
-          {
-            type: "input",
-            requestId: message.id,
-            whenBusy: "steer",
-            content: attributedText(
-              JSON.stringify({
-                messageId: message.id,
-                from: message.from,
-                text: message.text,
-              }),
-              message.provenance
-            ),
-          },
-          BACKGROUND_CONTEXT
+      return owner.delegations
+        .deliverMessage(
+          target.nativeId,
+          attributedText(
+            JSON.stringify({
+              messageId: message.id,
+              from: message.from,
+              text: message.text,
+            }),
+            message.provenance
+          ),
+          message.id
         )
-      })
+        .pipe(
+          Effect.mapError((cause) =>
+            Schema.is(DelegationFailure)(cause)
+              ? fail(
+                  cause.code === "cancelled" || cause.code === "not_found"
+                    ? "closed"
+                    : cause.code === "conflict"
+                      ? "conflict"
+                      : "unavailable",
+                  cause.message
+                )
+              : fail("unavailable", "Could not confirm native agent state.")
+          )
+        )
     },
   }
   const service = new AgentCoordination(store, host)
@@ -327,16 +349,50 @@ export function personalCoordination(
           }
         })
       ),
-    pump: () =>
+    nextWake: () =>
       boundary(
         Effect.gen(function* () {
-          if ((yield* owner.active())?.origin?.kind === "coordination")
-            yield* native(() => owner.runner.wake())
+          const messages = yield* store.nextWake()
+          const groups = yield* owner.delegations.nextWake()
+          return earliestWake(messages, groups)
+        })
+      ),
+    restore: () =>
+      boundary(
+        Effect.gen(function* () {
+          yield* owner.delegations.restore()
+          yield* service.restore()
+        })
+      ),
+    exhaust: (current) =>
+      boundary(
+        Effect.gen(function* () {
+          yield* store.exhaust(current)
+          yield* owner.delegations.exhaustRecovery(current)
+        })
+      ),
+    pump: (options) =>
+      boundary(
+        Effect.gen(function* () {
+          const allowDispatch = options?.allowDispatch ?? true
+          if (
+            allowDispatch &&
+            (yield* owner.active())?.origin?.kind === "coordination"
+          )
+            yield* boundary(
+              observeConversationSchedule("wake addressed conversation", () =>
+                owner.runner.wake()
+              )
+            )
           let next: number | undefined
           for (const id of yield* owner.delegationLedger.catalog()) {
             const group = yield* owner.delegationLedger.group(id)
+            if (!group.closed)
+              yield* owner.delegations.reconcile(group.turnId, {
+                allowDispatch,
+              })
             if (!group.detached || group.closed) continue
-            yield* owner.delegations.reconcile(group.turnId)
+            if (!allowDispatch) continue
             if (
               group.deadline <= Date.now() ||
               !(yield* rootLive(group.turnId))
@@ -348,10 +404,9 @@ export function personalCoordination(
             ))
               yield* report(child, group.turnId)
           }
-          const messages = yield* service.pump()
-          return messages === undefined
-            ? next
-            : Math.min(next ?? Infinity, messages)
+          const messages = allowDispatch ? yield* service.pump() : undefined
+          const groups = yield* owner.delegations.nextWake()
+          return earliestWake(next, messages, groups)
         })
       ),
   }

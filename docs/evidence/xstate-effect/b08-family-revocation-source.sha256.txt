@@ -1,0 +1,4 @@
+937539312cd4d97dda8a4f4d9bf7d2349e5ba4eaf93ef249330f4723f9409a2b  src/delegation/delegations.ts
+5e1e68bf22e61e77b20429639a53e2d8af8430230c8b0584a19a68435a757d21  src/delegation/service.ts
+be15a5777269f920ace17d31d1e5cd6db326416aeb10104ab5a3a6fcedce8140  tests/delegation-family-revocation.test.ts
+dbeb2098293bf2f92cb51aed195394bc61314aa46abb09ae6cfbe56989d93a4a  tests/family-model-authority.test.ts

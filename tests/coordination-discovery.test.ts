@@ -44,9 +44,13 @@ function fixture() {
       parent: () => Effect.succeed(undefined),
       catalog: () => Effect.succeed([]),
     },
+    delegations: { nextWake: () => Effect.succeed(undefined) },
     active: () => conversations.active(),
     messageProvenance: () => ({ conversationId: "synthetic-bot" }),
-    coordinationRunner: { wake: async () => {} },
+    coordinationRunner: {
+      wake: async () => {},
+      armDiscovery: async () => Date.now() + 60_000,
+    },
     notifyConversation: () => {},
     runner: {
       armDiscovery: async () => {
@@ -148,4 +152,21 @@ it("keeps both Coordination receipt and resumed turn after the immediate wake fa
   expect(f.order).toEqual(["prearm", "wake"])
   await Effect.runPromise(f.coordination.service.pump())
   expect(f.order).toEqual(["prearm", "wake"])
+})
+
+it("makes cleanup-only passes without admitting addressed conversations", async () => {
+  const f = fixture(),
+    message = await f.send()
+  await Effect.runPromise(f.coordination.pump({ allowDispatch: false }))
+  expect(f.order).toEqual([])
+  expect(
+    await Effect.runPromise(f.coordination.store.get(message.id))
+  ).toMatchObject({ phase: "pending" })
+  expect(
+    await Effect.runPromise(f.conversations.get(message.id))
+  ).toBeUndefined()
+  await Effect.runPromise(f.coordination.pump({ allowDispatch: true }))
+  expect(
+    await Effect.runPromise(f.coordination.store.get(message.id))
+  ).toMatchObject({ phase: "delivered" })
 })
