@@ -1,4 +1,4 @@
-import { Effect } from "effect"
+import { Deferred, Effect } from "effect"
 import { describe, expect, it } from "vitest"
 
 import { AccessStore } from "../src/access/adapters/sqlite"
@@ -46,7 +46,14 @@ function approvalsFixture() {
       },
     ])
   )
-  const gate = new AccessGate(access, () => Effect.succeed(true))
+  const approvalReady = Deferred.makeUnsafe<void>()
+  const gate = new AccessGate(
+    access,
+    () => Effect.succeed(true),
+    () => {
+      Deferred.doneUnsafe(approvalReady, Effect.void)
+    }
+  )
   const flow = emailApprovals(records, gate, {
     proofs: emailApprovalProofs(secret),
     active: () => Effect.succeed(true),
@@ -71,7 +78,16 @@ function approvalsFixture() {
       }),
     ...flow,
   })
-  return { records, access, gate, flow, sent, pump, admissions: () => admitted }
+  return {
+    records,
+    access,
+    gate,
+    flow,
+    sent,
+    pump,
+    approvalReady,
+    admissions: () => admitted,
+  }
 }
 describe("email approvals", () => {
   it("wakes a tool already waiting in the gate after the email transaction commits", async () => {
@@ -89,6 +105,7 @@ describe("email approvals", () => {
         Effect.sync(() => ++executed)
       )
     )
+    await run(Deferred.await(f.approvalReady))
     const operation = (await run(f.gate.pending()))[0]!
     const command = incoming(
       `APPROVE ${emailApprovalToken(secret, root.recipient, operation)}`

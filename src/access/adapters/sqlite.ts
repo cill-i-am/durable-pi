@@ -13,19 +13,18 @@ import {
 } from "../contracts"
 import * as Domain from "../domain"
 import type { AccessError } from "../gate"
-import type { AccessLedger, ToolIntent, ToolOperation } from "../ledger"
+import { ToolOperation, type AccessLedger, type ToolIntent } from "../ledger"
+import {
+  advanceOperation,
+  beginOperation,
+  type OperationEvent,
+} from "../operation.machine"
 import {
   toolGrants as grants,
   toolOperations as operations,
   toolOperationHistory as history,
 } from "./schema"
 
-const Operation = Schema.Struct({
-  ...Approval.fields,
-  grantRevision: Schema.Number,
-  result: Schema.NullOr(Schema.String),
-  decision: Schema.NullOr(Schema.String),
-})
 const query = <TValue>(
   operation: string,
   effect: Effect.Effect<TValue, EffectDrizzleQueryError>
@@ -106,22 +105,19 @@ export class AccessStore implements AccessLedger {
       )
       .pipe(
         Effect.map(([row]) =>
-          row ? Schema.decodeUnknownSync(Operation)(row) : undefined
+          row ? Schema.decodeUnknownSync(ToolOperation)(row) : undefined
         )
       )
   }
-  private change(
-    operation: ToolOperation,
-    patch: Partial<Omit<ToolOperation, "id" | "revision">>
-  ) {
+  private change(operation: ToolOperation, next: ToolOperation) {
     return Effect.gen({ self: this }, function* () {
-      const next = { ...operation, ...patch, revision: operation.revision + 1 }
+      if (next.revision === operation.revision) return operation
       yield* this.db.use((orm) =>
         query(
           "write",
           orm
             .update(operations)
-            .set({ ...patch, revision: next.revision })
+            .set(next)
             .where(eq(operations.id, operation.id))
         )
       )
@@ -143,8 +139,7 @@ export class AccessStore implements AccessLedger {
   private changeOpen(
     tool: string | undefined,
     turnId: string | undefined,
-    status: ToolOperation["status"],
-    expired = false
+    event: Extract<OperationEvent, { type: "EXPIRE" | "CANCEL" | "REVOKE" }>
   ) {
     return Effect.gen({ self: this }, function* () {
       const rows = yield* this.db.use((orm) =>
@@ -160,13 +155,18 @@ export class AccessStore implements AccessLedger {
                 turnId === undefined
                   ? undefined
                   : eq(operations.turnId, turnId),
-                expired ? lte(operations.expiresAt, this.now()) : undefined
+                event.type === "EXPIRE"
+                  ? lte(operations.expiresAt, event.now)
+                  : undefined
               )
             )
         )
       )
-      for (const row of rows)
-        yield* this.change(Schema.decodeUnknownSync(Operation)(row), { status })
+      for (const row of rows) {
+        const previous = Schema.decodeUnknownSync(ToolOperation)(row)
+        const next = yield* decision(() => advanceOperation(previous, event))
+        yield* this.change(previous, next.operation)
+      }
     })
   }
   update(name: string, revision: number, mode: AccessMode) {
@@ -190,7 +190,7 @@ export class AccessStore implements AccessLedger {
           )
         )
         if (next.mode === "deny")
-          yield* this.changeOpen(name, undefined, "denied")
+          yield* this.changeOpen(name, undefined, { type: "REVOKE" })
         return yield* this.policy(name)
       })
     )
@@ -226,7 +226,7 @@ export class AccessStore implements AccessLedger {
   }
   expire() {
     return this.atomic(() =>
-      this.changeOpen(undefined, undefined, "expired", true)
+      this.changeOpen(undefined, undefined, { type: "EXPIRE", now: this.now() })
     )
   }
   pending() {
@@ -274,29 +274,32 @@ export class AccessStore implements AccessLedger {
   ) {
     return this.atomic(() =>
       Effect.gen({ self: this }, function* () {
-        if (!(yield* canRun(input.turnId)))
-          return yield* new AccessDenied({
-            message: "This reply has stopped or its bot is archived.",
-          })
+        const runnable = yield* canRun(input.turnId)
         yield* this.expire()
-        const previous = yield* this.get(input.id),
-          existing = yield* decision(() => Domain.replayIntent(input, previous))
-        if (existing) return existing
+        const previous = yield* this.get(input.id)
+        if (previous)
+          return (yield* decision(() =>
+            advanceOperation(previous, {
+              type: "BEGIN",
+              intent: input,
+              runnable,
+              pending: 0,
+              policy: null,
+            })
+          )).operation
         const policy = yield* this.policy(input.tool),
           pending = yield* this.pending(),
           operation = yield* decision(() =>
-            Domain.admitOperation(input, policy, pending.length, this.now())
-          )
-        yield* this.db.use((orm) =>
-          query(
-            "write",
-            orm.insert(operations).values({
-              ...operation,
-              revision: 0,
-              result: null,
-              decision: null,
+            beginOperation(input, this.now(), {
+              type: "BEGIN",
+              intent: input,
+              policy,
+              pending: pending.length,
+              runnable,
             })
           )
+        yield* this.db.use((orm) =>
+          query("write", orm.insert(operations).values(operation))
         )
         yield* this.db.use((orm) =>
           query(
@@ -323,32 +326,29 @@ export class AccessStore implements AccessLedger {
       yield* this.expire()
       return yield* this.atomic(() =>
         Effect.gen({ self: this }, function* () {
-          const identity = yield* decision(() =>
-            Domain.decisionIdentity(approve, revision, remember)
+          const previous = yield* this.get(id)
+          if (!previous)
+            return yield* new AccessConflict({
+              message: "This approval no longer exists.",
+            })
+          const policies =
+            previous.status === "pending" ? yield* this.policies() : []
+          const change = yield* decision(() =>
+            advanceOperation(previous, {
+              type: "DECIDE",
+              approve,
+              expectedRevision: revision,
+              remember: remember ?? null,
+              policy:
+                policies.find((policy) => policy.name === previous.tool) ??
+                null,
+            })
           )
-          const previous = yield* this.get(id),
-            round = yield* decision(() =>
-              Domain.approvalRound(
-                previous,
-                approve,
-                revision,
-                identity,
-                remember
-              )
-            )
-          if (round.replay) return round.operation
-          const policy = yield* this.policy(round.operation.tool),
-            change = yield* decision(() =>
-              Domain.decideOperation(
-                round.operation,
-                policy,
-                approve,
-                identity,
-                remember
-              )
-            ),
-            operation = change.operation
-          if (change.grant)
+          const operation = change.operation
+          const grant = change.commands.find(
+            (command) => command.type === "grant"
+          )
+          if (grant)
             yield* this.db.use((orm) =>
               query(
                 "write",
@@ -356,23 +356,19 @@ export class AccessStore implements AccessLedger {
                   .insert(grants)
                   .values({
                     name: operation.tool,
-                    mode: change.grant!.mode,
-                    revision: change.grant!.revision,
+                    mode: "allow",
+                    revision: grant.revision,
                   })
                   .onConflictDoUpdate({
                     target: grants.name,
                     set: {
-                      mode: change.grant!.mode,
-                      revision: change.grant!.revision,
+                      mode: "allow",
+                      revision: grant.revision,
                     },
                   })
               )
             )
-          return yield* this.change(round.operation, {
-            status: operation.status,
-            grantRevision: operation.grantRevision,
-            decision: operation.decision,
-          })
+          return yield* this.change(previous, operation)
         })
       )
     })
@@ -387,25 +383,30 @@ export class AccessStore implements AccessLedger {
       yield* this.expire()
       return yield* this.atomic(() =>
         Effect.gen({ self: this }, function* () {
-          const previous = yield* this.get(id),
-            operation = yield* decision(() =>
-              Domain.requireOperation(previous)
-            ),
-            runnable = yield* canRun(operation.turnId)
-          if (!runnable)
+          const operation = yield* this.get(id)
+          if (!operation)
             return yield* new AccessDenied({
-              message: "This reply has stopped or its bot is archived.",
+              message: "This tool operation is unavailable.",
             })
-          const policy = yield* this.policy(operation.tool),
-            change = yield* decision(() =>
-              Domain.claimOperation(operation, policy, recoverable, this.now())
-            )
-          if (change.update)
-            yield* this.change(operation, {
-              status: change.update.status,
-              grantRevision: change.update.grantRevision,
+          const runnable = yield* canRun(operation.turnId)
+          const policy = yield* this.policy(operation.tool)
+          const change = yield* decision(() =>
+            advanceOperation(operation, {
+              type: "CLAIM",
+              policy,
+              recoverable,
+              now: this.now(),
+              runnable,
             })
-          return change.decision
+          )
+          yield* this.change(operation, change.operation)
+          const command = change.commands.find(
+            (value) => value.type === "dispatch" || value.type === "reject"
+          )
+          if (!command) throw new Error("Access claim produced no decision")
+          return command.type === "reject"
+            ? new AccessDenied({ message: command.message })
+            : command.decision
         })
       ).pipe(
         Effect.flatMap((value) =>
@@ -421,13 +422,19 @@ export class AccessStore implements AccessLedger {
       Effect.gen({ self: this }, function* () {
         yield* decision(() => Domain.validateResult(result))
         const operation = yield* this.get(id)
-        if (operation?.status === "running")
-          yield* this.change(operation, { status: "done", result })
+        if (operation) {
+          const next = yield* decision(() =>
+            advanceOperation(operation, { type: "FINISH", result })
+          )
+          yield* this.change(operation, next.operation)
+        }
       })
     )
   }
   cancel(turnId: string) {
-    return this.atomic(() => this.changeOpen(undefined, turnId, "cancelled"))
+    return this.atomic(() =>
+      this.changeOpen(undefined, turnId, { type: "CANCEL" })
+    )
   }
   revoke(name: string) {
     return this.atomic(() =>
@@ -446,7 +453,7 @@ export class AccessStore implements AccessLedger {
                 .where(eq(grants.name, name))
             )
           )
-        yield* this.changeOpen(name, undefined, "denied")
+        yield* this.changeOpen(name, undefined, { type: "REVOKE" })
       })
     )
   }

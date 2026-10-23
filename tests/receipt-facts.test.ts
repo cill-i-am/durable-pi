@@ -4,6 +4,8 @@ import type { ToolOperation } from "../src/access/ledger"
 import { receiptFact, scopedReceiptFact } from "../src/access/receipt"
 
 const operation: ToolOperation = {
+  schemaVersion: 1,
+  workflowVersion: 1,
   id: "receipt",
   turnId: "root",
   revision: 4,
