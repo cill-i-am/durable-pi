@@ -1,0 +1,14 @@
+$ vitest run --maxWorkers=2
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi
+
+
+ Test Files  246 passed (246)
+      Tests  2705 passed (2705)
+   Start at  14:26:25
+   Duration  87.63s (tests 52%, import 44%, transform 3%, setup 1%)
+
+     Import  1032 modules were evaluated 1996 times · 68.50s total, 44% of tracked time
+             ~10.36s faster with isolate: false — shared modules are evaluated once per worker instead of once per file
+             learn more: https://vitest.dev/guide/improving-performance#test-isolation
+
