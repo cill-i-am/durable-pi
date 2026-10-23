@@ -60,6 +60,8 @@ function fixture(extract: ExtractVideo = () => Effect.succeed(result)) {
   const make = (prefix = "private-bot") =>
     ManagedRuntime.make(
       workspaceLayer(db, bucket, prefix, () => Effect.sync(() => active), {
+        arm: () =>
+          Clock.currentTimeMillis.pipe(Effect.map((now) => now + 60_000)),
         document: undefined,
         video: extract,
       })
@@ -256,6 +258,9 @@ describe("private video preparation", () => {
       )
       await f.runtime.dispose()
       const restored = f.make()
+      await restored.runPromise(
+        Effect.flatMap(Workspace, (w) => w.restorePreparation())
+      )
       const next = () =>
         restored.runPromise(Effect.flatMap(Workspace, (w) => w.extractNext()))
       await next()
@@ -407,6 +412,7 @@ describe("private video preparation", () => {
     expect(
       f.db.all("SELECT status,attempts FROM workspace_video_preparations")
     ).toEqual([{ status: "running", attempts: 1 }])
+    await f.run((w) => w.restorePreparation())
     await f.run((w) => w.extractNext())
     expect((await f.run((w) => w.list()))[0]?.video?.status).toBe("ready")
     await f.runtime.dispose()

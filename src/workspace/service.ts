@@ -1,5 +1,7 @@
+import { createEffectActor, waitFor } from "@xstate/effect"
 import { Clock, Effect, Layer, Schema } from "effect"
 
+import { preserveFatal } from "../shared/effect"
 import { WorkspaceAdmission } from "./admission"
 import type { WorkspaceAssets } from "./assets"
 import {
@@ -21,7 +23,11 @@ import {
   workspaceUploadReplay,
   requireTextRange,
 } from "./domain"
-import { workspaceOperation as attempt } from "./effects"
+import {
+  workspaceOperation as attempt,
+  workspaceScope,
+  workspaceOccupancy,
+} from "./effects"
 import {
   FileRejected,
   WorkspaceReadOnly,
@@ -36,6 +42,9 @@ import type { PrepareImage } from "./images"
 import { requireImagePreview } from "./images"
 import type { WorkspaceLedger } from "./ledger"
 import { fileAsset, workspacePreparation } from "./preparation"
+import { WORKSPACE_RECOVERY_MS } from "./preparation.machine"
+import { decideReservation } from "./reservation.machine"
+import { uploadMachine } from "./upload.machine"
 import type { ExtractVideo } from "./video"
 import { Workspace, type AttachmentContent } from "./workspace"
 export interface WorkspaceProcessing {
@@ -43,6 +52,8 @@ export interface WorkspaceProcessing {
   video: ExtractVideo
   image: PrepareImage
   audio: TranscribeAudio
+  /** Retain Lifecycle discovery before returning a finite admission deadline. */
+  arm: () => Effect.Effect<number, WorkspaceUnavailable>
 }
 
 const base64 = (bytes: Uint8Array) => {
@@ -58,6 +69,8 @@ export function makeWorkspace(
   processing: Partial<WorkspaceProcessing> = {}
 ): Workspace["Service"] {
   const unavailable = () => Effect.fail(new WorkspaceUnavailable())
+  const arm = processing.arm ?? unavailable
+  const occupancy = workspaceOccupancy(ledger.transactionGroup)
   const prepareImage = processing.image ?? unavailable
   const transcribe = processing.audio ?? unavailable
   const preparation = workspacePreparation(
@@ -65,7 +78,8 @@ export function makeWorkspace(
     assets,
     canWrite,
     processing.document ?? unavailable,
-    processing.video ?? unavailable
+    processing.video ?? unavailable,
+    arm
   )
   const row = (id: string, active = false) =>
     ledger
@@ -117,7 +131,13 @@ export function makeWorkspace(
               ? "This PDF is still being prepared. Try again when extraction finishes."
               : (state?.error ?? "This file has no extracted text."),
         })
-      return { file, bytes: yield* assets.read(fileAsset(file, "pdf-text-v1")) }
+      return {
+        file,
+        bytes: yield* assets.read({
+          ...fileAsset(file, "pdf-text-v1"),
+          hash: state.artifactHash ?? file.hash,
+        }),
+      }
     })
   const readReplyFiles = Effect.fn("Workspace.readReplyFiles")(function* (
     replies: readonly FileReply[]
@@ -177,7 +197,10 @@ export function makeWorkspace(
       ),
     video: preparation.video,
     extractionPending: preparation.pending,
+    restorePreparation: () => ledger.restorePreparation(),
     extractNext: preparation.next,
+    nextPreparationWake: preparation.nextWake,
+    exhaustPreparation: preparation.exhaust,
     retryExtraction: Effect.fn("Workspace.retryExtraction")(function* (id) {
       yield* preparation.retry(id)
       return yield* info(id)
@@ -218,79 +241,175 @@ export function makeWorkspace(
       }
       const metadata = yield* attempt(() => inspectWorkspaceUpload(input))
       const hash = yield* assets.digest(input.bytes)
-      const now = yield* Clock.currentTimeMillis
-      const reserved = yield* ledger.atomic(() =>
+      const attemptId = crypto.randomUUID()
+      const needsPreparation =
+        metadata.kind === "video" || metadata.mime === "application/pdf"
+      const discovery = needsPreparation
+        ? Effect.suspend(arm)
+        : Effect.succeed(0)
+      const validateDiscovery = (deadline: number) =>
         Effect.gen(function* () {
-          const existing = yield* ledger.read(input.id)
-          if (existing) {
-            if (
-              yield* attempt(() =>
-                workspaceUploadReplay(existing, metadata, hash)
-              )
-            ) {
-              yield* ledger.promotePdf(input.id)
-              if (existing.status === "ready")
-                yield* ledger.enqueueDocument(input.id)
-            }
-            return yield* row(input.id)
-          }
-          yield* writable()
-          const usage = yield* ledger.usage()
-          yield* attempt(() => requireWorkspaceCapacity(usage, metadata.size))
-          yield* ledger.insert({
-            ...metadata,
-            id: input.id,
-            createdAt: new Date(now).toISOString(),
-            status: "uploading",
-            trashed: false,
-            hash,
-            visionHash: null,
+          if (!needsPreparation) return
+          const now = yield* Clock.currentTimeMillis
+          if (!Number.isFinite(deadline) || deadline <= now)
+            return yield* new WorkspaceUnavailable()
+        })
+      return yield* occupancy.upload(
+        input.id,
+        workspaceScope((observe) =>
+          Effect.gen(function* () {
+            const machine = uploadMachine({
+              reserve: observe(
+                Effect.gen(function* () {
+                  // Compare immutable replay input before discovery; an exact ready replay accepts no work.
+                  const previous = yield* ledger.read(input.id)
+                  const promote = previous
+                    ? yield* attempt(() =>
+                        workspaceUploadReplay(previous, metadata, hash)
+                      )
+                    : false
+                  const deadline =
+                    !previous || previous.status !== "ready" || promote
+                      ? yield* discovery
+                      : 0
+                  return yield* ledger.atomic(() =>
+                    Effect.gen(function* () {
+                      const existing = yield* ledger.read(input.id)
+                      if (existing) {
+                        if (
+                          yield* attempt(() =>
+                            workspaceUploadReplay(existing, metadata, hash)
+                          )
+                        ) {
+                          yield* ledger.promotePdf(input.id)
+                          if (existing.status === "ready") {
+                            yield* validateDiscovery(deadline)
+                            yield* ledger.enqueueDocument(
+                              input.id,
+                              (yield* Clock.currentTimeMillis) +
+                                WORKSPACE_RECOVERY_MS
+                            )
+                          }
+                        }
+                        const next = {
+                          ...existing,
+                          ...decideReservation(existing, {
+                            type: "CLAIM",
+                            attemptId,
+                          }),
+                        }
+                        yield* ledger.saveUpload(next)
+                        return next
+                      }
+                      yield* writable()
+                      const usage = yield* ledger.usage()
+                      yield* attempt(() =>
+                        requireWorkspaceCapacity(usage, metadata.size)
+                      )
+                      const now = yield* Clock.currentTimeMillis
+                      const file = {
+                        ...metadata,
+                        id: input.id,
+                        createdAt: new Date(now).toISOString(),
+                        trashed: false,
+                        hash,
+                        visionHash: null,
+                        ...decideReservation(
+                          { status: "uploading" },
+                          { type: "CLAIM", attemptId }
+                        ),
+                      }
+                      yield* ledger.insert(file)
+                      return file
+                    })
+                  )
+                })
+              ),
+              original: (file) =>
+                observe(assets.write(fileAsset(file), input.bytes)),
+              image: observe(
+                Effect.gen(function* () {
+                  const preview = yield* prepareImage(input.bytes).pipe(
+                    Effect.flatMap((bytes) =>
+                      attempt(() => requireImagePreview(bytes))
+                    )
+                  )
+                  const visionHash = yield* assets.digest(preview)
+                  yield* assets.write(
+                    { id: input.id, hash: visionHash },
+                    preview
+                  )
+                  return visionHash
+                })
+              ),
+              audio: observe(
+                Effect.gen(function* () {
+                  const transcript = yield* transcribe(input.bytes).pipe(
+                    preserveFatal,
+                    Effect.catchTag("AudioUnreadable", (error) =>
+                      Effect.fail(new FileRejected({ message: error.message }))
+                    ),
+                    Effect.map(Schema.decodeUnknownSync(AudioTranscript))
+                  )
+                  const bytes = new TextEncoder().encode(transcript.text)
+                  const textHash = yield* assets.digest(bytes)
+                  yield* assets.write(
+                    { id: input.id, hash: textHash, variant: "audio-text-v1" },
+                    bytes
+                  )
+                  return audioMetadata(transcript, textHash)
+                })
+              ),
+              arm: observe(discovery),
+              publish: (file, visionHash, audio, deadline) =>
+                observe(
+                  ledger.atomic(() =>
+                    Effect.gen(function* () {
+                      const current = yield* row(file.id)
+                      const next = decideReservation(current, {
+                        type: "READY",
+                        attemptId,
+                      })
+                      if (current.status === "ready")
+                        return yield* info(file.id)
+                      if (next.status !== "ready")
+                        return yield* new WorkspaceUnavailable()
+                      yield* validateDiscovery(deadline)
+                      yield* ledger.saveUpload({
+                        ...current,
+                        ...next,
+                        visionHash,
+                        audio: audio ?? undefined,
+                      })
+                      if (metadata.kind === "video")
+                        yield* ledger.enqueueVideo(
+                          file.id,
+                          (yield* Clock.currentTimeMillis) +
+                            WORKSPACE_RECOVERY_MS
+                        )
+                      if (metadata.mime === "application/pdf")
+                        yield* ledger.enqueueDocument(
+                          file.id,
+                          (yield* Clock.currentTimeMillis) +
+                            WORKSPACE_RECOVERY_MS
+                        )
+                      return yield* info(file.id)
+                    })
+                  )
+                ),
+              info: (file) => observe(info(file.id)),
+            })
+            const actor = yield* createEffectActor(machine)
+            const done = yield* waitFor(
+              actor,
+              (snapshot) => snapshot.status === "done"
+            ).pipe(Effect.orDie)
+            return yield* done.output!
           })
-          return yield* row(input.id)
-        })
-      )
-      if (reserved.status === "ready") return yield* info(reserved.id)
-      yield* assets.write(fileAsset(reserved), input.bytes)
-      let visionHash: string | null = null
-      let transcript: AudioTranscript | undefined
-      let textHash = ""
-      if (metadata.kind === "image") {
-        const preview = yield* prepareImage(input.bytes).pipe(
-          Effect.flatMap((bytes) => attempt(() => requireImagePreview(bytes)))
         )
-        visionHash = yield* assets.digest(preview)
-        yield* assets.write({ id: reserved.id, hash: visionHash }, preview)
-      }
-      if (metadata.kind === "audio") {
-        transcript = yield* transcribe(input.bytes).pipe(
-          Effect.catchTag("AudioUnreadable", (error) =>
-            Effect.fail(new FileRejected({ message: error.message }))
-          ),
-          Effect.map(Schema.decodeUnknownSync(AudioTranscript))
-        )
-        const bytes = new TextEncoder().encode(transcript.text)
-        textHash = yield* assets.digest(bytes)
-        yield* assets.write(
-          { id: reserved.id, hash: textHash, variant: "audio-text-v1" },
-          bytes
-        )
-      }
-      return yield* ledger.atomic(() =>
-        Effect.gen(function* () {
-          const current = yield* row(input.id)
-          if (current.status === "ready") return yield* info(input.id)
-          yield* ledger.ready(
-            input.id,
-            visionHash,
-            transcript ? audioMetadata(transcript, textHash) : undefined
-          )
-          if (metadata.kind === "video") yield* ledger.enqueueVideo(input.id)
-          if (metadata.mime === "application/pdf")
-            yield* ledger.enqueueDocument(input.id)
-          return yield* info(input.id)
-        })
       )
     }),
+
     content: Effect.fn("Workspace.content")(function* (id, vision) {
       const file = yield* row(id, true)
       if (vision && !file.visionHash)

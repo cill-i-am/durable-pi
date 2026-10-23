@@ -49,6 +49,8 @@ function fixture(
   const db = database()
   const runtime = ManagedRuntime.make(
     workspaceLayer(db, bucket, prefix, () => Effect.sync(canWrite), {
+      arm: () =>
+        Clock.currentTimeMillis.pipe(Effect.map((now) => now + 60_000)),
       document: undefined,
       video: undefined,
       image: () => Effect.succeed(preview),

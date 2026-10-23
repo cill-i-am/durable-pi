@@ -1,0 +1,3846 @@
+{
+  "syntheticExtractors": true,
+  "bucket": "separate durable SQLite DO behind production r2WorkspaceAssets; not hosted R2",
+  "negative": false,
+  "snapshots": {
+    "resourceOwner": {
+      "entered": {
+        "files": [
+          {
+            "id": "10000000-0000-4000-8000-000000000003",
+            "name": "native.pdf",
+            "mime": "application/pdf",
+            "kind": "document",
+            "size": 34,
+            "createdAt": "2026-10-23T14:58:16.663Z",
+            "status": "ready",
+            "trashed": 0,
+            "hash": "d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb",
+            "visionHash": null,
+            "audio": null,
+            "lifecycle_version": 1,
+            "attempt_id": "da40ca41-6e76-4e19-a29e-aa1183bda7b7"
+          }
+        ],
+        "documents": [
+          {
+            "id": "10000000-0000-4000-8000-000000000003",
+            "status": "running",
+            "attempts": 1,
+            "pages": 0,
+            "readPages": 0,
+            "characters": 0,
+            "truncated": 0,
+            "error": null,
+            "lifecycle_version": 1,
+            "attempt_id": "6fed7046-6cc7-47a6-83bd-03b529408409",
+            "artifact_hash": null,
+            "recovery_deadline": 1792768096688
+          }
+        ],
+        "videos": [],
+        "assets": [
+          {
+            "key": "synthetic-workspace/10000000-0000-4000-8000-000000000003/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb",
+            "bytes": [
+              37,
+              80,
+              68,
+              70,
+              45,
+              49,
+              46,
+              55,
+              32,
+              115,
+              121,
+              110,
+              116,
+              104,
+              101,
+              116,
+              105,
+              99,
+              32,
+              110,
+              97,
+              116,
+              105,
+              118,
+              101,
+              32,
+              100,
+              111,
+              99,
+              117,
+              109,
+              101,
+              110,
+              116
+            ],
+            "puts": 1
+          }
+        ],
+        "events": [
+          {
+            "value": "put-entered",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000003/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+          },
+          {
+            "value": "put-settled",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000003/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+          },
+          {
+            "value": "claim",
+            "detail": "{\"id\":\"10000000-0000-4000-8000-000000000003\",\"kind\":\"document\",\"attemptId\":\"6fed7046-6cc7-47a6-83bd-03b529408409\",\"attempts\":1}"
+          },
+          {
+            "value": "body-acquired",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000003/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+          },
+          {
+            "value": "body-cancelled",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000003/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+          },
+          {
+            "value": "document-extract",
+            "detail": ""
+          },
+          {
+            "value": "put-entered",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000003/d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd/pdf-text-v1"
+          },
+          {
+            "value": "put-held",
+            "detail": ""
+          }
+        ],
+        "jobs": [
+          {
+            "id": "workspace-extraction:recovery",
+            "capability": "workspace-extraction",
+            "fn": "recover",
+            "time": 1792767496656,
+            "payload": {
+              "schemaVersion": 1,
+              "workflowVersion": 1,
+              "token": "b1c0886c-c121-43ce-a527-94242ef528aa",
+              "armedUntil": 1792767556671
+            },
+            "retry": {
+              "maxAttempts": 3,
+              "baseDelayMs": 100,
+              "maxDelayMs": 1000
+            },
+            "singleflight": true,
+            "exclusive": false,
+            "recoveryLoop": true,
+            "createdAt": 1792767496
+          }
+        ],
+        "physicalAlarm": null,
+        "held": true,
+        "now": 1792767496696,
+        "discoveryDeadline": 1792767556671
+      },
+      "held": {
+        "files": [
+          {
+            "id": "10000000-0000-4000-8000-000000000003",
+            "name": "native.pdf",
+            "mime": "application/pdf",
+            "kind": "document",
+            "size": 34,
+            "createdAt": "2026-10-23T14:58:16.663Z",
+            "status": "ready",
+            "trashed": 0,
+            "hash": "d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb",
+            "visionHash": null,
+            "audio": null,
+            "lifecycle_version": 1,
+            "attempt_id": "da40ca41-6e76-4e19-a29e-aa1183bda7b7"
+          }
+        ],
+        "documents": [
+          {
+            "id": "10000000-0000-4000-8000-000000000003",
+            "status": "running",
+            "attempts": 1,
+            "pages": 0,
+            "readPages": 0,
+            "characters": 0,
+            "truncated": 0,
+            "error": null,
+            "lifecycle_version": 1,
+            "attempt_id": "6fed7046-6cc7-47a6-83bd-03b529408409",
+            "artifact_hash": null,
+            "recovery_deadline": 1792768096688
+          }
+        ],
+        "videos": [],
+        "assets": [
+          {
+            "key": "synthetic-workspace/10000000-0000-4000-8000-000000000003/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb",
+            "bytes": [
+              37,
+              80,
+              68,
+              70,
+              45,
+              49,
+              46,
+              55,
+              32,
+              115,
+              121,
+              110,
+              116,
+              104,
+              101,
+              116,
+              105,
+              99,
+              32,
+              110,
+              97,
+              116,
+              105,
+              118,
+              101,
+              32,
+              100,
+              111,
+              99,
+              117,
+              109,
+              101,
+              110,
+              116
+            ],
+            "puts": 1
+          }
+        ],
+        "events": [
+          {
+            "value": "put-entered",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000003/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+          },
+          {
+            "value": "put-settled",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000003/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+          },
+          {
+            "value": "claim",
+            "detail": "{\"id\":\"10000000-0000-4000-8000-000000000003\",\"kind\":\"document\",\"attemptId\":\"6fed7046-6cc7-47a6-83bd-03b529408409\",\"attempts\":1}"
+          },
+          {
+            "value": "body-acquired",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000003/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+          },
+          {
+            "value": "body-cancelled",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000003/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+          },
+          {
+            "value": "document-extract",
+            "detail": ""
+          },
+          {
+            "value": "put-entered",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000003/d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd/pdf-text-v1"
+          },
+          {
+            "value": "put-held",
+            "detail": ""
+          }
+        ],
+        "jobs": [
+          {
+            "id": "workspace-extraction:recovery",
+            "capability": "workspace-extraction",
+            "fn": "recover",
+            "time": 1792767496656,
+            "payload": {
+              "schemaVersion": 1,
+              "workflowVersion": 1,
+              "token": "b1c0886c-c121-43ce-a527-94242ef528aa",
+              "armedUntil": 1792767556671
+            },
+            "retry": {
+              "maxAttempts": 3,
+              "baseDelayMs": 100,
+              "maxDelayMs": 1000
+            },
+            "singleflight": true,
+            "exclusive": false,
+            "recoveryLoop": true,
+            "createdAt": 1792767496
+          }
+        ],
+        "physicalAlarm": null,
+        "held": true,
+        "now": 1792767496756,
+        "discoveryDeadline": 1792767556671
+      },
+      "joined": {
+        "files": [
+          {
+            "id": "10000000-0000-4000-8000-000000000003",
+            "name": "native.pdf",
+            "mime": "application/pdf",
+            "kind": "document",
+            "size": 34,
+            "createdAt": "2026-10-23T14:58:16.663Z",
+            "status": "ready",
+            "trashed": 0,
+            "hash": "d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb",
+            "visionHash": null,
+            "audio": null,
+            "lifecycle_version": 1,
+            "attempt_id": "da40ca41-6e76-4e19-a29e-aa1183bda7b7"
+          }
+        ],
+        "documents": [
+          {
+            "id": "10000000-0000-4000-8000-000000000003",
+            "status": "running",
+            "attempts": 1,
+            "pages": 0,
+            "readPages": 0,
+            "characters": 0,
+            "truncated": 0,
+            "error": null,
+            "lifecycle_version": 1,
+            "attempt_id": "6fed7046-6cc7-47a6-83bd-03b529408409",
+            "artifact_hash": null,
+            "recovery_deadline": 1792768096688
+          }
+        ],
+        "videos": [],
+        "assets": [
+          {
+            "key": "synthetic-workspace/10000000-0000-4000-8000-000000000003/d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd/pdf-text-v1",
+            "bytes": [
+              78,
+              97,
+              116,
+              105,
+              118,
+              101,
+              32,
+              87,
+              111,
+              114,
+              107,
+              115,
+              112,
+              97,
+              99,
+              101,
+              32,
+              101,
+              120,
+              116,
+              114,
+              97,
+              99,
+              116,
+              105,
+              111,
+              110,
+              58,
+              32,
+              101,
+              120,
+              97,
+              99,
+              116,
+              32,
+              240,
+              159,
+              141,
+              128,
+              32,
+              98,
+              121,
+              116,
+              101,
+              115,
+              46
+            ],
+            "puts": 1
+          },
+          {
+            "key": "synthetic-workspace/10000000-0000-4000-8000-000000000003/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb",
+            "bytes": [
+              37,
+              80,
+              68,
+              70,
+              45,
+              49,
+              46,
+              55,
+              32,
+              115,
+              121,
+              110,
+              116,
+              104,
+              101,
+              116,
+              105,
+              99,
+              32,
+              110,
+              97,
+              116,
+              105,
+              118,
+              101,
+              32,
+              100,
+              111,
+              99,
+              117,
+              109,
+              101,
+              110,
+              116
+            ],
+            "puts": 1
+          }
+        ],
+        "events": [
+          {
+            "value": "put-entered",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000003/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+          },
+          {
+            "value": "put-settled",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000003/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+          },
+          {
+            "value": "claim",
+            "detail": "{\"id\":\"10000000-0000-4000-8000-000000000003\",\"kind\":\"document\",\"attemptId\":\"6fed7046-6cc7-47a6-83bd-03b529408409\",\"attempts\":1}"
+          },
+          {
+            "value": "body-acquired",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000003/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+          },
+          {
+            "value": "body-cancelled",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000003/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+          },
+          {
+            "value": "document-extract",
+            "detail": ""
+          },
+          {
+            "value": "put-entered",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000003/d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd/pdf-text-v1"
+          },
+          {
+            "value": "put-held",
+            "detail": ""
+          },
+          {
+            "value": "put-settled",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000003/d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd/pdf-text-v1"
+          },
+          {
+            "value": "pass-settled",
+            "detail": ""
+          },
+          {
+            "value": "pass-failure",
+            "detail": "Cause([Interrupt(undefined),Interrupt(undefined),Interrupt(undefined),Interrupt(undefined),Interrupt(undefined),Interrupt(undefined)])"
+          },
+          {
+            "value": "pass-settled",
+            "detail": ""
+          }
+        ],
+        "jobs": [
+          {
+            "id": "workspace-extraction:recovery",
+            "capability": "workspace-extraction",
+            "fn": "recover",
+            "time": 1792767496656,
+            "payload": {
+              "schemaVersion": 1,
+              "workflowVersion": 1,
+              "token": "b1c0886c-c121-43ce-a527-94242ef528aa",
+              "armedUntil": 1792767556671
+            },
+            "retry": {
+              "maxAttempts": 3,
+              "baseDelayMs": 100,
+              "maxDelayMs": 1000
+            },
+            "singleflight": true,
+            "exclusive": false,
+            "recoveryLoop": true,
+            "createdAt": 1792767496
+          }
+        ],
+        "physicalAlarm": null,
+        "held": false,
+        "now": 1792767496761,
+        "discoveryDeadline": 1792767556671
+      }
+    },
+    "exhaustion": {
+      "before": {
+        "files": [
+          {
+            "id": "10000000-0000-4000-8000-000000000004",
+            "name": "native.pdf",
+            "mime": "application/pdf",
+            "kind": "document",
+            "size": 34,
+            "createdAt": "2026-10-23T14:58:16.809Z",
+            "status": "ready",
+            "trashed": 0,
+            "hash": "d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb",
+            "visionHash": null,
+            "audio": null,
+            "lifecycle_version": 1,
+            "attempt_id": "1a54d552-c5f4-4ca6-a2e9-34781a3a566e"
+          }
+        ],
+        "documents": [
+          {
+            "id": "10000000-0000-4000-8000-000000000004",
+            "status": "pending",
+            "attempts": 0,
+            "pages": 0,
+            "readPages": 0,
+            "characters": 0,
+            "truncated": 0,
+            "error": null,
+            "lifecycle_version": 1,
+            "attempt_id": null,
+            "artifact_hash": null,
+            "recovery_deadline": 1792768096819
+          }
+        ],
+        "videos": [],
+        "assets": [
+          {
+            "key": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb",
+            "bytes": [
+              37,
+              80,
+              68,
+              70,
+              45,
+              49,
+              46,
+              55,
+              32,
+              115,
+              121,
+              110,
+              116,
+              104,
+              101,
+              116,
+              105,
+              99,
+              32,
+              110,
+              97,
+              116,
+              105,
+              118,
+              101,
+              32,
+              100,
+              111,
+              99,
+              117,
+              109,
+              101,
+              110,
+              116
+            ],
+            "puts": 1
+          }
+        ],
+        "events": [
+          {
+            "value": "put-entered",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+          },
+          {
+            "value": "put-settled",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+          }
+        ],
+        "jobs": [
+          {
+            "id": "workspace-extraction:recovery",
+            "capability": "workspace-extraction",
+            "fn": "recover",
+            "time": 1792767496809,
+            "payload": {
+              "schemaVersion": 1,
+              "workflowVersion": 1,
+              "token": "1f05e001-6861-4513-b0f7-3c74a26c039f",
+              "armedUntil": 1792767556816
+            },
+            "retry": {
+              "maxAttempts": 3,
+              "baseDelayMs": 100,
+              "maxDelayMs": 1000
+            },
+            "singleflight": true,
+            "exclusive": false,
+            "recoveryLoop": true,
+            "createdAt": 1792767496
+          }
+        ],
+        "physicalAlarm": 1792767496817,
+        "held": false,
+        "now": 1792767496820,
+        "discoveryDeadline": 1792767556816
+      },
+      "failed": {
+        "files": [
+          {
+            "id": "10000000-0000-4000-8000-000000000004",
+            "name": "native.pdf",
+            "mime": "application/pdf",
+            "kind": "document",
+            "size": 34,
+            "createdAt": "2026-10-23T14:58:16.809Z",
+            "status": "ready",
+            "trashed": 0,
+            "hash": "d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb",
+            "visionHash": null,
+            "audio": null,
+            "lifecycle_version": 1,
+            "attempt_id": "1a54d552-c5f4-4ca6-a2e9-34781a3a566e"
+          }
+        ],
+        "documents": [
+          {
+            "id": "10000000-0000-4000-8000-000000000004",
+            "status": "failed",
+            "attempts": 3,
+            "pages": 0,
+            "readPages": 0,
+            "characters": 0,
+            "truncated": 0,
+            "error": "Extraction was unavailable or exceeded its resource limit. Retry from Files.",
+            "lifecycle_version": 1,
+            "attempt_id": "91861dfd-df55-450a-96f2-e7988dadd921",
+            "artifact_hash": null,
+            "recovery_deadline": 1792768096859
+          }
+        ],
+        "videos": [],
+        "assets": [
+          {
+            "key": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb",
+            "bytes": [
+              37,
+              80,
+              68,
+              70,
+              45,
+              49,
+              46,
+              55,
+              32,
+              115,
+              121,
+              110,
+              116,
+              104,
+              101,
+              116,
+              105,
+              99,
+              32,
+              110,
+              97,
+              116,
+              105,
+              118,
+              101,
+              32,
+              100,
+              111,
+              99,
+              117,
+              109,
+              101,
+              110,
+              116
+            ],
+            "puts": 1
+          }
+        ],
+        "events": [
+          {
+            "value": "put-entered",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+          },
+          {
+            "value": "put-settled",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+          },
+          {
+            "value": "automatic",
+            "detail": ""
+          },
+          {
+            "value": "job-dispatch",
+            "detail": "{\"id\":\"workspace-extraction:recovery\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"1f05e001-6861-4513-b0f7-3c74a26c039f\",\"armedUntil\":1792767556816}}"
+          },
+          {
+            "value": "automatic",
+            "detail": ""
+          },
+          {
+            "value": "job-dispatch",
+            "detail": "{\"id\":\"workspace-extraction:pump\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"f1d085ad-6d36-40c3-9268-f48aed34d4b7\",\"phase\":\"dispatch\",\"claim\":null,\"cleanupAt\":0,\"finalBatch\":false}}"
+          },
+          {
+            "value": "body-acquired",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+          },
+          {
+            "value": "body-cancelled",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+          },
+          {
+            "value": "document-extract",
+            "detail": ""
+          },
+          {
+            "value": "automatic",
+            "detail": ""
+          },
+          {
+            "value": "job-dispatch",
+            "detail": "{\"id\":\"workspace-extraction:pump\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"f1d085ad-6d36-40c3-9268-f48aed34d4b7\",\"phase\":\"dispatch\",\"claim\":null,\"cleanupAt\":0,\"finalBatch\":false}}"
+          },
+          {
+            "value": "body-acquired",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+          },
+          {
+            "value": "body-cancelled",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+          },
+          {
+            "value": "document-extract",
+            "detail": ""
+          },
+          {
+            "value": "automatic",
+            "detail": ""
+          },
+          {
+            "value": "job-dispatch",
+            "detail": "{\"id\":\"workspace-extraction:pump\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"f1d085ad-6d36-40c3-9268-f48aed34d4b7\",\"phase\":\"dispatch\",\"claim\":null,\"cleanupAt\":0,\"finalBatch\":false}}"
+          },
+          {
+            "value": "body-acquired",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+          },
+          {
+            "value": "body-cancelled",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+          },
+          {
+            "value": "document-extract",
+            "detail": ""
+          }
+        ],
+        "jobs": [
+          {
+            "id": "workspace-extraction:recovery",
+            "capability": "workspace-extraction",
+            "fn": "recover",
+            "time": 1792767556816,
+            "payload": {
+              "schemaVersion": 1,
+              "workflowVersion": 1,
+              "token": "1f05e001-6861-4513-b0f7-3c74a26c039f",
+              "armedUntil": 1792767556816
+            },
+            "retry": {
+              "maxAttempts": 3,
+              "baseDelayMs": 100,
+              "maxDelayMs": 1000
+            },
+            "singleflight": true,
+            "exclusive": false,
+            "recoveryLoop": true,
+            "createdAt": 1792767496
+          }
+        ],
+        "physicalAlarm": 1792767556816,
+        "held": false,
+        "now": 1792767496861,
+        "discoveryDeadline": 1792767556816
+      },
+      "stillFailed": {
+        "files": [
+          {
+            "id": "10000000-0000-4000-8000-000000000004",
+            "name": "native.pdf",
+            "mime": "application/pdf",
+            "kind": "document",
+            "size": 34,
+            "createdAt": "2026-10-23T14:58:16.809Z",
+            "status": "ready",
+            "trashed": 0,
+            "hash": "d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb",
+            "visionHash": null,
+            "audio": null,
+            "lifecycle_version": 1,
+            "attempt_id": "1a54d552-c5f4-4ca6-a2e9-34781a3a566e"
+          }
+        ],
+        "documents": [
+          {
+            "id": "10000000-0000-4000-8000-000000000004",
+            "status": "failed",
+            "attempts": 3,
+            "pages": 0,
+            "readPages": 0,
+            "characters": 0,
+            "truncated": 0,
+            "error": "Extraction was unavailable or exceeded its resource limit. Retry from Files.",
+            "lifecycle_version": 1,
+            "attempt_id": "91861dfd-df55-450a-96f2-e7988dadd921",
+            "artifact_hash": null,
+            "recovery_deadline": 1792768096859
+          }
+        ],
+        "videos": [],
+        "assets": [
+          {
+            "key": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb",
+            "bytes": [
+              37,
+              80,
+              68,
+              70,
+              45,
+              49,
+              46,
+              55,
+              32,
+              115,
+              121,
+              110,
+              116,
+              104,
+              101,
+              116,
+              105,
+              99,
+              32,
+              110,
+              97,
+              116,
+              105,
+              118,
+              101,
+              32,
+              100,
+              111,
+              99,
+              117,
+              109,
+              101,
+              110,
+              116
+            ],
+            "puts": 1
+          }
+        ],
+        "events": [
+          {
+            "value": "put-entered",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+          },
+          {
+            "value": "put-settled",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+          },
+          {
+            "value": "automatic",
+            "detail": ""
+          },
+          {
+            "value": "job-dispatch",
+            "detail": "{\"id\":\"workspace-extraction:recovery\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"1f05e001-6861-4513-b0f7-3c74a26c039f\",\"armedUntil\":1792767556816}}"
+          },
+          {
+            "value": "automatic",
+            "detail": ""
+          },
+          {
+            "value": "job-dispatch",
+            "detail": "{\"id\":\"workspace-extraction:pump\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"f1d085ad-6d36-40c3-9268-f48aed34d4b7\",\"phase\":\"dispatch\",\"claim\":null,\"cleanupAt\":0,\"finalBatch\":false}}"
+          },
+          {
+            "value": "body-acquired",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+          },
+          {
+            "value": "body-cancelled",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+          },
+          {
+            "value": "document-extract",
+            "detail": ""
+          },
+          {
+            "value": "automatic",
+            "detail": ""
+          },
+          {
+            "value": "job-dispatch",
+            "detail": "{\"id\":\"workspace-extraction:pump\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"f1d085ad-6d36-40c3-9268-f48aed34d4b7\",\"phase\":\"dispatch\",\"claim\":null,\"cleanupAt\":0,\"finalBatch\":false}}"
+          },
+          {
+            "value": "body-acquired",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+          },
+          {
+            "value": "body-cancelled",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+          },
+          {
+            "value": "document-extract",
+            "detail": ""
+          },
+          {
+            "value": "automatic",
+            "detail": ""
+          },
+          {
+            "value": "job-dispatch",
+            "detail": "{\"id\":\"workspace-extraction:pump\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"f1d085ad-6d36-40c3-9268-f48aed34d4b7\",\"phase\":\"dispatch\",\"claim\":null,\"cleanupAt\":0,\"finalBatch\":false}}"
+          },
+          {
+            "value": "body-acquired",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+          },
+          {
+            "value": "body-cancelled",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+          },
+          {
+            "value": "document-extract",
+            "detail": ""
+          },
+          {
+            "value": "automatic",
+            "detail": ""
+          },
+          {
+            "value": "job-dispatch",
+            "detail": "{\"id\":\"workspace-extraction:pump\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"d754a042-7f9c-4b0b-8e1b-4ca5201b28b2\",\"phase\":\"dispatch\",\"claim\":null,\"cleanupAt\":0,\"finalBatch\":false}}"
+          },
+          {
+            "value": "automatic",
+            "detail": ""
+          },
+          {
+            "value": "job-dispatch",
+            "detail": "{\"id\":\"workspace-extraction:recovery\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"1f05e001-6861-4513-b0f7-3c74a26c039f\",\"armedUntil\":1792767556816}}"
+          }
+        ],
+        "jobs": [],
+        "physicalAlarm": null,
+        "held": false,
+        "now": 1792767567105,
+        "discoveryDeadline": 1792767556816
+      },
+      "retried": {
+        "files": [
+          {
+            "id": "10000000-0000-4000-8000-000000000004",
+            "name": "native.pdf",
+            "mime": "application/pdf",
+            "kind": "document",
+            "size": 34,
+            "createdAt": "2026-10-23T14:58:16.809Z",
+            "status": "ready",
+            "trashed": 0,
+            "hash": "d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb",
+            "visionHash": null,
+            "audio": null,
+            "lifecycle_version": 1,
+            "attempt_id": "1a54d552-c5f4-4ca6-a2e9-34781a3a566e"
+          }
+        ],
+        "documents": [
+          {
+            "id": "10000000-0000-4000-8000-000000000004",
+            "status": "ready",
+            "attempts": 1,
+            "pages": 1,
+            "readPages": 1,
+            "characters": 44,
+            "truncated": 0,
+            "error": null,
+            "lifecycle_version": 1,
+            "attempt_id": "b79f9235-01b7-49db-8ea9-2933ca29609b",
+            "artifact_hash": "d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd",
+            "recovery_deadline": 1792768167116
+          }
+        ],
+        "videos": [],
+        "assets": [
+          {
+            "key": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd/pdf-text-v1",
+            "bytes": [
+              78,
+              97,
+              116,
+              105,
+              118,
+              101,
+              32,
+              87,
+              111,
+              114,
+              107,
+              115,
+              112,
+              97,
+              99,
+              101,
+              32,
+              101,
+              120,
+              116,
+              114,
+              97,
+              99,
+              116,
+              105,
+              111,
+              110,
+              58,
+              32,
+              101,
+              120,
+              97,
+              99,
+              116,
+              32,
+              240,
+              159,
+              141,
+              128,
+              32,
+              98,
+              121,
+              116,
+              101,
+              115,
+              46
+            ],
+            "puts": 1
+          },
+          {
+            "key": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb",
+            "bytes": [
+              37,
+              80,
+              68,
+              70,
+              45,
+              49,
+              46,
+              55,
+              32,
+              115,
+              121,
+              110,
+              116,
+              104,
+              101,
+              116,
+              105,
+              99,
+              32,
+              110,
+              97,
+              116,
+              105,
+              118,
+              101,
+              32,
+              100,
+              111,
+              99,
+              117,
+              109,
+              101,
+              110,
+              116
+            ],
+            "puts": 1
+          }
+        ],
+        "events": [
+          {
+            "value": "put-entered",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+          },
+          {
+            "value": "put-settled",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+          },
+          {
+            "value": "automatic",
+            "detail": ""
+          },
+          {
+            "value": "job-dispatch",
+            "detail": "{\"id\":\"workspace-extraction:recovery\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"1f05e001-6861-4513-b0f7-3c74a26c039f\",\"armedUntil\":1792767556816}}"
+          },
+          {
+            "value": "automatic",
+            "detail": ""
+          },
+          {
+            "value": "job-dispatch",
+            "detail": "{\"id\":\"workspace-extraction:pump\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"f1d085ad-6d36-40c3-9268-f48aed34d4b7\",\"phase\":\"dispatch\",\"claim\":null,\"cleanupAt\":0,\"finalBatch\":false}}"
+          },
+          {
+            "value": "body-acquired",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+          },
+          {
+            "value": "body-cancelled",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+          },
+          {
+            "value": "document-extract",
+            "detail": ""
+          },
+          {
+            "value": "automatic",
+            "detail": ""
+          },
+          {
+            "value": "job-dispatch",
+            "detail": "{\"id\":\"workspace-extraction:pump\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"f1d085ad-6d36-40c3-9268-f48aed34d4b7\",\"phase\":\"dispatch\",\"claim\":null,\"cleanupAt\":0,\"finalBatch\":false}}"
+          },
+          {
+            "value": "body-acquired",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+          },
+          {
+            "value": "body-cancelled",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+          },
+          {
+            "value": "document-extract",
+            "detail": ""
+          },
+          {
+            "value": "automatic",
+            "detail": ""
+          },
+          {
+            "value": "job-dispatch",
+            "detail": "{\"id\":\"workspace-extraction:pump\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"f1d085ad-6d36-40c3-9268-f48aed34d4b7\",\"phase\":\"dispatch\",\"claim\":null,\"cleanupAt\":0,\"finalBatch\":false}}"
+          },
+          {
+            "value": "body-acquired",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+          },
+          {
+            "value": "body-cancelled",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+          },
+          {
+            "value": "document-extract",
+            "detail": ""
+          },
+          {
+            "value": "automatic",
+            "detail": ""
+          },
+          {
+            "value": "job-dispatch",
+            "detail": "{\"id\":\"workspace-extraction:pump\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"d754a042-7f9c-4b0b-8e1b-4ca5201b28b2\",\"phase\":\"dispatch\",\"claim\":null,\"cleanupAt\":0,\"finalBatch\":false}}"
+          },
+          {
+            "value": "automatic",
+            "detail": ""
+          },
+          {
+            "value": "job-dispatch",
+            "detail": "{\"id\":\"workspace-extraction:recovery\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"1f05e001-6861-4513-b0f7-3c74a26c039f\",\"armedUntil\":1792767556816}}"
+          },
+          {
+            "value": "automatic",
+            "detail": ""
+          },
+          {
+            "value": "job-dispatch",
+            "detail": "{\"id\":\"workspace-extraction:recovery\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"6c82b234-7277-4531-b624-bd18666a1ae4\",\"armedUntil\":1792767627110}}"
+          },
+          {
+            "value": "automatic",
+            "detail": ""
+          },
+          {
+            "value": "job-dispatch",
+            "detail": "{\"id\":\"workspace-extraction:pump\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"501e969e-67d2-49ca-8b87-2ce71885df43\",\"phase\":\"dispatch\",\"claim\":null,\"cleanupAt\":0,\"finalBatch\":false}}"
+          },
+          {
+            "value": "body-acquired",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+          },
+          {
+            "value": "body-cancelled",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+          },
+          {
+            "value": "document-extract",
+            "detail": ""
+          },
+          {
+            "value": "put-entered",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd/pdf-text-v1"
+          },
+          {
+            "value": "put-settled",
+            "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd/pdf-text-v1"
+          }
+        ],
+        "jobs": [
+          {
+            "id": "workspace-extraction:recovery",
+            "capability": "workspace-extraction",
+            "fn": "recover",
+            "time": 1792767627110,
+            "payload": {
+              "schemaVersion": 1,
+              "workflowVersion": 1,
+              "token": "6c82b234-7277-4531-b624-bd18666a1ae4",
+              "armedUntil": 1792767627110
+            },
+            "retry": {
+              "maxAttempts": 3,
+              "baseDelayMs": 100,
+              "maxDelayMs": 1000
+            },
+            "singleflight": true,
+            "exclusive": false,
+            "recoveryLoop": true,
+            "createdAt": 1792767567
+          }
+        ],
+        "physicalAlarm": 1792767627110,
+        "held": false,
+        "now": 1792767567139,
+        "discoveryDeadline": 1792767627110
+      }
+    },
+    "early-documentBeforeRestart": {
+      "files": [
+        {
+          "id": "10000000-0000-4000-8000-000000000001",
+          "name": "native.pdf",
+          "mime": "application/pdf",
+          "kind": "document",
+          "size": 34,
+          "createdAt": "2026-10-23T14:58:16.912Z",
+          "status": "ready",
+          "trashed": 0,
+          "hash": "d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb",
+          "visionHash": null,
+          "audio": null,
+          "lifecycle_version": 1,
+          "attempt_id": "cf61ffb2-d787-40e2-a41f-04119d44899b"
+        }
+      ],
+      "documents": [
+        {
+          "id": "10000000-0000-4000-8000-000000000001",
+          "status": "pending",
+          "attempts": 0,
+          "pages": 0,
+          "readPages": 0,
+          "characters": 0,
+          "truncated": 0,
+          "error": null,
+          "lifecycle_version": 1,
+          "attempt_id": null,
+          "artifact_hash": null,
+          "recovery_deadline": 1792768096922
+        }
+      ],
+      "videos": [],
+      "assets": [
+        {
+          "key": "synthetic-workspace/10000000-0000-4000-8000-000000000001/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb",
+          "bytes": [
+            37,
+            80,
+            68,
+            70,
+            45,
+            49,
+            46,
+            55,
+            32,
+            115,
+            121,
+            110,
+            116,
+            104,
+            101,
+            116,
+            105,
+            99,
+            32,
+            110,
+            97,
+            116,
+            105,
+            118,
+            101,
+            32,
+            100,
+            111,
+            99,
+            117,
+            109,
+            101,
+            110,
+            116
+          ],
+          "puts": 1
+        }
+      ],
+      "events": [
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:recovery\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"6f559352-f52c-4636-b736-5300e1cdcadb\",\"armedUntil\":1792767556910}}"
+        },
+        {
+          "value": "empty-scan",
+          "detail": ""
+        },
+        {
+          "value": "put-entered",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000001/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        },
+        {
+          "value": "put-settled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000001/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        },
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:recovery\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"60f09ba0-4bbf-4075-acbf-4488559c3fa8\",\"armedUntil\":1792767556918}}"
+        },
+        {
+          "value": "empty-scan",
+          "detail": ""
+        }
+      ],
+      "jobs": [
+        {
+          "id": "workspace-extraction:recovery",
+          "capability": "workspace-extraction",
+          "fn": "recover",
+          "time": 1792767556918,
+          "payload": {
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "token": "60f09ba0-4bbf-4075-acbf-4488559c3fa8",
+            "armedUntil": 1792767556918
+          },
+          "retry": {
+            "maxAttempts": 3,
+            "baseDelayMs": 100,
+            "maxDelayMs": 1000
+          },
+          "singleflight": true,
+          "exclusive": false,
+          "recoveryLoop": true,
+          "createdAt": 1792767496
+        }
+      ],
+      "physicalAlarm": 1792767556918,
+      "held": false,
+      "now": 1792767496924,
+      "discoveryDeadline": 1792767556918
+    },
+    "early-videoBeforeRestart": {
+      "files": [
+        {
+          "id": "10000000-0000-4000-8000-000000000002",
+          "name": "native.mp4",
+          "mime": "video/mp4",
+          "kind": "video",
+          "size": 8,
+          "createdAt": "2026-10-23T14:58:16.972Z",
+          "status": "ready",
+          "trashed": 0,
+          "hash": "d9f1cb99ee21291800d5e62bd9bca07850461d7d8096afc4150a52dc8554d49f",
+          "visionHash": null,
+          "audio": null,
+          "lifecycle_version": 1,
+          "attempt_id": "9e41f42d-3a6f-4270-a94f-f5ae1b3f8f74"
+        }
+      ],
+      "documents": [],
+      "videos": [
+        {
+          "id": "10000000-0000-4000-8000-000000000002",
+          "status": "pending",
+          "attempts": 0,
+          "duration": 0,
+          "frames": 0,
+          "captions": 0,
+          "error": null,
+          "retry_at": 0,
+          "lifecycle_version": 1,
+          "attempt_id": null,
+          "artifact_hash": null,
+          "recovery_deadline": 1792768096982
+        }
+      ],
+      "assets": [
+        {
+          "key": "synthetic-workspace/10000000-0000-4000-8000-000000000002/d9f1cb99ee21291800d5e62bd9bca07850461d7d8096afc4150a52dc8554d49f",
+          "bytes": [
+            0,
+            0,
+            0,
+            24,
+            102,
+            116,
+            121,
+            112
+          ],
+          "puts": 1
+        }
+      ],
+      "events": [
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:recovery\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"3ed2e547-1ba6-4238-8c82-afccd9899a8f\",\"armedUntil\":1792767556970}}"
+        },
+        {
+          "value": "empty-scan",
+          "detail": ""
+        },
+        {
+          "value": "put-entered",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000002/d9f1cb99ee21291800d5e62bd9bca07850461d7d8096afc4150a52dc8554d49f"
+        },
+        {
+          "value": "put-settled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000002/d9f1cb99ee21291800d5e62bd9bca07850461d7d8096afc4150a52dc8554d49f"
+        },
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:recovery\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"796af221-4f32-47bb-b136-80f82a417519\",\"armedUntil\":1792767556978}}"
+        },
+        {
+          "value": "empty-scan",
+          "detail": ""
+        }
+      ],
+      "jobs": [
+        {
+          "id": "workspace-extraction:recovery",
+          "capability": "workspace-extraction",
+          "fn": "recover",
+          "time": 1792767556978,
+          "payload": {
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "token": "796af221-4f32-47bb-b136-80f82a417519",
+            "armedUntil": 1792767556978
+          },
+          "retry": {
+            "maxAttempts": 3,
+            "baseDelayMs": 100,
+            "maxDelayMs": 1000
+          },
+          "singleflight": true,
+          "exclusive": false,
+          "recoveryLoop": true,
+          "createdAt": 1792767496
+        }
+      ],
+      "physicalAlarm": 1792767556978,
+      "held": false,
+      "now": 1792767496983,
+      "discoveryDeadline": 1792767556978
+    },
+    "historical-pumpBeforeRestart": {
+      "files": [
+        {
+          "id": "10000000-0000-4000-8000-000000000005",
+          "name": "native.pdf",
+          "mime": "application/pdf",
+          "kind": "document",
+          "size": 34,
+          "createdAt": "2026-10-23T14:58:17.029Z",
+          "status": "ready",
+          "trashed": 0,
+          "hash": "d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb",
+          "visionHash": null,
+          "audio": null,
+          "lifecycle_version": 1,
+          "attempt_id": "72ce8403-5d54-4764-ada1-6f23d642dfb7"
+        }
+      ],
+      "documents": [
+        {
+          "id": "10000000-0000-4000-8000-000000000005",
+          "status": "pending",
+          "attempts": 0,
+          "pages": 0,
+          "readPages": 0,
+          "characters": 0,
+          "truncated": 0,
+          "error": null,
+          "lifecycle_version": 1,
+          "attempt_id": null,
+          "artifact_hash": null,
+          "recovery_deadline": 1792768097038
+        }
+      ],
+      "videos": [],
+      "assets": [
+        {
+          "key": "synthetic-workspace/10000000-0000-4000-8000-000000000005/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb",
+          "bytes": [
+            37,
+            80,
+            68,
+            70,
+            45,
+            49,
+            46,
+            55,
+            32,
+            115,
+            121,
+            110,
+            116,
+            104,
+            101,
+            116,
+            105,
+            99,
+            32,
+            110,
+            97,
+            116,
+            105,
+            118,
+            101,
+            32,
+            100,
+            111,
+            99,
+            117,
+            109,
+            101,
+            110,
+            116
+          ],
+          "puts": 1
+        }
+      ],
+      "events": [
+        {
+          "value": "put-entered",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000005/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        },
+        {
+          "value": "put-settled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000005/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        }
+      ],
+      "jobs": [
+        {
+          "id": "workspace-extraction:pump",
+          "capability": "workspace-extraction",
+          "fn": "pump",
+          "time": 1792767499042,
+          "singleflight": true,
+          "exclusive": false,
+          "recoveryLoop": true,
+          "createdAt": 1792767497
+        }
+      ],
+      "physicalAlarm": 1792767499042,
+      "held": false,
+      "now": 1792767497042,
+      "discoveryDeadline": 1792767557035
+    },
+    "early-documentAfterRestart": {
+      "files": [
+        {
+          "id": "10000000-0000-4000-8000-000000000001",
+          "name": "native.pdf",
+          "mime": "application/pdf",
+          "kind": "document",
+          "size": 34,
+          "createdAt": "2026-10-23T14:58:16.912Z",
+          "status": "ready",
+          "trashed": 0,
+          "hash": "d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb",
+          "visionHash": null,
+          "audio": null,
+          "lifecycle_version": 1,
+          "attempt_id": "cf61ffb2-d787-40e2-a41f-04119d44899b"
+        }
+      ],
+      "documents": [
+        {
+          "id": "10000000-0000-4000-8000-000000000001",
+          "status": "ready",
+          "attempts": 1,
+          "pages": 1,
+          "readPages": 1,
+          "characters": 44,
+          "truncated": 0,
+          "error": null,
+          "lifecycle_version": 1,
+          "attempt_id": "11e297a4-2b61-4aa6-97d1-e5a3f7305378",
+          "artifact_hash": "d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd",
+          "recovery_deadline": 1792768156935
+        }
+      ],
+      "videos": [],
+      "assets": [
+        {
+          "key": "synthetic-workspace/10000000-0000-4000-8000-000000000001/d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd/pdf-text-v1",
+          "bytes": [
+            78,
+            97,
+            116,
+            105,
+            118,
+            101,
+            32,
+            87,
+            111,
+            114,
+            107,
+            115,
+            112,
+            97,
+            99,
+            101,
+            32,
+            101,
+            120,
+            116,
+            114,
+            97,
+            99,
+            116,
+            105,
+            111,
+            110,
+            58,
+            32,
+            101,
+            120,
+            97,
+            99,
+            116,
+            32,
+            240,
+            159,
+            141,
+            128,
+            32,
+            98,
+            121,
+            116,
+            101,
+            115,
+            46
+          ],
+          "puts": 1
+        },
+        {
+          "key": "synthetic-workspace/10000000-0000-4000-8000-000000000001/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb",
+          "bytes": [
+            37,
+            80,
+            68,
+            70,
+            45,
+            49,
+            46,
+            55,
+            32,
+            115,
+            121,
+            110,
+            116,
+            104,
+            101,
+            116,
+            105,
+            99,
+            32,
+            110,
+            97,
+            116,
+            105,
+            118,
+            101,
+            32,
+            100,
+            111,
+            99,
+            117,
+            109,
+            101,
+            110,
+            116
+          ],
+          "puts": 1
+        }
+      ],
+      "events": [
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:recovery\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"6f559352-f52c-4636-b736-5300e1cdcadb\",\"armedUntil\":1792767556910}}"
+        },
+        {
+          "value": "empty-scan",
+          "detail": ""
+        },
+        {
+          "value": "put-entered",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000001/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        },
+        {
+          "value": "put-settled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000001/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        },
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:recovery\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"60f09ba0-4bbf-4075-acbf-4488559c3fa8\",\"armedUntil\":1792767556918}}"
+        },
+        {
+          "value": "empty-scan",
+          "detail": ""
+        },
+        {
+          "value": "automatic",
+          "detail": ""
+        },
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:recovery\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"60f09ba0-4bbf-4075-acbf-4488559c3fa8\",\"armedUntil\":1792767556918}}"
+        },
+        {
+          "value": "automatic",
+          "detail": ""
+        },
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:pump\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"c0253525-e4b8-416e-9985-b748db47d7e7\",\"phase\":\"dispatch\",\"claim\":null,\"cleanupAt\":0,\"finalBatch\":false}}"
+        },
+        {
+          "value": "body-acquired",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000001/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        },
+        {
+          "value": "body-cancelled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000001/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        },
+        {
+          "value": "document-extract",
+          "detail": ""
+        },
+        {
+          "value": "put-entered",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000001/d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd/pdf-text-v1"
+        },
+        {
+          "value": "put-settled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000001/d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd/pdf-text-v1"
+        }
+      ],
+      "jobs": [],
+      "physicalAlarm": null,
+      "held": false,
+      "now": 1792767567053,
+      "discoveryDeadline": 1792767556918
+    },
+    "early-documentServed": {
+      "files": [
+        {
+          "id": "10000000-0000-4000-8000-000000000001",
+          "name": "native.pdf",
+          "mime": "application/pdf",
+          "kind": "document",
+          "size": 34,
+          "createdAt": "2026-10-23T14:58:16.912Z",
+          "status": "ready",
+          "trashed": 0,
+          "hash": "d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb",
+          "visionHash": null,
+          "audio": null,
+          "lifecycle_version": 1,
+          "attempt_id": "cf61ffb2-d787-40e2-a41f-04119d44899b"
+        }
+      ],
+      "documents": [
+        {
+          "id": "10000000-0000-4000-8000-000000000001",
+          "status": "ready",
+          "attempts": 1,
+          "pages": 1,
+          "readPages": 1,
+          "characters": 44,
+          "truncated": 0,
+          "error": null,
+          "lifecycle_version": 1,
+          "attempt_id": "11e297a4-2b61-4aa6-97d1-e5a3f7305378",
+          "artifact_hash": "d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd",
+          "recovery_deadline": 1792768156935
+        }
+      ],
+      "videos": [],
+      "assets": [
+        {
+          "key": "synthetic-workspace/10000000-0000-4000-8000-000000000001/d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd/pdf-text-v1",
+          "bytes": [
+            78,
+            97,
+            116,
+            105,
+            118,
+            101,
+            32,
+            87,
+            111,
+            114,
+            107,
+            115,
+            112,
+            97,
+            99,
+            101,
+            32,
+            101,
+            120,
+            116,
+            114,
+            97,
+            99,
+            116,
+            105,
+            111,
+            110,
+            58,
+            32,
+            101,
+            120,
+            97,
+            99,
+            116,
+            32,
+            240,
+            159,
+            141,
+            128,
+            32,
+            98,
+            121,
+            116,
+            101,
+            115,
+            46
+          ],
+          "puts": 1
+        },
+        {
+          "key": "synthetic-workspace/10000000-0000-4000-8000-000000000001/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb",
+          "bytes": [
+            37,
+            80,
+            68,
+            70,
+            45,
+            49,
+            46,
+            55,
+            32,
+            115,
+            121,
+            110,
+            116,
+            104,
+            101,
+            116,
+            105,
+            99,
+            32,
+            110,
+            97,
+            116,
+            105,
+            118,
+            101,
+            32,
+            100,
+            111,
+            99,
+            117,
+            109,
+            101,
+            110,
+            116
+          ],
+          "puts": 1
+        }
+      ],
+      "events": [
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:recovery\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"6f559352-f52c-4636-b736-5300e1cdcadb\",\"armedUntil\":1792767556910}}"
+        },
+        {
+          "value": "empty-scan",
+          "detail": ""
+        },
+        {
+          "value": "put-entered",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000001/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        },
+        {
+          "value": "put-settled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000001/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        },
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:recovery\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"60f09ba0-4bbf-4075-acbf-4488559c3fa8\",\"armedUntil\":1792767556918}}"
+        },
+        {
+          "value": "empty-scan",
+          "detail": ""
+        },
+        {
+          "value": "automatic",
+          "detail": ""
+        },
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:recovery\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"60f09ba0-4bbf-4075-acbf-4488559c3fa8\",\"armedUntil\":1792767556918}}"
+        },
+        {
+          "value": "automatic",
+          "detail": ""
+        },
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:pump\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"c0253525-e4b8-416e-9985-b748db47d7e7\",\"phase\":\"dispatch\",\"claim\":null,\"cleanupAt\":0,\"finalBatch\":false}}"
+        },
+        {
+          "value": "body-acquired",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000001/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        },
+        {
+          "value": "body-cancelled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000001/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        },
+        {
+          "value": "document-extract",
+          "detail": ""
+        },
+        {
+          "value": "put-entered",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000001/d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd/pdf-text-v1"
+        },
+        {
+          "value": "put-settled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000001/d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd/pdf-text-v1"
+        },
+        {
+          "value": "body-acquired",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000001/d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd/pdf-text-v1"
+        },
+        {
+          "value": "body-cancelled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000001/d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd/pdf-text-v1"
+        }
+      ],
+      "jobs": [],
+      "physicalAlarm": null,
+      "held": false,
+      "now": 1792767567079,
+      "discoveryDeadline": 1792767556918,
+      "content": {
+        "file": {
+          "id": "10000000-0000-4000-8000-000000000001",
+          "name": "native.pdf",
+          "mime": "application/pdf",
+          "kind": "document",
+          "size": 34,
+          "createdAt": "2026-10-23T14:58:16.912Z",
+          "status": "ready",
+          "trashed": false,
+          "extraction": {
+            "status": "ready",
+            "pages": 1,
+            "readPages": 1,
+            "characters": 44,
+            "truncated": false,
+            "error": null
+          }
+        },
+        "text": "Native Workspace extraction: exact 🍀 bytes.",
+        "offset": 0,
+        "next": null,
+        "total": 44
+      }
+    },
+    "early-videoAfterRestart": {
+      "files": [
+        {
+          "id": "10000000-0000-4000-8000-000000000002",
+          "name": "native.mp4",
+          "mime": "video/mp4",
+          "kind": "video",
+          "size": 8,
+          "createdAt": "2026-10-23T14:58:16.972Z",
+          "status": "ready",
+          "trashed": 0,
+          "hash": "d9f1cb99ee21291800d5e62bd9bca07850461d7d8096afc4150a52dc8554d49f",
+          "visionHash": null,
+          "audio": null,
+          "lifecycle_version": 1,
+          "attempt_id": "9e41f42d-3a6f-4270-a94f-f5ae1b3f8f74"
+        }
+      ],
+      "documents": [],
+      "videos": [
+        {
+          "id": "10000000-0000-4000-8000-000000000002",
+          "status": "ready",
+          "attempts": 1,
+          "duration": 1,
+          "frames": 1,
+          "captions": 1,
+          "error": null,
+          "retry_at": 0,
+          "lifecycle_version": 1,
+          "attempt_id": "6b7f8fb1-a73e-4cd5-8919-9dc729eae8c2",
+          "artifact_hash": "97ef56e8576f46c5ab9a7e60d05c0c8202c4ab82ba78a8eec490159a276b77d9",
+          "recovery_deadline": 1792768156994
+        }
+      ],
+      "assets": [
+        {
+          "key": "synthetic-workspace/10000000-0000-4000-8000-000000000002/97ef56e8576f46c5ab9a7e60d05c0c8202c4ab82ba78a8eec490159a276b77d9/video-v1",
+          "bytes": [
+            123,
+            34,
+            100,
+            117,
+            114,
+            97,
+            116,
+            105,
+            111,
+            110,
+            34,
+            58,
+            49,
+            44,
+            34,
+            102,
+            114,
+            97,
+            109,
+            101,
+            115,
+            34,
+            58,
+            91,
+            123,
+            34,
+            97,
+            116,
+            34,
+            58,
+            48,
+            44,
+            34,
+            106,
+            112,
+            101,
+            103,
+            34,
+            58,
+            34,
+            47,
+            57,
+            106,
+            47,
+            34,
+            125,
+            93,
+            44,
+            34,
+            99,
+            97,
+            112,
+            116,
+            105,
+            111,
+            110,
+            115,
+            34,
+            58,
+            34,
+            78,
+            97,
+            116,
+            105,
+            118,
+            101,
+            32,
+            87,
+            111,
+            114,
+            107,
+            115,
+            112,
+            97,
+            99,
+            101,
+            32,
+            118,
+            105,
+            100,
+            101,
+            111,
+            32,
+            99,
+            97,
+            112,
+            116,
+            105,
+            111,
+            110,
+            115,
+            46,
+            34,
+            44,
+            34,
+            99,
+            97,
+            112,
+            116,
+            105,
+            111,
+            110,
+            115,
+            84,
+            114,
+            117,
+            110,
+            99,
+            97,
+            116,
+            101,
+            100,
+            34,
+            58,
+            102,
+            97,
+            108,
+            115,
+            101,
+            125
+          ],
+          "puts": 1
+        },
+        {
+          "key": "synthetic-workspace/10000000-0000-4000-8000-000000000002/d9f1cb99ee21291800d5e62bd9bca07850461d7d8096afc4150a52dc8554d49f",
+          "bytes": [
+            0,
+            0,
+            0,
+            24,
+            102,
+            116,
+            121,
+            112
+          ],
+          "puts": 1
+        }
+      ],
+      "events": [
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:recovery\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"3ed2e547-1ba6-4238-8c82-afccd9899a8f\",\"armedUntil\":1792767556970}}"
+        },
+        {
+          "value": "empty-scan",
+          "detail": ""
+        },
+        {
+          "value": "put-entered",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000002/d9f1cb99ee21291800d5e62bd9bca07850461d7d8096afc4150a52dc8554d49f"
+        },
+        {
+          "value": "put-settled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000002/d9f1cb99ee21291800d5e62bd9bca07850461d7d8096afc4150a52dc8554d49f"
+        },
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:recovery\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"796af221-4f32-47bb-b136-80f82a417519\",\"armedUntil\":1792767556978}}"
+        },
+        {
+          "value": "empty-scan",
+          "detail": ""
+        },
+        {
+          "value": "automatic",
+          "detail": ""
+        },
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:recovery\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"796af221-4f32-47bb-b136-80f82a417519\",\"armedUntil\":1792767556978}}"
+        },
+        {
+          "value": "automatic",
+          "detail": ""
+        },
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:pump\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"69fef5dd-107b-4cf6-a5a8-ffcb10c7468d\",\"phase\":\"dispatch\",\"claim\":null,\"cleanupAt\":0,\"finalBatch\":false}}"
+        },
+        {
+          "value": "body-acquired",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000002/d9f1cb99ee21291800d5e62bd9bca07850461d7d8096afc4150a52dc8554d49f"
+        },
+        {
+          "value": "body-cancelled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000002/d9f1cb99ee21291800d5e62bd9bca07850461d7d8096afc4150a52dc8554d49f"
+        },
+        {
+          "value": "video-extract",
+          "detail": ""
+        },
+        {
+          "value": "put-entered",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000002/97ef56e8576f46c5ab9a7e60d05c0c8202c4ab82ba78a8eec490159a276b77d9/video-v1"
+        },
+        {
+          "value": "put-settled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000002/97ef56e8576f46c5ab9a7e60d05c0c8202c4ab82ba78a8eec490159a276b77d9/video-v1"
+        }
+      ],
+      "jobs": [],
+      "physicalAlarm": null,
+      "held": false,
+      "now": 1792767567084,
+      "discoveryDeadline": 1792767556978
+    },
+    "early-videoServed": {
+      "files": [
+        {
+          "id": "10000000-0000-4000-8000-000000000002",
+          "name": "native.mp4",
+          "mime": "video/mp4",
+          "kind": "video",
+          "size": 8,
+          "createdAt": "2026-10-23T14:58:16.972Z",
+          "status": "ready",
+          "trashed": 0,
+          "hash": "d9f1cb99ee21291800d5e62bd9bca07850461d7d8096afc4150a52dc8554d49f",
+          "visionHash": null,
+          "audio": null,
+          "lifecycle_version": 1,
+          "attempt_id": "9e41f42d-3a6f-4270-a94f-f5ae1b3f8f74"
+        }
+      ],
+      "documents": [],
+      "videos": [
+        {
+          "id": "10000000-0000-4000-8000-000000000002",
+          "status": "ready",
+          "attempts": 1,
+          "duration": 1,
+          "frames": 1,
+          "captions": 1,
+          "error": null,
+          "retry_at": 0,
+          "lifecycle_version": 1,
+          "attempt_id": "6b7f8fb1-a73e-4cd5-8919-9dc729eae8c2",
+          "artifact_hash": "97ef56e8576f46c5ab9a7e60d05c0c8202c4ab82ba78a8eec490159a276b77d9",
+          "recovery_deadline": 1792768156994
+        }
+      ],
+      "assets": [
+        {
+          "key": "synthetic-workspace/10000000-0000-4000-8000-000000000002/97ef56e8576f46c5ab9a7e60d05c0c8202c4ab82ba78a8eec490159a276b77d9/video-v1",
+          "bytes": [
+            123,
+            34,
+            100,
+            117,
+            114,
+            97,
+            116,
+            105,
+            111,
+            110,
+            34,
+            58,
+            49,
+            44,
+            34,
+            102,
+            114,
+            97,
+            109,
+            101,
+            115,
+            34,
+            58,
+            91,
+            123,
+            34,
+            97,
+            116,
+            34,
+            58,
+            48,
+            44,
+            34,
+            106,
+            112,
+            101,
+            103,
+            34,
+            58,
+            34,
+            47,
+            57,
+            106,
+            47,
+            34,
+            125,
+            93,
+            44,
+            34,
+            99,
+            97,
+            112,
+            116,
+            105,
+            111,
+            110,
+            115,
+            34,
+            58,
+            34,
+            78,
+            97,
+            116,
+            105,
+            118,
+            101,
+            32,
+            87,
+            111,
+            114,
+            107,
+            115,
+            112,
+            97,
+            99,
+            101,
+            32,
+            118,
+            105,
+            100,
+            101,
+            111,
+            32,
+            99,
+            97,
+            112,
+            116,
+            105,
+            111,
+            110,
+            115,
+            46,
+            34,
+            44,
+            34,
+            99,
+            97,
+            112,
+            116,
+            105,
+            111,
+            110,
+            115,
+            84,
+            114,
+            117,
+            110,
+            99,
+            97,
+            116,
+            101,
+            100,
+            34,
+            58,
+            102,
+            97,
+            108,
+            115,
+            101,
+            125
+          ],
+          "puts": 1
+        },
+        {
+          "key": "synthetic-workspace/10000000-0000-4000-8000-000000000002/d9f1cb99ee21291800d5e62bd9bca07850461d7d8096afc4150a52dc8554d49f",
+          "bytes": [
+            0,
+            0,
+            0,
+            24,
+            102,
+            116,
+            121,
+            112
+          ],
+          "puts": 1
+        }
+      ],
+      "events": [
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:recovery\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"3ed2e547-1ba6-4238-8c82-afccd9899a8f\",\"armedUntil\":1792767556970}}"
+        },
+        {
+          "value": "empty-scan",
+          "detail": ""
+        },
+        {
+          "value": "put-entered",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000002/d9f1cb99ee21291800d5e62bd9bca07850461d7d8096afc4150a52dc8554d49f"
+        },
+        {
+          "value": "put-settled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000002/d9f1cb99ee21291800d5e62bd9bca07850461d7d8096afc4150a52dc8554d49f"
+        },
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:recovery\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"796af221-4f32-47bb-b136-80f82a417519\",\"armedUntil\":1792767556978}}"
+        },
+        {
+          "value": "empty-scan",
+          "detail": ""
+        },
+        {
+          "value": "automatic",
+          "detail": ""
+        },
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:recovery\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"796af221-4f32-47bb-b136-80f82a417519\",\"armedUntil\":1792767556978}}"
+        },
+        {
+          "value": "automatic",
+          "detail": ""
+        },
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:pump\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"69fef5dd-107b-4cf6-a5a8-ffcb10c7468d\",\"phase\":\"dispatch\",\"claim\":null,\"cleanupAt\":0,\"finalBatch\":false}}"
+        },
+        {
+          "value": "body-acquired",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000002/d9f1cb99ee21291800d5e62bd9bca07850461d7d8096afc4150a52dc8554d49f"
+        },
+        {
+          "value": "body-cancelled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000002/d9f1cb99ee21291800d5e62bd9bca07850461d7d8096afc4150a52dc8554d49f"
+        },
+        {
+          "value": "video-extract",
+          "detail": ""
+        },
+        {
+          "value": "put-entered",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000002/97ef56e8576f46c5ab9a7e60d05c0c8202c4ab82ba78a8eec490159a276b77d9/video-v1"
+        },
+        {
+          "value": "put-settled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000002/97ef56e8576f46c5ab9a7e60d05c0c8202c4ab82ba78a8eec490159a276b77d9/video-v1"
+        },
+        {
+          "value": "body-acquired",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000002/97ef56e8576f46c5ab9a7e60d05c0c8202c4ab82ba78a8eec490159a276b77d9/video-v1"
+        },
+        {
+          "value": "body-cancelled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000002/97ef56e8576f46c5ab9a7e60d05c0c8202c4ab82ba78a8eec490159a276b77d9/video-v1"
+        }
+      ],
+      "jobs": [],
+      "physicalAlarm": null,
+      "held": false,
+      "now": 1792767567090,
+      "discoveryDeadline": 1792767556978,
+      "content": {
+        "duration": 1,
+        "frames": [
+          {
+            "at": 0,
+            "jpeg": "/9j/"
+          }
+        ],
+        "captions": "Native Workspace video captions.",
+        "captionsTruncated": false
+      }
+    },
+    "historical-pumpAfterRestart": {
+      "files": [
+        {
+          "id": "10000000-0000-4000-8000-000000000005",
+          "name": "native.pdf",
+          "mime": "application/pdf",
+          "kind": "document",
+          "size": 34,
+          "createdAt": "2026-10-23T14:58:17.029Z",
+          "status": "ready",
+          "trashed": 0,
+          "hash": "d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb",
+          "visionHash": null,
+          "audio": null,
+          "lifecycle_version": 1,
+          "attempt_id": "72ce8403-5d54-4764-ada1-6f23d642dfb7"
+        }
+      ],
+      "documents": [
+        {
+          "id": "10000000-0000-4000-8000-000000000005",
+          "status": "ready",
+          "attempts": 1,
+          "pages": 1,
+          "readPages": 1,
+          "characters": 44,
+          "truncated": 0,
+          "error": null,
+          "lifecycle_version": 1,
+          "attempt_id": "d68a9a32-b79a-482d-90e5-831db404ead9",
+          "artifact_hash": "d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd",
+          "recovery_deadline": 1792768099064
+        }
+      ],
+      "videos": [],
+      "assets": [
+        {
+          "key": "synthetic-workspace/10000000-0000-4000-8000-000000000005/d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd/pdf-text-v1",
+          "bytes": [
+            78,
+            97,
+            116,
+            105,
+            118,
+            101,
+            32,
+            87,
+            111,
+            114,
+            107,
+            115,
+            112,
+            97,
+            99,
+            101,
+            32,
+            101,
+            120,
+            116,
+            114,
+            97,
+            99,
+            116,
+            105,
+            111,
+            110,
+            58,
+            32,
+            101,
+            120,
+            97,
+            99,
+            116,
+            32,
+            240,
+            159,
+            141,
+            128,
+            32,
+            98,
+            121,
+            116,
+            101,
+            115,
+            46
+          ],
+          "puts": 1
+        },
+        {
+          "key": "synthetic-workspace/10000000-0000-4000-8000-000000000005/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb",
+          "bytes": [
+            37,
+            80,
+            68,
+            70,
+            45,
+            49,
+            46,
+            55,
+            32,
+            115,
+            121,
+            110,
+            116,
+            104,
+            101,
+            116,
+            105,
+            99,
+            32,
+            110,
+            97,
+            116,
+            105,
+            118,
+            101,
+            32,
+            100,
+            111,
+            99,
+            117,
+            109,
+            101,
+            110,
+            116
+          ],
+          "puts": 1
+        }
+      ],
+      "events": [
+        {
+          "value": "put-entered",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000005/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        },
+        {
+          "value": "put-settled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000005/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        },
+        {
+          "value": "automatic",
+          "detail": ""
+        },
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:pump\",\"payload\":null}"
+        },
+        {
+          "value": "body-acquired",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000005/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        },
+        {
+          "value": "body-cancelled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000005/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        },
+        {
+          "value": "document-extract",
+          "detail": ""
+        },
+        {
+          "value": "put-entered",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000005/d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd/pdf-text-v1"
+        },
+        {
+          "value": "put-settled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000005/d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd/pdf-text-v1"
+        }
+      ],
+      "jobs": [],
+      "physicalAlarm": null,
+      "held": false,
+      "now": 1792767567095,
+      "discoveryDeadline": 1792767557035
+    },
+    "historical-pumpServed": {
+      "files": [
+        {
+          "id": "10000000-0000-4000-8000-000000000005",
+          "name": "native.pdf",
+          "mime": "application/pdf",
+          "kind": "document",
+          "size": 34,
+          "createdAt": "2026-10-23T14:58:17.029Z",
+          "status": "ready",
+          "trashed": 0,
+          "hash": "d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb",
+          "visionHash": null,
+          "audio": null,
+          "lifecycle_version": 1,
+          "attempt_id": "72ce8403-5d54-4764-ada1-6f23d642dfb7"
+        }
+      ],
+      "documents": [
+        {
+          "id": "10000000-0000-4000-8000-000000000005",
+          "status": "ready",
+          "attempts": 1,
+          "pages": 1,
+          "readPages": 1,
+          "characters": 44,
+          "truncated": 0,
+          "error": null,
+          "lifecycle_version": 1,
+          "attempt_id": "d68a9a32-b79a-482d-90e5-831db404ead9",
+          "artifact_hash": "d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd",
+          "recovery_deadline": 1792768099064
+        }
+      ],
+      "videos": [],
+      "assets": [
+        {
+          "key": "synthetic-workspace/10000000-0000-4000-8000-000000000005/d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd/pdf-text-v1",
+          "bytes": [
+            78,
+            97,
+            116,
+            105,
+            118,
+            101,
+            32,
+            87,
+            111,
+            114,
+            107,
+            115,
+            112,
+            97,
+            99,
+            101,
+            32,
+            101,
+            120,
+            116,
+            114,
+            97,
+            99,
+            116,
+            105,
+            111,
+            110,
+            58,
+            32,
+            101,
+            120,
+            97,
+            99,
+            116,
+            32,
+            240,
+            159,
+            141,
+            128,
+            32,
+            98,
+            121,
+            116,
+            101,
+            115,
+            46
+          ],
+          "puts": 1
+        },
+        {
+          "key": "synthetic-workspace/10000000-0000-4000-8000-000000000005/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb",
+          "bytes": [
+            37,
+            80,
+            68,
+            70,
+            45,
+            49,
+            46,
+            55,
+            32,
+            115,
+            121,
+            110,
+            116,
+            104,
+            101,
+            116,
+            105,
+            99,
+            32,
+            110,
+            97,
+            116,
+            105,
+            118,
+            101,
+            32,
+            100,
+            111,
+            99,
+            117,
+            109,
+            101,
+            110,
+            116
+          ],
+          "puts": 1
+        }
+      ],
+      "events": [
+        {
+          "value": "put-entered",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000005/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        },
+        {
+          "value": "put-settled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000005/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        },
+        {
+          "value": "automatic",
+          "detail": ""
+        },
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:pump\",\"payload\":null}"
+        },
+        {
+          "value": "body-acquired",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000005/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        },
+        {
+          "value": "body-cancelled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000005/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        },
+        {
+          "value": "document-extract",
+          "detail": ""
+        },
+        {
+          "value": "put-entered",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000005/d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd/pdf-text-v1"
+        },
+        {
+          "value": "put-settled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000005/d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd/pdf-text-v1"
+        },
+        {
+          "value": "body-acquired",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000005/d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd/pdf-text-v1"
+        },
+        {
+          "value": "body-cancelled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000005/d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd/pdf-text-v1"
+        }
+      ],
+      "jobs": [],
+      "physicalAlarm": null,
+      "held": false,
+      "now": 1792767567100,
+      "discoveryDeadline": 1792767557035,
+      "content": {
+        "file": {
+          "id": "10000000-0000-4000-8000-000000000005",
+          "name": "native.pdf",
+          "mime": "application/pdf",
+          "kind": "document",
+          "size": 34,
+          "createdAt": "2026-10-23T14:58:17.029Z",
+          "status": "ready",
+          "trashed": false,
+          "extraction": {
+            "status": "ready",
+            "pages": 1,
+            "readPages": 1,
+            "characters": 44,
+            "truncated": false,
+            "error": null
+          }
+        },
+        "text": "Native Workspace extraction: exact 🍀 bytes.",
+        "offset": 0,
+        "next": null,
+        "total": 44
+      }
+    },
+    "early-documentSecondRestart": {
+      "files": [
+        {
+          "id": "10000000-0000-4000-8000-000000000001",
+          "name": "native.pdf",
+          "mime": "application/pdf",
+          "kind": "document",
+          "size": 34,
+          "createdAt": "2026-10-23T14:58:16.912Z",
+          "status": "ready",
+          "trashed": 0,
+          "hash": "d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb",
+          "visionHash": null,
+          "audio": null,
+          "lifecycle_version": 1,
+          "attempt_id": "cf61ffb2-d787-40e2-a41f-04119d44899b"
+        }
+      ],
+      "documents": [
+        {
+          "id": "10000000-0000-4000-8000-000000000001",
+          "status": "ready",
+          "attempts": 1,
+          "pages": 1,
+          "readPages": 1,
+          "characters": 44,
+          "truncated": 0,
+          "error": null,
+          "lifecycle_version": 1,
+          "attempt_id": "11e297a4-2b61-4aa6-97d1-e5a3f7305378",
+          "artifact_hash": "d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd",
+          "recovery_deadline": 1792768156935
+        }
+      ],
+      "videos": [],
+      "assets": [
+        {
+          "key": "synthetic-workspace/10000000-0000-4000-8000-000000000001/d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd/pdf-text-v1",
+          "bytes": [
+            78,
+            97,
+            116,
+            105,
+            118,
+            101,
+            32,
+            87,
+            111,
+            114,
+            107,
+            115,
+            112,
+            97,
+            99,
+            101,
+            32,
+            101,
+            120,
+            116,
+            114,
+            97,
+            99,
+            116,
+            105,
+            111,
+            110,
+            58,
+            32,
+            101,
+            120,
+            97,
+            99,
+            116,
+            32,
+            240,
+            159,
+            141,
+            128,
+            32,
+            98,
+            121,
+            116,
+            101,
+            115,
+            46
+          ],
+          "puts": 1
+        },
+        {
+          "key": "synthetic-workspace/10000000-0000-4000-8000-000000000001/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb",
+          "bytes": [
+            37,
+            80,
+            68,
+            70,
+            45,
+            49,
+            46,
+            55,
+            32,
+            115,
+            121,
+            110,
+            116,
+            104,
+            101,
+            116,
+            105,
+            99,
+            32,
+            110,
+            97,
+            116,
+            105,
+            118,
+            101,
+            32,
+            100,
+            111,
+            99,
+            117,
+            109,
+            101,
+            110,
+            116
+          ],
+          "puts": 1
+        }
+      ],
+      "events": [
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:recovery\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"6f559352-f52c-4636-b736-5300e1cdcadb\",\"armedUntil\":1792767556910}}"
+        },
+        {
+          "value": "empty-scan",
+          "detail": ""
+        },
+        {
+          "value": "put-entered",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000001/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        },
+        {
+          "value": "put-settled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000001/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        },
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:recovery\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"60f09ba0-4bbf-4075-acbf-4488559c3fa8\",\"armedUntil\":1792767556918}}"
+        },
+        {
+          "value": "empty-scan",
+          "detail": ""
+        },
+        {
+          "value": "automatic",
+          "detail": ""
+        },
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:recovery\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"60f09ba0-4bbf-4075-acbf-4488559c3fa8\",\"armedUntil\":1792767556918}}"
+        },
+        {
+          "value": "automatic",
+          "detail": ""
+        },
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:pump\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"c0253525-e4b8-416e-9985-b748db47d7e7\",\"phase\":\"dispatch\",\"claim\":null,\"cleanupAt\":0,\"finalBatch\":false}}"
+        },
+        {
+          "value": "body-acquired",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000001/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        },
+        {
+          "value": "body-cancelled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000001/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        },
+        {
+          "value": "document-extract",
+          "detail": ""
+        },
+        {
+          "value": "put-entered",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000001/d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd/pdf-text-v1"
+        },
+        {
+          "value": "put-settled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000001/d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd/pdf-text-v1"
+        },
+        {
+          "value": "body-acquired",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000001/d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd/pdf-text-v1"
+        },
+        {
+          "value": "body-cancelled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000001/d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd/pdf-text-v1"
+        }
+      ],
+      "jobs": [],
+      "physicalAlarm": null,
+      "held": false,
+      "now": 1792767567242,
+      "discoveryDeadline": 1792767556918
+    },
+    "early-videoSecondRestart": {
+      "files": [
+        {
+          "id": "10000000-0000-4000-8000-000000000002",
+          "name": "native.mp4",
+          "mime": "video/mp4",
+          "kind": "video",
+          "size": 8,
+          "createdAt": "2026-10-23T14:58:16.972Z",
+          "status": "ready",
+          "trashed": 0,
+          "hash": "d9f1cb99ee21291800d5e62bd9bca07850461d7d8096afc4150a52dc8554d49f",
+          "visionHash": null,
+          "audio": null,
+          "lifecycle_version": 1,
+          "attempt_id": "9e41f42d-3a6f-4270-a94f-f5ae1b3f8f74"
+        }
+      ],
+      "documents": [],
+      "videos": [
+        {
+          "id": "10000000-0000-4000-8000-000000000002",
+          "status": "ready",
+          "attempts": 1,
+          "duration": 1,
+          "frames": 1,
+          "captions": 1,
+          "error": null,
+          "retry_at": 0,
+          "lifecycle_version": 1,
+          "attempt_id": "6b7f8fb1-a73e-4cd5-8919-9dc729eae8c2",
+          "artifact_hash": "97ef56e8576f46c5ab9a7e60d05c0c8202c4ab82ba78a8eec490159a276b77d9",
+          "recovery_deadline": 1792768156994
+        }
+      ],
+      "assets": [
+        {
+          "key": "synthetic-workspace/10000000-0000-4000-8000-000000000002/97ef56e8576f46c5ab9a7e60d05c0c8202c4ab82ba78a8eec490159a276b77d9/video-v1",
+          "bytes": [
+            123,
+            34,
+            100,
+            117,
+            114,
+            97,
+            116,
+            105,
+            111,
+            110,
+            34,
+            58,
+            49,
+            44,
+            34,
+            102,
+            114,
+            97,
+            109,
+            101,
+            115,
+            34,
+            58,
+            91,
+            123,
+            34,
+            97,
+            116,
+            34,
+            58,
+            48,
+            44,
+            34,
+            106,
+            112,
+            101,
+            103,
+            34,
+            58,
+            34,
+            47,
+            57,
+            106,
+            47,
+            34,
+            125,
+            93,
+            44,
+            34,
+            99,
+            97,
+            112,
+            116,
+            105,
+            111,
+            110,
+            115,
+            34,
+            58,
+            34,
+            78,
+            97,
+            116,
+            105,
+            118,
+            101,
+            32,
+            87,
+            111,
+            114,
+            107,
+            115,
+            112,
+            97,
+            99,
+            101,
+            32,
+            118,
+            105,
+            100,
+            101,
+            111,
+            32,
+            99,
+            97,
+            112,
+            116,
+            105,
+            111,
+            110,
+            115,
+            46,
+            34,
+            44,
+            34,
+            99,
+            97,
+            112,
+            116,
+            105,
+            111,
+            110,
+            115,
+            84,
+            114,
+            117,
+            110,
+            99,
+            97,
+            116,
+            101,
+            100,
+            34,
+            58,
+            102,
+            97,
+            108,
+            115,
+            101,
+            125
+          ],
+          "puts": 1
+        },
+        {
+          "key": "synthetic-workspace/10000000-0000-4000-8000-000000000002/d9f1cb99ee21291800d5e62bd9bca07850461d7d8096afc4150a52dc8554d49f",
+          "bytes": [
+            0,
+            0,
+            0,
+            24,
+            102,
+            116,
+            121,
+            112
+          ],
+          "puts": 1
+        }
+      ],
+      "events": [
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:recovery\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"3ed2e547-1ba6-4238-8c82-afccd9899a8f\",\"armedUntil\":1792767556970}}"
+        },
+        {
+          "value": "empty-scan",
+          "detail": ""
+        },
+        {
+          "value": "put-entered",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000002/d9f1cb99ee21291800d5e62bd9bca07850461d7d8096afc4150a52dc8554d49f"
+        },
+        {
+          "value": "put-settled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000002/d9f1cb99ee21291800d5e62bd9bca07850461d7d8096afc4150a52dc8554d49f"
+        },
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:recovery\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"796af221-4f32-47bb-b136-80f82a417519\",\"armedUntil\":1792767556978}}"
+        },
+        {
+          "value": "empty-scan",
+          "detail": ""
+        },
+        {
+          "value": "automatic",
+          "detail": ""
+        },
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:recovery\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"796af221-4f32-47bb-b136-80f82a417519\",\"armedUntil\":1792767556978}}"
+        },
+        {
+          "value": "automatic",
+          "detail": ""
+        },
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:pump\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"69fef5dd-107b-4cf6-a5a8-ffcb10c7468d\",\"phase\":\"dispatch\",\"claim\":null,\"cleanupAt\":0,\"finalBatch\":false}}"
+        },
+        {
+          "value": "body-acquired",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000002/d9f1cb99ee21291800d5e62bd9bca07850461d7d8096afc4150a52dc8554d49f"
+        },
+        {
+          "value": "body-cancelled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000002/d9f1cb99ee21291800d5e62bd9bca07850461d7d8096afc4150a52dc8554d49f"
+        },
+        {
+          "value": "video-extract",
+          "detail": ""
+        },
+        {
+          "value": "put-entered",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000002/97ef56e8576f46c5ab9a7e60d05c0c8202c4ab82ba78a8eec490159a276b77d9/video-v1"
+        },
+        {
+          "value": "put-settled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000002/97ef56e8576f46c5ab9a7e60d05c0c8202c4ab82ba78a8eec490159a276b77d9/video-v1"
+        },
+        {
+          "value": "body-acquired",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000002/97ef56e8576f46c5ab9a7e60d05c0c8202c4ab82ba78a8eec490159a276b77d9/video-v1"
+        },
+        {
+          "value": "body-cancelled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000002/97ef56e8576f46c5ab9a7e60d05c0c8202c4ab82ba78a8eec490159a276b77d9/video-v1"
+        }
+      ],
+      "jobs": [],
+      "physicalAlarm": null,
+      "held": false,
+      "now": 1792767567247,
+      "discoveryDeadline": 1792767556978
+    },
+    "historical-pumpSecondRestart": {
+      "files": [
+        {
+          "id": "10000000-0000-4000-8000-000000000005",
+          "name": "native.pdf",
+          "mime": "application/pdf",
+          "kind": "document",
+          "size": 34,
+          "createdAt": "2026-10-23T14:58:17.029Z",
+          "status": "ready",
+          "trashed": 0,
+          "hash": "d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb",
+          "visionHash": null,
+          "audio": null,
+          "lifecycle_version": 1,
+          "attempt_id": "72ce8403-5d54-4764-ada1-6f23d642dfb7"
+        }
+      ],
+      "documents": [
+        {
+          "id": "10000000-0000-4000-8000-000000000005",
+          "status": "ready",
+          "attempts": 1,
+          "pages": 1,
+          "readPages": 1,
+          "characters": 44,
+          "truncated": 0,
+          "error": null,
+          "lifecycle_version": 1,
+          "attempt_id": "d68a9a32-b79a-482d-90e5-831db404ead9",
+          "artifact_hash": "d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd",
+          "recovery_deadline": 1792768099064
+        }
+      ],
+      "videos": [],
+      "assets": [
+        {
+          "key": "synthetic-workspace/10000000-0000-4000-8000-000000000005/d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd/pdf-text-v1",
+          "bytes": [
+            78,
+            97,
+            116,
+            105,
+            118,
+            101,
+            32,
+            87,
+            111,
+            114,
+            107,
+            115,
+            112,
+            97,
+            99,
+            101,
+            32,
+            101,
+            120,
+            116,
+            114,
+            97,
+            99,
+            116,
+            105,
+            111,
+            110,
+            58,
+            32,
+            101,
+            120,
+            97,
+            99,
+            116,
+            32,
+            240,
+            159,
+            141,
+            128,
+            32,
+            98,
+            121,
+            116,
+            101,
+            115,
+            46
+          ],
+          "puts": 1
+        },
+        {
+          "key": "synthetic-workspace/10000000-0000-4000-8000-000000000005/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb",
+          "bytes": [
+            37,
+            80,
+            68,
+            70,
+            45,
+            49,
+            46,
+            55,
+            32,
+            115,
+            121,
+            110,
+            116,
+            104,
+            101,
+            116,
+            105,
+            99,
+            32,
+            110,
+            97,
+            116,
+            105,
+            118,
+            101,
+            32,
+            100,
+            111,
+            99,
+            117,
+            109,
+            101,
+            110,
+            116
+          ],
+          "puts": 1
+        }
+      ],
+      "events": [
+        {
+          "value": "put-entered",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000005/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        },
+        {
+          "value": "put-settled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000005/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        },
+        {
+          "value": "automatic",
+          "detail": ""
+        },
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:pump\",\"payload\":null}"
+        },
+        {
+          "value": "body-acquired",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000005/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        },
+        {
+          "value": "body-cancelled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000005/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        },
+        {
+          "value": "document-extract",
+          "detail": ""
+        },
+        {
+          "value": "put-entered",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000005/d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd/pdf-text-v1"
+        },
+        {
+          "value": "put-settled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000005/d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd/pdf-text-v1"
+        },
+        {
+          "value": "body-acquired",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000005/d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd/pdf-text-v1"
+        },
+        {
+          "value": "body-cancelled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000005/d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd/pdf-text-v1"
+        }
+      ],
+      "jobs": [],
+      "physicalAlarm": null,
+      "held": false,
+      "now": 1792767567251,
+      "discoveryDeadline": 1792767557035
+    },
+    "exhaustionSecondRestart": {
+      "files": [
+        {
+          "id": "10000000-0000-4000-8000-000000000004",
+          "name": "native.pdf",
+          "mime": "application/pdf",
+          "kind": "document",
+          "size": 34,
+          "createdAt": "2026-10-23T14:58:16.809Z",
+          "status": "ready",
+          "trashed": 0,
+          "hash": "d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb",
+          "visionHash": null,
+          "audio": null,
+          "lifecycle_version": 1,
+          "attempt_id": "1a54d552-c5f4-4ca6-a2e9-34781a3a566e"
+        }
+      ],
+      "documents": [
+        {
+          "id": "10000000-0000-4000-8000-000000000004",
+          "status": "ready",
+          "attempts": 1,
+          "pages": 1,
+          "readPages": 1,
+          "characters": 44,
+          "truncated": 0,
+          "error": null,
+          "lifecycle_version": 1,
+          "attempt_id": "b79f9235-01b7-49db-8ea9-2933ca29609b",
+          "artifact_hash": "d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd",
+          "recovery_deadline": 1792768167116
+        }
+      ],
+      "videos": [],
+      "assets": [
+        {
+          "key": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd/pdf-text-v1",
+          "bytes": [
+            78,
+            97,
+            116,
+            105,
+            118,
+            101,
+            32,
+            87,
+            111,
+            114,
+            107,
+            115,
+            112,
+            97,
+            99,
+            101,
+            32,
+            101,
+            120,
+            116,
+            114,
+            97,
+            99,
+            116,
+            105,
+            111,
+            110,
+            58,
+            32,
+            101,
+            120,
+            97,
+            99,
+            116,
+            32,
+            240,
+            159,
+            141,
+            128,
+            32,
+            98,
+            121,
+            116,
+            101,
+            115,
+            46
+          ],
+          "puts": 1
+        },
+        {
+          "key": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb",
+          "bytes": [
+            37,
+            80,
+            68,
+            70,
+            45,
+            49,
+            46,
+            55,
+            32,
+            115,
+            121,
+            110,
+            116,
+            104,
+            101,
+            116,
+            105,
+            99,
+            32,
+            110,
+            97,
+            116,
+            105,
+            118,
+            101,
+            32,
+            100,
+            111,
+            99,
+            117,
+            109,
+            101,
+            110,
+            116
+          ],
+          "puts": 1
+        }
+      ],
+      "events": [
+        {
+          "value": "put-entered",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        },
+        {
+          "value": "put-settled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        },
+        {
+          "value": "automatic",
+          "detail": ""
+        },
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:recovery\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"1f05e001-6861-4513-b0f7-3c74a26c039f\",\"armedUntil\":1792767556816}}"
+        },
+        {
+          "value": "automatic",
+          "detail": ""
+        },
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:pump\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"f1d085ad-6d36-40c3-9268-f48aed34d4b7\",\"phase\":\"dispatch\",\"claim\":null,\"cleanupAt\":0,\"finalBatch\":false}}"
+        },
+        {
+          "value": "body-acquired",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        },
+        {
+          "value": "body-cancelled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        },
+        {
+          "value": "document-extract",
+          "detail": ""
+        },
+        {
+          "value": "automatic",
+          "detail": ""
+        },
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:pump\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"f1d085ad-6d36-40c3-9268-f48aed34d4b7\",\"phase\":\"dispatch\",\"claim\":null,\"cleanupAt\":0,\"finalBatch\":false}}"
+        },
+        {
+          "value": "body-acquired",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        },
+        {
+          "value": "body-cancelled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        },
+        {
+          "value": "document-extract",
+          "detail": ""
+        },
+        {
+          "value": "automatic",
+          "detail": ""
+        },
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:pump\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"f1d085ad-6d36-40c3-9268-f48aed34d4b7\",\"phase\":\"dispatch\",\"claim\":null,\"cleanupAt\":0,\"finalBatch\":false}}"
+        },
+        {
+          "value": "body-acquired",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        },
+        {
+          "value": "body-cancelled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        },
+        {
+          "value": "document-extract",
+          "detail": ""
+        },
+        {
+          "value": "automatic",
+          "detail": ""
+        },
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:pump\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"d754a042-7f9c-4b0b-8e1b-4ca5201b28b2\",\"phase\":\"dispatch\",\"claim\":null,\"cleanupAt\":0,\"finalBatch\":false}}"
+        },
+        {
+          "value": "automatic",
+          "detail": ""
+        },
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:recovery\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"1f05e001-6861-4513-b0f7-3c74a26c039f\",\"armedUntil\":1792767556816}}"
+        },
+        {
+          "value": "automatic",
+          "detail": ""
+        },
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:recovery\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"6c82b234-7277-4531-b624-bd18666a1ae4\",\"armedUntil\":1792767627110}}"
+        },
+        {
+          "value": "automatic",
+          "detail": ""
+        },
+        {
+          "value": "job-dispatch",
+          "detail": "{\"id\":\"workspace-extraction:pump\",\"payload\":{\"schemaVersion\":1,\"workflowVersion\":1,\"token\":\"501e969e-67d2-49ca-8b87-2ce71885df43\",\"phase\":\"dispatch\",\"claim\":null,\"cleanupAt\":0,\"finalBatch\":false}}"
+        },
+        {
+          "value": "body-acquired",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        },
+        {
+          "value": "body-cancelled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d98e6d2c235034fce5f79265cd4ef7f533f0fc4e28708709b9761de14b734cfb"
+        },
+        {
+          "value": "document-extract",
+          "detail": ""
+        },
+        {
+          "value": "put-entered",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd/pdf-text-v1"
+        },
+        {
+          "value": "put-settled",
+          "detail": "synthetic-workspace/10000000-0000-4000-8000-000000000004/d5288b06a9fc8f31ae932296dd1ddd5d4f08224c15584b42f7e49bfc76b91cdd/pdf-text-v1"
+        }
+      ],
+      "jobs": [
+        {
+          "id": "workspace-extraction:recovery",
+          "capability": "workspace-extraction",
+          "fn": "recover",
+          "time": 1792767627110,
+          "payload": {
+            "schemaVersion": 1,
+            "workflowVersion": 1,
+            "token": "6c82b234-7277-4531-b624-bd18666a1ae4",
+            "armedUntil": 1792767627110
+          },
+          "retry": {
+            "maxAttempts": 3,
+            "baseDelayMs": 100,
+            "maxDelayMs": 1000
+          },
+          "singleflight": true,
+          "exclusive": false,
+          "recoveryLoop": true,
+          "createdAt": 1792767567
+        }
+      ],
+      "physicalAlarm": 1792767627110,
+      "held": false,
+      "now": 1792767567258,
+      "discoveryDeadline": 1792767627110
+    }
+  },
+  "noPoke": {
+    "start": 1792767497046,
+    "end": 1792767567038,
+    "discoveryDeadlines": [
+      1792767556918,
+      1792767556978,
+      1792767557035
+    ]
+  }
+}
