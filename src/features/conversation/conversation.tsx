@@ -89,6 +89,7 @@ import { submissionAttempt, rejectedModelAttempt } from "./commands"
 import { useMessageDeliveryDefault } from "./delivery-preference"
 import { ModelMenu } from "./model-menu"
 import { QueuedTurnAnchor } from "./queued-turn-anchor"
+import { RecoveryControls } from "./recovery-controls"
 import { TurnDelivery } from "./turn-delivery"
 import { TurnReply } from "./turn-reply"
 import type { ComposerDraftState } from "./use-composer-draft"
@@ -203,7 +204,16 @@ export function Conversation({
     }
   }
   async function retry(id: string) {
-    if (archived || retrying) return
+    if (
+      archived ||
+      retrying ||
+      state?.turns.some(
+        (turn) =>
+          turn.controlUnconfirmed &&
+          (turn.id === id || turn.steering?.some((member) => member.id === id))
+      )
+    )
+      return
     setRetrying(id)
     setError("")
     const operationId = retryKeys.current.get(id) ?? crypto.randomUUID()
@@ -451,9 +461,18 @@ export function Conversation({
                           )}
                           agentName={agent.name}
                           agentId={agent.id}
-                          onRetry={(id) => void retry(id)}
+                          onRetry={
+                            turn.controlUnconfirmed
+                              ? undefined
+                              : (id) => void retry(id)
+                          }
                           retrying={retrying}
                           canRetry={!archived && !!state.connected && !retrying}
+                        />
+                        <RecoveryControls
+                          turn={turn}
+                          agentId={agent.id}
+                          refresh={reload}
                         />
                         {state.access?.approvals
                           .filter((value) => value.turnId === turn.id)
@@ -821,6 +840,7 @@ function conversationWorking(
   return (
     !!active &&
     ["queued", "preparing", "running"].includes(active.status) &&
+    !active.controlUnconfirmed &&
     !state?.access?.approvals.some((approval) => approval.status === "pending")
   )
 }

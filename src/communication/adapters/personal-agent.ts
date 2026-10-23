@@ -3,6 +3,7 @@ import { Cause, Effect, Layer, ManagedRuntime } from "effect"
 import type { PersonalAgent } from "../../agent/worker"
 import { agentRpc, agentRpcNative } from "../../agents/adapters/rpc"
 import { agentObjectName, type AgentId } from "../../agents/domain"
+import { observeConversationSchedule } from "../../conversations/adapters/lifecycle"
 import { ConversationStorageError } from "../../conversations/turns"
 import { resolveRoute, validateRoute } from "../../inference/policy"
 import { makeCommunication, Communication } from "../communication"
@@ -178,8 +179,19 @@ export function personalCommunication(
           }),
         idle: () =>
           local(owner.conversations.active().pipe(Effect.map((turn) => !turn))),
+        prearm: () =>
+          observeConversationSchedule("arm conversation discovery", () =>
+            owner.runner.armDiscovery()
+          ).pipe(
+            Effect.mapError(() =>
+              failure(
+                "transport",
+                "Conversation recovery could not be scheduled."
+              )
+            )
+          ),
         wakeConversation: () => edge(() => owner.runner.wake()),
-        resume: (task, operationId) =>
+        resume: (task, operationId, discoveryDeadline) =>
           Effect.gen(function* () {
             const original = yield* owner.conversations.get(
               task.request.correlationId
@@ -227,7 +239,8 @@ export function personalCommunication(
               },
               undefined,
               [],
-              original.routing ?? undefined
+              original.routing ?? undefined,
+              { discoveryDeadline }
             )
             return { kind: "admitted" as const, turnId: admitted.turn.id }
           }),

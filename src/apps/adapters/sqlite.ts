@@ -397,7 +397,7 @@ export class AppStore implements AppLedger {
       })
     )
   }
-  deliverNext(admission: AppAdmission) {
+  deliverNext(admission: AppAdmission, discoveryDeadline: number) {
     return this.atomic(() =>
       Effect.gen({ self: this }, function* () {
         if (admission.transactionGroup !== this.transactionGroup)
@@ -407,7 +407,7 @@ export class AppStore implements AppLedger {
         if (!(yield* this.active())) return false
         const event = (yield* this.pending())[0]
         if (!event) return false
-        if ((yield* admission.admit(event)) !== event.turnId)
+        if ((yield* admission.admit(event, discoveryDeadline)) !== event.turnId)
           throw new Error("App admission returned a different turn identity.")
         yield* this.query((orm) =>
           orm

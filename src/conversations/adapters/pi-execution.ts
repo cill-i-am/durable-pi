@@ -1,4 +1,7 @@
-import { BACKGROUND_CONTEXT } from "@earendil-works/chord/context"
+import {
+  BACKGROUND_CONTEXT,
+  withAbortSignal,
+} from "@earendil-works/chord/context"
 import type {
   Conversation,
   Storage,
@@ -7,11 +10,11 @@ import type {
   ToolRegistration,
 } from "@earendil-works/pi-durable"
 import type { PiHarness } from "agents/harness/pi"
-import { Cause, Effect, Layer, Schema } from "effect"
+import { Cause, Effect, Equal, Exit, Layer, Schema } from "effect"
 
 import { attributedText } from "../../messages/identity"
 import { fatalCause } from "../../shared/effect"
-import { nativeOperation } from "../../shared/interop"
+import { nativeFailure, nativeOperation } from "../../shared/interop"
 import { AttachmentContent } from "../../workspace/files"
 import {
   ConversationExecution,
@@ -71,6 +74,7 @@ export function normalizePiObservation(
       .map((block) => block.text)
       .join("\n") ?? ""
   return {
+    accepted: [...records.keys()],
     settled: replySettled(root, members, reply),
     answer,
     liveAnswer: answer + partial,
@@ -95,27 +99,69 @@ export const conversationNativeOperation = <T>(
   body: (signal: AbortSignal) => Promise<T>
 ) =>
   Effect.suspend(() => {
-    let failed = false,
+    let failed: Cause.Cause<ConversationExecutionError> | undefined,
       signal: AbortSignal | undefined
-    return nativeOperation(
-      (currentSignal) => {
-        signal = currentSignal
-        return body(currentSignal).catch((cause: unknown) => {
-          failed = cause !== currentSignal.reason
-          throw cause
-        })
-      },
-      (cause) => new ConversationExecutionError({ operation, cause })
-    ).pipe(
-      Effect.ensuring(
-        Effect.suspend(() =>
-          failed && signal?.aborted
-            ? Effect.logError(
-                "Conversation.nativeOperationFailedAfterCancellation"
-              ).pipe(Effect.annotateLogs({ operation }))
-            : Effect.void
+    const classify = (cause: unknown) =>
+      cause instanceof ConversationExecutionError
+        ? cause
+        : new ConversationExecutionError({ operation, cause })
+    return nativeOperation((currentSignal) => {
+      signal = currentSignal
+      return body(currentSignal).catch((cause: unknown) => {
+        if (cause !== currentSignal.reason) {
+          failed = nativeFailure(cause, classify)
+          throw failed
+        }
+        throw cause
+      })
+    }, classify).pipe(
+      Effect.onExit((exit) => {
+        if (!failed || !signal?.aborted) return Effect.void
+        const retained = Exit.isFailure(exit) ? exit.cause.reasons : []
+        const missing = failed.reasons.filter(
+          (reason) =>
+            !retained.some((present) => {
+              const candidate =
+                present._tag === "Die" &&
+                reason._tag === "Fail" &&
+                Cause.isReason(present.defect) &&
+                Cause.isFailReason(present.defect)
+                  ? present.defect
+                  : present
+              const same =
+                candidate._tag === "Fail" && reason._tag === "Fail"
+                  ? Equal.equals(candidate.error, reason.error)
+                  : candidate._tag === "Die" && reason._tag === "Die"
+                    ? Equal.equals(candidate.defect, reason.defect)
+                    : candidate._tag === "Interrupt" &&
+                        reason._tag === "Interrupt"
+                      ? candidate.fiberId === reason.fiberId
+                      : false
+              // Effect may add stack annotations while retaining this reason.
+              return (
+                same &&
+                [...reason.annotations].every(
+                  ([key, value]) =>
+                    candidate.annotations.has(key) &&
+                    Equal.equals(candidate.annotations.get(key), value)
+                )
+              )
+            })
         )
-      )
+        // The native bridge joins settlement. Keep every late rejection in
+        // that joined Exit, including Fail-only Causes, without duplicating
+        // defects that the bridge already retained.
+        return Effect.logError(
+          "Conversation.nativeOperationFailedAfterCancellation"
+        ).pipe(
+          Effect.annotateLogs({ operation }),
+          Effect.andThen(
+            missing.length
+              ? Effect.failCause(fatalCause(Cause.fromReasons(missing)))
+              : Effect.void
+          )
+        )
+      })
     )
   })
 
@@ -222,9 +268,13 @@ export const piConversationLayer = (
       ).pipe(Effect.asVoid)
     ),
     abort: Effect.fn("Conversations.abortPi")((session: string) =>
-      conversationNativeOperation("abort", () =>
-        harness().session(session).abort()
-      ).pipe(Effect.asVoid)
+      conversationNativeOperation("abort", async (signal) => {
+        const conversation = await harness().conversation(session)
+        signal.throwIfAborted()
+        // The native context cancels the idle wait, not Pi's durable work.
+        // Joining this call prevents a late abort dispatch after owner release.
+        await conversation.abort(withAbortSignal(signal, BACKGROUND_CONTEXT))
+      })
     ),
     createSession: Effect.fn("Conversations.createPiSession")(() =>
       conversationNativeOperation("create session", () =>
@@ -248,7 +298,7 @@ export const piConversationLayer = (
                   ? coordinationTools()
                   : null,
             },
-            BACKGROUND_CONTEXT
+            withAbortSignal(signal, BACKGROUND_CONTEXT)
           )
         })
     ),

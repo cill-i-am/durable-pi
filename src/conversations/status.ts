@@ -1,6 +1,6 @@
 import { Effect, Schema } from "effect"
 
-import type { ChatTurn } from "./contracts"
+import type { ChatTurn, ControlUnconfirmed } from "./contracts"
 import type { RecoveryView } from "./recovery"
 import type { Conversations } from "./service"
 
@@ -20,6 +20,7 @@ export const RuntimeStatus = Schema.Struct({
 export type RuntimeStatus = typeof RuntimeStatus.Type
 export type StatusTurn = Pick<ChatTurn, "id" | "status"> & {
   recovery?: Pick<RecoveryView, "phase"> | null
+  controlUnconfirmed?: typeof ControlUnconfirmed.Type
 }
 
 export function runtimeStatus(facts: {
@@ -35,6 +36,7 @@ export function runtimeStatus(facts: {
     turnId: turn?.id ?? null,
   })
   if (facts.archived) return result("archived")
+  if (turn?.controlUnconfirmed) return result("unavailable")
   if (facts.active?.status === "stopping") return result("stopping")
   if (facts.active?.recovery?.phase === "blocked") return result("blocked")
   if (facts.active)
@@ -74,7 +76,9 @@ export function runtimeStatusEffect<TError, TRequirements>(
       ...facts,
       archived: yield* host.archived(),
       needsApproval:
-        !!facts.active && (yield* host.awaitingApproval(facts.active.id)),
+        !!facts.active &&
+        !facts.active.controlUnconfirmed &&
+        (yield* host.awaitingApproval(facts.active.id)),
       planBlocked:
         before.latest?.id === facts.latest?.id && planBlocked === true,
     })

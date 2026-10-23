@@ -47,6 +47,11 @@ export const chatRecoveryHistory = sqliteTable(
 export const chatTurns = sqliteTable(
   "chat_turns",
   {
+    schemaVersion: integer("schema_version").notNull().default(1),
+    workflowVersion: integer("workflow_version").notNull().default(1),
+    control: text("control")
+      .notNull()
+      .default('{"owner":null,"deadline":null,"unconfirmed":null}'),
     sequence: integer("sequence").primaryKey({ autoIncrement: true }),
     id: text("id").notNull(),
     text: text("text").notNull(),
@@ -80,6 +85,9 @@ export const chatTurns = sqliteTable(
   },
   (t) => [
     unique().on(t.id),
+    check("chat_turns_schema_version_check", sql`${t.schemaVersion} >= 1`),
+    check("chat_turns_workflow_version_check", sql`${t.workflowVersion} >= 1`),
+    check("chat_turns_control_json", sql`json_valid(${t.control})`),
     check(
       "chat_turns_status_check",
       sql`${t.status} in ('queued', 'preparing', 'running', 'stopping', 'done', 'failed', 'cancelled')`

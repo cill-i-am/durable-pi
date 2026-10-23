@@ -6,9 +6,9 @@ import { RunRecoveryStore } from "../src/conversations/adapters/sqlite-recovery"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import {
   initialRecovery,
-  observeRound,
   type Observation,
 } from "../src/conversations/recovery"
+import { observeRound } from "../src/conversations/tool-recovery.machine"
 import { database } from "./database"
 
 const call = (id: number, options: Partial<Observation> = {}): Observation => ({
@@ -147,7 +147,15 @@ describe("run recovery persistence and ownership", () => {
       thinking: "off",
     })
     const id = crypto.randomUUID()
-    Effect.runSync(turns.admit({ operationId: id, text: "Synthetic task" }))
+    Effect.runSync(
+      turns.admit(
+        { operationId: id, text: "Synthetic task" },
+        undefined,
+        [],
+        undefined,
+        { discoveryDeadline: Date.now() + 60000 }
+      )
+    )
     Effect.runSync(turns.saveSession(id, "7"))
     db.run("UPDATE chat_turns SET status='running' WHERE id=?", id)
     return { db, turns, id, store: new RunRecoveryStore(db) }
@@ -167,7 +175,13 @@ describe("run recovery persistence and ownership", () => {
     ).toBeUndefined()
     const second = crypto.randomUUID()
     Effect.runSync(
-      turns.admit({ operationId: second, text: "Different request" })
+      turns.admit(
+        { operationId: second, text: "Different request" },
+        undefined,
+        [],
+        undefined,
+        { discoveryDeadline: Date.now() + 60000 }
+      )
     )
     expect(Effect.runSync(reopened.get(second))).toBeUndefined()
     expect(Effect.runSync(setup().store.get(id))).toBeUndefined()

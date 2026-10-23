@@ -58,20 +58,25 @@ export function routineFixture(
     claimDue: () => run(service.claimDue()),
     deliver: (
       admit: (
-        value: RoutineRun
-      ) => void | Effect.Effect<unknown, ConversationFailure>
+        value: RoutineRun,
+        discoveryDeadline: number
+      ) => void | Effect.Effect<unknown, ConversationFailure>,
+      discoveryDeadline: number
     ) =>
       run(
-        service.deliver({
-          transactionGroup: db,
-          admit: (value) =>
-            Effect.suspend(() => {
-              const work = admit(value)
-              return Effect.isEffect(work)
-                ? work.pipe(Effect.as(value.turnId))
-                : Effect.succeed(value.turnId)
-            }),
-        })
+        service.deliver(
+          {
+            transactionGroup: db,
+            admit: (value, deadline) =>
+              Effect.suspend(() => {
+                const work = admit(value, deadline)
+                return Effect.isEffect(work)
+                  ? work.pipe(Effect.as(value.turnId))
+                  : Effect.succeed(value.turnId)
+              }),
+          },
+          discoveryDeadline
+        )
       ),
     finish: (
       id: string,

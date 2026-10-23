@@ -36,7 +36,8 @@ export type WebAppRecords = WebAppRepository
 export interface AppAdmission {
   readonly transactionGroup: object
   readonly admit: (
-    event: AppEvent
+    event: AppEvent,
+    discoveryDeadline: number
   ) => Effect.Effect<string, ConversationFailure>
 }
 /** Receipt, state, events and shared admission writes commit atomically. */
@@ -54,6 +55,7 @@ export interface AppLedger extends WebAppRepository {
   pending: () => Effect.Effect<AppEvent[], AppError>
   cancelOperation: (id: string) => Effect.Effect<{ applied: boolean }, AppError>
   deliverNext: (
-    admission: AppAdmission
+    admission: AppAdmission,
+    discoveryDeadline: number
   ) => Effect.Effect<boolean, AppError | ConversationFailure>
 }

@@ -1,0 +1,23 @@
+WAIT native SIGKILL recovery: health-only startup; no Durable Object requests until the real discovery lease expires.
+service fixture: The compatibility flag nodejs_compat became the default as of 2026-08-04 so does not need to be specified anymore.
+service fixture: The compatibility flag nodejs_compat became the default as of 2026-08-04 so does not need to be specified anymore.
+
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: delayed accepted intent was stranded after early empty discovery and SIGKILL
+
+'queued' !== 'done'
+
+    at file:///Users/cillianbarron/.codex/worktrees/xstate-effect-standard/durable-pi/scripts/test-conversation-runtime.mjs:294:10
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 'queued',
+  expected: 'done',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.21.0

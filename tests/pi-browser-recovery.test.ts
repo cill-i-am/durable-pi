@@ -17,7 +17,7 @@ import {
   watchEvents,
 } from "@earendil-works/pi-durable"
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
-import { Effect } from "effect"
+import { Clock, Effect } from "effect"
 import { expect, it } from "vitest"
 
 import { guardedTools } from "../src/access/adapters/pi"
@@ -49,10 +49,20 @@ it.each(["restricted", "launch", "read", "failed", "uncertain"] as const)(
       thinking: "off",
     })
     Effect.runSync(
-      turns.admit({
-        operationId: "browser-run",
-        text: "Open the synthetic page",
-      })
+      Clock.currentTimeMillis.pipe(
+        Effect.flatMap((now) =>
+          turns.admit(
+            {
+              operationId: "browser-run",
+              text: "Open the synthetic page",
+            },
+            undefined,
+            undefined,
+            undefined,
+            { discoveryDeadline: now + 60_000 }
+          )
+        )
+      )
     )
     const browserStore = new BrowserStore(db)
     let opens = 0,

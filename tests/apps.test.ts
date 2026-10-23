@@ -98,13 +98,16 @@ describe("private generated apps", () => {
     let admitted = false
     expect(() =>
       Effect.runSync(
-        f.store.deliverNext({
-          transactionGroup: database(),
-          admit: () => {
-            admitted = true
-            return Effect.succeed("wrong")
+        f.store.deliverNext(
+          {
+            transactionGroup: database(),
+            admit: () => {
+              admitted = true
+              return Effect.succeed("wrong")
+            },
           },
-        })
+          Date.now() + 60_000
+        )
       )
     ).toThrow("share its storage transaction group")
     expect(admitted).toBe(false)
@@ -123,26 +126,44 @@ describe("private generated apps", () => {
     )
     expect(() =>
       Effect.runSync(
-        f.store.deliverNext({
-          transactionGroup: f.db,
-          admit: (event) =>
-            conversations
-              .admit({ operationId: event.turnId, text: event.text })
-              .pipe(Effect.map(({ turn }) => turn.id)),
-        })
+        f.store.deliverNext(
+          {
+            transactionGroup: f.db,
+            admit: (event, discoveryDeadline) =>
+              conversations
+                .admit(
+                  { operationId: event.turnId, text: event.text },
+                  undefined,
+                  [],
+                  undefined,
+                  { discoveryDeadline }
+                )
+                .pipe(Effect.map(({ turn }) => turn.id)),
+          },
+          Date.now() + 60_000
+        )
       )
     ).toThrow(AppStorageError)
     expect(Effect.runSync(conversations.recent())).toEqual([])
     expect(Effect.runSync(f.store.pending())).toHaveLength(1)
     f.db.run("DROP TRIGGER fail_app_queue")
     Effect.runSync(
-      f.store.deliverNext({
-        transactionGroup: f.db,
-        admit: (event) =>
-          conversations
-            .admit({ operationId: event.turnId, text: event.text })
-            .pipe(Effect.map(({ turn }) => turn.id)),
-      })
+      f.store.deliverNext(
+        {
+          transactionGroup: f.db,
+          admit: (event, discoveryDeadline) =>
+            conversations
+              .admit(
+                { operationId: event.turnId, text: event.text },
+                undefined,
+                [],
+                undefined,
+                { discoveryDeadline }
+              )
+              .pipe(Effect.map(({ turn }) => turn.id)),
+        },
+        Date.now() + 60_000
+      )
     )
     expect(Effect.runSync(conversations.recent())).toHaveLength(1)
     expect(Effect.runSync(f.store.pending())).toHaveLength(0)
@@ -400,12 +421,15 @@ describe("private generated apps", () => {
     )
     expect(
       Effect.runSync(
-        f.store.deliverNext({
-          transactionGroup: f.db,
-          admit: () => {
-            throw Error("must not admit")
+        f.store.deliverNext(
+          {
+            transactionGroup: f.db,
+            admit: () => {
+              throw Error("must not admit")
+            },
           },
-        })
+          Date.now() + 60_000
+        )
       )
     ).toBe(false)
   })
@@ -437,14 +461,23 @@ describe("private generated apps", () => {
     })
     expect(() =>
       Effect.runSync(
-        f.store.deliverNext({
-          transactionGroup: f.db,
-          admit: (event) => {
-            return conversations
-              .admit({ operationId: event.turnId, text: event.text })
-              .pipe(Effect.andThen(Effect.die(new Error("power loss"))))
+        f.store.deliverNext(
+          {
+            transactionGroup: f.db,
+            admit: (event, discoveryDeadline) => {
+              return conversations
+                .admit(
+                  { operationId: event.turnId, text: event.text },
+                  undefined,
+                  [],
+                  undefined,
+                  { discoveryDeadline }
+                )
+                .pipe(Effect.andThen(Effect.die(new Error("power loss"))))
+            },
           },
-        })
+          Date.now() + 60_000
+        )
       )
     ).toThrow("power loss")
     expect(Effect.runSync(conversations.recent())).toEqual([])
@@ -452,27 +485,39 @@ describe("private generated apps", () => {
     const recovered = new AppStore(f.db, () => Effect.sync(() => true))
     expect(
       Effect.runSync(
-        recovered.deliverNext({
-          transactionGroup: f.db,
-          admit: (event) => {
-            return conversations
-              .admit({
-                operationId: event.turnId,
-                text: event.text,
-              })
-              .pipe(Effect.map(({ turn }) => turn.id))
+        recovered.deliverNext(
+          {
+            transactionGroup: f.db,
+            admit: (event, discoveryDeadline) => {
+              return conversations
+                .admit(
+                  {
+                    operationId: event.turnId,
+                    text: event.text,
+                  },
+                  undefined,
+                  [],
+                  undefined,
+                  { discoveryDeadline }
+                )
+                .pipe(Effect.map(({ turn }) => turn.id))
+            },
           },
-        })
+          Date.now() + 60_000
+        )
       )
     ).toBe(true)
     expect(
       Effect.runSync(
-        recovered.deliverNext({
-          transactionGroup: f.db,
-          admit: () => {
-            throw Error("must not repeat")
+        recovered.deliverNext(
+          {
+            transactionGroup: f.db,
+            admit: () => {
+              throw Error("must not repeat")
+            },
           },
-        })
+          Date.now() + 60_000
+        )
       )
     ).toBe(false)
     expect(Effect.runSync(conversations.recent())).toHaveLength(1)

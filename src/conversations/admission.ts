@@ -1,4 +1,5 @@
-import { Effect, Schema } from "effect"
+import { createEffectActor, waitFor } from "@xstate/effect"
+import { Cause, Effect, Equal, Exit, Ref, Schema } from "effect"
 
 import type { ConfigurationLedger } from "../agents/configuration"
 import { AgentConflict, AgentStorageError } from "../agents/domain"
@@ -21,6 +22,7 @@ import {
   WorkspaceUnavailable,
 } from "../workspace/files"
 import type { Workspace } from "../workspace/workspace"
+import { conversationAdmissionMachine } from "./admission.machine"
 import type { ConversationMaterialization } from "./journal"
 import type { ConversationLedger } from "./ledger"
 import type { Conversations } from "./service"
@@ -93,7 +95,8 @@ export function guardedMessageAdmission(
     prepared: PreparedMessage,
     route: ResolvedRoute,
     parentId: string | null,
-    catalog: ModelCatalog
+    catalog: ModelCatalog,
+    discoveryDeadline: number
   ) {
     yield* attempt(() => {
       if (
@@ -145,7 +148,8 @@ export function guardedMessageAdmission(
               route.contextWindow ?? capability.contextWindow,
               capability.contextWindow
             ),
-          }
+          },
+          { discoveryDeadline }
         )
       })
     )
@@ -156,6 +160,7 @@ export interface MessageAdmissionHost<TError, TRequirements = never> {
   connected: () => Effect.Effect<boolean, TError, TRequirements>
   archived: () => Effect.Effect<boolean, TError, TRequirements>
   catalog: () => Effect.Effect<ModelCatalog, TError, TRequirements>
+  prearm: () => Effect.Effect<number, TError, TRequirements>
   wake: () => Effect.Effect<void, TError, TRequirements>
   notify: () => Effect.Effect<void, TError, TRequirements>
 }
@@ -173,51 +178,112 @@ export function messageAdmission<TError, TRequirements>(
   ) {
     if (!input.text.trim() && !input.files?.length)
       return yield* new ConversationRejected({ reason: "empty" })
-    if (yield* conversations.get(input.operationId)) {
-      return yield* Effect.uninterruptible(
-        Effect.gen(function* () {
-          const replay = yield* conversations.admit(input)
-          yield* host.wake()
-          return receipt(replay)
+    const prepare = Effect.gen(function* () {
+      if (!(yield* host.connected()))
+        return yield* new ConversationRejected({ reason: "disconnected" })
+      const prepared = yield* prepareAttachments(
+        workspace,
+        input.files ?? [],
+        !!input.retryOf
+      )
+      if (yield* host.archived())
+        return yield* new ConversationRejected({ reason: "archived" })
+      yield* workspace.requireFiles(input.files ?? [])
+      const parent = submissionParent(input, yield* conversations.active())
+      const retry = input.retryOf
+        ? yield* conversations.get(input.retryOf)
+        : undefined
+      const settings = yield* conversations.settings()
+      const job = input.job ?? "conversation"
+      const route =
+        pinnedRoute(parent, settings) ??
+        pinnedRoute(retry, settings) ??
+        resolveRoute(job, yield* conversations.jobSetting(job), input.profile)
+      const catalog = yield* host.catalog()
+      return { prepared, route, parentId: parent?.id ?? null, catalog }
+    })
+    type Failure =
+      | Effect.Error<typeof prepare>
+      | Effect.Error<ReturnType<MessageCommit>>
+    const failed = yield* Ref.make<Cause.Cause<Failure> | undefined>(undefined)
+    const observe = <A>(effect: Effect.Effect<A, Failure, TRequirements>) =>
+      effect.pipe(
+        Effect.onExit((exit) =>
+          Exit.isFailure(exit) ? Ref.set(failed, exit.cause) : Effect.void
+        )
+      )
+    return yield* Effect.gen(function* () {
+      const actor = yield* createEffectActor(
+        conversationAdmissionMachine({
+          replaying: observe(
+            conversations.get(input.operationId).pipe(Effect.map(Boolean))
+          ),
+          prepare: observe(prepare),
+          validate: ({ prepared, route, catalog }) =>
+            observe(
+              attempt(() =>
+                validateRoute(
+                  route,
+                  catalog,
+                  prepared.content.some((block) => block.type === "image") ||
+                    (!!prepared.pending &&
+                      prepared.files.some(
+                        (file) => file.kind === "video" || file.kind === "image"
+                      ))
+                )
+              ).pipe(Effect.asVoid)
+            ),
+          arm: observe(Effect.suspend(host.prearm)),
+          accept: ({ prepared, route, parentId, catalog }, deadline) =>
+            observe(
+              Effect.gen(function* () {
+                const admitted = yield* commit(
+                  input,
+                  prepared,
+                  route,
+                  parentId,
+                  catalog,
+                  deadline
+                )
+                yield* host.wake()
+                yield* host.notify()
+                return receipt(admitted)
+              })
+            ),
+          replay: observe(
+            Effect.gen(function* () {
+              const replay = yield* conversations.admit(input)
+              // Exact replay can wake existing work, but cannot renew an exhausted
+              // discovery lease or authorize another native submission.
+              yield* host.wake()
+              return receipt(replay)
+            })
+          ),
         })
       )
-    }
-    if (!(yield* host.connected()))
-      return yield* new ConversationRejected({ reason: "disconnected" })
-    const prepared = yield* prepareAttachments(
-      workspace,
-      input.files ?? [],
-      !!input.retryOf
-    )
-    if (yield* host.archived())
-      return yield* new ConversationRejected({ reason: "archived" })
-    yield* workspace.requireFiles(input.files ?? [])
-    const parent = submissionParent(input, yield* conversations.active())
-    const retry = input.retryOf
-      ? yield* conversations.get(input.retryOf)
-      : undefined
-    const settings = yield* conversations.settings()
-    const job = input.job ?? "conversation"
-    const route =
-      pinnedRoute(parent, settings) ??
-      pinnedRoute(retry, settings) ??
-      resolveRoute(job, yield* conversations.jobSetting(job), input.profile)
-    const catalog = yield* host.catalog()
-    // Keep the durable claim and native scheduling handoff together. An
-    // acknowledgment failure leaves the committed turn for exact replay.
-    return yield* Effect.uninterruptible(
-      Effect.gen(function* () {
-        const admitted = yield* commit(
-          input,
-          prepared,
-          route,
-          parent?.id ?? null,
-          catalog
-        )
-        yield* host.wake()
-        yield* host.notify()
-        return receipt(admitted)
-      })
+      const done = yield* waitFor(
+        actor,
+        (state) => state.status === "done"
+      ).pipe(Effect.orDie)
+      return yield* done.output!
+    }).pipe(
+      Effect.scoped,
+      Effect.onExit((exit) =>
+        Effect.gen(function* () {
+          if (!Exit.isFailure(exit) || !Cause.hasInterrupts(exit.cause)) return
+          const failure = yield* Ref.get(failed)
+          const reasons =
+            failure?.reasons.filter(
+              (reason) =>
+                reason._tag !== "Interrupt" &&
+                !exit.cause.reasons.some((present) =>
+                  Equal.equals(present, reason)
+                )
+            ) ?? []
+          if (reasons.length)
+            return yield* Effect.failCause(Cause.fromReasons(reasons))
+        })
+      )
     )
   })
 }

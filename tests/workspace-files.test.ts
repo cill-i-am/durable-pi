@@ -1,4 +1,4 @@
-import { Effect, ManagedRuntime, Schema } from "effect"
+import { Clock, Effect, ManagedRuntime, Schema } from "effect"
 import { describe, expect, it } from "vitest"
 
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
@@ -126,7 +126,17 @@ describe("private workspace files", () => {
     for (const skill of skills)
       Schema.decodeUnknownSync(SkillSource)(skill.source)
     const root = Effect.runSync(
-      store.admit(command, { files: [], content: blocks }, skills)
+      Clock.currentTimeMillis.pipe(
+        Effect.flatMap((now) =>
+          store.admit(
+            command,
+            { files: [], content: blocks },
+            skills,
+            undefined,
+            { discoveryDeadline: now + 60_000 }
+          )
+        )
+      )
     ).turn
     Effect.runSync(
       store.savePrompt(
@@ -301,7 +311,15 @@ describe("private workspace files", () => {
       text: "",
       files: [input.id],
     }
-    const first = Effect.runSync(store.admit(command, prepared))
+    const first = Effect.runSync(
+      Clock.currentTimeMillis.pipe(
+        Effect.flatMap((now) =>
+          store.admit(command, prepared, undefined, undefined, {
+            discoveryDeadline: now + 60_000,
+          })
+        )
+      )
+    )
     expect(first.turn.attachments).toHaveLength(1)
     expect(first.turn.input).toEqual(prepared.content)
     await f.run((w) => w.trash(input.id, true))
@@ -317,16 +335,30 @@ describe("private workspace files", () => {
     expect(Effect.runSync(store.recent())[0]?.prompt).toBeNull()
     for (let i = 0; i < 3; i++)
       Effect.runSync(
-        store.admit(
-          { ...command, operationId: crypto.randomUUID(), mode: "steer" },
-          prepared
+        Clock.currentTimeMillis.pipe(
+          Effect.flatMap((now) =>
+            store.admit(
+              { ...command, operationId: crypto.randomUUID(), mode: "steer" },
+              prepared,
+              undefined,
+              undefined,
+              { discoveryDeadline: now + 60_000 }
+            )
+          )
         )
       )
     expect(() =>
       Effect.runSync(
-        store.admit(
-          { ...command, operationId: crypto.randomUUID(), mode: "steer" },
-          prepared
+        Clock.currentTimeMillis.pipe(
+          Effect.flatMap((now) =>
+            store.admit(
+              { ...command, operationId: crypto.randomUUID(), mode: "steer" },
+              prepared,
+              undefined,
+              undefined,
+              { discoveryDeadline: now + 60_000 }
+            )
+          )
         )
       )
     ).toThrow(/four-file/)

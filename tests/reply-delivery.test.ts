@@ -1,4 +1,4 @@
-import { Effect } from "effect"
+import { Clock, Effect } from "effect"
 import { describe, expect, it } from "vitest"
 
 import { homeAgentId } from "../src/agents/domain"
@@ -49,7 +49,16 @@ async function fixture(channel: "email" | "whatsapp") {
     thinking: "medium",
   })
   const admitted = await run(
-    conversations.admit({ operationId: id, text: "Reply please" })
+    Effect.gen(function* () {
+      const now = yield* Clock.currentTimeMillis
+      return yield* conversations.admit(
+        { operationId: id, text: "Reply please" },
+        undefined,
+        [],
+        undefined,
+        { discoveryDeadline: now + 60_000 }
+      )
+    })
   )
   if (channel === "email") {
     const store = new EmailStore(db)

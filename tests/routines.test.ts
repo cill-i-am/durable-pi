@@ -1,4 +1,4 @@
-import { Schema, Effect, Clock, Exit, Cause } from "effect"
+import { Schema, Effect, Clock, Exit, Cause, Context } from "effect"
 import { describe, expect, it, vi } from "vitest"
 
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
@@ -78,16 +78,25 @@ describe("durable bot routines", () => {
     expect(
       Effect.runSync(
         f.store.service
-          .deliver({
-            transactionGroup: f.db,
-            admit: (value) =>
-              conversations
-                .admit({
-                  operationId: value.turnId,
-                  text: value.prompt,
-                })
-                .pipe(Effect.map(({ turn }) => turn.id)),
-          })
+          .deliver(
+            {
+              transactionGroup: f.db,
+              admit: (value, discoveryDeadline) =>
+                conversations
+                  .admit(
+                    {
+                      operationId: value.turnId,
+                      text: value.prompt,
+                    },
+                    undefined,
+                    [],
+                    undefined,
+                    { discoveryDeadline }
+                  )
+                  .pipe(Effect.map(({ turn }) => turn.id)),
+            },
+            Date.now() + 60_000
+          )
           .pipe(Effect.result)
       )
     ).toMatchObject({
@@ -104,7 +113,10 @@ describe("durable bot routines", () => {
     f.store.claimDue()
     expect(() =>
       runFixture(
-        f.store.service.deliver({ transactionGroup: database(), admit })
+        f.store.service.deliver(
+          { transactionGroup: database(), admit },
+          Date.now() + 60_000
+        )
       )
     ).toThrow("share its storage transaction group")
     expect(admit).not.toHaveBeenCalled()
@@ -122,22 +134,34 @@ describe("durable bot routines", () => {
       "CREATE TRIGGER fail_queue BEFORE UPDATE ON routine_runs WHEN NEW.status='queued' BEGIN SELECT RAISE(ABORT,'disk failure'); END"
     )
     expect(() =>
-      f.store.deliver((value) => {
-        return conversations.admit({
-          operationId: value.turnId,
-          text: value.prompt,
-        })
-      })
+      f.store.deliver((value, discoveryDeadline) => {
+        return conversations.admit(
+          {
+            operationId: value.turnId,
+            text: value.prompt,
+          },
+          undefined,
+          [],
+          undefined,
+          { discoveryDeadline }
+        )
+      }, Date.now() + 60_000)
     ).toThrow(RoutineStorageError)
     expect(Effect.runSync(conversations.get(pending.turnId))).toBeUndefined()
     expect(f.store.inFlight()?.status).toBe("pending")
     f.db.run("DROP TRIGGER fail_queue")
-    f.store.deliver((value) => {
-      return conversations.admit({
-        operationId: value.turnId,
-        text: value.prompt,
-      })
-    })
+    f.store.deliver((value, discoveryDeadline) => {
+      return conversations.admit(
+        {
+          operationId: value.turnId,
+          text: value.prompt,
+        },
+        undefined,
+        [],
+        undefined,
+        { discoveryDeadline }
+      )
+    }, Date.now() + 60_000)
     expect(Effect.runSync(conversations.recent())).toHaveLength(1)
     expect(f.store.inFlight()?.status).toBe("queued")
   })
@@ -234,11 +258,17 @@ describe("durable bot routines", () => {
     f.advance(60000)
     const run = f.store.claimDue()!
     expect(() =>
-      f.store.deliver((value) => {
+      f.store.deliver((value, discoveryDeadline) => {
         return conversations
-          .admit({ operationId: value.turnId, text: value.prompt })
+          .admit(
+            { operationId: value.turnId, text: value.prompt },
+            undefined,
+            [],
+            undefined,
+            { discoveryDeadline }
+          )
           .pipe(Effect.andThen(Effect.die(new Error("rollback"))))
-      })
+      }, Date.now() + 60_000)
     ).toThrow("rollback")
     expect(Effect.runSync(conversations.get(run.turnId))).toBeUndefined()
     expect(f.store.inFlight()?.status).toBe("pending")
@@ -247,12 +277,20 @@ describe("durable bot routines", () => {
       () => true,
       () => 1060000
     )
-    restored.deliver((value) =>
-      conversations.admit({ operationId: value.turnId, text: value.prompt })
+    restored.deliver(
+      (value, discoveryDeadline) =>
+        conversations.admit(
+          { operationId: value.turnId, text: value.prompt },
+          undefined,
+          [],
+          undefined,
+          { discoveryDeadline }
+        ),
+      Date.now() + 60_000
     )
     restored.deliver(() => {
       throw new Error("duplicate")
-    })
+    }, Date.now() + 60_000)
     expect(Effect.runSync(conversations.recent())).toHaveLength(1)
     expect(restored.inFlight()).toMatchObject({
       turnId: run.turnId,
@@ -284,7 +322,7 @@ describe("durable bot routines", () => {
     const f = fixture()
     f.advance(60000)
     const first = f.store.claimDue()!
-    f.store.deliver(() => {})
+    f.store.deliver(() => {}, Date.now() + 60_000)
     status(f, "paused")
     f.store.save({
       ...f.input,
@@ -333,7 +371,7 @@ describe("durable bot routines", () => {
     expect(f.store.runNow(input).run?.id).toBe(first.id)
     f.advance(86400000)
     expect(f.store.canRun(first.turnId)).toBe(true)
-    f.store.deliver(() => {})
+    f.store.deliver(() => {}, Date.now() + 60_000)
     f.advance(ROUTINE_BUDGET_MS - 1)
     expect(f.store.canRun(first.turnId)).toBe(true)
     f.advance(1)
@@ -352,7 +390,7 @@ describe("durable bot routines", () => {
     f.store.cancelPendingRun(first.id)
     f.store.deliver(() => {
       throw new Error("late admission")
-    })
+    }, Date.now() + 60_000)
     expect(f.store.runs()[0]?.status).toBe("cancelled")
   })
 })
@@ -367,17 +405,31 @@ describe("routine alarm reconciliation", () => {
     const host = {
       getTurn: (id: string) => conversations.get(id),
       modelConnected: vi.fn(async () => true),
+      prearm: vi.fn(async () => Date.now() + 60_000),
       wakeConversation: vi.fn(async () => {}),
-      admit: vi.fn((run: { turnId: string; prompt: string }) => {
+      admit: vi.fn(
+        (
+          run: { turnId: string; prompt: string },
+          discoveryDeadline: number
+        ) => {
+          return conversations
+            .admit(
+              {
+                operationId: run.turnId,
+                text: run.prompt,
+              },
+              undefined,
+              [],
+              undefined,
+              { discoveryDeadline }
+            )
+            .pipe(Effect.map(({ turn }) => turn.id))
+        }
+      ),
+      stop: vi.fn((id: string, discoveryDeadline?: number) => {
         return conversations
-          .admit({
-            operationId: run.turnId,
-            text: run.prompt,
-          })
-          .pipe(Effect.map(({ turn }) => turn.id))
-      }),
-      stop: vi.fn((id: string) => {
-        return conversations.requestStop(id).pipe(Effect.asVoid)
+          .requestStop(id, { discoveryDeadline })
+          .pipe(Effect.asVoid)
       }),
       notify: vi.fn(),
     }
@@ -388,13 +440,18 @@ describe("routine alarm reconciliation", () => {
           try: () => host.modelConnected(),
           catch: (cause) => cause,
         }),
+      prearm: () =>
+        Effect.tryPromise({
+          try: () => host.prearm(),
+          catch: (cause) => cause,
+        }),
       wakeConversation: () =>
         Effect.tryPromise({
           try: () => host.wakeConversation(),
           catch: (cause) => cause,
         }),
       admission: { transactionGroup: f.db, admit: host.admit },
-      stop: (id) => host.stop(id),
+      stop: (id, discoveryDeadline) => host.stop(id, discoveryDeadline),
       notify: () => Effect.sync(host.notify),
     })
     const clock = fixtureClock(f.now)
@@ -411,7 +468,7 @@ describe("routine alarm reconciliation", () => {
     f.advance(60000)
     return { f, conversations, host, pump }
   }
-  it.each(["modelConnected", "wakeConversation"] as const)(
+  it.each(["modelConnected", "prearm"] as const)(
     "retains a future wake after exhausted %s errors and resumes once",
     async (method) => {
       const { f, conversations, host, pump } = scheduled()
@@ -433,13 +490,132 @@ describe("routine alarm reconciliation", () => {
       expect(pump.retry()).toBeUndefined()
     }
   )
+  it("rolls back both owners when the supplied discovery lease has expired", async () => {
+    const { f, conversations, host, pump } = scheduled()
+    host.prearm.mockResolvedValueOnce(1)
+    await expect(pump.run()).rejects.toMatchObject({
+      _tag: "ConversationStorageError",
+      operation: "admission discovery",
+    })
+    expect(f.store.inFlight()?.status).toBe("pending")
+    expect(Effect.runSync(conversations.recent())).toHaveLength(0)
+    expect(host.wakeConversation).not.toHaveBeenCalled()
+    expect(host.notify).not.toHaveBeenCalled()
+  })
+  it("retains one committed admission when its immediate wake fails", async () => {
+    const { f, conversations, host, pump } = scheduled()
+    host.wakeConversation.mockRejectedValueOnce(
+      new Error("Immediate wake unavailable")
+    )
+    await expect(pump.run()).rejects.toThrow("Immediate wake unavailable")
+    expect(f.store.inFlight()?.status).toBe("queued")
+    expect(Effect.runSync(conversations.recent())).toHaveLength(1)
+    await pump.run()
+    expect(host.admit).toHaveBeenCalledOnce()
+    expect(host.wakeConversation).toHaveBeenCalledOnce()
+  })
+  it("does not wake when a competing transaction cancels the pending run", async () => {
+    const { f, conversations, host, pump } = scheduled()
+    host.prearm.mockImplementationOnce(async () => {
+      f.store.cancelPendingRun(f.store.inFlight()!.id)
+      return Date.now() + 60_000
+    })
+    await pump.run()
+    expect(f.store.inFlight()).toBeUndefined()
+    expect(Effect.runSync(conversations.recent())).toHaveLength(0)
+    expect(host.admit).not.toHaveBeenCalled()
+    expect(host.wakeConversation).not.toHaveBeenCalled()
+  })
+  it("persists Stop even when discovery cannot be armed and propagates that failure", async () => {
+    const { f, conversations, host, pump } = scheduled()
+    await pump.run()
+    const admitted = f.store.inFlight()!
+    f.advance(ROUTINE_BUDGET_MS)
+    host.prearm.mockRejectedValueOnce(new Error("Stop discovery unavailable"))
+    await expect(pump.run()).rejects.toThrow("Stop discovery unavailable")
+    expect(host.stop).toHaveBeenCalledWith(admitted.turnId, undefined)
+    expect(Effect.runSync(conversations.get(admitted.turnId))?.status).toBe(
+      "stopping"
+    )
+  })
+  it.each([false, true])(
+    "retains all prearm and Stop failure reasons (Stop fails: %s)",
+    async (stopFails) => {
+      const { f, conversations, pump } = scheduled()
+      await pump.run()
+      const admitted = f.store.inFlight()!
+      f.advance(ROUTINE_BUDGET_MS)
+      class Marker extends Context.Service<Marker, string>()(
+        "RoutineStopCause"
+      ) {}
+      const prearmReasons = [
+        Cause.makeFailReason(new Error("Discovery unavailable")),
+        Cause.makeDieReason(new Error("Discovery cleanup defect")),
+        Cause.makeInterruptReason(812),
+      ].map((reason, index) =>
+        reason.annotate(Context.make(Marker, `prearm-${index}`))
+      )
+      const stopReasons = [
+        Cause.makeFailReason(new Error("Stop result unavailable")),
+        Cause.makeDieReason(new Error("Stop cleanup defect")),
+      ].map((reason, index) =>
+        reason.annotate(Context.make(Marker, `stop-${index}`))
+      )
+      let stops = 0
+      const reconciliation = routinePump(f.store.service, {
+        getTurn: (id) => conversations.get(id),
+        modelConnected: () => Effect.succeed(true),
+        prearm: () => Effect.failCause(Cause.fromReasons(prearmReasons)),
+        admission: {
+          transactionGroup: f.db,
+          admit: () => Effect.die("No new admission during Stop"),
+        },
+        stop: (id, discoveryDeadline) =>
+          Effect.gen(function* () {
+            stops++
+            if (stopFails)
+              return yield* Effect.failCause(Cause.fromReasons(stopReasons))
+            yield* conversations.requestStop(id, { discoveryDeadline })
+          }),
+        wakeConversation: () => Effect.die("Original failure must propagate"),
+        notify: () => Effect.die("Original failure must propagate"),
+      })
+      const exit = await Effect.runPromiseExit(
+        reconciliation
+          .run()
+          .pipe(Effect.provideService(Clock.Clock, fixtureClock(f.now)))
+      )
+      expect(stops).toBe(1)
+      expect(Effect.runSync(conversations.get(admitted.turnId))?.status).toBe(
+        stopFails ? "queued" : "stopping"
+      )
+      expect(Exit.isFailure(exit)).toBe(true)
+      if (Exit.isFailure(exit)) {
+        const expected = [...prearmReasons, ...(stopFails ? stopReasons : [])]
+        expect(exit.cause.reasons).toHaveLength(expected.length)
+        for (const [index, reason] of expected.entries()) {
+          const actual = exit.cause.reasons[index]!
+          expect(actual._tag).toBe(reason._tag)
+          expect(actual.annotations.get(Marker.key)).toBe(
+            reason.annotations.get(Marker.key)
+          )
+          if (actual._tag === "Fail" && reason._tag === "Fail")
+            expect(actual.error).toBe(reason.error)
+          if (actual._tag === "Die" && reason._tag === "Die")
+            expect(actual.defect).toBe(reason.defect)
+          if (actual._tag === "Interrupt" && reason._tag === "Interrupt")
+            expect(actual.fiberId).toBe(reason.fiberId)
+        }
+      }
+    }
+  )
   it("stops an admitted turn at its deadline and schedules the next tick after completion", async () => {
     const { f, conversations, host, pump } = scheduled()
     await pump.run()
     const admitted = f.store.inFlight()!
     f.advance(ROUTINE_BUDGET_MS)
     await pump.run()
-    expect(host.stop).toHaveBeenCalledWith(admitted.turnId)
+    expect(host.stop).toHaveBeenCalledWith(admitted.turnId, expect.any(Number))
     expect(Effect.runSync(conversations.get(admitted.turnId))?.status).toBe(
       "stopping"
     )

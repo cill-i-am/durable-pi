@@ -6,6 +6,7 @@ import {
   connectionResponse,
 } from "../src/access/adapters/connection-http"
 import { remoteToolResolution } from "../src/access/adapters/resolution"
+import { AccessStore } from "../src/access/adapters/sqlite"
 import {
   ConnectionError,
   ConnectionStorageError,
@@ -24,9 +25,14 @@ import { appsRequest } from "../src/apps/adapters/http"
 import { AppStore } from "../src/apps/adapters/sqlite"
 import { AppConflict } from "../src/apps/contracts"
 import { makeApps } from "../src/apps/service"
+import { stopConversation } from "../src/conversations/commands"
+import { ConversationControlTimeout } from "../src/conversations/execution"
+import { conversationPump } from "../src/conversations/pump"
+import { ConversationStorageError } from "../src/conversations/turns"
 import { ModelUnavailable } from "../src/inference/policy"
 import { routinesRequest } from "../src/routines/adapters/http"
 import { RoutineConflict } from "../src/routines/contracts"
+import { conversationFixture } from "./conversation-fixture"
 import { database } from "./database"
 import { routineFixture } from "./routine-fixture"
 
@@ -61,11 +67,21 @@ function fixture(
 ) {
   const runtime = ManagedRuntime.make(Layer.empty)
   runtimes.push(runtime)
+  const pump = Effect.runSync(conversationFixture())
   const host: PersonalAgent = Object.create(PersonalAgent.prototype)
   const waitUntil = vi.fn<(work: Promise<unknown>) => void>()
   const retrySummary = vi.fn(retry)
   Object.assign(host, {
     actorRuntime: runtime,
+    // The actual route now reconciles this host's joined control releases.
+    // Retain a real scoped test pump instead of bypassing the production seam.
+    conversationPump: conversationPump(
+      pump.conversations,
+      pump.memory,
+      pump.journal,
+      pump.execution,
+      pump.host
+    ),
     familyAdmission: async () => ({
       owner: "fixture",
       modelOwner: "fixture",
@@ -75,7 +91,7 @@ function fixture(
     ctx: { waitUntil, id: { toString: () => "actor-id" } },
     retrySummary,
   })
-  return { host, retrySummary, waitUntil }
+  return { host, retrySummary, waitUntil, pump }
 }
 const retryId = crypto.randomUUID()
 const retryRequest = (signal?: AbortSignal) =>
@@ -146,6 +162,89 @@ it("runs the actual host request through one retained runtime and pins its mutat
   })
   expect(f.waitUntil).toHaveBeenCalledOnce()
   await expect(f.waitUntil.mock.calls[0]?.[0]).resolves.toBe(response)
+})
+it("records HTTP Stop and revokes access while joined owner release persistence fails", async () => {
+  const f = fixture()
+  const id = crypto.randomUUID()
+  const access = new AccessStore(f.pump.db, () =>
+    Effect.succeed([
+      { name: "send", description: "Synthetic effect", mode: "ask" },
+    ])
+  )
+  const approvalId = crypto.randomUUID()
+  await Effect.runPromise(
+    f.pump.store.admit({ operationId: id, text: "hello" })
+  )
+  await Effect.runPromise(
+    access.begin({ id: approvalId, turnId: id, tool: "send", input: "{}" })
+  )
+  f.pump.db.run(
+    "CREATE TRIGGER reject_joined_release BEFORE UPDATE ON chat_turns WHEN json_extract(OLD.control,'$.owner') IS NOT NULL AND json_extract(NEW.control,'$.owner') IS NULL BEGIN SELECT RAISE(ABORT,'release write unavailable'); END"
+  )
+  const failed = await Effect.runPromiseExit(f.host.conversationPump.run())
+  expect(Exit.isFailure(failed)).toBe(true)
+  if (Exit.isFailure(failed))
+    expect(failed.cause.reasons).toContainEqual(
+      expect.objectContaining({
+        _tag: "Fail",
+        error: expect.any(ConversationStorageError),
+      })
+    )
+  const before = (await Effect.runPromise(f.pump.store.get(id)))!
+  expect(before.status).toBe("running")
+  expect(before.control?.owner).toBeTruthy()
+  const nativeCalls = [...f.pump.events]
+  Object.assign(f.host, {
+    stopConversation: stopConversation(
+      {
+        requestStop: (turnId, options) =>
+          f.pump.db.transaction(() =>
+            Effect.gen(function* () {
+              const root = yield* f.pump.store.requestStop(turnId, options)
+              if (root) yield* access.cancel(root)
+              return root
+            })
+          ),
+      },
+      {
+        prearm: () => Effect.succeed(Date.now() + 60_000),
+        wake: () => Effect.void,
+        wakeBackground: () => Effect.void,
+        notify: () => Effect.void,
+      }
+    ),
+  })
+  const response = await f.host.fetch(
+    new Request("https://internal/api/agent/cancel", {
+      method: "POST",
+      body: JSON.stringify({ operationId: id }),
+    })
+  )
+  expect(response.status).toBe(202)
+  expect(await response.json()).toEqual({ ok: true })
+  const stopped = (await Effect.runPromise(f.pump.store.get(id)))!
+  expect(stopped).toMatchObject({
+    status: "stopping",
+    control: {
+      owner: before.control!.owner,
+      deadline: before.control!.deadline,
+    },
+  })
+  expect(stopped.revision).toBeGreaterThan(before.revision)
+  expect(await Effect.runPromise(access.get(approvalId))).toMatchObject({
+    status: "cancelled",
+  })
+  expect(f.pump.events).toEqual(nativeCalls)
+  // Revocation must not swallow or clear the retained cleanup obligation.
+  expect(
+    Exit.isFailure(
+      await Effect.runPromiseExit(f.host.conversationPump.reconcile())
+    )
+  ).toBe(true)
+  expect((await Effect.runPromise(f.pump.store.get(id)))!.control!.owner).toBe(
+    before.control!.owner
+  )
+  expect(f.pump.events).toEqual(nativeCalls)
 })
 it("preserves the declared model rejection through the actual host", async () => {
   const f = fixture(() =>
@@ -458,4 +557,16 @@ it("bounds the upstream lease, fences unrelated releases and joins unused-channe
   const next = new WritableStream<Uint8Array>()
   expect(await f.host.observeUpstream("next", next)).toBe(true)
   await f.host.releaseUpstream("next")
+})
+
+it("returns an actionable 503 for an unconfirmed Conversation control timeout", async () => {
+  const response = await Effect.runPromise(
+    agentResponse(
+      Effect.fail(new ConversationControlTimeout({ phase: "observe" }))
+    )
+  )
+  expect(response.status).toBe(503)
+  expect(await response.json()).toEqual({
+    error: "This reply could not be confirmed. Check the reply again.",
+  })
 })

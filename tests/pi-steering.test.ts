@@ -17,7 +17,7 @@ import {
   watchEvents,
 } from "@earendil-works/pi-durable"
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
-import { Effect } from "effect"
+import { Clock, Effect } from "effect"
 import { describe, expect, it } from "vitest"
 
 import { piConversationObserver } from "../src/conversations/adapters/pi-execution"
@@ -121,10 +121,20 @@ describe("native Pi steering with SQLite persistence", () => {
           thinking: "off",
         })
         const root = Effect.runSync(
-          store.admit({
-            operationId: crypto.randomUUID(),
-            text: "make a design",
-          })
+          Clock.currentTimeMillis.pipe(
+            Effect.flatMap((now) =>
+              store.admit(
+                {
+                  operationId: crypto.randomUUID(),
+                  text: "make a design",
+                },
+                undefined,
+                undefined,
+                undefined,
+                { discoveryDeadline: now + 60_000 }
+              )
+            )
+          )
         ).turn
         let initial = await conversation.submit(
           {
@@ -139,11 +149,21 @@ describe("native Pi steering with SQLite persistence", () => {
         )
         await toolEntered.promise
         const steer = Effect.runSync(
-          store.admit({
-            operationId: crypto.randomUUID(),
-            text: "use blue",
-            mode: "steer",
-          })
+          Clock.currentTimeMillis.pipe(
+            Effect.flatMap((now) =>
+              store.admit(
+                {
+                  operationId: crypto.randomUUID(),
+                  text: "use blue",
+                  mode: "steer",
+                },
+                undefined,
+                undefined,
+                undefined,
+                { discoveryDeadline: now + 60_000 }
+              )
+            )
+          )
         ).turn
         const command = {
           type: "input" as const,

@@ -74,7 +74,12 @@ async function fixture(
       )
     )
   const admit = (operation: Parameters<EmailPumpHost["admit"]>[0]) =>
-    conversations.admit(operation).pipe(
+    Clock.currentTimeMillis.pipe(
+      Effect.flatMap((now) =>
+        conversations.admit(operation, undefined, [], undefined, {
+          discoveryDeadline: now + 60_000,
+        })
+      ),
       Effect.orDie,
       Effect.tap(() =>
         Effect.sync(() => {

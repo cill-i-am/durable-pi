@@ -80,7 +80,11 @@ export async function probeAttachments(
           })
           yield* conversations.admit(
             { operationId: id, text: "Read after restart", files: [fileId] },
-            yield* prepareAttachments(workspace, [fileId])
+            yield* prepareAttachments(workspace, [fileId]),
+            [],
+            undefined,
+            // This store-only probe resumes extraction explicitly after restart.
+            { discoveryDeadline: Date.now() + 60_000 }
           )
         } else {
           yield* workspace.extractNext()

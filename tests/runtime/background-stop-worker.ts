@@ -84,13 +84,16 @@ export class BackgroundStopProbe extends DurableObject<Record<string, never>> {
       active: () => Effect.succeed(false),
       backgroundActive: () => Effect.succeed(false),
       notify: () => Effect.void,
+      // Synthetic capability for empty report scans; this fixture has no Conversations.
+      prearm: () => Effect.sync(() => Date.now() + 60_000),
       wakeConversation: () => Effect.void,
       armBackground: (deadline) =>
         backgroundNative(() => this.runner.armBackground(deadline)),
       wakeBackground: () => backgroundNative(() => this.runner.wake()),
       admission: {
         transactionGroup: this.db,
-        admit: (handoff) => Effect.succeed(handoff.reportId),
+        admit: () =>
+          Effect.die("Cleanup-only fixture must never admit a report"),
         stop: () => Effect.void,
       },
     }

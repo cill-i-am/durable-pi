@@ -162,6 +162,10 @@ import {
 } from "../conversations/adapters/events"
 import { admissionResponse } from "../conversations/adapters/http-admission"
 import {
+  ConversationRunner,
+  observeConversationSchedule,
+} from "../conversations/adapters/lifecycle"
+import {
   piConversationLayer,
   conversationNativeOperation,
 } from "../conversations/adapters/pi-execution"
@@ -177,9 +181,15 @@ import {
   messageAdmission,
 } from "../conversations/admission"
 import { resumeAttachments } from "../conversations/attachments"
-import { retryMessage, stopConversation } from "../conversations/commands"
+import {
+  checkConversationReply,
+  retryConversationStop,
+  retryMessage,
+  stopConversation,
+} from "../conversations/commands"
 import {
   CancelInput,
+  RecoveryInput,
   SendInput,
   type ChatState,
 } from "../conversations/contracts"
@@ -188,7 +198,10 @@ import {
   ConversationExecutionError,
 } from "../conversations/execution"
 import { ConversationJournal } from "../conversations/journal"
-import { conversationPump } from "../conversations/pump"
+import {
+  conversationPump,
+  type ConversationControlAttempt,
+} from "../conversations/pump"
 import {
   RunRecovery,
   recoveryApplication,
@@ -205,6 +218,7 @@ import {
 } from "../conversations/status"
 import {
   ConversationStorageError,
+  conversationUnconfirmed,
   ModelSettings,
   type Submission,
   type Turn,
@@ -226,7 +240,6 @@ import {
 } from "../delegation/adapters/background-parent"
 import { backgroundRemote } from "../delegation/adapters/background-rpc"
 import { delegationsRequest } from "../delegation/adapters/http"
-import { backgroundNative } from "../delegation/adapters/interop"
 import { piDelegationLedger } from "../delegation/adapters/pi"
 import {
   delegationTool,
@@ -540,19 +553,16 @@ declare global {
   }
 }
 
-class TurnRunner extends LifecycleCapability {
+abstract class TurnRunner extends LifecycleCapability {
   constructor(
     readonly owner: PersonalAgent,
-    readonly capability = "personal-chat"
+    readonly capability: string
   ) {
     super(capability)
   }
   async wake() {
     await this.lifecycle.jobs.push({
-      id:
-        this.capability === "personal-chat"
-          ? "pump"
-          : `${this.capability}:pump`,
+      id: `${this.capability}:pump`,
       fn: "pump",
       time: Date.now(),
       singleflight: true,
@@ -560,13 +570,7 @@ class TurnRunner extends LifecycleCapability {
       recoveryLoop: true,
     })
   }
-  async onJob(): Promise<LifecycleJobOutcome> {
-    try {
-      return await this.owner.step()
-    } finally {
-      this.owner.notifyConversation()
-    }
-  }
+  abstract onJob(): Promise<LifecycleJobOutcome>
 }
 
 class CommunicationRunner extends TurnRunner {
@@ -1016,17 +1020,58 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           active: () => this.active().pipe(Effect.map((turn) => !!turn)),
           backgroundActive: () =>
             this.active().pipe(Effect.map((turn) => !!turn?.origin)),
-          wakeConversation: () => backgroundNative(() => this.runner.wake()),
+          prearm: () =>
+            observeConversationSchedule("arm conversation discovery", () =>
+              this.runner.armDiscovery()
+            ).pipe(
+              Effect.mapError(
+                () =>
+                  new DelegationFailure({
+                    code: "unavailable",
+                    message: "Conversation recovery could not be scheduled.",
+                  })
+              )
+            ),
+          wakeConversation: () =>
+            observeConversationSchedule("wake conversation", () =>
+              this.runner.wake()
+            ).pipe(
+              Effect.mapError(
+                () =>
+                  new DelegationFailure({
+                    code: "unavailable",
+                    message: "Conversation recovery could not be scheduled.",
+                  })
+              )
+            ),
           armBackground: (deadline) =>
-            backgroundNative(() =>
+            observeConversationSchedule("arm background discovery", () =>
               this.backgroundRunner.armBackground(deadline)
+            ).pipe(
+              Effect.mapError(
+                () =>
+                  new DelegationFailure({
+                    code: "unavailable",
+                    message: "Background recovery could not be scheduled.",
+                  })
+              )
             ),
           wakeBackground: () =>
-            backgroundNative(() => this.backgroundRunner.wake()),
+            observeConversationSchedule("wake background work", () =>
+              this.backgroundRunner.wake()
+            ).pipe(
+              Effect.mapError(
+                () =>
+                  new DelegationFailure({
+                    code: "unavailable",
+                    message: "Background recovery could not be scheduled.",
+                  })
+              )
+            ),
           notify: () => Effect.sync(() => this.notifyConversation()),
           admission: {
             transactionGroup: this.db,
-            admit: (handoff, report) =>
+            admit: (handoff, report, discoveryDeadline) =>
               this.conversations
                 .admit(
                   {
@@ -1044,11 +1089,14 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
                   },
                   undefined,
                   [],
-                  handoff.route
+                  handoff.route,
+                  { discoveryDeadline }
                 )
                 .pipe(Effect.map((admission) => admission.turn.id)),
-            stop: (reportId) =>
-              this.conversations.requestStop(reportId).pipe(Effect.asVoid),
+            stop: (reportId, options) =>
+              this.conversations
+                .requestStop(reportId, options)
+                .pipe(Effect.asVoid),
           },
         }
       ),
@@ -1300,11 +1348,22 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           Effect.map((configuration) => configuration?.status !== "archived")
         ),
     modelConnected: () => this.modelConnectedProgram(),
+    prearm: () =>
+      observeConversationSchedule("arm conversation discovery", () =>
+        this.runner.armDiscovery()
+      ).pipe(
+        Effect.mapError(
+          () =>
+            new AgentSynchronizationError({
+              operation: "arm conversation discovery",
+            })
+        )
+      ),
     wakeConversation: () =>
       agentNativeOperation("wake conversation", () => this.runner.wake()),
     admission: {
       transactionGroup: this.db,
-      admit: (event) =>
+      admit: (event, discoveryDeadline) =>
         Effect.gen({ self: this }, function* () {
           return (yield* this.conversations.admit(
             {
@@ -1324,7 +1383,9 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
                     cause,
                   })
               )
-            )).skills
+            )).skills,
+            undefined,
+            { discoveryDeadline }
           )).turn.id
         }),
     },
@@ -1417,6 +1478,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           Effect.map((configuration) => configuration?.status === "archived")
         ),
     catalog: () => this.catalogProgram(),
+    prearm: () =>
+      observeConversationSchedule("arm conversation discovery", () =>
+        this.runner.armDiscovery()
+      ),
     wake: () =>
       Effect.gen({ self: this }, function* () {
         yield* conversationNativeOperation("wake conversation", () =>
@@ -1457,32 +1522,118 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     this.conversationService,
     this.messageAdmission
   )
-  private readonly stopConversationCommand = stopConversation(
-    this.conversationService,
+  private readonly conversationStopHost = {
+    prearm: () =>
+      observeConversationSchedule("arm conversation discovery", () =>
+        this.runner.armDiscovery()
+      ),
+    wake: () =>
+      observeConversationSchedule("wake conversation", () =>
+        this.runner.wake()
+      ),
+    wakeBackground: () =>
+      observeConversationSchedule("wake background work", async () => {
+        await this.backgroundRunner.wake()
+        await this.coordinationRunner.wake()
+      }),
+    notify: () =>
+      Effect.sync(() => {
+        this.access.notify()
+        this.notifyConversation()
+      }),
+  }
+  readonly stopConversation = stopConversation(
     {
-      wake: () =>
-        conversationNativeOperation("wake conversation", () =>
-          this.runner.wake()
+      requestStop: (id, options) =>
+        conversationTransactions(this.db).atomic(() =>
+          Effect.gen({ self: this }, function* () {
+            yield* this.coordination.stop(id).pipe(
+              Effect.mapError(
+                (cause) =>
+                  new ConversationStorageError({
+                    operation: "stop agent session",
+                    cause,
+                  })
+              )
+            )
+            const root = yield* this.conversations.requestStop(id, options)
+            if (root)
+              yield* this.accessStore.cancel(root).pipe(
+                Effect.mapError(
+                  (cause) =>
+                    new ConversationStorageError({
+                      operation: "revoke conversation access",
+                      cause,
+                    })
+                )
+              )
+            return root
+          })
         ),
+    },
+    this.conversationStopHost
+  )
+  private readonly stopRoutine = stopConversation(
+    {
+      requestStop: (id, options) =>
+        conversationTransactions(this.db).atomic(() =>
+          Effect.gen({ self: this }, function* () {
+            const run = yield* this.routines.cancelPendingRun(id)
+            if (run?.status !== "queued") return undefined
+            const root = yield* this.conversations.requestStop(
+              run.turnId,
+              options
+            )
+            yield* this.accessStore.cancel(run.turnId).pipe(
+              Effect.mapError(
+                (cause) =>
+                  new ConversationStorageError({
+                    operation: "revoke routine access",
+                    cause,
+                  })
+              )
+            )
+            return root
+          })
+        ),
+    },
+    {
+      ...this.conversationStopHost,
       wakeBackground: () =>
-        conversationNativeOperation("wake background work", async () => {
-          await this.backgroundRunner.wake()
-          await this.coordinationRunner.wake()
-        }),
-      notify: () => Effect.sync(() => this.notifyConversation()),
+        this.conversationStopHost
+          .wakeBackground()
+          .pipe(
+            Effect.andThen(
+              observeConversationSchedule("wake routines", () =>
+                this.routineRunner.wake()
+              )
+            )
+          ),
     }
   )
-  readonly stopConversation = (id: string) =>
-    this.coordination.stop(id).pipe(
-      Effect.mapError(
-        (cause) =>
-          new ConversationStorageError({
-            operation: "stop agent session",
-            cause,
-          })
+  readonly retryConversationStop = retryConversationStop(
+    this.conversationService,
+    this.conversationStopHost
+  )
+  readonly checkConversationReply = checkConversationReply({
+    inspect: (id, revision) =>
+      this.conversationPump.run("inspect", { id, revision }).pipe(
+        Effect.mapError((cause) => {
+          switch (cause._tag) {
+            case "PlanFailure":
+            case "RoutineConflict":
+            case "RoutineStorageError":
+              return new ConversationExecutionError({
+                operation: "check conversation",
+                cause,
+              })
+            default:
+              return cause
+          }
+        })
       ),
-      Effect.andThen(this.stopConversationCommand(id))
-    )
+    notify: () => Effect.sync(() => this.notifyConversation()),
+  })
   readonly emailStore = new EmailStore(this.db)
   readonly whatsappStore = new WhatsAppStore(this.db)
   private wakeWhatsApp() {
@@ -2024,11 +2175,22 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   >(this.routines, {
     getTurn: (id) => this.conversations.get(id),
     modelConnected: () => this.modelConnectedProgram(),
+    prearm: () =>
+      observeConversationSchedule("arm conversation discovery", () =>
+        this.runner.armDiscovery()
+      ).pipe(
+        Effect.mapError(
+          () =>
+            new AgentSynchronizationError({
+              operation: "arm conversation discovery",
+            })
+        )
+      ),
     wakeConversation: () =>
       agentNativeOperation("wake conversation", () => this.runner.wake()),
     admission: {
       transactionGroup: this.db,
-      admit: (run) =>
+      admit: (run, discoveryDeadline) =>
         Effect.gen({ self: this }, function* () {
           return (yield* this.conversations.admit(
             {
@@ -2048,16 +2210,21 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
                     cause,
                   })
               )
-            )).skills
+            )).skills,
+            undefined,
+            { discoveryDeadline }
           )).turn.id
         }),
     },
-    stop: (id) =>
-      Effect.gen({ self: this }, function* () {
-        yield* this.conversations.requestStop(id)
-        yield* this.accessStore.cancel(id)
-        this.access.notify()
-      }),
+    stop: (id, discoveryDeadline) =>
+      conversationTransactions(this.db)
+        .atomic(() =>
+          Effect.gen({ self: this }, function* () {
+            yield* this.conversations.requestStop(id, { discoveryDeadline })
+            yield* this.accessStore.cancel(id)
+          })
+        )
+        .pipe(Effect.tap(() => Effect.sync(() => this.access.notify()))),
     notify: () => Effect.sync(() => this.notifyConversation()),
   })
   readonly objects: typeof Objects.Service = this.actorRuntime.runSync(Objects)
@@ -2371,7 +2538,19 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   }
   private fenceFamilyGeneration(): Effect.Effect<void, FamilyAdmissionError> {
     return Effect.gen({ self: this }, function* () {
-      const sessions: string[] = []
+      // Discovery is useful for cleanup but can never be a prerequisite for
+      // revoking authority. Every original root retains its native identity.
+      const discovery = yield* Effect.exit(
+        observeConversationSchedule("arm revoked conversation cleanup", () =>
+          this.runner.armDiscovery()
+        )
+      )
+      const stopOptions = Exit.isSuccess(discovery)
+        ? { discoveryDeadline: discovery.value }
+        : {
+            unconfirmedError:
+              "Access ended and Stop was saved, but cleanup could not be scheduled. Check the reply or try Stop again.",
+          }
       for (const routine of yield* this.routines.list()) {
         if (routine.status !== "active") continue
         yield* this.routines.setStatus({
@@ -2382,14 +2561,21 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         })
         const run = yield* this.routines.cancelPendingRun(routine.id)
         if (run?.status === "queued") {
-          yield* this.conversations.requestStop(run.turnId)
-          yield* this.access.cancel(run.turnId)
+          yield* conversationTransactions(this.db).atomic(() =>
+            Effect.gen({ self: this }, function* () {
+              yield* this.conversations.requestStop(run.turnId, stopOptions)
+              yield* this.accessStore.cancel(run.turnId)
+            })
+          )
         }
       }
       for (const turn of yield* this.conversations.unfinished()) {
-        yield* this.conversations.requestStop(turn.id)
-        yield* this.access.cancel(turn.id)
-        if (turn.session_id) sessions.push(turn.session_id)
+        yield* conversationTransactions(this.db).atomic(() =>
+          Effect.gen({ self: this }, function* () {
+            yield* this.conversations.requestStop(turn.id, stopOptions)
+            yield* this.accessStore.cancel(turn.id)
+          })
+        )
       }
       yield* this.coordination.store.closeAll()
       for (const id of yield* this.delegationLedger.catalog()) {
@@ -2408,10 +2594,15 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         }
         offset += groups.length
       }
-      // Native abort may re-enter admission, so only durable fences are
-      // joined here. Lifecycle's existing waitUntil owns remote cleanup.
-      for (const session of sessions)
-        this.ctx.waitUntil(this.run(this.conversationExecution.abort(session)))
+      this.access.notify()
+      // The owned pump performs native Stop after generation fencing finishes.
+      // An unowned delayed abort could otherwise reach a later continuation.
+      this.ctx.waitUntil(this.runner.wake())
+      if (Exit.isFailure(discovery))
+        yield* Effect.logError(
+          "Revoked conversation cleanup is unconfirmed",
+          discovery.cause
+        )
     })
   }
   /** Every boundary gets a fresh lookup. Generation changes are owned by the
@@ -3043,8 +3234,23 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     this.conversationJournal,
     this.conversationExecution,
     {
-      prepareFiles: (turn) =>
-        this.resumeAttachments(turn).pipe(
+      prepareRuntime: (turn) =>
+        Effect.gen({ self: this }, function* () {
+          this.foregroundSizing = turn
+          this.installRemoteTools(
+            yield* this.refreshRemoteTools().pipe(
+              Effect.mapError(
+                (cause) =>
+                  new ConversationExecutionError({
+                    operation: "prepare conversation tools",
+                    cause,
+                  })
+              )
+            )
+          )
+        }),
+      prepareFiles: (turn, owner) =>
+        this.resumeAttachments(turn, owner).pipe(
           Effect.mapError(
             (cause) =>
               new ConversationExecutionError({
@@ -3055,6 +3261,15 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         ),
       canRun: (id) =>
         Effect.gen({ self: this }, function* () {
+          const family = yield* conversationNativeOperation(
+            "verify conversation family access",
+            (signal) => this.familyAdmission(signal)
+          )
+          if (
+            !family ||
+            (yield* this.configurationService.read())?.status === "archived"
+          )
+            return false
           const allowed = yield* this.routines.canRun(id)
           const origin = (yield* this.conversations.get(id))?.origin
           return (
@@ -3180,15 +3395,62 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         })
       ),
   })
-  readonly snapshotProgram = conversationSnapshot(
+  private readonly readConversationSnapshot = conversationSnapshot(
     this.conversationService,
     this.conversationExecution,
     this.conversationJournal,
     () => this.snapshotMetadata(),
     (ids) => this.workspaceService.replyFilesForTurns(ids)
   )
+  readonly snapshotProgram = () =>
+    this.conversationPump
+      .reconcile()
+      .pipe(Effect.andThen(this.readConversationSnapshot()))
   readonly coordinationRunner = new CoordinationRunner(this)
-  readonly runner = new TurnRunner(this)
+  readonly runner: ConversationRunner<unknown> =
+    new ConversationRunner<unknown>({
+      run: (work) => this.actorRuntime.runPromise(work),
+      step: async (onAttempt) => {
+        const outcome = await this.step(onAttempt)
+        return outcome && outcome !== "yield" ? outcome.rescheduleAt : undefined
+      },
+      exhaust: (attempt, _error, eligible) =>
+        this.conversations.exhaustControl(
+          attempt.rootId,
+          attempt.revision,
+          attempt.phase,
+          attempt.phase === "stop"
+            ? "Stop could not be confirmed. Check the reply or try Stop again."
+            : "This reply could not be confirmed. Check the reply before continuing.",
+          eligible
+        ),
+      restore: () =>
+        Effect.gen({ self: this }, function* () {
+          yield* this.conversations.restoreControl()
+          const active = yield* this.conversations.active()
+          if (!active?.control?.unconfirmed || !active.session_id) return
+          const checked = yield* Effect.exit(
+            this.conversationPump.run("inspect", {
+              id: active.id,
+              revision: active.revision,
+            })
+          )
+          if (Exit.isFailure(checked))
+            yield* Effect.logError(
+              "Conversation cold recovery remains unconfirmed",
+              checked.cause
+            )
+        }),
+      nextWake: () =>
+        this.conversations
+          .active()
+          .pipe(
+            Effect.map((turn) =>
+              turn && !conversationUnconfirmed(turn) ? Date.now() : undefined
+            )
+          ),
+      notify: () => this.notifyConversation(),
+    })
   readonly compactor = new MemoryRunner(this, (work) =>
     this.ctx.waitUntil(work)
   )
@@ -3244,6 +3506,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   }
 
   async onStart() {
+    await this.runner.reconcile()
     await this.coordinationRunner.wake()
     await this.run(this.whatsappStore.recover())
     await this.whatsappRunner.reconcile()
@@ -3266,7 +3529,6 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       await this.browserCleanup.wake()
     if (await this.run(this.workspaceService.extractionPending()))
       await this.extraction.wake()
-    if (await this.run(this.active())) await this.runner.wake()
     await this.actorRuntime.runPromise(
       this.memoryMaintenance.recover().pipe(Effect.provide(WorkerTelemetry))
     )
@@ -4097,18 +4359,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
               )
             ),
           (id) =>
-            Effect.gen({ self: this }, function* () {
-              yield* agentNative("wake conversation", () => this.runner.wake())
-              yield* agentNative("wake routines", () =>
-                this.routineRunner.wake()
-              )
-              const run = yield* this.routines.cancelPendingRun(id)
-              if (run?.status === "queued") {
-                yield* this.conversationService.requestStop(run.turnId)
-                yield* this.access.cancel(run.turnId)
-              }
-              this.notifyConversation()
-            }).pipe(
+            this.stopRoutine(id).pipe(
               preserveFatal,
               Effect.mapError((cause) => {
                 switch (cause._tag) {
@@ -4335,6 +4586,14 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   }
   private conversationHttpProgram(request: Request, path: string) {
     return Effect.gen({ self: this }, function* () {
+      // Revocation retains a busy owner. A failed cleanup release must not
+      // prevent Stop from committing while that owner is still recorded.
+      if (`${request.method} ${path}` === "POST cancel") {
+        const input = yield* agentJson(request, CancelInput)
+        yield* this.stopConversation(input.operationId)
+        return Response.json({ ok: true }, { status: 202 })
+      }
+      yield* this.conversationPump.reconcile()
       const url = new URL(request.url)
       if (`${request.method} ${path}` === "GET export")
         return yield* exportResponse(
@@ -4443,9 +4702,14 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           )
         return yield* admissionResponse(this.retryMessage(input))
       }
-      if (`${request.method} ${path}` === "POST cancel") {
-        const input = yield* agentJson(request, CancelInput)
-        yield* this.stopConversation(input.operationId)
+      if (`${request.method} ${path}` === "POST recovery/check") {
+        const input = yield* agentJson(request, RecoveryInput)
+        yield* this.checkConversationReply(input.operationId, input.revision)
+        return Response.json({ ok: true })
+      }
+      if (`${request.method} ${path}` === "POST recovery/stop") {
+        const input = yield* agentJson(request, RecoveryInput)
+        yield* this.retryConversationStop(input.operationId, input.revision)
         return Response.json({ ok: true }, { status: 202 })
       }
 
@@ -4634,14 +4898,13 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   async snapshot(): Promise<ChatState> {
     return this.run(this.snapshotProgram())
   }
-  async step(): Promise<LifecycleJobOutcome> {
-    if (!(await this.familyAdmission())) return
-    this.installRemoteTools(await this.run(this.refreshRemoteTools()))
+  async step(
+    onAttempt?: (attempt: ConversationControlAttempt) => void
+  ): Promise<LifecycleJobOutcome> {
     const next = await this.actorRuntime.runPromise(
-      this.active().pipe(
-        Effect.andThen(this.conversationPump.run()),
-        Effect.provide(WorkerTelemetry)
-      )
+      this.conversationPump
+        .run("automatic", undefined, onAttempt)
+        .pipe(Effect.provide(WorkerTelemetry))
     )
     return next === undefined ? undefined : { rescheduleAt: next }
   }

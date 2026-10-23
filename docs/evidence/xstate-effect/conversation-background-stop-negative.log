@@ -1,0 +1,68 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-effect-standard/durable-pi
+
+ ❯ tests/background-mailbox.test.ts (60 tests | 3 failed | 57 skipped) 208ms
+   × arms Conversation cleanup separately before atomically stopping a delivered background report 116ms
+   × failed Conversation discovery still revokes the delivered report and preserves Background cleanup plus all Causes 48ms
+   × expired Conversation discovery cannot borrow the fresh Background lease or renew report recovery 43ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/background-mailbox.test.ts > arms Conversation cleanup separately before atomically stopping a delivered background report
+AssertionError: expected -1 to be greater than or equal to 0
+ ❯ tests/background-mailbox.test.ts:1603:45
+    1601|   )
+    1602|   await Effect.runPromise(app.requestStop(19))
+    1603|   expect(order.indexOf("conversation-arm")).toBeGreaterThanOrEqual(0)
+       |                                             ^
+    1604|   expect(order.indexOf("conversation-arm")).toBeLessThan(
+    1605|     order.indexOf("commit")
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  tests/background-mailbox.test.ts > failed Conversation discovery still revokes the delivered report and preserves Background cleanup plus all Causes
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/background-mailbox.test.ts:1677:32
+    1675|   )
+    1676|   const exit = await Effect.runPromiseExit(app.requestStop(19))
+    1677|   expect(Exit.isFailure(exit)).toBe(true)
+       |                                ^
+    1678|   if (Exit.isFailure(exit)) {
+    1679|     expect(Cause.pretty(exit.cause)).toContain("conversation arm faile…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  tests/background-mailbox.test.ts > expired Conversation discovery cannot borrow the fresh Background lease or renew report recovery
+AssertionError: expected undefined to match object { discoveryDeadline: 1792758260635 }
+
+- Expected:
+{
+  "discoveryDeadline": 1792758260635,
+}
+
++ Received:
+undefined
+
+ ❯ tests/background-mailbox.test.ts:1738:21
+    1736|   )
+    1737|   await Effect.runPromise(app.requestStop(19))
+    1738|   expect(forwarded).toMatchObject({ discoveryDeadline: expiredDeadline…
+       |                     ^
+    1739|   expect(backgroundDeadline).toBeGreaterThan(expiredDeadline)
+    1740|   const stopped = Effect.runSync(f.conversations.get(f.handoff.reportI…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 57 skipped (60)
+   Start at  13:24:19
+   Duration  724ms (import 48%, tests 34%, transform 17%, setup 1%)
+

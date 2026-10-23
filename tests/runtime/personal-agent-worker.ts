@@ -1145,14 +1145,23 @@ export class PersonalAgentProbe extends PersonalAgent {
           operationId: "original-task",
           text: "Original queued task.",
         },
-        { pending: true, files: [], content: [] }
+        { pending: true, files: [], content: [] },
+        undefined,
+        undefined,
+        { discoveryDeadline: await this.runner.armDiscovery() }
       )
     )
     await this.actorRuntime.runPromise(
-      this.conversations.admit({
-        operationId: "newer-task",
-        text: "Newer queued task.",
-      })
+      this.conversations.admit(
+        {
+          operationId: "newer-task",
+          text: "Newer queued task.",
+        },
+        undefined,
+        undefined,
+        undefined,
+        { discoveryDeadline: await this.runner.armDiscovery() }
+      )
     )
     const tasks = localTaskControls(this)
     const before = await this.actorRuntime.runPromise(tasks.list())
@@ -2163,7 +2172,8 @@ export class PersonalAgentProbe extends PersonalAgent {
             },
             undefined,
             [],
-            route
+            route,
+            { discoveryDeadline: await this.runner.armDiscovery() }
           )
         )
       ).turn
@@ -2210,7 +2220,11 @@ export class PersonalAgentProbe extends PersonalAgent {
         transactionGroup: this.db,
         stop: (id: string) =>
           this.conversations.requestStop(id).pipe(Effect.asVoid),
-        admit: (h: typeof row.handoff, report: string) =>
+        admit: (
+          h: typeof row.handoff,
+          report: string,
+          discoveryDeadline: number
+        ) =>
           this.conversations
             .admit(
               {
@@ -2220,22 +2234,26 @@ export class PersonalAgentProbe extends PersonalAgent {
               },
               undefined,
               [],
-              h.route
+              h.route,
+              { discoveryDeadline }
             )
             .pipe(Effect.map((result) => result.turn.id)),
       }
       const failed = await this.actorRuntime.runPromiseExit(
-        this.backgroundMailbox.deliver({
-          ...admission,
-          admit: (h, report) =>
-            admission
-              .admit(h, report)
-              .pipe(
-                Effect.andThen(
-                  Effect.die(new Error("Synthetic report admission fault"))
-                )
-              ),
-        })
+        this.backgroundMailbox.deliver(
+          {
+            ...admission,
+            admit: (h, report, discoveryDeadline) =>
+              admission
+                .admit(h, report, discoveryDeadline)
+                .pipe(
+                  Effect.andThen(
+                    Effect.die(new Error("Synthetic report admission fault"))
+                  )
+                ),
+          },
+          await this.runner.armDiscovery()
+        )
       )
       const rolledBack =
         Exit.isFailure(failed) &&
@@ -2248,10 +2266,16 @@ export class PersonalAgentProbe extends PersonalAgent {
       if (!rolledBack)
         throw new Error("Native background transaction did not roll back")
       const delivered = await this.actorRuntime.runPromise(
-        this.backgroundMailbox.deliver(admission)
+        this.backgroundMailbox.deliver(
+          admission,
+          await this.runner.armDiscovery()
+        )
       )
       const replay = await this.actorRuntime.runPromise(
-        this.backgroundMailbox.deliver(admission)
+        this.backgroundMailbox.deliver(
+          admission,
+          await this.runner.armDiscovery()
+        )
       )
       const turn = (await this.actorRuntime.runPromise(
         this.conversations.get(row.handoff.reportId)
@@ -2382,10 +2406,16 @@ export class PersonalAgentProbe extends PersonalAgent {
     }
     if (action === "stop") {
       await this.actorRuntime.runPromise(
-        this.conversations.admit({
-          operationId: "00000000-0000-4000-8000-000000000004",
-          text: "Stop before dispatch.",
-        })
+        this.conversations.admit(
+          {
+            operationId: "00000000-0000-4000-8000-000000000004",
+            text: "Stop before dispatch.",
+          },
+          undefined,
+          undefined,
+          undefined,
+          { discoveryDeadline: await this.runner.armDiscovery() }
+        )
       )
       const stopped = await this.authenticatedFetch(
         new Request("https://internal/api/agent/cancel", {
@@ -2931,10 +2961,16 @@ export class PersonalAgentProbe extends PersonalAgent {
     if (action === "planning") {
       const turnId = "00000000-0000-4000-8000-000000000012"
       await this.actorRuntime.runPromise(
-        this.conversations.admit({
-          operationId: turnId,
-          text: "Inspect the synthetic checklist in a private plan.",
-        })
+        this.conversations.admit(
+          {
+            operationId: turnId,
+            text: "Inspect the synthetic checklist in a private plan.",
+          },
+          undefined,
+          undefined,
+          undefined,
+          { discoveryDeadline: await this.runner.armDiscovery() }
+        )
       )
       await this.actorRuntime.runPromise(this.conversations.prepare(turnId))
       const source = await this.actorRuntime.runPromise(this.planSource(turnId))
@@ -2997,28 +3033,38 @@ export class PersonalAgentProbe extends PersonalAgent {
       )
       const reopened = await response.json()
       await this.actorRuntime.runPromise(this.plans.cancel(turnId))
-      await this.actorRuntime.runPromise(this.conversations.requestStop(turnId))
-      const root = (await this.actorRuntime.runPromise(
+      // Discovery may already have given the pump a live control owner. Use
+      // production Stop and observe its joined release instead of trying to
+      // complete that owner's row from this fixture request.
+      await this.actorRuntime.runPromise(this.stopConversation(turnId))
+      let stopped = await this.actorRuntime.runPromise(
         this.conversations.get(turnId)
-      ))!
-      if (
-        !(await this.actorRuntime.runPromise(
-          this.conversations.finish(
-            root,
-            (
-              await this.actorRuntime.runPromise(
-                this.conversations.members(turnId)
-              )
-            ).map((member) => ({
-              id: member.id,
-              delivery: "unanswered" as const,
-            })),
-            "",
-            null
-          )
-        ))
       )
-        throw new Error("Native fixture planning turn did not stop")
+      for (
+        let attempt = 0;
+        attempt < 200 &&
+        (stopped?.status !== "cancelled" ||
+          !stopped.control ||
+          stopped.control.owner !== null);
+        attempt++
+      ) {
+        await new Promise((resolve) => setTimeout(resolve, 25))
+        stopped = await this.actorRuntime.runPromise(
+          this.conversations.get(turnId)
+        )
+      }
+      if (
+        stopped?.status !== "cancelled" ||
+        !stopped.control ||
+        stopped.control.owner !== null ||
+        stopped.control.unconfirmed !== null
+      )
+        throw new Error(
+          `Native fixture planning turn did not stop: ${JSON.stringify({
+            status: stopped?.status,
+            control: stopped?.control,
+          })}`
+        )
       return Response.json({
         first,
         replay,
@@ -3310,10 +3356,20 @@ export class PersonalAgentProbe extends PersonalAgent {
             (_, n) => `membership-main-${n}`
           )
           for (const [n, id] of ids.entries()) {
-            yield* this.conversations.admit({
-              operationId: id,
-              text: "Retained synthetic history",
-            })
+            yield* this.conversations.admit(
+              {
+                operationId: id,
+                text: "Retained synthetic history",
+              },
+              undefined,
+              undefined,
+              undefined,
+              {
+                discoveryDeadline: yield* Effect.promise(() =>
+                  this.runner.armDiscovery()
+                ),
+              }
+            )
             yield* this.conversations.saveSession(id, String(500000 + n))
             this.fixtureRun(
               "UPDATE chat_turns SET status='done' WHERE id=?",

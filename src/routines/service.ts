@@ -32,7 +32,8 @@ export class Routines extends Context.Service<
     ) => Effect.Effect<{ applied: boolean }, RoutineError>
     claimDue: () => Effect.Effect<RoutineRun | undefined, RoutineError>
     deliver: (
-      admission: RoutineAdmission
+      admission: RoutineAdmission,
+      discoveryDeadline: number
     ) => Effect.Effect<
       RoutineRun | undefined,
       RoutineError | ConversationFailure
@@ -54,7 +55,8 @@ export class Routines extends Context.Service<
 export interface RoutineAdmission {
   readonly transactionGroup: object
   readonly admit: (
-    run: RoutineRun
+    run: RoutineRun,
+    discoveryDeadline: number
   ) => Effect.Effect<string, ConversationFailure>
 }
 
@@ -109,23 +111,24 @@ export function makeRoutineApplication(
       tx.cancelOperation(id)
     ),
     claimDue: Effect.fn("Routines.claimDue")(() => tx.claimDue()),
-    deliver: Effect.fn("Routines.deliver")((admission: RoutineAdmission) =>
-      Effect.suspend(() => {
-        if (admission.transactionGroup !== records.transactionGroup)
-          throw new Error(
-            "Routine admission must share its storage transaction group."
+    deliver: Effect.fn("Routines.deliver")(
+      (admission: RoutineAdmission, discoveryDeadline: number) =>
+        Effect.suspend(() => {
+          if (admission.transactionGroup !== records.transactionGroup)
+            throw new Error(
+              "Routine admission must share its storage transaction group."
+            )
+          return tx.deliver((run) =>
+            admission.admit(run, discoveryDeadline).pipe(
+              Effect.map((id) => {
+                if (id !== run.turnId)
+                  throw new Error(
+                    "Routine admission returned a different turn identity."
+                  )
+              })
+            )
           )
-        return tx.deliver((run) =>
-          admission.admit(run).pipe(
-            Effect.map((id) => {
-              if (id !== run.turnId)
-                throw new Error(
-                  "Routine admission returned a different turn identity."
-                )
-            })
-          )
-        )
-      })
+        })
     ),
     finish: Effect.fn("Routines.finish")(
       (
