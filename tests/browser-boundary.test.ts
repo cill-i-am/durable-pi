@@ -162,8 +162,10 @@ it("native reset atomically rolls back retirement and generation on a failed com
       ),
   }
   const f = fixture(db)
-  Effect.runSync(
-    f.ledger.update(0, {
+  f.db.run(
+    "INSERT INTO bot_browser VALUES (1,?)",
+    JSON.stringify({
+      ...Effect.runSync(f.ledger.read()),
       session: { ...session, expiresAt: Date.now() + 600000 },
     })
   )
@@ -197,6 +199,9 @@ it("historical codecs preserve restricted defaults, reject corrupt records as de
     "INSERT INTO bot_browser VALUES (1,?)",
     JSON.stringify({
       ...legacy,
+      schemaVersion: undefined,
+      workflowVersion: undefined,
+      attemptId: undefined,
       controller: undefined,
       unrestricted: undefined,
     })
@@ -313,8 +318,10 @@ it("interrupted native navigation settles under the tab permit and cannot publis
     abort = new AbortController(),
     f = fixture()
   let settled = false
-  Effect.runSync(
-    f.ledger.update(0, {
+  f.db.run(
+    "INSERT INTO bot_browser VALUES (1,?)",
+    JSON.stringify({
+      ...Effect.runSync(f.ledger.read()),
       session: { ...session, expiresAt: Date.now() + 600000 },
     })
   )

@@ -240,7 +240,10 @@ describe("Code execution", () => {
     const closing = f.runtime.dispose().then(() => {
       disposed = true
     })
-    await Promise.resolve()
+    await new Promise<void>((resolve) => {
+      if (signal.aborted) resolve()
+      else signal.addEventListener("abort", () => resolve(), { once: true })
+    })
     expect(signal.aborted).toBe(true)
     expect(disposed).toBe(false)
     finish(output)

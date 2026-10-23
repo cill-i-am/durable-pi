@@ -1,0 +1,67 @@
+{
+  "base": "0cf6861ab5a89686d3956e0f85f480446c1f9bf8",
+  "scope": "B09 Browser and Execution; 28 source/test files unchanged from all local gates; domain document updated only to link final evidence",
+  "source": {
+    "src/browser/adapters/cloudflare.ts": "13a4e0e210a62a14d796eb4a82557efc6731899109d86a60eb505c620e39ae31",
+    "src/browser/adapters/sqlite.ts": "aec15b4c51e6a3762d6c736791750faf47f8fd8ca856feab943e6d30184974ea",
+    "src/browser/browser.ts": "bc730298cd0c5d1255c2a4762e223004d9f73e49016e9ce1c25b7f78a7308f96",
+    "src/browser/connection.machine.ts": "47b9c31909cb4d879ba7d9f1e4da9a116797c182d91eac4c0c06579b70a33fba",
+    "src/browser/contracts.ts": "93a217d0286fad2afb3b7d4eb37c965c7badde7358ea4d2634c623662cfc05c1",
+    "src/browser/domain.ts": "ead2360d18a52f840bce51beb0ce578db1966d29224440cb2d1da33a39930684",
+    "src/browser/operation.machine.ts": "9a84f7bfafe60e22f1f24d56be2dc8935c1103e13d47fb728d3887c407e38e23",
+    "src/browser/operation.ts": "c2de4f7407ed062cd215a03b0af5c988f73262831458db7103dea450bdfb61a1",
+    "src/browser/record.ts": "e8df4becb1ddeea20103adf84de91590e196bff7bcbf78dc09a02cbe7bd34d15",
+    "src/browser/repository.ts": "c800de9632bde538c02126a9cc425e12b8c48a7dc055185057943aa1774e12b8",
+    "src/browser/retirement.machine.ts": "0e2f51bd008478fd4e705bc4a375a813ade52f473b91bfe7f358327d98b9d119",
+    "src/browser/retirement.ts": "c0ab08449695cf76e41a6998e28240625120506e44b5e98364e4dcd71b6c18ca",
+    "src/browser/session.machine.ts": "ff9b2b3c33619c7001b321f4e837e543e7c42cbf92ebee5f78f94fd967c3e6b1",
+    "src/execution/adapters/sqlite.ts": "fbdf1509fea57159b834a6029310abc5a847aaaa463fc73bcb009142676fb436",
+    "src/execution/domain.ts": "d84724e55684df8fc803aa555ad2e0062843a3613fe206abc9713d815283bcbd",
+    "src/execution/driver.machine.ts": "ddbd8b24619262fdd659d7088a1209dfef6acdadf73ed981b62204ec9767ac23",
+    "src/execution/driver.ts": "c7825a8b81f625ca85d42ddfade1ef7c05493fdd313ca5c06eb61890dd146536",
+    "src/execution/host.machine.ts": "5eae06246ab1b38e2660de9401a458490e864da795fcae80a5589c720674ec9a",
+    "src/execution/ledger.ts": "90bcb553f1c63bce3b9719cada3d5636e346100a867a293aedcfe1b3dbfa94a6",
+    "src/execution/run.machine.ts": "723a8d6dfd2b0be29b881731b145e6bb3e7a95ea6902363230526caaf19d1d5b",
+    "src/execution/service.ts": "cd955796f66b41e5a9dd68f1f67c7b5fdfeebe7e90efc47df3218de84a64e18c",
+    "tests/browser-boundary.test.ts": "4532ef4a245f41a3e773726695ea97517d4ca7587d56e91325701d655cd1086f",
+    "tests/browser-lifecycle.test.ts": "a8437e4781e56eeefeb75ed133f7b7995474affca97a4ba6f2ef3d34b8419434",
+    "tests/browser.test.ts": "5c9962d49aa429583b7bcb7d0df2b535b5064d2edb9b89dd747a31b6570200e4",
+    "tests/execution-boundary.test.ts": "616d4af872105ed45a5720e1623a60ea4fb3caff87144157e121fd1942f1534f",
+    "tests/execution-lifecycle.test.ts": "919a0cb590c1e69503a5588e831824b43fbba5cfbc5932ef1139ad6cde31bbf2",
+    "tests/execution.test.ts": "616de5060388b0176d4ce7b74ae029f93c4e510da643aa4730b7bdf654b8c4fb",
+    "tests/pi-browser-recovery.test.ts": "7a16e1e447a4acf8355dc75f8fd51d4794cd2e05da100c6dade4eb923d6265bc"
+  },
+  "artifacts": [
+    {
+      "path": "docs/evidence/xstate-effect/b09-static.log.txt",
+      "sha256": "c7eee028072e6f00e7b4609a395783b78b0defab38089356c3581e67b0b4e88b",
+      "bytes": 655
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b09-unit-build.log.txt",
+      "sha256": "4dd5a714e6bb1f8111c060adbb8d49d7068bd663cc3422c78ebd75491400303d",
+      "bytes": 25085
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b09-browser.log.txt",
+      "sha256": "e12004b5044767c1fcf30ffbcb85fa3785cd6c9d21ed9346022e06099703caf7",
+      "bytes": 39946
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b09-native.log.txt",
+      "sha256": "77f5745f1f33caf7b7aba510d236eed432a1aaceeb5f3f3a1ce8ae09baf71b0b",
+      "bytes": 25814
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b09-focused.log.txt",
+      "sha256": "f2a261b577455da42eedf0263b5135ffeb74acdead24b018ef8e7918b4357e11",
+      "bytes": 434
+    },
+    {
+      "path": "docs/evidence/xstate-effect/b09-gate-results.log.txt",
+      "sha256": "d9fba339a2b4658b43325cf14258c73b87b9a83f126c057efb0738e72526a3db",
+      "bytes": 2444
+    }
+  ],
+  "nativeLimits": "Synthetic providers; explicit native Execution evidence, no specialized native Browser provider fixture; no production rollout."
+}

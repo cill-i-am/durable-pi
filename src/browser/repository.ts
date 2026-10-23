@@ -1,11 +1,8 @@
 import type { Effect } from "effect"
 import { Schema } from "effect"
 
-import type {
-  BrowserRecord,
-  BrowserController,
-  BrowserFailure,
-} from "./contracts"
+import type { BrowserRecord, BrowserFailure } from "./contracts"
+import type { BrowserEvent } from "./session.machine"
 
 export class BrowserStorageError extends Schema.TaggedError<BrowserStorageError>()(
   "BrowserStorageError",
@@ -19,20 +16,8 @@ export interface BrowserRepository {
   retire: (id: string) => Effect.Effect<void, BrowserStorageError>
   retired: () => Effect.Effect<string[], BrowserStorageError>
   forget: (id: string) => Effect.Effect<void, BrowserStorageError>
-  // Generation checks and writes join the same actor transaction.
-  update: (
-    generation: number,
-    patch: Partial<
-      Pick<BrowserRecord, "status" | "session" | "capture" | "error">
-    >
-  ) => Effect.Effect<BrowserRecord, BrowserStorageError | BrowserFailure>
-  reset: (
-    generation: number,
-    hosts: readonly string[],
-    unrestricted?: boolean
-  ) => Effect.Effect<BrowserRecord, BrowserStorageError | BrowserFailure>
-  transfer: (
-    generation: number,
-    controller: BrowserController
+  // Event decision and persistence join the same actor transaction.
+  advance: (
+    event: BrowserEvent
   ) => Effect.Effect<BrowserRecord, BrowserStorageError | BrowserFailure>
 }
