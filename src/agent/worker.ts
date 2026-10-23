@@ -529,18 +529,20 @@ import { transcribeAudio } from "../workspace/adapters/audio"
 import { documentService } from "../workspace/adapters/document-service"
 import { filesRequest } from "../workspace/adapters/http"
 import { prepareImage } from "../workspace/adapters/images"
+import {
+  WorkspaceRunner,
+  observeWorkspaceSchedule,
+} from "../workspace/adapters/lifecycle"
 import { workspaceLayer } from "../workspace/adapters/storage"
 import { workspaceTools } from "../workspace/adapters/tools"
 import { videoService } from "../workspace/adapters/video-service"
 import { WorkspaceAdmission } from "../workspace/admission"
-import {
-  workspaceExtractionCycle,
-  workspaceExtractionFailure,
-} from "../workspace/application"
+import { workspaceExtractionCycle } from "../workspace/application"
 import {
   WorkspaceUnavailable,
   WorkspaceReadOnly,
   messageArchiveText,
+  type FileError,
 } from "../workspace/files"
 import { Workspace } from "../workspace/workspace"
 import { agentGateway } from "./adapters/gateway"
@@ -676,22 +678,6 @@ class BackupRunner extends MaintenanceRunner {
         ),
       retain
     )
-  }
-}
-
-class ExtractionRunner extends TurnRunner {
-  constructor(owner: PersonalAgent) {
-    super(owner, "workspace-extraction")
-  }
-  onJob(): Promise<LifecycleJobOutcome> {
-    return this.owner.actorRuntime
-      .runPromise(workspaceExtractionCycle())
-      .then((next) => (next === undefined ? undefined : { rescheduleAt: next }))
-  }
-  onJobError(): Promise<LifecycleJobOutcome> {
-    return this.owner.actorRuntime
-      .runPromise(workspaceExtractionFailure)
-      .then((next) => ({ rescheduleAt: next }))
   }
 }
 
@@ -1217,6 +1203,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           ),
           image: prepareImage(this.env.IMAGES),
           audio: transcribeAudio(this.env.AI),
+          arm: (): Effect.Effect<number, WorkspaceUnavailable> =>
+            observeWorkspaceSchedule("arm file preparation discovery", () =>
+              this.extraction.armDiscovery()
+            ),
         }
       ),
       Layer.unwrap(
@@ -3503,7 +3493,17 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     this.ctx.waitUntil(work)
   )
   readonly backups = new BackupRunner(this, (work) => this.ctx.waitUntil(work))
-  readonly extraction = new ExtractionRunner(this)
+  readonly extraction: WorkspaceRunner<FileError> =
+    new WorkspaceRunner<FileError>({
+      run: (work) => this.actorRuntime.runPromise(work),
+      step: (onClaim) =>
+        this.actorRuntime.runPromise(workspaceExtractionCycle(onClaim)),
+      restore: () => this.workspaceService.restorePreparation(),
+      nextWake: () => this.workspaceService.nextPreparationWake(),
+      exhaust: (claim, current) =>
+        this.workspaceService.exhaustPreparation(claim, current),
+      notify: () => this.notifyConversation(),
+    })
   readonly browserCleanup = new BrowserRunner(this)
   readonly webApps = new WebApps(
     this.appService,
@@ -3574,8 +3574,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     await this.run(this.browser.recover())
     if (await this.run(this.browser.maintenancePending()))
       await this.browserCleanup.wake()
-    if (await this.run(this.workspaceService.extractionPending()))
-      await this.extraction.wake()
+    await this.extraction.reconcile()
     await this.actorRuntime.runPromise(
       this.memoryMaintenance.recover().pipe(Effect.provide(WorkerTelemetry))
     )

@@ -1,4 +1,4 @@
-import { Context, Effect, Exit, Layer, Scope } from "effect"
+import { Clock, Context, Effect, Exit, Layer, Scope } from "effect"
 
 import { BotConfigurationStore } from "../../src/agents/adapters/configuration"
 import { homeAgentId } from "../../src/agents/domain"
@@ -49,6 +49,10 @@ export async function probeAttachments(
             "native-attachments",
             () => Effect.succeed(true),
             {
+              // This store-only fixture resumes extraction manually after
+              // restart; the finite lease is not proof of alarm recovery.
+              arm: () =>
+                Clock.currentTimeMillis.pipe(Effect.map((now) => now + 60_000)),
               document: () =>
                 Effect.succeed({
                   text: "NATIVE_PREPARATION_RESTART_OK",

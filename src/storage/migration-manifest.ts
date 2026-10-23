@@ -276,6 +276,23 @@ export const agentMigrationManifest = {
         "UPDATE `agent_messages` SET `phase` = CASE `state` WHEN 'accepted' THEN 'pending' WHEN 'delivered' THEN 'delivered' WHEN 'failed' THEN 'failed' END;",
       ],
     },
+    {
+      id: "20261023134558_workspace_lifecycle",
+      checksum:
+        "9c9afeb13f15b4ebe51215e1d1df32d91e3d92165226f31df4e3b0a9c7fa6781",
+      statements: [
+        "ALTER TABLE `workspace_extractions` ADD `lifecycle_version` integer DEFAULT 0 NOT NULL;",
+        "ALTER TABLE `workspace_extractions` ADD `attempt_id` text;",
+        "ALTER TABLE `workspace_extractions` ADD `artifact_hash` text;",
+        "ALTER TABLE `workspace_extractions` ADD `recovery_deadline` integer DEFAULT 0 NOT NULL;",
+        "ALTER TABLE `workspace_files` ADD `lifecycle_version` integer DEFAULT 0 NOT NULL;",
+        "ALTER TABLE `workspace_files` ADD `attempt_id` text;",
+        "ALTER TABLE `workspace_video_preparations` ADD `lifecycle_version` integer DEFAULT 0 NOT NULL;",
+        "ALTER TABLE `workspace_video_preparations` ADD `attempt_id` text;",
+        "ALTER TABLE `workspace_video_preparations` ADD `artifact_hash` text;",
+        "ALTER TABLE `workspace_video_preparations` ADD `recovery_deadline` integer DEFAULT 0 NOT NULL;",
+      ],
+    },
   ],
   schema: [
     {
@@ -726,12 +743,12 @@ export const agentMigrationManifest = {
     {
       type: "table",
       name: "workspace_extractions",
-      sql: 'CREATE TABLE `workspace_extractions` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`status` text DEFAULT \'pending\' NOT NULL,\n\t`attempts` integer DEFAULT 0 NOT NULL,\n\t`pages` integer DEFAULT 0 NOT NULL,\n\t`readPages` integer DEFAULT 0 NOT NULL,\n\t`characters` integer DEFAULT 0 NOT NULL,\n\t`truncated` integer DEFAULT 0 NOT NULL,\n\t`error` text,\n\tCONSTRAINT `fk_workspace_extractions_id_workspace_files_id_fk` FOREIGN KEY (`id`) REFERENCES `workspace_files`(`id`) ON DELETE CASCADE,\n\tCONSTRAINT "workspace_extractions_status_check" CHECK("status" in (\'pending\', \'running\', \'ready\', \'empty\', \'failed\')),\n\tCONSTRAINT "workspace_extractions_truncated_check" CHECK("truncated" in (0, 1)),\n\tCONSTRAINT "workspace_extractions_attempts_check" CHECK("attempts" >= 0),\n\tCONSTRAINT "workspace_extractions_pages_check" CHECK("pages" >= 0),\n\tCONSTRAINT "workspace_extractions_readPages_check" CHECK("readPages" >= 0),\n\tCONSTRAINT "workspace_extractions_characters_check" CHECK("characters" >= 0)\n)',
+      sql: 'CREATE TABLE `workspace_extractions` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`status` text DEFAULT \'pending\' NOT NULL,\n\t`attempts` integer DEFAULT 0 NOT NULL,\n\t`pages` integer DEFAULT 0 NOT NULL,\n\t`readPages` integer DEFAULT 0 NOT NULL,\n\t`characters` integer DEFAULT 0 NOT NULL,\n\t`truncated` integer DEFAULT 0 NOT NULL,\n\t`error` text, `lifecycle_version` integer DEFAULT 0 NOT NULL, `attempt_id` text, `artifact_hash` text, `recovery_deadline` integer DEFAULT 0 NOT NULL,\n\tCONSTRAINT `fk_workspace_extractions_id_workspace_files_id_fk` FOREIGN KEY (`id`) REFERENCES `workspace_files`(`id`) ON DELETE CASCADE,\n\tCONSTRAINT "workspace_extractions_status_check" CHECK("status" in (\'pending\', \'running\', \'ready\', \'empty\', \'failed\')),\n\tCONSTRAINT "workspace_extractions_truncated_check" CHECK("truncated" in (0, 1)),\n\tCONSTRAINT "workspace_extractions_attempts_check" CHECK("attempts" >= 0),\n\tCONSTRAINT "workspace_extractions_pages_check" CHECK("pages" >= 0),\n\tCONSTRAINT "workspace_extractions_readPages_check" CHECK("readPages" >= 0),\n\tCONSTRAINT "workspace_extractions_characters_check" CHECK("characters" >= 0)\n)',
     },
     {
       type: "table",
       name: "workspace_files",
-      sql: 'CREATE TABLE `workspace_files` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`name` text NOT NULL,\n\t`mime` text NOT NULL,\n\t`kind` text NOT NULL,\n\t`size` integer NOT NULL,\n\t`createdAt` text NOT NULL,\n\t`status` text NOT NULL,\n\t`trashed` integer DEFAULT 0 NOT NULL,\n\t`hash` text NOT NULL,\n\t`visionHash` text, `audio` text,\n\tCONSTRAINT "workspace_files_kind_check" CHECK("kind" in (\'image\', \'text\', \'video\', \'document\')),\n\tCONSTRAINT "workspace_files_status_check" CHECK("status" in (\'uploading\', \'ready\')),\n\tCONSTRAINT "workspace_files_trashed_check" CHECK("trashed" in (0, 1)),\n\tCONSTRAINT "workspace_files_size_check" CHECK("size" >= 0)\n)',
+      sql: 'CREATE TABLE `workspace_files` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`name` text NOT NULL,\n\t`mime` text NOT NULL,\n\t`kind` text NOT NULL,\n\t`size` integer NOT NULL,\n\t`createdAt` text NOT NULL,\n\t`status` text NOT NULL,\n\t`trashed` integer DEFAULT 0 NOT NULL,\n\t`hash` text NOT NULL,\n\t`visionHash` text, `audio` text, `lifecycle_version` integer DEFAULT 0 NOT NULL, `attempt_id` text,\n\tCONSTRAINT "workspace_files_kind_check" CHECK("kind" in (\'image\', \'text\', \'video\', \'document\')),\n\tCONSTRAINT "workspace_files_status_check" CHECK("status" in (\'uploading\', \'ready\')),\n\tCONSTRAINT "workspace_files_trashed_check" CHECK("trashed" in (0, 1)),\n\tCONSTRAINT "workspace_files_size_check" CHECK("size" >= 0)\n)',
     },
     {
       type: "index",
@@ -766,7 +783,7 @@ export const agentMigrationManifest = {
     {
       type: "table",
       name: "workspace_video_preparations",
-      sql: 'CREATE TABLE `workspace_video_preparations` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`status` text DEFAULT \'pending\' NOT NULL,\n\t`attempts` integer DEFAULT 0 NOT NULL,\n\t`duration` real DEFAULT 0 NOT NULL,\n\t`frames` integer DEFAULT 0 NOT NULL,\n\t`captions` integer DEFAULT 0 NOT NULL,\n\t`error` text,\n\t`retry_at` integer DEFAULT 0 NOT NULL,\n\tCONSTRAINT `fk_workspace_video_preparations_id_workspace_files_id_fk` FOREIGN KEY (`id`) REFERENCES `workspace_files`(`id`) ON DELETE CASCADE,\n\tCONSTRAINT "workspace_video_preparations_status_check" CHECK("status" in (\'pending\', \'running\', \'ready\', \'failed\')),\n\tCONSTRAINT "workspace_video_preparations_captions_check" CHECK("captions" in (0, 1)),\n\tCONSTRAINT "workspace_video_preparations_attempts_check" CHECK("attempts" >= 0),\n\tCONSTRAINT "workspace_video_preparations_duration_check" CHECK("duration" >= 0),\n\tCONSTRAINT "workspace_video_preparations_frames_check" CHECK("frames" >= 0),\n\tCONSTRAINT "workspace_video_preparations_retry_at_check" CHECK("retry_at" >= 0)\n)',
+      sql: 'CREATE TABLE `workspace_video_preparations` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`status` text DEFAULT \'pending\' NOT NULL,\n\t`attempts` integer DEFAULT 0 NOT NULL,\n\t`duration` real DEFAULT 0 NOT NULL,\n\t`frames` integer DEFAULT 0 NOT NULL,\n\t`captions` integer DEFAULT 0 NOT NULL,\n\t`error` text,\n\t`retry_at` integer DEFAULT 0 NOT NULL, `lifecycle_version` integer DEFAULT 0 NOT NULL, `attempt_id` text, `artifact_hash` text, `recovery_deadline` integer DEFAULT 0 NOT NULL,\n\tCONSTRAINT `fk_workspace_video_preparations_id_workspace_files_id_fk` FOREIGN KEY (`id`) REFERENCES `workspace_files`(`id`) ON DELETE CASCADE,\n\tCONSTRAINT "workspace_video_preparations_status_check" CHECK("status" in (\'pending\', \'running\', \'ready\', \'failed\')),\n\tCONSTRAINT "workspace_video_preparations_captions_check" CHECK("captions" in (0, 1)),\n\tCONSTRAINT "workspace_video_preparations_attempts_check" CHECK("attempts" >= 0),\n\tCONSTRAINT "workspace_video_preparations_duration_check" CHECK("duration" >= 0),\n\tCONSTRAINT "workspace_video_preparations_frames_check" CHECK("frames" >= 0),\n\tCONSTRAINT "workspace_video_preparations_retry_at_check" CHECK("retry_at" >= 0)\n)',
     },
   ],
 } as const

@@ -13,13 +13,23 @@ export type WorkspaceFile = Omit<FileInfo, "extraction" | "video" | "audio"> & {
   audio?: StoredAudio
   hash: string
   visionHash: string | null
+  lifecycleVersion?: number
+  attemptId?: string | null
 }
-export type DocumentJob = DocumentExtraction & { id: string; attempts: number }
-export type VideoJob = VideoPreparation & {
-  id: string
-  attempts: number
-  retryAt: number
+export type PreparationIdentity = {
+  lifecycleVersion?: number
+  attemptId?: string | null
+  artifactHash?: string | null
+  recoveryDeadline?: number
 }
+export type DocumentJob = DocumentExtraction &
+  PreparationIdentity & { id: string; attempts: number }
+export type VideoJob = VideoPreparation &
+  PreparationIdentity & {
+    id: string
+    attempts: number
+    retryAt: number
+  }
 export interface WorkspaceLedger {
   fileReply: (
     operationId: string
@@ -45,11 +55,8 @@ export interface WorkspaceLedger {
   >
   insert: (file: WorkspaceFile) => Effect.Effect<void, WorkspaceUnavailable>
   promotePdf: (id: string) => Effect.Effect<void, WorkspaceUnavailable>
-  ready: (
-    id: string,
-    visionHash?: string | null,
-    audio?: StoredAudio
-  ) => Effect.Effect<void, WorkspaceUnavailable>
+  saveUpload: (file: WorkspaceFile) => Effect.Effect<void, WorkspaceUnavailable>
+  restorePreparation: () => Effect.Effect<void, WorkspaceUnavailable>
   rename: (
     id: string,
     name: string
@@ -69,18 +76,24 @@ export interface WorkspaceLedger {
     WorkspaceUnavailable
   >
   pendingVideo: () => Effect.Effect<VideoJob | undefined, WorkspaceUnavailable>
-  enqueueDocument: (id: string) => Effect.Effect<void, WorkspaceUnavailable>
-  enqueueVideo: (id: string) => Effect.Effect<void, WorkspaceUnavailable>
-  claimDocument: (
-    job: DocumentJob
-  ) => Effect.Effect<boolean, WorkspaceUnavailable>
-  claimVideo: (job: VideoJob) => Effect.Effect<boolean, WorkspaceUnavailable>
+  pendingRecoveryDeadline: () => Effect.Effect<
+    number | undefined,
+    WorkspaceUnavailable
+  >
+  enqueueDocument: (
+    id: string,
+    recoveryDeadline: number
+  ) => Effect.Effect<void, WorkspaceUnavailable>
+  enqueueVideo: (
+    id: string,
+    recoveryDeadline: number
+  ) => Effect.Effect<void, WorkspaceUnavailable>
   saveDocument: (
     job: DocumentJob,
-    expectedAttempts?: number
+    expected?: { attempts: number; attemptId?: string | null }
   ) => Effect.Effect<void, WorkspaceUnavailable>
   saveVideo: (
     job: VideoJob,
-    expectedAttempts?: number
+    expected?: { attempts: number; attemptId?: string | null }
   ) => Effect.Effect<void, WorkspaceUnavailable>
 }

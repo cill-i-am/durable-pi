@@ -66,6 +66,10 @@ const fixture = Effect.gen(function* () {
       "attachments",
       () => Effect.succeed(true),
       {
+        // Store-only preparation probes advance extraction explicitly; this
+        // finite lease does not prove native alarm delivery.
+        arm: () =>
+          Clock.currentTimeMillis.pipe(Effect.map((now) => now + 60_000)),
         document: () =>
           Effect.gen(function* () {
             state.calls++

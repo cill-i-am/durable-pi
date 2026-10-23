@@ -1,4 +1,4 @@
-import { Cause, Effect, Exit, ManagedRuntime } from "effect"
+import { Clock, Cause, Effect, Exit, ManagedRuntime } from "effect"
 import { getResolvedPDFJS } from "unpdf"
 import { describe, expect, it, vi } from "vitest"
 
@@ -41,6 +41,8 @@ function fixture(canWrite = () => true) {
   const db = database()
   let runtime = ManagedRuntime.make(
     workspaceLayer(db, bucket, "test", () => Effect.sync(canWrite), {
+      arm: () =>
+        Clock.currentTimeMillis.pipe(Effect.map((now) => now + 60_000)),
       document: extractPdf,
     })
   )
@@ -54,8 +56,13 @@ function fixture(canWrite = () => true) {
       await runtime.dispose()
       runtime = ManagedRuntime.make(
         workspaceLayer(db, bucket, "test", () => Effect.sync(canWrite), {
+          arm: () =>
+            Clock.currentTimeMillis.pipe(Effect.map((now) => now + 60_000)),
           document: extractPdf,
         })
+      )
+      await runtime.runPromise(
+        Effect.flatMap(Workspace, (w) => w.restorePreparation())
       )
     },
     close: () => runtime.dispose(),
@@ -336,6 +343,7 @@ describe("PDF extraction", () => {
       "UPDATE workspace_extractions SET status='running',attempts=3 WHERE id=?",
       input.id
     )
+    await f.restart()
     await f.run((w) => w.extractNext())
     expect((await f.run((w) => w.list()))[0]?.extraction?.status).toBe("failed")
     await f.run((w) => w.retryExtraction(input.id))
