@@ -1,4 +1,4 @@
-import { Effect, Exit } from "effect"
+import { Clock, Effect, Exit } from "effect"
 import { describe, expect, it } from "vitest"
 
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
@@ -136,7 +136,17 @@ it("treats owner channel requests as user messages and empty audio requests as v
     thinking: "off",
   })
   const { turn } = await run(
-    store.admit({ operationId: "voice", text: "Voice" })
+    Clock.currentTimeMillis.pipe(
+      Effect.flatMap((now) =>
+        store.admit(
+          { operationId: "voice", text: "Voice" },
+          undefined,
+          undefined,
+          undefined,
+          { discoveryDeadline: now + 60_000 }
+        )
+      )
+    )
   )
   const input = { ...turn, text: "", attachments: [file] }
   expect(conversationPrompt(input, "", 1, "", [])).toContain(

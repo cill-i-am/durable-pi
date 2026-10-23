@@ -33,8 +33,8 @@ export const makeApps = (ledger: AppLedger) =>
     cancelOperation: Effect.fn("Apps.cancelOperation")((id) =>
       ledger.cancelOperation(id)
     ),
-    deliverNext: Effect.fn("Apps.deliverNext")((admission) =>
-      ledger.deliverNext(admission)
+    deliverNext: Effect.fn("Apps.deliverNext")((admission, discoveryDeadline) =>
+      ledger.deliverNext(admission, discoveryDeadline)
     ),
   })
 export const appApplication = (ledger: AppLedger) =>

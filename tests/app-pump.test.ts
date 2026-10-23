@@ -54,9 +54,15 @@ function fixture() {
   const apps = makeApps(store)
   const admission: AppAdmission = {
     transactionGroup: db,
-    admit: (event) =>
+    admit: (event, discoveryDeadline) =>
       conversations
-        .admit({ operationId: event.turnId, text: event.text })
+        .admit(
+          { operationId: event.turnId, text: event.text },
+          undefined,
+          [],
+          undefined,
+          { discoveryDeadline }
+        )
         .pipe(Effect.map(({ turn }) => turn.id)),
   }
   return { db, store, conversations, apps, admission }
@@ -73,6 +79,7 @@ it.effect(
         active: () => Effect.succeed(true),
         modelConnected: () => Effect.succeed(true),
         admission: f.admission,
+        prearm: () => Effect.sync(() => Date.now() + 60_000),
         wakeConversation: () => Effect.void,
         notify: () => Effect.die("Failed admission must not notify"),
       })
@@ -95,6 +102,7 @@ it.effect(
         active: () => Effect.succeed(true),
         modelConnected: () => Effect.succeed(false),
         admission: f.admission,
+        prearm: () => Effect.sync(() => Date.now() + 60_000),
         wakeConversation: () =>
           Effect.sync(() => {
             wakes++
@@ -114,10 +122,10 @@ it.effect(
 )
 class WakePermit extends Context.Service<
   WakePermit,
-  { wake: () => Effect.Effect<void> }
+  { prearm: () => Effect.Effect<number>; wake: () => Effect.Effect<void> }
 >()("test/apps/WakePermit") {}
 it.effect(
-  "preserves caller requirements, wakes before admission and notifies after its commit",
+  "preserves caller requirements, prearms before admission and wakes after its commit",
   () =>
     Effect.gen(function* () {
       const f = fixture()
@@ -127,6 +135,7 @@ it.effect(
         active: () => Effect.succeed(true),
         modelConnected: () => Effect.succeed(true),
         admission: f.admission,
+        prearm: () => WakePermit.use((permit) => permit.prearm()),
         wakeConversation: () => WakePermit.use((permit) => permit.wake()),
         notify: () =>
           Effect.sync(() => {
@@ -139,15 +148,22 @@ it.effect(
       })
       yield* pump.run().pipe(
         Effect.provideService(WakePermit, {
-          wake: () =>
+          prearm: () =>
             Effect.sync(() => {
               expect(Effect.runSync(f.conversations.recent())).toHaveLength(0)
               expect(Effect.runSync(f.store.pending())).toHaveLength(1)
+              order.push("prearm")
+              return Date.now() + 60_000
+            }),
+          wake: () =>
+            Effect.sync(() => {
+              expect(Effect.runSync(f.conversations.recent())).toHaveLength(1)
+              expect(Effect.runSync(f.store.pending())).toHaveLength(0)
               order.push("wake")
             }),
         })
       )
-      expect(order).toEqual(["wake", "notify"])
+      expect(order).toEqual(["prearm", "wake", "notify"])
     })
 )
 it.effect(
@@ -156,15 +172,22 @@ it.effect(
     Effect.gen(function* () {
       const f = fixture()
       for (let index = 0; index < 10; index++)
-        yield* f.conversations.admit({
-          operationId: crypto.randomUUID(),
-          text: `Queued ${index}`,
-        })
+        yield* f.conversations.admit(
+          {
+            operationId: crypto.randomUUID(),
+            text: `Queued ${index}`,
+          },
+          undefined,
+          [],
+          undefined,
+          { discoveryDeadline: Date.now() + 60_000 }
+        )
       let notifications = 0
       const pump = appEventPump(f.apps, {
         active: () => Effect.succeed(true),
         modelConnected: () => Effect.succeed(true),
         admission: f.admission,
+        prearm: () => Effect.sync(() => Date.now() + 60_000),
         wakeConversation: () => Effect.void,
         notify: () =>
           Effect.sync(() => {
@@ -176,5 +199,112 @@ it.effect(
       expect(notifications).toBe(0)
       expect(Effect.runSync(f.store.pending())).toHaveLength(1)
       expect(Effect.runSync(f.conversations.recent())).toHaveLength(10)
+    })
+)
+
+it.effect(
+  "does not consume the event when retained discovery cannot be armed",
+  () =>
+    Effect.gen(function* () {
+      const f = fixture(),
+        failure = new Error("Discovery unavailable")
+      const pump = appEventPump(f.apps, {
+        active: () => Effect.succeed(true),
+        modelConnected: () => Effect.succeed(true),
+        prearm: () => Effect.fail(failure),
+        admission: f.admission,
+        wakeConversation: () => Effect.die("No committed admission"),
+        notify: () => Effect.die("No committed admission"),
+      })
+      expect(yield* pump.run().pipe(Effect.result)).toMatchObject({
+        _tag: "Failure",
+        failure,
+      })
+      expect(yield* f.store.pending()).toHaveLength(1)
+      expect(yield* f.conversations.recent()).toHaveLength(0)
+    })
+)
+it.effect(
+  "rolls back both owners when the supplied discovery lease has expired",
+  () =>
+    Effect.gen(function* () {
+      const f = fixture()
+      const pump = appEventPump(f.apps, {
+        active: () => Effect.succeed(true),
+        modelConnected: () => Effect.succeed(true),
+        prearm: () => Clock.currentTimeMillis,
+        admission: f.admission,
+        wakeConversation: () => Effect.die("No committed admission"),
+        notify: () => Effect.die("No committed admission"),
+      })
+      expect(yield* pump.run().pipe(Effect.result)).toMatchObject({
+        _tag: "Failure",
+        failure: {
+          _tag: "ConversationStorageError",
+          operation: "admission discovery",
+        },
+      })
+      expect(yield* f.store.pending()).toHaveLength(1)
+      expect(yield* f.conversations.recent()).toHaveLength(0)
+    })
+)
+it.effect(
+  "preserves one committed admission after the immediate wake fails",
+  () =>
+    Effect.gen(function* () {
+      const f = fixture(),
+        failure = new Error("Immediate wake unavailable")
+      let admissions = 0,
+        wakes = 0
+      const pump = appEventPump(f.apps, {
+        active: () => Effect.succeed(true),
+        modelConnected: () => Effect.succeed(true),
+        prearm: () => Effect.sync(() => Date.now() + 60_000),
+        admission: {
+          transactionGroup: f.db,
+          admit: (event, discoveryDeadline) => {
+            admissions++
+            return f.admission.admit(event, discoveryDeadline)
+          },
+        },
+        wakeConversation: () =>
+          Effect.suspend(() => {
+            wakes++
+            return Effect.fail(failure)
+          }),
+        notify: () => Effect.die("The wake failure must propagate"),
+      })
+      expect(yield* pump.run().pipe(Effect.result)).toMatchObject({
+        _tag: "Failure",
+        failure,
+      })
+      expect(yield* f.store.pending()).toHaveLength(0)
+      expect(yield* f.conversations.recent()).toHaveLength(1)
+      yield* pump.run()
+      expect(admissions).toBe(1)
+      expect(wakes).toBe(1)
+    })
+)
+it.effect(
+  "does not wake when another transaction already consumed the pending event",
+  () =>
+    Effect.gen(function* () {
+      const f = fixture()
+      const pump = appEventPump(f.apps, {
+        active: () => Effect.succeed(true),
+        modelConnected: () => Effect.succeed(true),
+        prearm: () =>
+          Effect.gen(function* () {
+            const discoveryDeadline = Date.now() + 60_000
+            yield* f.apps.deliverNext(f.admission, discoveryDeadline)
+            return discoveryDeadline
+          }),
+        admission: f.admission,
+        wakeConversation: () =>
+          Effect.die("This invocation did not commit an admission"),
+        notify: () => Effect.void,
+      })
+      yield* pump.run()
+      expect(yield* f.conversations.recent()).toHaveLength(1)
     })
 )

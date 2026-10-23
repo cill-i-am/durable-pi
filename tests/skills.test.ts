@@ -1,4 +1,4 @@
-import { Cause, Effect, Exit, Schema } from "effect"
+import { Clock, Cause, Effect, Exit, Schema } from "effect"
 import { describe, expect, it } from "vitest"
 
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
@@ -257,7 +257,9 @@ describe("versioned owner skills", () => {
       text: "Draft a note",
     }
     const admitted = Effect.runSync(
-      turns.admit(submission, undefined, [skill])
+      turns.admit(submission, undefined, [skill], undefined, {
+        discoveryDeadline: Effect.runSync(Clock.currentTimeMillis) + 60_000,
+      })
     ).turn
     expect(admitted.skills).toEqual([
       { id: skill.id, name: skill.name, revision: 1 },
@@ -283,7 +285,9 @@ describe("versioned owner skills", () => {
           mode: "steer",
         },
         undefined,
-        [changed]
+        [changed],
+        undefined,
+        { discoveryDeadline: Effect.runSync(Clock.currentTimeMillis) + 60_000 }
       )
     ).turn
     expect(steer.skills).toEqual(admitted.skills)

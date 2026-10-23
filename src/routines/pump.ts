@@ -1,4 +1,4 @@
-import { Clock, Effect } from "effect"
+import { Cause, Clock, Effect, Exit } from "effect"
 
 import type { Turn } from "../conversations/turns"
 import { preserveFatal } from "../shared/effect"
@@ -9,9 +9,10 @@ export interface RoutineHost<TError> {
     id: string
   ) => Effect.Effect<Pick<Turn, "id" | "status" | "error"> | undefined, TError>
   modelConnected: () => Effect.Effect<boolean, TError>
+  prearm: () => Effect.Effect<number, TError>
   wakeConversation: () => Effect.Effect<void, TError>
   admission: RoutineAdmission
-  stop: (id: string) => Effect.Effect<void, TError>
+  stop: (id: string, discoveryDeadline?: number) => Effect.Effect<void, TError>
   notify: () => Effect.Effect<void, TError>
 }
 
@@ -43,8 +44,23 @@ export function routinePump<TError>(
         )
           yield* routines.finish(turn.id, turn.status, turn.error)
         else if (!(yield* routines.canRun(turn.id))) {
+          yield* Effect.uninterruptibleMask((restore) =>
+            Effect.gen(function* () {
+              const armed = yield* restore(host.prearm()).pipe(Effect.exit)
+              const stopped = yield* host
+                .stop(turn.id, Exit.isSuccess(armed) ? armed.value : undefined)
+                .pipe(Effect.exit)
+              if (Exit.isFailure(armed))
+                return yield* Effect.failCause(
+                  Exit.isFailure(stopped)
+                    ? Cause.combine(armed.cause, stopped.cause)
+                    : armed.cause
+                )
+              if (Exit.isFailure(stopped))
+                return yield* Effect.failCause(stopped.cause)
+            })
+          )
           yield* host.wakeConversation()
-          yield* host.stop(turn.id)
         }
       }
       yield* routines.claimDue()
@@ -52,11 +68,14 @@ export function routinePump<TError>(
         (yield* routines.inFlight())?.status === "pending" &&
         (yield* host.modelConnected())
       ) {
-        yield* host.wakeConversation()
-        yield* routines.deliver(host.admission).pipe(
-          preserveFatal,
-          Effect.catchTag("ConversationFull", () => Effect.void)
-        )
+        const discoveryDeadline = yield* host.prearm()
+        const delivered = yield* routines
+          .deliver(host.admission, discoveryDeadline)
+          .pipe(
+            preserveFatal,
+            Effect.catchTag("ConversationFull", () => Effect.void)
+          )
+        if (delivered) yield* host.wakeConversation()
         yield* host.notify()
       }
       const next = yield* routines.nextWake()

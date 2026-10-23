@@ -1,6 +1,6 @@
 import { createModels } from "@earendil-works/pi-ai/models"
 import { openaiProvider } from "@earendil-works/pi-ai/providers/openai"
-import { Effect } from "effect"
+import { Clock, Effect } from "effect"
 import { describe, expect, it } from "vitest"
 
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
@@ -183,11 +183,41 @@ describe("job model routing", () => {
       ...resolveRoute("conversation", undefined, command.profile),
       contextWindow: 272000,
     }
-    const root = Effect.runSync(store.admit(command, undefined, [], route)).turn
+    const root = Effect.runSync(
+      Clock.currentTimeMillis.pipe(
+        Effect.flatMap((now) =>
+          store.admit(command, undefined, [], route, {
+            discoveryDeadline: now + 60_000,
+          })
+        )
+      )
+    ).turn
     Effect.runSync(store.setSettings({ model: "gpt-6-luna", thinking: "low" }))
-    expect(Effect.runSync(store.admit(command)).turn.routing).toEqual(route)
+    expect(
+      Effect.runSync(
+        Clock.currentTimeMillis.pipe(
+          Effect.flatMap((now) =>
+            store.admit(command, undefined, undefined, undefined, {
+              discoveryDeadline: now + 60_000,
+            })
+          )
+        )
+      ).turn.routing
+    ).toEqual(route)
     expect(() =>
-      Effect.runSync(store.admit({ ...command, profile: "fast" }))
+      Effect.runSync(
+        Clock.currentTimeMillis.pipe(
+          Effect.flatMap((now) =>
+            store.admit(
+              { ...command, profile: "fast" },
+              undefined,
+              undefined,
+              undefined,
+              { discoveryDeadline: now + 60_000 }
+            )
+          )
+        )
+      )
     ).toThrow(/another message/)
     expect(
       submissionAttempt(command, "design it", "steer", [], "fast")
@@ -198,21 +228,41 @@ describe("job model routing", () => {
     })
     expect(Effect.runSync(restored.get(root.id))?.model).toBe("gpt-6-astra")
     const steer = Effect.runSync(
-      restored.admit({
-        operationId: crypto.randomUUID(),
-        text: "keep mobile support",
-        mode: "steer",
-      })
+      Clock.currentTimeMillis.pipe(
+        Effect.flatMap((now) =>
+          restored.admit(
+            {
+              operationId: crypto.randomUUID(),
+              text: "keep mobile support",
+              mode: "steer",
+            },
+            undefined,
+            undefined,
+            undefined,
+            { discoveryDeadline: now + 60_000 }
+          )
+        )
+      )
     ).turn
     expect(steer.routing).toMatchObject({ ...route, reason: "active run" })
     expect(() =>
       Effect.runSync(
-        restored.admit({
-          operationId: crypto.randomUUID(),
-          text: "steer",
-          mode: "steer",
-          profile: "fast",
-        })
+        Clock.currentTimeMillis.pipe(
+          Effect.flatMap((now) =>
+            restored.admit(
+              {
+                operationId: crypto.randomUUID(),
+                text: "steer",
+                mode: "steer",
+                profile: "fast",
+              },
+              undefined,
+              undefined,
+              undefined,
+              { discoveryDeadline: now + 60_000 }
+            )
+          )
+        )
       )
     ).toThrow(/Steering keeps/)
     const other = new ConversationStore(database(), {
@@ -225,7 +275,17 @@ describe("job model routing", () => {
     )
     expect(
       Effect.runSync(
-        restored.admit(submissionAttempt(null, "next", "followUp"))
+        Clock.currentTimeMillis.pipe(
+          Effect.flatMap((now) =>
+            restored.admit(
+              submissionAttempt(null, "next", "followUp"),
+              undefined,
+              undefined,
+              undefined,
+              { discoveryDeadline: now + 60_000 }
+            )
+          )
+        )
       ).turn.model
     ).toBe("gpt-6-luna")
   })
@@ -297,7 +357,17 @@ it("keeps legacy model pins and versions every job setting update", () => {
       thinking: "medium",
     })
   const turn = Effect.runSync(
-    store.admit(submissionAttempt(null, "old task", "followUp"))
+    Clock.currentTimeMillis.pipe(
+      Effect.flatMap((now) =>
+        store.admit(
+          submissionAttempt(null, "old task", "followUp"),
+          undefined,
+          undefined,
+          undefined,
+          { discoveryDeadline: now + 60_000 }
+        )
+      )
+    )
   ).turn
   db.run(
     "UPDATE chat_turns SET routing=NULL,model='gpt-6-astra',thinking='high',status='failed' WHERE id=?",
@@ -310,11 +380,21 @@ it("keeps legacy model pins and versions every job setting update", () => {
   )
   expect(Effect.runSync(store.selection()).settingsRevision).toBe(before + 1)
   const retry = Effect.runSync(
-    store.admit({
-      operationId: crypto.randomUUID(),
-      text: turn.text,
-      retryOf: turn.id,
-    })
+    Clock.currentTimeMillis.pipe(
+      Effect.flatMap((now) =>
+        store.admit(
+          {
+            operationId: crypto.randomUUID(),
+            text: turn.text,
+            retryOf: turn.id,
+          },
+          undefined,
+          undefined,
+          undefined,
+          { discoveryDeadline: now + 60_000 }
+        )
+      )
+    )
   ).turn
   expect(retry.routing).toMatchObject({
     model: "gpt-6-astra",

@@ -6,7 +6,11 @@ import type { ChatState, TimelineItem } from "./contracts"
 import type { ConversationExecution } from "./execution"
 import type { ConversationJournal } from "./journal"
 import type { Conversations } from "./service"
-import type { Turn } from "./turns"
+import {
+  conversationControl,
+  conversationUnconfirmed,
+  type Turn,
+} from "./turns"
 
 export type SnapshotMetadata = Pick<
   ChatState,
@@ -35,7 +39,11 @@ export function conversationSnapshot<TError, TRequirements>(
     }
     const activity = new Map<string, readonly TimelineItem[]>()
     for (const turn of turns) {
-      if (turn.session_id && ["running", "stopping"].includes(turn.status)) {
+      if (
+        turn.session_id &&
+        !conversationUnconfirmed(turn) &&
+        ["running", "stopping"].includes(turn.status)
+      ) {
         const observation = yield* execution.observe(
           turn,
           members.get(turn.id) ?? []
@@ -54,6 +62,9 @@ export function conversationSnapshot<TError, TRequirements>(
       const saved = activity.get(turn.id) ?? savedActivity.get(turn.id)
       return {
         id: turn.id,
+        revision: turn.revision,
+        controlUnconfirmed: conversationUnconfirmed(turn),
+        controlBusy: conversationControl(turn).owner !== null || undefined,
         origin: turn.origin,
         provenance: turn.provenance,
         text: turn.text,

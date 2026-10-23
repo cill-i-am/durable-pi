@@ -116,12 +116,22 @@ function fixture() {
   const wakes: (string | null)[] = []
   const botConfiguration = new BotConfigurationStore(db)
   const skills = new SkillStore(db)
+  const pump = Effect.runSync(conversationFixture(db))
   const host: PersonalAgentTest = Object.create(PersonalAgentTest.prototype)
   Object.assign(host, {
     conversations,
     actorRuntime: runtime,
     ctx: { waitUntil: vi.fn() },
     conversationService: runtime.runSync(Conversations),
+    // Prototype hosts skip field initializers. Keep one real pump per host so
+    // HTTP reconciliation shares its joined-release receipts across requests.
+    conversationPump: conversationPump(
+      runtime.runSync(Conversations),
+      pump.memory,
+      pump.journal,
+      pump.execution,
+      pump.host
+    ),
     configurationService: { read: () => Effect.succeed(undefined) },
     connections: { defaults: () => Effect.succeed([]) },
     remoteSelection: {
@@ -135,6 +145,7 @@ function fixture() {
     modelConnected: async () => true,
     accountModelCatalog: async () => catalog,
     runner: {
+      armDiscovery: async () => Date.now() + 60_000,
       wake: async () => {
         wakes.push(Effect.runSync(conversations.active())?.id ?? null)
       },
@@ -160,6 +171,7 @@ function fixture() {
           Effect.sync(
             () => Effect.runSync(botConfiguration.read())?.status === "archived"
           ),
+        prearm: () => Effect.promise(() => host.runner.armDiscovery()),
         catalog: () =>
           conversationNativeOperation("read model catalog", () =>
             host.accountModelCatalog()
@@ -550,10 +562,16 @@ it("sends the pinned independent memory model through the installed Responses ad
 it("completes foreground work despite blocked summaries, then delivers a ready background report", async () => {
   const { host, conversations, runtime, db, wakes } = fixture()
   const source = Effect.runSync(
-    conversations.admit({
-      operationId: crypto.randomUUID(),
-      text: "Draft in background",
-    })
+    conversations.admit(
+      {
+        operationId: crypto.randomUUID(),
+        text: "Draft in background",
+      },
+      undefined,
+      undefined,
+      undefined,
+      { discoveryDeadline: Date.now() + 60_000 }
+    )
   ).turn
   Effect.runSync(
     conversations.finish(
@@ -564,10 +582,16 @@ it("completes foreground work despite blocked summaries, then delivers a ready b
     )
   )
   const foreground = Effect.runSync(
-    conversations.admit({
-      operationId: crypto.randomUUID(),
-      text: "Another question",
-    })
+    conversations.admit(
+      {
+        operationId: crypto.randomUUID(),
+        text: "Another question",
+      },
+      undefined,
+      undefined,
+      undefined,
+      { discoveryDeadline: Date.now() + 60_000 }
+    )
   ).turn
   const route = { ...resolveRoute("conversation"), contextWindow: 8192 }
   let parentDone = false
@@ -626,6 +650,7 @@ it("completes foreground work despite blocked summaries, then delivers a ready b
         active: () => conversations.active().pipe(Effect.map((turn) => !!turn)),
         backgroundActive: () =>
           conversations.active().pipe(Effect.map((turn) => !!turn?.origin)),
+        prearm: () => Effect.promise(() => host.runner.armDiscovery()),
         wakeConversation: () => Effect.promise(() => host.runner.wake()),
         armBackground: () => Effect.void,
         wakeBackground: () => Effect.void,
@@ -633,7 +658,7 @@ it("completes foreground work despite blocked summaries, then delivers a ready b
         admission: {
           transactionGroup: db,
           stop: () => Effect.void,
-          admit: (h, report) =>
+          admit: (h, report, discoveryDeadline) =>
             conversations
               .admit(
                 {
@@ -647,7 +672,8 @@ it("completes foreground work despite blocked summaries, then delivers a ready b
                 },
                 undefined,
                 [],
-                h.route
+                h.route,
+                { discoveryDeadline }
               )
               .pipe(Effect.map((admission) => admission.turn.id)),
         },

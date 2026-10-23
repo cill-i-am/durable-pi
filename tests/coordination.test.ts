@@ -289,10 +289,16 @@ it.effect(
     Effect.gen(function* () {
       const db = database(),
         turns = new ConversationStore(db, { model: "test", thinking: "off" })
-      const root = (yield* turns.admit({
-        operationId: "session-a",
-        text: "Original task",
-      })).turn
+      const root = (yield* turns.admit(
+        {
+          operationId: "session-a",
+          text: "Original task",
+        },
+        undefined,
+        undefined,
+        undefined,
+        { discoveryDeadline: Date.now() + 60_000 }
+      )).turn
       yield* turns.saveSession(root.id, "42")
       db.run("UPDATE chat_turns SET status='done' WHERE id=?", root.id)
       const input = {
@@ -304,19 +310,28 @@ it.effect(
           messageId: "message-a",
         },
       }
-      const accepted = yield* turns.resumeMessage(input)
+      const accepted = yield* turns.resumeMessage(input, {
+        discoveryDeadline: Date.now() + 60_000,
+      })
       expect(accepted.turn).toMatchObject({
         session_id: "42",
         mode: "followUp",
         parent_id: null,
       })
       yield* turns.submitted(accepted.turn.id, "42")
-      expect((yield* turns.resumeMessage(input)).accepted).toBe(false)
-      const next = yield* turns.resumeMessage({
-        ...input,
-        operationId: "message-b",
-        origin: { ...input.origin, messageId: "message-b" },
-      })
+      expect(
+        (yield* turns.resumeMessage(input, {
+          discoveryDeadline: Date.now() + 60_000,
+        })).accepted
+      ).toBe(false)
+      const next = yield* turns.resumeMessage(
+        {
+          ...input,
+          operationId: "message-b",
+          origin: { ...input.origin, messageId: "message-b" },
+        },
+        { discoveryDeadline: Date.now() + 60_000 }
+      )
       expect(next.turn.parent_id).toBe(accepted.turn.id)
       expect((yield* turns.sessionForNative(42))?.id).toBe(root.id)
       expect((yield* turns.sessions()).map((s) => s.id)).toEqual([root.id])
@@ -324,11 +339,17 @@ it.effect(
         "UPDATE chat_turns SET status='failed' WHERE id=?",
         accepted.turn.id
       )
-      const retry = (yield* turns.admit({
-        operationId: "retry-message",
-        retryOf: accepted.turn.id,
-        text: input.text,
-      })).turn
+      const retry = (yield* turns.admit(
+        {
+          operationId: "retry-message",
+          retryOf: accepted.turn.id,
+          text: input.text,
+        },
+        undefined,
+        undefined,
+        undefined,
+        { discoveryDeadline: Date.now() + 60_000 }
+      )).turn
       expect(retry.session_id).toBe("42")
       expect(retry.origin).toEqual(input.origin)
     })
@@ -344,7 +365,13 @@ it.effect(
         thinking: "off",
       })
       for (const id of ["a", "b"]) {
-        yield* turns.admit({ operationId: id, text: "Retained original" })
+        yield* turns.admit(
+          { operationId: id, text: "Retained original" },
+          undefined,
+          undefined,
+          undefined,
+          { discoveryDeadline: Date.now() + 60_000 }
+        )
         yield* turns.saveSession(id, id === "a" ? "1" : "4")
       }
       const receipt = yield* f.service.send(1, "before-revoke", {

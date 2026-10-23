@@ -1,4 +1,4 @@
-import { Effect, Schema } from "effect"
+import { Clock, Effect, Schema } from "effect"
 import { renderToStaticMarkup } from "react-dom/server"
 import { expect, it, vi } from "vitest"
 
@@ -35,10 +35,16 @@ function fixture() {
   const access = new AccessStore(db, () => Effect.succeed(tools()))
   const usage = usageFixture(db)
   const root = Effect.runSync(
-    conversations.admit({
-      operationId: crypto.randomUUID(),
-      text: "Synthetic task",
-    })
+    conversations.admit(
+      {
+        operationId: crypto.randomUUID(),
+        text: "Synthetic task",
+      },
+      undefined,
+      undefined,
+      undefined,
+      { discoveryDeadline: Effect.runSync(Clock.currentTimeMillis) + 60_000 }
+    )
   ).turn
   const read = (cursor: RunCursor | null = null) =>
     projectRunActivity(
@@ -54,11 +60,17 @@ it("projects approval, model, compaction and steering records across reopen with
   const f = fixture()
   Effect.runSync(f.conversations.submitted(f.root.id, "pi-session"))
   const steer = Effect.runSync(
-    f.conversations.admit({
-      operationId: crypto.randomUUID(),
-      text: "Keep the constraint",
-      mode: "steer",
-    })
+    f.conversations.admit(
+      {
+        operationId: crypto.randomUUID(),
+        text: "Keep the constraint",
+        mode: "steer",
+      },
+      undefined,
+      undefined,
+      undefined,
+      { discoveryDeadline: Effect.runSync(Clock.currentTimeMillis) + 60_000 }
+    )
   ).turn
   const attempt = f.usage.start(route, f.root.id, "conversation")
   attempt.usage({
@@ -177,7 +189,11 @@ it("includes every request beyond the 100-request activity limit with stable pag
 it("marks orphaned attempts interrupted, preserves cancellation and never invents historical timings", () => {
   const f = fixture()
   f.usage.start(route, f.root.id, "conversation")
-  Effect.runSync(f.conversations.requestStop(f.root.id))
+  Effect.runSync(
+    f.conversations.requestStop(f.root.id, {
+      discoveryDeadline: Effect.runSync(Clock.currentTimeMillis) + 60_000,
+    })
+  )
   const stopping = Effect.runSync(f.conversations.get(f.root.id))!
   Effect.runSync(
     f.conversations.finish(
@@ -235,7 +251,11 @@ it("retains distinct recovery transitions without double-counting replay and sto
     )
   )
   expect(f.read().events.filter((e) => e.kind === "recovery")).toEqual(before)
-  Effect.runSync(f.conversations.requestStop(f.root.id))
+  Effect.runSync(
+    f.conversations.requestStop(f.root.id, {
+      discoveryDeadline: Effect.runSync(Clock.currentTimeMillis) + 60_000,
+    })
+  )
   Effect.runSync(
     f.recovery.observe(f.root.id, "pi-session", "epoch", "epoch", [
       observation(4),

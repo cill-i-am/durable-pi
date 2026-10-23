@@ -41,7 +41,12 @@ const brief = {
   context: "EUR 2400. Do not publish.",
 }
 async function fixture(
-  options: { prepare?: () => Effect.Effect<void, CommunicationError> } = {}
+  options: {
+    prepare?: () => Effect.Effect<void, CommunicationError>
+    prearm?: Host["prearm"]
+    wakeConversation?: Host["wakeConversation"]
+    resume?: Host["resume"]
+  } = {}
 ) {
   const db = database(),
     repo = sqliteMailbox(db),
@@ -66,31 +71,34 @@ async function fixture(
       wakeFails
         ? Effect.fail(failure("storage", "Fixture wake failed"))
         : Effect.void,
-    wakeConversation: () => Effect.void,
+    prearm: options.prearm ?? (() => Effect.sync(() => Date.now() + 60_000)),
+    wakeConversation: options.wakeConversation ?? (() => Effect.void),
     notify: () => {},
-    resume: (task, id) =>
-      db
-        .use((orm) =>
-          orm
-            .insert(resumedTable)
-            .values({ id, task: task.id })
-            .onConflictDoNothing()
-        )
-        .pipe(
-          Effect.mapError(
-            (cause) =>
-              new ConversationStorageError({
-                operation: "resume fixture",
-                cause,
-              })
-          ),
-          Effect.andThen(() =>
-            Effect.sync(() => {
-              if (admitFails) throw new Error("Fixture admission crash")
-              return { kind: "admitted" as const, turnId: id }
-            })
+    resume:
+      options.resume ??
+      ((task, id) =>
+        db
+          .use((orm) =>
+            orm
+              .insert(resumedTable)
+              .values({ id, task: task.id })
+              .onConflictDoNothing()
           )
-        ),
+          .pipe(
+            Effect.mapError(
+              (cause) =>
+                new ConversationStorageError({
+                  operation: "resume fixture",
+                  cause,
+                })
+            ),
+            Effect.andThen(() =>
+              Effect.sync(() => {
+                if (admitFails) throw new Error("Fixture admission crash")
+                return { kind: "admitted" as const, turnId: id }
+              })
+            )
+          )),
   }
   const transport = Layer.succeed(MailboxTransport, {
     permitted: () => Effect.succeed(true),
@@ -297,7 +305,13 @@ it("retains a result receipt and maps a conversation admission write failure to 
         operationId: operation,
         admit: () =>
           conversations
-            .admit({ operationId: operation, text: "Continuation" })
+            .admit(
+              { operationId: operation, text: "Continuation" },
+              undefined,
+              undefined,
+              undefined,
+              { discoveryDeadline: Date.now() + 60_000 }
+            )
             .pipe(
               Effect.map((admission) => ({
                 kind: "admitted" as const,
@@ -427,4 +441,130 @@ it("delivery cleanup defects do not become an ordinary backoff update", async ()
       (delivery) => delivery.envelope.taskId === request.id
     )
   ).toMatchObject({ status: "delivering", attempts: 1, error: null })
+})
+
+it("prearms continuation discovery before its shared transaction and wakes after commit", async () => {
+  const order: string[] = [],
+    deadline = Date.now() + 60_000
+  let f: Awaited<ReturnType<typeof fixture>>
+  f = await fixture({
+    prearm: () =>
+      Effect.sync(() => {
+        order.push("prearm")
+        expect(f.db.all("SELECT * FROM resumed")).toHaveLength(0)
+        return deadline
+      }),
+    resume: (task, id, discoveryDeadline) =>
+      f.db
+        .use((orm) => {
+          expect(discoveryDeadline).toBe(deadline)
+          order.push("commit")
+          return orm.insert(resumedTable).values({ id, task: task.id })
+        })
+        .pipe(
+          Effect.mapError(
+            (cause) =>
+              new ConversationStorageError({ operation: "resume", cause })
+          ),
+          Effect.as({ kind: "admitted" as const, turnId: id })
+        ),
+    wakeConversation: () =>
+      Effect.sync(() => {
+        expect(f.db.all("SELECT * FROM resumed")).toHaveLength(1)
+        order.push("wake")
+      }),
+  })
+  const request = await run(f.app.delegate(brief, source))
+  await f.complete(request.id)
+  await run(f.app.pump())
+  await run(f.app.pump())
+  expect(order).toEqual(["prearm", "commit", "wake"])
+  expect((await run(f.mailbox.task(request.id))).resumed).toBe(true)
+})
+
+it("retains the continuation and every scheduling failure reason when prearm fails", async () => {
+  const cause = Cause.combine(
+    Cause.fail(failure("storage", "Discovery unavailable")),
+    Cause.die(new Error("discovery diagnostic"))
+  )
+  const f = await fixture({ prearm: () => Effect.failCause(cause) }),
+    request = await run(f.app.delegate(brief, source))
+  await f.complete(request.id)
+  const exit = await run(Effect.exit(f.app.pump()))
+  expect(Exit.isFailure(exit)).toBe(true)
+  if (Exit.isFailure(exit)) {
+    expect(exit.cause.reasons.map((reason) => reason._tag)).toEqual([
+      "Fail",
+      "Die",
+    ])
+    expect(
+      exit.cause.reasons.map((reason) =>
+        reason._tag === "Fail"
+          ? reason.error
+          : reason._tag === "Die"
+            ? reason.defect
+            : undefined
+      )
+    ).toEqual(
+      cause.reasons.map((reason) =>
+        reason._tag === "Fail"
+          ? reason.error
+          : reason._tag === "Die"
+            ? reason.defect
+            : undefined
+      )
+    )
+  }
+  expect(f.db.all("SELECT * FROM resumed")).toHaveLength(0)
+  expect((await run(f.mailbox.task(request.id))).resumed).toBe(false)
+})
+
+it("rolls back continuation consumption when its prepared discovery lease expires", async () => {
+  let conversations: ConversationStore
+  const f = await fixture({
+    prearm: () => Effect.succeed(0),
+    resume: (_task, id, discoveryDeadline) =>
+      conversations
+        .admit(
+          { operationId: id, text: "Continuation" },
+          undefined,
+          [],
+          undefined,
+          { discoveryDeadline }
+        )
+        .pipe(
+          Effect.map(({ turn }) => ({
+            kind: "admitted" as const,
+            turnId: turn.id,
+          }))
+        ),
+  })
+  conversations = new ConversationStore(f.db, {
+    model: "test",
+    thinking: "off",
+  })
+  const request = await run(f.app.delegate(brief, source))
+  await f.complete(request.id)
+  expect(Exit.isFailure(await run(Effect.exit(f.app.pump())))).toBe(true)
+  expect((await run(f.mailbox.task(request.id))).resumed).toBe(false)
+  expect(await run(conversations.recent())).toEqual([])
+})
+
+it("retains the committed continuation when its immediate wake acknowledgement fails", async () => {
+  let wakes = 0
+  const f = await fixture({
+    wakeConversation: () =>
+      Effect.suspend(() => {
+        wakes++
+        return Effect.fail(failure("storage", "Wake acknowledgement lost"))
+      }),
+  })
+  const request = await run(f.app.delegate(brief, source))
+  await f.complete(request.id)
+  expect(Exit.isFailure(await run(Effect.exit(f.app.pump())))).toBe(true)
+  expect(f.db.all("SELECT * FROM resumed")).toHaveLength(1)
+  expect((await run(f.mailbox.task(request.id))).resumed).toBe(true)
+  await run(f.app.pump())
+  expect(f.db.all("SELECT * FROM resumed")).toHaveLength(1)
+  expect(wakes).toBe(1)
 })

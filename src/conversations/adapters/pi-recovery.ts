@@ -10,21 +10,25 @@ import { Cause, Effect } from "effect"
 import type { AccessLedger } from "../../access/ledger"
 import type { AgentStorageError } from "../../agents/domain"
 import type { RoutineStorageError } from "../../routines/persistence"
+import { nativeOperation } from "../../shared/interop"
 import {
   recoveryOutcome,
-  RunBlocked,
   type Observation,
   type RecoveryView,
 } from "../recovery"
 import {
   makeRunRecovery,
+  runRecoveryHookProgram,
+  type RecoveryHookWork,
+  type RecoveryHashError,
+  type RecoverySource,
   type RecoveryLedger,
   type RunRecovery,
 } from "../recovery-service"
 import { ConversationStorageError } from "../turns"
 import { webCryptoRecoveryFingerprint } from "./crypto"
 
-export type RecoverySource = { turnId: string; steeringKey: string }
+export type { RecoverySource } from "../recovery-service"
 export function runRecoveryHook(options: {
   storage: Storage
   store: RecoveryLedger
@@ -62,129 +66,155 @@ export function runRecoveryHook(options: {
   const app =
     options.application ?? makeRunRecovery(store, webCryptoRecoveryFingerprint)
   const run = options.run ?? Effect.runPromise
-  const fingerprint = (value: unknown, context: Context) =>
-    run(app.epoch(value), { signal: context.abortSignal })
-  async function roundObservations(
+  const native = <A>(operation: string, work: () => Promise<A>) =>
+    nativeOperation(
+      work,
+      (cause) => new ConversationStorageError({ operation, cause })
+    )
+  function roundObservations(
     assistantId: Parameters<Storage["entry"]>[1],
     results: readonly Parameters<Storage["entry"]>[1][],
     api: HookApi,
     context: Context,
     origin: RecoverySource
   ) {
-    const assistant = (
-      await storage.entry(api.conversationId, assistantId, context)
-    )?.entry
-    const message = assistant?.model?.[0]
-    if (assistant?.kind !== "pi.assistant" || message?.role !== "assistant")
-      throw new Error("Recovery requires a native assistant entry")
-    const calls = message.content.filter((part) => part.type === "toolCall")
-    async function observeResult(
-      id: Parameters<Storage["entry"]>[1]
-    ): Promise<Observation> {
-      const entry = (await storage.entry(api.conversationId, id, context))
-        ?.entry
-      const result = entry?.model?.[0]
-      if (entry?.kind !== "pi.tool-result" || result?.role !== "toolResult")
-        throw new Error("Recovery requires a native tool result")
-      const call = calls.find((candidate) => candidate.id === result.toolCallId)
-      if (!call) throw new Error("Recovery tool/result pairing is missing")
-      const receipt =
-        entry.byTaskId === undefined
-          ? undefined
-          : await run(
-              checked(
-                "read recovery receipt",
-                access.get(String(entry.byTaskId))
-              ),
-              { signal: context.abortSignal }
-            )
-      if (
-        receipt &&
-        (receipt.turnId !== origin.turnId || receipt.tool !== call.name)
-      )
-        throw new Error("Recovery receipt ownership mismatch")
-      const codes = diagnosticCodes(entry.data)
-      const { outcome, category } = recoveryOutcome({
-        receiptStatus: receipt?.status,
-        diagnostics: codes,
-        isError: result.isError,
-        tool: call.name,
-        deniedPolicy:
-          !receipt &&
-          result.isError &&
-          (
-            await run(checked("read recovery policy", access.policies()), {
-              signal: context.abortSignal,
-            })
-          ).some(
-            (policy) => policy.name === call.name && policy.mode === "deny"
-          ),
-      })
-      return {
-        resultId: Number(id),
-        invocation: recoveryInvocation(entry.byTaskId, id, result.toolCallId),
-        tool: /^[a-zA-Z0-9_.:-]{1,160}$/.test(call.name)
-          ? call.name
-          : "unavailable_tool",
-        fingerprint: await fingerprint(
-          {
+    return Effect.gen(function* () {
+      const assistant = (yield* native("read native assistant entry", () =>
+        storage.entry(api.conversationId, assistantId, context)
+      ))?.entry
+      const message = assistant?.model?.[0]
+      if (assistant?.kind !== "pi.assistant" || message?.role !== "assistant")
+        throw new Error("Recovery requires a native assistant entry")
+      const calls = message.content.filter((part) => part.type === "toolCall")
+      return yield* Effect.forEach(results, (id) =>
+        Effect.gen(function* () {
+          const entry = (yield* native("read native tool result", () =>
+            storage.entry(api.conversationId, id, context)
+          ))?.entry
+          const result = entry?.model?.[0]
+          if (entry?.kind !== "pi.tool-result" || result?.role !== "toolResult")
+            throw new Error("Recovery requires a native tool result")
+          const call = calls.find(
+            (candidate) => candidate.id === result.toolCallId
+          )
+          if (!call) throw new Error("Recovery tool/result pairing is missing")
+          const receipt =
+            entry.byTaskId === undefined
+              ? undefined
+              : yield* checked(
+                  "read recovery receipt",
+                  access.get(String(entry.byTaskId))
+                )
+          if (
+            receipt &&
+            (receipt.turnId !== origin.turnId || receipt.tool !== call.name)
+          )
+            throw new Error("Recovery receipt ownership mismatch")
+          const codes = diagnosticCodes(entry.data)
+          const { outcome, category } = recoveryOutcome({
+            receiptStatus: receipt?.status,
+            diagnostics: codes,
+            isError: result.isError,
             tool: call.name,
-            args: receipt
-              ? (JSON.parse(receipt.input) as unknown)
-              : call.arguments,
-            category,
-          },
-          context
+            deniedPolicy:
+              !receipt &&
+              result.isError &&
+              (yield* checked("read recovery policy", access.policies())).some(
+                (policy) => policy.name === call.name && policy.mode === "deny"
+              ),
+          })
+          return {
+            resultId: Number(id),
+            invocation: recoveryInvocation(
+              entry.byTaskId,
+              id,
+              result.toolCallId
+            ),
+            tool: /^[a-zA-Z0-9_.:-]{1,160}$/.test(call.name)
+              ? call.name
+              : "unavailable_tool",
+            fingerprint: yield* app.epoch({
+              tool: call.name,
+              args: receipt
+                ? (JSON.parse(receipt.input) as unknown)
+                : call.arguments,
+              category,
+            }),
+            outcome,
+            receiptId: receipt?.id ?? null,
+          }
+        })
+      )
+    })
+  }
+  const program = (
+    kind: "before" | "after",
+    api: HookApi,
+    context: Context,
+    collect: (
+      origin: RecoverySource
+    ) => Effect.Effect<
+      readonly Observation[],
+      ConversationStorageError | RecoveryHashError
+    >
+  ) => {
+    const work: RecoveryHookWork<ConversationStorageError | RecoveryHashError> =
+      {
+        kind,
+        source: Effect.suspend(() => source(api)),
+        collect,
+        hash: (key) => app.epoch(key),
+        remember: (epoch) =>
+          native("save native recovery epoch", () =>
+            api.memo("recovery:epoch", epoch, context)
+          ),
+        recall: native("read native recovery epoch", () =>
+          api.memo<string>("recovery:epoch", context)
         ),
-        outcome,
-        receiptId: receipt?.id ?? null,
+        read: (id) => app.get(id),
+        commit: ({ origin, epoch, requestEpoch, observations }) =>
+          app.observe(
+            origin.turnId,
+            String(api.conversationId),
+            epoch,
+            requestEpoch,
+            observations,
+            () =>
+              source(api).pipe(
+                Effect.map((latest) => {
+                  if (latest?.turnId !== origin.turnId) return undefined
+                  if (kind === "before")
+                    return latest.steeringKey === origin.steeringKey
+                      ? epoch
+                      : undefined
+                  return latest.steeringKey === origin.steeringKey
+                    ? requestEpoch
+                    : "stale-request"
+                })
+              )
+          ),
+        publish: ({ origin, state, previousPhase }) =>
+          Effect.sync(() => {
+            if (state?.view && state.view.phase !== previousPhase) {
+              try {
+                options.observed?.(origin.turnId, state.view)
+              } catch {}
+            }
+            options.changed?.()
+          }),
+        // The exact native call context must reach abort(). Its signal lets Pi
+        // escape waiting for its own GenerationTask while the stop is committed.
+        stop: native("stop blocked native generation", () =>
+          options.stop(api, context)
+        ),
       }
-    }
-    const observations: Observation[] = []
-    for (const id of results) {
-      observations.push(await observeResult(id))
-    }
-    return observations
+    return run(runRecoveryHookProgram(work), { signal: context.abortSignal })
   }
   return hook(GenerationTask, {
     beforeRequest: async ({ messages }, api, context) => {
-      const origin = await run(source(api), { signal: context.abortSignal })
-      if (!origin) return { messages }
-      const epoch = await fingerprint(origin.steeringKey, context)
-      if (
-        (await run(source(api), { signal: context.abortSignal }))
-          ?.steeringKey !== origin.steeringKey
+      const state = await program("before", api, context, () =>
+        Effect.succeed([])
       )
-        return { messages }
-      await api.memo("recovery:epoch", epoch, context)
-      if (
-        (await run(source(api), { signal: context.abortSignal }))
-          ?.steeringKey !== origin.steeringKey
-      )
-        return { messages }
-      const state = await run(
-        app.observe(
-          origin.turnId,
-          String(api.conversationId),
-          epoch,
-          epoch,
-          [],
-          () =>
-            source(api).pipe(
-              Effect.map((current) =>
-                current?.turnId === origin.turnId &&
-                current.steeringKey === origin.steeringKey
-                  ? epoch
-                  : undefined
-              )
-            )
-        ),
-        { signal: context.abortSignal }
-      )
-      if (state?.view?.phase === "blocked") {
-        await options.stop(api, context)
-        throw new RunBlocked({ message: state.view.detail })
-      }
       if (state?.view?.phase !== "recovering") return { messages }
       const text = `Run recovery: ${state.view.tool} failed ${state.view.failures} times with the same inputs (saved result ${state.view.resultId}). ${state.view.remaining} attempts remain. Inspect that error; correct inputs or use a permitted approach. Never bypass access or repeat uncertain effects.`
       return {
@@ -199,52 +229,9 @@ export function runRecoveryHook(options: {
       }
     },
     afterTools: async (assistantId, results, api, context) => {
-      const origin = await run(source(api), { signal: context.abortSignal })
-      if (!origin) return
-      const observations = await roundObservations(
-        assistantId,
-        results,
-        api,
-        context,
-        origin
+      await program("after", api, context, (origin) =>
+        roundObservations(assistantId, results, api, context, origin)
       )
-      const epoch = await fingerprint(origin.steeringKey, context)
-      const requestEpoch = await api.memo<string>("recovery:epoch", context)
-      const current = await run(source(api), { signal: context.abortSignal })
-      if (!current || current.turnId !== origin.turnId) return
-      const previousPhase = (
-        await run(app.get(origin.turnId), { signal: context.abortSignal })
-      )?.view?.phase
-      const state = await run(
-        app.observe(
-          origin.turnId,
-          String(api.conversationId),
-          epoch,
-          requestEpoch ?? epoch,
-          observations,
-          () =>
-            source(api).pipe(
-              Effect.map((latest) =>
-                latest?.turnId === origin.turnId
-                  ? latest.steeringKey !== origin.steeringKey
-                    ? "stale-request"
-                    : (requestEpoch ?? epoch)
-                  : undefined
-              )
-            )
-        ),
-        { signal: context.abortSignal }
-      )
-      if (state?.view && state.view.phase !== previousPhase) {
-        try {
-          options.observed?.(origin.turnId, state.view)
-        } catch {}
-      }
-      options.changed?.()
-      if (state?.view?.phase === "blocked") {
-        await options.stop(api, context)
-        throw new RunBlocked({ message: state.view.detail })
-      }
     },
   })
 }

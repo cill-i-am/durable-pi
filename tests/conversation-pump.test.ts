@@ -9,7 +9,7 @@ import { conversationFixture } from "./conversation-fixture"
 const pump = (f: Effect.Success<ReturnType<typeof conversationFixture>>) =>
   conversationPump(f.conversations, f.memory, f.journal, f.execution, f.host)
 it.effect(
-  "skips submission if another coordinator completes the turn during configuration",
+  "rejects completion from a coordinator that does not own the active native pass",
   () =>
     Effect.gen(function* () {
       const f = yield* conversationFixture()
@@ -27,13 +27,13 @@ it.effect(
                 null
               )
             )
-          ).toBe(true)
+          ).toBe(false)
         })
       yield* pump(f).run()
-      expect(f.events).not.toContain("submit")
+      expect(f.events).toContain("submit")
       expect(Effect.runSync(f.store.get(root.id))).toMatchObject({
-        status: "done",
-        answer: "already done",
+        status: "running",
+        answer: "",
       })
     })
 )
@@ -146,7 +146,8 @@ it.effect(
         })
       yield* pump(f).run()
       expect(f.events).not.toContain("submit")
-      expect(Effect.runSync(f.store.get(root.id))?.status).toBe("stopping")
+      expect(f.events).toContain("abort")
+      expect(Effect.runSync(f.store.get(root.id))?.status).toBe("cancelled")
     })
 )
 it.effect(
@@ -344,7 +345,7 @@ nativeIt(
 )
 
 nativeIt(
-  "uses the committed session when concurrent native acquisitions race",
+  "rejects a second native acquisition while the first root owner is held",
   async () => {
     const f = await Effect.runPromise(conversationFixture())
     const root = Effect.runSync(
@@ -379,9 +380,10 @@ nativeIt(
     release()
     await first
     expect(Effect.runSync(f.store.get(root.id))?.session_id).toBe(
-      "committed-session"
+      "late-session"
     )
-    expect(configured).toEqual(["committed-session", "committed-session"])
+    expect(acquisitions).toBe(1)
+    expect(configured).toEqual(["late-session"])
     expect(await Effect.runPromise(f.memory.total())).toBe(1)
   }
 )

@@ -1,5 +1,5 @@
 import { expect, it } from "@effect/vitest"
-import { Effect, Schema } from "effect"
+import { Clock, Effect, Schema } from "effect"
 
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import { SendInput } from "../src/conversations/contracts"
@@ -125,7 +125,9 @@ it.effect(
         text: "Who is speaking?",
         provenance: human,
       }
-      yield* f.store.admit(input)
+      yield* f.store.admit(input, undefined, undefined, undefined, {
+        discoveryDeadline: (yield* Clock.currentTimeMillis) + 60_000,
+      })
       const reopened = new ConversationStore(f.db, {
         model: "test",
         thinking: "off",
@@ -143,12 +145,18 @@ it.effect(
         "UPDATE chat_turns SET status='failed' WHERE id=?",
         input.operationId
       )
-      const retried = (yield* reopened.admit({
-        operationId: "retry-a",
-        retryOf: input.operationId,
-        text: input.text,
-        provenance: peer,
-      })).turn
+      const retried = (yield* reopened.admit(
+        {
+          operationId: "retry-a",
+          retryOf: input.operationId,
+          text: input.text,
+          provenance: peer,
+        },
+        undefined,
+        undefined,
+        undefined,
+        { discoveryDeadline: (yield* Clock.currentTimeMillis) + 60_000 }
+      )).turn
       expect(retried.provenance).toEqual(human)
     })
 )
@@ -158,11 +166,17 @@ it.effect(
   () =>
     Effect.gen(function* () {
       const f = yield* conversationFixture()
-      const root = (yield* f.store.admit({
-        operationId: "root-a",
-        text: "I suggest Tuesday, pending human confirmation.",
-        provenance: peer,
-      })).turn
+      const root = (yield* f.store.admit(
+        {
+          operationId: "root-a",
+          text: "I suggest Tuesday, pending human confirmation.",
+          provenance: peer,
+        },
+        undefined,
+        undefined,
+        undefined,
+        { discoveryDeadline: (yield* Clock.currentTimeMillis) + 60_000 }
+      )).turn
       const prompt = yield* f.journal.prompt(root.id, "")
       const block = JSON.parse(prompt!)[1].text as string
       expect(block).toContain('"kind":"agent","id":"researcher"')
@@ -202,10 +216,16 @@ it.effect(
   () =>
     Effect.gen(function* () {
       const f = yield* conversationFixture()
-      const legacy = (yield* f.store.admit({
-        operationId: "legacy",
-        text: "Unattributed history",
-      })).turn
+      const legacy = (yield* f.store.admit(
+        {
+          operationId: "legacy",
+          text: "Unattributed history",
+        },
+        undefined,
+        undefined,
+        undefined,
+        { discoveryDeadline: (yield* Clock.currentTimeMillis) + 60_000 }
+      )).turn
       expect(legacy.provenance).toBeUndefined()
       const prompt = yield* f.journal.prompt(legacy.id, "")
       expect(prompt).toContain('\\"kind\\":\\"unknown\\"')

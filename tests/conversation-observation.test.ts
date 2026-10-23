@@ -177,6 +177,15 @@ function fixture() {
     model: "test",
     thinking: "off",
   })
+  const admit = store.admit.bind(store)
+  store.admit = (input, prepared, skills, resolved, options) =>
+    admit(
+      input,
+      prepared,
+      skills,
+      resolved,
+      options ?? { discoveryDeadline: Date.now() + 60_000 }
+    )
   Effect.runSync(store.admit({ operationId: "root", text: "hello" }))
   Effect.runSync(store.saveSession("root", "session"))
   const root = Effect.runSync(store.get("root"))!

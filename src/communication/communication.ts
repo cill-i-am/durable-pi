@@ -31,11 +31,13 @@ export type Host = {
     turn: string
   ) => Effect.Effect<"active" | "done" | "cancelled", CommunicationError>
   wake: () => Effect.Effect<void, CommunicationError>
+  prearm: () => Effect.Effect<number, CommunicationError>
   wakeConversation: () => Effect.Effect<void, CommunicationError>
   idle: () => Effect.Effect<boolean, CommunicationError>
   resume: (
     task: Task,
-    operationId: string
+    operationId: string,
+    discoveryDeadline: number
   ) => ReturnType<ContinuationAdmission["admit"]>
   notify: () => void
 }
@@ -179,12 +181,13 @@ export const makeCommunication = (host: Host) =>
           yield* mailbox.discard(t.id)
         } else if (yield* host.idle()) {
           const operation = yield* continuationIdentity.derive(t.id)
-          yield* host.wakeConversation()
+          const discoveryDeadline = yield* host.prearm()
           yield* mailbox.resume(t.id, {
             transactionGroup: host.transactionGroup,
             operationId: operation,
-            admit: (value) => host.resume(value, operation),
+            admit: (value) => host.resume(value, operation, discoveryDeadline),
           })
+          yield* host.wakeConversation()
         }
       }
       yield* Effect.sync(host.notify)

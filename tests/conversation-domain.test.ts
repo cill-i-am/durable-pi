@@ -2,7 +2,11 @@ import { Cause, Effect, Exit } from "effect"
 import { expect, it } from "vitest"
 
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
-import * as Domain from "../src/conversations/domain"
+import { canSubmitInput } from "../src/conversations/input.machine"
+import {
+  advanceRootRun,
+  completionDecision,
+} from "../src/conversations/root-run.machine"
 import { makeConversations } from "../src/conversations/service"
 import type { Turn } from "../src/conversations/turns"
 import { database, corrupt } from "./database"
@@ -32,10 +36,10 @@ it("cannot reopen terminal turns through preparation, submission or completion a
   for (const status of ["done", "failed", "cancelled"] as const) {
     for (const revision of [0, 1, 10, 99]) {
       const current = { ...turn, status, revision }
-      expect(Domain.canPrepare(current)).toBe(false)
-      expect(Domain.canSubmit(current)).toBe(false)
+      expect(advanceRootRun(current, { type: "PREPARE" })).toBeUndefined()
+      expect(canSubmitInput(current)).toBe(false)
       expect(
-        Domain.finishTransition(
+        completionDecision(
           current,
           current,
           [current],
@@ -44,7 +48,15 @@ it("cannot reopen terminal turns through preparation, submission or completion a
           null
         )
       ).toBeUndefined()
-      expect(Domain.stopTransition(current, current)).toBeUndefined()
+      expect(
+        advanceRootRun(current, {
+          type: "STOP",
+          now: 1,
+          discoveryDeadline: 2,
+          expectedRevision: null,
+          error: "stop",
+        })
+      ).toBeUndefined()
     }
   }
 })
@@ -56,7 +68,7 @@ it("requires the current revision and every member while retaining answered chil
     { id: child.id, delivery: "answered" as const },
   ]
   expect(
-    Domain.finishTransition(
+    completionDecision(
       turn,
       current,
       [current, child],
@@ -66,7 +78,7 @@ it("requires the current revision and every member while retaining answered chil
     )
   ).toBeUndefined()
   expect(
-    Domain.finishTransition(
+    completionDecision(
       current,
       current,
       [current, child],
@@ -76,7 +88,7 @@ it("requires the current revision and every member while retaining answered chil
     )
   ).toBeUndefined()
   expect(
-    Domain.finishTransition(
+    completionDecision(
       current,
       current,
       [current, child],
@@ -98,14 +110,26 @@ it("rolls back a steer and its root revision when the root update fails", async 
     service = makeConversations(ledger)
   expect(ledger.transactionGroup).toBe(db)
   const root = Effect.runSync(
-    ledger.admit({ operationId: "root", text: "Request" })
+    ledger.admit(
+      { operationId: "root", text: "Request" },
+      undefined,
+      undefined,
+      undefined,
+      { discoveryDeadline: Date.now() + 60_000 }
+    )
   ).turn
   db.run(
     "CREATE TRIGGER reject_steer BEFORE UPDATE ON chat_turns WHEN NEW.id='root' AND NEW.revision>OLD.revision BEGIN SELECT RAISE(ABORT,'revision failure'); END"
   )
   const result = await Effect.runPromise(
     service
-      .admit({ operationId: "steer", text: "Correction", mode: "steer" })
+      .admit(
+        { operationId: "steer", text: "Correction", mode: "steer" },
+        undefined,
+        undefined,
+        undefined,
+        { discoveryDeadline: Date.now() + 60_000 }
+      )
       .pipe(Effect.result)
   )
   expect(result).toMatchObject({
@@ -119,9 +143,23 @@ it("rolls back all member outcomes when one completion update fails", async () =
   const db = database(),
     ledger = new ConversationStore(db, { model: "test", thinking: "off" }),
     service = makeConversations(ledger)
-  Effect.runSync(ledger.admit({ operationId: "root", text: "Request" }))
   Effect.runSync(
-    ledger.admit({ operationId: "child", text: "Correction", mode: "steer" })
+    ledger.admit(
+      { operationId: "root", text: "Request" },
+      undefined,
+      undefined,
+      undefined,
+      { discoveryDeadline: Date.now() + 60_000 }
+    )
+  )
+  Effect.runSync(
+    ledger.admit(
+      { operationId: "child", text: "Correction", mode: "steer" },
+      undefined,
+      undefined,
+      undefined,
+      { discoveryDeadline: Date.now() + 60_000 }
+    )
   )
   Effect.runSync(ledger.submitted("root", "session"))
   Effect.runSync(ledger.submitted("child", "session"))
@@ -154,7 +192,15 @@ it("keeps corrupt historical primitive fields in the defect channel", async () =
   const db = database(),
     ledger = new ConversationStore(db, { model: "test", thinking: "off" }),
     service = makeConversations(ledger)
-  Effect.runSync(ledger.admit({ operationId: "root", text: "Request" }))
+  Effect.runSync(
+    ledger.admit(
+      { operationId: "root", text: "Request" },
+      undefined,
+      undefined,
+      undefined,
+      { discoveryDeadline: Date.now() + 60_000 }
+    )
+  )
   corrupt(db, "UPDATE chat_turns SET status='unknown' WHERE id='root'")
   const exit = await Effect.runPromise(Effect.exit(service.get("root")))
   expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)

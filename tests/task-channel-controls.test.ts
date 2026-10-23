@@ -1,4 +1,4 @@
-import { Effect } from "effect"
+import { Clock, Effect } from "effect"
 import { expect, it, vi } from "vitest"
 
 import { homeAgentId } from "../src/agents/domain"
@@ -203,7 +203,18 @@ it("an old actor's already-admitted STATUS email keeps its original conversation
   await run(
     records.receive({ ...email, body: "STATUS all" }, 1, Date.now() + 60_000)
   )
-  await run(conversations.admit({ operationId: email.id, text: "STATUS all" }))
+  await run(
+    Effect.gen(function* () {
+      const now = yield* Clock.currentTimeMillis
+      return yield* conversations.admit(
+        { operationId: email.id, text: "STATUS all" },
+        undefined,
+        [],
+        undefined,
+        { discoveryDeadline: now + 60_000 }
+      )
+    })
+  )
   await run(records.prepared(email.id))
   const turn = await run(conversations.get(email.id))
   if (!turn) throw new Error("Legacy conversation is missing")

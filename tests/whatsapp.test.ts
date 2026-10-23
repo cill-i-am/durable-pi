@@ -1,4 +1,4 @@
-import { Effect, Schema } from "effect"
+import { Clock, Effect, Schema } from "effect"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { AgentId, homeAgentId, type AgentProfile } from "../src/agents/domain"
@@ -74,7 +74,10 @@ async function fixture() {
     admit: (agent, input) =>
       Effect.gen(function* () {
         admissions.push({ agent, id: input.operationId })
-        return yield* conversations.admit(input)
+        const now = yield* Clock.currentTimeMillis
+        return yield* conversations.admit(input, undefined, [], undefined, {
+          discoveryDeadline: now + 60_000,
+        })
       }).pipe(Effect.orDie),
     turn: (_agent, id) =>
       conversations.get(id).pipe(

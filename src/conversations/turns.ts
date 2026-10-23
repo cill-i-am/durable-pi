@@ -20,7 +20,63 @@ export type Delivery =
   | "consumed"
   | "answered"
   | "unanswered"
+export const conversationControlAttemptLimit = 3
+export const ConversationControl = Schema.Struct({
+  attempts: Schema.optional(Schema.Int.check(Schema.isGreaterThanOrEqualTo(0))),
+  owner: Schema.NullOr(Schema.String),
+  deadline: Schema.NullOr(Schema.Number),
+  unconfirmed: Schema.NullOr(Schema.Literals(["handoff", "observe", "stop"])),
+})
+export type ConversationControl = typeof ConversationControl.Type
+export type ControlRelease = {
+  failed: boolean
+  phase: ControlPhase
+  timedOut: boolean
+  inspected: boolean
+  error?: string
+}
+export type ControlPhase = NonNullable<ConversationControl["unconfirmed"]>
+export type AdmissionDiscovery = { discoveryDeadline: number }
+export type StopDiscovery = {
+  discoveryDeadline?: number
+  expectedRevision?: number
+  unconfirmedError?: string
+}
+export const emptyConversationControl = (): ConversationControl => ({
+  attempts: 0,
+  owner: null,
+  deadline: null,
+  unconfirmed: null,
+})
+/** Structural test/legacy callers may omit metadata; persisted rows may not. */
+export const conversationControl = (
+  turn: Pick<Turn, "control">
+): ConversationControl =>
+  turn.control
+    ? { ...turn.control, attempts: turn.control.attempts ?? 0 }
+    : emptyConversationControl()
+/** Read-only public projection; an exhausted budget remains unavailable even if
+ * a legacy row predates the atomic uncertainty marker. */
+export const conversationUnconfirmed = (
+  turn: Pick<Turn, "status" | "session_id" | "control">
+): ControlPhase | null => {
+  const control = conversationControl(turn)
+  return (
+    control.unconfirmed ??
+    (isPending(turn) &&
+    (control.attempts ?? 0) >= conversationControlAttemptLimit
+      ? turn.status === "stopping"
+        ? "stop"
+        : turn.session_id
+          ? "observe"
+          : "handoff"
+      : null)
+  )
+}
 export type Turn = ChatTurn & {
+  schemaVersion?: 1
+  workflowVersion?: 1
+  control?: ConversationControl
   provenance?: MessageProvenance
   origin?: TurnOrigin
   parent_id: string | null
@@ -40,6 +96,9 @@ export type Turn = ChatTurn & {
 /** Durable row shape. Dates and IDs keep legacy compatibility; native metadata
  * columns remain an adapter concern and may be retained alongside this shape. */
 export const TurnRecord = Schema.Struct({
+  schemaVersion: Schema.Literal(1),
+  workflowVersion: Schema.Literal(1),
+  control: ConversationControl,
   id: Schema.String,
   text: Schema.String,
   status: Schema.Literals([

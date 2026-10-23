@@ -14,7 +14,10 @@ import {
   AgentStorageError,
   AgentNotFound,
 } from "../../agents/domain"
-import { ConversationExecutionError } from "../../conversations/execution"
+import {
+  ConversationControlTimeout,
+  ConversationExecutionError,
+} from "../../conversations/execution"
 import {
   ConversationConflict,
   ConversationFull,
@@ -74,6 +77,7 @@ const HttpFailure = Schema.Union([
   ConversationFull,
   ConversationStorageError,
   ConversationExecutionError,
+  ConversationControlTimeout,
   InvalidMemory,
   MemoryNotReady,
   MemoryStorageError,
@@ -163,6 +167,11 @@ const response = (error: typeof HttpFailure.Type): Response => {
       return Response.json(
         { error: "Restore this agent before changing its files." },
         { status: 409 }
+      )
+    case "ConversationControlTimeout":
+      return Response.json(
+        { error: "This reply could not be confirmed. Check the reply again." },
+        { status: 503 }
       )
     case "ConversationConflict":
       return Response.json({ error: error.message }, { status: 409 })

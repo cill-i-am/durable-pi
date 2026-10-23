@@ -7,6 +7,7 @@ import type {
 import { Effect, Schema } from "effect"
 
 import type { PersonalAgent } from "../agent/worker"
+import { observeConversationSchedule } from "../conversations/adapters/lifecycle"
 import { ConversationConflict, ConversationFull } from "../conversations/turns"
 import { attributedText } from "../messages/identity"
 import { preserveFatal } from "../shared/effect"
@@ -202,8 +203,12 @@ export function personalCoordination(
     deliver: (message, target) => {
       if (target.role === "main")
         return boundary(
-          store
-            .atomic(() =>
+          Effect.gen(function* () {
+            const discoveryDeadline = yield* observeConversationSchedule(
+              "arm conversation discovery",
+              () => owner.runner.armDiscovery()
+            )
+            yield* store.atomic(() =>
               Effect.gen(function* () {
                 if (
                   !(yield* rootLive(target.address.sessionId)) ||
@@ -213,31 +218,34 @@ export function personalCoordination(
                     "closed",
                     "The addressed session has stopped."
                   )
-                yield* owner.conversations.resumeMessage({
-                  operationId: message.id,
-                  text: message.text,
-                  provenance: message.provenance,
-                  origin: {
-                    kind: "coordination",
-                    turnId: target.address.sessionId,
-                    messageId: message.id,
-                    from: message.from,
+                yield* owner.conversations.resumeMessage(
+                  {
+                    operationId: message.id,
+                    text: message.text,
+                    provenance: message.provenance,
+                    origin: {
+                      kind: "coordination",
+                      turnId: target.address.sessionId,
+                      messageId: message.id,
+                      from: message.from,
+                    },
                   },
-                })
+                  { discoveryDeadline }
+                )
                 yield* store.delivered(message.id)
               })
             )
-            .pipe(
-              Effect.mapError((cause) =>
-                Schema.is(ConversationFull)(cause)
-                  ? fail("busy", "The conversation queue is full.")
-                  : Schema.is(ConversationConflict)(cause)
-                    ? fail("closed", "The addressed session has stopped.")
-                    : cause
-              ),
-              Effect.andThen(native(() => owner.runner.wake())),
-              Effect.tap(() => Effect.sync(() => owner.notifyConversation()))
-            )
+          }).pipe(
+            Effect.mapError((cause) =>
+              Schema.is(ConversationFull)(cause)
+                ? fail("busy", "The conversation queue is full.")
+                : Schema.is(ConversationConflict)(cause)
+                  ? fail("closed", "The addressed session has stopped.")
+                  : cause
+            ),
+            Effect.andThen(native(() => owner.runner.wake())),
+            Effect.tap(() => Effect.sync(() => owner.notifyConversation()))
+          )
         )
       return native(async (signal) => {
         const pi = await owner.harness.pi(),

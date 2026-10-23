@@ -145,7 +145,7 @@ it("treats a previous-version owner as having no defaults while its actor drains
   expect(await previous.defaults()).toEqual([])
 })
 
-it("installs workspace defaults through the real owner RPC for existing and new agents, then removes disconnected defaults", async () => {
+it("resolves workspace defaults through the real owner RPC for existing and new agents, then removes disconnected defaults", async () => {
   const inherited = { ...tool, remoteName: "search" }
   const f = fixture({ tools: () => Effect.succeed([inherited]) })
   for (const selected of [
@@ -153,7 +153,6 @@ it("installs workspace defaults through the real owner RPC for existing and new 
     [{ ...tool, name: `mcp_${"c".repeat(40)}` }],
   ] as RemoteTool[][]) {
     const child: PersonalAgent = Object.create(PersonalAgent.prototype)
-    const install = vi.fn()
     Object.assign(child, {
       familyAdmission: async () => ({
         owner: "synthetic-owner",
@@ -176,15 +175,21 @@ it("installs workspace defaults through the real owner RPC for existing and new 
           },
         },
       },
-      installRemoteTools: install,
       active: () => Effect.succeed(undefined),
       conversationPump: { run: () => Effect.succeed(undefined) },
     })
+    // Idle pump passes do not perform fallible setup before a control claim.
+    const callsBeforeIdle = f.defaults.mock.calls.length
     await child.step()
-    expect(install).toHaveBeenLastCalledWith([inherited, ...selected])
+    expect(f.defaults).toHaveBeenCalledTimes(callsBeforeIdle)
+    expect(await f.runtime.runPromise(child["refreshRemoteTools"]())).toEqual([
+      inherited,
+      ...selected,
+    ])
     f.defaults.mockImplementation(() => Effect.succeed([]))
-    await child.step()
-    expect(install).toHaveBeenLastCalledWith(selected)
+    expect(await f.runtime.runPromise(child["refreshRemoteTools"]())).toEqual(
+      selected
+    )
     f.defaults.mockImplementation(() => Effect.succeed([inherited]))
   }
   expect(f.defaults).toHaveBeenCalledTimes(4)

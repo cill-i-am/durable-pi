@@ -1,0 +1,763 @@
+{
+  "schema_version": 1,
+  "candidate_branch": "codex/xstate-conversations",
+  "parent_commit": "60af6f10941241e22d12db87d9d2ea648916a995",
+  "extraction_manifest_sha256": "202ae1a1e3aa215271a9652a082c29707b3a7697f09d7052c98a5d58e693b965",
+  "patch_sha256": "d309093f55e795f96c1d546f895e94b2bd49c04273ad3a619590fc70ecd58f63",
+  "extraction_source_archive_sha256": "6bcd9089d9ebdf648a348a9e9024dd4b8792a7aaf66e12a6bd2535d866433b29",
+  "final_proof_archive_sha256": "754881a6f0335610069f820230146dd753f1461f77e2a30b68920b69558474e7",
+  "final_proof_manifest_sha256": "ad80c2c07710bfa002b170bf46524fa7da54c875b86a8e83bfcedce208fd32fe",
+  "implementation_identity": {
+    "delta_files": 114,
+    "modified": 88,
+    "added": 26,
+    "deleted": 0,
+    "source_files": 49,
+    "test_fixture_files": 60,
+    "scripts": 2,
+    "migration_files": 2,
+    "package_files": 1,
+    "before_scope_files": 1113,
+    "after_scope_files": 1139,
+    "scope": {
+      "prefixes": ["src/", "tests/", "scripts/", "migrations/"],
+      "files": [
+        "package.json",
+        "pnpm-lock.yaml",
+        "pnpm-workspace.yaml",
+        ".npmrc"
+      ]
+    },
+    "after_scope_sha256": "d7565c34a706739ea9b9f94f68ba301872f63a19b55da8a8d29590417f09c0f4",
+    "after_modes_sha256": "931df9f282ae84573bd022e8a5e294089c41dfd2d39b1e19a4b0070fe1d6c410",
+    "digest_encoding": "SHA-256 of UTF-8 JSON, sorted keys, separators comma and colon, no trailing newline",
+    "checked": "All 1,139 guarded implementation files and modes match the extraction manifest; no unexpected guarded paths. Documentation and evidence are outside this scope."
+  },
+  "migrations": {
+    "agent_sql_snapshot_pairs": 16,
+    "earlier_pairs_unchanged": 15,
+    "added": "20261023112327_stiff_warpath",
+    "added_snapshot_id": "85b3b74b-b50c-4254-86aa-d946305d4286",
+    "predecessor_id": "5eca2009-163b-471f-a590-bff9721d7f03"
+  },
+  "generated_file_exception": {
+    "reason": "Current generated route tree matches frozen parent. Candidate snapshot contains a build-added TanStack Start Register declaration. Parent explicitly approved exclusion; B06 changes no route.",
+    "files": {
+      "src/routeTree.gen.ts": {
+        "candidate_sha256": "d2fb9605f47791e62095a2b5ceb5ea4864b9765c3e5779113635ff0d80a9f24f",
+        "current_sha256": "d60b008a2cdb7aabe2aca0a98ee72de8e12e2d19a2b636ba8a6a3e2bc7074e68"
+      }
+    }
+  },
+  "evidence_scope": {
+    "combined_final_static": "Passed after final backend Stop corrections. Preserved integration-tree check, not a fresh review-branch run.",
+    "combined_final_unit_build": "2,662 tests in 242 files and application/site-route/all-Worker builds passed after final backend Stop corrections.",
+    "combined_final_native": "All eight native suites passed after final backend Stop corrections. This later final proof supersedes the earlier extraction source_status native-pending observation; implementation bytes match.",
+    "combined_final_credentials": "1,308 proposed files passed in the frozen integration tree. This is not the review-branch proposed-file scan.",
+    "browser": "72 desktop/mobile journeys, built passkeys and two-real-build client upgrade passed before the final backend Stop corrections; frontend sources unchanged; no new browser run claimed.",
+    "fresh_review_static": "pnpm verify:static passed on the materialized review branch; preserved separately in conversation-review-static.log.",
+    "publication": "B06 publication and hosted CI pending. No merge or deployment claimed."
+  },
+  "files": {
+    "migrations/agent/20261023112327_stiff_warpath/migration.sql": {
+      "baseline_sha256": null,
+      "materialized_sha256": "2afc2e834d8a3be4fdef5616b53c6289956245e97fc0ea4d39f78b288f8fe96a",
+      "operation": "add",
+      "mode": 420
+    },
+    "migrations/agent/20261023112327_stiff_warpath/snapshot.json": {
+      "baseline_sha256": null,
+      "materialized_sha256": "9a2672ec174ea718c93d572a91d5dddd40c733951fbbfd960a89bda688e0b0b1",
+      "operation": "add",
+      "mode": 420
+    },
+    "package.json": {
+      "baseline_sha256": "eb3cef9f4226db582a186b1fe2ef606b67aed69aee1eacfdb4e5376d3396f337",
+      "materialized_sha256": "7700a03a78b0ff6a1f0198a8021ed362fea742cec2159ce6ba957f01891af2cc",
+      "operation": "modify",
+      "mode": 420
+    },
+    "scripts/test-communication-runtime.mjs": {
+      "baseline_sha256": "468dc6afb24562e12e843ed9db227d077ef06de7eadd13d0ccaaf012724880fa",
+      "materialized_sha256": "f7ff294ce595a5789f1a5f2ddad3f88af869356233812b995820041315c1e483",
+      "operation": "modify",
+      "mode": 420
+    },
+    "scripts/test-conversation-runtime.mjs": {
+      "baseline_sha256": null,
+      "materialized_sha256": "5391b4859ab2538c13b4a187803f4800af92758cb6bf11858a831822757ba7c0",
+      "operation": "add",
+      "mode": 420
+    },
+    "src/agent/adapters/http.ts": {
+      "baseline_sha256": "a813a4e1b18a131cf876230902d45ba3c07cce6561b8e149047c06f9ffe31f83",
+      "materialized_sha256": "2d96459ee0ac81836f018e085013cd662c458a4c37dca33dd9247c473fc3d208",
+      "operation": "modify",
+      "mode": 420
+    },
+    "src/agent/worker.ts": {
+      "baseline_sha256": "62bbc8fd0dfb598916f8c480955ac8c96ffc6c487e4eccf36fa2918a12dfc012",
+      "materialized_sha256": "2172f16ed87700feb65d733c8371bf527cbf21f3014da6356d9d5d2ff0e3b952",
+      "operation": "modify",
+      "mode": 420
+    },
+    "src/apps/adapters/sqlite.ts": {
+      "baseline_sha256": "2aa1c9c7509be1b78955d04dd561e7204ee60c2662d83b16eedff73bfe9a803c",
+      "materialized_sha256": "13ec4e262ca99f55c6a4fe9695658653dd427cdc247035f1cedff7c77555054b",
+      "operation": "modify",
+      "mode": 420
+    },
+    "src/apps/pump.ts": {
+      "baseline_sha256": "8abea2e4baac8a90dbba96dcf04751787c54ef3b444db5f2563a526e6f2d847a",
+      "materialized_sha256": "6dfc273c9c90b5fdfa2950584a82c1f344a366665a5dad5a1278033bac9fcb8a",
+      "operation": "modify",
+      "mode": 420
+    },
+    "src/apps/repository.ts": {
+      "baseline_sha256": "634b696e400c59da50957061a4f750e2afcd9083ca7c2c1d83e4f559edb0d366",
+      "materialized_sha256": "ac3abc4599fc472707c1e6a63c27db7f4c05374b29e5752d1370215eb9080d4f",
+      "operation": "modify",
+      "mode": 420
+    },
+    "src/apps/service.ts": {
+      "baseline_sha256": "b5da9dc6b30adc4333c4d26a5d0771e8fd701df55d13bf2a577cc9cba7848c9a",
+      "materialized_sha256": "c4b07673f1a17ab58f2da2a3724f69afec5f4acf1473fa9930e20db5ad401a37",
+      "operation": "modify",
+      "mode": 420
+    },
+    "src/communication/adapters/personal-agent.ts": {
+      "baseline_sha256": "74682e292665c6ce7738f873296e4fac0eb106c54ab63ed10a40e130a7dcd0be",
+      "materialized_sha256": "4df5d0cf99923c27cf13f77bef832e455d122e917da9545ff5340d8285c60f00",
+      "operation": "modify",
+      "mode": 420
+    },
+    "src/communication/communication.ts": {
+      "baseline_sha256": "dae4b8392143d42758c0d871a7812a9730b69d7b20e52193ffba95045cdbceab",
+      "materialized_sha256": "dd1d9fcdaef6356e7576da47bbc91d568032a3f4226a5e34518c9c70a9995c53",
+      "operation": "modify",
+      "mode": 420
+    },
+    "src/conversations/adapters/lifecycle.ts": {
+      "baseline_sha256": null,
+      "materialized_sha256": "54e857183c6ec7829bcd8d4485db7ce1a747ad1ca9bb725677f66cb761b1c6a3",
+      "operation": "add",
+      "mode": 420
+    },
+    "src/conversations/adapters/pi-execution.ts": {
+      "baseline_sha256": "31050789ab3cb5b33769dab95038c0f9913fafb778d0c2f19e15896e837f490f",
+      "materialized_sha256": "f199c789a03a61cc77ce0837e254f7c201ad7a4b473ca876e61f85517b62a39a",
+      "operation": "modify",
+      "mode": 420
+    },
+    "src/conversations/adapters/pi-recovery.ts": {
+      "baseline_sha256": "854aa19cddbd08c3711a97433c0af053ec69ccc422bf0773de19061dc8d9f8a5",
+      "materialized_sha256": "18d7fc1ae3742161d42bfc776f16ebd694060bc70b17c6f01973a1ab9f606ee6",
+      "operation": "modify",
+      "mode": 420
+    },
+    "src/conversations/adapters/schema.ts": {
+      "baseline_sha256": "bfe0308abd8848aea090f4f3205e9b818ce3a781044035e7f677a639aef0be07",
+      "materialized_sha256": "6367702028dced132788f190a630049d793be13401fb8023be1e86485f397bc3",
+      "operation": "modify",
+      "mode": 420
+    },
+    "src/conversations/adapters/sqlite-recovery.ts": {
+      "baseline_sha256": "27146a3ba4b2ff8e416693269163e7982feb9409682064c9d6f41583c492f4cb",
+      "materialized_sha256": "d3d47b38c2af1aefc4b70d69fcdbdb947ec6f7fc3ed12914671b64dd51007cac",
+      "operation": "modify",
+      "mode": 420
+    },
+    "src/conversations/adapters/sqlite-turns.ts": {
+      "baseline_sha256": "3b9e543a52075aeb7ef7281fdaf4278cf5946100b32147beb0934bc30753e485",
+      "materialized_sha256": "c198afc03a339b3eeb999de664cfc59586203693b680300cc4a9f7adf280f4ed",
+      "operation": "modify",
+      "mode": 420
+    },
+    "src/conversations/admission.machine.ts": {
+      "baseline_sha256": null,
+      "materialized_sha256": "750e12b26d5fc2e2109cbe71968b40607f3f47b1103cf35cc70deff6e656cd1a",
+      "operation": "add",
+      "mode": 420
+    },
+    "src/conversations/admission.ts": {
+      "baseline_sha256": "b0caacabc6ac4046fc1ec906a396ad0865c5b3e503e87aac83e2d090259fd32d",
+      "materialized_sha256": "abb969167eab548cab3f29798d1b05a8ae5d68b041b67fc7ac0d82c4d9a7e8be",
+      "operation": "modify",
+      "mode": 420
+    },
+    "src/conversations/attachments.machine.ts": {
+      "baseline_sha256": null,
+      "materialized_sha256": "c8cc850c7046096c954c3a376d5d1b27978f74d4f0b56217f5389a83c5c0e49b",
+      "operation": "add",
+      "mode": 420
+    },
+    "src/conversations/attachments.ts": {
+      "baseline_sha256": "b7c077fa5c3c30ead61651eca3eb19a6bfa9250a4099cb02d71bababde121a03",
+      "materialized_sha256": "5472f233d3243063812df9039bf9b058fb5a195fdd4f71fc406c03d335e597b2",
+      "operation": "modify",
+      "mode": 420
+    },
+    "src/conversations/command.machine.ts": {
+      "baseline_sha256": null,
+      "materialized_sha256": "49438166a06de5242911ef05c565ff47268e3eea6db9814a32e8838a38f6c598",
+      "operation": "add",
+      "mode": 420
+    },
+    "src/conversations/commands.ts": {
+      "baseline_sha256": "3904b3342d5fa2d850490649d5c57d244dba8bf41962b0bfd136ac8c4a988c0c",
+      "materialized_sha256": "a7ddd5a340b1d433f02bf7be3e969230031315a4ee2ef075cc44362381b517c6",
+      "operation": "modify",
+      "mode": 420
+    },
+    "src/conversations/contracts.ts": {
+      "baseline_sha256": "a7bf76d32838e822663dd9589004619b47ac4e7d67d67195da504b2cd47fe6d8",
+      "materialized_sha256": "9e64d57294edc06dd79e65887cc7568ef6d525783580d4fce5deff0e39d22c82",
+      "operation": "modify",
+      "mode": 420
+    },
+    "src/conversations/domain.ts": {
+      "baseline_sha256": "bab78d7adc6854f7e0d10090bb24e5f72e700e74c200f15951ef36480b1aa417",
+      "materialized_sha256": "3e48f0b25ebb9d4af2de543f08f31e56d23292d7949381718e0995aefadb9dfc",
+      "operation": "modify",
+      "mode": 420
+    },
+    "src/conversations/execution.ts": {
+      "baseline_sha256": "b539491f672e5fbbe55777994423710034ffb688039f7e36f9647f9e5104309b",
+      "materialized_sha256": "a7124e4f76e56d525a2f78d5b0c9acf8c56993726ce69570ca6ef3ad77378e3c",
+      "operation": "modify",
+      "mode": 420
+    },
+    "src/conversations/input.machine.ts": {
+      "baseline_sha256": null,
+      "materialized_sha256": "aeac89223e6511a49e7007accff30d9784fad21c2b78a20e4915b5509799e83f",
+      "operation": "add",
+      "mode": 420
+    },
+    "src/conversations/journal.ts": {
+      "baseline_sha256": "1a8e0cf89a8205218e86476eaa8da095d9c30aab53d1ea4a657368ef2754c49e",
+      "materialized_sha256": "08ecec5de533055d2e876d1a0013e0fe3319f13fce5307b0daa53a92aa0e1a4a",
+      "operation": "modify",
+      "mode": 420
+    },
+    "src/conversations/ledger.ts": {
+      "baseline_sha256": "71eacc7d4e0e28a93e4f02d9bb2e5487f7f411c1aa41b394923f328962f8b77d",
+      "materialized_sha256": "c76cadbc3e68ef49dc6d688cae27f97c949e0c2fae13379377fb909fb5641687",
+      "operation": "modify",
+      "mode": 420
+    },
+    "src/conversations/pump.machine.ts": {
+      "baseline_sha256": null,
+      "materialized_sha256": "a7111a3d44d97a330019225f3adeef11319434469c67410af59baf9eec6ec59a",
+      "operation": "add",
+      "mode": 420
+    },
+    "src/conversations/pump.ts": {
+      "baseline_sha256": "edf49c398492ee9d264a7b794c3df25061fdb4db7c78a84afe3b60edcf30d7b9",
+      "materialized_sha256": "7875d5400fe95d85434d78d0144bd88012580e4e759f2e22a440ee4f182182fc",
+      "operation": "modify",
+      "mode": 420
+    },
+    "src/conversations/recovery-discovery.machine.ts": {
+      "baseline_sha256": null,
+      "materialized_sha256": "0e53997efd17f3e2d684c2a6b9155bc2e4c093f93a848b0b09bd9b1e6b75ab3b",
+      "operation": "add",
+      "mode": 420
+    },
+    "src/conversations/recovery-service.ts": {
+      "baseline_sha256": "b5909b49aa063efee6f18444ba37a54bf9e9d8754f37c4b97cf329349d5b8330",
+      "materialized_sha256": "e96eb20de88b38641c2db1448967df1f843658d14ec187f718b85f949d74ce3e",
+      "operation": "modify",
+      "mode": 420
+    },
+    "src/conversations/recovery.ts": {
+      "baseline_sha256": "871769102eec31b31196096a90a3b2582c11a00c12fda951b4883d8ae7a9e268",
+      "materialized_sha256": "93fb3d1546dd275448ed5bf008e65320f7a2a3d2223cdf19e9560765e224e49d",
+      "operation": "modify",
+      "mode": 420
+    },
+    "src/conversations/root-run.machine.ts": {
+      "baseline_sha256": null,
+      "materialized_sha256": "985d15fed62db3ebb1dfdb7b67c33bc6a8e87709aed036477fd2c263b808b881",
+      "operation": "add",
+      "mode": 420
+    },
+    "src/conversations/snapshot.ts": {
+      "baseline_sha256": "fc43b7258e756c7a28068c0df362f8e2d3d247376f883428bf0e13270d5955d1",
+      "materialized_sha256": "11e188545f8ee61e82c79033c1028c1e0e1d1c8abb75fc2d0d670f3d100e0d02",
+      "operation": "modify",
+      "mode": 420
+    },
+    "src/conversations/status.ts": {
+      "baseline_sha256": "adb453d8744cec2726b31bf2dc7c33423edb42f92df06f51ba8d7689aed0c06e",
+      "materialized_sha256": "1401b808e47d3ab4ce29665e65d316dda75a2eeeaf60ba9d59c2ccdfa48231b7",
+      "operation": "modify",
+      "mode": 420
+    },
+    "src/conversations/tool-recovery-hook.machine.ts": {
+      "baseline_sha256": null,
+      "materialized_sha256": "fb425100f5bff506166a1fa35d73202bd87f526d5bcb1f3fc696b102b4e1d08a",
+      "operation": "add",
+      "mode": 420
+    },
+    "src/conversations/tool-recovery.machine.ts": {
+      "baseline_sha256": null,
+      "materialized_sha256": "ed0a4424be6a4746674d3d55a5e92c689a5fddb2ed283709b4c35cc4aeb2a290",
+      "operation": "add",
+      "mode": 420
+    },
+    "src/conversations/turns.ts": {
+      "baseline_sha256": "7282d6314b970313116edca96e493cd24e96aa7c1a50daac3775467ca31b67a5",
+      "materialized_sha256": "bda90ca12794b51edd723a15c369da94681f3610caf750203665f4cb48d2b31a",
+      "operation": "modify",
+      "mode": 420
+    },
+    "src/coordination/personal-agent.ts": {
+      "baseline_sha256": "9f6bed74736de0fef607048bbff0719f658f454ce1e81b088fa0fd7ed0911ccb",
+      "materialized_sha256": "2c0ccc00b921e24f122a3c8019b6c56d19963d4393b64d066af9f13cfb972dd3",
+      "operation": "modify",
+      "mode": 420
+    },
+    "src/delegation/background-mailbox.ts": {
+      "baseline_sha256": "e19a8891c0679b7fcff1a33fca9ca6e38f26a9c83140da36ac342bebf84b2e30",
+      "materialized_sha256": "17f8138d7fbac7153328091978b3333ee0dede651d7fe1e0f7307ce098190625",
+      "operation": "modify",
+      "mode": 420
+    },
+    "src/delegation/background-service.ts": {
+      "baseline_sha256": "fc6f23bf785d23c49b91f1fd5d3ccfa6370f79cac661e1ffb2f7fbf16b2ad519",
+      "materialized_sha256": "c7f86f09606b0aff39989b63dd11cac3b74eec53650ee4c34619a5fbc48c9629",
+      "operation": "modify",
+      "mode": 420
+    },
+    "src/features/conversation/conversation.tsx": {
+      "baseline_sha256": "1c43c44ac3c0d40104b412fecbeb0ce1e0c54be771c5925808dad2844078919f",
+      "materialized_sha256": "ad2d2698877abefbb84897ef30ac59970dd10c92106be8507b149a837227f611",
+      "operation": "modify",
+      "mode": 420
+    },
+    "src/features/conversation/recovery-controls-owner.ts": {
+      "baseline_sha256": null,
+      "materialized_sha256": "03dd1b41696ac3c55e52b250fb6c5b1980d2176b4e1e1b863d8a58b5d39acf2f",
+      "operation": "add",
+      "mode": 420
+    },
+    "src/features/conversation/recovery-controls.machine.ts": {
+      "baseline_sha256": null,
+      "materialized_sha256": "8349007529a0a76ecac55cf6acff7d8a6253d7b9a86b80a9e463723f626e0fd0",
+      "operation": "add",
+      "mode": 420
+    },
+    "src/features/conversation/recovery-controls.tsx": {
+      "baseline_sha256": null,
+      "materialized_sha256": "82d54fa0f975010b7eb207699eee19eb89afc015aaabb894b8deb99d47ce2a94",
+      "operation": "add",
+      "mode": 420
+    },
+    "src/features/conversation/use-conversation.ts": {
+      "baseline_sha256": "caa15cc9417b0366f146c7491b727f34108db117c8c0b9ef6926f06327eaddde",
+      "materialized_sha256": "d870633045920855284ca99821867cfca96a9d08fb555a9dfd2bfd277bcefac6",
+      "operation": "modify",
+      "mode": 420
+    },
+    "src/routines/pump.ts": {
+      "baseline_sha256": "75eef6de6e283e58d0cd1dc9c6cef1ba3d43940f76634a5dcf612dc7b4bab381",
+      "materialized_sha256": "5324ffcd4c38938eaacdac328a7ac6cf5c075ca450d6c29d2057af529ffd82fa",
+      "operation": "modify",
+      "mode": 420
+    },
+    "src/routines/service.ts": {
+      "baseline_sha256": "3320391dbc97ef6d12d71945ef5b3cbb666c80e81553c8b22d21f47bd363ef62",
+      "materialized_sha256": "60960f04c58a422c8631bda5ed256ee9835ac661e19dab0f1ae86bba0d68baa1",
+      "operation": "modify",
+      "mode": 420
+    },
+    "src/storage/migration-manifest.ts": {
+      "baseline_sha256": "17d33feff9b9ec9a7903edc37ee8328efa04b9c00cf1f800c19ada3fd6418316",
+      "materialized_sha256": "9ffc9ff9a339ce66950a8dbf82c1c03a533b6e0b43a7d7eb05642fcdb1a1899e",
+      "operation": "modify",
+      "mode": 420
+    },
+    "src/workspace/attachments.ts": {
+      "baseline_sha256": "6e4f0071673a3cb6a7dca038d32a8364b9294a1fe936076391d4be0e73848832",
+      "materialized_sha256": "b8039999e13885e6892edbb6c0f12c371f3c73a610963da350f219bfd6f336a1",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/activity-boundary.test.ts": {
+      "baseline_sha256": "f95511185c8c1b613edd34dd30ab620bd28a0d1c737241e221e64c6898223746",
+      "materialized_sha256": "6c79e0f9d780977187ae7420ed18624e20738a4554743856619b4cc4ab9fd56d",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/activity.test.ts": {
+      "baseline_sha256": "5f9ec4b8dffbd625d3a47e1e2817e04140be49d13e6964521da4d2827293c4f0",
+      "materialized_sha256": "473e0cb4f211f54e291409c2aa6eccd98c0894a92b33a56092a12e337abdf9fa",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/admission-wake.test.ts": {
+      "baseline_sha256": "74b01d1a1b75fe3d0bd001d97721a468840a47ae5443f7bb18381c35715bfe8d",
+      "materialized_sha256": "72e88cf3750a0fbc8c4603fdeae4ac0a621476141456b9b003d6fd1799c94fa8",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/agent-http.test.ts": {
+      "baseline_sha256": "9fe45c053e4e0f25cba3fe8ce2eca6a0b536cb749cf88863ebed1ca3c2ef8698",
+      "materialized_sha256": "c9e829c75c99076bf26b7fe6c78e99aa1ec02ca75b1581e25dbb28b3b796b0fc",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/app-pump.test.ts": {
+      "baseline_sha256": "7320d9c9d8a6e23caec76e6aecfd22b1b6bc3b7ec8325fdc30e9a62ca3429889",
+      "materialized_sha256": "4154a1666a4f8af706f507e85cd389b0b614ec96d2bc44b9e15a996e8add5490",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/apps.test.ts": {
+      "baseline_sha256": "eede748753619644036e2a521256a7ec22723cc6dd22b0304ab440f57d9ad188",
+      "materialized_sha256": "eecd24099d2a18e6fe4ec6a55e8a17402727e8aba439cc21e7a0448659bdc124",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/attachment-preparation.test.ts": {
+      "baseline_sha256": "171bca27fa8ca57f47b4e64f8bb800a73b321c410a2cc5923aa2b908af805b01",
+      "materialized_sha256": "9edd8d0720003559d703f32c00e3217c0a873e57d45cb2675ed25110363afa00",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/background-mailbox.test.ts": {
+      "baseline_sha256": "5c9b34c46d663355c9df0c71564f1a4e0150566cfccdd0383b0515b7e5054e6a",
+      "materialized_sha256": "7347e61ff3a2d4cf0b7ca6c20fa99459e3492080b87d336662d2adde290e59bc",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/background-task-controls.test.ts": {
+      "baseline_sha256": "c756b5d0c7bb1653d502061739b3112b473521a948533eb63a9a28bcd7cdb0e6",
+      "materialized_sha256": "2de5bfd837ad7ab7b6eab9343980b2d5897069a449474488e9b6fa27d3830136",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/browser/conversation-recovery.spec.ts": {
+      "baseline_sha256": null,
+      "materialized_sha256": "ef53bab6a7f5fe82d6e5c3a366d898d70d7dfd691172ae031b5b4084373b45dd",
+      "operation": "add",
+      "mode": 420
+    },
+    "tests/communication-application.test.ts": {
+      "baseline_sha256": "9be4ad1a365152c1e640c372e891c9d47290c259eb3ccd47b8e04e3d1d5537c0",
+      "materialized_sha256": "10c7fd30cac7b1b10361a3b819e23c64b9b349265e9421ae03fe13d44481d7f1",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/conversation-admission.test.ts": {
+      "baseline_sha256": "ffbc15bb7dcc99acf42efe5cc2a05c57cdd30cebf5383e7e72be6c3a53b2c5b5",
+      "materialized_sha256": "182d0f68e2986c7932562d7636ba48bc28db3842e178be3ca8b7640eb15ead89",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/conversation-command-boundary.test.ts": {
+      "baseline_sha256": "e07cbabafbfb5ef40098c8042755d7558b133a4cf7e9e1ea36c9b28e13ba9c38",
+      "materialized_sha256": "af0d22ad372ce1713fc4f37be5fafc5c669d108c9f75d21b8792ba2792de5c51",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/conversation-control.test.ts": {
+      "baseline_sha256": null,
+      "materialized_sha256": "bdda75e47abd1044c295365eb0c209ac5dd62c4d0fc7b76392fc45f76c837fa3",
+      "operation": "add",
+      "mode": 420
+    },
+    "tests/conversation-domain.test.ts": {
+      "baseline_sha256": "e159ee9e2d97486082a454d3c2222a5e94f4ee9b8762260fd0274509ddf624be",
+      "materialized_sha256": "f856130490bc47d5c192b29f73ccff9dcd81d622859dc0eea60d4ff69ef31e45",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/conversation-fixture.ts": {
+      "baseline_sha256": "70d07dfac1c3fa686572ead3e2ccbb8413afd729612ec4e79a4f4e7919f3af4e",
+      "materialized_sha256": "df99e64de2fa905fab9f4301f7b96ca007cd6427a35732db0005b11de7c6d2a1",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/conversation-input-machine.test.ts": {
+      "baseline_sha256": null,
+      "materialized_sha256": "eeaaed38c62b235af4625171ad5d3875017491582afc6256bce8075d4025d7e5",
+      "operation": "add",
+      "mode": 420
+    },
+    "tests/conversation-journal.test.ts": {
+      "baseline_sha256": "7083788bae677ae063b3e96e03a4df979d35e94a17a03539c439e2b1d7216bb0",
+      "materialized_sha256": "bb5b52594801d40458c51f781d07e5bb5d87147d148ee14e0dfb5faad9c3be71",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/conversation-native-control.test.ts": {
+      "baseline_sha256": null,
+      "materialized_sha256": "3b0071217cf92b010181cc5838a94f74e95f442a179c4271676b5f5db32f329f",
+      "operation": "add",
+      "mode": 420
+    },
+    "tests/conversation-observation.test.ts": {
+      "baseline_sha256": "0c318efc190477b50d6e341994d8253052edf0ceec0f2ed91999cb2829a50877",
+      "materialized_sha256": "aaaea6ad5a2600119037dde62065a45ce4488d85a9d8fd84472691d27e7aa8db",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/conversation-pump-ownership.test.ts": {
+      "baseline_sha256": null,
+      "materialized_sha256": "6498928bb58df231415b484703799c8081a37a02ea45ec2295dd11407bce4d67",
+      "operation": "add",
+      "mode": 420
+    },
+    "tests/conversation-pump.test.ts": {
+      "baseline_sha256": "5a968c1833288018ddc4fb074d13753f68e9ba96b48c164b9629c43c74f98662",
+      "materialized_sha256": "7947a821c75f692ff958be603fcd789e71393b3d76e6edd003574eac2a456d2a",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/conversation-recovery-controls.test.tsx": {
+      "baseline_sha256": null,
+      "materialized_sha256": "d15317441deb3c182bae2b1d88a21d08e1250558f7e1bfdc04118f00b33865e1",
+      "operation": "add",
+      "mode": 420
+    },
+    "tests/conversation-runner.test.ts": {
+      "baseline_sha256": null,
+      "materialized_sha256": "26468f82f489e6f54ebc3bc2c458d8860a16ba0cfb6db627c7b401c0ba73871b",
+      "operation": "add",
+      "mode": 420
+    },
+    "tests/conversation-snapshot.test.ts": {
+      "baseline_sha256": "20062554d33bdef3844973da60bf920162bf2f603dad6eeef11176516b62c05a",
+      "materialized_sha256": "5343980eba353d31187b5814bbbf734d9ed6437e9221f7965406cde294ea62a9",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/conversation-store.test.ts": {
+      "baseline_sha256": "4e687cf00bd8c76c1b8b420c813367cbfc048d4543b8914b6fd453ab0bc24ae0",
+      "materialized_sha256": "f301d1f62f9af762bfa3f2d25a13935a0a6f91d498c9fcb256ffe89e347c609f",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/coordination-discovery.test.ts": {
+      "baseline_sha256": null,
+      "materialized_sha256": "bc0664cbf22cc004a96a5a676d02c6e42b52c2362db5feb4034b30f49ce7fa93",
+      "operation": "add",
+      "mode": 420
+    },
+    "tests/coordination.test.ts": {
+      "baseline_sha256": "552dabed84d8be6ab24ea6541966fe8b23427e420eb482bc5b3c107b2a3b4775",
+      "materialized_sha256": "99d2a7bb7fcc9b09b7a1cc76642ab2f6cafcf70b4b3d045b54297a351af7562d",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/email.test.ts": {
+      "baseline_sha256": "171a057bfa4db82ae5ae889856a68b90fbe2af9adf6890b7e60b0a428f45a670",
+      "materialized_sha256": "91028373d296449808931471396a10ffb4bcd8264dcc0650db5a7a6b03cfcb28",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/family-model-authority.test.ts": {
+      "baseline_sha256": "15364d2fae7ffc0005faf607a42965c9edad54b6531348ca4894599f90a8b11f",
+      "materialized_sha256": "d292ffbb56c3694a32c42decb7d16c4a59952d1612d65fef49100c5e7d831094",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/inference-native.test.ts": {
+      "baseline_sha256": "63e2358d74d9646373de70393d3b0a6147ba15d0bac7f67227b0830d0ae1b26b",
+      "materialized_sha256": "b02772a337e9a6d78efdf335b1e69aec1cb76efcc20afb0e5076645f369ffd08",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/inference-routing.test.ts": {
+      "baseline_sha256": "cdcaafb5a504c97ead8d3a5145ed2acd8a21f0e1f2842fc801d6a516f8c6afd9",
+      "materialized_sha256": "20ac2bb8bba727bf00ea59263f86af0a25b7da1e44cf8d986488e5dc9aa11347",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/loop-recovery.test.ts": {
+      "baseline_sha256": "f58779e6eb3fbfca7c1e93da19f1b0e155b6cb00b9e477a8b5beda986a59b8ad",
+      "materialized_sha256": "28711a19dede93dc58e1f7e082ec409d57882168b58234ec074cb77858aaedee",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/message-provenance.test.ts": {
+      "baseline_sha256": "b6167250e3276ee866074f026d8f3ee6ea333758ed87e52629288af4d12bafca",
+      "materialized_sha256": "c1a924a76451a4b1f736b4502bb98c4854a8904fec7fb83778727e71e0fd672b",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/owner-rpc.test.ts": {
+      "baseline_sha256": "1e88c5b2a0427bf5e7655232b02afd4df8524210bac210c8e0614b781fb141bf",
+      "materialized_sha256": "be2e4d46dc72696a60c2925b10ffced934a6a5fccfb5d7b26f263ac57543a01f",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/pi-browser-recovery.test.ts": {
+      "baseline_sha256": "d189f140e5a9499bf71471bb70d14db9f484f97d0de9556dfb1e3ca1f16e6131",
+      "materialized_sha256": "d42226af5dc1485be92a9eff9d99bcbff8dba22807bfd0f8cf354eb43ae4307b",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/pi-compaction.test.ts": {
+      "baseline_sha256": "f4bed1bef4957c4e9ac9ee5844a776ec7ce457be3d977adb3ca0e643da6e6e45",
+      "materialized_sha256": "b0129de02e3af3371c40dc254ac2f4b3be17765dfbfebb3887a466b00e82e734",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/pi-conversation-pump.test.ts": {
+      "baseline_sha256": "96c9940d9bf68ea67118731c799ac71456be72b76e370a62bad0808b04d970fc",
+      "materialized_sha256": "e20170fce95ef2a13726df8a5167b61c5cb5da9d8c188e9eccd19f3d642a262d",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/pi-loop-recovery.test.ts": {
+      "baseline_sha256": "6000ea339dc3b84ebb7d6a2dc09140d61ed8eb7cd15990d5c03d97015cf21fee",
+      "materialized_sha256": "e186a1454900b00936d401b6daac545668b7029ddd96c81e4c2b8bd782173d4d",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/pi-reply.test.ts": {
+      "baseline_sha256": "a37041a397f04f50042392c69debd4ee9461989858192abd3df42b3483c760ee",
+      "materialized_sha256": "990e9e4ffd4b6467448bb272863c9c715d3c71b28b52ec5356ea55074e776a57",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/pi-steering.test.ts": {
+      "baseline_sha256": "f60919cb681d27b0fbcfaea8e81c1ad123ff3a618e0b0bda3fafc3265c54dc32",
+      "materialized_sha256": "6cfbd7a0563ac37fe00d025707dcdd36c180db19690cc488886e0434abe1af60",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/recovery-boundary.test.ts": {
+      "baseline_sha256": "7d5cb4aaaacd0d6c271e1304a97de0fc288a4712cbf139b2b8e70aaa65cf075f",
+      "materialized_sha256": "656cc20663bd4c72eac417a90408776d83226ed95e022f552c9e72e89f216d6e",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/reply-delivery.test.ts": {
+      "baseline_sha256": "3b4b8132137b0af460906d7fbfbe79d46ee7cb6e678cf54a3af7156f26dd1eb6",
+      "materialized_sha256": "7b3fd12d75d792af020d0c2ef43d124f697b6ec0e7a90e5300c2326f1d9e95c3",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/reply-pump-failure.test.ts": {
+      "baseline_sha256": "ef04e56a8cb45dca768fd291ab6d572a49c342b597547a3441e343117f50997d",
+      "materialized_sha256": "50e4949713b78fa79bdc842b4aa157297d588ec7efc810415a2c6489335ad355",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/routine-fixture.ts": {
+      "baseline_sha256": "5960a3a123a38bd14500b18e04aca7022578df60dcedd3ec44dcb1b48b300847",
+      "materialized_sha256": "83ef2ba41994c4ab8de140db1e54ba7500625f0625af88676ca0e030f045b1ba",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/routines.test.ts": {
+      "baseline_sha256": "6448bf3a2d44426c56d087328e804f0a0ea16d1977eba317ccb2963cc185652f",
+      "materialized_sha256": "64e74e71889975153cc46a7d9d1939d7770b4b724c87b206d845c717fa2a4eb1",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/run-activity.test.tsx": {
+      "baseline_sha256": "711ff2b402d976471a0e713ab2232a21c95b3a2d1123f3236d496fdfaf9f2d42",
+      "materialized_sha256": "ae1fa5e6c186610e37d556848eca81b470914dffeeb696af938f26fb787358c2",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/runtime/attachment-probe.ts": {
+      "baseline_sha256": "61501a4315c613cd943251a9d8f58ec57ffc0ce4da66e64816ceccabdbde8476",
+      "materialized_sha256": "6909c3d6c54426a983f5e0838c2f81b1f3930c2cb273275b4d0f05add932c8d0",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/runtime/background-stop-worker.ts": {
+      "baseline_sha256": "ed1a67bfd70d541f33c28ee8748bda53faef5505cbf1fc8a4b1833853b918695",
+      "materialized_sha256": "87e545eda9f95b0338c64784e69b5ad7223e33dc8ed34f7dd8f073fee3bdbbc2",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/runtime/conversation-control-worker.ts": {
+      "baseline_sha256": null,
+      "materialized_sha256": "b1541a63983ae974d1ff45addb1e83ce3cfac318f712e39701136e0e38534ff6",
+      "operation": "add",
+      "mode": 420
+    },
+    "tests/runtime/loop-worker.ts": {
+      "baseline_sha256": "c9478c38f857d72007d26dd34ac16a022f3c563580dd5d59771488531a4afc01",
+      "materialized_sha256": "10bd7fa787a9b3ccc69069e560d206b6c893e8fc9fac70f809e4409644be93fc",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/runtime/personal-agent-worker.ts": {
+      "baseline_sha256": "6cfd6e37400ce182b3b3680ea50e57e95629f1b47832b56c215a26a93cf63939",
+      "materialized_sha256": "8555f5ff91c96392daac9d565f3f71d36d6cd22ec928b166796b33ef933024fd",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/skills.test.ts": {
+      "baseline_sha256": "5839b1af2a7e15c35c24e1b136138e8e7d371e6bca8a550161ce341081a61b60",
+      "materialized_sha256": "08bcc7564399a05ac2d563275ca08931ea766093be5f8da7ce93f7bf4f787457",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/task-channel-controls.test.ts": {
+      "baseline_sha256": "4f432d9325f5904ffa69a6d669badaaff3bd4b39dfb1db9dadcca7307b0549c1",
+      "materialized_sha256": "b7d54201329fefd129409ffc4e517b9d3b239828f4c7a5870b5c57a294d5a734",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/tool-recovery-machines.test.ts": {
+      "baseline_sha256": null,
+      "materialized_sha256": "efca1452fd5e42ddd71389e3d6a7da88bd0e87dc1d170fff349e498696851cb9",
+      "operation": "add",
+      "mode": 420
+    },
+    "tests/video-preparation.test.ts": {
+      "baseline_sha256": "6e69c06d3caec25c8cce269f5af568240863655eb79e22f9e8e91f65c582669a",
+      "materialized_sha256": "262eac302c0852eb746bff0bf981bc020e28ff1eb7acb42af416f4132a432b25",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/webhooks.test.ts": {
+      "baseline_sha256": "0e126dbdf8fa65806cc909af38a59a77e27de0ca5f54be99edf2069e5a081fec",
+      "materialized_sha256": "111e731ebd3fa2f807cef6cba42f06faa3b46745670154f752960c75b67bb44a",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/whatsapp.test.ts": {
+      "baseline_sha256": "a6b034a66ca921123a56651719f177101de210cea7c919afe678358a801e703c",
+      "materialized_sha256": "48a1e1969a8a653e75f910fd5f4d7faf3a581e428d04fe2b43e3624b28ce07b2",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/workspace-audio.test.ts": {
+      "baseline_sha256": "858ac0a41c18442205c72f3c95d1782bffac43d43098c2ab14e2deaeee43b35c",
+      "materialized_sha256": "59fb9aea727e9bc49da4aedd3487b96143fffb75dfda5c7cbd263684b87e7dea",
+      "operation": "modify",
+      "mode": 420
+    },
+    "tests/workspace-files.test.ts": {
+      "baseline_sha256": "ad2837a036600667d79c97cd68c6d8fee418348f4a2f04fc278acaeea1b0781b",
+      "materialized_sha256": "badbc7d97f967f709465f9001cbedfb951abb9f7dbec3c093fc14e40b3cae26d",
+      "operation": "modify",
+      "mode": 420
+    }
+  },
+  "preserved_evidence_sha256": {
+    "docs/evidence/xstate-effect/conversation-background-stop-negative.log": "cea64a2285459b49800fb90d6329ea9ab3e705b4df5095f37c872d7ea029ccda",
+    "docs/evidence/xstate-effect/conversation-candidate-browser.log": "41516dcc92132a9333a1d6f3c1340f863f981f846be1b39b1982d7696eccea06",
+    "docs/evidence/xstate-effect/conversation-candidate-credentials.log": "29c6080fadf35a3999ddac765dee83ac2007a5679764ac6b167b5bec5c31c2b1",
+    "docs/evidence/xstate-effect/conversation-candidate-native.log": "04472c829e988be12cb4cbf6f89b7d105405287d8b72f5c5d70cfbc82dd7c7fe",
+    "docs/evidence/xstate-effect/conversation-candidate-static.log": "6da4f858f112bafc02464d78cdcfb34c4a0ad7d9374e97e7ad045d874c1492f8",
+    "docs/evidence/xstate-effect/conversation-candidate-unit-build.log": "15733fec7e602e259db88bb69961f781de02ce3b2f50c6a882c754999db3d29d",
+    "docs/evidence/xstate-effect/conversation-http-stop-negative.log": "2b691b6c8ee01b3e64bb9015c74f7a212d531a7feb4f7b569aff91f3989febd4",
+    "docs/evidence/xstate-effect/conversation-native-negative.json.txt": "8cee37e3a85b38466657830a52efe315742c47471ffe2fb0e44af3e99ebcf807",
+    "docs/evidence/xstate-effect/conversation-native-negative.log": "0666a22b9be8b38450c6b8d57cb5f2be177fbc4c83eecce501e539e5d98a7d45",
+    "docs/evidence/xstate-effect/conversation-native.json.txt": "1a55716c7c45791c8057098b573c41078a320c68f1c0c450afde2d7ecc20cadb",
+    "docs/evidence/xstate-effect/conversation-native.log": "cafdeef0c2aa423ffcdc25d8e7af24de193f0284b4ce87e2ced0a06af3c12b8e",
+    "docs/evidence/xstate-effect/conversation-stop-integration.log": "b9c7b1113779c91ed8e0cff44405395c39c8e9bd5ad6d0869116bad181ca73ec"
+  },
+  "fresh_review_static_sha256": "af3536fba69f5966c1116a876463f255294fd869cc778e1efdafdb1a44ba4a39",
+  "parent_extraction_manifest_sha256": "c851dd71a8693c9128e6e16adf51f3728d7001f83633e95b9f5b83880bf4d258"
+}

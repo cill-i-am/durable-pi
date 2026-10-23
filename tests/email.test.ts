@@ -1,4 +1,4 @@
-import { Effect, Exit } from "effect"
+import { Clock, Effect, Exit } from "effect"
 import { Schema } from "effect"
 import { describe, expect, it } from "vitest"
 
@@ -78,6 +78,15 @@ function fixture() {
     sends = 0,
     admissions = 0
   let sendError: EmailSendFailed | undefined
+  // This fixture's admission host supplies a finite synthetic discovery lease.
+  const admit = (input: Submission) =>
+    Clock.currentTimeMillis.pipe(
+      Effect.flatMap((now) =>
+        conversations.admit(input, undefined, [], undefined, {
+          discoveryDeadline: now + 60_000,
+        })
+      )
+    )
   const pump = emailPump(records, {
     armReply: () => Effect.void,
     active: () => Effect.sync(() => active),
@@ -85,9 +94,7 @@ function fixture() {
       Effect.suspend(() => {
         if (!connected) return Effect.fail(new EmailUnavailable())
         admissions++
-        return conversations
-          .admit(input)
-          .pipe(Effect.mapError(() => new EmailUnavailable()))
+        return admit(input).pipe(Effect.mapError(() => new EmailUnavailable()))
       }),
     turn: (id) => conversations.get(id).pipe(Effect.orDie),
     send: (_record, _reply) =>
@@ -119,6 +126,7 @@ function fixture() {
     db,
     records,
     conversations,
+    admit,
     input,
     pump,
     complete,
@@ -317,7 +325,7 @@ describe("durable receipt and reply delivery", () => {
     const f = fixture()
     run(f.records.receive(f.input, 1, Date.now() + 60_000))
     run(
-      f.conversations.admit({
+      f.admit({
         operationId: f.input.id,
         text: "Subject: Dinner\n\nHelp with dinner.",
         mode: "followUp",

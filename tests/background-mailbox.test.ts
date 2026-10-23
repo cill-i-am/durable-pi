@@ -6,7 +6,10 @@ import { expect, it } from "vitest"
 
 import { archiveEntries } from "../src/conversations/adapters/pi-reply"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
-import { ConversationFull } from "../src/conversations/turns"
+import {
+  ConversationFull,
+  type StopDiscovery,
+} from "../src/conversations/turns"
 import { backgroundRequest } from "../src/delegation/adapters/background-http"
 import { SqliteBackgroundMailbox } from "../src/delegation/adapters/background-mailbox"
 import { backgroundReply } from "../src/delegation/adapters/background-protocol"
@@ -116,8 +119,9 @@ function fixture() {
     },
     admission: {
       transactionGroup: db,
-      stop: (id: string) => conversations.requestStop(id).pipe(Effect.asVoid),
-      admit: (h: typeof handoff, text: string) =>
+      stop: (id: string, options?: StopDiscovery) =>
+        conversations.requestStop(id, options).pipe(Effect.asVoid),
+      admit: (h: typeof handoff, text: string, discoveryDeadline: number) =>
         conversations
           .admit(
             {
@@ -127,7 +131,8 @@ function fixture() {
             },
             undefined,
             [],
-            h.route
+            h.route,
+            { discoveryDeadline }
           )
           .pipe(Effect.map((admission) => admission.turn.id)),
     },
@@ -140,7 +145,8 @@ function fixture() {
         },
         undefined,
         [],
-        h.route
+        h.route,
+        { discoveryDeadline: Date.now() + 60_000 }
       ),
   }
 }
@@ -161,13 +167,19 @@ it("persists handoff and admits its report once with the original model and even
     )
   ).toThrow("different request")
   Effect.runSync(f.mailbox.observed(19, f.result))
-  expect(Effect.runSync(f.mailbox.deliver(f.admission))).toBe(false)
+  expect(
+    Effect.runSync(f.mailbox.deliver(f.admission, Date.now() + 60_000))
+  ).toBe(false)
   f.status("done")
   Effect.runSync(
     f.conversations.setSettings({ model: "gpt-6-astra", thinking: "high" })
   )
-  expect(Effect.runSync(f.reopen().deliver(f.admission))).toBe(true)
-  expect(Effect.runSync(f.reopen().deliver(f.admission))).toBe(false)
+  expect(
+    Effect.runSync(f.reopen().deliver(f.admission, Date.now() + 60_000))
+  ).toBe(true)
+  expect(
+    Effect.runSync(f.reopen().deliver(f.admission, Date.now() + 60_000))
+  ).toBe(false)
   const turns = Effect.runSync(f.conversations.recent())
   expect(turns).toHaveLength(1)
   expect(turns[0]!.routing).toEqual(route)
@@ -185,25 +197,30 @@ it("rolls back report acknowledgement and conversation admission together", () =
   Effect.runSync(f.mailbox.observed(19, f.result))
   expect(() =>
     Effect.runSync(
-      f.mailbox.deliver({
-        ...f.admission,
-        admit: (h, text) =>
-          f
-            .admit(h, text)
-            .pipe(Effect.andThen(() => Effect.die(new Error("crash")))),
-      })
+      f.mailbox.deliver(
+        {
+          ...f.admission,
+          admit: (h, text) =>
+            f
+              .admit(h, text)
+              .pipe(Effect.andThen(() => Effect.die(new Error("crash")))),
+        },
+        Date.now() + 60_000
+      )
     )
   ).toThrow("crash")
   expect(Effect.runSync(f.conversations.recent())).toHaveLength(0)
   expect(Effect.runSync(f.mailbox.get(19))!.status).toBe("ready")
-  expect(Effect.runSync(f.reopen().deliver(f.admission))).toBe(true)
+  expect(
+    Effect.runSync(f.reopen().deliver(f.admission, Date.now() + 60_000))
+  ).toBe(true)
 })
 
 it("repeated report retries preserve trusted provenance and archive as events", () => {
   const f = fixture()
   f.status("done")
   Effect.runSync(f.mailbox.observed(19, f.result))
-  Effect.runSync(f.mailbox.deliver(f.admission))
+  Effect.runSync(f.mailbox.deliver(f.admission, Date.now() + 60_000))
   let turn = Effect.runSync(f.conversations.get(f.handoff.reportId))!
   for (let n = 0; n < 2; n++) {
     Effect.runSync(
@@ -215,11 +232,17 @@ it("repeated report retries preserve trusted provenance and archive as events", 
       )
     )
     turn = Effect.runSync(
-      f.conversations.admit({
-        operationId: crypto.randomUUID(),
-        text: turn.text,
-        retryOf: turn.id,
-      })
+      f.conversations.admit(
+        {
+          operationId: crypto.randomUUID(),
+          text: turn.text,
+          retryOf: turn.id,
+        },
+        undefined,
+        undefined,
+        undefined,
+        { discoveryDeadline: Date.now() + 60_000 }
+      )
     ).turn
     expect(turn.origin).toEqual({
       kind: "background",
@@ -257,7 +280,9 @@ it.each(["parent", "owner", "deadline"])(
     Effect.runSync(f.mailbox.observed(19, f.result))
     f.status("done")
     expect(Effect.runSync(f.mailbox.authorized(19))).toBe(false)
-    expect(Effect.runSync(f.mailbox.deliver(f.admission))).toBe(false)
+    expect(
+      Effect.runSync(f.mailbox.deliver(f.admission, Date.now() + 60_000))
+    ).toBe(false)
     expect(Effect.runSync(f.mailbox.get(19))!.status).toBe("cancelled")
   }
 )
@@ -287,7 +312,9 @@ it("does not admit a result whose RPC acknowledgement arrives after the deadline
   f.advance(600001)
   Effect.runSync(f.mailbox.observed(19, f.result))
   expect(Effect.runSync(f.mailbox.get(19))!.status).toBe("cancelled")
-  expect(Effect.runSync(f.mailbox.deliver(f.admission))).toBe(false)
+  expect(
+    Effect.runSync(f.mailbox.deliver(f.admission, Date.now() + 60_000))
+  ).toBe(false)
 })
 
 it("isolates bots, validates report ownership and limits unfinished groups", () => {
@@ -347,6 +374,7 @@ function application(
     {
       active: () => Effect.succeed(false),
       backgroundActive: () => Effect.succeed(false),
+      prearm: () => Effect.sync(() => Date.now() + 60_000),
       wakeConversation: () => Effect.void,
       armBackground: () => Effect.void,
       wakeBackground: () => Effect.void,
@@ -363,14 +391,20 @@ it.each(["pending", "delivered"])(
     const f = fixture()
     if (state === "delivered") {
       Effect.runSync(
-        f.conversations.admit({
-          operationId: "synthetic-active",
-          text: "Keep this separate request running",
-        })
+        f.conversations.admit(
+          {
+            operationId: "synthetic-active",
+            text: "Keep this separate request running",
+          },
+          undefined,
+          undefined,
+          undefined,
+          { discoveryDeadline: Date.now() + 60_000 }
+        )
       )
       f.status("done")
       Effect.runSync(f.mailbox.observed(19, f.result))
-      Effect.runSync(f.mailbox.deliver(f.admission))
+      Effect.runSync(f.mailbox.deliver(f.admission, Date.now() + 60_000))
     }
     const unrelated = Effect.runSync(f.conversations.get("synthetic-active"))
     const app = application(f, {
@@ -400,17 +434,22 @@ it.each(["storage", "identity"])(
     Effect.runSync(f.mailbox.observed(19, f.result))
     let called = false
     const exit = await Effect.runPromiseExit(
-      f.mailbox.deliver({
-        ...f.admission,
-        transactionGroup: mode === "storage" ? {} : f.db,
-        admit: (h, report) =>
-          Effect.sync(() => {
-            called = true
-          }).pipe(
-            Effect.andThen(() => f.admission.admit(h, report)),
-            Effect.as("wrong-identity")
-          ),
-      })
+      f.mailbox.deliver(
+        {
+          ...f.admission,
+          transactionGroup: mode === "storage" ? {} : f.db,
+          admit: (h, report, discoveryDeadline) =>
+            Effect.sync(() => {
+              called = true
+            }).pipe(
+              Effect.andThen(() =>
+                f.admission.admit(h, report, discoveryDeadline)
+              ),
+              Effect.as("wrong-identity")
+            ),
+        },
+        Date.now() + 60_000
+      )
     )
     expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)
     expect(called).toBe(mode === "identity")
@@ -653,6 +692,7 @@ it("redacts native storage failures at the background HTTP boundary", async () =
       backgroundActive: () => Effect.succeed(false),
       armBackground: () => Effect.void,
       wakeBackground: () => Effect.void,
+      prearm: () => Effect.sync(() => Date.now() + 60_000),
       wakeConversation: () => Effect.void,
       notify: () => Effect.void,
       admission: f.admission,
@@ -895,10 +935,13 @@ it("retains a typed conversation rejection without requiring its class prototype
   f.status("done")
   Effect.runSync(f.mailbox.observed(19, f.result))
   const exit = await Effect.runPromiseExit(
-    f.mailbox.deliver({
-      ...f.admission,
-      admit: () => Effect.fail(error),
-    })
+    f.mailbox.deliver(
+      {
+        ...f.admission,
+        admit: () => Effect.fail(error),
+      },
+      Date.now() + 60_000
+    )
   )
   expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(false)
   expect(
@@ -915,16 +958,16 @@ it("rolls back report Stop when its shared native transaction fails", async () =
   const f = fixture()
   f.status("done")
   Effect.runSync(f.mailbox.observed(19, f.result))
-  Effect.runSync(f.mailbox.deliver(f.admission))
+  Effect.runSync(f.mailbox.deliver(f.admission, Date.now() + 60_000))
   const before = Effect.runSync(f.conversations.get(f.handoff.reportId))
   const exit = await Effect.runPromiseExit(
     f.mailbox.cancel(
       19,
       {
         ...f.admission,
-        stop: (id) =>
+        stop: (id, options) =>
           f.admission
-            .stop(id)
+            .stop(id, options)
             .pipe(
               Effect.andThen(() =>
                 Effect.die(new Error("Stop transaction failed"))
@@ -1377,4 +1420,346 @@ it("continues Stop cleanup after family authority ends without dispatching a han
   expect(await Effect.runPromise(app.step(false))).toBeUndefined()
   expect(stops).toBe(2)
   expect(Effect.runSync(f.mailbox.get(19))?.stop_state).toBe("confirmed")
+})
+
+it("prearms report discovery outside the coupled transaction and wakes only after commit", async () => {
+  const f = fixture(),
+    deadline = Date.now() + 60_000,
+    order: string[] = []
+  f.status("done")
+  Effect.runSync(f.mailbox.observed(19, f.result))
+  const app = application(
+    f,
+    {},
+    {
+      prearm: () =>
+        Effect.sync(() => {
+          expect(
+            Effect.runSync(f.conversations.get(f.handoff.reportId))
+          ).toBeUndefined()
+          order.push("prearm")
+          return deadline
+        }),
+      admission: {
+        ...f.admission,
+        admit: (handoff, report, discoveryDeadline) => {
+          expect(discoveryDeadline).toBe(deadline)
+          order.push("commit")
+          return f.admission.admit(handoff, report, discoveryDeadline)
+        },
+      },
+      wakeConversation: () =>
+        Effect.sync(() => {
+          expect(
+            Effect.runSync(f.conversations.get(f.handoff.reportId))
+          ).toBeDefined()
+          expect(Effect.runSync(f.mailbox.get(19))?.status).toBe("delivered")
+          order.push("wake")
+        }),
+    }
+  )
+  await Effect.runPromise(app.step())
+  expect(order).toEqual(["prearm", "commit", "wake"])
+})
+
+it("retains a ready report and all failure reasons when conversation discovery cannot be armed", async () => {
+  const f = fixture(),
+    cause = Cause.combine(
+      Cause.fail(
+        new DelegationFailure({
+          code: "unavailable",
+          message: "Discovery unavailable",
+        })
+      ),
+      Cause.die(new Error("discovery diagnostic"))
+    )
+  f.status("done")
+  Effect.runSync(f.mailbox.observed(19, f.result))
+  const exit = await Effect.runPromiseExit(
+    application(
+      f,
+      {},
+      {
+        prearm: () => Effect.failCause(cause),
+      }
+    ).step()
+  )
+  expect(Exit.isFailure(exit)).toBe(true)
+  if (Exit.isFailure(exit)) {
+    expect(exit.cause.reasons.map((reason) => reason._tag)).toEqual([
+      "Fail",
+      "Die",
+    ])
+    expect(
+      exit.cause.reasons.map((reason) =>
+        reason._tag === "Fail"
+          ? reason.error
+          : reason._tag === "Die"
+            ? reason.defect
+            : undefined
+      )
+    ).toEqual(
+      cause.reasons.map((reason) =>
+        reason._tag === "Fail"
+          ? reason.error
+          : reason._tag === "Die"
+            ? reason.defect
+            : undefined
+      )
+    )
+  }
+  expect(Effect.runSync(f.mailbox.get(19))?.status).toBe("ready")
+  expect(
+    Effect.runSync(f.conversations.get(f.handoff.reportId))
+  ).toBeUndefined()
+})
+
+it("rolls back report delivery when its conversation discovery lease has expired", async () => {
+  const f = fixture()
+  f.status("done")
+  Effect.runSync(f.mailbox.observed(19, f.result))
+  const exit = await Effect.runPromiseExit(
+    application(
+      f,
+      {},
+      {
+        prearm: () => Effect.succeed(0),
+      }
+    ).step()
+  )
+  expect(Exit.isFailure(exit)).toBe(true)
+  expect(Effect.runSync(f.mailbox.get(19))?.status).toBe("ready")
+  expect(
+    Effect.runSync(f.conversations.get(f.handoff.reportId))
+  ).toBeUndefined()
+})
+
+it("retains a delivered report after the immediate conversation wake fails", async () => {
+  const f = fixture()
+  f.status("done")
+  Effect.runSync(f.mailbox.observed(19, f.result))
+  const exit = await Effect.runPromiseExit(
+    application(
+      f,
+      {},
+      {
+        wakeConversation: () =>
+          Effect.fail(
+            new DelegationFailure({
+              code: "unavailable",
+              message: "Wake acknowledgement lost",
+            })
+          ),
+      }
+    ).step()
+  )
+  expect(Exit.isFailure(exit)).toBe(true)
+  expect(Effect.runSync(f.mailbox.get(19))?.status).toBe("delivered")
+  expect(Effect.runSync(f.conversations.get(f.handoff.reportId))).toBeDefined()
+})
+
+it("arms Conversation cleanup separately before atomically stopping a delivered background report", async () => {
+  const f = fixture(),
+    conversationDeadline = Date.now() + 17_000,
+    order: string[] = []
+  f.status("done")
+  Effect.runSync(f.mailbox.observed(19, f.result))
+  Effect.runSync(f.mailbox.deliver(f.admission, Date.now() + 60_000))
+  const original = Effect.runSync(f.conversations.get(f.handoff.reportId))!
+  let backgroundDeadline: number | undefined,
+    stopOptions: StopDiscovery | undefined
+  const app = application(
+    f,
+    {},
+    {
+      prearm: () =>
+        Effect.sync(() => {
+          expect(Effect.runSync(f.conversations.get(original.id))?.status).toBe(
+            "queued"
+          )
+          order.push("conversation-arm")
+          return conversationDeadline
+        }),
+      armBackground: (deadline) =>
+        Effect.sync(() => {
+          backgroundDeadline = deadline
+          order.push("background-arm")
+        }),
+      admission: {
+        ...f.admission,
+        stop: (id: string, options?: StopDiscovery) =>
+          Effect.gen(function* () {
+            stopOptions = options
+            order.push("commit")
+            yield* f.conversations.requestStop(id, options)
+          }),
+      },
+      wakeConversation: () =>
+        Effect.sync(() => {
+          order.push("conversation-wake")
+        }),
+    }
+  )
+  await Effect.runPromise(app.requestStop(19))
+  expect(order.indexOf("conversation-arm")).toBeGreaterThanOrEqual(0)
+  expect(order.indexOf("conversation-arm")).toBeLessThan(
+    order.indexOf("commit")
+  )
+  expect(order.indexOf("background-arm")).toBeLessThan(order.indexOf("commit"))
+  expect(stopOptions).toMatchObject({ discoveryDeadline: conversationDeadline })
+  expect(backgroundDeadline).toBeGreaterThan(conversationDeadline)
+  expect(Effect.runSync(f.mailbox.get(19))).toMatchObject({
+    status: "delivered",
+    stop_state: "pending",
+    stop_attempts: 0,
+    stop_deadline: 301_000,
+  })
+  const stopped = Effect.runSync(f.conversations.get(original.id))!
+  expect(stopped).toMatchObject({
+    id: original.id,
+    session_id: original.session_id,
+    status: "stopping",
+    control: { owner: null, unconfirmed: null },
+  })
+  expect(
+    Effect.runSync(
+      f.conversations.claimControl(
+        original.id,
+        "report-cleanup",
+        Date.now() + 30_000
+      )
+    )
+  ).toBeDefined()
+})
+
+it("failed Conversation discovery still revokes the delivered report and preserves Background cleanup plus all Causes", async () => {
+  const f = fixture(),
+    cause = Cause.combine(
+      Cause.fail(
+        new DelegationFailure({
+          code: "unavailable",
+          message: "conversation arm failed",
+        })
+      ),
+      Cause.die("conversation arm cleanup defect")
+    )
+  f.status("done")
+  Effect.runSync(f.mailbox.observed(19, f.result))
+  Effect.runSync(f.mailbox.deliver(f.admission, Date.now() + 60_000))
+  const original = Effect.runSync(f.conversations.get(f.handoff.reportId))!
+  let backgroundArms = 0,
+    remoteStops = 0,
+    forwarded: StopDiscovery | undefined
+  const app = application(
+    f,
+    {
+      stop: () =>
+        Effect.sync(() => {
+          remoteStops++
+        }),
+    },
+    {
+      prearm: () => Effect.failCause(cause),
+      armBackground: () =>
+        Effect.sync(() => {
+          backgroundArms++
+        }),
+      admission: {
+        ...f.admission,
+        stop: (id: string, options?: StopDiscovery) =>
+          Effect.gen(function* () {
+            forwarded = options
+            yield* f.conversations.requestStop(id, options)
+          }),
+      },
+    }
+  )
+  const exit = await Effect.runPromiseExit(app.requestStop(19))
+  expect(Exit.isFailure(exit)).toBe(true)
+  if (Exit.isFailure(exit)) {
+    expect(Cause.pretty(exit.cause)).toContain("conversation arm failed")
+    expect(Cause.pretty(exit.cause)).toContain(
+      "conversation arm cleanup defect"
+    )
+  }
+  expect(backgroundArms).toBe(1)
+  expect(remoteStops).toBe(0)
+  expect(forwarded).toMatchObject({ unconfirmedError: expect.any(String) })
+  expect(Effect.runSync(f.mailbox.get(19))).toMatchObject({
+    status: "delivered",
+    stop_state: "pending",
+    stop_attempts: 0,
+    stop_deadline: 301_000,
+  })
+  expect(Effect.runSync(f.conversations.get(original.id))).toMatchObject({
+    id: original.id,
+    session_id: original.session_id,
+    status: "stopping",
+    control: { unconfirmed: "stop" },
+  })
+  expect(
+    Effect.runSync(
+      f.conversations.claimControl(
+        original.id,
+        "must-not-clear-uncertainty",
+        Date.now() + 30_000
+      )
+    )
+  ).toBeUndefined()
+})
+
+it("expired Conversation discovery cannot borrow the fresh Background lease or renew report recovery", async () => {
+  const f = fixture(),
+    expiredDeadline = Date.now() - 1
+  f.status("done")
+  Effect.runSync(f.mailbox.observed(19, f.result))
+  Effect.runSync(f.mailbox.deliver(f.admission, Date.now() + 60_000))
+  let backgroundDeadline: number | undefined,
+    forwarded: StopDiscovery | undefined
+  const app = application(
+    f,
+    {},
+    {
+      prearm: () => Effect.succeed(expiredDeadline),
+      armBackground: (deadline) =>
+        Effect.sync(() => {
+          backgroundDeadline = deadline
+        }),
+      admission: {
+        ...f.admission,
+        stop: (id: string, options?: StopDiscovery) =>
+          Effect.gen(function* () {
+            forwarded = options
+            yield* f.conversations.requestStop(id, options)
+          }),
+      },
+    }
+  )
+  await Effect.runPromise(app.requestStop(19))
+  expect(forwarded).toMatchObject({ discoveryDeadline: expiredDeadline })
+  expect(backgroundDeadline).toBeGreaterThan(expiredDeadline)
+  const stopped = Effect.runSync(f.conversations.get(f.handoff.reportId))!
+  expect(stopped).toMatchObject({
+    status: "stopping",
+    control: { unconfirmed: "stop" },
+  })
+  expect(Effect.runSync(f.mailbox.get(19))).toMatchObject({
+    stop_state: "pending",
+    stop_attempts: 0,
+    stop_deadline: 301_000,
+  })
+  await Effect.runPromise(
+    application(
+      f,
+      {},
+      {
+        admission: {
+          ...f.admission,
+          stop: (id: string, options?: StopDiscovery) =>
+            f.conversations.requestStop(id, options).pipe(Effect.asVoid),
+        },
+      }
+    ).requestStop(19)
+  )
+  expect(Effect.runSync(f.conversations.get(stopped.id))).toEqual(stopped)
 })

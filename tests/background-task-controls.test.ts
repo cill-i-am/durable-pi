@@ -47,6 +47,7 @@ function fixture() {
     {
       active: () => Effect.succeed(false),
       backgroundActive: () => Effect.succeed(false),
+      prearm: () => Effect.sync(() => Date.now() + 60_000),
       wakeConversation: () => Effect.void,
       armBackground: () => Effect.void,
       wakeBackground: () => Effect.void,
