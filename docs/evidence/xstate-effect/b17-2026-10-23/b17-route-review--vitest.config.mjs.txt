@@ -1,0 +1,9 @@
+export default {
+  root: '/private/tmp/b17-route-review',
+  resolve: { alias: { '@': '/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/src' } },
+  test: {
+    setupFiles: ['/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/tests/agents-platform-stubs.ts'],
+    include: ['*.test.ts'],
+    testTimeout: 5000,
+  },
+};

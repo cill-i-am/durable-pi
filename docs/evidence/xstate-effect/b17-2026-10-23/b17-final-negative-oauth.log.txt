@@ -1,0 +1,34 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi
+
+ ❯ tests/mcp-oauth.test.ts (12 tests | 1 failed | 11 skipped) 71ms
+   ❯ connection generation owns pending OAuth state (3)
+     × rejects old pending state and PKCE after reconnect even when SDK cleanup left every key 70ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/mcp-oauth.test.ts > connection generation owns pending OAuth state > rejects old pending state and PKCE after reconnect even when SDK cleanup left every key
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ tests/mcp-oauth.test.ts:289:50
+    287|     next.serverId = connectionId
+    288|     next.clientId = "synthetic"
+    289|     expect((await next.checkState(state)).valid).toBe(false)
+       |                                                  ^
+    290|     await expect(
+    291|       next.runWithCodeVerifierState(state, () => next.codeVerifier())
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 11 skipped (12)
+   Start at  16:56:26
+   Duration  457ms (import 65%, tests 19%, transform 13%, setup 2%, worker 1%)
+

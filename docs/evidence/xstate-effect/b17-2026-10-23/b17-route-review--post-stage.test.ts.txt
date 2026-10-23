@@ -1,0 +1,51 @@
+import { Effect, ManagedRuntime } from 'effect';
+import { expect, it } from 'vitest';
+import { ConnectionStore } from '/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/src/access/adapters/connections';
+import { connectionApplication, RemoteConnections } from '/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/src/access/connection-service';
+import { mcpConnectionClient, type McpManager } from '/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/src/access/adapters/mcp';
+import { database } from '/Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi/tests/database';
+const input = { id: `mcp-${'d'.repeat(32)}`, name: 'Post native review fixture', url: 'https://mcp.example.com/mcp' };
+const gate = () => { let release!: () => void; const wait = new Promise<void>(resolve => { release = resolve; }); return {wait,release}; };
+function fixture() {
+  const db=database(), store=new ConnectionStore(db), calls:string[]=[];
+  let active=true, now=Date.now(), registered=false;
+  // Capture the deadline per receipt, rather than extending it on inspection.
+  const receipt=() => Effect.sync(() => { const deadline=now+10_000; return active ? {deadline,current:() => active && now < deadline} : null; });
+  const manager={
+    listServers:() => registered ? [{id:input.id,auth_url:null}] : [], mcpConnections:{},listTools:() => [],
+    registerServer:async () => {calls.push('register');registered=true;return input.id;},
+    connectToServer:async () => {calls.push('connect');return {state:'connected'};},
+    discoverIfConnected:async () => {calls.push('discover');return {};},
+    removeServer:async () => {calls.push('remove');registered=false;},
+    isCallbackRequest:() => true, handleCallbackRequest:async () => ({authSuccess:true,serverId:input.id}),
+    establishConnection:async () => {calls.push('establish');},waitForConnections:async () => {},callTool:async () => ({content:[]}),
+  } as unknown as McpManager;
+  return {db,store,calls,manager,receipt,revoke:() => {active=false;},restore:() => {active=true;},expire:() => {now+=10_001;}};
+}
+it.each([
+  ['register','registerServer',['register']],
+  ['connect','connectToServer',['register','connect']],
+  ['discover','discoverIfConnected',['register','connect','discover']],
+] as const)('revocation after native %s prevents any next stage and cannot acknowledge success',async (_stage,method,expected) => {
+  const f=fixture();
+  const native=f.manager[method].bind(f.manager) as (...args:any[]) => Promise<any>;
+  (f.manager as any)[method]=async (...args:any[]) => {const result=await native(...args);f.revoke();return result;};
+  const runtime=ManagedRuntime.make(connectionApplication(f.store,mcpConnectionClient(f.manager),f.receipt));
+  const service=runtime.runSync(RemoteConnections);
+  const result=await Effect.runPromiseExit(service.connect(input,'https://app.example.com'));
+  expect(result._tag).toBe('Failure');expect(f.calls).toEqual(expected);
+  expect(Effect.runSync(f.store.get(input.id))).toMatchObject({active:true,revision:1});
+  await runtime.dispose();
+});
+it.each(['revoke','expire'] as const)('a receipt that %ss after entering the SQL queue cannot authorize an activation write',async (action) => {
+  const f=fixture(), held=gate(), release=gate(), queued=gate();
+  const holder=Effect.runPromise(f.db.transaction(() => Effect.gen(function* () {held.release();yield* Effect.promise(() => release.wait);})));await held.wait;
+  const ledger={list:f.store.list.bind(f.store),get:f.store.get.bind(f.store),change:f.store.change.bind(f.store),selection:f.store.selection.bind(f.store),select:f.store.select.bind(f.store),
+    add:(...args:Parameters<ConnectionStore['add']>) => Effect.suspend(() => {queued.release();return f.store.add(...args);}),
+  };
+  const runtime=ManagedRuntime.make(connectionApplication(ledger,mcpConnectionClient(f.manager),f.receipt));
+  const service=runtime.runSync(RemoteConnections),work=Effect.runPromiseExit(service.connect(input,'https://app.example.com'));
+  await queued.wait;f[action]();release.release();await holder;
+  const result=await work;expect(result._tag).toBe('Failure');expect(f.calls).toEqual([]);
+  expect(Effect.runSync(f.store.get(input.id))).toBeUndefined();await runtime.dispose();
+});

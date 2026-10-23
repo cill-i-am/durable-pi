@@ -1,0 +1,9 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-frontend-resources/durable-pi
+
+
+ Test Files  9 passed (9)
+      Tests  133 passed (133)
+   Start at  16:53:49
+   Duration  10.04s (tests 44%, import 39%, transform 16%, setup 1%)
+
