@@ -1988,7 +1988,8 @@ export class PersonalAgentProbe extends PersonalAgent {
             conversationId: Number(source.session_id),
             route: source.routing!,
             memory: "Synthetic",
-          }
+          },
+          Date.now() + 60_000
         )
       )
       const child = this.backgroundNamespace.getByName(
@@ -2006,7 +2007,7 @@ export class PersonalAgentProbe extends PersonalAgent {
       if (action === "background-held-release") await child.releaseHeld()
       if (action === "background-held-cancel") {
         await this.actorRuntime.runPromise(
-          this.backgroundMailbox.cancel(910002)
+          this.backgroundMailbox.cancel(910002, undefined, Date.now() + 60_000)
         )
         this.fixtureRun("DELETE FROM model_credentials WHERE provider='openai'")
       }
@@ -2180,7 +2181,8 @@ export class PersonalAgentProbe extends PersonalAgent {
             conversationId: 1,
             route,
             memory: "Local reference",
-          }
+          },
+          Date.now() + 60_000
         )
       )
       await this.actorRuntime.runPromise(

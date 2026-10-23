@@ -1,6 +1,6 @@
 import type { EntryId, ConversationId } from "@earendil-works/pi-durable"
 import { it as effectIt } from "@effect/vitest"
-import { Cause, Context, Effect, Exit } from "effect"
+import { Cause, Context, Deferred, Effect, Exit, Fiber } from "effect"
 import { TestClock } from "effect/testing"
 import { expect, it } from "vitest"
 
@@ -9,15 +9,21 @@ import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import { ConversationFull } from "../src/conversations/turns"
 import { backgroundRequest } from "../src/delegation/adapters/background-http"
 import { SqliteBackgroundMailbox } from "../src/delegation/adapters/background-mailbox"
+import { backgroundReply } from "../src/delegation/adapters/background-protocol"
+import { backgroundRemote } from "../src/delegation/adapters/background-rpc"
 import { backgroundNative } from "../src/delegation/adapters/interop"
+import { advanceBackgroundHandoff } from "../src/delegation/background-handoff.machine"
 import { makeBackgroundMailbox } from "../src/delegation/background-mailbox"
 import {
   makeBackgroundDelegation,
   type BackgroundRemote,
   type BackgroundHost,
 } from "../src/delegation/background-service"
+import { advanceBackgroundStop } from "../src/delegation/background-stop.machine"
 import { DelegationFailure, type Group } from "../src/delegation/contracts"
 import { resolveRoute } from "../src/inference/policy"
+import { agentMigrationManifest } from "../src/storage/migration-manifest"
+import { migrateSqlite } from "../src/storage/migrations"
 import { database, corrupt } from "./database"
 
 function gate<T>() {
@@ -61,7 +67,9 @@ function fixture() {
     route,
     memory: "Owner reference",
   }
-  const handoff = Effect.runSync(mailbox.create(brief, source)).handoff
+  const handoff = Effect.runSync(
+    mailbox.create(brief, source, Number.MAX_SAFE_INTEGER)
+  ).handoff
   const result: Group = {
     id: 19,
     turnId: source.turnId,
@@ -139,12 +147,17 @@ function fixture() {
 
 it("persists handoff and admits its report once with the original model and event provenance", () => {
   const f = fixture()
-  expect(Effect.runSync(f.reopen().create(brief, f.source)).handoff).toEqual(
-    f.handoff
-  )
+  expect(
+    Effect.runSync(f.reopen().create(brief, f.source, Number.MAX_SAFE_INTEGER))
+      .handoff
+  ).toEqual(f.handoff)
   expect(() =>
     Effect.runSync(
-      f.mailbox.create({ ...brief, objective: "Changed" }, f.source)
+      f.mailbox.create(
+        { ...brief, objective: "Changed" },
+        f.source,
+        Number.MAX_SAFE_INTEGER
+      )
     )
   ).toThrow("different request")
   Effect.runSync(f.mailbox.observed(19, f.result))
@@ -237,7 +250,8 @@ it.each(["parent", "owner", "deadline"])(
   (kind) => {
     const f = fixture()
     if (kind === "parent") f.status("cancelled")
-    if (kind === "owner") Effect.runSync(f.mailbox.cancel(19))
+    if (kind === "owner")
+      Effect.runSync(f.mailbox.cancel(19, undefined, Number.MAX_SAFE_INTEGER))
     if (kind === "deadline") f.advance(600000)
     Effect.runSync(f.mailbox.reconcileCancellation())
     Effect.runSync(f.mailbox.observed(19, f.result))
@@ -255,8 +269,12 @@ it("bounds transport retries, retains a deadline wake, and reuses explicit retry
   expect(Effect.runSync(f.mailbox.due())).toHaveLength(0)
   expect(Effect.runSync(f.mailbox.nextWake())).toBe(f.handoff.deadline)
   const id = crypto.randomUUID()
-  expect(Effect.runSync(f.reopen().retry(19, id))).toBe(true)
-  expect(Effect.runSync(f.reopen().retry(19, id))).toBe(false)
+  expect(
+    Effect.runSync(f.reopen().retry(19, id, Number.MAX_SAFE_INTEGER))
+  ).toBe(true)
+  expect(
+    Effect.runSync(f.reopen().retry(19, id, Number.MAX_SAFE_INTEGER))
+  ).toBe(false)
   expect(Effect.runSync(f.mailbox.get(19))!.handoff.reportId).toBe(
     f.handoff.reportId
   )
@@ -286,19 +304,27 @@ it("isolates bots, validates report ownership and limits unfinished groups", () 
     Effect.runSync(f.mailbox.observed(19, { ...f.result, turnId: "foreign" }))
   ).toThrow("ownership")
   Effect.runSync(
-    f.mailbox.create(brief, {
-      ...f.source,
-      taskId: 20,
-      turnId: crypto.randomUUID(),
-    })
+    f.mailbox.create(
+      brief,
+      {
+        ...f.source,
+        taskId: 20,
+        turnId: crypto.randomUUID(),
+      },
+      Number.MAX_SAFE_INTEGER
+    )
   )
   expect(() =>
     Effect.runSync(
-      f.mailbox.create(brief, {
-        ...f.source,
-        taskId: 21,
-        turnId: crypto.randomUUID(),
-      })
+      f.mailbox.create(
+        brief,
+        {
+          ...f.source,
+          taskId: 21,
+          turnId: crypto.randomUUID(),
+        },
+        Number.MAX_SAFE_INTEGER
+      )
     )
   ).toThrow("two unfinished")
 })
@@ -322,6 +348,7 @@ function application(
       active: () => Effect.succeed(false),
       backgroundActive: () => Effect.succeed(false),
       wakeConversation: () => Effect.void,
+      armBackground: () => Effect.void,
       wakeBackground: () => Effect.void,
       notify: () => Effect.void,
       admission: f.admission,
@@ -399,7 +426,9 @@ it("rolls back a retry receipt when the same native transaction cannot resume th
     "CREATE TRIGGER refuse_retry BEFORE UPDATE ON background_handoffs WHEN OLD.status='paused' AND NEW.status='pending' BEGIN SELECT RAISE(ABORT,'private database fault'); END"
   )
   const operation = crypto.randomUUID()
-  const exit = await Effect.runPromiseExit(f.mailbox.retry(19, operation))
+  const exit = await Effect.runPromiseExit(
+    f.mailbox.retry(19, operation, Number.MAX_SAFE_INTEGER)
+  )
   expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(false)
   expect(
     Exit.isFailure(exit) &&
@@ -494,7 +523,11 @@ effectIt.effect(
         "owner-bot",
         () => crypto.randomUUID()
       )
-      const row = yield* mailbox.create(brief, f.source)
+      const row = yield* mailbox.create(
+        brief,
+        f.source,
+        Number.MAX_SAFE_INTEGER
+      )
       expect(row.handoff.createdAt).toBe(0)
       yield* TestClock.adjust(5000)
       yield* mailbox.observed(19, { ...f.result, status: "working" })
@@ -584,7 +617,7 @@ it("shows a Stop committed while a native read was in flight", async () => {
   const reading = Effect.runPromise(app.read(19))
   try {
     await entered.promise
-    Effect.runSync(f.mailbox.cancel(19))
+    Effect.runSync(f.mailbox.cancel(19, undefined, Number.MAX_SAFE_INTEGER))
     reply.release(f.result)
     expect(await reading).toMatchObject({
       status: "cancelled",
@@ -618,6 +651,7 @@ it("redacts native storage failures at the background HTTP boundary", async () =
     {
       active: () => Effect.succeed(false),
       backgroundActive: () => Effect.succeed(false),
+      armBackground: () => Effect.void,
       wakeBackground: () => Effect.void,
       wakeConversation: () => Effect.void,
       notify: () => Effect.void,
@@ -655,7 +689,8 @@ it.each(["pending", "paused", "cancelled"])(
     if (status === "paused")
       for (let index = 0; index < 5; index++)
         Effect.runSync(f.mailbox.failed(19))
-    if (status === "cancelled") Effect.runSync(f.mailbox.cancel(19))
+    if (status === "cancelled")
+      Effect.runSync(f.mailbox.cancel(19, undefined, Number.MAX_SAFE_INTEGER))
     const app = application(f, {
       read: () =>
         Effect.fail(
@@ -883,17 +918,21 @@ it("rolls back report Stop when its shared native transaction fails", async () =
   Effect.runSync(f.mailbox.deliver(f.admission))
   const before = Effect.runSync(f.conversations.get(f.handoff.reportId))
   const exit = await Effect.runPromiseExit(
-    f.mailbox.cancel(19, {
-      ...f.admission,
-      stop: (id) =>
-        f.admission
-          .stop(id)
-          .pipe(
-            Effect.andThen(() =>
-              Effect.die(new Error("Stop transaction failed"))
-            )
-          ),
-    })
+    f.mailbox.cancel(
+      19,
+      {
+        ...f.admission,
+        stop: (id) =>
+          f.admission
+            .stop(id)
+            .pipe(
+              Effect.andThen(() =>
+                Effect.die(new Error("Stop transaction failed"))
+              )
+            ),
+      },
+      Number.MAX_SAFE_INTEGER
+    )
   )
   expect(Exit.isFailure(exit) && Cause.hasDies(exit.cause)).toBe(true)
   expect(Effect.runSync(f.conversations.get(f.handoff.reportId))).toEqual(
@@ -960,4 +999,382 @@ it("bounds historical listing to two concurrent remote reads", async () => {
     reply.release()
     await running
   }
+})
+
+it("retries remote Stop after cancellation and outage, then persists acknowledgement across restore", async () => {
+  const f = fixture()
+  let calls = 0
+  const app = application(f, {
+    stop: () =>
+      Effect.suspend(() =>
+        ++calls === 1
+          ? Effect.fail(
+              new DelegationFailure({ code: "unavailable", message: "Offline" })
+            )
+          : Effect.void
+      ),
+  })
+  f.status("cancelled")
+  expect(await Effect.runPromise(app.step())).toBe(3000)
+  expect(calls).toBe(1)
+  expect(Effect.runSync(f.mailbox.authorized(19))).toBe(false)
+  expect(Effect.runSync(f.reopen().get(19))).toMatchObject({
+    status: "cancelled",
+    stop_state: "pending",
+    stop_attempts: 1,
+  })
+  f.advance(2000)
+  expect(await Effect.runPromise(app.step())).toBeUndefined()
+  expect(calls).toBe(2)
+  expect(Effect.runSync(f.reopen().get(19))).toMatchObject({
+    status: "cancelled",
+    stop_state: "confirmed",
+    handoff: f.handoff,
+  })
+  await Effect.runPromise(app.step())
+  expect(calls).toBe(2)
+})
+
+it("exhausts Stop recovery durably and lets an explicit Stop renew cleanup without reauthorizing work", async () => {
+  const f = fixture()
+  let calls = 0
+  let online = false
+  const app = application(f, {
+    stop: () =>
+      Effect.suspend(() => {
+        calls++
+        return online
+          ? Effect.void
+          : Effect.fail(
+              new DelegationFailure({ code: "unavailable", message: "Offline" })
+            )
+      }),
+  })
+  await Effect.runPromise(app.requestStop(19))
+  for (let index = 0; index < 5; index++) {
+    await Effect.runPromise(app.step())
+    f.advance(60_000)
+  }
+  expect(calls).toBe(5)
+  expect(Effect.runSync(f.reopen().nextWake())).toBeUndefined()
+  expect(Effect.runSync(f.reopen().get(19))).toMatchObject({
+    status: "cancelled",
+    stop_state: "unconfirmed",
+    stop_attempts: 5,
+  })
+  expect((await Effect.runPromise(app.read(19))).background).toMatchObject({
+    stop: "unconfirmed",
+    error: expect.stringContaining("unconfirmed"),
+  })
+  online = true
+  await Effect.runPromise(app.stop(19))
+  expect(calls).toBe(6)
+  expect(Effect.runSync(f.mailbox.get(19))).toMatchObject({
+    stop_state: "confirmed",
+    handoff: f.handoff,
+  })
+  expect(Effect.runSync(f.mailbox.authorized(19))).toBe(false)
+})
+
+it("fences late Stop and report acknowledgements from an older persisted attempt", () => {
+  const f = fixture()
+  const before = Effect.runSync(f.mailbox.get(19))!
+  Effect.runSync(f.mailbox.cancel(19, undefined, Number.MAX_SAFE_INTEGER))
+  const first = Effect.runSync(f.mailbox.claimStop(19))!
+  f.advance(30_000)
+  const second = Effect.runSync(f.reopen().claimStop(19))!
+  expect(second.stop_attempt).not.toBe(first.stop_attempt)
+  Effect.runSync(f.mailbox.stopped(19, first.stop_attempt!, true))
+  Effect.runSync(f.mailbox.observed(19, f.result, before.revision))
+  expect(Effect.runSync(f.mailbox.get(19))).toEqual(second)
+  Effect.runSync(f.mailbox.stopped(19, second.stop_attempt!, true))
+  expect(Effect.runSync(f.reopen().get(19))?.stop_state).toBe("confirmed")
+})
+
+it("retains recovery when Stop acknowledgement cannot commit", async () => {
+  const f = fixture()
+  let calls = 0
+  const app = application(f, {
+    stop: () =>
+      Effect.sync(() => {
+        calls++
+      }),
+  })
+  Effect.runSync(f.mailbox.cancel(19, undefined, Number.MAX_SAFE_INTEGER))
+  f.db.run(
+    "CREATE TRIGGER refuse_stop_ack BEFORE UPDATE ON background_handoffs WHEN NEW.stop_state='confirmed' BEGIN SELECT RAISE(ABORT,'lost ack'); END"
+  )
+  const exit = await Effect.runPromiseExit(app.step())
+  expect(Exit.isFailure(exit)).toBe(true)
+  expect(Effect.runSync(f.mailbox.nextWake())).toBe(31_000)
+  expect(Effect.runSync(f.reopen().get(19))?.stop_state).toBe("pending")
+  f.db.run("DROP TRIGGER refuse_stop_ack")
+  f.advance(30_000)
+  await Effect.runPromise(app.step())
+  expect(calls).toBe(2)
+  expect(Effect.runSync(f.mailbox.get(19))?.stop_state).toBe("confirmed")
+})
+
+it("does not let an old handoff failure consume a resumed transport budget", () => {
+  const f = fixture()
+  const old = Effect.runSync(f.mailbox.get(19))!
+  for (let index = 0; index < 5; index++) Effect.runSync(f.mailbox.failed(19))
+  Effect.runSync(
+    f.mailbox.retry(19, crypto.randomUUID(), Number.MAX_SAFE_INTEGER)
+  )
+  const resumed = Effect.runSync(f.mailbox.get(19))!
+  Effect.runSync(f.mailbox.failed(19, old.revision))
+  Effect.runSync(f.mailbox.observed(19, f.result, old.revision))
+  expect(Effect.runSync(f.mailbox.get(19))).toEqual(resumed)
+})
+
+it("does not revoke or accept work when recovery cannot be armed", async () => {
+  const f = fixture()
+  const before = Effect.runSync(f.mailbox.get(19))
+  const app = application(
+    f,
+    {},
+    {
+      armBackground: () =>
+        Effect.fail(
+          new DelegationFailure({
+            code: "unavailable",
+            message: "Wake store unavailable",
+          })
+        ),
+    }
+  )
+  expect(Exit.isFailure(await Effect.runPromiseExit(app.requestStop(19)))).toBe(
+    true
+  )
+  expect(Effect.runSync(f.mailbox.get(19))).toEqual(before)
+})
+
+it("refuses writes after their prearmed discovery lease expires", () => {
+  const f = fixture()
+  expect(() => Effect.runSync(f.mailbox.cancel(19, f.admission, 1000))).toThrow(
+    "lease expired"
+  )
+  expect(Effect.runSync(f.mailbox.get(19))?.status).toBe("pending")
+  expect(() =>
+    Effect.runSync(
+      f.mailbox.create(
+        brief,
+        { ...f.source, taskId: 20, turnId: "other" },
+        1000
+      )
+    )
+  ).toThrow("lease expired")
+  expect(Effect.runSync(f.mailbox.get(20))).toBeUndefined()
+})
+
+it("fences an exhausted old job before it can change a newly admitted cohort", () => {
+  const f = fixture()
+  const before = Effect.runSync(f.mailbox.get(19))
+  Effect.runSync(f.mailbox.exhaustRecovery(() => false))
+  expect(Effect.runSync(f.mailbox.get(19))).toEqual(before)
+  Effect.runSync(f.mailbox.exhaustRecovery(() => true))
+  expect(Effect.runSync(f.mailbox.get(19))).toMatchObject({
+    status: "paused",
+    error: expect.stringContaining("recovery"),
+  })
+  Effect.runSync(f.mailbox.cancel(19, undefined, Number.MAX_SAFE_INTEGER))
+  Effect.runSync(f.mailbox.exhaustRecovery(() => true))
+  expect(Effect.runSync(f.mailbox.get(19))).toMatchObject({
+    status: "cancelled",
+    stop_state: "unconfirmed",
+  })
+})
+
+it("joins Stop cleanup and retains its complete late failure after caller interruption", async () => {
+  const f = fixture(),
+    entered = gate<void>(),
+    cleaning = gate<void>(),
+    release = gate<void>()
+  const controller = new AbortController()
+  const defect = new Error("Stop cleanup defect")
+  const app = application(f, {
+    stop: () =>
+      Effect.sync(() => entered.release()).pipe(
+        Effect.andThen(Effect.never),
+        Effect.ensuring(
+          Effect.sync(() => cleaning.release()).pipe(
+            Effect.andThen(Effect.promise(() => release.promise)),
+            Effect.andThen(Effect.die(defect))
+          )
+        )
+      ),
+  })
+  let settled = false
+  const running = Effect.runPromiseExit(app.stop(19), {
+    signal: controller.signal,
+  }).then((exit) => {
+    settled = true
+    return exit
+  })
+  await entered.promise
+  controller.abort()
+  await cleaning.promise
+  expect(settled).toBe(false)
+  expect(Effect.runSync(f.mailbox.get(19))?.stop_state).toBe("pending")
+  release.release()
+  const exit = await running
+  expect(Exit.isFailure(exit) && Cause.hasInterrupts(exit.cause)).toBe(true)
+  expect(
+    Exit.isFailure(exit) &&
+      exit.cause.reasons.some(
+        (reason) => reason._tag === "Die" && reason.defect === defect
+      )
+  ).toBe(true)
+  expect(Effect.runSync(f.reopen().nextWake())).toBe(31_000)
+})
+
+it("migrates a legacy cancelled handoff as unacknowledged cleanup without rewriting receipts or identities", () => {
+  const f = fixture(),
+    db = database({ migrate: false })
+  for (const version of agentMigrationManifest.versions) {
+    if (
+      version.statements.some((statement) =>
+        statement.includes("ADD `stop_state`")
+      )
+    )
+      break
+    for (const statement of version.statements) db.run(statement)
+    db.run(
+      "INSERT INTO __durable_pi_migrations(id,checksum) VALUES(?,?)",
+      version.id,
+      version.checksum
+    )
+  }
+  db.run(
+    "INSERT INTO background_handoffs(id,turn_id,handoff,status,report,error,failures,next_at) VALUES(19,?,?,'cancelled',NULL,'Historical transport error',3,NULL)",
+    f.source.turnId,
+    JSON.stringify(f.handoff)
+  )
+  const operation = crypto.randomUUID()
+  db.run(
+    "INSERT INTO background_retries(operation_id,group_id) VALUES(?,19)",
+    operation
+  )
+  Effect.runSync(migrateSqlite(db))
+  const records = new SqliteBackgroundMailbox(db)
+  const restored = Effect.runSync(records.get(19))!
+  expect(restored).toMatchObject({
+    status: "cancelled",
+    failures: 3,
+    handoff: f.handoff,
+    stop_state: "pending",
+    stop_next_at: 0,
+    stop_deadline: null,
+  })
+  expect(Effect.runSync(records.retry(operation))).toBe(19)
+  const mailbox = makeBackgroundMailbox(
+    records,
+    () => Effect.succeed("cancelled"),
+    "owner-bot",
+    () => crypto.randomUUID()
+  )
+  expect(Effect.runSync(mailbox.authorized(19))).toBe(false)
+  const claimed = Effect.runSync(mailbox.claimStop(19))!
+  expect(claimed.stop_attempts).toBe(1)
+  expect(claimed.stop_deadline).toBeGreaterThan(Date.now())
+})
+
+it("rejects future handoff versions and malformed durable machine events", () => {
+  const f = fixture(),
+    row = Effect.runSync(f.mailbox.get(19))!
+  expect(() =>
+    advanceBackgroundHandoff({ ...row, workflow_version: 2 } as never, {
+      type: "CANCEL",
+    })
+  ).toThrow()
+  expect(() =>
+    advanceBackgroundHandoff(row, {
+      type: "OBSERVED",
+      group: {},
+      revision: 0,
+      authority: "active",
+      now: 0,
+    } as never)
+  ).toThrow()
+  expect(() =>
+    advanceBackgroundStop(row, {
+      type: "REQUEST",
+      now: "invalid",
+      explicit: true,
+    } as never)
+  ).toThrow()
+  corrupt(f.db, "UPDATE background_handoffs SET schema_version=2 WHERE id=19")
+  expect(() => Effect.runSync(f.reopen().get(19))).toThrow()
+})
+
+effectIt.effect(
+  "bounds an actual non-cancellable remote Stop promise and ignores its late acknowledgement",
+  () =>
+    Effect.gen(function* () {
+      const f = fixture(),
+        late = gate<unknown>()
+      const entered = yield* Deferred.make<void>()
+      let calls = 0
+      const remote = backgroundRemote("a".repeat(64), () => ({
+        invokeV1: () => {
+          calls++
+          Effect.runSync(Deferred.succeed(entered, undefined))
+          return calls === 1
+            ? late.promise
+            : Promise.resolve(backgroundReply(Exit.succeed(null)))
+        },
+      }))
+      f.status("cancelled")
+      const app = application(f, remote)
+      const running = yield* Effect.forkChild(app.step())
+      yield* Deferred.await(entered)
+      yield* TestClock.adjust(15_000)
+      expect(yield* Fiber.join(running)).toBe(3000)
+      expect(Effect.runSync(f.mailbox.get(19))?.stop_state).toBe("pending")
+      late.release(backgroundReply(Exit.succeed(null)))
+      yield* Effect.yieldNow
+      expect(Effect.runSync(f.mailbox.get(19))?.stop_state).toBe("pending")
+      f.advance(2000)
+      yield* app.step()
+      expect(calls).toBe(2)
+      expect(Effect.runSync(f.mailbox.get(19))?.stop_state).toBe("confirmed")
+    }).pipe(Effect.scoped)
+)
+
+it("continues Stop cleanup after family authority ends without dispatching a handoff or report", async () => {
+  const f = fixture()
+  let stops = 0
+  const app = application(
+    f,
+    {
+      start: () =>
+        Effect.die("Revoked family must not dispatch background work"),
+      stop: () =>
+        Effect.suspend(() =>
+          ++stops === 1
+            ? Effect.fail(
+                new DelegationFailure({
+                  code: "unavailable",
+                  message: "Offline",
+                })
+              )
+            : Effect.void
+        ),
+    },
+    {
+      wakeConversation: () =>
+        Effect.die("Revoked family must not dispatch a report"),
+    }
+  )
+  expect(await Effect.runPromise(app.step(false))).toBe(3000)
+  expect(Effect.runSync(f.mailbox.get(19))).toMatchObject({
+    status: "cancelled",
+    stop_state: "pending",
+  })
+  expect(Effect.runSync(f.mailbox.authorized(19))).toBe(false)
+  f.advance(2000)
+  expect(await Effect.runPromise(app.step(false))).toBeUndefined()
+  expect(stops).toBe(2)
+  expect(Effect.runSync(f.mailbox.get(19))?.stop_state).toBe("confirmed")
 })

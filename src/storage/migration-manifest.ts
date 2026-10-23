@@ -202,6 +202,57 @@ export const agentMigrationManifest = {
         "ALTER TABLE `bot_admission` ADD `workflowVersion` integer DEFAULT 1 NOT NULL;",
       ],
     },
+    {
+      id: "20261023082234_blushing_havok",
+      checksum:
+        "a8098d491daa819904493711425bfc0b3a223a0fe9f220e96d413a914a8cf2c8",
+      statements: [
+        "ALTER TABLE `email_messages` ADD `schemaVersion` integer DEFAULT 1 NOT NULL;",
+        "ALTER TABLE `email_messages` ADD `workflowVersion` integer DEFAULT 1 NOT NULL;",
+        "ALTER TABLE `email_messages` ADD `revision` integer DEFAULT 0 NOT NULL;",
+        "ALTER TABLE `email_messages` ADD `attempt_id` text;",
+        "ALTER TABLE `email_messages` ADD `send_index` integer;",
+        "ALTER TABLE `email_messages` ADD `send_deadline` integer;",
+        "ALTER TABLE `whatsapp_messages` ADD `schemaVersion` integer DEFAULT 1 NOT NULL;",
+        "ALTER TABLE `whatsapp_messages` ADD `workflowVersion` integer DEFAULT 1 NOT NULL;",
+        "ALTER TABLE `whatsapp_messages` ADD `revision` integer DEFAULT 0 NOT NULL;",
+        "ALTER TABLE `whatsapp_messages` ADD `attempt_id` text;",
+        "ALTER TABLE `whatsapp_messages` ADD `send_index` integer;",
+        "ALTER TABLE `whatsapp_messages` ADD `send_deadline` integer;",
+      ],
+    },
+    {
+      id: "20261023100524_outstanding_pixie",
+      checksum:
+        "842d845983a3f9eb50fc30be9e8b0bc76130f3cfce1bf18d6df9cec8e78b3938",
+      statements: [
+        "ALTER TABLE `background_handoffs` ADD `schema_version` integer DEFAULT 1 NOT NULL;",
+        "ALTER TABLE `background_handoffs` ADD `workflow_version` integer DEFAULT 1 NOT NULL;",
+        "ALTER TABLE `background_handoffs` ADD `revision` integer DEFAULT 0 NOT NULL;",
+        "ALTER TABLE `background_handoffs` ADD `stop_state` text DEFAULT 'none' NOT NULL;",
+        "ALTER TABLE `background_handoffs` ADD `stop_attempt` text;",
+        "ALTER TABLE `background_handoffs` ADD `stop_attempts` integer DEFAULT 0 NOT NULL;",
+        "ALTER TABLE `background_handoffs` ADD `stop_next_at` integer;",
+        "ALTER TABLE `background_handoffs` ADD `stop_deadline` integer;",
+        "ALTER TABLE `background_handoffs` ADD `stop_error` text;",
+        "ALTER TABLE `email_settings` ADD `schemaVersion` integer DEFAULT 1 NOT NULL;",
+        "ALTER TABLE `email_settings` ADD `workflowVersion` integer DEFAULT 1 NOT NULL;",
+        "ALTER TABLE `whatsapp_settings` ADD `schemaVersion` integer DEFAULT 1 NOT NULL;",
+        "ALTER TABLE `whatsapp_settings` ADD `workflowVersion` integer DEFAULT 1 NOT NULL;",
+        "UPDATE `background_handoffs` SET `stop_state` = 'pending', `stop_next_at` = 0 WHERE `status` = 'cancelled';",
+      ],
+    },
+    {
+      id: "20261023101342_ambitious_hardball",
+      checksum:
+        "36f179c45c2031edf5f1d692d535c81634158f80c6c526500137f5707a88fbef",
+      statements: [
+        "ALTER TABLE `email_messages` ADD `work_deadline` integer;",
+        "ALTER TABLE `whatsapp_messages` ADD `work_deadline` integer;",
+        "UPDATE `email_messages` SET `work_deadline` = CAST(unixepoch('subsec') * 1000 AS integer) + 60000 WHERE `state` IN ('queued', 'waiting');",
+        "UPDATE `whatsapp_messages` SET `work_deadline` = CAST(unixepoch('subsec') * 1000 AS integer) + 60000 WHERE `state` IN ('queued', 'waiting');",
+      ],
+    },
   ],
   schema: [
     {
@@ -252,7 +303,7 @@ export const agentMigrationManifest = {
     {
       type: "table",
       name: "background_handoffs",
-      sql: "CREATE TABLE `background_handoffs` (\n\t`id` integer PRIMARY KEY,\n\t`turn_id` text NOT NULL UNIQUE,\n\t`handoff` text NOT NULL,\n\t`status` text NOT NULL,\n\t`report` text,\n\t`error` text,\n\t`failures` integer DEFAULT 0 NOT NULL,\n\t`next_at` integer,\n\tCONSTRAINT \"background_handoffs_status_check\" CHECK(\"status\" in ('pending', 'running', 'ready', 'delivered', 'cancelled', 'paused')),\n\tCONSTRAINT \"background_handoffs_handoff_json\" CHECK(json_valid(\"handoff\")),\n\tCONSTRAINT \"background_handoffs_failures_check\" CHECK(\"failures\" >= 0)\n)",
+      sql: "CREATE TABLE `background_handoffs` (\n\t`id` integer PRIMARY KEY,\n\t`turn_id` text NOT NULL UNIQUE,\n\t`handoff` text NOT NULL,\n\t`status` text NOT NULL,\n\t`report` text,\n\t`error` text,\n\t`failures` integer DEFAULT 0 NOT NULL,\n\t`next_at` integer, `schema_version` integer DEFAULT 1 NOT NULL, `workflow_version` integer DEFAULT 1 NOT NULL, `revision` integer DEFAULT 0 NOT NULL, `stop_state` text DEFAULT 'none' NOT NULL, `stop_attempt` text, `stop_attempts` integer DEFAULT 0 NOT NULL, `stop_next_at` integer, `stop_deadline` integer, `stop_error` text,\n\tCONSTRAINT \"background_handoffs_status_check\" CHECK(\"status\" in ('pending', 'running', 'ready', 'delivered', 'cancelled', 'paused')),\n\tCONSTRAINT \"background_handoffs_handoff_json\" CHECK(json_valid(\"handoff\")),\n\tCONSTRAINT \"background_handoffs_failures_check\" CHECK(\"failures\" >= 0)\n)",
     },
     {
       type: "table",
@@ -367,7 +418,7 @@ export const agentMigrationManifest = {
     {
       type: "table",
       name: "email_messages",
-      sql: "CREATE TABLE `email_messages` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`fingerprint` text NOT NULL,\n\t`message_id` text NOT NULL,\n\t`sender` text NOT NULL,\n\t`recipient` text NOT NULL,\n\t`subject` text NOT NULL,\n\t`body` text NOT NULL,\n\t`references` text NOT NULL,\n\t`state` text NOT NULL,\n\t`reply` text DEFAULT '' NOT NULL,\n\t`provider_id` text,\n\t`error` text,\n\t`created_at` integer NOT NULL, `files` text DEFAULT '[]' NOT NULL, `purpose` text DEFAULT 'request' NOT NULL, `notice_key` text, `delivery` text,\n\tCONSTRAINT \"email_messages_state\" CHECK(\"state\" in ('queued','waiting','sending','sent','failed','uncertain','cancelled'))\n)",
+      sql: "CREATE TABLE `email_messages` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`fingerprint` text NOT NULL,\n\t`message_id` text NOT NULL,\n\t`sender` text NOT NULL,\n\t`recipient` text NOT NULL,\n\t`subject` text NOT NULL,\n\t`body` text NOT NULL,\n\t`references` text NOT NULL,\n\t`state` text NOT NULL,\n\t`reply` text DEFAULT '' NOT NULL,\n\t`provider_id` text,\n\t`error` text,\n\t`created_at` integer NOT NULL, `files` text DEFAULT '[]' NOT NULL, `purpose` text DEFAULT 'request' NOT NULL, `notice_key` text, `delivery` text, `schemaVersion` integer DEFAULT 1 NOT NULL, `workflowVersion` integer DEFAULT 1 NOT NULL, `revision` integer DEFAULT 0 NOT NULL, `attempt_id` text, `send_index` integer, `send_deadline` integer, `work_deadline` integer,\n\tCONSTRAINT \"email_messages_state\" CHECK(\"state\" in ('queued','waiting','sending','sent','failed','uncertain','cancelled'))\n)",
     },
     {
       type: "index",
@@ -392,7 +443,7 @@ export const agentMigrationManifest = {
     {
       type: "table",
       name: "email_settings",
-      sql: 'CREATE TABLE `email_settings` (\n\t`id` integer PRIMARY KEY,\n\t`enabled` integer NOT NULL,\n\t`revision` integer NOT NULL,\n\t`generation` integer NOT NULL,\n\t`operation_id` text NOT NULL,\n\tCONSTRAINT "email_settings_singleton" CHECK("id" = 1),\n\tCONSTRAINT "email_settings_enabled" CHECK("enabled" in (0,1)),\n\tCONSTRAINT "email_settings_revision" CHECK("revision" >= 0),\n\tCONSTRAINT "email_settings_generation" CHECK("generation" >= 0)\n)',
+      sql: 'CREATE TABLE `email_settings` (\n\t`id` integer PRIMARY KEY,\n\t`enabled` integer NOT NULL,\n\t`revision` integer NOT NULL,\n\t`generation` integer NOT NULL,\n\t`operation_id` text NOT NULL, `schemaVersion` integer DEFAULT 1 NOT NULL, `workflowVersion` integer DEFAULT 1 NOT NULL,\n\tCONSTRAINT "email_settings_singleton" CHECK("id" = 1),\n\tCONSTRAINT "email_settings_enabled" CHECK("enabled" in (0,1)),\n\tCONSTRAINT "email_settings_revision" CHECK("revision" >= 0),\n\tCONSTRAINT "email_settings_generation" CHECK("generation" >= 0)\n)',
     },
     {
       type: "table",
@@ -627,7 +678,7 @@ export const agentMigrationManifest = {
     {
       type: "table",
       name: "whatsapp_messages",
-      sql: "CREATE TABLE `whatsapp_messages` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`fingerprint` text NOT NULL,\n\t`message_id` text NOT NULL,\n\t`thread_id` text NOT NULL,\n\t`sender` text NOT NULL,\n\t`body` text NOT NULL,\n\t`timestamp` integer NOT NULL,\n\t`agent_id` text NOT NULL,\n\t`generation` integer NOT NULL,\n\t`control` integer NOT NULL,\n\t`state` text NOT NULL,\n\t`reply` text DEFAULT '' NOT NULL,\n\t`provider_id` text,\n\t`error` text,\n\t`created_at` integer NOT NULL, `image` text, `image_file_id` text, `outbound_image_id` text, `image_attempts` integer DEFAULT 0 NOT NULL, `delivery` text,\n\tCONSTRAINT \"whatsapp_messages_state\" CHECK(\"state\" in ('queued','waiting','sending','sent','failed','uncertain','cancelled','expired')),\n\tCONSTRAINT \"whatsapp_messages_control\" CHECK(\"control\" in (0,1))\n)",
+      sql: "CREATE TABLE `whatsapp_messages` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`fingerprint` text NOT NULL,\n\t`message_id` text NOT NULL,\n\t`thread_id` text NOT NULL,\n\t`sender` text NOT NULL,\n\t`body` text NOT NULL,\n\t`timestamp` integer NOT NULL,\n\t`agent_id` text NOT NULL,\n\t`generation` integer NOT NULL,\n\t`control` integer NOT NULL,\n\t`state` text NOT NULL,\n\t`reply` text DEFAULT '' NOT NULL,\n\t`provider_id` text,\n\t`error` text,\n\t`created_at` integer NOT NULL, `image` text, `image_file_id` text, `outbound_image_id` text, `image_attempts` integer DEFAULT 0 NOT NULL, `delivery` text, `schemaVersion` integer DEFAULT 1 NOT NULL, `workflowVersion` integer DEFAULT 1 NOT NULL, `revision` integer DEFAULT 0 NOT NULL, `attempt_id` text, `send_index` integer, `send_deadline` integer, `work_deadline` integer,\n\tCONSTRAINT \"whatsapp_messages_state\" CHECK(\"state\" in ('queued','waiting','sending','sent','failed','uncertain','cancelled','expired')),\n\tCONSTRAINT \"whatsapp_messages_control\" CHECK(\"control\" in (0,1))\n)",
     },
     {
       type: "index",
@@ -647,7 +698,7 @@ export const agentMigrationManifest = {
     {
       type: "table",
       name: "whatsapp_settings",
-      sql: 'CREATE TABLE `whatsapp_settings` (\n\t`id` integer PRIMARY KEY,\n\t`enabled` integer NOT NULL,\n\t`agent_id` text NOT NULL,\n\t`revision` integer NOT NULL,\n\t`generation` integer NOT NULL,\n\t`operation_id` text NOT NULL,\n\t`last_inbound_at` integer NOT NULL,\n\tCONSTRAINT "whatsapp_settings_singleton" CHECK("id" = 1),\n\tCONSTRAINT "whatsapp_settings_enabled" CHECK("enabled" in (0,1)),\n\tCONSTRAINT "whatsapp_settings_revision" CHECK("revision" >= 0),\n\tCONSTRAINT "whatsapp_settings_generation" CHECK("generation" >= 0)\n)',
+      sql: 'CREATE TABLE `whatsapp_settings` (\n\t`id` integer PRIMARY KEY,\n\t`enabled` integer NOT NULL,\n\t`agent_id` text NOT NULL,\n\t`revision` integer NOT NULL,\n\t`generation` integer NOT NULL,\n\t`operation_id` text NOT NULL,\n\t`last_inbound_at` integer NOT NULL, `schemaVersion` integer DEFAULT 1 NOT NULL, `workflowVersion` integer DEFAULT 1 NOT NULL,\n\tCONSTRAINT "whatsapp_settings_singleton" CHECK("id" = 1),\n\tCONSTRAINT "whatsapp_settings_enabled" CHECK("enabled" in (0,1)),\n\tCONSTRAINT "whatsapp_settings_revision" CHECK("revision" >= 0),\n\tCONSTRAINT "whatsapp_settings_generation" CHECK("generation" >= 0)\n)',
     },
     {
       type: "table",

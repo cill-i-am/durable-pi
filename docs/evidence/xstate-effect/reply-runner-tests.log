@@ -1,0 +1,9 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-effect-standard/durable-pi
+
+
+ Test Files  1 passed (1)
+      Tests  32 passed (32)
+   Start at  11:48:28
+   Duration  315ms (import 70%, transform 14%, tests 11%, setup 3%, worker 1%)
+

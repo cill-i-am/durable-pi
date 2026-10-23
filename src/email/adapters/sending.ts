@@ -1,6 +1,6 @@
 import { Effect, Schema } from "effect"
 
-import { nativeOperation } from "../../shared/interop"
+import { nativeFailure } from "../../shared/interop"
 import type { EmailRecord } from "../contracts"
 import { EmailSendFailed } from "../pump"
 import { renderReplyEmail } from "./template"
@@ -31,11 +31,12 @@ export const sendEmailReply = (
   attachments: EmailAttachment[] = []
 ) =>
   Effect.suspend(() => {
-    let dispatched = false
-    return nativeOperation(
-      async () => {
-        const html = renderReplyEmail(record, text)
-        dispatched = true
+    const html = renderReplyEmail(record, text)
+    // SendEmail exposes neither cancellation nor a local resource to release.
+    // Own observation of this RPC, not its remote lifetime: the reply deadline
+    // may stop waiting with durable uncertainty while the provider still runs.
+    return Effect.tryPromise({
+      try: async () => {
         const response = await binding.send({
           from: record.recipient,
           to: record.sender,
@@ -60,16 +61,17 @@ export const sendEmailReply = (
           throw new Error("Email provider returned no message receipt")
         return response.messageId
       },
-      (cause, channel) => {
-        if (channel === "failure" || Schema.isSchemaError(cause)) throw cause
-        const decoded = Schema.decodeUnknownOption(
-          Schema.Struct({ code: Schema.String })
-        )(cause)
-        return new EmailSendFailed({
-          uncertain:
-            dispatched &&
-            (decoded._tag === "None" || !rejected.has(decoded.value.code)),
-        })
-      }
-    )
+      catch: (cause) =>
+        nativeFailure(cause, (reason, channel) => {
+          if (channel === "failure" || Schema.isSchemaError(reason))
+            throw reason
+          const decoded = Schema.decodeUnknownOption(
+            Schema.Struct({ code: Schema.String })
+          )(reason)
+          return new EmailSendFailed({
+            uncertain:
+              decoded._tag === "None" || !rejected.has(decoded.value.code),
+          })
+        }),
+    }).pipe(Effect.catch((cause) => Effect.failCause(cause)))
   })

@@ -4,6 +4,11 @@ import { createChatSdkState } from "agents/chat-sdk"
 import { probeAttachments } from "./attachment-probe"
 import { probeReplies } from "./reply-probe"
 
+export {
+  EmailRecoveryProbe,
+  WhatsAppRecoveryProbe,
+} from "./reply-recovery-probe"
+
 export { ChatSdkStateAgent } from "agents/chat-sdk"
 
 export class WhatsAppStateProbe extends Agent {
@@ -41,9 +46,21 @@ export class WhatsAppStateProbe extends Agent {
 }
 export default {
   async fetch(
-    _request: Request,
-    env: { PROBES: DurableObjectNamespace<WhatsAppStateProbe> }
+    request: Request,
+    env: {
+      PROBES: DurableObjectNamespace<WhatsAppStateProbe>
+      EMAIL_RECOVERY: DurableObjectNamespace
+      WHATSAPP_RECOVERY: DurableObjectNamespace
+    }
   ) {
+    if (new URL(request.url).pathname === "/health")
+      return Response.json({ ok: true })
+    const [, route, channel, name] = new URL(request.url).pathname.split("/")
+    if (route === "replies") {
+      const namespace =
+        channel === "email" ? env.EMAIL_RECOVERY : env.WHATSAPP_RECOVERY
+      return namespace.get(namespace.idFromName(name!)).fetch(request)
+    }
     return Response.json(
       await (await getAgentByName(env.PROBES, "owner")).probe()
     )

@@ -101,6 +101,7 @@ import {
   type AgentFailure,
   agentRpc,
   agentRpcNative,
+  observeAgentRpc,
 } from "../agents/adapters/rpc"
 import { sqliteAgentCatalog } from "../agents/adapters/sqlite"
 import {
@@ -216,6 +217,7 @@ import {
   coordinationToolNames,
 } from "../coordination/tools"
 import { backgroundRequest } from "../delegation/adapters/background-http"
+import { BackgroundRunner } from "../delegation/adapters/background-lifecycle"
 import { SqliteBackgroundMailbox } from "../delegation/adapters/background-mailbox"
 import {
   BackgroundParentRequest,
@@ -272,9 +274,13 @@ import {
   type Actor,
   type MessageProvenance,
 } from "../messages/identity"
+import { ReplyRunner } from "../replies/adapters/lifecycle"
+import { admitReply } from "../replies/admission"
 import { replyDeliveryProgress } from "../replies/progress"
 import { jsonRequest } from "../shared/http"
+import { nativeResponse } from "../shared/interop"
 import { localTaskControls } from "../tasks/adapters/personal-agent"
+import { readTaskResponse } from "../tasks/adapters/response"
 import { taskTools, taskInstructions } from "../tasks/adapters/tools"
 import { taskCommand, type TaskCommand } from "../tasks/commands"
 import { TaskControlError, TaskReference } from "../tasks/contracts"
@@ -286,6 +292,7 @@ import {
   WhatsAppOutcome,
   WhatsAppRequest,
   whatsappNative,
+  whatsappRemote,
   whatsappRpc,
 } from "../whatsapp/adapters/rpc"
 import { WhatsAppStore } from "../whatsapp/adapters/sqlite"
@@ -585,16 +592,6 @@ class CommunicationRunner extends TurnRunner {
   }
 }
 
-class BackgroundRunner extends TurnRunner {
-  constructor(owner: PersonalAgent) {
-    super(owner, "background-groups")
-  }
-  async onJob(): Promise<LifecycleJobOutcome> {
-    const next = await this.owner.stepBackground()
-    return next === undefined ? undefined : { rescheduleAt: next }
-  }
-}
-
 class CoordinationRunner extends TurnRunner {
   constructor(owner: PersonalAgent) {
     super(owner, "agent-coordination")
@@ -639,24 +636,6 @@ class RoutineRunner extends TurnRunner {
       this.owner.routinePump.retry()
     )
     return next === undefined ? undefined : { rescheduleAt: next }
-  }
-}
-
-class EmailRunner extends TurnRunner {
-  constructor(owner: PersonalAgent) {
-    super(owner, "email")
-  }
-  async onJob(): Promise<LifecycleJobOutcome> {
-    return this.owner.stepEmail()
-  }
-}
-
-class WhatsAppRunner extends TurnRunner {
-  constructor(owner: PersonalAgent) {
-    super(owner, "whatsapp")
-  }
-  async onJob(): Promise<LifecycleJobOutcome> {
-    return this.owner.stepWhatsApp()
   }
 }
 
@@ -1038,6 +1017,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           backgroundActive: () =>
             this.active().pipe(Effect.map((turn) => !!turn?.origin)),
           wakeConversation: () => backgroundNative(() => this.runner.wake()),
+          armBackground: (deadline) =>
+            backgroundNative(() =>
+              this.backgroundRunner.armBackground(deadline)
+            ),
           wakeBackground: () =>
             backgroundNative(() => this.backgroundRunner.wake()),
           notify: () => Effect.sync(() => this.notifyConversation()),
@@ -1533,10 +1516,16 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   private importWhatsAppMedia(owner: string, id: string, media: WhatsAppMedia) {
     return importWhatsAppMedia(this.workspaceService, (source) =>
       Effect.gen({ self: this }, function* () {
-        const result = yield* whatsappNative(async () => {
+        const result = yield* whatsappRemote(async () => {
           const bridge = await getAgentByName(this.env.WHATSAPP, owner)
           return bridge.downloadMedia(source)
-        })
+        }).pipe(
+          Effect.mapError((error) =>
+            error._tag === "WhatsAppStorageError"
+              ? new WhatsAppUnavailable()
+              : error
+          )
+        )
         if (!result.ok)
           return yield* result.retryable
             ? new WhatsAppUnavailable()
@@ -1572,7 +1561,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         const agent = yield* profile(id)
         if (agent?.status !== "active") return yield* new WhatsAppUnavailable()
         const peer = this.env.AGENT.getByName(agentObjectName(owner, id))
-        yield* agentRpcNative(() =>
+        yield* observeAgentRpc(() =>
           agentRpc(peer).configure(owner, agent, owner)
         ).pipe(Effect.mapError(() => new WhatsAppUnavailable()))
         return peer
@@ -1583,12 +1572,15 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     ): Effect.Effect<WhatsAppMediaExport, WhatsAppFailure> =>
       agentId === homeAgentId
         ? exportWhatsAppMedia(this.workspaceService, id)
-        : whatsappNative(() =>
+        : whatsappRemote(() =>
             whatsappRpc(
               this.env.AGENT.getByName(agentObjectName(owner, agentId))
             ).exportMedia(owner, id)
           )
     return whatsappApplication(this.whatsappStore, {
+      reconcile: () => whatsappNative(() => this.whatsappRunner.reconcile()),
+      armReply: (deadline) =>
+        whatsappNative(() => this.whatsappRunner.armReply(deadline)),
       control: (body, id) =>
         agentNative("control task from WhatsApp", (signal) =>
           this.taskAction(taskCommand(body)!, id, signal)
@@ -1613,7 +1605,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
               record.media
             )
           const peer = yield* connected(record.agentId)
-          return yield* whatsappNative(() =>
+          return yield* whatsappRemote(() =>
             whatsappRpc(peer).importMedia(owner, record.id, record.media!)
           )
         }),
@@ -1627,7 +1619,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           if (input.origin?.kind !== "whatsapp")
             return yield* new WhatsAppUnavailable()
           const origin = input.origin
-          return yield* whatsappNative(() =>
+          return yield* whatsappRemote(() =>
             whatsappRpc(peer).submit(owner, {
               id: input.operationId,
               body: input.text,
@@ -1640,7 +1632,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       turn: (id, turnId) =>
         id === homeAgentId
           ? this.whatsappTurn(turnId)
-          : whatsappNative(() =>
+          : whatsappRemote(() =>
               whatsappRpc(
                 this.env.AGENT.getByName(agentObjectName(owner, id))
               ).turn(owner, turnId)
@@ -1741,6 +1733,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     return WhatsAppOutcome.encode(await this.actorRuntime.runPromiseExit(work))
   }
   readonly emailPump = emailPump(this.emailStore, {
+    armReply: (deadline) =>
+      agentNative("arm email reply recovery", () =>
+        this.emailRunner.armReply(deadline)
+      ).pipe(Effect.mapError(() => new EmailUnavailable())),
     control: (record) =>
       agentNative("control task from email", (signal) =>
         this.taskAction(taskCommand(record.body)!, undefined, signal)
@@ -1805,7 +1801,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         const profile =
           id === homeAgentId
             ? yield* this.catalog.requireActive(id)
-            : yield* agentRpcNative(() =>
+            : yield* observeAgentRpc(() =>
                 agentRpc(this.env.AGENT.getByName(configuration.owner)).profile(
                   id
                 )
@@ -1822,6 +1818,13 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   }
   private emailView(owner: string, id: AgentId) {
     return Effect.gen({ self: this }, function* () {
+      yield* agentNative("reconcile email", () =>
+        this.emailRunner.reconcile()
+      ).pipe(
+        Effect.mapError(
+          () => new EmailStorageError({ operation: "reconcile email" })
+        )
+      )
       const settings = yield* this.emailStore.settings()
       const configured = this.emailReady()
       const address =
@@ -1944,14 +1947,17 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             )
         }
       }
-      const accepted = yield* this.emailStore.receive(
-        email,
-        settings.generation
-      )
-      yield* agentNative("wake email", () => this.emailRunner.wake()).pipe(
-        Effect.mapError(() => new EmailUnavailable())
-      )
-      return accepted
+      return yield* admitReply({
+        arm: (deadline) =>
+          agentNative("arm email acceptance", () =>
+            this.emailRunner.armReply(deadline)
+          ).pipe(Effect.mapError(() => new EmailUnavailable())),
+        accept: (deadline) =>
+          this.emailStore.receive(email, settings.generation, deadline),
+        wake: agentNative("wake email", () => this.emailRunner.wake()).pipe(
+          Effect.mapError(() => new EmailUnavailable())
+        ),
+      })
     }).pipe(
       Effect.mapError((error) =>
         error._tag === "AgentStorageError" || error._tag === "AgentConflict"
@@ -2272,8 +2278,8 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     return this.run(this.background.read(id))
   }
   async stepBackground() {
-    if (!(await this.familyAdmission())) return
-    return this.run(this.background.step())
+    const authorized = !!(await this.familyAdmission())
+    return this.run(this.background.step(authorized))
   }
   readonly delegations: typeof Delegation.Service =
     this.actorRuntime.runSync(Delegation)
@@ -3136,7 +3142,13 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         ),
     }
   )
-  readonly backgroundRunner = new BackgroundRunner(this)
+  readonly backgroundRunner: BackgroundRunner<unknown> =
+    new BackgroundRunner<unknown>({
+      run: (work) => this.actorRuntime.runPromise(work),
+      step: () => this.stepBackground(),
+      exhaust: (current) => this.background.exhaustRecovery(current),
+      nextWake: () => this.background.nextWake(),
+    })
   readonly runtimeStatusProgram = runtimeStatusEffect<
     AgentConflict | AgentStorageError | AccessError,
     never
@@ -3189,8 +3201,24 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   )
   readonly appEvents = new AppEventRunner(this)
   readonly routineRunner = new RoutineRunner(this)
-  readonly emailRunner = new EmailRunner(this)
-  readonly whatsappRunner = new WhatsAppRunner(this)
+  readonly emailRunner = new ReplyRunner("email", {
+    run: (work) => this.actorRuntime.runPromise(work),
+    pump: () => this.stepEmail(),
+    recover: () => this.emailStore.recover(false),
+    exhaust: (eligible, expiredOnly) =>
+      this.emailStore.exhaustRecovery(eligible, expiredOnly),
+    pending: () => this.emailStore.pending(),
+    nextRecovery: () => this.emailStore.nextRecovery(),
+  })
+  readonly whatsappRunner = new ReplyRunner("whatsapp", {
+    run: (work) => this.actorRuntime.runPromise(work),
+    pump: () => this.stepWhatsApp(),
+    recover: () => this.whatsappStore.recover(false),
+    exhaust: (eligible, expiredOnly) =>
+      this.whatsappStore.exhaustRecovery(eligible, expiredOnly),
+    pending: () => this.whatsappStore.pending(),
+    nextRecovery: () => this.whatsappStore.nextRecovery(),
+  })
   readonly actorServices = new ActorServices(this)
   readonly lifecycle = Lifecycle.install(this)
     .use(this.mcp)
@@ -3218,9 +3246,11 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   async onStart() {
     await this.coordinationRunner.wake()
     await this.run(this.whatsappStore.recover())
+    await this.whatsappRunner.reconcile()
     if ((await this.run(this.whatsappStore.pending())).length)
       await this.whatsappRunner.wake()
     await this.run(this.emailStore.recover())
+    await this.emailRunner.reconcile()
     if ((await this.run(this.emailStore.pending())).length)
       await this.emailRunner.wake()
     if ((await this.run(this.communication.mailbox.nextWake())) !== undefined)
@@ -3683,45 +3713,64 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     current?: AgentId,
     signal?: AbortSignal
   ) {
-    const access = await this.familyAdmission()
+    const access = await this.familyAdmission(signal)
     if (!access) return "Your account access has ended."
     const identity = await this.communication.runtime.runPromise(
-      this.communication.mailbox.identity()
+      this.communication.mailbox.identity(),
+      { signal }
     )
     const root = this.env.AGENT.getByName(access.owner)
     const call = async (
       agent: AgentProfile,
       task?: typeof TaskReference.Type
     ) => {
-      const response = await agentGateway(
-        new Request(
-          `https://agent.internal/api/agent/tasks${task ? "/stop" : ""}?agent=${agent.id}`,
-          {
-            method: task ? "POST" : "GET",
-            headers: {
-              "x-owner-id": access.owner,
-              "content-type": "application/json",
-            },
-            ...(task ? { body: JSON.stringify(task) } : {}),
-            signal,
-          }
+      const exit = await this.actorRuntime.runPromiseExit(
+        Effect.scoped(
+          Effect.gen({ self: this }, function* () {
+            const response = yield* nativeResponse(
+              (requestSignal) =>
+                agentGateway(
+                  new Request(
+                    `https://agent.internal/api/agent/tasks${task ? "/stop" : ""}?agent=${agent.id}`,
+                    {
+                      method: task ? "POST" : "GET",
+                      headers: {
+                        "x-owner-id": access.owner,
+                        "content-type": "application/json",
+                      },
+                      ...(task ? { body: JSON.stringify(task) } : {}),
+                      signal: requestSignal,
+                    }
+                  ),
+                  { AGENT: this.env.AGENT },
+                  this.ctx
+                ),
+              (cause) => {
+                throw cause
+              }
+            )
+            return yield* readTaskResponse(response)
+          })
         ),
-        { AGENT: this.env.AGENT },
-        this.ctx
+        { signal }
       )
-      if (!response.ok) {
-        await response.body?.cancel()
-        throw new TaskControlError({
-          code: response.status === 404 ? "not_found" : "unavailable",
-          message:
-            "This task's state could not be confirmed. Retry the same handle.",
-        })
-      }
-      return response.json<unknown>()
+      if (Exit.isSuccess(exit)) return exit.value
+      const [reason] = exit.cause.reasons
+      if (
+        exit.cause.reasons.length === 1 &&
+        reason?._tag === "Fail" &&
+        Schema.is(TaskControlError)(reason.error)
+      )
+        throw reason.error
+      throw exit.cause
     }
     try {
       return await taskDirectory({
-        profiles: () => agentRpc(root).profiles(),
+        profiles: () =>
+          this.actorRuntime.runPromise(
+            observeAgentRpc(() => agentRpc(root).profiles()),
+            { signal }
+          ),
         list: (agent) => call(agent),
         stop: call,
       })(command, current ?? identity.bot)
@@ -3790,7 +3839,6 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           path,
           id,
           this.whatsapp(owner),
-          this.whatsappStore,
           () => this.wakeWhatsApp()
         )
       }
@@ -3805,19 +3853,22 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             this.receiveEmail(owner, id, input, attachments),
           configure: (input) => this.configureEmail(input),
           retry: (input) =>
-            this.emailStore
-              .retry(
-                input.id,
-                input.acknowledgeDuplicateRisk,
-                input.operationId
-              )
-              .pipe(
-                Effect.andThen(
-                  agentNative("wake email", () => this.emailRunner.wake()).pipe(
-                    Effect.mapError(() => new EmailUnavailable())
-                  )
-                )
-              ),
+            admitReply({
+              arm: (deadline) =>
+                agentNative("arm email retry", () =>
+                  this.emailRunner.armReply(deadline)
+                ).pipe(Effect.mapError(() => new EmailUnavailable())),
+              accept: (deadline) =>
+                this.emailStore.retry(
+                  input.id,
+                  input.acknowledgeDuplicateRisk,
+                  input.operationId,
+                  deadline
+                ),
+              wake: agentNative("wake email", () =>
+                this.emailRunner.wake()
+              ).pipe(Effect.mapError(() => new EmailUnavailable())),
+            }),
         })
       }
       if (

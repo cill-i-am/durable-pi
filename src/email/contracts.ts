@@ -12,7 +12,7 @@ export class EmailRejected extends Schema.TaggedError<EmailRejected>()(
 ) {}
 export class EmailStorageError extends Schema.TaggedError<EmailStorageError>()(
   "EmailStorageError",
-  { operation: Schema.String }
+  { operation: Schema.String, cause: Schema.optionalKey(Schema.Unknown) }
 ) {}
 export class EmailUnavailable extends Schema.TaggedError<EmailUnavailable>()(
   "EmailUnavailable",

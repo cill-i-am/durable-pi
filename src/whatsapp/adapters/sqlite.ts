@@ -1,28 +1,47 @@
-import { and, asc, count, desc, eq, inArray } from "drizzle-orm"
-import { Effect, Schema } from "effect"
+import { asc, count, desc, eq, inArray } from "drizzle-orm"
+import { Clock, Effect, Schema } from "effect"
 
-import { homeAgentId, type AgentId } from "../../agents/domain"
-import { replyComplete, type ReplyProgress } from "../../replies/contracts"
+import type { AgentId } from "../../agents/domain"
+import {
+  ReplyOwnership,
+  REPLY_LEASE_MS,
+  type ReplyProgress,
+  type ReplyLease,
+  type ReplyWork,
+} from "../../replies/contracts"
+import {
+  advanceReplyMessage,
+  newReplyMessage,
+  type ReplyMessageEvent,
+} from "../../replies/message.machine"
 import {
   mapSqliteError,
   type Sqlite,
   type EffectSqliteDatabase,
 } from "../../storage/sqlite"
 import {
+  advanceWhatsAppConfiguration,
+  readWhatsAppConfiguration,
+} from "../configuration.machine"
+import {
   WhatsAppSettings,
   WhatsAppRecord,
   WhatsAppRejected,
+  WhatsAppUnavailable,
   WhatsAppStorageError,
   WHATSAPP_MAX_PENDING,
   WHATSAPP_MAX_RECORDS,
   WHATSAPP_WINDOW_MS,
   type ConfigureWhatsApp,
   type IncomingWhatsApp,
-  type WhatsAppDelivery,
   type WhatsAppFailure,
 } from "../contracts"
 import { whatsappSettings, whatsappMessages, whatsappRetries } from "./schema"
 
+const StoredWhatsApp = Schema.Struct({
+  ...WhatsAppRecord.fields,
+  ...ReplyOwnership,
+})
 const pending = ["queued", "waiting", "sending"] as const
 export class WhatsAppStore {
   constructor(readonly db: Sqlite) {}
@@ -31,80 +50,56 @@ export class WhatsAppStore {
   ) {
     return mapSqliteError(
       this.db.use(body),
-      () => new WhatsAppStorageError({ operation: "query" })
+      (cause) => new WhatsAppStorageError({ operation: "query", cause })
     )
   }
   private atomic<A, E, R>(body: () => Effect.Effect<A, E, R>) {
     return mapSqliteError(
       this.db.transaction(body),
-      () => new WhatsAppStorageError({ operation: "transaction" })
+      (cause) => new WhatsAppStorageError({ operation: "transaction", cause })
+    )
+  }
+  private readSettings() {
+    return this.query((orm) => orm.select().from(whatsappSettings).get()).pipe(
+      Effect.map(readWhatsAppConfiguration)
     )
   }
   settings() {
-    return this.query((orm) => orm.select().from(whatsappSettings).get()).pipe(
-      Effect.map((row) =>
-        row
-          ? Schema.decodeUnknownSync(WhatsAppSettings)(row)
-          : {
-              enabled: false,
-              agentId: homeAgentId,
-              revision: 0,
-              generation: 0,
-              operationId: "",
-              lastInboundAt: 0,
-            }
-      )
+    return this.readSettings().pipe(
+      Effect.map(Schema.decodeUnknownSync(WhatsAppSettings))
     )
   }
   configure(input: ConfigureWhatsApp, agentId: AgentId) {
     return this.atomic(() =>
       Effect.gen({ self: this }, function* () {
-        const current = yield* this.settings()
-        if (current.operationId === input.operationId) {
-          if (
-            current.enabled !== input.enabled ||
-            current.agentId !== agentId ||
-            current.revision !== input.revision + 1
-          )
-            return yield* new WhatsAppRejected({
-              message: "This request belongs to different WhatsApp settings.",
-            })
-          return current
-        }
-        if (current.revision !== input.revision)
-          return yield* new WhatsAppRejected({
-            message: "WhatsApp settings changed. Reload before saving.",
-          })
-        const next = {
-          ...current,
-          enabled: input.enabled,
-          agentId,
-          revision: current.revision + 1,
-          generation:
-            current.generation + (input.enabled && !current.enabled ? 1 : 0),
-          operationId: input.operationId,
-        }
+        const current = yield* this.readSettings()
+        const { record: next, commands } = advanceWhatsAppConfiguration(
+          current,
+          { type: "CONFIGURE", ...input, agentId }
+        )
+        for (const command of commands)
+          if (command.type === "rejected")
+            return yield* new WhatsAppRejected({ message: command.message })
+        if (next.revision === current.revision)
+          return Schema.decodeUnknownSync(WhatsAppSettings)(next)
         yield* this.query((orm) =>
           orm
             .insert(whatsappSettings)
             .values({ id: 1, ...next })
             .onConflictDoUpdate({ target: whatsappSettings.id, set: next })
         )
-        if (!next.enabled)
-          yield* this.query((orm) =>
-            orm
-              .update(whatsappMessages)
-              .set({
-                state: "cancelled",
-                error: "WhatsApp was disabled. The conversation remains in Pi.",
-              })
-              .where(inArray(whatsappMessages.state, ["queued", "waiting"]))
-          )
-        return next
+        for (const command of commands)
+          if (command.type === "cancel-pending")
+            for (const record of yield* this.pending())
+              yield* this.cancel(
+                record.id,
+                "WhatsApp was disabled. The conversation remains in Pi."
+              )
+        return Schema.decodeUnknownSync(WhatsAppSettings)(next)
       })
     )
   }
-  get(id: string) {
+  private readCurrent(id: string) {
     return this.query((orm) =>
       orm
         .select()
@@ -112,6 +107,13 @@ export class WhatsAppStore {
         .where(eq(whatsappMessages.id, id))
         .get()
     ).pipe(
+      Effect.map((row) =>
+        row ? Schema.decodeUnknownSync(StoredWhatsApp)(row) : undefined
+      )
+    )
+  }
+  get(id: string) {
+    return this.readCurrent(id).pipe(
       Effect.map((row) =>
         row ? Schema.decodeUnknownSync(WhatsAppRecord)(row) : undefined
       )
@@ -124,7 +126,15 @@ export class WhatsAppStore {
         .from(whatsappMessages)
         .orderBy(desc(whatsappMessages.createdAt))
         .limit(30)
-    ).pipe(Effect.map(Schema.decodeUnknownSync(Schema.Array(WhatsAppRecord))))
+    ).pipe(
+      Effect.map((rows) =>
+        rows.map((row) =>
+          Schema.decodeUnknownSync(WhatsAppRecord)(
+            Schema.decodeUnknownSync(StoredWhatsApp)(row)
+          )
+        )
+      )
+    )
   }
   pending() {
     return this.query((orm) =>
@@ -134,7 +144,15 @@ export class WhatsAppStore {
         .where(inArray(whatsappMessages.state, pending))
         .orderBy(asc(whatsappMessages.createdAt))
         .limit(WHATSAPP_MAX_PENDING)
-    ).pipe(Effect.map(Schema.decodeUnknownSync(Schema.Array(WhatsAppRecord))))
+    ).pipe(
+      Effect.map((rows) =>
+        rows.map((row) =>
+          Schema.decodeUnknownSync(WhatsAppRecord)(
+            Schema.decodeUnknownSync(StoredWhatsApp)(row)
+          )
+        )
+      )
+    )
   }
   receive(
     input: IncomingWhatsApp,
@@ -143,7 +161,14 @@ export class WhatsAppStore {
       reply = "",
       route,
       outboundFileId = null,
-    }: { reply?: string; route?: AgentId; outboundFileId?: string | null } = {}
+      generation,
+    }: {
+      reply?: string
+      route?: AgentId
+      outboundFileId?: string | null
+      generation?: number
+    } = {},
+    discoveryDeadline: number
   ) {
     return this.atomic(() =>
       Effect.gen({ self: this }, function* () {
@@ -156,8 +181,13 @@ export class WhatsAppStore {
             })
           return false
         }
-        const settings = yield* this.settings()
+        const settings = yield* this.readSettings()
         if (!settings.enabled) return false
+        if (generation !== undefined && generation !== settings.generation)
+          return yield* new WhatsAppRejected({
+            message:
+              "WhatsApp settings changed while this message was being prepared.",
+          })
         const [total] = yield* this.query((orm) =>
           orm.select({ total: count() }).from(whatsappMessages)
         )
@@ -172,19 +202,20 @@ export class WhatsAppStore {
           return yield* new WhatsAppRejected({
             message: "Invalid WhatsApp message timestamp.",
           })
+        if ((yield* Clock.currentTimeMillis) >= discoveryDeadline)
+          return yield* new WhatsAppUnavailable()
+        const { record: nextSettings } = advanceWhatsAppConfiguration(
+          settings,
+          {
+            type: "INBOUND",
+            timestamp: input.timestamp,
+            route: route ?? null,
+          }
+        )
         yield* this.query((orm) =>
           orm
             .update(whatsappSettings)
-            .set({
-              lastInboundAt: Math.max(settings.lastInboundAt, input.timestamp),
-              ...(route
-                ? {
-                    agentId: route,
-                    revision: settings.revision + 1,
-                    operationId: "",
-                  }
-                : {}),
-            })
+            .set(nextSettings)
             .where(eq(whatsappSettings.id, 1))
         )
         const expired =
@@ -200,11 +231,15 @@ export class WhatsAppStore {
             agentId,
             generation: settings.generation,
             control: !!reply,
-            state: expired ? "expired" : reply ? "waiting" : "queued",
-            reply,
-            error: expired
-              ? "The WhatsApp reply window closed. Open Pi to review this request."
-              : null,
+            ...newReplyMessage(
+              reply,
+              !!reply,
+              expired,
+              expired
+                ? "The WhatsApp reply window closed. Open Pi to review this request."
+                : null,
+              discoveryDeadline
+            ),
             createdAt: Date.now(),
           })
         )
@@ -212,108 +247,283 @@ export class WhatsAppStore {
       })
     )
   }
-  update(
+  notice(
+    parent: WhatsAppRecord,
+    input: IncomingWhatsApp,
+    reply: string,
+    discoveryDeadline: number
+  ) {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const current = yield* this.readCurrent(parent.id)
+        if (
+          current?.state !== "waiting" ||
+          current.generation !== parent.generation
+        )
+          return
+        yield* this.receive(
+          input,
+          parent.agentId,
+          { reply, generation: parent.generation },
+          discoveryDeadline
+        )
+      })
+    )
+  }
+  private change(
     id: string,
-    from: WhatsAppDelivery,
-    state: WhatsAppDelivery,
+    event: ReplyMessageEvent,
     details: {
       control?: boolean
-      reply?: string
-      delivery?: ReplyProgress
-      error?: string | null
-      providerId?: string | null
       fileId?: string
       mediaAttempts?: number
     } = {}
   ) {
-    return this.query((orm) =>
-      orm
-        .update(whatsappMessages)
-        .set({ state, ...details })
-        .where(
-          and(eq(whatsappMessages.id, id), eq(whatsappMessages.state, from))
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const current = yield* this.readCurrent(id)
+        if (!current) return false
+        const next = advanceReplyMessage(
+          { ...current, delivery: current.delivery ?? null },
+          event
         )
-        .returning({ id: whatsappMessages.id })
-    ).pipe(Effect.map((rows) => rows.length > 0))
+        if (next.revision === current.revision) return false
+        yield* this.query((orm) =>
+          orm
+            .update(whatsappMessages)
+            .set({ ...details, ...next })
+            .where(eq(whatsappMessages.id, id))
+        )
+        return true
+      })
+    )
   }
+  prepared(id: string, reply = "", control = false, revision?: number) {
+    return this.change(id, { type: "PREPARED", reply, revision }, { control })
+  }
+  cancel(id: string, error: string) {
+    return this.change(id, { type: "CANCEL", error })
+  }
+  expire(id: string, error: string, revision?: number) {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const settings = yield* this.settings()
+        const now = yield* Clock.currentTimeMillis
+        return yield* this.change(id, {
+          type: "EXPIRE",
+          error,
+          revision,
+          expired: now - settings.lastInboundAt >= WHATSAPP_WINDOW_MS,
+        })
+      })
+    )
+  }
+  preparationFailed(id: string, revision: number, error: string) {
+    return this.change(id, { type: "PREPARATION_FAILED", revision, error })
+  }
+  saveMedia(id: string, revision: number, fileId: string) {
+    return this.change(id, { type: "PREPARATION_SAVED", revision }, { fileId })
+  }
+  checkpoint(id: string, attemptId: string, delivery: ReplyProgress) {
+    return this.change(id, { type: "CHECKPOINT", attemptId, delivery })
+  }
+  finish(
+    id: string,
+    attemptId: string,
+    state: "sent" | "failed" | "uncertain",
+    providerId: string | null,
+    error: string | null
+  ) {
+    return this.change(id, {
+      type: "FINISH",
+      attemptId,
+      state,
+      providerId,
+      error,
+    })
+  }
+  recoverAttempt(id: string, attemptId: string) {
+    return this.change(id, {
+      type: "RECOVER",
+      now: 0,
+      force: true,
+      attemptId,
+      error: "Sending was interrupted. Check the destination before retrying.",
+    })
+  }
+  recover(force = true) {
+    return Effect.gen({ self: this }, function* () {
+      const now = yield* Clock.currentTimeMillis
+      for (const record of yield* this.pending())
+        yield* this.change(record.id, {
+          type: "RECOVER",
+          now,
+          force,
+          attemptId: null,
+          error:
+            "Sending was interrupted. Check the destination before retrying.",
+        })
+    })
+  }
+  /** Lifecycle exhausted its finite job attempts. No new provider attempt is
+   * authorized; active send leases retain their deadline and ownership. */
+  exhaustRecovery(eligible?: () => boolean, expiredOnly = false) {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const now = yield* Clock.currentTimeMillis
+        if (eligible && !eligible()) return
+        for (const record of yield* this.pending())
+          yield* this.change(record.id, {
+            type: "RECOVERY_EXHAUSTED",
+            expiredOnly,
+            now,
+            error:
+              "Reply processing could not finish. Review the conversation and retry explicitly; check the destination before retrying an unconfirmed send.",
+          })
+      })
+    )
+  }
+  /** Refuse an expired orphan before it can use an unrelated message's wake. */
+  getPendingWork(id: string) {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        yield* this.change(id, {
+          type: "WORK_CHECKED",
+          now: yield* Clock.currentTimeMillis,
+          error:
+            "Reply processing stopped before it could finish. Review the conversation and retry explicitly.",
+        })
+        const current = yield* this.readCurrent(id)
+        if (
+          !current ||
+          (current.state !== "queued" && current.state !== "waiting") ||
+          current.workDeadline === null
+        )
+          return undefined
+        return {
+          revision: current.revision,
+          state: current.state,
+          deadline: current.workDeadline,
+          record: Schema.decodeUnknownSync(WhatsAppRecord)(current),
+        } satisfies ReplyWork<WhatsAppRecord>
+      })
+    )
+  }
+  /** The caller must prearm this deadline after a successful owned pass. */
+  renewWork(id: string, revision: number, deadline: number) {
+    return this.atomic(() =>
+      Effect.gen({ self: this }, function* () {
+        const now = yield* Clock.currentTimeMillis
+        yield* this.change(id, {
+          type: "WORK_CHECKED",
+          now,
+          error:
+            "Reply processing stopped before it could finish. Review the conversation and retry explicitly.",
+        })
+        return yield* this.change(id, {
+          type: "WORK_RENEWED",
+          revision,
+          deadline,
+          now,
+        })
+      })
+    )
+  }
+  nextRecovery() {
+    return Effect.gen({ self: this }, function* () {
+      const now = yield* Clock.currentTimeMillis
+      const rows = yield* this.query((orm) =>
+        orm
+          .select({
+            state: whatsappMessages.state,
+            sendDeadline: whatsappMessages.sendDeadline,
+            workDeadline: whatsappMessages.workDeadline,
+          })
+          .from(whatsappMessages)
+          .where(inArray(whatsappMessages.state, pending))
+      )
+      return rows.length
+        ? Math.max(
+            now,
+            Math.min(
+              ...rows.map(
+                (row) =>
+                  (row.state === "sending"
+                    ? row.sendDeadline
+                    : row.workDeadline) ?? now
+              )
+            )
+          )
+        : undefined
+    })
+  }
+
   claim(
     record: WhatsAppRecord,
     reply: string,
     active: () => Effect.Effect<boolean, WhatsAppFailure>,
     delivery?: ReplyProgress,
-    from: "waiting" | "sending" = "waiting"
+    from: "waiting" | "sending" = "waiting",
+    lease?: ReplyLease
   ) {
     return this.atomic(() =>
       Effect.gen({ self: this }, function* () {
         const settings = yield* this.settings()
-        if (
-          !settings.enabled ||
-          settings.generation !== record.generation ||
-          !(yield* active())
-        ) {
-          yield* this.update(record.id, from, "cancelled", {
-            error:
-              "WhatsApp is disabled or the agent is archived. Review this conversation in Pi.",
-          })
-          return false
-        }
-        if (Date.now() - settings.lastInboundAt >= WHATSAPP_WINDOW_MS) {
-          yield* this.update(record.id, from, "expired", {
-            reply,
-            error:
-              "The WhatsApp reply window closed. Send a new WhatsApp message before retrying.",
-          })
-          return false
-        }
-        return yield* this.update(record.id, from, "sending", {
+        const authorized =
+          settings.enabled &&
+          settings.generation === record.generation &&
+          (!delivery || delivery.generation === settings.generation) &&
+          (yield* active())
+        const now = yield* Clock.currentTimeMillis
+        const expired = now - settings.lastInboundAt >= WHATSAPP_WINDOW_MS
+        const changed = yield* this.change(record.id, {
+          type: "CLAIM",
+          from,
+          attemptId: lease?.attemptId ?? crypto.randomUUID(),
+          deadline: lease?.deadline ?? now + REPLY_LEASE_MS,
+          now,
           reply,
-          ...(delivery ? { delivery } : {}),
-          error: null,
+          delivery: delivery ?? null,
+          authorized,
+          expired,
+          error: !authorized
+            ? "WhatsApp is disabled or the agent is archived. Review this conversation in Pi."
+            : "The WhatsApp reply window closed. Send a new WhatsApp message before retrying.",
         })
+        return changed && authorized && !expired
       })
     )
   }
-  recover() {
-    return Effect.gen({ self: this }, function* () {
-      for (const record of yield* this.pending()) {
-        if (record.state !== "sending") continue
-        const complete = replyComplete(record.delivery)
-        yield* this.update(
-          record.id,
-          "sending",
-          complete ? "sent" : "uncertain",
-          {
-            providerId: complete
-              ? (record.delivery!.receipts.at(-1) ?? null)
-              : null,
-            error: complete
-              ? null
-              : "Sending was interrupted. Check the destination before retrying.",
-          }
-        )
-      }
-    })
-  }
-
-  beginMedia(id: string) {
+  beginMedia(id: string, revision?: number) {
     return this.atomic(() =>
       Effect.gen({ self: this }, function* () {
-        const record = yield* this.get(id)
-        if (!record || record.state !== "queued") return false
-        if (record.mediaAttempts >= 5) {
-          yield* this.update(id, "queued", "failed", {
+        const record = yield* this.readCurrent(id)
+        if (!record) return undefined
+        const changed = yield* this.change(
+          id,
+          {
+            type: "PREPARATION_STARTED",
+            revision,
+            attempts: record.mediaAttempts,
+            limit: 5,
             error:
               "The image could not be prepared after several attempts. Retry or send it again.",
-          })
-          return false
-        }
-        return yield* this.update(id, "queued", "queued", {
-          mediaAttempts: record.mediaAttempts + 1,
-        })
+          },
+          { mediaAttempts: Math.min(5, record.mediaAttempts + 1) }
+        )
+        const current = yield* this.readCurrent(id)
+        return changed && current?.state === "queued"
+          ? current.revision
+          : undefined
       })
     )
   }
-  retry(id: string, acknowledgeDuplicateRisk: boolean, operationId: string) {
+  retry(
+    id: string,
+    acknowledgeDuplicateRisk: boolean,
+    operationId: string,
+    discoveryDeadline: number
+  ) {
     return this.atomic(() =>
       Effect.gen({ self: this }, function* () {
         const previous = yield* this.query((orm) =>
@@ -365,16 +575,22 @@ export class WhatsAppStore {
           return yield* new WhatsAppRejected({
             message: "This reply reached its retry limit. Open Pi.",
           })
+        if ((yield* Clock.currentTimeMillis) >= discoveryDeadline)
+          return yield* new WhatsAppUnavailable()
         yield* this.query((orm) =>
           orm
             .insert(whatsappRetries)
             .values({ operationId, messageId: id, acknowledgeDuplicateRisk })
         )
-        yield* this.update(
+        yield* this.change(
           id,
-          row.state,
-          row.control || row.reply ? "waiting" : "queued",
-          { error: null, mediaAttempts: 0 }
+          {
+            type: "RETRY",
+            deadline: discoveryDeadline,
+            waiting: !!(row.control || row.reply || row.delivery),
+            acknowledgeDuplicateRisk,
+          },
+          { mediaAttempts: 0 }
         )
       })
     )

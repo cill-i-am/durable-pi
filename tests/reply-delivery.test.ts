@@ -76,10 +76,12 @@ async function fixture(channel: "email" | "whatsapp") {
           body: "Reply please",
           references: "",
         },
-        settings.generation
+        settings.generation,
+        Date.now() + 60_000
       )
     )
     const pump = emailPump(store, {
+      armReply: () => Effect.void,
       active: () => Effect.succeed(true),
       admit: () => Effect.void,
       turn: () =>
@@ -98,9 +100,11 @@ async function fixture(channel: "email" | "whatsapp") {
       state,
       pump: () => run(pump()),
       read: () => run(store.get(id)),
-      retry: (ack: boolean) => run(store.retry(id, ack, crypto.randomUUID())),
+      retry: (ack: boolean) =>
+        run(store.retry(id, ack, crypto.randomUUID(), Date.now() + 60_000)),
       recover: () => run(new EmailStore(db).recover()),
-      forceSending: () => run(store.update(id, "sent", "sending")),
+      forceSending: () =>
+        db.run("UPDATE email_messages SET state = 'sending' WHERE id = ?", id),
     }
   }
   const store = new WhatsAppStore(db)
@@ -129,10 +133,13 @@ async function fixture(channel: "email" | "whatsapp") {
         body: "Reply please",
         timestamp: Date.now(),
       },
-      homeAgentId
+      homeAgentId,
+      {},
+      Date.now() + 60_000
     )
   )
   const pump = whatsappPump(store, {
+    armReply: () => Effect.void,
     active: () => Effect.succeed(true),
     admit: () => Effect.void,
     turn: () =>
@@ -156,9 +163,11 @@ async function fixture(channel: "email" | "whatsapp") {
     state,
     pump: () => run(pump()),
     read: () => run(store.get(id)),
-    retry: (ack: boolean) => run(store.retry(id, ack, crypto.randomUUID())),
+    retry: (ack: boolean) =>
+      run(store.retry(id, ack, crypto.randomUUID(), Date.now() + 60_000)),
     recover: () => run(new WhatsAppStore(db).recover()),
-    forceSending: () => run(store.update(id, "sent", "sending")),
+    forceSending: () =>
+      db.run("UPDATE whatsapp_messages SET state = 'sending' WHERE id = ?", id),
   }
 }
 

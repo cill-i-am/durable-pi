@@ -1,0 +1,3 @@
+Reply outages: terminal domain-write failure, finite queue exhaustion, explicit status repair, newer-admission fencing, expired-work isolation and orphan SIGKILL restoration passed for email and WhatsApp.
+Reply discovery: empty-scan lease retention, commit-during-scan fencing, newer native queue intent, and lost-wake SIGKILL recovery via real alarms passed for email and WhatsApp.
+Attachment preparation: native SQLite request and PDF job survived SIGKILL and resumed with the original ID. Multipart email/WhatsApp: native receipt checkpoints, restart without resend, and explicit retry skipping confirmed parts passed. WhatsApp Chat SDK state: native SQLite facets, locking, list bounds and restart persistence passed.

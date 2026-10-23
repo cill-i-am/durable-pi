@@ -63,6 +63,7 @@ function approvalsFixture() {
   const sent: string[] = []
   let admitted = 0
   const pump = emailPump(records, {
+    armReply: () => Effect.void,
     active: () => Effect.succeed(true),
     admit: () =>
       Effect.sync(() => {
@@ -110,7 +111,7 @@ describe("email approvals", () => {
     const command = incoming(
       `APPROVE ${emailApprovalToken(secret, root.recipient, operation)}`
     )
-    await run(f.records.receive(command, 1))
+    await run(f.records.receive(command, 1, Date.now() + 60_000))
     await run(f.flow.decide((await run(f.records.get(command.id)))!))
     expect(await work).toBe(1)
     expect(executed).toBe(1)
@@ -120,7 +121,7 @@ describe("email approvals", () => {
     async (approve) => {
       const f = approvalsFixture(),
         root = incoming()
-      await run(f.records.receive(root, 1))
+      await run(f.records.receive(root, 1, Date.now() + 60_000))
       const operation = await run(
         f.access.begin({
           id: "operation",
@@ -148,7 +149,7 @@ describe("email approvals", () => {
       const reply = incoming(
         `${approve ? "APPROVE" : "DENY"} ${token}\n\n> Old quoted email`
       )
-      await run(f.records.receive(reply, 1))
+      await run(f.records.receive(reply, 1, Date.now() + 60_000))
       await run(f.pump())
       await run(f.pump())
       expect((await run(f.access.get(operation.id)))?.status).toBe(
@@ -220,7 +221,7 @@ describe("email approvals", () => {
     ])
       expect(emailDecision(`APPROVE\n${quote}`)?.token).toBe("")
     const reply = incoming(`APPROVE ${token}`)
-    await run(f.records.receive(reply, 1))
+    await run(f.records.receive(reply, 1, Date.now() + 60_000))
     await run(
       f.records.configure({
         operationId: crypto.randomUUID(),
@@ -245,7 +246,7 @@ describe("email approvals", () => {
       })
     )
     const token = emailApprovalToken(secret, input.recipient, operation)
-    await run(f.records.receive(input, 1))
+    await run(f.records.receive(input, 1, Date.now() + 60_000))
     const record = (await run(f.records.get(input.id)))!
     const text =
       emailApprovalNotice(operation, token) +
@@ -332,7 +333,9 @@ describe("email attachment transport", () => {
       })
     )
     expect(await run(records.settings())).toMatchObject({ enabled: false })
-    await expect(run(records.receive(incoming(), 1))).rejects.toMatchObject({
+    await expect(
+      run(records.receive(incoming(), 1, Date.now() + 60_000))
+    ).rejects.toMatchObject({
       _tag: "EmailRejected",
     })
     await run(
@@ -346,7 +349,9 @@ describe("email attachment transport", () => {
       enabled: true,
       generation: 2,
     })
-    await expect(run(records.receive(incoming(), 1))).rejects.toMatchObject({
+    await expect(
+      run(records.receive(incoming(), 1, Date.now() + 60_000))
+    ).rejects.toMatchObject({
       _tag: "EmailRejected",
     })
   })

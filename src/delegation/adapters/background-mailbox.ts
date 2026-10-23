@@ -1,4 +1,4 @@
-import { desc, eq, inArray } from "drizzle-orm"
+import { desc, eq, inArray, or } from "drizzle-orm"
 import type { EffectDrizzleQueryError } from "drizzle-orm/effect-core/errors"
 import { Effect, Schema } from "effect"
 
@@ -80,12 +80,15 @@ export class SqliteBackgroundMailbox implements BackgroundLedger {
             .select()
             .from(handoffs)
             .where(
-              inArray(handoffs.status, [
-                "pending",
-                "running",
-                "ready",
-                "paused",
-              ])
+              or(
+                inArray(handoffs.status, [
+                  "pending",
+                  "running",
+                  "ready",
+                  "paused",
+                ]),
+                eq(handoffs.stop_state, "pending")
+              )
             )
             .orderBy(handoffs.id)
         )
@@ -122,6 +125,15 @@ export class SqliteBackgroundMailbox implements BackgroundLedger {
                   error: row.error,
                   failures: row.failures,
                   next_at: row.next_at,
+                  schema_version: row.schema_version,
+                  workflow_version: row.workflow_version,
+                  revision: row.revision,
+                  stop_state: row.stop_state,
+                  stop_attempt: row.stop_attempt,
+                  stop_attempts: row.stop_attempts,
+                  stop_next_at: row.stop_next_at,
+                  stop_deadline: row.stop_deadline,
+                  stop_error: row.stop_error,
                 },
               })
           )

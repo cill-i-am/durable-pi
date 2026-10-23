@@ -1,0 +1,33 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-effect-standard/durable-pi
+
+ ❯ tests/background-mailbox.test.ts (49 tests | 1 failed | 48 skipped) 59ms
+   × retries remote Stop after cancellation and outage, then persists acknowledgement across restore 59ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/background-mailbox.test.ts > retries remote Stop after cancellation and outage, then persists acknowledgement across restore
+AssertionError: expected undefined to be 3000 // Object.is equality
+
+- Expected:
+3000
+
++ Received:
+undefined
+
+ ❯ tests/background-mailbox.test.ts:1012:47
+    1010|   })
+    1011|   f.status("cancelled")
+    1012|   expect(await Effect.runPromise(app.step())).toBe(3000)
+       |                                               ^
+    1013|   expect(calls).toBe(1)
+    1014|   expect(Effect.runSync(f.mailbox.authorized(19))).toBe(false)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 48 skipped (49)
+   Start at  11:13:26
+   Duration  458ms (import 63%, transform 18%, tests 17%, setup 2%, worker 1%)
+

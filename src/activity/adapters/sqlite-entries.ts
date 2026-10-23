@@ -174,20 +174,36 @@ export function activityEntries(
                 1,
                 180
               ),
-              status: backgroundHandoffs.status,
+              status: caseWhen<string>(
+                eq(backgroundHandoffs.stop_state, "unconfirmed"),
+                literal<string>("stop-unconfirmed"),
+                caseWhen<string>(
+                  eq(backgroundHandoffs.stop_state, "pending"),
+                  literal<string>("stopping"),
+                  backgroundHandoffs.status
+                )
+              ),
               attention: caseWhen<number>(
                 eq(backgroundHandoffs.status, "paused"),
                 1,
-                0
+                caseWhen<number>(
+                  eq(backgroundHandoffs.stop_state, "unconfirmed"),
+                  1,
+                  0
+                )
               ),
               running: caseWhen<number>(
-                inArray(backgroundHandoffs.status, [
-                  "pending",
-                  "running",
-                  "ready",
-                ]),
+                eq(backgroundHandoffs.stop_state, "pending"),
                 1,
-                0
+                caseWhen<number>(
+                  inArray(backgroundHandoffs.status, [
+                    "pending",
+                    "running",
+                    "ready",
+                  ]),
+                  1,
+                  0
+                )
               ),
               target: literal<string>("background"),
               reference: asText(backgroundHandoffs.id),
