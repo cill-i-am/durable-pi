@@ -1,0 +1,60 @@
+{
+  "source_manifest": "/private/tmp/b09-final-manifest.json",
+  "base": "0cf6861ab5a89686d3956e0f85f480446c1f9bf8",
+  "static": {
+    "status": "passed",
+    "log": "/private/tmp/b09-full-static.log",
+    "log_sha256": "c7eee028072e6f00e7b4609a395783b78b0defab38089356c3581e67b0b4e88b"
+  },
+  "unit_and_build": {
+    "status": "passed",
+    "tests": 2726,
+    "files": 248,
+    "workers": 2,
+    "log": "/private/tmp/b09-full-unit-build.log",
+    "log_sha256": "4dd5a714e6bb1f8111c060adbb8d49d7068bd663cc3422c78ebd75491400303d"
+  },
+  "browser": {
+    "status": "passed",
+    "journeys": 84,
+    "passkeys": "passed",
+    "two_build_upgrade": "passed",
+    "log": "/private/tmp/b09-full-browser.log",
+    "log_sha256": "e12004b5044767c1fcf30ffbcb85fa3785cd6c9d21ed9346022e06099703caf7"
+  },
+  "native": {
+    "status": "passed",
+    "command": "PATH=/opt/homebrew/opt/node@24/bin:$PATH pnpm verify:native-runtime",
+    "workdir": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+    "script": "pnpm generate-routes && pnpm test:communication-runtime && pnpm test:conversation-runtime && pnpm test:drizzle-runtime && pnpm test:whatsapp-runtime && pnpm test:background-stop-runtime && pnpm test:memory-runtime && pnpm test:upstream-runtime && pnpm test:xstate-runtime",
+    "log": "/private/tmp/b09-full-native.log",
+    "preflight_utc": "2026-10-23T14:18:26.146725+00:00",
+    "source_files_verified": 29,
+    "source_manifest_sha256": "23f57206edbccfc739b99480ebece6f8c1ccb6d9edd01caa1f69990c570e76cb",
+    "started_utc": "2026-10-23T14:23:36.635798+00:00",
+    "node": "v24.21.0",
+    "pnpm": "12.14.0",
+    "window_release": "Explicit communication_wave B12 release received after positive and intended-failing negative control.",
+    "exit_code": 0,
+    "completed_utc": "2026-10-23T14:30:27.909569+00:00",
+    "log_sha256": "77f5745f1f33caf7b7aba510d236eed432a1aaceeb5f3f3a1ce8ae09baf71b0b",
+    "postflight_source_files_verified": 29,
+    "source_hashes_unchanged": true,
+    "suites_passed": [
+      "communication",
+      "conversation",
+      "drizzle",
+      "whatsapp",
+      "background-stop",
+      "memory",
+      "upstream",
+      "xstate"
+    ]
+  },
+  "source_verification": {
+    "frozen_files": 29,
+    "all_hashes_unchanged": true,
+    "generated_evidence": "/private/tmp/b09-generated-evidence",
+    "route_tree": "Build-generated append preserved externally; original HEAD bytes restored"
+  }
+}

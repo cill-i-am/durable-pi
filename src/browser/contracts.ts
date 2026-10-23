@@ -125,6 +125,9 @@ export interface BrowserCapture {
   screenshot: string | null
 }
 export interface BrowserRecord {
+  schemaVersion: 1
+  workflowVersion: 1
+  attemptId: string | null
   controller: "agent" | "owner"
   generation: number
   hosts: readonly string[]
