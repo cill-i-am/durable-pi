@@ -24,6 +24,8 @@ export const botAdmission = sqliteTable(
     id: integer("id").notNull().primaryKey(),
     revision: integer("revision").notNull(),
     status: text("status").notNull(),
+    schemaVersion: integer("schemaVersion").notNull().default(1),
+    workflowVersion: integer("workflowVersion").notNull().default(1),
   },
   (t) => [
     check(
@@ -43,6 +45,8 @@ export const agentCatalog = sqliteTable(
     slug: text("slug"),
     instructions: text("instructions").notNull(),
     status: text("status").notNull(),
+    schemaVersion: integer("schemaVersion").notNull().default(1),
+    workflowVersion: integer("workflowVersion").notNull().default(1),
     createdAt: text("createdAt").notNull(),
     updatedAt: text("updatedAt").notNull(),
     creation: text("creation").notNull(),

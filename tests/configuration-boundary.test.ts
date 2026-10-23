@@ -5,8 +5,8 @@ import { BotConfigurationStore } from "../src/agents/adapters/configuration"
 import {
   BotConfiguration,
   configurationApplication,
-  configurationChange,
 } from "../src/agents/configuration"
+import { configureRecord } from "../src/agents/configuration.machine"
 import { homeAgentId } from "../src/agents/domain"
 import { database, corrupt } from "./database"
 
@@ -59,13 +59,27 @@ it("rejects older or replayed configuration updates across generated revision/st
           revision: current,
           status,
         }
-        expect(
-          configurationChange(saved, "owner", {
+        const next = configureRecord(
+          { ...saved, schemaVersion: 1, workflowVersion: 1 },
+          "owner",
+          {
             ...profile,
             revision: incoming,
             status: status === "active" ? "archived" : "active",
-          })
-        ).toBe(incoming > current)
+          }
+        )
+        expect(next).toEqual(
+          incoming > current
+            ? {
+                owner: "owner",
+                instructions: profile.instructions,
+                revision: incoming,
+                status: status === "active" ? "archived" : "active",
+                schemaVersion: 1,
+                workflowVersion: 1,
+              }
+            : { ...saved, schemaVersion: 1, workflowVersion: 1 }
+        )
       }
 })
 it.effect(

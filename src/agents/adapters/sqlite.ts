@@ -6,8 +6,9 @@ import {
   type Sqlite,
   type EffectSqliteDatabase,
 } from "../../storage/sqlite"
-import { AgentProfile, AgentStorageError, type AgentId } from "../domain"
+import { AgentStorageError, type AgentId, type AgentProfile } from "../domain"
 import type { AgentCatalogLedger } from "../ledger"
+import { AgentRecord, newAgentRecord } from "../profile.machine"
 import { agentCatalogApplication } from "../service"
 import { allocateAgentSlug } from "../slugs"
 import { agentCatalog } from "./schema"
@@ -40,7 +41,7 @@ export class SqliteAgentCatalog implements AgentCatalogLedger {
         .orderBy(asc(agentCatalog.createdAt), asc(agentCatalog.id))
     ).pipe(
       Effect.map((rows) =>
-        rows.map((row) => Schema.decodeUnknownSync(AgentProfile)(row))
+        rows.map((row) => Schema.decodeUnknownSync(AgentRecord)(row))
       )
     )
   }
@@ -49,21 +50,7 @@ export class SqliteAgentCatalog implements AgentCatalogLedger {
       orm.select().from(agentCatalog).where(eq(agentCatalog.id, id))
     ).pipe(
       Effect.map((rows) =>
-        rows[0] ? Schema.decodeUnknownSync(AgentProfile)(rows[0]) : undefined
-      )
-    )
-  }
-  creation(id: AgentId) {
-    return this.query((orm) =>
-      orm
-        .select({ creation: agentCatalog.creation })
-        .from(agentCatalog)
-        .where(eq(agentCatalog.id, id))
-    ).pipe(
-      Effect.map((rows) =>
-        rows[0]
-          ? Schema.decodeUnknownSync(Schema.String)(rows[0].creation)
-          : undefined
+        rows[0] ? Schema.decodeUnknownSync(AgentRecord)(rows[0]) : undefined
       )
     )
   }
@@ -81,12 +68,7 @@ export class SqliteAgentCatalog implements AgentCatalogLedger {
         yield* this.query((orm) =>
           orm
             .insert(agentCatalog)
-            .values({
-              ...profile,
-              status: "active",
-              revision: 0,
-              creation: "legacy",
-            })
+            .values(newAgentRecord(profile, "legacy", 0))
             .onConflictDoNothing()
         )
         // Add names to pre-slug catalogs in a deterministic order. Keep IDs and
@@ -115,12 +97,12 @@ export class SqliteAgentCatalog implements AgentCatalogLedger {
       })
     )
   }
-  insert(profile: AgentProfile, creation: string) {
-    return this.query((orm) =>
-      orm.insert(agentCatalog).values({ ...profile, creation })
-    ).pipe(Effect.asVoid)
+  insert(profile: AgentRecord) {
+    return this.query((orm) => orm.insert(agentCatalog).values(profile)).pipe(
+      Effect.asVoid
+    )
   }
-  update(profile: AgentProfile) {
+  update(profile: AgentRecord) {
     const { id, name, instructions, status, updatedAt, revision } = profile
     return this.query((orm) =>
       orm

@@ -5,6 +5,10 @@ import { Effect, Layer, ManagedRuntime, Redacted, Schema } from "effect"
 import { afterEach, expect, it, vi } from "vitest"
 
 import { PersonalAgent } from "../src/agent/worker"
+import {
+  FamilyAdmission,
+  type familyAdmissionApplication,
+} from "../src/agents/family-admission"
 import { ConversationStore } from "../src/conversations/adapters/sqlite-turns"
 import {
   Conversations,
@@ -41,7 +45,7 @@ vi.mock("../src/observability/events", () => ({
   reportService: vi.fn(),
 }))
 const runtimes: ManagedRuntime.ManagedRuntime<
-  ModelCredentials | Conversations,
+  ModelCredentials | Conversations | FamilyAdmission,
   never
 >[] = []
 const authDatabases: DatabaseSync[] = []
@@ -81,8 +85,13 @@ function fixture(rotate?: () => Promise<void>) {
       model: "gpt-6.1-sol",
       thinking: "medium",
     })
+    const host: PersonalAgent = Object.create(PersonalAgent.prototype)
+    const family = host as unknown as {
+      familyAdmissionLayer(): ReturnType<typeof familyAdmissionApplication>
+    }
     const runtime = ManagedRuntime.make(
       Layer.mergeAll(
+        family.familyAdmissionLayer(),
         credentialApplication(ledger, refresh),
         conversationApplication(turns)
       )
@@ -92,7 +101,6 @@ function fixture(rotate?: () => Promise<void>) {
     const pause = vi.fn(() => Effect.void)
     const coordination = new CoordinationStore(db)
     const reconcile = vi.fn(() => Effect.void)
-    const host: PersonalAgent = Object.create(PersonalAgent.prototype)
     Object.assign(host, {
       actorRuntime: runtime,
       conversationService: runtime.runSync(Conversations),

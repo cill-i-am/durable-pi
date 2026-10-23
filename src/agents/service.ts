@@ -5,13 +5,12 @@ import {
   AgentConflict,
   AgentNotFound,
   AgentStorageError,
-  agentCreationReplay,
-  agentArchiveChange,
+  AgentProfile,
   requireAgent,
-  requireAgentCapacity,
   originalAgent,
 } from "./domain"
 import type { AgentCatalogLedger } from "./ledger"
+import { advanceAgentRecord, newAgentRecord } from "./profile.machine"
 import { allocateAgentSlug } from "./slugs"
 
 const attempt = <T>(body: () => T) =>
@@ -32,13 +31,25 @@ export function makeAgentCatalog(
   ledger: AgentCatalogLedger
 ): typeof AgentCatalog.Service {
   return {
-    list: Effect.fn("Agents.list")(() => ledger.list()),
+    list: Effect.fn("Agents.list")(() =>
+      ledger
+        .list()
+        .pipe(
+          Effect.map((rows) =>
+            rows.map((row) => Schema.decodeUnknownSync(AgentProfile)(row))
+          )
+        )
+    ),
     requireActive: Effect.fn("Agents.requireActive")((id) =>
       ledger
         .read(id)
         .pipe(
           Effect.flatMap((profile) =>
-            attempt(() => requireAgent(profile, true))
+            attempt(() =>
+              Schema.decodeUnknownSync(AgentProfile)(
+                requireAgent(profile, true)
+              )
+            )
           )
         )
     ),
@@ -47,32 +58,40 @@ export function makeAgentCatalog(
       return yield* ledger.atomic(() =>
         Effect.gen(function* () {
           const creation = JSON.stringify(input)
-          const previous = yield* ledger.creation(input.id)
-          if (yield* attempt(() => agentCreationReplay(previous, creation))) {
-            const profile = yield* ledger.read(input.id)
-            return yield* attempt(() => requireAgent(profile))
-          }
+          const previous = yield* ledger.read(input.id)
+          if (previous)
+            return yield* attempt(() =>
+              Schema.decodeUnknownSync(AgentProfile)(
+                advanceAgentRecord(previous, {
+                  type: "CREATE",
+                  creation,
+                  active: 0,
+                })
+              )
+            )
           const count = yield* ledger.activeCount()
-          yield* attempt(() => requireAgentCapacity(count))
           const agents = yield* ledger.list()
           const slug = allocateAgentSlug(
             input.name,
             agents.flatMap((agent) => [agent.id, agent.slug])
           )
-          yield* ledger.insert(
-            {
-              ...input,
-              name: input.name.trim(),
-              slug,
-              status: "active",
-              revision: 0,
-              createdAt: now,
-              updatedAt: now,
-            },
-            creation
+          const record = yield* attempt(() =>
+            newAgentRecord(
+              {
+                ...input,
+                name: input.name.trim(),
+                slug,
+                status: "active",
+                revision: 0,
+                createdAt: now,
+                updatedAt: now,
+              },
+              creation,
+              count
+            )
           )
-          const profile = yield* ledger.read(input.id)
-          return yield* attempt(() => requireAgent(profile))
+          yield* ledger.insert(record)
+          return Schema.decodeUnknownSync(AgentProfile)(record)
         })
       )
     }),
@@ -81,16 +100,20 @@ export function makeAgentCatalog(
       return yield* ledger.atomic(() =>
         Effect.gen(function* () {
           const stored = yield* ledger.read(input.id)
-          const current = yield* attempt(() => requireAgent(stored))
-          yield* ledger.update({
-            ...current,
-            name: input.name.trim(),
-            instructions: input.instructions,
-            updatedAt: now,
-            revision: current.revision + 1,
+          const current = yield* attempt(() => {
+            if (!stored) throw new AgentNotFound()
+            return stored
           })
-          const profile = yield* ledger.read(input.id)
-          return yield* attempt(() => requireAgent(profile))
+          const next = yield* attempt(() =>
+            advanceAgentRecord(current, {
+              type: "UPDATE",
+              name: input.name,
+              instructions: input.instructions,
+              now,
+            })
+          )
+          yield* ledger.update(next)
+          return Schema.decodeUnknownSync(AgentProfile)(next)
         })
       )
     }),
@@ -99,22 +122,24 @@ export function makeAgentCatalog(
       return yield* ledger.atomic(() =>
         Effect.gen(function* () {
           const stored = yield* ledger.read(id)
-          const current = yield* attempt(() => requireAgent(stored))
+          const current = yield* attempt(() => {
+            if (!stored) throw new AgentNotFound()
+            return stored
+          })
           const count =
             !archived && current.status === "archived"
               ? yield* ledger.activeCount()
               : 0
-          const status = yield* attempt(() =>
-            agentArchiveChange(current, archived, count)
+          const next = yield* attempt(() =>
+            advanceAgentRecord(
+              current,
+              archived
+                ? { type: "ARCHIVE", now }
+                : { type: "RESTORE", now, active: count }
+            )
           )
-          yield* ledger.update({
-            ...current,
-            status,
-            updatedAt: now,
-            revision: current.revision + 1,
-          })
-          const profile = yield* ledger.read(id)
-          return yield* attempt(() => requireAgent(profile))
+          yield* ledger.update(next)
+          return Schema.decodeUnknownSync(AgentProfile)(next)
         })
       )
     }),
