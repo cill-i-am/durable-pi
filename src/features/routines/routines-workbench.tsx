@@ -153,8 +153,10 @@ export function RoutinesWorkbench({
               variant="outline"
               disabled={
                 locked ||
-                actions.data.runs.some(
-                  (run) => run.status === "pending" || run.status === "queued"
+                actions.data.runs.some((run) =>
+                  ["pending", "queued", "stopping", "unconfirmed"].includes(
+                    run.status
+                  )
                 )
               }
               onClick={() =>
@@ -384,7 +386,9 @@ function RunRow({
   disabled: boolean
   onStop: () => void
 }) {
-  const active = run.status === "pending" || run.status === "queued"
+  const active = ["pending", "queued", "stopping", "unconfirmed"].includes(
+    run.status
+  )
   return (
     <div className="flex flex-col gap-2 rounded-lg border p-3">
       <div className="flex items-start justify-between gap-2">
@@ -396,7 +400,11 @@ function RunRow({
             ? "Waiting"
             : run.status === "queued"
               ? "In progress"
-              : run.status}
+              : run.status === "stopping"
+                ? "Stopping"
+                : run.status === "unconfirmed"
+                  ? "Needs attention"
+                  : run.status}
         </Badge>
       </div>
       <p className="text-xs text-muted-foreground">

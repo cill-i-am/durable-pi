@@ -51,9 +51,11 @@ export function routineFixture(
     get: (id: string) => run(service.get(id)),
     runs: () => run(service.runs()),
     inFlight: () => run(service.inFlight()),
-    save: (input: SaveRoutine) => run(service.save(input)),
-    setStatus: (input: SetRoutineStatus) => run(service.setStatus(input)),
-    runNow: (input: RunRoutineNow) => run(service.runNow(input)),
+    save: (input: SaveRoutine) => run(service.save(input, now() + 60_000)),
+    setStatus: (input: SetRoutineStatus) =>
+      run(service.setStatus(input, now() + 60_000)),
+    runNow: (input: RunRoutineNow) =>
+      run(service.runNow(input, now() + 60_000)),
     cancelOperation: (id: string) => run(service.cancelOperation(id)),
     claimDue: () => run(service.claimDue()),
     deliver: (
@@ -111,7 +113,17 @@ export function webhookFixture(
       eventId: string,
       payload: string,
       payloadHash: string
-    ) => run(service.accept(id, hash, eventId, payload, payloadHash)),
+    ) =>
+      run(
+        service.accept(
+          id,
+          hash,
+          eventId,
+          payload,
+          payloadHash,
+          Date.now() + 60_000
+        )
+      ),
   }
 }
 

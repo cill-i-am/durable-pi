@@ -28,6 +28,7 @@ import { conversationFixture } from "./conversation-fixture"
 import { d1 } from "./d1"
 import { database } from "./database"
 import { credential, catalog } from "./inference-fixture"
+import { routineFixture } from "./routine-fixture"
 
 vi.mock("cloudflare:workers", () => ({
   DurableObject: class {},
@@ -158,6 +159,7 @@ function fixture(rotate?: () => Promise<void>) {
           Effect.succeed([{ id: "routine", revision: 1, status: "active" }]),
         setStatus: pause,
         cancelPendingRun: () => Effect.succeed(undefined),
+        inFlight: () => Effect.succeed(undefined),
       },
       conversations: turns,
       coordination: { store: coordination },
@@ -657,3 +659,47 @@ it("chat model changes use the existing settings API and remain private to the c
     await member.host.modelSettingsAction({ action: "read" })
   ).toMatchObject({ selection: { model: "gpt-6-luna" } })
 })
+
+it.each(["removed", "replaced"] as const)(
+  "cancels manual pending work on an already-paused routine when membership is %s",
+  async (change) => {
+    const f = fixture()
+    f.actor("cillian")
+    const member = f.actor("claire")
+    await member.host.familyAdmission()
+    const routines = routineFixture(member.db, () => true)
+    Object.assign(member.host, { routines: routines.service })
+    const routine = routines.save({
+      id: crypto.randomUUID(),
+      operationId: crypto.randomUUID(),
+      expectedRevision: 0,
+      title: "Paused routine",
+      prompt: "Read saved facts.",
+      status: "paused",
+      schedule: { type: "once", at: Date.now() + 3600_000 },
+    }).routine
+    const pending = routines.runNow({
+      id: routine.id,
+      operationId: crypto.randomUUID(),
+      expectedRevision: routine.revision,
+    }).run!
+    f.sql.exec("DELETE FROM member WHERE userId='claire'")
+    if (change === "replaced")
+      f.sql.exec(
+        "INSERT INTO member(id,organizationId,userId,role,createdAt) VALUES('replacement','family','claire','member',1)"
+      )
+    const current = await member.host.familyAdmission()
+    expect(current?.membershipId ?? null).toBe(
+      change === "replaced" ? "replacement" : null
+    )
+    expect(routines.runs()).toMatchObject([
+      { id: pending.id, turnId: pending.turnId, status: "cancelled" },
+    ])
+    expect(routines.inFlight()).toBeUndefined()
+    expect(routines.get(routine.id)).toMatchObject({
+      status: "paused",
+      revision: routine.revision,
+    })
+    expect(await Effect.runPromise(member.turns.recent())).toHaveLength(0)
+  }
+)

@@ -1,5 +1,5 @@
 import { expect, it } from "@effect/vitest"
-import { Clock, Context, Effect } from "effect"
+import { Cause, Clock, Context, Effect, Exit } from "effect"
 
 import { AppStore } from "../src/apps/adapters/sqlite"
 import { appEventPump } from "../src/apps/pump"
@@ -308,3 +308,49 @@ it.effect(
       expect(yield* f.conversations.recent()).toHaveLength(1)
     })
 )
+
+it("preserves late compound prearm failure during pump interruption", async () => {
+  const { nativeOperation } = await import("../src/shared/interop")
+  const f = fixture()
+  let entered!: () => void, reject!: (cause: unknown) => void
+  const started = new Promise<void>((resolve) => {
+    entered = resolve
+  })
+  const controller = new AbortController()
+  const late = Cause.fromReasons([
+    Cause.makeFailReason("late prearm checked"),
+    Cause.makeDieReason("late prearm defect"),
+  ])
+  const pump = appEventPump(f.apps, {
+    active: () => Effect.succeed(true),
+    modelConnected: () => Effect.succeed(true),
+    admission: f.admission,
+    prearm: () =>
+      nativeOperation(
+        () => {
+          entered()
+          return new Promise<number>((_, no) => {
+            reject = no
+          })
+        },
+        (cause) => String(cause)
+      ),
+    wakeConversation: () => Effect.void,
+    notify: () => Effect.void,
+  })
+  const running = Effect.runPromiseExit(pump.run(), {
+    signal: controller.signal,
+  })
+  await started
+  controller.abort()
+  reject(late)
+  const exit = await running
+  expect(Exit.isFailure(exit)).toBe(true)
+  if (Exit.isFailure(exit)) {
+    expect(Cause.hasDies(exit.cause)).toBe(true)
+    expect(JSON.stringify(exit.cause)).toContain("late prearm defect")
+    expect(JSON.stringify(exit.cause)).toContain("late prearm checked")
+  }
+  expect(Effect.runSync(f.store.pending())).toHaveLength(1)
+  expect(Effect.runSync(f.conversations.recent())).toHaveLength(0)
+})

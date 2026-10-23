@@ -2,6 +2,8 @@ import { Effect, Schema } from "effect"
 
 import { RoutineConflict } from "../routines/contracts"
 import type { RoutineAdmissionState } from "../routines/service"
+import { configureWebhook } from "./activation.machine"
+import { acceptWebhookEvent } from "./admission.machine"
 import {
   WebhookRejected,
   type ConfigureWebhook,
@@ -91,17 +93,10 @@ export class WebhookTransactions {
               reject("conflict", "This bot reached its webhook change limit.")
             )
           const current = yield* this.records.key(input.routineId)
-          if ((current?.revision ?? 0) !== input.expectedRevision)
-            return yield* decision(() =>
-              reject(
-                "conflict",
-                "The webhook changed. Resolve this request and reload before changing it."
-              )
-            )
-          yield* this.records.putKey(input.routineId, {
-            revision: input.expectedRevision + 1,
-            hash: input.hash,
-          })
+          const next = yield* decision(() =>
+            configureWebhook(current, input.expectedRevision, input.hash)
+          )
+          yield* this.records.putKey(input.routineId, next)
           const pending = yield* this.routines.inFlight()
           if (
             pending?.routineId === input.routineId &&
@@ -155,42 +150,35 @@ export class WebhookTransactions {
     keyHash: string,
     eventId: string,
     payload: string,
-    payloadHash: string
+    payloadHash: string,
+    discoveryDeadline: number
   ) {
     return routineFailure(
       this.records.atomic(() =>
         Effect.gen({ self: this }, function* () {
-          if (!(yield* this.authorized(id, keyHash)))
-            return yield* decision(() =>
-              reject("unauthorized", "Invalid webhook authorization.")
-            )
+          const authorized = yield* this.authorized(id, keyHash)
           const previous = yield* this.records.event(id, eventId)
-          if (previous) {
-            if (previous.hash !== payloadHash)
-              return yield* decision(() =>
-                reject(
-                  "conflict",
-                  "This event ID already belongs to different data."
-                )
-              )
-            return { runId: previous.run_id, duplicate: true }
-          }
-          if ((yield* this.routines.get(id))?.status !== "active")
-            return yield* decision(() =>
-              reject("conflict", "This routine is paused or unavailable.")
-            )
-          if (yield* this.routines.inFlight())
-            return yield* decision(() =>
-              reject(
-                "busy",
-                "This bot already has a routine waiting or running. Retry this event later."
-              )
-            )
-          if ((yield* this.records.eventCount()) >= 2000)
-            return yield* decision(() =>
-              reject("conflict", "This bot reached its webhook event limit.")
-            )
-          const run = yield* this.routines.acceptWebhook(id, payload)
+          const fresh = authorized && !previous
+          const active =
+            fresh && (yield* this.routines.get(id))?.status === "active"
+          const occupied = fresh && !!(yield* this.routines.inFlight())
+          const count = fresh ? yield* this.records.eventCount() : 0
+          const duplicate = yield* decision(() =>
+            acceptWebhookEvent({
+              authorized,
+              previous,
+              payloadHash,
+              active,
+              occupied,
+              count,
+            })
+          )
+          if (duplicate) return { runId: duplicate.run_id, duplicate: true }
+          const run = yield* this.routines.acceptWebhook(
+            id,
+            payload,
+            discoveryDeadline
+          )
           yield* this.records.putEvent(id, eventId, {
             hash: payloadHash,
             run_id: run.id,

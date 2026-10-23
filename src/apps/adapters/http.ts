@@ -19,7 +19,8 @@ export function appsRequest<TRequirements>(
   request: Request,
   path: string,
   wake: () => Effect.Effect<void, AppError, TRequirements>,
-  web?: WebApps
+  web?: WebApps,
+  arm?: () => Effect.Effect<number, AppError, TRequirements>
 ) {
   return Effect.gen(function* () {
     if (path === "apps" && request.method === "GET")
@@ -41,14 +42,20 @@ export function appsRequest<TRequirements>(
       const input = yield* Schema.decodeUnknownEffect(RenderWebApp)(raw)
       return Response.json(yield* web.render(input, request.signal))
     }
-    if (path === "apps/interact") yield* wake()
     const interaction =
       path === "apps/interact"
         ? yield* Schema.decodeUnknownEffect(InteractApp)(raw)
         : null
+    let discoveryDeadline: number | undefined
+    if (interaction) {
+      const replay = yield* store.interactionReceipt(interaction)
+      if (replay) return Response.json(replay)
+      if (arm) discoveryDeadline = yield* arm()
+      else yield* wake()
+    }
     const result =
       interaction?.action.type === "web" && web
-        ? yield* web.interact(interaction, request.signal)
+        ? yield* web.interact(interaction, request.signal, discoveryDeadline)
         : yield* Effect.gen(function* () {
             switch (path) {
               case "apps/cancel":
@@ -71,7 +78,9 @@ export function appsRequest<TRequirements>(
                 )
               case "apps/interact":
                 return yield* store.interact(
-                  yield* Schema.decodeUnknownEffect(InteractApp)(raw)
+                  yield* Schema.decodeUnknownEffect(InteractApp)(raw),
+                  undefined,
+                  discoveryDeadline
                 )
               default:
                 return yield* new AppConflict({

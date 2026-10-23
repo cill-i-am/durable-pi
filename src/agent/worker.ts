@@ -134,7 +134,12 @@ import {
   familyAdmissionApplication,
 } from "../agents/family-admission"
 import { webExecutor } from "../apps/adapters/code"
+import {
+  appConfiguration,
+  invalidateArchivedApps,
+} from "../apps/adapters/configuration"
 import { appsRequest } from "../apps/adapters/http"
+import { AppEventRunner } from "../apps/adapters/lifecycle"
 import { appTools } from "../apps/adapters/pi"
 import { AppStore } from "../apps/adapters/sqlite"
 import { AppStorageError } from "../apps/contracts"
@@ -473,6 +478,7 @@ import type { PlanSource, PlanControl, PlanEvidence } from "../planning/plans"
 import { Planning, planningApplication } from "../planning/service"
 import { richResultTools } from "../rich-results/adapters/tools"
 import { routinesRequest } from "../routines/adapters/http"
+import { RoutineRunner } from "../routines/adapters/lifecycle"
 import { routineTools } from "../routines/adapters/pi"
 import { sqliteRoutinePersistence } from "../routines/adapters/sqlite"
 import { RoutineId } from "../routines/contracts"
@@ -581,39 +587,6 @@ abstract class TurnRunner extends LifecycleCapability {
     })
   }
   abstract onJob(): Promise<LifecycleJobOutcome>
-}
-
-class AppEventRunner extends TurnRunner {
-  constructor(owner: PersonalAgent) {
-    super(owner, "app-events")
-  }
-  async onJob(): Promise<LifecycleJobOutcome> {
-    if (!(await this.owner.familyAdmission())) return
-    const next = await this.owner.actorRuntime.runPromise(
-      this.owner.appPump.run().pipe(Effect.provide(WorkerTelemetry))
-    )
-    return next === undefined ? undefined : { rescheduleAt: next }
-  }
-}
-
-class RoutineRunner extends TurnRunner {
-  constructor(owner: PersonalAgent) {
-    super(owner, "routines")
-  }
-  async onJob(): Promise<LifecycleJobOutcome> {
-    if (!(await this.owner.familyAdmission())) return
-    const next = await this.owner.actorRuntime.runPromise(
-      this.owner.routinePump.run().pipe(Effect.provide(WorkerTelemetry))
-    )
-    return next === undefined ? undefined : { rescheduleAt: next }
-  }
-  async onJobError(): Promise<LifecycleJobOutcome> {
-    if (!(await this.owner.familyAdmission())) return
-    const next = await this.owner.actorRuntime.runPromise(
-      this.owner.routinePump.retry()
-    )
-    return next === undefined ? undefined : { rescheduleAt: next }
-  }
 }
 
 class MemoryRunner extends MaintenanceRunner {
@@ -1186,7 +1159,9 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       backupStatusApplication(this.backupStatusLedger),
       this.catalogLayer,
       agentCatalogHttp.pipe(Layer.provide(this.catalogLayer)),
-      configurationApplication(this.botConfiguration),
+      configurationApplication(
+        appConfiguration(this.db, this.botConfiguration, this.apps)
+      ),
       recoveryApplication(this.recovery).pipe(
         Layer.provide(webCryptoRecoveryLayer)
       ),
@@ -1390,12 +1365,16 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     TerminalAuthoritySync
   )
   readonly configurationHost: AgentConfigurationHost<
+    | AgentStorageError
     | Effect.Error<ReturnType<typeof synchronizeTerminalAuthority>>
     | Effect.Error<ReturnType<Workspace["Service"]["extractionPending"]>>
     | Effect.Error<ReturnType<Apps["Service"]["pending"]>>
     | Effect.Error<ReturnType<Routines["Service"]["nextWake"]>>
   > = {
-    invalidateApps: () => Effect.sync(() => this.webApps.invalidate()),
+    invalidateApps: () =>
+      invalidateArchivedApps(this.db, this.botConfiguration, () =>
+        this.webApps.invalidate()
+      ),
     syncTerminal: (projection) => this.terminalAuthoritySync.sync(projection),
     wakeBrowser: () =>
       agentNativeOperation("wake browser cleanup", () =>
@@ -1569,8 +1548,9 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       requestStop: (id, options) =>
         conversationTransactions(this.db).atomic(() =>
           Effect.gen({ self: this }, function* () {
-            const run = yield* this.routines.cancelPendingRun(id)
-            if (run?.status !== "queued") return undefined
+            const run = yield* this.routines.requestStopRun(id)
+            if (!run || (run.status !== "queued" && run.status !== "stopping"))
+              return undefined
             const root = yield* this.conversations.requestStop(
               run.turnId,
               options
@@ -2160,12 +2140,17 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   }
   readonly routinePump = routinePump<
     | Effect.Error<ReturnType<PersonalAgent["modelConnectedProgram"]>>
+    | FamilyAdmissionError
     | AgentSynchronizationError
     | ConversationError
     | AccessError
   >(this.routines, {
     getTurn: (id) => this.conversations.get(id),
     modelConnected: () => this.modelConnectedProgram(),
+    canAdmit: () =>
+      this.actorRuntime
+        .runSync(FamilyAdmission)
+        .admit.pipe(Effect.map(Boolean)),
     prearm: () =>
       observeConversationSchedule("arm conversation discovery", () =>
         this.runner.armDiscovery()
@@ -2550,16 +2535,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           operationId: crypto.randomUUID(),
           status: "paused",
         })
-        const run = yield* this.routines.cancelPendingRun(routine.id)
-        if (run?.status === "queued") {
-          yield* conversationTransactions(this.db).atomic(() =>
-            Effect.gen({ self: this }, function* () {
-              yield* this.conversations.requestStop(run.turnId, stopOptions)
-              yield* this.accessStore.cancel(run.turnId)
-            })
-          )
-        }
       }
+      const pendingRoutine = yield* this.routines.inFlight()
+      if (pendingRoutine?.status === "pending")
+        yield* this.routines.cancelPendingRun(pendingRoutine.id)
       for (const turn of yield* this.conversations.unfinished()) {
         yield* conversationTransactions(this.db).atomic(() =>
           Effect.gen({ self: this }, function* () {
@@ -3080,7 +3059,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             ),
             ...routineTools(
               this.routines,
-              () => this.routineRunner.wake(),
+              () => this.routineRunner.armDiscovery(),
               (operation, signal) => this.run(operation, { signal })
             ),
             ...workspaceTools(
@@ -3509,8 +3488,47 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     this.appService,
     webExecutor(this.env.EXECUTION_SERVICE)
   )
-  readonly appEvents = new AppEventRunner(this)
-  readonly routineRunner = new RoutineRunner(this)
+  readonly appEvents = new AppEventRunner<
+    Effect.Error<ReturnType<PersonalAgent["appPump"]["run"]>>
+  >({
+    run: (work) => this.actorRuntime.runPromise(work),
+    pump: async () => {
+      if (!(await this.familyAdmission())) return undefined
+      return this.actorRuntime.runPromise(
+        this.appPump.run().pipe(Effect.provide(WorkerTelemetry))
+      )
+    },
+    next: () => this.appService.nextDelivery(),
+    exhaust: (current, expiredOnly) =>
+      this.appService.exhaustDelivery(current, expiredOnly),
+  })
+  readonly routineRunner = new RoutineRunner<
+    Effect.Error<ReturnType<PersonalAgent["routinePump"]["run"]>>
+  >({
+    owner: this.db,
+    run: (work) => this.actorRuntime.runPromise(work),
+    step: async (onAttempt) => {
+      const allowDispatch = await this.familyAdmission()
+        .then(Boolean)
+        .catch(async (error) => {
+          await this.actorRuntime.runPromise(
+            Effect.logError(
+              "Routine authority refresh failed; retaining cleanup",
+              error
+            )
+          )
+          return false
+        })
+      return this.actorRuntime.runPromise(
+        this.routinePump
+          .run(onAttempt, { allowDispatch })
+          .pipe(Effect.provide(WorkerTelemetry))
+      )
+    },
+    nextWake: () => this.routines.nextWake(),
+    exhaust: (attempt, current) => this.routines.exhaust(attempt, current),
+    notify: () => this.notifyConversation(),
+  })
   readonly emailRunner = new ReplyRunner("email", {
     run: (work) => this.actorRuntime.runPromise(work),
     pump: () => this.stepEmail(),
@@ -3566,10 +3584,8 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     if ((await this.run(this.emailStore.pending())).length)
       await this.emailRunner.wake()
     await this.backgroundRunner.wake()
-    if ((await this.run(this.routineAuthority.nextWake())) !== undefined)
-      await this.routineRunner.wake()
-    if ((await this.run(this.apps.pending())).length)
-      await this.appEvents.wake()
+    await this.routineRunner.reconcile()
+    await this.appEvents.reconcile()
     await this.run(this.executions.recover())
     await this.run(this.browser.recover())
     if (await this.run(this.browser.maintenancePending()))
@@ -4380,7 +4396,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
 
       if (path === "webhooks/incoming" && request.method === "POST")
         return yield* webhookIncoming(this.webhooks, request, () =>
-          webhookNative(() => this.routineRunner.wake())
+          webhookNative(() => this.routineRunner.armDiscovery())
         )
       if (base === "webhooks")
         return yield* webhookOwnerRequest(this.webhooks, request, path)
@@ -4390,7 +4406,9 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           request,
           path,
           () =>
-            agentNative("wake routines", () => this.routineRunner.wake()).pipe(
+            agentNative("arm routine discovery", () =>
+              this.routineRunner.armDiscovery()
+            ).pipe(
               Effect.catchCause((cause) =>
                 Effect.failCause(
                   Cause.map(
@@ -4470,7 +4488,24 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
                 )
               )
             ),
-          this.webApps
+          this.webApps,
+          () =>
+            agentNative("arm app delivery discovery", () =>
+              this.appEvents.armDiscovery()
+            ).pipe(
+              Effect.catchCause((cause) =>
+                Effect.failCause(
+                  Cause.map(
+                    cause,
+                    (error) =>
+                      new AppStorageError({
+                        operation: "arm app delivery discovery",
+                        cause: error,
+                      })
+                  )
+                )
+              )
+            )
         )
       if (base === "execution")
         return yield* executionRequest(this.executions, request, path, (task) =>
