@@ -1,0 +1,37 @@
+# Model credential lifecycles
+
+B15 separates the account owner, durable token rotation, and durable sign-in attempt. The official Effect-backed machines are `credential-host.machine.ts`, `credential-rotation.machine.ts`, and `sign-in.machine.ts`. The existing OAuth adapter remains bounded native transport and validation work invoked by the rotation owner. It does not independently retry or choose lifecycle transitions.
+
+## Authority and storage
+
+The account host owns one accepted rotation, connection exchange, or installation at a time. Its machine closes admission before scope shutdown, retains occupancy until work settles, and joins native response, reader, and verification cleanup. A departing browser joins an accepted operation without interrupting it. A browser that leaves while waiting for account admission has not consumed its authorization code. Usable access tokens remain usable during refresh-ahead for the exact locally owned rotation attempt.
+
+Rotation authority is the `credentialLifecycle` object inside the existing `model_credentials.value` JSON: application schema version 1, workflow version 1, phase, connection ID, and attempt ID. Credential fields, provider IDs, source, and account connection IDs retain their meanings. No SQL migration or additional execution journal is introduced. The existing `model_credential_refresh` row is written or removed in the same transaction as this object and is only a compatibility projection. It has no independent mutation API.
+
+Legacy credential JSON converts in place inside the existing SQLite coordinator. A legacy refresh marker becomes an unconfirmed attempt, preserving tokens and an existing connection ID. A legacy ready connection receives metadata without changing its credential. Existing credentials without a connection ID receive one once, before sign-in or model use. Account grants remain authoritative over later deployment seeds. Changed deployment seeds retain the existing supported replacement behavior for legacy deployment-owned records. Unknown application/workflow versions block reads and replacement with an actionable update error; malformed known records and inconsistent marker projections are sanitized defects.
+
+The rotation machine commits an exact attempt before dispatch. Dispatch rechecks the current attempt, connection ID, credential, and open host. Completion checks the same facts in a transaction. No interruptible actor-mailbox hop separates a successful token response from the fenced credential commit. A rejected, interrupted, invalid, timed-out, or unacknowledged refresh cannot authorize another POST. Failure attempts an exact `UNCERTAIN` transition; if that persistence also fails, the original intent remains unsafe to replay and both Causes are preserved. Explicit installation of a newly authorized grant is the recovery boundary and allocates a new connection ID.
+
+The existing `chatgpt-pending-sign-in-v1` KV value now holds a versioned sign-in record. A waiting attempt retains the existing PKCE verifier, callback state, nonce, client/host registration, expected identity, and expiry. Legacy waiting values convert without changing those fields or the authorization URL. The machine consumes the exact attempt only after the account owner accepts it and before the token POST. Consumed and terminal records retain correlation metadata but discard PKCE material. Restart never replays an exchanging or unconfirmed code. Starting another explicit sign-in creates a new attempt.
+
+Family admin authority and the original membership are checked at request admission, dispatch, and after exchange. A new account connection cannot be overwritten by an older sign-in: its expected connection ID is checked atomically with installation. The same storage instance shares sign-in serialization across controller instances. Account reconstruction assumes the existing single Durable Object account owner; this does not introduce distributed live-owner takeover.
+
+## Bounds and cleanup
+
+A waiting sign-in lasts ten minutes. Token refresh and authorization-code exchange each have one native attempt and a 30-second local deadline; no application transport retry is introduced. The deadline signals interruption and joins actual native cleanup, so cleanup or an uncooperative foreign promise can extend elapsed shutdown time. JWT verification preserves nonce, issuer, audience, subject, verified email, and model-scope checks. Verification promises are joined even when cancellation arrives late. OAuth response bodies remain bounded to 65,536 bytes. Secrets are redacted in domain values, private in storage, absent from machine control metadata, and omitted from fixture evidence and fixed diagnostic messages.
+
+The account owner has a fallback scope finalizer installed immediately on acquisition. Its explicit shutdown closes admission and joins the active work before returning. Full late compound Causes survive interruption, deadline handling, waiter settlement, and repeated disposal.
+
+## Evidence and limits
+
+Focused tests cover intent-before-dispatch, failed intent/rotation commits, shared refresh, refresh-ahead access, changed deployment seed fencing, legacy and future data, projection corruption, malformed and stale machine events, direct-factory interruption, browser departure before and after acceptance, legacy PKCE restoration, final family revocation, cross-host stale sign-in completion, and joined compound cleanup failure. A retained red characterization demonstrated that the previous request-owned sign-in exchange aborted its provider signal when the browser left. Synthetic providers and local signing keys are used throughout.
+
+This evidence does not authorize or prove a real OAuth login, provider-side exactly-once execution, deployment, or browser UI migration. A process loss after an irreversible provider exchange can leave the account needing explicit reconnection. Existing pending/connected HTTP shapes and constructor wiring are preserved; frontend family sign-in lifecycle migration remains F09. Broad worker/native and repository gates remain the parent integration responsibility.
+
+## Independent deadline correction
+
+Independent review held the code-consumption KV transaction until after the ten-minute waiting deadline. The earlier implementation captured time before waiting for the coordinator and still made one token POST after expiry. It now reads the injected clock inside the acquired transaction against the latest pending record, so the unchanged probe makes zero token requests. The permanent injected-clock regression and all 75 focused tests pass; full types and scoped lint/format pass. [Archived evidence](evidence/xstate-effect/b15-2026-10-23/manifest.json) retains the original failure, unchanged passing reproduction, source freeze and negative controls. These are local synthetic-provider results; composed gates and hosted CI are separate.
+
+## Composed candidate
+
+The reviewed executable hashes are unchanged after composition above Memory `aacaa67`. Full static checks, 3,234 tests in 285 files, website/routing/all Worker builds and the complete native Communication/PersonalAgent suite pass. That suite includes credential rotation intent surviving SIGKILL without refresh replay and joined provider/credential shutdown; its provider transport is synthetic. Generated route output is restored before final typechecking. The inherited Memory browser/native evidence retains its exact source boundary; full hosted CI on this credential commit remains required.
