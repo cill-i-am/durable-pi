@@ -66,6 +66,7 @@ import { localTaskControls } from "../../src/tasks/adapters/personal-agent"
 import { WebhookStorageError } from "../../src/webhooks/persistence"
 import { whatsappRpc } from "../../src/whatsapp/adapters/rpc"
 import { whatsappIdentity } from "../../src/whatsapp/contracts"
+import { WorkspaceUnavailable } from "../../src/workspace/files"
 import { transcript } from "../audio-fixture"
 import type { BackgroundGroupProbe } from "./background-worker"
 import type { TerminalProbe } from "./terminal-worker"
@@ -3170,6 +3171,15 @@ export class PersonalAgentProbe extends PersonalAgent {
       Cause.makeInterruptReason(918),
     ])
     app.pump = () => Effect.failCause(mailboxCause)
+    const extract = this.workspaceService.extractNext
+    const workspaceFailure = new WorkspaceUnavailable({})
+    const workspaceCause = Cause.fromReasons([
+      Cause.makeFailReason(workspaceFailure),
+      Cause.makeDieReason(defect),
+      Cause.makeInterruptReason(918),
+    ])
+    this.workspaceService.extractNext = () => Effect.failCause(workspaceCause)
+    const expected = [checked, checked, mailboxFailure, workspaceFailure]
     const conversation = this.conversationPump.run,
       routine = this.routinePump.run
     this.conversationPump.run = () => Effect.failCause(cause)
@@ -3179,6 +3189,7 @@ export class PersonalAgentProbe extends PersonalAgent {
         this.runner.host.step(() => {}),
         this.routineRunner.host.step(() => {}),
         this.communicationRunner.host.step(() => {}),
+        this.extraction.host.step(() => Effect.void),
       ])
       return Response.json(
         observed.map((result, index) => {
@@ -3189,8 +3200,7 @@ export class PersonalAgentProbe extends PersonalAgent {
             complete:
               reasons.some(
                 (reason) =>
-                  reason._tag === "Fail" &&
-                  reason.error === (index === 2 ? mailboxFailure : checked)
+                  reason._tag === "Fail" && reason.error === expected[index]
               ) &&
               reasons.some(
                 (reason) => reason._tag === "Die" && reason.defect === defect
@@ -3203,6 +3213,7 @@ export class PersonalAgentProbe extends PersonalAgent {
         })
       )
     } finally {
+      this.workspaceService.extractNext = extract
       app.pump = communication
       this.conversationPump.run = conversation
       this.routinePump.run = routine
@@ -3220,6 +3231,7 @@ export class PersonalAgentProbe extends PersonalAgent {
         "conversation",
         "routines",
         "communication",
+        "workspace",
       ] as const
     ).find((kind) => action?.startsWith(`${kind}-held-`))
     if (kind) {
@@ -3229,6 +3241,7 @@ export class PersonalAgentProbe extends PersonalAgent {
         conversation: this.runner,
         routines: this.routineRunner,
         communication: this.communicationRunner,
+        workspace: this.extraction,
       }[kind]
       if (action === `${kind}-held-start`) {
         await this.lifecycle.start()
@@ -3258,7 +3271,8 @@ export class PersonalAgentProbe extends PersonalAgent {
         if (
           kind === "conversation" ||
           kind === "routines" ||
-          kind === "communication"
+          kind === "communication" ||
+          kind === "workspace"
         )
           await runner.wake()
       }

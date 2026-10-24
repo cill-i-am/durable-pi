@@ -1,8 +1,11 @@
+import { AsyncLocalStorage } from "node:async_hooks"
+
 import { it as effectIt } from "@effect/vitest"
 import type { LifecycleJob, LifecycleJobPushOptions } from "agents/lifecycle"
 import { Cause, Context, Deferred, Effect, Exit, Fiber } from "effect"
 import { TestClock } from "effect/testing"
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { initialTransition, transition } from "xstate"
 
 import {
   WorkspaceRunner,
@@ -17,10 +20,14 @@ import {
 } from "../src/workspace/discovery.machine"
 import { WorkspaceUnavailable } from "../src/workspace/files"
 import { WORKSPACE_RECOVERY_MS } from "../src/workspace/preparation.machine"
+import { workspaceRunnerMachine } from "../src/workspace/runner.machine"
 import type { PreparationClaim } from "../src/workspace/workspace"
 
 vi.mock("agents/lifecycle", () => ({ LifecycleCapability: class {} }))
-afterEach(() => {
+const owners = new Set<WorkspaceRunner<unknown>>()
+afterEach(async () => {
+  await Promise.allSettled([...owners].map((owner) => owner.dispose()))
+  owners.clear()
   vi.useRealTimers()
   vi.restoreAllMocks()
 })
@@ -55,9 +62,7 @@ function fixture(existing = new Map<string, LifecycleJob>()) {
       return undefined as number | undefined
     }
   )
-  const restore = vi.fn(
-    (): Effect.Effect<void, WorkspaceUnavailable> => Effect.void
-  )
+  const restore = vi.fn((): Effect.Effect<void, unknown> => Effect.void)
   const nextWake = vi.fn(
     (): Effect.Effect<number | undefined, WorkspaceUnavailable> =>
       Effect.succeed(pending)
@@ -73,13 +78,15 @@ function fixture(existing = new Map<string, LifecycleJob>()) {
         return recovery
       })
   )
-  const runner = new WorkspaceRunner<WorkspaceUnavailable>({
+  const runner = new WorkspaceRunner<unknown>({
     run: Effect.runPromise,
     step,
     restore,
     nextWake,
     exhaust,
   })
+  owners.add(runner)
+  const get = vi.fn((id: string) => jobs.get(id))
   const push = vi.fn(async (options: LifecycleJobPushOptions) => {
     const job: LifecycleJob = {
       id: options.id!,
@@ -105,11 +112,12 @@ function fixture(existing = new Map<string, LifecycleJob>()) {
   const rearm = vi.fn(async () => {})
   Object.defineProperty(runner, "lifecycle", {
     value: {
-      jobs: { get: (id: string) => jobs.get(id), push, reschedule, rearm },
+      jobs: { get, push, reschedule, rearm },
     },
   })
   return {
     runner,
+    get,
     jobs,
     step,
     restore,
@@ -713,4 +721,351 @@ effectIt.effect(
       expect(Exit.isFailure(exit)).toBe(true)
       if (Exit.isFailure(exit)) expect(Cause.hasFails(exit.cause)).toBe(true)
     })
+)
+
+it("defers dispatch while an accepted wake is still updating the native job", async () => {
+  const f = fixture(),
+    b = barrier()
+  await f.runner.wake()
+  const job = f.pump(),
+    reschedule = f.reschedule.getMockImplementation()!
+  f.reschedule.mockImplementationOnce(async (...args) => {
+    await b.enter()
+    await b.wait()
+    return reschedule(...args)
+  })
+  const wake = f.runner.wake()
+  await b.entered()
+  try {
+    expect(await f.runner.onJob({ job, attempt: 1 })).toHaveProperty(
+      "rescheduleAt"
+    )
+    expect(f.step).not.toHaveBeenCalled()
+  } finally {
+    await b.release()
+    await wake
+  }
+})
+
+it("defers a duplicate exact discovery callback while its storage scan is held", async () => {
+  const f = fixture(),
+    b = barrier()
+  await f.runner.armDiscovery()
+  const job = f.discovery()
+  f.nextWake.mockImplementationOnce(() =>
+    Effect.promise(async () => {
+      await b.enter()
+      await b.wait()
+      return undefined
+    })
+  )
+  const scanning = f.runner.onJob({ job, attempt: 1 })
+  await b.entered()
+  try {
+    expect(await f.runner.onJob({ job, attempt: 1 })).toHaveProperty(
+      "rescheduleAt"
+    )
+    expect(f.nextWake).toHaveBeenCalledTimes(1)
+  } finally {
+    await b.release()
+    await scanning
+  }
+})
+
+function completion<A>() {
+  let resolve!: (value: A) => void, reject!: (reason: unknown) => void
+  const promise = new Promise<A>((yes, no) => {
+    resolve = yes
+    reject = no
+  })
+  return { promise, resolve, reject }
+}
+
+for (const mode of ["step", "restore", "storage"] as const)
+  it.each([false, true])(
+    `joins held ${mode} and preserves annotated native Causes (defect %s)`,
+    async (defect) => {
+      const f = fixture(),
+        started = completion<void>(),
+        held = completion<void>()
+      const annotation = Context.make(Reason, "original")
+      const failure = Cause.fromReasons([
+        Cause.makeFailReason(new Error("checked native failure")).annotate(
+          annotation
+        ),
+        ...(defect
+          ? [
+              Cause.makeDieReason(new Error("native cleanup defect")).annotate(
+                annotation
+              ),
+            ]
+          : []),
+        Cause.makeInterruptReason(715).annotate(annotation),
+      ])
+      const work = async () => {
+        started.resolve()
+        await held.promise
+      }
+      let accepted: Promise<unknown>
+      if (mode === "step") {
+        await f.runner.wake()
+        f.step.mockImplementationOnce(async () => {
+          await work()
+          return undefined
+        })
+        accepted = f.runner.onJob({ job: f.pump(), attempt: 1 })
+      } else {
+        const effect = Effect.gen(function* () {
+          started.resolve()
+          yield* Effect.promise(() =>
+            held.promise.then(
+              () => undefined,
+              () => undefined
+            )
+          )
+          return yield* Effect.failCause(failure)
+        })
+        if (mode === "restore") f.restore.mockReturnValueOnce(effect)
+        else f.runner.host.nextWake = () => effect.pipe(Effect.as(undefined))
+        accepted = f.runner.reconcile()
+      }
+      const observed = accepted.catch((error: unknown) => error)
+      await started.promise
+      let disposed = false
+      const disposal = f.runner
+        .dispose()
+        .catch((error: unknown) => error)
+        .finally(() => {
+          disposed = true
+        })
+      await expect(f.runner.armDiscovery()).rejects.toThrow("stopped")
+      expect(disposed).toBe(false)
+      const reads = f.get.mock.calls.length
+      await f.runner.wake()
+      await f.runner.reconcile()
+      await f.runner.onJob({ job: {} as LifecycleJob, attempt: 1 })
+      await f.runner.onJobError({ job: {} as LifecycleJob, attempt: 3 }, "late")
+      expect(f.get).toHaveBeenCalledTimes(reads)
+      held.reject(failure)
+      for (const result of await Promise.all([observed, disposal])) {
+        expect(Cause.isCause(result)).toBe(true)
+        if (!Cause.isCause(result)) throw new Error("Expected a native Cause")
+        for (const reason of failure.reasons) {
+          const observed = result.reasons.find(
+            (candidate) => candidate._tag === reason._tag
+          )
+          expect(observed?._tag).toBe(reason._tag)
+          for (const [key, value] of reason.annotations)
+            expect(observed?.annotations.get(key)).toBe(value)
+          if (reason._tag === "Fail" && observed?._tag === "Fail")
+            expect(observed.error).toBe(reason.error)
+          if (reason._tag === "Die" && observed?._tag === "Die")
+            expect(observed.defect).toBe(reason.defect)
+          if (reason._tag === "Interrupt" && observed?._tag === "Interrupt")
+            expect(observed.fiberId).toBe(reason.fiberId)
+        }
+      }
+    }
+  )
+
+it("coalesces failed restoration and retries only for a fresh caller", async () => {
+  const f = fixture(),
+    started = completion<void>(),
+    held = completion<void>()
+  const failure = Cause.fail(new Error("restore unavailable"))
+  f.restore.mockReturnValueOnce(
+    Effect.gen(function* () {
+      started.resolve()
+      yield* Effect.promise(() =>
+        held.promise.then(
+          () => undefined,
+          () => undefined
+        )
+      )
+      return yield* Effect.failCause(failure)
+    })
+  )
+  const first = f.runner.reconcile().catch((error: unknown) => error)
+  await started.promise
+  const second = f.runner.reconcile().catch((error: unknown) => error)
+  held.reject(failure)
+  for (const result of await Promise.all([first, second])) {
+    expect(Cause.isCause(result)).toBe(true)
+    if (!Cause.isCause(result)) throw new Error("Expected restoration failure")
+    expect(result.reasons).toHaveLength(1)
+    const observed = result.reasons[0],
+      original = failure.reasons[0]
+    expect(observed?._tag).toBe("Fail")
+    if (observed?._tag === "Fail" && original?._tag === "Fail")
+      expect(observed.error).toBe(original.error)
+  }
+  expect(f.restore).toHaveBeenCalledTimes(1)
+  await f.runner.reconcile()
+  await f.runner.reconcile()
+  expect(f.restore).toHaveBeenCalledTimes(2)
+})
+
+it("starts restoration in the native caller's context", async () => {
+  const f = fixture(),
+    context = new AsyncLocalStorage<string>()
+  let observed: string | undefined
+  f.restore.mockImplementation(() =>
+    Effect.sync(() => {
+      observed = context.getStore()
+    })
+  )
+  await context.run("startup", () => f.runner.reconcile())
+  expect(observed).toBe("startup")
+})
+
+it("joins a held queue write, refuses its late lease and releases queued wake callers on close", async () => {
+  const f = fixture(),
+    entered = completion<void>(),
+    held = completion<void>()
+  const push = f.push.getMockImplementation()!
+  f.push.mockImplementationOnce(async (options) => {
+    entered.resolve()
+    await held.promise
+    return push(options)
+  })
+  const armed = f.runner.armDiscovery().catch((error: unknown) => error)
+  await entered.promise
+  const wake = f.runner.wake()
+  let disposed = false
+  const disposal = f.runner.dispose().finally(() => {
+    disposed = true
+  })
+  await wake
+  expect(disposed).toBe(false)
+  expect(f.push).toHaveBeenCalledTimes(1)
+  held.resolve()
+  expect(await armed).toBeInstanceOf(Error)
+  await disposal
+  expect(f.step).not.toHaveBeenCalled()
+})
+
+it("rejects malformed callback admission through the official validator", () => {
+  const machine = workspaceRunnerMachine(() => Effect.void)
+  const [initial] = initialTransition(machine)
+  const [state, effects] = transition(machine, initial, {
+    type: "ADMIT",
+    token: "bad",
+    job: null,
+    reply: null,
+  } as never)
+  expect(state.value).toEqual(initial.value)
+  expect(
+    effects.some(
+      (effect) =>
+        effect.kind === "builtin" &&
+        effect.type === "@xstate.deadLetter" &&
+        effect.reason === "invalidEvent"
+    )
+  ).toBe(true)
+})
+
+it.each([false, true])(
+  "joins held cleanup and preserves its complete failure (defect %s)",
+  async (defect) => {
+    const f = fixture(),
+      b = barrier()
+    await f.runner.wake()
+    const job = f.pump()
+    f.failStep()
+    await failAttempt(f, job)
+    const checked = new WorkspaceUnavailable({}),
+      died = new Error("cleanup finalizer")
+    const cause = Cause.fromReasons([
+      Cause.makeFailReason(checked),
+      ...(defect ? [Cause.makeDieReason(died)] : []),
+      Cause.makeInterruptReason(838),
+    ])
+    f.runner.host.exhaust = () =>
+      Effect.gen(function* () {
+        yield* Effect.promise(() => b.enter())
+        yield* Effect.promise(() => b.wait())
+        return yield* Effect.failCause(cause)
+      })
+    const cleanup = f.runner
+      .onJob({ job, attempt: 2 })
+      .catch((error: unknown) => error)
+    await b.entered()
+    let closed = false
+    const closing = f.runner
+      .dispose()
+      .catch((error: unknown) => error)
+      .finally(() => {
+        closed = true
+      })
+    await expect(f.runner.armDiscovery()).rejects.toThrow("stopped")
+    expect(closed).toBe(false)
+    await b.release()
+    for (const result of await Promise.all([cleanup, closing])) {
+      expect(Cause.isCause(result)).toBe(true)
+      if (!Cause.isCause(result))
+        throw new Error("Expected complete cleanup Cause")
+      expect(
+        result.reasons.some((r) => r._tag === "Fail" && r.error === checked)
+      ).toBe(true)
+      expect(
+        result.reasons.some((r) => r._tag === "Die" && r.defect === died)
+      ).toBe(defect)
+      expect(
+        result.reasons.some((r) => r._tag === "Interrupt" && r.fiberId === 838)
+      ).toBe(true)
+    }
+  }
+)
+
+it("joins a failed retained-receipt write during close without losing its Cause", async () => {
+  const f = fixture(),
+    b = barrier()
+  await f.runner.wake()
+  const job = f.pump()
+  f.failStep()
+  await failAttempt(f, job)
+  const cause = Cause.fromReasons([
+    Cause.makeDieReason("job storage failed"),
+    Cause.makeInterruptReason(839),
+  ])
+  f.push.mockImplementationOnce(async () => {
+    await b.enter()
+    await b.wait()
+    throw cause
+  })
+  const cleanup = f.runner
+    .onJobError({ job, attempt: 3 }, "exhausted")
+    .catch((error: unknown) => error)
+  await b.entered()
+  let closed = false
+  const closing = f.runner
+    .dispose()
+    .catch((error: unknown) => error)
+    .finally(() => {
+      closed = true
+    })
+  await expect(f.runner.armDiscovery()).rejects.toThrow("stopped")
+  expect(closed).toBe(false)
+  await b.release()
+  for (const result of await Promise.all([cleanup, closing])) {
+    expect(Cause.isCause(result)).toBe(true)
+    if (!Cause.isCause(result)) throw new Error("Expected complete write Cause")
+    expect(result.reasons).toEqual(cause.reasons)
+  }
+})
+
+it.each([null, { ...claim, attempts: 9 }])(
+  "rejects a malformed native claim before its acknowledgement",
+  async (receipt) => {
+    const f = fixture()
+    await f.runner.wake()
+    f.step.mockImplementationOnce(async (onClaim) => {
+      await Effect.runPromise(onClaim(receipt as PreparationClaim))
+      return undefined
+    })
+    await expect(
+      f.runner.onJob({ job: f.pump(), attempt: 1 })
+    ).rejects.toBeDefined()
+    expect(f.committed).toEqual([])
+  }
 )

@@ -133,9 +133,10 @@ const config :Workerd.Config = (
     { complete: true },
     { complete: true },
     { complete: true },
+    { complete: true },
   ])
   console.log(
-    "PASS native Conversation, Routine and Communication callback bindings preserve checked failures, cleanup defects and interruption together."
+    "PASS native Conversation, Routine, Communication and Workspace callback bindings preserve checked failures, cleanup defects and interruption together."
   )
   for (const kind of [
     "coordination",
@@ -143,6 +144,7 @@ const config :Workerd.Config = (
     "conversation",
     "routines",
     "communication",
+    "workspace",
   ]) {
     const heldRunner = (action) =>
       call(`personal-${kind}-disposal/${kind}-held-${action}`, {})

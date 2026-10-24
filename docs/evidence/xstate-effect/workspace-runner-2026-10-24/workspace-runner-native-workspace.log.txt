@@ -1,0 +1,7 @@
+$ node scripts/test-workspace-runtime.mjs
+PASS warm native resource ownership: interrupted artifact put joins before either caller settles; a fresh Workspace facade cannot steal the attempt. This held operation is released before process death.
+PASS native bounded preparation failure: exactly three extraction attempts leave an actionable Retry from Files state; another wake does not renew the business budget.
+WAIT actual sixty-second retained Workspace discovery after SIGKILL; health-only startup and no object requests during recovery.
+PASS historical payloadless workspace-extraction:pump row: native restart consumes exactly that existing queue identity once, with no replacement job or renewed business attempt.
+PASS real retained discovery: PDF and video intents survive pre-admission empty scans, lost post-commit wakes and SIGKILL; original file IDs and source bytes lead to exactly one content-addressed artifact and one business attempt each.
+PASS explicit retry alone renews exhausted budget; second SIGKILL retains exact completed metadata, source and artifact bytes without extraction replay. Production Workspace/SQLite/R2 adapter/Runner/Lifecycle; synthetic extractors and local durable bucket, no hosted R2 or live provider claim.

@@ -646,6 +646,10 @@ class ActorServices extends LifecycleCapability {
             () => this.owner.communicationRunner.dispose(),
             (cause) => cause
           ).pipe(Effect.exit),
+          nativeOperation(
+            () => this.owner.extraction.dispose(),
+            (cause) => cause
+          ).pipe(Effect.exit),
         ],
         { concurrency: "unbounded" }
       ).pipe(
@@ -3549,7 +3553,9 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     new WorkspaceRunner<FileError>({
       run: (work) => this.actorRuntime.runPromise(work),
       step: (onClaim) =>
-        this.actorRuntime.runPromise(workspaceExtractionCycle(onClaim)),
+        modelCallback(
+          this.actorRuntime.runPromiseExit(workspaceExtractionCycle(onClaim))
+        ),
       restore: () => this.workspaceService.restorePreparation(),
       nextWake: () => this.workspaceService.nextPreparationWake(),
       exhaust: (claim, current) =>

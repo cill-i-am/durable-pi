@@ -1,0 +1,39 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+ ❯ tests/workspace-runner.test.ts (29 tests | 2 failed) 45ms
+   × defers dispatch while an accepted wake is still updating the native job 3ms
+   × defers a duplicate exact discovery callback while its storage scan is held 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/workspace-runner.test.ts > defers dispatch while an accepted wake is still updating the native job
+TypeError: .toHaveProperty() expects to receive a valid object, but got undefined
+ ❯ tests/workspace-runner.test.ts:732:55
+    730|   await b.entered()
+    731|   try {
+    732|     expect(await f.runner.onJob({ job, attempt: 1 })).toHaveProperty(
+       |                                                       ^
+    733|       "rescheduleAt"
+    734|     )
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/workspace-runner.test.ts > defers a duplicate exact discovery callback while its storage scan is held
+AssertionError: expected "vi.fn()" to be called 1 times, but got 2 times
+ ❯ tests/workspace-runner.test.ts:760:24
+    758|       "rescheduleAt"
+    759|     )
+    760|     expect(f.nextWake).toHaveBeenCalledTimes(1)
+       |                        ^
+    761|   } finally {
+    762|     await b.release()
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 27 passed (29)
+   Start at  21:46:00
+   Duration  366ms (import 62%, transform 18%, tests 17%, setup 2%, worker 1%)
+

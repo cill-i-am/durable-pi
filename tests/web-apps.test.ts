@@ -1,4 +1,6 @@
-import { Cause, Effect, Exit, Schema } from "effect"
+import { it as effectIt } from "@effect/vitest"
+import { Cause, Effect, Exit, Fiber, Schema } from "effect"
+import { TestClock } from "effect/testing"
 import { describe, expect, it } from "vitest"
 
 import { AppStore } from "../src/apps/adapters/sqlite"
@@ -453,50 +455,56 @@ it("rejects a preview started after its bot was archived without dispatching gen
   ).rejects.toMatchObject({ _tag: "AppConflict" })
   expect(calls).toBe(0)
 })
-it("times out a bounded render and joins native teardown before the lease can be reused", async () => {
-  const f = setup()
-  let aborted = false,
-    entered!: () => void,
-    finish!: () => void
-  const started = new Promise<void>((resolve) => {
-    entered = resolve
-  })
-  const web = new WebApps(
-    makeApps(f.store),
-    (_, resourceSignal) =>
-      nativeOperation(
-        () => {
-          entered()
-          resourceSignal.addEventListener("abort", () => {
-            aborted = true
-          })
-          return new Promise<CodeOutput>((resolve) => {
-            finish = () =>
-              resolve({
-                result: JSON.stringify(output()),
-                logs: "",
-                error: null,
+effectIt.effect(
+  "times out a bounded render and joins native teardown before the lease can be reused",
+  () =>
+    Effect.gen(function* () {
+      const f = setup()
+      let aborted = false,
+        entered!: () => void,
+        finish!: () => void
+      const started = new Promise<void>((resolve) => {
+        entered = resolve
+      })
+      const web = new WebApps(
+        makeApps(f.store),
+        (_, resourceSignal) =>
+          nativeOperation(
+            () => {
+              entered()
+              resourceSignal.addEventListener("abort", () => {
+                aborted = true
               })
-          })
-        },
-        () => new AppConflict({ message: "fixture" })
-      ),
-    20
-  )
-  const running = Effect.runPromiseExit(web.interact(f.input, signal()))
-  await started
-  await new Promise((resolve) => setTimeout(resolve, 35))
-  const overlapping = await Effect.runPromiseExit(
-    web.render({ id: f.app.id, version: 1 }, signal())
-  )
-  expect(Exit.isFailure(overlapping)).toBe(true)
-  expect(aborted).toBe(true)
-  finish()
-  const exit = await running
-  expect(Exit.isFailure(exit) && Cause.hasFails(exit.cause)).toBe(true)
-  expect(aborted).toBe(true)
-  expect(Effect.runSync(f.store.pending())).toHaveLength(0)
-})
+              return new Promise<CodeOutput>((resolve) => {
+                finish = () =>
+                  resolve({
+                    result: JSON.stringify(output()),
+                    logs: "",
+                    error: null,
+                  })
+              })
+            },
+            () => new AppConflict({ message: "fixture" })
+          ),
+        20
+      )
+      const running = yield* Effect.forkChild(
+        Effect.exit(web.interact(f.input, signal()))
+      )
+      yield* Effect.promise(() => started)
+      yield* TestClock.adjust(35)
+      const overlapping = yield* Effect.exit(
+        web.render({ id: f.app.id, version: 1 }, signal())
+      )
+      expect(Exit.isFailure(overlapping)).toBe(true)
+      expect(aborted).toBe(true)
+      finish()
+      const exit = yield* Fiber.join(running)
+      expect(Exit.isFailure(exit) && Cause.hasFails(exit.cause)).toBe(true)
+      expect(aborted).toBe(true)
+      expect(Effect.runSync(f.store.pending())).toHaveLength(0)
+    })
+)
 it("fences synchronous archive/restore from the executor completion callback", async () => {
   const f = setup()
   const web = new WebApps(makeApps(f.store), () =>

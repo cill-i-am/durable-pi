@@ -12,7 +12,7 @@ import { WORKSPACE_RECOVERY_MS } from "./preparation.machine"
 
 const timestamp = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0))
 const token = Schema.String.check(Schema.isNonEmpty())
-const Claim = Schema.Struct({
+export const WorkspacePreparationClaim = Schema.Struct({
   id: token,
   kind: Schema.Literals(["document", "video"]),
   attemptId: token,
@@ -122,7 +122,7 @@ export const WorkspacePump = Schema.Struct({
   workflowVersion: Schema.Literal(1),
   token,
   phase: Schema.Literals(["dispatch", "cleanup", "retired"]),
-  claim: Schema.NullOr(Claim),
+  claim: Schema.NullOr(WorkspacePreparationClaim),
   cleanupAt: timestamp,
   finalBatch: Schema.Boolean,
 })
@@ -138,11 +138,10 @@ export const workspacePumpMachine = setupEffect({
     input: WorkspacePump,
     context: WorkspacePump,
     events: {
-      CLAIMED: Schema.Struct({ claim: Claim }),
+      CLAIMED: Schema.Struct({ claim: WorkspacePreparationClaim }),
       FAILED: Schema.Struct({ now: timestamp }),
       DEFER_CLEANUP: Schema.Struct({ at: timestamp }),
       EXHAUSTED: Schema.Struct({}),
-      SAVED: Schema.Struct({}),
       TRANSFER: Schema.Struct({ token }),
     },
   },
@@ -179,10 +178,6 @@ export const workspacePumpMachine = setupEffect({
           context.finalBatch
             ? { target: "retired", context: { ...context, phase: "retired" } }
             : { context: { ...context, finalBatch: true } },
-        SAVED: ({ context }) => ({
-          target: "retired",
-          context: { ...context, phase: "retired" },
-        }),
       },
     },
     retired: { type: "final" },

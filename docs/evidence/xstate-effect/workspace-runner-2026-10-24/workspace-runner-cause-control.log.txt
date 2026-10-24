@@ -1,0 +1,79 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+ ❯ tests/workspace-runner.test.ts (44 tests | 6 failed | 35 skipped) 50ms
+   × joins held restore and preserves annotated native Causes (defect false) 6ms
+   × joins held restore and preserves annotated native Causes (defect true) 2ms
+   × joins held storage and preserves annotated native Causes (defect false) 3ms
+   × joins held storage and preserves annotated native Causes (defect true) 2ms
+   × joins held cleanup and preserves its complete failure (defect false) 6ms
+   × joins held cleanup and preserves its complete failure (defect true) 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/workspace-runner.test.ts > joins held restore and preserves annotated native Causes (defect false)
+ FAIL  tests/workspace-runner.test.ts > joins held restore and preserves annotated native Causes (defect true)
+AssertionError: expected undefined to be 'original' // Object.is equality
+
+- Expected:
+"original"
+
++ Received:
+undefined
+
+ ❯ tests/workspace-runner.test.ts:859:52
+    857|           expect(observed?._tag).toBe(reason._tag)
+    858|           for (const [key, value] of reason.annotations)
+    859|             expect(observed?.annotations.get(key)).toBe(value)
+       |                                                    ^
+    860|           if (reason._tag === "Fail" && observed?._tag === "Fail")
+    861|             expect(observed.error).toBe(reason.error)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  tests/workspace-runner.test.ts > joins held storage and preserves annotated native Causes (defect false)
+ FAIL  tests/workspace-runner.test.ts > joins held storage and preserves annotated native Causes (defect true)
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/workspace-runner.test.ts:851:39
+    849|       held.reject(failure)
+    850|       for (const result of await Promise.all([observed, disposal])) {
+    851|         expect(Cause.isCause(result)).toBe(true)
+       |                                       ^
+    852|         if (!Cause.isCause(result)) throw new Error("Expected a native…
+    853|         for (const reason of failure.reasons) {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  tests/workspace-runner.test.ts > joins held cleanup and preserves its complete failure (defect false)
+ FAIL  tests/workspace-runner.test.ts > joins held cleanup and preserves its complete failure (defect true)
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/workspace-runner.test.ts:1004:37
+    1002|     await b.release()
+    1003|     for (const result of await Promise.all([cleanup, closing])) {
+    1004|       expect(Cause.isCause(result)).toBe(true)
+       |                                     ^
+    1005|       if (!Cause.isCause(result))
+    1006|         throw new Error("Expected complete cleanup Cause")
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  6 failed | 3 passed | 35 skipped (44)
+   Start at  21:51:10
+   Duration  381ms (import 69%, tests 17%, transform 11%, setup 2%, worker 1%)
+
