@@ -1,0 +1,22 @@
+import base from "/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/vitest.config.ts"
+export default {
+  ...base,
+  plugins: [{
+    name: "f13-required-lifecycle-negative-controls",
+    enforce: "pre",
+    transform(source, id) {
+      if (id.endsWith("/src/features/channel-settings/settings-request.ts")) {
+        const anchor = "return current\n          ? Schema.decodeUnknownSync(saved)(JSON.parse(current)).request\n          : null";
+        if (!source.includes(anchor)) throw new Error("F13_RESTORE_CONTROL_ANCHOR_MISSING");
+        console.error("F13_RESTORE_CONTROL_APPLIED");
+        return source.replace(anchor, "return null");
+      }
+      if (id.endsWith("/src/features/memory/import.machine.ts")) {
+        const anchor = "reading: {\n        invoke:";
+        if (!source.includes(anchor)) throw new Error("F13_IMPORT_CONTROL_ANCHOR_MISSING");
+        console.error("F13_IMPORT_CONTROL_APPLIED");
+        return source.replace(anchor, 'reading: {\n        on: { SUBMIT: { target: "reading", reenter: true } },\n        invoke:');
+      }
+    }
+  }]
+}

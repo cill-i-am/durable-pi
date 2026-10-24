@@ -1,0 +1,15 @@
+# Model-defaults mounted baseline
+
+Two concrete defects reproduced with original c93f7e4c ModelDefaults, actual useModelCatalog, actual TanStack provider/HTTP query layer and actual Base UI controls, mounted in Chromium. Only family context and HTTP responses are synthetic.
+
+1. Change Reasoning effort to high, then invoke two real DOM Save button clicks synchronously in the same browser turn. React has not committed the saving projection between activations; both save closures pass admission. Observed two settings POSTs with the same agent/job/draft and two onSaved callbacks.
+2. Start alpha save and hold its HTTP response. Re-render the same unkeyed component with agentId beta (matching the caller's unkeyed ModelDefaults). Wait for beta catalog, then release alpha response. Observed old alpha onSaved callback plus Saved displayed in beta UI. The old fetch is not signaled aborted.
+
+Preserved controls: while alpha save is held, inject an authoritative catalog revision9/low into the actual query cache. The old revision1 save cannot overwrite revision9, and final UI displays low. A subsequent catalog HTTP503 does not erase the accepted save: onSaved runs once and Saved is shown. TanStack invalidateQueries does not reject that ordinary query failure, so a source-only claim that this current refresh path converts acceptance into failure would be incorrect. The refresh-failure UI falls back to the stale selection prop's medium setting, rather than displaying accepted high; this report treats that as a compatibility observation, not an additional independently scoped finding.
+
+The final immutable probe is probe.mjs (hash in before-manifest.json). Run MODEL_DEFAULTS_SOURCE=before to bundle the preserved original component; omit it to bundle the live correction using identical cases/assertions. The assertion outcome is deliberately red before the fix on duplicate-save count2. All case records are written before assertions so both defects and control outcomes are retained.
+
+Command from xstate-native-ci-budget/durable-pi:
+MODEL_DEFAULTS_SOURCE=before /opt/homebrew/opt/node@24/bin/node /private/tmp/model-defaults-independent/probe.mjs
+
+This uses an ephemeral localhost server with synthetic HTTP only. No production source edits, live auth/provider, Git mutation, or broad gate occurred.

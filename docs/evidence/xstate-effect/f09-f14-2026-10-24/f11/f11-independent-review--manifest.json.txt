@@ -1,0 +1,11 @@
+{
+  "sourceManifest": "/private/tmp/f11-source-freeze.json",
+  "evidence": {
+    "/private/tmp/f11-independent.test.ts": "f641ae4b848d1d7bc77135089153cf510319b8f83c6a9057ade8edb96ca42837",
+    "/private/tmp/f11-independent.config.mjs": "aae96a508b50435f51c627c70a5ec7d547472792e2a71a4d258ea1dc1b607038",
+    "/private/tmp/f11-independent-before-final.log": "f495e4653a548ab476f7928a362f17f97d7226fb46136d39e6fb6508ed6f399c"
+  },
+  "finalReview": "d09f94d7e32db19eae0e0b34f8b505bbf1cc59f0d1cd5c513f1bd15cb26e8567",
+  "finalProbe": "f641ae4b848d1d7bc77135089153cf510319b8f83c6a9057ade8edb96ca42837",
+  "finalLog": "bba5180e78fc1988318f62ef024f2af18cb436dd03ff55f8eb7eea64b83ab19a"
+}

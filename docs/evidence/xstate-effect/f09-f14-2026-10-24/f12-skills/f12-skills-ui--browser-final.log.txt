@@ -1,0 +1,9 @@
+PASS desktop: held selection is fenced after changing agents
+PASS desktop: lost save retries the same identity and exact CAS input
+PASS desktop: conflict reload preserves the draft until explicit reapply
+PASS desktop: file import stays local and closing hosted read discards its late preview
+PASS mobile: held selection is fenced after changing agents
+PASS mobile: lost save retries the same identity and exact CAS input
+PASS mobile: conflict reload preserves the draft until explicit reapply
+PASS mobile: file import stays local and closing hosted read discards its late preview
+{"component":"actual SkillsPanel","syntheticHttp":true,"results":[{"viewport":"desktop","name":"held selection is fenced after changing agents","passed":true},{"viewport":"desktop","name":"lost save retries the same identity and exact CAS input","passed":true},{"viewport":"desktop","name":"conflict reload preserves the draft until explicit reapply","passed":true},{"viewport":"desktop","name":"file import stays local and closing hosted read discards its late preview","passed":true},{"viewport":"mobile","name":"held selection is fenced after changing agents","passed":true},{"viewport":"mobile","name":"lost save retries the same identity and exact CAS input","passed":true},{"viewport":"mobile","name":"conflict reload preserves the draft until explicit reapply","passed":true},{"viewport":"mobile","name":"file import stays local and closing hosted read discards its late preview","passed":true}]}

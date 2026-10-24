@@ -1,0 +1,33 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi
+
+ ❯ ../../../../../../private/tmp/f12-independent.test.ts (1 test | 1 failed) 70ms
+   × retains annotated Fail plus native Interrupt after joining a rejected held Skills fetch 69ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  ../../../../../../private/tmp/f12-independent.test.ts > retains annotated Fail plus native Interrupt after joining a rejected held Skills fetch
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ ../../../../../../private/tmp/f12-independent.test.ts:19:33
+     17|  reject(native)
+     18|  const result=await closing
+     19|  expect(Exit.isFailure(result)).toBe(true)
+       |                                 ^
+     20|  if(Exit.isFailure(result)){
+     21|   expect(result.cause.reasons.some(r=>r._tag==='Interrupt'&&r.fiberId=…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  20:59:07
+   Duration  494ms (import 55%, transform 24%, tests 18%, setup 2%, worker 1%)
+

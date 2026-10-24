@@ -1,0 +1,87 @@
+{
+  "root": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+  "files": [
+    {
+      "path": "src/features/family/chatgpt-sign-in.tsx",
+      "sha256": "c1a8b317ab7d3044bc28e9dcb7b3ed7218b59e422c740921d0f49734a176276b"
+    },
+    {
+      "path": "src/features/family/context.tsx",
+      "sha256": "54780e1fe4270d8c21d470447863ec5fbf107c4ee0ef88dfa326a133de786f65"
+    },
+    {
+      "path": "src/features/family/family-access-owner.ts",
+      "sha256": "1889bd76cae1e24e0130c5b5339a23adde9bd9deda0c0823f76d2ec9279aee65"
+    },
+    {
+      "path": "src/features/family/family-access.machine.ts",
+      "sha256": "5d2309e04b592db076734015a4df62cdbb9cc7f2ce2da922622f680e1ff9618d"
+    },
+    {
+      "path": "src/features/family/family-change-owner.ts",
+      "sha256": "25f6eb18c3884fd5fcb049b66b699c0178c769eaf8d14acbff11e14441b728bd"
+    },
+    {
+      "path": "src/features/family/family-change.machine.ts",
+      "sha256": "ab6ece184567c71d53cc9a5ba3793a2b9decfdc6aea083a015f8b6a2269ca341"
+    },
+    {
+      "path": "src/features/family/family-join-owner.ts",
+      "sha256": "a3055c6cb9c21085740c8959a10236c0e799abe6c732e74966ebd88cd4aaf55d"
+    },
+    {
+      "path": "src/features/family/family-join.machine.ts",
+      "sha256": "46cbf40da0ab8af19421fd8f3b4ab1ffdc02e17f8ca5b4ef6e05582c956bc713"
+    },
+    {
+      "path": "src/features/family/family-requests.ts",
+      "sha256": "2fd265d293420fe4a8aa8c23d88527bb142cecaca8712b0b5b87b143568d65ec"
+    },
+    {
+      "path": "src/features/family/family-settings.tsx",
+      "sha256": "2390c5fb54f1ad4d0df61fab87764739b7b058b08a2a284b2fb9c8ffd16a98d2"
+    },
+    {
+      "path": "src/features/family/invitation-record.ts",
+      "sha256": "a0194f5cecb5e5025b11593d566d03f0ee579e500d20ae8419984b2b040e41da"
+    },
+    {
+      "path": "src/features/family/join.tsx",
+      "sha256": "dda893405c11cc9553a0bd09daef58bed6468f8018f2b6309c12499755022dcf"
+    },
+    {
+      "path": "src/features/family/model-access.machine.ts",
+      "sha256": "3143dd1783e902f37e7653994dcdb6402c88557dcbbdd87fadeb9e8260683935"
+    },
+    {
+      "path": "src/features/family/model-access.tsx",
+      "sha256": "cad22ab6f3c707a9c7f6a304069392d8b5ebb9de62f015d359c1aefa36f678df"
+    },
+    {
+      "path": "src/features/family/model-sign-in-owner.ts",
+      "sha256": "5769103f19702bc8e4ee3e22f4ad37ce7ef1f2139a8187c8e4e0e53c5de366f9"
+    },
+    {
+      "path": "src/features/family/model-sign-in.machine.ts",
+      "sha256": "564753441ea3b56c5eec561bb4e33b92854e7e0f0a38fc8b05407a51fc5fea2f"
+    },
+    {
+      "path": "tests/family-ui-lifecycle.test.ts",
+      "sha256": "00f7cbc7980d7d0ebfd32a25a6b66f18b376fc99b17b0c2d79e4fc083d82bb77"
+    },
+    {
+      "path": "tests/browser/family-ownership.spec.ts",
+      "sha256": "6e6294d45170e23c5cf93b4150d1d8535775993cba4767af99402e95cef04de6"
+    },
+    {
+      "path": "docs/f09-family-ownership.md",
+      "sha256": "af0f63ffac7d8c4c4d89f510f0f5924e925f41e453275c608cc7fe932fed4bd4"
+    }
+  ],
+  "sharedDependencies": {
+    "src/http/client.ts": "49febd36b66c3db158fc85324058e2f7752b55676f765ff85403039f26cd8d66",
+    "src/shared/interop.ts": "3026be9bb101211871294ec28834a2c55710fcf1a346374ae56368af297eee99",
+    "src/shared/effect.ts": "75587bface6c2ddf87156a108653d78c1b698ad6c3e0c34ecd559880cc6b65ba"
+  },
+  "historicalManifest": "/private/tmp/f09-family-manifest.json"
+}

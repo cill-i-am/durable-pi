@@ -1,0 +1,2 @@
+import base from '/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/vitest.config.ts'
+export default {...base,plugins:[{name:'f12-broken-editor-identity',enforce:'pre',transform(code,id){if(!id.endsWith('/src/features/skills/skill-view.machine.ts'))return; console.log('F12_MUTATED_EDITOR_FENCE',id);const seam='event.generation === context.generation';if(!code.includes(seam))throw Error('Missing exact editor completion fence');return {code:code.replace(seam,'true'),map:null}}}]}

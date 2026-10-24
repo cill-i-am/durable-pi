@@ -1,6 +1,5 @@
-import { Schema } from "effect"
 import { MessageCircle } from "lucide-react"
-import { useCallback, useEffect, useId, useRef, useState } from "react"
+import { useEffect, useId, useState } from "react"
 
 import type { AgentProfile } from "@/agents/contracts"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -24,14 +23,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { agentApi, ApiError } from "@/http/client"
-import { poll } from "@/http/poll"
+import { useChannelSettings } from "@/features/channel-settings/use-channel-settings"
 import { replyProgressText, replyRetryLabel } from "@/replies/progress"
-import {
-  WhatsAppView,
-  type ConfigureWhatsApp,
-  type RetryWhatsApp,
-} from "@/whatsapp/contracts"
+import type { WhatsAppView } from "@/whatsapp/contracts"
 
 const labels = {
   queued: "Queued",
@@ -43,11 +37,6 @@ const labels = {
   cancelled: "Cancelled",
   expired: "Reply window closed",
 }
-// An unconfirmed mutation must replay its original URL target and operation ID.
-type Change = { agentId: string } & (
-  | { path: "configure"; body: ConfigureWhatsApp }
-  | { path: "retry"; body: typeof RetryWhatsApp.Type }
-)
 export function WhatsAppSettings({
   agents,
   open,
@@ -57,12 +46,29 @@ export function WhatsAppSettings({
   open: boolean
   onPendingChange: (pending: boolean) => void
 }) {
-  const [view, setView] = useState<WhatsAppView | null>(null)
-  const [error, setError] = useState("")
-  const [busy, setBusy] = useState(false)
-  const [attempt, setAttempt] = useState<Change | null>(null)
-  const [resend, setResend] = useState<string | null>(null)
   const [chosenAgentId, setChosenAgentId] = useState<string | null>(null)
+  const [requestPending, setRequestPending] = useState(false)
+  const settings = useChannelSettings(
+    "whatsapp",
+    "home",
+    false,
+    open,
+    setRequestPending
+  )
+  const {
+    error,
+    busy,
+    attempt,
+    resend,
+    change,
+    refresh,
+    retrySame,
+    confirm,
+    cancel,
+  } = settings
+  const view =
+    settings.view && "contactUrl" in settings.view ? settings.view : null
+
   const activeAgents = agents.filter((agent) => agent.status === "active")
   const selectedAgentId =
     chosenAgentId ??
@@ -71,71 +77,14 @@ export function WhatsAppSettings({
       : null)
   const routingDirty =
     !!view && selectedAgentId !== null && selectedAgentId !== view.agentId
-  const lock = useRef(false),
-    sequence = useRef(0)
-  const refresh = useCallback(async () => {
-    if (lock.current || attempt) return
-    const generation = ++sequence.current
-    try {
-      const result = Schema.decodeUnknownSync(WhatsAppView)(
-        await agentApi("home")("whatsapp")
-      )
-      if (generation === sequence.current) {
-        setView(result)
-        setError("")
-      }
-    } catch (cause) {
-      if (generation === sequence.current)
-        setError(
-          cause instanceof Error ? cause.message : "Could not load WhatsApp."
-        )
-    }
-  }, [attempt])
   useEffect(() => {
-    if (!open) return
-    const stop = poll(
-      async () => {
-        if (document.visibilityState === "visible") await refresh()
-      },
-      5000,
-      true
-    )
-    return () => {
-      stop()
-      // oxlint-disable-next-line react/exhaustive-deps -- Invalidate pending responses, not a DOM node.
-      sequence.current++
-    }
-  }, [open, refresh])
+    onPendingChange(requestPending || routingDirty)
+    return () => onPendingChange(false)
+  }, [requestPending, routingDirty, onPendingChange])
   useEffect(() => {
-    onPendingChange(busy || !!attempt || !!resend || routingDirty)
-  }, [busy, attempt, resend, routingDirty, onPendingChange])
-  async function change(input: Change) {
-    if (lock.current) return
-    lock.current = true
-    sequence.current++
-    setBusy(true)
-    setAttempt(input)
-    setError("")
-    try {
-      const result = Schema.decodeUnknownSync(WhatsAppView)(
-        await agentApi(input.agentId)(`whatsapp/${input.path}`, input.body)
-      )
-      setView(result)
-      setAttempt(null)
-      if (input.path === "configure") setChosenAgentId(null)
-    } catch (cause) {
-      if (cause instanceof ApiError && [400, 409].includes(cause.status))
-        setAttempt(null)
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "The change was not confirmed. Retry the same request."
-      )
-    } finally {
-      lock.current = false
-      setBusy(false)
-    }
-  }
+    if (!busy && !attempt && chosenAgentId === view?.agentId)
+      setChosenAgentId(null)
+  }, [busy, attempt, chosenAgentId, view?.agentId])
   const retry = (id: string, acknowledgeDuplicateRisk: boolean) =>
     change({
       agentId: "home",
@@ -178,11 +127,7 @@ export function WhatsAppSettings({
         </Alert>
       )}
       {attempt && (
-        <Button
-          variant="outline"
-          disabled={busy}
-          onClick={() => change(attempt)}
-        >
+        <Button variant="outline" disabled={busy} onClick={retrySame}>
           Retry same request
         </Button>
       )}
@@ -226,11 +171,7 @@ export function WhatsAppSettings({
                         (agent) => agent.id === message.agentId
                       )
                     }
-                    onClick={() =>
-                      message.state === "uncertain"
-                        ? setResend(message.id)
-                        : retry(message.id, false)
-                    }
+                    onClick={() => retry(message.id, false)}
                   >
                     {replyRetryLabel(message.progress)}
                   </Button>
@@ -261,7 +202,7 @@ export function WhatsAppSettings({
       <AlertDialog
         open={resend !== null}
         onOpenChange={(value) => {
-          if (!value) setResend(null)
+          if (!value) cancel()
         }}
       >
         <AlertDialogContent>
@@ -275,15 +216,7 @@ export function WhatsAppSettings({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <Button
-              onClick={async () => {
-                const id = resend
-                setResend(null)
-                if (id) await retry(id, true)
-              }}
-            >
-              Send again
-            </Button>
+            <Button onClick={confirm}>Send again</Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

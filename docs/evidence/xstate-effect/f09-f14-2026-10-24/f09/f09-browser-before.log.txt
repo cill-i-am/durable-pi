@@ -1,0 +1,56 @@
+[WebServer] (node:261) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] [plugin builtin:vite-reporter] 
+[WebServer] (!) Some chunks are larger than 500 kB after minification. Consider:
+[WebServer] - Using dynamic import() to code-split the application
+[WebServer] - Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+[WebServer] - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[WebServer] [INEFFECTIVE_DYNAMIC_IMPORT] src/features/files/files-panel.tsx is dynamically imported by src/app/workspace.tsx but also statically imported by src/features/files/index.ts, dynamic import will not move module into another chunk.
+[WebServer] 
+
+Running 1 test using 1 worker
+
+(node:294) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 [desktop] › tests/browser/family-ownership.spec.ts:20:1 › an older family read cannot restore owner controls after a newer access denial (7.4s)
+
+
+  1) [desktop] › tests/browser/family-ownership.spec.ts:20:1 › an older family read cannot restore owner controls after a newer access denial 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('heading', { name: 'Your family access has ended', exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('heading', { name: 'Your family access has ended', exact: true }) with timeout 5000ms
+      - waiting for getByRole('heading', { name: 'Your family access has ended', exact: true })
+
+
+      72 |         exact: true,
+      73 |       })
+    > 74 |     ).toBeVisible()
+         |       ^
+      75 |     await expect(page.getByRole("region", { name: "Your agents" })).toHaveCount(
+      76 |       0
+      77 |     )
+        at /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/browser/family-ownership.spec.ts:74:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../../../../private/tmp/f09-browser-before-results/family-ownership-an-older--a3fad-after-a-newer-access-denial-desktop/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../../../../private/tmp/f09-browser-before-results/family-ownership-an-older--a3fad-after-a-newer-access-denial-desktop/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../../../../private/tmp/f09-browser-before-results/family-ownership-an-older--a3fad-after-a-newer-access-denial-desktop/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../../../../private/tmp/f09-browser-before-results/family-ownership-an-older--a3fad-after-a-newer-access-denial-desktop/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [desktop] › tests/browser/family-ownership.spec.ts:20:1 › an older family read cannot restore owner controls after a newer access denial 

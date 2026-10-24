@@ -1,0 +1,39 @@
+
+Running 1 test using 1 worker
+
+(node:28049) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 tests/browser/activity-query.spec.ts:33:1 › late run page cannot replace the newly selected run (5.4s)
+
+
+  1) tests/browser/activity-query.spec.ts:33:1 › late run page cannot replace the newly selected run 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: getByLabel('Durable run records')
+    Expected substring: "new latest"
+    Received string:    "old olderdone10/23/2026, 1:00:00 AMold"
+    Timeout: 5000ms
+
+    Call log:
+      - Expect "toContainText" getByLabel('Durable run records') with timeout 5000ms
+      - waiting for getByLabel('Durable run records')
+        14 × locator resolved to <ol aria-label="Durable run records" class="flex min-w-0 flex-col divide-y">…</ol>
+           - unexpected value "old olderdone10/23/2026, 1:00:00 AMold"
+
+
+      38 |   await page.evaluate(() => (window as unknown as {proof:{release:()=>void}}).proof.release())
+      39 |   await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 50)))
+    > 40 |   await expect(page.getByLabel("Durable run records")).toContainText("new latest")
+         |                                                        ^
+      41 |   await expect(page.getByLabel("Durable run records")).not.toContainText("old older")
+      42 | })
+      43 |
+        at /Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/browser/activity-query.spec.ts:40:56
+
+    Error Context: ../../../../../../private/tmp/f14-query-browser-results/activity-query-late-run-pa-05c74-lace-the-newly-selected-run/error-context.md
+
+    Error Context: ../../../../../../private/tmp/f14-query-browser-results/activity-query-late-run-pa-05c74-lace-the-newly-selected-run/error-context.md
+
+  1 failed
+    tests/browser/activity-query.spec.ts:33:1 › late run page cannot replace the newly selected run 

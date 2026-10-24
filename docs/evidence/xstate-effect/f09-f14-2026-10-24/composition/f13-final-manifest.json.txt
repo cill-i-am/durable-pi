@@ -1,0 +1,35 @@
+{
+  "worktree": "/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi",
+  "base": "aacaa677c491badd8d8bfdc8356f0c29bf4f04b9",
+  "frozenAt": "2026-10-23T19:40:29.760681+00:00",
+  "owned": {
+    "src/features/channel-settings/settings.machine.ts": "840bca56a63a6a515573941fdd88692fe6d231b06f43d15b19707ca000ac01ea",
+    "src/features/channel-settings/settings-request.ts": "f7e5e5f5be8aec09a83c2be1caca1bf4bf11320c1b40a9d8796b97104033b629",
+    "src/features/channel-settings/settings-owner.ts": "e2245ba61c7b243ab0f21087eee9a93a939d1ac9c349fc1f35ff01599519ca86",
+    "src/features/channel-settings/use-channel-settings.ts": "bd80cfe8ac36800aaecba4057e7bf23eb18866eaf1d82a873b36d6b33c116d04",
+    "src/features/memory/import.machine.ts": "077f4f4edd4a6efcb0f84fdeefd0ccf7b937e17ab68e4a4bcfabf51c590fc509",
+    "src/features/memory/import-owner.ts": "33859e77e319992c80f17de528705cf99a542d06c8c07772ff75cc62f31b8d01",
+    "src/features/memory/memory-import.tsx": "67251916394d41296c8ec1f13141163b00c5b42f9577e99b87951cb9b94c6f3c",
+    "tests/channel-settings-ui.test.ts": "812d9b93a6414ccf89324588e6adf59aa6b01cec5f7b24646678af265c210c5d",
+    "tests/memory-import-ui.test.ts": "96d6ad09658a7398986c202855ca5bdd39eda31213b1697baaca77623e7f6792",
+    "tests/browser/settings-import-lifecycle.spec.ts": "21c0aacb66dc10dd93bb00bb1c7abe28a44cb62d68e8d4ce503963c791b80569",
+    "src/features/email/email-settings.tsx": "d92cf92b5ae48e9ef6a92dad6e80c3204b3077cb71d4838677258d2afd1a8cda",
+    "src/features/whatsapp/whatsapp-settings.tsx": "20c60ab139065b774b60fef88ea921edd055fe533d51471bd974c10163d548d3",
+    "src/features/memory/memory-panel.tsx": "095917c6db24773cabd07f2fb4e92f7937860960e88a60818f46d057e5e46828",
+    "tests/browser/email.spec.ts": "e47ef426ef41ce1ca63445083685a60f82dcebeb8f1c717b143c34260238f349"
+  },
+  "preserved": {
+    "src/features/memory/summary-recovery.machine.ts": "ace9bc87967826331003c5aa68c3c5d743b503d3e583f07f626c346c104a192d",
+    "src/features/memory/summary-recovery-owner.ts": "367130c86688d993694983997ec22c0ad4b1b8b5e03329c8d869d3068c7574f3",
+    "src/features/memory/summary-recovery.tsx": "ed11c96904e8418fdb94bed3d4ea36559818120946a9bf90faa685240f6acfb1",
+    "src/features/memory/backup-recovery.machine.ts": "54da888fb235035ca786f77974622a9528e5dede6aa3b2f27a2b9475a4519bfc",
+    "src/features/memory/backup-recovery-owner.ts": "67582d3f1f7c40434ad7826035d6fd76adb931d3c0200287aaf71c851e884d19",
+    "src/features/memory/backup-recovery.tsx": "f0865f89ed5a59b5b2ab7e59cdaae3e8d38100379904225c2f6ff2c527f36d35",
+    "tests/memory-summary-recovery-ui.test.ts": "1fe54222640a5b51626ded6e28e89fd6092eb0d0552578d8965cac0dffa07e62",
+    "tests/memory-backup-recovery-ui.test.ts": "5044edaefb901754a609ec923ba5f2298a16e8119446949156f42c79785d7a88",
+    "tests/browser/memory-recovery.spec.ts": "a1143dde800a12e64c4ce6c6fae9e8ca70947647f3d3165ff13b45f96879077f",
+    "package.json": "daa3a03808b0bb8eaa8818302b97832639758bae3e1fa000d6db7a5bc4ffb7ea",
+    "pnpm-lock.yaml": "3ce4fba0856c9038e8cbb9327cb557c1975d6c594eb23a0f2db2a4e5123056e2"
+  },
+  "reviewFix": "Preserve native Interrupt and annotation reasons in joined channel scope cleanup."
+}

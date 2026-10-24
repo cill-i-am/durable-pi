@@ -1,0 +1,24 @@
+{"kind":"task","late":true,"reasons":[{"_tag":"Interrupt","annotations":[["effect/Cause/StackTrace",{"name":"createEffectLogic"}]]},{"_tag":"Die","defect":{"_tag":"Fail","error":"original checked"},"annotations":[["effect/Cause/StackTrace",{"name":"createEffectLogic"}]]},{"_tag":"Interrupt","fiberId":91827,"annotations":[["independent-cleanup","kept"],["effect/Cause/StackTrace",{"name":"createEffectLogic"}]]},{"_tag":"Interrupt","annotations":[["effect/Cause/StackTrace",{"name":"createEffectLogic"}]]},{"_tag":"Interrupt","fiberId":19,"annotations":[["effect/Cause/StackTrace",{"name":"createEffectLogic"}]]},{"_tag":"Die","defect":{"_tag":"Fail","error":"original checked"},"annotations":[["effect/Cause/StackTrace",{"name":"createEffectLogic"}]]},{"_tag":"Interrupt","fiberId":91827,"annotations":[["independent-cleanup","kept"],["effect/Cause/StackTrace",{"name":"createEffectLogic"}]]},{"_tag":"Interrupt","annotations":[["effect/Cause/StackTrace",{"name":"createEffectLogic"}]]},{"_tag":"Interrupt","fiberId":19,"annotations":[["effect/Cause/StackTrace",{"name":"createEffectLogic"}]]}]}
+{"kind":"task","late":true,"exit":"Failure","hasChecked":true,"hasInterrupt":true,"viewRetained":false,"recordRetained":true}
+{"kind":"task","late":false,"reasons":[{"_tag":"Interrupt","fiberId":91827,"annotations":[["independent-cleanup","kept"],["effect/Cause/StackTrace",{"name":"createEffectLogic"}]]},{"_tag":"Interrupt","fiberId":91827,"annotations":[["independent-cleanup","kept"],["effect/Cause/StackTrace",{"name":"createEffectLogic"}]]}]}
+{"kind":"task","late":false,"exit":"Failure","hasChecked":false,"hasInterrupt":true,"viewRetained":true,"recordRetained":true}
+{"kind":"mailbox","late":true,"reasons":[{"_tag":"Interrupt","annotations":[["effect/Cause/StackTrace",{"name":"createEffectLogic"}]]},{"_tag":"Die","defect":{"_tag":"Fail","error":"original checked"},"annotations":[["effect/Cause/StackTrace",{"name":"createEffectLogic"}]]},{"_tag":"Interrupt","fiberId":91827,"annotations":[["independent-cleanup","kept"],["effect/Cause/StackTrace",{"name":"createEffectLogic"}]]},{"_tag":"Interrupt","annotations":[["effect/Cause/StackTrace",{"name":"createEffectLogic"}]]},{"_tag":"Interrupt","fiberId":54,"annotations":[["effect/Cause/StackTrace",{"name":"createEffectLogic"}]]},{"_tag":"Die","defect":{"_tag":"Fail","error":"original checked"},"annotations":[["effect/Cause/StackTrace",{"name":"createEffectLogic"}]]},{"_tag":"Interrupt","fiberId":91827,"annotations":[["independent-cleanup","kept"],["effect/Cause/StackTrace",{"name":"createEffectLogic"}]]},{"_tag":"Interrupt","annotations":[["effect/Cause/StackTrace",{"name":"createEffectLogic"}]]},{"_tag":"Interrupt","fiberId":54,"annotations":[["effect/Cause/StackTrace",{"name":"createEffectLogic"}]]}]}
+{"kind":"mailbox","late":true,"exit":"Failure","hasChecked":true,"hasInterrupt":true,"viewRetained":false}
+{"kind":"mailbox","late":false,"reasons":[{"_tag":"Interrupt","fiberId":91827,"annotations":[["independent-cleanup","kept"],["effect/Cause/StackTrace",{"name":"createEffectLogic"}]]},{"_tag":"Interrupt","fiberId":91827,"annotations":[["independent-cleanup","kept"],["effect/Cause/StackTrace",{"name":"createEffectLogic"}]]}]}
+{"kind":"mailbox","late":false,"exit":"Failure","hasChecked":false,"hasInterrupt":true,"viewRetained":true}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: task late=false: scope must retain original annotated native Cause
+    at <anonymous> (/private/tmp/f14-controls-independent/compound-no-die.mts:34:25)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v24.21.0

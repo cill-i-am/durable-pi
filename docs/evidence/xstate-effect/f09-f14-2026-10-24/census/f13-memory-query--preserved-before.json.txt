@@ -1,0 +1,127 @@
+{
+  "src/features/channel-settings/settings.machine.ts": {
+    "expected": "840bca56a63a6a515573941fdd88692fe6d231b06f43d15b19707ca000ac01ea",
+    "actual": "840bca56a63a6a515573941fdd88692fe6d231b06f43d15b19707ca000ac01ea",
+    "matches": true
+  },
+  "src/features/channel-settings/settings-request.ts": {
+    "expected": "f7e5e5f5be8aec09a83c2be1caca1bf4bf11320c1b40a9d8796b97104033b629",
+    "actual": "f7e5e5f5be8aec09a83c2be1caca1bf4bf11320c1b40a9d8796b97104033b629",
+    "matches": true
+  },
+  "src/features/channel-settings/settings-owner.ts": {
+    "expected": "e2245ba61c7b243ab0f21087eee9a93a939d1ac9c349fc1f35ff01599519ca86",
+    "actual": "e2245ba61c7b243ab0f21087eee9a93a939d1ac9c349fc1f35ff01599519ca86",
+    "matches": true
+  },
+  "src/features/channel-settings/use-channel-settings.ts": {
+    "expected": "bd80cfe8ac36800aaecba4057e7bf23eb18866eaf1d82a873b36d6b33c116d04",
+    "actual": "bd80cfe8ac36800aaecba4057e7bf23eb18866eaf1d82a873b36d6b33c116d04",
+    "matches": true
+  },
+  "src/features/memory/import.machine.ts": {
+    "expected": "077f4f4edd4a6efcb0f84fdeefd0ccf7b937e17ab68e4a4bcfabf51c590fc509",
+    "actual": "077f4f4edd4a6efcb0f84fdeefd0ccf7b937e17ab68e4a4bcfabf51c590fc509",
+    "matches": true
+  },
+  "src/features/memory/import-owner.ts": {
+    "expected": "33859e77e319992c80f17de528705cf99a542d06c8c07772ff75cc62f31b8d01",
+    "actual": "33859e77e319992c80f17de528705cf99a542d06c8c07772ff75cc62f31b8d01",
+    "matches": true
+  },
+  "src/features/memory/memory-import.tsx": {
+    "expected": "67251916394d41296c8ec1f13141163b00c5b42f9577e99b87951cb9b94c6f3c",
+    "actual": "67251916394d41296c8ec1f13141163b00c5b42f9577e99b87951cb9b94c6f3c",
+    "matches": true
+  },
+  "tests/channel-settings-ui.test.ts": {
+    "expected": "812d9b93a6414ccf89324588e6adf59aa6b01cec5f7b24646678af265c210c5d",
+    "actual": "812d9b93a6414ccf89324588e6adf59aa6b01cec5f7b24646678af265c210c5d",
+    "matches": true
+  },
+  "tests/memory-import-ui.test.ts": {
+    "expected": "96d6ad09658a7398986c202855ca5bdd39eda31213b1697baaca77623e7f6792",
+    "actual": "96d6ad09658a7398986c202855ca5bdd39eda31213b1697baaca77623e7f6792",
+    "matches": true
+  },
+  "tests/browser/settings-import-lifecycle.spec.ts": {
+    "expected": "21c0aacb66dc10dd93bb00bb1c7abe28a44cb62d68e8d4ce503963c791b80569",
+    "actual": "21c0aacb66dc10dd93bb00bb1c7abe28a44cb62d68e8d4ce503963c791b80569",
+    "matches": true
+  },
+  "src/features/email/email-settings.tsx": {
+    "expected": "d92cf92b5ae48e9ef6a92dad6e80c3204b3077cb71d4838677258d2afd1a8cda",
+    "actual": "d92cf92b5ae48e9ef6a92dad6e80c3204b3077cb71d4838677258d2afd1a8cda",
+    "matches": true
+  },
+  "src/features/whatsapp/whatsapp-settings.tsx": {
+    "expected": "20c60ab139065b774b60fef88ea921edd055fe533d51471bd974c10163d548d3",
+    "actual": "20c60ab139065b774b60fef88ea921edd055fe533d51471bd974c10163d548d3",
+    "matches": true
+  },
+  "src/features/memory/memory-panel.tsx": {
+    "expected": "095917c6db24773cabd07f2fb4e92f7937860960e88a60818f46d057e5e46828",
+    "actual": "095917c6db24773cabd07f2fb4e92f7937860960e88a60818f46d057e5e46828",
+    "matches": true
+  },
+  "tests/browser/email.spec.ts": {
+    "expected": "e47ef426ef41ce1ca63445083685a60f82dcebeb8f1c717b143c34260238f349",
+    "actual": "e47ef426ef41ce1ca63445083685a60f82dcebeb8f1c717b143c34260238f349",
+    "matches": true
+  },
+  "src/features/memory/summary-recovery.machine.ts": {
+    "expected": "ace9bc87967826331003c5aa68c3c5d743b503d3e583f07f626c346c104a192d",
+    "actual": "ace9bc87967826331003c5aa68c3c5d743b503d3e583f07f626c346c104a192d",
+    "matches": true
+  },
+  "src/features/memory/summary-recovery-owner.ts": {
+    "expected": "367130c86688d993694983997ec22c0ad4b1b8b5e03329c8d869d3068c7574f3",
+    "actual": "367130c86688d993694983997ec22c0ad4b1b8b5e03329c8d869d3068c7574f3",
+    "matches": true
+  },
+  "src/features/memory/summary-recovery.tsx": {
+    "expected": "ed11c96904e8418fdb94bed3d4ea36559818120946a9bf90faa685240f6acfb1",
+    "actual": "ed11c96904e8418fdb94bed3d4ea36559818120946a9bf90faa685240f6acfb1",
+    "matches": true
+  },
+  "src/features/memory/backup-recovery.machine.ts": {
+    "expected": "54da888fb235035ca786f77974622a9528e5dede6aa3b2f27a2b9475a4519bfc",
+    "actual": "54da888fb235035ca786f77974622a9528e5dede6aa3b2f27a2b9475a4519bfc",
+    "matches": true
+  },
+  "src/features/memory/backup-recovery-owner.ts": {
+    "expected": "67582d3f1f7c40434ad7826035d6fd76adb931d3c0200287aaf71c851e884d19",
+    "actual": "67582d3f1f7c40434ad7826035d6fd76adb931d3c0200287aaf71c851e884d19",
+    "matches": true
+  },
+  "src/features/memory/backup-recovery.tsx": {
+    "expected": "f0865f89ed5a59b5b2ab7e59cdaae3e8d38100379904225c2f6ff2c527f36d35",
+    "actual": "f0865f89ed5a59b5b2ab7e59cdaae3e8d38100379904225c2f6ff2c527f36d35",
+    "matches": true
+  },
+  "tests/memory-summary-recovery-ui.test.ts": {
+    "expected": "1fe54222640a5b51626ded6e28e89fd6092eb0d0552578d8965cac0dffa07e62",
+    "actual": "1fe54222640a5b51626ded6e28e89fd6092eb0d0552578d8965cac0dffa07e62",
+    "matches": true
+  },
+  "tests/memory-backup-recovery-ui.test.ts": {
+    "expected": "5044edaefb901754a609ec923ba5f2298a16e8119446949156f42c79785d7a88",
+    "actual": "5044edaefb901754a609ec923ba5f2298a16e8119446949156f42c79785d7a88",
+    "matches": true
+  },
+  "tests/browser/memory-recovery.spec.ts": {
+    "expected": "a1143dde800a12e64c4ce6c6fae9e8ca70947647f3d3165ff13b45f96879077f",
+    "actual": "a1143dde800a12e64c4ce6c6fae9e8ca70947647f3d3165ff13b45f96879077f",
+    "matches": true
+  },
+  "package.json": {
+    "expected": "daa3a03808b0bb8eaa8818302b97832639758bae3e1fa000d6db7a5bc4ffb7ea",
+    "actual": "daa3a03808b0bb8eaa8818302b97832639758bae3e1fa000d6db7a5bc4ffb7ea",
+    "matches": true
+  },
+  "pnpm-lock.yaml": {
+    "expected": "3ce4fba0856c9038e8cbb9327cb557c1975d6c594eb23a0f2db2a4e5123056e2",
+    "actual": "3ce4fba0856c9038e8cbb9327cb557c1975d6c594eb23a0f2db2a4e5123056e2",
+    "matches": true
+  }
+}

@@ -1,0 +1,55 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi
+
+stdout | ../../../../../../private/tmp/workspace-controls-negative/workspace-control-lifetimes.test.ts > a late close cannot dispatch into a reopened search or replace its newer command
+[21:15:17.875] ERROR (#1): Error [AssertionError]: expected [ { kind: 'action', id: 'memory' } ] to deeply equal []
+    at /private/tmp/workspace-controls-negative/workspace-control-lifetimes.test.ts:78:21 {
+  actual: [ { kind: 'action', id: 'memory' } ],
+  expected: [],
+  showDiff: true,
+  operator: 'deepStrictEqual',
+  [cause]: undefined
+}
+
+ ❯ ../../../../../../private/tmp/workspace-controls-negative/workspace-control-lifetimes.test.ts (9 tests | 1 failed | 8 skipped) 27ms
+   × a late close cannot dispatch into a reopened search or replace its newer command 26ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  ../../../../../../private/tmp/workspace-controls-negative/workspace-control-lifetimes.test.ts > a late close cannot dispatch into a reopened search or replace its newer command
+AssertionError: expected [ { kind: 'action', id: 'memory' } ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   {
++     "id": "memory",
++     "kind": "action",
++   },
++ ]
+
+ ❯ ../../../../../../private/tmp/workspace-controls-negative/workspace-control-lifetimes.test.ts:78:21
+     76|       yield* send(owner.actor, { type: "CLOSED", revision: old })
+     77|       yield* Effect.yieldNow
+     78|       expect(calls).toEqual([])
+       |                     ^
+     79|       yield* send(owner.actor, { type: "CLOSED", revision })
+     80|       yield* waitFor(owner.actor, (state) => state.matches("closed"))
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/core.ts:585:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:589:27
+ ❯ Array.<anonymous> node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1025:13
+ ❯ MixedSchedulerDispatcher.runTasks node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/Scheduler.ts:254:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 8 skipped (9)
+   Start at  21:15:17
+   Duration  407ms (import 65%, transform 22%, tests 9%, setup 2%, worker 1%)
+

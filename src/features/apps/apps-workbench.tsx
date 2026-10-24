@@ -1,9 +1,8 @@
 import { Link } from "@tanstack/react-router"
-import { Schema } from "effect"
 import { PanelsTopLeft, ListTodo } from "lucide-react"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 
-import { type AppDocument, AppList } from "@/apps/contracts"
+import { type AppDocument } from "@/apps/contracts"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button, buttonVariants } from "@/components/ui/button"
 import {
@@ -13,13 +12,15 @@ import {
   EmptyDescription,
 } from "@/components/ui/empty"
 import { Skeleton } from "@/components/ui/skeleton"
-import { agentApi } from "@/http/client"
-import { poll } from "@/http/poll"
 import { parseAgentId, workspaceDestination } from "@/navigation/workspace"
 
 import { AppView } from "./app-view"
+import { useAppList } from "./use-app-list"
 
-export function AppsWorkbench({
+export function AppsWorkbench(props: Parameters<typeof AppsWorkbenchView>[0]) {
+  return <AppsWorkbenchView key={props.agentId} {...props} />
+}
+function AppsWorkbenchView({
   agentId,
   onPendingChange,
   selected,
@@ -30,48 +31,12 @@ export function AppsWorkbench({
   agentId: string
   onPendingChange: (pending: boolean) => void
 }) {
-  const [apps, setApps] = useState<AppDocument[]>([]),
-    [error, setError] = useState("")
-  const [loading, setLoading] = useState(true)
+  const { apps, error, loading, refresh } = useAppList(agentId)
   const [interactionPending, setInteractionPending] = useState(false)
   useEffect(() => {
     onPendingChange(interactionPending)
     return () => onPendingChange(false)
   }, [interactionPending, onPendingChange])
-  const sequence = useRef(0)
-  const refresh = useCallback(async () => {
-    const generation = ++sequence.current
-    try {
-      const data = Schema.decodeUnknownSync(AppList)(
-        await agentApi(agentId)("apps")
-      )
-      if (generation === sequence.current) {
-        setApps([...data.apps])
-        setError("")
-      }
-    } catch (cause) {
-      if (generation === sequence.current)
-        setError(
-          cause instanceof Error ? cause.message : "Could not load apps."
-        )
-    } finally {
-      if (generation === sequence.current) setLoading(false)
-    }
-  }, [agentId])
-  useEffect(() => {
-    const stop = poll(
-      async () => {
-        if (document.visibilityState === "visible") await refresh()
-      },
-      4000,
-      true
-    )
-    return () => {
-      stop()
-      // oxlint-disable-next-line react/exhaustive-deps -- Advance the live request generation so all pending responses become stale.
-      sequence.current++
-    }
-  }, [refresh])
   const content = (
     <>
       {!selected && (

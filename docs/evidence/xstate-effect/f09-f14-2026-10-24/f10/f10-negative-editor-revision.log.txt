@@ -1,0 +1,50 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi
+
+stdout | ../../../../../../private/tmp/f10-controls/editor-negative.test.ts > a save captures its fields, rejects duplicate admission and retains later edits
+[20:53:49.991] ERROR (#1): Error [AssertionError]: expected 1 to be +0 // Object.is equality
+    at /private/tmp/f10-controls/editor-negative.test.ts:66:22 {
+  actual: 1,
+  expected: 0,
+  showDiff: true,
+  operator: 'strictEqual',
+  [cause]: undefined
+}
+
+ ❯ ../../../../../../private/tmp/f10-controls/editor-negative.test.ts (7 tests | 1 failed | 6 skipped) 41ms
+   × a save captures its fields, rejects duplicate admission and retains later edits 40ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  ../../../../../../private/tmp/f10-controls/editor-negative.test.ts > a save captures its fields, rejects duplicate admission and retains later edits
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ ../../../../../../private/tmp/f10-controls/editor-negative.test.ts:66:22
+     64|         (state) => state.matches("ready") || state.matches("closed")
+     65|       )
+     66|       expect(closed).toBe(0)
+       |                      ^
+     67|       expect(owner.actor.getSnapshot().context.draft.name).toBe("Newer…
+     68|       yield* send(owner.actor, { type: "SAVE" })
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/core.ts:585:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:589:27
+ ❯ node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1159:17
+ ❯ next node_modules/.pnpm/@xstate+effect@1.0.0-alpha.8_effect@4.0.5_xstate@6.0.0-alpha.68/node_modules/@xstate/effect/dist/xstate-effect.js:525:9
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 6 skipped (7)
+   Start at  20:53:49
+   Duration  654ms (import 70%, transform 20%, tests 8%, setup 2%, worker 1%)
+

@@ -1,0 +1,39 @@
+{
+  "status": "closed",
+  "root": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+  "scope": "F14 controls only; reviewer-authored query dependency and PlanInspector excluded from independent claim",
+  "sourceFiles": {
+    "src/features/activity/background-actions.tsx": "53397e6698d64997ecc145ea636f317414926597c1296003fe138199dccf7624",
+    "src/features/activity/bot-tasks.tsx": "1970eab46a9b2e519edb26ea1b6751baf2d0352f2534b772e903f7654bf16800",
+    "src/features/activity/delegated-work.tsx": "9b5ca523872c1d1598f62ca954a16b3b73724b26e17d7db903275a3edd1e7003",
+    "src/features/activity/task-control.machine.ts": "812fdf5dab829c870ae6978b0c5ce275cef72cbd4b5fe2768fcfc8146cb832bf",
+    "src/features/activity/task-control-owner.ts": "4794e77c8103ecf03f92eb6e358533ba676bb5855b8299d770f8b900be133691",
+    "src/features/activity/use-task-control.ts": "6ef3e5e5ee52c2545371f4c3ffa0a4078cee98782bdb20ca17dd5783ea1cd4b9",
+    "src/features/activity/mailbox-control.machine.ts": "67e386bcdedbf995e6256a3c6d0e7ac53dfd9e4d5b5efa50be39573ffc82dc64",
+    "src/features/activity/mailbox-control-owner.ts": "9fdbb3ab718d6f4cee119a52938855059bccb7f94dfceb1de77cfe20c0313d7f",
+    "src/features/activity/use-mailbox-control.ts": "24e67fefe244e13c8a89dbdfdcdd8e5f37b7177bf98c2d1ddd567a5b01c5b571",
+    "tests/activity-controls-ui.test.ts": "d0951f77b87360fa57c6880e513353cc0fcb9f9b310b0cc8086a298bedcb3830",
+    "tests/browser/activity-controls-lifecycle.spec.ts": "0deb047167630f7b92741cc742977e5464889b92a917e630842cd87f751b4595",
+    "docs/xstate-effect-activity-ui.md": "fc02020f8daa6776be9020b0ab0102e6e7d8d64fbd8f80591911972297c261db"
+  },
+  "evidence": {
+    "source-before.json": "d08eaecacad33691b88c72965027fae91b323f5bff769af519fe3c486337dd81",
+    "compound-settlement.mts": "7c46b1aa8aec90f6bde33da87aeff499c1a83dc4f985a429871af3937ed54029",
+    "compound-settlement-before.log": "4de62594c2147cc1ce1c2be9aee22650ba242a19982622ee1b9ea0e69e90adec",
+    "compound-settlement-after.log": "db0121083879ae6c9b42019387ff665e8748552f4e280fdf3263344f48f986c4",
+    "compound-no-die.mts": "e1bc21832fbc2a1632d2d5bc9c4b87d503d4d4be39cac0a1d89262dec9cdc6b5",
+    "compound-no-die-before.log": "73babc3c1168634d3b7f298d4371e3a1fd95a61bdad0730e436b922c183d4dce",
+    "compound-no-die-after.log": "c84644379d8b1bfc615d33061e8375267dceb944f98e1d4d4b5ece423938ea34",
+    "identity-storage.mts": "846a42f91c438f8eb057c9a81c14659a8f1337b74cd071e86160a4c1901aa983",
+    "identity-storage.log": "5f646a4b8083bf960cd0fa8782bc9984a568fa2cbc16b124f5b4c5f0d12af701",
+    "identity-storage-after.log": "5f646a4b8083bf960cd0fa8782bc9984a568fa2cbc16b124f5b4c5f0d12af701",
+    "agent-owner.mjs": "a030d81c9a42dc2a9f4b2367b87591b53ad815ec79137a199e8fd5bdfb7e816a",
+    "agent-owner.log": "c5d08ee63033ffc59cc25afcd1b4144b0875e2c72a7178b08fcda2180c8bfd12",
+    "agent-owner-final.log": "bcf6b455c8a16089e9460e6720b078105576ae90d8b40557e3d27a3ba8ed9c66"
+  },
+  "limits": [
+    "No production edits, Git writes, live effects or broad gates.",
+    "Original author browser14/14 preceded cleanup-only delta; unchanged mounted agent-switch probe rechecked after final repair.",
+    "Parent owns integrated gates."
+  ]
+}

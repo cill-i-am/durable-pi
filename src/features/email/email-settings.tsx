@@ -1,6 +1,4 @@
-import { Schema } from "effect"
 import { Copy, Mail } from "lucide-react"
-import { useCallback, useEffect, useRef, useState } from "react"
 
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
@@ -25,13 +23,8 @@ import {
   InputGroupInput,
   InputGroupAddon,
 } from "@/components/ui/input-group"
-import {
-  EmailView,
-  type ConfigureEmail,
-  type RetryEmail,
-} from "@/email/contracts"
-import { agentApi, ApiError } from "@/http/client"
-import { poll } from "@/http/poll"
+import type { EmailView } from "@/email/contracts"
+import { useChannelSettings } from "@/features/channel-settings/use-channel-settings"
 import { replyProgressText, replyRetryLabel } from "@/replies/progress"
 
 const labels = {
@@ -43,13 +36,10 @@ const labels = {
   uncertain: "Delivery unconfirmed",
   cancelled: "Cancelled",
 }
-type Change =
-  | { path: "configure"; body: ConfigureEmail }
-  | { path: "retry"; body: typeof RetryEmail.Type }
 const toggleDisabled = (
   view: EmailView | null,
   busy: boolean,
-  attempt: Change | null,
+  attempt: unknown,
   archived: boolean
 ) =>
   (!view?.configured && !view?.enabled) ||
@@ -65,70 +55,27 @@ export function EmailSettings({
   archived: boolean
   onPendingChange: (pending: boolean) => void
 }) {
-  const [view, setView] = useState<EmailView | null>(null)
-  const [error, setError] = useState("")
-  const [busy, setBusy] = useState(false)
-  const [attempt, setAttempt] = useState<Change | null>(null)
-  const [resend, setResend] = useState<string | null>(null)
-  const lock = useRef(false),
-    sequence = useRef(0)
-  const refresh = useCallback(async () => {
-    if (lock.current) return
-    const generation = ++sequence.current
-    try {
-      const result = Schema.decodeUnknownSync(EmailView)(
-        await agentApi(agentId)("email")
-      )
-      if (sequence.current === generation) setView(result)
-    } catch (cause) {
-      if (sequence.current === generation)
-        setError(
-          cause instanceof Error ? cause.message : "Could not load email."
-        )
-    }
-  }, [agentId])
-  useEffect(() => {
-    const stop = poll(
-      async () => {
-        if (document.visibilityState === "visible") await refresh()
-      },
-      5000,
-      true
-    )
-    return () => {
-      stop()
-      // oxlint-disable-next-line react/exhaustive-deps -- This ref is a response generation, not a DOM node.
-      sequence.current++
-    }
-  }, [refresh])
-  useEffect(() => {
-    onPendingChange(busy || attempt !== null)
-  }, [busy, attempt, onPendingChange])
-  async function change(input: Change) {
-    if (lock.current) return
-    lock.current = true
-    sequence.current++
-    setBusy(true)
-    setAttempt(input)
-    setError("")
-    try {
-      const result = Schema.decodeUnknownSync(EmailView)(
-        await agentApi(agentId)(`email/${input.path}`, input.body)
-      )
-      setView(result)
-      setAttempt(null)
-    } catch (cause) {
-      if (cause instanceof ApiError && cause.status === 409) setAttempt(null)
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "The change was not confirmed. Retry the same request."
-      )
-    } finally {
-      lock.current = false
-      setBusy(false)
-    }
-  }
+  const settings = useChannelSettings(
+    "email",
+    agentId,
+    archived,
+    true,
+    onPendingChange
+  )
+  const {
+    error,
+    busy,
+    attempt,
+    resend,
+    change,
+    refresh,
+    retrySame,
+    confirm,
+    cancel,
+    setError,
+  } = settings
+  const view =
+    settings.view && "address" in settings.view ? settings.view : null
   const retry = (id: string, acknowledgeDuplicateRisk: boolean) =>
     change({
       path: "retry",
@@ -214,11 +161,7 @@ export function EmailSettings({
         </Alert>
       )}
       {attempt && (
-        <Button
-          variant="outline"
-          disabled={busy}
-          onClick={() => change(attempt)}
-        >
+        <Button variant="outline" disabled={busy} onClick={retrySame}>
           Retry same request
         </Button>
       )}
@@ -247,11 +190,7 @@ export function EmailSettings({
                     size="sm"
                     variant="outline"
                     disabled={busy || !!attempt || !view.enabled || archived}
-                    onClick={() =>
-                      message.state === "uncertain"
-                        ? setResend(message.id)
-                        : retry(message.id, false)
-                    }
+                    onClick={() => retry(message.id, false)}
                   >
                     {replyRetryLabel(message.progress)}
                   </Button>
@@ -272,7 +211,7 @@ export function EmailSettings({
       <AlertDialog
         open={resend !== null}
         onOpenChange={(open) => {
-          if (!open) setResend(null)
+          if (!open) cancel()
         }}
       >
         <AlertDialogContent>
@@ -286,15 +225,7 @@ export function EmailSettings({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <Button
-              onClick={async () => {
-                const id = resend
-                setResend(null)
-                if (id) await retry(id, true)
-              }}
-            >
-              Send again
-            </Button>
+            <Button onClick={confirm}>Send again</Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

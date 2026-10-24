@@ -20,10 +20,11 @@ import {
 } from "@/components/ui/empty"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
-import { agentApi } from "@/http/client"
-import { poll } from "@/http/poll"
 
 import { ActivityRecord } from "./activity-record"
+import { activityJsonRequest } from "./query-owner"
+import { useActivityQuery } from "./use-activity-query"
+import { useMailboxControl } from "./use-mailbox-control"
 
 export function BotTasks({
   agentId,
@@ -34,71 +35,22 @@ export function BotTasks({
   agents: readonly ActivityAgent[]
   onOpenBot: (id: ActivityAgent["id"]) => void
 }) {
-  const [state, setState] = useState<MailboxView | null>(null),
-    [error, setError] = useState(""),
-    [pending, setPending] = useState<string | null>(null),
-    [retry, setRetry] = useState(0)
+  const query = useActivityQuery({
+    key: JSON.stringify([agentId, "communication"]),
+    interval: 3000,
+    read: async (signal) =>
+      Schema.decodeUnknownSync(MailboxView)(
+        await activityJsonRequest(agentId, "communication", signal)
+      ),
+    errorMessage: "Bot tasks could not reconnect.",
+  })
+  const state = query.data
+  const controls = useMailboxControl(agentId, state, query.refresh)
+  const pending = controls.pending
+  const error = controls.error || query.error
+  const control = controls.submit
   const [origin, setOrigin] = useState<Task | null>(null)
-  useEffect(() => {
-    setState(null)
-    setOrigin(null)
-  }, [agentId])
-  useEffect(() => {
-    let alive = true
-    const controller = new AbortController()
-    setError("")
-    const stop = poll(
-      async () => {
-        if (document.visibilityState !== "visible") return
-        try {
-          const value = Schema.decodeUnknownSync(MailboxView)(
-            await agentApi(agentId)(
-              "communication",
-              undefined,
-              controller.signal
-            )
-          )
-          if (alive) {
-            setState(value)
-            setError("")
-          }
-        } catch (cause) {
-          if (alive)
-            setError(
-              cause instanceof Error
-                ? cause.message
-                : "Bot tasks could not reconnect."
-            )
-        }
-      },
-      3000,
-      true
-    )
-    return () => {
-      alive = false
-      controller.abort()
-      stop()
-    }
-  }, [agentId, retry])
-  async function control(
-    id: string,
-    action: "cancel" | "retry" | "retry_mailbox"
-  ) {
-    setPending(id)
-    setError("")
-    try {
-      await agentApi(agentId)("communication/control", { id, action })
-      setRetry((value) => value + 1)
-    } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "The update could not be confirmed. Retrying this control is safe."
-      )
-    } finally {
-      setPending(null)
-    }
-  }
+  useEffect(() => setOrigin(null), [agentId])
   const recovery = state?.recovery
   const name = (id: string) =>
     agents.find((a) => a.id === id)?.name ?? "Archived bot"
@@ -123,7 +75,7 @@ export function BotTasks({
             <Button
               variant="outline"
               size="sm"
-              disabled={pending !== null}
+              disabled={controls.blocked(recovery.epoch, "retry_mailbox")}
               aria-busy={pending === recovery.epoch}
               onClick={() => void control(recovery.epoch, "retry_mailbox")}
             >
@@ -141,7 +93,7 @@ export function BotTasks({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setRetry((n) => n + 1)}
+              onClick={() => void query.refresh()}
             >
               Reconnect
             </Button>
@@ -222,7 +174,7 @@ export function BotTasks({
                       <Button
                         variant="outline"
                         size="sm"
-                        disabled={pending !== null}
+                        disabled={controls.blocked(task.id, "retry")}
                         aria-busy={pending === task.id}
                         onClick={() => void control(task.id, "retry")}
                       >
@@ -263,7 +215,10 @@ export function BotTasks({
                       <Button
                         variant="outline"
                         size="sm"
-                        disabled={pending !== null}
+                        disabled={controls.blocked(
+                          delivery.envelope.id,
+                          "retry"
+                        )}
                         onClick={() =>
                           void control(delivery.envelope.id, "retry")
                         }
@@ -288,7 +243,7 @@ export function BotTasks({
                     <Button
                       variant="outline"
                       size="sm"
-                      disabled={pending !== null}
+                      disabled={controls.blocked(task.id, "cancel")}
                       onClick={() => void control(task.id, "cancel")}
                     >
                       <Square data-icon="inline-start" />

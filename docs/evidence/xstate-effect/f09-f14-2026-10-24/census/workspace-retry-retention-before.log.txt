@@ -1,0 +1,62 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace-settings/durable-pi
+
+stdout | tests/workspace-control-lifetimes.test.ts > successful retry cannot erase prior compound invalidation cleanup without Die
+[18:25:45.220] ERROR (#180): Error [AssertionError]: expected false to be true // Object.is equality
+    at /Users/cillianbarron/.codex/worktrees/xstate-workspace-settings/durable-pi/tests/workspace-control-lifetimes.test.ts:355:40 {
+  actual: false,
+  expected: true,
+  showDiff: true,
+  operator: 'strictEqual',
+  [cause]: undefined
+}
+
+stdout | tests/workspace-control-lifetimes.test.ts > successful retry cannot erase prior compound invalidation cleanup with Die
+[18:25:45.226] ERROR (#201): Error [AssertionError]: expected false to be true // Object.is equality
+    at /Users/cillianbarron/.codex/worktrees/xstate-workspace-settings/durable-pi/tests/workspace-control-lifetimes.test.ts:355:40 {
+  actual: false,
+  expected: true,
+  showDiff: true,
+  operator: 'strictEqual',
+  [cause]: undefined
+}
+
+ ❯ tests/workspace-control-lifetimes.test.ts (11 tests | 2 failed) 50ms
+   × successful retry cannot erase prior compound invalidation cleanup without Die 8ms
+   × successful retry cannot erase prior compound invalidation cleanup with Die 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/workspace-control-lifetimes.test.ts > successful retry cannot erase prior compound invalidation cleanup without Die
+ FAIL  tests/workspace-control-lifetimes.test.ts > successful retry cannot erase prior compound invalidation cleanup with Die
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/workspace-control-lifetimes.test.ts:355:40
+    353|         expect(requests).toBe(2)
+    354|         const closed = yield* Effect.exit(Scope.close(scope, Exit.void…
+    355|         expect(Exit.isFailure(closed)).toBe(true)
+       |                                        ^
+    356|         if (Exit.isFailure(closed))
+    357|           expect(closed.cause.reasons.some(reason => reason._tag === "…
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ FiberImpl.succeedWith node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:711:30
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:3791:20
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/core.ts:585:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:589:27
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 9 passed (11)
+   Start at  18:25:44
+   Duration  373ms (import 62%, tests 20%, transform 14%, setup 2%, worker 1%)
+

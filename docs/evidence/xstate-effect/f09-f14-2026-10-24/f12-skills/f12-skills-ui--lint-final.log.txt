@@ -1,0 +1,1 @@
+src/features/skills/skills-panel.tsx:27:1: error eslint(complexity): function `SkillsPanelOwner` has a complexity of 21. Maximum allowed is 20.

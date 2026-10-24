@@ -1,0 +1,22 @@
+$ node tests/browser/skills-lifecycle.mjs && node tests/browser/memory-query-lifecycle.mjs && node tests/browser/workspace-controls-lifecycle.mjs
+PASS desktop: held selection is fenced after changing agents
+PASS desktop: lost save retries the same identity and exact CAS input
+PASS desktop: conflict reload preserves the draft until explicit reapply
+PASS desktop: file import stays local and closing hosted read discards its late preview
+PASS mobile: held selection is fenced after changing agents
+PASS mobile: lost save retries the same identity and exact CAS input
+PASS mobile: conflict reload preserves the draft until explicit reapply
+PASS mobile: file import stays local and closing hosted read discards its late preview
+{"component":"actual SkillsPanel","syntheticHttp":true,"results":[{"viewport":"desktop","name":"held selection is fenced after changing agents","passed":true},{"viewport":"desktop","name":"lost save retries the same identity and exact CAS input","passed":true},{"viewport":"desktop","name":"conflict reload preserves the draft until explicit reapply","passed":true},{"viewport":"desktop","name":"file import stays local and closing hosted read discards its late preview","passed":true},{"viewport":"mobile","name":"held selection is fenced after changing agents","passed":true},{"viewport":"mobile","name":"lost save retries the same identity and exact CAS input","passed":true},{"viewport":"mobile","name":"conflict reload preserves the draft until explicit reapply","passed":true},{"viewport":"mobile","name":"file import stays local and closing hosted read discards its late preview","passed":true}]}
+{"results":[{"name":"1280: hidden history has no read; search abort/retry preserves query and fences late completion","pass":true},{"name":"1280: agent ABA keeps latest root; tree failure preserves branch and Current view recovers","pass":true},{"name":"1280: source error retries explicitly and closing the disclosure aborts a held retry","pass":true},{"name":"late old-agent root never replaces new-agent tree","pass":true},{"name":"held branch request aborts on owner unmount","pass":true},{"name":"source content is hidden immediately when agent changes","pass":true},{"name":"390: hidden history has no read; search abort/retry preserves query and fences late completion","pass":true},{"name":"390: agent ABA keeps latest root; tree failure preserves branch and Current view recovers","pass":true},{"name":"390: source error retries explicitly and closing the disclosure aborts a held retry","pass":true},{"name":"late old-agent root never replaces new-agent tree","pass":true},{"name":"held branch request aborts on owner unmount","pass":true},{"name":"source content is hidden immediately when agent changes","pass":true}]}
+{"calls":1,"resets":0}
+late unmount reset fenced
+failed invalidation requires explicit retry and resets once
+replacement error waits for native invalidation and owns its reset
+native focus return 1100
+exact current agent 1100
+locked search stays closed 1100
+native focus return 390
+exact current agent 390
+locked search stays closed 390
+{"passed":9,"results":["late unmount reset fenced","failed invalidation requires explicit retry and resets once","replacement error waits for native invalidation and owns its reset","native focus return 1100","exact current agent 1100","locked search stays closed 1100","native focus return 390","exact current agent 390","locked search stays closed 390"]}

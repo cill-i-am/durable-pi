@@ -1,0 +1,29 @@
+# F09 independent review
+
+Result: bounded clear on the 19-path frozen source manifest `/private/tmp/f09-family-manifest.json` in `/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi`. No production edits or Git mutation by reviewer.
+
+Reviewed the actual family access, mutation, invitation, model sign-in and catalog machines; native request owners; React integration; versioned invitation record; tests; ownership document; and unchanged SDK/auth/query seams. The canonical architecture standard matches the freshly read standard from the same composition.
+
+## Independent challenges
+
+1. `compound-probe.mts` creates the production `makeFamilyAccess` owner with a held native read. Revocation signals abort; scope close remains pending until the read rejects. The rejection contains annotated Fail, Die and native Interrupt(89234). `compound.log` confirms all three identities and annotations survive joined shutdown. This is a stronger native Cause check than simply asserting any defect exists. No sign-out/navigation is invoked.
+2. `hash-ack-probe.mjs` bundles production `JoinFamily` plus its production owner/machine into a temporary Chromium harness. Only auth ports and decorative framing are synthetic; native fetch returns local synthetic previews. It holds session refresh after acceptance, changes the hash from old to new and resolves refresh in the same browser turn. The resulting URL and tab record remain new, previews run old then new, and the old acceptance does not render welcome. `hash-ack.log` records the passing observation. The local server uses an ephemeral localhost port; no external auth/provider request is made.
+
+Commands (from the worktree, Node 24):
+
+- `node --import tsx /private/tmp/f09-independent/compound-probe.mts`
+- `node /private/tmp/f09-independent/hash-ack-probe.mjs`
+
+Both exit 0. Source hashes match before and after the probes. No new production test or broad gate was needed.
+
+## Source conclusions
+
+Family access serializes and coalesces reads and makes access-ended terminal. Current authority is read from the actual family actor snapshot, with account-keyed workspace remounting outside this slice. Mutation and model owners check current authority before dispatch and after native completion. Their accepted acknowledgements are separate from ordinary refresh failure.
+
+Invitation generation changes immediately abort the superseded signal; the machine queues the latest source and waits for actual native settlement before advancing. Acceptance is fenced at dispatch, after its response, and after session refresh before URL removal/welcome. Secret tokens/passwords remain ephemeral Redacted values. The only automatic business retry is the one temporary preview retry after 250 ms; the production preview supplies a ten-second abort signal per read. SDK commands and credential exchanges are not automatically replayed. A failed exchange performs one status read and requires the same still-pending attempt before another explicit finish.
+
+The ID-only tab record validates version/length, preserves unknown/corrupt/inaccessible storage, and removes only the matching confirmed invitation. An active URL remains usable when storage is unreadable. Popup acquisition stays in the click handler; native pending work and owned blank-popup cleanup remain separate from user-owned navigation.
+
+## Evidence limits
+
+Owner's 42 focused tests/scoped types/lint are separate evidence, not rerun here. The owner's final application desktop/mobile browser proof was still pending at review handoff; this bounded review does not substitute for it. The targeted mounted probe uses synthetic auth ports and verifies UI ordering, not real Better Auth login. No live auth/provider, credential exchange, deployment, workerd restart, full build or broad browser gate is claimed. Model catalog remains TanStack Query-owned; backend auth/credential authority is unchanged and was not reopened.

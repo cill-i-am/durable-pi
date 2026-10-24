@@ -1,0 +1,18 @@
+# F12 routines/webhooks handoff
+
+Production source is frozen in `/private/tmp/f12-routines-source-freeze.json`. Nine production files, including the existing workbench/panel adapters, use official scoped XState/Effect actors; no backend, package, Git or shared tracking edits were made.
+
+The machine owns command admission, exact operation retry, cancellation plus authoritative read, run-specific Stop uncertainty, view-generation fencing and original periodic observation. Scope owners abort and join actual native request/body settlement; complete late defect-bearing Causes retain checked failure and original Interrupt identity. Plain routine/editor data remains outside lifecycle control. Webhook secrets retain exact expected revision, operation ID and key across retry; verification hides superseded keys. Pure form fields reset on an agent-keyed owner boundary.
+
+The byte-identical actual-Chromium before/after probe demonstrates the old Alpha acknowledgement calling Beta’s editor callback and the repair fencing it. New actual actor tests prove duplicate commands cannot become retries, exact immutable retry/Stop identity, cancellation read failure, A-to-B-to-A view ownership, malformed events, full late cleanup Causes and periodic recovery after four failures. Initial hidden-page reads remain suppressed until the next visible four-second tick.
+
+Evidence: 53 affected routine/webhook tests passed before the observation compatibility correction; final 11 routine actor tests and 22 combined file/routine compatibility tests pass after it. Scoped TypeScript, configured lint and formatting pass. Ten production-hook Chromium cases pass; four actual RoutinesWorkbench/WebhookPanel desktop/mobile cases pass after correcting fixture title data and narrowing a status locator. Raw paths are in the manifest. The final bundle-only view-fence negative control exits1 at the unchanged A-to-B-to-A assertion: applied1 instead of0 (`/private/tmp/f12-routines-negative-final.log`).
+
+Limits: local synthetic native capabilities, no live routine/webhook/provider effects; the UI has no new persistence journal. Existing pending-work guards remain the reload boundary. Parent owns fresh independent review and composed application gates. Shared F12 documentation is complete with the Skills owner’s contract and repository test paths. Its final Skills source manifest remains separately owned.
+
+
+## Independent repair addendum
+
+The F12 independent review reproduced caller-object aliasing and loss of late Fail-plus-annotated-Interrupt cleanup without Die. Admission now snapshots each routine command, including the Save schedule, and each webhook configuration. The existing owner observer captures raw failed Exit before recovery and retains the complete mixed Cause after the child joins. The separate shared native adapter fix is an explicit dependency; no local promise wrapper was added.
+
+All 19 focused lifecycle cases pass after these repairs, including three routine command shapes, webhook secret and exact Resolve identity, and both native and direct uninterruptible Effect cleanup for each owner. Scoped TypeScript, lint and formatting pass. The unchanged independent six-case probe also passes in the fresh reviewer run; all 12 owned and 3 shared dependency hashes matched the freeze. No remaining concrete finding was reported. Earlier browser/control evidence remains historical before this narrow repair, with no broad gate repeated. The prior manifest is preserved; refreshed source/dependency hashes and additive logs are in /private/tmp/f12-routines-source-freeze.json.

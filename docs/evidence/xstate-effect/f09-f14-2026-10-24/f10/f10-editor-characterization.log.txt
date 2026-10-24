@@ -1,0 +1,56 @@
+[WebServer] (node:18799) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] [plugin builtin:vite-reporter] 
+[WebServer] (!) Some chunks are larger than 500 kB after minification. Consider:
+[WebServer] - Using dynamic import() to code-split the application
+[WebServer] - Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+[WebServer] - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[WebServer] [INEFFECTIVE_DYNAMIC_IMPORT] src/features/files/files-panel.tsx is dynamically imported by src/app/workspace.tsx but also statically imported by src/features/files/index.ts, dynamic import will not move module into another chunk.
+[WebServer] 
+
+Running 1 test using 1 worker
+
+(node:18859) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 [desktop] › tests/browser/agent-owner-lifecycle.spec.ts:10:1 › a held agent save retains newer edits and uses update after acknowledged creation (7.5s)
+
+
+  1) [desktop] › tests/browser/agent-owner-lifecycle.spec.ts:10:1 › a held agent save retains newer edits and uses update after acknowledged creation 
+
+    Error: expect(locator).toBeEnabled() failed
+
+    Locator: getByRole('button', { name: 'Save changes', exact: true })
+    Expected: enabled
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeEnabled" getByRole('button', { name: 'Save changes', exact: true }) with timeout 5000ms
+      - waiting for getByRole('button', { name: 'Save changes', exact: true })
+
+
+      34 |   release()
+      35 |   await expect(page.getByLabel("Name", { exact: true })).toHaveValue("Newer name")
+    > 36 |   await expect(page.getByRole("button", { name: "Save changes", exact: true })).toBeEnabled()
+         |                                                                                 ^
+      37 |   await page.getByRole("button", { name: "Save changes", exact: true }).click()
+      38 |   await expect.poll(() => writes.length).toBe(2)
+      39 |   expect(writes[1]).toEqual({ path: "/api/agent/bots/update", id: writes[0]!.id, name: "Newer name", instructions: "Newer purpose" })
+        at /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/browser/agent-owner-lifecycle.spec.ts:36:81
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../../../../private/tmp/f10-browser-results/agent-owner-lifecycle-a-he-10412-after-acknowledged-creation-desktop/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../../../../private/tmp/f10-browser-results/agent-owner-lifecycle-a-he-10412-after-acknowledged-creation-desktop/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../../../../private/tmp/f10-browser-results/agent-owner-lifecycle-a-he-10412-after-acknowledged-creation-desktop/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace ../../../../../../private/tmp/f10-browser-results/agent-owner-lifecycle-a-he-10412-after-acknowledged-creation-desktop/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [desktop] › tests/browser/agent-owner-lifecycle.spec.ts:10:1 › a held agent save retains newer edits and uses update after acknowledged creation 

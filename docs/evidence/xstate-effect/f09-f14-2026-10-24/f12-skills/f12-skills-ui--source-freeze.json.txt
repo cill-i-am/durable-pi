@@ -1,0 +1,59 @@
+{
+  "capturedAt": "2026-10-23T19:54:30.235348+00:00",
+  "worktree": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+  "base": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+  "sourceHashes": {
+    "src/features/skills/hosted-skill-import.tsx": "6f857d9b09b01daad54450ef986dc73d33948bde73413aa11d9f0c0e84faba7e",
+    "src/features/skills/hosted-skill-owner.ts": "c368482cea4fc5616e2d4ff8bdbac8c5f191de7d6d17e7ed50c4de103d2e5e21",
+    "src/features/skills/hosted-skill.machine.ts": "abd9e0e940b08b2714eb38220bc745fa82a83a2eb9151f0b8a71d1daec8ef870",
+    "src/features/skills/skill-view.machine.ts": "511e4f6ae4963b865f0576e2c30669afa70416812535c717482009abe4e170d8",
+    "src/features/skills/skills-owner.ts": "c54efe69e5ef8c7943f0cd3a541e84128d772eebb859002669ef504d5c61b0b4",
+    "src/features/skills/skills-panel.tsx": "7ab9b37a593887a12e6037786e8e83fa99b019ae7686fc3c62024bc61aea2529",
+    "src/features/skills/skills.machine.ts": "df24e837a96d387bc6bb0b98192e7c14c9f2e910f6bfc4b6349e8a6b95921313",
+    "src/features/skills/use-hosted-skill.ts": "49c6457a9b90e7b7805f8c72e4f4195d14faf45991bd11fbf8398e3ae48f08b7",
+    "src/features/skills/use-skill-view.ts": "3c58761c0de3724b5bbe1994325d7704745cbcf206369c3fca3c2c2a9e6bf731",
+    "src/features/skills/use-skills.ts": "149bc12c2e9eb0f7257847ce68cb238d903cc462493f928dabc0da5486e4e814",
+    "tests/skills-ui-lifecycle.test.ts": "dc3ce9e030627c2c6c47679ee5e06c0dd559fdff22e247b386f99dc4b0636f58",
+    "tests/browser/skills-lifecycle.mjs": "9117400da3aa08f04d0252d01e9d1a12a1d3e0968c180bf22c496e51be46ce81"
+  },
+  "compatibilitySourceHashes": {
+    "src/skills/contracts.ts": "ade5efe4a40cb8a3b42f8411512b9d8947c0ba80fcce677b9fa5b2b206f02b83",
+    "src/skills/domain.ts": "265526cc25af9d5d3133a8d32a3573d8115343b708183c8a352d2a420382d0ea",
+    "src/skills/source.ts": "8f90b9464b4aa001e5ce910f39214750de01260dee2c50cf2ba933c4c0cb8615",
+    "src/features/skills/index.ts": "4852aa237d4873377fdc93d3002208bda645aee5b42ce35ade3c61b6a60a1759"
+  },
+  "evidenceHashes": {
+    "docs/evidence/xstate-effect/f12-skills-ui/before-hosted-skill-import.tsx.txt": "e0424c1f1561074572a46990c4ec70fc110d4f2b45213e5dc31d1bbea5e5d76b",
+    "docs/evidence/xstate-effect/f12-skills-ui/before-skills-panel.tsx.txt": "05dad84092b2b60a2baf4846ec72b042e3ed6198add98556850a62ee1a4dbbb9",
+    "docs/evidence/xstate-effect/f12-skills-ui/before-use-skills.ts.txt": "b94281a6c480605f4e2094d453db5c68dda54de3bbd94b8fa6c0ce17168e7c73",
+    "docs/evidence/xstate-effect/f12-skills-ui/editor-control-negative.log.txt": "dc8922cb065ccbebe0c17e92dccc1e9a6cf5e7d76ce63f32bed4f63fa488b6cb",
+    "docs/evidence/xstate-effect/f12-skills-ui/editor-control-positive.log.txt": "d476db4deb30a51f3b28d397b96cdc84c7d0fdba0dde7cf2db5e9fe1bdb9c1d8",
+    "docs/evidence/xstate-effect/f12-skills-ui/editor-control-probe.mjs.txt": "200b0ef3ac677d11ef272af5d5e5dd2e2359e0a356e8110bf983407ba66dfb62",
+    "docs/evidence/xstate-effect/f12-skills-ui/focused-tests.log.txt": "bfc8ebc624c0dfb64dab8df32ef842b98e7e7c30275fd455d0d20e23f70bd173",
+    "docs/evidence/xstate-effect/f12-skills-ui/format.log.txt": "fa9137ec6ecc7ddaf9f8b3fde3727e31c15789694087c3b7b651acba66809c27",
+    "docs/evidence/xstate-effect/f12-skills-ui/mounted-browser.log.txt": "7e0b32317ba936a4a42238e1d1e4f13fd8398fd36ae07d118743142595bb96e0",
+    "docs/evidence/xstate-effect/f12-skills-ui/scoped-lint.log.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "docs/evidence/xstate-effect/f12-skills-ui/scoped-types.log.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "docs/evidence/xstate-effect/f12-skills-ui/stale-selection-after.log.txt": "50e65a7c1ee39194fc0b39b170baaf11c1a658843e9faa9902ab0e436e21165e",
+    "docs/evidence/xstate-effect/f12-skills-ui/stale-selection-before.log.txt": "f38fd8472883f8b5ba3af64d0ce319e99aacd1697adf365a8148e26c454cbf99",
+    "docs/evidence/xstate-effect/f12-skills-ui/stale-selection-probe.mjs.txt": "5994f73df3b582bc15d757a471d53a2c81a94ea87e2f3546230acf0289998e0d"
+  },
+  "verified": {
+    "focusedTests": 25,
+    "focusedFiles": 2,
+    "actualMountedChromiumJourneys": 8,
+    "scopedTypes": true,
+    "scopedLint": true,
+    "scopedFormat": true,
+    "unchangedOldAgentProbe": "old revision2 fails; final new revision7 passes",
+    "negative": "actual machine bundled exactly once with SAVED generation check removed: replacement editor closes, assertion fails"
+  },
+  "limits": [
+    "Synthetic local HTTP and local File objects, no real provider or backend effects.",
+    "Browser proof mounts actual SkillsPanel in Chromium; it does not prove full router, production CSS/build, workerd, hosted CI or production.",
+    "No new skill persistence format, backend budgets or polling introduced. Retry identity is component-lifetime state; it is not persisted across page reload.",
+    "Native Promise cleanup waits for actual settlement, including unabortable File.text.",
+    "Early Vitest transform controls did not execute their mutation; final esbuild control asserts exact transform count and observes official @xstate.transition for SAVED.",
+    "Final broad integration and publication gates remain parent-owned."
+  ]
+}

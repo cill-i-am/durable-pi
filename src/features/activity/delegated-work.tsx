@@ -1,6 +1,6 @@
 import { Schema } from "effect"
 import { GitBranch, Square } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 
 import { CopyButton } from "@/components/copy-button"
 import { Markdown } from "@/components/markdown"
@@ -27,22 +27,12 @@ import {
   TraceCollapsibleTrigger,
   TraceCollapsibleContent,
 } from "@/components/ui/trace"
-import {
-  Group,
-  Transcript,
-  type Child,
-  type Control,
-} from "@/delegation/contracts"
-import { agentApi } from "@/http/client"
-import { poll } from "@/http/poll"
+import { Group, Transcript, type Child } from "@/delegation/contracts"
 
 import { BackgroundActions } from "./background-actions"
-import {
-  acknowledgeControl,
-  confirmedRejection,
-  controlKey,
-  pendingControl,
-} from "./delegation-commands"
+import { activityJsonRequest } from "./query-owner"
+import { useActivityQuery } from "./use-activity-query"
+import { useTaskControl } from "./use-task-control"
 
 const Page = Schema.Struct({
   groups: Schema.Array(Group),
@@ -56,43 +46,19 @@ export function DelegatedWork({
   background?: boolean
 }) {
   const prefix = background ? "background" : "delegations"
-  const [page, setPage] = useState<typeof Page.Type>({
-      groups: [],
-      nextOffset: null,
-    }),
-    [offset, setOffset] = useState(0),
-    [error, setError] = useState("")
-  useEffect(() => {
-    let active = true
-    setPage({ groups: [], nextOffset: null })
-    const stop = poll(
-      async () => {
-        if (document.visibilityState !== "visible") return
-        try {
-          const value = Schema.decodeUnknownSync(Page)(
-            await agentApi(agentId)(`${prefix}?offset=${offset}`)
-          )
-          if (active) {
-            setPage(value)
-            setError("")
-          }
-        } catch (cause) {
-          if (active)
-            setError(
-              cause instanceof Error
-                ? cause.message
-                : "Delegated work could not reconnect."
-            )
-        }
-      },
-      2000,
-      true
-    )
-    return () => {
-      active = false
-      stop()
-    }
-  }, [agentId, offset, prefix])
+  const [offset, setOffset] = useState(0)
+  const path = `${prefix}?offset=${offset}`
+  const query = useActivityQuery({
+    key: JSON.stringify([agentId, path]),
+    interval: 2000,
+    read: async (signal) =>
+      Schema.decodeUnknownSync(Page)(
+        await activityJsonRequest(agentId, path, signal)
+      ),
+    errorMessage: "Delegated work could not reconnect.",
+  })
+  const page = query.data ?? { groups: [], nextOffset: null }
+  const error = query.error
   if (!page.groups.length && !error && offset === 0) return null
   return (
     <section
@@ -114,7 +80,14 @@ export function DelegatedWork({
         <Alert>
           <AlertTitle>Updates interrupted</AlertTitle>
           <AlertDescription>
-            {error} Reconnecting automatically.
+            {error}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => void query.refresh()}
+            >
+              Reconnect
+            </Button>
           </AlertDescription>
         </Alert>
       )}
@@ -266,6 +239,13 @@ function ChildTrace({
   const [expanded, setExpanded] = useState<boolean | null>(null)
   const { running, label, status } = childPresentation(child, group)
   const prefix = group.background ? "background" : "delegations"
+  const controls = useTaskControl({
+    agentId,
+    groupId: group.id,
+    childId: child.id,
+    prefix,
+    active: running && child.status !== "stopping" ? ["stop", "steer"] : [],
+  })
   return (
     <TraceCollapsible
       open={expanded ?? (running || !!child.error)}
@@ -327,7 +307,7 @@ function ChildTrace({
           </Trace>
         )}
         <ChildControl
-          agentId={agentId}
+          controls={controls}
           groupId={group.id}
           prefix={prefix}
           child={child}
@@ -352,7 +332,7 @@ function ChildTrace({
             {inspect ? "Close task" : "Open task"}
           </Button>
           <ChildControl
-            agentId={agentId}
+            controls={controls}
             groupId={group.id}
             prefix={prefix}
             child={child}
@@ -366,91 +346,46 @@ function ChildTrace({
 }
 
 function ChildControl({
-  agentId,
   groupId,
   child,
   action,
   active,
   prefix,
+  controls,
 }: {
-  agentId: string
   groupId: number
   child: Child
   action: "stop" | "steer"
   active: boolean
   prefix: string
+  controls: ReturnType<typeof useTaskControl>
 }) {
-  const key = `${prefix === "background" ? "background:" : ""}${controlKey(agentId, groupId, child.id, action)}`,
-    mounted = useRef(true),
-    pending = useRef<Control | null>(null)
-  const [text, setText] = useState(""),
-    [uncertain, setUncertain] = useState(false),
-    [busy, setBusy] = useState(false),
-    [error, setError] = useState("")
+  const [text, setText] = useState("")
+  const saved = controls.saved(action)
+  const uncertain = !!saved
+  const busy = controls.busy
+  const error = controls.error
+  const acknowledged = controls.acknowledged
   useEffect(() => {
-    mounted.current = true
-    pending.current = pendingControl(sessionStorage, key)
-    setUncertain(!!pending.current)
-    return () => {
-      mounted.current = false
-    }
-  }, [key])
-  async function submit() {
-    if (busy || (!active && !pending.current)) return
-    setBusy(true)
-    setError("")
-    let input = pending.current
-    try {
-      input ??= {
-        groupId,
-        childId: child.id,
-        operationId: crypto.randomUUID(),
-        action:
-          action === "stop"
-            ? { type: "stop" }
-            : { type: "steer", text: text.trim() },
-      }
-      sessionStorage.setItem(key, JSON.stringify(input))
-      pending.current = input
-      await agentApi(agentId)(`${prefix}/control`, input)
-      acknowledgeControl(sessionStorage, key, input.operationId)
-      pending.current = null
-      if (mounted.current) {
-        setUncertain(false)
-        setText("")
-      }
-    } catch (cause) {
-      const final = confirmedRejection(cause)
-      if (final && input) {
-        acknowledgeControl(sessionStorage, key, input.operationId)
-        pending.current = null
-      }
-      if (mounted.current) {
-        setUncertain(!!pending.current)
-        setError(
-          cause instanceof Error
-            ? cause.message
-            : "Acknowledgement lost. Retry this saved control."
-        )
-      }
-    } finally {
-      if (mounted.current) setBusy(false)
-    }
-  }
+    if (
+      acknowledged?.kind === "child" &&
+      acknowledged.body.action.type === action
+    )
+      setText("")
+  }, [acknowledged, action])
   if (!active && !uncertain && !error) return null
   const button = (
     <Button
       size="sm"
       variant="outline"
       disabled={
-        busy ||
-        (!active && !uncertain) ||
+        controls.blocked(action) ||
         (action === "steer" && !uncertain && !text.trim())
       }
-      onClick={() => void submit()}
+      onClick={() => controls.submit(action, text)}
     >
       {action === "stop" && <Square data-icon="inline-start" />}
-      {controlLabel(action, busy, uncertain)}
+      {controlLabel(action, controls.sending, uncertain)}
     </Button>
   )
   return (
@@ -464,8 +399,10 @@ function ChildControl({
             <Textarea
               id={`${prefix}-steer-${groupId}-${child.id}`}
               value={
-                uncertain && pending.current?.action.type === "steer"
-                  ? pending.current.action.text
+                uncertain &&
+                saved?.kind === "child" &&
+                saved.body.action.type === "steer"
+                  ? saved.body.action.text
                   : text
               }
               maxLength={8000}
@@ -504,41 +441,19 @@ function ChildTranscript({
   childId: number
   prefix: string
 }) {
-  const [page, setPage] = useState<Transcript | null>(null),
-    [cursor, setCursor] = useState<string | undefined>(),
-    [error, setError] = useState("")
-  useEffect(() => {
-    let active = true
-    setPage(null)
-    setError("")
-    const stop = poll(
-      async () => {
-        if (document.visibilityState !== "visible") return
-        try {
-          const value = Schema.decodeUnknownSync(Transcript)(
-            await agentApi(agentId)(
-              `${prefix}/${groupId}/${childId}${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`
-            )
-          )
-          if (active) {
-            setPage(value)
-            setError("")
-          }
-        } catch (cause) {
-          if (active)
-            setError(
-              cause instanceof Error ? cause.message : "Task could not load."
-            )
-        }
-      },
-      cursor ? 10000 : 2000,
-      true
-    )
-    return () => {
-      active = false
-      stop()
-    }
-  }, [agentId, groupId, childId, cursor, prefix])
+  const [cursor, setCursor] = useState<string | undefined>()
+  const path = `${prefix}/${groupId}/${childId}${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`
+  const query = useActivityQuery({
+    key: JSON.stringify([agentId, path]),
+    interval: cursor ? 10000 : 2000,
+    read: async (signal) =>
+      Schema.decodeUnknownSync(Transcript)(
+        await activityJsonRequest(agentId, path, signal)
+      ),
+    errorMessage: "Task could not load.",
+  })
+  const page = query.data
+  const error = query.error
   return (
     <section
       className="flex min-w-0 flex-col gap-3"
@@ -551,7 +466,16 @@ function ChildTranscript({
       </p>
       {error ? (
         <Alert>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>
+            {error}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => void query.refresh()}
+            >
+              Reconnect
+            </Button>
+          </AlertDescription>
         </Alert>
       ) : !page ? (
         <Skeleton className="h-24 w-full" />

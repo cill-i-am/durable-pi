@@ -1,0 +1,22 @@
+import assert from 'node:assert/strict'
+import {createRequire} from 'node:module'
+import {makeChannelSettings} from '/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/src/features/channel-settings/settings-owner.ts'
+import {nativeOperation} from '/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/src/shared/interop.ts'
+const require=createRequire('/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/package.json')
+const {Cause,Effect,Exit,Scope}=await import(require.resolve('effect'))
+let enter!:()=>void, abort!:()=>void, reject!:(reason:unknown)=>void
+const entered=new Promise<void>(r=>enter=r),aborted=new Promise<void>(r=>abort=r)
+const scope=await Effect.runPromise(Scope.make())
+await Effect.runPromise(makeChannelSettings({channel:'email',archived:false,open:true},{
+ restore:Effect.succeed(null), definitive:()=>false, change:()=>Effect.die('unused'),
+ read:nativeOperation(async(signal)=>{signal.addEventListener('abort',abort);enter();return await new Promise((_resolve,fail)=>reject=fail)},x=>x)
+}).pipe(Scope.provide(scope)))
+await entered
+let settled=false
+const closing=Effect.runPromiseExit(Scope.close(scope,Exit.void)).then(x=>{settled=true;return x})
+await aborted
+assert.equal(settled,false,'scope close must join the native read')
+reject(Cause.fromReasons([...Cause.fail('native checked').reasons,...Cause.die(new Error('native defect')).reasons,...Cause.interrupt(82234).reasons]))
+const exit=await closing
+console.log(JSON.stringify({failure:Exit.isFailure(exit),reasons:Exit.isFailure(exit)?exit.cause.reasons.map((x:any)=>({tag:x._tag,fiberId:x.fiberId})):[]}))
+assert.ok(Exit.isFailure(exit));assert.ok(exit.cause.reasons.some((r:any)=>r._tag==='Interrupt'&&r.fiberId===82234),'native compound interruption reason must remain alongside defect')

@@ -1,0 +1,25 @@
+{
+  "sourceFreeze": "/private/tmp/f12-skills-ui/review-source-freeze.json",
+  "sourceHashes": {
+    "src/features/skills/hosted-skill-import.tsx": "6f857d9b09b01daad54450ef986dc73d33948bde73413aa11d9f0c0e84faba7e",
+    "src/features/skills/hosted-skill-owner.ts": "c368482cea4fc5616e2d4ff8bdbac8c5f191de7d6d17e7ed50c4de103d2e5e21",
+    "src/features/skills/hosted-skill.machine.ts": "abd9e0e940b08b2714eb38220bc745fa82a83a2eb9151f0b8a71d1daec8ef870",
+    "src/features/skills/skill-view.machine.ts": "511e4f6ae4963b865f0576e2c30669afa70416812535c717482009abe4e170d8",
+    "src/features/skills/skills-owner.ts": "03f2923eba463156bcddf4f316c590e48adfb4df02f37493b002a974f88986c3",
+    "src/features/skills/skills-panel.tsx": "7ab9b37a593887a12e6037786e8e83fa99b019ae7686fc3c62024bc61aea2529",
+    "src/features/skills/skills.machine.ts": "c004c630d08d2b4a4d816055bd6865467a4393798c8d0e4b763de5680f2b2b1e",
+    "src/features/skills/use-hosted-skill.ts": "49c6457a9b90e7b7805f8c72e4f4195d14faf45991bd11fbf8398e3ae48f08b7",
+    "src/features/skills/use-skill-view.ts": "3c58761c0de3724b5bbe1994325d7704745cbcf206369c3fca3c2c2a9e6bf731",
+    "src/features/skills/use-skills.ts": "149bc12c2e9eb0f7257847ce68cb238d903cc462493f928dabc0da5486e4e814",
+    "tests/skills-ui-lifecycle.test.ts": "32195cc538b7ac395930d0a6c00e5d298a80468145f8c6e7ca726c7257456d6c",
+    "tests/browser/skills-lifecycle.mjs": "9117400da3aa08f04d0252d01e9d1a12a1d3e0968c180bf22c496e51be46ce81"
+  },
+  "files": {
+    "/private/tmp/f12-independent.test.ts": "526c34ef8001fba82621b729051c1a96fd836b937377a0a8088e14cb0791abb2",
+    "/private/tmp/f12-read-bound.test.ts": "7d93053c51489a7fdce2c01495592de17a49b3a4273aabd52526843932a0ab74",
+    "/private/tmp/f12-independent-final.log": "a5ddd8f9a45296127be237832965e44806616b84cae26ae4a8dc80d68a8fbd14",
+    "/private/tmp/f12-read-bound-after.log": "379f47f344a877246844ee430fe3fd4693b8d039287ec00152a92309e49b48cf",
+    "/private/tmp/f12-direct-compound-independent-after.log": "2c29d89ab08af9d94366b29d563a56b508e07def4de393977bf120cb3d0d0b33",
+    "/private/tmp/f12-skills-independent-review.md": "73eff056c17c7a5fb4fe192fc25dbfe04218447416ad1e9f5d58e48030c2db9a"
+  }
+}

@@ -1,0 +1,86 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi
+
+stdout | tests/agent-request-cleanup.test.ts > editor joins and retains an interrupted native cleanup failure without a defect
+[21:00:37.302] ERROR (#1): Error [AssertionError]: expected false to be true // Object.is equality
+    at /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/agent-request-cleanup.test.ts:119:38 {
+  actual: false,
+  expected: true,
+  showDiff: true,
+  operator: 'strictEqual',
+  [cause]: undefined
+}
+
+stdout | tests/agent-request-cleanup.test.ts > catalog joins and retains an interrupted native cleanup failure without a defect
+[21:00:37.308] ERROR (#18): Error [AssertionError]: expected false to be true // Object.is equality
+    at /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/agent-request-cleanup.test.ts:119:38 {
+  actual: false,
+  expected: true,
+  showDiff: true,
+  operator: 'strictEqual',
+  [cause]: undefined
+}
+
+stdout | tests/agent-request-cleanup.test.ts > archive joins and retains an interrupted native cleanup failure without a defect
+[21:00:37.311] ERROR (#31): Error [AssertionError]: expected false to be true // Object.is equality
+    at /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/agent-request-cleanup.test.ts:119:38 {
+  actual: false,
+  expected: true,
+  showDiff: true,
+  operator: 'strictEqual',
+  [cause]: undefined
+}
+
+stdout | tests/agent-request-cleanup.test.ts > statuses joins and retains an interrupted native cleanup failure without a defect
+[21:00:37.314] ERROR (#50): Error [AssertionError]: expected false to be true // Object.is equality
+    at /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/agent-request-cleanup.test.ts:119:38 {
+  actual: false,
+  expected: true,
+  showDiff: true,
+  operator: 'strictEqual',
+  [cause]: undefined
+}
+
+ ❯ tests/agent-request-cleanup.test.ts (4 tests | 4 failed) 32ms
+   × editor joins and retains an interrupted native cleanup failure without a defect 22ms
+   × catalog joins and retains an interrupted native cleanup failure without a defect 3ms
+   × archive joins and retains an interrupted native cleanup failure without a defect 3ms
+   × statuses joins and retains an interrupted native cleanup failure without a defect 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/agent-request-cleanup.test.ts > editor joins and retains an interrupted native cleanup failure without a defect
+ FAIL  tests/agent-request-cleanup.test.ts > catalog joins and retains an interrupted native cleanup failure without a defect
+ FAIL  tests/agent-request-cleanup.test.ts > archive joins and retains an interrupted native cleanup failure without a defect
+ FAIL  tests/agent-request-cleanup.test.ts > statuses joins and retains an interrupted native cleanup failure without a defect
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/agent-request-cleanup.test.ts:119:38
+    117|         expect(callbacks).toBe(0)
+    118|         expect(listeners).toBe(0)
+    119|         expect(Exit.isFailure(exit)).toBe(true)
+       |                                      ^
+    120|         if (Exit.isFailure(exit)) {
+    121|           expect(
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/core.ts:585:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:589:27
+ ❯ node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1159:17
+ ❯ Array.<anonymous> node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:804:44
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed (4)
+   Start at  21:00:36
+   Duration  375ms (import 72%, tests 13%, transform 11%, setup 3%, worker 1%)
+

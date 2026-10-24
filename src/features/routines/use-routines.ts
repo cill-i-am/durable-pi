@@ -1,188 +1,147 @@
-import { Schema } from "effect"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { send, type EffectActor } from "@xstate/effect"
+import { Cause, Effect, Exit, Fiber } from "effect"
+import { useEffect, useLayoutEffect, useRef, useState } from "react"
+import type { EventFromLogic, SnapshotFrom } from "xstate"
 
-import { agentApi } from "@/http/client"
-import { poll } from "@/http/poll"
+import { makeRoutinesOwner, routinesRequests } from "./routines-owner"
 import {
-  RoutineList,
-  RoutineChange,
-  type SaveRoutine,
-  type SetRoutineStatus,
-  type RunRoutineNow,
-} from "@/routines/contracts"
+  type RoutineCommand,
+  type routinesUiMachine,
+} from "./routines-ui.machine"
 
-type Change =
-  | { path: "save"; body: SaveRoutine }
-  | { path: "status"; body: SetRoutineStatus }
-  | { path: "run"; body: RunRoutineNow }
+type Machine = ReturnType<typeof routinesUiMachine>
 export function useRoutines(
   agentId: string,
   onApplied: () => void,
-  onPendingChange: (pending: boolean) => void
+  onPendingChange: (pending: boolean) => void,
+  view = "list"
 ) {
-  const [data, setData] = useState<RoutineList>({ routines: [], runs: [] })
-  const [loading, setLoading] = useState(true),
-    [error, setError] = useState("")
-  const [busy, setBusy] = useState(false),
-    [attempt, setAttempt] = useState<Change | null>(null)
-  const sequence = useRef(0),
-    lock = useRef(false)
-  const refresh = useCallback(
-    async (force = false) => {
-      if (lock.current && !force) return false
-      const generation = ++sequence.current
-      try {
-        const value = Schema.decodeUnknownSync(RoutineList)(
-          await agentApi(agentId)("routines")
-        )
-        if (generation === sequence.current) {
-          setData(value)
-          setLoading(false)
-          return true
-        }
-      } catch (cause) {
-        if (generation === sequence.current) {
-          setError(
-            cause instanceof Error ? cause.message : "Could not load routines."
-          )
-          setLoading(false)
-        }
-      }
-      return false
-    },
-    [agentId]
-  )
+  const callback = useRef(onApplied),
+    currentView = useRef(view)
+  useLayoutEffect(() => {
+    callback.current = onApplied
+    currentView.current = view
+  }, [onApplied, view])
+  const [owner, setOwner] = useState<{
+    agentId: string
+    actor: EffectActor<Machine>
+  } | null>(null)
+  const [state, setState] = useState<{
+    agentId: string
+    snapshot: SnapshotFrom<Machine>
+  } | null>(null)
   useEffect(() => {
-    const stopPolling = poll(
-      async () => {
-        if (document.visibilityState === "visible") await refresh()
-      },
-      4000,
-      true
+    let mounted = true
+    const fiber = Effect.runFork(
+      Effect.scoped(
+        Effect.gen(function* () {
+          const actor = yield* makeRoutinesOwner(
+            view,
+            routinesRequests(agentId),
+            document.visibilityState === "visible"
+          )
+          yield* Effect.acquireRelease(
+            Effect.sync(() =>
+              actor.subscribe((snapshot) => {
+                if (mounted) setState({ agentId, snapshot })
+              })
+            ),
+            (subscription) => Effect.sync(() => subscription.unsubscribe())
+          )
+          yield* Effect.acquireRelease(
+            Effect.sync(() =>
+              actor.on("applied", (event) => {
+                if (mounted && currentView.current === event.view)
+                  callback.current()
+              })
+            ),
+            (subscription) => Effect.sync(() => subscription.unsubscribe())
+          )
+          const visible = () =>
+            Effect.runFork(
+              send(actor, {
+                type: "VISIBLE",
+                visible: document.visibilityState === "visible",
+              })
+            )
+          yield* Effect.acquireRelease(
+            Effect.sync(() => {
+              document.addEventListener("visibilitychange", visible)
+              visible()
+            }),
+            () =>
+              Effect.sync(() =>
+                document.removeEventListener("visibilitychange", visible)
+              )
+          )
+          if (mounted) {
+            setOwner({ agentId, actor })
+            setState({ agentId, snapshot: actor.getSnapshot() })
+          }
+          return yield* Effect.never
+        })
+      )
     )
     return () => {
-      stopPolling()
-      // oxlint-disable-next-line react/exhaustive-deps -- Advance the live request generation so all pending responses become stale.
-      sequence.current++
-    }
-  }, [refresh])
-  async function send(change: Change) {
-    if (lock.current) return
-    lock.current = true
-    sequence.current++
-    onPendingChange(true)
-    setBusy(true)
-    setAttempt(change)
-    setError("")
-    let confirmed = false
-    try {
-      const result = Schema.decodeUnknownSync(RoutineChange)(
-        await agentApi(agentId)(`routines/${change.path}`, change.body)
-      )
-      sequence.current++
-      setData((current) => ({
-        routines: current.routines.some((r) => r.id === result.routine.id)
-          ? current.routines.map((r) =>
-              r.id === result.routine.id &&
-              r.revision <= result.routine.revision
-                ? result.routine
-                : r
-            )
-          : [result.routine, ...current.routines],
-        runs:
-          result.run && !current.runs.some((r) => r.id === result.run!.id)
-            ? [result.run, ...current.runs].slice(0, 200)
-            : current.runs,
-      }))
-      confirmed = true
-      setAttempt(null)
-      onApplied()
-      await refresh(true)
-    } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "The change was not confirmed. Retry or resolve it before another change."
-      )
-    } finally {
-      lock.current = false
-      setBusy(false)
-      onPendingChange(!confirmed)
-    }
-  }
-  async function resolve() {
-    if (!attempt || lock.current) return
-    lock.current = true
-    sequence.current++
-    onPendingChange(true)
-    setBusy(true)
-    setError("")
-    let confirmed = false
-    try {
-      const result = await agentApi(agentId)<{ applied: boolean }>(
-        "routines/cancel",
-        { operationId: attempt.body.operationId }
-      )
-      if (!(await refresh(true)))
-        throw new Error(
-          "The request was resolved, but current routines could not load. Retry resolving before another change."
+      mounted = false
+      Effect.runFork(
+        Fiber.interrupt(fiber).pipe(
+          Effect.andThen(Fiber.await(fiber)),
+          Effect.flatMap((exit) =>
+            Exit.isFailure(exit) && !Cause.hasInterruptsOnly(exit.cause)
+              ? Effect.logError(exit.cause)
+              : Effect.void
+          )
         )
-      confirmed = true
-      setAttempt(null)
-      if (result.applied) onApplied()
-      setError(
-        result.applied
-          ? "The previous change was already saved."
-          : "The unconfirmed change was cancelled. You can edit or try again."
       )
-    } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Could not resolve the change. Retry."
-      )
-    } finally {
-      lock.current = false
-      setBusy(false)
-      onPendingChange(!confirmed)
     }
-  }
-  async function stop(id: string) {
-    if (lock.current || attempt) return
-    lock.current = true
-    sequence.current++
-    onPendingChange(true)
-    setBusy(true)
-    setError("")
-    try {
-      await agentApi(agentId)("routines/stop", { id })
-      await refresh(true)
-    } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Stop was not confirmed. Retry stopping the same run."
-      )
-    } finally {
-      lock.current = false
-      setBusy(false)
-      onPendingChange(false)
-    }
-  }
+    // A changed agent closes its own scope. View changes are machine events.
+    // oxlint-disable-next-line react/exhaustive-deps
+  }, [agentId])
+  const actor = owner?.agentId === agentId ? owner.actor : null
+  const snapshot = state?.agentId === agentId ? state.snapshot : null
+  useLayoutEffect(() => {
+    if (actor) Effect.runFork(send(actor, { type: "VIEW", view }))
+  }, [actor, view])
+  const busy =
+    !!snapshot &&
+    (snapshot.matches("submitting") ||
+      snapshot.matches("resolving") ||
+      snapshot.matches("stopping"))
+  const attempt = snapshot?.context.attempt ?? null,
+    stopId = snapshot?.context.stopId ?? null
+  const pending = routinePending(busy, attempt, stopId)
+  useEffect(() => {
+    onPendingChange(pending)
+    return () => onPendingChange(false)
+  }, [pending, onPendingChange])
+  const dispatch = (event: EventFromLogic<Machine>) =>
+    actor
+      ? Effect.runPromise(send(actor, event)).then(() => true)
+      : Promise.resolve(false)
   return {
-    data,
-    loading,
-    error,
-    busy,
+    data: snapshot?.context.data ?? { routines: [], runs: [] },
+    loading:
+      !snapshot ||
+      (snapshot.context.data === null && snapshot.matches("loading")),
+    error: snapshot?.context.error ?? "",
+    busy: busy || !actor,
     attempt,
-    refresh,
-    send,
-    resolve,
-    stop,
-    retryLoad: () => {
-      if (lock.current || attempt) return Promise.resolve(false)
-      setError("")
-      return refresh()
-    },
+    stopId,
+    refresh: () => dispatch({ type: "REFRESH" }),
+    retryLoad: () => dispatch({ type: "REFRESH" }),
+    send: (change: RoutineCommand) => dispatch({ type: "SEND", change, view }),
+    resolve: () => dispatch({ type: "RESOLVE" }),
+    retry: () => dispatch({ type: "RETRY" }),
+    retryStop: () => dispatch({ type: "RETRY_STOP" }),
+    stop: (id: string) => dispatch({ type: "STOP", id }),
   }
+}
+
+function routinePending(
+  busy: boolean,
+  attempt: RoutineCommand | null,
+  stopId: string | null
+) {
+  return busy || !!attempt || !!stopId
 }

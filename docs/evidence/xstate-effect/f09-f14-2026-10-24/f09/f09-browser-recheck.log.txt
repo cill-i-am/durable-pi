@@ -1,0 +1,94 @@
+[WebServer] (node:43785) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] [plugin builtin:vite-reporter] 
+[WebServer] (!) Some chunks are larger than 500 kB after minification. Consider:
+[WebServer] - Using dynamic import() to code-split the application
+[WebServer] - Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+[WebServer] - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[WebServer] [INEFFECTIVE_DYNAMIC_IMPORT] src/features/files/files-panel.tsx is dynamically imported by src/app/workspace.tsx but also statically imported by src/features/files/index.ts, dynamic import will not move module into another chunk.
+[WebServer] 
+
+Running 32 tests using 1 worker
+
+(node:44061) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [desktop] › tests/browser/family-ownership.spec.ts:20:1 › an older family read cannot restore owner controls after a newer access denial (2.6s)
+  ✓   2 [desktop] › tests/browser/family-ownership.spec.ts:104:1 › invitation identity survives the actual auth SDK challenge redirect (1.5s)
+  ✓   3 [desktop] › tests/browser/family-ownership.spec.ts:148:1 › a late invitation acceptance cannot clear a newer invitation URL (1.0s)
+  ✓   4 [desktop] › tests/browser/family-ownership.spec.ts:201:1 › model exchange completion is fenced after family role revocation (4.1s)
+  ✓   5 [desktop] › tests/browser/family.spec.ts:52:1 › admin can invite and remove with safe focus and retained private data copy (4.6s)
+  ✓   6 [desktop] › tests/browser/family.spec.ts:111:1 › member family screen is read only, and a shared model outage preserves an editable draft (4.0s)
+  ✓   7 [desktop] › tests/browser/family.spec.ts:165:1 › invitation creates an account, verifies email, then opens a private welcome (1.2s)
+  ✓   8 [desktop] › tests/browser/family.spec.ts:243:1 › expired verification can be resent without losing a valid family invitation (953ms)
+  ✓   9 [desktop] › tests/browser/family.spec.ts:304:1 › admin reconnects ChatGPT in Settings with a private return-address field and recovery (6.4s)
+  ✓  10 [desktop] › tests/browser/family.spec.ts:472:1 › model access recovers automatically after a transient catalog polling failure (4.1s)
+  ✓  11 [desktop] › tests/browser/invitation-recovery.spec.ts:10:1 › an invitation preview recovers from one temporary failure without reloading (699ms)
+  ✓  12 [desktop] › tests/browser/invitation-recovery.spec.ts:38:1 › an unavailable preview can be retried in place without replaying email verification (847ms)
+  ✓  13 [desktop] › tests/browser/invitation-recovery.spec.ts:74:1 › a cancelled invitation stays unavailable without retrying it (371ms)
+  ✓  14 [desktop] › tests/browser/invitation-recovery.spec.ts:101:1 › opening an email link in an existing join tab clears the previous error while it loads (384ms)
+  ✓  15 [desktop] › tests/browser/invitation-recovery.spec.ts:134:1 › failed animation downloads preserve the composer and its draft (901ms)
+  ✓  16 [desktop] › tests/browser/invitation-recovery.spec.ts:175:1 › a workspace load error retries the same page without a document reload (1.2s)
+(node:44905) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  17 [mobile] › tests/browser/family-ownership.spec.ts:20:1 › an older family read cannot restore owner controls after a newer access denial (2.6s)
+  ✓  18 [mobile] › tests/browser/family-ownership.spec.ts:104:1 › invitation identity survives the actual auth SDK challenge redirect (1.4s)
+  ✓  19 [mobile] › tests/browser/family-ownership.spec.ts:148:1 › a late invitation acceptance cannot clear a newer invitation URL (1.3s)
+  ✓  20 [mobile] › tests/browser/family-ownership.spec.ts:201:1 › model exchange completion is fenced after family role revocation (3.8s)
+  ✓  21 [mobile] › tests/browser/family.spec.ts:52:1 › admin can invite and remove with safe focus and retained private data copy (6.5s)
+  ✓  22 [mobile] › tests/browser/family.spec.ts:111:1 › member family screen is read only, and a shared model outage preserves an editable draft (3.9s)
+  ✓  23 [mobile] › tests/browser/family.spec.ts:165:1 › invitation creates an account, verifies email, then opens a private welcome (1.0s)
+  ✓  24 [mobile] › tests/browser/family.spec.ts:243:1 › expired verification can be resent without losing a valid family invitation (917ms)
+  ✘  25 [mobile] › tests/browser/family.spec.ts:304:1 › admin reconnects ChatGPT in Settings with a private return-address field and recovery (9.1s)
+(node:45962) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  26 [mobile] › tests/browser/family.spec.ts:472:1 › model access recovers automatically after a transient catalog polling failure (3.9s)
+  ✓  27 [mobile] › tests/browser/invitation-recovery.spec.ts:10:1 › an invitation preview recovers from one temporary failure without reloading (823ms)
+  ✓  28 [mobile] › tests/browser/invitation-recovery.spec.ts:38:1 › an unavailable preview can be retried in place without replaying email verification (957ms)
+  ✓  29 [mobile] › tests/browser/invitation-recovery.spec.ts:74:1 › a cancelled invitation stays unavailable without retrying it (380ms)
+  ✓  30 [mobile] › tests/browser/invitation-recovery.spec.ts:101:1 › opening an email link in an existing join tab clears the previous error while it loads (425ms)
+  ✓  31 [mobile] › tests/browser/invitation-recovery.spec.ts:134:1 › failed animation downloads preserve the composer and its draft (899ms)
+  ✓  32 [mobile] › tests/browser/invitation-recovery.spec.ts:175:1 › a workspace load error retries the same page without a document reload (1.3s)
+
+
+  1) [mobile] › tests/browser/family.spec.ts:304:1 › admin reconnects ChatGPT in Settings with a private return-address field and recovery 
+
+    Error: expect(locator).toBeFocused() failed
+
+    Locator:  getByLabel('Return address', { exact: true })
+    Expected: focused
+    Received: inactive
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toBeFocused" getByLabel('Return address', { exact: true }) with timeout 5000ms
+      - waiting for getByLabel('Return address', { exact: true })
+        14 × locator resolved to <input value="" type="url" required="" maxlength="8192" data-slot="input" autocomplete="off" spellcheck="false" autocapitalize="none" id="chatgpt-return-address" aria-describedby="chatgpt-return-help" placeholder="http://127.0.0.1:…/auth/callback?…" class="w-full rounded-[11px] border border-input bg-control px-3.75 py-3.5 shadow-(--shadow-field) transition-colors outline-none file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:te…/>
+           - unexpected value "inactive"
+
+
+      395 |   await popup.close()
+      396 |   const field = page.getByLabel("Return address", { exact: true })
+    > 397 |   await expect(field).toBeFocused()
+          |                       ^
+      398 |   await expect(
+      399 |     page.getByText("the last page may say it can’t connect", { exact: false })
+      400 |   ).toBeVisible()
+        at /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/browser/family.spec.ts:397:23
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../../../../private/tmp/f09-browser-recheck-results/family-admin-reconnects-Ch-c7e12--address-field-and-recovery-mobile/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../../../../private/tmp/f09-browser-recheck-results/family-admin-reconnects-Ch-c7e12--address-field-and-recovery-mobile/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../../../../private/tmp/f09-browser-recheck-results/family-admin-reconnects-Ch-c7e12--address-field-and-recovery-mobile/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../../../../private/tmp/f09-browser-recheck-results/family-admin-reconnects-Ch-c7e12--address-field-and-recovery-mobile/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [mobile] › tests/browser/family.spec.ts:304:1 › admin reconnects ChatGPT in Settings with a private return-address field and recovery 
+  31 passed (1.5m)

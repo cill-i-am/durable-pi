@@ -1,0 +1,66 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi
+
+stdout | tests/activity-controls-ui.test.ts > explicit cancellation after uncertain mailbox recovery sends the new exact task identity
+[20:57:05.263] ERROR (#1): Error [AssertionError]: expected [ { id: 'old', …(1) }, …(1) ] to deeply equal [ { id: 'old', …(1) }, …(1) ]
+    at /Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/activity-controls-ui.test.ts:574:18 {
+  actual: [
+    { id: 'old', action: 'retry_mailbox' },
+    { id: 'old', action: 'retry_mailbox' }
+  ],
+  expected: [
+    { id: 'old', action: 'retry_mailbox' },
+    { id: 'cancel-me', action: 'cancel' }
+  ],
+  showDiff: true,
+  operator: 'deepStrictEqual',
+  [cause]: undefined
+}
+
+ ❯ tests/activity-controls-ui.test.ts (13 tests | 1 failed | 12 skipped) 45ms
+   × explicit cancellation after uncertain mailbox recovery sends the new exact task identity 44ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/activity-controls-ui.test.ts > explicit cancellation after uncertain mailbox recovery sends the new exact task identity
+AssertionError: expected [ { id: 'old', …(1) }, …(1) ] to deeply equal [ { id: 'old', …(1) }, …(1) ]
+
+- Expected
++ Received
+
+@@ -2,9 +2,9 @@
+    {
+      "action": "retry_mailbox",
+      "id": "old",
+    },
+    {
+-     "action": "cancel",
+-     "id": "cancel-me",
++     "action": "retry_mailbox",
++     "id": "old",
+    },
+  ]
+
+ ❯ tests/activity-controls-ui.test.ts:574:18
+    572|     yield* send(actor, { type: "SUBMIT", agentId: "one", id: "cancel-m…
+    573|     yield* waitFor(actor, (s) => s.matches("ready"))
+    574|     expect(seen).toEqual([{ id: "old", action: "retry_mailbox" }, { id…
+       |                  ^
+    575|     expect(actor.getSnapshot().context.view.state?.tasks[0]?.status).t…
+    576|     expect(actor.getSnapshot().context.view.state?.tasks[0]?.cancelReq…
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/core.ts:585:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:589:27
+ ❯ node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1159:17
+ ❯ next node_modules/.pnpm/@xstate+effect@1.0.0-alpha.8_effect@4.0.5_xstate@6.0.0-alpha.68/node_modules/@xstate/effect/dist/xstate-effect.js:525:9
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 12 skipped (13)
+   Start at  20:57:04
+   Duration  427ms (import 61%, transform 16%, tests 16%, setup 5%, worker 2%)
+

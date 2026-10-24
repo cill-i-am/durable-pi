@@ -1,0 +1,18 @@
+{
+  "extends": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tsconfig.json",
+  "include": [
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/app/workspace-navigation.tsx",
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/app/workspace-link-error.tsx",
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/app/workspace-command.machine.ts",
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/app/use-workspace-command.ts",
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/app/workspace-link-retry.machine.ts",
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/app/use-workspace-link-retry.ts",
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/workspace-control-lifetimes.test.ts"
+  ],
+  "compilerOptions": {
+    "typeRoots": [
+      "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/@types",
+      "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules"
+    ]
+  }
+}

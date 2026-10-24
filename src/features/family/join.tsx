@@ -1,6 +1,7 @@
-import { Schema } from "effect"
+import { Effect, Fiber, Redacted, Schema } from "effect"
 import { Check, LockKeyhole } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
+import type { SnapshotFrom } from "xstate"
 
 import { authClient } from "@/auth/client"
 import { AgentMark } from "@/components/agent-mark"
@@ -18,7 +19,15 @@ import { AuthFrame } from "@/features/auth/auth-frame"
 import { PasskeySignIn } from "@/features/auth/passkey-sign-in"
 import { api, ApiError } from "@/http/client"
 
-type Invitation = InvitationPreview & { id: string }
+import { makeFamilyJoin } from "./family-join-owner"
+import {
+  familyJoinMachine,
+  type JoinCommand,
+  type JoinInvitation,
+} from "./family-join.machine"
+import { invitationRecord } from "./invitation-record"
+
+type Invitation = JoinInvitation
 type Session = NonNullable<ReturnType<typeof authClient.useSession>["data"]>
 type Step =
   | "loading"
@@ -32,78 +41,6 @@ type Step =
 
 class InvitationUnavailable extends Error {}
 
-async function invitationPreview(id: string, signal: AbortSignal) {
-  for (let attempt = 0; ; attempt++) {
-    signal.throwIfAborted()
-    try {
-      return await api(
-        "/api/family/invitation",
-        { invitation: id },
-        AbortSignal.any([signal, AbortSignal.timeout(10_000)])
-      )
-    } catch (cause) {
-      const temporary =
-        cause instanceof TypeError ||
-        (cause instanceof DOMException && cause.name === "TimeoutError") ||
-        (cause instanceof ApiError && cause.status >= 500)
-      if (signal.aborted || attempt > 0 || !temporary) throw cause
-      // Only this read-only preview is retried. Verification and joining are never replayed.
-      await new Promise((resolve) => setTimeout(resolve, 250))
-    }
-  }
-}
-
-function unavailableInvitation(cause: unknown) {
-  return (
-    cause instanceof InvitationUnavailable ||
-    (cause instanceof ApiError && [400, 404, 410].includes(cause.status))
-  )
-}
-
-async function openInvitation(
-  refetch: () => Promise<unknown>,
-  signal: AbortSignal
-) {
-  const hash = new URLSearchParams(window.location.hash.slice(1))
-  const token = hash.get("token")
-  let verificationFailed = false
-  let id = hash.get("invitation")
-  if (token) {
-    hash.delete("token")
-    window.history.replaceState(null, "", `/join${hash.size ? `#${hash}` : ""}`)
-    try {
-      await api("/api/family/verify", { token }, signal)
-    } catch {
-      verificationFailed = true
-    }
-    await refetch()
-  }
-  if (!id) {
-    const result = await authClient.organization.listUserInvitations()
-    if (result.error) {
-      if ([401, 403].includes(result.error.status))
-        throw new InvitationUnavailable()
-      throw new Error("Could not check invitations.")
-    }
-    id =
-      result.data?.find(
-        (item) =>
-          item.organizationId === "family" &&
-          item.status === "pending" &&
-          new Date(item.expiresAt).getTime() > Date.now()
-      )?.id ?? null
-  }
-  if (!id) throw new InvitationUnavailable()
-  const preview = Schema.decodeUnknownSync(InvitationPreview)(
-    await invitationPreview(id, signal)
-  )
-  return {
-    invitation: { ...preview, id },
-    verified: !!token && !verificationFailed,
-    verificationFailed,
-    needsSignin: !!token,
-  }
-}
 function joinStep(
   loading: boolean,
   welcome: boolean,
@@ -122,140 +59,181 @@ function joinStep(
 }
 function useJoinFlow() {
   const { data: session, isPending, refetch } = authClient.useSession()
-  const [invitation, setInvitation] = useState<Invitation | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [loadFailed, setLoadFailed] = useState(false)
-  const [attempt, setAttempt] = useState(0)
-  const [error, setError] = useState("")
-  const [pending, setPending] = useState(false)
-  const [welcome, setWelcome] = useState(false)
-  const [signin, setSignin] = useState(false)
   const [name, setName] = useState("")
   const [password, setPassword] = useState("")
-  const [notice, setNotice] = useState("")
+  const latest = useRef({ session, refetch })
+  latest.current = { session, refetch }
+  const owner = useRef<Effect.Success<
+    ReturnType<typeof makeFamilyJoin>
+  > | null>(null)
+  const [snapshot, setSnapshot] = useState<SnapshotFrom<
+    ReturnType<typeof familyJoinMachine>
+  > | null>(null)
   useEffect(() => {
-    let disposed = false
-    let sequence = 0
-    let controller: AbortController | undefined
-    function load() {
-      const current = ++sequence
-      controller?.abort()
-      controller = new AbortController()
-      setLoading(true)
-      setInvitation(null)
-      setLoadFailed(false)
-      setError("")
-      setNotice("")
-      setPassword("")
-      setWelcome(false)
-      if (new URLSearchParams(window.location.hash.slice(1)).has("token"))
-        setSignin(true)
-      void openInvitation(refetch, controller.signal)
-        .then((result) => {
-          if (disposed || current !== sequence) return
-          setInvitation(result.invitation)
-          setError(
-            result.verificationFailed
-              ? "This verification link could not be confirmed. Resend the verification email below, or sign in to request a new link."
-              : ""
-          )
-          if (result.needsSignin) setSignin(true)
-          if (result.verified)
-            setNotice("Email verified. Finish joining your family below.")
+    let mounted = true
+    // Accessing sessionStorage itself can fail in a privacy-restricted tab.
+    const storage = {
+      getItem: (key: string) => window.sessionStorage.getItem(key),
+      setItem: (key: string, value: string) =>
+        window.sessionStorage.setItem(key, value),
+      removeItem: (key: string) => window.sessionStorage.removeItem(key),
+    }
+    const record = invitationRecord(storage)
+    const fiber = Effect.runFork(
+      Effect.gen(function* () {
+        const value = yield* makeFamilyJoin({
+          verify: async (token, signal) => {
+            await api("/api/family/verify", { token }, signal)
+          },
+          locate: async (signal) => {
+            const result = await authClient.organization.listUserInvitations()
+            signal.throwIfAborted()
+            if (result.error) {
+              if ([401, 403].includes(result.error.status))
+                throw new InvitationUnavailable()
+              throw new Error("Could not check invitations.")
+            }
+            const id = result.data?.find(
+              (item) =>
+                item.organizationId === "family" &&
+                item.status === "pending" &&
+                new Date(item.expiresAt).getTime() > Date.now()
+            )?.id
+            if (!id) throw new InvitationUnavailable()
+            record.remember(id)
+            return id
+          },
+          preview: async (id, signal) => ({
+            ...Schema.decodeUnknownSync(InvitationPreview)(
+              await api(
+                "/api/family/invitation",
+                { invitation: id },
+                AbortSignal.any([signal, AbortSignal.timeout(10_000)])
+              )
+            ),
+            id,
+          }),
+          session: () => {
+            const data = latest.current.session
+            return data
+              ? { email: data.user.email, verified: data.user.emailVerified }
+              : null
+          },
+          refresh: () => latest.current.refetch(),
+          change: async (invitation, command) => {
+            const result =
+              command.kind === "signin"
+                ? await authClient.signIn.email({
+                    email: invitation.email,
+                    password: Redacted.value(command.password),
+                  })
+                : command.kind === "signup"
+                  ? await authClient.signUp.email(
+                      {
+                        email: invitation.email,
+                        password: Redacted.value(command.password),
+                        name: command.name,
+                      },
+                      { headers: { "x-family-invitation": invitation.id } }
+                    )
+                  : command.kind === "accept"
+                    ? await authClient.organization.acceptInvitation({
+                        invitationId: invitation.id,
+                      })
+                    : command.kind === "resend"
+                      ? await authClient.sendVerificationEmail(
+                          { email: invitation.email },
+                          { headers: { "x-family-invitation": invitation.id } }
+                        )
+                      : await authClient.signOut()
+            if (result.error)
+              throw new Error(
+                result.error.message || "Could not continue. Please try again."
+              )
+          },
+          joined: (id) => {
+            record.joined(id)
+            window.history.replaceState(null, "", "/join")
+          },
+          classify: (cause) => ({
+            unavailable:
+              cause instanceof InvitationUnavailable ||
+              (cause instanceof ApiError &&
+                [400, 404, 410].includes(cause.status)),
+            temporary:
+              cause instanceof TypeError ||
+              (cause instanceof DOMException &&
+                cause.name === "TimeoutError") ||
+              (cause instanceof ApiError && cause.status >= 500),
+          }),
         })
-        .catch((cause) => {
-          if (!disposed && current === sequence) {
-            const unavailable = unavailableInvitation(cause)
-            setLoadFailed(!unavailable)
-            setError(
-              unavailable
-                ? "This invitation is no longer available. Open the latest invitation email, or ask your family admin to resend it."
-                : "Could not connect to load your invitation. Please try again."
-            )
+        if (!mounted) {
+          value.revoke()
+          return
+        }
+        owner.current = value
+        const subscription = value.actor.subscribe((state) => {
+          if (mounted) setSnapshot(state)
+        })
+        function open() {
+          const hash = new URLSearchParams(window.location.hash.slice(1))
+          const token = hash.get("token")
+          const id = hash.get("invitation") || record.restore()
+          if (id) {
+            hash.set("invitation", id)
+            record.remember(id)
           }
-        })
-        .finally(() => {
-          if (!disposed && current === sequence) setLoading(false)
-        })
-    }
-    load()
-    window.addEventListener("hashchange", load)
+          hash.delete("token")
+          window.history.replaceState(
+            null,
+            "",
+            `/join${hash.size ? `#${hash}` : ""}`
+          )
+          setPassword("")
+          value.open(id, token)
+        }
+        open()
+        window.addEventListener("hashchange", open)
+        yield* Effect.addFinalizer(() =>
+          Effect.sync(() => {
+            window.removeEventListener("hashchange", open)
+            subscription.unsubscribe()
+          })
+        )
+        return yield* Effect.never
+      }).pipe(Effect.scoped)
+    )
     return () => {
-      disposed = true
-      controller?.abort()
-      window.removeEventListener("hashchange", load)
+      mounted = false
+      owner.current?.revoke()
+      owner.current = null
+      Effect.runFork(Fiber.interrupt(fiber))
     }
-    // Re-open a verification link arriving in this tab, without repeating it on session refresh.
-    // oxlint-disable-next-line react/exhaustive-deps
-  }, [attempt])
-  async function perform(work: () => Promise<void>) {
-    if (pending) return
-    setPending(true)
-    setError("")
-    try {
-      await work()
-    } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Could not connect. Please try again."
-      )
-    } finally {
-      setPending(false)
-    }
-  }
-  const join = () =>
-    perform(async () => {
-      if (!invitation) return
-      const result = await authClient.organization.acceptInvitation({
-        invitationId: invitation.id,
-      })
-      if (result.error)
-        throw new Error(result.error.message || "Could not join the family.")
-      await refetch()
-      setWelcome(true)
-      window.history.replaceState(null, "", "/join")
+  }, [])
+  const generation = snapshot?.context.source.generation ?? 0
+  useEffect(() => {
+    owner.current?.actor.send({
+      type: "SESSION",
+      pending: isPending,
+      session: session
+        ? { email: session.user.email, verified: session.user.emailVerified }
+        : null,
     })
+  }, [session, isPending, generation])
+  const { invitation, pending, loading, signin, error, notice } =
+    joinView(snapshot)
+  function dispatchCommand(command: JoinCommand) {
+    owner.current?.actor.send({ type: "COMMAND", command })
+  }
   function submit(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
-    void perform(async () => {
-      if (!invitation) return
-      const result = signin
-        ? await authClient.signIn.email({ email: invitation.email, password })
-        : await authClient.signUp.email(
-            { email: invitation.email, password, name: name.trim() },
-            { headers: { "x-family-invitation": invitation.id } }
-          )
-      if (result.error)
-        throw new Error(
-          result.error.message || "Could not continue. Please try again."
-        )
-      setPassword("")
-      await refetch()
-    })
-  }
-  const resend = () =>
-    perform(async () => {
-      if (!invitation) return
-      const result = await authClient.sendVerificationEmail(
-        { email: invitation.email },
-        { headers: { "x-family-invitation": invitation.id } }
-      )
-      if (result.error)
-        throw new Error(
-          result.error.message || "Could not send. Please try again."
-        )
-      setNotice("Verification email sent.")
-    })
-  const switchAccount = () =>
-    perform(async () => {
-      await authClient.signOut()
-      await refetch()
-    })
-  const toggleSignin = () => {
-    setSignin(!signin)
-    setError("")
+    const secret = Redacted.make(password)
     setPassword("")
+    dispatchCommand(
+      signin
+        ? { kind: "signin", password: secret }
+        : { kind: "signup", password: secret, name: name.trim() }
+    )
   }
   return {
     session,
@@ -268,22 +246,46 @@ function useJoinFlow() {
     notice,
     setName,
     setPassword,
-    setPending,
-    refetch,
+    setPending: (busy: boolean) =>
+      owner.current?.actor.send({ type: "EXTERNAL", generation, busy }),
+    refetch: () => owner.current?.refresh(generation) ?? Promise.resolve(),
     submit,
-    join,
-    resend,
-    switchAccount,
-    toggleSignin,
-    retry: () => setAttempt((value) => value + 1),
+    join: () => dispatchCommand({ kind: "accept" }),
+    resend: () => dispatchCommand({ kind: "resend" }),
+    switchAccount: () => dispatchCommand({ kind: "switch" }),
+    toggleSignin: () => {
+      setPassword("")
+      owner.current?.actor.send({ type: "TOGGLE" })
+    },
+    retry: () => owner.current?.actor.send({ type: "RETRY" }),
     step: joinStep(
       loading || isPending,
-      welcome,
+      !!snapshot?.matches("welcome"),
       invitation,
       session,
-      loadFailed
+      !!snapshot?.matches("failed")
     ),
   }
+}
+function joinView(
+  snapshot: SnapshotFrom<ReturnType<typeof familyJoinMachine>> | null
+) {
+  const invitation = snapshot?.context.invitation ?? null
+  const pending =
+    !!snapshot &&
+    (snapshot.matches({ working: "change" }) ||
+      snapshot.matches({ working: "changedSession" }) ||
+      snapshot.matches({ working: "joined" }) ||
+      snapshot.matches("external"))
+  const loading =
+    !snapshot ||
+    snapshot.matches("empty") ||
+    snapshot.context.queued !== null ||
+    (snapshot.matches("working") && !pending)
+  const signin = snapshot?.context.signin ?? false
+  const error = snapshot?.context.error ?? ""
+  const notice = snapshot?.context.notice ?? ""
+  return { invitation, pending, loading, signin, error, notice }
 }
 function joinTitle(step: Step, familyName: string, signin: boolean) {
   switch (step) {
@@ -456,6 +458,7 @@ function JoinAccount({ flow }: { flow: ReturnType<typeof useJoinFlow> }) {
       </form>
       {signin && (
         <PasskeySignIn
+          key={invitation?.id}
           disabled={pending}
           onBusyChange={flow.setPending}
           onSignedIn={flow.refetch}

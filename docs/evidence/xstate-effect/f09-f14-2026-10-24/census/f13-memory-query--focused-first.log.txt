@@ -1,0 +1,56 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi
+
+stdout | tests/memory-query-ui.test.ts > tree admits one branch read, snapshots its trail and commits navigation only on success
+[21:16:48.163] ERROR (#29): Error [AssertionError]: expected [] to deeply equal [ { start: 1, count: 2, …(1) } ]
+    at /Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/tests/memory-query-ui.test.ts:106:55 {
+  actual: [],
+  expected: [ { start: 1, count: 2, text: 'summary' } ],
+  showDiff: true,
+  operator: 'deepStrictEqual',
+  [cause]: undefined
+}
+
+ ❯ tests/memory-query-ui.test.ts (9 tests | 1 failed) 47ms
+   × tree admits one branch read, snapshots its trail and commits navigation only on success 10ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/memory-query-ui.test.ts > tree admits one branch read, snapshots its trail and commits navigation only on success
+AssertionError: expected [] to deeply equal [ { start: 1, count: 2, …(1) } ]
+
+- Expected
++ Received
+
+- [
+-   {
+-     "count": 2,
+-     "start": 1,
+-     "text": "summary",
+-   },
+- ]
++ []
+
+ ❯ tests/memory-query-ui.test.ts:106:55
+    104|       yield* send(actor, { type: "RETRY" })
+    105|       yield* waitFor(actor, (state) => state.matches("ready"))
+    106|       expect(actor.getSnapshot().context.data?.trail).toEqual([part])
+       |                                                       ^
+    107|       yield* send(actor, { type: "OPEN", trail: [] })
+    108|       yield* waitFor(
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/core.ts:585:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:589:27
+ ❯ node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1159:17
+ ❯ next node_modules/.pnpm/@xstate+effect@1.0.0-alpha.8_effect@4.0.5_xstate@6.0.0-alpha.68/node_modules/@xstate/effect/dist/xstate-effect.js:525:9
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 8 passed (9)
+   Start at  21:16:47
+   Duration  424ms (import 66%, tests 16%, transform 15%, setup 2%, worker 1%)
+

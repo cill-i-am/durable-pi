@@ -1,0 +1,56 @@
+import assert from 'node:assert/strict'
+import {createRequire} from 'node:module'
+import {makeRoutinesOwner} from '/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/routines/routines-owner.ts'
+import {makeWebhookOwner} from '/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/routines/webhook-owner.ts'
+import {nativeOperation} from '/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/shared/interop.ts'
+const req=createRequire('/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/package.json')
+const {Cause,Context,Effect,Exit,Scope}=await import(req.resolve('effect'))
+const {send,waitFor}=await import(req.resolve('@xstate/effect'))
+const id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',operationId='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+const list={routines:[],runs:[]},hook={routineId:id,enabled:false,revision:1,accepted:0}
+const results:any[]=[]
+async function check(name:string,work:()=>Promise<void>){try{await work();results.push({name,pass:true})}catch(e){results.push({name,pass:false,error:String(e)})}}
+async function commandImmutable(webhook:boolean){
+ const scope=await Effect.runPromise(Scope.make()),calls:any[]=[]
+ const change:any=webhook?{routineId:id,operationId,expectedRevision:1,key:'rpwh_'+'a'.repeat(64)}:{path:'status',body:{id,operationId,expectedRevision:1,status:'paused'}}
+ const original=structuredClone(change)
+ const common={read:()=>Effect.succeed(webhook?hook:list),change:(input:any)=>Effect.sync(()=>calls.push(structuredClone(input))).pipe(Effect.andThen(Effect.fail('uncertain'))),resolve:()=>Effect.die('unused'),stop:()=>Effect.die('unused')}
+ const actor=await Effect.runPromise((webhook?makeWebhookOwner(id,common as any):makeRoutinesOwner('editor',common as any)).pipe(Scope.provide(scope)))
+ try{
+  await Effect.runPromise(waitFor(actor as any,(s:any)=>s.matches(webhook?'ready':'waiting')))
+  await Effect.runPromise(send(actor as any,{type:'SEND',change,view:'editor'}))
+  await Effect.runPromise(waitFor(actor as any,(s:any)=>s.matches('uncertain')))
+  const body=webhook?change:change.body
+  body.operationId=id;body.expectedRevision=99
+  if(webhook)body.key='rpwh_'+'b'.repeat(64);else body.status='active'
+  await Effect.runPromise(send(actor as any,{type:'RETRY'}))
+  await Effect.runPromise(waitFor(actor as any,(s:any)=>s.matches('uncertain')&&calls.length===2))
+  console.log(JSON.stringify({case:webhook?'webhook immutable':'routine immutable',calls}))
+  assert.deepEqual(calls,[original,original],'admitted retry payload must not change with caller mutation')
+ }finally{await Effect.runPromise(Scope.close(scope,Exit.void))}
+}
+class NativeRequestId extends Context.Service<NativeRequestId,string>()('F12IndependentCause'){}
+const cause=()=>Cause.fromReasons([Cause.makeFailReason('late checked'),Cause.makeInterruptReason(91234).annotate(Context.make(NativeRequestId,'original native interrupt'))])
+async function cleanup(mode:'native'|'effect',webhook:boolean){
+ const scope=await Effect.runPromise(Scope.make())
+ let entered!:()=>void,abort!:()=>void,release!:(value?:unknown)=>void
+ const started=new Promise<void>(r=>entered=r),aborted=new Promise<void>(r=>abort=r)
+ const read=mode==='native'?nativeOperation(async(signal)=>{signal.addEventListener('abort',abort,{once:true});entered();return await new Promise<never>((_ok,reject)=>release=reject)},x=>x):Effect.uninterruptible(Effect.promise(()=>{entered();return new Promise<void>(r=>release=()=>r())}).pipe(Effect.andThen(Effect.failCause(cause()))))
+ const work={read:()=>read,change:()=>Effect.die('unused'),resolve:()=>Effect.die('unused'),stop:()=>Effect.die('unused')}
+ await Effect.runPromise((webhook?makeWebhookOwner(id,work):makeRoutinesOwner('list',work)).pipe(Scope.provide(scope)))
+ await started
+ let settled=false
+ const closing=Effect.runPromiseExit(Scope.close(scope,Exit.void)).then(x=>{settled=true;return x})
+ if(mode==='native')await aborted;else await new Promise(r=>setTimeout(r,0))
+ assert.equal(settled,false,'scope close must join held work')
+ release(mode==='native'?cause():undefined)
+ const exit=await closing
+ console.log(JSON.stringify({case:`${mode} ${webhook?'webhook':'routine'} cleanup`,failure:Exit.isFailure(exit),reasons:Exit.isFailure(exit)?exit.cause.reasons.map((r:any)=>({tag:r._tag,fiberId:r.fiberId,annotation:r.annotations.get(NativeRequestId.key)})):[]}))
+ assert.ok(Exit.isFailure(exit),'late nonempty compound Cause must survive scope closure')
+ assert.ok(exit.cause.reasons.some((r:any)=>r._tag==='Interrupt'&&r.fiberId===91234&&r.annotations.get(NativeRequestId.key)==='original native interrupt'),'exact annotated native Interrupt must survive')
+}
+await check('routine admitted retry immutable',()=>commandImmutable(false))
+await check('webhook admitted retry immutable',()=>commandImmutable(true))
+for(const mode of ['native','effect'] as const)for(const webhook of [false,true])await check(`${mode} ${webhook?'webhook':'routine'} no-Die cleanup`,()=>cleanup(mode,webhook))
+console.log(JSON.stringify({results}))
+if(results.some(r=>!r.pass))process.exitCode=1

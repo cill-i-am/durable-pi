@@ -1,0 +1,47 @@
+# F13 settings and Memory import handoff
+
+Worktree: `/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi`
+Parent-established branch: `codex/xstate-settings-ui`; base `aacaa677c491badd8d8bfdc8356f0c29bf4f04b9`.
+Source freeze: `/private/tmp/f13-final-manifest.json` (14 owned files and preserved source/test/package hashes). No Git or shared tracking edits performed.
+
+## Outcome and contract
+
+Official `@xstate/effect` machines own email/WhatsApp settings polling, immutable configure/retry admission, duplicate-risk confirmation and exact explicit retry. A versioned sessionStorage envelope is keyed by signed-in user ID, agent ID and channel. The exact request is stored before dispatch; recreation restores it without dispatching. Definitive checked rejection clears only the matching operation identity. Mixed compound Causes stay uncertain; cleanup failure does not erase the original rejection. Stale read completion cannot overwrite an acknowledged save. Scope closure joins native fetch and retains late fatal compound cleanup.
+
+Memory import owns one selected file and captured body per attempt. Duplicate submit/selection during work is rejected by the machine; explicit retry reuses the captured body. Existing server content identity remains the deduplication authority. Native File.text and fetch are joined through the existing nativeOperation capability. Scope closure/unmount fences late read completion so it cannot submit or refresh a replacement view. Existing form layout and wording are preserved, with explicit Retry same import after uncertain failure.
+
+Existing summary/backup recovery machines, owners and UI are untouched. Memory download anchors at `src/features/memory/memory-panel.tsx:444` and `:452` remain native browser-owned downloads; no application async request exists there. `src/memory/archive.ts:34` restoreArchive is backend-only, with no Memory restore UI/HTTP action. These are approved exclusions, not invented lifecycles. Clipboard copying remains a direct native click action. Auth is read only to namespace receipts; backend ledgers, providers, SDKs, schemas and package files are unchanged.
+
+## Before/fix proof
+
+`/private/tmp/f13-settings-import-before.log`: three desktop failures on the unchanged frontend: both channel uncertain retry identities disappear on reload, and synchronous duplicate Memory form submissions make two POSTs. After implementation, the same cases plus confirmation, exact authorized retry, delayed file read and all five existing Memory recovery journeys pass on desktop/mobile.
+
+`tests/browser/email.spec.ts` only needed an async fixture synchronization correction: wait until the synthetic address is assigned before asserting its value. Actor send enqueues work; click completion does not imply its API has already completed.
+
+## Checks
+
+- `/private/tmp/f13-focused-final.log`: 24 tests / 4 files pass (13 new channel/import tests plus 11 unchanged summary/backup recovery tests).
+- `/private/tmp/f13-types-final.log`: full TypeScript check exit 0.
+- `/private/tmp/f13-lint-final.log`: scoped lint exit 0, no warnings.
+- `/private/tmp/f13-format-final.log`: all 14 owned files formatted.
+- `/private/tmp/f13-browser-second.log`: 22 desktop/mobile cases pass before final lint-only error-contract correction and late-Cause accumulation Set correction.
+- `/private/tmp/f13-browser-final.log`: final source rebuild and all 22 desktop/mobile cases pass (2.4m), process exit 0. The manifest was rechecked after completion with no drift.
+
+## Negative controls
+
+`/private/tmp/f13-mutants.config.mts` transforms production modules in memory only. `/private/tmp/f13-negative-controls.log` shows both sentinels and intended failures:
+
+1. Force receipt restoration to return null: exact email request restoration assertion fails.
+2. Allow reentering Memory reading on a duplicate SUBMIT: read count is two instead of one.
+
+`f13-controls-source-before.sha256` and `f13-controls-source-after.sha256` are identical. No production edits were used for mutation testing.
+
+All runs use Node 24 and synthetic browser transports; no real sends/providers. Scoped Playwright runner rebuilds `dist/browser` in this isolated tree and owns port 4399 for its run. No broad/native duplicate gates were run.
+
+## Review focus
+
+Review exact request/confirmation authority, storage failure and cleanup error retention, restored request no automatic dispatch, account/agent namespace separation, stale read completion, late compound Cause scope drain, immutable Memory body and admission under duplicate events, and unmount during native File.text. Parent owns docs/inventory and fresh independent review. Source remains frozen pending specific findings.
+
+## Independent cleanup repair
+
+Fresh review reproduced native Interrupt(82234) being dropped from a late Fail+Die+Interrupt Cause by the channel scope finalizer. The blanket Interrupt filter is removed. Expanded regression also checks the annotated native Die. Reviewer probe `/private/tmp/f13-compound-cleanup-review.mts` is unchanged: red before (`f13-compound-cleanup-before.log`), green after (`f13-compound-cleanup-after.log`), with held native read joined before scope completion. `/private/tmp/f13-focused-review-fix.log`: 24/24 pass. Scoped repair lint/format pass (`f13-{lint,format}-review-fix.log`). The redundant post-repair full tsc was cancelled by parent request for host contention, with no diagnostics; prior final full tsc was clean. Parent owns final integrated static gates. Manifest updated for the two changed files only. Browser22/22 proof predates this diagnostic-only Cause retention repair; no broad duplicate browser run.

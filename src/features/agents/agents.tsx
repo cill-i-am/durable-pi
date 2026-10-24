@@ -1,5 +1,4 @@
 import { Link } from "@tanstack/react-router"
-import { Schema } from "effect"
 import {
   Archive,
   Activity,
@@ -13,15 +12,8 @@ import {
   Settings2,
   Undo2,
 } from "lucide-react"
-import { useCallback, useEffect, useReducer, useRef, useState } from "react"
 
-import {
-  AgentList,
-  AgentProfileResponse,
-  AgentProfile,
-  type AgentId,
-  homeAgentId,
-} from "@/agents/contracts"
+import { AgentProfile, homeAgentId } from "@/agents/contracts"
 import { authClient } from "@/auth/client"
 import { AgentMark, agentTone } from "@/components/agent-mark"
 import { AgentStatusMarker, agentStatusLabel } from "@/components/agent-status"
@@ -67,70 +59,14 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { UserAvatar } from "@/components/user-avatar"
 import type { RuntimeStatus } from "@/conversations/status"
-import { markReady } from "@/features/performance"
-import { api } from "@/http/client"
 import {
   workspaceDestination,
   type WorkspaceSearch,
 } from "@/navigation/workspace"
 
-import { catalogReducer, initialCatalog } from "./catalog-state"
+import { useAgentEditor } from "./use-agent-editor"
 
-export function useAgentCatalog(ownerId: string, selectedId?: string) {
-  const [state, dispatch] = useReducer(catalogReducer, initialCatalog)
-  const [selected, setSelected] = useState<string>(homeAgentId)
-  const requestId = useRef(0)
-  const refresh = useCallback(async (signal?: AbortSignal) => {
-    const request = ++requestId.current
-    dispatch({ type: "start", request })
-    try {
-      const result = Schema.decodeUnknownSync(AgentList)(
-        await api("/api/agent/bots", undefined, signal)
-      )
-      if (!signal?.aborted) {
-        markReady("catalog")
-        dispatch({ type: "loaded", request, agents: result.agents })
-      }
-    } catch (error) {
-      if (!signal?.aborted) dispatch({ type: "failed", request })
-      if (request === requestId.current) throw error
-    }
-  }, [])
-  useEffect(() => {
-    const controller = new AbortController()
-    try {
-      setSelected(localStorage.getItem(`pi:selected:${ownerId}`) ?? homeAgentId)
-    } catch {}
-    void refresh(controller.signal).catch(() => {})
-    return () => controller.abort()
-  }, [ownerId, refresh])
-  useEffect(() => {
-    const agent = state.agents.find(
-      (agent) =>
-        (agent.id === selectedId || agent.slug === selectedId) &&
-        agent.status === "active"
-    )
-    if (!agent) return
-    try {
-      localStorage.setItem(`pi:selected:${ownerId}`, agent.id)
-    } catch {}
-  }, [selectedId, ownerId, state.agents])
-  const select = (id: AgentId) => {
-    setSelected(id)
-    try {
-      localStorage.setItem(`pi:selected:${ownerId}`, id)
-    } catch {}
-  }
-  return {
-    ...state,
-    refresh,
-    select,
-    selected: selectedId
-      ? state.agents.find((a) => a.id === selectedId || a.slug === selectedId)
-      : (state.agents.find((a) => a.id === selected && a.status === "active") ??
-        state.agents.find((a) => a.id === homeAgentId)),
-  }
-}
+export { useAgentCatalog } from "./use-agent-catalog"
 
 export function AgentSidebar({
   disabled = false,
@@ -447,52 +383,33 @@ export function AgentEditor({
   agent?: AgentProfile
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSaved: (agent: AgentProfile) => Promise<void>
+  onSaved: (agent: AgentProfile, signal?: AbortSignal) => Promise<void>
 }) {
-  const [name, setName] = useState(agent?.name ?? "")
-  const [instructions, setInstructions] = useState(agent?.instructions ?? "")
-  const [error, setError] = useState("")
-  const [pending, setPending] = useState(false)
-  const id = useRef(agent?.id ?? crypto.randomUUID())
-  async function save(event: React.SubmitEvent<HTMLFormElement>) {
+  const editor = useAgentEditor(agent, onSaved, () => onOpenChange(false))
+  const { name, instructions } = editor.draft
+  const { error, pending } = editor
+  function save(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (pending) return
-    setPending(true)
-    setError("")
-    try {
-      const result = Schema.decodeUnknownSync(AgentProfileResponse)(
-        await api(`/api/agent/bots/${agent ? "update" : "create"}`, {
-          id: id.current,
-          name: name.trim(),
-          instructions,
-        })
-      )
-      await onSaved(result)
-      onOpenChange(false)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not save this agent.")
-    } finally {
-      setPending(false)
-    }
+    editor.save()
   }
   return (
     <Sheet
       open={open}
       dismissible={!pending}
       onOpenChange={(value) => {
-        if (!pending) onOpenChange(value)
+        if (!value) editor.dismiss()
       }}
     >
       <SheetContent className="agent-editor agent-editor-sheet">
         <SheetHeader>
           <SheetTitle>
-            {agent ? "Agent settings" : "Create an agent"}
+            {editor.existing ? "Agent settings" : "Create an agent"}
           </SheetTitle>
           <SheetDescription>Give it a name and a purpose.</SheetDescription>
         </SheetHeader>
         <form onSubmit={save}>
           <div className="agent-editor-preview">
-            <AgentMark tone={agentTone(id.current)} />
+            <AgentMark tone={agentTone(editor.id)} />
             <span>{name || "A new point of view"}</span>
           </div>
           <FieldGroup>
@@ -500,8 +417,9 @@ export function AgentEditor({
               <FieldLabel htmlFor="agent-name">Name</FieldLabel>
               <Input
                 id="agent-name"
+                disabled={!editor.ready}
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => editor.change("name", e.target.value)}
                 placeholder="Research, Studio, Home…"
                 maxLength={80}
                 required
@@ -513,8 +431,9 @@ export function AgentEditor({
               <FieldLabel htmlFor="agent-instructions">Purpose</FieldLabel>
               <Textarea
                 id="agent-instructions"
+                disabled={!editor.ready}
                 value={instructions}
-                onChange={(e) => setInstructions(e.target.value)}
+                onChange={(e) => editor.change("instructions", e.target.value)}
                 placeholder="What should this agent help with?"
                 rows={4}
                 maxLength={8000}
@@ -533,13 +452,23 @@ export function AgentEditor({
                 type="button"
                 variant="outline"
                 disabled={pending}
-                onClick={() => onOpenChange(false)}
+                onClick={editor.dismiss}
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={pending}>
-                {pending ? "Saving…" : agent ? "Save changes" : "Create agent"}
-              </Button>
+              {editor.refreshFailed ? (
+                <Button type="button" onClick={editor.reconcile}>
+                  Refresh agent list
+                </Button>
+              ) : (
+                <Button type="submit" disabled={pending}>
+                  {pending
+                    ? "Saving…"
+                    : editor.existing
+                      ? "Save changes"
+                      : "Create agent"}
+                </Button>
+              )}
             </div>
           </FieldGroup>
         </form>

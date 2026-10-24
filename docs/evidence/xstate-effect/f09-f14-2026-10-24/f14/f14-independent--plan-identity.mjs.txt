@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict'
+import { createRequire } from 'node:module'
+import { createServer } from 'node:http'
+import { createHash } from 'node:crypto'
+import { readFile } from 'node:fs/promises'
+const root='/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi'
+const require=createRequire(root+'/package.json'),{build}=createRequire(require.resolve('alchemy'))('esbuild'),{chromium}=require('@playwright/test')
+console.log(JSON.stringify({source:'src/features/activity/use-plans.ts',sha256:createHash('sha256').update(await readFile(root+'/src/features/activity/use-plans.ts')).digest('hex')}))
+const entry=`import React from'react';import{createRoot}from'react-dom/client';import{usePlans}from'${root}/src/features/activity/use-plans.ts';function App(){const query=usePlans('agent','00000000-0000-0000-0000-000000000001',0);window.query=query;return <pre>{JSON.stringify({id:query.detail?.plan.id??null,loading:query.loading,error:query.error})}</pre>}createRoot(document.getElementById('root')).render(<App/>);`
+const bundle=await build({stdin:{contents:entry,resolveDir:root,loader:'tsx'},bundle:true,write:false,platform:'browser',format:'iife',tsconfig:root+'/tsconfig.json'})
+const server=createServer((req,res)=>{res.setHeader('content-type',req.url==='/app.js'?'text/javascript':'text/html');res.end(req.url==='/app.js'?bundle.outputFiles[0].text:'<div id="root"></div><script src="/app.js"></script>')});await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const browser=await chromium.launch(),page=await browser.newPage()
+try{
+await page.addInitScript(()=>{const wrong={id:'00000000-0000-0000-0000-000000000002',schemaVersion:1,revision:1,objective:'Wrong plan',constraints:[],criteria:['done'],steps:[{id:'one',title:'One',status:'active',evidence:[],note:''}],complete:false,state:'open',nextAction:'Continue',blocker:'',rootTurns:[],inputIds:[],reviewedTurn:'00000000-0000-0000-0000-000000000003',inputRevision:0,createdAt:'2026-10-23',updatedAt:'2026-10-23'};window.fetch=async raw=>{const path=new URL(String(raw),location.href).pathname;return Response.json(path.endsWith('/access')?{tools:[],approvals:[]}:path.endsWith('/plans')?{plans:[],nextOffset:null}:{plan:wrong,history:[],nextHistory:null})}})
+await page.goto(`http://127.0.0.1:${server.address().port}`);await page.waitForFunction(()=>window.query&&!window.query.loading);const result=await page.evaluate(()=>({id:window.query.detail?.plan.id??null,error:window.query.error}));console.log(JSON.stringify(result));assert.equal(result.id,null,'A response for another plan cannot populate the selected plan')
+}finally{await browser.close();await new Promise(resolve=>server.close(resolve))}

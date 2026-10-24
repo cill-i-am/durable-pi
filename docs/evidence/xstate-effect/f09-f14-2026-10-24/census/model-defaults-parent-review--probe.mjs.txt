@@ -1,0 +1,37 @@
+import assert from 'node:assert/strict'
+import {createRequire} from 'node:module'
+import {createServer} from 'node:http'
+import {readFileSync,writeFileSync} from 'node:fs'
+const root='/Users/cillianbarron/.codex/worktrees/xstate-workspace-settings/durable-pi',dir='/private/tmp/model-defaults-parent-review',old=process.env.MODEL_DEFAULTS_SOURCE==='before'
+const require=createRequire(root+'/package.json'),{build}=createRequire(require.resolve('alchemy'))('esbuild'),{chromium}=require('@playwright/test')
+const contents=`import {createRoot} from 'react-dom/client';import {useState} from 'react';import {useQueryClient} from '@tanstack/react-query';import {ModelDefaults} from './src/features/conversation/model-defaults';import {ModelQueryProvider,modelQuery} from './src/features/conversation/model-query';
+function App(){const[agent,setAgent]=useState('alpha');const client=useQueryClient();window.switchAgent=setAgent;window.pushCatalog=(agent,value)=>client.setQueryData(modelQuery.getQueryKey({query:{agent}}),value);return <main data-agent={agent}><ModelDefaults agentId={agent} selection={{model:'gpt-6.1-sol',thinking:'medium',settingsRevision:0}} onSaved={()=>window.acks.push(agent)} onPendingChange={pending=>window.pendingEvents.push({agent,pending})}/></main>}createRoot(document.getElementById('root')).render(<ModelQueryProvider><App/></ModelQueryProvider>);`
+const result=await build({stdin:{contents,resolveDir:root,loader:'tsx'},plugins:[{name:'synthetic-family-and-frozen-source',setup(b){b.onLoad({filter:/\/features\/family\/context\.tsx$/},()=>({contents:`export const useFamily=()=>({family:{role:'owner',ownerName:'Review'}});`,loader:'tsx'}));if(old)b.onLoad({filter:/\/features\/conversation\/model-defaults\.tsx$/},args=>({contents:readFileSync(dir+'/before-source/model-defaults.tsx','utf8'),loader:'tsx',resolveDir:root+'/src/features/conversation'}))}}],bundle:true,write:false,platform:'browser',format:'iife',tsconfig:root+'/tsconfig.json',define:{__PI_BUILD_REVISION__:JSON.stringify('a'.repeat(40))}})
+const server=createServer((req,res)=>{res.setHeader('content-type',req.url==='/bundle.js'?'text/javascript':'text/html');res.end(req.url==='/bundle.js'?result.outputFiles[0].text:`<div id='root'></div><script src='/bundle.js'></script>`)})
+await new Promise(r=>server.listen(0,'127.0.0.1',r));const browser=await chromium.launch({headless:true}),results=[]
+try{
+for(const scenario of ['duplicate','agent-switch','newer-catalog','refresh-failure']){
+ const page=await browser.newPage();page.setDefaultTimeout(8000);page.on('pageerror',error=>console.log('pageerror',String(error)))
+ await page.addInitScript(()=>{window.acks=[];window.pendingEvents=[];window.posts=[];window.gets=[];window.pendingPosts=[];window.failRefresh=false;window.revisions={};window.makeCatalog=(agent,revision=0,thinking='medium')=>({models:[{id:'gpt-6.1-sol',name:'Sol',thinking:['low','medium','high'],input:['text','image'],tools:true,contextWindow:100000,unavailable:null}],checkedAt:new Date().toISOString(),error:null,usage:'ChatGPT plan usage',selection:{model:'gpt-6.1-sol',thinking,settingsRevision:revision},assignments:{conversation:{model:'gpt-6.1-sol',thinking,job:'conversation',profile:'auto',policyVersion:'jobs-v1',reason:'agent setting'}}});window.fetch=async(input,init)=>{const url=new URL(typeof input==='string'?input:input.url??String(input),location.href),agent=url.searchParams.get('agent');if(url.pathname==='/api/agent/models'){window.gets.push(agent);return window.failRefresh?Response.json({error:'synthetic refresh failed'},{status:503}):Response.json(window.revisions[agent]??window.makeCatalog(agent))}if(url.pathname==='/api/agent/settings'){const body=JSON.parse(init?.body??await input.text());const record={agent,body,aborted:false};window.posts.push(record);init?.signal?.addEventListener('abort',()=>record.aborted=true,{once:true});return new Promise(resolve=>window.pendingPosts.push(()=>{window.revisions[agent]=window.makeCatalog(agent,1,body.thinking);resolve(Response.json({model:body.model,thinking:body.thinking,settingsRevision:1}))}))}throw new Error('unexpected URL '+url)}})
+ await page.goto(`http://127.0.0.1:${server.address().port}`)
+ await page.waitForTimeout(100);console.log('loaded',scenario,await page.evaluate(()=>({text:document.body.innerText,gets:window.gets})));await page.getByRole('combobox',{name:'Reasoning effort',exact:true}).click();await page.getByRole('option',{name:'high',exact:true}).click()
+ await page.getByRole('button',{name:'Save default',exact:true}).waitFor();await page.waitForFunction(()=>[...document.querySelectorAll('button')].some(b=>b.textContent==='Save default'&&!b.disabled))
+ if(scenario==='duplicate')await page.getByRole('button',{name:'Save default',exact:true}).evaluate(b=>{b.click();b.click()})
+ else await page.getByRole('button',{name:'Save default',exact:true}).click()
+ await page.waitForFunction(()=>window.posts.length>0)
+ if(scenario==='agent-switch'){await page.evaluate(()=>window.switchAgent('beta'));await page.waitForFunction(()=>document.querySelector('main').dataset.agent==='beta'&&window.gets.includes('beta'))}
+ if(scenario==='newer-catalog')await page.evaluate(()=>{const v=window.makeCatalog('alpha',9,'low');window.revisions.alpha=v;window.pushCatalog('alpha',v)})
+ if(scenario==='refresh-failure')await page.evaluate(()=>window.failRefresh=true)
+ const before=await page.evaluate(()=>({posts:window.posts.map(x=>({...x})),pending:window.pendingEvents,agent:document.querySelector('main').dataset.agent}))
+ await page.evaluate(()=>window.pendingPosts.splice(0).forEach(resolve=>resolve()))
+ await page.waitForTimeout(150)
+ const observed=await page.evaluate(()=>({posts:window.posts,acks:window.acks,pending:window.pendingEvents.at(-1),agent:document.querySelector('main').dataset.agent,text:document.body.innerText,effort:document.querySelectorAll('[role="combobox"]')[2]?.textContent}))
+ results.push({scenario,before,observed});console.log(JSON.stringify(results.at(-1)));await page.close()
+}
+writeFileSync(dir+(old?'/before-results.json':'/after-results.json'),JSON.stringify(results,null,2))
+assert.equal(results[0].observed.posts.length,1,'one Save activation batch must admit one immutable save')
+assert.deepEqual(results[1].observed.acks,[],'retired agent save must not acknowledge into replacement mounted owner')
+assert.equal(results[1].observed.text.includes('Saved'),false,'retired agent save must not mark replacement agent Saved')
+assert.ok(results[2].observed.effort.startsWith('low'),'newer authoritative catalog must remain visible')
+assert.equal(results[3].observed.acks.length,1,'accepted save stays accepted if subsequent catalog refresh fails')
+}finally{await browser.close();await new Promise(r=>server.close(r))}

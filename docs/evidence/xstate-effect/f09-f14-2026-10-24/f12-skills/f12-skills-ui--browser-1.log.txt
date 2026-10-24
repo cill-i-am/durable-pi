@@ -1,0 +1,20 @@
+PASS desktop: held selection is fenced after changing agents
+PASS desktop: lost save retries the same identity and exact CAS input
+PASS desktop: conflict reload preserves the draft until explicit reapply
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+locator.waitFor: Timeout 8000ms exceeded.
+Call log:
+[2m  - waiting for getByRole('button', { name: 'Preview', exact: true }) to be visible[22m
+
+    at file import stays local and closing hosted read discards its late preview (/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/browser/skills-lifecycle.mjs:99:70)
+    at async file:///Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/browser/skills-lifecycle.mjs:116:34 {
+  log: [
+    "  - waiting for getByRole('button', { name: 'Preview', exact: true }) to be visible"
+  ],
+  name: 'TimeoutError'
+}
+
+Node.js v24.21.0

@@ -1,0 +1,40 @@
+# F14 activity query slice
+
+Source is frozen in `/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi` on base `e521e980c3f60992bae9b63ed113e19da0a4e9f0`. Exact 12-file hashes and evidence locations are in `/private/tmp/f14-query-freeze.json`. No Git writes. Independent review is assigned to coordination_wave.
+
+## Contract and ownership
+
+`query.machine.ts` is the official Effect-backed owner for initial/manual read admission, reading, waiting, hidden observation, settled/manual history and fatal failure. It retains one current native read. Explicit refresh invalidations coalesce to one successor for polling; duplicate pagination requests are ignored while occupied. The owner joins each read's scope before admitting its result or starting a successor. Visibility events update observation permission; hidden automatic polling pauses and becoming visible resumes. Terminal saved conversations settle without more polling. Explicit refresh remains possible.
+
+`use-activity-query.ts` owns an Effect scope per semantic query key and enabled state. Each owner captures its read capability once. Both publication and new dispatch check current identity/enablement before React effects can publish a prior view. Unmount revokes local observation and forks a scope-close join; native cleanup remains owned until it settles and a compound cleanup failure is logged by the owning boundary. It does not stop remote work.
+
+`query-owner.ts` supplies the native boundary. `activityQueryRequest(read(signal))` aborts and joins native settlement, retains structured late Fail+Die and Fail+Interrupt (including original reason annotations) and deduplicates reasons already observed. Effect finalizers use the repository `fatalCause` representation: checked Fail reasons are retained as complete defect payloads because finalizers cannot have checked errors. `activityJsonRequest(agentId,path,signal,body?)` retains the existing ApiError status/message/code contract, joins unread response-body cancellation (including 401), combines cleanup failures with the original error, and preserves structured JSON-read Causes. The companion control owner reuses these HTTP/resource mechanics, while its own machine decides command progression.
+
+`usePlans` reads list/detail/access concurrently inside one observation. The first native failure aborts sibling requests; all sibling promises settle before that observation releases ownership. Plan detail, pending approval filtering, page offsets and immutable plan/run history projections stay unchanged. A wrong plan/run ID returned by a history endpoint cannot be published under a different selected identity. Plan history uses the unchanged `historyPage` projection; run history returns the same latest/earlier views.
+
+Existing cadences remain: plans and model activity 2.5s; activity list 5s/latest or15s/cursor; saved record3s; history only explicit requests. The shared companion surfaces choose their existing intervals. Ordinary transport/decoded read failures keep periodic reconnect behavior while visible, including beyond five consecutive failures. There is no new five-failure cutoff and no automatic business-action replay. Fatal compound failures retain an error until an explicit refresh; no command or Pi authority is created by query retry.
+
+These are volatile query-resource owners. Existing query DTOs, `historyPage`, `RunEventView`, elapsed/usage projections and route selection remain pure data/UI inputs; no durable snapshot/version/journal is introduced. Remount performs a fresh GET observation rather than restoring unfinished external work. Backend domain rows, receipts and native Pi resources remain authoritative.
+
+## Characterization and proof
+
+- `/private/tmp/f14-query-before.log`: actual original usePlans mounts; held initial plans GET plus online event produces two simultaneous reads (expected1); unmount produces zero aborts (expectedpositive). These were assertion failures after fixing a UTF-8-only test fixture issue.
+- `/private/tmp/f14-query-run-before.log`: actual original RunTimeline loads an earlier page, switches run while held, releases old response; durable record list becomes `old older` under new run (expected `new latest`). The probe awaits native/React settlement before inspecting.
+- `/private/tmp/f14-query-browser-final.log`: all3 exact browser assertions pass, synthetic fetch only. New fixture/spec are retained in `tests/browser/{activity-query.spec.ts,fixtures/activity-query.tsx}`. Isolated Playwright config `/private/tmp/f14-query-playwright.config.ts`; Vite IIFE compilation uses a temporary directory and intercepts fixture URLs, no full app/backend server.
+- `/private/tmp/f14-query-focused-final.log`:28/28 in3files, including10 new query/native ownership tests plus unchanged planning and activity presentation tests. Covers coalescing behind held cleanup;8reads after7transient failures; hidden polling and terminal settle; stale keys/duplicate cursor; scope closure held on actual native Promise; own read finalizer failure;401 held cancellation and compound failure;ApiError409code;full structured503JSONreadfailure;runtime malformed event rejection;late checked+native interruption.
+- `/private/tmp/f14-query-interrupt-before.log`: scoped owner returns successful close despite late Fail+Interrupt; exact check fails before the local retention repair.
+- `/private/tmp/f14-query-negative.log`: bundle-only Vite transform disables retention in `activityQueryRequest`; the same late checked+Interrupt assertion fails. Config `/private/tmp/f14-query-negative.config.ts`. Production files were never replaced or restored for this control.
+- `/private/tmp/f14-query-restored.log`: normal unmutated10/10 after the negative control.
+- Scoped TypeScript exited0 using `/private/tmp/f14-query-tsconfig.json`; scoped lint and final12-file formatter check exited0. Logs in manifest. Two earlier whole-tree typechecks were explicitly stopped for host contention and are not pass evidence. Full integrated checks are parent-owned.
+
+## Remaining review boundary
+
+The mounted browser fixture covers the two concrete query surfaces, not the whole workspace shell. mailbox_recovery_ui owns the combined full-workbench control/browser proof and `docs/xstate-effect-activity-ui.md`. Query generation, visibility/interval changes, compound annotated cleanup and full history identity remain independent-review priorities. No live provider, deployment, external messages or publication occurred.
+
+## Independent-review repairs
+
+coordination_wave reproduced a migration regression where a schema-valid selected-plan response carried another plan ID; the old projection guard had been omitted. `usePlans` now validates the selected root before publishing data or approvals and retains the public projection fence. The same review reproduced a pre-existing malformed-history gap: a matching root could contain revisions for another plan. Both initial detail and PlanInspector pagination now validate every history row's plan ID. `historyPage` remains unchanged.
+
+Exact independent red probes/logs are `/private/tmp/f14-independent/plan-identity.mjs`, `plan-identity-before.log`, `history-identity.mjs`, and `history-identity-before.log`. The independent annotated Fail+Interrupt cleanup probe passed without a change to the frozen native owner. Final repository mounted coverage is **6/6**, `/private/tmp/f14-query-browser-final-reviewed.log`: original3 plus mismatched selected-root, foreign initial history, and foreign paginated history. Pagination is exercised through the actual mounted ActivityWorkbench; no private component export was added for testing.
+
+Independent review closed: `/private/tmp/f14-independent/review.md` and `review-manifest.json`. Both unchanged identity probes pass at the final frozen hashes; annotated Fail plus Interrupt cleanup and independent 28 focused tests pass. No remaining concrete finding within the bounded query slice.

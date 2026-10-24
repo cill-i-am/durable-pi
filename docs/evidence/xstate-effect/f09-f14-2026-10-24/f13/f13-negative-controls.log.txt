@@ -1,0 +1,82 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi
+
+F13_IMPORT_CONTROL_APPLIED
+stdout | tests/memory-import-ui.test.ts > admits one file read, ignores replacement during work and retries the captured body
+[20:35:39.551] ERROR (#1): Error [AssertionError]: expected [ 'history.jsonl', 'history.jsonl' ] to deeply equal [ 'history.jsonl' ]
+    at /Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/tests/memory-import-ui.test.ts:56:21 {
+  actual: [ 'history.jsonl', 'history.jsonl' ],
+  expected: [ 'history.jsonl' ],
+  showDiff: true,
+  operator: 'deepStrictEqual',
+  [cause]: undefined
+}
+
+ ❯ tests/memory-import-ui.test.ts (3 tests | 1 failed | 2 skipped) 26ms
+   × admits one file read, ignores replacement during work and retries the captured body 25ms
+F13_RESTORE_CONTROL_APPLIED
+ ❯ tests/channel-settings-ui.test.ts (10 tests | 1 failed | 9 skipped) 7ms
+   × email restores exact request without dispatch and separates users and agents 6ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/channel-settings-ui.test.ts > email restores exact request without dispatch and separates users and agents
+AssertionError: expected null to deeply equal { path: 'configure', body: { …(3) } }
+
+- Expected:
+{
+  "body": {
+    "enabled": false,
+    "operationId": "12345678-1234-4234-a234-123456789abc",
+    "revision": 1,
+  },
+  "path": "configure",
+}
+
++ Received:
+null
+
+ ❯ tests/channel-settings-ui.test.ts:179:51
+    177|     )
+    178|     await Effect.runPromiseExit(work.change(configure))
+    179|     expect(await Effect.runPromise(work.restore)).toEqual(configure)
+       |                                                   ^
+    180|     const recreated = settingsRequests(
+    181|       channel,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/memory-import-ui.test.ts > admits one file read, ignores replacement during work and retries the captured body
+AssertionError: expected [ 'history.jsonl', 'history.jsonl' ] to deeply equal [ 'history.jsonl' ]
+
+- Expected
++ Received
+
+  [
+    "history.jsonl",
++   "history.jsonl",
+  ]
+
+ ❯ tests/memory-import-ui.test.ts:56:21
+     54|       yield* waitFor(actor, (state) => state.matches("unconfirmed"))
+     55|       expect(actor.getSnapshot().context.id).toBe("first")
+     56|       expect(reads).toEqual([file.name])
+       |                     ^
+     57|       expect(bodies).toEqual(["original body"])
+     58|       yield* send(actor, { type: "RETRY" })
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/core.ts:585:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:589:27
+ ❯ node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1159:17
+ ❯ next node_modules/.pnpm/@xstate+effect@1.0.0-alpha.8_effect@4.0.5_xstate@6.0.0-alpha.68/node_modules/@xstate/effect/dist/xstate-effect.js:525:9
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  2 failed | 11 skipped (13)
+   Start at  20:35:39
+   Duration  463ms (import 69%, transform 23%, tests 5%, setup 2%, worker 1%)
+

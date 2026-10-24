@@ -1,0 +1,15 @@
+# Final F09 independent closure
+
+Bounded clear on the final nineteen owned paths and three shared dependencies from /private/tmp/f09-family-final-manifest.json; every hash rechecked and matched. Historical initial review and manifest remain unchanged.
+
+The shared HTTP body-Cause defect is closed. Actual makeModelSignIn + agentApi with a synthetic HTTP503 response whose body rejects annotated Fail, native Die and native Interrupt89235 now leaves the actor fatal and closes scope with every native reason and annotation preserved. The original immutable probe now reaches an expected ActorStoppedError at its waitFor observer (the library rejects a waiter on errored actors), before its later cleanup assertions. An additive observed copy changes only that waiter to runPromiseExit; all safety assertions remain. A further additive full copy strengthens assertions for exact Die identity and all annotations. Both pass. Original before evidence remains red because the old helper converted the same body Cause to ordinary503 and scope success.
+
+The final c1a8b317 sign-in focus correction is source-clear: the first animation frame schedules one second frame, cleanup cancels whichever handle is current, and the final callback checks current owned actor waiting state plus body/dialog focus before changing focus. The earlier tentative window listener is absent. This preserves the immediate existing focus behavior and adds no dispatch/retry/persistence behavior. Owner-provided unchanged browser logs were inspected: five mobile repetitions and one desktop repetition pass. No independent broad browser gate was rerun for this small delta.
+
+Prior independent proofs still apply: actual family native compound cleanup with and without Die, and actual JoinFamily Chromium stale acceptance/hash acknowledgement race. The latter preserves a newer invitation URL/record when older acceptance finishes refresh in the same browser turn. No feature production edits, live providers/auth/email, native SDK outbound action, or Git mutation were performed by this review.
+
+Commands, from native-ci-budget/durable-pi:
+- /opt/homebrew/opt/node@24/bin/node --import tsx /private/tmp/f09-independent/body-cause-observed-probe.mts
+- /opt/homebrew/opt/node@24/bin/node --import tsx /private/tmp/f09-independent/body-cause-full-probe.mts
+
+See the additive final-review-manifest.json for exact source/evidence hashes; prior review.md and manifest.json remain historical.

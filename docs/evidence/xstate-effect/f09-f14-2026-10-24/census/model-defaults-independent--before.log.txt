@@ -1,0 +1,94 @@
+loaded duplicate {
+  text: 'Models & connections\n' +
+    'Model connection\n' +
+    'ChatGPTConnected\n' +
+    '\n' +
+    'Uses the family’s ChatGPT connection, provided by you. Your model choices stay personal.\n' +
+    '\n' +
+    'Refresh connection\n' +
+    'Defaults for this agent\n' +
+    '\n' +
+    'Used by Auto for new jobs. Running jobs keep their model.\n' +
+    '\n' +
+    'JobEveryday conversation\n' +
+    'ModelSol\n' +
+    'Reasoning effortmedium\n' +
+    'Save default',
+  gets: [ 'alpha' ]
+}
+{"scenario":"duplicate","before":{"posts":[{"agent":"alpha","body":{"model":"gpt-6.1-sol","thinking":"high","job":"conversation","profile":"auto","policyVersion":"jobs-v1","reason":"agent setting"},"aborted":false},{"agent":"alpha","body":{"model":"gpt-6.1-sol","thinking":"high","job":"conversation","profile":"auto","policyVersion":"jobs-v1","reason":"agent setting"},"aborted":false}],"pending":[{"agent":"alpha","pending":false},{"agent":"alpha","pending":true},{"agent":"alpha","pending":true}],"agent":"alpha"},"observed":{"posts":[{"agent":"alpha","body":{"model":"gpt-6.1-sol","thinking":"high","job":"conversation","profile":"auto","policyVersion":"jobs-v1","reason":"agent setting"},"aborted":false},{"agent":"alpha","body":{"model":"gpt-6.1-sol","thinking":"high","job":"conversation","profile":"auto","policyVersion":"jobs-v1","reason":"agent setting"},"aborted":false}],"acks":["alpha","alpha"],"pending":{"agent":"alpha","pending":false},"agent":"alpha","text":"Models & connections\nModel connection\nChatGPTConnected\n\nUses the family’s ChatGPT connection, provided by you. Your model choices stay personal.\n\nRefresh connection\nDefaults for this agent\n\nUsed by Auto for new jobs. Running jobs keep their model.\n\nJobEveryday conversation\nModelSol\nReasoning efforthigh\n SavedSave default","effort":"high▼"}}
+loaded agent-switch {
+  text: 'Models & connections\n' +
+    'Model connection\n' +
+    'ChatGPTConnected\n' +
+    '\n' +
+    'Uses the family’s ChatGPT connection, provided by you. Your model choices stay personal.\n' +
+    '\n' +
+    'Refresh connection\n' +
+    'Defaults for this agent\n' +
+    '\n' +
+    'Used by Auto for new jobs. Running jobs keep their model.\n' +
+    '\n' +
+    'JobEveryday conversation\n' +
+    'ModelSol\n' +
+    'Reasoning effortmedium\n' +
+    'Save default',
+  gets: [ 'alpha' ]
+}
+{"scenario":"agent-switch","before":{"posts":[{"agent":"alpha","body":{"model":"gpt-6.1-sol","thinking":"high","job":"conversation","profile":"auto","policyVersion":"jobs-v1","reason":"agent setting"},"aborted":false}],"pending":[{"agent":"alpha","pending":false},{"agent":"alpha","pending":true},{"agent":"alpha","pending":true},{"agent":"beta","pending":true}],"agent":"beta"},"observed":{"posts":[{"agent":"alpha","body":{"model":"gpt-6.1-sol","thinking":"high","job":"conversation","profile":"auto","policyVersion":"jobs-v1","reason":"agent setting"},"aborted":false}],"acks":["alpha"],"pending":{"agent":"beta","pending":false},"agent":"beta","text":"Models & connections\nModel connection\nChatGPTConnected\n\nUses the family’s ChatGPT connection, provided by you. Your model choices stay personal.\n\nRefresh connection\nDefaults for this agent\n\nUsed by Auto for new jobs. Running jobs keep their model.\n\nJobEveryday conversation\nModelSol\nReasoning effortmedium\n SavedSave default","effort":"medium▼"}}
+loaded newer-catalog {
+  text: 'Models & connections\n' +
+    'Model connection\n' +
+    'ChatGPTConnected\n' +
+    '\n' +
+    'Uses the family’s ChatGPT connection, provided by you. Your model choices stay personal.\n' +
+    '\n' +
+    'Refresh connection\n' +
+    'Defaults for this agent\n' +
+    '\n' +
+    'Used by Auto for new jobs. Running jobs keep their model.\n' +
+    '\n' +
+    'JobEveryday conversation\n' +
+    'ModelSol\n' +
+    'Reasoning effortmedium\n' +
+    'Save default',
+  gets: [ 'alpha' ]
+}
+{"scenario":"newer-catalog","before":{"posts":[{"agent":"alpha","body":{"model":"gpt-6.1-sol","thinking":"high","job":"conversation","profile":"auto","policyVersion":"jobs-v1","reason":"agent setting"},"aborted":false}],"pending":[{"agent":"alpha","pending":false},{"agent":"alpha","pending":true},{"agent":"alpha","pending":true}],"agent":"alpha"},"observed":{"posts":[{"agent":"alpha","body":{"model":"gpt-6.1-sol","thinking":"high","job":"conversation","profile":"auto","policyVersion":"jobs-v1","reason":"agent setting"},"aborted":false}],"acks":["alpha"],"pending":{"agent":"alpha","pending":false},"agent":"alpha","text":"Models & connections\nModel connection\nChatGPTConnected\n\nUses the family’s ChatGPT connection, provided by you. Your model choices stay personal.\n\nRefresh connection\nDefaults for this agent\n\nUsed by Auto for new jobs. Running jobs keep their model.\n\nJobEveryday conversation\nModelSol\nReasoning effortlow\n SavedSave default","effort":"low▼"}}
+loaded refresh-failure {
+  text: 'Models & connections\n' +
+    'Model connection\n' +
+    'ChatGPTConnected\n' +
+    '\n' +
+    'Uses the family’s ChatGPT connection, provided by you. Your model choices stay personal.\n' +
+    '\n' +
+    'Refresh connection\n' +
+    'Defaults for this agent\n' +
+    '\n' +
+    'Used by Auto for new jobs. Running jobs keep their model.\n' +
+    '\n' +
+    'JobEveryday conversation\n' +
+    'ModelSol\n' +
+    'Reasoning effortmedium\n' +
+    'Save default',
+  gets: [ 'alpha' ]
+}
+{"scenario":"refresh-failure","before":{"posts":[{"agent":"alpha","body":{"model":"gpt-6.1-sol","thinking":"high","job":"conversation","profile":"auto","policyVersion":"jobs-v1","reason":"agent setting"},"aborted":false}],"pending":[{"agent":"alpha","pending":false},{"agent":"alpha","pending":true},{"agent":"alpha","pending":true}],"agent":"alpha"},"observed":{"posts":[{"agent":"alpha","body":{"model":"gpt-6.1-sol","thinking":"high","job":"conversation","profile":"auto","policyVersion":"jobs-v1","reason":"agent setting"},"aborted":false}],"acks":["alpha"],"pending":{"agent":"alpha","pending":false},"agent":"alpha","text":"Models & connections\nModel connection\nChatGPTNeeds attention\n\nUses the family’s ChatGPT connection, provided by you. Your model choices stay personal.\n\nRefresh connection\nCould not verify model availability. Refresh to retry.\nDefaults for this agent\n\nUsed by Auto for new jobs. Running jobs keep their model.\n\nJobEveryday conversation\nModelgpt-6.1-sol\nReasoning effortmedium\n\nCould not verify model availability. Refresh to retry.\n\n SavedSave default","effort":"medium▼"}}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: one Save activation batch must admit one immutable save
+
+2 !== 1
+
+    at file:///private/tmp/model-defaults-independent/probe.mjs:31:8 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 2,
+  expected: 1,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.21.0

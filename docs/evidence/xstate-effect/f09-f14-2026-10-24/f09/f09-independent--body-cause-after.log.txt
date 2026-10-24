@@ -1,0 +1,16 @@
+{"reads":1,"actorStatus":"active","value":"idle","error":"Could not restore the previous sign-in. Start again to reconnect.","scopeFailure":false,"reasons":[]}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: native response-body compound failure must remain fatal, not become ordinary503
+    at <anonymous> (/private/tmp/f09-independent/body-cause-probe.mts:17:9) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v24.21.0

@@ -1,0 +1,34 @@
+import assert from 'node:assert/strict'
+import {createRequire} from 'node:module'
+const root='/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi'
+const require=createRequire(root+'/package.json')
+const {Cause,Context,Deferred,Effect,Exit,Fiber,Scope}=await import(require.resolve('effect'))
+const {send,waitFor}=await import(require.resolve('@xstate/effect'))
+const {makeTaskControlOwner,taskControlRequests,taskCommandKey}=await import(root+'/src/features/activity/task-control-owner.ts')
+const {makeMailboxControlOwner}=await import(root+'/src/features/activity/mailbox-control-owner.ts')
+const view={agentId:'one',groupId:17,childId:null,prefix:'background',active:['stop','retry']}
+const mailbox={agentId:'one',state:{tasks:[],deliveries:[],recovery:{schemaVersion:1,workflowVersion:1,epoch:'old',failedAt:1,discoveryToken:null,message:'storage unavailable'}}}
+const annotations=Context.makeUnsafe(new Map([['independent-cleanup','kept']]))
+const checked=Cause.makeFailReason('original checked').annotate(annotations),interrupted=Cause.makeInterruptReason(91827).annotate(annotations),defect=Cause.makeDieReason('original defect').annotate(annotations)
+const results=[]
+for(const kind of ['task','mailbox']) for(const late of [true,false]) {
+ const result=await Effect.runPromise(Effect.scoped(Effect.gen(function*(){
+  const scope=yield*Scope.make(),started=yield*Deferred.make(),aborted=yield*Deferred.make();let reject,closed=false
+  const entries=new Map(),storage={getItem:k=>entries.get(k)??null,setItem:(k,v)=>entries.set(k,v),removeItem:k=>entries.delete(k)}
+  globalThis.fetch=(_url,init)=>new Promise((_resolve,fail)=>{reject=fail;init.signal.addEventListener('abort',()=>Effect.runSync(Deferred.succeed(aborted,undefined)));Effect.runSync(Deferred.succeed(started,undefined))})
+  const actor=yield*(kind==='task'?makeTaskControlOwner(view,taskControlRequests(storage,()=> '00000000-0000-4000-8000-000000000071')):makeMailboxControlOwner(mailbox)).pipe(Scope.provide(scope))
+  yield*waitFor(actor,s=>s.matches('ready'))
+  yield*send(actor,kind==='task'?{type:'SUBMIT',view,action:'retry',text:''}:{type:'SUBMIT',agentId:'one',id:'old',action:'retry_mailbox'})
+  yield*Deferred.await(started)
+  let closing
+  if(late){closing=yield*Scope.close(scope,Exit.void).pipe(Effect.exit,Effect.tap(()=>Effect.sync(()=>{closed=true})),Effect.forkChild);yield*Deferred.await(aborted);assert.equal(closed,false)}
+  reject(Cause.fromReasons(late?[checked,interrupted]:[checked,defect,interrupted]))
+  if(!late){yield*waitFor(actor,s=>s.matches(kind==='task'?'ready':'uncertain'));closing=yield*Scope.close(scope,Exit.void).pipe(Effect.exit,Effect.forkChild)}
+  const exit=yield*Fiber.join(closing), reasons=Exit.isFailure(exit)?exit.cause.reasons:[]
+  const hasChecked=reasons.some(r=>(r._tag==='Fail'&&r.error==='original checked'&&r.annotations.get('independent-cleanup')==='kept')||(r._tag==='Die'&&r.defect?._tag==='Fail'&&r.defect.error==='original checked'&&r.defect.annotations.get('independent-cleanup')==='kept'))
+  const hasInterrupt=reasons.some(r=>r._tag==='Interrupt'&&r.fiberId===91827&&r.annotations.get('independent-cleanup')==='kept')
+  console.log(JSON.stringify({kind,late,reasons:reasons.map(r=>({_tag:r._tag,error:r.error,defect:r.defect,fiberId:r.fiberId,annotations:[...r.annotations]}))}));return {kind,late,exit:exit._tag,hasChecked,hasInterrupt,viewRetained:!!actor.getSnapshot().context.failure,recordRetained:kind==='task'?!!entries.get(taskCommandKey(view,'retry')):undefined}
+ })))
+ console.log(JSON.stringify(result));results.push(result)
+}
+for(const r of results) assert(r.hasChecked&&r.hasInterrupt,`${r.kind} late=${r.late}: scope must retain original annotated native Cause`)

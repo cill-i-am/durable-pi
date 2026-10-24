@@ -1,0 +1,1 @@
+tests/skills-ui-lifecycle.test.ts(8,3): error TS6133: 'Equal' is declared but its value is never read.

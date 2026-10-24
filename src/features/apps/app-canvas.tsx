@@ -1,4 +1,4 @@
-import { useId, useState } from "react"
+import { useId } from "react"
 
 import type {
   AppAction,
@@ -28,9 +28,18 @@ import {
 } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
 
+import { useAppForm } from "./use-app-form"
 import { WebCanvas } from "./web-canvas"
 
-export function AppCanvas({
+export function AppCanvas(props: Parameters<typeof AppCanvasView>[0]) {
+  return (
+    <AppCanvasView
+      key={`${props.agentId}/${props.id}/${props.version}`}
+      {...props}
+    />
+  )
+}
+function AppCanvasView({
   definition,
   agentId,
   id,
@@ -187,26 +196,15 @@ function AppForm({
   disabled: boolean
   onAction: (action: AppAction, expectedRevision?: number) => Promise<boolean>
 }) {
-  const [draft, setDraft] = useState<{
-    values: Record<string, string>
-    revision: number
-  } | null>(null)
-  const values = draft?.values ?? saved
-  const conflict = draft !== null && draft.revision !== revision
-  const [submitted, setSubmitted] = useState(false)
+  const form = useAppForm(block.id, saved, revision, disabled, onAction)
+  const { values, conflict, submitted } = form
   const prefix = useId()
   return (
     <form
       onSubmit={(event) => {
         event.preventDefault()
         if (conflict) return
-        void onAction(
-          { type: "submit", blockId: block.id, values },
-          draft?.revision ?? revision
-        ).then((success) => {
-          setSubmitted(success)
-          if (success) setDraft(null)
-        })
+        form.submit()
       }}
     >
       <FieldSet disabled={disabled}>
@@ -226,13 +224,7 @@ function AppForm({
                   maxLength={1000}
                   required={field.required}
                   disabled={disabled}
-                  onChange={(event) => {
-                    setSubmitted(false)
-                    setDraft({
-                      values: { ...values, [field.id]: event.target.value },
-                      revision: draft?.revision ?? revision,
-                    })
-                  }}
+                  onChange={(event) => form.edit(field.id, event.target.value)}
                 />
               </Field>
             )
@@ -248,10 +240,7 @@ function AppForm({
                     size="sm"
                     variant="outline"
                     disabled={disabled}
-                    onClick={() => {
-                      setDraft(null)
-                      setSubmitted(false)
-                    }}
+                    onClick={form.useSaved}
                   >
                     Use saved values
                   </Button>
@@ -260,7 +249,7 @@ function AppForm({
                     size="sm"
                     variant="outline"
                     disabled={disabled}
-                    onClick={() => setDraft({ values, revision })}
+                    onClick={form.keepEdits}
                   >
                     Keep my edits
                   </Button>
@@ -268,7 +257,7 @@ function AppForm({
               </AlertDescription>
             </Alert>
           )}
-          <Button type="submit" disabled={disabled || conflict}>
+          <Button type="submit" disabled={disabled || conflict || form.saving}>
             {block.submitLabel}
           </Button>
           {submitted && (

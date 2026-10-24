@@ -1,0 +1,52 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi
+
+stdout | tests/apps-ui-lifecycle.test.ts > form completion cannot erase newer edits including edit ABA
+[20:39:28.702] ERROR (#1): Error [AssertionError]: expected undefined to deeply equal { name: 'A' }
+    at /Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/apps-ui-lifecycle.test.ts:279:55 {
+  actual: undefined,
+  expected: { name: 'A' },
+  showDiff: true,
+  operator: 'deepStrictEqual',
+  [cause]: undefined
+}
+
+ ❯ tests/apps-ui-lifecycle.test.ts (8 tests | 1 failed | 7 skipped) 35ms
+   × form completion cannot erase newer edits including edit ABA 34ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/apps-ui-lifecycle.test.ts > form completion cannot erase newer edits including edit ABA
+AssertionError: expected undefined to deeply equal { name: 'A' }
+
+- Expected:
+{
+  "name": "A",
+}
+
++ Received:
+undefined
+
+ ❯ tests/apps-ui-lifecycle.test.ts:279:55
+    277|     yield* Deferred.succeed(release, undefined)
+    278|     yield* waitFor(actor, (state) => state.matches("editing"))
+    279|     expect(actor.getSnapshot().context.draft?.values).toEqual({ name: …
+       |                                                       ^
+    280|     expect(actor.getSnapshot().context.submitted).toBe(false)
+    281|   }).pipe(Effect.scoped)
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/core.ts:585:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:589:27
+ ❯ node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1159:17
+ ❯ next node_modules/.pnpm/@xstate+effect@1.0.0-alpha.8_effect@4.0.5_xstate@6.0.0-alpha.68/node_modules/@xstate/effect/dist/xstate-effect.js:525:9
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 7 skipped (8)
+   Start at  20:39:27
+   Duration  858ms (import 48%, transform 40%, tests 6%, setup 5%, worker 2%)
+

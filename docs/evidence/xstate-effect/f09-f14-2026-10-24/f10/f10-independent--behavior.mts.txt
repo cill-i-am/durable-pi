@@ -1,0 +1,48 @@
+import assert from 'node:assert/strict'
+import {createRequire} from 'node:module'
+import {makeAgentEditor} from '/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/agents/agent-editor-owner.ts'
+import {makeAgentCatalog} from '/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/agents/agent-catalog-owner.ts'
+import {makeAgentStatuses} from '/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/agents/agent-statuses-owner.ts'
+import {makeWorkspaceGuard} from '/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/app/use-workspace-guard.ts'
+import {makeWorkbenchPresence} from '/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/app/use-workbench-presence.ts'
+const require=createRequire('/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/package.json')
+const {Effect,Deferred,Fiber,Scope,Exit}=await import(require.resolve('effect'))
+const {send,waitFor}=await import(require.resolve('@xstate/effect'))
+const profile={id:'home',slug:'home',name:'Home',instructions:'',status:'active',revision:1,createdAt:'today',updatedAt:'today'} as any
+await Effect.runPromise(Effect.gen(function*(){
+ const entered=yield* Deferred.make<void>(),writes:any[]=[];let release!:()=>void,closes=0,reconciles=0
+ const held=new Promise<void>(r=>release=r)
+ const owner=yield* makeAgentEditor({id:profile.id,agent:null},{save:async(input)=>{writes.push(structuredClone(input));return profile},reconcile:async()=>{if(++reconciles===1){Deferred.doneUnsafe(entered,Effect.void);await held}},close:()=>{closes++}})
+ yield* send(owner.actor,{type:'CHANGE',field:'name',value:'Home'});yield* send(owner.actor,{type:'SAVE'});yield* Deferred.await(entered)
+ for(const value of ['New','Home'])yield* send(owner.actor,{type:'CHANGE',field:'name',value})
+ yield* waitFor(owner.actor,s=>s.context.revision===3);release();yield* waitFor(owner.actor,s=>s.matches('ready'))
+ assert.equal(closes,0);assert.equal(writes.length,1)
+ yield* send(owner.actor,{type:'SAVE'});yield* waitFor(owner.actor,s=>s.matches('closed'))
+ assert.deepEqual(writes.map(x=>[x.id,x.action,x.name]),[['home','create','Home'],['home','update','Home']]);assert.equal(closes,1)
+ console.log('editor reconciliation-barrier ABA preserves new draft; acknowledged create next save is update')
+}).pipe(Effect.scoped))
+await Effect.runPromise(Effect.gen(function*(){
+ let reads=0,release!:(x:any)=>void;const entered=yield* Deferred.make<void>();const held=new Promise<any>(r=>release=r)
+ const owner=yield* makeAgentCatalog(async()=>{if(++reads===1){Deferred.doneUnsafe(entered,Effect.void);return held}if(reads===2)throw Error('queued read failed');return [profile]})
+ yield* Deferred.await(entered);const refresh=yield* Effect.forkChild(Effect.exit(owner.refresh()));yield* waitFor(owner.actor,s=>s.context.queued);release([{...profile,name:'stale'}]);const failed=yield* Fiber.join(refresh)
+ assert.equal(Exit.isFailure(failed),true);assert.deepEqual(owner.actor.getSnapshot().context.agents,[])
+ yield* owner.refresh();assert.equal(reads,3);assert.equal(owner.actor.getSnapshot().context.agents[0].name,'Home')
+ console.log('catalog queues one fresh read; stale result suppressed even when following read fails; explicit read recovers')
+}).pipe(Effect.scoped))
+await Effect.runPromise(Effect.gen(function*(){
+ let reads=0,membership='home:active',visible=true,release!:(x:any)=>void,listeners=0
+ const entered=yield* Deferred.make<void>(),held=new Promise<any>(r=>release=r)
+ const owner=yield* makeAgentStatuses({read:async()=>{reads++;if(reads===1){Deferred.doneUnsafe(entered,Effect.void);return held}return{statuses:[]}},membership:()=>membership,visible:()=>visible,listen:()=>{listeners++;return()=>listeners--}})
+ yield* Deferred.await(entered);membership='other:active';owner.inspect();yield* waitFor(owner.actor,s=>s.context.queued)
+ release({statuses:[{agentId:'home',state:'ready',turnId:null}]});yield* waitFor(owner.actor,s=>s.matches('waiting')&&reads===2)
+ assert.deepEqual(owner.actor.getSnapshot().context.statuses,[]);visible=false;owner.inspect();yield* waitFor(owner.actor,s=>s.matches('dormant'));membership='';owner.inspect();visible=true;owner.inspect();yield* Effect.yieldNow;assert.equal(reads,2)
+ console.log('membership change joins obsolete read before fresh observation; empty membership does not poll')
+}).pipe(Effect.scoped))
+await Effect.runPromise(Effect.gen(function*(){
+ const scope=yield* Scope.make();const guard=yield* makeWorkspaceGuard({protected:false,starting:true}).pipe(Scope.provide(scope));assert.equal(yield* guard.check(true),true)
+ yield* send(guard.actor,{type:'OBSERVE',protected:false,starting:false});yield* waitFor(guard.actor,s=>s.context.started);yield* send(guard.actor,{type:'OBSERVE',protected:false,starting:true});yield* Effect.yieldNow;assert.equal(guard.actor.getSnapshot().context.started,true)
+ yield* Scope.close(scope,Exit.void);assert.equal(yield* guard.check(false),true)
+ const panel=yield* makeWorkbenchPresence({panel:'files',search:{item:'original'}});yield* send(panel,{type:'ROUTE',panel:null,search:{}});const old=yield* waitFor(panel,s=>s.matches('closing'))
+ yield* send(panel,{type:'ROUTE',panel:'files',search:{item:'new'}});yield* send(panel,{type:'ROUTE',panel:null,search:{}});const next=yield* waitFor(panel,s=>s.matches('closing')&&s.context.revision>old.context.revision);yield* send(panel,{type:'CLOSED',revision:old.context.revision});yield* Effect.yieldNow;assert.equal(panel.getSnapshot().context.search.item,'new');yield* send(panel,{type:'CLOSED',revision:next.context.revision});yield* waitFor(panel,s=>s.matches('closed'))
+ console.log('closed guard fails safe; startup readiness monotonic; same-panel ABA exit completion fenced')
+}).pipe(Effect.scoped))

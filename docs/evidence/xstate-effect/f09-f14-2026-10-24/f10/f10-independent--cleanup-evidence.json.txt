@@ -1,0 +1,173 @@
+{
+  "source": {
+    "src/features/agents/agents.tsx": "20e2decc5344a255fcb0d6cd3f1eb02db6bcf3a113ce41c1ac36ac90ea736338",
+    "src/features/agents/archive-agent-dialog.tsx": "5a59593e98d693c17838ccc714afd9cb8c3e2fcb79af4ff9e77a072b3504d747",
+    "src/features/agents/use-agent-statuses.ts": "f230452c787ea921c7d610fb047b0fb7a5b2ab4a0e796d6c7fa086155e94820d",
+    "src/features/agents/catalog-state.test.ts": "b74781875d2dd1a63e5fb73150189629cceaa64689fd2307f566481d88d0faac",
+    "src/features/agents/agent-requests.ts": "33489df0e383e02cffdc2bab66d944e1b406f1c9082493f2a0cc3814432f384c",
+    "src/features/agents/agent-editor.machine.ts": "1724893297f9aa7f59df60c42bb113ccbe85452a1104eb7b182b3fc1776366e3",
+    "src/features/agents/agent-editor-owner.ts": "f41ee495568ae58322993f29a4e44cd4a7badba3a34b75570faab96b10e6b99f",
+    "src/features/agents/use-agent-editor.ts": "dbbe39311389db8795594a0ff5d99c8938565b44c84846839e450cea425be4e9",
+    "src/features/agents/agent-catalog.machine.ts": "dd502151724c69a028103ebaf3e0458cc9ad88154922efdf5dfe1546a5c0cf17",
+    "src/features/agents/agent-catalog-owner.ts": "dee89cb4b94fef5d07fa391161032bdf68e9dc70f6b4bd548b72df765630a54a",
+    "src/features/agents/use-agent-catalog.ts": "a7f15d10326cdef40b52c75bf4fa98bde40727d735ea33f653f1d9351cff544d",
+    "src/features/agents/agent-statuses.machine.ts": "9b71689e007966a33c9b53ec7fe407a4454d7b8ce722b0a886d4b653ee37d291",
+    "src/features/agents/agent-statuses-owner.ts": "3d442fcec9e023e9eae48eeedda37f494fd324789f9deebd5a40f1f510d7f669",
+    "src/features/agents/agent-archive.machine.ts": "4fa6621e3af7bca39bb89eb37dbec6b130ee5a1b8ff5156f15233dc567fee86b",
+    "src/features/agents/agent-archive-owner.ts": "4566de30a592ee19a38fab610c370762ccae9121cf0b0f96d754a68d25557956",
+    "src/features/agents/use-agent-archive.ts": "f31b612d78ce0c7d9e4a464474aa2c83a6b34e81529e24f93c272c8d2d693621",
+    "src/app/workspace.tsx": "14c5ec789648b6c88a5f358bf688517647374b4b16987830c99ea0e1ae9a5e4a",
+    "src/app/workbench-presence.machine.ts": "c3bec9e76e422500f2a3e40d03f515771c27527d3eab127a5f5dbe839aea98ff",
+    "src/app/use-workbench-presence.ts": "31001de37090a4921499cfe5c0648f026001e26252588f1c4a0dcb7a4e882d69",
+    "src/app/workspace-guard.machine.ts": "dce18b3f4f8228e58a12f7fa9ab0eb9c08d0af8e20e17386a1f9e5a2f20465db",
+    "src/app/use-workspace-guard.ts": "ca17200ec55840494676450e512b4dbdc0a24d3a38020df4433991c35c50965c",
+    "tests/agent-editor-machine.test.ts": "6227c2db9f30a09361de9ca06ba4c22572aa79ff28e15d3ab9db96d96f14390c",
+    "tests/agent-observation-lifetime.test.ts": "1be4cc98228496b54eda4bf267922280cf33b4f897994e9c457b76d2ce30e9ae",
+    "tests/agent-archive-machine.test.ts": "63ee42a63c590d0750df653f8d700f09124fcef87b0698e22b9de163bea2f259",
+    "tests/workspace-lifetime-machine.test.ts": "56eba3e3fdece333b63d9992a4bbccd6140ccd09137f49cac872a224a065799a",
+    "tests/browser/agent-owner-lifecycle.spec.ts": "943811159d5e522c0d218338b8d6bd95113e26fe7e33cd4bd99c3f25bca6dc82",
+    "tests/agent-request-cleanup.test.ts": "f47446ec8762463c680bc256e04c5d6f9e63e8136fcfc91e0f81961d2711726d"
+  },
+  "results": [
+    {
+      "kind": "editor",
+      "held": true,
+      "callbacks": 0,
+      "listeners": 0,
+      "status": "Failure",
+      "savedFail": true,
+      "savedInterrupt": true,
+      "reasons": [
+        {
+          "tag": "Die",
+          "defect": {
+            "_tag": "Fail",
+            "error": {
+              "message": "native checked cleanup failed",
+              "owner": "editor"
+            }
+          },
+          "annotations": []
+        },
+        {
+          "tag": "Interrupt",
+          "fiberId": 91073,
+          "annotations": [
+            [
+              "f10/native-cleanup",
+              {
+                "source": "editor",
+                "phase": "after-abort"
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "catalog",
+      "held": true,
+      "callbacks": 0,
+      "listeners": 0,
+      "status": "Failure",
+      "savedFail": true,
+      "savedInterrupt": true,
+      "reasons": [
+        {
+          "tag": "Die",
+          "defect": {
+            "_tag": "Fail",
+            "error": {
+              "message": "native checked cleanup failed",
+              "owner": "catalog"
+            }
+          },
+          "annotations": []
+        },
+        {
+          "tag": "Interrupt",
+          "fiberId": 91073,
+          "annotations": [
+            [
+              "f10/native-cleanup",
+              {
+                "source": "catalog",
+                "phase": "after-abort"
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "archive",
+      "held": true,
+      "callbacks": 0,
+      "listeners": 0,
+      "status": "Failure",
+      "savedFail": true,
+      "savedInterrupt": true,
+      "reasons": [
+        {
+          "tag": "Die",
+          "defect": {
+            "_tag": "Fail",
+            "error": {
+              "message": "native checked cleanup failed",
+              "owner": "archive"
+            }
+          },
+          "annotations": []
+        },
+        {
+          "tag": "Interrupt",
+          "fiberId": 91073,
+          "annotations": [
+            [
+              "f10/native-cleanup",
+              {
+                "source": "archive",
+                "phase": "after-abort"
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "statuses",
+      "held": true,
+      "callbacks": 0,
+      "listeners": 0,
+      "status": "Failure",
+      "savedFail": true,
+      "savedInterrupt": true,
+      "reasons": [
+        {
+          "tag": "Die",
+          "defect": {
+            "_tag": "Fail",
+            "error": {
+              "message": "native checked cleanup failed",
+              "owner": "statuses"
+            }
+          },
+          "annotations": []
+        },
+        {
+          "tag": "Interrupt",
+          "fiberId": 91073,
+          "annotations": [
+            [
+              "f10/native-cleanup",
+              {
+                "source": "statuses",
+                "phase": "after-abort"
+              }
+            ]
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi
+
+stdout | tests/activity-controls-ui.test.ts > a stale mailbox rejection remains visible without clearing a newer recovery
+[20:51:29.707] ERROR (#1): Error [AssertionError]: expected '' to be 'This mailbox recovery is no longer cu…' // Object.is equality
+    at /Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/activity-controls-ui.test.ts:473:45 {
+  actual: '',
+  expected: 'This mailbox recovery is no longer current.',
+  showDiff: true,
+  operator: 'strictEqual',
+  [cause]: undefined
+}
+
+ ❯ tests/activity-controls-ui.test.ts (11 tests | 1 failed | 10 skipped) 624ms
+   × a stale mailbox rejection remains visible without clearing a newer recovery 622ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/activity-controls-ui.test.ts > a stale mailbox rejection remains visible without clearing a newer recovery
+AssertionError: expected '' to be 'This mailbox recovery is no longer cu…' // Object.is equality
+
+- Expected
++ Received
+
+- This mailbox recovery is no longer current.
+
+ ❯ tests/activity-controls-ui.test.ts:473:45
+    471|   yield* Deferred.fail(release,new Error("This mailbox recovery is no …
+    472|   yield* waitFor(actor,s=>s.matches("ready"))
+    473|   expect(actor.getSnapshot().context.error).toBe("This mailbox recover…
+       |                                             ^
+    474|   expect(actor.getSnapshot().context.view.state?.recovery?.epoch).toBe…
+    475| }).pipe(Effect.scoped))
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/core.ts:585:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:589:27
+ ❯ node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1159:17
+ ❯ next node_modules/.pnpm/@xstate+effect@1.0.0-alpha.8_effect@4.0.5_xstate@6.0.0-alpha.68/node_modules/@xstate/effect/dist/xstate-effect.js:525:9
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 10 skipped (11)
+   Start at  20:51:22
+   Duration  8.38s (import 48%, transform 33%, tests 10%, setup 9%)
+

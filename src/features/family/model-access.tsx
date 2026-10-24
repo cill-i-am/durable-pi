@@ -1,5 +1,8 @@
+import { createEffectActor } from "@xstate/effect"
+import { Effect, Fiber } from "effect"
 import { LockKeyhole, RefreshCw } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
+import type { SnapshotFrom } from "xstate"
 
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -8,6 +11,8 @@ import { useModelCatalog } from "@/features/conversation/use-model-catalog"
 
 import { ChatGPTReconnect } from "./chatgpt-sign-in"
 import { useFamily } from "./context"
+import { makeFamilyRequests } from "./family-requests"
+import { modelAccessMachine } from "./model-access.machine"
 
 export function ModelAccess({
   onPendingChange,
@@ -16,8 +21,54 @@ export function ModelAccess({
 }) {
   const { family } = useFamily()
   const { catalog, catalogError, refresh } = useModelCatalog("home", 0)
-  const [pending, setPending] = useState(false)
-  const [savedConnection, setSavedConnection] = useState(false)
+  const resource = useRef<{
+    actor: Effect.Success<
+      ReturnType<
+        typeof createEffectActor<ReturnType<typeof modelAccessMachine>>
+      >
+    >
+    revoke: () => void
+  } | null>(null)
+  const [snapshot, setSnapshot] = useState<SnapshotFrom<
+    ReturnType<typeof modelAccessMachine>
+  > | null>(null)
+  useEffect(() => {
+    let mounted = true
+    const fiber = Effect.runFork(
+      Effect.gen(function* () {
+        const requests = yield* makeFamilyRequests()
+        const actor = yield* createEffectActor(
+          modelAccessMachine(
+            requests.request(refresh).pipe(Effect.catch(() => Effect.void))
+          )
+        )
+        if (!mounted) {
+          requests.revoke()
+          return
+        }
+        resource.current = { actor, revoke: requests.revoke }
+        const subscription = actor.subscribe((state) => {
+          if (mounted) setSnapshot(state)
+        })
+        setSnapshot(actor.getSnapshot())
+        yield* Effect.addFinalizer(() =>
+          Effect.sync(() => subscription.unsubscribe())
+        )
+        return yield* Effect.never
+      }).pipe(Effect.scoped)
+    )
+    return () => {
+      mounted = false
+      resource.current?.revoke()
+      resource.current = null
+      Effect.runFork(Fiber.interrupt(fiber))
+    }
+  }, [refresh])
+  const pending = !snapshot || snapshot.matches("checking")
+  const savedConnection = snapshot?.context.saved ?? false
+  const connected = useCallback(async () => {
+    resource.current?.actor.send({ type: "CONNECTED" })
+  }, [])
   const [reconnectPending, setReconnectPending] = useState(false)
   useEffect(() => {
     onPendingChange?.(pending || reconnectPending)
@@ -58,20 +109,14 @@ export function ModelAccess({
                 family.members.find((member) => member.role === "owner")
                   ?.email ?? ""
               }
-              onConnected={async () => {
-                setSavedConnection(true)
-                await refresh()
-              }}
+              onConnected={connected}
             />
           )}
           {owner && (
             <Button
               variant="outline"
               disabled={pending}
-              onClick={() => {
-                setPending(true)
-                void refresh().finally(() => setPending(false))
-              }}
+              onClick={() => resource.current?.actor.send({ type: "REFRESH" })}
             >
               <RefreshCw />
               {pending ? "Checking…" : "Refresh connection"}

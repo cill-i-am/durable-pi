@@ -16,7 +16,10 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { AppCanvas } from "./app-canvas"
 import { useApp } from "./use-app"
 
-export function AppView({
+export function AppView(props: Parameters<typeof AppViewContent>[0]) {
+  return <AppViewContent key={`${props.agentId}/${props.id}`} {...props} />
+}
+function AppViewContent({
   agentId,
   id,
   initialVersion,

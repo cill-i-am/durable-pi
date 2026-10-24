@@ -1,0 +1,45 @@
+{
+  "view": {
+    "agent": "beta",
+    "applied": 1,
+    "data": {
+      "routines": [],
+      "runs": []
+    },
+    "attempt": null,
+    "busy": false
+  },
+  "calls": [
+    {
+      "agent": "alpha",
+      "path": "/api/agent/routines"
+    },
+    {
+      "agent": "alpha",
+      "path": "/api/agent/routines/save",
+      "body": "{\"id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"operationId\":\"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb\",\"expectedRevision\":0,\"title\":\"proof\",\"prompt\":\"proof\",\"schedule\":{\"type\":\"webhook\"},\"status\":\"active\"}"
+    },
+    {
+      "agent": "alpha",
+      "path": "/api/agent/routines"
+    }
+  ]
+}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: old agent acknowledgement cannot close current editor
+
+1 !== 0
+
+    at file:///private/tmp/f12-before-probe.mjs:5:1610 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 1,
+  expected: 0,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.21.0

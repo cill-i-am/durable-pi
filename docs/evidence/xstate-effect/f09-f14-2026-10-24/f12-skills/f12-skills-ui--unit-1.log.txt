@@ -1,0 +1,411 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi
+
+stdout | tests/skills-ui-lifecycle.test.ts > refresh and duplicate commands never replace the accepted immutable CAS input
+[20:42:01.284] ERROR (#1): Error [ActorStoppedError]: Actor "skills-ui" errored before completing
+    at stoppedError (file:///Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/@xstate+effect@1.0.0-alpha.8_effect@4.0.5_xstate@6.0.0-alpha.68/node_modules/@xstate/effect/dist/xstate-effect.js:413:10)
+    at Object.<anonymous> (file:///Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/@xstate+effect@1.0.0-alpha.8_effect@4.0.5_xstate@6.0.0-alpha.68/node_modules/@xstate/effect/dist/xstate-effect.js:509:26) {
+  actorId: 'skills-ui',
+  snapshot: {
+    status: 'error',
+    output: undefined,
+    error: ActorValidationError: Invalid context
+        at createError (/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/xstate@6.0.0-alpha.68/node_modules/xstate/dist/xstate-validation.development.cjs.js:248:10)
+        at checkTarget (/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/xstate@6.0.0-alpha.68/node_modules/xstate/dist/xstate-validation.development.cjs.js:82:14)
+        at checkMachineResult (/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/xstate@6.0.0-alpha.68/node_modules/xstate/dist/xstate-validation.development.cjs.js:142:17)
+        at Object.check (/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/xstate@6.0.0-alpha.68/node_modules/xstate/dist/xstate-validation.development.cjs.js:227:23)
+        at Object.assertValid (/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/xstate@6.0.0-alpha.68/node_modules/xstate/dist/index-e37fe162.development.cjs.js:6:27)
+        at StateMachine.transition (/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/xstate@6.0.0-alpha.68/node_modules/xstate/dist/xstate.development.cjs.js:1079:25)
+        at Object.transition (/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/xstate@6.0.0-alpha.68/node_modules/xstate/dist/effectDescriptor-3e92534c.development.cjs.js:35:100)
+        at /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/xstate@6.0.0-alpha.68/node_modules/xstate/dist/xstate-durable.development.cjs.js:406:162
+        at Object.withExecutionIdentity (/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/xstate@6.0.0-alpha.68/node_modules/xstate/dist/createActor-b14a387c.development.cjs.js:5065:12)
+        at /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/xstate@6.0.0-alpha.68/node_modules/xstate/dist/xstate-durable.development.cjs.js:406:98 {
+      reason: 'invalid',
+      boundary: 'context',
+      logicId: 'skills-ui',
+      stateNodeId: undefined,
+      eventType: undefined,
+      eventOrigin: undefined,
+      childId: undefined,
+      issues: [Array],
+      Symbol(xstate.actorValidationError): true,
+      [cause]: undefined
+    },
+    machine: StateMachine {
+      config: [Object],
+      validator: [Object],
+      _internalEventType: undefined,
+      _transitionMetaType: undefined,
+      _inputType: undefined,
+      _actionMap: undefined,
+      _actorMap: undefined,
+      _stateSchema: undefined,
+      version: undefined,
+      schemas: [Object],
+      snapshotSchema: [Object],
+      eventSchema: [Object],
+      sources: [Object],
+      options: {},
+      idMap: [Map],
+      root: [StateNode],
+      id: 'skills-ui',
+      states: [Object],
+      events: [Array],
+      internalEventDescriptors: [],
+      _hasEventlessTransitions: true,
+      _microstepHooks: undefined,
+      _json: undefined,
+      transition: [Function: bound transition],
+      initialTransition: [Function: bound initialTransition],
+      getInitialSnapshot: [Function: bound getInitialSnapshot],
+      getPersistedSnapshot: [Function: bound getPersistedSnapshot],
+      restoreSnapshot: [Function: bound restoreSnapshot],
+      start: [Function: bound start],
+      provide: [Function (anonymous)]
+    },
+    context: {
+      agentId: 'agent',
+      library: [],
+      selection: [Object],
+      ready: false,
+      dirty: true,
+      request: [Object],
+      failed: null,
+      error: '',
+      failure: undefined
+    },
+    nodes: [ [StateNode], [StateNode], [StateNode], [StateNode], [StateNode] ],
+    value: { command: 'requesting', resource: 'paused' },
+    tags: Set(0) {},
+    children: { '0.skills-ui.command.requesting': [Actor] },
+    timers: [],
+    historyValue: {},
+    _stateInputs: {},
+    _nextTimerId: 0,
+    _nextActorIds: undefined,
+    matches: [Function: matches],
+    hasTag: [Function: hasTag],
+    can: [Function: can],
+    getMeta: [Function: getMeta],
+    getInputs: [Function: getInputs],
+    toJSON: [Function: toJSON]
+  },
+  _tag: 'ActorStoppedError',
+  [cause]: undefined
+}
+
+stdout | tests/skills-ui-lifecycle.test.ts > reload observes without repeating failed writes; explicit retry keeps exact input
+[20:42:01.517] ERROR (#26): Error [ActorStoppedError]: Actor "skills-ui" errored before completing
+    at stoppedError (file:///Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/@xstate+effect@1.0.0-alpha.8_effect@4.0.5_xstate@6.0.0-alpha.68/node_modules/@xstate/effect/dist/xstate-effect.js:413:10)
+    at error (file:///Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/@xstate+effect@1.0.0-alpha.8_effect@4.0.5_xstate@6.0.0-alpha.68/node_modules/@xstate/effect/dist/xstate-effect.js:532:28)
+    at safeCall (file:///Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/@xstate+effect@1.0.0-alpha.8_effect@4.0.5_xstate@6.0.0-alpha.68/node_modules/@xstate/effect/dist/state-ea62b88e.js:19:9)
+    at EffectActor._settle (file:///Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/@xstate+effect@1.0.0-alpha.8_effect@4.0.5_xstate@6.0.0-alpha.68/node_modules/@xstate/effect/dist/state-ea62b88e.js:183:9)
+    at EffectActor._publish (file:///Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/@xstate+effect@1.0.0-alpha.8_effect@4.0.5_xstate@6.0.0-alpha.68/node_modules/@xstate/effect/dist/state-ea62b88e.js:163:10)
+    at file:///Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/@xstate+effect@1.0.0-alpha.8_effect@4.0.5_xstate@6.0.0-alpha.68/node_modules/@xstate/effect/dist/state-ea62b88e.js:659:15 {
+  actorId: 'skills-ui',
+  snapshot: {
+    status: 'error',
+    output: undefined,
+    error: ActorValidationError: Invalid context
+        at createError (/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/xstate@6.0.0-alpha.68/node_modules/xstate/dist/xstate-validation.development.cjs.js:248:10)
+        at checkTarget (/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/xstate@6.0.0-alpha.68/node_modules/xstate/dist/xstate-validation.development.cjs.js:82:14)
+        at checkMachineResult (/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/xstate@6.0.0-alpha.68/node_modules/xstate/dist/xstate-validation.development.cjs.js:142:17)
+        at Object.check (/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/xstate@6.0.0-alpha.68/node_modules/xstate/dist/xstate-validation.development.cjs.js:227:23)
+        at Object.assertValid (/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/xstate@6.0.0-alpha.68/node_modules/xstate/dist/index-e37fe162.development.cjs.js:6:27)
+        at StateMachine.transition (/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/xstate@6.0.0-alpha.68/node_modules/xstate/dist/xstate.development.cjs.js:1079:25)
+        at Object.transition (/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/xstate@6.0.0-alpha.68/node_modules/xstate/dist/effectDescriptor-3e92534c.development.cjs.js:35:100)
+        at /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/xstate@6.0.0-alpha.68/node_modules/xstate/dist/xstate-durable.development.cjs.js:406:162
+        at Object.withExecutionIdentity (/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/xstate@6.0.0-alpha.68/node_modules/xstate/dist/createActor-b14a387c.development.cjs.js:5065:12)
+        at /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/.pnpm/xstate@6.0.0-alpha.68/node_modules/xstate/dist/xstate-durable.development.cjs.js:406:98 {
+      reason: 'invalid',
+      boundary: 'context',
+      logicId: 'skills-ui',
+      stateNodeId: undefined,
+      eventType: undefined,
+      eventOrigin: undefined,
+      childId: undefined,
+      issues: [Array],
+      Symbol(xstate.actorValidationError): true,
+      [cause]: undefined
+    },
+    machine: StateMachine {
+      config: [Object],
+      validator: [Object],
+      _internalEventType: undefined,
+      _transitionMetaType: undefined,
+      _inputType: undefined,
+      _actionMap: undefined,
+      _actorMap: undefined,
+      _stateSchema: undefined,
+      version: undefined,
+      schemas: [Object],
+      snapshotSchema: [Object],
+      eventSchema: [Object],
+      sources: [Object],
+      options: {},
+      idMap: [Map],
+      root: [StateNode],
+      id: 'skills-ui',
+      states: [Object],
+      events: [Array],
+      internalEventDescriptors: [],
+      _hasEventlessTransitions: true,
+      _microstepHooks: undefined,
+      _json: undefined,
+      transition: [Function: bound transition],
+      initialTransition: [Function: bound initialTransition],
+      getInitialSnapshot: [Function: bound getInitialSnapshot],
+      getPersistedSnapshot: [Function: bound getPersistedSnapshot],
+      restoreSnapshot: [Function: bound restoreSnapshot],
+      start: [Function: bound start],
+      provide: [Function (anonymous)]
+    },
+    context: {
+      agentId: 'agent',
+      library: [],
+      selection: [Object],
+      ready: false,
+      dirty: true,
+      request: null,
+      failed: [Object],
+      error: '',
+      failure: [Object]
+    },
+    nodes: [ [StateNode], [StateNode], [StateNode], [StateNode], [StateNode] ],
+    value: { command: 'ready', resource: 'loading' },
+    tags: Set(0) {},
+    children: { '0.skills-ui.resource.loading': [Actor] },
+    timers: [],
+    historyValue: {},
+    _stateInputs: {},
+    _nextTimerId: 0,
+    _nextActorIds: undefined,
+    matches: [Function: matches],
+    hasTag: [Function: hasTag],
+    can: [Function: can],
+    getMeta: [Function: getMeta],
+    getInputs: [Function: getInputs],
+    toJSON: [Function: toJSON]
+  },
+  _tag: 'ActorStoppedError',
+  [cause]: undefined
+}
+
+stdout | tests/skills-ui-lifecycle.test.ts > an older save acknowledgement cannot close a newly opened editor
+[20:42:02.187] ERROR (#101): Error [AssertionError]: expected false to be true // Object.is equality
+    at /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/skills-ui-lifecycle.test.ts:306:54 {
+  actual: false,
+  expected: true,
+  showDiff: true,
+  operator: 'strictEqual',
+  [cause]: undefined
+}
+
+stdout | tests/skills-ui-lifecycle.test.ts > oversize local files are rejected before reading any bytes
+[20:42:02.254] ERROR (#110): Error [AssertionError]: expected '' to contain '64 KB'
+    at /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/skills-ui-lifecycle.test.ts:336:47 {
+  actual: '',
+  expected: '64 KB',
+  showDiff: true,
+  operator: 'strictEqual',
+  [cause]: undefined
+}
+
+stderr | tests/skills-ui-lifecycle.test.ts > late history completion cannot reopen a closed or replaced view
+Event "HISTORY" to actor "skill-view" was not delivered (invalidEvent).
+
+stdout | tests/skills-ui-lifecycle.test.ts > hosted import captures the catalog revision and mints no save before preview confirmation
+[20:42:07.877] ERROR (#160): Error [AssertionError]: expected [] to deeply equal [ { …(4) } ]
+    at /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/skills-ui-lifecycle.test.ts:462:24 {
+  actual: [],
+  expected: [
+    {
+      id: '00000000-0000-0000-0000-000000000001',
+      expectedRevision: 1,
+      name: 'Saved',
+      body: 'New body'
+    }
+  ],
+  showDiff: true,
+  operator: 'deepStrictEqual',
+  [cause]: undefined
+}
+
+stdout | tests/skills-ui-lifecycle.test.ts > invalid command payload is rejected before native work
+[20:42:08.438] ERROR (#214): Error [AssertionError]: expected false to be true // Object.is equality
+    at /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/skills-ui-lifecycle.test.ts:580:34 {
+  actual: false,
+  expected: true,
+  showDiff: true,
+  operator: 'strictEqual',
+  [cause]: undefined
+}
+
+ ❯ tests/skills-ui-lifecycle.test.ts (14 tests | 7 failed) 8351ms
+   × refresh and duplicate commands never replace the accepted immutable CAS input 1330ms
+   × reload observes without repeating failed writes; explicit retry keeps exact input 43ms
+   × an older save acknowledgement cannot close a newly opened editor 72ms
+   × oversize local files are rejected before reading any bytes 16ms
+   × late history completion cannot reopen a closed or replaced view 5334ms
+   × hosted import captures the catalog revision and mints no save before preview confirmation 397ms
+   × invalid command payload is rejected before native work 98ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/skills-ui-lifecycle.test.ts > refresh and duplicate commands never replace the accepted immutable CAS input
+ActorStoppedError: Actor "skills-ui" errored before completing
+ ❯ stoppedError node_modules/.pnpm/@xstate+effect@1.0.0-alpha.8_effect@4.0.5_xstate@6.0.0-alpha.68/node_modules/@xstate/effect/dist/xstate-effect.js:413:10
+ ❯ Object.<anonymous> node_modules/.pnpm/@xstate+effect@1.0.0-alpha.8_effect@4.0.5_xstate@6.0.0-alpha.68/node_modules/@xstate/effect/dist/xstate-effect.js:509:26
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1155:38
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:589:27
+ ❯ Array.<anonymous> node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1159:17
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:618:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/7]⎯
+
+ FAIL  tests/skills-ui-lifecycle.test.ts > reload observes without repeating failed writes; explicit retry keeps exact input
+ActorStoppedError: Actor "skills-ui" errored before completing
+ ❯ stoppedError node_modules/.pnpm/@xstate+effect@1.0.0-alpha.8_effect@4.0.5_xstate@6.0.0-alpha.68/node_modules/@xstate/effect/dist/xstate-effect.js:413:10
+ ❯ error node_modules/.pnpm/@xstate+effect@1.0.0-alpha.8_effect@4.0.5_xstate@6.0.0-alpha.68/node_modules/@xstate/effect/dist/xstate-effect.js:532:28
+ ❯ safeCall node_modules/.pnpm/@xstate+effect@1.0.0-alpha.8_effect@4.0.5_xstate@6.0.0-alpha.68/node_modules/@xstate/effect/dist/state-ea62b88e.js:19:9
+ ❯ EffectActor._settle node_modules/.pnpm/@xstate+effect@1.0.0-alpha.8_effect@4.0.5_xstate@6.0.0-alpha.68/node_modules/@xstate/effect/dist/state-ea62b88e.js:183:9
+ ❯ EffectActor._publish node_modules/.pnpm/@xstate+effect@1.0.0-alpha.8_effect@4.0.5_xstate@6.0.0-alpha.68/node_modules/@xstate/effect/dist/state-ea62b88e.js:163:10
+ ❯ node_modules/.pnpm/@xstate+effect@1.0.0-alpha.8_effect@4.0.5_xstate@6.0.0-alpha.68/node_modules/@xstate/effect/dist/state-ea62b88e.js:659:15
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/core.ts:585:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/7]⎯
+
+ FAIL  tests/skills-ui-lifecycle.test.ts > an older save acknowledgement cannot close a newly opened editor
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/skills-ui-lifecycle.test.ts:306:54
+    304|       })
+    305|       yield* send(actor, { type: "SAVED", generation })
+    306|       expect(actor.getSnapshot().matches("editing")).toBe(true)
+       |                                                      ^
+    307|       yield* send(actor, { type: "LEAVE" })
+    308|       expect(actor.getSnapshot().matches("editing")).toBe(true)
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:971:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+ ❯ node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:5689:9
+ ❯ node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:5767:19
+ ❯ Module.<anonymous> node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:5786:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/7]⎯
+
+ FAIL  tests/skills-ui-lifecycle.test.ts > oversize local files are rejected before reading any bytes
+AssertionError: expected '' to contain '64 KB'
+
+- Expected
++ Received
+
+- 64 KB
+
+ ❯ tests/skills-ui-lifecycle.test.ts:336:47
+    334|     })
+    335|     expect(reads).toBe(0)
+    336|     expect(actor.getSnapshot().context.error).toContain("64 KB")
+       |                                               ^
+    337|   }).pipe(Effect.scoped)
+    338| )
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:971:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+ ❯ node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:5689:9
+ ❯ node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:5767:19
+ ❯ Module.<anonymous> node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:5786:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/7]⎯
+
+ FAIL  tests/skills-ui-lifecycle.test.ts > late history completion cannot reopen a closed or replaced view
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ tests/skills-ui-lifecycle.test.ts:412:4
+    410| )
+    411|
+    412| it.effect(
+       |    ^
+    413|   "late history completion cannot reopen a closed or replaced view",
+    414|   () =>
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/7]⎯
+
+ FAIL  tests/skills-ui-lifecycle.test.ts > hosted import captures the catalog revision and mints no save before preview confirmation
+AssertionError: expected [] to deeply equal [ { …(4) } ]
+
+- Expected
++ Received
+
+- [
+-   {
+-     "body": "New body",
+-     "expectedRevision": 1,
+-     "id": "00000000-0000-0000-0000-000000000001",
+-     "name": "Saved",
+-   },
+- ]
++ []
+
+ ❯ tests/skills-ui-lifecycle.test.ts:462:24
+    460|       yield* waitFor(actor, (snapshot) => snapshot.matches("previewed"…
+    461|       expect(calls).toEqual([{ id, toolName: tool.name, skill: hosted …
+    462|       expect(previews).toEqual([draft])
+       |                        ^
+    463|     }).pipe(Effect.scoped)
+    464| )
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/core.ts:585:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:589:27
+ ❯ node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1159:17
+ ❯ next node_modules/.pnpm/@xstate+effect@1.0.0-alpha.8_effect@4.0.5_xstate@6.0.0-alpha.68/node_modules/@xstate/effect/dist/xstate-effect.js:525:9
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/7]⎯
+
+ FAIL  tests/skills-ui-lifecycle.test.ts > invalid command payload is rejected before native work
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/skills-ui-lifecycle.test.ts:580:34
+    578|       })
+    579|     )
+    580|     expect(Exit.isFailure(exit)).toBe(true)
+       |                                  ^
+    581|     expect(calls).toBe(0)
+    582|   }).pipe(Effect.scoped)
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ FiberImpl.succeedWith node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:711:30
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:3791:20
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:971:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+ ❯ node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:5689:9
+ ❯ node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:5767:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/7]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  7 failed | 7 passed (14)
+   Start at  20:41:43
+   Duration  26.10s (tests 37%, import 31%, transform 30%, setup 2%, worker 1%)
+

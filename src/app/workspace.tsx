@@ -17,6 +17,7 @@ import {
   useAgentCatalog,
 } from "@/features/agents"
 import { AgentCollection } from "@/features/agents/agent-collection"
+import { useAgentArchive } from "@/features/agents/use-agent-archive"
 import { useAgentStatuses } from "@/features/agents/use-agent-statuses"
 import { Conversation, useConversation } from "@/features/conversation"
 import { adoptDraftOwner } from "@/features/conversation/draft"
@@ -29,7 +30,6 @@ import {
   AssetBoundary,
   useReloadGuard,
 } from "@/features/updates/update-recovery"
-import { api } from "@/http/client"
 import {
   globalSettingsSection,
   isGlobalSettingsSection,
@@ -38,6 +38,8 @@ import {
 import { listenForClientErrors } from "@/observability/browser"
 
 import { MobileNavigation } from "./mobile-navigation"
+import { useWorkbenchPresence } from "./use-workbench-presence"
+import { useWorkspaceGuard } from "./use-workspace-guard"
 import {
   useWorkspaceLocation,
   useWorkspaceRoute,
@@ -131,25 +133,20 @@ export function ChatApp() {
 function useWorkspaceProtection(
   locked: boolean,
   editing: boolean,
-  archiving: boolean
+  archiving: boolean,
+  starting: boolean
 ) {
-  const [navigationBlocked, setNavigationBlocked] = useState(false)
   const protectedView = locked || editing || archiving
+  const guard = useWorkspaceGuard({ protected: protectedView, starting })
   useReloadGuard(
     "Finish or cancel the open edit before reloading.",
     protectedView
   )
   useBlocker({
-    shouldBlockFn: () => {
-      if (protectedView) setNavigationBlocked(true)
-      return protectedView
-    },
+    shouldBlockFn: guard.block,
     enableBeforeUnload: protectedView,
   })
-  useEffect(() => {
-    if (!protectedView) setNavigationBlocked(false)
-  }, [protectedView])
-  return navigationBlocked
+  return guard
 }
 
 function Workspace({
@@ -177,13 +174,11 @@ function Workspace({
   } = workspaceRoute(location, catalog.selected)
   const conversation = useConversation(conversationId, conversationEnabled)
   const runtime = useAgentStatuses(catalog.agents, ownerId, location.agentId)
-  const [startupComplete, setStartupComplete] = useState(false)
   const setSecurityOpen = location.setSecurity
   const [workLocked, setNavigationLocked] = useState(false)
   const [settingsPending, setSettingsPending] = useState(false)
   const [settingsShown, setSettingsShown] = useState(false)
   const setSettings = location.setSettings
-  const navigationLocked = workLocked || settingsPending
   const setWorkbench = location.setPanel
   const { openAgent, agentId, openArchivedAgents } = location
   useEffect(() => {
@@ -205,7 +200,7 @@ function Workspace({
     catalog.selected,
   ])
   function selectAgent(id: AgentProfile["id"], panel?: Workbench) {
-    if (navigationLocked) return
+    if (navigationLocked || editor !== null || archiveTarget !== null) return
     catalog.select(id)
     void location.openAgent(id, { panel })
   }
@@ -215,41 +210,33 @@ function Workspace({
     if (value) location.openEditor(value.agent?.id)
     else location.closeEditor()
   }
-  const [error, setError] = useState("")
-  const [archiveTarget, setArchiveTarget] = useState<AgentProfile | null>(null)
-  const navigationBlocked = useWorkspaceProtection(
+  const archiveOwner = useAgentArchive(async ({ agent, archived }, signal) => {
+    if (archived && location.agentId === agent.id)
+      await location.openAgent(homeAgentId, {}, true)
+    signal.throwIfAborted()
+    await catalog.refresh(signal)
+  })
+  const navigationLocked = workLocked || settingsPending || archiveOwner.locked
+  const archiveTarget = archiveOwner.target
+  const starting = workspaceStarting(
+    catalog,
+    conversation,
+    collection,
+    editor !== null,
+    !!globalSection,
+    !!context.backgroundPath
+  )
+  const protection = useWorkspaceProtection(
     navigationLocked,
     editor !== null,
-    archiveTarget !== null
+    archiveTarget !== null,
+    starting
   )
-  async function updateArchive(agent: AgentProfile, shouldArchive: boolean) {
-    await api("/api/agent/bots/archive", {
-      id: agent.id,
-      archived: shouldArchive,
-    })
-    setError("")
-    if (shouldArchive && location.agentId === agent.id)
-      await location.openAgent(homeAgentId, {}, true)
-    await catalog.refresh().catch(() => {
-      setError(
-        "Agent updated, but the list could not refresh. Try refreshing it."
-      )
-    })
-  }
-  async function archive(agent: AgentProfile) {
-    if (navigationLocked) return
-    if (agent.status === "active") {
-      setArchiveTarget(agent)
-      return
-    }
-    try {
-      await updateArchive(agent, false)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not restore this agent.")
-    }
+  function archive(agent: AgentProfile) {
+    if (!navigationLocked) archiveOwner.request(agent)
   }
   function act(action: WorkspaceAction) {
-    if (navigationLocked) return
+    if (navigationLocked || editor !== null || archiveTarget !== null) return
     if (action === "create") setEditor({ key: crypto.randomUUID() })
     else if (action === "edit" && catalog.selected)
       setEditor({ key: catalog.selected.id, agent: catalog.selected })
@@ -279,14 +266,6 @@ function Workspace({
   // The hooks above keep catalog and conversation requests parallel while the
   // initial view stays stable. Errors release it; later reconnects and agent
   // navigation keep their existing in-workspace loading/recovery controls.
-  const starting = workspaceStarting(
-    catalog,
-    conversation,
-    collection,
-    editor !== null,
-    !!globalSection,
-    !!context.backgroundPath
-  )
   const { view: agentView, retaining } = useSettingsOwner(
     catalog.selected,
     { location, conversation, settings, workbench },
@@ -297,8 +276,7 @@ function Workspace({
       shown: settingsShown,
     }
   )
-  if (!startupComplete && starting) return <WorkspaceStartup />
-  if (!startupComplete) setStartupComplete(true)
+  if (!protection.started && starting) return <WorkspaceStartup />
   return (
     <TooltipProvider>
       <SidebarProvider
@@ -347,27 +325,23 @@ function Workspace({
             />
           )}
           <main id="main-content" tabIndex={-1} className="workspace-main">
-            {navigationBlocked && (
+            {protection.notice && (
               <Alert>
                 <AlertDescription>
                   Finish or cancel the open edit before leaving this view.
                 </AlertDescription>
               </Alert>
             )}
-            {(error || catalog.error) && (
+            {(archiveOwner.error || catalog.error) && (
               <Alert>
                 <AlertDescription className="flex items-center justify-between">
-                  {error || catalog.error}
+                  {archiveOwner.error || catalog.error}
                   <Button
                     variant="ghost"
-                    onClick={() =>
-                      void catalog
-                        .refresh()
-                        .then(() => setError(""))
-                        .catch(() =>
-                          setError("Could not reconnect. Try again.")
-                        )
-                    }
+                    onClick={() => {
+                      if (archiveOwner.unreconciled) archiveOwner.reconcile()
+                      else void catalog.refresh().catch(() => {})
+                    }}
                   >
                     Retry
                   </Button>
@@ -437,8 +411,10 @@ function Workspace({
           <ArchiveAgentDialog
             key={archiveTarget.id}
             agent={archiveTarget}
-            onConfirm={() => updateArchive(archiveTarget, true)}
-            onClose={() => setArchiveTarget(null)}
+            onConfirm={archiveOwner.confirm}
+            pending={archiveOwner.pending}
+            error={archiveOwner.error}
+            onClose={archiveOwner.dismiss}
           />
         )}
         {editor && (
@@ -454,9 +430,9 @@ function Workspace({
                 savedEditor.current = null
               }
             }}
-            onSaved={async (agent) => {
-              await catalog.refresh()
+            onSaved={async (agent, signal) => {
               savedEditor.current = agent.id
+              await catalog.refresh(signal)
             }}
           />
         )}
@@ -518,24 +494,6 @@ function WorkspaceUnavailable({
   )
 }
 
-function useWorkbenchView(
-  panel: Workbench | null,
-  search: ReturnType<typeof useWorkspaceLocation>["search"],
-  settingsShown: boolean
-) {
-  const [view, setView] = useState({ panel, search })
-  if (panel && (panel !== view.panel || search !== view.search))
-    setView({ panel, search })
-  return {
-    panel: panel ?? view.panel,
-    search: panel ? search : view.search,
-    open: panel !== null || settingsShown,
-    closed: () => {
-      if (panel === null && !settingsShown) setView({ panel: null, search })
-    },
-  }
-}
-
 function AgentWorkspace({
   ownerId,
   location,
@@ -590,12 +548,14 @@ function AgentWorkspace({
     agent.id,
     sending
   )
-  const {
-    panel: renderedWorkbench,
-    search: renderedSearch,
-    open: workbenchOpen,
-    closed: workbenchClosed,
-  } = useWorkbenchView(workbench, location.search, settingsShown)
+  const presence = useWorkbenchPresence({
+    panel: workbench,
+    search: location.search,
+    held: settingsShown,
+  })
+  const renderedWorkbench = presence.panel
+  const renderedSearch = presence.search
+  const workbenchOpen = workbench !== null || settingsShown
   const workbenchTrigger = useRef<HTMLButtonElement>(null)
   const [filePending, setFilePending] = useState(false)
   const [workbenchAppPending, setAppPending] = useState(false)
@@ -724,7 +684,7 @@ function AgentWorkspace({
             open={workbenchOpen}
             value={renderedWorkbench}
             onChange={openWorkbench}
-            onClosed={workbenchClosed}
+            onClosed={presence.closed}
             returnFocus={workbenchTrigger}
             agentName={agent.name}
             agentReference={agent.slug}

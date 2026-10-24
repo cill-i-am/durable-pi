@@ -1,0 +1,7 @@
+src/app/workspace-navigation.tsx
+src/app/workspace-link-error.tsx
+src/app/workspace-command.machine.ts
+src/app/use-workspace-command.ts
+src/app/workspace-link-retry.machine.ts
+src/app/use-workspace-link-retry.ts
+tests/workspace-control-lifetimes.test.ts

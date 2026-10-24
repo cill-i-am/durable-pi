@@ -1,0 +1,2 @@
+{"reads":1,"actorStatus":"error","value":"restoring","error":"","scopeFailure":true,"reasons":["Die","Die","Interrupt"]}
+{"nativeInterrupt":true,"nativeDefect":true,"nativeChecked":true,"allAnnotationsRetained":true}

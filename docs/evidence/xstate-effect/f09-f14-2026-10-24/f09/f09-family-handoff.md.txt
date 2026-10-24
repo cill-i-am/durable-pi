@@ -1,0 +1,25 @@
+# F09 source freeze for independent review
+
+Worktree `/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi`, same shared frontend composition. Manifest `/private/tmp/f09-family-manifest.json` contains 19 owned paths. No Git/package/shared tracking/backend/auth edits.
+
+Read `docs/f09-family-ownership.md` for state, budget, authority and storage contracts. The five existing UI modules are fully migrated. Only name/email/password text and dialog selection remain ordinary independent inputs; SDK sessions/catalog stay SDK-owned.
+
+Highest-risk review: actual native Promise join through scope shutdown and exact structured Cause; late role check at model/account and membership boundaries; invitation OPEN replacement cannot dispatch a new operation until old native settles; acceptance is fenced again after refresh before URL removal/welcome; no automatic exchange or auth mutation replay; popup synchronous acquisition with late-authority fencing; accepted exchange/mutation acknowledgment survives refresh failure; canonical machine event validation. Family context adds stable `current()` authority projection; existing `family` and `refresh():Promise<void>` remain.
+
+New identity-only tab record pi:family-invitation:v1 retains invitation across the actual Better Auth challenge redirect, never token/password/return address. It preserves corrupt/future/inaccessible records rather than overwriting them; an active URL still supplies the invitation in those cases. Review this compatibility edge along with normal redirect retention.
+
+Evidence: `/private/tmp/f09-unit-recheck.log` 42 tests/2 files (20 new lifecycle regressions plus22 existing invitation evals). `/private/tmp/f09-scoped-types.log` empty, F09 entry points and transitive dependencies checked with `/private/tmp/f09-tsconfig.json`; `/private/tmp/f09-lint.log` empty, all19owned source/test paths scoped lint. No full duplicate gates.
+
+Failure-sensitive control: `/private/tmp/f09-browser-before.log` old original family-context fails exact test in tests/browser/family-ownership.spec.ts firsttest: old delayed owner result restores workspace after newer403. Source and browser probe were preserved.
+
+Current browser run `/private/tmp/f09-browser-final.log` was intentionally stopped after sibling F10 build captured an intermediate homeAgentId import regression. Two new desktop browser cases passed (actual SDK challenge redirect, late invitation acceptance URL fencing); model/family Settings failed before F09 mount. F10 owner confirms import repaired and will send final freeze for a fresh build. Final browser run remains required, and is not claimed complete. `/private/tmp/f09-playwright-final.config.mjs` isolated ephemeral config now includes oldreadcontrol + three new cases + existing family/invitation flows on desktop/mobile; no live auth/provider effects.
+
+The final account-after-refresh fence was added after that initial browser build and is covered in latest20unit tests; fresh build will include it. No further source edits planned except confirmed review repairs.
+
+## Final source and bounded rechecks
+
+Final19owned paths plus3shared dependency hashes are `/private/tmp/f09-family-final-manifest.json`; initial manifest remains historical. Only sign-in focus correction and owned doc differ from initial freeze. The tentative window-focus listener was removed. Actual mobile trace `/private/tmp/f09-focus-events.log` demonstrates SDK drawer restoration stealing focus one frame after the return field was focused. Bounded two-frame reconciliation now cancels on owner/state cleanup, checks latest waiting state, and moves focus only from body or containing dialog (never another chosen control). No browser assertion was changed.
+
+Full refreshed browser32cases produced31pass/1focusfailure in `/private/tmp/f09-browser-recheck.log`; every new F09 ownership case passed on desktop/mobile, including actual Better Auth challenge redirect. The remaining exact unchanged focus journey then passed5mobile repeats against repaired build (`/private/tmp/f09-focus-final.log`) and1desktop against final formatted build (`/private/tmp/f09-focus-desktop-final.log`). No further broad duplicate browser run. Source-only scoped types `/private/tmp/f09-focus-types-final.log` and scoped lint `/private/tmp/f09-focus-lint-final.log` pass. Existing42focused unit/evaluation tests retain `/private/tmp/f09-unit-recheck.log`; focus-only correction has browser proof.
+
+Parent-approved shared HTTP/native fix is owned by workspace_wave and separately frozen `/private/tmp/shared-http-native-freeze.json`. Unchanged F09 unread401 native-body probe now passes `/private/tmp/f09-http-after.log`. Independent actual503 full annotated native Cause probe passes `/private/tmp/f09-independent/body-cause-full-after.log`; raw original probe is preserved, additive observer accepts actor fatal terminal status before checking all3native reasons/annotations. No native credentials, provider exchange, production authentication or external email was attempted. F09 source freeze released for parent extraction/reviewer delta confirmation.

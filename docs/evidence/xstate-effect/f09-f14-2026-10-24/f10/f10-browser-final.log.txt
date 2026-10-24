@@ -1,0 +1,26 @@
+[WebServer] (node:46890) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] [plugin builtin:vite-reporter] 
+[WebServer] (!) Some chunks are larger than 500 kB after minification. Consider:
+[WebServer] - Using dynamic import() to code-split the application
+[WebServer] - Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+[WebServer] - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[WebServer] [INEFFECTIVE_DYNAMIC_IMPORT] src/features/files/files-panel.tsx is dynamically imported by src/app/workspace.tsx but also statically imported by src/features/files/index.ts, dynamic import will not move module into another chunk.
+[WebServer] 
+
+Running 8 tests using 1 worker
+
+(node:47105) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [desktop] › tests/browser/agent-owner-lifecycle.spec.ts:14:1 › a held agent save retains newer edits and uses update after acknowledged creation (4.4s)
+  ✓  2 [desktop] › tests/browser/agent-owner-lifecycle.spec.ts:85:1 › an acknowledged agent save retries only its failed catalog refresh (2.9s)
+  ✓  3 [desktop] › tests/browser/agent-owner-lifecycle.spec.ts:129:1 › restore holds navigation until the request settles and retains capacity errors (2.2s)
+  ✓  4 [desktop] › tests/browser/agent-slugs.spec.ts:3:1 › ID links become canonical slug URLs and preserve the selected view (7.1s)
+(node:47476) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  5 [mobile] › tests/browser/agent-owner-lifecycle.spec.ts:14:1 › a held agent save retains newer edits and uses update after acknowledged creation (4.2s)
+  ✓  6 [mobile] › tests/browser/agent-owner-lifecycle.spec.ts:85:1 › an acknowledged agent save retries only its failed catalog refresh (3.0s)
+  ✓  7 [mobile] › tests/browser/agent-owner-lifecycle.spec.ts:129:1 › restore holds navigation until the request settles and retains capacity errors (2.2s)
+  ✓  8 [mobile] › tests/browser/agent-slugs.spec.ts:3:1 › ID links become canonical slug URLs and preserve the selected view (7.7s)
+
+  8 passed (39.2s)

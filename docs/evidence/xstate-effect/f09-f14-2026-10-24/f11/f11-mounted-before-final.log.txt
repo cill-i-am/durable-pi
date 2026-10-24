@@ -1,0 +1,133 @@
+[WebServer] (node:7692) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] [plugin builtin:vite-reporter] 
+[WebServer] (!) Some chunks are larger than 500 kB after minification. Consider:
+[WebServer] - Using dynamic import() to code-split the application
+[WebServer] - Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+[WebServer] - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[WebServer] [INEFFECTIVE_DYNAMIC_IMPORT] src/features/files/files-panel.tsx is dynamically imported by src/app/workspace.tsx but also statically imported by src/features/files/index.ts, dynamic import will not move module into another chunk.
+[WebServer] 
+
+Running 3 tests using 1 worker
+
+(node:7709) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 [desktop] › tests/browser/apps-mounted.spec.ts:21:1 › held app mutation cannot overwrite the next mounted agent (4.7s)
+(node:7784) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  2 [desktop] › tests/browser/apps-mounted.spec.ts:31:1 › removed iframe action cannot start a follow-up render (471ms)
+(node:7789) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  3 [desktop] › tests/browser/apps-mounted.spec.ts:40:1 › form acknowledgement preserves a newer mounted draft (5.4s)
+
+
+  1) [desktop] › tests/browser/apps-mounted.spec.ts:21:1 › held app mutation cannot overwrite the next mounted agent 
+
+    Error: expect(received).toHaveLength(expected)
+
+    Expected length: 1
+    Received length: 2
+    Received array:  [{"agent": "one", "body": null, "path": "/api/agent/apps/11111111-1111-4111-8111-111111111111"}, {"agent": "one", "body": null, "path": "/api/agent/apps/11111111-1111-4111-8111-111111111111"}]
+
+      27 |   await expect(page.locator("output")).toHaveText("two")
+      28 |   const calls = await page.evaluate(() => (window as unknown as { proof: { calls: { agent: string; body: unknown }[] } }).proof.calls)
+    > 29 |   expect(calls.filter(call => call.agent === "one" && call.body === null)).toHaveLength(1)
+         |                                                                            ^
+      30 | })
+      31 | test("removed iframe action cannot start a follow-up render", async ({ page }) => {
+      32 |   await mount(page, "frame")
+        at /Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/browser/apps-mounted.spec.ts:29:76
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../../../../private/tmp/f11-playwright-results/apps-mounted-held-app-muta-46513-rite-the-next-mounted-agent-desktop/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../../../../private/tmp/f11-playwright-results/apps-mounted-held-app-muta-46513-rite-the-next-mounted-agent-desktop/error-context.md
+
+    Error Context: ../../../../../../private/tmp/f11-playwright-results/apps-mounted-held-app-muta-46513-rite-the-next-mounted-agent-desktop/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../../../../private/tmp/f11-playwright-results/apps-mounted-held-app-muta-46513-rite-the-next-mounted-agent-desktop/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace ../../../../../../private/tmp/f11-playwright-results/apps-mounted-held-app-muta-46513-rite-the-next-mounted-agent-desktop/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [desktop] › tests/browser/apps-mounted.spec.ts:31:1 › removed iframe action cannot start a follow-up render 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 1
+    Received: 2
+
+      36 |   // Let the completed native promise and its React continuations settle.
+      37 |   await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 50)))
+    > 38 |   expect(await page.evaluate(() => (window as unknown as { proof: { renders: number } }).proof.renders)).toBe(1)
+         |                                                                                                          ^
+      39 | })
+      40 | test("form acknowledgement preserves a newer mounted draft", async ({ page }) => {
+      41 |   await mount(page, "form")
+        at /Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/browser/apps-mounted.spec.ts:38:106
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../../../../private/tmp/f11-playwright-results/apps-mounted-removed-ifram-19da2-ot-start-a-follow-up-render-desktop/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../../../../private/tmp/f11-playwright-results/apps-mounted-removed-ifram-19da2-ot-start-a-follow-up-render-desktop/error-context.md
+
+    Error Context: ../../../../../../private/tmp/f11-playwright-results/apps-mounted-removed-ifram-19da2-ot-start-a-follow-up-render-desktop/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../../../../private/tmp/f11-playwright-results/apps-mounted-removed-ifram-19da2-ot-start-a-follow-up-render-desktop/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace ../../../../../../private/tmp/f11-playwright-results/apps-mounted-removed-ifram-19da2-ot-start-a-follow-up-render-desktop/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [desktop] › tests/browser/apps-mounted.spec.ts:40:1 › form acknowledgement preserves a newer mounted draft 
+
+    Error: expect(locator).toHaveValue(expected) failed
+
+    Locator:  getByLabel('Name', { exact: true })
+    Expected: "newer draft"
+    Received: ""
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveValue" getByLabel('Name', { exact: true }) with timeout 5000ms
+      - waiting for getByLabel('Name', { exact: true })
+        14 × locator resolved to <input value="" id="_r_1_-name" maxlength="1000" data-slot="input" class="h-12 w-full min-w-0 rounded-[11px] border border-input bg-control px-3.75 py-3.5 text-md shadow-(--shadow-field) transition-colors outline-none file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg…/>
+           - unexpected value ""
+
+
+      44 |   await page.getByLabel("Name", { exact: true }).fill("newer draft")
+      45 |   await release(page)
+    > 46 |   await expect(page.getByLabel("Name", { exact: true })).toHaveValue("newer draft")
+         |                                                          ^
+      47 |   await expect(page.getByRole("status")).toHaveCount(0)
+      48 | })
+      49 |
+        at /Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/browser/apps-mounted.spec.ts:46:58
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../../../../private/tmp/f11-playwright-results/apps-mounted-form-acknowle-4dfb1-erves-a-newer-mounted-draft-desktop/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../../../../private/tmp/f11-playwright-results/apps-mounted-form-acknowle-4dfb1-erves-a-newer-mounted-draft-desktop/error-context.md
+
+    Error Context: ../../../../../../private/tmp/f11-playwright-results/apps-mounted-form-acknowle-4dfb1-erves-a-newer-mounted-draft-desktop/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../../../../private/tmp/f11-playwright-results/apps-mounted-form-acknowle-4dfb1-erves-a-newer-mounted-draft-desktop/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace ../../../../../../private/tmp/f11-playwright-results/apps-mounted-form-acknowle-4dfb1-erves-a-newer-mounted-draft-desktop/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3 failed
+    [desktop] › tests/browser/apps-mounted.spec.ts:21:1 › held app mutation cannot overwrite the next mounted agent 
+    [desktop] › tests/browser/apps-mounted.spec.ts:31:1 › removed iframe action cannot start a follow-up render 
+    [desktop] › tests/browser/apps-mounted.spec.ts:40:1 › form acknowledgement preserves a newer mounted draft 

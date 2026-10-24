@@ -1,0 +1,19 @@
+{"agent":"new","selection":{"revision":2,"skills":[]},"busy":false,"ready":true}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+2 !== 7
+
+    at file:///private/tmp/f12-skills-ui/stale-selection.mjs:9:554 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 2,
+  expected: 7,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.21.0

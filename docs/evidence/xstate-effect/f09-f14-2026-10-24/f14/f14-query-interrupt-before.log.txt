@@ -1,0 +1,45 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi
+
+stdout | tests/activity-query-owner.test.ts > retains a late checked failure accompanied by native interruption
+[20:50:31.313] ERROR (#1): Error [AssertionError]: expected false to be true // Object.is equality
+    at /Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/activity-query-owner.test.ts:342:32 {
+  actual: false,
+  expected: true,
+  showDiff: true,
+  operator: 'strictEqual',
+  [cause]: undefined
+}
+
+ ❯ tests/activity-query-owner.test.ts (10 tests | 1 failed | 9 skipped) 885ms
+   × retains a late checked failure accompanied by native interruption 866ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/activity-query-owner.test.ts > retains a late checked failure accompanied by native interruption
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/activity-query-owner.test.ts:342:32
+
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/core.ts:585:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:589:27
+ ❯ Array.<anonymous> node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1159:17
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:618:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 9 skipped (10)
+   Start at  20:50:13
+   Duration  19.84s (import 70%, transform 20%, tests 6%, setup 3%, worker 1%)
+

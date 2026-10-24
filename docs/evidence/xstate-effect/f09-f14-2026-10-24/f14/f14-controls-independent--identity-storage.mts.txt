@@ -1,0 +1,37 @@
+import assert from 'node:assert/strict'
+import {createRequire} from 'node:module'
+const root='/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi',require=createRequire(root+'/package.json')
+const {Deferred,Effect,Scope,Exit}=await import(require.resolve('effect'))
+const {send,waitFor}=await import(require.resolve('@xstate/effect'))
+const {makeTaskControlOwner,taskControlRequests,taskCommandKey}=await import(root+'/src/features/activity/task-control-owner.ts')
+const {makeMailboxControlOwner}=await import(root+'/src/features/activity/mailbox-control-owner.ts')
+const first='00000000-0000-4000-8000-000000000071',second='00000000-0000-4000-8000-000000000072',newer='00000000-0000-4000-8000-000000000073'
+const child={agentId:'one',groupId:17,childId:19,prefix:'background',active:['stop','steer']}
+const command=(view,action,text='')=>({type:'SUBMIT',view,action,text})
+function storage(){const values=new Map();return {values,getItem:k=>values.get(k)??null,setItem:(k,v)=>values.set(k,v),removeItem:k=>values.delete(k)}}
+await Effect.runPromise(Effect.scoped(Effect.gen(function*(){
+ const saved=storage(),posts=[],waiters=[];let generated=0
+ globalThis.fetch=(url,init)=>new Promise(resolve=>{posts.push({url,body:JSON.parse(init.body)});waiters.push(resolve)})
+ const actor=yield*makeTaskControlOwner(child,taskControlRequests(saved,()=>++generated===1?first:second))
+ yield*waitFor(actor,s=>s.matches('ready'));yield*send(actor,command(child,'steer','Original brief'));yield*send(actor,command(child,'steer','Different brief'));yield*send(actor,command(child,'stop'));yield*waitFor(actor,s=>s.matches('submitting'));yield*Effect.yieldNow
+ assert.equal(posts.length,1);assert.equal(generated,1);assert.equal(posts[0].body.action.text,'Original brief')
+ waiters[0](Response.json({error:'Unknown acknowledgement'},{status:503}));yield*waitFor(actor,s=>s.matches('ready')&&!!s.context.error)
+ assert.equal(posts.length,1);yield*send(actor,command({...child,agentId:'other'},'stop'));yield*Effect.yieldNow;assert.equal(posts.length,1)
+ yield*send(actor,command(child,'stop'));yield*waitFor(actor,s=>s.matches('submitting'));yield*Effect.yieldNow;assert.equal(posts.length,2);assert.equal(posts[1].body.operationId,second);assert.deepEqual(posts[1].body.action,{type:'stop'})
+ const replacement={groupId:17,childId:19,operationId:newer,action:{type:'stop'}};saved.setItem(taskCommandKey(child,'stop'),JSON.stringify(replacement));waiters[1](Response.json({ok:true}));yield*waitFor(actor,s=>s.matches('ready')&&!!s.context.acknowledged)
+ assert.deepEqual(JSON.parse(saved.getItem(taskCommandKey(child,'stop'))),replacement);assert.equal(JSON.parse(saved.getItem(taskCommandKey(child,'steer'))).operationId,first)
+ console.log(JSON.stringify({probe:'duplicate/uncertainty/independent-stop/late-ack',posts,generated,remaining:[...saved.values.values()]}))
+})))
+for(const failure of ['read','write']) await Effect.runPromise(Effect.scoped(Effect.gen(function*(){
+ const saved=storage();let posts=0;globalThis.fetch=()=>{posts++;return Promise.resolve(Response.json({ok:true}))}
+ const actor=yield*makeTaskControlOwner(child,taskControlRequests({...saved,...(failure==='read'?{getItem:()=>{throw new Error('storage unavailable')}}:{setItem:()=>{throw new Error('storage unavailable')}})},()=>first))
+ yield*waitFor(actor,s=>s.matches(failure==='read'?'blocked':'ready'));yield*send(actor,command(child,'steer','No unsafe send'))
+ if(failure==='write')yield*waitFor(actor,s=>s.matches('ready')&&!!s.context.error);else yield*Effect.yieldNow
+ assert.equal(posts,0);assert(actor.getSnapshot().context.error.includes('retained'));console.log(JSON.stringify({probe:`storage-${failure}`,posts,error:actor.getSnapshot().context.error}))
+})))
+await Effect.runPromise(Effect.scoped(Effect.gen(function*(){
+ const initial=epoch=>({agentId:'one',state:{tasks:[],deliveries:[],recovery:{schemaVersion:1,workflowVersion:1,epoch,failedAt:1,discoveryToken:null,message:'needs recovery'}}}),release=yield*Deferred.make(),seen=[]
+ const actor=yield*makeMailboxControlOwner(initial('old'),(_view,request)=>{seen.push(request);return Deferred.await(release)})
+ yield*send(actor,{type:'SUBMIT',agentId:'one',id:'old',action:'retry_mailbox'});yield*waitFor(actor,s=>s.matches('submitting'));yield*send(actor,{type:'VIEW',...initial('new')});yield*waitFor(actor,s=>s.context.view.state.recovery.epoch==='new');yield*Deferred.succeed(release,undefined);yield*waitFor(actor,s=>s.matches('ready'))
+ yield*send(actor,{type:'SUBMIT',agentId:'one',id:'old',action:'retry_mailbox'});yield*Effect.yieldNow;assert.deepEqual(seen,[{id:'old',action:'retry_mailbox'}]);assert.equal(actor.getSnapshot().context.view.state.recovery.epoch,'new');console.log(JSON.stringify({probe:'old-mailbox-ack-fence',seen,epoch:actor.getSnapshot().context.view.state.recovery.epoch}))
+})))

@@ -1,0 +1,36 @@
+# F14 controls and combined handoff
+
+Frozen worktree `/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi`, base `e521e980c3f60992bae9b63ed113e19da0a4e9f0`. No Git writes. Combined manifest `/private/tmp/f14-source-freeze.json` covers24 files; controls-only `/private/tmp/f14-controls-source-freeze.json` covers12. Query ownership/evidence is separate in `/private/tmp/f14-query-handoff.md` and its12-file manifest. Query reviewer is coordination_wave; controls independent review pending mailbox_independent_review.
+
+Task control admission and saved identity are owned by `task-control.machine.ts`/`task-control-owner.ts`, scoped through `use-task-control.ts`. Mailbox epoch/task/delivery request ownership is in the corresponding mailbox-control files. BackgroundActions/DelegatedWork/BotTasks use those owners; their custom read cycles now use the query slice's official scoped owner. Existing `delegation-commands.ts` is unchanged.
+
+The exact original built-browser probe produced2 POSTs with2 operation IDs before React rerendered and retained only the second. `/private/tmp/f14-characterization/probe.spec.ts` is byte-unchanged (SHA25690090671ec1a8fee36d0401b1d247731f7067c880e13bc66402671714dfe820e). Final after.log shows1 POST and matching saved ID; before.log preserves original failure. The after config only selects the final built bundle and separate result directory.
+
+Final controls evidence:
+- `/private/tmp/f14-controls-unit-final.log`:23/23 across activity-controls-ui, task-controls and task-channel-controls.
+- `/private/tmp/f14-controls-restored.log`:13/13 final unmutated actor tests after the bundle-only negative control.
+- `/private/tmp/f14-controls-negative.log`:removing exact mailbox epoch guard through a temporary Vite transform causes the intended stale epoch extra-dispatch assertion to fail. Source untouched.
+- `/private/tmp/f14-mailbox-cancel-red.log`:uncertain recovery followed by explicit cancellation wrongly sent previous recovery id/action; corrected by capturing the admitted cancellation in context.
+- `/private/tmp/f14-mailbox-projection-red.log`:stale409 error disappeared when newer diagnostic arrived; corrected without clearing/replacing newer diagnostic.
+- `/private/tmp/f14-controls-scoped-types.log`:exit0 bounded TypeScript config; no whole-tree rerun.
+- `/private/tmp/f14-controls-lint-final.log`:exit0 scoped architecture lint.
+- `/private/tmp/f14-controls-format-final.log`:exit0 formatter check (domain doc later formatted after adding reviewed history invariant).
+- `/private/tmp/f14-controls-browser-build-final.log`:final isolated full-workbench bundle built successfully after query identity repairs.
+- `/private/tmp/f14-controls-browser-final.log`:14/14 desktop/mobile cases across new activity-controls-lifecycle and existing communication-recovery specs. No pageerrors; paused/unconfirmed status and output retained; pending controls disabled; no task resend; exact recovery retry.
+- `/private/tmp/f14-characterization/after.log`:1/1 original byte-unchanged duplicate-admission probe.
+
+Original remote Stop pending/unconfirmed projections remain intact. Explicit Stop after uncertain steering/connection retry is available only after previous HTTP settlement; it gets a distinct immutable operation ID and leaves the original uncertain command saved. There is no auto command replay. Backend/task/epoch authority stays in the server; browser observers don't stop remote work.
+
+Known proof limits: browser transport is synthetic; no live OAuth/model/provider/network effects, account changes, deployment or publication. Existing task-channel suites exercise their normal synthetic adapters. Native finalizer proof is Effect/native Promise lifecycle, not browser process crash durability. Query liveness preserves existing cadence after ordinary failures, with no new5-failure budget. Integrated full static/build/native/browser gates are parent-owned. The earlier control typecheck was explicitly cancelled under shared-host contention and is not pass evidence.
+
+Port4457 was checked free after final Playwright cleanup. Production source remains frozen pending independent review.
+
+
+## Independent cleanup repair
+
+The reviewer found natural settlement of annotated Fail+Die+Interrupt and Fail+Interrupt loses checked/defect reasons when the owner filters against snapshot.context.failure. Snapshot retention does not propagate a parent Exit. Both owners now retain every fatal compound observation through finalization and collect non-pure Fail+Interrupt without Die. Four focused regressions fail before the repair; all27 focused tests pass after it. Scoped types/lint/format pass. Both reviewer-authored probes pass unchanged, including natural and late-after-abort task/mailbox cases. Identity/storage recheck also passes. Final manifest updated; reviewer hash closure pending.
+
+This delta changes only owner cleanup, focused tests and domain documentation. The14 desktop/mobile journeys and unchanged original probe precede this final cleanup-only delta; no public transitions, click payloads or UI projections changed. No redundant full browser rerun was performed.
+
+
+Independent controls review CLOSED: all12 final hashes matched. Both exact unchanged compound probes passed all8 natural/late task/mailbox cases with original annotations; unchanged identity/storage and mounted agent-switch probes passed after repair. Review `/private/tmp/f14-controls-independent/review.md`, hash/evidence manifest `review-manifest.json`. No remaining concrete finding within controls scope. Query review is separately owned.

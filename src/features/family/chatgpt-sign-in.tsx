@@ -1,14 +1,140 @@
+import { Effect, Fiber, Redacted } from "effect"
 import { ExternalLink } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
+import type { SnapshotFrom } from "xstate"
 
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { agentApi } from "@/http/client"
-import type { ChatGPTSignInPending } from "@/inference/adapters/chatgpt-sign-in"
+
+import { useFamily } from "./context"
+import { makeModelSignIn } from "./model-sign-in-owner"
+import type { modelSignInMachine } from "./model-sign-in.machine"
 
 const account = agentApi("home")
+function useModelSignIn(
+  defaultEmail: string,
+  onConnected: () => Promise<void>
+) {
+  const { family, current } = useFamily()
+  const authority = `${family.id}:${family.members.find((member) => member.role === "owner")?.id}`
+  const [email, setEmail] = useState(defaultEmail)
+  const [address, setAddress] = useState("")
+  const [snapshot, setSnapshot] = useState<SnapshotFrom<
+    ReturnType<typeof modelSignInMachine>
+  > | null>(null)
+  const owner = useRef<Effect.Success<
+    ReturnType<typeof makeModelSignIn>
+  > | null>(null)
+  const returnField = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    let mounted = true
+    const fiber = Effect.runFork(
+      Effect.gen(function* () {
+        const value = yield* makeModelSignIn({
+          account: (body, signal) => account("model-account", body, signal),
+          connected: onConnected,
+          authorized: () => {
+            const latest = current()
+            return (
+              latest?.role === "owner" &&
+              `${latest.id}:${latest.members.find((member) => member.role === "owner")?.id}` ===
+                authority
+            )
+          },
+          popup: () => window.open("about:blank", "_blank"),
+        })
+        if (!mounted) {
+          value.revoke()
+          return
+        }
+        owner.current = value
+        const subscription = value.actor.subscribe((state) => {
+          if (mounted) setSnapshot(state)
+        })
+        yield* Effect.addFinalizer(() =>
+          Effect.sync(() => subscription.unsubscribe())
+        )
+        setSnapshot(value.actor.getSnapshot())
+        return yield* Effect.never
+      }).pipe(Effect.scoped)
+    )
+    return () => {
+      mounted = false
+      owner.current?.revoke()
+      owner.current = null
+      Effect.runFork(Fiber.interrupt(fiber))
+    }
+  }, [authority, current, onConnected])
+  const attempt = snapshot?.context.attempt ?? null
+  const error = snapshot?.context.error ?? ""
+  const saved = snapshot?.context.connected
+    ? `ChatGPT connected as ${snapshot.context.connected}. Your family uses this connection.`
+    : ""
+  const loading = !snapshot || snapshot.matches("restoring")
+  const working =
+    !!snapshot &&
+    ["starting", "exchanging", "reconciling", "cancelling"].some((state) =>
+      snapshot.matches(state as "starting")
+    )
+  const expired = !!snapshot?.matches("expired")
+  useEffect(() => {
+    if (!attempt || working || expired) return
+    const field = returnField.current
+    if (!field) return
+    field.focus()
+    // Removing the start button lets the drawer restore focus to its popup on
+    // the next frame. Reconcile after that restoration, unless the user chose
+    // another control. Both frames belong to this waiting state.
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => {
+        const active = document.activeElement
+        if (
+          owner.current?.actor.getSnapshot().matches("waiting") &&
+          (active === document.body ||
+            active === field.closest('[role="dialog"]'))
+        )
+          field.focus()
+      })
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [attempt, working, expired, error])
+  function start() {
+    owner.current?.start(email)
+  }
+  function finish() {
+    const returned = address
+    setAddress("")
+    owner.current?.actor.send({
+      type: "FINISH",
+      address: Redacted.make(returned),
+    })
+  }
+  function cancel() {
+    setAddress("")
+    owner.current?.actor.send({ type: "CANCEL" })
+  }
+  return {
+    email,
+    setEmail,
+    address,
+    setAddress,
+    attempt,
+    error,
+    requestError: snapshot?.context.requestError ?? false,
+    saved,
+    loading,
+    working,
+    expired,
+    returnField,
+    start,
+    finish,
+    cancel,
+    owner,
+  }
+}
 export function ChatGPTReconnect({
   defaultEmail,
   onConnected,
@@ -18,113 +144,28 @@ export function ChatGPTReconnect({
   onConnected: () => Promise<void>
   onPendingChange?: (pending: boolean) => void
 }) {
-  const [email, setEmail] = useState(defaultEmail)
-  const [attempt, setAttempt] = useState<ChatGPTSignInPending | null>(null)
-  const [address, setAddress] = useState("")
-  const [error, setError] = useState("")
-  const [saved, setSaved] = useState("")
-  const [working, setWorking] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [requestError, setRequestError] = useState(false)
+  const {
+    email,
+    setEmail,
+    address,
+    setAddress,
+    attempt,
+    error,
+    requestError,
+    saved,
+    loading,
+    working,
+    expired,
+    returnField,
+    start,
+    finish,
+    cancel,
+    owner,
+  } = useModelSignIn(defaultEmail, onConnected)
   useEffect(() => {
     onPendingChange?.(working || address.length > 0 || requestError)
     return () => onPendingChange?.(false)
   }, [working, address, requestError, onPendingChange])
-  const returnField = useRef<HTMLInputElement>(null)
-  useEffect(() => {
-    const controller = new AbortController()
-    void account<{ pending: ChatGPTSignInPending | null }>(
-      "model-account",
-      undefined,
-      controller.signal
-    )
-      .then((value) => {
-        if (!controller.signal.aborted) setAttempt(value.pending)
-      })
-      .catch(() => {
-        if (!controller.signal.aborted)
-          setError(
-            "Could not restore the previous sign-in. Start again to reconnect."
-          )
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false)
-      })
-    return () => controller.abort()
-  }, [])
-  useEffect(() => {
-    if (attempt && !working) returnField.current?.focus()
-  }, [attempt, working, error])
-  async function start() {
-    setWorking(true)
-    setRequestError(false)
-    setError("")
-    setSaved("")
-    // Open synchronously so browser popup policies can preserve the user's tab.
-    const tab = window.open("about:blank", "_blank")
-    if (tab) tab.opener = null
-    try {
-      const next = await account<ChatGPTSignInPending>("model-account", {
-        action: "start",
-        email,
-      })
-      setAttempt(next)
-      if (tab) tab.location.replace(next.authorizationUrl)
-    } catch (cause) {
-      setRequestError(true)
-      tab?.close()
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Could not start sign-in. Try again."
-      )
-    } finally {
-      setWorking(false)
-    }
-  }
-  async function finish() {
-    if (!attempt) return
-    setWorking(true)
-    setRequestError(false)
-    setError("")
-    const returned = address
-    setAddress("")
-    try {
-      const result = await account<{ status: "connected"; email: string }>(
-        "model-account",
-        { action: "finish", id: attempt.id, address: returned }
-      )
-      await onConnected()
-      setAttempt(null)
-      setSaved(
-        `ChatGPT connected as ${result.email}. Your family uses this connection.`
-      )
-    } catch (cause) {
-      setRequestError(true)
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Could not finish sign-in. Start again."
-      )
-    } finally {
-      setWorking(false)
-    }
-  }
-  async function cancel() {
-    setWorking(true)
-    setRequestError(false)
-    setError("")
-    setAddress("")
-    try {
-      await account("model-account", { action: "cancel" })
-      setAttempt(null)
-    } catch {
-      setRequestError(true)
-      setError("Could not reset sign-in. Try again.")
-    } finally {
-      setWorking(false)
-    }
-  }
   const failure = error && (
     <Alert id="chatgpt-sign-in-error" role="alert">
       <AlertDescription>{error}</AlertDescription>
@@ -149,7 +190,7 @@ export function ChatGPTReconnect({
           <Button
             variant="outline"
             className="h-11"
-            onClick={() => setSaved("")}
+            onClick={() => owner.current?.actor.send({ type: "AGAIN" })}
           >
             Sign in again
           </Button>
@@ -202,8 +243,7 @@ export function ChatGPTReconnect({
               value={address}
               onChange={(event) => {
                 setAddress(event.target.value)
-                setError("")
-                setRequestError(false)
+                owner.current?.actor.send({ type: "EDIT" })
               }}
               placeholder="http://127.0.0.1:…/auth/callback?…"
               className="h-11 min-w-0 text-base sm:text-sm"
@@ -213,7 +253,7 @@ export function ChatGPTReconnect({
                   : "chatgpt-return-help"
               }
               aria-invalid={error ? true : undefined}
-              disabled={working}
+              disabled={working || expired}
             />
             <p id="chatgpt-return-help">
               Use this field only. Keep the address out of chat messages. Finish
@@ -225,7 +265,7 @@ export function ChatGPTReconnect({
             <Button
               type="submit"
               className="h-11"
-              disabled={working}
+              disabled={working || expired}
               aria-busy={working}
             >
               {working ? "Connecting…" : "Finish connection"}
@@ -283,8 +323,7 @@ export function ChatGPTReconnect({
           className="self-start"
           onClick={() => {
             setAddress("")
-            setError("")
-            setRequestError(false)
+            owner.current?.actor.send({ type: "EDIT" })
           }}
         >
           {requestError ? "Dismiss error" : "Discard return address"}

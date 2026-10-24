@@ -1,0 +1,11 @@
+{"calls":1,"resets":0}
+late unmount reset fenced
+failed invalidation requires explicit retry and resets once
+replacement error waits for native invalidation and owns its reset
+native focus return 1100
+exact current agent 1100
+locked search stays closed 1100
+native focus return 390
+exact current agent 390
+locked search stays closed 390
+{"passed":9,"results":["late unmount reset fenced","failed invalidation requires explicit retry and resets once","replacement error waits for native invalidation and owns its reset","native focus return 1100","exact current agent 1100","locked search stays closed 1100","native focus return 390","exact current agent 390","locked search stays closed 390"]}

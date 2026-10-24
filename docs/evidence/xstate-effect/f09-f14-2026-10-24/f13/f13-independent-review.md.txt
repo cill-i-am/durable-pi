@@ -1,0 +1,24 @@
+# F13 independent review
+
+Worktree: `/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi`.
+Scope: 14 F13 paths in `/private/tmp/f13-final-manifest.json`, plus read-only inspection of the actual account/agent remount callsites, native interop, and existing server operation/dedup authority. No production edits, Git actions, provider traffic, native sends, or broad duplicate gates by reviewer.
+
+## Finding and recheck
+
+One confirmed cleanup Cause-integrity defect: `makeChannelSettings` recorded Die-containing native cleanup failures but removed every Interrupt reason at outer scope release. A native Fail + Die + Interrupt(82234) arriving after abort therefore lost the native interruption identity, despite correctly joining the native operation. Pure expected interruption was already excluded by the observer's Die requirement.
+
+Preserved independent actual-owner probe: `/private/tmp/f13-compound-cleanup-review.mts` (SHA256 `e537cd808aa4b001a6837bd9cb5a403eeb7e18461cec036b319532f57747d03d`). It starts the production owner with a held native read, closes the owning scope, waits for the abort, verifies closure remains pending, then rejects with the native compound Cause. `/private/tmp/f13-compound-cleanup-before.log` records the failed sentinel assertion and only Die,Die reasons.
+
+Command from the worktree: `/opt/homebrew/opt/node@24/bin/node --import tsx /private/tmp/f13-compound-cleanup-review.mts`.
+
+Author repair removes only the blanket Interrupt filter and retains all original reasons. Independent unchanged recheck exited 0 at `/private/tmp/f13-compound-cleanup-independent-after.log`; Interrupt(82234) is present alongside both defect reasons. All 14 owned and 11 preserved hashes match the corrected freeze. Review CLOSED with no remaining concrete findings in this bounded scope. Corrected owner SHA256 `e2245ba61c7b243ab0f21087eee9a93a939d1ac9c349fc1f35ff01599519ca86`; regression test SHA256 `812d9b93a6414ccf89324588e6adf59aa6b01cec5f7b24646678af265c210c5d`.
+
+## Reviewed authority and limits
+
+- Settings store an exact versioned request under account + agent + channel before dispatch. Restoring a saved request does not dispatch; malformed/unknown receipt data blocks new writes rather than deleting it. Acknowledgement/removal checks operation identity, preserving a replacement receipt.
+- New retry requests must pass current open/enabled/archive/message-state guards. The uncertain-message branch requires explicit confirmation and freezes the acknowledged body. RETRY for an already saved operation intentionally reuses its exact operationId/body/revision; this is recovery, not new authorization. Existing email/WhatsApp receipt lookups verify message id plus duplicate-risk acknowledgement before returning a previous operation. Unknown operations still run server admission checks. Configuration replay preserves the original revision fence. Outer server failures may leave a request unconfirmed; recovery does not promise success after revocation.
+- Superseded reads cannot publish over accepted saves. Current production parent keys remount settings for agent changes and the workspace for account changes; source inspection did not assume hook state alone supplied those fences.
+- Memory import admits one file read/submission and freezes the string used for explicit same-import retry. Native file reads and requests are abort-signaled/joined and unmount suppresses late publication. Memory's owner retains the full late fatal Cause. Existing prepareHistory canonical record hashing and import:<hash>:<index> append identity remain the backend deduplication authority. No new persisted byte store or backend scheduler is introduced.
+- Downloads and summary/backup recovery are preserved exclusions/previously reviewed owners. No live provider, production browser, workerd restart or new end-to-end backend import claim is made.
+
+Owner-reported evidence inspected: `/private/tmp/f13-settings-import-handoff.md` and final browser log `/private/tmp/f13-browser-final.log` ending 22 passed (desktop/mobile). Reviewer did not duplicate those browser/full gates; this browser run precedes the small Cause-preservation repair. The author's post-repair focused regression is the relevant check for that change.

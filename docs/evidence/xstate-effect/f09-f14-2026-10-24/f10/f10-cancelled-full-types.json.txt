@@ -1,0 +1,6 @@
+{
+  "pid": 32164,
+  "command": "",
+  "stdout": "",
+  "action": "No matching own process remained; no signal sent"
+}

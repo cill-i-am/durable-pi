@@ -1,0 +1,40 @@
+# F11 Apps frontend — ready for fresh review
+
+Worktree: /Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi
+Source manifest: /private/tmp/f11-source-freeze.json
+Document: docs/xstate-effect-apps-ui.md
+
+Production source frozen. Official @xstate/effect actors now own Apps detail/list observation, save/interaction/cancellation reconciliation, frame rendering/actions/listeners, and form acknowledgement. Uncertain path+payload+operationId remains immutable until explicit retry or confirmed cancellation. A cancelled already-applied operation retains its receipt until successful reload. Actor scopes stop stale continuations and join actual native work, preserving late Fail/Die/Interrupt Causes. App and frame identity remounts fence other agents/versions; form edit revision fences newer drafts including ABA. Pure projections and backend contracts remain unchanged.
+
+Before-edit actual-mounted characterization: /private/tmp/f11-mounted-before-final.log, three intended failures. Earlier before.log/before-2.log were fixture encoding failures and are NOT acceptance evidence. Correct UTF-8 fixture reproduces old-agent follow-up read, removed-frame follow-up render, and cleared newer draft. Same safety assertions preserved after repair; later extra native-entry waits ensure barriers are occupied.
+
+Final evidence:
+-36 tests/3 files: /private/tmp/f11-tests-final.log (8 new lifecycle tests, web-apps, native Pi apps)
+-10 browser tests, desktop/mobile: /private/tmp/f11-browser-final.log (all pass)
+-Negative source-preserving transform removes form edit-revision guard and fails ABA as intended: /private/tmp/f11-negative-draft.log; config /private/tmp/f11-negative.config.mjs
+-Scoped lint: /private/tmp/f11-lint-final.log
+-Scoped format: /private/tmp/f11-format-final.log
+-Current full typecheck /private/tmp/f11-types-final.log reports only unrelated src/features/auth/passkeys.machine.ts:30 unused requiresRefresh. Earlier F11 typechecks passed; no F11 errors remain. Parent owns combined gate.
+
+Browser test fixture bundles production components through installed Vite; all HTTP and native action responses are local synthetic. tests/browser/apps-mounted.spec.ts runs under the existing browser server; custom local run config /private/tmp/f11-playwright.config.mjs uses4458 and isolateddist/f11-browser. Server released after final run. No live Apps, provider/auth mutation, Git, shared package/config/tracking or schema edits.
+
+Known limits: UI-local uncertain intent is retained only by mounted owner, matching prior persistence boundary; backend operation ledger remains authoritative and reload does not resend. Abort is not remote rollback. A native operation that never settles can keep its scope occupied indefinitely; no invented release timeout. web-frame.ts remains the pure sandbox document generator plus native browser relay; parent actor is sole consequential action admission owner and iframe disposal owns its native document resources.
+
+Please review highest-risk exact operation/cancellation state, final frame authority and form acknowledgement boundaries. F04 remains frozen and independently clear. Fresh F11 review not yet completed.
+
+## Fresh review correction and shared dependency freeze
+
+Independent actual-consumer probes reproduced unread401 bodies and lost late native Fail+annotatedInterrupt without Die. The single shared repair is owned here and parent-authorized in src/http/client.ts plus src/shared/interop.ts; identical frozen bytes and two focused tests were copied into xstate-native-ci-budget after checking its old hashes. No parallel feature wrapper remains. appWorkFailures applies preserveFatal before observing direct Effects.
+
+Shared exact manifest: /private/tmp/shared-http-native-freeze.json. F11 /private/tmp/f11-source-freeze.json now covers24 paths including these exact dependencies and regression tests; old20-path manifest retained as f11-source-freeze-before-review.json.
+
+Final corrected evidence:
+-43 tests/5 files pass: /private/tmp/f11-review-final-tests.log
+-unchanged independent actual appRequests/frame owner3/3 pass: /private/tmp/f11-independent-after-final.log
+-10 mounted desktop/mobile journeys pass against final shared helper composition: /private/tmp/f11-browser-shared-final.log (8.1s);4458 server released
+-scoped types/lint/24-file format pass: /private/tmp/f11-review-types-final.log, f11-review-lint-final.log, f11-format-review-final.log
+-direct raw native no-Die Cause regression is failure-sensitive: /private/tmp/native-operation-negative.log fails original annotatedInterrupt assertion when the new shared guard is removed; config native-operation-negative.config.mjs. AbortError and pure interruption controls remain green in positive run.
+
+HTTP behavior retains original status/code/message and ordinary malformed JSON fallback. Unread unlocked response cancellation is awaited, structured body failures remain intact, and failed cancellation combines complete native reasons with the original request/API error. Parent owns combined whole-repository/static/native/browser gates for the shared seam; this handoff claims only the bounded checks above.
+
+Independent F11 review CLOSED CLEAR: /private/tmp/f11-independent-review/review.md. All24 final manifest hashes match; unchanged3 actual-consumer probes pass. Reviewer independently confirmed F09 actual401/503 shared consumers and F12 held-fetch/File.text no-Die native probes against copied shared helpers. No further concrete F11 finding.

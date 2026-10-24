@@ -1,6 +1,5 @@
 import { Schema } from "effect"
 import { ChevronDown } from "lucide-react"
-import { useEffect, useState } from "react"
 
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -10,43 +9,23 @@ import {
   CollapsibleTrigger,
   CollapsibleContent,
 } from "@/components/ui/collapsible"
-import { agentApi } from "@/http/client"
-import { poll } from "@/http/poll"
 import { InferenceActivity, type Attempt } from "@/inference/usage-domain"
 
+import { activityJsonRequest } from "./query-owner"
+import { useActivityQuery } from "./use-activity-query"
+
 export function InferenceRuns({ agentId }: { agentId: string }) {
-  const [attempts, setAttempts] = useState<readonly Attempt[]>([])
-  const [error, setError] = useState("")
-  useEffect(() => {
-    let current = true
-    const controller = new AbortController()
-    setAttempts([])
-    const stop = poll(
-      async () => {
-        try {
-          const result = Schema.decodeUnknownSync(InferenceActivity)(
-            await agentApi(agentId)("inference", undefined, controller.signal)
-          )
-          if (current) {
-            setAttempts(result.attempts)
-            setError("")
-          }
-        } catch {
-          if (current)
-            setError(
-              "Model activity could not reconnect. Saved records will return when the connection recovers."
-            )
-        }
-      },
-      2500,
-      true
-    )
-    return () => {
-      current = false
-      controller.abort()
-      stop()
-    }
-  }, [agentId])
+  const { data, error, refresh } = useActivityQuery({
+    key: JSON.stringify(["inference", agentId]),
+    interval: 2500,
+    read: async (signal) =>
+      Schema.decodeUnknownSync(InferenceActivity)(
+        await activityJsonRequest(agentId, "inference", signal)
+      ),
+    errorMessage:
+      "Model activity could not reconnect. Saved records will return when the connection recovers.",
+  })
+  const attempts = data?.attempts ?? []
   return (
     <Collapsible defaultOpen>
       <CollapsibleTrigger render={<Button variant="ghost" size="sm" />}>
@@ -59,7 +38,16 @@ export function InferenceRuns({ agentId }: { agentId: string }) {
         </p>
         {error && (
           <Alert>
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription>
+              {error}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void refresh()}
+              >
+                Reconnect
+              </Button>
+            </AlertDescription>
           </Alert>
         )}
         {!attempts.length && !error && (

@@ -1,6 +1,5 @@
 import { Schema } from "effect"
 import { ArrowRight, ChevronDown, Clock3, RefreshCw } from "lucide-react"
-import { useEffect, useState } from "react"
 
 import {
   ActivityFilter as importedFilter,
@@ -23,12 +22,38 @@ import {
 } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { agentApi } from "@/http/client"
-import { poll } from "@/http/poll"
 import type { WorkspaceQuery } from "@/navigation/workspace"
 import { parseAgentId } from "@/navigation/workspace"
 
 import { ActivityRecord } from "./activity-record"
+import { activityJsonRequest } from "./query-owner"
+import { useActivityQuery } from "./use-activity-query"
+
+function useActivityTimeline(
+  agentId: string,
+  scope: string,
+  filter: string,
+  cursor: ActivityCursor | null
+) {
+  const params = new URLSearchParams({
+    scope: scope === "all" ? "all" : "bot",
+    filter,
+  })
+  if (cursor) params.set("cursor", JSON.stringify(cursor))
+  const path = `activity?${params}`
+  return useActivityQuery({
+    key: JSON.stringify(["activity", agentId, scope, path]),
+    interval: cursor ? 15000 : 5000,
+    read: async (signal) =>
+      Schema.decodeUnknownSync(ActivityPage)(
+        await activityJsonRequest(
+          scope === "all" ? agentId : scope,
+          path,
+          signal
+        )
+      ),
+  })
+}
 
 export function ActivityTimeline({
   agent,
@@ -60,49 +85,11 @@ export function ActivityTimeline({
   const cursor = filters.cursor ?? null
   const setCursor = (value: ActivityCursor | null) =>
     onFiltersChange({ ...filters, cursor: value ?? undefined })
-  const [page, setPage] = useState<ActivityPage | null>(null)
-  const [error, setError] = useState("")
-  const [retry, setRetry] = useState(0)
-  useEffect(() => {
-    let current = true
-    const controller = new AbortController()
-    setPage(null)
-    setError("")
-    const request = agentApi(scope === "all" ? agent.id : scope)
-    const params = new URLSearchParams({
-      scope: scope === "all" ? "all" : "bot",
-      filter,
-    })
-    if (cursor) params.set("cursor", JSON.stringify(cursor))
-    const stop = poll(
-      async () => {
-        if (document.visibilityState !== "visible") return
-        try {
-          const value = Schema.decodeUnknownSync(ActivityPage)(
-            await request(`activity?${params}`, undefined, controller.signal)
-          )
-          if (current) {
-            setPage(value)
-            setError("")
-          }
-        } catch (cause) {
-          if (current)
-            setError(
-              cause instanceof Error
-                ? cause.message
-                : "Activity could not reconnect."
-            )
-        }
-      },
-      cursor ? 15000 : 5000,
-      true
-    )
-    return () => {
-      current = false
-      controller.abort()
-      stop()
-    }
-  }, [agent.id, scope, filter, cursor, retry])
+  const {
+    data: page,
+    error,
+    refresh,
+  } = useActivityTimeline(agent.id, scope, filter, cursor)
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -171,7 +158,7 @@ export function ActivityTimeline({
       <TimelineAvailability
         page={page}
         error={error}
-        onRetry={() => setRetry((value) => value + 1)}
+        onRetry={() => void refresh()}
         onMemory={onMemory}
       />
       <section className="flex flex-col divide-y" aria-label="Recent activity">

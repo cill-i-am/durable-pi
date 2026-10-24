@@ -1,0 +1,23 @@
+{
+  "extends": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tsconfig.json",
+  "include": [
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/agents/**/*.ts",
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/agents/**/*.tsx",
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/agent-editor-machine.test.ts",
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/app/workbench-presence.machine.ts",
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/app/use-workbench-presence.ts",
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/app/workspace-guard.machine.ts",
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/app/use-workspace-guard.ts",
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/agent-archive-machine.test.ts",
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/agent-observation-lifetime.test.ts",
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/workspace-lifetime-machine.test.ts",
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/browser/agent-owner-lifecycle.spec.ts",
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/agent-request-cleanup.test.ts"
+  ],
+  "compilerOptions": {
+    "typeRoots": [
+      "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/@types",
+      "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules"
+    ]
+  }
+}

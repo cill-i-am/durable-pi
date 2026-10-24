@@ -43,7 +43,12 @@ const schedule = (routine: Routine) =>
     : routine.schedule.type === "webhook"
       ? "On incoming events"
       : `Every ${routine.schedule.minutes} minutes`
-export function RoutinesWorkbench({
+export function RoutinesWorkbench(
+  props: Parameters<typeof RoutinesWorkbenchOwner>[0]
+) {
+  return <RoutinesWorkbenchOwner key={props.agentId} {...props} />
+}
+function RoutinesWorkbenchOwner({
   agentId,
   onPendingChange,
   selected,
@@ -67,7 +72,8 @@ export function RoutinesWorkbench({
       setNewEditor(null)
       onSelect(null)
     },
-    setMutationPending
+    setMutationPending,
+    `${selected ?? "list"}:${webhook}:${newEditor?.key ?? ""}`
   )
   const selectedRoutine = actions.data.routines.find(
     (value) => value.id === selected
@@ -86,7 +92,7 @@ export function RoutinesWorkbench({
   const setHook = (value: Routine | null) =>
     onSelect(value?.id ?? null, !!value)
   const [hookPending, setHookPending] = useState(false)
-  const locked = actions.busy || !!actions.attempt || hookPending
+  const locked = routinesLocked(actions, hookPending)
   const editing = editor !== null
   useEffect(() => {
     onPendingChange(mutationPending || locked || editing)
@@ -224,7 +230,7 @@ export function RoutinesWorkbench({
           <Alert>
             <AlertDescription>
               {actions.error}
-              {!actions.attempt && (
+              {!routinesLocked(actions, false) && (
                 <Button
                   variant="link"
                   size="sm"
@@ -237,6 +243,20 @@ export function RoutinesWorkbench({
             </AlertDescription>
           </Alert>
         )}
+        {actions.stopId && (
+          <div className="flex flex-col gap-2 rounded-lg border p-3">
+            <p className="text-xs text-muted-foreground">
+              Stop has not been confirmed for this run.
+            </p>
+            <Button
+              size="sm"
+              disabled={actions.busy}
+              onClick={() => void actions.retryStop()}
+            >
+              Retry same Stop
+            </Button>
+          </div>
+        )}
         {actions.attempt && (
           <div className="flex flex-col gap-2 rounded-lg border p-3">
             <p className="text-xs text-muted-foreground">
@@ -248,7 +268,7 @@ export function RoutinesWorkbench({
               <Button
                 size="sm"
                 disabled={actions.busy}
-                onClick={() => void actions.send(actions.attempt!)}
+                onClick={() => void actions.retry()}
               >
                 Retry same change
               </Button>
@@ -276,7 +296,7 @@ export function RoutinesWorkbench({
           </Alert>
         ) : hook ? (
           <WebhookPanel
-            key={hook.id}
+            key={`${agentId}:${hook.id}`}
             agentId={agentId}
             routine={hook}
             onBack={() => {
@@ -750,4 +770,11 @@ function routineEditorDefaults(routine?: Routine) {
     status:
       routine?.status === "paused" ? ("paused" as const) : ("active" as const),
   }
+}
+
+function routinesLocked(
+  actions: { busy: boolean; attempt: unknown; stopId: string | null },
+  hookPending: boolean
+) {
+  return actions.busy || !!actions.attempt || !!actions.stopId || hookPending
 }

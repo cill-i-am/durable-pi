@@ -1,0 +1,4 @@
+editor reconciliation-barrier ABA preserves new draft; acknowledged create next save is update
+catalog queues one fresh read; stale result suppressed even when following read fails; explicit read recovers
+membership change joins obsolete read before fresh observation; empty membership does not poll
+closed guard fails safe; startup readiness monotonic; same-panel ABA exit completion fenced

@@ -1,0 +1,11 @@
+# F10 bounded independent review: closed clear
+
+One confirmed finding was repaired by the F10 author. All four production agent owners (editor, catalogue, archive and statuses) joined a held native operation correctly, then incorrectly returned successful scope closure after its late rejection contained a checked failure plus an annotated native interruption without a defect. The original values and annotations disappeared. The raw before evidence and frozen 26-file hashes remain in `cleanup-before.log`.
+
+The author updated the existing `makeAgentRequests` observer, together with the separately owned shared native adapter correction; no new request wrapper was introduced. The byte-unchanged `cleanup.mts` now passes for all four owners, preserving checked failure and Interrupt 91073 with its original annotation. It also checks that closure waits for real settlement, no late callback runs, and status listeners are removed. `cleanup-after.log` contains the final 27-file source hashes (one added regression file).
+
+The separate unchanged `behavior.mts` passes held-reconciliation A→B→A draft preservation, acknowledged create→update, superseded catalogue result suppression when the newer read fails followed by explicit read recovery, membership-change serialization and empty/hidden observation gating, a closed guard failing safe, monotonic startup readiness, and same-panel A→B→A exit acknowledgement fencing. Both before and post-repair runs pass.
+
+Read-only inspection covered all manifest production paths and the unchanged WorkbenchPanel/route callers. No additional finding in this bounded scope. Catalogue and status endpoints have no client pagination contract; their existing collection shape and projection remain intact. The authored desktop/mobile evidence was inspected, but this review did not repeat a browser/build/full-router gate. The recorded probes use actual production owners and official scoped actors with synthetic native barriers; they do not establish real remote cancellation or exactly-once writes.
+
+Final ownership and shared dependency hashes are in `closed-manifest.json`. No production edits, Git actions or broad gates were performed by this reviewer.

@@ -1,0 +1,21 @@
+import { Effect, Exit, Scope } from 'effect'
+import { afterEach, expect, it, vi } from 'vitest'
+import { makeSkillsOwner, skillsRequests } from '/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/skills/skills-owner'
+afterEach(()=>vi.unstubAllGlobals())
+it('coalesces refresh while the previous actual native read is still joined',async()=>{
+ const requests:{path:string,signal:AbortSignal,release:(r:Response)=>void}[]=[]
+ vi.stubGlobal('fetch',vi.fn((path,init)=>new Promise<Response>(release=>requests.push({path,signal:init.signal,release}))))
+ const scope=Effect.runSync(Scope.make())
+ const actor=Effect.runSync(makeSkillsOwner('a',skillsRequests('a')).pipe(Effect.provideService(Scope.Scope,scope)))
+ let closing:Promise<unknown>|undefined
+ try{
+  await actor.send({type:'REFRESH'});await vi.waitFor(()=>expect(requests).toHaveLength(2))
+  await actor.send({type:'REFRESH'});await new Promise(r=>setTimeout(r,20))
+  expect(requests).toHaveLength(2)
+ }finally{
+  closing=Effect.runPromiseExit(Scope.close(scope,Exit.void))
+  await new Promise(r=>setTimeout(r,10))
+  for(const r of requests)r.release(Response.json(r.path.includes('skill-selection')?{revision:0,skills:[]}:{skills:[]}))
+  await closing
+ }
+})

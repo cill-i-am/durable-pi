@@ -1,0 +1,30 @@
+import {expect,test} from "@playwright/test"
+import {resolveRoute} from "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/inference/policy"
+const group={id:17,turnId:"turn-one",conversationId:7,objective:"Uncertain private draft",route:resolveRoute("conversation",{model:"test",thinking:"off"}),createdAt:1,deadline:9000000000000,status:"working",children:[],background:{delivery:"paused",error:"Connection needs explicit retry",reportId:"report-one",stop:"none"}}
+test("background command rapid admission preserves one original operation",async({page})=>{
+ const posts:any[]=[];const releases:(()=>void)[]=[]
+ await page.route("**/api/agent/**",async route=>{
+  const request=route.request(),path=new URL(request.url()).pathname
+  if(request.method()==="POST") {posts.push({path,body:request.postDataJSON()});await new Promise<void>(done=>releases.push(done));return route.fulfill({status:503,json:{error:"Acknowledgement lost"}})}
+  if(path==="/api/agent/background")return route.fulfill({json:{groups:[group],nextOffset:null}})
+  if(path==="/api/agent/delegations")return route.fulfill({json:{groups:[],nextOffset:null}})
+  if(path==="/api/agent/plans")return route.fulfill({json:{plans:[],nextOffset:null}})
+  if(path==="/api/agent/access")return route.fulfill({json:{tools:[],approvals:[]}})
+  if(path==="/api/agent/inference")return route.fulfill({json:{attempts:[]}})
+  if(path==="/api/agent/communication")return route.fulfill({json:{tasks:[],deliveries:[],recovery:null}})
+  return route.fallback()
+ })
+ await page.goto("/agents/home/activity?tab=tasks")
+ await page.getByLabel("Email",{exact:true}).fill("browser-smoke@example.invalid")
+ await page.getByLabel("Password",{exact:true}).fill("Disposable browser fixture password 2026!")
+ await page.getByRole("button",{name:"Sign in",exact:true}).click()
+ const retry=page.getByRole("region",{name:"Background work"}).getByRole("button",{name:"Retry connection",exact:true})
+ await expect(retry).toBeEnabled()
+ await retry.evaluate((button:HTMLButtonElement)=>{button.click();button.click()})
+ await expect.poll(()=>posts.length).toBeGreaterThan(0)
+ await page.waitForTimeout(100)
+ const saved=await page.evaluate(()=>Object.fromEntries(Object.entries(sessionStorage)))
+ console.log(JSON.stringify({posts,saved}))
+ for(const release of releases)release()
+ expect(posts).toHaveLength(1)
+})

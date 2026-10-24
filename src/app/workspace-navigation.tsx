@@ -17,7 +17,7 @@ import {
   Settings2,
   TerminalSquare,
 } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
+import { useRef } from "react"
 
 import type { AgentProfile } from "@/agents/contracts"
 import { AgentMark, agentTone } from "@/components/agent-mark"
@@ -51,16 +51,9 @@ import { useFamily } from "@/features/family/context"
 import type { Workbench } from "@/navigation/workspace"
 
 export type { Workbench } from "@/navigation/workspace"
-export type WorkspaceAction =
-  | Workbench
-  | "create"
-  | "edit"
-  | "archive"
-  | "memory"
-  | "hide-workbench"
-  | "sign-out"
-  | "security"
-  | "settings"
+export type { WorkspaceAction } from "./workspace-command.machine"
+import { useWorkspaceCommand } from "./use-workspace-command"
+import type { WorkspaceAction } from "./workspace-command.machine"
 
 const destinations = [
   { id: "activity", label: "Activity", icon: Activity },
@@ -94,43 +87,40 @@ export function WorkspaceNavigation({
   onSelect: (id: AgentProfile["id"]) => void
 }) {
   const { family } = useFamily()
-  const [searchOpen, setSearchOpen] = useState(false)
   const searchTrigger = useRef<HTMLButtonElement>(null)
-  const skipSearchFocusReturn = useRef(false)
-  const afterSearch = useRef<
-    | { kind: "action"; id: WorkspaceAction }
-    | { kind: "agent"; id: AgentProfile["id"] }
-    | null
-  >(null)
   const { toggleSidebar, setOpenMobile } = useSidebar()
-  useEffect(() => {
-    function shortcut(event: KeyboardEvent) {
-      if (
-        event.key.toLowerCase() !== "k" ||
-        !(event.metaKey || event.ctrlKey) ||
-        event.isComposing ||
-        event.repeat
-      )
-        return
-      if (!searchOpen && document.activeElement?.closest('[role="dialog"]'))
-        return
-      event.preventDefault()
-      if (!locked) {
+  const search = useWorkspaceCommand({
+    locked: () => locked,
+    dispatch: (command) => {
+      if (command.kind === "action") onAction(command.id)
+      else {
         setOpenMobile(false)
-        setSearchOpen((value) => !value)
+        onSelect(command.id)
       }
-    }
-    window.addEventListener("keydown", shortcut)
-    return () => window.removeEventListener("keydown", shortcut)
-  }, [locked, searchOpen, setOpenMobile])
-  function run(action: WorkspaceAction) {
-    if (locked) return
-    if (searchOpen) {
-      skipSearchFocusReturn.current = true
-      afterSearch.current = { kind: "action", id: action }
-      setSearchOpen(false)
-    } else onAction(action)
-  }
+    },
+    listen: (toggle, opened, unlocked) => {
+      const shortcut = (event: KeyboardEvent) => {
+        if (
+          event.key.toLowerCase() !== "k" ||
+          !(event.metaKey || event.ctrlKey) ||
+          event.isComposing ||
+          event.repeat
+        )
+          return
+        if (!opened() && document.activeElement?.closest('[role="dialog"]'))
+          return
+        event.preventDefault()
+        if (unlocked()) {
+          setOpenMobile(false)
+          toggle()
+        }
+      }
+      window.addEventListener("keydown", shortcut)
+      return () => window.removeEventListener("keydown", shortcut)
+    },
+  })
+  const run = (action: WorkspaceAction) =>
+    search.choose({ kind: "action", id: action })
   const commands = [
     { id: "security", label: "Account security", icon: ShieldCheck },
     { id: "create", label: "New agent", icon: Plus },
@@ -174,7 +164,7 @@ export function WorkspaceNavigation({
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   disabled={locked}
-                  onClick={() => setSearchOpen(true)}
+                  onClick={() => search.change(true)}
                 >
                   <Search />
                   Search agents and commands
@@ -241,7 +231,7 @@ export function WorkspaceNavigation({
           variant="outline"
           disabled={locked}
           className="workspace-search"
-          onClick={() => setSearchOpen(true)}
+          onClick={() => search.change(true)}
           aria-label="Search agents and commands"
         >
           <Search />
@@ -259,28 +249,17 @@ export function WorkspaceNavigation({
         </Button>
       </header>
       <Dialog
-        open={searchOpen && !locked}
-        onOpenChange={setSearchOpen}
+        open={search.open && !locked}
+        onOpenChange={search.change}
         onOpenChangeComplete={(open) => {
-          if (open) {
-            skipSearchFocusReturn.current = false
-            return
-          }
-          const pending = afterSearch.current
-          afterSearch.current = null
-          if (!pending || locked) return
-          if (pending.kind === "action") onAction(pending.id)
-          else {
-            setOpenMobile(false)
-            onSelect(pending.id)
-          }
+          if (!open) search.complete()
         }}
       >
         <DialogContent
           className="workspace-command"
           showCloseButton={false}
           finalFocus={() =>
-            skipSearchFocusReturn.current
+            search.skipFocus
               ? false
               : searchTrigger.current?.getClientRects().length
                 ? searchTrigger.current
@@ -309,13 +288,9 @@ export function WorkspaceNavigation({
                       key={agent.id}
                       value={`agent:${agent.id}`}
                       keywords={[agent.name, agent.instructions]}
-                      onSelect={() => {
-                        if (!locked) {
-                          skipSearchFocusReturn.current = true
-                          afterSearch.current = { kind: "agent", id: agent.id }
-                          setSearchOpen(false)
-                        }
-                      }}
+                      onSelect={() =>
+                        search.choose({ kind: "agent", id: agent.id })
+                      }
                     >
                       <AgentMark tone={agentTone(agent.id)} />
                       <span className="min-w-0 flex-1 truncate">
@@ -357,7 +332,7 @@ export function WorkspaceNavigation({
             <Button
               variant="ghost"
               size="xs"
-              onClick={() => setSearchOpen(false)}
+              onClick={() => search.change(false)}
             >
               Esc · Close
             </Button>

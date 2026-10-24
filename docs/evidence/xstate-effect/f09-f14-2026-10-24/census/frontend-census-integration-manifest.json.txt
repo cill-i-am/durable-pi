@@ -1,0 +1,132 @@
+{
+  "note": "Author work interrupted before final closure; these additive candidates require root review and gates",
+  "backup": "/private/tmp/frontend-census-integration-8j5k4gcw",
+  "files": [
+    {
+      "lane": "model-default",
+      "path": "src/features/conversation/model-defaults.tsx",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/conversation/model-defaults.tsx",
+      "before": "c93f7e4c15e072f9419ddfa45262cb96f8932388ab78f4420869bea6fe3c4efa",
+      "sha256": "1bf9a9652de6b5b3901a651f1f8bf965ca4ae5786d5a901d1b487b1a31bc5093"
+    },
+    {
+      "lane": "model-default",
+      "path": "src/features/conversation/model-defaults.machine.ts",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/conversation/model-defaults.machine.ts",
+      "before": null,
+      "sha256": "2282dd245a0236e2434e8b37bccd9a3c14410750d526f21107aac8870bb91a01"
+    },
+    {
+      "lane": "model-default",
+      "path": "src/features/conversation/model-defaults-owner.ts",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/conversation/model-defaults-owner.ts",
+      "before": null,
+      "sha256": "d24e9fcaa6a3343941958a17b36d673162989bae8f5e863bb88d4e049278c85e"
+    },
+    {
+      "lane": "model-default",
+      "path": "src/features/conversation/use-model-defaults.ts",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/conversation/use-model-defaults.ts",
+      "before": null,
+      "sha256": "80b1d5763fec394673fb50e9e708578f8fa49bb4af881299812d9b33550f708d"
+    },
+    {
+      "lane": "model-default",
+      "path": "tests/model-defaults-lifecycle.test.ts",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/model-defaults-lifecycle.test.ts",
+      "before": null,
+      "sha256": "0a91e22ebe0002da1a1835d5dd70ec0d7453d37c42810c74422c8cbe9135aff3"
+    },
+    {
+      "lane": "model-default",
+      "path": "tests/browser/model-defaults-ownership.spec.ts",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/browser/model-defaults-ownership.spec.ts",
+      "before": null,
+      "sha256": "1339f89a9c9fb3d6815c8e3797f3e0d65bbe538e830ece950277d19c53212614"
+    },
+    {
+      "lane": "workspace-controls",
+      "path": "src/app/workspace-navigation.tsx",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/app/workspace-navigation.tsx",
+      "before": "da47ab787061957e1a6151969ed5f06dc0ecba0e9136cdf20e019d11b973b6f9",
+      "sha256": "52930c00bffd87177cba9cefdf80cf6bb49d3359de7d4c3f9ffbd231ee047e7c"
+    },
+    {
+      "lane": "workspace-controls",
+      "path": "src/app/workspace-link-error.tsx",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/app/workspace-link-error.tsx",
+      "before": "d8ce984cab005391296196042e35c40f4d7334a2eccd1814a8f84b178a79fac3",
+      "sha256": "38ba72d4adf8678da5ea16c9bb2f3eb3118308316ea4e03311b754312d343afa"
+    },
+    {
+      "lane": "workspace-controls",
+      "path": "src/app/workspace-command.machine.ts",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/app/workspace-command.machine.ts",
+      "before": null,
+      "sha256": "a525dae154ad7fe9d0964f845f5770b92473de7afca9d6ebf5de4ebb0177c65c"
+    },
+    {
+      "lane": "workspace-controls",
+      "path": "src/app/use-workspace-command.ts",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/app/use-workspace-command.ts",
+      "before": null,
+      "sha256": "658ec4b99a0d7fad59876ed357643a560bdfbf5f0af943f4372d1f641f12816f"
+    },
+    {
+      "lane": "workspace-controls",
+      "path": "src/app/workspace-link-retry.machine.ts",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/app/workspace-link-retry.machine.ts",
+      "before": null,
+      "sha256": "90b07ce96fc4303c6d11acd20f8d27c047afa3c8290a3b7f54e9f0215e3adfe4"
+    },
+    {
+      "lane": "workspace-controls",
+      "path": "src/app/use-workspace-link-retry.ts",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/app/use-workspace-link-retry.ts",
+      "before": null,
+      "sha256": "b36060fdc12a204c46ce799408686d81fa7622e426b8630cbac3ea00d2e98d67"
+    },
+    {
+      "lane": "workspace-controls",
+      "path": "tests/workspace-control-lifetimes.test.ts",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/workspace-control-lifetimes.test.ts",
+      "before": null,
+      "sha256": "902bdc6af74d612efb810d89267703a0feeae1ff5545d27b0c3060106ac13060"
+    },
+    {
+      "lane": "memory-query",
+      "path": "src/features/memory/memory-panel.tsx",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/src/features/memory/memory-panel.tsx",
+      "before": "095917c6db24773cabd07f2fb4e92f7937860960e88a60818f46d057e5e46828",
+      "sha256": "357d491674877b17d6808586726958ab10a070a2d35532e391f0ab01a80a9772"
+    },
+    {
+      "lane": "memory-query",
+      "path": "src/features/memory/query.machine.ts",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/src/features/memory/query.machine.ts",
+      "before": null,
+      "sha256": "a031348cc44b1aa16ed892c897be56b81d523b1c4f2783df1b9f04b07a5a534b"
+    },
+    {
+      "lane": "memory-query",
+      "path": "src/features/memory/query-owner.ts",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/src/features/memory/query-owner.ts",
+      "before": null,
+      "sha256": "1770cee814d7f333fc3b4ffcac347848108782e9b150ec47b48e427afc49ee02"
+    },
+    {
+      "lane": "memory-query",
+      "path": "src/features/memory/use-memory-query.ts",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/src/features/memory/use-memory-query.ts",
+      "before": null,
+      "sha256": "1f1c8bd679c7f190e242ae95a9c0ce96868e3a70b57f56114fd9f8931ed4688c"
+    },
+    {
+      "lane": "memory-query",
+      "path": "tests/memory-query-ui.test.ts",
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-memory/durable-pi/tests/memory-query-ui.test.ts",
+      "before": null,
+      "sha256": "c7cb76ebd27f46100c01be58a4aa17da788a7ce2c444c3e3377a36e779c46799"
+    }
+  ]
+}

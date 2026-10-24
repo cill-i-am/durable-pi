@@ -1,0 +1,157 @@
+import assert from "node:assert/strict"
+import { createRequire } from "node:module"
+import { fileURLToPath } from "node:url"
+const root = fileURLToPath(new URL("../..", import.meta.url)),
+  fixture = fileURLToPath(
+    new URL("./fixtures/workspace-controls", import.meta.url)
+  ),
+  require = createRequire(root + "/package.json")
+const { createServer } = await import(require.resolve("vite")),
+  { chromium } = require("@playwright/test")
+const stub = fixture + "/stubs.jsx"
+const server = await createServer({
+  configFile: false,
+  plugins: [(await import(require.resolve("@tailwindcss/vite"))).default()],
+  root: fixture,
+  resolve: {
+    alias: [
+      ...[
+        "@/features/family/context",
+        "@/components/ui/sidebar",
+        "@/features/updates/recovery",
+        "@/features/updates/update-recovery",
+        "@/observability/browser",
+      ].map((find) => ({ find, replacement: stub })),
+      { find: "@", replacement: root + "/src" },
+    ],
+  },
+  server: { host: "127.0.0.1", port: 0, fs: { allow: [root, fixture] } },
+  esbuild: { jsx: "automatic" },
+})
+await server.listen()
+const port = server.httpServer.address().port,
+  browser = await chromium.launch({ headless: true }),
+  page = await browser.newPage()
+page.setDefaultTimeout(5000)
+page.on("pageerror", (e) => console.log("PAGEERROR", e.message))
+const results = []
+const record = (v) => {
+  results.push(v)
+  console.log(v)
+}
+try {
+  await page.goto(`http://127.0.0.1:${port}`)
+  await page.getByRole("button", { name: "Try again", exact: true }).click()
+  await page.waitForFunction(() => window.fixture.calls === 1)
+  await page.evaluate(() => window.fixture.unmount())
+  await page.getByText("Retired", { exact: true }).waitFor()
+  await page.evaluate(() => window.fixture.pending[0].resolve())
+  await page.waitForTimeout(50)
+  const result = await page.evaluate(() => ({
+    calls: window.fixture.calls,
+    resets: window.fixture.resets,
+  }))
+  console.log(JSON.stringify(result))
+  assert.equal(
+    result.resets,
+    0,
+    "late invalidation must not reset a retired route error owner"
+  )
+  record("late unmount reset fenced")
+  await page.goto(`http://127.0.0.1:${port}`)
+  const retry = page.getByRole("button", { name: "Try again", exact: true })
+  await retry.click()
+  await page.getByRole("button", { name: "Opening…", exact: true }).waitFor()
+  assert.equal(
+    await page
+      .getByRole("button", { name: "Opening…", exact: true })
+      .isDisabled(),
+    true
+  )
+  assert.equal(await page.evaluate(() => window.fixture.calls), 1)
+  await page.evaluate(() =>
+    window.fixture.pending[0].reject(new Error("offline"))
+  )
+  await retry.waitFor()
+  await retry.click()
+  await page.waitForFunction(() => window.fixture.calls === 2)
+  await page.evaluate(() => window.fixture.pending[1].resolve())
+  await page.waitForFunction(() => window.fixture.resets === 1)
+  record("failed invalidation requires explicit retry and resets once")
+  await page.goto(`http://127.0.0.1:${port}`)
+  await page.getByRole("button", { name: "Try again", exact: true }).click()
+  await page.waitForFunction(() => window.fixture.calls === 1)
+  await page.evaluate(() => window.fixture.replace())
+  assert.equal(
+    await page
+      .getByRole("button", { name: "Opening…", exact: true })
+      .isDisabled(),
+    true
+  )
+  await page.evaluate(() => window.fixture.pending[0].resolve())
+  await page.getByRole("button", { name: "Try again", exact: true }).waitFor()
+  assert.equal(await page.evaluate(() => window.fixture.resets), 0)
+  await page.getByRole("button", { name: "Try again", exact: true }).click()
+  await page.waitForFunction(() => window.fixture.calls === 2)
+  await page.evaluate(() => window.fixture.pending[1].resolve())
+  await page.waitForFunction(() => window.fixture.resets === 1)
+  record("replacement error waits for native invalidation and owns its reset")
+  for (const viewport of [
+    { width: 1100, height: 800 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport)
+    await page.goto(`http://127.0.0.1:${port}/?search`)
+    const trigger = page.getByRole("button", {
+      name: "Search agents and commands",
+      exact: true,
+    })
+    const open = () =>
+      viewport.width < 768 ? page.keyboard.press("Control+k") : trigger.click()
+    await open()
+    await page
+      .getByRole("combobox", { name: "Search agents and commands" })
+      .waitFor()
+    await page.keyboard.press("Escape")
+    if (viewport.width >= 768)
+      await page.waitForFunction(
+        () =>
+          document.activeElement?.getAttribute("aria-label") ===
+          "Search agents and commands"
+      )
+    else
+      await page.waitForFunction(
+        () => !document.activeElement?.closest('[role="dialog"]')
+      )
+    record(`native focus return ${viewport.width}`)
+    await open()
+    await page.getByRole("option", { name: /Home/ }).click()
+    await page.waitForFunction(() => window.fixture.selected.length === 1)
+    assert.deepEqual(await page.evaluate(() => window.fixture.selected), [
+      "home",
+    ])
+    record(`exact current agent ${viewport.width}`)
+    await page.keyboard.press("Control+k")
+    await page
+      .getByRole("combobox", { name: "Search agents and commands" })
+      .waitFor()
+    await page.evaluate(() => window.fixture.lock(true))
+    await page.waitForFunction(
+      () => !document.querySelector('[role="combobox"]')
+    )
+    await page.evaluate(() => window.fixture.lock(false))
+    await page.waitForTimeout(50)
+    assert.deepEqual(await page.evaluate(() => window.fixture.actions), [])
+    assert.equal(
+      await page
+        .getByRole("combobox", { name: "Search agents and commands" })
+        .count(),
+      0
+    )
+    record(`locked search stays closed ${viewport.width}`)
+  }
+  console.log(JSON.stringify({ passed: results.length, results }))
+} finally {
+  await browser.close()
+  await server.close()
+}

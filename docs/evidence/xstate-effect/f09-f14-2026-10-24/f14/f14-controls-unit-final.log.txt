@@ -1,0 +1,9 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi
+
+
+ Test Files  3 passed (3)
+      Tests  23 passed (23)
+   Start at  20:58:41
+   Duration  1.78s (import 47%, tests 42%, transform 9%, setup 1%, worker 1%)
+

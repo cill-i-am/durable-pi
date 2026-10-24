@@ -8,7 +8,6 @@ import {
   Clock3,
   ListChecks,
 } from "lucide-react"
-import { useState } from "react"
 
 import type { ActivityAgent } from "@/activity/contracts"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -37,7 +36,6 @@ import {
   TraceCollapsibleTrigger,
   TraceCollapsibleContent,
 } from "@/components/ui/trace"
-import { agentApi } from "@/http/client"
 import type { WorkspaceQuery } from "@/navigation/workspace"
 import { PlanDetail, type Plan, type PlanRevision } from "@/planning/contracts"
 
@@ -46,6 +44,8 @@ import { BotTasks } from "./bot-tasks"
 import { DelegatedWork } from "./delegated-work"
 import { historyPage } from "./history"
 import { InferenceRuns } from "./inference-runs"
+import { activityJsonRequest } from "./query-owner"
+import { useActivityQuery } from "./use-activity-query"
 import { usePlans } from "./use-plans"
 
 export function ActivityWorkbench({
@@ -392,27 +392,34 @@ function PlanInspector({
   agentId: string
   detail: PlanDetail
 }) {
-  const [older, setOlder] = useState<PlanRevision[]>([])
-  const [busy, setBusy] = useState(false),
-    [error, setError] = useState("")
-  const { history, cursor } = historyPage(detail.history, older)
-  async function earlier() {
-    if (busy || cursor === null) return
-    setBusy(true)
-    setError("")
-    try {
+  const {
+    data: older,
+    busy,
+    error,
+    refresh,
+  } = useActivityQuery<readonly PlanRevision[], number>({
+    key: JSON.stringify(["plan-history", agentId, detail.plan.id]),
+    auto: false,
+    read: async (signal, cursor) => {
       const result = Schema.decodeUnknownSync(PlanDetail)(
-        await agentApi(agentId)(`plans/${detail.plan.id}?before=${cursor}`)
+        await activityJsonRequest(
+          agentId,
+          `plans/${detail.plan.id}?before=${cursor}`,
+          signal
+        )
       )
-      setOlder((values) => [...values, ...result.history])
-    } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "History could not load."
+      if (
+        result.plan.id !== detail.plan.id ||
+        result.history.some((entry) => entry.plan.id !== detail.plan.id)
       )
-    } finally {
-      setBusy(false)
-    }
-  }
+        throw new Error("History does not match this plan.")
+      return result.history
+    },
+    merge: (previous, result) => [...(previous ?? []), ...result],
+    errorMessage: "History could not load.",
+  })
+  const { history, cursor } = historyPage(detail.history, older ?? [])
+  const earlier = () => (cursor !== null ? refresh(cursor) : Promise.resolve())
   return (
     <>
       <PlanView plan={detail.plan} />

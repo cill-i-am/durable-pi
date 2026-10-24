@@ -1,0 +1,10 @@
+--- reviewed-F10/src/app/workspace.tsx
++++ composed/src/app/workspace.tsx
+@@ -878,6 +878,7 @@
+     case "memory":
+       return (
+         <MemoryWorkbench
++          refresh={conversation.reload}
+           query={renderedSearch.query ?? ""}
+           onQueryChange={(query) =>
+             location.update({ query: query || undefined }, true)

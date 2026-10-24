@@ -1,0 +1,56 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi
+
+F14_MAILBOX_EPOCH_FENCE_MUTATION_APPLIED
+stderr | tests/activity-controls-ui.test.ts > mailbox duplicate controls serialize and an old acknowledgement retains a newer recovery epoch
+Event "SUBMIT" to actor "mailbox-control-ui" was not delivered (invalidEvent).
+
+stdout | tests/activity-controls-ui.test.ts > mailbox duplicate controls serialize and an old acknowledgement retains a newer recovery epoch
+[21:00:46.665] ERROR (#1): Error [AssertionError]: expected [ 'old', 'old' ] to deeply equal [ 'old' ]
+    at /Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/activity-controls-ui.test.ts:431:20 {
+  actual: [ 'old', 'old' ],
+  expected: [ 'old' ],
+  showDiff: true,
+  operator: 'deepStrictEqual',
+  [cause]: undefined
+}
+
+ ❯ tests/activity-controls-ui.test.ts (13 tests | 1 failed | 12 skipped) 46ms
+   × mailbox duplicate controls serialize and an old acknowledgement retains a newer recovery epoch 45ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/activity-controls-ui.test.ts > mailbox duplicate controls serialize and an old acknowledgement retains a newer recovery epoch
+AssertionError: expected [ 'old', 'old' ] to deeply equal [ 'old' ]
+
+- Expected
++ Received
+
+  [
+    "old",
++   "old",
+  ]
+
+ ❯ tests/activity-controls-ui.test.ts:431:20
+    429|       } as never)
+    430|       yield* Effect.yieldNow
+    431|       expect(seen).toEqual(["old"])
+       |                    ^
+    432|     }).pipe(Effect.scoped)
+    433| )
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/core.ts:585:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:589:27
+ ❯ Array.<anonymous> node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1025:13
+ ❯ MixedSchedulerDispatcher.runTasks node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/Scheduler.ts:254:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 12 skipped (13)
+   Start at  21:00:45
+   Duration  787ms (import 57%, transform 28%, tests 8%, setup 6%, worker 1%)
+

@@ -1,0 +1,20 @@
+# F12 routines/webhooks independent review — reissued closure
+
+Review remains closed with no remaining concrete findings against the final source recorded in `f12-independent-final-before.json` and `f12-independent-final-after.json`. Those two source snapshots are byte-equivalent data and retain all 12 owned file plus 3 shared dependency hashes. The unchanged independent probe remains SHA-256 `f268080f96d18fba90d88bf4e2eadda06823484df628fd6aeaf5e0fcc31ff647`.
+
+## Artifact collision
+
+The generic `f12-independent-review.md` and `f12-independent-review-manifest.json` were accidentally overwritten by the separate Skills reviewer after routines/webhooks closure. That reviewer moved the Skills files to unique names. The raw routines probe, its before/after logs and source snapshots were unaffected. This uniquely named report and manifest are freshly issued from those retained records; they are not claimed to be byte-identical restorations of the overwritten generic files. No behavioral checks were rerun during this artifact repair.
+
+## Findings and proof
+
+1. Admitted routine and webhook commands had retained caller-owned objects, so later caller mutation changed operation ID, expected revision, status or secret on Retry. The repair snapshots routine bodies including nested schedule and all webhook fields. The unchanged independent probe now observes the original payload on both attempts. Added repository regressions cover Save, Status, Run and Resolve.
+2. Held scope cleanup had lost a late Fail plus annotated Interrupt Cause without Die. The shared native helper now retains the mixed late Cause, and the feature observer captures raw Exit before recovery. All four original held cleanup cases—routine/webhook via nativeOperation and direct uninterruptible Effect capabilities—now retain the exact annotated Interrupt(91234) and return a failing scope Exit after joining. Repository regressions additionally assert the checked failure payload and annotations. No duplicate Promise wrapper or blanket request masking was added.
+
+The original six-case probe failed all six cases before repair and passed all six after repair with exit 0 (`f12-independent-probe-before.log`, `f12-independent-probe-after.log`). An interim hypothesis blaming an unfixable Effect runtime limitation was disproven by the unchanged direct-Effect cases.
+
+Four independent existing tests passed for exact Stop uncertainty, held acknowledgement/view ABA, recovery after four transient reads and initial hidden-page no-read (`f12-independent-observation.log`). The narrow repair left those state transitions and the four-second cadence unchanged by source inspection. Retry and cancellation preserve original operation/revision; Stop preserves run identity; keyed production component ownership and view revisions fence late acknowledgements; webhook secret disclosure remains revision-bound.
+
+Author logs inspected at closure record 19 focused tests and scoped types/lint/format passing. Earlier desktop/mobile component and failure-sensitive view-fence browser evidence predates the narrow payload/Cause repair; no final-tree browser repeat, broad duplicate gate or live-provider result is claimed. Parent owns integrated gates.
+
+No production edits, Git operations, broad typechecks or browser reruns were made by the independent reviewer. Exact retained evidence hashes and recorded source hashes are in `f12-routines-independent-review-manifest.json`.
