@@ -66,6 +66,8 @@ assert.equal(
 assert.equal(diagnostic.headers.get("cache-control"), "private, no-store")
 await diagnostic.body?.cancel()
 for (const path of [
+  "/settings",
+  "/agents/navi/settings",
   "/settings/account",
   "/settings/preferences",
   "/settings/security",
@@ -90,7 +92,6 @@ for (const section of [
   "skill-library",
   "channels",
   "memory",
-  "",
 ]) {
   const response = await website.fetch(
     new Request(

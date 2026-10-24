@@ -2,11 +2,21 @@ import {
   useNavigate,
   useMatches,
   useLocation,
+  useRouter,
   defaultStringifySearch,
 } from "@tanstack/react-router"
 import { useCallback, useMemo, useEffect } from "react"
 
 import type { AgentId, AgentProfile } from "@/agents/contracts"
+import {
+  readWorkspaceNavigation,
+  settingsFrames as resolveSettingsFrames,
+  settingsPush,
+  settingsPop as resolveSettingsPop,
+  settingsHref,
+  settingsBackdrop,
+  type SettingsFrame,
+} from "@/navigation/settings-stack"
 import {
   workspaceDestination,
   editorDestination,
@@ -36,11 +46,16 @@ export function useWorkspaceRoute() {
     [match.pathname, match.search]
   )
   const pathname = match.pathname
+  const navigation = useMemo(
+    () => readWorkspaceNavigation(match.context),
+    [match.context]
+  )
   return {
     params,
     query,
     pathname,
     href: pathname + defaultStringifySearch(query),
+    navigation,
   }
 }
 
@@ -48,7 +63,8 @@ export function useWorkspaceLocation(
   agents: readonly AgentProfile[] = noAgents,
   selected?: AgentProfile
 ) {
-  const { params, query, href, pathname } = useWorkspaceRoute()
+  const { params, query, href, pathname, navigation } = useWorkspaceRoute()
+  const router = useRouter()
   const {
     globalSection,
     params: contextParams,
@@ -67,6 +83,68 @@ export function useWorkspaceLocation(
     ) ?? (globalSection && !contextParams.agentId ? selected : undefined)
   const agentId = profile?.id
   const reference = profile?.slug ?? contextParams.agentId
+  const frames = useMemo(
+    () => resolveSettingsFrames(href, navigation.settings),
+    [href, navigation.settings]
+  )
+  const backdrop = settingsBackdrop(href) ?? navigation.settings?.backdrop
+  const settingsLink = useCallback(
+    (category: SettingsCategory, parentFrame?: SettingsFrame) => {
+      const destination = isGlobalSettingsSection(category)
+        ? globalSettingsLink(category, { returnTo: backdrop })
+        : reference
+          ? workspaceDestination(reference, {
+              ...search,
+              settings: category,
+              security: undefined,
+              connections: undefined,
+            })
+          : undefined
+      if (!destination)
+        throw new Error("Choose an agent before opening its settings.")
+      return {
+        ...destination,
+        state: settingsPush(
+          href,
+          settingsHref(destination),
+          navigation,
+          parentFrame,
+          backdrop
+        ),
+      }
+    },
+    [reference, search, backdrop, href, navigation]
+  )
+  const pushSettings = useCallback(
+    (category: SettingsCategory, parentFrame?: SettingsFrame) => {
+      void navigate(settingsLink(category, parentFrame))
+    },
+    [navigate, settingsLink]
+  )
+  const closeSettings = useCallback(() => {
+    void navigate({
+      ...workspaceReturnLink(
+        backdrop ?? (reference ? `/agents/${reference}` : "/agents")
+      ),
+      state: {},
+      ignoreBlocker: true,
+    })
+  }, [navigate, backdrop, reference])
+  const popSettings = useCallback(() => {
+    const current = router.history.location.state
+    const pop = resolveSettingsPop(href, navigation, {
+      entryKey: current.__TSR_key,
+      entryIndex: current.__TSR_index,
+    })
+    if (pop.kind === "back") router.history.back()
+    else if (pop.kind === "replace")
+      void navigate({
+        ...workspaceReturnLink(pop.href),
+        state: pop.state,
+        replace: true,
+      })
+    else closeSettings()
+  }, [href, navigation, router, navigate, closeSettings])
   const hash = useLocation({ select: (location) => location.hash })
   useEffect(() => {
     if (!profile || contextParams.agentId === profile.slug) return
@@ -84,6 +162,7 @@ export function useWorkspaceLocation(
             : `/agents/${profile.slug}`,
         },
         replace: true,
+        state: navigation.settings ? { piSettings: navigation.settings } : {},
         ignoreBlocker: true,
       })
       return
@@ -93,6 +172,7 @@ export function useWorkspaceLocation(
       search: query,
       hash,
       replace: true,
+      state: navigation.settings ? { piSettings: navigation.settings } : {},
       ignoreBlocker: true,
     })
   }, [
@@ -104,6 +184,7 @@ export function useWorkspaceLocation(
     query,
     hash,
     navigate,
+    navigation.settings,
   ])
   const update = useCallback(
     (change: Partial<WorkspaceSearch>, replace = false) => {
@@ -112,6 +193,7 @@ export function useWorkspaceLocation(
       if (globalSection && isGlobalSettingsSection(section)) {
         void navigate({
           ...globalSettingsLink(section, next),
+          state: navigation.settings ? { piSettings: navigation.settings } : {},
           replace,
           ignoreBlocker: true,
         })
@@ -121,6 +203,9 @@ export function useWorkspaceLocation(
         if (isGlobalSettingsSection(section))
           void navigate({
             ...globalSettingsLink(section, next),
+            state: navigation.settings
+              ? { piSettings: navigation.settings }
+              : {},
             replace,
             ignoreBlocker: true,
           })
@@ -130,11 +215,17 @@ export function useWorkspaceLocation(
       }
       void navigate({
         ...workspaceDestination(reference, { ...search, ...change }),
+        state:
+          next.settings &&
+          next.settings === search.settings &&
+          navigation.settings
+            ? { piSettings: navigation.settings }
+            : {},
         replace,
         ignoreBlocker: true,
       })
     },
-    [reference, navigate, search, globalSection]
+    [reference, navigate, search, globalSection, navigation.settings]
   )
   const openAgent = useCallback(
     (id: AgentId, next: WorkspaceSearch = {}, replace = false) => {
@@ -196,7 +287,6 @@ export function useWorkspaceLocation(
         panel: panel ?? undefined,
         settings: undefined,
         security: undefined,
-        settingsView: undefined,
         connections: undefined,
         returnTo: undefined,
         item: undefined,
@@ -214,21 +304,10 @@ export function useWorkspaceLocation(
   )
   const setSettings = useCallback(
     (settings: SettingsCategory | null) => {
-      if (!settings && globalSection) {
-        void navigate({
-          ...workspaceReturnLink(query.returnTo ?? "/agents"),
-          ignoreBlocker: true,
-        })
-        return
-      }
-      update({
-        settings: settings ?? undefined,
-        security: undefined,
-        settingsView: undefined,
-        connections: undefined,
-      })
+      if (settings) pushSettings(settings)
+      else closeSettings()
     },
-    [update, globalSection, navigate, query.returnTo]
+    [pushSettings, closeSettings]
   )
   const setSecurity = useCallback(
     (open: boolean) => {
@@ -266,6 +345,12 @@ export function useWorkspaceLocation(
     openArchivedAgents,
     setPanel,
     setSettings,
+    settingsFrames: frames,
+    settingsRoot: frames[0],
+    settingsLink,
+    pushSettings,
+    popSettings,
+    closeSettings,
     setSecurity,
     setItem,
     setTab,

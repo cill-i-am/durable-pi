@@ -32,6 +32,7 @@ import {
 
 const id = parseAgentId("home")
 const globalRoutes = [
+  ["/settings", "settings"],
   ["/settings/account", "account"],
   ["/settings/preferences", "preferences"],
   ["/settings/security", "security"],
@@ -133,7 +134,6 @@ describe("canonical workspace locations", () => {
       params: {},
       search: {
         returnTo: "/agents/home/files/file_1?tab=trash",
-        settingsView: undefined,
       },
     })
     expect(
@@ -144,14 +144,17 @@ describe("canonical workspace locations", () => {
       }).to
     ).toBe("/agents/$agentId/$panel/$itemId")
   })
-  it("rejects the removed Settings index alias instead of selecting General", () => {
+  it("addresses the agent settings list without redirecting to General", () => {
     expect(
       workspaceReturnPath("/agents/home/settings?panel=files&item=file_1")
-    ).toBe("/")
-    expect(workspaceReturnPath("/agents/home/settings")).toBe("/")
+    ).toBe("/agents/home/settings?panel=files&item=file_1")
+    expect(workspaceReturnPath("/agents/home/settings")).toBe(
+      "/agents/home/settings"
+    )
     expect(workspaceReturnLink("/agents/home/settings")).toEqual({
-      to: "/",
-      search: {},
+      to: "/agents/$agentId/settings",
+      params: { agentId: "home" },
+      search: { panel: undefined, item: undefined },
     })
   })
   it("provides a distinct archive collection with bookmarkable filtering", () => {
@@ -289,10 +292,10 @@ describe("validated view state and auth return", () => {
     ).toEqual(editorDestination(id, "/"))
     expect(
       workspaceReturnPath("/agents/home/settings/general?settingsView=sections")
-    ).toBe("/agents/home/settings/general?settingsView=sections")
+    ).toBe("/agents/home/settings/general")
     expect(
       workspaceReturnPath("/agents/home/files?settingsView=sections")
-    ).toBe("/")
+    ).toBe("/agents/home/files")
   })
   it("sanitizes auth destinations without storing or forwarding bearer/action parameters", () => {
     expect(
@@ -333,7 +336,7 @@ describe("global settings and retained assistant backdrops", () => {
     (path, section) => {
       const returnTo =
         "/agents/meal-planning/terminal/command%3Atask_123?tab=interactive"
-      const query = { returnTo, settingsView: "detail" as const }
+      const query = { returnTo }
       const destination = `${path}${defaultStringifySearch(query)}`
       expect(globalSettingsSection(path)).toBe(section)
       expect(workspaceReturnPath(destination)).toBe(destination)
@@ -402,7 +405,7 @@ describe("global settings and retained assistant backdrops", () => {
       panel: "terminal",
       token: "private",
     })
-    expect(query).toEqual({ returnTo: safe, settingsView: "sections" })
+    expect(query).toEqual({ returnTo: safe })
     expect(globalSettingsView("family", query)).toMatchObject({
       ...view,
       panel: "activity",
@@ -491,9 +494,9 @@ describe("global settings and retained assistant backdrops", () => {
     expect(() =>
       validateGlobalSettingsSearch({ returnTo: "x".repeat(2001) })
     ).toThrow()
-    expect(() =>
-      validateGlobalSettingsSearch({ settingsView: "unknown" })
-    ).toThrow()
+    expect(validateGlobalSettingsSearch({ settingsView: "unknown" })).toEqual({
+      returnTo: undefined,
+    })
   })
 })
 
@@ -516,7 +519,12 @@ function routerAt(initialPath: string) {
         }),
       },
       beforeLoad: ({ params, search }) => {
-        workspaceView(params, search)
+        workspaceView(
+          path === "/agents/$agentId/settings"
+            ? { ...params, section: "agent-settings" }
+            : params,
+          search
+        )
       },
     })
   const global = (path: string) =>
@@ -536,6 +544,7 @@ function routerAt(initialPath: string) {
       route("/agents/$agentId/$panel"),
       route("/agents/$agentId/$panel/$itemId"),
       route("/agents/$agentId/settings/$section"),
+      route("/agents/$agentId/settings"),
       ...globalRoutes.map(([path]) => global(path)),
     ]),
     history: createMemoryHistory({ initialEntries: [initialPath] }),
@@ -544,7 +553,6 @@ function routerAt(initialPath: string) {
 }
 describe("native TanStack routing", () => {
   it.each([
-    "/agents/home/settings",
     "/agents/home/settings/family",
     "/agents/home/settings/model-access",
     "/agents/home/settings/security",

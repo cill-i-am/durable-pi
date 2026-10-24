@@ -26,6 +26,8 @@ export const Workbench = Schema.Literals([
 ])
 export type Workbench = typeof Workbench.Type
 export const SettingsCategory = Schema.Literals([
+  "settings",
+  "agent-settings",
   "account",
   "preferences",
   "security",
@@ -66,7 +68,6 @@ const Tab = Schema.Literals([
 ])
 const Search = Schema.Struct({
   tab: Schema.optional(Tab),
-  settingsView: Schema.optional(Schema.Literals(["sections", "detail"])),
   preview: Schema.optional(Schema.Literals(["preview", "source"])),
   scope: Schema.optional(Schema.Union([AgentId, Schema.Literals(["all"])])),
   filter: Schema.optional(ActivityFilter),
@@ -111,6 +112,7 @@ export function parseSection(value: unknown) {
 }
 export const parseResourceId = Schema.decodeUnknownSync(ResourceId)
 export type GlobalSettingsSection =
+  | "settings"
   | "account"
   | "preferences"
   | "security"
@@ -120,6 +122,7 @@ export type GlobalSettingsSection =
   | "family"
   | "model-access"
 const globalSettingsPaths = {
+  settings: "/settings",
   account: "/settings/account",
   preferences: "/settings/preferences",
   "connection-library": "/settings/connections",
@@ -141,7 +144,6 @@ export function globalSettingsSection(pathname: string) {
 }
 const GlobalSettingsSearch = Schema.Struct({
   returnTo: Schema.optional(Schema.String.check(Schema.isMaxLength(2000))),
-  settingsView: Schema.optional(Schema.Literals(["sections", "detail"])),
 })
 const ConnectionSettingsSearch = Schema.Struct({
   ...GlobalSettingsSearch.fields,
@@ -218,7 +220,10 @@ export function globalSettingsView(
   }
 }
 
-export function workspaceRouteSearch(pathname: string, input: unknown) {
+export function workspaceRouteSearch(
+  pathname: string,
+  input: unknown
+): WorkspaceQuery & GlobalSettingsQuery {
   const section = globalSettingsSection(pathname)
   if (section) return globalSettingsSearch(section, input)
   if (/^\/agents\/(?:new|[^/]+\/edit)\/?$/.test(pathname))
@@ -241,7 +246,12 @@ export function workspaceContext(
     params: background?.params ?? params,
     view: globalSection
       ? globalSettingsView(globalSection, query)
-      : workspaceView(params, query),
+      : workspaceView(
+          isAgentSettingsIndex(pathname)
+            ? { ...params, section: "agent-settings" }
+            : params,
+          query
+        ),
     backgroundPath: background?.path,
   }
 }
@@ -266,7 +276,6 @@ function globalSettingsDestination(
     settings: _settings,
     security: _security,
     returnTo,
-    settingsView,
     connections,
     ...background
   } = view
@@ -279,7 +288,6 @@ function globalSettingsDestination(
     ) + defaultStringifySearch(destination.search)
   return globalSettingsLink(section, {
     returnTo: returnTo ?? path,
-    settingsView,
     connections,
   })
 }
@@ -298,7 +306,9 @@ const WorkspaceParams = Schema.Struct({
   agentId: Schema.optional(AgentReference),
   panel: Schema.optional(Workbench),
   itemId: Schema.optional(ResourceId),
-  section: Schema.optional(SettingsSection),
+  section: Schema.optional(
+    Schema.Union([SettingsSection, Schema.Literal("agent-settings")])
+  ),
 })
 export type WorkspaceParams = typeof WorkspaceParams.Type
 export const parseWorkspaceParams = Schema.decodeUnknownSync(WorkspaceParams)
@@ -316,16 +326,11 @@ export function workspaceView(
     settings: params.section,
   }
   validatePanelSelection(view)
-  validateWorkspaceFilters(view, params)
+  validateWorkspaceFilters(view)
   return view
 }
 
-function validateWorkspaceFilters(
-  view: WorkspaceSearch,
-  params: WorkspaceParams
-) {
-  if (view.settingsView && !params.section)
-    throw new Error("Settings presentation belongs to Settings.")
+function validateWorkspaceFilters(view: WorkspaceSearch) {
   if (
     (view.scope || view.filter || view.cursor || view.offset !== undefined) &&
     view.panel !== "activity"
@@ -376,6 +381,12 @@ function agentWorkspaceDestination(
     ...query
   } = view
   if (settings) {
+    if (settings === "agent-settings")
+      return {
+        to: "/agents/$agentId/settings" as const,
+        params: { agentId },
+        search: { ...query, panel, item },
+      }
     return {
       to: "/agents/$agentId/settings/$section" as const,
       params: {
@@ -453,15 +464,21 @@ function agentWorkspaceParams(
   parts: string[],
   agentId: AgentReference
 ): WorkspaceParams {
-  return parts[2] === "settings" && parts.length === 4
-    ? { agentId, section: parseSection(parts[3]) }
-    : parts.length >= 3
-      ? {
-          agentId,
-          panel: parsePanel(parts[2]),
-          itemId: parts[3] ? parseResourceId(parts[3]) : undefined,
-        }
-      : { agentId }
+  return parts[2] === "settings" && parts.length === 3
+    ? { agentId, section: "agent-settings" }
+    : parts[2] === "settings" && parts.length === 4
+      ? { agentId, section: parseSection(parts[3]) }
+      : parts.length >= 3
+        ? {
+            agentId,
+            panel: parsePanel(parts[2]),
+            itemId: parts[3] ? parseResourceId(parts[3]) : undefined,
+          }
+        : { agentId }
+}
+
+export function isAgentSettingsIndex(pathname: string) {
+  return /^\/agents\/[^/]+\/settings\/?$/.test(pathname)
 }
 
 const AuthSearch = Schema.Struct({
@@ -509,7 +526,11 @@ export function workspaceReturnLink(value: string) {
       {
         agentId,
         ...(parts[2] === "settings"
-          ? { section: parseSection(parts[3]) }
+          ? {
+              section: parts[3]
+                ? parseSection(parts[3])
+                : ("agent-settings" as const),
+            }
           : parts[2]
             ? { panel: parsePanel(parts[2]), itemId: parts[3] }
             : {}),

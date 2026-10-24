@@ -2161,6 +2161,20 @@ body {
   border-right: 1px solid var(--border);
   overflow-y: auto;
 }
+.workspace-settings[data-settings-index="true"] {
+  grid-template-columns: minmax(0, 1fr);
+}
+.workspace-settings[data-settings-index="true"] .settings-navigation {
+  width: 100%;
+  max-width: 640px;
+  margin-inline: auto;
+  border-right: 0;
+}
+.settings-root-close {
+  position: absolute;
+  top: 16px;
+  right: 12px;
+}
 .settings-agent {
   display: flex;
   align-items: center;
@@ -2437,27 +2451,18 @@ body {
   line-height: 18px;
   color: var(--muted-foreground);
 }
-.settings-back,
-.settings-mobile-close {
-  display: none;
-}
-@media (max-width: 1199px) and (min-width: 768px) {
-  .workspace-settings[data-slot="dialog-content"] {
-    grid-template-columns: 260px minmax(0, 1fr);
-  }
-}
 @media (max-width: 767px) {
   .workspace-settings[data-slot="dialog-content"] {
     inset: 0;
     grid-template-columns: minmax(0, 1fr);
     padding-bottom: env(safe-area-inset-bottom);
   }
-  .workspace-settings[data-detail="true"] .settings-navigation,
-  .workspace-settings[data-detail="false"] .settings-detail {
-    display: none;
-  }
   .settings-navigation {
+    flex: 1;
     border: 0;
+  }
+  .settings-route-drawer .settings-detail {
+    flex: 1;
   }
   .settings-agent {
     padding-inline: 18px;
@@ -2470,15 +2475,6 @@ body {
     height: 56px;
     padding-inline: 12px;
     font-size: 14px;
-  }
-  .settings-back,
-  .settings-mobile-close {
-    display: inline-flex;
-  }
-  .settings-mobile-close {
-    position: absolute;
-    top: 16px;
-    right: 12px;
   }
   .settings-detail-content {
     padding: 20px 12px;

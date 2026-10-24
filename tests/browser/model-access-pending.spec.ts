@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test"
 
+import { closeSettings, settingsFront, settingsRoot } from "./settings-helpers"
+
 const attempt = {
   id: "pending-guard-attempt",
   email: "owner@example.invalid",
@@ -45,6 +47,7 @@ async function openModelAccess(page: Page) {
 
 test("a return-address draft blocks settings dismissal until explicitly discarded", async ({
   page,
+  isMobile,
 }) => {
   const writes: unknown[] = []
   await page.route("**/api/agent/model-account?*", (route) => {
@@ -58,33 +61,52 @@ test("a return-address draft blocks settings dismissal until explicitly discarde
     return route.fulfill({ json: { pending: attempt } })
   })
   await openModelAccess(page)
-  const close = page.getByRole("button", {
-    name: "Close settings",
+  const close = settingsFront(page).getByRole("button", {
+    name: isMobile ? "Close Model access" : "Close settings",
     exact: true,
   })
   const field = page.getByLabel("Return address", { exact: true })
   await field.fill(address)
   await expect(close).toBeDisabled()
   await expect(
-    page.getByText(
+    settingsFront(page).getByText(
       "Finish or cancel your changes before leaving this section.",
       {
         exact: true,
       }
     )
   ).toBeVisible()
+  if (isMobile) {
+    await expect(
+      settingsFront(page).getByRole("button", {
+        name: "Back to Family",
+        exact: true,
+      })
+    ).toBeDisabled()
+    await expect(
+      settingsRoot(page).getByRole("button", {
+        name: "Close settings",
+        exact: true,
+        includeHidden: true,
+      })
+    ).toBeDisabled()
+  }
+  await page.keyboard.press("Escape")
+  await expect(page).toHaveURL(/\/family\/model-access$/)
+  await expect(field).toHaveValue(address)
   await page
     .getByRole("button", { name: "Discard return address", exact: true })
     .click()
   await expect(field).toHaveValue("")
   await expect(close).toBeEnabled()
-  await close.click()
+  await closeSettings(page)
   await expect(page).toHaveURL(/\/agents$/)
   expect(writes).toEqual([])
 })
 
 test("a reconnect request stays guarded through an unresolved error without retrying on dismissal", async ({
   page,
+  isMobile,
 }) => {
   const writes: unknown[] = []
   let release!: () => void
@@ -103,8 +125,8 @@ test("a reconnect request stays guarded through an unresolved error without retr
   })
   try {
     await openModelAccess(page)
-    const close = page.getByRole("button", {
-      name: "Close settings",
+    const close = settingsFront(page).getByRole("button", {
+      name: isMobile ? "Close Model access" : "Close settings",
       exact: true,
     })
     await page.getByLabel("Return address", { exact: true }).fill(address)
@@ -127,7 +149,7 @@ test("a reconnect request stays guarded through an unresolved error without retr
       .getByRole("button", { name: "Dismiss error", exact: true })
       .click()
     await expect(close).toBeEnabled()
-    await close.click()
+    await closeSettings(page)
     await expect(page).toHaveURL(/\/agents$/)
     expect(writes).toEqual([{ action: "finish", id: attempt.id, address }])
   } finally {

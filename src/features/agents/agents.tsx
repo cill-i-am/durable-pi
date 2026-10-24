@@ -402,7 +402,7 @@ export function AgentSidebar({
                         <Link
                           {...workspaceDestination(selected.id, {
                             ...view,
-                            settings: "account",
+                            settings: "settings",
                             security: undefined,
                             connections: undefined,
                           })}
@@ -410,6 +410,7 @@ export function AgentSidebar({
                       ) : undefined
                     }
                     onClick={() => {
+                      setOpenMobile(false)
                       if (!selected) onSettings()
                     }}
                   >
