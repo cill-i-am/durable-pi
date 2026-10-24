@@ -1016,20 +1016,22 @@
     "src/workspace/workspace.ts": "0b3b9413a68493ed4e6e4c58f54dd9b265779b215c2cb8552ca007e3dbcf6aae",
     "package.json": "622bfa1d23b6bb47c67f965d6dd56cd2da5e3b179cd882b3a8f4c407f4d7a678",
     "pnpm-lock.yaml": "3ce4fba0856c9038e8cbb9327cb557c1975d6c594eb23a0f2db2a4e5123056e2",
-    ".github/workflows/check.yml": "05d39a5aee0dd141e8a846ccaec1c1c832888e48d4e8b0efe876f33a4f82e86d",
+    ".github/workflows/check.yml": "fc58359f4b27977347c5849b37ee6181abfc935184bf3f75d7cbaf18f4469693",
     "tests/settings-drawer-lifecycle.test.ts": "0fdc275a2e57d71c376f3f850249a8167b4198e0c3737e61ed28c5082a615b7a",
     "tests/browser/route-ownership.spec.ts": "b2c1c2535a6212c0b2826a581ed1c73b3b141dce2d30567232d426bc18cf65d0",
     "tests/browser/model-defaults-ownership.spec.ts": "5d293f3cb8e15b4f5d989b463811e3c49f9625f0f5d8edc69255b9817d97613b",
     "tests/browser/interaction-sound.spec.ts": "80da84ee91451f0dde605bb7015470631f4f75ae718fa4eeae3b712949c2fc5b"
   },
   "artifactHashes": {
-    "README.md": "051c0ba228b563609a8d6ca16d71506180ee1ea51a820fa306a13838d497358f",
+    "README.md": "4b8210998732dffc957f0d86e45bb0b964bc3e6a6213b6578b4c1f998a4e4355",
     "browser-assignment-recheck.log": "3da61a6be4de89b4ed2c92154f91f954a25b3be22a21fad552daa0e7c9a24d2e",
     "browser-baseline.log": "32e6b33ae91ab4e27d5fc2a5052109b7dc719c808fe73dc6dce1cac5e6046748",
     "browser-composed-before.log": "c17540fa355beb53848dba2bb063951a2245012736c443049b3919d16f8db1ea",
     "browser-final.log": "c907f22b46086f1a72b0150b4bdcac74f9547cd732fb5c5ed7e8793af7931f9e",
     "browser-interrupted.log": "96f12ebf1f1da3a9910ebaac79bb69d89f183d22decd40e2285e84525db5e0a9",
     "browser-model-sound-recheck.log": "fb703f596a0c0850ac054945c26d150a741885d5d227ae31d1b50ce70303a9ef",
+    "ci-browser-timeout-job.json": "eb020122da7293a897237a0bf94f8b807e4b3e2d37a0073d2e941e924766874e",
+    "ci-browser-timeout.log": "e2fbf01d33926270ce4d9901ee268f3bfd79f1bbfa634d87434e3988933e8558",
     "components.log": "3d9935911dbc721273496228ed72191d425877ea25cc115dc3e1a0129655e162",
     "connections-focused.log": "952ae734f3088396caaddc9734c4f345118f6ab2545c82853c10d183a37b3e58",
     "container.log": "6760c9ea1dbce58240771f9cf2fb4db1862ec3dba2e37117a3cac82fb9dbea12",
@@ -1041,14 +1043,17 @@
     "native.log": "3e5ff7453253cdca98cd18830d6f31ad2b971e9e22f550bf2d8e7685f1ddfcea",
     "passkeys.log": "3dfd4bb2c3210b2b84d89e20bc0bbade54e5110bdbea3ec6375b740a5a33d5e1",
     "previous-pr230-ci.json": "46262753d95b23b5b1534adf4f43558cb596db0be8da48245092fe451da98063",
-    "rebase-crosswalk.json": "f7fb033c151a26b361794858ab6611d4d14b957f12b2fc0ff744e71f18a37524",
+    "rebase-crosswalk.json": "3b97e7cdcff483a30d4a51e610067b82790fce4e75b97720ff121f1c2b3f3b0d",
     "settings-focused.log": "1c39cd3dbd551f460ceee7ecaf609fa02be0156ffb1dbb473711706eda09c203",
     "source-files.txt": "fdc200ffda27e0ee673b0650021a579bd35c655da274b50d5fd2b3c6d7b5275f",
     "static.log": "42903031c829ec31fc2f929689b9ca66f031a1feac1e82a153af41e0f180111d",
     "unit.log": "a091409c29a8752034f0a71c39404805e5e73dc364c8774fed794f367bf0b858",
     "upgrade.log": "3d0bb29a7c5899ce6843ab074098744637bd5360134aac9c41c59e536a7c0e64",
-    "workers.log": "b06545f05878b52933dcdc2f4ad4208cb72726b5e85f1933ead49b718505f813"
+    "workers.log": "b06545f05878b52933dcdc2f4ad4208cb72726b5e85f1933ead49b718505f813",
+    "workflow-check.json": "6f5cc47fc6fc2e234f62d4e491fb0245d44e7062cb6f7021fbcadf441e091ee1"
   },
   "publishedSource": "1cc6c9db67e2fa9312207acd2c002ceaf2ab35c8",
-  "pullRequest": 231
+  "pullRequest": 231,
+  "browserJobBudget": "30 minutes, after job 120999590261 exhausted 20 minutes with 322 journeys and 29 component cases passed",
+  "budgetRebaseHead": "a97a8f32687c5446aac9da39a42174e15055050f"
 }

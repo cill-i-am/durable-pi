@@ -164,90 +164,99 @@
       "branch": "codex/xstate-workspace-settings-ui",
       "before": "986e4166a8c22809cd48149e4cdd533e32af2a5b",
       "tree": "8d1165bfb0678246e47359f89ba63e773567f5e5",
-      "after": "aee7523b7e4d85ff0a7b43b8c7481fc5a7e573f1",
+      "after": "7afbef3591ab8561d4dc654108ba865cacfe3685",
       "before_browser_repair": "32b8f04255e33fe1bdae5cf0aaf02d8b9a6a00d1",
-      "rebased_tree": "93388f1afc3be36d5de42ca6c764c711bec2503b",
-      "before_assignment_repair": "f477442a656c6e3a0521e1068378b5c4153bfab5"
+      "rebased_tree": "0fd2dec5fd8a999640a5ba29e996b8af6e38be79",
+      "before_assignment_repair": "f477442a656c6e3a0521e1068378b5c4153bfab5",
+      "before_browser_budget": "aee7523b7e4d85ff0a7b43b8c7481fc5a7e573f1"
     },
     {
       "pr": 223,
       "branch": "codex/xstate-host-admission-completion",
       "before": "627293d6fac7d0c618173ac80619af894c12b74d",
       "tree": "3b0dfd34de666078ef18c9a54d9adad1b3963c95",
-      "after": "8c695acd59b5cd77871d388e717769f6c0e8fd88",
+      "after": "e6f9a5239f2289a2fdf889d401c3a09e614699a8",
       "before_browser_repair": "5c8cba0a72e091ee648ab83d5e92f6ca39be3580",
-      "rebased_tree": "800a90409213da306e454bae00bc40f9b3e1f22f",
-      "before_assignment_repair": "0904abcb675f7b57750ef1722fa80f1c592c927c"
+      "rebased_tree": "c53492cf924eba2d8112de446cb29380b8ed3b05",
+      "before_assignment_repair": "0904abcb675f7b57750ef1722fa80f1c592c927c",
+      "before_browser_budget": "8c695acd59b5cd77871d388e717769f6c0e8fd88"
     },
     {
       "pr": 224,
       "branch": "codex/xstate-app-runner-lifetime",
       "before": "b2cfb8445254585631347f4a54c8f79653483efe",
       "tree": "71fc02587d95ab29120ef11c838b19bd0df2e79d",
-      "after": "455c98a4a018ec8c118cbf43c48e42286a48c775",
+      "after": "212c5d7877ab09745c8f404ce3487e9e910884a3",
       "before_browser_repair": "6f6e02abd958c5f43e60c03cfd10355d0c0f783d",
-      "rebased_tree": "41f1d491e469c01961675641ffcdff477d4e867d",
-      "before_assignment_repair": "bdcc23f1092e74c2f81547b0f6a8cf5ccac64d29"
+      "rebased_tree": "ed314e187e64891a6e180046d67cd73c20cebb85",
+      "before_assignment_repair": "bdcc23f1092e74c2f81547b0f6a8cf5ccac64d29",
+      "before_browser_budget": "455c98a4a018ec8c118cbf43c48e42286a48c775"
     },
     {
       "pr": 225,
       "branch": "codex/xstate-memory-runner-lifetime",
       "before": "87001c77ec79a0290bc00da365d79a0e6c77d7ee",
       "tree": "b7d5b8105455a3760ba90f99e99f7d908dec9bab",
-      "after": "65e8333d7626de992d6105b1095537c901549ba9",
+      "after": "1d16e31269155bf2759975966feed0857b35e93c",
       "before_browser_repair": "c960d423afa2bf533da482a41ce8aa53a3e6d79a",
-      "rebased_tree": "c693bef9309ff61867286c0e51dec727c0b1c97a",
-      "before_assignment_repair": "21ffe80ed20d99dae5c589c917740c4fcfecacc9"
+      "rebased_tree": "ce7d375a1fe1400c1fbfa1eefeba800cf1fcd824",
+      "before_assignment_repair": "21ffe80ed20d99dae5c589c917740c4fcfecacc9",
+      "before_browser_budget": "65e8333d7626de992d6105b1095537c901549ba9"
     },
     {
       "pr": 226,
       "branch": "codex/xstate-conversation-runner-lifetime",
       "before": "87988ce25c581f3c93ae0891c218cf2a805c69bd",
       "tree": "22962c3e72a390aae2a0d8bbedcea3b892f3a731",
-      "after": "8223f49cfaa5d444641b3ddb80724b2a4ea44f7f",
+      "after": "c4a9621db6d07aaebe902f49a66dd2a015389369",
       "before_browser_repair": "da1d4c5fc0d19dc5ac701fa39410a80c5cbdef7d",
-      "rebased_tree": "2c72de16f0da5dcc76ea70c7878beadcc588ec9b",
-      "before_assignment_repair": "9a52f823c5e9296a0c89c87575f3fa0cad29f83e"
+      "rebased_tree": "6fc6c1bb2857c09214b0038188db8fb0a97c5d17",
+      "before_assignment_repair": "9a52f823c5e9296a0c89c87575f3fa0cad29f83e",
+      "before_browser_budget": "8223f49cfaa5d444641b3ddb80724b2a4ea44f7f"
     },
     {
       "pr": 227,
       "branch": "codex/xstate-routine-runner-lifetime",
       "before": "4ed5efcefba79e9bb4b49deaedff5a44ac71f1e6",
       "tree": "6a90988bc928d507532da5fb516d05ab507cff04",
-      "after": "3b1b4d511d1c7bce79d8746fafd572f8f5b41cd6",
+      "after": "3baf09de33eb1bd91ba26f18b865e9b996ae8213",
       "before_browser_repair": "c6bd5e85b6a88ce9a45ec3213cedebb8d893a09b",
-      "rebased_tree": "d8fea6459a6a447558e3bedf5d1295c68463f7cb",
-      "before_assignment_repair": "d9bbf5fcca32cf11a81a1a4a832b1a947ce02ef9"
+      "rebased_tree": "985ea64376a608d34372769abc321563afa204c6",
+      "before_assignment_repair": "d9bbf5fcca32cf11a81a1a4a832b1a947ce02ef9",
+      "before_browser_budget": "3b1b4d511d1c7bce79d8746fafd572f8f5b41cd6"
     },
     {
       "pr": 228,
       "branch": "codex/xstate-communication-runner-lifetime",
       "before": "e04434aee21f23657c2ccb19f262643db51735a2",
       "tree": "4097d8c59cdc5bfd6bc5efd40db097d1e26bd157",
-      "after": "078d1509069689b1a8eb91990c755094e8cbb2a0",
+      "after": "2ed96b60e9de862e6dee37dab8ecca8eaf22ce3a",
       "before_browser_repair": "f20f0c207b4081f66238bbe1eb4e4e7d979fb6cd",
-      "rebased_tree": "9a98211cc29bbd674eeae39b33870489620f0c01",
-      "before_assignment_repair": "d69908dff4185ee44e7bb488f029e3ecff144f06"
+      "rebased_tree": "d89ac4b74969116adec59af95268c86a6ac04314",
+      "before_assignment_repair": "d69908dff4185ee44e7bb488f029e3ecff144f06",
+      "before_browser_budget": "078d1509069689b1a8eb91990c755094e8cbb2a0"
     },
     {
       "pr": 229,
       "branch": "codex/xstate-workspace-runner-lifetime",
       "before": "55b2d68f6412bd9335f5e243cbad3eee08139032",
       "tree": "9ab1a2a75e76b6a99603530532dcc4422659bb08",
-      "after": "7c878ca822b06dd31e679a76c74e7865e5366e1c",
+      "after": "ea691c7208c9613c678f10a2a8bb0c7150e21295",
       "before_browser_repair": "cc1569383887ddce7b2b5bb02cbb427817b2dffd",
-      "rebased_tree": "394be0b7ec380b8e34d68be03f32b894735354ab",
-      "before_assignment_repair": "6a9129befe00e39732d6760bf5a0cfc0e3603eb6"
+      "rebased_tree": "7d2ca9e84d9f096c0c0de6a21083281035f6b2ce",
+      "before_assignment_repair": "6a9129befe00e39732d6760bf5a0cfc0e3603eb6",
+      "before_browser_budget": "7c878ca822b06dd31e679a76c74e7865e5366e1c"
     },
     {
       "pr": 230,
       "branch": "codex/xstate-runner-boundary-audit",
       "before": "efc3588c76125039b71d40ff8f659ed1d11a3ecf",
       "tree": "4aa2356716469f00d8ba8a646837092e93da7096",
-      "after": "238729c3de0b82d3aafaf7b554a3a771f125b452",
+      "after": "94d16962d17298b851cb86f7a42a72ac18407546",
       "before_browser_repair": "8537b9fb7349728254ac58da01e4b0e01a897fa6",
-      "rebased_tree": "3a8d156c5290cfdd5de4b8fa5060719fa29d8fc1",
-      "before_assignment_repair": "807cecdf3f60207eda3362ada634a6e9b7a45ad5"
+      "rebased_tree": "52bc66d891b02ea0c68433401a59628038f8b6ef",
+      "before_assignment_repair": "807cecdf3f60207eda3362ada634a6e9b7a45ad5",
+      "before_browser_budget": "238729c3de0b82d3aafaf7b554a3a771f125b452"
     }
   ]
 }

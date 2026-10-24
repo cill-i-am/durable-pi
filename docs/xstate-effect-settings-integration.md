@@ -36,3 +36,7 @@ The prior inventory remains the responsibility map. The current-main source delt
 | `src/hooks/interaction-sound-resource.ts`, `src/features/rich-results/places-map-resource.ts`, `src/browser/adapters/cloudflare.ts` | Effect scopes retain native nodes, maps and disconnect handles under their existing feature/connection machines. Native resource flags prevent duplicate cleanup; they do not select the next business step. |
 
 Local integration gates, the complete source census and the rebased-head crosswalk are recorded. The repository-wide goal stays open until every final PR head passes the required hosted checks. The last published source commit is unsigned `1cc6c9db67e2fa9312207acd2c002ceaf2ab35c8`; subsequent evidence-only commits must retain the recorded source hashes.
+
+## Hosted verification budget
+
+The first refreshed #221 browser job passed all 322 journeys (18.5 minutes) and 29 component cases, then reached its 20-minute job limit during passkey checks. The browser job allowance is now 30 minutes; individual test deadlines, assertions and required gates are unchanged. Native-runtime retains 20 minutes and other verification suites ten. The [raw job log and local workflow validation](evidence/xstate-effect/main-integration-2026-10-24/README.md#hosted-browser-job-allowance) record the cause. The correction is folded into the stack at #221 and carried through #231 with no application/test changes.
