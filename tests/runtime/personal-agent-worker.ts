@@ -57,6 +57,7 @@ import { piObjectLedger } from "../../src/objects/adapters/pi"
 import { WorkerTelemetry } from "../../src/observability/worker"
 import { piPlanLedger } from "../../src/planning/adapters/pi"
 import type { PlanUpdate } from "../../src/planning/contracts"
+import { RoutineStorageError } from "../../src/routines/persistence"
 import { nativeOperation } from "../../src/shared/interop"
 import { SkillStorageError } from "../../src/skills/contracts"
 import { localTaskControls } from "../../src/tasks/adapters/personal-agent"
@@ -1232,6 +1233,7 @@ export class PersonalAgentProbe extends PersonalAgent {
       )
     const action = new URL(request.url).pathname.split("/").at(-1)
     for (const probe of [
+      this.runnerCauseProbe,
       this.heldRunnerProbe,
       this.coordinationProbe,
       this.taskControlProbe,
@@ -3139,26 +3141,70 @@ export class PersonalAgentProbe extends PersonalAgent {
     return undefined
   }
 
+  private async runnerCauseProbe(
+    _request: Request,
+    action: string | undefined
+  ): Promise<Response | undefined> {
+    if (action !== "runner-causes") return undefined
+    const checked = new RoutineStorageError({
+        operation: "native runner failure probe",
+        cause: "synthetic storage unavailable",
+      }),
+      defect = new Error("native runner cleanup defect")
+    const cause = Cause.fromReasons([
+      Cause.makeFailReason(checked),
+      Cause.makeDieReason(defect),
+      Cause.makeInterruptReason(918),
+    ])
+    const conversation = this.conversationPump.run,
+      routine = this.routinePump.run
+    this.conversationPump.run = () => Effect.failCause(cause)
+    this.routinePump.run = () => Effect.failCause(cause)
+    try {
+      const observed = await Promise.allSettled([
+        this.runner.host.step(() => {}),
+        this.routineRunner.host.step(() => {}),
+      ])
+      return Response.json(
+        observed.map((result) => {
+          if (result.status !== "rejected" || !Cause.isCause(result.reason))
+            return { complete: false }
+          const reasons = result.reason.reasons
+          return {
+            complete:
+              reasons.some(
+                (reason) => reason._tag === "Fail" && reason.error === checked
+              ) &&
+              reasons.some(
+                (reason) => reason._tag === "Die" && reason.defect === defect
+              ) &&
+              reasons.some(
+                (reason) =>
+                  reason._tag === "Interrupt" && reason.fiberId === 918
+              ),
+          }
+        })
+      )
+    } finally {
+      this.conversationPump.run = conversation
+      this.routinePump.run = routine
+    }
+  }
+
   private async heldRunnerProbe(
     _request: Request,
     action: string | undefined
   ): Promise<Response | undefined> {
-    if (
-      action?.startsWith("coordination-held-") ||
-      action?.startsWith("apps-held-") ||
-      action?.startsWith("conversation-held-")
-    ) {
-      const kind = action.startsWith("apps-")
-        ? "apps"
-        : action.startsWith("conversation-")
-          ? "conversation"
-          : "coordination"
-      const runner =
-        kind === "apps"
-          ? this.appEvents
-          : kind === "conversation"
-            ? this.runner
-            : this.coordinationRunner
+    const kind = (
+      ["coordination", "apps", "conversation", "routines"] as const
+    ).find((kind) => action?.startsWith(`${kind}-held-`))
+    if (kind) {
+      const runner = {
+        coordination: this.coordinationRunner,
+        apps: this.appEvents,
+        conversation: this.runner,
+        routines: this.routineRunner,
+      }[kind]
       if (action === `${kind}-held-start`) {
         await this.lifecycle.start()
         const held = new Promise<void>((resolve) => {
@@ -3172,16 +3218,15 @@ export class PersonalAgentProbe extends PersonalAgent {
           this.events.push(`${kind}.settled`)
           return undefined
         }
-        if (kind === "apps") this.appEvents.host.pump = pump
-        else if (kind === "conversation") this.runner.host.step = pump
-        else this.coordinationRunner.host.step = pump
+        if ("pump" in runner.host) runner.host.pump = pump
+        else runner.host.step = pump
         const dispose = runner.dispose.bind(runner)
         runner.dispose = () => {
           this.events.push(`${kind}.close`)
           return dispose()
         }
         await runner.armDiscovery()
-        if (kind === "conversation") await runner.wake()
+        if (kind === "conversation" || kind === "routines") await runner.wake()
       }
       if (action === `${kind}-held-release`) this.releaseRunner?.()
       if (action === `${kind}-held-dispose`) {

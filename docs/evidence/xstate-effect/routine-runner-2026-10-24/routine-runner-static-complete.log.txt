@@ -1,0 +1,13 @@
+$ node --import tsx scripts/check-secrets.ts && pnpm generate-routes && pnpm db:check:agent && pnpm typecheck && pnpm lint && pnpm check
+Checked 2979 tracked files; no credential matches.
+$ tsr generate
+(node:99785) Warning: Accessing non-existent property 'replaceRouteChunk' of module exports inside circular dependency
+(Use `node --trace-warnings ...` to show where the warning was created)
+$ node scripts/generate-agent-migration-manifest.mjs --check
+$ tsc --noEmit
+$ oxlint --config oxlint.config.ts --deny-warnings
+$ oxfmt --check .
+Checking formatting...
+
+All matched files use the correct format.
+Finished in 488ms on 1682 files using 10 threads.

@@ -79,13 +79,20 @@ export class ConversationRunner<E> extends LifecycleCapability {
     super("personal-chat")
   }
 
+  private async run<A>(work: Effect.Effect<A, E>): Promise<A> {
+    // The native runner squashes failed Exits. Keep the whole Exit as its
+    // successful value until this boundary can return every original reason.
+    const exit = await this.host.run(Effect.exit(work))
+    if (Exit.isFailure(exit)) throw exit.cause
+    return exit.value
+  }
   private getActor() {
     // Lazy creation preserves Lifecycle's first native caller context.
     return (this.actor ??= Effect.runSync(
       createEffectActor(
         conversationRunnerMachine(() =>
           nativeOperation(
-            () => this.host.run(this.host.restore()),
+            () => this.run(this.host.restore()),
             (cause) => cause
           )
         )
@@ -233,7 +240,7 @@ export class ConversationRunner<E> extends LifecycleCapability {
       await this.restore()
       await this.schedule(async () => {
         if (!this.current(pumpId) && !this.current(discoveryId)) {
-          const next = await this.host.run(this.host.nextWake())
+          const next = await this.run(this.host.nextWake())
           if (!this.closed() && next !== undefined && !this.current(pumpId))
             await this.pushPump(next)
         }
@@ -252,8 +259,8 @@ export class ConversationRunner<E> extends LifecycleCapability {
     if (!this.owns(job)) return this.outcome(job, undefined)
     if (job.fn === "recover") {
       // Capture scan start before storage: admission may commit while it waits.
-      const now = await this.host.run(Clock.currentTimeMillis)
-      const pending = (await this.host.run(this.host.nextWake())) !== undefined
+      const now = await this.run(Clock.currentTimeMillis)
+      const pending = (await this.run(this.host.nextWake())) !== undefined
       let outcome: LifecycleJobOutcome
       for (const command of observeConversationDiscovery(job.payload, {
         now,
@@ -324,11 +331,11 @@ export class ConversationRunner<E> extends LifecycleCapability {
     if (this.closed()) return
     const { token } = readJob(job)
     if (job.fn === "recover") {
-      await this.host.run(
+      await this.run(
         Effect.logError("Conversation job exhausted", { job: job.id }, error)
       )
       if (this.closed()) return
-      const now = await this.host.run(Clock.currentTimeMillis)
+      const now = await this.run(Clock.currentTimeMillis)
       const command = observeConversationDiscovery(job.payload, {
         now,
         pending: false,
@@ -348,20 +355,20 @@ export class ConversationRunner<E> extends LifecycleCapability {
     if (permission !== "start") return this.outcome(job, undefined)
     try {
       if (!receipt || this.closed()) return this.outcome(job, undefined)
-      await this.host.run(
+      await this.run(
         Effect.logError("Conversation job exhausted", { job: job.id }, error)
       )
-      const result = await this.host.run(
+      const result = await this.run(
         Effect.exit(this.host.exhaust(receipt, error, () => this.owns(job)))
       )
       if (Exit.isSuccess(result) && !result.value && !this.closed()) {
         // A newer Stop or explicit recovery still owns its revisioned wake.
-        const next = await this.host.run(this.host.nextWake())
+        const next = await this.run(this.host.nextWake())
         if (next !== undefined) return this.outcome(job, { rescheduleAt: next })
       }
       if (Exit.isFailure(result)) {
         if (this.closed()) throw result.cause
-        await this.host.run(
+        await this.run(
           Effect.logError(
             "Conversation control persistence is unconfirmed",
             result.cause

@@ -1,0 +1,90 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+stdout | tests/routine-runner.test.ts > closing a second facade joins held exhaust with original Causes (defect false)
+[21:22:00.736] ERROR (#708): Routine job exhausted { job: 'routines:pump' } failed
+
+stdout | tests/routine-runner.test.ts > closing a second facade joins held exhaust with original Causes (defect true)
+[21:22:00.740] ERROR (#774): Routine job exhausted { job: 'routines:pump' } failed
+
+ ❯ tests/routine-runner.test.ts (20 tests | 4 failed) 61ms
+   × closing a second facade joins held storage with original Causes (defect false) 4ms
+   × closing a second facade joins held storage with original Causes (defect true) 2ms
+   × closing a second facade joins held exhaust with original Causes (defect false) 2ms
+   × closing a second facade joins held exhaust with original Causes (defect true) 3ms
+ ❯ tests/conversation-runner.test.ts (50 tests | 4 failed) 121ms
+   × joins held restore and preserves annotated native Causes (defect false) 5ms
+   × joins held restore and preserves annotated native Causes (defect true) 2ms
+   × joins held storage and preserves annotated native Causes (defect false) 3ms
+   × joins held storage and preserves annotated native Causes (defect true) 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/conversation-runner.test.ts > joins held restore and preserves annotated native Causes (defect false)
+ FAIL  tests/conversation-runner.test.ts > joins held restore and preserves annotated native Causes (defect true)
+AssertionError: expected undefined to be 'original' // Object.is equality
+
+- Expected:
+"original"
+
++ Received:
+undefined
+
+ ❯ tests/conversation-runner.test.ts:852:52
+    850|           expect(observed?._tag).toBe(reason._tag)
+    851|           for (const [key, value] of reason.annotations)
+    852|             expect(observed?.annotations.get(key)).toBe(value)
+       |                                                    ^
+    853|           if (reason._tag === "Fail" && observed?._tag === "Fail")
+    854|             expect(observed.error).toBe(reason.error)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯
+
+ FAIL  tests/conversation-runner.test.ts > joins held storage and preserves annotated native Causes (defect false)
+ FAIL  tests/conversation-runner.test.ts > joins held storage and preserves annotated native Causes (defect true)
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/conversation-runner.test.ts:844:39
+    842|       held.reject(failure)
+    843|       for (const result of await Promise.all([observed, disposal])) {
+    844|         expect(Cause.isCause(result)).toBe(true)
+       |                                       ^
+    845|         if (!Cause.isCause(result)) throw new Error("Expected a native…
+    846|         for (const reason of failure.reasons) {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯
+
+ FAIL  tests/routine-runner.test.ts > closing a second facade joins held storage with original Causes (defect false)
+ FAIL  tests/routine-runner.test.ts > closing a second facade joins held storage with original Causes (defect true)
+ FAIL  tests/routine-runner.test.ts > closing a second facade joins held exhaust with original Causes (defect false)
+ FAIL  tests/routine-runner.test.ts > closing a second facade joins held exhaust with original Causes (defect true)
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/routine-runner.test.ts:336:39
+    334|       held.resolve()
+    335|       for (const result of await Promise.all([observed, closing])) {
+    336|         expect(Cause.isCause(result)).toBe(true)
+       |                                       ^
+    337|         if (!Cause.isCause(result))
+    338|           throw new Error("Expected original native Cause")
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  8 failed | 62 passed (70)
+   Start at  21:22:00
+   Duration  398ms (import 55%, tests 32%, transform 10%, setup 2%, worker 1%)
+

@@ -638,6 +638,10 @@ class ActorServices extends LifecycleCapability {
             () => this.owner.runner.dispose(),
             (cause) => cause
           ).pipe(Effect.exit),
+          nativeOperation(
+            () => this.owner.routineRunner.dispose(),
+            (cause) => cause
+          ).pipe(Effect.exit),
         ],
         { concurrency: "unbounded" }
       ).pipe(
@@ -3582,10 +3586,12 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
           )
           return false
         })
-      return this.actorRuntime.runPromise(
-        this.routinePump
-          .run(onAttempt, { allowDispatch })
-          .pipe(Effect.provide(WorkerTelemetry))
+      return modelCallback(
+        this.actorRuntime.runPromiseExit(
+          this.routinePump
+            .run(onAttempt, { allowDispatch })
+            .pipe(Effect.provide(WorkerTelemetry))
+        )
       )
     },
     nextWake: () => this.routines.nextWake(),
@@ -5185,10 +5191,12 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   async step(
     onAttempt?: (attempt: ConversationControlAttempt) => void
   ): Promise<LifecycleJobOutcome> {
-    const next = await this.actorRuntime.runPromise(
-      this.conversationPump
-        .run("automatic", undefined, onAttempt)
-        .pipe(Effect.provide(WorkerTelemetry))
+    const next = await modelCallback(
+      this.actorRuntime.runPromiseExit(
+        this.conversationPump
+          .run("automatic", undefined, onAttempt)
+          .pipe(Effect.provide(WorkerTelemetry))
+      )
     )
     return next === undefined ? undefined : { rescheduleAt: next }
   }

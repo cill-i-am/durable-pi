@@ -1,0 +1,7 @@
+$ node scripts/test-conversation-runtime.mjs
+PASS native held-submit: owner retained until joined cancellation; no overlapping native command or stopped-session reuse.
+PASS native held-abort: owner retained until joined cancellation; no overlapping native command or stopped-session reuse.
+WAIT native SIGKILL recovery: health-only startup; no Durable Object requests until the real discovery lease expires.
+PASS native no-poke recovery: early-empty sixty-second admission discovery and lost acknowledgement reconcile the same durable native request without another synthetic provider call.
+PASS native exhausted-write outage: repeated wakes and cold restoration preserve the spent budget; Check observes only, and revisioned Retry Stop confirms cancellation.
+PASS native session reuse: a later addressed request uses the original Pi conversation and a distinct request receipt after prior ownership is released. All provider responses are synthetic.

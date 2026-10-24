@@ -1,0 +1,40 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+stdout | tests/routine-runner.test.ts > admits exhaustion once across concurrent callbacks (warm facade false)
+[21:17:16.285] ERROR (#26): Routine recovery exhausted native failure
+
+stdout | tests/routine-runner.test.ts > admits exhaustion once across concurrent callbacks (warm facade false)
+[21:17:16.285] ERROR (#28): Routine recovery exhausted duplicate failure
+
+stdout | tests/routine-runner.test.ts > admits exhaustion once across concurrent callbacks (warm facade true)
+[21:17:16.287] ERROR (#30): Routine recovery exhausted native failure
+
+stdout | tests/routine-runner.test.ts > admits exhaustion once across concurrent callbacks (warm facade true)
+[21:17:16.287] ERROR (#32): Routine recovery exhausted duplicate failure
+
+ ❯ tests/routine-runner.test.ts (9 tests | 2 failed) 20ms
+   × admits exhaustion once across concurrent callbacks (warm facade false) 2ms
+   × admits exhaustion once across concurrent callbacks (warm facade true) 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/routine-runner.test.ts > admits exhaustion once across concurrent callbacks (warm facade false)
+ FAIL  tests/routine-runner.test.ts > admits exhaustion once across concurrent callbacks (warm facade true)
+AssertionError: expected "vi.fn()" to be called 1 times, but got 2 times
+ ❯ tests/routine-runner.test.ts:226:23
+    224|   try {
+    225|     await (warm ? f.make() : f.runner).onJobError({ job, attempt: 3 },…
+    226|     expect(f.exhaust).toHaveBeenCalledTimes(1)
+       |                       ^
+    227|   } finally { held.resolve(); await first }
+    228| })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 7 passed (9)
+   Start at  21:17:16
+   Duration  279ms (import 72%, transform 14%, tests 10%, setup 3%, worker 1%)
+

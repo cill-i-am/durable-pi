@@ -808,7 +808,16 @@ for (const mode of ["step", "restore", "storage"] as const)
         })
         accepted = f.runner.onJob({ job: f.pump(), attempt: 1 })
       } else {
-        const effect = Effect.promise(work)
+        const effect = Effect.gen(function* () {
+          started.resolve()
+          yield* Effect.promise(() =>
+            held.promise.then(
+              () => undefined,
+              () => undefined
+            )
+          )
+          return yield* Effect.failCause(failure)
+        })
         if (mode === "restore") f.restore.mockReturnValueOnce(effect)
         else f.runner.host.nextWake = () => effect.pipe(Effect.as(undefined))
         accepted = f.runner.reconcile()
@@ -858,9 +867,15 @@ it("coalesces failed restoration and retries only for a fresh caller", async () 
     held = barrier<void>()
   const failure = Cause.fail(new Error("restore unavailable"))
   f.restore.mockReturnValueOnce(
-    Effect.promise(async () => {
+    Effect.gen(function* () {
       started.resolve()
-      await held.promise
+      yield* Effect.promise(() =>
+        held.promise.then(
+          () => undefined,
+          () => undefined
+        )
+      )
+      return yield* Effect.failCause(failure)
     })
   )
   const first = f.runner.reconcile().catch((error: unknown) => error)

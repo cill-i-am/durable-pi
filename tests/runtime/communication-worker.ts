@@ -45,6 +45,8 @@ interface Env {
 }
 const personalProbeOwners = new Map([
   ["personal-apps-disposal", "personal-apps-disposal-owner"],
+  ["personal-routines-disposal", "personal-routines-disposal-owner"],
+  ["personal-runner-causes", "personal-runner-causes-owner"],
   ["personal-conversation-disposal", "personal-conversation-disposal-owner"],
   ["personal-coordination-disposal", "personal-coordination-disposal-owner"],
   ["personal-coordination", "personal-coordination-owner"],

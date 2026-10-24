@@ -1,6 +1,7 @@
 import type { LifecycleJob, LifecycleJobPushOptions } from "agents/lifecycle"
-import { Effect } from "effect"
+import { Cause, Context, Effect } from "effect"
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { initialTransition, transition } from "xstate"
 
 import {
   RoutineRunner,
@@ -10,9 +11,16 @@ import {
   armRoutineDiscovery,
   observeRoutineDiscovery,
 } from "../src/routines/discovery.machine"
+import { routineRunnerMachine } from "../src/routines/runner.machine"
 
 vi.mock("agents/lifecycle", () => ({ LifecycleCapability: class {} }))
-afterEach(() => vi.useRealTimers())
+const owners = new Set<RoutineRunner<unknown>>()
+afterEach(async () => {
+  await Promise.allSettled([...owners].map((owner) => owner.dispose()))
+  owners.clear()
+  vi.useRealTimers()
+  vi.restoreAllMocks()
+})
 function fixture() {
   const jobs = new Map<string, LifecycleJob>()
   const owner = {}
@@ -49,8 +57,9 @@ function fixture() {
     return !!current
   })
   const rearm = vi.fn(async () => {})
+  const get = vi.fn((id: string) => jobs.get(id))
   const make = () => {
-    const runner = new RoutineRunner({
+    const runner = new RoutineRunner<unknown>({
       owner,
       run: Effect.runPromise,
       step,
@@ -59,13 +68,15 @@ function fixture() {
     })
     Object.defineProperty(runner, "lifecycle", {
       value: {
-        jobs: { get: (id: string) => jobs.get(id), push, reschedule, rearm },
+        jobs: { get, push, reschedule, rearm },
       },
     })
+    owners.add(runner)
     return runner
   }
   return {
     runner: make(),
+    get,
     make,
     jobs,
     step,
@@ -204,4 +215,241 @@ describe("routine Lifecycle recovery", () => {
       armRoutineDiscovery({ ...saved, schemaVersion: 2 }, 3000, "future")
     ).toThrow()
   })
+})
+
+it.each([false, true])(
+  "admits exhaustion once across concurrent callbacks (warm facade %s)",
+  async (warm) => {
+    const f = fixture(),
+      entered = deferred(),
+      held = deferred()
+    f.step.mockImplementationOnce(async (attempt) => {
+      attempt({ id: "run", controlRevision: 3 })
+      throw new Error("native failure")
+    })
+    await f.runner.wake()
+    const job = f.pump()
+    await expect(f.runner.onJob({ job, attempt: 3 })).rejects.toThrow(
+      "native failure"
+    )
+    f.exhaust.mockImplementationOnce((_attempt, eligible) =>
+      Effect.promise(async () => {
+        entered.resolve()
+        await held.promise
+        return eligible()
+      })
+    )
+    const first = f.runner.onJobError({ job, attempt: 3 }, "native failure")
+    await entered.promise
+    try {
+      await (warm ? f.make() : f.runner).onJobError(
+        { job, attempt: 3 },
+        "duplicate failure"
+      )
+      expect(f.exhaust).toHaveBeenCalledTimes(1)
+    } finally {
+      held.resolve()
+      await first
+    }
+  }
+)
+
+class NativeReason extends Context.Service<NativeReason, string>()(
+  "routine-runner/native-reason"
+) {}
+for (const mode of ["step", "storage", "exhaust"] as const)
+  it.each([false, true])(
+    `closing a second facade joins held ${mode} with original Causes (defect %s)`,
+    async (defect) => {
+      const f = fixture(),
+        entered = deferred(),
+        held = deferred(),
+        warm = f.make()
+      const annotation = Context.make(NativeReason, "original")
+      const failure = Cause.fromReasons([
+        Cause.makeFailReason(new Error("native checked failure")).annotate(
+          annotation
+        ),
+        ...(defect
+          ? [
+              Cause.makeDieReason(new Error("cleanup defect")).annotate(
+                annotation
+              ),
+            ]
+          : []),
+        Cause.makeInterruptReason(927).annotate(annotation),
+      ])
+      const effect = Effect.gen(function* () {
+        entered.resolve()
+        yield* Effect.promise(() => held.promise)
+        return yield* Effect.failCause(failure)
+      })
+      let accepted: Promise<unknown>
+      if (mode === "storage") {
+        f.runner.host.nextWake = () => effect
+        accepted = f.runner.reconcile()
+      } else {
+        await f.runner.wake()
+        const job = f.pump()
+        if (mode === "step") {
+          f.step.mockImplementationOnce(async () => {
+            entered.resolve()
+            await held.promise
+            throw failure
+          })
+          accepted = f.runner.onJob({ job, attempt: 1 })
+        } else {
+          f.step.mockImplementationOnce(async (receipt) => {
+            receipt({ id: "run", controlRevision: 1 })
+            throw new Error("step failed")
+          })
+          await expect(f.runner.onJob({ job, attempt: 3 })).rejects.toThrow(
+            "step failed"
+          )
+          f.runner.host.exhaust = () => effect
+          accepted = f.runner.onJobError({ job, attempt: 3 }, "failed")
+        }
+      }
+      const observed = accepted.catch((error: unknown) => error)
+      await entered.promise
+      let closed = false
+      const closing = warm
+        .dispose()
+        .catch((error: unknown) => error)
+        .finally(() => {
+          closed = true
+        })
+      await expect(f.runner.armDiscovery()).rejects.toThrow("stopped")
+      expect(closed).toBe(false)
+      const afterClose = f.make(),
+        reads = f.get.mock.calls.length
+      await afterClose.wake()
+      await afterClose.reconcile()
+      await afterClose.onJob({ job: {} as LifecycleJob, attempt: 1 })
+      await afterClose.onJobError(
+        { job: {} as LifecycleJob, attempt: 3 },
+        "late"
+      )
+      expect(f.get).toHaveBeenCalledTimes(reads)
+      held.resolve()
+      for (const result of await Promise.all([observed, closing])) {
+        expect(Cause.isCause(result)).toBe(true)
+        if (!Cause.isCause(result))
+          throw new Error("Expected original native Cause")
+        for (const reason of failure.reasons)
+          expect(result.reasons).toContain(reason)
+      }
+      expect(f.runner.dispose()).toBe(warm.dispose())
+      expect(afterClose.dispose()).toBe(warm.dispose())
+    }
+  )
+
+it("a second facade cannot exhaust a still-running callback", async () => {
+  const f = fixture(),
+    entered = deferred(),
+    held = deferred()
+  await f.runner.wake()
+  const job = f.pump()
+  f.step.mockImplementationOnce(async (receipt) => {
+    receipt({ id: "run", controlRevision: 1 })
+    entered.resolve()
+    await held.promise
+    return undefined
+  })
+  const work = f.runner.onJob({ job, attempt: 1 })
+  await entered.promise
+  try {
+    await f.make().onJobError({ job, attempt: 3 }, "premature")
+    expect(f.exhaust).not.toHaveBeenCalled()
+  } finally {
+    held.resolve()
+    await work
+  }
+})
+
+it("a shared schedule owner coalesces wakes while the native write is held", async () => {
+  const f = fixture(),
+    entered = deferred(),
+    held = deferred(),
+    warm = f.make()
+  const push = f.push.getMockImplementation()!
+  f.push.mockImplementationOnce(async (options) => {
+    entered.resolve()
+    await held.promise
+    return push(options)
+  })
+  const first = f.runner.wake()
+  await entered.promise
+  const second = warm.wake()
+  expect(f.push).toHaveBeenCalledTimes(1)
+  held.resolve()
+  await Promise.all([first, second])
+  expect(f.push).toHaveBeenCalledTimes(1)
+  expect(f.reschedule).toHaveBeenCalledTimes(1)
+})
+
+it("closing a shared owner releases queued calls but joins a held queue write", async () => {
+  const f = fixture(),
+    entered = deferred(),
+    held = deferred(),
+    warm = f.make()
+  const push = f.push.getMockImplementation()!
+  f.push.mockImplementationOnce(async (options) => {
+    entered.resolve()
+    await held.promise
+    return push(options)
+  })
+  const armed = f.runner.armDiscovery().catch((error: unknown) => error)
+  await entered.promise
+  const queued = warm.wake()
+  let closed = false
+  const closing = warm.dispose().finally(() => {
+    closed = true
+  })
+  await queued
+  expect(closed).toBe(false)
+  held.resolve()
+  expect(await armed).toBeInstanceOf(Error)
+  await closing
+  expect(f.push).toHaveBeenCalledTimes(1)
+})
+
+it("preserves a newer native job when an old held callback completes", async () => {
+  const f = fixture(),
+    entered = deferred(),
+    held = deferred()
+  await f.runner.wake()
+  const job = f.pump()
+  f.step.mockImplementationOnce(async () => {
+    entered.resolve()
+    await held.promise
+    return undefined
+  })
+  const work = f.runner.onJob({ job, attempt: 1 })
+  await entered.promise
+  f.jobs.delete(job.id)
+  await f.make().wake()
+  const newer = f.pump()
+  held.resolve()
+  expect(await work).toEqual({ rescheduleAt: newer.time })
+  expect(f.pump()).toBe(newer)
+})
+
+it("validates malformed callback events through the official integration", () => {
+  const [initial] = initialTransition(routineRunnerMachine)
+  const [state, effects] = transition(routineRunnerMachine, initial, {
+    type: "ADMIT",
+    token: "bad",
+    job: null,
+    reply: null,
+  } as never)
+  expect(state.value).toEqual(initial.value)
+  expect(
+    effects.some(
+      (effect) =>
+        effect.kind === "builtin" &&
+        effect.type === "@xstate.deadLetter" &&
+        effect.reason === "invalidEvent"
+    )
+  ).toBe(true)
 })
