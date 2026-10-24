@@ -2,6 +2,8 @@ import { mkdir } from "node:fs/promises"
 
 import { expect, test, type Page } from "@playwright/test"
 
+import { closeSettings } from "./settings-helpers"
+
 const owner = {
   id: "family-owner",
   userId: "fixture-owner",
@@ -141,9 +143,7 @@ test("member family screen is read only, and a shared model outage preserves an 
   await expect(
     page.getByRole("button", { name: "Refresh connection" })
   ).toHaveCount(0)
-  await page
-    .getByRole("button", { name: "Close settings", exact: true })
-    .click()
+  await closeSettings(page)
   const draft = page.getByRole("textbox", { name: "Message Navi", exact: true })
   await draft.fill("Keep this private draft while ChatGPT reconnects.")
   await page.request.post("/api/fixture/model-connection", {

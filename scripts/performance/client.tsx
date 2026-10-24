@@ -23,6 +23,7 @@ import {
 } from "../../src/components/ui/input-group"
 import { JoinFamily } from "../../src/features/family/join"
 import { UpdateRecovery } from "../../src/features/updates/update-recovery"
+import { workspaceNavigationContext } from "../../src/navigation/settings-stack"
 import {
   workspaceView,
   validateGlobalSettingsSearch,
@@ -31,8 +32,10 @@ import {
 import { reportClientError } from "../../src/observability/browser"
 import { Route as PanelRoute } from "../../src/routes/_workspace.agents.$agentId.$panel.index"
 import { Route as SettingsRoute } from "../../src/routes/_workspace.agents.$agentId.settings.$section"
+import { Route as AgentSettingsIndexRoute } from "../../src/routes/_workspace.agents.$agentId.settings.index"
 import { Route as FamilyRoute } from "../../src/routes/_workspace.family"
 import { Route as ModelAccessRoute } from "../../src/routes/_workspace.family.model-access"
+import { Route as SettingsIndexRoute } from "../../src/routes/_workspace.settings.index"
 import { Route as SecurityRoute } from "../../src/routes/_workspace.settings.security"
 
 import "./styles.css"
@@ -46,6 +49,7 @@ const root = createRootRoute({
 const workspace = createRoute({
   getParentRoute: () => root,
   id: "_workspace",
+  beforeLoad: workspaceNavigationContext,
   errorComponent: WorkspaceLinkError,
   component: FixtureWorkspace,
 })
@@ -69,6 +73,21 @@ const router = createRouter({
           component: () => null,
         })
       ),
+      createRoute({
+        getParentRoute: () => workspace,
+        path: "/settings",
+        validateSearch: SettingsIndexRoute.options.validateSearch,
+        component: SettingsIndexRoute.options.component,
+      }),
+      createRoute({
+        getParentRoute: () => workspace,
+        path: "/agents/$agentId/settings",
+        params: AgentSettingsIndexRoute.options.params,
+        validateSearch: AgentSettingsIndexRoute.options.validateSearch,
+        beforeLoad: ({ params, search }) =>
+          workspaceView({ ...params, section: "agent-settings" }, search),
+        component: AgentSettingsIndexRoute.options.component,
+      }),
       createRoute({
         validateSearch: FamilyRoute.options.validateSearch,
         component: FamilyRoute.options.component,

@@ -23,6 +23,7 @@ import { Route as WorkspaceAgentsIndexRouteImport } from './routes/_workspace.ag
 import { Route as WorkspaceAgentsArchivedRouteImport } from './routes/_workspace.agents.archived'
 import { Route as WorkspaceAgentsNewRouteImport } from './routes/_workspace.agents.new'
 import { Route as WorkspaceFamilyModelAccessRouteImport } from './routes/_workspace.family.model-access'
+import { Route as WorkspaceSettingsIndexRouteImport } from './routes/_workspace.settings.index'
 import { Route as WorkspaceSettingsAccountRouteImport } from './routes/_workspace.settings.account'
 import { Route as WorkspaceSettingsChannelsRouteImport } from './routes/_workspace.settings.channels'
 import { Route as WorkspaceSettingsConnectionsRouteImport } from './routes/_workspace.settings.connections'
@@ -39,6 +40,7 @@ import { Route as WorkspaceAgentsAgentIdEditRouteImport } from './routes/_worksp
 import { Route as ApiHooksAgentRoutineRouteImport } from './routes/api.hooks.$agent.$routine'
 import { Route as WorkspaceAgentsAgentIdPanelIndexRouteImport } from './routes/_workspace.agents.$agentId.$panel.index'
 import { Route as WorkspaceAgentsAgentIdPanelItemIdRouteImport } from './routes/_workspace.agents.$agentId.$panel.$itemId'
+import { Route as WorkspaceAgentsAgentIdSettingsIndexRouteImport } from './routes/_workspace.agents.$agentId.settings.index'
 import { Route as WorkspaceAgentsAgentIdSettingsSectionRouteImport } from './routes/_workspace.agents.$agentId.settings.$section'
 
 const WorkspaceRoute = WorkspaceRouteImport.update({
@@ -111,6 +113,11 @@ const WorkspaceFamilyModelAccessRoute =
     path: '/model-access',
     getParentRoute: () => WorkspaceFamilyRoute,
   } as any)
+const WorkspaceSettingsIndexRoute = WorkspaceSettingsIndexRouteImport.update({
+  id: '/settings/',
+  path: '/settings/',
+  getParentRoute: () => WorkspaceRoute,
+} as any)
 const WorkspaceSettingsAccountRoute =
   WorkspaceSettingsAccountRouteImport.update({
     id: '/settings/account',
@@ -201,6 +208,12 @@ const WorkspaceAgentsAgentIdPanelItemIdRoute =
     path: '/agents/$agentId/$panel/$itemId',
     getParentRoute: () => WorkspaceRoute,
   } as any)
+const WorkspaceAgentsAgentIdSettingsIndexRoute =
+  WorkspaceAgentsAgentIdSettingsIndexRouteImport.update({
+    id: '/agents/$agentId/settings/',
+    path: '/agents/$agentId/settings/',
+    getParentRoute: () => WorkspaceRoute,
+  } as any)
 const WorkspaceAgentsAgentIdSettingsSectionRoute =
   WorkspaceAgentsAgentIdSettingsSectionRouteImport.update({
     id: '/agents/$agentId/settings/$section',
@@ -233,12 +246,14 @@ export interface FileRoutesByFullPath {
   '/api/diagnostics/client-error': typeof ApiDiagnosticsClientErrorRoute
   '/api/family/$': typeof ApiFamilySplatRoute
   '/agents/': typeof WorkspaceAgentsIndexRoute
+  '/settings/': typeof WorkspaceSettingsIndexRoute
   '/agents/$agentId/edit': typeof WorkspaceAgentsAgentIdEditRoute
   '/api/hooks/$agent/$routine': typeof ApiHooksAgentRoutineRoute
   '/agents/$agentId/': typeof WorkspaceAgentsAgentIdIndexRoute
   '/agents/$agentId/$panel/$itemId': typeof WorkspaceAgentsAgentIdPanelItemIdRoute
   '/agents/$agentId/settings/$section': typeof WorkspaceAgentsAgentIdSettingsSectionRoute
   '/agents/$agentId/$panel/': typeof WorkspaceAgentsAgentIdPanelIndexRoute
+  '/agents/$agentId/settings/': typeof WorkspaceAgentsAgentIdSettingsIndexRoute
 }
 export interface FileRoutesByTo {
   '/forgot-password': typeof ForgotPasswordRoute
@@ -265,12 +280,14 @@ export interface FileRoutesByTo {
   '/api/diagnostics/client-error': typeof ApiDiagnosticsClientErrorRoute
   '/api/family/$': typeof ApiFamilySplatRoute
   '/agents': typeof WorkspaceAgentsIndexRoute
+  '/settings': typeof WorkspaceSettingsIndexRoute
   '/agents/$agentId/edit': typeof WorkspaceAgentsAgentIdEditRoute
   '/api/hooks/$agent/$routine': typeof ApiHooksAgentRoutineRoute
   '/agents/$agentId': typeof WorkspaceAgentsAgentIdIndexRoute
   '/agents/$agentId/$panel/$itemId': typeof WorkspaceAgentsAgentIdPanelItemIdRoute
   '/agents/$agentId/settings/$section': typeof WorkspaceAgentsAgentIdSettingsSectionRoute
   '/agents/$agentId/$panel': typeof WorkspaceAgentsAgentIdPanelIndexRoute
+  '/agents/$agentId/settings': typeof WorkspaceAgentsAgentIdSettingsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -299,12 +316,14 @@ export interface FileRoutesById {
   '/api/diagnostics/client-error': typeof ApiDiagnosticsClientErrorRoute
   '/api/family/$': typeof ApiFamilySplatRoute
   '/_workspace/agents/': typeof WorkspaceAgentsIndexRoute
+  '/_workspace/settings/': typeof WorkspaceSettingsIndexRoute
   '/_workspace/agents/$agentId/edit': typeof WorkspaceAgentsAgentIdEditRoute
   '/api/hooks/$agent/$routine': typeof ApiHooksAgentRoutineRoute
   '/_workspace/agents/$agentId/': typeof WorkspaceAgentsAgentIdIndexRoute
   '/_workspace/agents/$agentId/$panel/$itemId': typeof WorkspaceAgentsAgentIdPanelItemIdRoute
   '/_workspace/agents/$agentId/settings/$section': typeof WorkspaceAgentsAgentIdSettingsSectionRoute
   '/_workspace/agents/$agentId/$panel/': typeof WorkspaceAgentsAgentIdPanelIndexRoute
+  '/_workspace/agents/$agentId/settings/': typeof WorkspaceAgentsAgentIdSettingsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -333,12 +352,14 @@ export interface FileRouteTypes {
     | '/api/diagnostics/client-error'
     | '/api/family/$'
     | '/agents/'
+    | '/settings/'
     | '/agents/$agentId/edit'
     | '/api/hooks/$agent/$routine'
     | '/agents/$agentId/'
     | '/agents/$agentId/$panel/$itemId'
     | '/agents/$agentId/settings/$section'
     | '/agents/$agentId/$panel/'
+    | '/agents/$agentId/settings/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/forgot-password'
@@ -365,12 +386,14 @@ export interface FileRouteTypes {
     | '/api/diagnostics/client-error'
     | '/api/family/$'
     | '/agents'
+    | '/settings'
     | '/agents/$agentId/edit'
     | '/api/hooks/$agent/$routine'
     | '/agents/$agentId'
     | '/agents/$agentId/$panel/$itemId'
     | '/agents/$agentId/settings/$section'
     | '/agents/$agentId/$panel'
+    | '/agents/$agentId/settings'
   id:
     | '__root__'
     | '/_workspace'
@@ -398,12 +421,14 @@ export interface FileRouteTypes {
     | '/api/diagnostics/client-error'
     | '/api/family/$'
     | '/_workspace/agents/'
+    | '/_workspace/settings/'
     | '/_workspace/agents/$agentId/edit'
     | '/api/hooks/$agent/$routine'
     | '/_workspace/agents/$agentId/'
     | '/_workspace/agents/$agentId/$panel/$itemId'
     | '/_workspace/agents/$agentId/settings/$section'
     | '/_workspace/agents/$agentId/$panel/'
+    | '/_workspace/agents/$agentId/settings/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -523,6 +548,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceFamilyModelAccessRouteImport
       parentRoute: typeof WorkspaceFamilyRoute
     }
+    '/_workspace/settings/': {
+      id: '/_workspace/settings/'
+      path: '/settings'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof WorkspaceSettingsIndexRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
     '/_workspace/settings/account': {
       id: '/_workspace/settings/account'
       path: '/settings/account'
@@ -635,6 +667,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceAgentsAgentIdPanelItemIdRouteImport
       parentRoute: typeof WorkspaceRoute
     }
+    '/_workspace/agents/$agentId/settings/': {
+      id: '/_workspace/agents/$agentId/settings/'
+      path: '/agents/$agentId/settings'
+      fullPath: '/agents/$agentId/settings/'
+      preLoaderRoute: typeof WorkspaceAgentsAgentIdSettingsIndexRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
     '/_workspace/agents/$agentId/settings/$section': {
       id: '/_workspace/agents/$agentId/settings/$section'
       path: '/agents/$agentId/settings/$section'
@@ -669,11 +708,13 @@ interface WorkspaceRouteChildren {
   WorkspaceSettingsSecurityRoute: typeof WorkspaceSettingsSecurityRoute
   WorkspaceSettingsSkillsRoute: typeof WorkspaceSettingsSkillsRoute
   WorkspaceAgentsIndexRoute: typeof WorkspaceAgentsIndexRoute
+  WorkspaceSettingsIndexRoute: typeof WorkspaceSettingsIndexRoute
   WorkspaceAgentsAgentIdEditRoute: typeof WorkspaceAgentsAgentIdEditRoute
   WorkspaceAgentsAgentIdIndexRoute: typeof WorkspaceAgentsAgentIdIndexRoute
   WorkspaceAgentsAgentIdPanelItemIdRoute: typeof WorkspaceAgentsAgentIdPanelItemIdRoute
   WorkspaceAgentsAgentIdSettingsSectionRoute: typeof WorkspaceAgentsAgentIdSettingsSectionRoute
   WorkspaceAgentsAgentIdPanelIndexRoute: typeof WorkspaceAgentsAgentIdPanelIndexRoute
+  WorkspaceAgentsAgentIdSettingsIndexRoute: typeof WorkspaceAgentsAgentIdSettingsIndexRoute
 }
 
 const WorkspaceRouteChildren: WorkspaceRouteChildren = {
@@ -688,6 +729,7 @@ const WorkspaceRouteChildren: WorkspaceRouteChildren = {
   WorkspaceSettingsSecurityRoute: WorkspaceSettingsSecurityRoute,
   WorkspaceSettingsSkillsRoute: WorkspaceSettingsSkillsRoute,
   WorkspaceAgentsIndexRoute: WorkspaceAgentsIndexRoute,
+  WorkspaceSettingsIndexRoute: WorkspaceSettingsIndexRoute,
   WorkspaceAgentsAgentIdEditRoute: WorkspaceAgentsAgentIdEditRoute,
   WorkspaceAgentsAgentIdIndexRoute: WorkspaceAgentsAgentIdIndexRoute,
   WorkspaceAgentsAgentIdPanelItemIdRoute:
@@ -695,6 +737,8 @@ const WorkspaceRouteChildren: WorkspaceRouteChildren = {
   WorkspaceAgentsAgentIdSettingsSectionRoute:
     WorkspaceAgentsAgentIdSettingsSectionRoute,
   WorkspaceAgentsAgentIdPanelIndexRoute: WorkspaceAgentsAgentIdPanelIndexRoute,
+  WorkspaceAgentsAgentIdSettingsIndexRoute:
+    WorkspaceAgentsAgentIdSettingsIndexRoute,
 }
 
 const WorkspaceRouteWithChildren = WorkspaceRoute._addFileChildren(

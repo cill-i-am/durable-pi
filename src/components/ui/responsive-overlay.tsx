@@ -20,6 +20,10 @@ function useOverlay() {
   return context
 }
 
+export function useOverlayMobile() {
+  return useOverlay().mobile
+}
+
 function Root({
   desktop = "dialog",
   breakpoint = "md",

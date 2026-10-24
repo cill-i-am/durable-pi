@@ -30,7 +30,11 @@ import {
   useReloadGuard,
 } from "@/features/updates/update-recovery"
 import { api } from "@/http/client"
-import { globalSettingsSection, workspaceContext } from "@/navigation/workspace"
+import {
+  globalSettingsSection,
+  isGlobalSettingsSection,
+  workspaceContext,
+} from "@/navigation/workspace"
 import { listenForClientErrors } from "@/observability/browser"
 
 import { MobileNavigation } from "./mobile-navigation"
@@ -177,6 +181,7 @@ function Workspace({
   const setSecurityOpen = location.setSecurity
   const [workLocked, setNavigationLocked] = useState(false)
   const [settingsPending, setSettingsPending] = useState(false)
+  const [settingsShown, setSettingsShown] = useState(false)
   const setSettings = location.setSettings
   const navigationLocked = workLocked || settingsPending
   const setWorkbench = location.setPanel
@@ -250,7 +255,7 @@ function Workspace({
       setEditor({ key: catalog.selected.id, agent: catalog.selected })
     else if (action === "archive" && catalog.selected)
       void archive(catalog.selected)
-    else if (action === "settings") setSettings("account")
+    else if (action === "settings") setSettings("settings")
     else if (action === "security") {
       setSecurityOpen(true)
     } else if (action === "sign-out") void authClient.signOut()
@@ -281,6 +286,16 @@ function Workspace({
     editor !== null,
     !!globalSection,
     !!context.backgroundPath
+  )
+  const { view: agentView, retaining } = useSettingsOwner(
+    catalog.selected,
+    { location, conversation, settings, workbench },
+    {
+      collection,
+      globalSection,
+      background: !!context.backgroundPath,
+      shown: settingsShown,
+    }
   )
   if (!startupComplete && starting) return <WorkspaceStartup />
   if (!startupComplete) setStartupComplete(true)
@@ -368,58 +383,56 @@ function Workspace({
                 onCreate={() => act("create")}
                 onArchive={(agent) => void archive(agent)}
               />
-            ) : canRenderAgent(
-                catalog.selected,
-                globalSection,
-                !!context.backgroundPath
-              ) ? (
-              <AgentWorkspace
-                key={catalog.selected.id}
-                ownerId={ownerId}
-                location={location}
-                conversation={conversation}
-                overlayOpen={archiveTarget !== null || editor !== null}
-                settings={settings}
-                setSettings={setSettings}
-                onSettingsPending={setSettingsPending}
-                workbench={workbench}
-                setWorkbench={setWorkbench}
-                onNavigationLockChange={setNavigationLocked}
-                name={name}
-                agent={catalog.selected}
-                onStatus={runtime.setLive}
-                agents={catalog.agents.filter(
-                  (value) => value.status === "active"
-                )}
-                onOpenBot={selectAgent}
-                onMemory={(id) => {
-                  if (!navigationLocked) {
-                    selectAgent(id, "memory")
-                  }
-                }}
+            ) : !agentView ? (
+              <WorkspaceUnavailable
+                globalSettings={!!globalSection}
+                loading={catalog.loading}
+                onOpen={() => selectAgent(homeAgentId)}
               />
-            ) : (
-              <>
-                <WorkspaceUnavailable
-                  globalSettings={!!globalSection}
-                  loading={catalog.loading}
-                  onOpen={() => selectAgent(homeAgentId)}
+            ) : null}
+            <div className="contents" hidden={retaining}>
+              {agentView && (
+                <AgentWorkspace
+                  key={agentView.agent.id}
+                  ownerId={ownerId}
+                  location={agentView.location}
+                  conversation={agentView.conversation}
+                  overlayOpen={archiveTarget !== null || editor !== null}
+                  settings={retaining ? null : agentView.settings}
+                  setSettings={setSettings}
+                  onSettingsPending={setSettingsPending}
+                  onSettingsShown={setSettingsShown}
+                  settingsShown={settingsShown}
+                  workbench={agentView.workbench}
+                  setWorkbench={setWorkbench}
+                  onNavigationLockChange={setNavigationLocked}
+                  name={name}
+                  agent={agentView.agent}
+                  onStatus={runtime.setLive}
+                  agents={catalog.agents.filter(
+                    (value) => value.status === "active"
+                  )}
+                  onOpenBot={selectAgent}
+                  onMemory={(id) => {
+                    if (!navigationLocked) {
+                      selectAgent(id, "memory")
+                    }
+                  }}
                 />
-                {globalSection && (
-                  <WorkspaceSettingsOverlay
-                    settings={settings}
-                    agents={catalog.agents}
-                    location={location}
-                    setSettings={setSettings}
-                    conversation={conversation}
-                    onSettingsPending={setSettingsPending}
-                    openWorkbench={setWorkbench}
-                  />
-                )}
-              </>
-            )}
+              )}
+            </div>
           </main>
         </div>
+        <WorkspaceSettingsOverlay
+          settings={settings}
+          enabled={!agentView}
+          agents={catalog.agents}
+          location={location}
+          setSettings={setSettings}
+          conversation={conversation}
+          onSettingsPending={setSettingsPending}
+          openWorkbench={setWorkbench}
+        />
         {archiveTarget && (
           <ArchiveAgentDialog
             key={archiveTarget.id}
@@ -452,6 +465,35 @@ function Workspace({
   )
 }
 
+type SettingsOwner = Pick<
+  Parameters<typeof AgentWorkspace>[0],
+  "agent" | "location" | "conversation" | "settings" | "workbench"
+>
+/** Retain the route owner until its outgoing native settings stack has closed. */
+function useSettingsOwner(
+  agent: AgentProfile | null | undefined,
+  view: Omit<SettingsOwner, "agent">,
+  options: {
+    collection: boolean
+    globalSection?: string
+    background: boolean
+    shown: boolean
+  }
+) {
+  const current =
+    !options.collection &&
+    canRenderAgent(agent, options.globalSection, options.background)
+      ? { ...view, agent }
+      : null
+  const previous = useRef<SettingsOwner | null>(current)
+  const retaining =
+    options.shown &&
+    !!previous.current &&
+    previous.current.agent.id !== current?.agent.id
+  if (!retaining) previous.current = current
+  return { view: previous.current, retaining }
+}
+
 function WorkspaceUnavailable({
   globalSettings,
   loading,
@@ -476,6 +518,24 @@ function WorkspaceUnavailable({
   )
 }
 
+function useWorkbenchView(
+  panel: Workbench | null,
+  search: ReturnType<typeof useWorkspaceLocation>["search"],
+  settingsShown: boolean
+) {
+  const [view, setView] = useState({ panel, search })
+  if (panel && (panel !== view.panel || search !== view.search))
+    setView({ panel, search })
+  return {
+    panel: panel ?? view.panel,
+    search: panel ? search : view.search,
+    open: panel !== null || settingsShown,
+    closed: () => {
+      if (panel === null && !settingsShown) setView({ panel: null, search })
+    },
+  }
+}
+
 function AgentWorkspace({
   ownerId,
   location,
@@ -484,6 +544,8 @@ function AgentWorkspace({
   settings,
   setSettings,
   onSettingsPending,
+  onSettingsShown,
+  settingsShown,
   workbench,
   setWorkbench,
   agent,
@@ -501,6 +563,8 @@ function AgentWorkspace({
   settings: SettingsCategory | null
   setSettings: (value: SettingsCategory | null) => void
   onSettingsPending: (pending: boolean) => void
+  onSettingsShown: (shown: boolean) => void
+  settingsShown: boolean
   workbench: Workbench | null
   setWorkbench: (value: Workbench | null) => void
   agent: AgentProfile
@@ -526,19 +590,12 @@ function AgentWorkspace({
     agent.id,
     sending
   )
-  const [workbenchView, setWorkbenchView] = useState({
-    panel: workbench,
-    search: location.search,
-  })
-  if (
-    workbench &&
-    (workbench !== workbenchView.panel ||
-      location.search !== workbenchView.search)
-  ) {
-    setWorkbenchView({ panel: workbench, search: location.search })
-  }
-  const renderedWorkbench = workbench ?? workbenchView.panel
-  const renderedSearch = workbench ? location.search : workbenchView.search
+  const {
+    panel: renderedWorkbench,
+    search: renderedSearch,
+    open: workbenchOpen,
+    closed: workbenchClosed,
+  } = useWorkbenchView(workbench, location.search, settingsShown)
   const workbenchTrigger = useRef<HTMLButtonElement>(null)
   const [filePending, setFilePending] = useState(false)
   const [workbenchAppPending, setAppPending] = useState(false)
@@ -621,6 +678,7 @@ function AgentWorkspace({
       agents={agents}
       conversation={conversation}
       onSettingsPending={onSettingsPending}
+      onSettingsShown={onSettingsShown}
       openWorkbench={openWorkbench}
     />
   )
@@ -663,18 +721,15 @@ function AgentWorkspace({
         />
         {renderedWorkbench && (
           <WorkbenchPanel
-            open={workbench !== null}
+            open={workbenchOpen}
             value={renderedWorkbench}
             onChange={openWorkbench}
-            onClosed={() => {
-              if (workbench === null)
-                setWorkbenchView({ panel: null, search: location.search })
-            }}
+            onClosed={workbenchClosed}
             returnFocus={workbenchTrigger}
             agentName={agent.name}
             agentReference={agent.slug}
             locked={locked}
-            overlayOpen={overlayOpen || settings !== null}
+            overlayOpen={overlayOpen || settings !== null || settingsShown}
             overlays={settingsPanel}
             recoveryAction={
               recoverChecklist ? (
@@ -1007,7 +1062,9 @@ function WorkspaceSettingsOverlay({
   agents,
   conversation,
   onSettingsPending,
+  onSettingsShown,
   openWorkbench,
+  enabled = true,
 }: Pick<
   Parameters<typeof AgentWorkspace>[0],
   "settings" | "location" | "setSettings" | "conversation" | "onSettingsPending"
@@ -1015,17 +1072,26 @@ function WorkspaceSettingsOverlay({
   agent?: AgentProfile
   agents: readonly AgentProfile[]
   openWorkbench: (value: Workbench | null) => void
+  onSettingsShown?: (shown: boolean) => void
+  enabled?: boolean
 }) {
-  return settings ? (
+  const category =
+    enabled && (agent || isGlobalSettingsSection(settings ?? undefined))
+      ? settings
+      : null
+  const [loaded, setLoaded] = useState(!!category)
+  if (category && !loaded) setLoaded(true)
+  return loaded ? (
     <AssetBoundary>
       <Suspense fallback={<p role="status">Opening settings…</p>}>
         <WorkspaceSettings
-          category={settings}
+          category={category}
           onCategoryChange={setSettings}
           agent={agent}
           agents={agents}
           conversation={conversation}
           onPendingChange={onSettingsPending}
+          onShownChange={onSettingsShown}
           onWorkbench={openWorkbench}
         />
       </Suspense>

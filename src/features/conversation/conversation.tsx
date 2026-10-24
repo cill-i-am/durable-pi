@@ -118,6 +118,7 @@ export function Conversation({
   setSending: (value: boolean) => void
   onSettings: (
     category:
+      | "agent-settings"
       | "general"
       | "models"
       | "access"
@@ -311,7 +312,7 @@ export function Conversation({
             <DropdownMenuContent align="end" className="min-w-56">
               <DropdownMenuGroup>
                 <DropdownMenuLabel>{agent.name}</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => onSettings("general")}>
+                <DropdownMenuItem onClick={() => onSettings("agent-settings")}>
                   <Settings2 /> Agent settings
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onSettings("models")}>

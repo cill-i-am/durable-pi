@@ -49,7 +49,7 @@ export function AgentCollection({
           Back to Home
         </Link>
         <Link
-          to="/settings/account"
+          to="/settings"
           aria-label="Settings"
           className={buttonVariants({ variant: "ghost", size: "icon" })}
         >

@@ -96,10 +96,7 @@ try {
   await page.getByLabel("Email", { exact: true }).fill(passkeyOwnerEmail)
   await page.getByLabel("Password", { exact: true }).fill(passkeyPassword)
   await page.getByRole("button", { name: "Sign in", exact: true }).click()
-  const security = page.getByRole("dialog", {
-    name: "Settings",
-    exact: true,
-  })
+  const security = page.locator('[data-settings-route="/settings/security"]')
   await expect(security).toBeVisible()
   await expect(
     security.getByText("No passkeys yet.", { exact: false })

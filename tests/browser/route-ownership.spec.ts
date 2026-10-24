@@ -1,5 +1,13 @@
 import { expect, test, type Page } from "@playwright/test"
 
+import {
+  closeSettings,
+  settingsFrame,
+  settingsFront,
+  settingsIndex,
+  settingsRoot,
+} from "./settings-helpers"
+
 const workbench = "/agents/navi/files?tab=trash"
 const photo = {
   name: "route-draft.png",
@@ -38,9 +46,7 @@ test("merged raw query keys cannot replace a global setting's workbench backdrop
     includeHidden: true,
   })
   await expect(picker).toContainText("Files")
-  await page
-    .getByRole("button", { name: "Close settings", exact: true })
-    .click()
+  await closeSettings(page)
   await expect(page).toHaveURL(/\/agents\/navi\/files\?tab=trash$/)
   await expect(picker).toBeVisible()
   await expect(picker).toContainText("Files")
@@ -215,10 +221,7 @@ async function openSettingsMenu(page: Page, mobile: boolean) {
 }
 
 async function selectSettings(page: Page, name: string, mobile: boolean) {
-  if (mobile)
-    await page
-      .getByRole("button", { name: "All settings", exact: true })
-      .click()
+  if (mobile) await settingsIndex(page)
   await page
     .getByRole("navigation", { name: "Settings sections", exact: true })
     .getByRole("link", { name: new RegExp(`^${name}`) })
@@ -230,13 +233,15 @@ async function expectPath(page: Page, path: string) {
 }
 
 async function expectNavigation(page: Page, paths: readonly string[]) {
-  const navigation = page
-    .locator(".workspace-settings")
-    .getByRole("navigation", {
-      name: "Settings sections",
-      exact: true,
-      includeHidden: true,
-    })
+  const options = {
+    name: "Settings sections",
+    exact: true,
+    includeHidden: true,
+  }
+  const front = settingsFront(page).getByRole("navigation", options)
+  const navigation = (await front.count())
+    ? front
+    : settingsRoot(page).getByRole("navigation", options)
   await expect
     .poll(() =>
       navigation
@@ -251,7 +256,7 @@ async function expectNavigation(page: Page, paths: readonly string[]) {
 }
 
 async function expectGlobalShell(page: Page) {
-  const shell = page.locator(".workspace-settings")
+  const shell = settingsFront(page)
   await expect(shell.locator(".agent-mark")).toHaveCount(0)
   await expect(
     shell.locator(".settings-agent").filter({ hasText: /Navi|Research/ })
@@ -296,7 +301,7 @@ for (const { path, heading } of destinations) {
       page.getByRole("heading", { name: heading, exact: true })
     ).toBeVisible()
     await expectGlobalShell(page)
-    const shell = page.locator(".workspace-settings")
+    const shell = settingsFront(page)
     if (path === "/settings/account") {
       await expect(
         shell.getByRole("region", { name: "Your profile photo", exact: true })
@@ -321,7 +326,6 @@ for (const path of [
   "/agents/navi/settings/model-access",
   "/agents/navi/settings/security",
   "/agents/navi/settings/memory",
-  "/agents/navi/settings",
 ]) {
   test(`${path} is rejected without redirecting or opening Home`, async ({
     page,
@@ -399,33 +403,25 @@ test("Family through Settings keeps the same unsent composer and attachment thro
   await openSettingsMenu(page, isMobile)
   await preserved()
   await page.getByRole("menuitem", { name: "Settings", exact: true }).click()
-  await expectPath(page, "/settings/account")
+  await expectPath(page, "/settings")
   await selectSettings(page, "Family", isMobile)
   await expectPath(page, "/family")
   expect(new URL(page.url()).searchParams.get("returnTo")).toBe("/agents/navi")
   await preserved()
-  await page
-    .getByRole("button", { name: "Close settings", exact: true })
-    .click()
-  await expectPath(page, "/agents/navi")
-  await preserved()
   await page.goBack()
-  await expectPath(page, "/family")
-  await preserved()
-  await page.goBack()
-  await expectPath(page, "/settings/account")
+  await expectPath(page, "/settings")
   await preserved()
   await page.goForward()
   await expectPath(page, "/family")
   await preserved()
-  await page.goForward()
+  await closeSettings(page)
   await expectPath(page, "/agents/navi")
   await preserved()
   await expect(composer).toBeVisible()
   await expect(attachment).toBeVisible()
 })
 
-test("global Security is a settings section and closes directly to the workbench", async ({
+test("global Security returns through settings to the workbench", async ({
   page,
   isMobile,
 }) => {
@@ -439,11 +435,18 @@ test("global Security is a settings section and closes directly to the workbench
     page.getByRole("heading", { name: "Account security", exact: true })
   ).toBeVisible()
   expect(new URL(page.url()).searchParams.get("returnTo")).toBe(workbench)
-  await expect(page.locator(".workspace-settings [role=dialog]")).toHaveCount(0)
   await expectGlobalShell(page)
-  await page
-    .getByRole("button", { name: "Close settings", exact: true })
-    .click()
+  if (isMobile) {
+    await expect(settingsFrame(page, "/settings")).toHaveAttribute(
+      "data-settings-index",
+      "true"
+    )
+    await settingsFront(page)
+      .getByRole("button", { name: "Close Account security", exact: true })
+      .click()
+    await expectPath(page, "/settings")
+  }
+  await closeSettings(page)
   await expect(page).toHaveURL(/\/agents\/navi\/files\?tab=trash$/)
   await expect(
     page.getByRole("combobox", { name: "Workbench tool" })
@@ -466,9 +469,7 @@ test("global settings reject external, action, overlay and invalid resource retu
     await expect(
       page.getByRole("heading", { name: "Family", exact: true })
     ).toBeVisible()
-    await page
-      .getByRole("button", { name: "Close settings", exact: true })
-      .click()
+    await closeSettings(page)
     await expect
       .poll(() => new URL(page.url()).pathname)
       .toMatch(/^\/agents(?:\/navi)?$/)
@@ -488,16 +489,16 @@ test("assistant settings have only assistant controls and five scoped destinatio
       page,
       sections.map((value) => `/agents/navi/settings/${value}`)
     )
+    await expect(settingsRoot(page).locator(".settings-agent")).toContainText(
+      "Navi"
+    )
     await expect(
-      page.locator(".workspace-settings .settings-agent")
-    ).toContainText("Navi")
-    await expect(
-      page.locator(".workspace-settings").getByRole("region", {
+      settingsFront(page).getByRole("region", {
         name: "Your profile photo",
         includeHidden: true,
       })
     ).toHaveCount(0)
-    const shell = page.locator(".workspace-settings")
+    const shell = settingsFront(page)
     await expect(
       shell.getByRole("heading", {
         name: "Appearance",
@@ -563,7 +564,7 @@ test("global libraries manage connections and skill revisions without assistant 
   await signIn(page)
   await page.goto("/settings/connections")
   await expectGlobalShell(page)
-  const shell = page.locator(".workspace-settings")
+  const shell = settingsFront(page)
   await expect(
     shell.getByRole("heading", { name: "Calendar service", exact: true })
   ).toBeVisible()
@@ -643,9 +644,11 @@ test("assistant connection and skill assignments save only to the selected assis
   await addResearch(page)
   const fixture = await mockLibraries(page)
   await signIn(page)
-  const shell = page.locator(".workspace-settings")
+  const shell = settingsFront(page)
   await page.goto("/agents/research/settings/connections")
-  await expect(shell.locator(".settings-agent")).toContainText("Research")
+  await expect(settingsRoot(page).locator(".settings-agent")).toContainText(
+    "Research"
+  )
   await expect(
     shell.getByRole("heading", { name: "Calendar service", exact: true })
   ).toBeVisible()
@@ -700,7 +703,7 @@ test("mobile Family invitation stays a nested sheet and dismisses back to the wo
   test.skip(!isMobile, "Mobile sheet nesting")
   await signIn(page)
   await page.goto(`/family?${new URLSearchParams({ returnTo: workbench })}`)
-  await expect(page.locator(".workspace-settings")).toHaveAttribute(
+  await expect(settingsFront(page)).toHaveAttribute(
     "data-overlay-mobile",
     "true"
   )
@@ -726,9 +729,7 @@ test("mobile Family invitation stays a nested sheet and dismisses back to the wo
   await expect(
     page.getByRole("heading", { name: "Family", exact: true })
   ).toBeVisible()
-  await page
-    .getByRole("button", { name: "Close settings", exact: true })
-    .click()
+  await closeSettings(page)
   await expect(page).toHaveURL(/\/agents\/navi\/files\?tab=trash$/)
   await expect(
     page.getByRole("dialog", { name: "Navi workbench", exact: true })
@@ -737,6 +738,7 @@ test("mobile Family invitation stays a nested sheet and dismisses back to the wo
 
 test("global Family remains usable while the known assistant's SSE request is pending", async ({
   page,
+  isMobile,
 }) => {
   let requested = false
   let release!: () => void
@@ -758,7 +760,10 @@ test("global Family remains usable while the known assistant's SSE request is pe
       page.getByRole("heading", { name: "Family", exact: true })
     ).toBeVisible()
     await expect(
-      page.getByRole("button", { name: "Close settings", exact: true })
+      settingsFront(page).getByRole("button", {
+        name: isMobile ? "Close Family" : "Close settings",
+        exact: true,
+      })
     ).toBeEnabled()
   } finally {
     release()
@@ -856,9 +861,7 @@ test("global Family canonicalizes an ID backdrop without losing its search", asy
   await expect
     .poll(() => new URL(page.url()).searchParams.get("returnTo"))
     .toBe("/agents/navi?q=Studio")
-  await page
-    .getByRole("button", { name: "Close settings", exact: true })
-    .click()
+  await closeSettings(page)
   await expectPath(page, "/agents/navi")
   expect(new URL(page.url()).searchParams.get("q")).toBe("Studio")
 })
@@ -951,9 +954,7 @@ test("a non-default assistant keeps its mounted composer and file draft through 
       includeHidden: true,
     })
   ).toHaveCount(0)
-  await page
-    .getByRole("button", { name: "Close settings", exact: true })
-    .click()
+  await closeSettings(page)
   await expectPath(page, "/agents/research")
   expect(await original!.evaluate((node) => node.isConnected)).toBe(true)
   await expect(composer).toBeVisible()
@@ -1052,9 +1053,7 @@ test("a ready terminal keeps its command draft and renews its lease through glob
   expect(renewals).toBeGreaterThanOrEqual(2)
   expect(await original!.evaluate((node) => node.isConnected)).toBe(true)
   await expect(command).toHaveValue(draft)
-  await page
-    .getByRole("button", { name: "Close settings", exact: true })
-    .click()
+  await closeSettings(page)
   await expectPath(page, "/agents/research/terminal")
   expect(await original!.evaluate((node) => node.isConnected)).toBe(true)
   await expect(command).toBeVisible()
