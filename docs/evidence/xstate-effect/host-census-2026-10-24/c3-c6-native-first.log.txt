@@ -1,0 +1,5 @@
+{"mode":"terminal-census","status":200,"capacityBounded":true,"closeJoined":true,"exactRelease":true,"sealedRecovery":true,"pageRollback":true,"restoredDuplicate":true,"sourceAuthority":true}
+{"mode":"conversation-stream","status":200,"delivered":true,"cursorFrames":2,"handoffFrames":0,"released":1}
+{"mode":"conversation-milestones","status":200,"delivered":true,"cursorFrames":2,"handoffFrames":2,"released":1}
+{"mode":"conversation-handoff","status":200,"stages":{"count":7,"first":"control-start"},"capacityBounded":true,"released":true,"overflowReleased":true,"abortReleased":true,"privateDataAbsent":true}
+PASS native Drizzle proof: 4 transaction/interoperability cases and 0 persisted-state checks after SIGKILL/restart.

@@ -1,0 +1,350 @@
+{
+  "scope": "Historical author/independent freezes and composed local gates; final PersonalAgent shutdown repair has separate failing-before and passing-after native proof. Hosted CI remains pending.",
+  "artifacts": [
+    {
+      "source": "/private/tmp/terminal-host-independent/closed-manifest.json",
+      "file": "terminal-independent-manifest.json.txt",
+      "sha256": "3b59d91bbdb3e5b67742f8c660565df1ba40689b0866b9812c5886eca32e26d7"
+    },
+    {
+      "source": "/private/tmp/terminal-host-independent/confirmed-review.log",
+      "file": "terminal-independent-confirmed-review.log.txt",
+      "sha256": "2703ceecc19b8dfd702da88c72cfc0983a136f3c53e15ca23cc14c7ed3fd435d"
+    },
+    {
+      "source": "/private/tmp/terminal-host-independent/after-review.log",
+      "file": "terminal-independent-after-review.log.txt",
+      "sha256": "2883a524cac5a9c03771177955e6a5871464185f9c9f2375562a2e880552d4c4"
+    },
+    {
+      "source": "/private/tmp/terminal-host-independent/review.test.ts",
+      "file": "terminal-independent-review.test.ts.txt",
+      "sha256": "760f2898461a5f431e190058532784ee7ad210089946a8942f40e85a43aad233"
+    },
+    {
+      "source": "/private/tmp/terminal-host-independent/vitest.config.mjs",
+      "file": "terminal-independent-vitest.config.mjs.txt",
+      "sha256": "85c9d0e17b647ee8e8285e4f53f9c9c651aa421c9d10cc63095c1422b34a92c7"
+    },
+    {
+      "source": "/private/tmp/coordination-runner-local/manifest.json",
+      "file": "coordination-author-manifest.json.txt",
+      "sha256": "70e7d4e7f8fb09257e3c2c60aca00a22b766e89bd261d342e9d7bdfe52c9a40d"
+    },
+    {
+      "source": "/private/tmp/coordination-runner-local/baseline.log",
+      "file": "coordination-author-baseline.log.txt",
+      "sha256": "31f6a3dd4eb1fe10f20af2b89cbdc60cb838ff22a42f0deca2e7cda283f7586b"
+    },
+    {
+      "source": "/private/tmp/coordination-runner-local/second-acceptance.log",
+      "file": "coordination-author-second-acceptance.log.txt",
+      "sha256": "48d603c07b798dc3d957c20a99bd2d1a4f068419136f29ec6e4af656050c8d2b"
+    },
+    {
+      "source": "/private/tmp/coordination-runner-local/final-focused.log",
+      "file": "coordination-author-final-focused.log.txt",
+      "sha256": "c35b342137bcb41f85f4cfb3a5bd9c964ee8a0c6591ee0f56a98016455bd7546"
+    },
+    {
+      "source": "/private/tmp/coordination-runner-local/final-types.log",
+      "file": "coordination-author-final-types.log.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "/private/tmp/coordination-runner-local/final-lint.log",
+      "file": "coordination-author-final-lint.log.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "/private/tmp/coordination-runner-local/final-format.log",
+      "file": "coordination-author-final-format.log.txt",
+      "sha256": "437f46aacaa8125478b8655a0056754c2c6ea2c5ef931879f8d8459a16c70ecb"
+    },
+    {
+      "source": "/private/tmp/coordination-runner-local/negative-ownership.log",
+      "file": "coordination-author-negative-ownership.log.txt",
+      "sha256": "a52f8b7274148dacb33b5e48d7e834e69cc0a0b6a692147a20aae770f84baa89"
+    },
+    {
+      "source": "/private/tmp/coordination-runner-local/lifecycle.before.ts",
+      "file": "coordination-author-lifecycle.before.ts.txt",
+      "sha256": "3699caf04ad5fd3ec859981cf61adc572412d2e4518f755f5c532b40cba46b80"
+    },
+    {
+      "source": "/private/tmp/coordination-runner-local/runner.negative.machine.ts",
+      "file": "coordination-author-runner.negative.machine.ts.txt",
+      "sha256": "640dbbe9940a109626e303a198e0932ec07580d72b4f9c26aada5d1507dabaec"
+    },
+    {
+      "source": "/private/tmp/coordination-runner-local/lifecycle.negative.ts",
+      "file": "coordination-author-lifecycle.negative.ts.txt",
+      "sha256": "ed1450c8ad366687e1a7a40589a56af4af77d42a6ed1a4abb8f953a0ca0c69bd"
+    },
+    {
+      "source": "/private/tmp/coordination-runner-local/ownership.negative.test.ts",
+      "file": "coordination-author-ownership.negative.test.ts.txt",
+      "sha256": "ed128d724ded75c58ebc2e8bed858555f4e40969c0637222a2cea0bc77e19055"
+    },
+    {
+      "source": "/private/tmp/coordination-runner-local/vitest.negative.config.mjs",
+      "file": "coordination-author-vitest.negative.config.mjs.txt",
+      "sha256": "bacb1ae4f715aa3558bd04d3a39b58c9c18a58414073725e6f6ca7607ba561bc"
+    },
+    {
+      "source": "/private/tmp/coordination-runner-local/review-cause-independent-after.log",
+      "file": "coordination-author-review-cause-independent-after.log.txt",
+      "sha256": "c4441bb91d8aef78ba874a3f02d3fba6e8c8077538e915e161e8dc59740f28d2"
+    },
+    {
+      "source": "/private/tmp/coordination-runner-local/review-final-focused.log",
+      "file": "coordination-author-review-final-focused.log.txt",
+      "sha256": "e8c5c24e814af941203d83e83b315015b356ae0790f87eeaafe604713a3869db"
+    },
+    {
+      "source": "/private/tmp/coordination-runner-local/review-final-types.log",
+      "file": "coordination-author-review-final-types.log.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "/private/tmp/coordination-runner-local/review-final-lint.log",
+      "file": "coordination-author-review-final-lint.log.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "/private/tmp/coordination-runner-local/review-final-format.log",
+      "file": "coordination-author-review-final-format.log.txt",
+      "sha256": "69cb070625cbfe95767586ff3365a2d8fbfc514387071fdaf2a88cbbe46ded79"
+    },
+    {
+      "source": "/private/tmp/coordination-independent-restore.test.ts",
+      "file": "coordination-author-coordination-independent-restore.test.ts.txt",
+      "sha256": "bfdc7f309baf2679fa815386a8f977454b4734ad675ea0e9540654d042a6665c"
+    },
+    {
+      "source": "/private/tmp/coordination-independent-before-3.log",
+      "file": "coordination-author-coordination-independent-before-3.log.txt",
+      "sha256": "a7681c44f11b07d4b5f65b2f187a596a75f552efb35ea3a4ac9d7e0909f8decf"
+    },
+    {
+      "source": "/private/tmp/coordination-independent.config.mjs",
+      "file": "coordination-author-coordination-independent.config.mjs.txt",
+      "sha256": "929bedd1975db3b7aa96f8b2c5132c1948b9e2adee254e3ff1b0b7b42d5cf4a0"
+    },
+    {
+      "source": "/private/tmp/coordination-parent-review.json",
+      "file": "coordination-parent-manifest.json.txt",
+      "sha256": "c63cd7680f4f394d8b6cb08ca1c706bb34c50d79a006f508f36971c757e080a2"
+    },
+    {
+      "source": "/private/tmp/coordination-independent-before-3.log",
+      "file": "coordination-parent-coordination-independent-before-3.log.txt",
+      "sha256": "a7681c44f11b07d4b5f65b2f187a596a75f552efb35ea3a4ac9d7e0909f8decf"
+    },
+    {
+      "source": "/private/tmp/coordination-independent-after.log",
+      "file": "coordination-parent-coordination-independent-after.log.txt",
+      "sha256": "e64ca37efb7c5d28d0fc944d3b995156f0f914e50583677f9d21da823ef89bd0"
+    },
+    {
+      "source": "/private/tmp/coordination-independent-restore.test.ts",
+      "file": "coordination-parent-coordination-independent-restore.test.ts.txt",
+      "sha256": "bfdc7f309baf2679fa815386a8f977454b4734ad675ea0e9540654d042a6665c"
+    },
+    {
+      "source": "/private/tmp/coordination-independent.config.mjs",
+      "file": "coordination-parent-coordination-independent.config.mjs.txt",
+      "sha256": "929bedd1975db3b7aa96f8b2c5132c1948b9e2adee254e3ff1b0b7b42d5cf4a0"
+    },
+    {
+      "source": "/private/tmp/c1-c3-malformed-before.log",
+      "file": "c1-c3-malformed-before.log.txt",
+      "sha256": "0a9d1b25ec67fa2fd62ff48733280b8c3ce863d7e22910310fa88b17fb8d2da7"
+    },
+    {
+      "source": "/private/tmp/c1-c3-focused-retained-annotations.log",
+      "file": "c1-c3-focused-retained-annotations.log.txt",
+      "sha256": "288db6794ec5c251c2e6ee156678221c1f7a678bfd3d979c723d82b652271d4d"
+    },
+    {
+      "source": "/private/tmp/c4-handoff-joined-cleanup.log",
+      "file": "c4-handoff-joined-cleanup.log.txt",
+      "sha256": "6965d1e30aa275b47c861e5523950f9e06f929b7f73ca8e88e7188268203507c"
+    },
+    {
+      "source": "/private/tmp/c5-c6-restoration-before.log",
+      "file": "c5-c6-restoration-before.log.txt",
+      "sha256": "868973c7e6278df75fad710997f4f65c8f833056649a79e7014e5cbf62919531"
+    },
+    {
+      "source": "/private/tmp/c5-c6-restoration-after.log",
+      "file": "c5-c6-restoration-after.log.txt",
+      "sha256": "dad02d80b3fa2c66ef505d0fa2476196e1f758b53a029123f530a3d5fba4b23b"
+    },
+    {
+      "source": "/private/tmp/c5-owner-extra-after.log",
+      "file": "c5-owner-extra-after.log.txt",
+      "sha256": "a91a1e9338266a846a9ca89aa9b8129185320e149ce843e08bbf08427de26060"
+    },
+    {
+      "source": "/private/tmp/c6-cutover-before.log",
+      "file": "c6-cutover-before.log.txt",
+      "sha256": "07701f298948b19bff23765e61ca1fb27af664310ad79770e1874beff6d10564"
+    },
+    {
+      "source": "/private/tmp/c6-cutover-after.log",
+      "file": "c6-cutover-after.log.txt",
+      "sha256": "e691de10cbed57ba1eeaaacc63d85b891f9bd31754b3c7c511e02aee22958d18"
+    },
+    {
+      "source": "/private/tmp/backend-census-native-all.log",
+      "file": "backend-census-native-all.log.txt",
+      "sha256": "6f867005c4031e6f669cfec6abcc2a4959d1cc9df7536ec6e9fd59f589c35e16"
+    },
+    {
+      "source": "/private/tmp/backend-census-native-with-parent-runner.log",
+      "file": "backend-census-native-with-parent-runner.log.txt",
+      "sha256": "fd4bf0d41e2f37a1c38445c3dca8d10027cdcea907f4d5539e993c2933677e88"
+    },
+    {
+      "source": "/private/tmp/coordination-start-context-before.log",
+      "file": "coordination-start-context-before.log.txt",
+      "sha256": "c886938e43c475aac2bb26169195e2df5360d77a9e53b691f2c62c74d857c0df"
+    },
+    {
+      "source": "/private/tmp/coordination-context-and-stale-before.log",
+      "file": "coordination-context-and-stale-before.log.txt",
+      "sha256": "3c2594a3d04597858acb6cb3b930ad60b745f869dea405a168d778b8cc07d297"
+    },
+    {
+      "source": "/private/tmp/coordination-native-context-independent-after.log",
+      "file": "coordination-native-context-independent-after.log.txt",
+      "sha256": "2e1b534cbe5bf4597a1ae39f62c0efe5e55d8439bc5f1389b2dfc9f4f6dc84ef"
+    },
+    {
+      "source": "/private/tmp/backend-census-composition.log",
+      "file": "backend-census-composition.log.txt",
+      "sha256": "fb1597332a8a0e0916f9de2b08492d6bd36daeee8ea4853e6e8b70a887828b84"
+    },
+    {
+      "source": "/private/tmp/backend-census-unit-build-first.log",
+      "file": "backend-census-unit-build-first.log.txt",
+      "sha256": "05efdcff395ff8326d122d929249fa87ada63e8c8855bf8fb7553962760650cb"
+    },
+    {
+      "source": "/private/tmp/backend-census-unit-build-second.log",
+      "file": "backend-census-unit-build-second.log.txt",
+      "sha256": "a036e559741faf5b563b18e14906d03bb8a1016fd104b31c0d4e50006624e975"
+    },
+    {
+      "source": "/private/tmp/backend-census-static-third.log",
+      "file": "backend-census-static-third.log.txt",
+      "sha256": "cad7a967f94b3af7e5f8a5f6cdbe79b183a486e8eaf508d7a13a26cb6acaac08"
+    },
+    {
+      "source": "/private/tmp/c3-c6-native-first.log",
+      "file": "c3-c6-native-first.log.txt",
+      "sha256": "d8569a8cb1cf364852703497b52b578b0d28a8c5ddaaa09baa68b07e15305d67"
+    },
+    {
+      "source": "/private/tmp/c3-fake-clock-final.log",
+      "file": "c3-fake-clock-final.log.txt",
+      "sha256": "79b84f9c4660723e6cf00e86a0f6a09d2b76d410a56cd6e14415d3780bc8b0f2"
+    },
+    {
+      "source": "/private/tmp/backend-census-residual-controls.txt",
+      "file": "backend-census-residual-controls.txt.txt",
+      "sha256": "5f32569f37bbd7d71cf68c311762fd177c12f816c7ea2e218db9fbfe51554b2e"
+    },
+    {
+      "source": "/private/tmp/c1-c2-independent/catalog-cleanup.mts",
+      "file": "catalog-independent-catalog-cleanup.mts.txt",
+      "sha256": "6872c57cb8d8393abd08defa54f7438bbb8f76e6aa9e12ca5fb1e571105f670c"
+    },
+    {
+      "source": "/private/tmp/c1-c2-independent/catalog-cleanup-before.log",
+      "file": "catalog-independent-catalog-cleanup-before.log.txt",
+      "sha256": "c3323a8b881e020edab5aca88813e789574aa6b9b7707631c3768c93baade524"
+    },
+    {
+      "source": "/private/tmp/c1-c2-independent/catalog-cleanup-after-lookup-observation.log",
+      "file": "catalog-independent-catalog-cleanup-after-lookup-observation.log.txt",
+      "sha256": "75fa728ad5bd8f4f502b2063a29ec4bcf1171f5c5399aeb7d0863bafd67099bb"
+    },
+    {
+      "source": "/private/tmp/terminal-host-independent/closed-review.md",
+      "file": "terminal-independent-review.md.txt",
+      "sha256": "dd41a59dc54f0d319f44470b937aa36495f541a1463fc7436c60e320a8a506b1"
+    },
+    {
+      "source": "/private/tmp/backend-census-final-unit.log",
+      "file": "backend-census-final-unit.log.txt",
+      "sha256": "dc12639f953ca234ecdbb19af8a8f785556fb7b03dc5ff491acd0194cb99a32a"
+    },
+    {
+      "source": "/private/tmp/backend-census-memory-latency-recheck.log",
+      "file": "backend-census-memory-latency-recheck.log.txt",
+      "sha256": "14648eb2119e84771af683fc94661e4c437c3e658b7383d65b406d3b3a71e610"
+    },
+    {
+      "source": "/private/tmp/remaining-runner-acceptance-map.txt",
+      "file": "remaining-runner-acceptance-map.txt",
+      "sha256": "0c2a5312f347cbc59e493e58137ad9a0f2485c45f58afef523a270821f5d1bda"
+    },
+    {
+      "source": "/private/tmp/backend-census-final-unit-bounded.log",
+      "file": "backend-census-final-unit-bounded.log.txt",
+      "sha256": "dfbdb93ea76655f3b182db7e7df6eb0a906ddb0d32aead03f68c6dce5f7a6231"
+    },
+    {
+      "source": "/private/tmp/backend-census-final-workers.log",
+      "file": "backend-census-final-workers.log.txt",
+      "sha256": "38eaca8b274a4e755ee8001a3c801cd7600758cb15a403284861499131bb11e4"
+    },
+    {
+      "source": "/private/tmp/backend-census-native-second.log",
+      "file": "backend-census-native-second.log.txt",
+      "sha256": "ec5403b3a11813e6cbaaee85d9b92a2087baa805f78aa40cc89b30c8a7c57f27"
+    },
+    {
+      "source": "/private/tmp/backend-census-browser.log",
+      "file": "backend-census-browser.log.txt",
+      "sha256": "931ce11f9f94b1e426c58e85a7d3b60607b16dd28da833ca80d9ccac2d55800b"
+    },
+    {
+      "source": "/private/tmp/backend-census-containers.log",
+      "file": "backend-census-containers.log.txt",
+      "sha256": "ff40645567ca611ae89a1cd812f411835a58e7ae2c64bdd2726c2cb66ac7dcae"
+    },
+    {
+      "source": "/private/tmp/backend-census-final-static.log",
+      "file": "backend-census-final-static.log.txt",
+      "sha256": "d5254ea0aa2516ae5eee2e66feac195ecef5774416ccfc6479336024c01ccc52"
+    },
+    {
+      "source": "/private/tmp/backend-census-shutdown-workers.log",
+      "file": "backend-census-shutdown-workers.log.txt",
+      "sha256": "57258dedaec3e9992cae57361b7a9977a5fb5ef202e37ed90c0bab13c006cb33"
+    },
+    {
+      "source": "/private/tmp/backend-census-shutdown-unit.log",
+      "file": "backend-census-shutdown-unit.log.txt",
+      "sha256": "9260eb82ace1e0c8be16ceefb2446b98d3cfae19aea47b7041f1459889f230b8"
+    },
+    {
+      "source": "/private/tmp/coordination-shutdown-before.log",
+      "file": "coordination-shutdown-before.log.txt",
+      "sha256": "5b3f1a30f6049b6967a0992d1fb67b38135d59236c1cc24c6bd7db021a43f7d0"
+    },
+    {
+      "source": "/private/tmp/coordination-shutdown-after.log",
+      "file": "coordination-shutdown-after.log.txt",
+      "sha256": "584110bead29fe3c099c02868f345f256082004b41bd5d60037a653e7f35d227"
+    },
+    {
+      "source": "/private/tmp/backend-census-publication-secrets.log",
+      "file": "backend-census-publication-secrets.log.txt",
+      "sha256": "7eb2d38ef750dd5ba93ceae1c3b85aab83ef7d6c3a5bf5b33962acf54253eaf6"
+    }
+  ]
+}

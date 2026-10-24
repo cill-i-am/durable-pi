@@ -1,0 +1,524 @@
+src/email/contracts.ts:91:export const RetryEmail = Schema.Struct({
+src/whatsapp/adapters/http.ts:7:  RetryWhatsApp,
+src/whatsapp/adapters/http.ts:34:          RetryWhatsApp,
+src/whatsapp/adapters/http.ts:38:        yield* app.retry(input)
+src/coordination/service.ts:204:          ? this.store.retry(message.id, attempt, this.now())
+src/coordination/service.ts:209:          ? this.store.retry(message.id, attempt, this.now())
+src/whatsapp/contracts.ts:133:export const RetryWhatsApp = Schema.Struct({
+src/coordination/adapters/sqlite.ts:264:                "Agent message recovery is unconfirmed. Retry from the original session.",
+src/communication/domain.ts:214:export function requireRetryableTask(task: Task) {
+src/email/adapters/http.ts:9:  RetryEmail,
+src/email/adapters/http.ts:27:      input: typeof RetryEmail.Type
+src/email/adapters/http.ts:50:        RetryEmail,
+src/email/adapters/http.ts:54:      yield* host.retry(input)
+src/email/adapters/http.ts:72:                "Email storage is temporarily unavailable. Retry the same request.",
+src/whatsapp/adapters/sqlite.ts:510:              "The image could not be prepared after several attempts. Retry or send it again.",
+src/tasks/adapters/personal-agent.ts:159:      : "This task's state could not be confirmed. Retry the same handle."
+src/agent/worker.ts:422:import { summaryRetryAuthority } from "../memory/adapters/retry-authority"
+src/agent/worker.ts:445:import { BackupRetry } from "../memory/backup.machine"
+src/agent/worker.ts:450:import { memorySummaryRetry } from "../memory/retry"
+src/agent/worker.ts:2118:  readonly retrySummary = memorySummaryRetry(
+src/agent/worker.ts:2120:    summaryRetryAuthority(this.botConfiguration),
+src/agent/worker.ts:4238:                this.emailStore.retry(
+src/agent/worker.ts:4742:        const input = yield* agentJson(request, BackupRetry)
+src/routines/adapters/http.ts:111:  "The routine request could not finish. Retry the same change."
+src/routines/application.ts:68:            "Routine recovery discovery expired. Retry the same request to arm recovery before accepting work.",
+src/whatsapp/service.ts:13:  RetryWhatsApp,
+src/whatsapp/service.ts:79:  const retry = (input: typeof RetryWhatsApp.Type) =>
+src/whatsapp/service.ts:83:        store.retry(
+src/whatsapp/service.ts:173:                "WhatsApp storage is temporarily unavailable. Retry the same request.",
+src/replies/progress.ts:38:export const replyRetryLabel = (progress?: ReplyDeliveryProgress) =>
+src/replies/progress.ts:39:  progress?.confirmed ? "Retry remaining messages" : "Retry reply"
+src/components/copy-button.tsx:5:  useState,
+src/components/copy-button.tsx:33:  const [feedback, setFeedback] = useState<{
+src/components/copy-button.tsx:49:    const timeout = window.setTimeout(() => setFeedback(null), 2000)
+src/planning/adapters/pi.ts:159:    message: "The saved plan could not be confirmed. Retry the same update.",
+src/access/adapters/mcp.ts:224:            resetTimeoutOnProgress: false,
+src/communication/adapters/personal-agent.ts:53:            "Bot state could not be confirmed. Retry the same operation."
+src/delegation/service.ts:139:              "Agent recovery discovery expired before acceptance. Retry the same operation."
+src/delegation/service.ts:836:            "Child message delivery could not be confirmed. Retry the same operation."
+src/components/ui/select.tsx:18:  const [localOpen, setLocalOpen] = React.useState(defaultOpen)
+src/communication/adapters/sqlite.ts:46:      "Mailbox state could not be confirmed. Retry the same operation."
+src/communication/adapters/sqlite.ts:447:                    ? "Continuation admission could not be confirmed. Retry the same operation."
+src/communication/adapters/sqlite.ts:449:                      ? "The conversation queue is full. Retry this continuation later."
+src/communication/adapters/sqlite.ts:685:            yield* decide(() => Domain.requireRetryableTask(t))
+src/tasks/adapters/response.ts:10:    message: "This task's state could not be confirmed. Retry the same handle.",
+src/communication/adapters/lifecycle.ts:218:          "Mailbox recovery discovery expired. Retry the same recovery."
+src/communication/adapters/lifecycle.ts:374:              "Mailbox discovery stopped after three failed attempts. Retry the mailbox to continue pending work.",
+src/communication/adapters/lifecycle.ts:399:                "Mailbox processing stopped after three failed attempts. Retry the mailbox to continue pending work.",
+src/agent/adapters/http.ts:152:            "File storage is temporarily unavailable. Retry the same message.",
+src/agent/adapters/http.ts:187:            "The request could not be confirmed. Retry the same operation.",
+src/communication/adapters/http.ts:27:      else yield* app.retry(input.id)
+src/delegation/background-task-domain.ts:272:            ? "Native Stop remains unconfirmed. Retry Stop to reconcile cleanup."
+src/features/conversation/use-composer-draft.ts:2:import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+src/features/conversation/use-composer-draft.ts:26:  const [observed, setObserved] = useState<{
+src/access/adapters/oauth.ts:59:  private pendingGeneration() {
+src/auth/session-fetch.ts:136:  const retry = response.headers.get("Retry-After")
+src/delegation/domain.ts:282:            ? "Stop could not be confirmed. Retry the original Stop operation."
+src/features/conversation/use-model-defaults.ts:3:import { useEffect, useRef, useState } from "react"
+src/features/conversation/use-model-defaults.ts:35:  const [snapshot, setSnapshot] = useState<SnapshotFrom<
+src/delegation/background-mailbox.ts:314:          const prior = yield* records.retry(operationId)
+src/delegation/background-mailbox.ts:342:          yield* records.putRetry(operationId, id)
+src/components/ui/dropdown-menu.tsx:20:  const [localOpen, setLocalOpen] = React.useState(defaultOpen)
+src/features/conversation/model-query.tsx:6:import { useEffect, useState, type ReactNode } from "react"
+src/features/conversation/model-query.tsx:25:  const [client] = useState(() => new QueryClient())
+src/communication/communication.ts:580:                  mailbox.retry(id, now, { discoveryDeadline })
+src/delegation/adapters/background-mailbox.ts:165:  putRetry(operationId: string, groupId: number) {
+src/memory/adapters/backup-lifecycle.ts:217:            "Backup scheduling could not persist or discover its work. Retry backup recovery when storage is available.",
+src/memory/adapters/backup-lifecycle.ts:301:          "Retry backup scheduling recovery before adding memory."
+src/apps/web.ts:59:              message: "This bot is rendering another app. Retry shortly.",
+src/delegation/adapters/interop.ts:28:      "Background task state could not be confirmed. Retry the same operation.",
+src/delegation/adapters/interop.ts:38:    message: "The task state could not be confirmed. Retry the same operation.",
+src/delegation/adapters/background-http.ts:39:        : service.retry(input.groupId, input.operationId)
+src/delegation/adapters/background-http.ts:66:                "Background task state could not be confirmed. Retry the same operation.",
+src/delegation/adapters/background-http.ts:88:                "Background task state could not be confirmed. Retry the same operation.",
+src/auth/owner-session.ts:39:          headers: { "Cache-Control": "private, no-store", "Retry-After": "5" },
+src/features/conversation/conversation.tsx:21:  useState,
+src/features/conversation/conversation.tsx:134:  const [dragging, setDragging] = useState(false)
+src/features/conversation/conversation.tsx:177:    commands.retry(
+src/features/conversation/conversation.tsx:413:                          onRetry={
+src/features/conversation/conversation.tsx:419:                          canRetry={!archived && !!state.connected && !retrying}
+src/features/conversation/conversation.tsx:568:  const [override, setOverride] = useState<SubmissionMode | null>(null)
+src/memory/adapters/retry-authority.ts:5:import type { SummaryRetryAuthority } from "../retry"
+src/memory/adapters/retry-authority.ts:7:export const summaryRetryAuthority = (
+src/memory/adapters/retry-authority.ts:9:): SummaryRetryAuthority => ({
+src/features/skills/use-hosted-skill.ts:3:import { useEffect, useRef, useState } from "react"
+src/features/skills/use-hosted-skill.ts:18:  const [actor, setActor] = useState<EffectActor<Machine> | null>(null)
+src/features/skills/use-hosted-skill.ts:19:  const [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null)
+src/features/conversation/recovery-controls.tsx:3:import { useEffect, useMemo, useState } from "react"
+src/features/conversation/recovery-controls.tsx:107:  const [actor, setActor] = useState<EffectActor<RecoveryMachine> | null>(null)
+src/features/conversation/recovery-controls.tsx:108:  const [snapshot, setSnapshot] = useState<RecoverySnapshot | null>(null)
+src/delegation/adapters/http.ts:101:              "Background task state could not be confirmed. Retry the same operation.",
+src/features/skills/skills-panel.tsx:2:import { useEffect, useRef, useState } from "react"
+src/features/skills/skills-panel.tsx:47:  const [tab, setTab] = useState("library")
+src/features/skills/skills-panel.tsx:359:              void state.retry().then((result) => {
+src/features/skills/skills-panel.tsx:365:            Retry same change
+src/features/conversation/turn-reply.tsx:24:  onRetry,
+src/features/conversation/turn-reply.tsx:26:  canRetry,
+src/features/conversation/turn-reply.tsx:35:  onRetry?: (id: string) => void
+src/features/conversation/turn-reply.tsx:37:  canRetry?: boolean
+src/features/conversation/turn-reply.tsx:92:              onRetry && (
+src/features/conversation/turn-reply.tsx:97:                  disabled={!!retrying || !canRetry}
+src/features/conversation/turn-reply.tsx:98:                  aria-label={`Retry correction: ${input.text.slice(0, 80)}`}
+src/features/conversation/turn-reply.tsx:99:                  onClick={() => onRetry(input.id)}
+src/features/conversation/turn-reply.tsx:101:                  {retrying === input.id ? "Retrying…" : "Retry correction"}
+src/features/conversation/turn-reply.tsx:115:            {(stopped || failed) && onRetry && (
+src/features/conversation/turn-reply.tsx:119:                disabled={!!retrying || !canRetry}
+src/features/conversation/turn-reply.tsx:120:                onClick={() => onRetry(turn.id)}
+src/features/conversation/turn-reply.tsx:122:                {retrying === turn.id ? "Retrying…" : "Retry message"}
+src/features/skills/hosted-skill-import.tsx:1:import { useState } from "react"
+src/features/skills/hosted-skill-import.tsx:19:  const [app, setApp] = useState("personal-skills")
+src/features/skills/use-skill-view.ts:3:import { useEffect, useState } from "react"
+src/features/skills/use-skill-view.ts:29:  const [actor, setActor] = useState<EffectActor<Machine> | null>(null),
+src/features/skills/use-skill-view.ts:30:    [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null),
+src/features/skills/use-skill-view.ts:31:    [draft, setDraft] = useState<SkillDraft | null>(null)
+src/webhooks/adapters/public.ts:115:                "Webhook temporarily unavailable. Retry the same event ID.",
+src/apps/adapters/sqlite.ts:349:                  "App admission discovery expired. Retry the same interaction.",
+src/components/ui/sidebar.tsx:69:  const [openMobile, setOpenMobile] = React.useState(false)
+src/components/ui/sidebar.tsx:71:  const [_open, _setOpen] = React.useState(defaultOpen)
+src/components/ui/sidebar.tsx:598:  const [width] = React.useState(() => {
+src/hooks/use-highlighted-code.ts:14:    React.useState<EffectActor<HighlightMachine> | null>(null)
+src/hooks/use-highlighted-code.ts:16:    React.useState<SnapshotFrom<HighlightMachine> | null>(null)
+src/hooks/use-highlighted-code.ts:75:  const [done, setDone] = React.useState<{
+src/webhooks/adapters/http.ts:27:    message: "Webhook temporarily unavailable. Retry the same request.",
+src/webhooks/adapters/http.ts:45:      message: "Webhook temporarily unavailable. Retry the same event ID.",
+src/features/skills/use-skills.ts:3:import { useCallback, useEffect, useState } from "react"
+src/features/skills/use-skills.ts:13:  const [actor, setActor] = useState<EffectActor<Machine> | null>(null),
+src/features/skills/use-skills.ts:14:    [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null)
+src/components/ui/code-block.tsx:93:  const [copied, setCopied] = React.useState(false)
+src/components/ui/code-block.tsx:100:    const timeout = setTimeout(() => setCopied(false), 2000)
+src/apps/adapters/lifecycle.ts:93:              "The previous app recovery lease is still settling. Retry after its admission deadline."
+src/apps/adapters/lifecycle.ts:109:            "App admission is busy finishing its retained recovery lease. Retry shortly."
+src/features/conversation/use-conversation.ts:3:import { useCallback, useEffect, useMemo, useState } from "react"
+src/features/conversation/use-conversation.ts:14:  const [refresh, setRefresh] = useState(0)
+src/features/conversation/use-conversation.ts:21:  const [metadata, setMetadata] = useState<{
+src/features/conversation/use-conversation.ts:25:  const [connectionError, setConnectionError] = useState({
+src/features/conversation/use-conversation.ts:29:  const [streamError, setStreamError] = useState<{
+src/features/conversation/use-conversation.ts:33:  const [retained, setRetained] = useState<{
+src/hooks/use-mobile.ts:6:  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
+src/features/objects/checklist.tsx:11:import { useEffect, useId, useState } from "react"
+src/features/objects/checklist.tsx:117:                <Button size="sm" onClick={() => void store.retry(id)}>
+src/features/objects/checklist.tsx:118:                  Retry same save
+src/features/objects/checklist.tsx:352:  const [fields, setDraft] = useState<Draft | null>(null)
+src/features/objects/checklist.tsx:367:          Retry
+src/features/objects/store.ts:68:    message: message(cause, "Save not confirmed. Retry this same change."),
+src/features/auth/auth-owner.ts:3:import { useCallback, useLayoutEffect, useRef, useState } from "react"
+src/features/auth/auth-owner.ts:86:  const [owned, setOwned] = useState<{
+src/features/objects/object-storage.ts:27:              "A previous save was not confirmed. Retry the same change or cancel it safely.",
+src/features/objects/object-storage.ts:61:              "A previous save was not confirmed. Retry the same change or cancel it safely.",
+src/features/auth/passkey-settings.tsx:2:import { useEffect, useRef, useState } from "react"
+src/features/auth/passkey-settings.tsx:23:  const [available, setAvailable] = useState(false)
+src/features/auth/passkey-settings.tsx:24:  const [name, setName] = useState("")
+src/features/auth/passkey-settings.tsx:25:  const [nameInvalid, setNameInvalid] = useState(false)
+src/features/objects/context.tsx:6:  useState,
+src/features/objects/context.tsx:30:  const [owned, setOwned] = useState<{
+src/features/objects/context.tsx:65:  const [consumers, setConsumers] = useState(0)
+src/features/objects/workbench.tsx:3:import { useEffect, useId, useState } from "react"
+src/features/objects/workbench.tsx:53:  const [editing, setEditing] = useState(false),
+src/features/objects/workbench.tsx:54:    [title, setTitle] = useState("")
+src/features/objects/use-object-creation.ts:3:import { useEffect, useLayoutEffect, useRef, useState } from "react"
+src/features/objects/use-object-creation.ts:14:  const [actor, setActor] = useState<EffectActor<
+src/features/objects/use-object-creation.ts:17:  const [snapshot, setSnapshot] = useState<SnapshotFrom<
+src/objects/adapters/pi.ts:99:    message: "The saved state could not be confirmed. Retry the same change.",
+src/memory/adapters/summary-lifecycle.ts:181:          "Retry compaction recovery before adding more summary work."
+src/memory/adapters/summary-lifecycle.ts:474:            "Memory compaction could not persist or discover its work. Retry compaction recovery after storage is available. Paused summaries still require their own retry.",
+src/features/objects/use-object-origin.ts:3:import { useEffect, useState } from "react"
+src/features/objects/use-object-origin.ts:16:  const [actor, setActor] = useState<EffectActor<Machine> | null>(null)
+src/features/objects/use-object-origin.ts:17:  const [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null)
+src/memory/adapters/http.ts:62:  let closed = false
+src/features/terminal/use-terminal.ts:3:import { useEffect, useRef, useState } from "react"
+src/features/terminal/use-terminal.ts:28:  const [actor, setActor] = useState<TerminalActor | null>(null)
+src/features/terminal/use-terminal.ts:29:  const [snapshot, setSnapshot] = useState<Snapshot | null>(null)
+src/features/terminal/use-terminal.ts:108:  const [leaseState, setLease] = useState<{
+src/memory/application.ts:8:  BackupRetry,
+src/memory/application.ts:215:  receipt: BackupRetry,
+src/features/terminal/terminal-workbench.tsx:3:import { useEffect, useRef, useState } from "react"
+src/features/terminal/terminal-workbench.tsx:54:    useState<TerminalNetworkPolicy | null>(null)
+src/features/terminal/terminal-workbench.tsx:70:  const [command, setCommand] = useState(
+src/features/terminal/terminal-workbench.tsx:99:                Retry cleanup
+src/features/terminal/terminal-workbench.tsx:166:                onRetry={() => void terminal.retryTransfer()}
+src/features/terminal/terminal-workbench.tsx:452:            {terminal.attempt ? "Retry same request" : "Run command"}
+src/features/terminal/terminal-workbench.tsx:474:            The outcome is unconfirmed. Retry keeps the same command ID and
+src/memory/retry.ts:20:  summaryRetryMachine,
+src/memory/retry.ts:21:  type SummaryRetryAdmission,
+src/memory/retry.ts:24:export type SummaryRetry = Part & { operationId: string }
+src/memory/retry.ts:25:export interface SummaryRetryAuthority {
+src/memory/retry.ts:45:export function memorySummaryRetry<TError, TRequirements>(
+src/memory/retry.ts:50:  authority: SummaryRetryAuthority,
+src/memory/retry.ts:70:  const commit = Effect.fn("Memory.commitSummaryRetry")(
+src/memory/retry.ts:71:    (input: SummaryRetry, admission: SummaryRetryAdmission) =>
+src/memory/retry.ts:118:  return Effect.fn("Memory.retrySummary")(function* (input: SummaryRetry) {
+src/memory/retry.ts:155:        summaryRetryMachine({
+src/inference/adapters/upstream-worker.ts:66:    let pending = 0
+src/features/channel-settings/use-channel-settings.ts:3:import { useEffect, useMemo, useState } from "react"
+src/features/channel-settings/use-channel-settings.ts:28:  const [actor, setActor] = useState<EffectActor<Machine> | null>(null)
+src/features/channel-settings/use-channel-settings.ts:29:  const [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null)
+src/features/auth/password-input.tsx:2:import { useState, type ComponentProps } from "react"
+src/features/auth/password-input.tsx:15:  const [visible, setVisible] = useState(false)
+src/conversations/domain.ts:52:export function requireRetry(input: Submission, source: Turn | undefined) {
+src/delegation/background-ledger.ts:31:  readonly putRetry: (
+src/features/conversation/use-conversation-commands.ts:3:import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+src/features/conversation/use-conversation-commands.ts:36:  const [snapshot, setSnapshot] = useState<{
+src/memory/compaction.ts:94:  let pending = receipts.get(memory)
+src/features/terminal/file-transfers.tsx:4:import { useEffect, useState } from "react"
+src/features/terminal/file-transfers.tsx:32:  onRetry,
+src/features/terminal/file-transfers.tsx:40:  onRetry: () => void
+src/features/terminal/file-transfers.tsx:45:  const [path, setPath] = useState("/workspace/result.txt")
+src/features/terminal/file-transfers.tsx:46:  const [invalid, setInvalid] = useState(false)
+src/features/terminal/file-transfers.tsx:140:            The request is unconfirmed. Retry keeps the same transfer ID.
+src/features/terminal/file-transfers.tsx:145:              onClick={onRetry}
+src/features/terminal/file-transfers.tsx:147:              Retry transfer
+src/features/terminal/file-transfers.tsx:175:  const [actor, setActor] = useState<EffectActor<
+src/features/terminal/file-transfers.tsx:178:  const [state, setState] = useState({
+src/features/conversation/turn-activity.tsx:17:import { lazy, Suspense, useState } from "react"
+src/features/conversation/turn-activity.tsx:164:  const [expanded, setExpanded] = useState<boolean | null>(null)
+src/features/conversation/turn-activity.tsx:233:  const [expanded, setExpanded] = useState<boolean | null>(null)
+src/features/conversation/turn-activity.tsx:256:  const [unavailableIcon, setUnavailableIcon] = useState<string | null>(null)
+src/features/auth/passkey-sign-in.tsx:3:import { useEffect, useState } from "react"
+src/features/auth/passkey-sign-in.tsx:26:  const [available, setAvailable] = useState<boolean | null>(null)
+src/app/use-workspace-command.ts:3:import { useEffect, useRef, useState } from "react"
+src/app/use-workspace-command.ts:62:  const [snapshot, setSnapshot] = useState<SnapshotFrom<
+src/features/auth/password-recovery.tsx:3:import { useEffect, useRef, useState } from "react"
+src/features/auth/password-recovery.tsx:102:  const [link, setLink] = useState<{ token: string | null; revision: number }>({
+src/features/terminal/interactive-terminal.tsx:3:import { useEffect, useRef, useState } from "react"
+src/features/terminal/interactive-terminal.tsx:58:          {attempt ? "Retry opening same session" : "Open interactive terminal"}
+src/features/terminal/interactive-terminal.tsx:114:  const [status, setStatus] = useState("Connecting")
+src/features/terminal/interactive-terminal.tsx:115:  const [error, setError] = useState("")
+src/features/access/use-approval.ts:3:import { useEffect, useMemo, useRef, useState } from "react"
+src/features/access/use-approval.ts:17:  const [actor, setActor] = useState<EffectActor<Machine> | null>(null)
+src/features/access/use-approval.ts:18:  const [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null)
+src/features/auth/factor-settings.tsx:3:import { useEffect, useState } from "react"
+src/features/auth/factor-settings.tsx:69:  const [password, setPassword] = useState("")
+src/features/auth/factor-settings.tsx:70:  const [code, setCode] = useState("")
+src/features/auth/factor-settings.tsx:71:  const [showKey, setShowKey] = useState(false)
+src/features/access/use-access.ts:3:import { useEffect, useRef, useState } from "react"
+src/features/access/use-access.ts:13:  const [actor, setActor] = useState<EffectActor<Machine> | null>(null)
+src/features/access/use-access.ts:14:  const [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null)
+src/delegation/background-service.ts:210:        mailbox.retry(id, operationId, deadline)
+src/features/whatsapp/whatsapp-settings.tsx:16:import { replyProgressText, replyRetryLabel } from "@/replies/progress"
+src/features/whatsapp/whatsapp-settings.tsx:94:          Retry same request
+src/features/whatsapp/whatsapp-settings.tsx:134:                      {replyRetryLabel(message.progress)}
+src/features/auth/two-factor-challenge.tsx:3:import { useState } from "react"
+src/features/auth/two-factor-challenge.tsx:17:  const [code, setCode] = useState("")
+src/app/use-workbench-presence.ts:3:import { useEffect, useRef, useState } from "react"
+src/app/use-workbench-presence.ts:21:  const [snapshot, setSnapshot] = useState<SnapshotFrom<
+src/features/email/email-settings.tsx:28:import { replyProgressText, replyRetryLabel } from "@/replies/progress"
+src/features/email/email-settings.tsx:165:          Retry same request
+src/features/email/email-settings.tsx:195:                    {replyRetryLabel(message.progress)}
+src/terminal/workspace-import.ts:114:                "The transfer could not be confirmed. Retry the same transfer.",
+src/features/memory/use-memory-query.ts:3:import { useEffect, useMemo, useState } from "react"
+src/features/memory/use-memory-query.ts:27:  const [view, setView] = useState<{
+src/terminal/session.ts:65:  private pending = 0
+src/app/workspace-settings.tsx:17:import { useEffect, useState } from "react"
+src/app/workspace-settings.tsx:120:  const [familyPending, setFamilyPending] = useState(false)
+src/app/workspace-settings.tsx:121:  const [securityPending, setSecurityPending] = useState(false)
+src/app/workspace-settings.tsx:122:  const [profilePending, setProfilePending] = useState(false)
+src/app/workspace-settings.tsx:123:  const [modelsPending, setModelsPending] = useState(false)
+src/app/workspace-settings.tsx:124:  const [accessPending, setAccessPending] = useState(false)
+src/app/workspace-settings.tsx:125:  const [connectionsPending, setConnectionsPending] = useState(false)
+src/app/workspace-settings.tsx:126:  const [skillsPending, setSkillsPending] = useState(false)
+src/app/workspace-settings.tsx:127:  const [emailPending, setEmailPending] = useState(false)
+src/app/workspace-settings.tsx:128:  const [whatsappPending, setWhatsAppPending] = useState(false)
+src/conversations/adapters/latency.ts:21:  let pending:
+src/features/apps/use-app-list.ts:3:import { useEffect, useState } from "react"
+src/features/apps/use-app-list.ts:15:  const [owned, setOwned] = useState<{
+src/features/rich-results/products.tsx:2:import { useContext, useMemo, useState, type ReactNode } from "react"
+src/features/rich-results/products.tsx:47:  const [selected, setSelected] = useState<string[]>([])
+src/features/rich-results/products.tsx:48:  const [query, setQuery] = useState("")
+src/features/rich-results/products.tsx:49:  const [budget, setBudget] = useState("")
+src/features/rich-results/products.tsx:50:  const [sort, setSort] = useState(["recommended"])
+src/features/rich-results/products.tsx:51:  const [view, setView] = useState(["browse"])
+src/features/rich-results/products.tsx:52:  const [shortlistOnly, setShortlistOnly] = useState(false)
+src/features/rich-results/products.tsx:53:  const [merchant, setMerchant] = useState("")
+src/app/use-workspace-guard.ts:3:import { useEffect, useRef, useState } from "react"
+src/app/use-workspace-guard.ts:42:  const [snapshot, setSnapshot] = useState<SnapshotFrom<
+src/features/family/chatgpt-sign-in.tsx:3:import { useEffect, useRef, useState } from "react"
+src/features/family/chatgpt-sign-in.tsx:23:  const [email, setEmail] = useState(defaultEmail)
+src/features/family/chatgpt-sign-in.tsx:24:  const [address, setAddress] = useState("")
+src/features/family/chatgpt-sign-in.tsx:25:  const [snapshot, setSnapshot] = useState<SnapshotFrom<
+src/features/rich-results/table-controls.tsx:3:import { useId, useState } from "react"
+src/features/rich-results/table-controls.tsx:84:  const [open, setOpen] = useState(false)
+src/features/rich-results/table-controls.tsx:85:  const [key, setKey] = useState(columns[0]!.key)
+src/features/rich-results/table-controls.tsx:86:  const [operator, setOperator] = useState<ValueFilter["operator"]>("contains")
+src/features/rich-results/table-controls.tsx:87:  const [inputValue, setValue] = useState("")
+src/features/family/context.tsx:7:  useState,
+src/features/family/context.tsx:41:  const [snapshot, setSnapshot] = useState<SnapshotFrom<
+src/app/use-workspace-link-retry.ts:3:import { useEffect, useRef, useState } from "react"
+src/app/use-workspace-link-retry.ts:9:import { workspaceLinkRetryMachine } from "./workspace-link-retry.machine"
+src/app/use-workspace-link-retry.ts:11:export function makeWorkspaceLinkRetry(work: {
+src/app/use-workspace-link-retry.ts:27:      workspaceLinkRetryMachine({
+src/app/use-workspace-link-retry.ts:65:export function useWorkspaceLinkRetry(
+src/app/use-workspace-link-retry.ts:72:    ReturnType<typeof makeWorkspaceLinkRetry>
+src/app/use-workspace-link-retry.ts:74:  const [snapshot, setSnapshot] = useState<SnapshotFrom<
+src/app/use-workspace-link-retry.ts:75:    ReturnType<typeof workspaceLinkRetryMachine>
+src/app/use-workspace-link-retry.ts:81:        const current = yield* makeWorkspaceLinkRetry({
+src/features/family/join.tsx:3:import { useEffect, useRef, useState } from "react"
+src/features/family/join.tsx:62:  const [name, setName] = useState("")
+src/features/family/join.tsx:63:  const [password, setPassword] = useState("")
+src/features/family/join.tsx:69:  const [snapshot, setSnapshot] = useState<SnapshotFrom<
+src/app/workspace.tsx:3:import { lazy, Suspense, useCallback, useEffect, useState, useRef } from "react"
+src/app/workspace.tsx:169:  const [workLocked, setNavigationLocked] = useState(false)
+src/app/workspace.tsx:170:  const [settingsPending, setSettingsPending] = useState(false)
+src/app/workspace.tsx:332:                    Retry
+src/app/workspace.tsx:473:  const [sending, setSending] = useState(false)
+src/app/workspace.tsx:486:  const [filePending, setFilePending] = useState(false)
+src/app/workspace.tsx:487:  const [workbenchAppPending, setAppPending] = useState(false)
+src/app/workspace.tsx:488:  const [inlineAppRequests, setInlineAppRequests] = useState<
+src/app/workspace.tsx:501:  const [executionPending, setExecutionPending] = useState(false)
+src/app/workspace.tsx:502:  const [objectPending, setObjectPending] = useState(false)
+src/app/workspace.tsx:503:  const [objectEditing, setObjectEditing] = useState(false)
+src/app/workspace.tsx:504:  const [routinePending, setRoutinePending] = useState(false)
+src/features/family/model-access.tsx:4:import { useCallback, useEffect, useRef, useState } from "react"
+src/features/family/model-access.tsx:28:  const [snapshot, setSnapshot] = useState<SnapshotFrom<
+src/app/workspace-link-error.tsx:6:import { useEffect, useState } from "react"
+src/app/workspace-link-error.tsx:13:import { useWorkspaceLinkRetry } from "./use-workspace-link-retry"
+src/app/workspace-link-error.tsx:17:  const { retrying, retry } = useWorkspaceLinkRetry(error, {
+src/app/workspace-link-error.tsx:21:  const [receipt, setReceipt] = useState<{ error: unknown; id: string }>()
+src/features/activity/bot-tasks.tsx:3:import { useEffect, useState } from "react"
+src/features/activity/bot-tasks.tsx:52:  const [origin, setOrigin] = useState<Task | null>(null)
+src/features/activity/bot-tasks.tsx:83:              Retry mailbox
+src/features/activity/bot-tasks.tsx:172:                      not be confirmed. Retrying uses the saved result and
+src/features/activity/bot-tasks.tsx:182:                        Retry result
+src/features/activity/bot-tasks.tsx:200:                Retrying delivery preserves the task identity and does not start
+src/features/activity/bot-tasks.tsx:227:                        Retry delivery
+src/features/family/family-settings.tsx:10:import { useEffect, useRef, useState } from "react"
+src/features/family/family-settings.tsx:60:  const [inviteOpen, setInviteOpen] = useState(false)
+src/features/family/family-settings.tsx:61:  const [removing, setRemoving] = useState<typeof FamilyMember.Type | null>(
+src/features/family/family-settings.tsx:67:  const [snapshot, setSnapshot] = useState<SnapshotFrom<
+src/features/family/family-settings.tsx:439:  const [email, setEmail] = useState("")
+src/conversations/admission.ts:128:              "The active reply changed. Retry to send with the current run settings.",
+src/features/activity/delegated-work.tsx:3:import { useEffect, useState } from "react"
+src/features/activity/delegated-work.tsx:49:  const [offset, setOffset] = useState(0)
+src/features/activity/delegated-work.tsx:225:  if (uncertain) return `Retry saved ${action}`
+src/features/activity/delegated-work.tsx:238:  const [inspect, setInspect] = useState(false)
+src/features/activity/delegated-work.tsx:239:  const [expanded, setExpanded] = useState<boolean | null>(null)
+src/features/activity/delegated-work.tsx:363:  const [text, setText] = useState("")
+src/features/activity/delegated-work.tsx:421:          Saved control awaiting acknowledgement. Retry sends the same
+src/features/activity/delegated-work.tsx:444:  const [cursor, setCursor] = useState<string | undefined>()
+src/features/activity/background-actions.tsx:53:                    ? "Retry connection"
+src/features/activity/background-actions.tsx:57:                      ? "Retry stop"
+src/features/activity/background-actions.tsx:62:                  Saved action awaiting acknowledgement. Retry uses the same
+src/conversations/commands.ts:159:              "Retry Stop requires an armed discovery lease"
+src/features/rich-results/question.tsx:10:  useState,
+src/features/rich-results/question.tsx:31:  const [chosen, setChosen] = useState<string[]>([])
+src/features/rich-results/question.tsx:32:  const [other, setOther] = useState("")
+src/features/rich-results/question.tsx:35:  const [actor, setActor] = useState<EffectActor<QuestionMachine> | null>(null)
+src/features/rich-results/question.tsx:37:    useState<SnapshotFrom<QuestionMachine> | null>(null)
+src/app/workbench.tsx:13:import { useState, type ReactNode, type RefObject } from "react"
+src/app/workbench.tsx:80:  const [container, setContainer] = useState<HTMLDivElement | null>(null)
+src/conversations/adapters/crypto.ts:22:        let pending: Promise<string> | undefined
+src/features/rich-results/gallery.tsx:2:import { useState } from "react"
+src/features/rich-results/gallery.tsx:17:  const [weatherRange, setWeatherRange] = useState(["weekend"])
+src/conversations/adapters/sqlite-turns.ts:530:        yield* attempt(() => Domain.requireRetry(input, source))
+src/terminal/adapters/socket.ts:33:  let closed = false
+src/features/memory/memory-import.tsx:3:import { useEffect, useMemo, useState } from "react"
+src/features/memory/memory-import.tsx:33:  const [actor, setActor] = useState<EffectActor<Machine> | null>(null)
+src/features/memory/memory-import.tsx:34:  const [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null)
+src/features/memory/memory-import.tsx:95:          : "Could not confirm the import. Retry the same file."
+src/features/memory/memory-import.tsx:143:                ? "Retry same import"
+src/features/rich-results/cards.tsx:3:import { useId, useState, type ReactNode } from "react"
+src/features/rich-results/cards.tsx:125:  const [selected, setSelected] = useState(0)
+src/features/rich-results/cards.tsx:190:  const [selected, setSelected] = useState(0)
+src/conversations/adapters/handoff.ts:37:    let pending = 0
+src/features/apps/inline-app.tsx:2:import { useCallback, useId, useState } from "react"
+src/features/apps/inline-app.tsx:39:  const [open, setOpen] = useState(false)
+src/features/apps/inline-app.tsx:40:  const [pending, setPending] = useState(false)
+src/features/rich-results/workspace.tsx:2:import { useState, type ReactNode } from "react"
+src/features/rich-results/workspace.tsx:26:  const [open, setOpen] = useState(false)
+src/features/activity/use-activity-query.ts:3:import { useEffect, useRef, useState } from "react"
+src/features/activity/use-activity-query.ts:33:  const [actor, setActor] = useState<EffectActor<Machine> | null>(null)
+src/features/activity/use-activity-query.ts:34:  const [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null)
+src/features/files/use-files.ts:6:  useState,
+src/features/files/use-files.ts:26:  const [live, setLive] = useState<{
+src/features/files/use-files.ts:82:      owner ? Effect.runPromise(owner.retry(attempt)) : Promise.resolve(),
+src/features/rich-results/places-map.tsx:5:import { useEffect, useRef, useState } from "react"
+src/features/rich-results/places-map.tsx:29:  const [actor, setActor] = useState<EffectActor<MapMachine> | null>(null)
+src/features/rich-results/places-map.tsx:30:  const [snapshot, setSnapshot] = useState<SnapshotFrom<MapMachine> | null>(
+src/features/activity/use-mailbox-control.ts:3:import { useEffect, useMemo, useRef, useState } from "react"
+src/features/activity/use-mailbox-control.ts:20:  const [actor, setActor] = useState<EffectActor<Machine> | null>(null)
+src/features/activity/use-mailbox-control.ts:21:  const [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null)
+src/features/memory/memory-panel.tsx:2:import { useMemo, useState } from "react"
+src/features/memory/memory-panel.tsx:154:                  Retry search
+src/features/memory/memory-panel.tsx:206:  const [open, setOpen] = useState(false)
+src/features/memory/memory-panel.tsx:244:            Retry source
+src/features/rich-results/explorer.tsx:2:import { lazy, Suspense, useState } from "react"
+src/features/rich-results/explorer.tsx:26:  const [open, setOpen] = useState(false)
+src/features/memory/summary-recovery.tsx:3:import { useEffect, useMemo, useState } from "react"
+src/features/memory/summary-recovery.tsx:99:  const [actor, setActor] = useState<EffectActor<Machine> | null>(null)
+src/features/memory/summary-recovery.tsx:100:  const [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null)
+src/features/memory/summary-recovery.tsx:171:              Retrying the scheduler checks pending work. Paused summaries still
+src/features/memory/summary-recovery.tsx:187:                ? "Retrying scheduler…"
+src/features/memory/summary-recovery.tsx:188:                : "Retry compaction scheduler"}
+src/features/memory/summary-recovery.tsx:200:              Memory summaries job default. Retrying a summary explicitly starts
+src/features/memory/summary-recovery.tsx:223:                    ? "Retrying…"
+src/features/memory/summary-recovery.tsx:224:                    : `Retry summary ${issue.start}+${issue.count}`}
+src/features/rich-results/data-table.tsx:14:import { useId, useMemo, useState } from "react"
+src/features/rich-results/data-table.tsx:101:  const [sorting, setSorting] = useState<SortingState>([])
+src/features/rich-results/data-table.tsx:102:  const [search, setSearch] = useState("")
+src/features/rich-results/data-table.tsx:103:  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+src/features/rich-results/data-table.tsx:104:  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
+src/features/rich-results/data-table.tsx:180:    setTimeout(() => URL.revokeObjectURL(url), 1000)
+src/features/files/files-panel.tsx:15:import { useEffect, useRef, useState } from "react"
+src/features/files/files-panel.tsx:70:  const [detailLocked, setDetailLocked] = useState(false)
+src/features/files/files-panel.tsx:354:                            : "Retry extraction"}
+src/features/files/use-file-preview.ts:3:import { useEffect, useState } from "react"
+src/features/files/use-file-preview.ts:17:  const [actor, setActor] = useState<EffectActor<Machine> | null>(null)
+src/features/files/use-file-preview.ts:18:  const [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null)
+src/features/rich-results/places-map-resource.ts:157:    let closed = false
+src/workspace/preparation.ts:405:                            ? "Video preparation is unavailable or exceeded its resource limit. Retry from Files."
+src/workspace/preparation.ts:406:                            : "Extraction was unavailable or exceeded its resource limit. Retry from Files.",
+src/features/apps/use-app-form.ts:3:import { useEffect, useRef, useState } from "react"
+src/features/apps/use-app-form.ts:22:  const [actor, setActor] = useState<Actor | null>(null),
+src/features/apps/use-app-form.ts:23:    [snapshot, setSnapshot] = useState<SnapshotFrom<
+src/workspace/attachments.ts:25:      let pending = false
+src/features/apps/apps-workbench.tsx:3:import { useEffect, useState } from "react"
+src/features/apps/apps-workbench.tsx:35:  const [interactionPending, setInteractionPending] = useState(false)
+src/features/apps/apps-workbench.tsx:68:                Retry apps
+src/features/activity/activity-timeline.tsx:161:        onRetry={() => void refresh()}
+src/features/activity/activity-timeline.tsx:262:  onRetry,
+src/features/activity/activity-timeline.tsx:267:  onRetry: () => void
+src/features/activity/activity-timeline.tsx:277:            <Button variant="outline" size="sm" onClick={onRetry}>
+src/workspace/service.ts:205:      yield* preparation.retry(id)
+src/features/apps/use-app.ts:3:import { useEffect, useState } from "react"
+src/features/apps/use-app.ts:16:  const [owned, setOwned] = useState<{
+src/features/routines/use-routines.ts:3:import { useEffect, useLayoutEffect, useRef, useState } from "react"
+src/features/routines/use-routines.ts:25:  const [owner, setOwner] = useState<{
+src/features/routines/use-routines.ts:29:  const [state, setState] = useState<{
+src/features/activity/use-task-control.ts:3:import { useEffect, useMemo, useRef, useState } from "react"
+src/features/activity/use-task-control.ts:17:  const [actor, setActor] = useState<EffectActor<Machine> | null>(null)
+src/features/activity/use-task-control.ts:18:  const [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null)
+src/features/apps/web-canvas.tsx:3:import { useEffect, useRef, useState } from "react"
+src/features/apps/web-canvas.tsx:45:  const [owner, setOwner] = useState<FrameActor | null>(null),
+src/features/apps/web-canvas.tsx:46:    [snapshot, setSnapshot] = useState<SnapshotFrom<
+src/features/execution/use-execution.ts:3:import { useEffect, useLayoutEffect, useRef, useState } from "react"
+src/features/execution/use-execution.ts:15:  const [actor, setActor] = useState<EffectActor<Machine> | null>(null)
+src/features/execution/use-execution.ts:16:  const [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null)
+src/features/files/use-file-details.ts:3:import { useEffect, useLayoutEffect, useRef, useState } from "react"
+src/features/files/use-file-details.ts:23:  const [actor, setActor] = useState<EffectActor<Machine> | null>(null)
+src/features/files/use-file-details.ts:24:  const [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null)
+src/features/apps/app-view.tsx:2:import { useEffect, useState } from "react"
+src/features/apps/app-view.tsx:43:  const [selected, setSelected] = useState<number | null>(
+src/features/apps/app-view.tsx:76:                Retry app
+src/features/apps/app-view.tsx:113:            The change is unconfirmed. Retry keeps the same request.
+src/features/apps/app-view.tsx:119:                onClick={() => void app.retry()}
+src/features/apps/app-view.tsx:121:                Retry change
+src/features/memory/backup-recovery.tsx:3:import { useEffect, useMemo, useState } from "react"
+src/features/memory/backup-recovery.tsx:55:  const [actor, setActor] = useState<EffectActor<Machine> | null>(null)
+src/features/memory/backup-recovery.tsx:56:  const [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null)
+src/features/memory/backup-recovery.tsx:121:          ? "Retry recovery to check pending backup work. Saved memory and any completed backup remain available."
+src/features/memory/backup-recovery.tsx:122:          : "Retry the failed backup. Saved memory and any completed backup remain available."}
+src/features/memory/backup-recovery.tsx:143:            ? "Retrying backup recovery…"
+src/features/memory/backup-recovery.tsx:144:            : "Retry backup recovery"
+src/features/memory/backup-recovery.tsx:146:            ? "Retrying backup…"
+src/features/memory/backup-recovery.tsx:147:            : "Retry backup"}
+src/features/memory/backup-recovery.tsx:156:        <p role="status">Retry requested. Waiting for updated backup status.</p>
+src/features/routines/routines-workbench.tsx:2:import { useEffect, useState } from "react"
+src/features/routines/routines-workbench.tsx:64:  const [newEditor, setNewEditor] = useState<{
+src/features/routines/routines-workbench.tsx:68:  const [mutationPending, setMutationPending] = useState(false)
+src/features/routines/routines-workbench.tsx:94:  const [hookPending, setHookPending] = useState(false)
+src/features/routines/routines-workbench.tsx:240:                  Retry routines
+src/features/routines/routines-workbench.tsx:256:              Retry same Stop
+src/features/routines/routines-workbench.tsx:271:                onClick={() => void actions.retry()}
+src/features/routines/routines-workbench.tsx:273:                Retry same change
+src/features/routines/routines-workbench.tsx:493:  const [baseline, setBaseline] = useState(routine)
+src/features/routines/routines-workbench.tsx:494:  const [savedSchedule, setSavedSchedule] = useState(routine?.schedule)
+src/features/routines/routines-workbench.tsx:496:  const [initial] = useState(() => routineEditorDefaults(routine))
+src/features/routines/routines-workbench.tsx:497:  const [id] = useState(initial.id)
+src/features/routines/routines-workbench.tsx:498:  const [title, setTitle] = useState(initial.title),
+src/features/routines/routines-workbench.tsx:499:    [prompt, setPrompt] = useState(initial.prompt)
+src/features/routines/routines-workbench.tsx:500:  const [type, setType] = useState(initial.type)
+src/features/routines/routines-workbench.tsx:501:  const [at, setAt] = useState(initial.at)
+src/features/routines/routines-workbench.tsx:502:  const [minutes, setMinutes] = useState(initial.minutes)
+src/features/routines/routines-workbench.tsx:503:  const [changedTime, setChangedTime] = useState(false)
+src/features/routines/routines-workbench.tsx:504:  const [status, setStatus] = useState(initial.status)
+src/features/routines/routines-workbench.tsx:505:  const [error, setError] = useState("")
+src/features/browser/use-browser.ts:3:import { useEffect, useState } from "react"
+src/features/browser/use-browser.ts:15:  const [actor, setActor] = useState<EffectActor<Machine> | null>(null)
+src/features/browser/use-browser.ts:16:  const [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null)
+src/features/agents/use-agent-catalog.ts:2:import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+src/features/agents/use-agent-catalog.ts:16:  const [live, setLive] = useState<{
+src/features/agents/use-agent-catalog.ts:20:  const [selected, setSelected] = useState<string>(homeAgentId)
+src/features/updates/update-recovery.tsx:9:  useState,
+src/features/updates/update-recovery.tsx:45:  const [recovery, setRecovery] = useState<Recovery | null>(null)
+src/features/updates/update-recovery.tsx:46:  const [manager] = useState(createToastManager)
+src/features/browser/browser-workbench.tsx:2:import { useEffect, useRef, useState } from "react"
+src/features/browser/browser-workbench.tsx:32:  const [url, setUrl] = useState("")
+src/features/browser/browser-workbench.tsx:33:  const [settings, setSettings] = useState<BrowserSettings | null>(null)
+src/features/browser/browser-preview.tsx:3:import { useEffect, useRef, useState } from "react"
+src/features/browser/browser-preview.tsx:30:  const [actor, setActor] = useState<EffectActor<Machine> | null>(null)
+src/features/browser/browser-preview.tsx:31:  const [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null)
+src/features/files/voice-recorder.tsx:4:import { useEffect, useLayoutEffect, useRef, useState } from "react"
+src/features/files/voice-recorder.tsx:29:  const [actor, setActor] = useState<EffectActor<Machine> | null>(null)
+src/features/files/voice-recorder.tsx:30:  const [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null)
+src/features/browser/browser-controls.tsx:2:import { useState } from "react"
+src/features/browser/browser-controls.tsx:24:  const [text, setText] = useState("")
+src/features/browser/browser-controls.tsx:25:  const [visible, setVisible] = useState(false)
+src/features/routines/use-webhook.ts:3:import { useEffect, useState } from "react"
+src/features/routines/use-webhook.ts:18:  const [owner, setOwner] = useState<{
+src/features/routines/use-webhook.ts:22:  const [state, setState] = useState<{
+src/features/files/uploads.ts:30:          error: "Upload interrupted. Retry to finish the same upload.",
+src/features/files/upload-controls.tsx:75:                onClick={() => void state.retry(item)}
+src/features/files/upload-controls.tsx:77:                Retry
+src/workspace/adapters/http.ts:134:                "File storage is temporarily unavailable. Retry the same upload.",
+src/features/routines/webhook-panel.tsx:88:                Retry settings
+src/features/routines/webhook-panel.tsx:102:            Retry same change
+src/features/routines/webhook-panel.tsx:206:              A 202 response means accepted. Retrying the same event ID and JSON
+src/features/execution/execution-workbench.tsx:3:import { useEffect, useState } from "react"
+src/features/execution/execution-workbench.tsx:31:  const [code, setCode] = useState(
+src/features/execution/execution-workbench.tsx:34:  const [data, setData] = useState("[1, 2, 3]")
+src/features/execution/execution-workbench.tsx:235:          {execution.attempt ? "Retry same request" : "Run code"}
+src/features/execution/execution-workbench.tsx:253:          The outcome is not confirmed. Retry sends the same saved request ID
+src/features/connections/use-connections.ts:3:import { useCallback, useEffect, useRef, useState } from "react"
+src/features/connections/use-connections.ts:24:  const [actor, setActor] = useState<EffectActor<Machine> | null>(null)
+src/features/connections/use-connections.ts:25:  const [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null)
+src/features/agents/use-agent-archive.ts:2:import { useEffect, useRef, useState } from "react"
+src/features/agents/use-agent-archive.ts:19:  const [snapshot, setSnapshot] = useState<SnapshotFrom<
+src/features/connections/connections-panel.tsx:2:import { useEffect, useState } from "react"
+src/features/connections/connections-panel.tsx:59:  const [draft, setDraft] = useState<ReturnType<typeof newDraft> | null>(null)
+src/features/connections/connections-panel.tsx:60:  const [callback, setCallback] = useState("")
+src/features/agents/use-agent-statuses.ts:2:import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+src/features/agents/use-agent-statuses.ts:17:  const [observed, setObserved] = useState<{
+src/features/agents/use-agent-statuses.ts:29:  const [live, publishLive] = useState<{
+src/features/agents/use-agent-editor.ts:2:import { useEffect, useRef, useState } from "react"
+src/features/agents/use-agent-editor.ts:20:  const [id] = useState(
+src/features/agents/use-agent-editor.ts:28:  const [snapshot, setSnapshot] = useState<SnapshotFrom<

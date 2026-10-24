@@ -1,0 +1,33 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+ ❯ ../../../../../../private/tmp/coordination-independent-restore.test.ts (8 tests | 1 failed) 52ms
+   × independent: held restore preserves structured Cause through callback and disposal 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  ../../../../../../private/tmp/coordination-independent-restore.test.ts > independent: held restore preserves structured Cause through callback and disposal
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ ../../../../../../private/tmp/coordination-independent-restore.test.ts:337:32
+    335|  const values=await Promise.all([observed,closing])
+    336|  for(const value of values){
+    337|   expect(Cause.isCause(value)).toBe(true)
+       |                                ^
+    338|   if(Cause.isCause(value)) expect(value.reasons.some(reason=>reason._t…
+    339|  }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 7 passed (8)
+   Start at  21:02:23
+   Duration  497ms (import 51%, transform 33%, tests 13%, setup 2%, worker 1%)
+

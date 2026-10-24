@@ -584,6 +584,8 @@ export class PersonalAgentProbe extends PersonalAgent {
     return this.ctx.storage.sql.exec(query, ...bindings).toArray() as T[]
   }
 
+  private coordinationHoldEntered = false
+  private releaseCoordination?: () => void
   private coordinationProbeEnabled = false
   protected override catalogProgram(): Effect.Effect<ModelCatalog> {
     return Effect.succeed({
@@ -3140,6 +3142,39 @@ export class PersonalAgentProbe extends PersonalAgent {
     _request: Request,
     action: string | undefined
   ): Promise<Response | undefined> {
+    if (action?.startsWith("coordination-held-")) {
+      if (action === "coordination-held-start") {
+        await this.lifecycle.start()
+        const held = new Promise<void>((resolve) => {
+          this.releaseCoordination = resolve
+        })
+        this.coordinationRunner.host.step = async () => {
+          this.coordinationHoldEntered = true
+          await held
+          // The accepted native callback still needs its actual runtime and SQL.
+          await this.actorRuntime.runPromise(this.configurationService.read())
+          this.events.push("coordination.settled")
+          return undefined
+        }
+        const dispose = this.coordinationRunner.dispose.bind(
+          this.coordinationRunner
+        )
+        this.coordinationRunner.dispose = () => {
+          this.events.push("coordination.close")
+          return dispose()
+        }
+        await this.coordinationRunner.armDiscovery()
+      }
+      if (action === "coordination-held-release") this.releaseCoordination?.()
+      if (action === "coordination-held-dispose") {
+        await this.lifecycle.dispose()
+        this.events.push("host.dispose")
+      }
+      return Response.json({
+        entered: this.coordinationHoldEntered,
+        events: this.events,
+      })
+    }
     const coordinationTurn = "00000000-0000-4000-8000-000000000081"
     if (action === "coordination-start") {
       this.coordinationProbeEnabled = true

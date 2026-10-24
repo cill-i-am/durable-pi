@@ -1,25 +1,34 @@
+import { createEffectActor, send, type EffectActor } from "@xstate/effect"
 import {
   LifecycleCapability,
   type LifecycleJob,
   type LifecycleJobContext,
   type LifecycleJobOutcome,
 } from "agents/lifecycle"
-import { Clock, Effect, Exit, Schema } from "effect"
+import { Cause, Clock, Deferred, Effect, Exit, Schema, Scope } from "effect"
+import type { EventFromLogic } from "xstate"
 
-import { nativeFailure } from "../../shared/interop"
+import { nativeFailure, nativeOperation } from "../../shared/interop"
 import { CoordinationFailure, fail } from "../contracts"
 import {
   armCoordinationDiscovery,
   observeCoordinationDiscovery,
   readCoordinationDiscovery,
 } from "../discovery.machine"
+import {
+  coordinationRunnerMachine,
+  type RunnerReply,
+  type RunnerAck,
+  type RunnerPermission,
+} from "../runner.machine"
 
-/** The existing capability/job remain the wake owner. Admission prearms a
- * retained lease; empty scans and stale callbacks cannot erase newer work. */
+/** Lifecycle retains durable scheduling and its three-attempt budget. The local
+ * actor owns activation, exact callback admission, and wake coalescing. */
 export class CoordinationRunner<E> extends LifecycleCapability {
-  private restoring?: Promise<void>
-  private restored = false
-  private active?: { job: LifecycleJob; wakeRequested: boolean }
+  private readonly scope = Scope.makeUnsafe()
+  private actor?: EffectActor<ReturnType<typeof coordinationRunnerMachine>>
+  private readonly operations = new Set<Promise<unknown>>()
+  private closing?: Promise<void>
   constructor(
     readonly host: {
       run: <A>(work: Effect.Effect<A, E>) => Promise<A>
@@ -31,6 +40,66 @@ export class CoordinationRunner<E> extends LifecycleCapability {
     }
   ) {
     super("agent-coordination")
+  }
+  private getActor() {
+    // Lifecycle's reentrant startup context is established by the first caller,
+    // after construction. Restoration must retain it when it reads native Pi.
+    return (this.actor ??= Effect.runSync(
+      createEffectActor(
+        coordinationRunnerMachine({
+          restore: () => Effect.suspend(() => this.host.restore()),
+        })
+      ).pipe(Scope.provide(this.scope))
+    ))
+  }
+  private track<A>(work: () => Promise<A>): Promise<A> {
+    const pending = work()
+    this.operations.add(pending)
+    void pending.then(
+      () => this.operations.delete(pending),
+      () => this.operations.delete(pending)
+    )
+    return pending
+  }
+  private async stopped() {
+    return this.getActor().getSnapshot().matches({ admission: "closed" })
+  }
+  private async request(
+    event: (
+      reply: RunnerReply
+    ) => EventFromLogic<ReturnType<typeof coordinationRunnerMachine>>
+  ) {
+    const actor = this.getActor()
+    if (actor.getSnapshot().matches({ admission: "closed" }))
+      return "stopped" as const
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const reply = yield* Deferred.make<RunnerPermission>()
+        yield* send(actor, event(reply))
+        return yield* Deferred.await(reply)
+      })
+    )
+  }
+  private async observe(
+    event: (
+      ack: RunnerAck
+    ) => EventFromLogic<ReturnType<typeof coordinationRunnerMachine>>
+  ) {
+    const actor = this.getActor()
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const ack = yield* Deferred.make<void>()
+        yield* send(actor, event(ack))
+        yield* Deferred.await(ack)
+      })
+    )
+  }
+  private async native<A>(start: () => Promise<A>) {
+    const exit = await Effect.runPromiseExit(
+      nativeOperation(start, (cause) => cause).pipe(Effect.scoped)
+    )
+    if (Exit.isFailure(exit)) throw exit.cause
+    return exit.value
   }
   private current() {
     return this.lifecycle.jobs.get("agent-coordination:pump")
@@ -63,102 +132,171 @@ export class CoordinationRunner<E> extends LifecycleCapability {
       retry: { maxAttempts: 3, baseDelayMs: 100, maxDelayMs: 1000 },
     })
   }
-  async armDiscovery() {
-    const now = Date.now(),
-      deadline = now + 60_000
-    await this.schedule(now, deadline)
-    return deadline
+  armDiscovery() {
+    return this.track(async () => {
+      if (await this.stopped())
+        throw new Error("Coordination runner has been disposed")
+      const now = Date.now(),
+        deadline = now + 60_000
+      await this.schedule(now, deadline)
+      return deadline
+    })
   }
-  async wake() {
-    if (this.active) {
-      this.active.wakeRequested = true
-      await this.lifecycle.jobs.rearm()
-      return
-    }
-    const now = Date.now()
-    await this.schedule(now, now)
+  wake() {
+    return this.track(async () => {
+      const permission = await this.request((reply) => ({
+        type: "WAKE",
+        reply,
+      }))
+      if (permission === "stopped") return
+      if (permission === "rearm") {
+        await this.lifecycle.jobs.rearm()
+        return
+      }
+      const now = Date.now()
+      await this.schedule(now, now)
+    })
   }
   private async restore() {
-    if (this.restored) return
-    this.restoring ??= this.host.run(this.host.restore()).then(
-      () => {
-        this.restored = true
-      },
-      (error: unknown) => {
-        this.restoring = undefined
-        throw error
-      }
+    const actor = this.getActor()
+    if (actor.getSnapshot().matches({ admission: "closed" })) return
+    const exit = await Effect.runPromiseExit(
+      Effect.gen(function* () {
+        const reply = yield* Deferred.make<void, unknown>()
+        yield* send(actor, { type: "RESTORE", reply })
+        yield* Deferred.await(reply)
+      })
     )
-    await this.restoring
+    if (Exit.isFailure(exit)) throw exit.cause
   }
-  async reconcile() {
-    await this.restore()
-    if (!this.current()) {
-      const next = await this.host.run(this.host.nextWake())
-      if (next !== undefined && !this.current()) await this.schedule(next, next)
-    }
-    await this.lifecycle.jobs.rearm()
+  reconcile() {
+    return this.track(async () => {
+      await this.restore()
+      if (await this.stopped()) return
+      if (!this.current()) {
+        const next = await this.host.run(this.host.nextWake())
+        if (await this.stopped()) return
+        if (next !== undefined && !this.current())
+          await this.schedule(next, next)
+      }
+      await this.lifecycle.jobs.rearm()
+    })
   }
-  async onJob({ job }: LifecycleJobContext): Promise<LifecycleJobOutcome> {
-    await this.restore()
-    const latest = this.current()
-    if (!latest || this.token(latest) !== this.token(job))
-      return this.outcome(job, undefined)
-    if (this.active && this.active.job !== job)
-      return this.outcome(job, { rescheduleAt: Date.now() + 1000 })
-    const dispatch = this.active ?? { job, wakeRequested: false }
-    this.active = dispatch
-    try {
-      const now = await this.host.run(Clock.currentTimeMillis)
-      const next = await this.host.step()
-      this.active = undefined
-      const command = observeCoordinationDiscovery(job.payload, job.time, {
-        now,
-        next: dispatch.wakeRequested
-          ? Math.min(next ?? Infinity, now)
-          : (next ?? null),
-      })[0]
-      return this.outcome(
+  onJob({ job }: LifecycleJobContext): Promise<LifecycleJobOutcome> {
+    return this.track(async () => {
+      await this.restore()
+      if (await this.stopped()) return
+      const latest = this.current()
+      const permission = await this.request((reply) => ({
+        type: "ADMIT",
         job,
-        command ? { rescheduleAt: command.at } : undefined
-      )
-    } finally {
-      this.host.notify?.()
-    }
+        current: !!latest && this.token(latest) === this.token(job),
+        reply,
+      }))
+      if (permission === "stopped") return
+      if (permission !== "start")
+        return this.outcome(
+          job,
+          permission === "defer"
+            ? { rescheduleAt: Date.now() + 1000 }
+            : undefined
+        )
+      try {
+        const { now, next } = await this.native(async () => ({
+          now: await this.host.run(Clock.currentTimeMillis),
+          next: await this.host.step(),
+        }))
+        const wake = await this.request((reply) => ({
+          type: "STEP_FINISHED",
+          job,
+          reply,
+        }))
+        if (await this.stopped()) return
+        const command = observeCoordinationDiscovery(job.payload, job.time, {
+          now,
+          next:
+            wake === "rearm" ? Math.min(next ?? Infinity, now) : (next ?? null),
+        })[0]
+        return this.outcome(
+          job,
+          command ? { rescheduleAt: command.at } : undefined
+        )
+      } catch (error) {
+        await this.observe((ack) => ({ type: "STEP_FAILED", job, ack }))
+        throw error
+      } finally {
+        this.host.notify?.()
+      }
+    })
   }
-  async onJobError(
+  onJobError(
     { job }: LifecycleJobContext,
     error: unknown
   ): Promise<LifecycleJobOutcome> {
-    // A hung SDK replacement cannot exhaust the original still-running owner,
-    // even when both callbacks carry the same durable scheduling token.
-    if (this.active && this.active.job !== job)
-      return this.outcome(job, { rescheduleAt: Date.now() + 1000 })
-    // No active dispatch means cold restoration failed before step began.
-    // Attempt to record that current job's exhausted recovery too, retaining
-    // the prearmed lease even if restoration/persistence remains unavailable.
-    if (this.active?.job === job) this.active = undefined
-    const current = () => {
-      const latest = this.current()
-      return !!latest && this.token(latest) === this.token(job)
-    }
-    const exit = await this.host.run(Effect.exit(this.host.exhaust(current)))
-    if (Exit.isFailure(exit))
-      await this.host.run(
-        Effect.logError(
-          "Coordination recovery persistence is unconfirmed",
-          exit.cause
-        )
+    return this.track(async () => {
+      const permission = await this.request((reply) => ({
+        type: "EXHAUST",
+        job,
+        reply,
+      }))
+      if (permission === "stopped") return
+      if (permission !== "start")
+        return this.outcome(job, { rescheduleAt: Date.now() + 1000 })
+      try {
+        return await this.native(async () => {
+          const current = () => {
+            const latest = this.current()
+            return !!latest && this.token(latest) === this.token(job)
+          }
+          const exit = await this.host.run(
+            Effect.exit(this.host.exhaust(current))
+          )
+          if (Exit.isFailure(exit))
+            await this.host.run(
+              Effect.logError(
+                "Coordination recovery persistence is unconfirmed",
+                exit.cause
+              )
+            )
+          await this.host.run(
+            Effect.logError("Coordination recovery exhausted", error)
+          )
+          if (await this.stopped()) return
+          const now = await this.host.run(Clock.currentTimeMillis)
+          const command = observeCoordinationDiscovery(job.payload, job.time, {
+            now,
+            next: null,
+          })[0]
+          return this.outcome(
+            job,
+            command ? { rescheduleAt: command.at } : undefined
+          )
+        })
+      } finally {
+        await this.observe((ack) => ({ type: "EXHAUSTED", job, ack }))
+      }
+    })
+  }
+  dispose() {
+    return (this.closing ??= (async () => {
+      await this.observe((ack) => ({ type: "CLOSE", ack }))
+      const settled = await Promise.allSettled([...this.operations])
+      const exit = await Effect.runPromiseExit(
+        Scope.close(this.scope, Exit.void)
       )
-    await this.host.run(
-      Effect.logError("Coordination recovery exhausted", error)
-    )
-    const now = await this.host.run(Clock.currentTimeMillis)
-    const command = observeCoordinationDiscovery(job.payload, job.time, {
-      now,
-      next: null,
-    })[0]
-    return this.outcome(job, command ? { rescheduleAt: command.at } : undefined)
+      const failures = settled.flatMap((result) =>
+        result.status === "rejected"
+          ? [
+              Cause.isCause(result.reason)
+                ? result.reason
+                : Cause.die(result.reason),
+            ]
+          : []
+      )
+      if (Exit.isFailure(exit)) failures.push(exit.cause)
+      if (failures.length)
+        throw Cause.fromReasons(failures.flatMap((cause) => cause.reasons))
+    })())
   }
 }
 

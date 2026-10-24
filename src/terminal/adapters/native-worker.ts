@@ -63,6 +63,7 @@ export class LinuxSandboxV1 extends DurableObject<NativeTerminalEnv> {
     this.ctx.waitUntil(pending)
     return pending
   }
+  private readonly databaseScope = Scope.makeUnsafe()
   private readonly capacityOwner = new NativeContainerOwner(
     this.ctx.id.toString(),
     this.container,
@@ -75,13 +76,13 @@ export class LinuxSandboxV1 extends DurableObject<NativeTerminalEnv> {
       },
       fence: () => this.ctx.storage.kv.get<number>("capacity:fence") ?? 0,
       setFence: (epoch) => this.ctx.storage.kv.put("capacity:fence", epoch),
-    }
+    },
+    this.databaseScope
   )
   retireCapacity(epoch: number) {
     return this.capacityOwner.retireIdle(epoch)
   }
   private readonly files = new Files(this.container)
-  private readonly databaseScope = Scope.makeUnsafe()
   private readonly db = Effect.runSync(
     Effect.gen({ self: this }, function* () {
       const db = yield* makeDurableObjectSqlite(this.ctx.storage)

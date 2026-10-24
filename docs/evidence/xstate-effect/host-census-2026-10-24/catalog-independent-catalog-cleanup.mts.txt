@@ -1,0 +1,27 @@
+import assert from 'node:assert/strict'
+import {createRequire} from 'node:module'
+const root='/Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi',require=createRequire(root+'/package.json')
+const effectPath=require.resolve('effect');console.log(JSON.stringify({effectPath}));assert(effectPath.includes('effect@4.0.5'))
+const {Cause,Context,Deferred,Effect,Exit,Fiber,Scope}=await import(effectPath)
+const {makeModelCatalog}=await import(process.argv[2]==='current'?root+'/src/inference/catalog.ts':'/private/tmp/c1-c2-independent/catalog.before.ts')
+const {nativeOperation}=await import(root+'/src/shared/interop.ts')
+const catalog={models:[],checkedAt:'2026-10-23T00:00:00.000Z',error:null,usage:'ChatGPT plan usage'}
+const annotation=Context.makeUnsafe(new Map([['catalog-independent','kept']])),checked=Cause.makeFailReason('checked cleanup').annotate(annotation),interrupted=Cause.makeInterruptReason(81726).annotate(annotation),defect=Cause.makeDieReason('cleanup defect').annotate(annotation)
+const outputs=[]
+for(const withDefect of [false,true]) {
+ const output=await Effect.runPromise(Effect.scoped(Effect.gen(function*(){
+  const scope=yield*Scope.make(),started=yield*Deferred.make(),aborted=yield*Deferred.make();let reject,closed=false
+  const reader=yield*makeModelCatalog({current:()=>Effect.succeed({identity:'a',load:()=>nativeOperation(signal=>new Promise((_resolve,fail)=>{reject=fail;signal.addEventListener('abort',()=>Effect.runSync(Deferred.succeed(aborted,undefined)));Effect.runSync(Deferred.succeed(started,undefined))}),x=>x)})},{storage:{read:()=>Effect.succeed({identity:'a',verifiedAt:Date.now()-300001,retryAt:0,failures:0,value:catalog}),write:()=>Effect.void}}).pipe(Scope.provide(scope))
+  assert.deepEqual(yield*reader.read(),catalog);yield*Deferred.await(started)
+  const closing=yield*Scope.close(scope,Exit.void).pipe(Effect.exit,Effect.tap(()=>Effect.sync(()=>{closed=true})),Effect.forkChild)
+  yield*Deferred.await(aborted);assert.equal(closed,false,'background native cleanup must be joined')
+  reject(Cause.fromReasons(withDefect?[checked,defect,interrupted]:[checked,interrupted]))
+  const exit=yield*Fiber.join(closing),reasons=Exit.isFailure(exit)?exit.cause.reasons:[]
+  const hasChecked=reasons.some(r=>(r._tag==='Fail'&&r.error==='checked cleanup'&&r.annotations.get('catalog-independent')==='kept')||(r._tag==='Die'&&r.defect?._tag==='Fail'&&r.defect.error==='checked cleanup'&&r.defect.annotations.get('catalog-independent')==='kept'))
+  const hasInterrupt=reasons.some(r=>r._tag==='Interrupt'&&r.fiberId===81726&&r.annotations.get('catalog-independent')==='kept')
+  const hasDefect=reasons.some(r=>r._tag==='Die'&&r.defect==='cleanup defect'&&r.annotations.get('catalog-independent')==='kept')
+  return {withDefect,exit:exit._tag,hasChecked,hasInterrupt,hasDefect}
+ })))
+ outputs.push(output);console.log(JSON.stringify(output))
+}
+for(const output of outputs)assert(output.hasChecked&&output.hasInterrupt&&(!output.withDefect||output.hasDefect),'background scope close must retain the original compound native failure')

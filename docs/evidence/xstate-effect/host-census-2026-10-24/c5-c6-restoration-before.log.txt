@@ -1,0 +1,45 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+ ❯ tests/census-lifecycle-validation.test.ts (9 tests | 5 failed) 21ms
+   × rejects incompatible capacity data without allocating from it: {"next":0,"leases":[]} 3ms
+   × rejects incompatible capacity data without allocating from it: {"next":2,"leases":[{"owner":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","epoch":1,"issuedAt":0},{"owner":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","epoch":1,"issuedAt":0}]} 0ms
+   × rejects incompatible capacity data without allocating from it: {"next":2,"leases":[{"owner":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","epoch":2,"issuedAt":0}]} 0ms
+   × rejects incompatible capacity data without allocating from it: {"next":2,"leases":[{"owner":"not-an-owner","epoch":1,"issuedAt":0}]} 0ms
+   × restores compatible cutover data and rejects malformed and conflicting progression 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/census-lifecycle-validation.test.ts > rejects incompatible capacity data without allocating from it: {"next":0,"leases":[]}
+ FAIL  tests/census-lifecycle-validation.test.ts > rejects incompatible capacity data without allocating from it: {"next":2,"leases":[{"owner":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","epoch":1,"issuedAt":0},{"owner":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","epoch":1,"issuedAt":0}]}
+ FAIL  tests/census-lifecycle-validation.test.ts > rejects incompatible capacity data without allocating from it: {"next":2,"leases":[{"owner":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","epoch":2,"issuedAt":0}]}
+ FAIL  tests/census-lifecycle-validation.test.ts > rejects incompatible capacity data without allocating from it: {"next":2,"leases":[{"owner":"not-an-owner","epoch":1,"issuedAt":0}]}
+AssertionError: expected [Function] to throw an error
+ ❯ tests/census-lifecycle-validation.test.ts:104:93
+    102|   { next: 2, leases: [{ ...lease, owner: "not-an-owner" }] },
+    103| ])("rejects incompatible capacity data without allocating from it: %j"…
+    104|   expect(() => decideCapacity(current, { type: "ACQUIRE", owner: "b".r…
+       |                                                                                             ^
+    105| })
+    106| const receipt = { owner: lease.owner, name: "pi-synthetic", key: `term…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  tests/census-lifecycle-validation.test.ts > restores compatible cutover data and rejects malformed and conflicting progression
+AssertionError: expected [Function] to throw an error
+ ❯ tests/census-lifecycle-validation.test.ts:120:104
+    118|   expect(() => restoreTerminalMigration({ phase: "future" } as never))…
+    119|   expect(() => restoreTerminalMigration({ phase: "copying", receipt, c…
+    120|   expect(() => restoreTerminalMigration({ phase: "snapshot", id: "test…
+       |                                                                                                        ^
+    121| })
+    122|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  5 failed | 4 passed (9)
+   Start at  19:18:18
+   Duration  462ms (import 76%, transform 14%, tests 6%, setup 2%, worker 1%)
+

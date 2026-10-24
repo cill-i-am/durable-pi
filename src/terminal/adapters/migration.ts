@@ -6,6 +6,13 @@ import {
   MAX_CHECKPOINT,
   TerminalFailure,
 } from "../contracts"
+import {
+  advanceTerminalMigration,
+  restoreTerminalMigration,
+  MigrationReceipt,
+  type MigrationMarker,
+} from "../migration.machine"
+export { MigrationReceipt, type MigrationMarker } from "../migration.machine"
 import { readBounded } from "./stream"
 
 const tables = {
@@ -36,14 +43,6 @@ export interface MigrationBucket {
   } | null>
   put: (key: string, bytes: Uint8Array) => Promise<unknown>
 }
-export const MigrationReceipt = Schema.Struct({
-  owner: Schema.String,
-  name: Schema.String,
-  key: Schema.String,
-  sha256: Schema.String,
-  size: Schema.Number,
-})
-export type MigrationReceipt = typeof MigrationReceipt.Type
 interface Page {
   table: Table
   key: string
@@ -59,13 +58,6 @@ interface Manifest {
   name: string
   pages: Page[]
   counts: Record<Table, number>
-}
-export interface MigrationMarker {
-  phase: "frozen" | "sealed" | "snapshot" | "copying" | "done" | "moved"
-  id?: string
-  name?: string
-  receipt?: MigrationReceipt
-  copied?: number
 }
 export interface MigrationMarkers {
   get: () => MigrationMarker | undefined
@@ -139,15 +131,13 @@ export class TerminalMigration {
     private readonly markers: MigrationMarkers
   ) {}
   assertWritable() {
-    const phase = this.markers.get()?.phase
-    if (phase && phase !== "done")
+    if (!restoreTerminalMigration(this.markers.get()).hasTag("writable"))
       throw new TerminalFailure({
         message: "Terminal migration is in progress. Try again shortly.",
       })
   }
   assertCancellationAllowed() {
-    const phase = this.markers.get()?.phase
-    if (phase && phase !== "frozen" && phase !== "done")
+    if (!restoreTerminalMigration(this.markers.get()).hasTag("cancellable"))
       throw new TerminalFailure({
         message: "Terminal migration is in progress. Try again shortly.",
       })
@@ -194,16 +184,34 @@ export class TerminalMigration {
   ): Promise<MigrationReceipt> {
     if (!validOwner(this.owner) || !validName(name))
       throw new Error("Invalid migration owner")
-    const previous = this.markers.get()
+    const previous = this.db.atomic(() => {
+      const old = this.markers.get()
+      const next = advanceTerminalMigration(old, {
+        type: "FREEZE",
+        name,
+        id: old?.id ?? crypto.randomUUID(),
+      })
+      this.markers.put(next)
+      return next
+    })
     if (
       previous?.receipt &&
       (previous.phase === "snapshot" || previous.phase === "moved")
     )
       return previous.receipt
-    const id = previous?.id ?? crypto.randomUUID()
-    this.markers.put({ phase: "frozen", name, id })
-    await drain()
-    this.markers.put({ phase: "sealed", name, id })
+    const id = previous.id!
+    if (previous.phase === "frozen") {
+      await drain()
+      this.db.atomic(() =>
+        this.markers.put(
+          advanceTerminalMigration(this.markers.get(), {
+            type: "SEAL",
+            name,
+            id,
+          })
+        )
+      )
+    }
     const prefix = "terminal-migration/" + this.owner + "/" + id + "/"
     const pages: Page[] = []
     const counts = Object.fromEntries(
@@ -259,7 +267,16 @@ export class TerminalMigration {
       size: bytes.length,
     }
     await this.bucket.put(receipt.key, bytes)
-    this.markers.put({ phase: "snapshot", id, name, receipt })
+    this.db.atomic(() =>
+      this.markers.put(
+        advanceTerminalMigration(this.markers.get(), {
+          type: "SNAPSHOT",
+          id,
+          name,
+          receipt,
+        })
+      )
+    )
     return receipt
   }
   private async readManifest(receipt: MigrationReceipt) {
@@ -289,25 +306,22 @@ export class TerminalMigration {
   }
   async import(receipt: MigrationReceipt) {
     const manifest = await this.readManifest(receipt)
-    const previous = this.markers.get()
-    if (
-      previous?.receipt &&
-      (previous.receipt.sha256 !== receipt.sha256 ||
-        previous.receipt.owner !== receipt.owner)
-    )
-      throw new Error("Conflicting terminal migration")
-    if (previous?.phase === "done")
-      return { verified: true, sha256: receipt.sha256, counts: manifest.counts }
-    if (!previous) {
+    const previous = this.db.atomic(() => {
+      const old = this.markers.get()
       if (
+        !old &&
         keys.some(
           (table) =>
             this.db.query("SELECT id FROM " + table + " LIMIT 1").length
         )
       )
         throw new Error("Native terminal already contains state")
-      this.markers.put({ phase: "copying", receipt, copied: 0 })
-    }
+      const next = advanceTerminalMigration(old, { type: "COPY", receipt })
+      this.markers.put(next)
+      return next
+    })
+    if (previous.phase === "done")
+      return { verified: true, sha256: receipt.sha256, counts: manifest.counts }
     for (
       let index = this.markers.get()?.copied ?? 0;
       index < manifest.pages.length;
@@ -317,11 +331,13 @@ export class TerminalMigration {
     }
     const result = await this.verify(receipt)
     this.db.atomic(() =>
-      this.markers.put({
-        phase: "done",
-        receipt,
-        copied: manifest.pages.length,
-      })
+      this.markers.put(
+        advanceTerminalMigration(this.markers.get(), {
+          type: "VERIFIED",
+          receipt,
+          copied: manifest.pages.length,
+        })
+      )
     )
     return result
   }
@@ -372,6 +388,13 @@ export class TerminalMigration {
       })
     }
     this.db.atomic(() => {
+      const current = this.markers.get()
+      const next = advanceTerminalMigration(current, {
+        type: "PAGE",
+        receipt,
+        index,
+      })
+      if (next.copied === current?.copied) return
       const columns = tables[page.table]
       for (const row of rows) {
         const existing = this.db.query(
@@ -399,7 +422,7 @@ export class TerminalMigration {
             ...columns.map((column) => row[column]!)
           )
       }
-      this.markers.put({ phase: "copying", receipt, copied: index + 1 })
+      this.markers.put(next)
     })
   }
   async verify(receipt: MigrationReceipt) {
@@ -446,15 +469,14 @@ export class TerminalMigration {
   commitSource(receipt: MigrationReceipt) {
     this.db.atomic(() => {
       const current = this.markers.get()
-      if (current?.receipt?.sha256 !== receipt.sha256)
-        throw new Error("Unprepared source migration")
+      const next = advanceTerminalMigration(current, { type: "MOVE", receipt })
       // Older Worker versions cannot reactivate this retired authority.
       this.db.query(
         "INSERT INTO terminal_authority (id,revision,active,revoked_through) VALUES (1,0,0,?) ON CONFLICT(id) DO UPDATE SET active=0,revoked_through=?",
         Number.MAX_SAFE_INTEGER,
         Number.MAX_SAFE_INTEGER
       )
-      this.markers.put({ ...current, phase: "moved" })
+      this.markers.put(next)
     })
   }
 }

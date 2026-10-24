@@ -314,12 +314,20 @@ describe("Linux commands", () => {
     )
   })
   it("destroys a surviving container after restart before reporting idle or admitting", async () => {
-    const closed = deferred<void>()
-    const f = fixture({ close: vi.fn(() => closed.promise) })
+    const closed = deferred<void>(),
+      entered = deferred<void>()
+    const f = fixture({
+      close: vi.fn(() => {
+        entered.resolve()
+        return closed.promise
+      }),
+    })
     Effect.runSync(
       f.repository.claim(input, "command", undefined, crypto.randomUUID())
     )
     const recovering = f.terminal.recover()
+    // recover is an asynchronous Effect; observe admitted native ownership.
+    await entered.promise
     expect(f.terminal.state().busy).toBe(true)
     expect(Effect.runSync(f.repository.get(input.id))?.status).toBe(
       "interrupted"
@@ -332,6 +340,34 @@ describe("Linux commands", () => {
     expect(f.terminal.state().busy).toBe(false)
     expect(f.runtime.close).toHaveBeenCalledTimes(1)
   })
+  it("orders a concurrent command behind admitted recovery without dispatching it", async () => {
+    const entered = deferred<void>(),
+      release = deferred<void>()
+    const f = fixture({
+      close: vi.fn(() => {
+        entered.resolve()
+        return release.promise
+      }),
+    })
+    const recovery = f.terminal.recover()
+    const command = run(
+      f.terminal.start({ ...input, id: "concurrent-recovery" })
+    ).then(
+      () => "unexpected admission",
+      (error: unknown) => error
+    )
+    await entered.promise
+    expect(f.terminal.state().busy).toBe(true)
+    expect(() =>
+      f.terminal.configureNetwork({ revision: 0, unrestricted: true })
+    ).toThrow("cleanup")
+    expect(await command).toMatchObject({
+      message: expect.stringContaining("cleanup"),
+    })
+    expect(f.runtime.execute).not.toHaveBeenCalled()
+    release.resolve()
+    await recovery
+  })
   it("fails closed on unconfirmed cleanup and permits an explicit recovery retry", async () => {
     const f = fixture({
       close: vi
@@ -341,6 +377,34 @@ describe("Linux commands", () => {
     })
     await f.terminal.recover()
     expect(f.terminal.state().cleanupError).toContain("not be confirmed")
+    await expect(run(f.terminal.start(input))).rejects.toThrow("cleanup")
+    await f.terminal.recover()
+    expect(f.terminal.state().cleanupError).toBeNull()
+  })
+  it("retains fatal native cleanup uncertainty without command rows and preserves the full Cause", async () => {
+    const defect = new Error("native close defect")
+    const fatal = Cause.fromReasons([
+      Cause.makeDieReason(defect),
+      Cause.makeInterruptReason(88236),
+    ])
+    const f = fixture({
+      close: vi.fn().mockRejectedValueOnce(fatal).mockResolvedValue(undefined),
+    })
+    const result = await Effect.runPromiseExit(f.terminal.service.recover())
+    expect(Exit.isFailure(result)).toBe(true)
+    if (Exit.isFailure(result)) {
+      expect(result.cause.reasons).toContainEqual(
+        expect.objectContaining({ _tag: "Die", defect })
+      )
+      expect(result.cause.reasons).toContainEqual(
+        expect.objectContaining({ _tag: "Interrupt", fiberId: 88236 })
+      )
+    }
+    expect(Effect.runSync(f.repository.list())).toEqual([])
+    expect(f.terminal.state().cleanupError).toContain("not be confirmed")
+    expect(() =>
+      f.terminal.configureNetwork({ revision: 0, unrestricted: false })
+    ).toThrow("cleanup")
     await expect(run(f.terminal.start(input))).rejects.toThrow("cleanup")
     await f.terminal.recover()
     expect(f.terminal.state().cleanupError).toBeNull()
@@ -840,9 +904,15 @@ describe("owner-controlled terminal internet access", () => {
     ).toThrow("Stop or save")
     done.resolve(0)
     await command.completion
-    const close = deferred<void>()
-    f.runtime.close = () => close.promise
+    const close = deferred<void>(),
+      entered = deferred<void>()
+    f.runtime.close = () => {
+      entered.resolve()
+      return close.promise
+    }
     const recovery = f.terminal.recover()
+    // Keep cleanup held while testing the original network permission.
+    await entered.promise
     expect(() =>
       f.terminal.configureNetwork({ revision: 0, unrestricted: true })
     ).toThrow("cleanup")

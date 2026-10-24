@@ -1,0 +1,62 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+ ❯ tests/terminal-migration.test.ts (9 tests | 2 failed) 577ms
+   × never reopens a sealed source while resuming a failed snapshot 81ms
+   × rejects changed snapshot identity and a copied target cannot retire source authority 82ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/terminal-migration.test.ts > never reopens a sealed source while resuming a failed snapshot
+AssertionError: expected [Function] to throw an error
+
+- Expected:
+null
+
++ Received:
+undefined
+
+ ❯ tests/terminal-migration.test.ts:404:53
+    402|   f.blobs.port.put = original
+    403|   const drain = vi.fn(async () => {
+    404|     expect(() => f.old.assertCancellationAllowed()).toThrow("migration…
+       |                                                     ^
+    405|   })
+    406|   await f.old.snapshot("pi-synthetic", drain)
+ ❯ TerminalMigration.snapshot src/terminal/adapters/migration.ts:205:11
+ ❯ tests/terminal-migration.test.ts:406:15
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/terminal-migration.test.ts > rejects changed snapshot identity and a copied target cannot retire source authority
+AssertionError: promise resolved "{ …(5) }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "key": "terminal-migration/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/89d421a0-6ade-452c-9ceb-6ad3a924cd2a/manifest.json",
++   "name": "pi-synthetic",
++   "owner": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
++   "sha256": "4a3a9508eab6007f51eccbaabff266b6f66ea055d64cf60f4f2c83f0c42ff70e",
++   "size": 2646,
+  }
+
+ ❯ tests/terminal-migration.test.ts:413:63
+    411|   const f = await fixture()
+    412|   const receipt = await f.old.snapshot("pi-synthetic", async () => {})
+    413|   await expect(f.old.snapshot("pi-different", async () => {})).rejects…
+       |                                                               ^
+    414|   await f.next().import(receipt)
+    415|   expect(() => f.next().commitSource(receipt)).toThrow("Unprepared")
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 7 passed (9)
+   Start at  19:02:53
+   Duration  856ms (tests 75%, import 19%, transform 4%, setup 1%)
+

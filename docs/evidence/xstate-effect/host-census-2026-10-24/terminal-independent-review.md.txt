@@ -1,0 +1,11 @@
+# Terminal host bounded independent review
+
+Closed on the exact owner freeze recorded in closed-manifest.json. No production or Git edits by reviewer.
+
+One concrete finding was reproduced: a native close failing with Die plus Interrupt(88236), with no command rows, rejected recovery but returned the host to ready with cleanupError:null. Synchronous network configuration succeeded despite unconfirmed cleanup. The repair observes every unsuccessful joined close/settle outcome before release/RECOVERY_FINISHED, preserving the original Cause while retaining the local cleanup marker. The analogous command cleanup path records the same uncertainty.
+
+The unchanged actual-service/NodeSQLite probe passes after repair. The second independent probe holds recovery SQL across runtime disposal, then holds native close: disposal remains pending, no command producer starts, the competing command rejects, and exact cleanup joins once. An initial fixture awaited the competing request before releasing cleanup's installation semaphore and timed out; correcting only wait ordering preserved all safety assertions. This was not a production finding. The corrected before probe and after probe are byte-identical.
+
+Source review supports the exact captured recovery-fiber join/retirement, closed admission before and after SQL claim, original cancelled receipt, cleanup uncertainty projection, synchronous snapshot.can network decision plus repository occupancy checks, and actor/fiber finalizer ordering. The parent-approved two legacy native-entry barriers retain their original assertions. Owner acceptance counts were context, not independent proof.
+
+Independent execution used real production Terminal, official Effect actor and NodeSQLite with held synthetic native calls. It did not run Sandbox, workerd, real providers or broad gates. No remaining concrete finding in this bounded review.

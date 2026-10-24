@@ -129,6 +129,42 @@ const config :Workerd.Config = (
 );`
   )
   await start()
+  const heldCoordination = (action) =>
+    call(`personal-coordination-disposal/coordination-held-${action}`, {})
+  const waitCoordinationHeld = async (predicate) => {
+    for (let attempt = 0; attempt < 100; attempt++) {
+      const state = await heldCoordination("inspect")
+      if (predicate(state)) return state
+      await sleep(25)
+    }
+    throw new Error("Native Coordination shutdown did not progress")
+  }
+  await heldCoordination("start")
+  await waitCoordinationHeld((state) => state.entered)
+  const heldCoordinationDisposal = heldCoordination("dispose")
+  void heldCoordinationDisposal.catch(() => {})
+  const coordinationClosing = await waitCoordinationHeld((state) =>
+    state.events.includes("coordination.close")
+  )
+  assert(
+    !coordinationClosing.events.includes("actor.connections.close"),
+    "Actor resources closed before accepted Coordination work joined"
+  )
+  assert(!coordinationClosing.events.includes("host.dispose"))
+  await heldCoordination("release")
+  const coordinationClosed = await heldCoordinationDisposal
+  assert(coordinationClosed.events.indexOf("coordination.settled") >= 0)
+  assert(
+    coordinationClosed.events.indexOf("coordination.settled") <
+      coordinationClosed.events.indexOf("actor.connections.close")
+  )
+  assert(
+    coordinationClosed.events.indexOf("actor.connections.close") <
+      coordinationClosed.events.indexOf("host.dispose")
+  )
+  console.log(
+    "PASS native Coordination callback joins before actor runtime and SQL disposal."
+  )
   const maintenanceState = () => call("maintenance/inspect", {})
   const waitMaintenance = async (predicate) => {
     for (let attempt = 0; attempt < 100; attempt++) {

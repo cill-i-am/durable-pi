@@ -41,6 +41,7 @@ import { conversationActivitiesProbe } from "./conversation-activities"
 import { conversationHandoffProbe } from "./conversation-handoff"
 import { conversationStreamProbe } from "./conversation-stream"
 import { drizzleProbeRows } from "./drizzle-schema"
+import { terminalCensusProbe } from "./terminal-census"
 
 function persistedMachineProbe(mode: string, storage: DurableObjectStorage) {
   if (
@@ -184,6 +185,8 @@ export class DrizzleProbe extends DurableObject<Record<string, never>> {
           conversationStreamProbe(mode === "conversation-milestones")
         )
       )
+    if (mode === "terminal-census")
+      return Response.json(await terminalCensusProbe(this.ctx.storage))
     if (mode === "conversation-handoff")
       return Response.json(
         await this.runtime.runPromise(conversationHandoffProbe())

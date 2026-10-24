@@ -1,0 +1,33 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+ ❯ tests/coordination-runner-lifecycle.test.ts (9 tests | 1 failed) 52ms
+   × creates the restoration owner in the native startup caller context 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/coordination-runner-lifecycle.test.ts > creates the restoration owner in the native startup caller context
+AssertionError: expected undefined to be 'startup-owner' // Object.is equality
+
+- Expected:
+"startup-owner"
+
++ Received:
+undefined
+
+ ❯ tests/coordination-runner-lifecycle.test.ts:397:22
+    395|   try {
+    396|     await startup.run("startup-owner", () => f.runner.reconcile())
+    397|     expect(observed).toBe("startup-owner")
+       |                      ^
+    398|   } finally { await f.runner.dispose() }
+    399| })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 8 passed (9)
+   Start at  19:33:44
+   Duration  368ms (import 62%, tests 19%, transform 15%, setup 3%, worker 1%)
+

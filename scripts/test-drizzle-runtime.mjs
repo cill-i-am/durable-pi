@@ -164,6 +164,7 @@ const config :Workerd.Config = (
         "conversation-stream",
         "conversation-milestones",
         "conversation-handoff",
+        "terminal-census",
         ...[
           "commit",
           "rollback",
@@ -272,6 +273,16 @@ const config :Workerd.Config = (
         cursorFrames: 2,
         handoffFrames: kind === "conversation-milestones" ? 2 : 0,
         released: 1,
+      })
+    if (kind === "terminal-census")
+      assert.deepEqual(result, {
+        capacityBounded: true,
+        closeJoined: true,
+        exactRelease: true,
+        sealedRecovery: true,
+        pageRollback: true,
+        restoredDuplicate: true,
+        sourceAuthority: true,
       })
     if (kind === "conversation-handoff")
       assert.deepEqual(result, {

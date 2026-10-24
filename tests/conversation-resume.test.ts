@@ -145,7 +145,7 @@ it("an unknown or unacknowledged checkpoint always receives a full snapshot", as
 })
 
 it("unchanged heartbeat reconciliation does not reserialize the checkpoint", async () => {
-  vi.useFakeTimers()
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] })
   const checkpoint = new ConversationCheckpoint()
   const current = vi.spyOn(checkpoint, "current")
   const reader = open(checkpoint, null)

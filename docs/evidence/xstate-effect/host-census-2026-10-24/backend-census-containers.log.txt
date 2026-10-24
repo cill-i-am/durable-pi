@@ -1,0 +1,114 @@
+$ docker build --platform linux/amd64 --tag durable-pi-ci:terminal containers/terminal && docker build --platform linux/amd64 --tag durable-pi-ci:terminal-native containers/terminal-native
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 507B 0.0s done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/cloudflare/sandbox:0.12.10@sha256:35c932d3e5b35f28d350800cf00551cac46dfe28274afb54e16325b8d8f560d1
+#2 DONE 0.1s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 2B done
+#3 DONE 0.0s
+
+#4 [internal] load build context
+#4 DONE 0.0s
+
+#5 [1/6] FROM docker.io/cloudflare/sandbox:0.12.10@sha256:35c932d3e5b35f28d350800cf00551cac46dfe28274afb54e16325b8d8f560d1
+#5 resolve docker.io/cloudflare/sandbox:0.12.10@sha256:35c932d3e5b35f28d350800cf00551cac46dfe28274afb54e16325b8d8f560d1
+#5 resolve docker.io/cloudflare/sandbox:0.12.10@sha256:35c932d3e5b35f28d350800cf00551cac46dfe28274afb54e16325b8d8f560d1 0.2s done
+#5 DONE 0.2s
+
+#4 [internal] load build context
+#4 transferring context: 9.83kB done
+#4 DONE 0.0s
+
+#6 [5/6] COPY check-video.py /tmp/check-video.py
+#6 CACHED
+
+#7 [2/6] COPY --chmod=755 pi-shell /usr/local/bin/pi-shell
+#7 CACHED
+
+#8 [3/6] COPY --chmod=755 pi-video.py /usr/local/bin/pi-video.py
+#8 CACHED
+
+#9 [4/6] RUN apt-get update && apt-get install -y --no-install-recommends python3 ffmpeg     && rm -rf /var/lib/apt/lists/* && mkdir -p /workspace
+#9 CACHED
+
+#10 [6/6] RUN /usr/bin/python3 /tmp/check-video.py && rm /tmp/check-video.py
+#10 CACHED
+
+#11 exporting to image
+#11 exporting layers 0.0s done
+#11 exporting manifest sha256:f7df704badbc2daef142b6c254824e15b1457ef9220c974a9f5c20ca345173ee done
+#11 exporting config sha256:55b0c3a8c76cf178613a888226a8e49df5c1d080f08b344b9cffe33ce74fc4e8 done
+#11 exporting attestation manifest sha256:b58f797e25f970d1a130daa3b1edd290ebe42c3377fc31fefd1c82620e09d957 0.0s done
+#11 exporting manifest list sha256:cb4797a44dc104a464bb0afb64d277b33af63949fa298cc85208eeb35e2918b8 0.0s done
+#11 naming to docker.io/library/durable-pi-ci:terminal done
+#11 DONE 0.1s
+
+View build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/ulnh46nkssk4p9hgt6u4pfu73
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 839B done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/node:24.21.0-trixie-slim@sha256:173f125896c3b47ddf056734c7ea789d04595a6a08769a8f78e0df642781fb66
+#2 DONE 1.3s
+
+#3 [internal] load metadata for docker.io/cloudflare/sandbox:1.0.1@sha256:e796e813de8213fb062bba279ddeddbf61277389a2cc7b3e4620075a9188843b
+#3 DONE 1.3s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 2B done
+#4 DONE 0.0s
+
+#5 FROM docker.io/cloudflare/sandbox:1.0.1@sha256:e796e813de8213fb062bba279ddeddbf61277389a2cc7b3e4620075a9188843b
+#5 resolve docker.io/cloudflare/sandbox:1.0.1@sha256:e796e813de8213fb062bba279ddeddbf61277389a2cc7b3e4620075a9188843b done
+#5 DONE 0.0s
+
+#6 [stage-0 1/9] FROM docker.io/library/node:24.21.0-trixie-slim@sha256:173f125896c3b47ddf056734c7ea789d04595a6a08769a8f78e0df642781fb66
+#6 resolve docker.io/library/node:24.21.0-trixie-slim@sha256:173f125896c3b47ddf056734c7ea789d04595a6a08769a8f78e0df642781fb66 0.0s done
+#6 DONE 0.0s
+
+#7 [internal] load build context
+#7 transferring context: 10.04kB done
+#7 DONE 0.0s
+
+#8 [stage-0 8/9] RUN /usr/bin/python3 /tmp/check-video.py && rm /tmp/check-video.py
+#8 CACHED
+
+#9 [stage-0 7/9] COPY check-video.py /tmp/check-video.py
+#9 CACHED
+
+#10 [stage-0 4/9] RUN printf 'set -g status off\nset -g history-limit 1000\n' > /etc/tmux.conf
+#10 CACHED
+
+#11 [stage-0 5/9] COPY --chmod=755 pi-shell /usr/local/bin/pi-shell
+#11 CACHED
+
+#12 [stage-0 6/9] COPY --chmod=755 pi-video.py /usr/local/bin/pi-video.py
+#12 CACHED
+
+#13 [stage-0 3/9] COPY --from=docker.io/cloudflare/sandbox:1.0.1@sha256:e796e813de8213fb062bba279ddeddbf61277389a2cc7b3e4620075a9188843b /usr/local/bin/sandbox-shim /usr/local/bin/sandbox-shim
+#13 CACHED
+
+#14 [stage-0 2/9] RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl git python3 ffmpeg tmux     && rm -rf /var/lib/apt/lists/* && mkdir -p /workspace
+#14 CACHED
+
+#15 [stage-0 9/9] WORKDIR /workspace
+#15 CACHED
+
+#16 exporting to image
+#16 exporting layers done
+#16 exporting manifest sha256:aecff541b66b37a1471070af4c585c977d30b27488a861dd3f7a3d4e28c265d8 done
+#16 exporting config sha256:cc04fa4a0bec6a926e553406b0620d9b67db46f82bbe6e3395355d68457f2fed done
+#16 exporting attestation manifest sha256:0a210aa17dd2788021d84d2bbd7806fccd3ab512c36bdc42dc48370c74669b5f
+#16 exporting attestation manifest sha256:0a210aa17dd2788021d84d2bbd7806fccd3ab512c36bdc42dc48370c74669b5f 0.0s done
+#16 exporting manifest list sha256:1d7e845397b2c97616f1f921c86a602427d6cceaf51caddb94e847dcf6ee83a1 0.0s done
+#16 naming to docker.io/library/durable-pi-ci:terminal-native done
+#16 DONE 0.1s
+
+View build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/8cx33rc6wgkzb2o2u6di5f5jl

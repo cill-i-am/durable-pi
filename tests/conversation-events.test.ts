@@ -95,7 +95,16 @@ async function frame(
 
 describe("conversation stream", () => {
   it("publishes the first change immediately and coalesces the following burst", async () => {
-    vi.useFakeTimers()
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] })
+    const coalescing = deferred<void>()
+    const schedule = globalThis.setTimeout
+    const timer = vi
+      .spyOn(globalThis, "setTimeout")
+      .mockImplementation((handler, delay, ...args) => {
+        const handle = schedule(handler, delay, ...args)
+        if (delay === 80) coalescing.resolve()
+        return handle
+      })
     const f = fixture()
     try {
       await frame(f.reader)
@@ -105,8 +114,9 @@ describe("conversation stream", () => {
       })
       f.change({ ...initial, turns: [{ ...turn, answer: "First token" }] })
       await vi.advanceTimersByTimeAsync(0)
-      expect(first?.done).toBe(false)
       await pending
+      expect(first?.done).toBe(false)
+      await coalescing.promise
       for (let count = 1; count <= 20; count++)
         f.change({
           ...initial,
@@ -123,6 +133,7 @@ describe("conversation stream", () => {
       expect(new TextDecoder().decode(next?.value)).toContain("Tokens 20")
     } finally {
       await f.reader.cancel()
+      timer.mockRestore()
     }
   })
 
@@ -204,7 +215,7 @@ describe("conversation stream", () => {
     expect(stream.stop).toHaveBeenCalledOnce()
   })
   it("closes the old session watcher before acquiring its replacement", async () => {
-    vi.useFakeTimers()
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] })
     const stopping = deferred<void>(),
       released = deferred<void>(),
       replaced = deferred<void>()
@@ -328,7 +339,7 @@ describe("conversation stream", () => {
     expect(stream.stop).toHaveBeenCalledOnce()
   })
   it("starts with durable state and publishes turn deltas and removals", async () => {
-    vi.useFakeTimers()
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] })
     const f = fixture()
     const first = await frame(f.reader)
     expect(first).toEqual({ type: "snapshot", state: initial })
@@ -348,7 +359,7 @@ describe("conversation stream", () => {
     expect(f.unsubscribe).toHaveBeenCalledOnce()
   })
   it("stops on client abort and periodically reconnects to reauthorize", async () => {
-    vi.useFakeTimers()
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] })
     const f = fixture()
     await frame(f.reader)
     f.controller.abort()
@@ -362,7 +373,7 @@ describe("conversation stream", () => {
     expect(vi.getTimerCount()).toBe(0)
   })
   it("bounds slow-client buffers and releases subscriptions at the authorization deadline", async () => {
-    vi.useFakeTimers()
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] })
     const f = fixture()
     for (let count = 0; count < 8; count++) {
       f.change({ ...initial, memory: { ...initial.memory, messages: count } })
@@ -375,6 +386,7 @@ describe("conversation stream", () => {
     await f.reader.cancel()
   })
   it("releases a Pi watch that attaches after the HTTP client leaves", async () => {
+    const entered = deferred<void>()
     let attach!: (watch: AgentEventStream) => void
     const pending = new Promise<AgentEventStream>((resolve) => {
       attach = resolve
@@ -386,13 +398,16 @@ describe("conversation stream", () => {
       {
         snapshot: () => Effect.succeed(initial),
         activeSession: () => Effect.succeed("one"),
-        watch: () => pending,
+        watch: () => {
+          entered.resolve()
+          return pending
+        },
         subscribe: () => () => {},
       },
       controller.signal
     )
     const reader = response.body!.getReader()
-    await Promise.resolve()
+    await entered.promise
     controller.abort()
     attach({
       snapshot: {

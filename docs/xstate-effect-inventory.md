@@ -72,13 +72,15 @@ Every item here is local and must use an explicitly owned Effect actor scope. Ba
 
 Frontend paths after the first path in each cell are relative to that path's directory until another `src/` prefix appears. No row authorizes one giant cross-feature machine. Basic async submit lifecycles qualify even when they are short; queries already fully delegated to TanStack need no mirrored machine.
 
+F04–F08 are published in [draft #220](https://github.com/cill-i-am/durable-pi/pull/220) with [frozen source and composed gates](evidence/xstate-effect/f04-f08-publication-manifest.json). F09–F14 and the three frontend follow-ups are in [draft #221](https://github.com/cill-i-am/durable-pi/pull/221), with [owner paths and final local evidence](xstate-effect-frontend-completion.md). Both include the [reproduced passkey focus correction](evidence/xstate-effect/f08-focus-repair/README.md). The first hosted browser runs exposed that correction after their Playwright cases passed; revised commits `02af9d2` / `e87ffb4` still need final hosted checks.
+
 ## Responsibility-based exclusions and coverage reconciliation
 
 These exclusions concern the named responsibility, not every future line in the directory. A module can contain both an excluded pure helper and an in-scope control path listed above.
 
 | Paths / responsibility | Classification and reason |
 | --- | --- |
-| `src/activity/{contracts,run,service}.ts`, `src/tasks/{contracts,commands,directory}.ts`, `src/agents/statuses.ts`, `src/features/agents/catalog-state.ts` | Derived inspection/catalog/status views; mutations delegate to the owning lifecycle. Their DTO state is not independently authoritative. |
+| `src/activity/{contracts,run,service}.ts`, `src/tasks/{contracts,commands,directory}.ts`, `src/agents/statuses.ts` | Derived inspection/catalog/status views; mutations delegate to the owning lifecycle. Their DTO state is not independently authoritative. |
 | `src/inference/{domain,policy,selection,usage-domain,timing}.ts`, catalog/usage adapters | Model selection, metering, timing and catalog data. Credential/sign-in progression is B15; a counter or cached model list is not a machine. |
 | `src/planning/evidence.ts`, `src/objects/contracts.ts`, `src/apps/app.ts`, `src/apps/html.ts` | Evidence computation, user-authored checklist/form values and rendering/validation. Cancellation/receipt gates and plan reopening remain B14; Apps event delivery is B12. |
 | `src/features/files/preparation.ts`, `src/features/conversation/{commands,delivery-preference}.ts`, `src/features/conversation/turn-delivery.tsx` | Pure selectors/attempt construction. Retain as pure helpers behind F01/F03 decisions. |
@@ -99,13 +101,24 @@ The composed-source census after B17 identified these additional application-own
 
 | Follow-up | Owning row and required boundary |
 | --- | --- |
-| Auth request ordering and cooldown in `src/auth/session-fetch.ts` | B16/F08: serialize auth mutations, coalesce compatible reads, preserve caller cancellation isolation and native deadlines. Better Auth remains session authority. |
-| Catalogue refresh/backoff in `src/inference/catalog.ts` | B15: preserve persisted retry/freshness policy, identity rechecks and denial/transient distinction. Native cache and catalogue payloads remain data/capabilities. |
-| Conversation observer and diagnostic handoff in `src/conversations/events.ts` and `adapters/handoff.ts` | B06/B16: own watcher replacement, timed observation, admission, pipe transfer and retirement; keep SSE framing, cursor and backpressure mechanics. |
-| Terminal capacity and cutover in `src/terminal/adapters/{capacity,migration}.ts` | B04/B16: own acknowledged reclamation, native epoch fencing and durable freeze/import/move progression from the existing ledgers, without another journal. |
+| Implemented locally: auth request ordering and cooldown in `src/auth/session-fetch.ts` | B16/F08: serialize auth mutations, coalesce compatible reads, preserve caller cancellation isolation and native deadlines. Better Auth remains session authority. |
+| Implemented locally: catalogue refresh/backoff in `src/inference/catalog.ts` | B15: preserve persisted retry/freshness policy, identity rechecks and denial/transient distinction. Native cache and catalogue payloads remain data/capabilities. |
+| Implemented locally: conversation observer and diagnostic handoff in `src/conversations/events.ts` and `adapters/handoff.ts` | B06/B16: own watcher replacement, timed observation, admission, pipe transfer and retirement; keep SSE framing, cursor and backpressure mechanics. |
+| Implemented locally: Terminal capacity and cutover in `src/terminal/adapters/{capacity,migration}.ts` | B04/B16: own acknowledged reclamation, native epoch fencing and durable freeze/import/move progression from the existing ledgers, without another journal. |
 | Implemented locally: model-default save in `src/features/conversation/model-defaults.tsx` | F09: own admitted save/acknowledgement/refresh and agent/draft revision fences. TanStack remains query-cache owner. |
 | Implemented locally: deferred workspace navigation and route-error retry in `src/app/{workspace-navigation,workspace-link-error}.tsx` | F10: own deferred close-to-navigation and native invalidate/reset lifetimes; Base UI and Router remain native owners. |
 | Implemented locally: Memory panel search/source/tree reads in `src/features/memory/memory-panel.tsx` | F13: own custom request admission, completion, retry and cancellation. Result DTOs remain projections. |
+
+The [additional host census](xstate-effect-host-census.md) records the implemented owners, restored-data checks, native transaction proof and the corrected Coordination startup-context regression. Composed local unit/build, native, browser, static and container gates pass; publication and hosted CI remain open.
+
+A further full-source rescan identified local adapter ownership still outside the machines:
+
+| Remaining host boundary | Owning row and required boundary |
+| --- | --- |
+| Conversation and Communication runner activation, callback ownership and wake coalescing in `src/{conversations,communication}/adapters/lifecycle.ts` | B06/B07: retain exact SDK callback identity, exhausted budgets, receipt correlation, durable discovery and explicit recovery; close admission before joining accepted work. |
+| Workspace and Routine callback admission in `src/{workspace,routines}/adapters/lifecycle.ts` | B10/B11: retain revision/attempt fences, held native cleanup, same-token replacement refusal and wake fairness. |
+| App-event local dispatch admission in `src/apps/adapters/lifecycle.ts` | B12: retain acknowledged dispatch, spent lease and orphan/late-commit behavior; do not create another business retry. |
+| Memory Summary/Backup activation and closed admission in `src/memory/adapters/{summary-lifecycle,backup-lifecycle}.ts` | B13/B18: retain the existing controller/dispatch machines and storage ownership, exact claims, failed cleanup and joined disposal. Only the remaining local permission gates are open. |
 
 The same census classifies CopyButton's copied/failed feedback timer as presentation: it does not gate copy admission or retry. `src/http/poll.ts` and its sole legacy test file are removed after composing all remaining consumers and confirming no caller remains. The three frontend census follow-ups have passed composed local gates; their publication and hosted CI remain open. Final integrated source hashes and behavioral gates remain required.
 

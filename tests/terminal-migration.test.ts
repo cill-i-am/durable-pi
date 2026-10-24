@@ -353,3 +353,89 @@ it("seals a drained source before awaiting remote page writes", async () => {
   expect((await f.next().import(receipt)).counts.terminal_runs).toBe(33)
   expect(() => f.next().assertCancellationAllowed()).not.toThrow()
 })
+
+it("joins an admitted capacity acquisition before close and fences its late native start", async () => {
+  let token: number | undefined
+  let fence = 0
+  let grant!: (lease: CapacityLease) => void
+  let entered!: () => void
+  const acquiring = new Promise<void>((resolve) => {
+    entered = resolve
+  })
+  const container = {
+    images: { TerminalImage: "verified" },
+    start: vi.fn(),
+    setInactivityTimeout: vi.fn(async () => {}),
+    running: false,
+    destroy: vi.fn(async () => {}),
+  }
+  const release = vi.fn(async () => true)
+  const owner = new NativeContainerOwner(
+    targetOwner,
+    container,
+    {
+      acquire: () =>
+        new Promise<CapacityLease>((resolve) => {
+          grant = resolve
+          entered()
+        }),
+      release,
+    },
+    {
+      token: () => token,
+      setToken: (value) => {
+        token = value
+      },
+      fence: () => fence,
+      setFence: (value) => {
+        fence = value
+      },
+    }
+  )
+  const starting = owner.start().then(
+    () => "started",
+    () => "fenced"
+  )
+  await acquiring
+  let closed = false
+  const closing = owner.close().then(() => {
+    closed = true
+  })
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  const joinedBeforeGrant = !closed
+  grant({ owner: targetOwner, epoch: 1, issuedAt: 0 })
+  await closing
+  expect(await starting).toBe("fenced")
+  expect(joinedBeforeGrant).toBe(true)
+  expect(container.start).not.toHaveBeenCalled()
+  expect(release).toHaveBeenCalledWith(targetOwner, 1)
+  expect(token).toBeUndefined()
+})
+
+it("never reopens a sealed source while resuming a failed snapshot", async () => {
+  const f = await fixture()
+  const original = f.blobs.port.put
+  f.blobs.port.put = async () => {
+    throw new Error("storage unavailable")
+  }
+  await expect(f.old.snapshot("pi-synthetic", async () => {})).rejects.toThrow(
+    "storage unavailable"
+  )
+  expect(f.old.status()).toBe("sealed")
+  f.blobs.port.put = original
+  const drain = vi.fn(async () => {
+    expect(() => f.old.assertCancellationAllowed()).toThrow("migration")
+  })
+  await f.old.snapshot("pi-synthetic", drain)
+  expect(drain).not.toHaveBeenCalled()
+})
+
+it("rejects changed snapshot identity and a copied target cannot retire source authority", async () => {
+  const f = await fixture()
+  const receipt = await f.old.snapshot("pi-synthetic", async () => {})
+  await expect(f.old.snapshot("pi-different", async () => {})).rejects.toThrow(
+    "Conflicting"
+  )
+  await f.next().import(receipt)
+  expect(() => f.next().commitSource(receipt)).toThrow("Unprepared")
+})

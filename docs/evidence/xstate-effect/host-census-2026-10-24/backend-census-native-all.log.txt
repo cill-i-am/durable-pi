@@ -1,0 +1,22 @@
+$ pnpm generate-routes && pnpm test:communication-runtime && pnpm test:communication-control-runtime && pnpm test:coordination-runtime && pnpm test:conversation-runtime && pnpm test:workspace-runtime && pnpm test:routines-runtime && pnpm test:apps-runtime && pnpm test:drizzle-runtime && pnpm test:whatsapp-runtime && pnpm test:background-stop-runtime && pnpm test:memory-runtime && pnpm test:memory-summary-runtime && pnpm test:memory-backup-runtime && pnpm test:upstream-runtime && pnpm test:xstate-runtime
+$ tsr generate
+(node:56205) Warning: Accessing non-existent property 'replaceRouteChunk' of module exports inside circular dependency
+(Use `node --trace-warnings ...` to show where the warning was created)
+$ node scripts/test-communication-runtime.mjs
+file:///Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/scripts/test-communication-runtime.mjs:69
+    throw new Error(`Fixture ${path} request failed; ${output.slice(-6000)}`, {
+          ^
+
+Error: Fixture personal-coordination/coordination-start request failed; service fixture: The compatibility flag nodejs_compat became the default as of 2026-08-04 so does not need to be specified anymore.
+service chatgpt-provider: The compatibility flag nodejs_compat became the default as of 2026-08-04 so does not need to be specified anymore.
+
+    at file:///Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/scripts/test-communication-runtime.mjs:69:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async call (file:///Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/scripts/test-communication-runtime.mjs:61:20)
+    at async file:///Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/scripts/test-communication-runtime.mjs:146:6 {
+  [cause]: [DOMException [TimeoutError]: The operation was aborted due to timeout]
+}
+
+Node.js v24.21.0
+[ELIFECYCLE] Command failed with exit code 1.
+[ELIFECYCLE] Command failed with exit code 1.

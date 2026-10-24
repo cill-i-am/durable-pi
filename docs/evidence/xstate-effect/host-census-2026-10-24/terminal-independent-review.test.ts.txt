@@ -1,0 +1,63 @@
+import { Cause, Effect } from "effect"
+import { expect, it, vi } from "vitest"
+import { TerminalStore } from "/Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/src/terminal/adapters/sqlite.ts"
+import { relayTerminal } from "/Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/src/terminal/adapters/socket.ts"
+import { database } from "/Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/tests/database.ts"
+import { Terminal } from "/Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/tests/terminal-fixture.ts"
+
+const barrier = () => {
+ let resolve!: () => void
+ const promise = new Promise<void>(r => resolve = r)
+ return {promise, resolve}
+}
+function fixture(close: () => Promise<void>) {
+ const db=database(), store=new TerminalStore(db)
+ let executions=0
+ const terminal=new Terminal(store, {
+  close, restore:async()=>{}, execute:async()=>{executions++;return 0}, snapshot:async()=>new Uint8Array([1]),
+ }, {read:async()=>new Uint8Array([1]),write:async()=>({key:"synthetic",sha256:"x",size:1,savedAt:0})}, relayTerminal)
+ terminal.configure(1,true)
+ return {db,store,terminal,executions:()=>executions}
+}
+
+it("held SQL recovery survives CLOSE only as joined native cleanup, with no command producer",async()=>{
+ const locked=barrier(), sqlRelease=barrier(), closeEntered=barrier(), closeRelease=barrier()
+ let closes=0
+ const f=fixture(async()=>{closes++;closeEntered.resolve();await closeRelease.promise})
+ const holding=Effect.runPromise(f.db.transaction(()=>Effect.sync(()=>locked.resolve()).pipe(Effect.andThen(Effect.promise(()=>sqlRelease.promise)))))
+ await locked.promise
+ const originalRecover=f.store.recover.bind(f.store)
+ const recoverEntered=barrier()
+ f.store.recover=(id?:string)=>Effect.sync(()=>recoverEntered.resolve()).pipe(Effect.andThen(originalRecover(id)))
+ const recovering=f.terminal.recover().then(()=>"success",()=>"interrupted")
+ await recoverEntered.promise
+ let disposed=false
+ const disposal=f.terminal.runtime.dispose().then(()=>{disposed=true})
+ const attempted=Effect.runPromise(f.terminal.service.start({id:"after-close",command:"echo forbidden"})).then(()=>"admitted",()=>"rejected")
+ sqlRelease.resolve();await holding
+ await closeEntered.promise
+ expect(disposed).toBe(false)
+ expect(f.executions()).toBe(0)
+ // The request may have passed its first admission check before disposal's
+ // finalizer queued CLOSE. It must reject after the joined installation lock.
+ closeRelease.resolve()
+ await Promise.all([recovering,disposal])
+ expect(await attempted).toBe("rejected")
+ expect(closes).toBe(1)
+ expect(Effect.runSync(f.store.get("after-close"))).toBeUndefined()
+ console.log(JSON.stringify({case:"held-sql-close",closes,executions:f.executions(),disposed}))
+})
+
+it("fatal native close with no command rows retains cleanup uncertainty until explicit recovery",async()=>{
+ let closes=0
+ const fatal=Cause.fromReasons([Cause.makeDieReason(new Error("native close defect")),Cause.makeInterruptReason(88236)])
+ const f=fixture(async()=>{if(++closes===1)throw fatal})
+ const result=await f.terminal.recover().then(()=>undefined,(error:unknown)=>error)
+ expect(result).toBeDefined()
+ const state=f.terminal.state()
+ let network="allowed"
+ try{f.terminal.configureNetwork({revision:0,unrestricted:false})}catch{network="blocked"}
+ console.log(JSON.stringify({case:"fatal-cleanup-empty-ledger",state,network,closes}))
+ expect(state.cleanupError).not.toBeNull()
+ expect(network).toBe("blocked")
+})

@@ -308,7 +308,7 @@ import { ReplyRunner } from "../replies/adapters/lifecycle"
 import { admitReply } from "../replies/admission"
 import { replyDeliveryProgress } from "../replies/progress"
 import { jsonRequest } from "../shared/http"
-import { nativeResponse } from "../shared/interop"
+import { nativeOperation, nativeResponse } from "../shared/interop"
 import { localTaskControls } from "../tasks/adapters/personal-agent"
 import { readTaskResponse } from "../tasks/adapters/response"
 import { taskTools, taskInstructions } from "../tasks/adapters/tools"
@@ -614,8 +614,9 @@ class ActorServices extends LifecycleCapability {
       this.owner.compactor.dispose(),
       this.owner.backups.dispose(),
     ])
-    // Stop provider admission and accepted account refreshes together: provider
-    // waiters must join refresh settlement, which requires its owner to stop too.
+    // Stop provider admission, account refreshes and Coordination together.
+    // Accepted callbacks retain their runtime and SQL until native work settles;
+    // their provider waiters also need provider/credential shutdown to progress.
     await Effect.runPromise(
       Effect.all(
         [
@@ -625,6 +626,10 @@ class ActorServices extends LifecycleCapability {
             .pipe(Effect.exit),
           this.owner.credentialService.shutdown().pipe(Effect.exit),
           this.owner.shutdownUpstream.pipe(Effect.exit),
+          nativeOperation(
+            () => this.owner.coordinationRunner.dispose(),
+            (cause) => cause
+          ).pipe(Effect.exit),
         ],
         { concurrency: "unbounded" }
       ).pipe(

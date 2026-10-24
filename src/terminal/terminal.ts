@@ -41,6 +41,13 @@ import type {
   TerminalRuntimeError,
 } from "./runtime"
 import {
+  terminalServiceHostMachine,
+  terminalCleanupMessage as cleanupMessage,
+  type HostCheck,
+  type HostObservation,
+  type HostPermission,
+} from "./service-host.machine"
+import {
   makeInteractiveSession,
   type InteractiveSession,
   type TerminalRelay,
@@ -127,14 +134,10 @@ const attempt = <T>(body: () => T) =>
     },
   })
 const commandResult = Schema.decodeUnknownSync(CommandRun)
-const cleanupMessage =
-  "The command outcome or container cleanup could not be confirmed. Retry recovery before running another command."
 
 export class Terminal implements TerminalOperations {
   private readonly admissions = Semaphore.makeUnsafe(1)
-  private closed = false
   private recovery: Fiber.Fiber<void, TerminalOperationError> | null = null
-  private cleanupError: string | null = null
   private active: {
     id: string
     attemptId: string
@@ -146,15 +149,50 @@ export class Terminal implements TerminalOperations {
   constructor(
     private readonly options: TerminalOptions,
     private readonly tasks: FiberSet.FiberSet<void, TerminalOperationError>,
-    private readonly clock: Clock.Clock
+    private readonly clock: Clock.Clock,
+    private readonly host: EffectActor<typeof terminalServiceHostMachine>
   ) {}
   private get repository() {
     return this.options.repository
   }
+  private observe = (type: HostObservation) =>
+    Effect.gen({ self: this }, function* () {
+      const ack = yield* Deferred.make<void>()
+      yield* send(this.host, { type, ack })
+      yield* Deferred.await(ack)
+    })
+  private check = (mode: HostCheck) =>
+    Effect.gen({ self: this }, function* () {
+      if (this.host.getSnapshot().status !== "active")
+        return yield* new TerminalFailure({
+          message: "The terminal host has stopped.",
+        })
+      const reply = yield* Deferred.make<HostPermission>()
+      yield* send(this.host, {
+        type: "CHECK",
+        mode,
+        active: this.active !== null,
+        reply,
+      })
+      const permission = yield* Deferred.await(reply)
+      if (permission === "stopped")
+        return yield* new TerminalFailure({
+          message: "The terminal host has stopped.",
+        })
+      if (permission === "active")
+        return yield* new TerminalFailure({
+          message: "Stop the active command before retrying cleanup.",
+        })
+      if (permission === "cleanup")
+        return yield* new TerminalFailure({
+          message: "Wait for the active command and its cleanup to finish.",
+        })
+      return permission
+    })
   shutdown = Effect.fn("Terminal.shutdown")(() =>
-    Effect.sync(() => {
-      this.closed = true
-    }).pipe(
+    // CLOSE is enqueued before waiting for the installation lock. Subsequent
+    // CHECK events cannot overtake it, including after an awaited SQL claim.
+    this.observe("CLOSE").pipe(
       Effect.andThen(this.admissions.withPermit(FiberSet.clear(this.tasks)))
     )
   )
@@ -218,9 +256,11 @@ export class Terminal implements TerminalOperations {
         savedAt: checkpoint?.savedAt ?? null,
         busy:
           !!this.active ||
-          !!this.recovery ||
+          this.host.getSnapshot().matches({ cleanup: "recovering" }) ||
           (!blocked && (yield* this.repository.occupied())),
-        cleanupError: this.cleanupError ?? (blocked ? cleanupMessage : null),
+        cleanupError:
+          this.host.getSnapshot().context.cleanupError ??
+          (blocked ? cleanupMessage : null),
         session: this.active?.session?.state() ?? null,
       }
     })
@@ -229,7 +269,11 @@ export class Terminal implements TerminalOperations {
     (input: TerminalNetworkPolicy) =>
       Effect.gen({ self: this }, function* () {
         yield* attempt(() => {
-          if (this.active || this.recovery || this.cleanupError)
+          if (
+            !this.host
+              .getSnapshot()
+              .can({ type: "CONFIGURE_NETWORK", active: this.active !== null })
+          )
             throw new TerminalFailure({
               message:
                 "Stop or save the active terminal session and wait for cleanup before changing internet access.",
@@ -246,34 +290,33 @@ export class Terminal implements TerminalOperations {
       Effect.gen({ self: this }, function* () {
         const fiber = yield* this.admissions.withPermit(
           Effect.gen({ self: this }, function* () {
-            if (this.recovery) return this.recovery
-            yield* attempt(() => {
-              if (this.closed)
-                throw new TerminalFailure({
-                  message: "The terminal host has stopped.",
-                })
-              if (this.active)
-                throw new TerminalFailure({
-                  message: "Stop the active command before retrying cleanup.",
-                })
-            })
+            const joining = this.recovery
+            if ((yield* this.check("recover")) === "join") {
+              if (!joining)
+                return yield* Effect.die("Missing terminal recovery fiber")
+              return joining
+            }
             const ownerId = crypto.randomUUID()
             yield* this.repository.recover(ownerId)
-            this.cleanupError = null
+            yield* this.observe("RECOVERY_STARTED")
             let confirmed = false
             const begin = yield* Deferred.make<void>()
             const work = Deferred.await(begin).pipe(
               Effect.andThen(this.options.runtime.close()),
               preserveFatal,
               Effect.catchTag("TerminalRuntimeError", () =>
-                Effect.sync(() => {
-                  this.cleanupError = cleanupMessage
-                })
+                this.observe("CLEANUP_FAILED")
               ),
               Effect.ensuring(this.options.runtime.settle()),
+              Effect.onExit((exit) =>
+                Exit.isFailure(exit)
+                  ? this.observe("CLEANUP_FAILED")
+                  : Effect.void
+              ),
               Effect.tap(() =>
                 Effect.sync(() => {
-                  confirmed = this.cleanupError === null
+                  confirmed =
+                    this.host.getSnapshot().context.cleanupError === null
                 })
               ),
               Effect.ensuring(
@@ -282,9 +325,13 @@ export class Terminal implements TerminalOperations {
                 ).pipe(orDieAll)
               ),
               Effect.ensuring(
-                Effect.sync(() => {
-                  this.recovery = null
-                })
+                this.observe("RECOVERY_FINISHED").pipe(
+                  Effect.andThen(
+                    Effect.sync(() => {
+                      if (this.recovery === active) this.recovery = null
+                    })
+                  )
+                )
               )
             )
             this.recovery = yield* FiberSet.run(
@@ -388,121 +435,108 @@ export class Terminal implements TerminalOperations {
       kind: NonNullable<CommandRun["kind"]> = "command",
       transfer?: { plan: TransferPlan; bytes?: Uint8Array }
     ) =>
-      Effect.suspend(() =>
-        this.closed
-          ? Effect.fail(
-              new TerminalFailure({ message: "The terminal host has stopped." })
-            )
-          : this.admissions.withPermit(
-              Effect.uninterruptible(
-                Effect.gen({ self: this }, function* () {
-                  const decoded = yield* Schema.decodeUnknownEffect(
-                    CommandInput
-                  )(input).pipe(
-                    Effect.mapError(
-                      () =>
-                        new TerminalFailure({
-                          message: "Invalid command request.",
-                        })
-                    )
-                  )
-                  if (this.closed)
-                    return yield* new TerminalFailure({
-                      message: "The terminal host has stopped.",
-                    })
-                  const existing = yield* this.repository.get(decoded.id)
-                  if (
-                    !existing &&
-                    (this.active || this.recovery || this.cleanupError)
-                  )
-                    return yield* new TerminalFailure({
-                      message:
-                        "Wait for the active command and its cleanup to finish.",
-                    })
-                  const { run, fresh } = yield* this.repository.claim(
-                    decoded,
-                    kind,
-                    transfer?.plan,
-                    crypto.randomUUID()
-                  )
-                  if (!fresh)
-                    return {
-                      run: commandResult(run),
-                      completion:
-                        this.active?.id === run.id
-                          ? Fiber.join(this.active.fiber)
-                          : Effect.void,
-                    }
-                  if (this.closed) {
-                    yield* this.repository.finish(
-                      run.id,
-                      {
-                        status: "cancelled",
-                        exitCode: null,
-                        error:
-                          "The terminal host stopped before dispatch. This command was not executed.",
-                      },
-                      undefined,
-                      undefined,
-                      run.attemptId
-                    )
-                    yield* this.repository.release(run.attemptId, true)
-                    return yield* new TerminalFailure({
-                      message: "The terminal host has stopped.",
-                    })
-                  }
-                  const controller = new AbortController()
-                  const sessionScope = yield* Scope.make()
-                  const session =
-                    kind === "session"
-                      ? yield* makeInteractiveSession(
-                          run.id,
-                          controller,
-                          this.options.relay,
-                          this.clock
-                        ).pipe(Effect.provideService(Scope.Scope, sessionScope))
-                      : undefined
-                  const begin = yield* Deferred.make<void>()
-                  const work = Deferred.await(begin).pipe(
-                    Effect.andThen(
-                      this.perform(
-                        run,
-                        controller,
-                        sessionScope,
-                        session,
-                        transfer?.bytes
-                      )
-                    ),
-                    Effect.ensuring(
-                      Effect.sync(() => {
-                        controller.abort()
-                        session?.dispose()
-                        if (this.active?.attemptId === run.attemptId)
-                          this.active = null
+      this.check("open").pipe(
+        Effect.andThen(
+          this.admissions.withPermit(
+            Effect.uninterruptible(
+              Effect.gen({ self: this }, function* () {
+                const decoded = yield* Schema.decodeUnknownEffect(CommandInput)(
+                  input
+                ).pipe(
+                  Effect.mapError(
+                    () =>
+                      new TerminalFailure({
+                        message: "Invalid command request.",
                       })
-                    ),
-                    Effect.onExit((exit) => Scope.close(sessionScope, exit))
                   )
-                  const fiber = yield* FiberSet.run(
-                    this.tasks,
-                    Effect.interruptible(work)
-                  )
-                  this.active = {
-                    id: run.id,
-                    attemptId: run.attemptId,
-                    authorityRevision: run.authorityRevision ?? -1,
-                    controller,
-                    fiber,
-                    session,
-                  }
-                  yield* Deferred.succeed(begin, undefined)
+                )
+                yield* this.check("open")
+                const existing = yield* this.repository.get(decoded.id)
+                if (!existing) yield* this.check("resources")
+                const { run, fresh } = yield* this.repository.claim(
+                  decoded,
+                  kind,
+                  transfer?.plan,
+                  crypto.randomUUID()
+                )
+                if (!fresh)
                   return {
                     run: commandResult(run),
-                    completion: Fiber.join(fiber),
+                    completion:
+                      this.active?.id === run.id
+                        ? Fiber.join(this.active.fiber)
+                        : Effect.void,
                   }
-                })
-              )
+                const admission = yield* Effect.exit(this.check("open"))
+                if (Exit.isFailure(admission)) {
+                  yield* this.repository.finish(
+                    run.id,
+                    {
+                      status: "cancelled",
+                      exitCode: null,
+                      error:
+                        "The terminal host stopped before dispatch. This command was not executed.",
+                    },
+                    undefined,
+                    undefined,
+                    run.attemptId
+                  )
+                  yield* this.repository.release(run.attemptId, true)
+                  return yield* Effect.failCause(admission.cause)
+                }
+                const controller = new AbortController()
+                const sessionScope = yield* Scope.make()
+                const session =
+                  kind === "session"
+                    ? yield* makeInteractiveSession(
+                        run.id,
+                        controller,
+                        this.options.relay,
+                        this.clock
+                      ).pipe(Effect.provideService(Scope.Scope, sessionScope))
+                    : undefined
+                const begin = yield* Deferred.make<void>()
+                const work = Deferred.await(begin).pipe(
+                  Effect.andThen(
+                    this.perform(
+                      run,
+                      controller,
+                      sessionScope,
+                      session,
+                      transfer?.bytes
+                    )
+                  ),
+                  Effect.ensuring(
+                    Effect.sync(() => {
+                      controller.abort()
+                      session?.dispose()
+                      if (this.active?.attemptId === run.attemptId)
+                        this.active = null
+                    })
+                  ),
+                  Effect.onExit((exit) => Scope.close(sessionScope, exit))
+                )
+                const fiber = yield* FiberSet.run(
+                  this.tasks,
+                  Effect.interruptible(work)
+                )
+                this.active = {
+                  id: run.id,
+                  attemptId: run.attemptId,
+                  authorityRevision: run.authorityRevision ?? -1,
+                  controller,
+                  fiber,
+                  session,
+                }
+                yield* Deferred.succeed(begin, undefined)
+                return {
+                  run: commandResult(run),
+                  completion: Fiber.join(fiber),
+                }
+              })
             )
+          )
+        )
       )
   )
   cancel = Effect.fn("Terminal.cancel")((id: string) =>
@@ -711,9 +745,7 @@ export class Terminal implements TerminalOperations {
       runtime.close().pipe(
         preserveFatal,
         Effect.catchTag("TerminalRuntimeError", () =>
-          Effect.sync(() => {
-            this.cleanupError = cleanupMessage
-          })
+          this.observe("CLEANUP_FAILED")
         )
       )
     return Effect.acquireUseRelease(
@@ -767,9 +799,12 @@ export class Terminal implements TerminalOperations {
           Effect.ensuring(session ? session.settleConnections() : Effect.void),
           Effect.ensuring(Scope.close(sessionScope, Exit.void)),
           Effect.ensuring(finalizeClose()),
+          Effect.onExit((exit) =>
+            Exit.isFailure(exit) ? this.observe("CLEANUP_FAILED") : Effect.void
+          ),
           Effect.tap(() =>
             Effect.sync(() => {
-              confirmed = this.cleanupError === null
+              confirmed = this.host.getSnapshot().context.cleanupError === null
             })
           )
         )
@@ -805,7 +840,8 @@ export const terminalLayer = (options: TerminalOptions) =>
       const terminal = new Terminal(
         options,
         yield* FiberSet.make<void, TerminalOperationError>(),
-        yield* Clock.Clock
+        yield* Clock.Clock,
+        yield* createEffectActor(terminalServiceHostMachine)
       )
       yield* Effect.addFinalizer(() => terminal.shutdown())
       return terminal
