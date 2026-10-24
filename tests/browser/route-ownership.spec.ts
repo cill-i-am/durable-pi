@@ -75,7 +75,7 @@ async function addResearch(page: Page, status = "active") {
 
 async function mockLibraries(page: Page) {
   const tool = {
-    name: "mcp_calendar_read",
+    name: `mcp_${"c".repeat(40)}`,
     connectionId: `mcp-${"a".repeat(32)}`,
     connectionRevision: 0,
     connectionName: "Calendar service",

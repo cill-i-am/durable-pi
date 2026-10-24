@@ -211,7 +211,7 @@ test("uncertain reconnect retains its expected revision and shows the SDK author
       },
     })
   })
-  await login(page, "/agents/home/settings/connections")
+  await login(page, "/settings/connections")
   const reconnect = page.getByRole("button", { name: "Reconnect", exact: true })
   await reconnect.click()
   await expect(
@@ -265,7 +265,7 @@ test("a superseded catalog response cannot replace the latest catalog", async ({
       },
     })
   })
-  await login(page, "/agents/home/settings/connections")
+  await login(page, "/settings/connections")
   await expect.poll(() => reads).toBe(1)
   await page.getByRole("button", { name: "Loading…", exact: true }).click()
   await expect(
