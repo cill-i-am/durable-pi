@@ -13,6 +13,7 @@ import {
   workspaceReturnLink,
   workspaceContext,
   globalSettingsLink,
+  isGlobalSettingsSection,
   parseWorkspaceParams,
   workspaceRouteSearch,
   type SettingsCategory,
@@ -70,6 +71,7 @@ export function useWorkspaceLocation(
   useEffect(() => {
     if (!profile || contextParams.agentId === profile.slug) return
     if (globalSection) {
+      if (!contextParams.agentId) return
       void navigate({
         to: pathname,
         search: {
@@ -105,15 +107,18 @@ export function useWorkspaceLocation(
   ])
   const update = useCallback(
     (change: Partial<WorkspaceSearch>, replace = false) => {
+      const next = { ...search, ...change }
+      const section = next.security ? "security" : next.settings
+      if (globalSection && isGlobalSettingsSection(section)) {
+        void navigate({
+          ...globalSettingsLink(section, next),
+          replace,
+          ignoreBlocker: true,
+        })
+        return
+      }
       if (!reference) {
-        const next = { ...search, ...change }
-        const section = next.security ? "security" : next.settings
-        if (
-          globalSection &&
-          (section === "family" ||
-            section === "model-access" ||
-            section === "security")
-        )
+        if (isGlobalSettingsSection(section))
           void navigate({
             ...globalSettingsLink(section, next),
             replace,
@@ -209,18 +214,7 @@ export function useWorkspaceLocation(
   )
   const setSettings = useCallback(
     (settings: SettingsCategory | null) => {
-      update({
-        settings: settings ?? undefined,
-        security: undefined,
-        settingsView: undefined,
-        connections: undefined,
-      })
-    },
-    [update]
-  )
-  const setSecurity = useCallback(
-    (open: boolean) => {
-      if (!open && globalSection && !profile) {
+      if (!settings && globalSection) {
         void navigate({
           ...workspaceReturnLink(query.returnTo ?? "/agents"),
           ignoreBlocker: true,
@@ -228,12 +222,19 @@ export function useWorkspaceLocation(
         return
       }
       update({
-        settings: "general",
-        security: open || undefined,
+        settings: settings ?? undefined,
+        security: undefined,
         settingsView: undefined,
+        connections: undefined,
       })
     },
-    [update, globalSection, profile, navigate, query.returnTo]
+    [update, globalSection, navigate, query.returnTo]
+  )
+  const setSecurity = useCallback(
+    (open: boolean) => {
+      setSettings(open ? "security" : null)
+    },
+    [setSettings]
   )
   const setItem = useCallback(
     (item: string | null) =>

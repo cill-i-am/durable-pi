@@ -12,16 +12,15 @@ Keep reusable Markdown instructions in a private library and choose explicit rev
 
 ## How to get to it (user POV)
 
-- Open `/agents/AGENT_SLUG/settings/skills` or **Settings → Skills**.
-- Use library/archive tabs, new-skill controls, or **Import skill Markdown**.
+- Open personal **Settings → Skills** at `/settings/skills` for the library. Use library/archive tabs, new-skill controls, or **Import skill Markdown**.
 - Use **Import from Executor**, choose the provider/app, preview its main SKILL.md, and save a local revision.
-- Select a revision for the agent; use the visible update control when a newer revision exists.
+- Open agent **Skills** at `/agents/AGENT_SLUG/settings/skills` to select revisions for that agent; use the visible update control when a newer revision exists. Library authoring/history and per-agent pins are separate screens.
 
 ## Driving it with the verification harness
 
 Preconditions: Use a disposable Markdown skill. Executor import requires workspace authorization and a connected provider.
 
-- **Library journey.** Create `Feature map writing`, fill Name and Instructions, save, and select it. Edit the library copy and verify the agent still pins the earlier revision until updated.
+- **Library journey.** In personal Skills, create `Feature map writing`, fill Name and Instructions, and save. Open the agent's Skills screen and select that revision. Edit the personal library copy and verify the agent still pins the earlier revision until updated.
 - **Reopen and recover.** Reload settings, inspect history, and restore a previous revision as a new version. Exercise a stale edit from a second view only in a disposable skill.
 - **Import.** Import a Markdown file, inspect its saved content, then archive and restore it. For Executor, compare the previewed main document with the saved revision.
 - **Checks.** Run `pnpm test tests/skills.test.ts tests/skill-import.test.ts`.
@@ -32,4 +31,4 @@ Preconditions: Use a disposable Markdown skill. Executor import requires workspa
 - Imported instructions do not grant tool permissions.
 - Provider import copies the main SKILL.md, not all referenced files. Accessing provider references still needs the appropriate connected tool.
 - Saved copies remain after disconnect. A running request retains its admitted skill selection.
-- The library is owner-wide; each agent's selected revisions are explicit.
+- The library is personal/account-wide, not family-shared; each agent's selected revisions are explicit. Opening or editing the library does not assign its skills to an agent.

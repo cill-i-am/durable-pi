@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router"
-import { Archive, ArrowLeft, Plus, Undo2 } from "lucide-react"
+import { Archive, ArrowLeft, Plus, Settings2, Undo2 } from "lucide-react"
 
 import type { AgentProfile } from "@/agents/contracts"
 import { homeAgentId } from "@/agents/contracts"
@@ -32,21 +32,30 @@ export function AgentCollection({
       className="mx-auto flex w-full max-w-3xl flex-col gap-6 overflow-y-auto p-6 sm:p-10"
       aria-label={archived ? "Archived agents" : "Your agents"}
     >
-      <Link
-        to="/agents/$agentId"
-        params={{
-          agentId:
-            agents.find((agent) => agent.id === homeAgentId)?.slug ??
-            homeAgentId,
-        }}
-        className={buttonVariants({
-          variant: "ghost",
-          className: "self-start",
-        })}
-      >
-        <ArrowLeft data-icon="inline-start" />
-        Back to Home
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link
+          to="/agents/$agentId"
+          params={{
+            agentId:
+              agents.find((agent) => agent.id === homeAgentId)?.slug ??
+              homeAgentId,
+          }}
+          className={buttonVariants({
+            variant: "ghost",
+            className: "self-start",
+          })}
+        >
+          <ArrowLeft data-icon="inline-start" />
+          Back to Home
+        </Link>
+        <Link
+          to="/settings/account"
+          aria-label="Settings"
+          className={buttonVariants({ variant: "ghost", size: "icon" })}
+        >
+          <Settings2 />
+        </Link>
+      </div>
       <header className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold">
           {archived ? "Archived agents" : "Your agents"}

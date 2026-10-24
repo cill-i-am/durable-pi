@@ -24,12 +24,23 @@ import {
   parseWorkspaceParams,
   parseAgentReference,
   validateGlobalSettingsSearch,
+  validateConnectionSettingsSearch,
   workspaceBackdrop,
   globalSettingsView,
   globalSettingsSection,
 } from "../src/navigation/workspace"
 
 const id = parseAgentId("home")
+const globalRoutes = [
+  ["/settings/account", "account"],
+  ["/settings/preferences", "preferences"],
+  ["/settings/security", "security"],
+  ["/settings/connections", "connection-library"],
+  ["/settings/skills", "skill-library"],
+  ["/settings/channels", "channels"],
+  ["/family", "family"],
+  ["/family/model-access", "model-access"],
+] as const
 describe("canonical workspace locations", () => {
   it.each([
     "browser",
@@ -51,7 +62,7 @@ describe("canonical workspace locations", () => {
       `/agents/home/${panel}`
     )
   })
-  it.each(["general", "models", "access", "skills", "memory", "connections"])(
+  it.each(["general", "models", "access", "skills", "connections"])(
     "uses a page path for Settings %s",
     (section) => {
       expect(workspaceReturnPath(`/agents/home/settings/${section}`)).toBe(
@@ -59,7 +70,17 @@ describe("canonical workspace locations", () => {
       )
     }
   )
-  it.each(["family", "model-access", "security"])(
+  it.each([
+    "family",
+    "model-access",
+    "security",
+    "account",
+    "preferences",
+    "connection-library",
+    "skill-library",
+    "channels",
+    "memory",
+  ])(
     "rejects removed assistant-scoped %s settings instead of redirecting",
     (section) => {
       const path = `/agents/home/settings/${section}`
@@ -72,7 +93,7 @@ describe("canonical workspace locations", () => {
       expect(validateAuthSearch({ returnTo: path })).toEqual({ returnTo: "/" })
     }
   )
-  it.each(["/family", "/family/model-access", "/settings/security"])(
+  it.each(globalRoutes)(
     "addresses global %s settings directly without an assistant",
     (path) => {
       expect(workspaceReturnPath(path)).toBe(path)
@@ -102,7 +123,7 @@ describe("canonical workspace locations", () => {
       returnTo: "/agents/home/files/file_1?tab=trash",
     })
     expect(view).toMatchObject({
-      settings: "general",
+      settings: "security",
       security: true,
       panel: "files",
       item: "file_1",
@@ -307,11 +328,7 @@ describe("global settings and retained assistant backdrops", () => {
     expect(globalSettingsView("family", query).item).toBeUndefined()
     expect(globalSettingsView("family", query)).not.toHaveProperty("approve")
   })
-  it.each([
-    ["/family", "family"],
-    ["/family/model-access", "model-access"],
-    ["/settings/security", "security"],
-  ] as const)(
+  it.each(globalRoutes)(
     "recognizes the canonical %s route and preserves an auth return",
     (path, section) => {
       const returnTo =
@@ -350,14 +367,16 @@ describe("global settings and retained assistant backdrops", () => {
     })
     expect(globalSettingsView("security", { returnTo })).toMatchObject({
       returnTo,
-      settings: "general",
+      settings: "security",
       security: true,
       panel: "files",
       item: "file_1",
       tab: "trash",
       preview: "source",
     })
-    for (const section of ["family", "model-access"] as const) {
+    for (const [, section] of globalRoutes.filter(
+      ([, value]) => value !== "security"
+    )) {
       expect(globalSettingsView(section, { returnTo })).toMatchObject({
         settings: section,
         security: undefined,
@@ -389,6 +408,42 @@ describe("global settings and retained assistant backdrops", () => {
       panel: "activity",
       settings: "family",
     })
+  })
+
+  it("retains OAuth callback status only in the global connection library", () => {
+    const returnTo = "/agents/research/terminal"
+    for (const connections of ["connected", "failed"] as const) {
+      const query = { returnTo, connections, approve: true, token: "private" }
+      expect(validateConnectionSettingsSearch(query)).toEqual({
+        returnTo,
+        connections,
+      })
+      for (const [path, section] of globalRoutes) {
+        const safe = workspaceRouteSearch(path, query)
+        const expected =
+          section === "connection-library"
+            ? { returnTo, connections }
+            : { returnTo }
+        expect(safe).toEqual(expected)
+        const incoming = path + defaultStringifySearch(query)
+        const canonical = path + defaultStringifySearch(expected)
+        expect(workspaceReturnPath(incoming)).toBe(canonical)
+        expect(workspaceReturnLink(incoming)).toEqual({
+          to: path,
+          search: expected,
+        })
+        expect(validateAuthSearch({ returnTo: incoming })).toEqual({
+          returnTo: canonical,
+        })
+        expect(globalSettingsView(section, safe).connections).toBe(
+          section === "connection-library" ? connections : undefined
+        )
+        expect(globalSettingsView(section, safe)).not.toHaveProperty("approve")
+      }
+    }
+    expect(() =>
+      validateConnectionSettingsSearch({ connections: "approved" })
+    ).toThrow()
   })
 
   it("retains an explicit unknown assistant instead of substituting home", () => {
@@ -468,7 +523,10 @@ function routerAt(initialPath: string) {
     createRoute({
       getParentRoute: () => root,
       path,
-      validateSearch: validateGlobalSettingsSearch,
+      validateSearch:
+        path === "/settings/connections"
+          ? validateConnectionSettingsSearch
+          : validateGlobalSettingsSearch,
     })
   return createRouter({
     routeTree: root.addChildren([
@@ -478,9 +536,7 @@ function routerAt(initialPath: string) {
       route("/agents/$agentId/$panel"),
       route("/agents/$agentId/$panel/$itemId"),
       route("/agents/$agentId/settings/$section"),
-      global("/family"),
-      global("/family/model-access"),
-      global("/settings/security"),
+      ...globalRoutes.map(([path]) => global(path)),
     ]),
     history: createMemoryHistory({ initialEntries: [initialPath] }),
     isServer: true,
@@ -492,6 +548,9 @@ describe("native TanStack routing", () => {
     "/agents/home/settings/family",
     "/agents/home/settings/model-access",
     "/agents/home/settings/security",
+    "/agents/home/settings/memory",
+    "/agents/home/settings/account",
+    "/agents/home/settings/preferences",
   ])(
     "rejects removed settings route %s without navigating to a replacement",
     async (path) => {
@@ -601,9 +660,9 @@ describe("native TanStack routing", () => {
       tab: "trash",
     })
   })
-  it.each(["family", "model-access", "security"] as const)(
+  it.each(globalRoutes)(
     "round-trips the same non-default terminal backdrop through global %s and native history",
-    async (section) => {
+    async (path, section) => {
       const reference = parseAgentReference("meal-planning")
       const backdrop =
         "/agents/meal-planning/terminal/command%3Atask_123?tab=interactive"
@@ -623,6 +682,7 @@ describe("native TanStack routing", () => {
       router.history.push(router.buildLocation(destination).href)
       await router.load()
       expect(router.state.matches.at(-1)?.status).toBe("success")
+      expect(router.state.location.pathname).toBe(path)
       expect(router.state.matches.at(-1)?.params).toEqual({})
       expect(router.state.matches.at(-1)?.search).toEqual({
         returnTo: backdrop,

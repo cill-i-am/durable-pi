@@ -13,7 +13,8 @@ Use the implemented Chat SDK adapter to talk to a selected agent through text an
 
 ## How to get to it (user POV)
 
-- Open `/agents/AGENT_SLUG/settings/general` → WhatsApp to inspect availability and select/enable the route.
+- As the owner, open personal **Settings → Channels** at `/settings/channels` to inspect WhatsApp availability. Choose an active owned agent in **WhatsApp agent**, then explicitly enable or save the route. The settings backdrop does not choose the recipient.
+- WhatsApp enablement/routing is one account-wide channel. Recent replies retain their original agent labels when the route changes. Email settings remain in each agent's General settings.
 - After onboarding, message the configured business number from the configured owner.
 - Send `/agents` or `/agent AGENT_ID` to choose an agent. Send `STATUS`, `STATUS all`, `STATUS AGENT_SLUG`, or `STOP HANDLE` for controls.
 - Pi tool approvals link back to the authenticated app; WhatsApp approval decisions are not implemented.
@@ -35,4 +36,5 @@ Preconditions: Live provider onboarding is parked. No real WhatsApp sender or su
 - The reply adapter enforces the customer-service window; expiry preserves the request for review rather than inventing an authorized proactive template.
 - Voice notes receive text. Real-time calls, TTS, proactive templates, and approve/deny by WhatsApp are not implemented.
 - One configured owner sender is supported. Adding another person requires participant routing and authorization work.
+- Changing the target affects new messages; it does not move earlier requests. Disabling WhatsApp affects the account channel, not just the agent visible behind Settings. Existing owner-only entitlement and family admission remain unchanged.
 - Provider media limits can reject a file even when it is valid in Pi. Rejected or uncertain sends remain visible.

@@ -44,7 +44,7 @@ const callbackResponse = (result: "connected" | "failed") =>
   new Response(null, {
     status: 303,
     headers: {
-      Location: `/?connections=${result}`,
+      Location: `/settings/connections?connections=${result}`,
       "Referrer-Policy": "no-referrer",
     },
   })

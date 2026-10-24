@@ -97,7 +97,7 @@ try {
   await page.getByLabel("Password", { exact: true }).fill(passkeyPassword)
   await page.getByRole("button", { name: "Sign in", exact: true }).click()
   const security = page.getByRole("dialog", {
-    name: "Account security",
+    name: "Settings",
     exact: true,
   })
   await expect(security).toBeVisible()
