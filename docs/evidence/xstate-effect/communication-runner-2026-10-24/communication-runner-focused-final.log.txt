@@ -1,0 +1,9 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+
+ Test Files  1 passed (1)
+      Tests  66 passed (66)
+   Start at  21:40:32
+   Duration  509ms (tests 49%, import 41%, transform 8%, setup 2%, worker 1%)
+

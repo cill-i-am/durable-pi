@@ -1,8 +1,11 @@
+import { AsyncLocalStorage } from "node:async_hooks"
+
 import { it as effectIt } from "@effect/vitest"
 import type { LifecycleJob, LifecycleJobPushOptions } from "agents/lifecycle"
 import { Cause, Context, Deferred, Effect, Exit, Fiber } from "effect"
 import { TestClock } from "effect/testing"
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { initialTransition, transition } from "xstate"
 
 import {
   CommunicationRunner,
@@ -15,9 +18,13 @@ import {
   observeCommunicationDiscovery,
   readCommunicationDiscovery,
 } from "../src/communication/recovery.machine"
+import { communicationRunnerMachine } from "../src/communication/runner.machine"
 
 vi.mock("agents/lifecycle", () => ({ LifecycleCapability: class {} }))
-afterEach(() => {
+const owners = new Set<CommunicationRunner<unknown>>()
+afterEach(async () => {
+  await Promise.allSettled([...owners].map((owner) => owner.dispose()))
+  owners.clear()
   vi.useRealTimers()
   vi.restoreAllMocks()
 })
@@ -58,9 +65,9 @@ function fixture() {
       return undefined as number | undefined
     }
   )
-  const restore = vi.fn(() => Effect.void)
+  const restore = vi.fn<() => Effect.Effect<void, unknown>>(() => Effect.void)
   const nextWake = vi.fn(() => Effect.succeed(pending ? Date.now() : undefined))
-  const runner = new CommunicationRunner<never>({
+  const runner = new CommunicationRunner<unknown>({
     run: Effect.runPromise,
     step,
     restore,
@@ -76,6 +83,8 @@ function fixture() {
         return true
       }),
   })
+  owners.add(runner)
+  const get = vi.fn((id: string) => jobs.get(id))
   const push = vi.fn(async (options: LifecycleJobPushOptions) => {
     const job: LifecycleJob = {
       id: options.id!,
@@ -103,7 +112,7 @@ function fixture() {
     value: {
       storage,
       jobs: {
-        get: (id: string) => jobs.get(id),
+        get,
         push,
         reschedule,
         rearm,
@@ -113,6 +122,7 @@ function fixture() {
   })
   return {
     runner,
+    get,
     jobs,
     records,
     storage,
@@ -808,6 +818,7 @@ describe("idle mailbox failure recovery", () => {
     await f.runner.wake()
     const recovery = await unownedFailure(f)
     const cold = new CommunicationRunner(f.runner.host)
+    owners.add(cold)
     Object.defineProperty(cold, "lifecycle", {
       value: {
         storage: f.storage,
@@ -926,6 +937,7 @@ it("does not dispatch an exhausted epoch whose SDK row survived the failure-summ
   await f.runner.wake()
   expect(f.reschedule).not.toHaveBeenCalled()
   const cold = new CommunicationRunner(f.runner.host)
+  owners.add(cold)
   Object.defineProperty(cold, "lifecycle", {
     value: {
       storage: f.storage,
@@ -1056,4 +1068,528 @@ it("preserves retired pump authority when a recovery discovery itself exhausts b
   expect(f.step).toHaveBeenCalledTimes(3)
   await f.runner.wake()
   expect(f.pump().payload).not.toEqual(pump.payload)
+})
+
+describe("communication callback admission regressions", () => {
+  it("refuses an overlapping invocation of the exact same SDK callback", async () => {
+    const f = fixture()
+    await f.runner.wake()
+    let release!: () => void, entered!: () => void
+    const held = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const started = new Promise<void>((resolve) => {
+      entered = resolve
+    })
+    f.step.mockImplementationOnce(async () => {
+      entered()
+      await held
+      return undefined
+    })
+    const job = f.pump()
+    const first = f.runner.onJob({ job, attempt: 1 })
+    await started
+    try {
+      expect(await f.runner.onJob({ job, attempt: 1 })).toEqual({
+        rescheduleAt: expect.any(Number),
+      })
+      expect(f.step).toHaveBeenCalledTimes(1)
+    } finally {
+      release()
+      await first
+    }
+  })
+
+  it("refuses premature exhaustion while the exact callback is still running", async () => {
+    const f = fixture()
+    await f.runner.wake()
+    let release!: () => void, entered!: () => void
+    const held = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const started = new Promise<void>((resolve) => {
+      entered = resolve
+    })
+    f.step.mockImplementationOnce(async (onAttempt) => {
+      onAttempt({
+        taskId: "root",
+        owner: "owner",
+        revision: 1,
+        phase: "observe",
+      })
+      entered()
+      await held
+      return undefined
+    })
+    const job = f.pump()
+    const first = f.runner.onJob({ job, attempt: 1 })
+    await started
+    try {
+      await f.runner.onJobError({ job, attempt: 3 }, "premature failure")
+      expect(f.committed).toEqual([])
+    } finally {
+      release()
+      await first
+    }
+  })
+})
+
+function barrier<A>() {
+  let resolve!: (value: A) => void, reject!: (reason: unknown) => void
+  const promise = new Promise<A>((yes, no) => {
+    resolve = yes
+    reject = no
+  })
+  return { promise, resolve, reject }
+}
+
+for (const mode of ["step", "restore", "storage"] as const)
+  it.each([false, true])(
+    `joins held ${mode} and preserves annotated native Causes (defect %s)`,
+    async (defect) => {
+      const f = fixture(),
+        started = barrier<void>(),
+        held = barrier<void>()
+      const annotation = Context.make(PrearmReason, "original")
+      const failure = Cause.fromReasons([
+        Cause.makeFailReason(new Error("checked native failure")).annotate(
+          annotation
+        ),
+        ...(defect
+          ? [
+              Cause.makeDieReason(new Error("native cleanup defect")).annotate(
+                annotation
+              ),
+            ]
+          : []),
+        Cause.makeInterruptReason(715).annotate(annotation),
+      ])
+      const work = async () => {
+        started.resolve()
+        await held.promise
+      }
+      let accepted: Promise<unknown>
+      if (mode === "step") {
+        await f.runner.wake()
+        f.step.mockImplementationOnce(async () => {
+          await work()
+          return undefined
+        })
+        accepted = f.runner.onJob({ job: f.pump(), attempt: 1 })
+      } else {
+        const effect = Effect.gen(function* () {
+          started.resolve()
+          yield* Effect.promise(() =>
+            held.promise.then(
+              () => undefined,
+              () => undefined
+            )
+          )
+          return yield* Effect.failCause(failure)
+        })
+        if (mode === "restore") f.restore.mockReturnValueOnce(effect)
+        else f.runner.host.nextWake = () => effect.pipe(Effect.as(undefined))
+        accepted = f.runner.reconcile()
+      }
+      const observed = accepted.catch((error: unknown) => error)
+      await started.promise
+      let disposed = false
+      const disposal = f.runner
+        .dispose()
+        .catch((error: unknown) => error)
+        .finally(() => {
+          disposed = true
+        })
+      await expect(f.runner.armDiscovery()).rejects.toThrow("stopped")
+      expect(disposed).toBe(false)
+      const reads = f.get.mock.calls.length
+      await f.runner.wake()
+      await f.runner.reconcile()
+      await f.runner.onJob({ job: {} as LifecycleJob, attempt: 1 })
+      await f.runner.onJobError({ job: {} as LifecycleJob, attempt: 3 }, "late")
+      expect(f.get).toHaveBeenCalledTimes(reads)
+      held.reject(failure)
+      for (const result of await Promise.all([observed, disposal])) {
+        expect(Cause.isCause(result)).toBe(true)
+        if (!Cause.isCause(result)) throw new Error("Expected a native Cause")
+        for (const reason of failure.reasons) {
+          const observed = result.reasons.find(
+            (candidate) => candidate._tag === reason._tag
+          )
+          expect(observed?._tag).toBe(reason._tag)
+          for (const [key, value] of reason.annotations)
+            expect(observed?.annotations.get(key)).toBe(value)
+          if (reason._tag === "Fail" && observed?._tag === "Fail")
+            expect(observed.error).toBe(reason.error)
+          if (reason._tag === "Die" && observed?._tag === "Die")
+            expect(observed.defect).toBe(reason.defect)
+          if (reason._tag === "Interrupt" && observed?._tag === "Interrupt")
+            expect(observed.fiberId).toBe(reason.fiberId)
+        }
+      }
+    }
+  )
+
+it("coalesces failed restoration and retries only for a fresh caller", async () => {
+  const f = fixture(),
+    started = barrier<void>(),
+    held = barrier<void>()
+  const failure = Cause.fail(new Error("restore unavailable"))
+  f.restore.mockReturnValueOnce(
+    Effect.gen(function* () {
+      started.resolve()
+      yield* Effect.promise(() =>
+        held.promise.then(
+          () => undefined,
+          () => undefined
+        )
+      )
+      return yield* Effect.failCause(failure)
+    })
+  )
+  const first = f.runner.reconcile().catch((error: unknown) => error)
+  await started.promise
+  const second = f.runner.reconcile().catch((error: unknown) => error)
+  held.reject(failure)
+  for (const result of await Promise.all([first, second])) {
+    expect(Cause.isCause(result)).toBe(true)
+    if (!Cause.isCause(result)) throw new Error("Expected restoration failure")
+    expect(result.reasons).toHaveLength(1)
+    const observed = result.reasons[0],
+      original = failure.reasons[0]
+    expect(observed?._tag).toBe("Fail")
+    if (observed?._tag === "Fail" && original?._tag === "Fail")
+      expect(observed.error).toBe(original.error)
+  }
+  expect(f.restore).toHaveBeenCalledTimes(1)
+  await f.runner.reconcile()
+  await f.runner.reconcile()
+  expect(f.restore).toHaveBeenCalledTimes(2)
+})
+
+it("starts restoration in the native caller's context", async () => {
+  const f = fixture(),
+    context = new AsyncLocalStorage<string>()
+  let observed: string | undefined
+  f.restore.mockImplementation(() =>
+    Effect.sync(() => {
+      observed = context.getStore()
+    })
+  )
+  await context.run("startup", () => f.runner.reconcile())
+  expect(observed).toBe("startup")
+})
+
+it("joins a held queue write, refuses its late lease and releases queued wake callers on close", async () => {
+  const f = fixture(),
+    entered = barrier<void>(),
+    held = barrier<void>()
+  const push = f.push.getMockImplementation()!
+  f.push.mockImplementationOnce(async (options) => {
+    entered.resolve()
+    await held.promise
+    return push(options)
+  })
+  const armed = f.runner.armDiscovery().catch((error: unknown) => error)
+  await entered.promise
+  const wake = f.runner.wake()
+  let disposed = false
+  const disposal = f.runner.dispose().finally(() => {
+    disposed = true
+  })
+  await wake
+  expect(disposed).toBe(false)
+  expect(f.push).toHaveBeenCalledTimes(1)
+  held.resolve()
+  expect(await armed).toBeInstanceOf(Error)
+  await disposal
+  expect(f.step).not.toHaveBeenCalled()
+})
+
+it("defers callback admission while an accepted wake is updating the SDK job", async () => {
+  const f = fixture(),
+    entered = barrier<void>(),
+    held = barrier<void>()
+  await f.runner.wake()
+  const job = f.pump(),
+    reschedule = f.reschedule.getMockImplementation()!
+  f.reschedule.mockImplementationOnce(async (...args) => {
+    entered.resolve()
+    await held.promise
+    return reschedule(...args)
+  })
+  const wake = f.runner.wake()
+  await entered.promise
+  try {
+    expect(await f.runner.onJob({ job, attempt: 1 })).toEqual({
+      rescheduleAt: expect.any(Number),
+    })
+    expect(f.step).not.toHaveBeenCalled()
+  } finally {
+    held.resolve()
+    await wake
+  }
+})
+
+it("does not let a copied SDK callback exhaust the original failed receipt", async () => {
+  const f = fixture()
+  await f.runner.wake()
+  const job = await failedPass(f)
+  await f.runner.onJobError({ job: { ...job }, attempt: 3 }, "copied")
+  expect(f.committed).toEqual([])
+  await f.runner.onJobError({ job, attempt: 3 }, "original")
+  expect(f.committed).toHaveLength(1)
+})
+
+it("rejects malformed callback admission through the official validator", () => {
+  const machine = communicationRunnerMachine(() => Effect.void)
+  const [initial] = initialTransition(machine)
+  const [state, effects] = transition(machine, initial, {
+    type: "ADMIT",
+    token: "bad",
+    job: null,
+    reply: null,
+  } as never)
+  expect(state.value).toEqual(initial.value)
+  expect(
+    effects.some(
+      (effect) =>
+        effect.kind === "builtin" &&
+        effect.type === "@xstate.deadLetter" &&
+        effect.reason === "invalidEvent"
+    )
+  ).toBe(true)
+})
+
+it.each([false, true])(
+  "retains failed exhaustion settlement during shutdown (defect %s)",
+  async (defect) => {
+    const f = fixture(),
+      entered = barrier<void>(),
+      held = barrier<void>()
+    await f.runner.wake()
+    const job = await failedPass(f)
+    const checked = new Error("exhaustion storage failed"),
+      died = new Error("exhaustion finalizer")
+    const failure = Cause.fromReasons([
+      Cause.makeFailReason(checked),
+      ...(defect ? [Cause.makeDieReason(died)] : []),
+      Cause.makeInterruptReason(631),
+    ])
+    f.runner.host.exhaust = () =>
+      Effect.gen(function* () {
+        entered.resolve()
+        yield* Effect.promise(() => held.promise)
+        return yield* Effect.failCause(failure)
+      })
+    const exhausted = f.runner
+      .onJobError({ job, attempt: 3 }, "native failure")
+      .catch((error: unknown) => error)
+    await entered.promise
+    let done = false
+    const closing = f.runner
+      .dispose()
+      .catch((error: unknown) => error)
+      .finally(() => {
+        done = true
+      })
+    await expect(f.runner.armDiscovery()).rejects.toThrow("stopped")
+    expect(done).toBe(false)
+    held.resolve()
+    for (const result of await Promise.all([exhausted, closing])) {
+      expect(Cause.isCause(result)).toBe(true)
+      if (!Cause.isCause(result))
+        throw new Error("Expected joined exhaustion failure")
+      expect(
+        result.reasons.some(
+          (reason) => reason._tag === "Fail" && reason.error === checked
+        )
+      ).toBe(true)
+      expect(
+        result.reasons.some(
+          (reason) => reason._tag === "Die" && reason.defect === died
+        )
+      ).toBe(defect)
+      expect(
+        result.reasons.some(
+          (reason) => reason._tag === "Interrupt" && reason.fiberId === 631
+        )
+      ).toBe(true)
+    }
+  }
+)
+
+it("retains an absent original discovery token across failed attempts", async () => {
+  const f = fixture()
+  await f.runner.wake()
+  const job = f.pump()
+  f.step.mockRejectedValue(new Error("unowned scan failed"))
+  await expect(f.runner.onJob({ job, attempt: 1 })).rejects.toThrow()
+  await f.runner.armDiscovery()
+  const discovery = f.discovery()
+  await expect(f.runner.onJob({ job, attempt: 3 })).rejects.toThrow()
+  await f.runner.onJobError({ job, attempt: 3 }, "exhausted")
+  expect((await f.runner.recovery())?.discoveryToken).toBeNull()
+  expect(f.discovery()).toBe(discovery)
+})
+
+it("clears the previous receipt when the next native pass has no claim", async () => {
+  const f = fixture()
+  await f.runner.wake()
+  const job = await failedPass(f)
+  f.step.mockImplementationOnce(async (onAttempt) => {
+    onAttempt(undefined)
+    throw new Error("unowned scan failed")
+  })
+  await expect(f.runner.onJob({ job, attempt: 3 })).rejects.toThrow()
+  await f.runner.onJobError({ job, attempt: 3 }, "exhausted")
+  expect(f.committed).toEqual([])
+  expect((await f.runner.recovery())?.epoch).toBe(
+    (job.payload as { token: string }).token
+  )
+})
+
+it("does not let an old publication acknowledgement clear a newer pending failure", async () => {
+  const f = fixture(),
+    entered = barrier<void>(),
+    held = barrier<void>()
+  await f.runner.wake()
+  const old = f.pump()
+  f.step.mockRejectedValue(new Error("scan failed"))
+  await expect(f.runner.onJob({ job: old, attempt: 3 })).rejects.toThrow()
+  const transaction = f.storage.transaction
+  vi.spyOn(f.storage, "transaction").mockImplementationOnce(async (work) => {
+    const result = await transaction(work)
+    entered.resolve()
+    await held.promise
+    return result
+  })
+  const first = f.runner.onJobError({ job: old, attempt: 3 }, "first failure")
+  await entered.promise
+  try {
+    const newer = {
+      ...old,
+      payload: { schemaVersion: 1, workflowVersion: 1, token: "newer" },
+    }
+    f.jobs.set(old.id, newer)
+    await expect(f.runner.onJob({ job: newer, attempt: 3 })).rejects.toThrow()
+    vi.spyOn(f.storage, "put").mockRejectedValueOnce(
+      new Error("new failure write unavailable")
+    )
+    await expect(
+      f.runner.onJobError({ job: newer, attempt: 3 }, "new failure")
+    ).rejects.toThrow("new failure write unavailable")
+    held.resolve()
+    await first
+    expect((await f.runner.recovery())?.epoch).toBe("newer")
+  } finally {
+    held.resolve()
+    await first
+  }
+})
+
+it("does not republish a retired failure when its delayed transaction resumes after explicit recovery", async () => {
+  const f = fixture(),
+    entered = barrier<void>(),
+    held = barrier<void>()
+  await f.runner.wake()
+  const job = f.pump(),
+    epoch = (job.payload as { token: string }).token
+  f.step.mockRejectedValue(new Error("scan failed"))
+  await expect(f.runner.onJob({ job, attempt: 3 })).rejects.toThrow()
+  const transaction = f.storage.transaction
+  vi.spyOn(f.storage, "transaction").mockImplementationOnce(async (work) => {
+    entered.resolve()
+    await held.promise
+    return transaction(work)
+  })
+  const first = f.runner.onJobError({ job, attempt: 3 }, "exhausted")
+  await entered.promise
+  try {
+    expect((await f.runner.recovery())?.epoch).toBe(epoch)
+    const deadline = await f.runner.armRecovery(epoch)
+    await f.runner.retryRecovery(epoch, deadline)
+    held.resolve()
+    await first
+    expect(await f.runner.recovery()).toBeNull()
+    expect(f.records.get("bot-communication:failure")).toMatchObject({
+      retiredEpoch: epoch,
+    })
+    expect(await f.runner.onJob({ job, attempt: 1 })).toBeUndefined()
+    expect(f.step).toHaveBeenCalledTimes(1)
+  } finally {
+    held.resolve()
+    await first
+  }
+})
+
+it("joins accepted failure publication and refuses recovery calls after close before storage", async () => {
+  const f = fixture(),
+    entered = barrier<void>(),
+    held = barrier<void>()
+  await f.runner.wake()
+  const job = f.pump()
+  f.step.mockRejectedValue(new Error("scan failed"))
+  await expect(f.runner.onJob({ job, attempt: 3 })).rejects.toThrow()
+  const put = f.storage.put
+  vi.spyOn(f.storage, "put").mockImplementationOnce(async (...args) => {
+    entered.resolve()
+    await held.promise
+    return put(...args)
+  })
+  const publication = f.runner.onJobError({ job, attempt: 3 }, "failed")
+  await entered.promise
+  let closed = false
+  const closing = f.runner.dispose().then(() => {
+    closed = true
+  })
+  await expect(f.runner.armDiscovery()).rejects.toThrow("stopped")
+  const read = vi.spyOn(f.storage, "get")
+  await expect(f.runner.recovery()).rejects.toThrow("stopped")
+  await expect(f.runner.armRecovery("epoch")).rejects.toThrow("stopped")
+  await expect(
+    f.runner.retryRecovery("epoch", Date.now() + 1000)
+  ).rejects.toThrow("stopped")
+  await f.runner.reconcileQueue()
+  expect(read).not.toHaveBeenCalled()
+  expect(closed).toBe(false)
+  held.resolve()
+  await publication
+  await closing
+  expect(f.records.get("bot-communication:failure")).toMatchObject({
+    recovery: { epoch: (job.payload as { token: string }).token },
+  })
+})
+
+it("claims discovery exhaustion once and ignores copied or still-running callbacks", async () => {
+  const f = fixture(),
+    entered = barrier<void>(),
+    held = barrier<void>()
+  await f.runner.armDiscovery()
+  const job = f.discovery()
+  f.runner.host.nextWake = () =>
+    Effect.gen(function* () {
+      entered.resolve()
+      yield* Effect.promise(() => held.promise)
+      return yield* Effect.die("discovery scan failed")
+    })
+  const scanning = f.runner
+    .onJob({ job, attempt: 3 })
+    .catch((error: unknown) => error)
+  await entered.promise
+  await f.runner.onJobError({ job, attempt: 3 }, "premature")
+  expect(f.records.size).toBe(0)
+  held.resolve()
+  await scanning
+  await f.runner.onJobError({ job: { ...job }, attempt: 3 }, "copied")
+  expect(f.records.size).toBe(0)
+  const put = vi.spyOn(f.storage, "put")
+  await Promise.all([
+    f.runner.onJobError({ job, attempt: 3 }, "original"),
+    f.runner.onJobError({ job, attempt: 3 }, "duplicate"),
+  ])
+  expect(put).toHaveBeenCalledTimes(1)
+  expect((await f.runner.recovery())?.epoch).toBe(
+    readCommunicationDiscovery(job.payload).token
+  )
 })

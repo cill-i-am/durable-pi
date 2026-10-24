@@ -642,6 +642,10 @@ class ActorServices extends LifecycleCapability {
             () => this.owner.routineRunner.dispose(),
             (cause) => cause
           ).pipe(Effect.exit),
+          nativeOperation(
+            () => this.owner.communicationRunner.dispose(),
+            (cause) => cause
+          ).pipe(Effect.exit),
         ],
         { concurrency: "unbounded" }
       ).pipe(
@@ -3228,8 +3232,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     new CommunicationRunner<CommunicationError>({
       run: (work) => this.actorRuntime.runPromise(work),
       step: (onAttempt) =>
-        this.communication.runtime.runPromise(
-          Effect.flatMap(Communication, (app) => app.pump(onAttempt))
+        modelCallback(
+          this.communication.runtime.runPromiseExit(
+            Effect.flatMap(Communication, (app) => app.pump(onAttempt))
+          )
         ),
       exhaust: (attempt, _error, eligible) =>
         Effect.flatMap(Clock.currentTimeMillis, (now) =>

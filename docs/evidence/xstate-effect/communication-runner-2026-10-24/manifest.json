@@ -1,0 +1,89 @@
+{
+  "base": "982e245f51ef3a8bce7bb5a8ad4409459f2e23a4",
+  "artifacts": [
+    {
+      "file": "communication-runner-before.log.txt",
+      "sha256": "ed1b219be49875bde0a5420f291eb7041f3d091c873a18ff6a0bdce859a15aae",
+      "source": "/private/tmp/communication-runner-before.log"
+    },
+    {
+      "file": "communication-runner-initial.log.txt",
+      "sha256": "8f01d90a214a14be7365d4c70023d2e4e53bfd56763d92af8fde3211d38a6d99",
+      "source": "/private/tmp/communication-runner-initial.log"
+    },
+    {
+      "file": "communication-runner-focused-final.log.txt",
+      "sha256": "47b7700fa5bf74fb4e37ee7942e5bc996862d9cdfb0f475eb40e80bd5e056986",
+      "source": "/private/tmp/communication-runner-focused-final.log"
+    },
+    {
+      "file": "communication-runner-cause-control.log.txt",
+      "sha256": "1daecf4c23674e6da3f50e186bdab8495f32478d4efbf2993e6e085ec62f3615",
+      "source": "/private/tmp/communication-runner-cause-control.log"
+    },
+    {
+      "file": "communication-runner-retirement-control.log.txt",
+      "sha256": "80a08663843fbf65410ebfba23cacb2e51ec98d122b5f704caf95cec49ddab06",
+      "source": "/private/tmp/communication-runner-retirement-control.log"
+    },
+    {
+      "file": "communication-runner-native-binding-before.log.txt",
+      "sha256": "7ae9e1c16ab39d0bd1bb62515a9e269875c6903f6ec8239c9ba05b5cf96efd70",
+      "source": "/private/tmp/communication-runner-native-binding-before.log"
+    },
+    {
+      "file": "communication-runner-native-join-before.log.txt",
+      "sha256": "c09ccb1542b6e83418cd54f08db27cdcb284241d0ecfb1688116e7397a2f8ab4",
+      "source": "/private/tmp/communication-runner-native-join-before.log"
+    },
+    {
+      "file": "communication-runner-static.log.txt",
+      "sha256": "43482aec074c7f7aafc03e70fc39d8fbfb86c8cfaab6571f0cf56d5cfa49de79",
+      "source": "/private/tmp/communication-runner-static.log"
+    },
+    {
+      "file": "communication-runner-unit.log.txt",
+      "sha256": "59daeed3fc201bedda5fd45cfaf93a5108f47cbcf02b6b159cc5bf63cf91ba5c",
+      "source": "/private/tmp/communication-runner-unit.log"
+    },
+    {
+      "file": "communication-runner-build.log.txt",
+      "sha256": "aa426f231056e79377e1d78c9d5c461e6292979f382ec2369201eef26f6d61ff",
+      "source": "/private/tmp/communication-runner-build.log"
+    },
+    {
+      "file": "communication-runner-routes.log.txt",
+      "sha256": "f282d7dba702934a4718e64c20cb9e74ff7048a4edab5d58fc5b60b31ffb9dfa",
+      "source": "/private/tmp/communication-runner-routes.log"
+    },
+    {
+      "file": "communication-runner-workers.log.txt",
+      "sha256": "2ce242ab17a7bb8e66438740a343b3b5da59180c85b67fa2803f25f546b7bf68",
+      "source": "/private/tmp/communication-runner-workers.log"
+    },
+    {
+      "file": "communication-runner-native-personal.log.txt",
+      "sha256": "23e15591da27dbe1cf3099c1a503007595eff7f7f92e1d28911c4a9dc7acb2de",
+      "source": "/private/tmp/communication-runner-native-personal.log"
+    },
+    {
+      "file": "communication-runner-native-control.log.txt",
+      "sha256": "3dfbd7342faa87a2c22d942f3e6530af3819e143ae061e272ba75d2280d926d8",
+      "source": "/private/tmp/communication-runner-native-control.log"
+    },
+    {
+      "file": "communication-runner-secrets.log.txt",
+      "sha256": "f5ef6f7944efb96c903a48abe26cc34663aefad50f77fade31096ef9793e4121",
+      "source": "/private/tmp/communication-runner-secrets.log"
+    }
+  ],
+  "sources": {
+    "scripts/test-communication-runtime.mjs": "33267c28a61895d188477a710682db1aa2fb4e1623f5569171519a853f8e454d",
+    "src/agent/worker.ts": "9f7ed887c7dfd360fb5a02bf4604b32d13e09f92573a03e5778fc3dbd19a7e7a",
+    "src/communication/adapters/lifecycle.ts": "b9b8f2dd8e7daf7ceb5776ccb0e7ccc19e7b6d84c12bacfbd30bb5e1ed639566",
+    "src/communication/runner.machine.ts": "32e9d817d334f1ad43d745a23c09d47f2d9ed7601ee907e2950842d44c5e5f9b",
+    "tests/communication-runner.test.ts": "b40d0927ae047e394b65cc53ae451dd31eb07355c92012b62bf45004a533ba78",
+    "tests/runtime/communication-worker.ts": "fde1eb66dc948c4295baad694ef47f60402b211045a02dd63a508ed41fe95393",
+    "tests/runtime/personal-agent-worker.ts": "f13384dbbd45c70752c98bd09ccf7fad38e5ae889fe3f9903389bfd35a489fda"
+  }
+}

@@ -1,0 +1,43 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+stdout | tests/communication-runner.test.ts > does not republish a retired failure when its delayed transaction resumes after explicit recovery
+[21:40:04.443] ERROR (#34): Communication job exhausted { job: 'bot-communication:pump' } exhausted
+
+ ❯ tests/communication-runner.test.ts (66 tests | 1 failed | 65 skipped) 30ms
+   × does not republish a retired failure when its delayed transaction resumes after explicit recovery 29ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/communication-runner.test.ts > does not republish a retired failure when its delayed transaction resumes after explicit recovery
+AssertionError: expected { schemaVersion: 1, …(5) } to be null
+
+- Expected:
+null
+
++ Received:
+{
+  "discoveryToken": null,
+  "epoch": "68000321-a10e-4c51-8bab-6652d13e3d66",
+  "failedAt": 1792874404445,
+  "message": "Mailbox processing stopped after three failed attempts. Retry the mailbox to continue pending work.",
+  "schemaVersion": 1,
+  "workflowVersion": 1,
+}
+
+ ❯ tests/communication-runner.test.ts:1514:39
+    1512|     held.resolve()
+    1513|     await first
+    1514|     expect(await f.runner.recovery()).toBeNull()
+       |                                       ^
+    1515|     expect(f.records.get("bot-communication:failure")).toMatchObject({
+    1516|       retiredEpoch: epoch,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 65 skipped (66)
+   Start at  21:40:04
+   Duration  324ms (import 68%, transform 16%, tests 13%, setup 3%, worker 1%)
+

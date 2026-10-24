@@ -132,11 +132,18 @@ const config :Workerd.Config = (
   assert.deepEqual(await call("personal-runner-causes/runner-causes", {}), [
     { complete: true },
     { complete: true },
+    { complete: true },
   ])
   console.log(
-    "PASS native Conversation and Routine callback bindings preserve checked failures, cleanup defects and interruption together."
+    "PASS native Conversation, Routine and Communication callback bindings preserve checked failures, cleanup defects and interruption together."
   )
-  for (const kind of ["coordination", "apps", "conversation", "routines"]) {
+  for (const kind of [
+    "coordination",
+    "apps",
+    "conversation",
+    "routines",
+    "communication",
+  ]) {
     const heldRunner = (action) =>
       call(`personal-${kind}-disposal/${kind}-held-${action}`, {})
     const waitRunner = async (predicate) => {

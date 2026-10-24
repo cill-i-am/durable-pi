@@ -20,6 +20,8 @@ import {
   AgentSynchronizationError,
   homeAgentId,
 } from "../../src/agents/domain"
+import { Communication } from "../../src/communication/communication"
+import { CommunicationError } from "../../src/communication/contracts"
 import { conversationEvents } from "../../src/conversations/adapters/events"
 import { backgroundRemote } from "../../src/delegation/adapters/background-rpc"
 import { backgroundNative } from "../../src/delegation/adapters/interop"
@@ -3156,6 +3158,18 @@ export class PersonalAgentProbe extends PersonalAgent {
       Cause.makeDieReason(defect),
       Cause.makeInterruptReason(918),
     ])
+    const app = await this.communication.runtime.runPromise(Communication)
+    const communication = app.pump
+    const mailboxFailure = new CommunicationError({
+      code: "storage",
+      message: "native mailbox failure probe",
+    })
+    const mailboxCause = Cause.fromReasons([
+      Cause.makeFailReason(mailboxFailure),
+      Cause.makeDieReason(defect),
+      Cause.makeInterruptReason(918),
+    ])
+    app.pump = () => Effect.failCause(mailboxCause)
     const conversation = this.conversationPump.run,
       routine = this.routinePump.run
     this.conversationPump.run = () => Effect.failCause(cause)
@@ -3164,16 +3178,19 @@ export class PersonalAgentProbe extends PersonalAgent {
       const observed = await Promise.allSettled([
         this.runner.host.step(() => {}),
         this.routineRunner.host.step(() => {}),
+        this.communicationRunner.host.step(() => {}),
       ])
       return Response.json(
-        observed.map((result) => {
+        observed.map((result, index) => {
           if (result.status !== "rejected" || !Cause.isCause(result.reason))
             return { complete: false }
           const reasons = result.reason.reasons
           return {
             complete:
               reasons.some(
-                (reason) => reason._tag === "Fail" && reason.error === checked
+                (reason) =>
+                  reason._tag === "Fail" &&
+                  reason.error === (index === 2 ? mailboxFailure : checked)
               ) &&
               reasons.some(
                 (reason) => reason._tag === "Die" && reason.defect === defect
@@ -3186,6 +3203,7 @@ export class PersonalAgentProbe extends PersonalAgent {
         })
       )
     } finally {
+      app.pump = communication
       this.conversationPump.run = conversation
       this.routinePump.run = routine
     }
@@ -3196,7 +3214,13 @@ export class PersonalAgentProbe extends PersonalAgent {
     action: string | undefined
   ): Promise<Response | undefined> {
     const kind = (
-      ["coordination", "apps", "conversation", "routines"] as const
+      [
+        "coordination",
+        "apps",
+        "conversation",
+        "routines",
+        "communication",
+      ] as const
     ).find((kind) => action?.startsWith(`${kind}-held-`))
     if (kind) {
       const runner = {
@@ -3204,6 +3228,7 @@ export class PersonalAgentProbe extends PersonalAgent {
         apps: this.appEvents,
         conversation: this.runner,
         routines: this.routineRunner,
+        communication: this.communicationRunner,
       }[kind]
       if (action === `${kind}-held-start`) {
         await this.lifecycle.start()
@@ -3214,6 +3239,10 @@ export class PersonalAgentProbe extends PersonalAgent {
           this.runnerHoldEntered = true
           await held
           // Accepted native callbacks still need their actual runtime and SQL.
+          if (kind === "communication")
+            await this.communication.runtime.runPromise(
+              this.communication.mailbox.nextWake()
+            )
           await this.actorRuntime.runPromise(this.configurationService.read())
           this.events.push(`${kind}.settled`)
           return undefined
@@ -3226,7 +3255,12 @@ export class PersonalAgentProbe extends PersonalAgent {
           return dispose()
         }
         await runner.armDiscovery()
-        if (kind === "conversation" || kind === "routines") await runner.wake()
+        if (
+          kind === "conversation" ||
+          kind === "routines" ||
+          kind === "communication"
+        )
+          await runner.wake()
       }
       if (action === `${kind}-held-release`) this.releaseRunner?.()
       if (action === `${kind}-held-dispose`) {

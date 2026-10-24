@@ -1,12 +1,14 @@
+import { createEffectActor, send, type EffectActor } from "@xstate/effect"
 import {
   LifecycleCapability,
   type LifecycleJob,
   type LifecycleJobContext,
   type LifecycleJobOutcome,
 } from "agents/lifecycle"
-import { Clock, Effect, Exit, Schema } from "effect"
+import { Cause, Clock, Deferred, Effect, Exit, Schema, Scope } from "effect"
+import type { EventFromLogic } from "xstate"
 
-import { nativeFailure } from "../../shared/interop"
+import { nativeFailure, nativeOperation } from "../../shared/interop"
 import {
   CommunicationError,
   failure,
@@ -28,12 +30,13 @@ const PumpOwner = Schema.Struct({
 })
 export type CommunicationControlAttempt = ControlAttempt
 
-type Dispatch = {
-  job: LifecycleJob
-  receipt?: CommunicationControlAttempt
-  wakeRequested: boolean
-  discoveryToken: string | null
-}
+import {
+  communicationRunnerMachine,
+  type CommunicationRunnerDecision,
+  type CommunicationRunnerReply,
+  type CommunicationRunnerAck,
+} from "../runner.machine"
+type RunnerMachine = ReturnType<typeof communicationRunnerMachine>
 const pumpId = "bot-communication:pump"
 const discoveryId = "bot-communication:recovery"
 const recoveryKey = "bot-communication:failure"
@@ -56,10 +59,10 @@ function readJob(job: LifecycleJob) {
 /** Lifecycle owns durable scheduling. This adapter only retains admission
  * discovery and correlates a bounded failed dispatch with its domain claim. */
 export class CommunicationRunner<E> extends LifecycleCapability {
-  private readonly dispatches = new Map<string, Dispatch>()
-  private restoring?: Promise<void>
-  private restored = false
-  private completedFailure?: { job: LifecycleJob; recovery: MailboxRecovery }
+  private readonly scope = Scope.makeUnsafe()
+  private actor?: EffectActor<RunnerMachine>
+  private readonly operations = new Set<Promise<unknown>>()
+  private closing?: Promise<void>
 
   constructor(
     readonly host: {
@@ -84,16 +87,90 @@ export class CommunicationRunner<E> extends LifecycleCapability {
     super("bot-communication")
   }
 
+  private async run<A>(work: Effect.Effect<A, E>): Promise<A> {
+    // The native runner squashes failed Exits. Keep the whole Exit as its
+    // successful value until this boundary can return every original reason.
+    const exit = await this.host.run(Effect.exit(work))
+    if (Exit.isFailure(exit)) throw exit.cause
+    return exit.value
+  }
+  private getActor() {
+    // Lazy creation preserves Lifecycle's first native caller context.
+    return (this.actor ??= Effect.runSync(
+      createEffectActor(
+        communicationRunnerMachine(() =>
+          nativeOperation(
+            () => this.run(this.host.restore()),
+            (cause) => cause
+          )
+        )
+      ).pipe(Scope.provide(this.scope))
+    ))
+  }
+  private closed() {
+    // Eligibility may be read inside native SQL; never start an actor there.
+    return this.actor?.getSnapshot().matches({ admission: "closed" }) ?? false
+  }
+  private track<A>(work: () => Promise<A>) {
+    this.getActor()
+    const pending = work()
+    this.operations.add(pending)
+    void pending.then(
+      () => this.operations.delete(pending),
+      () => this.operations.delete(pending)
+    )
+    return pending
+  }
+  private ask(
+    event: (reply: CommunicationRunnerReply) => EventFromLogic<RunnerMachine>
+  ) {
+    const reply = Deferred.makeUnsafe<CommunicationRunnerDecision>()
+    Effect.runSync(send(this.getActor(), event(reply)))
+    return Effect.runPromise(Deferred.await(reply))
+  }
+  private acknowledge(
+    event: (ack: CommunicationRunnerAck) => EventFromLogic<RunnerMachine>
+  ) {
+    const ack = Deferred.makeUnsafe<void>()
+    Effect.runSync(send(this.getActor(), event(ack)))
+    return Effect.runPromise(Deferred.await(ack))
+  }
+  private async restore() {
+    const actor = this.getActor(),
+      snapshot = actor.getSnapshot()
+    const reply = Deferred.makeUnsafe<void, unknown>()
+    const generation =
+      snapshot.context.generation +
+      (snapshot.matches({ activation: "cold" }) ? 1 : 0)
+    Effect.runSync(send(actor, { type: "RESTORE", reply, generation }))
+    const exit = await Effect.runPromiseExit(Deferred.await(reply))
+    if (Exit.isFailure(exit)) throw exit.cause
+  }
+  private async schedule<A>(work: () => Promise<A>): Promise<A | undefined> {
+    if (this.closed()) return
+    if (
+      (await this.ask((reply) => ({ type: "SCHEDULE", reply }))).permission ===
+      "stopped"
+    )
+      return
+    try {
+      return this.closed() ? undefined : await work()
+    } finally {
+      await this.acknowledge((ack) => ({ type: "RELEASE", ack }))
+    }
+  }
   private current(id: string) {
     const job = this.lifecycle.jobs.get(id)
     if (job) readJob(job)
     return job
   }
   private owns(job: LifecycleJob) {
+    if (this.closed()) return false
     const latest = this.current(job.id)
     return !!latest && readJob(latest).token === readJob(job).token
   }
   private outcome(job: LifecycleJob, outcome: LifecycleJobOutcome) {
+    if (this.closed()) return
     const latest = this.current(job.id)
     // The SDK guards outcomes with a running bit. A second alarm may already
     // have marked a newer same-ID job running, so an old completion must retain
@@ -118,7 +195,16 @@ export class CommunicationRunner<E> extends LifecycleCapability {
       retry,
     })
   }
-  async armDiscovery(recoveryEpoch?: string): Promise<number> {
+  armDiscovery(recoveryEpoch?: string): Promise<number> {
+    return this.track(() => this.schedule(() => this.arm(recoveryEpoch))).then(
+      (deadline) => {
+        if (deadline === undefined || this.closed())
+          throw new Error("Communication runner is stopped")
+        return deadline
+      }
+    )
+  }
+  private async arm(recoveryEpoch?: string): Promise<number> {
     const now = Date.now()
     const deadline = now + discoveryDuration
     const prior = this.current(discoveryId)
@@ -140,15 +226,16 @@ export class CommunicationRunner<E> extends LifecycleCapability {
     return deadline
   }
   private async persistFailure() {
-    const completed = this.completedFailure
+    const completed = this.getActor().getSnapshot().context.failure
     if (!completed) return
     await this.lifecycle.storage.transaction(async (storage) => {
       const prior = readMailboxRecoveryState(await storage.get(recoveryKey))
       // A joined failed epoch can be retried after its SDK row was removed,
       // but cannot replace a newer pump or a newer durable failure summary.
-      const current = this.current(completed.job.id)
+      const current = this.current(completed.jobId)
       if (
-        (current && !this.owns(completed.job)) ||
+        (current && readJob(current).token !== completed.recovery.epoch) ||
+        prior.retiredEpoch === completed.recovery.epoch ||
         (!current &&
           prior.recovery &&
           prior.recovery.epoch !== completed.recovery.epoch)
@@ -162,7 +249,11 @@ export class CommunicationRunner<E> extends LifecycleCapability {
         })
       )
     })
-    if (this.completedFailure === completed) this.completedFailure = undefined
+    await this.acknowledge((ack) => ({
+      type: "FAILURE_PERSISTED",
+      key: completed.key,
+      ack,
+    }))
     const discovery = this.current(discoveryId)
     if (
       discovery &&
@@ -176,8 +267,11 @@ export class CommunicationRunner<E> extends LifecycleCapability {
       await this.lifecycle.storage.get(recoveryKey)
     )
   }
-  async recovery(): Promise<MailboxRecovery | null> {
-    return (await this.recoveryState()).recovery
+  recovery(): Promise<MailboxRecovery | null> {
+    return this.track(async () => {
+      if (this.closed()) throw new Error("Communication runner is stopped")
+      return (await this.recoveryState()).recovery
+    })
   }
   private mayWake(recovery: MailboxRecovery | null) {
     const discovery = this.current(discoveryId)
@@ -196,7 +290,13 @@ export class CommunicationRunner<E> extends LifecycleCapability {
       )
     return this.armDiscovery(epoch)
   }
-  async retryRecovery(epoch: string, deadline: number): Promise<void> {
+  retryRecovery(epoch: string, deadline: number): Promise<void> {
+    return this.track(async () => {
+      if (this.closed()) throw new Error("Communication runner is stopped")
+      await this.retry(epoch, deadline)
+    })
+  }
+  private async retry(epoch: string, deadline: number): Promise<void> {
     await this.persistFailure()
     await this.lifecycle.storage.transaction(async (storage) => {
       const prior = readMailboxRecoveryState(await storage.get(recoveryKey))
@@ -231,8 +331,12 @@ export class CommunicationRunner<E> extends LifecycleCapability {
       await storage.put(recoveryKey, next)
     })
   }
-  async wake() {
+  wake() {
+    return this.track(() => this.schedule(() => this.wakeQueue()))
+  }
+  private async wakeQueue() {
     const state = await this.recoveryState()
+    if (this.closed()) return
     const recovery = state.recovery
     const allowed = this.mayWake(recovery)
     const current = this.current(pumpId)
@@ -246,188 +350,237 @@ export class CommunicationRunner<E> extends LifecycleCapability {
       readJob(current).token === state.retiredEpoch
     )
       return this.pushPump(Date.now())
-    const dispatch = this.dispatches.get(readJob(current).token)
-    if (dispatch) {
-      // SDK push/reschedule clears its running marker. During tryN (including
-      // gaps between failures) rearm only, so a doorbell cannot renew the budget.
-      dispatch.wakeRequested = true
-      await this.lifecycle.jobs.rearm()
-      return
-    }
-    await this.lifecycle.jobs.reschedule(pumpId, Date.now())
+    const { permission } = await this.ask((reply) => ({
+      type: "WAKE",
+      token: readJob(current).token,
+      reply,
+    }))
+    if (this.closed()) return
+    if (permission === "rearm") await this.lifecycle.jobs.rearm()
+    else if (permission === "schedule")
+      await this.lifecycle.jobs.reschedule(pumpId, Date.now())
   }
-  async reconcile() {
-    this.current(pumpId)
-    this.current(discoveryId)
-    if (!this.restored) {
-      this.restoring ??= this.host.run(this.host.restore()).then(
-        () => {
-          this.restored = true
-        },
-        (error: unknown) => {
-          this.restoring = undefined
-          throw error
-        }
-      )
-      await this.restoring
-    }
-    await this.reconcileQueue()
+  reconcile() {
+    return this.track(async () => {
+      if (this.closed()) return
+      this.current(pumpId)
+      this.current(discoveryId)
+      await this.restore()
+      await this.schedule(() => this.reconcilePending())
+    })
   }
-  async reconcileQueue() {
-    const recovery = await this.recovery()
+  reconcileQueue() {
+    return this.track(() => this.schedule(() => this.reconcilePending()))
+  }
+  private async reconcilePending() {
+    const recovery = (await this.recoveryState()).recovery
+    if (this.closed()) return
     const allowed = this.mayWake(recovery)
     const pump = this.current(pumpId)
     const discovery = this.current(discoveryId)
     if (allowed && !pump && !discovery) {
-      const next = await this.host.run(this.host.nextWake())
+      const next = await this.run(this.host.nextWake())
       // No awaited work lies between this second absence check and push.
-      if (next !== undefined && !this.current(pumpId)) await this.pushPump(next)
+      if (!this.closed() && next !== undefined && !this.current(pumpId))
+        await this.pushPump(next)
     }
-    await this.lifecycle.jobs.rearm()
+    if (!this.closed()) await this.lifecycle.jobs.rearm()
   }
-  async onJob({ job }: LifecycleJobContext): Promise<LifecycleJobOutcome> {
-    const owner = readJob(job)
+  onJob(context: LifecycleJobContext): Promise<LifecycleJobOutcome> {
+    return this.track(() => this.dispatch(context))
+  }
+  private async dispatch({
+    job,
+  }: LifecycleJobContext): Promise<LifecycleJobOutcome> {
+    if (this.closed()) return
+    const { token } = readJob(job)
     if (!this.owns(job)) return this.outcome(job, undefined)
-    if (job.fn === "recover") {
-      if (!this.mayWake(await this.recovery())) {
-        const lease = readCommunicationDiscovery(job.payload)
-        return this.outcome(
-          job,
-          lease.recoveryEpoch && lease.armedUntil > Date.now()
-            ? { rescheduleAt: lease.armedUntil }
-            : undefined
-        )
-      }
-      // A scan beginning just before the deadline must retain another scan even
-      // when storage returns after it; admission may have committed meanwhile.
-      const now = await this.host.run(Clock.currentTimeMillis)
-      const pending = (await this.host.run(this.host.nextWake())) !== undefined
-      let outcome: LifecycleJobOutcome
-      for (const command of observeCommunicationDiscovery(job.payload, {
-        now,
-        pending,
-      })) {
-        if (command.type === "wake") await this.wake()
-        else outcome = { rescheduleAt: command.at }
-      }
-      return this.outcome(job, outcome)
-    }
-    const state = await this.recoveryState()
-    if (
-      !this.owns(job) ||
-      state.recovery?.epoch === owner.token ||
-      state.retiredEpoch === owner.token
-    )
-      return this.outcome(job, undefined)
-    let dispatch = this.dispatches.get(owner.token)
-    if (dispatch && dispatch.job !== job) {
-      // A hung SDK replacement does not own this live dispatch or its retry
-      // budget. The durable domain claim independently forbids warm takeover.
-      return this.outcome(job, { rescheduleAt: Date.now() + 1000 })
-    }
-    if (!dispatch) {
-      const discovery = this.current(discoveryId)
-      dispatch = {
-        job,
-        wakeRequested: false,
-        discoveryToken: discovery ? readJob(discovery).token : null,
-      }
-      this.dispatches.set(owner.token, dispatch)
-    }
-    dispatch.receipt = undefined
-    try {
-      const next = await this.host.step((attempt) => {
-        dispatch.receipt = attempt
-      })
-      this.dispatches.delete(owner.token)
+    const discovery = this.current(discoveryId)
+    const { permission } = await this.ask((reply) => ({
+      type: "ADMIT",
+      token,
+      job,
+      current: this.owns(job),
+      discoveryToken: discovery ? readJob(discovery).token : null,
+      reply,
+    }))
+    if (permission === "stopped") return
+    if (permission !== "start")
       return this.outcome(
         job,
-        dispatch.wakeRequested
-          ? { rescheduleAt: Math.min(next ?? Infinity, Date.now()) }
-          : next === undefined
-            ? undefined
-            : { rescheduleAt: next }
+        permission === "defer" ? { rescheduleAt: Date.now() + 1000 } : undefined
       )
+    try {
+      const outcome =
+        this.closed() || !this.owns(job)
+          ? undefined
+          : job.fn === "recover"
+            ? await this.discover(job)
+            : await this.pump(job, token)
+      const result = await this.ask((reply) => ({
+        type: "FINISHED",
+        token,
+        job,
+        reply,
+      }))
+      return this.outcome(
+        job,
+        job.fn === "pump" && result.permission === "rearm"
+          ? {
+              rescheduleAt: Math.min(
+                typeof outcome === "object" ? outcome.rescheduleAt : Infinity,
+                Date.now()
+              ),
+            }
+          : outcome
+      )
+    } catch (error) {
+      await this.acknowledge((ack) => ({ type: "FAILED", token, job, ack }))
+      throw error
     } finally {
       this.host.notify?.()
     }
   }
-  async onJobError(
+  private async discover(job: LifecycleJob): Promise<LifecycleJobOutcome> {
+    if (!this.mayWake((await this.recoveryState()).recovery)) {
+      const lease = readCommunicationDiscovery(job.payload)
+      return lease.recoveryEpoch && lease.armedUntil > Date.now()
+        ? { rescheduleAt: lease.armedUntil }
+        : undefined
+    }
+    if (!this.owns(job)) return
+    // Capture scan start before storage: admission may commit while it waits.
+    const now = await this.run(Clock.currentTimeMillis)
+    const pending = (await this.run(this.host.nextWake())) !== undefined
+    let outcome: LifecycleJobOutcome
+    for (const command of observeCommunicationDiscovery(job.payload, {
+      now,
+      pending,
+    })) {
+      if (command.type === "wake") await this.wake()
+      else outcome = { rescheduleAt: command.at }
+    }
+    return outcome
+  }
+  private async pump(
+    job: LifecycleJob,
+    token: string
+  ): Promise<LifecycleJobOutcome> {
+    const state = await this.recoveryState()
+    if (
+      !this.owns(job) ||
+      state.recovery?.epoch === token ||
+      state.retiredEpoch === token
+    )
+      return
+    const next = await this.host.step((receipt) => {
+      // The claim transaction has completed. Enqueue its observation before
+      // callback completion; undefined clears the previous attempt's receipt.
+      Effect.runSync(
+        send(this.getActor(), {
+          type: "RECEIPT",
+          token,
+          job,
+          receipt: receipt ?? null,
+        })
+      )
+    })
+    return next === undefined ? undefined : { rescheduleAt: next }
+  }
+  onJobError(
+    context: LifecycleJobContext,
+    error: unknown
+  ): Promise<LifecycleJobOutcome> {
+    return this.track(() => this.failed(context, error))
+  }
+  private async failed(
     { job }: LifecycleJobContext,
     error: unknown
   ): Promise<LifecycleJobOutcome> {
-    const owner = readJob(job)
-    await this.host.run(
-      Effect.logError("Communication job exhausted", { job: job.id }, error)
-    )
-    if (job.fn === "recover") {
-      if (this.owns(job)) {
-        this.completedFailure = {
-          job,
-          recovery: {
-            schemaVersion: 1,
-            workflowVersion: 1,
-            epoch: owner.token,
-            failedAt: Date.now(),
-            discoveryToken: owner.token,
-            message:
-              "Mailbox discovery stopped after three failed attempts. Retry the mailbox to continue pending work.",
-          },
-        }
-        try {
-          await this.persistFailure()
-        } finally {
-          this.host.notify?.()
-        }
-      }
-      return this.outcome(job, undefined)
-    }
-    const dispatch = this.dispatches.get(owner.token)
-    if (!dispatch || dispatch.job !== job) return this.outcome(job, undefined)
+    if (this.closed()) return
+    const { token } = readJob(job)
+    const { permission, receipt, discoveryToken } = await this.ask((reply) => ({
+      type: "ERROR",
+      token,
+      job,
+      current: this.owns(job),
+      reply,
+    }))
+    if (permission !== "start") return this.outcome(job, undefined)
     try {
-      if (!dispatch.receipt) {
+      if (this.closed()) return
+      await this.run(
+        Effect.logError("Communication job exhausted", { job: job.id }, error)
+      )
+      if (job.fn === "recover" || !receipt) {
         if (this.owns(job)) {
-          this.completedFailure = {
-            job,
-            recovery: {
-              schemaVersion: 1,
-              workflowVersion: 1,
-              epoch: owner.token,
-              failedAt: Date.now(),
-              discoveryToken: dispatch.discoveryToken,
-              message:
-                "Mailbox processing stopped after three failed attempts. Retry the mailbox to continue pending work.",
+          await this.acknowledge((ack) => ({
+            type: "RETAIN_FAILURE",
+            ack,
+            failure: {
+              key: crypto.randomUUID(),
+              jobId: job.id,
+              recovery: {
+                schemaVersion: 1,
+                workflowVersion: 1,
+                epoch: token,
+                failedAt: Date.now(),
+                discoveryToken: job.fn === "recover" ? token : discoveryToken,
+                message:
+                  job.fn === "recover"
+                    ? "Mailbox discovery stopped after three failed attempts. Retry the mailbox to continue pending work."
+                    : "Mailbox processing stopped after three failed attempts. Retry the mailbox to continue pending work.",
+              },
             },
-          }
+          }))
           await this.persistFailure()
         }
         return this.outcome(job, undefined)
       }
-      const result = await this.host.run(
-        Effect.exit(
-          this.host.exhaust(dispatch.receipt, error, () => this.owns(job))
-        )
+      const result = await this.run(
+        Effect.exit(this.host.exhaust(receipt, error, () => this.owns(job)))
       )
-      if (Exit.isSuccess(result) && !result.value) {
-        // A newer Stop or explicit recovery changed the domain revision while
-        // the failed pass joined. Continue only that still-eligible domain work.
-        const next = await this.host.run(this.host.nextWake())
+      if (Exit.isSuccess(result) && !result.value && !this.closed()) {
+        const next = await this.run(this.host.nextWake())
         if (next !== undefined) return this.outcome(job, { rescheduleAt: next })
       }
-      if (Exit.isFailure(result))
-        await this.host.run(
+      if (Exit.isFailure(result)) {
+        if (this.closed()) throw result.cause
+        await this.run(
           Effect.logError(
             "Communication control persistence is unconfirmed",
             result.cause
           )
         )
+      }
     } finally {
-      this.dispatches.delete(owner.token)
+      await this.acknowledge((ack) => ({ type: "EXHAUSTED", token, job, ack }))
       this.host.notify?.()
     }
-    // Failure consumes this job's three attempts. Discovery does not authorize
-    // the exhausted root; only a revisioned explicit recovery may clear it.
     return this.outcome(job, undefined)
+  }
+  dispose() {
+    return (this.closing ??= (async () => {
+      await this.acknowledge((ack) => ({ type: "CLOSE", ack }))
+      const settled = await Promise.allSettled([...this.operations])
+      const exit = await Effect.runPromiseExit(
+        Scope.close(this.scope, Exit.void)
+      )
+      const causes = settled.flatMap((result) =>
+        result.status === "rejected"
+          ? [
+              Cause.isCause(result.reason)
+                ? result.reason
+                : Cause.fail(result.reason),
+            ]
+          : []
+      )
+      if (Exit.isFailure(exit)) causes.push(exit.cause)
+      if (causes.length)
+        throw Cause.fromReasons([
+          ...new Set(causes.flatMap((cause) => cause.reasons)),
+        ])
+    })())
   }
 }
 

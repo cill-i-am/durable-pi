@@ -1,0 +1,66 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+stdout | tests/communication-runner.test.ts > communication callback admission regressions > refuses premature exhaustion while the exact callback is still running
+[21:30:54.354] ERROR (#262): Communication job exhausted { job: 'bot-communication:pump' } premature failure
+
+ ❯ tests/communication-runner.test.ts (46 tests | 2 failed) 54ms
+   ❯ communication callback admission regressions (2)
+     × refuses an overlapping invocation of the exact same SDK callback 2ms
+     × refuses premature exhaustion while the exact callback is still running 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/communication-runner.test.ts > communication callback admission regressions > refuses an overlapping invocation of the exact same SDK callback
+AssertionError: expected undefined to deeply equal { rescheduleAt: Any<Number> }
+
+- Expected:
+{
+  "rescheduleAt": Any<Number>,
+}
+
++ Received:
+undefined
+
+ ❯ tests/communication-runner.test.ts:1081:57
+    1079|     await started
+    1080|     try {
+    1081|       expect(await f.runner.onJob({ job, attempt: 1 })).toEqual({
+       |                                                         ^
+    1082|         rescheduleAt: expect.any(Number),
+    1083|       })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/communication-runner.test.ts > communication callback admission regressions > refuses premature exhaustion while the exact callback is still running
+AssertionError: expected [ { taskId: 'root', …(3) } ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   {
++     "owner": "owner",
++     "phase": "observe",
++     "revision": 1,
++     "taskId": "root",
++   },
++ ]
+
+ ❯ tests/communication-runner.test.ts:1112:27
+    1110|     try {
+    1111|       await f.runner.onJobError({ job, attempt: 3 }, "premature failur…
+    1112|       expect(f.committed).toEqual([])
+       |                           ^
+    1113|     } finally {
+    1114|       release()
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 44 passed (46)
+   Start at  21:30:53
+   Duration  388ms (import 57%, transform 21%, tests 18%, setup 2%, worker 1%)
+
