@@ -1,0 +1,21 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: email/all-sql: SQL fault fixture was evicted
+
+false !== true
+
+    at file:///Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/[eval1]:140:22
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async Promise.all (index 0)
+    at async file:///Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/[eval1]:128:7 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.21.0

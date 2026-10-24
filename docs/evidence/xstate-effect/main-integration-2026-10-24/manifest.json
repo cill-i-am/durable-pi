@@ -1023,7 +1023,7 @@
     "tests/browser/interaction-sound.spec.ts": "80da84ee91451f0dde605bb7015470631f4f75ae718fa4eeae3b712949c2fc5b"
   },
   "artifactHashes": {
-    "README.md": "4b8210998732dffc957f0d86e45bb0b964bc3e6a6213b6578b4c1f998a4e4355",
+    "README.md": "d10aeb32edbae7651058b723662ec589abba8d54b8e177173369c27fecba5c6c",
     "browser-assignment-recheck.log": "3da61a6be4de89b4ed2c92154f91f954a25b3be22a21fad552daa0e7c9a24d2e",
     "browser-baseline.log": "32e6b33ae91ab4e27d5fc2a5052109b7dc719c808fe73dc6dce1cac5e6046748",
     "browser-composed-before.log": "c17540fa355beb53848dba2bb063951a2245012736c443049b3919d16f8db1ea",
@@ -1040,6 +1040,11 @@
     "drawer-negative-transform.txt": "453d1197d76d078a522f1d22c020f5be1d8d1201974d852ff761f771b32cedb2",
     "drawer-negative.log": "76004b1eaace01afc785aceabe3dd44069b0959f1ef830344343ed729b08d141",
     "heartbeat-focused.log": "a574b50833e5d55221f328f160db873321fc18614b49bf09f216339e2e4b5f45",
+    "native-fixture-ci-failure.log": "d6569cef4a60f128add9cd5ff00decc5e3713d00c32b100674c27aa6c2f68352",
+    "native-fixture-idle-after.log": "df1f447965b2c9720e2bbb90cb032084ec999ee71c8f51931f63468c52358ebc",
+    "native-fixture-idle-before.log": "7c57c087c9dcf575541008ab2524ff5ae69464e7ac5aa1d74401efea67d9bbd9",
+    "native-fixture-original-pass.log": "df1f447965b2c9720e2bbb90cb032084ec999ee71c8f51931f63468c52358ebc",
+    "native-fixture-repair.json": "f6d46525a839ff6c8dc8bea388cce60875b13be7d39d5fa3a6cff149ca782364",
     "native.log": "3e5ff7453253cdca98cd18830d6f31ad2b971e9e22f550bf2d8e7685f1ddfcea",
     "passkeys.log": "3dfd4bb2c3210b2b84d89e20bc0bbade54e5110bdbea3ec6375b740a5a33d5e1",
     "previous-pr230-ci.json": "46262753d95b23b5b1534adf4f43558cb596db0be8da48245092fe451da98063",
@@ -1055,5 +1060,11 @@
   "publishedSource": "1cc6c9db67e2fa9312207acd2c002ceaf2ab35c8",
   "pullRequest": 231,
   "browserJobBudget": "30 minutes, after job 120999590261 exhausted 20 minutes with 322 journeys and 29 component cases passed",
-  "budgetRebaseHead": "a97a8f32687c5446aac9da39a42174e15055050f"
+  "budgetRebaseHead": "a97a8f32687c5446aac9da39a42174e15055050f",
+  "nativeFixtureRetention": {
+    "record": "native-fixture-repair.json",
+    "script": "scripts/test-whatsapp-runtime.mjs",
+    "sha256": "aa6b365e77113da08706dd67eb246da4f06585c54e2cb151495d912c503790dd",
+    "result": "Twenty-second idle regression fails before and passes after; no application-source changes."
+  }
 }

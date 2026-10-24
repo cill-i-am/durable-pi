@@ -55,10 +55,11 @@ async function waitForBarrier(call, channel, name, field) {
     await new Promise((done) => setTimeout(done, 10))
   }
 }
-async function prepareOutages(call, channel) {
+async function prepareOutages(call, channel, retain) {
   await call(channel, "all-sql", "setup")
   await call(channel, "all-sql", "lost-wake")
   await call(channel, "all-sql", "fault-all-sql")
+  retain(channel, "all-sql")
   const unavailable = await call(channel, "all-sql", "exercise-all-sql")
   assert.equal(unavailable.failures.length, 2)
   assert.ok(
@@ -69,6 +70,7 @@ async function prepareOutages(call, channel) {
   assert.ok(unavailable.faults >= 2)
   for (const name of ["outage-read", "outage-new", "outage-restart"]) {
     await call(channel, name, "setup")
+    retain(channel, name)
     await call(channel, name, "lost-wake")
     await call(channel, name, "fault-terminal")
     await call(channel, name, "wake")
@@ -81,6 +83,7 @@ async function prepareOutages(call, channel) {
     ["outage-complete", "fault-finish"],
   ]) {
     await call(channel, name, "setup")
+    retain(channel, name)
     await call(channel, name, "lost-wake")
     await call(channel, name, fault)
     await call(channel, name, "wake")
@@ -123,27 +126,22 @@ async function prepareOutages(call, channel) {
 async function withOutageInstances(call, work) {
   let active = true,
     failure
+  const retained = new Map()
+  const retain = (channel, name) => {
+    retained.set(`${channel}/${name}`, { channel, name })
+  }
   const pulse = (async () => {
     while (active) {
       await Promise.all(
-        ["email", "whatsapp"].flatMap((channel) =>
-          [
-            "all-sql",
-            "outage-read",
-            "outage-new",
-            "outage-restart",
-            "outage-send",
-            "outage-complete",
-          ].map(async (name) => {
-            const current = await call(channel, name, "keep-alive")
-            if (name === "all-sql")
-              assert.equal(
-                current.sqlUnavailable,
-                true,
-                "SQL fault fixture was evicted"
-              )
-          })
-        )
+        [...retained.values()].map(async ({ channel, name }) => {
+          const current = await call(channel, name, "keep-alive")
+          if (name === "all-sql")
+            assert.equal(
+              current.sqlUnavailable,
+              true,
+              `${channel}/${name}: SQL fault fixture was evicted`
+            )
+        })
       )
       await new Promise((done) => setTimeout(done, 1000))
     }
@@ -153,7 +151,7 @@ async function withOutageInstances(call, work) {
   })
   let result
   try {
-    result = await work()
+    result = await work(retain)
   } finally {
     active = false
     await pulse
@@ -326,100 +324,106 @@ const config :Workerd.Config = (
     return response.json()
   }
   const recovery = (result) => result.jobs.find((job) => job.fn === "recover")
-  for (const channel of ["email", "whatsapp"]) {
-    await call(channel, "early", "setup")
-    const deadline = Date.now() + 60_000
-    await call(channel, "early", "arm", `?deadline=${Date.now()}`)
-    await call(channel, "early", "arm", `?deadline=${deadline}`)
-    const early = await call(channel, "early", "dispatch")
-    assert.equal(recovery(early).payload.armedUntil, deadline)
-    assert.equal(recovery(early).time, deadline)
-    assert.equal(early.row, null)
+  // Retain each synthetic fault from creation, including while the other
+  // channel is still being prepared. Keep-alive never advances domain work.
+  await withOutageInstances(call, async (retain) => {
+    for (const channel of ["email", "whatsapp"]) {
+      await call(channel, "early", "setup")
+      const deadline = Date.now() + 60_000
+      await call(channel, "early", "arm", `?deadline=${Date.now()}`)
+      await call(channel, "early", "arm", `?deadline=${deadline}`)
+      const early = await call(channel, "early", "dispatch")
+      assert.equal(recovery(early).payload.armedUntil, deadline)
+      assert.equal(recovery(early).time, deadline)
+      assert.equal(early.row, null)
 
-    // An empty read starts before the lease expires. A row commits while the
-    // scan is held, then its clock advances beyond the admission deadline.
-    await call(channel, "scan", "setup")
-    await call(channel, "scan", "arm", `?deadline=${deadline}`)
-    await call(channel, "scan", "due")
-    await call(channel, "scan", "hold-scan")
-    const scanning = call(channel, "scan", "dispatch")
-    for (let attempt = 0; ; attempt++) {
-      if ((await call(channel, "scan", "status")).scanned) break
-      assert.ok(attempt < 100, "scan barrier was not reached")
-      await new Promise((done) => setTimeout(done, 10))
-    }
-    await call(channel, "scan", "accept", `?deadline=${deadline}`)
-    await call(channel, "scan", "release", "?offset=61000")
-    const scanned = await scanning
-    assert.ok(
-      recovery(scanned),
-      "the overlapping acceptance lost its discovery job"
-    )
-    assert.equal(recovery(scanned).time, deadline)
-
-    // A new same-ID push during native dispatch supersedes the old callback.
-    await call(channel, "replace", "setup")
-    await call(channel, "replace", "arm", `?deadline=${Date.now()}`)
-    await call(channel, "replace", "hold-scan")
-    const replacing = call(channel, "replace", "dispatch")
-    for (let attempt = 0; ; attempt++) {
-      if ((await call(channel, "replace", "status")).scanned) break
-      assert.ok(attempt < 100, "replacement barrier was not reached")
-      await new Promise((done) => setTimeout(done, 10))
-    }
-    await call(channel, "replace", "arm", `?deadline=${deadline}`)
-    await call(channel, "replace", "release")
-    assert.equal(recovery(await replacing).payload.armedUntil, deadline)
-
-    for (const owner of ["pump", "discovery"]) {
-      await call(channel, `exhaust-${owner}`, "setup")
-      await call(channel, `exhaust-${owner}`, "lost-wake")
-      await call(channel, `exhaust-${owner}`, `fault-${owner}`)
-      await call(channel, `exhaust-${owner}`, owner === "pump" ? "wake" : "due")
-      const exhausted = await call(channel, `exhaust-${owner}`, "dispatch")
-      assert.equal(exhausted.failures, 3)
-      assert.equal(exhausted.row.state, "failed")
-      assert.match(exhausted.row.error, /retry explicitly/)
-      assert.equal(exhausted.metrics.sends, 0)
-      assert.equal(
-        exhausted.jobs.some((job) => job.fn === "pump"),
-        false
-      )
+      // An empty read starts before the lease expires. A row commits while the
+      // scan is held, then its clock advances beyond the admission deadline.
+      await call(channel, "scan", "setup")
+      await call(channel, "scan", "arm", `?deadline=${deadline}`)
+      await call(channel, "scan", "due")
+      await call(channel, "scan", "hold-scan")
+      const scanning = call(channel, "scan", "dispatch")
+      for (let attempt = 0; ; attempt++) {
+        if ((await call(channel, "scan", "status")).scanned) break
+        assert.ok(attempt < 100, "scan barrier was not reached")
+        await new Promise((done) => setTimeout(done, 10))
+      }
+      await call(channel, "scan", "accept", `?deadline=${deadline}`)
+      await call(channel, "scan", "release", "?offset=61000")
+      const scanned = await scanning
       assert.ok(
-        recovery(exhausted),
-        "future admission lease disappeared during failure handling"
+        recovery(scanned),
+        "the overlapping acceptance lost its discovery job"
       )
+      assert.equal(recovery(scanned).time, deadline)
+
+      // A new same-ID push during native dispatch supersedes the old callback.
+      await call(channel, "replace", "setup")
+      await call(channel, "replace", "arm", `?deadline=${Date.now()}`)
+      await call(channel, "replace", "hold-scan")
+      const replacing = call(channel, "replace", "dispatch")
+      for (let attempt = 0; ; attempt++) {
+        if ((await call(channel, "replace", "status")).scanned) break
+        assert.ok(attempt < 100, "replacement barrier was not reached")
+        await new Promise((done) => setTimeout(done, 10))
+      }
+      await call(channel, "replace", "arm", `?deadline=${deadline}`)
+      await call(channel, "replace", "release")
+      assert.equal(recovery(await replacing).payload.armedUntil, deadline)
+
+      for (const owner of ["pump", "discovery"]) {
+        await call(channel, `exhaust-${owner}`, "setup")
+        await call(channel, `exhaust-${owner}`, "lost-wake")
+        await call(channel, `exhaust-${owner}`, `fault-${owner}`)
+        await call(
+          channel,
+          `exhaust-${owner}`,
+          owner === "pump" ? "wake" : "due"
+        )
+        const exhausted = await call(channel, `exhaust-${owner}`, "dispatch")
+        assert.equal(exhausted.failures, 3)
+        assert.equal(exhausted.row.state, "failed")
+        assert.match(exhausted.row.error, /retry explicitly/)
+        assert.equal(exhausted.metrics.sends, 0)
+        assert.equal(
+          exhausted.jobs.some((job) => job.fn === "pump"),
+          false
+        )
+        assert.ok(
+          recovery(exhausted),
+          "future admission lease disappeared during failure handling"
+        )
+      }
+
+      await call(channel, "checkpoint", "setup")
+      await call(channel, "checkpoint", "lost-wake")
+      await call(channel, "checkpoint", "fault-checkpoint")
+      await call(channel, "checkpoint", "wake")
+      await call(channel, "checkpoint", "dispatch")
+      await call(channel, "checkpoint", "pump-due")
+      const unconfirmed = await call(channel, "checkpoint", "dispatch")
+      assert.equal(unconfirmed.row.state, "sending")
+      assert.equal(unconfirmed.metrics.sends, 1)
+      assert.ok(
+        recovery(unconfirmed),
+        "failed immediate recovery lost the armed deadline"
+      )
+      await call(channel, "checkpoint", "heal")
+      const reconciled = await call(channel, "checkpoint", "dispatch")
+      assert.equal(reconciled.row.state, "uncertain")
+      assert.equal(reconciled.metrics.sends, 1)
+      await call(channel, "checkpoint", "wake")
+      const unchanged = await call(channel, "checkpoint", "dispatch")
+      assert.equal(unchanged.row.state, "uncertain")
+      assert.equal(unchanged.metrics.sends, 1)
+
+      await prepareOutages(call, channel, retain)
     }
-
-    await call(channel, "checkpoint", "setup")
-    await call(channel, "checkpoint", "lost-wake")
-    await call(channel, "checkpoint", "fault-checkpoint")
-    await call(channel, "checkpoint", "wake")
-    await call(channel, "checkpoint", "dispatch")
-    await call(channel, "checkpoint", "pump-due")
-    const unconfirmed = await call(channel, "checkpoint", "dispatch")
-    assert.equal(unconfirmed.row.state, "sending")
-    assert.equal(unconfirmed.metrics.sends, 1)
-    assert.ok(
-      recovery(unconfirmed),
-      "failed immediate recovery lost the armed deadline"
-    )
-    await call(channel, "checkpoint", "heal")
-    const reconciled = await call(channel, "checkpoint", "dispatch")
-    assert.equal(reconciled.row.state, "uncertain")
-    assert.equal(reconciled.metrics.sends, 1)
-    await call(channel, "checkpoint", "wake")
-    const unchanged = await call(channel, "checkpoint", "dispatch")
-    assert.equal(unchanged.row.state, "uncertain")
-    assert.equal(unchanged.metrics.sends, 1)
-
-    await prepareOutages(call, channel)
-  }
-  // Both provider calls hold their real persisted 60s lease concurrently. No
-  // fake clock or shortened production policy: dispatch must return on its own,
-  // then a late non-abortable provider result must not overwrite an explicit retry.
-  await withOutageInstances(call, () =>
-    Promise.all(
+    // Both provider calls hold their real persisted 60s lease concurrently. No
+    // fake clock or shortened production policy: dispatch must return on its own,
+    // then a late non-abortable provider result must not overwrite an explicit retry.
+    await Promise.all(
       ["email", "whatsapp"].map(async (channel) => {
         await call(channel, "held-provider", "setup")
         await call(channel, "held-provider", "hold-provider")
@@ -454,7 +458,7 @@ const config :Workerd.Config = (
         assert.equal(late.metrics.sends, 2)
       })
     )
-  )
+  })
   const orphanRestarts = new Map()
   for (const channel of ["email", "whatsapp"])
     orphanRestarts.set(channel, await finishOutages(call, channel))

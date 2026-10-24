@@ -1,0 +1,29 @@
+{
+  "failedHead": "ea691c7208c9613c678f10a2a8bb0c7150e21295",
+  "localPositiveHead": "46523c13601bb6fa654af4ff32c3d908268c3966",
+  "failedJob": 121006419511,
+  "failedAssertion": "SQL fault fixture was evicted",
+  "controlledNegative": "20-second idle delay after preparing email fixtures reproduces email/all-sql eviction assertion; repository files unchanged",
+  "unchangedLocalPositive": "PASS all native reply-outage, discovery, attachment, multipart and Chat SDK state checks",
+  "fixtures": [
+    {
+      "path": "scripts/test-whatsapp-runtime.mjs",
+      "sameAtFailedAndCurrentHead": true,
+      "sha256": "7f914af825e97765ba02d5251887a8610e42122783f0491e890630b96ab915be"
+    },
+    {
+      "path": "tests/runtime/reply-recovery-probe.ts",
+      "sameAtFailedAndCurrentHead": true,
+      "sha256": "8a46f80365b16deffa6a16bb801410096ed3138adee84989832645f6c6647cbf"
+    }
+  ],
+  "artifacts": {
+    "native-fixture-ci-failure.log": "d6569cef4a60f128add9cd5ff00decc5e3713d00c32b100674c27aa6c2f68352",
+    "native-fixture-idle-before.log": "7c57c087c9dcf575541008ab2524ff5ae69464e7ac5aa1d74401efea67d9bbd9",
+    "native-fixture-idle-after.log": "df1f447965b2c9720e2bbb90cb032084ec999ee71c8f51931f63468c52358ebc",
+    "native-fixture-original-pass.log": "df1f447965b2c9720e2bbb90cb032084ec999ee71c8f51931f63468c52358ebc"
+  },
+  "repair": "Start the existing keep-alive scope before channel setup; register each synthetic outage immediately after creation. Keep the same eviction assertion and native recovery checks.",
+  "repairedScriptSha256": "aa6b365e77113da08706dd67eb246da4f06585c54e2cb151495d912c503790dd",
+  "delayedRepairResult": "PASS: the same 20-second gap after email outage preparation now retains the simulated outage and passes all native reply checks."
+}

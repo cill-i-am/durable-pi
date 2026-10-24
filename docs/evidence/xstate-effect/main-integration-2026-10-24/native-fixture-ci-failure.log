@@ -1,0 +1,570 @@
+﻿2026-10-24T22:37:47.6007364Z Current runner version: '2.338.0'
+2026-10-24T22:37:47.6029343Z ##[group]Runner Image Provisioner
+2026-10-24T22:37:47.6030278Z Hosted Compute Agent
+2026-10-24T22:37:47.6030773Z Version: 20261021.618
+2026-10-24T22:37:47.6031280Z Commit: 21505ad2541d5be6135ed84fc33697146cf75b8e
+2026-10-24T22:37:47.6031918Z Build Date: 2026-10-21T00:45:21Z
+2026-10-24T22:37:47.6032495Z Worker ID: {ae5faca8-93a7-4c4e-9599-26a5869c204f}
+2026-10-24T22:37:47.6033094Z Region: centralus
+2026-10-24T22:37:47.6033661Z Cloud: Azure
+2026-10-24T22:37:47.6034108Z ##[endgroup]
+2026-10-24T22:37:47.6035289Z ##[group]Operating System
+2026-10-24T22:37:47.6035843Z Ubuntu
+2026-10-24T22:37:47.6036289Z 24.04.5
+2026-10-24T22:37:47.6036761Z LTS
+2026-10-24T22:37:47.6037184Z ##[endgroup]
+2026-10-24T22:37:47.6037654Z ##[group]Runner Image
+2026-10-24T22:37:47.6038150Z Image: ubuntu-24.04
+2026-10-24T22:37:47.6038627Z Version: 20261012.334.1
+2026-10-24T22:37:47.6039704Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20261012.334/images/ubuntu/Ubuntu2404-Readme.md
+2026-10-24T22:37:47.6041099Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261012.334
+2026-10-24T22:37:47.6041874Z ##[endgroup]
+2026-10-24T22:37:47.6042836Z ##[group]GITHUB_TOKEN Permissions
+2026-10-24T22:37:47.6044586Z Contents: read
+2026-10-24T22:37:47.6045119Z Metadata: read
+2026-10-24T22:37:47.6045593Z ##[endgroup]
+2026-10-24T22:37:47.6047320Z Secret source: Actions
+2026-10-24T22:37:47.6048133Z Cache mode: write
+2026-10-24T22:37:47.6049018Z Prepare workflow directory
+2026-10-24T22:37:47.6309247Z Prepare all required actions
+2026-10-24T22:37:47.6348451Z Getting action download info
+2026-10-24T22:37:47.9332992Z Download action repository 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1' (SHA:3d3c42e5aac5ba805825da76410c181273ba90b1)
+2026-10-24T22:37:48.6254080Z Download action repository 'pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86' (SHA:0977fd99725f1db4007ccb2928dbb4e90d06cc86)
+2026-10-24T22:37:48.9194775Z Download action repository 'actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1' (SHA:949feb2413d6458794dcd2491c4babbbce0c15c1)
+2026-10-24T22:37:49.4396006Z Download action repository 'moznion/cccc-action@1d5313811f8451953e46a268c61791a01e40b7df' (SHA:1d5313811f8451953e46a268c61791a01e40b7df)
+2026-10-24T22:37:49.6120513Z Download action repository 'actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9' (SHA:cf430e030ddbb5b0abf93d22962f4752f3646cd9)
+2026-10-24T22:37:50.2228133Z Getting action download info
+2026-10-24T22:37:50.3268230Z Download action repository 'actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830' (SHA:0057852bfaa89a56745cba8c7296529d2fc39830)
+2026-10-24T22:37:50.6499583Z Complete job name: native-runtime
+2026-10-24T22:37:50.7069464Z ##[group]Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+2026-10-24T22:37:50.7070182Z with:
+2026-10-24T22:37:50.7070370Z   repository: cill-i-am/durable-pi
+2026-10-24T22:37:50.7072616Z   token: ***
+2026-10-24T22:37:50.7072804Z   ssh-strict: true
+2026-10-24T22:37:50.7073003Z   ssh-user: git
+2026-10-24T22:37:50.7073200Z   persist-credentials: true
+2026-10-24T22:37:50.7073397Z   clean: true
+2026-10-24T22:37:50.7073590Z   sparse-checkout-cone-mode: true
+2026-10-24T22:37:50.7073797Z   fetch-depth: 1
+2026-10-24T22:37:50.7073968Z   fetch-tags: false
+2026-10-24T22:37:50.7074140Z   show-progress: true
+2026-10-24T22:37:50.7074324Z   lfs: false
+2026-10-24T22:37:50.7074480Z   submodules: false
+2026-10-24T22:37:50.7074652Z   set-safe-directory: true
+2026-10-24T22:37:50.7074858Z   allow-unsafe-pr-checkout: false
+2026-10-24T22:37:50.7075216Z ##[endgroup]
+2026-10-24T22:37:50.7914778Z Syncing repository: cill-i-am/durable-pi
+2026-10-24T22:37:50.7916123Z ##[group]Getting Git version info
+2026-10-24T22:37:50.7916461Z Working directory is '/home/runner/work/durable-pi/durable-pi'
+2026-10-24T22:37:50.7917032Z [command]/usr/bin/git version
+2026-10-24T22:37:51.4119501Z git version 2.55.0
+2026-10-24T22:37:51.4136577Z ##[endgroup]
+2026-10-24T22:37:51.4150333Z Temporarily overriding HOME='/home/runner/work/_temp/526fa480-156a-4e3b-8c9f-3053fd09b261' before making global git config changes
+2026-10-24T22:37:51.4151309Z Adding repository directory to the temporary git global config as a safe directory
+2026-10-24T22:37:51.4155236Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/durable-pi/durable-pi
+2026-10-24T22:37:51.4456338Z Deleting the contents of '/home/runner/work/durable-pi/durable-pi'
+2026-10-24T22:37:51.4459576Z ##[group]Determining repository object format
+2026-10-24T22:37:51.4461189Z ##[endgroup]
+2026-10-24T22:37:51.4461634Z ##[group]Initializing the repository
+2026-10-24T22:37:51.4465023Z [command]/usr/bin/git init /home/runner/work/durable-pi/durable-pi
+2026-10-24T22:37:51.5201388Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-10-24T22:37:51.5201897Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-10-24T22:37:51.5202304Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-10-24T22:37:51.5202952Z hint: call:
+2026-10-24T22:37:51.5203170Z hint:
+2026-10-24T22:37:51.5203594Z hint: 	git config --global init.defaultBranch <name>
+2026-10-24T22:37:51.5203857Z hint:
+2026-10-24T22:37:51.5204100Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-10-24T22:37:51.5204488Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-10-24T22:37:51.5204782Z hint:
+2026-10-24T22:37:51.5204949Z hint: 	git branch -m <name>
+2026-10-24T22:37:51.5205146Z hint:
+2026-10-24T22:37:51.5205407Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-10-24T22:37:51.5205880Z Initialized empty Git repository in /home/runner/work/durable-pi/durable-pi/.git/
+2026-10-24T22:37:51.5216193Z [command]/usr/bin/git remote add origin https://github.com/cill-i-am/durable-pi
+2026-10-24T22:37:51.5517164Z ##[endgroup]
+2026-10-24T22:37:51.5517580Z ##[group]Disabling automatic garbage collection
+2026-10-24T22:37:51.5520425Z [command]/usr/bin/git config --local gc.auto 0
+2026-10-24T22:37:51.5553184Z ##[endgroup]
+2026-10-24T22:37:51.5553646Z ##[group]Setting up auth
+2026-10-24T22:37:51.5554050Z Removing SSH command configuration
+2026-10-24T22:37:51.5558575Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-10-24T22:37:51.5589636Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-10-24T22:37:51.8859879Z Removing HTTP extra header
+2026-10-24T22:37:51.8864751Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-24T22:37:51.8896423Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-10-24T22:37:51.9122309Z Removing includeIf entries pointing to credentials config files
+2026-10-24T22:37:51.9127164Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-10-24T22:37:51.9157942Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-10-24T22:37:51.9352273Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-24d704bf-6a4b-4757-9d82-9358c313c084.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-10-24T22:37:51.9386791Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/durable-pi/durable-pi/.git.path /home/runner/work/_temp/git-credentials-24d704bf-6a4b-4757-9d82-9358c313c084.config
+2026-10-24T22:37:51.9417025Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/durable-pi/durable-pi/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-24d704bf-6a4b-4757-9d82-9358c313c084.config
+2026-10-24T22:37:51.9449436Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-24d704bf-6a4b-4757-9d82-9358c313c084.config
+2026-10-24T22:37:51.9480470Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-24d704bf-6a4b-4757-9d82-9358c313c084.config
+2026-10-24T22:37:51.9509342Z ##[endgroup]
+2026-10-24T22:37:51.9509814Z ##[group]Fetching the repository
+2026-10-24T22:37:51.9515969Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +e9324e5986cb0780eba493d749927e359c9a3538:refs/remotes/pull/229/merge
+2026-10-24T22:37:53.8389182Z From https://github.com/cill-i-am/durable-pi
+2026-10-24T22:37:53.8389822Z  * [new ref]         e9324e5986cb0780eba493d749927e359c9a3538 -> pull/229/merge
+2026-10-24T22:37:53.8393492Z ##[endgroup]
+2026-10-24T22:37:53.8394079Z ##[group]Determining the checkout info
+2026-10-24T22:37:53.8394612Z ##[endgroup]
+2026-10-24T22:37:53.8400121Z [command]/usr/bin/git sparse-checkout disable
+2026-10-24T22:37:53.8626777Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-10-24T22:37:53.8656134Z ##[group]Checking out the ref
+2026-10-24T22:37:53.8659739Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/229/merge
+2026-10-24T22:37:54.1146343Z Note: switching to 'refs/remotes/pull/229/merge'.
+2026-10-24T22:37:54.1146693Z 
+2026-10-24T22:37:54.1146967Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-10-24T22:37:54.1147349Z changes and commit them, and you can discard any commits you make in this
+2026-10-24T22:37:54.1147781Z state without impacting any branches by switching back to a branch.
+2026-10-24T22:37:54.1148030Z 
+2026-10-24T22:37:54.1148433Z If you want to create a new branch to retain commits you create, you may
+2026-10-24T22:37:54.1149012Z do so (now or later) by using -c with the switch command. Example:
+2026-10-24T22:37:54.1149358Z 
+2026-10-24T22:37:54.1149594Z   git switch -c <new-branch-name>
+2026-10-24T22:37:54.1149799Z 
+2026-10-24T22:37:54.1149916Z Or undo this operation with:
+2026-10-24T22:37:54.1150254Z 
+2026-10-24T22:37:54.1150353Z   git switch -
+2026-10-24T22:37:54.1150797Z 
+2026-10-24T22:37:54.1151058Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-10-24T22:37:54.1151429Z 
+2026-10-24T22:37:54.1151832Z HEAD is now at e9324e5 Merge ea691c7208c9613c678f10a2a8bb0c7150e21295 into 18046aa5362d78e7151c1b61c965adbe70b5aa66
+2026-10-24T22:37:54.1159717Z ##[endgroup]
+2026-10-24T22:37:54.1203398Z [command]/usr/bin/git log -1 --format=%H
+2026-10-24T22:37:54.1230137Z e9324e5986cb0780eba493d749927e359c9a3538
+2026-10-24T22:37:54.1446991Z ##[group]Run pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
+2026-10-24T22:37:54.1447311Z with:
+2026-10-24T22:37:54.1447490Z   dest: ~/setup-pnpm
+2026-10-24T22:37:54.1447670Z   run_install: null
+2026-10-24T22:37:54.1447840Z   cache: false
+2026-10-24T22:37:54.1448023Z   cache_dependency_path: pnpm-lock.yaml
+2026-10-24T22:37:54.1448274Z   package_json_file: package.json
+2026-10-24T22:37:54.1448487Z   standalone: false
+2026-10-24T22:37:54.1448658Z ##[endgroup]
+2026-10-24T22:37:54.2594653Z ##[group]Running self-installer...
+2026-10-24T22:38:03.9623269Z 
+2026-10-24T22:38:03.9623771Z added 1 package, and audited 2 packages in 5s
+2026-10-24T22:38:03.9623986Z 
+2026-10-24T22:38:03.9624244Z 1 package is looking for funding
+2026-10-24T22:38:03.9624538Z   run `npm fund` for details
+2026-10-24T22:38:03.9630331Z 
+2026-10-24T22:38:03.9630654Z found 0 vulnerabilities
+2026-10-24T22:38:04.4266701Z Checking for updates...
+2026-10-24T22:38:04.7765233Z Switching pnpm from v11.19.0 to v12.14.0...
+2026-10-24T22:38:05.2930409Z .../v11/85b-1a170106527-ac7173c3d6e3a7b5 | Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-10-24T22:38:05.2951371Z .../v11/85b-1a170106527-ac7173c3d6e3a7b5 |   +2 +
+2026-10-24T22:38:05.7657225Z .../v11/85b-1a170106527-ac7173c3d6e3a7b5 | Progress: resolved 2, reused 0, downloaded 2, added 2, done
+2026-10-24T22:38:06.9949442Z [WARN] Detected a pnpm v10 installation layout at PNPM_HOME. The pnpm shims at PNPM_HOME have been refreshed so the new version is active, but pnpm v11 expects bins in PNPM_HOME/bin. Run "pnpm setup" to migrate your PATH to the v11 layout.
+2026-10-24T22:38:06.9980950Z Successfully updated pnpm to v12.14.0
+2026-10-24T22:38:07.1797001Z ##[endgroup]
+2026-10-24T22:38:07.1797242Z Installation Completed!
+2026-10-24T22:38:07.1931705Z ##[group]Run actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+2026-10-24T22:38:07.1932011Z with:
+2026-10-24T22:38:07.1932177Z   node-version: 24
+2026-10-24T22:38:07.1932350Z   cache: pnpm
+2026-10-24T22:38:07.1932515Z   check-latest: false
+2026-10-24T22:38:07.1934652Z   token: ***
+2026-10-24T22:38:07.1934840Z   package-manager-cache: true
+2026-10-24T22:38:07.1935048Z env:
+2026-10-24T22:38:07.1935247Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-10-24T22:38:07.1935506Z ##[endgroup]
+2026-10-24T22:38:07.5941388Z Found in cache @ /opt/hostedtoolcache/node/24.21.0/x64
+2026-10-24T22:38:08.9888627Z ##[group]Environment details
+2026-10-24T22:38:11.5072989Z node: v24.21.0
+2026-10-24T22:38:11.5073312Z npm: 11.19.0
+2026-10-24T22:38:11.5081033Z yarn: 1.22.22
+2026-10-24T22:38:11.5101112Z ##[endgroup]
+2026-10-24T22:38:11.5104964Z [command]/home/runner/setup-pnpm/node_modules/.bin/bin/pnpm store path --silent
+2026-10-24T22:38:11.5234888Z /home/runner/setup-pnpm/node_modules/.bin/store/v11
+2026-10-24T22:38:11.6942657Z Cache hit for: node-cache-Linux-x64-pnpm-cbc82000c4e68cd2cf690f4524df8468ef14e0d15498cd380ffd83ea3674c917
+2026-10-24T22:38:12.8215415Z Received 134217728 of 535860119 (25.0%), 128.0 MBs/sec
+2026-10-24T22:38:13.8255782Z Received 398458880 of 535860119 (74.4%), 189.6 MBs/sec
+2026-10-24T22:38:14.3352450Z Received 535860119 of 535860119 (100.0%), 203.4 MBs/sec
+2026-10-24T22:38:14.3353023Z Cache Size: ~511 MB (535860119 B)
+2026-10-24T22:38:14.3441766Z [command]/usr/bin/tar -xf /home/runner/work/_temp/09b2ce80-6e36-4ab8-b174-ee6257afd7af/cache.tzst -P -C /home/runner/work/durable-pi/durable-pi --use-compress-program unzstd
+2026-10-24T22:38:22.8417653Z Cache restored successfully
+2026-10-24T22:38:22.8635793Z Cache restored from key: node-cache-Linux-x64-pnpm-cbc82000c4e68cd2cf690f4524df8468ef14e0d15498cd380ffd83ea3674c917
+2026-10-24T22:38:22.9182567Z ##[group]Run pnpm install --frozen-lockfile
+2026-10-24T22:38:22.9182953Z [36;1mpnpm install --frozen-lockfile[0m
+2026-10-24T22:38:23.1483237Z shell: /usr/bin/bash -e {0}
+2026-10-24T22:38:23.1483471Z env:
+2026-10-24T22:38:23.1483700Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-10-24T22:38:23.1483971Z ##[endgroup]
+2026-10-24T22:38:23.2497398Z ? Verifying lockfile against supply-chain policies (1431 entries)...
+2026-10-24T22:38:23.8347045Z Packages are hard linked from the content-addressable store to the virtual store.
+2026-10-24T22:38:23.8348568Z   Content-addressable store is at: /home/runner/setup-pnpm/node_modules/.bin/store/v11
+2026-10-24T22:38:23.8349273Z   Virtual store is at:             node_modules/.pnpm
+2026-10-24T22:38:24.8442763Z Progress: resolved 217, reused 217, downloaded 0, added 210
+2026-10-24T22:38:26.3666420Z Progress: resolved 324, reused 324, downloaded 0, added 317
+2026-10-24T22:38:27.3831719Z Progress: resolved 519, reused 519, downloaded 0, added 512
+2026-10-24T22:38:28.4173068Z Progress: resolved 661, reused 661, downloaded 0, added 654
+2026-10-24T22:38:29.4251380Z Progress: resolved 867, reused 867, downloaded 0, added 860
+2026-10-24T22:38:30.4251397Z Progress: resolved 1163, reused 1163, downloaded 0, added 1156
+2026-10-24T22:38:36.1430401Z Progress: resolved 1177, reused 1177, downloaded 0, added 1176
+2026-10-24T22:38:36.1967912Z [WARN] Request took 12408ms: https://registry.npmjs.org/@keyv%2Fserialize
+2026-10-24T22:38:36.1968772Z [WARN] Request took 12408ms: https://registry.npmjs.org/@keyv%2Fbigmap
+2026-10-24T22:38:36.1969548Z [WARN] Request took 12401ms: https://registry.npmjs.org/@libsql%2Fhrana-client
+2026-10-24T22:38:36.1971170Z [WARN] Request took 12376ms: https://registry.npmjs.org/@mapbox%2Ftiny-sdf
+2026-10-24T22:38:36.1977171Z [WARN] Request took 12371ms: https://registry.npmjs.org/@mapbox%2Fvector-tile
+2026-10-24T22:38:36.1978227Z [WARN] Request took 12370ms: https://registry.npmjs.org/@modelcontextprotocol%2Fclient
+2026-10-24T22:38:36.1979011Z [WARN] Request took 12369ms: https://registry.npmjs.org/@nodelib%2Ffs.stat
+2026-10-24T22:38:36.1979694Z [WARN] Request took 12372ms: https://registry.npmjs.org/@maplibre%2Fgeojson-vt
+2026-10-24T22:38:36.1985620Z [WARN] Request took 12369ms: https://registry.npmjs.org/@neon%2Ffunctions
+2026-10-24T22:38:36.1986488Z [WARN] Request took 12368ms: https://registry.npmjs.org/@oozcitak%2Fdom
+2026-10-24T22:38:36.1997784Z [WARN] Request took 12383ms: https://registry.npmjs.org/@libsql%2Flinux-x64-musl
+2026-10-24T22:38:36.2002444Z [WARN] Request took 12368ms: https://registry.npmjs.org/@oozcitak%2Finfra
+2026-10-24T22:38:36.2003319Z [WARN] Request took 12375ms: https://registry.npmjs.org/@maplibre%2Fmlt
+2026-10-24T22:38:36.2005396Z [WARN] Request took 12373ms: https://registry.npmjs.org/@modelcontextprotocol%2Fcore
+2026-10-24T22:38:36.2011041Z [WARN] Request took 12371ms: https://registry.npmjs.org/@octokit%2Frequest
+2026-10-24T22:38:36.2021294Z [WARN] Request took 12367ms: https://registry.npmjs.org/@oxc-parser%2Fbinding-android-arm64
+2026-10-24T22:38:36.2025561Z [WARN] Request took 12372ms: https://registry.npmjs.org/@octokit%2Fplugin-paginate-rest
+2026-10-24T22:38:36.2055450Z [WARN] Request took 12382ms: https://registry.npmjs.org/@mapbox%2Funitbezier
+2026-10-24T22:38:36.2056400Z [WARN] Request took 12406ms: https://registry.npmjs.org/@libsql%2Flinux-arm-gnueabihf
+2026-10-24T22:38:36.2057516Z [WARN] Request took 12385ms: https://registry.npmjs.org/@libsql%2Fwin32-x64-msvc
+2026-10-24T22:38:36.2063468Z [WARN] Request took 12383ms: https://registry.npmjs.org/@mapbox%2Fpoint-geometry
+2026-10-24T22:38:36.2064246Z [WARN] Request took 12377ms: https://registry.npmjs.org/@noble%2Fciphers
+2026-10-24T22:38:36.2071434Z [WARN] Request took 12378ms: https://registry.npmjs.org/@neodrag%2Fsolid
+2026-10-24T22:38:36.2072330Z [WARN] Request took 12383ms: https://registry.npmjs.org/@mapbox%2Fjsonlint-lines-primitives
+2026-10-24T22:38:36.2073470Z [WARN] Request took 12380ms: https://registry.npmjs.org/@modelcontextprotocol%2Fserver
+2026-10-24T22:38:36.2074221Z [WARN] Request took 12375ms: https://registry.npmjs.org/@nodelib%2Ffs.scandir
+2026-10-24T22:38:36.2075110Z [WARN] Request took 12376ms: https://registry.npmjs.org/@octokit%2Fendpoint
+2026-10-24T22:38:36.2088638Z [WARN] Request took 12375ms: https://registry.npmjs.org/@octokit%2Frest
+2026-10-24T22:38:36.2115684Z [WARN] Request took 12380ms: https://registry.npmjs.org/@neodrag%2Fcore
+2026-10-24T22:38:36.2116610Z [WARN] Request took 12380ms: https://registry.npmjs.org/@maplibre%2Fvt-pbf
+2026-10-24T22:38:36.2117678Z [WARN] Request took 12375ms: https://registry.npmjs.org/@octokit%2Fwebhooks-methods
+2026-10-24T22:38:36.2132881Z [WARN] Request took 12373ms: https://registry.npmjs.org/@oxc-parser%2Fbinding-android-arm-eabi
+2026-10-24T22:38:36.2135430Z [WARN] Request took 12378ms: https://registry.npmjs.org/@neon-rs%2Fload
+2026-10-24T22:38:36.2153755Z [WARN] Request took 12415ms: https://registry.npmjs.org/@libsql%2Fdarwin-x64
+2026-10-24T22:38:36.2159122Z [WARN] Request took 12378ms: https://registry.npmjs.org/@opentelemetry%2Fsemantic-conventions
+2026-10-24T22:38:36.2166451Z [WARN] Request took 12387ms: https://registry.npmjs.org/@napi-rs%2Fwasm-runtime
+2026-10-24T22:38:36.2169639Z [WARN] Request took 12387ms: https://registry.npmjs.org/@maplibre%2Fmaplibre-gl-style-spec
+2026-10-24T22:38:36.2178553Z [WARN] Request took 12383ms: https://registry.npmjs.org/@octokit%2Fopenapi-webhooks-types
+2026-10-24T22:38:36.2179895Z [WARN] Request took 12384ms: https://registry.npmjs.org/@nodelib%2Ffs.walk
+2026-10-24T22:38:36.2181664Z [WARN] Request took 12389ms: https://registry.npmjs.org/@noble%2Fhashes
+2026-10-24T22:38:36.2183619Z [WARN] Request took 12388ms: https://registry.npmjs.org/@octokit%2Fgraphql
+2026-10-24T22:38:36.2188795Z [WARN] Request took 12394ms: https://registry.npmjs.org/@modelcontextprotocol%2Fsdk
+2026-10-24T22:38:36.2198408Z [WARN] Request took 12390ms: https://registry.npmjs.org/@octokit%2Fcore
+2026-10-24T22:38:36.2207057Z [WARN] Request took 12389ms: https://registry.npmjs.org/@octokit%2Frequest-error
+2026-10-24T22:38:36.2215461Z [WARN] Request took 12386ms: https://registry.npmjs.org/@oxc-parser%2Fbinding-darwin-arm64
+2026-10-24T22:38:36.2220360Z [WARN] Request took 12391ms: https://registry.npmjs.org/@octokit%2Fopenapi-types
+2026-10-24T22:38:36.2230514Z [WARN] Request took 12393ms: https://registry.npmjs.org/@oozcitak%2Furl
+2026-10-24T22:38:36.2233651Z [WARN] Request took 12425ms: https://registry.npmjs.org/@libsql%2Flinux-arm64-musl
+2026-10-24T22:38:36.2240794Z [WARN] Request took 12426ms: https://registry.npmjs.org/@libsql%2Flinux-x64-gnu
+2026-10-24T22:38:36.2245477Z [WARN] Request took 12399ms: https://registry.npmjs.org/@octokit%2Fplugin-request-log
+2026-10-24T22:38:36.2252577Z [WARN] Request took 12400ms: https://registry.npmjs.org/@mrleebo%2Fprisma-ast
+2026-10-24T22:38:36.2253573Z [WARN] Request took 12397ms: https://registry.npmjs.org/@oozcitak%2Futil
+2026-10-24T22:38:36.2263858Z [WARN] Request took 12402ms: https://registry.npmjs.org/@octokit%2Fauth-token
+2026-10-24T22:38:36.2369600Z [WARN] Request took 12412ms: https://registry.npmjs.org/@octokit%2Ftypes
+2026-10-24T22:38:36.2485616Z [WARN] Request took 12424ms: https://registry.npmjs.org/@octokit%2Fplugin-rest-endpoint-methods
+2026-10-24T22:38:36.2749279Z [WARN] Request took 12448ms: https://registry.npmjs.org/@octokit%2Fwebhooks
+2026-10-24T22:38:37.9790880Z ✓ Lockfile passes supply-chain policies (1431 entries in 14.7s)
+2026-10-24T22:38:37.9791513Z Lockfile is up to date, resolution step is skipped
+2026-10-24T22:38:37.9932253Z Packages: +1177
+2026-10-24T22:38:37.9932775Z ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2026-10-24T22:38:38.1636724Z Progress: resolved 1177, reused 1177, downloaded 0, added 1177, done
+2026-10-24T22:38:41.4530359Z Agent skills awaiting approval: @tanstack/ai, @tanstack/devtools-vite, @tanstack/react-start, drizzle-kit, ultracite.
+2026-10-24T22:38:41.4531253Z Run "pnpm approve" to review them.
+2026-10-24T22:38:41.4581368Z . prepare$ effect-tsgo patch --oxlint
+2026-10-24T22:38:42.3769425Z . prepare: Patched typescript at /home/runner/work/durable-pi/durable-pi/node_modules/.pnpm/@typescript+typescript-linux-x64@7.0.2/node_modules/@typescript/typescript-linux-x64/lib/tsc
+2026-10-24T22:38:42.3771362Z . prepare: Patched oxlint at /home/runner/work/durable-pi/durable-pi/node_modules/.pnpm/@oxlint+binding-linux-x64-gnu@1.88.0/node_modules/@oxlint/binding-linux-x64-gnu/oxlint.linux-x64-gnu.node
+2026-10-24T22:38:42.3772981Z . prepare: Patched oxlint-dts at /home/runner/work/durable-pi/durable-pi/node_modules/.pnpm/oxlint@1.88.0_oxlint-tsgolint@7.0.2004/node_modules/oxlint/dist/index.d.ts
+2026-10-24T22:38:42.3774015Z . prepare: Patched oxlint-tsgolint at /home/runner/work/durable-pi/durable-pi/node_modules/.pnpm/@oxlint-tsgolint+linux-x64@7.0.2004/node_modules/@oxlint-tsgolint/linux-x64/tsgolint
+2026-10-24T22:38:42.4008034Z . prepare: Done
+2026-10-24T22:38:42.4026799Z 
+2026-10-24T22:38:42.4027022Z dependencies:
+2026-10-24T22:38:42.4027750Z + @alchemy.run/frontend-frameworks 2.0.0-beta.83
+2026-10-24T22:38:42.4028524Z + @base-ui/react 1.9.0
+2026-10-24T22:38:42.4029031Z + @better-auth/passkey 1.7.10
+2026-10-24T22:38:42.4033957Z + @chat-adapter/whatsapp 4.42.0
+2026-10-24T22:38:42.4036636Z + @cloudflare/puppeteer 1.4.0
+2026-10-24T22:38:42.4036956Z + @cloudflare/sandbox 1.0.1
+2026-10-24T22:38:42.4037266Z + @earendil-works/chord 1.3.0
+2026-10-24T22:38:42.4037588Z + @earendil-works/pi-ai 1.3.0
+2026-10-24T22:38:42.4037942Z + @earendil-works/pi-durable 1.3.0
+2026-10-24T22:38:42.4039060Z + @effect/platform-bun 4.0.5
+2026-10-24T22:38:42.4040932Z + @effect/platform-node 4.0.5
+2026-10-24T22:38:42.4041250Z + @effect/sql-sqlite-do 4.0.5
+2026-10-24T22:38:42.4042355Z + @fontsource-variable/geist-mono 5.3.0
+2026-10-24T22:38:42.4045612Z + @fontsource-variable/inter 5.3.0
+2026-10-24T22:38:42.4046105Z + @json-render/core 0.21.1
+2026-10-24T22:38:42.4047878Z + @json-render/react 0.21.1
+2026-10-24T22:38:42.4052135Z + @modelcontextprotocol/client 2.3.1
+2026-10-24T22:38:42.4052576Z + @shadcn/react 0.3.1
+2026-10-24T22:38:42.4053031Z + @tailwindcss/vite 4.3.3
+2026-10-24T22:38:42.4055900Z + @tanstack/ai 0.69.0
+2026-10-24T22:38:42.4056209Z + @tanstack/ai-client 0.39.3
+2026-10-24T22:38:42.4056540Z + @tanstack/ai-react 0.30.4
+2026-10-24T22:38:42.4056878Z + @tanstack/query-core 5.104.1
+2026-10-24T22:38:42.4057245Z + @tanstack/react-devtools 0.10.13
+2026-10-24T22:38:42.4057624Z + @tanstack/react-query 5.104.1
+2026-10-24T22:38:42.4057984Z + @tanstack/react-router 1.170.45
+2026-10-24T22:38:42.4058387Z + @tanstack/react-router-devtools 1.167.2
+2026-10-24T22:38:42.4058780Z + @tanstack/react-start 1.169.3
+2026-10-24T22:38:42.4059135Z + @tanstack/react-table 8.21.3
+2026-10-24T22:38:42.4059516Z + @tiesen/effect-tanstack-query 0.0.26
+2026-10-24T22:38:42.4059900Z + @xstate/effect 1.0.0-alpha.8
+2026-10-24T22:38:42.4060351Z + @xterm/addon-fit 0.11.0
+2026-10-24T22:38:42.4060657Z + @xterm/xterm 6.0.0
+2026-10-24T22:38:42.4060924Z + agents 0.28.1
+2026-10-24T22:38:42.4061204Z + alchemy 2.0.0-beta.83
+2026-10-24T22:38:42.4061498Z + better-auth 1.7.10
+2026-10-24T22:38:42.4061775Z + border-beam 1.4.1
+2026-10-24T22:38:42.4062031Z + chat 4.42.0
+2026-10-24T22:38:42.4062353Z + class-variance-authority 0.7.1
+2026-10-24T22:38:42.4062669Z + cmdk 1.1.1
+2026-10-24T22:38:42.4062896Z + cn 0.5.0
+2026-10-24T22:38:42.4063190Z + drizzle-orm 1.0.0-rc.5-ab785fc
+2026-10-24T22:38:42.4063493Z + effect 4.0.5
+2026-10-24T22:38:42.4063736Z + hono 4.13.13
+2026-10-24T22:38:42.4064013Z + input-otp 1.5.0
+2026-10-24T22:38:42.4064269Z + jose 6.2.12
+2026-10-24T22:38:42.4064532Z + lucide-react 1.58.0
+2026-10-24T22:38:42.4064826Z + maplibre-gl 6.14.0
+2026-10-24T22:38:42.4065107Z + next-themes 0.4.6
+2026-10-24T22:38:42.4065362Z + parse5 8.0.1
+2026-10-24T22:38:42.4065617Z + postal-mime 4.0.7
+2026-10-24T22:38:42.4065915Z + qrcode.react 4.2.0
+2026-10-24T22:38:42.4066166Z + react 19.3.1
+2026-10-24T22:38:42.4066410Z + react-dom 19.3.1
+2026-10-24T22:38:42.4066671Z + react-email 6.11.0
+2026-10-24T22:38:42.4066933Z + react-markdown 10.1.0
+2026-10-24T22:38:42.4067555Z + remark-gfm 4.0.1
+2026-10-24T22:38:42.4067797Z + shadcn 4.22.0
+2026-10-24T22:38:42.4068029Z + shiki 4.5.0
+2026-10-24T22:38:42.4068264Z + tailwindcss 4.3.3
+2026-10-24T22:38:42.4068522Z + thinking-orbs 0.3.2
+2026-10-24T22:38:42.4068794Z + tw-animate-css 1.4.0
+2026-10-24T22:38:42.4069041Z + unpdf 1.9.0
+2026-10-24T22:38:42.4069379Z + xstate 6.0.0-alpha.68
+2026-10-24T22:38:42.4069651Z + zod 4.6.5
+2026-10-24T22:38:42.4069778Z 
+2026-10-24T22:38:42.4069889Z devDependencies:
+2026-10-24T22:38:42.4070364Z + @chat-adapter/state-memory 4.42.0
+2026-10-24T22:38:42.4070841Z + @cloudflare/sandbox-v0 <- @cloudflare/sandbox 0.12.10
+2026-10-24T22:38:42.4071285Z + @cloudflare/workers-types 5.20261016.1
+2026-10-24T22:38:42.4071731Z + @effect/sql-sqlite-node 4.0.5
+2026-10-24T22:38:42.4072038Z + @effect/tsgo 0.53.3
+2026-10-24T22:38:42.4072302Z + @effect/vitest 4.0.5
+2026-10-24T22:38:42.4072576Z + @playwright/test 1.64.1
+2026-10-24T22:38:42.4072904Z + @tanstack/devtools-vite 0.8.5
+2026-10-24T22:38:42.4073240Z + @tanstack/router-cli 1.167.45
+2026-10-24T22:38:42.4073539Z + @types/node 24.19.2
+2026-10-24T22:38:42.4073805Z + @types/react 19.3.0
+2026-10-24T22:38:42.4074084Z + @types/react-dom 19.3.0
+2026-10-24T22:38:42.4074463Z + @types/ws 8.18.2
+2026-10-24T22:38:42.4074774Z + @typescript/native <- typescript 7.0.2
+2026-10-24T22:38:42.4075189Z + @vitejs/plugin-react 6.1.2
+2026-10-24T22:38:42.4075572Z + drizzle-kit 1.0.0-rc.5-ab785fc
+2026-10-24T22:38:42.4075872Z + oxfmt 0.73.0
+2026-10-24T22:38:42.4076113Z + oxlint 1.88.0
+2026-10-24T22:38:42.4076417Z + oxlint-plugin-effect 0.29.0
+2026-10-24T22:38:42.4076808Z + oxlint-plugin-react-doctor 0.9.16
+2026-10-24T22:38:42.4077171Z + oxlint-tsgolint 7.0.2004
+2026-10-24T22:38:42.4077463Z + tsx 4.23.15
+2026-10-24T22:38:42.4077808Z + typescript <- @typescript/typescript6 6.0.2
+2026-10-24T22:38:42.4078220Z + ultracite 8.0.1
+2026-10-24T22:38:42.4078398Z + vite 8.3.4
+2026-10-24T22:38:42.4078565Z + vitest 5.0.5
+2026-10-24T22:38:42.4078730Z + ws 8.22.0
+2026-10-24T22:38:42.4078824Z 
+2026-10-24T22:38:42.4078968Z Done in 19.2s using pnpm v12.14.0
+2026-10-24T22:38:42.4494624Z ##[group]Run pnpm verify:native-runtime
+2026-10-24T22:38:42.4494920Z [36;1mpnpm verify:native-runtime[0m
+2026-10-24T22:38:42.4552813Z shell: /usr/bin/bash -e {0}
+2026-10-24T22:38:42.4553122Z env:
+2026-10-24T22:38:42.4553420Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-10-24T22:38:42.4553798Z ##[endgroup]
+2026-10-24T22:38:42.4900455Z $ pnpm generate-routes && pnpm test:communication-runtime && pnpm test:communication-control-runtime && pnpm test:coordination-runtime && pnpm test:conversation-runtime && pnpm test:workspace-runtime && pnpm test:routines-runtime && pnpm test:apps-runtime && pnpm test:drizzle-runtime && pnpm test:whatsapp-runtime && pnpm test:background-stop-runtime && pnpm test:memory-runtime && pnpm test:memory-summary-runtime && pnpm test:memory-backup-runtime && pnpm test:upstream-runtime && pnpm test:xstate-runtime
+2026-10-24T22:38:42.5072784Z $ tsr generate
+2026-10-24T22:38:42.7995449Z (node:2430) Warning: Accessing non-existent property 'replaceRouteChunk' of module exports inside circular dependency
+2026-10-24T22:38:42.7996837Z (Use `node --trace-warnings ...` to show where the warning was created)
+2026-10-24T22:38:43.0648490Z $ node scripts/test-communication-runtime.mjs
+2026-10-24T22:38:45.1054834Z PASS native Conversation, Routine, Communication and Workspace callback bindings preserve checked failures, cleanup defects and interruption together.
+2026-10-24T22:38:45.3359240Z PASS native coordination callback joins before actor runtime and SQL disposal.
+2026-10-24T22:38:45.5473557Z PASS native apps callback joins before actor runtime and SQL disposal.
+2026-10-24T22:38:45.6949764Z PASS native conversation callback joins before actor runtime and SQL disposal.
+2026-10-24T22:38:45.8425635Z PASS native routines callback joins before actor runtime and SQL disposal.
+2026-10-24T22:38:45.9997828Z PASS native communication callback joins before actor runtime and SQL disposal.
+2026-10-24T22:38:46.2809040Z PASS native workspace callback joins before actor runtime and SQL disposal.
+2026-10-24T22:38:51.7741816Z PASS native agent coordination: authenticated human provenance, nonblocking spawn, child discovery/question, addressed reply, automatic findings, resuming the original native session, and atomic membership fencing of 25 completed main sessions with queued mail and retained history.
+2026-10-24T22:38:52.5971240Z PASS native maintenance: foreground progress during held IO, no overlapping attempts, wake during completion retained, and persisted recovery after SIGKILL.
+2026-10-24T22:38:53.5151405Z PASS native chat: production admission, context pinning, Pi reply and turn completion all finish while the summary model and backup IO remain held.
+2026-10-24T22:38:54.4219846Z PASS native ChatGPT sign-in: default Workers fetch, PKCE exchange, remote JWKS identity validation, durable credential install, one-use replay and refused redirects.
+2026-10-24T22:39:33.3414626Z PASS native voice: shared original/transcript storage, agent transcript input and text reply, dedupe and restart without resend; AI/provider inference is synthetic.
+2026-10-24T22:39:33.3415754Z PASS native WhatsApp images: production workspace upload and vision admission, common share_image tool, complete multipart text and a private image send, dedupe and restart persistence.
+2026-10-24T22:39:33.4048420Z PASS native WhatsApp: production actor admission, one Pi reply, webhook dedupe and sent restart without resend.
+2026-10-24T22:39:39.4968163Z PASS native email: MIME to production actor, one Pi reply, webhook dedupe, sent restart, and SIGKILL during provider send without resend.
+2026-10-24T22:39:40.4237663Z PASS website SSE gzip: small initial event and later heartbeat arrive before EOF, cloned Response is encoded once, cancellation reaches the source exactly once and a late source error fails the native body reader.
+2026-10-24T22:39:40.5166393Z PASS native Effect SQLite DO driver: rollback/nesting/interruption/defect, automatic yields with a queued reader, native synchronous writes, query-only rejection, pre-commit failure, lost acknowledgement with committed state and real commit-failure recovery.
+2026-10-24T22:39:41.2154371Z PASS native Terminal client and relay: one original command/replay, real WebSocket binary/resize relay, disconnect/reconnect, invalid input closes, and session Save/checkpoint.
+2026-10-24T22:39:41.4440692Z PASS native PersonalAgent HTTP proxy: actual retained host, Terminal session admission, WebSocket upgrade, binary/resize relay and Save.
+2026-10-24T22:39:41.4936867Z PASS native Dynamic Worker Loader: production Execution handler, bundled runner/code loading, bounded JSON/logs, outbound network denied.
+2026-10-24T22:40:25.6437198Z PASS native loop recovery: SIGKILL at third failure, same committed round replayed once, fifth failure stops, blocked restart dispatches no new calls.
+2026-10-24T22:40:26.3820419Z PASS native Effect SQL read compatibility with the actual committed Pi journal, without mutation or a second harness.
+2026-10-24T22:40:26.5081836Z PASS native retained HttpApi catalog: preserved wire/status, safe expected failure, fatal defect/interruption/compound cause and invalid-result rejection.
+2026-10-24T22:40:26.5575210Z PASS native Objects/Planning/Delegation commits: callback rollback, separate raw/compound settlement faults and joined late defects retain both causes without changing Pi journal entries.
+2026-10-24T22:40:26.6572737Z PASS native BackgroundGroup RPC: explicit Exit preserves expected failures, defects, interruption and compound Causes; legacy Promise projection demonstrates the lost meanings.
+2026-10-24T22:40:26.6826275Z PASS native reverse parent/account RPC: retained host handlers preserve complete Causes through actual DO calls in both directions.
+2026-10-24T22:40:26.7193425Z PASS native connection/tool/skill owner RPC: actual retained handlers preserve complete outcomes, reject invalid operations and redact private diagnostics across DO calls.
+2026-10-24T22:40:26.7736317Z PASS native profile/status/configuration/connection RPC: complete outcomes and actual previous-version DO fallback, including owner and mailbox identity arguments.
+2026-10-24T22:40:27.3570790Z PASS native task controls: original records, queued cancellation before model dispatch, exact retry and a newer request preserved.
+2026-10-24T22:40:27.3614651Z PASS native read-only deployment revisions through the production Worker and actual PersonalAgent catalogue/actors.
+2026-10-24T22:40:27.3777219Z PASS native Activity/webhook outcomes, actual previous-version read fallback and composed gateway routing through real PersonalAgent objects.
+2026-10-24T22:40:38.8168319Z PASS native website -> Agent gateway -> PersonalAgent -> Terminal: private HTTP, actual generated app execution and replay, real upgraded binary/resize relay, fresh session revocation and stopped rechecks.
+2026-10-24T22:40:52.1441406Z PASS native Pi run_command completion/Stop fencing and BackgroundGroup active provider shutdown joins held reader cleanup before runtime disposal.
+2026-10-24T22:40:58.3711992Z PASS full PersonalAgent: native actor Layer activation (5 -> 6 across restart), conversation pump, Pi completion, real parent/two-child delegation and sealed restart state, real parent/background-DO/two-child execution and report reconciliation with exact restart state, atomic background report admission/acknowledgement, read-only Activity HTTP/RPC and exact saved-run restart state, Terminal HTTP/import/export/cancel with exact receipt and byte restart state, private archive export, code HTTP replay and uncertain-intent recovery without redispatch, credential rotation intent survives SIGKILL without refresh replay, usage terminal fences and deduplicated totals survive restart, ordered disposal joining held provider/credential/SSE/summary/export/download/execution work, and fresh activation after restart without another conversation model request.
+2026-10-24T22:40:58.3715890Z PASS workerd 1.20261002.1: private Effect RPC, two SQLite DOs, sender restart before delivery, lost acknowledgment after acceptance, recipient/result-delivery restart, unique task admission, invalid/version/owner rejection native Pi interruption/recovery, single continuation and coexisting Pi/Lifecycle alarms.
+2026-10-24T22:40:58.4326124Z $ node scripts/test-communication-control-runtime.mjs
+2026-10-24T22:41:04.7068524Z PASS actual Lifecycle exhausted-epoch crash window: exactly3 unowned callbacks, persisted summary plus surviving running row, cold autonomous alarm without a fourth dispatch; explicit Retry mints a new epoch even with an old SDK row, and stale UI retry cannot clear the next failure.
+2026-10-24T22:41:05.2724671Z WAIT held native submit: cross the real thirty-second owner deadline before Stop and a replacement pass.
+2026-10-24T22:41:36.3338555Z PASS native held submit: real lease expiry cannot steal ownership; Stop revokes model authority, waits for joined handoff, then confirms one abort without another submission.
+2026-10-24T22:41:36.9007073Z PASS native held abort: duplicate pass and wake retain one Stop owner until actual Pi abort joins.
+2026-10-24T22:41:37.5287792Z WAIT native Communication SIGKILL recovery: health-only startup, no object request until the actual sixty-second discovery lease expires.
+2026-10-24T22:42:52.3142005Z PASS native admission no-request recovery: the real sixty-second retained discovery dispatches one original envelope and commits exactly one matching recipient inbox receipt.
+2026-10-24T22:42:52.3217843Z PASS native result no-request recovery: accepted native result reconciles after lost acknowledgement with the same receipt, one continuation and no model call or resubmission.
+2026-10-24T22:42:52.5104901Z PASS second SIGKILL: exact completed task and delivery rows retained; continuation remains consumed once. All model responses are synthetic.
+2026-10-24T22:42:52.5473238Z $ node scripts/test-coordination-runtime.mjs
+2026-10-24T22:43:55.6666406Z {"case":"retained-native-restart","emptySteps":1,"restores":2,"message":"a38981f4-064d-4f5f-b15b-39b620ed4862","initial":19,"addressed":24,"calls":2}
+2026-10-24T22:43:56.0679801Z {"case":"held-native-stop","trace":["admitted:delegation:7:7","submit-held","admitted:bbe73ba4-da92-459c-a502-8b60b88f2160","abort-started","abort-acknowledged","stop-returned"],"child":7,"message":"bbe73ba4-da92-459c-a502-8b60b88f2160","receipt":25,"stopFirstPhase":"failed"}
+2026-10-24T22:43:56.2293868Z PASS B08 actual Lifecycle/SQLite/Pi retained discovery, original identities, joined Stop and two SIGKILL/restarts; workerd 1.20261002.1. Synthetic authority/provider; no full PersonalAgent authorization claim.
+2026-10-24T22:43:56.2615357Z $ node scripts/test-conversation-runtime.mjs
+2026-10-24T22:43:57.0093698Z PASS native held-submit: owner retained until joined cancellation; no overlapping native command or stopped-session reuse.
+2026-10-24T22:43:57.3755131Z PASS native held-abort: owner retained until joined cancellation; no overlapping native command or stopped-session reuse.
+2026-10-24T22:43:59.2732904Z WAIT native SIGKILL recovery: health-only startup; no Durable Object requests until the real discovery lease expires.
+2026-10-24T22:45:07.0767562Z PASS native no-poke recovery: early-empty sixty-second admission discovery and lost acknowledgement reconcile the same durable native request without another synthetic provider call.
+2026-10-24T22:45:07.4962624Z PASS native exhausted-write outage: repeated wakes and cold restoration preserve the spent budget; Check observes only, and revisioned Retry Stop confirms cancellation.
+2026-10-24T22:45:07.6001199Z PASS native session reuse: a later addressed request uses the original Pi conversation and a distinct request receipt after prior ownership is released. All provider responses are synthetic.
+2026-10-24T22:45:07.6333726Z $ node scripts/test-workspace-runtime.mjs
+2026-10-24T22:45:08.1622338Z PASS warm native resource ownership: interrupted artifact put joins before either caller settles; a fresh Workspace facade cannot steal the attempt. This held operation is released before process death.
+2026-10-24T22:45:08.7657635Z PASS native bounded preparation failure: exactly three extraction attempts leave an actionable Retry from Files state; another wake does not renew the business budget.
+2026-10-24T22:45:09.1724462Z WAIT actual sixty-second retained Workspace discovery after SIGKILL; health-only startup and no object requests during recovery.
+2026-10-24T22:46:19.3703301Z PASS historical payloadless workspace-extraction:pump row: native restart consumes exactly that existing queue identity once, with no replacement job or renewed business attempt.
+2026-10-24T22:46:19.3797758Z PASS real retained discovery: PDF and video intents survive pre-admission empty scans, lost post-commit wakes and SIGKILL; original file IDs and source bytes lead to exactly one content-addressed artifact and one business attempt each.
+2026-10-24T22:46:19.5649684Z PASS explicit retry alone renews exhausted budget; second SIGKILL retains exact completed metadata, source and artifact bytes without extraction replay. Production Workspace/SQLite/R2 adapter/Runner/Lifecycle; synthetic extractors and local durable bucket, no hosted R2 or live provider claim.
+2026-10-24T22:46:19.5977985Z $ node scripts/test-routines-runtime.mjs
+2026-10-24T22:46:19.9213243Z {"case":"bundled-source-evidence","bundle":"ebdb412987ccf2ac1358879a7db99b441d7f13273f0375fc7fbf5e2032eaea4a","sourceHashes":{"src/access/connections.ts":"0194fd3db3512dac785e6b34fe2c2cbcd3d28f1bf477b94f473f6b0e3ba1e918","src/access/contracts.ts":"21044fa3a8e7dc479a5150b745fc9bb8a1faaa8e94b172b4c8a7adeeeaded5e9","src/access/executor.ts":"310e812058e8382ab0e3ce387b1ede1381fca2497cbf760068b15f7de82500aa","src/conversations/adapters/lifecycle.ts":"23f92f42a46b65c77ac10b561db9005b9539ee416af062c9796e6480c4f5f1f8","src/conversations/adapters/pi-execution.ts":"f199c789a03a61cc77ce0837e254f7c201ad7a4b473ca876e61f85517b62a39a","src/conversations/adapters/pi-reply.ts":"736f8f49487e51798e7a4507b2853775edd0957f0cb49fab70a542db5c16cb1e","src/conversations/adapters/pi-timeline.ts":"0ad67342aa5bf7bb449ba545e7298ddca0788de73ee2929781863249648505ce","src/conversations/adapters/schema.ts":"6367702028dced132788f190a630049d793be13401fb8023be1e86485f397bc3","src/conversations/adapters/sqlite-journal.ts":"fc6aa1ba4643a376f3f50301810de58284eb64acb3226f39fe6d33090b8da161","src/conversations/adapters/sqlite-turns.ts":"c198afc03a339b3eeb999de664cfc59586203693b680300cc4a9f7adf280f4ed","src/conversations/contracts.ts":"284e0137ef4dd1663a8e16781b5fa635ea5c9ae1f9c9675c1d70cc98b82d804e","src/conversations/domain.ts":"3e48f0b25ebb9d4af2de543f08f31e56d23292d7949381718e0995aefadb9dfc","src/conversations/execution.ts":"a7124e4f76e56d525a2f78d5b0c9acf8c56993726ce69570ca6ef3ad77378e3c","src/conversations/input.machine.ts":"aeac89223e6511a49e7007accff30d9784fad21c2b78a20e4915b5509799e83f","src/conversations/journal.ts":"3740b61ccfac4ecf6b1b7445aba4fe6defa8ac2acd141220d40a10dca94c05c8","src/conversations/prompt.ts":"118cf9c94aea6d478e3b93ec1a6914a0974b4a1cde9289792251c4104228c1bd","src/conversations/pump.machine.ts":"a7111a3d44d97a330019225f3adeef11319434469c67410af59baf9eec6ec59a","src/conversations/pump.ts":"7875d5400fe95d85434d78d0144bd88012580e4e759f2e22a440ee4f182182fc","src/conversations/recovery-discovery.machine.ts":"0e53997efd17f3e2d684c2a6b9155bc2e4c093f93a848b0b09bd9b1e6b75ab3b","src/conversations/recovery.ts":"93fb3d1546dd275448ed5bf008e65320f7a2a3d2223cdf19e9560765e224e49d","src/conversations/root-run.machine.ts":"985d15fed62db3ebb1dfdb7b67c33bc6a8e87709aed036477fd2c263b808b881","src/conversations/runner.machine.ts":"78cf01538017f6f78ce2efc9c6f43366c97dc578c43cf6d47ad6397691e070c6","src/conversations/service.ts":"ae2bc2e68f7b560316d34667d62f64de56f70de68485c059281dc89bb30b2cac","src/conversations/status.ts":"1401b808e47d3ab4ce29665e65d316dda75a2eeeaf60ba9d59c2ccdfa48231b7","src/conversations/turns.ts":"bda90ca12794b51edd723a15c369da94681f3610caf750203665f4cb48d2b31a","src/coordination/contracts.ts":"9abe7235e81534b8eff6022437af12e16589efcb8ff46b1c1bfa48907c294d85","src/inference/policy.ts":"78517253f484be7abadb4b906cf1272a0f99851db706448e22e5bdb31389e5b9","src/inference/selection.ts":"4482516b4d056295ad743717e661eca6e760827a54a9c61a18f9329d04f4ae7e","src/memory/adapters/schema.ts":"50feacee54e1dcee246dd67e5eaf6a5c3d39df71890f882aa554eaa9e661c2c0","src/memory/adapters/sqlite.ts":"325c9109d0949eba4a697de6007861821481384472ffa1887259ba9ad73f741d","src/memory/domain.ts":"51e6b7b7ccfe3dd76f90037317b8dbecc88a2496486296063061bb6076704e92","src/memory/ledger.ts":"7d5ead7d85ed258fba13577aef1a7c3ca8572ce0d0e441b8917e6e10f8c8aa5b","src/memory/policy.ts":"96ba4bf4b5f1b49f909e90036529ccebafc9395b4532495cedcf7b82ce682f77","src/memory/records.ts":"06f79456677338002d051799f82e31065d145d155b1f7443748f18ba2a2c7e89","src/memory/repository.ts":"2a16fe94b1fbc1744ab6918df3f45cb4aa1406d53cff1e9c1a7526d20a59cb35","src/memory/service.ts":"c018dc7429fb9abf9ea09a951c298fc1f815d3afcb48fd81e18be083d1cfbce1","src/memory/summary.machine.ts":"f901ce56b034993b2a19bb34e143d4e047f8a1bbc49a9ce0d23f2456a8c24d49","src/messages/identity.ts":"6826b17deeda2d767d373c4035bbf41cf86e9efa3c4293a7765d907b1eb62140","src/routines/adapters/lifecycle.ts":"bb234565710e7f05764d9322fc1d51598982189cfae7b7b00335150b667bcb3f","src/routines/adapters/schema.ts":"1f0d2b11e13f7f9ddc6005c2e2120c48ce1d137c12edc3b6d6e38ba1dec75cbd","src/routines/adapters/sqlite.ts":"bb77be8e7cffb95ee783d6a2e49db5a8da5fc6f8103438cf6e49fa418c0b6700","src/routines/application.ts":"55e794df2347a24afc782cb1f9c44f09353f958e23047a5c591e278ca5c1cce2","src/routines/contracts.ts":"0a47bd4b0edafb0841cfa72fb79bd43eb52c18e3a4e30a0ce85eb64927882dd6","src/routines/discovery.machine.ts":"383ff921c2b4ff9df29e1c566096248c83969647452f24b578c977c43b3fcee3","src/routines/domain.ts":"12e914fc0fa56618c3e79605b01df8586615d87cf3b2f638b5d685eb881db7b4","src/routines/persistence.ts":"a32a21eef9b21ce601da197ee32496769af641b87397c4c85cf0fc4a35dd6492","src/routines/pump.machine.ts":"5fa343acc4a6579b005eecef3eae5d06b5257debe1b841c2b3144c389946d108","src/routines/pump.ts":"07a00374942e18d89164165ebbe82ccd2c06b17435c07f60d6a45b4a7ca0fc1f","src/routines/routine.machine.ts":"9b6ff1be6d1d8da4a36ac0dc165031307c9cf5ce73ce79ac124f6c0e962728fa","src/routines/run.machine.ts":"42b9dabb7cbf6290986ddd6ee89d6572587780e49eb0d1a268d3c81a584cb29b","src/routines/runner.machine.ts":"9d0a209da0d4917160c56f86af90b38ce7cb58fdc009db55ba7bf5b2dbc1c460","src/routines/service.ts":"0ff636f95beae2d40090f9593aad12eddc8116c51f7212654ed22ec5cf1a2587","src/shared/effect.ts":"75587bface6c2ddf87156a108653d78c1b698ad6c3e0c34ecd559880cc6b65ba","src/shared/interop.ts":"3026be9bb101211871294ec28834a2c55710fcf1a346374ae56368af297eee99","src/skills/contracts.ts":"ade5efe4a40cb8a3b42f8411512b9d8947c0ba80fcce677b9fa5b2b206f02b83","src/skills/source.ts":"8f90b9464b4aa001e5ce910f39214750de01260dee2c50cf2ba933c4c0cb8615","src/storage/durable-object.ts":"01f800ba5eefc9a9e20627ad91cd3b54725e00e0578f338532e3d2ff09ad7499","src/storage/effect.ts":"675f88a838ec8bf8bc4d91c3260ff28c4174648467ab400f8d84ad16237b93ea","src/storage/expressions.ts":"78be5d0c4a59254b418c775ea13a8ed41ab6eb606919898f287a52a7340b290e","src/storage/migration-manifest.ts":"c7cc644057aa608ad6ec9ad43e49acffd004e64ca255a3f03c395a0ef27b044c","src/storage/migration-schema.ts":"b5b85566629ac1f5b90460e8489e7750c703b1845975eecccaebdb4c20768e56","src/storage/migrations.ts":"0915ec0f273148500771df5ffe7ed5c758d0a780f578c194363248e582b229df","src/storage/sqlite.ts":"f9c832074b14981c40092d36f92f06314ba1c3c007e56be0e0042f4c9c179642","src/webhooks/activation.machine.ts":"0f438507684e8fb0676e4983d7c3f8fa9ffa9f66c05988dcfb3ff5424e164376","src/webhooks/adapters/schema.ts":"dd061fa40823893b4ee049047d608b8977ff37fa4b83719c9e2af04830f2f674","src/webhooks/adapters/sqlite.ts":"c1f5d7feb7545d49d6c6ba3394b8a346955aec5e57eebf6658aea653ea99a00b","src/webhooks/admission.machine.ts":"ae1050455e3d1c510d8c2aa9ecdce287e85493c9468b6e035916c3f0cda9ea7d","src/webhooks/application.ts":"c5791a2c8d9c6c4587be965e2291dc3a07382085e6274656c4335b3378e59a34","src/webhooks/contracts.ts":"d642f432ec8077283b65b598774152dce12c1f814924982d6c781b36bcc6181b","src/webhooks/persistence.ts":"179eda4c7cc4efdfad485656f641d5451864fc83a1fed3a79ab35d951c2d8627","src/webhooks/service.ts":"52620927db38b555168d7751a66e7d0c5e6d7ee4fbc6ba45cbecb9b93bb74137","src/workspace/audio.ts":"7d64e189ed5cb4691728fa01fa0d5dc0d0ff8b367002e426ebd323c23c339676","src/workspace/files.ts":"d390efbfd5010aee11cceb2db3288096ce3bb00077b4c973367ab732cf786c0f","src/workspace/video.ts":"633dad7599c10adcca8aad79e77f7581b7408ee2876a5bea0d63adb3fb8ca06b","tests/runtime/database.ts":"3738dcb584769311ef584786292e2c37df90db1669bcc751d3a3b34c810ca19f","tests/runtime/routines-worker.ts":"28c5c00f343c4f67a5208044b97befc34e65a7c782a20ab232f3344b32d82d88"}}
+2026-10-24T22:46:21.0672282Z {"case":"waiting-for-retained-alarm","brokenWake":false,"deadline":1792882040908,"objectRequestsDuringRecovery":0}
+2026-10-24T22:47:28.9252069Z {"case":"retained-native-restart","name":"webhook","run":"72183f2f-b8e6-470f-8eda-567247533b52","turn":"b5a4faa3-edc0-4063-9360-105d4f2b6a21","receipt":14,"calls":1,"alarms":9,"boots":2}
+2026-10-24T22:47:28.9327167Z {"case":"retained-native-restart","name":"manual","run":"98bd0ec1-b425-42cb-9fd1-bb492c901bcb","turn":"2b95ac8f-8534-4592-b97b-8181bb37595a","receipt":14,"calls":1,"alarms":9,"boots":2}
+2026-10-24T22:47:29.2831762Z {"case":"pause-and-stop-before-native-dispatch","pending":"cancelled","admitted":"queued","stopped":"cancelled","calls":0}
+2026-10-24T22:47:29.5203037Z PASS B11 actual RoutineRunner/Routines/Webhooks/Conversation/SQLite/Pi retained discovery, original run/event/turn and native receipt identities, dedupe, Pause/Stop and two SIGKILL/restarts; workerd 1.20261002.1. Synthetic authority/provider; no live external execution or full PersonalAgent authorization claim.
+2026-10-24T22:47:29.5514242Z $ node scripts/test-apps-runtime.mjs
+2026-10-24T22:47:30.9461863Z WAIT Apps SIGKILL recovery: health-only startup, no object requests until real discovery deadline plus native completion margin.
+2026-10-24T22:48:44.4900579Z PASS native Apps: retained empty discovery, real shared admission and Pi receipt after no-poke SIGKILL, bounded SDK exhaustion, second restart and exact receipt replay.
+2026-10-24T22:48:44.4939587Z Apps native evidence: /tmp/apps-native-positive-2984-evidence.json
+2026-10-24T22:48:44.5199923Z $ node scripts/test-drizzle-runtime.mjs
+2026-10-24T22:48:46.2270335Z {"mode":"commit","status":200,"admitted":true,"finalized":true,"reasons":[],"outsideRows":{"count":64,"first":{"id":0,"value":"recorded"}},"rows":{"count":64,"first":{"id":0,"value":"recorded"}},"persisted":{"count":64,"first":{"id":0,"value":"recorded"}}}
+2026-10-24T22:48:46.2412228Z {"mode":"rollback","status":200,"admitted":true,"finalized":true,"reasons":["Fail"],"outsideRows":{"count":0},"rows":{"count":0},"persisted":{"count":0}}
+2026-10-24T22:48:46.2526283Z {"mode":"nested","status":200,"admitted":true,"finalized":true,"reasons":[],"outsideRows":{"count":64,"first":{"id":0,"value":"recorded"}},"rows":{"count":64,"first":{"id":0,"value":"recorded"}},"persisted":{"count":64,"first":{"id":0,"value":"recorded"}}}
+2026-10-24T22:48:46.2614832Z {"mode":"nested-caught","status":200,"admitted":true,"finalized":true,"reasons":[],"outsideRows":{"count":1,"first":{"id":0,"value":"recorded"}},"rows":{"count":1,"first":{"id":0,"value":"recorded"}},"persisted":{"count":1,"first":{"id":0,"value":"recorded"}}}
+2026-10-24T22:48:46.2689143Z {"mode":"nested-uncaught","status":200,"admitted":true,"finalized":true,"reasons":["Fail"],"outsideRows":{"count":0},"rows":{"count":0},"persisted":{"count":0}}
+2026-10-24T22:48:46.2806754Z {"mode":"interrupt","status":200,"admitted":true,"finalized":true,"reasons":["Interrupt"],"outsideRows":{"count":0},"rows":{"count":0},"persisted":{"count":0}}
+2026-10-24T22:48:46.3820457Z {"mode":"defect","status":200,"admitted":true,"finalized":true,"reasons":["Die"],"outsideRows":{"count":0},"rows":{"count":0},"persisted":{"count":0}}
+2026-10-24T22:48:46.3997189Z {"mode":"yield-rollback","status":200,"admitted":true,"finalized":true,"reasons":["Fail"],"outsideRows":{"count":0},"rows":{"count":0},"persisted":{"count":0}}
+2026-10-24T22:48:46.4117122Z {"mode":"before-commit","status":200,"admitted":true,"finalized":true,"reasons":["Fail"],"outsideRows":{"count":0},"rows":{"count":0},"persisted":{"count":0}}
+2026-10-24T22:48:46.4226037Z {"mode":"lost-ack","status":200,"admitted":true,"finalized":true,"reasons":["Fail"],"outsideRows":{"count":64,"first":{"id":0,"value":"recorded"}},"rows":{"count":64,"first":{"id":0,"value":"recorded"}},"persisted":{"count":64,"first":{"id":0,"value":"recorded"}}}
+2026-10-24T22:48:46.4281796Z {"mode":"stock-suspension","status":200,"reasons":["Die"],"resumed":true,"rows":{"count":1,"first":{"id":2,"value":"orphan"}},"persisted":{"count":1,"first":{"id":2,"value":"orphan"}}}
+2026-10-24T22:48:46.4422082Z {"mode":"pi-rollback-app-write","status":200,"returnedBeforePiRelease":false,"piError":true,"appReasons":[],"rows":{"count":1,"first":{"id":1,"value":"app-success"}},"persisted":{"count":1,"first":{"id":1,"value":"app-success"}}}
+2026-10-24T22:48:46.4526789Z {"mode":"app-rollback-pi-write","status":200,"returnedBeforeAppRelease":false,"piError":false,"appReasons":["Fail"],"cached":{"value":1},"piDocuments":1,"rows":{"count":0},"persisted":{"count":0}}
+2026-10-24T22:48:46.4600969Z {"mode":"external-interrupt","status":200,"reasons":["Interrupt"],"finalized":true,"rows":{"count":1,"first":{"id":3,"value":"after-cancellation"}},"persisted":{"count":1,"first":{"id":3,"value":"after-cancellation"}}}
+2026-10-24T22:48:46.4713159Z {"mode":"rollback-settlement","status":200,"admitted":true,"finalized":true,"reasons":["Fail","Fail"],"outsideRows":{"count":0},"rows":{"count":0},"persisted":{"count":0}}
+2026-10-24T22:48:46.4788694Z {"mode":"pi-rollback-app-statement","status":200,"returnedBeforePiRelease":true,"piError":true,"appReasons":[],"rows":{"count":0},"persisted":{"count":0}}
+2026-10-24T22:48:46.4850386Z {"mode":"app-rollback-lifecycle-write","status":200,"returnedBeforeAppRelease":true,"appReasons":["Fail"],"savedJob":null,"rows":{"count":0},"persisted":{"count":0}}
+2026-10-24T22:48:46.4930751Z {"mode":"alchemy-commit","status":200,"admitted":true,"finalized":true,"reasons":[],"outsideRows":{"count":64,"first":{"id":0,"value":"recorded"}},"rows":{"count":64,"first":{"id":0,"value":"recorded"}},"persisted":{"count":64,"first":{"id":0,"value":"recorded"}}}
+2026-10-24T22:48:46.5563708Z {"mode":"alchemy-rollback","status":200,"admitted":true,"finalized":true,"reasons":["Fail"],"outsideRows":{"count":0},"rows":{"count":0},"persisted":{"count":0}}
+2026-10-24T22:48:46.5641879Z {"mode":"alchemy-nested","status":200,"admitted":true,"finalized":true,"reasons":[],"outsideRows":{"count":64,"first":{"id":0,"value":"recorded"}},"rows":{"count":64,"first":{"id":0,"value":"recorded"}},"persisted":{"count":64,"first":{"id":0,"value":"recorded"}}}
+2026-10-24T22:48:46.6020896Z {"mode":"conversation-stream","status":200,"delivered":true,"cursorFrames":2,"handoffFrames":0,"released":1}
+2026-10-24T22:48:46.6648583Z {"mode":"conversation-milestones","status":200,"delivered":true,"cursorFrames":2,"handoffFrames":2,"released":1}
+2026-10-24T22:48:47.9385955Z {"mode":"conversation-handoff","status":200,"stages":{"count":7,"first":"control-start"},"capacityBounded":true,"released":true,"overflowReleased":true,"abortReleased":true,"privateDataAbsent":true}
+2026-10-24T22:48:48.0310650Z {"mode":"terminal-census","status":200,"capacityBounded":true,"closeJoined":true,"exactRelease":true,"sealedRecovery":true,"pageRollback":true,"restoredDuplicate":true,"sourceAuthority":true}
+2026-10-24T22:48:48.0394783Z {"mode":"guarded-commit","status":200,"admitted":true,"finalized":true,"reasons":[],"outsideRows":{"count":64,"first":{"id":0,"value":"recorded"}},"rows":{"count":64,"first":{"id":0,"value":"recorded"}},"persisted":{"count":64,"first":{"id":0,"value":"recorded"}}}
+2026-10-24T22:48:48.0615149Z {"mode":"guarded-rollback","status":200,"admitted":true,"finalized":true,"reasons":["Fail"],"outsideRows":{"count":0},"rows":{"count":0},"persisted":{"count":0}}
+2026-10-24T22:48:48.2259321Z {"mode":"guarded-nested","status":200,"admitted":true,"finalized":true,"reasons":[],"outsideRows":{"count":64,"first":{"id":0,"value":"recorded"}},"rows":{"count":64,"first":{"id":0,"value":"recorded"}},"persisted":{"count":64,"first":{"id":0,"value":"recorded"}}}
+2026-10-24T22:48:48.2316206Z {"mode":"guarded-nested-caught","status":200,"admitted":true,"finalized":true,"reasons":[],"outsideRows":{"count":1,"first":{"id":0,"value":"recorded"}},"rows":{"count":1,"first":{"id":0,"value":"recorded"}},"persisted":{"count":1,"first":{"id":0,"value":"recorded"}}}
+2026-10-24T22:48:48.2368377Z {"mode":"guarded-nested-uncaught","status":200,"admitted":true,"finalized":true,"reasons":["Fail"],"outsideRows":{"count":0},"rows":{"count":0},"persisted":{"count":0}}
+2026-10-24T22:48:48.2451917Z {"mode":"guarded-interrupt","status":200,"admitted":true,"finalized":true,"reasons":["Interrupt"],"outsideRows":{"count":0},"rows":{"count":0},"persisted":{"count":0}}
+2026-10-24T22:48:48.3040177Z {"mode":"guarded-defect","status":200,"admitted":true,"finalized":true,"reasons":["Die"],"outsideRows":{"count":0},"rows":{"count":0},"persisted":{"count":0}}
+2026-10-24T22:48:48.4640475Z {"mode":"guarded-yield-rollback","status":200,"admitted":true,"finalized":true,"reasons":["Fail"],"outsideRows":{"count":0},"rows":{"count":0},"persisted":{"count":0}}
+2026-10-24T22:48:48.4731283Z {"mode":"guarded-before-commit","status":200,"admitted":true,"finalized":true,"reasons":["Fail"],"outsideRows":{"count":0},"rows":{"count":0},"persisted":{"count":0}}
+2026-10-24T22:48:48.4806861Z {"mode":"guarded-lost-ack","status":200,"admitted":true,"finalized":true,"reasons":["Fail"],"outsideRows":{"count":64,"first":{"id":0,"value":"recorded"}},"rows":{"count":64,"first":{"id":0,"value":"recorded"}},"persisted":{"count":64,"first":{"id":0,"value":"recorded"}}}
+2026-10-24T22:48:48.5001780Z {"mode":"guarded-rollback-settlement","status":200,"admitted":true,"finalized":true,"reasons":["Fail","Die"],"outsideRows":{"count":0},"rows":{"count":0},"persisted":{"count":0}}
+2026-10-24T22:48:48.5049807Z {"mode":"guarded-suspension","status":200,"reasons":["Die","Interrupt"],"resumed":false,"rows":{"count":0},"persisted":{"count":0}}
+2026-10-24T22:48:48.5095262Z {"mode":"guarded-uninterruptible-finalizer","status":200,"reasons":["Die","Interrupt"],"rolledBackBeforeCleanup":true,"finalizerReasons":["Fail"],"rows":{"count":0},"persisted":{"count":0}}
+2026-10-24T22:48:48.5137466Z {"mode":"guarded-context","status":200,"reasons":[],"rows":{"count":1,"first":{"id":1,"value":"retained:1234"}},"persisted":{"count":1,"first":{"id":1,"value":"retained:1234"}}}
+2026-10-24T22:48:48.5176856Z {"mode":"guarded-escaped-builder","status":200,"reasons":["Fail"],"rows":{"count":0},"persisted":{"count":0}}
+2026-10-24T22:48:48.5215317Z {"mode":"guarded-detached-child","status":200,"reasons":[],"childReasons":["Die"],"rows":{"count":1,"first":{"id":1,"value":"committed"}},"persisted":{"count":1,"first":{"id":1,"value":"committed"}}}
+2026-10-24T22:48:48.5285754Z {"mode":"guarded-pi-rollback-app-statement","status":200,"returnedBeforePiRelease":false,"piError":true,"appReasons":[],"rows":{"count":1,"first":{"id":1,"value":"app-success"}},"persisted":{"count":1,"first":{"id":1,"value":"app-success"}}}
+2026-10-24T22:48:48.5333358Z {"mode":"guarded-app-rollback-lifecycle-write","status":200,"returnedBeforeAppRelease":true,"appReasons":["Die","Interrupt"],"savedJob":{"id":"probe","capability":"host","fn":"probe","time":1792882188531,"singleflight":false,"exclusive":false,"recoveryLoop":false,"createdAt":1792882128},"rows":{"count":0},"persisted":{"count":0}}
+2026-10-24T22:48:48.7384847Z {"mode":"guarded-queued-cancellation","status":200,"cancellationJoinedBeforePiRelease":false,"reasons":["Interrupt"],"rows":{"count":0},"persisted":{"count":0}}
+2026-10-24T22:48:48.7521947Z {"mode":"guarded-pi-harness","status":200,"sameStorage":true,"listedBeforeRelease":false,"sessionCount":1,"observed":{"count":22,"first":"scanTasks"},"persisted":{"count":0}}
+2026-10-24T22:48:48.8129057Z {"mode":"guarded-migrations","status":200,"migrated":true,"retained":{"text":"retained"},"bootstrap":{"first":{"statements":215,"durationMs":49},"reactivation":{"statements":2,"durationMs":1},"audit":{"statements":2,"durationMs":0}},"rows":{"count":0},"persisted":{"count":0}}
+2026-10-24T22:48:49.0268399Z {"mode":"guarded-activity","status":200,"activity":{"turn":{"id":"native-activity","status":"running","session_id":null,"created_at":"2026-10-16T00:00:00.000Z","started_at":null,"finished_at":null},"rows":[{"key":"accepted:native-activity","at":"2026-10-16T00:00:00.000Z","reference":"native-activity","kind":"run","title":"Request accepted","status":"accepted"}]},"rows":{"count":0},"persisted":{"count":0}}
+2026-10-24T22:48:49.3033421Z {"mode":"guarded-conversation-members","status":200,"counts":{"count":3,"first":48},"hidden":true,"bindings":{"count":2,"first":"root-0"},"duringRollback":2,"rollback":"Failure","afterRollback":1}
+2026-10-24T22:48:49.5115218Z {"mode":"guarded-conversation-activities","status":200,"counts":{"count":3,"first":48},"parity":true,"singleTransactions":100,"bulkTransactions":1,"replyCounts":{"count":3,"first":48},"replyParity":true,"replyVisibleOnly":true,"visibleOnly":true,"during":true,"rollback":"Failure","afterRollback":1}
+2026-10-24T22:48:49.5864787Z {"mode":"guarded-access-operation","status":200,"result":"saved receipt","operations":{"count":5,"first":{"id":"pending","turnId":"turn","tool":"test","input":"{}","createdAt":1792882129561,"expiresAt":1792883029561,"status":"pending","revision":0,"schemaVersion":1,"workflowVersion":1,"grantRevision":0,"result":null,"decision":null}}}
+2026-10-24T22:48:49.7154889Z {"mode":"guarded-agent-availability","status":200,"profiles":{"count":3,"first":{"id":"00000000-0000-4000-8000-000000000001","slug":"synthetic-1","name":"Synthetic 1","instructions":"retained instructions","status":"active","revision":2,"createdAt":"2026-10-24T22:48:49.636Z","updatedAt":"2026-10-24T22:48:49.640Z","schemaVersion":1,"workflowVersion":1,"creation":"{\"id\":\"00000000-0000-4000-8000-000000000001\",\"name\":\"Synthetic 1\",\"instructions\":\"retained instructions\"}"}},"configuration":{"owner":"owner","instructions":"retained instructions","revision":1,"status":"archived"},"generation":{"schemaVersion":1,"workflowVersion":1,"membershipId":"new-membership"}}
+2026-10-24T22:48:50.0214711Z PASS Agent availability: native restart preserves profiles, raw creation replay, admission revision and membership generation without repeating cleanup.
+2026-10-24T22:48:50.0466905Z PASS Access machine: native restart preserves receipts, waiting approval, recovery and revocation fences; one external effect.
+2026-10-24T22:48:50.0467854Z PASS native Drizzle proof: 50 transaction/interoperability cases and 41 persisted-state checks after SIGKILL/restart.
+2026-10-24T22:48:50.0868649Z $ node scripts/test-whatsapp-runtime.mjs
+2026-10-24T22:50:08.3473015Z node:internal/modules/run_main:107
+2026-10-24T22:50:08.3473556Z     triggerUncaughtException(
+2026-10-24T22:50:08.3473834Z     ^
+2026-10-24T22:50:08.3473929Z 
+2026-10-24T22:50:08.3474147Z AssertionError [ERR_ASSERTION]: SQL fault fixture was evicted
+2026-10-24T22:50:08.3474367Z 
+2026-10-24T22:50:08.3474447Z false !== true
+2026-10-24T22:50:08.3474605Z 
+2026-10-24T22:50:08.3474885Z     at file:///home/runner/work/durable-pi/durable-pi/scripts/test-whatsapp-runtime.mjs:140:22
+2026-10-24T22:50:08.3475412Z     at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+2026-10-24T22:50:08.3475777Z     at async Promise.all (index 0)
+2026-10-24T22:50:08.3476198Z     at async file:///home/runner/work/durable-pi/durable-pi/scripts/test-whatsapp-runtime.mjs:128:7 {
+2026-10-24T22:50:08.3476582Z   generatedMessage: false,
+2026-10-24T22:50:08.3476786Z   code: 'ERR_ASSERTION',
+2026-10-24T22:50:08.3476980Z   actual: false,
+2026-10-24T22:50:08.3477160Z   expected: true,
+2026-10-24T22:50:08.3477342Z   operator: 'strictEqual',
+2026-10-24T22:50:08.3477805Z   diff: 'simple'
+2026-10-24T22:50:08.3477968Z }
+2026-10-24T22:50:08.3478055Z 
+2026-10-24T22:50:08.3478130Z Node.js v24.21.0
+2026-10-24T22:50:08.3544317Z [ELIFECYCLE] Command failed with exit code 1.
+2026-10-24T22:50:08.3576484Z [ELIFECYCLE] Command failed with exit code 1.
+2026-10-24T22:50:08.3604304Z ##[error]Process completed with exit code 1.
+2026-10-24T22:50:08.3689248Z Post job cleanup.
+2026-10-24T22:50:08.4864639Z Pruning is unnecessary.
+2026-10-24T22:50:08.5058097Z Post job cleanup.
+2026-10-24T22:50:08.5871004Z [command]/usr/bin/git version
+2026-10-24T22:50:08.5902642Z git version 2.55.0
+2026-10-24T22:50:08.5937824Z Temporarily overriding HOME='/home/runner/work/_temp/4494c062-125b-4650-81df-56415c8d608c' before making global git config changes
+2026-10-24T22:50:08.5939785Z Adding repository directory to the temporary git global config as a safe directory
+2026-10-24T22:50:08.5945912Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/durable-pi/durable-pi
+2026-10-24T22:50:08.5988061Z Removing SSH command configuration
+2026-10-24T22:50:08.5994996Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-10-24T22:50:08.6050648Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-10-24T22:50:08.6307548Z Removing HTTP extra header
+2026-10-24T22:50:08.6313627Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-24T22:50:08.6358320Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-10-24T22:50:08.6635288Z Removing includeIf entries pointing to credentials config files
+2026-10-24T22:50:08.6641089Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-10-24T22:50:08.6669801Z includeif.gitdir:/home/runner/work/durable-pi/durable-pi/.git.path
+2026-10-24T22:50:08.6671215Z includeif.gitdir:/home/runner/work/durable-pi/durable-pi/.git/worktrees/*.path
+2026-10-24T22:50:08.6672120Z includeif.gitdir:/github/workspace/.git.path
+2026-10-24T22:50:08.6672933Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-10-24T22:50:08.6677180Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/durable-pi/durable-pi/.git.path
+2026-10-24T22:50:08.6700586Z /home/runner/work/_temp/git-credentials-24d704bf-6a4b-4757-9d82-9358c313c084.config
+2026-10-24T22:50:08.6709311Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/durable-pi/durable-pi/.git.path \/home\/runner\/work\/_temp\/git\-credentials\-24d704bf\-6a4b\-4757\-9d82\-9358c313c084\.config
+2026-10-24T22:50:08.6745221Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/durable-pi/durable-pi/.git/worktrees/*.path
+2026-10-24T22:50:08.6767699Z /home/runner/work/_temp/git-credentials-24d704bf-6a4b-4757-9d82-9358c313c084.config
+2026-10-24T22:50:08.6774540Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/durable-pi/durable-pi/.git/worktrees/*.path \/home\/runner\/work\/_temp\/git\-credentials\-24d704bf\-6a4b\-4757\-9d82\-9358c313c084\.config
+2026-10-24T22:50:08.6805016Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+2026-10-24T22:50:08.6827324Z /github/runner_temp/git-credentials-24d704bf-6a4b-4757-9d82-9358c313c084.config
+2026-10-24T22:50:08.6832897Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path \/github\/runner_temp\/git\-credentials\-24d704bf\-6a4b\-4757\-9d82\-9358c313c084\.config
+2026-10-24T22:50:08.7357853Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-10-24T22:50:08.7384028Z /github/runner_temp/git-credentials-24d704bf-6a4b-4757-9d82-9358c313c084.config
+2026-10-24T22:50:08.7390956Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path \/github\/runner_temp\/git\-credentials\-24d704bf\-6a4b\-4757\-9d82\-9358c313c084\.config
+2026-10-24T22:50:08.7423434Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-10-24T22:50:08.7623686Z Removing credentials config '/home/runner/work/_temp/git-credentials-24d704bf-6a4b-4757-9d82-9358c313c084.config'
+2026-10-24T22:50:08.7771249Z Cleaning up orphan processes
