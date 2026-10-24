@@ -1,0 +1,219 @@
+[WebServer] (node:20386) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] [plugin builtin:vite-reporter] 
+[WebServer] (!) Some chunks are larger than 500 kB after minification. Consider:
+[WebServer] - Using dynamic import() to code-split the application
+[WebServer] - Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+[WebServer] - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[WebServer] [INEFFECTIVE_DYNAMIC_IMPORT] src/features/files/files-panel.tsx is dynamically imported by src/app/workspace.tsx but also statically imported by src/features/files/index.ts, dynamic import will not move module into another chunk.
+[WebServer] 
+
+Running 58 tests using 1 worker
+
+(node:20401) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [desktop] › tests/browser/access-connections-lifecycle.spec.ts:50:1 › approval keeps exact inputs and decision identity across an uncertain acknowledgement (2.6s)
+  ✓   2 [desktop] › tests/browser/access-connections-lifecycle.spec.ts:132:1 › policy mutation is serialized and an uncertain response cannot grant permission (2.9s)
+  ✓   3 [desktop] › tests/browser/access-connections-lifecycle.spec.ts:181:1 › uncertain reconnect retains its expected revision and shows the SDK authorization status (2.1s)
+  ✓   4 [desktop] › tests/browser/access-connections-lifecycle.spec.ts:243:1 › a superseded catalog response cannot replace the latest catalog (2.2s)
+  ✓   5 [desktop] › tests/browser/access-connections-lifecycle.spec.ts:282:1 › a late Always allow acknowledgement cannot overwrite a newer denied policy (2.2s)
+  ✓   6 [desktop] › tests/browser/channel-ownership.spec.ts:163:1 › WhatsApp uses its persisted target, reroutes explicitly, and retains earlier reply ownership (4.3s)
+  ✓   7 [desktop] › tests/browser/channel-ownership.spec.ts:242:3 › a missing WhatsApp target is left unavailable rather than defaulted (3.5s)
+  ✓   8 [desktop] › tests/browser/channel-ownership.spec.ts:242:3 › a archived WhatsApp target is left unavailable rather than defaulted (3.4s)
+  ✓   9 [desktop] › tests/browser/channel-ownership.spec.ts:275:1 › an unconfirmed WhatsApp reroute retries its original operation and chosen target (3.5s)
+  ✓  10 [desktop] › tests/browser/family-ownership.spec.ts:20:1 › an older family read cannot restore owner controls after a newer access denial (2.3s)
+  ✓  11 [desktop] › tests/browser/family-ownership.spec.ts:104:1 › invitation identity survives the actual auth SDK challenge redirect (1.1s)
+  ✓  12 [desktop] › tests/browser/family-ownership.spec.ts:148:1 › a late invitation acceptance cannot clear a newer invitation URL (893ms)
+  ✘  13 [desktop] › tests/browser/family-ownership.spec.ts:201:1 › model exchange completion is fenced after family role revocation (30.2s)
+(node:21023) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  14 [desktop] › tests/browser/model-access-pending.spec.ts:48:1 › a return-address draft blocks settings dismissal until explicitly discarded (3.4s)
+  ✓  15 [desktop] › tests/browser/model-access-pending.spec.ts:107:1 › a reconnect request stays guarded through an unresolved error without retrying on dismissal (3.4s)
+  ✘  16 [desktop] › tests/browser/model-defaults-ownership.spec.ts:49:1 › model default Save admits one write and retains acknowledgement across catalog failure (30.2s)
+(node:21403) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  17 [desktop] › tests/browser/model-defaults-ownership.spec.ts:115:1 › an unconfirmed default uses an explicit read before any reapply (2.8s)
+  ✓  18 [desktop] › tests/browser/settings-import-lifecycle.spec.ts:17:3 › email restores an uncertain immutable request after reload without dispatching it (4.2s)
+  ✓  19 [desktop] › tests/browser/settings-import-lifecycle.spec.ts:17:3 › whatsapp restores an uncertain immutable request after reload without dispatching it (3.2s)
+  ✓  20 [desktop] › tests/browser/settings-import-lifecycle.spec.ts:84:1 › Memory import admits one immutable file read and submission (2.7s)
+  ✓  21 [desktop] › tests/browser/settings-import-lifecycle.spec.ts:133:1 › WhatsApp requires confirmation before retry and retains that exact authorization after an uncertain response (3.7s)
+  ✓  22 [desktop] › tests/browser/settings-import-lifecycle.spec.ts:196:1 › leaving Memory during a held native file read prevents its later submission (2.9s)
+  ✓  23 [desktop] › tests/browser/settings-stack.spec.ts:117:1 › personal and agent settings indexes open their own navigation without selecting a detail (6.3s)
+  -  24 [desktop] › tests/browser/settings-stack.spec.ts:181:1 › mobile settings keep native parents mounted and restore the originating control for each dismissal
+  -  25 [desktop] › tests/browser/settings-stack.spec.ts:275:1 › a native downward swipe dismisses only the top mobile settings route
+  -  26 [desktop] › tests/browser/settings-stack.spec.ts:301:1 › mobile agent Models retains its parent across global Model access history and reload
+  -  27 [desktop] › tests/browser/settings-stack.spec.ts:363:1 › mobile settings retain the closing page until the native exit transition completes
+  -  28 [desktop] › tests/browser/settings-stack.spec.ts:426:1 › a dirty settings form keeps the same native body across portrait and landscape
+  -  29 [desktop] › tests/browser/settings-stack.spec.ts:495:1 › browser Back retains an agent-backed settings page through its native exit to the collection
+(node:21448) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  30 [mobile] › tests/browser/access-connections-lifecycle.spec.ts:50:1 › approval keeps exact inputs and decision identity across an uncertain acknowledgement (2.1s)
+  ✓  31 [mobile] › tests/browser/access-connections-lifecycle.spec.ts:132:1 › policy mutation is serialized and an uncertain response cannot grant permission (2.8s)
+  ✓  32 [mobile] › tests/browser/access-connections-lifecycle.spec.ts:181:1 › uncertain reconnect retains its expected revision and shows the SDK authorization status (2.2s)
+  ✓  33 [mobile] › tests/browser/access-connections-lifecycle.spec.ts:243:1 › a superseded catalog response cannot replace the latest catalog (2.1s)
+  ✓  34 [mobile] › tests/browser/access-connections-lifecycle.spec.ts:282:1 › a late Always allow acknowledgement cannot overwrite a newer denied policy (2.1s)
+  ✓  35 [mobile] › tests/browser/channel-ownership.spec.ts:163:1 › WhatsApp uses its persisted target, reroutes explicitly, and retains earlier reply ownership (5.2s)
+  ✓  36 [mobile] › tests/browser/channel-ownership.spec.ts:242:3 › a missing WhatsApp target is left unavailable rather than defaulted (4.1s)
+  ✓  37 [mobile] › tests/browser/channel-ownership.spec.ts:242:3 › a archived WhatsApp target is left unavailable rather than defaulted (4.1s)
+  ✓  38 [mobile] › tests/browser/channel-ownership.spec.ts:275:1 › an unconfirmed WhatsApp reroute retries its original operation and chosen target (4.2s)
+  ✓  39 [mobile] › tests/browser/family-ownership.spec.ts:20:1 › an older family read cannot restore owner controls after a newer access denial (2.3s)
+  ✓  40 [mobile] › tests/browser/family-ownership.spec.ts:104:1 › invitation identity survives the actual auth SDK challenge redirect (1.0s)
+  ✓  41 [mobile] › tests/browser/family-ownership.spec.ts:148:1 › a late invitation acceptance cannot clear a newer invitation URL (861ms)
+  ✘  42 [mobile] › tests/browser/family-ownership.spec.ts:201:1 › model exchange completion is fenced after family role revocation (30.1s)
+(node:21648) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  43 [mobile] › tests/browser/model-access-pending.spec.ts:48:1 › a return-address draft blocks settings dismissal until explicitly discarded (4.7s)
+  ✓  44 [mobile] › tests/browser/model-access-pending.spec.ts:107:1 › a reconnect request stays guarded through an unresolved error without retrying on dismissal (4.8s)
+  ✘  45 [mobile] › tests/browser/model-defaults-ownership.spec.ts:49:1 › model default Save admits one write and retains acknowledgement across catalog failure (30.2s)
+(node:21709) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  46 [mobile] › tests/browser/model-defaults-ownership.spec.ts:115:1 › an unconfirmed default uses an explicit read before any reapply (3.4s)
+  ✓  47 [mobile] › tests/browser/settings-import-lifecycle.spec.ts:17:3 › email restores an uncertain immutable request after reload without dispatching it (4.1s)
+  ✓  48 [mobile] › tests/browser/settings-import-lifecycle.spec.ts:17:3 › whatsapp restores an uncertain immutable request after reload without dispatching it (3.1s)
+  ✓  49 [mobile] › tests/browser/settings-import-lifecycle.spec.ts:84:1 › Memory import admits one immutable file read and submission (2.7s)
+  ✓  50 [mobile] › tests/browser/settings-import-lifecycle.spec.ts:133:1 › WhatsApp requires confirmation before retry and retains that exact authorization after an uncertain response (4.4s)
+  ✓  51 [mobile] › tests/browser/settings-import-lifecycle.spec.ts:196:1 › leaving Memory during a held native file read prevents its later submission (2.9s)
+  ✓  52 [mobile] › tests/browser/settings-stack.spec.ts:117:1 › personal and agent settings indexes open their own navigation without selecting a detail (6.5s)
+  ✓  53 [mobile] › tests/browser/settings-stack.spec.ts:181:1 › mobile settings keep native parents mounted and restore the originating control for each dismissal (7.5s)
+  ✓  54 [mobile] › tests/browser/settings-stack.spec.ts:275:1 › a native downward swipe dismisses only the top mobile settings route (4.7s)
+  ✓  55 [mobile] › tests/browser/settings-stack.spec.ts:301:1 › mobile agent Models retains its parent across global Model access history and reload (6.4s)
+  ✓  56 [mobile] › tests/browser/settings-stack.spec.ts:363:1 › mobile settings retain the closing page until the native exit transition completes (4.4s)
+  ✓  57 [mobile] › tests/browser/settings-stack.spec.ts:426:1 › a dirty settings form keeps the same native body across portrait and landscape (5.4s)
+  ✓  58 [mobile] › tests/browser/settings-stack.spec.ts:495:1 › browser Back retains an agent-backed settings page through its native exit to the collection (2.4s)
+
+
+  1) [desktop] › tests/browser/family-ownership.spec.ts:201:1 › model exchange completion is fenced after family role revocation 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.fill: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByLabel('Return address', { exact: true })
+
+
+      244 |     await page
+      245 |       .getByLabel("Return address", { exact: true })
+    > 246 |       .fill("http://127.0.0.1:5000/auth/callback?code=synthetic")
+          |        ^
+      247 |     await page
+      248 |       .getByRole("button", { name: "Finish connection", exact: true })
+      249 |       .click()
+        at /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/tests/browser/family-ownership.spec.ts:246:8
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/family-ownership-model-exc-ad2ed-fter-family-role-revocation-desktop/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/family-ownership-model-exc-ad2ed-fter-family-role-revocation-desktop/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/family-ownership-model-exc-ad2ed-fter-family-role-revocation-desktop/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/family-ownership-model-exc-ad2ed-fter-family-role-revocation-desktop/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [desktop] › tests/browser/model-defaults-ownership.spec.ts:49:1 › model default Save admits one write and retains acknowledgement across catalog failure 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: 'Refresh connection', exact: true })
+
+
+      103 |     await page
+      104 |       .getByRole("button", { name: "Refresh connection", exact: true })
+    > 105 |       .click()
+          |        ^
+      106 |     await expect(
+      107 |       page.getByRole("button", { name: "Save default", exact: true })
+      108 |     ).toBeDisabled()
+        at /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/tests/browser/model-defaults-ownership.spec.ts:105:8
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/model-defaults-ownership-m-3f3e9-ment-across-catalog-failure-desktop/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/model-defaults-ownership-m-3f3e9-ment-across-catalog-failure-desktop/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/model-defaults-ownership-m-3f3e9-ment-across-catalog-failure-desktop/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/model-defaults-ownership-m-3f3e9-ment-across-catalog-failure-desktop/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [mobile] › tests/browser/family-ownership.spec.ts:201:1 › model exchange completion is fenced after family role revocation 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.fill: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByLabel('Return address', { exact: true })
+
+
+      244 |     await page
+      245 |       .getByLabel("Return address", { exact: true })
+    > 246 |       .fill("http://127.0.0.1:5000/auth/callback?code=synthetic")
+          |        ^
+      247 |     await page
+      248 |       .getByRole("button", { name: "Finish connection", exact: true })
+      249 |       .click()
+        at /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/tests/browser/family-ownership.spec.ts:246:8
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/family-ownership-model-exc-ad2ed-fter-family-role-revocation-mobile/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/family-ownership-model-exc-ad2ed-fter-family-role-revocation-mobile/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/family-ownership-model-exc-ad2ed-fter-family-role-revocation-mobile/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/family-ownership-model-exc-ad2ed-fter-family-role-revocation-mobile/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) [mobile] › tests/browser/model-defaults-ownership.spec.ts:49:1 › model default Save admits one write and retains acknowledgement across catalog failure 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: 'Refresh connection', exact: true })
+
+
+      103 |     await page
+      104 |       .getByRole("button", { name: "Reload models", exact: true })
+    > 105 |       .click()
+          |        ^
+      106 |     await expect(
+      107 |       page.getByRole("button", { name: "Save default", exact: true })
+      108 |     ).toBeDisabled()
+        at /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/tests/browser/model-defaults-ownership.spec.ts:105:8
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/model-defaults-ownership-m-3f3e9-ment-across-catalog-failure-mobile/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/model-defaults-ownership-m-3f3e9-ment-across-catalog-failure-mobile/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/model-defaults-ownership-m-3f3e9-ment-across-catalog-failure-mobile/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/model-defaults-ownership-m-3f3e9-ment-across-catalog-failure-mobile/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4 failed
+    [desktop] › tests/browser/family-ownership.spec.ts:201:1 › model exchange completion is fenced after family role revocation 
+    [desktop] › tests/browser/model-defaults-ownership.spec.ts:49:1 › model default Save admits one write and retains acknowledgement across catalog failure 
+    [mobile] › tests/browser/family-ownership.spec.ts:201:1 › model exchange completion is fenced after family role revocation 
+    [mobile] › tests/browser/model-defaults-ownership.spec.ts:49:1 › model default Save admits one write and retains acknowledgement across catalog failure 
+  6 skipped
+  48 passed (4.9m)

@@ -1,0 +1,45 @@
+[WebServer] (node:18951) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] [plugin builtin:vite-reporter] 
+[WebServer] (!) Some chunks are larger than 500 kB after minification. Consider:
+[WebServer] - Using dynamic import() to code-split the application
+[WebServer] - Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+[WebServer] - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[WebServer] [INEFFECTIVE_DYNAMIC_IMPORT] src/features/files/files-panel.tsx is dynamically imported by src/app/workspace.tsx but also statically imported by src/features/files/index.ts, dynamic import will not move module into another chunk.
+[WebServer] 
+
+Running 26 tests using 1 worker
+
+(node:18969) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [desktop] › tests/browser/channel-ownership.spec.ts:163:1 › WhatsApp uses its persisted target, reroutes explicitly, and retains earlier reply ownership (4.4s)
+  ✓   2 [desktop] › tests/browser/channel-ownership.spec.ts:242:3 › a missing WhatsApp target is left unavailable rather than defaulted (3.2s)
+  ✓   3 [desktop] › tests/browser/channel-ownership.spec.ts:242:3 › a archived WhatsApp target is left unavailable rather than defaulted (3.6s)
+  ✓   4 [desktop] › tests/browser/channel-ownership.spec.ts:275:1 › an unconfirmed WhatsApp reroute retries its original operation and chosen target (3.7s)
+  ✓   5 [desktop] › tests/browser/model-access-pending.spec.ts:48:1 › a return-address draft blocks settings dismissal until explicitly discarded (3.1s)
+  ✓   6 [desktop] › tests/browser/model-access-pending.spec.ts:107:1 › a reconnect request stays guarded through an unresolved error without retrying on dismissal (3.2s)
+  ✓   7 [desktop] › tests/browser/settings-stack.spec.ts:117:1 › personal and agent settings indexes open their own navigation without selecting a detail (5.8s)
+  -   8 [desktop] › tests/browser/settings-stack.spec.ts:181:1 › mobile settings keep native parents mounted and restore the originating control for each dismissal
+  -   9 [desktop] › tests/browser/settings-stack.spec.ts:275:1 › a native downward swipe dismisses only the top mobile settings route
+  -  10 [desktop] › tests/browser/settings-stack.spec.ts:301:1 › mobile agent Models retains its parent across global Model access history and reload
+  -  11 [desktop] › tests/browser/settings-stack.spec.ts:363:1 › mobile settings retain the closing page until the native exit transition completes
+  -  12 [desktop] › tests/browser/settings-stack.spec.ts:426:1 › a dirty settings form keeps the same native body across portrait and landscape
+  -  13 [desktop] › tests/browser/settings-stack.spec.ts:495:1 › browser Back retains an agent-backed settings page through its native exit to the collection
+(node:19156) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  14 [mobile] › tests/browser/channel-ownership.spec.ts:163:1 › WhatsApp uses its persisted target, reroutes explicitly, and retains earlier reply ownership (5.2s)
+  ✓  15 [mobile] › tests/browser/channel-ownership.spec.ts:242:3 › a missing WhatsApp target is left unavailable rather than defaulted (4.3s)
+  ✓  16 [mobile] › tests/browser/channel-ownership.spec.ts:242:3 › a archived WhatsApp target is left unavailable rather than defaulted (4.2s)
+  ✓  17 [mobile] › tests/browser/channel-ownership.spec.ts:275:1 › an unconfirmed WhatsApp reroute retries its original operation and chosen target (4.3s)
+  ✓  18 [mobile] › tests/browser/model-access-pending.spec.ts:48:1 › a return-address draft blocks settings dismissal until explicitly discarded (4.6s)
+  ✓  19 [mobile] › tests/browser/model-access-pending.spec.ts:107:1 › a reconnect request stays guarded through an unresolved error without retrying on dismissal (4.8s)
+  ✓  20 [mobile] › tests/browser/settings-stack.spec.ts:117:1 › personal and agent settings indexes open their own navigation without selecting a detail (6.5s)
+  ✓  21 [mobile] › tests/browser/settings-stack.spec.ts:181:1 › mobile settings keep native parents mounted and restore the originating control for each dismissal (7.5s)
+  ✓  22 [mobile] › tests/browser/settings-stack.spec.ts:275:1 › a native downward swipe dismisses only the top mobile settings route (4.8s)
+  ✓  23 [mobile] › tests/browser/settings-stack.spec.ts:301:1 › mobile agent Models retains its parent across global Model access history and reload (6.5s)
+  ✓  24 [mobile] › tests/browser/settings-stack.spec.ts:363:1 › mobile settings retain the closing page until the native exit transition completes (4.4s)
+  ✓  25 [mobile] › tests/browser/settings-stack.spec.ts:426:1 › a dirty settings form keeps the same native body across portrait and landscape (5.3s)
+  ✓  26 [mobile] › tests/browser/settings-stack.spec.ts:495:1 › browser Back retains an agent-backed settings page through its native exit to the collection (2.1s)
+
+  6 skipped
+  20 passed (1.6m)

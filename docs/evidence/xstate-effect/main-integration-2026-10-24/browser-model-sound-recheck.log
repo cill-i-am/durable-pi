@@ -1,0 +1,26 @@
+[WebServer] (node:23351) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] [plugin builtin:vite-reporter] 
+[WebServer] (!) Some chunks are larger than 500 kB after minification. Consider:
+[WebServer] - Using dynamic import() to code-split the application
+[WebServer] - Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+[WebServer] - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[WebServer] [INEFFECTIVE_DYNAMIC_IMPORT] src/features/files/files-panel.tsx is dynamically imported by src/app/workspace.tsx but also statically imported by src/features/files/index.ts, dynamic import will not move module into another chunk.
+[WebServer] 
+
+Running 8 tests using 1 worker
+
+(node:23353) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [desktop] › tests/browser/interaction-sound.spec.ts:76:1 › native pointer and keyboard sound preserve gesture, mute, preview and context cleanup (3.6s)
+  ✓  2 [desktop] › tests/browser/interaction-sound.spec.ts:147:1 › blocked audio and failed preference writes never block password visibility (1.5s)
+  ✓  3 [desktop] › tests/browser/model-defaults-ownership.spec.ts:49:1 › model default Save admits one write and retains acknowledgement across catalog failure (2.9s)
+  ✓  4 [desktop] › tests/browser/model-defaults-ownership.spec.ts:112:1 › an unconfirmed default uses an explicit read before any reapply (2.8s)
+(node:23574) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  5 [mobile] › tests/browser/interaction-sound.spec.ts:76:1 › native pointer and keyboard sound preserve gesture, mute, preview and context cleanup (3.5s)
+  ✓  6 [mobile] › tests/browser/interaction-sound.spec.ts:147:1 › blocked audio and failed preference writes never block password visibility (1.4s)
+  ✓  7 [mobile] › tests/browser/model-defaults-ownership.spec.ts:49:1 › model default Save admits one write and retains acknowledgement across catalog failure (3.2s)
+  ✓  8 [mobile] › tests/browser/model-defaults-ownership.spec.ts:112:1 › an unconfirmed default uses an explicit read before any reapply (3.7s)
+
+  8 passed (25.5s)

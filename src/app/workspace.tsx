@@ -38,6 +38,7 @@ import {
 import { listenForClientErrors } from "@/observability/browser"
 
 import { MobileNavigation } from "./mobile-navigation"
+import { useSettingsOwner } from "./use-settings-owner"
 import { useWorkbenchPresence } from "./use-workbench-presence"
 import { useWorkspaceGuard } from "./use-workspace-guard"
 import {
@@ -267,14 +268,16 @@ function Workspace({
   // initial view stays stable. Errors release it; later reconnects and agent
   // navigation keep their existing in-workspace loading/recovery controls.
   const { view: agentView, retaining } = useSettingsOwner(
-    catalog.selected,
-    { location, conversation, settings, workbench },
-    {
-      collection,
-      globalSection,
-      background: !!context.backgroundPath,
-      shown: settingsShown,
-    }
+    settingsOwnerView(
+      catalog.selected,
+      { location, conversation, settings, workbench },
+      {
+        collection,
+        globalSection,
+        background: !!context.backgroundPath,
+      }
+    ),
+    settingsShown
   )
   if (!protection.started && starting) return <WorkspaceStartup />
   return (
@@ -441,33 +444,15 @@ function Workspace({
   )
 }
 
-type SettingsOwner = Pick<
-  Parameters<typeof AgentWorkspace>[0],
-  "agent" | "location" | "conversation" | "settings" | "workbench"
->
-/** Retain the route owner until its outgoing native settings stack has closed. */
-function useSettingsOwner(
+function settingsOwnerView(
   agent: AgentProfile | null | undefined,
-  view: Omit<SettingsOwner, "agent">,
-  options: {
-    collection: boolean
-    globalSection?: string
-    background: boolean
-    shown: boolean
-  }
+  view: Omit<NonNullable<Parameters<typeof useSettingsOwner>[0]>, "agent">,
+  options: { collection: boolean; globalSection?: string; background: boolean }
 ) {
-  const current =
-    !options.collection &&
+  return !options.collection &&
     canRenderAgent(agent, options.globalSection, options.background)
-      ? { ...view, agent }
-      : null
-  const previous = useRef<SettingsOwner | null>(current)
-  const retaining =
-    options.shown &&
-    !!previous.current &&
-    previous.current.agent.id !== current?.agent.id
-  if (!retaining) previous.current = current
-  return { view: previous.current, retaining }
+    ? { ...view, agent }
+    : null
 }
 
 function WorkspaceUnavailable({

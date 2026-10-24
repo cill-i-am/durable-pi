@@ -1,0 +1,433 @@
+src/whatsapp/service.ts:83:        store.retry(
+src/whatsapp/adapters/chat.ts:166:      } finally {
+src/whatsapp/adapters/chat.ts:206:      } finally {
+src/whatsapp/adapters/chat.ts:252:      } finally {
+src/whatsapp/adapters/http.ts:38:        yield* app.retry(input)
+src/apps/web.ts:27:  private readonly cancellations = new Set<AbortController>()
+src/apps/web.ts:61:          const controller = new AbortController()
+src/email/adapters/http.ts:54:      yield* host.retry(input)
+src/rich-results/adapters/lookups.ts:51:  } finally {
+src/features/conversation/use-composer-draft.ts:2:import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+src/features/conversation/use-composer-draft.ts:26:  const [observed, setObserved] = useState<{
+src/delegation/background-mailbox.ts:314:          const prior = yield* records.retry(operationId)
+src/features/conversation/connection-response.ts:11:      settlement = reader.cancel(reason).finally(() => reader.releaseLock())
+src/apps/adapters/lifecycle.ts:113:    } finally {
+src/features/conversation/use-model-defaults.ts:3:import { useEffect, useRef, useState } from "react"
+src/features/conversation/use-model-defaults.ts:36:  const [snapshot, setSnapshot] = useState<SnapshotFrom<
+src/email/adapters/incoming.ts:63:  } finally {
+src/features/conversation/model-query.tsx:6:import { useEffect, useState, type ReactNode } from "react"
+src/features/conversation/model-query.tsx:25:  const [client] = useState(() => new QueryClient())
+src/access/adapters/pi.ts:193:        .finally(() => {
+src/hooks/use-highlighted-code.ts:14:    React.useState<EffectActor<HighlightMachine> | null>(null)
+src/hooks/use-highlighted-code.ts:16:    React.useState<SnapshotFrom<HighlightMachine> | null>(null)
+src/hooks/use-highlighted-code.ts:75:  const [done, setDone] = React.useState<{
+src/features/conversation/model-defaults-owner.ts:25:    const lifetime = new AbortController()
+src/access/adapters/mcp.ts:224:            resetTimeoutOnProgress: false,
+src/storage/durable-object.ts:81:        } finally {
+src/storage/effect.ts:152:              } finally {
+src/delegation/adapters/background-http.ts:39:        : service.retry(input.groupId, input.operationId)
+src/features/conversation/conversation.tsx:22:  useState,
+src/features/conversation/conversation.tsx:142:        requestAnimationFrame(() => composerInput.current?.focus())
+src/features/conversation/conversation.tsx:144:  const [dragging, setDragging] = useState(false)
+src/features/conversation/conversation.tsx:187:    commands.retry(
+src/features/conversation/conversation.tsx:585:  const [override, setOverride] = useState<SubmissionMode | null>(null)
+src/features/conversation/conversation.tsx:616:            requestAnimationFrame(() => inputRef.current?.focus())
+src/features/conversation/recovery-controls.tsx:3:import { useEffect, useMemo, useState } from "react"
+src/features/conversation/recovery-controls.tsx:107:  const [actor, setActor] = useState<EffectActor<RecoveryMachine> | null>(null)
+src/features/conversation/recovery-controls.tsx:108:  const [snapshot, setSnapshot] = useState<RecoverySnapshot | null>(null)
+src/features/files/use-files.ts:6:  useState,
+src/features/files/use-files.ts:26:  const [live, setLive] = useState<{
+src/features/files/use-files.ts:82:      owner ? Effect.runPromise(owner.retry(attempt)) : Promise.resolve(),
+src/features/conversation/connection.ts:71:          } finally {
+src/features/activity/bot-tasks.tsx:3:import { useEffect, useState } from "react"
+src/features/activity/bot-tasks.tsx:52:  const [origin, setOrigin] = useState<Task | null>(null)
+src/features/conversation/use-conversation.ts:3:import { useCallback, useEffect, useMemo, useState } from "react"
+src/features/conversation/use-conversation.ts:14:  const [refresh, setRefresh] = useState(0)
+src/features/conversation/use-conversation.ts:21:  const [metadata, setMetadata] = useState<{
+src/features/conversation/use-conversation.ts:25:  const [connectionError, setConnectionError] = useState({
+src/features/conversation/use-conversation.ts:29:  const [streamError, setStreamError] = useState<{
+src/features/conversation/use-conversation.ts:33:  const [retained, setRetained] = useState<{
+src/features/conversation/use-conversation-commands.ts:3:import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+src/features/conversation/use-conversation-commands.ts:36:  const [snapshot, setSnapshot] = useState<{
+src/features/files/files-panel.tsx:15:import { useEffect, useRef, useState } from "react"
+src/features/files/files-panel.tsx:70:  const [detailLocked, setDetailLocked] = useState(false)
+src/features/activity/delegated-work.tsx:3:import { useEffect, useState } from "react"
+src/features/activity/delegated-work.tsx:49:  const [offset, setOffset] = useState(0)
+src/features/activity/delegated-work.tsx:238:  const [inspect, setInspect] = useState(false)
+src/features/activity/delegated-work.tsx:239:  const [expanded, setExpanded] = useState<boolean | null>(null)
+src/features/activity/delegated-work.tsx:363:  const [text, setText] = useState("")
+src/features/activity/delegated-work.tsx:444:  const [cursor, setCursor] = useState<string | undefined>()
+src/features/conversation/turn-activity.tsx:17:import { lazy, Suspense, useState } from "react"
+src/features/conversation/turn-activity.tsx:164:  const [expanded, setExpanded] = useState<boolean | null>(null)
+src/features/conversation/turn-activity.tsx:233:  const [expanded, setExpanded] = useState<boolean | null>(null)
+src/features/conversation/turn-activity.tsx:256:  const [unavailableIcon, setUnavailableIcon] = useState<string | null>(null)
+src/features/files/use-file-details.ts:3:import { useEffect, useLayoutEffect, useRef, useState } from "react"
+src/features/files/use-file-details.ts:23:  const [actor, setActor] = useState<EffectActor<Machine> | null>(null)
+src/features/files/use-file-details.ts:24:  const [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null)
+src/features/activity/use-plans.ts:21:      const controller = new AbortController()
+src/features/activity/use-plans.ts:72:      } finally {
+src/features/activity/query-owner.ts:144:  } finally {
+src/features/conversation/queued-turn-anchor.tsx:30:    frame.current = requestAnimationFrame(() => {
+src/features/activity/use-mailbox-control.ts:3:import { useEffect, useMemo, useRef, useState } from "react"
+src/features/activity/use-mailbox-control.ts:20:  const [actor, setActor] = useState<EffectActor<Machine> | null>(null)
+src/features/activity/use-mailbox-control.ts:21:  const [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null)
+src/features/files/voice-recorder.tsx:4:import { useEffect, useLayoutEffect, useRef, useState } from "react"
+src/features/files/voice-recorder.tsx:29:  const [actor, setActor] = useState<EffectActor<Machine> | null>(null)
+src/features/files/voice-recorder.tsx:30:  const [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null)
+src/terminal/terminal.ts:145:    controller: AbortController
+src/terminal/terminal.ts:211:        let revoked: AbortController | undefined
+src/terminal/terminal.ts:487:                const controller = new AbortController()
+src/terminal/terminal.ts:545:      let accepted: AbortController | undefined
+src/terminal/terminal.ts:558:    controller: AbortController,
+src/features/conversation/connection-owner.ts:202:  } finally {
+src/memory/adapters/backup-lifecycle.ts:65:  controller?: AbortController
+src/memory/adapters/backup-lifecycle.ts:214:    } finally {
+src/memory/adapters/backup-lifecycle.ts:247:      } finally {
+src/memory/adapters/backup-lifecycle.ts:485:    const controller = new AbortController()
+src/memory/adapters/backup-lifecycle.ts:532:      .finally(() => {
+src/terminal/host.ts:60:      .finally(() => {
+src/terminal/host.ts:117:      .finally(() => {
+src/features/activity/use-activity-query.ts:3:import { useEffect, useRef, useState } from "react"
+src/features/activity/use-activity-query.ts:33:  const [actor, setActor] = useState<EffectActor<Machine> | null>(null)
+src/features/activity/use-activity-query.ts:34:  const [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null)
+src/features/whatsapp/whatsapp-settings.tsx:2:import { useEffect, useId, useState } from "react"
+src/features/whatsapp/whatsapp-settings.tsx:49:  const [chosenAgentId, setChosenAgentId] = useState<string | null>(null)
+src/features/whatsapp/whatsapp-settings.tsx:50:  const [requestPending, setRequestPending] = useState(false)
+src/features/files/upload-controls.tsx:75:                onClick={() => void state.retry(item)}
+src/features/activity/use-task-control.ts:3:import { useEffect, useMemo, useRef, useState } from "react"
+src/features/activity/use-task-control.ts:17:  const [actor, setActor] = useState<EffectActor<Machine> | null>(null)
+src/features/activity/use-task-control.ts:18:  const [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null)
+src/terminal/session.ts:73:    private readonly controller: AbortController,
+src/terminal/session.ts:79:    controller: AbortController,
+src/features/files/use-file-preview.ts:3:import { useEffect, useState } from "react"
+src/features/files/use-file-preview.ts:17:  const [actor, setActor] = useState<EffectActor<Machine> | null>(null)
+src/features/files/use-file-preview.ts:18:  const [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null)
+src/features/apps/use-app-list.ts:3:import { useEffect, useState } from "react"
+src/features/apps/use-app-list.ts:15:  const [owned, setOwned] = useState<{
+src/features/apps/inline-app.tsx:2:import { useCallback, useId, useState } from "react"
+src/features/apps/inline-app.tsx:39:  const [open, setOpen] = useState(false)
+src/features/apps/inline-app.tsx:40:  const [pending, setPending] = useState(false)
+src/hooks/use-mobile.ts:6:  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
+src/delegation/background-service.ts:210:        mailbox.retry(id, operationId, deadline)
+src/memory/adapters/summary-lifecycle.ts:47:  controller?: AbortController
+src/memory/adapters/summary-lifecycle.ts:334:    const controller = new AbortController()
+src/memory/adapters/summary-lifecycle.ts:372:      .finally(() => {
+src/memory/adapters/summary-lifecycle.ts:416:      .finally(() => {
+src/memory/adapters/summary-lifecycle.ts:530:      } finally {
+src/features/auth/auth-owner.ts:3:import { useCallback, useLayoutEffect, useRef, useState } from "react"
+src/features/auth/auth-owner.ts:86:  const [owned, setOwned] = useState<{
+src/terminal/adapters/transfer-files.ts:32: finally: os.close(file)
+src/terminal/adapters/transfer-files.ts:33:finally: os.close(directory)
+src/features/execution/use-execution.ts:3:import { useEffect, useLayoutEffect, useRef, useState } from "react"
+src/features/execution/use-execution.ts:15:  const [actor, setActor] = useState<EffectActor<Machine> | null>(null)
+src/features/execution/use-execution.ts:16:  const [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null)
+src/features/auth/passkey-settings.tsx:2:import { useEffect, useRef, useState } from "react"
+src/features/auth/passkey-settings.tsx:23:  const [available, setAvailable] = useState(false)
+src/features/auth/passkey-settings.tsx:24:  const [name, setName] = useState("")
+src/features/auth/passkey-settings.tsx:25:  const [nameInvalid, setNameInvalid] = useState(false)
+src/features/auth/passkey-settings.tsx:73:    let frame = requestAnimationFrame(() => {
+src/features/auth/passkey-settings.tsx:74:      frame = requestAnimationFrame(() => {
+src/communication/adapters/lifecycle.ts:158:    } finally {
+src/communication/adapters/lifecycle.ts:296:      await this.retry(epoch, deadline)
+src/communication/adapters/lifecycle.ts:440:    } finally {
+src/communication/adapters/lifecycle.ts:556:    } finally {
+src/memory/adapters/http.ts:60:  const cancelled = new AbortController()
+src/communication/adapters/http.ts:27:      else yield* app.retry(input.id)
+src/agent/worker.ts:4314:                this.emailStore.retry(
+src/features/execution/execution-workbench.tsx:3:import { useEffect, useState } from "react"
+src/features/execution/execution-workbench.tsx:31:  const [code, setCode] = useState(
+src/features/execution/execution-workbench.tsx:34:  const [data, setData] = useState("[1, 2, 3]")
+src/features/apps/web-canvas.tsx:3:import { useEffect, useRef, useState } from "react"
+src/features/apps/web-canvas.tsx:45:  const [owner, setOwner] = useState<FrameActor | null>(null),
+src/features/apps/web-canvas.tsx:46:    [snapshot, setSnapshot] = useState<SnapshotFrom<
+src/communication/communication.ts:580:                  mailbox.retry(id, now, { discoveryDeadline })
+src/features/routines/routines-workbench.tsx:2:import { useEffect, useState } from "react"
+src/features/routines/routines-workbench.tsx:64:  const [newEditor, setNewEditor] = useState<{
+src/features/routines/routines-workbench.tsx:68:  const [mutationPending, setMutationPending] = useState(false)
+src/features/routines/routines-workbench.tsx:94:  const [hookPending, setHookPending] = useState(false)
+src/features/routines/routines-workbench.tsx:271:                onClick={() => void actions.retry()}
+src/features/routines/routines-workbench.tsx:493:  const [baseline, setBaseline] = useState(routine)
+src/features/routines/routines-workbench.tsx:494:  const [savedSchedule, setSavedSchedule] = useState(routine?.schedule)
+src/features/routines/routines-workbench.tsx:496:  const [initial] = useState(() => routineEditorDefaults(routine))
+src/features/routines/routines-workbench.tsx:497:  const [id] = useState(initial.id)
+src/features/routines/routines-workbench.tsx:498:  const [title, setTitle] = useState(initial.title),
+src/features/routines/routines-workbench.tsx:499:    [prompt, setPrompt] = useState(initial.prompt)
+src/features/routines/routines-workbench.tsx:500:  const [type, setType] = useState(initial.type)
+src/features/routines/routines-workbench.tsx:501:  const [at, setAt] = useState(initial.at)
+src/features/routines/routines-workbench.tsx:502:  const [minutes, setMinutes] = useState(initial.minutes)
+src/features/routines/routines-workbench.tsx:503:  const [changedTime, setChangedTime] = useState(false)
+src/features/routines/routines-workbench.tsx:504:  const [status, setStatus] = useState(initial.status)
+src/features/routines/routines-workbench.tsx:505:  const [error, setError] = useState("")
+src/terminal/adapters/native-terminal.ts:16:  const abort = new AbortController()
+src/terminal/adapters/native-terminal.ts:79:            .finally(() => {
+src/conversations/adapters/latency.ts:126:          } finally {
+src/conversations/adapters/handoff.ts:33:    const cancelled = new AbortController()
+src/features/routines/use-webhook.ts:3:import { useEffect, useState } from "react"
+src/features/routines/use-webhook.ts:18:  const [owner, setOwner] = useState<{
+src/features/routines/use-webhook.ts:22:  const [state, setState] = useState<{
+src/conversations/adapters/events.ts:108:  const cancelled = new AbortController()
+src/conversations/adapters/events.ts:278:                } finally {
+src/features/auth/password-input.tsx:2:import { useState, type ComponentProps } from "react"
+src/features/auth/password-input.tsx:15:  const [visible, setVisible] = useState(false)
+src/terminal/adapters/native-sandbox.ts:90:            new AbortController().signal
+src/features/routines/use-routines.ts:3:import { useEffect, useLayoutEffect, useRef, useState } from "react"
+src/features/routines/use-routines.ts:25:  const [owner, setOwner] = useState<{
+src/features/routines/use-routines.ts:29:  const [state, setState] = useState<{
+src/features/apps/use-app-form.ts:3:import { useEffect, useRef, useState } from "react"
+src/features/apps/use-app-form.ts:22:  const [actor, setActor] = useState<Actor | null>(null),
+src/features/apps/use-app-form.ts:23:    [snapshot, setSnapshot] = useState<SnapshotFrom<
+src/features/auth/passkey-sign-in.tsx:3:import { useEffect, useState } from "react"
+src/features/auth/passkey-sign-in.tsx:26:  const [available, setAvailable] = useState<boolean | null>(null)
+src/features/apps/apps-workbench.tsx:3:import { useEffect, useState } from "react"
+src/features/apps/apps-workbench.tsx:35:  const [interactionPending, setInteractionPending] = useState(false)
+src/terminal/native-host.ts:75:      .finally(() => {
+src/terminal/native-host.ts:130:      .finally(() => {
+src/features/apps/use-app.ts:3:import { useEffect, useState } from "react"
+src/features/apps/use-app.ts:16:  const [owned, setOwned] = useState<{
+src/features/auth/password-recovery.tsx:3:import { useEffect, useRef, useState } from "react"
+src/features/auth/password-recovery.tsx:102:  const [link, setLink] = useState<{ token: string | null; revision: number }>({
+src/features/browser/use-browser.ts:3:import { useEffect, useState } from "react"
+src/features/browser/use-browser.ts:15:  const [actor, setActor] = useState<EffectActor<Machine> | null>(null)
+src/features/browser/use-browser.ts:16:  const [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null)
+src/features/apps/app-view.tsx:2:import { useEffect, useState } from "react"
+src/features/apps/app-view.tsx:43:  const [selected, setSelected] = useState<number | null>(
+src/features/apps/app-view.tsx:119:                onClick={() => void app.retry()}
+src/app/use-workspace-command.ts:3:import { useEffect, useRef, useState } from "react"
+src/app/use-workspace-command.ts:62:  const [snapshot, setSnapshot] = useState<SnapshotFrom<
+src/routines/adapters/lifecycle.ts:138:    } finally {
+src/routines/adapters/lifecycle.ts:304:    } finally {
+src/routines/adapters/lifecycle.ts:349:    } finally {
+src/conversations/adapters/lifecycle.ts:150:    } finally {
+src/conversations/adapters/lifecycle.ts:317:    } finally {
+src/conversations/adapters/lifecycle.ts:378:    } finally {
+src/features/browser/browser-preview.tsx:3:import { useEffect, useRef, useState } from "react"
+src/features/browser/browser-preview.tsx:30:  const [actor, setActor] = useState<EffectActor<Machine> | null>(null)
+src/features/browser/browser-preview.tsx:31:  const [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null)
+src/app/workspace-settings.tsx:18:import { useCallback, useEffect, useRef, useState } from "react"
+src/app/workspace-settings.tsx:107:  const [pending, setPending] = useState<Record<string, boolean>>({})
+src/app/workspace-settings.tsx:160:  const [entered, setEntered] = useState(false)
+src/app/workspace-settings.tsx:366:  const [entered, setEntered] = useState(false)
+src/app/use-workbench-presence.ts:3:import { useEffect, useRef, useState } from "react"
+src/app/use-workbench-presence.ts:23:  const [snapshot, setSnapshot] = useState<SnapshotFrom<
+src/features/auth/factor-settings.tsx:3:import { useEffect, useState } from "react"
+src/features/auth/factor-settings.tsx:69:  const [password, setPassword] = useState("")
+src/features/auth/factor-settings.tsx:70:  const [code, setCode] = useState("")
+src/features/auth/factor-settings.tsx:71:  const [showKey, setShowKey] = useState(false)
+src/app/use-workspace-guard.ts:3:import { useEffect, useRef, useState } from "react"
+src/app/use-workspace-guard.ts:42:  const [snapshot, setSnapshot] = useState<SnapshotFrom<
+src/app/use-settings-owner.ts:3:import { useEffect, useRef, useState } from "react"
+src/app/use-settings-owner.ts:29:  const [snapshot, setSnapshot] = useState<SnapshotFrom<
+src/features/skills/use-hosted-skill.ts:3:import { useEffect, useRef, useState } from "react"
+src/features/skills/use-hosted-skill.ts:18:  const [actor, setActor] = useState<EffectActor<Machine> | null>(null)
+src/features/skills/use-hosted-skill.ts:19:  const [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null)
+src/features/browser/browser-workbench.tsx:2:import { useEffect, useRef, useState } from "react"
+src/features/browser/browser-workbench.tsx:32:  const [url, setUrl] = useState("")
+src/features/browser/browser-workbench.tsx:33:  const [settings, setSettings] = useState<BrowserSettings | null>(null)
+src/features/auth/two-factor-challenge.tsx:3:import { useState } from "react"
+src/features/auth/two-factor-challenge.tsx:17:  const [code, setCode] = useState("")
+src/app/use-workspace-link-retry.ts:3:import { useEffect, useRef, useState } from "react"
+src/app/use-workspace-link-retry.ts:74:  const [snapshot, setSnapshot] = useState<SnapshotFrom<
+src/features/browser/browser-controls.tsx:2:import { useState } from "react"
+src/features/browser/browser-controls.tsx:24:  const [text, setText] = useState("")
+src/features/browser/browser-controls.tsx:25:  const [visible, setVisible] = useState(false)
+src/components/copy-button.tsx:5:  useState,
+src/components/copy-button.tsx:33:  const [feedback, setFeedback] = useState<{
+src/components/copy-button.tsx:49:    const timeout = window.setTimeout(() => setFeedback(null), 2000)
+src/app/workbench.tsx:13:import { useState, type ReactNode, type RefObject } from "react"
+src/app/workbench.tsx:80:  const [container, setContainer] = useState<HTMLDivElement | null>(null)
+src/features/skills/skills-panel.tsx:2:import { useEffect, useRef, useState } from "react"
+src/features/skills/skills-panel.tsx:53:  const [tab, setTab] = useState("library")
+src/features/skills/skills-panel.tsx:315:                  onClick={() => void state.retry()}
+src/features/skills/skills-panel.tsx:453:              void state.retry().then((result) => {
+src/app/workspace-link-error.tsx:6:import { useEffect, useState } from "react"
+src/app/workspace-link-error.tsx:21:  const [receipt, setReceipt] = useState<{ error: unknown; id: string }>()
+src/app/use-settings-drawers.ts:3:import { useEffect, useRef, useState } from "react"
+src/app/use-settings-drawers.ts:55:  const [snapshot, setSnapshot] = useState<SnapshotFrom<
+src/features/skills/hosted-skill-import.tsx:1:import { useState } from "react"
+src/features/skills/hosted-skill-import.tsx:19:  const [app, setApp] = useState("personal-skills")
+src/planning/service.ts:210:          const finallyCancelled = yield* cancelled()
+src/planning/service.ts:212:            requireUncancelledPlan(finallyCancelled)
+src/app/workspace.tsx:3:import { lazy, Suspense, useCallback, useEffect, useState, useRef } from "react"
+src/app/workspace.tsx:179:  const [workLocked, setNavigationLocked] = useState(false)
+src/app/workspace.tsx:180:  const [settingsPending, setSettingsPending] = useState(false)
+src/app/workspace.tsx:181:  const [settingsShown, setSettingsShown] = useState(false)
+src/app/workspace.tsx:530:  const [sending, setSending] = useState(false)
+src/app/workspace.tsx:545:  const [filePending, setFilePending] = useState(false)
+src/app/workspace.tsx:546:  const [workbenchAppPending, setAppPending] = useState(false)
+src/app/workspace.tsx:547:  const [inlineAppRequests, setInlineAppRequests] = useState<
+src/app/workspace.tsx:560:  const [executionPending, setExecutionPending] = useState(false)
+src/app/workspace.tsx:561:  const [objectPending, setObjectPending] = useState(false)
+src/app/workspace.tsx:562:  const [objectEditing, setObjectEditing] = useState(false)
+src/app/workspace.tsx:563:  const [routinePending, setRoutinePending] = useState(false)
+src/app/workspace.tsx:1028:  const [loaded, setLoaded] = useState(!!category)
+src/coordination/service.ts:204:          ? this.store.retry(message.id, attempt, this.now())
+src/coordination/service.ts:209:          ? this.store.retry(message.id, attempt, this.now())
+src/features/connections/connections-panel.tsx:2:import { useEffect, useState, type Dispatch, type SetStateAction } from "react"
+src/features/connections/connections-panel.tsx:62:  const [draft, setDraft] = useState<ReturnType<typeof newDraft> | null>(null)
+src/features/connections/connections-panel.tsx:63:  const [callback, setCallback] = useState("")
+src/features/skills/use-skill-view.ts:3:import { useEffect, useState } from "react"
+src/features/skills/use-skill-view.ts:29:  const [actor, setActor] = useState<EffectActor<Machine> | null>(null),
+src/features/skills/use-skill-view.ts:30:    [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null),
+src/features/skills/use-skill-view.ts:31:    [draft, setDraft] = useState<SkillDraft | null>(null)
+src/components/ui/select.tsx:18:  const [localOpen, setLocalOpen] = React.useState(defaultOpen)
+src/features/auth/prepare-avatar.ts:42:  } finally {
+src/features/connections/use-connections.ts:3:import { useCallback, useEffect, useRef, useState } from "react"
+src/features/connections/use-connections.ts:24:  const [actor, setActor] = useState<EffectActor<Machine> | null>(null)
+src/features/connections/use-connections.ts:25:  const [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null)
+src/components/ui/dropdown-menu.tsx:20:  const [localOpen, setLocalOpen] = React.useState(defaultOpen)
+src/features/skills/use-skills.ts:3:import { useCallback, useEffect, useState } from "react"
+src/features/skills/use-skills.ts:13:  const [actor, setActor] = useState<EffectActor<Machine> | null>(null),
+src/features/skills/use-skills.ts:14:    [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null)
+src/features/updates/recovery.ts:28:    const lifetime = new AbortController()
+src/features/updates/recovery.ts:32:    let request: AbortController | undefined
+src/features/updates/recovery.ts:53:      const controller = new AbortController()
+src/features/updates/update-recovery.tsx:9:  useState,
+src/features/updates/update-recovery.tsx:45:  const [recovery, setRecovery] = useState<Recovery | null>(null)
+src/features/updates/update-recovery.tsx:46:  const [manager] = useState(createToastManager)
+src/inference/adapters/upstream-worker.ts:116:                } finally {
+src/coordination/adapters/lifecycle.ts:238:      } finally {
+src/coordination/adapters/lifecycle.ts:287:      } finally {
+src/inference/adapters/streams-pi.ts:62:  private readonly controller = new AbortController()
+src/inference/adapters/streams-pi.ts:150:    } finally {
+src/inference/adapters/streams-pi.ts:272:        .finally(() => {
+src/inference/adapters/streams-pi.ts:399:    } finally {
+src/inference/adapters/streams-pi.ts:452:    } finally {
+src/inference/adapters/streams-pi.ts:469:      })().finally(() => {
+src/features/access/use-approval.ts:3:import { useEffect, useMemo, useRef, useState } from "react"
+src/features/access/use-approval.ts:17:  const [actor, setActor] = useState<EffectActor<Machine> | null>(null)
+src/features/access/use-approval.ts:18:  const [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null)
+src/features/access/use-access.ts:3:import { useEffect, useRef, useState } from "react"
+src/features/access/use-access.ts:13:  const [actor, setActor] = useState<EffectActor<Machine> | null>(null)
+src/features/access/use-access.ts:14:  const [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null)
+src/features/agents/use-agent-catalog.ts:2:import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+src/features/agents/use-agent-catalog.ts:16:  const [live, setLive] = useState<{
+src/features/agents/use-agent-catalog.ts:20:  const [selected, setSelected] = useState<string>(homeAgentId)
+src/auth/session-fetch.ts:26:    const controller = new AbortController()
+src/auth/session-fetch.ts:162:      .finally(() => signal.removeEventListener("abort", abort))
+src/features/channel-settings/use-channel-settings.ts:3:import { useEffect, useMemo, useState } from "react"
+src/features/channel-settings/use-channel-settings.ts:28:  const [actor, setActor] = useState<EffectActor<Machine> | null>(null)
+src/features/channel-settings/use-channel-settings.ts:29:  const [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null)
+src/features/agents/use-agent-archive.ts:2:import { useEffect, useRef, useState } from "react"
+src/features/agents/use-agent-archive.ts:19:  const [snapshot, setSnapshot] = useState<SnapshotFrom<
+src/features/memory/use-memory-query.ts:3:import { useEffect, useMemo, useState } from "react"
+src/features/memory/use-memory-query.ts:27:  const [view, setView] = useState<{
+src/features/memory/memory-import.tsx:3:import { useEffect, useMemo, useState } from "react"
+src/features/memory/memory-import.tsx:33:  const [actor, setActor] = useState<EffectActor<Machine> | null>(null)
+src/features/memory/memory-import.tsx:34:  const [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null)
+src/workspace/service.ts:205:      yield* preparation.retry(id)
+src/components/ui/sidebar.tsx:69:  const [openMobile, setOpenMobile] = React.useState(false)
+src/components/ui/sidebar.tsx:71:  const [_open, _setOpen] = React.useState(defaultOpen)
+src/components/ui/sidebar.tsx:598:  const [width] = React.useState(() => {
+src/features/agents/use-agent-statuses.ts:2:import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+src/features/agents/use-agent-statuses.ts:17:  const [observed, setObserved] = useState<{
+src/features/agents/use-agent-statuses.ts:29:  const [live, publishLive] = useState<{
+src/components/ui/code-block.tsx:93:  const [copied, setCopied] = React.useState(false)
+src/components/ui/code-block.tsx:100:    const timeout = setTimeout(() => setCopied(false), 2000)
+src/features/rich-results/products.tsx:2:import { useContext, useMemo, useState, type ReactNode } from "react"
+src/features/rich-results/products.tsx:47:  const [selected, setSelected] = useState<string[]>([])
+src/features/rich-results/products.tsx:48:  const [query, setQuery] = useState("")
+src/features/rich-results/products.tsx:49:  const [budget, setBudget] = useState("")
+src/features/rich-results/products.tsx:50:  const [sort, setSort] = useState(["recommended"])
+src/features/rich-results/products.tsx:51:  const [view, setView] = useState(["browse"])
+src/features/rich-results/products.tsx:52:  const [shortlistOnly, setShortlistOnly] = useState(false)
+src/features/rich-results/products.tsx:53:  const [merchant, setMerchant] = useState("")
+src/auth/adapters/event-stream-encoding.ts:146:        .finally(() =>
+src/features/memory/memory-panel.tsx:2:import { useMemo, useState } from "react"
+src/features/memory/memory-panel.tsx:206:  const [open, setOpen] = useState(false)
+src/features/objects/checklist.tsx:11:import { useEffect, useId, useState } from "react"
+src/features/objects/checklist.tsx:117:                <Button size="sm" onClick={() => void store.retry(id)}>
+src/features/objects/checklist.tsx:352:  const [fields, setDraft] = useState<Draft | null>(null)
+src/auth/adapters/owner-setup.ts:144:  const stopped = new AbortController()
+src/features/memory/backup-recovery.tsx:3:import { useEffect, useMemo, useState } from "react"
+src/features/memory/backup-recovery.tsx:55:  const [actor, setActor] = useState<EffectActor<Machine> | null>(null)
+src/features/memory/backup-recovery.tsx:56:  const [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null)
+src/features/objects/store.ts:98:  return promise.finally(() => {
+src/features/rich-results/table-controls.tsx:3:import { useId, useState } from "react"
+src/features/rich-results/table-controls.tsx:84:  const [open, setOpen] = useState(false)
+src/features/rich-results/table-controls.tsx:85:  const [key, setKey] = useState(columns[0]!.key)
+src/features/rich-results/table-controls.tsx:86:  const [operator, setOperator] = useState<ValueFilter["operator"]>("contains")
+src/features/rich-results/table-controls.tsx:87:  const [inputValue, setValue] = useState("")
+src/features/rich-results/cards.tsx:3:import { useId, useState, type ReactNode } from "react"
+src/features/rich-results/cards.tsx:125:  const [selected, setSelected] = useState(0)
+src/features/rich-results/cards.tsx:190:  const [selected, setSelected] = useState(0)
+src/features/objects/context.tsx:6:  useState,
+src/features/objects/context.tsx:30:  const [owned, setOwned] = useState<{
+src/features/objects/context.tsx:65:  const [consumers, setConsumers] = useState(0)
+src/workspace/adapters/lifecycle.ts:152:    } finally {
+src/workspace/adapters/lifecycle.ts:390:    } finally {
+src/features/rich-results/workspace.tsx:2:import { useState, type ReactNode } from "react"
+src/features/rich-results/workspace.tsx:26:  const [open, setOpen] = useState(false)
+src/workspace/adapters/download.ts:23:      const cancelled = new AbortController(),
+src/features/objects/workbench.tsx:3:import { useEffect, useId, useState } from "react"
+src/features/objects/workbench.tsx:53:  const [editing, setEditing] = useState(false),
+src/features/objects/workbench.tsx:54:    [title, setTitle] = useState("")
+src/features/agents/agent-requests.ts:10:    const lifetime = new AbortController()
+src/features/agents/use-agent-editor.ts:2:import { useEffect, useRef, useState } from "react"
+src/features/agents/use-agent-editor.ts:20:  const [id] = useState(
+src/features/agents/use-agent-editor.ts:28:  const [snapshot, setSnapshot] = useState<SnapshotFrom<
+src/features/objects/use-object-creation.ts:3:import { useEffect, useLayoutEffect, useRef, useState } from "react"
+src/features/objects/use-object-creation.ts:14:  const [actor, setActor] = useState<EffectActor<
+src/features/objects/use-object-creation.ts:17:  const [snapshot, setSnapshot] = useState<SnapshotFrom<
+src/features/rich-results/places-map.tsx:5:import { useEffect, useRef, useState } from "react"
+src/features/rich-results/places-map.tsx:29:  const [actor, setActor] = useState<EffectActor<MapMachine> | null>(null)
+src/features/rich-results/places-map.tsx:30:  const [snapshot, setSnapshot] = useState<SnapshotFrom<MapMachine> | null>(
+src/features/objects/use-object-origin.ts:3:import { useEffect, useState } from "react"
+src/features/objects/use-object-origin.ts:16:  const [actor, setActor] = useState<EffectActor<Machine> | null>(null)
+src/features/objects/use-object-origin.ts:17:  const [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null)
+src/features/rich-results/explorer.tsx:2:import { lazy, Suspense, useState } from "react"
+src/features/rich-results/explorer.tsx:26:  const [open, setOpen] = useState(false)
+src/features/terminal/use-terminal.ts:3:import { useEffect, useRef, useState } from "react"
+src/features/terminal/use-terminal.ts:28:  const [actor, setActor] = useState<TerminalActor | null>(null)
+src/features/terminal/use-terminal.ts:29:  const [snapshot, setSnapshot] = useState<Snapshot | null>(null)
+src/features/terminal/use-terminal.ts:108:  const [leaseState, setLease] = useState<{
+src/features/memory/summary-recovery.tsx:3:import { useEffect, useMemo, useState } from "react"
+src/features/memory/summary-recovery.tsx:99:  const [actor, setActor] = useState<EffectActor<Machine> | null>(null)
+src/features/memory/summary-recovery.tsx:100:  const [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null)
+src/features/rich-results/gallery.tsx:2:import { useState } from "react"
+src/features/rich-results/gallery.tsx:17:  const [weatherRange, setWeatherRange] = useState(["weekend"])
+src/features/rich-results/data-table.tsx:14:import { useId, useMemo, useState } from "react"
+src/features/rich-results/data-table.tsx:101:  const [sorting, setSorting] = useState<SortingState>([])
+src/features/rich-results/data-table.tsx:102:  const [search, setSearch] = useState("")
+src/features/rich-results/data-table.tsx:103:  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+src/features/rich-results/data-table.tsx:104:  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
+src/features/rich-results/data-table.tsx:180:    setTimeout(() => URL.revokeObjectURL(url), 1000)
+src/features/family/chatgpt-sign-in.tsx:3:import { useEffect, useRef, useState } from "react"
+src/features/family/chatgpt-sign-in.tsx:23:  const [email, setEmail] = useState(defaultEmail)
+src/features/family/chatgpt-sign-in.tsx:24:  const [address, setAddress] = useState("")
+src/features/family/chatgpt-sign-in.tsx:25:  const [snapshot, setSnapshot] = useState<SnapshotFrom<
+src/features/family/chatgpt-sign-in.tsx:91:    let frame = requestAnimationFrame(() => {
+src/features/family/chatgpt-sign-in.tsx:92:      frame = requestAnimationFrame(() => {
+src/features/family/context.tsx:7:  useState,
+src/features/family/context.tsx:41:  const [snapshot, setSnapshot] = useState<SnapshotFrom<
+src/features/terminal/terminal-workbench.tsx:3:import { useEffect, useRef, useState } from "react"
+src/features/terminal/terminal-workbench.tsx:54:    useState<TerminalNetworkPolicy | null>(null)
+src/features/terminal/terminal-workbench.tsx:70:  const [command, setCommand] = useState(
+src/features/family/model-access.tsx:4:import { useCallback, useEffect, useRef, useState } from "react"
+src/features/family/model-access.tsx:32:  const [snapshot, setSnapshot] = useState<SnapshotFrom<
+src/features/family/model-access.tsx:72:  const [reconnectPending, setReconnectPending] = useState(false)
+src/features/family/join.tsx:3:import { useEffect, useRef, useState } from "react"
+src/features/family/join.tsx:62:  const [name, setName] = useState("")
+src/features/family/join.tsx:63:  const [password, setPassword] = useState("")
+src/features/family/join.tsx:69:  const [snapshot, setSnapshot] = useState<SnapshotFrom<
+src/features/terminal/interactive-terminal.tsx:3:import { useEffect, useRef, useState } from "react"
+src/features/terminal/interactive-terminal.tsx:114:  const [status, setStatus] = useState("Connecting")
+src/features/terminal/interactive-terminal.tsx:115:  const [error, setError] = useState("")
+src/features/family/family-join-owner.ts:32:    let active: AbortController | undefined
+src/features/family/family-join-owner.ts:41:        const controller = new AbortController()
+src/features/family/family-join-owner.ts:45:        } finally {
+src/features/terminal/file-transfers.tsx:4:import { useEffect, useState } from "react"
+src/features/terminal/file-transfers.tsx:45:  const [path, setPath] = useState("/workspace/result.txt")
+src/features/terminal/file-transfers.tsx:46:  const [invalid, setInvalid] = useState(false)
+src/features/terminal/file-transfers.tsx:175:  const [actor, setActor] = useState<EffectActor<
+src/features/terminal/file-transfers.tsx:178:  const [state, setState] = useState({
+src/features/rich-results/question.tsx:10:  useState,
+src/features/rich-results/question.tsx:31:  const [chosen, setChosen] = useState<string[]>([])
+src/features/rich-results/question.tsx:32:  const [other, setOther] = useState("")
+src/features/rich-results/question.tsx:35:  const [actor, setActor] = useState<EffectActor<QuestionMachine> | null>(null)
+src/features/rich-results/question.tsx:37:    useState<SnapshotFrom<QuestionMachine> | null>(null)
+src/features/family/family-settings.tsx:10:import { useEffect, useRef, useState } from "react"
+src/features/family/family-settings.tsx:60:  const [inviteOpen, setInviteOpen] = useState(false)
+src/features/family/family-settings.tsx:61:  const [removing, setRemoving] = useState<typeof FamilyMember.Type | null>(
+src/features/family/family-settings.tsx:67:  const [snapshot, setSnapshot] = useState<SnapshotFrom<
+src/features/family/family-settings.tsx:439:  const [email, setEmail] = useState("")
+src/features/family/family-requests.ts:10:    const lifetime = new AbortController()
