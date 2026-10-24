@@ -1,0 +1,19 @@
+# Conversation runner lifetime
+
+Invariants for this slice:
+
+- Lifecycle retains the existing pump/discovery job identities, legacy payload compatibility, finite three-attempt budget and one alarm owner. Conversation domain receipts and revisioned exhaustion remain durable authority.
+- A local machine owns cold restoration, exact callback identity, running/failed/exhausting progression, wake coalescing, scheduling admission and closure. A repeated callback cannot overlap itself; only a failed exact callback may exhaust its receipt.
+- Wake during an owned dispatch rearms without replacing the SDK retry identity. Late completion preserves newer queue intent. Exhaustion rechecks native job identity and current domain revision inside the existing transaction.
+- Closing refuses new work and joins accepted callbacks/restoration/storage before runtime and SQL disposal. Provider shutdown remains concurrent so native waiters can settle. Full Causes survive joined disposal.
+- A bounded scheduling observation may time out without cancelling the native queue write. A late queue write cannot authorize a domain admission or a Pi submission.
+
+`conversations/runner.machine.ts` now owns these local gates through one scoped official Effect actor. The adapter keeps only native Promise joins and the actor/scope handles. Scheduling requests are admitted serially so an asynchronous mailbox decision cannot race a callback into a native queue update. Restoration carries the observed attempt generation so a queued join cannot become an automatic retry after a failure.
+
+Two failure-sensitive tests reproduce same-object overlap and premature receipt exhaustion against the preceding adapter. The native PersonalAgent control reproduces runtime/SQL disposal before a held Conversation callback settles; joining Conversation alongside provider shutdown fixes the same assertion. Existing domain ledgers, Pi execution, Stop/recovery revisions, discovery deadlines and native retry budgets are unchanged.
+
+One older race test assumed dispatch started synchronously. It now explicitly waits for the original callback to enter before replacing its queue job; its newer-job retention assertion remains. Added failure checks preserve original errors, defects, interruption and annotations while allowing the official Effect invocation to add its diagnostic stack annotation. A failure-injection fixture was corrected to use `Effect.failCause` inside `Effect.exit`; Promise rejection there represents a defect, not a checked failure.
+
+All 50 focused cases, static checks, the native Conversation restart/receipt suite and the full PersonalAgent/Communication suite pass. The latter runs a real held callback through runtime and SQLite disposal. Native Conversation checks retain discovery through the full sixty-second lease without object requests and reconcile the same Pi submission after SIGKILL without another synthetic provider call. All 3,741 unit tests in 330 files, website/route checks and all seven Worker bundles pass. [Raw evidence and final source hashes](evidence/xstate-effect/conversation-runner-2026-10-24/README.md) retain the negative controls and intermediate fixture corrections. Hosted CI remains a publication gate.
+
+The Memory predecessor is published as draft #225 at unsigned `068158f`, with hosted checks running. Communication, Workspace and Routine runner ownership remains open. No merge, deployment or live-provider delivery is claimed.

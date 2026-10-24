@@ -1,0 +1,94 @@
+{
+  "base": "068158f18e48550dc8e46be4cc53126b7be56465",
+  "artifacts": [
+    {
+      "file": "conversation-runner-before.log.txt",
+      "sha256": "220a9a0ed671e4346fee9e31744dc7eeb6fc866b2b7957b7a26112328aeda024",
+      "source": "/private/tmp/conversation-runner-before.log"
+    },
+    {
+      "file": "conversation-runner-after-first.log.txt",
+      "sha256": "09df5a861c6b4f41fd4ed3e5bb75322104452a8cf2efbe8608f5fe51e4adf2fd",
+      "source": "/private/tmp/conversation-runner-after-first.log"
+    },
+    {
+      "file": "conversation-runner-focused.log.txt",
+      "sha256": "b4ebebbe5414dbfebde84eb6e79f8b88cb8c4daec03d15a26f88c74337f13de8",
+      "source": "/private/tmp/conversation-runner-focused.log"
+    },
+    {
+      "file": "conversation-runner-focused-complete.log.txt",
+      "sha256": "d1e7a85be9ddce14ad90fb71bb93ea31a0c4561f2febeeb11a5301fd5c9de295",
+      "source": "/private/tmp/conversation-runner-focused-complete.log"
+    },
+    {
+      "file": "conversation-runner-unit-complete.log.txt",
+      "sha256": "3ddca1906c3250dd86e5a805d1c18f8fdf6a3d99256cf9424805da06eecddde1",
+      "source": "/private/tmp/conversation-runner-unit-complete.log"
+    },
+    {
+      "file": "conversation-runner-focused-final-50.log.txt",
+      "sha256": "fa9a3507a297edfdeb446e99ecb922f4a504e4a502a3e41983aba5874b345e5a",
+      "source": "/private/tmp/conversation-runner-focused-final-50.log"
+    },
+    {
+      "file": "conversation-runner-static-final.log.txt",
+      "sha256": "2788d741843c762904dd7c096ab45da9adaeff151bc41147f3aee287e456e4c8",
+      "source": "/private/tmp/conversation-runner-static-final.log"
+    },
+    {
+      "file": "conversation-runner-native-join-before.log.txt",
+      "sha256": "a94f2127a92bffe138d38f39d90f37dba74508d38890f067a39e1e004a24f31b",
+      "source": "/private/tmp/conversation-runner-native-join-before.log"
+    },
+    {
+      "file": "conversation-runner-native-join-control.log.txt",
+      "sha256": "d0e27a2779f96ab3d37a1f82715c7ab74d173641784949decc2dbe06ba35b20c",
+      "source": "/private/tmp/conversation-runner-native-join-control.log"
+    },
+    {
+      "file": "conversation-runner-native-personal.log.txt",
+      "sha256": "fd84f2c7034ecd3992ac8d98f1d24d28376f2944360f8f4e4622a33dba106bda",
+      "source": "/private/tmp/conversation-runner-native-personal.log"
+    },
+    {
+      "file": "conversation-runner-native-conversation.log.txt",
+      "sha256": "702208749d6d18dbf0411996cede139acd0b3af9375d859093df5ca87d93bbe5",
+      "source": "/private/tmp/conversation-runner-native-conversation.log"
+    },
+    {
+      "file": "conversation-runner-unit-final.log.txt",
+      "sha256": "39b4e0299463c60d73bba060f682cc883a2f759e9429f3c1f1260ca5cdf5787e",
+      "source": "/private/tmp/conversation-runner-unit-final.log"
+    },
+    {
+      "file": "conversation-runner-build-final.log.txt",
+      "sha256": "eb11ee447360b53ee45745d9649c1471e4d7644ae1351a09de80a2d2245d27f7",
+      "source": "/private/tmp/conversation-runner-build-final.log"
+    },
+    {
+      "file": "conversation-runner-routes-final.log.txt",
+      "sha256": "f282d7dba702934a4718e64c20cb9e74ff7048a4edab5d58fc5b60b31ffb9dfa",
+      "source": "/private/tmp/conversation-runner-routes-final.log"
+    },
+    {
+      "file": "conversation-runner-workers-final.log.txt",
+      "sha256": "3ed709c17203bd594e86917acb6526eec31cfd6f8421c5bfe3d763c7042fe48b",
+      "source": "/private/tmp/conversation-runner-workers-final.log"
+    },
+    {
+      "file": "conversation-runner-publication-secrets.log.txt",
+      "sha256": "b62daf6bd42b2c86a436d746c514df039157f65919277092dc8cf609bc550c04",
+      "source": "/private/tmp/conversation-runner-publication-secrets.log"
+    }
+  ],
+  "sources": {
+    "scripts/test-communication-runtime.mjs": "a27ed8fabb6582adee1d4e0b06bee9d725fe2141ce258aba0273ab10ec5521b8",
+    "src/agent/worker.ts": "27ba9fc58f616a453931dbb50eb2c78a0ab6621e779ca1fa097ea079cff8c95b",
+    "src/conversations/adapters/lifecycle.ts": "80582a35a28e7098aaa81ff9ffeba5e4ddd9ad2bc1b9bbd56cfce2715e7289fc",
+    "src/conversations/runner.machine.ts": "78cf01538017f6f78ce2efc9c6f43366c97dc578c43cf6d47ad6397691e070c6",
+    "tests/conversation-runner.test.ts": "64bb6b0e029afb51813e22221808052f2445e98a546733c9c65ad34db6c702d9",
+    "tests/runtime/communication-worker.ts": "153c0b242253f6063c8d985100da2898fd7638757c3ae8e9041e333b42e3f3f2",
+    "tests/runtime/personal-agent-worker.ts": "e3e7082fa4d9cccb194b44e17ae86db7aef617e21d1566309f315f2b3cb9a34e"
+  }
+}

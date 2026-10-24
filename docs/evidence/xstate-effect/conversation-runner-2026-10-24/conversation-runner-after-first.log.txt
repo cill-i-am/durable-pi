@@ -1,0 +1,27 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+ ❯ tests/conversation-runner.test.ts (36 tests | 1 failed) 88ms
+   ❯ conversation job ownership (16)
+     × retains a newer pump job when old joined work completes 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/conversation-runner.test.ts > conversation job ownership > retains a newer pump job when old joined work completes
+TypeError: finish is not a function
+ ❯ tests/conversation-runner.test.ts:366:5
+    364|     await f.runner.wake()
+    365|     const newer = f.pump()
+    366|     finish()
+       |     ^
+    367|     expect(await work).toEqual({ rescheduleAt: newer.time })
+    368|     expect(f.pump()).toBe(newer)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 35 passed (36)
+   Start at  21:05:55
+   Duration  407ms (import 49%, tests 28%, transform 20%, setup 2%, worker 1%)
+

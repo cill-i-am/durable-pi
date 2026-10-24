@@ -634,6 +634,10 @@ class ActorServices extends LifecycleCapability {
             () => this.owner.appEvents.dispose(),
             (cause) => cause
           ).pipe(Effect.exit),
+          nativeOperation(
+            () => this.owner.runner.dispose(),
+            (cause) => cause
+          ).pipe(Effect.exit),
         ],
         { concurrency: "unbounded" }
       ).pipe(

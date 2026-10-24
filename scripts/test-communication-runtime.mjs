@@ -129,7 +129,7 @@ const config :Workerd.Config = (
 );`
   )
   await start()
-  for (const kind of ["coordination", "apps"]) {
+  for (const kind of ["coordination", "apps", "conversation"]) {
     const heldRunner = (action) =>
       call(`personal-${kind}-disposal/${kind}-held-${action}`, {})
     const waitRunner = async (predicate) => {

@@ -3145,10 +3145,20 @@ export class PersonalAgentProbe extends PersonalAgent {
   ): Promise<Response | undefined> {
     if (
       action?.startsWith("coordination-held-") ||
-      action?.startsWith("apps-held-")
+      action?.startsWith("apps-held-") ||
+      action?.startsWith("conversation-held-")
     ) {
-      const kind = action.startsWith("apps-") ? "apps" : "coordination"
-      const runner = kind === "apps" ? this.appEvents : this.coordinationRunner
+      const kind = action.startsWith("apps-")
+        ? "apps"
+        : action.startsWith("conversation-")
+          ? "conversation"
+          : "coordination"
+      const runner =
+        kind === "apps"
+          ? this.appEvents
+          : kind === "conversation"
+            ? this.runner
+            : this.coordinationRunner
       if (action === `${kind}-held-start`) {
         await this.lifecycle.start()
         const held = new Promise<void>((resolve) => {
@@ -3163,6 +3173,7 @@ export class PersonalAgentProbe extends PersonalAgent {
           return undefined
         }
         if (kind === "apps") this.appEvents.host.pump = pump
+        else if (kind === "conversation") this.runner.host.step = pump
         else this.coordinationRunner.host.step = pump
         const dispose = runner.dispose.bind(runner)
         runner.dispose = () => {
@@ -3170,6 +3181,7 @@ export class PersonalAgentProbe extends PersonalAgent {
           return dispose()
         }
         await runner.armDiscovery()
+        if (kind === "conversation") await runner.wake()
       }
       if (action === `${kind}-held-release`) this.releaseRunner?.()
       if (action === `${kind}-held-dispose`) {

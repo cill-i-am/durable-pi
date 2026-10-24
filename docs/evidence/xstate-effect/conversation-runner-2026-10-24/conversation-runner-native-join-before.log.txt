@@ -1,0 +1,25 @@
+$ node scripts/test-communication-runtime.mjs
+PASS native coordination callback joins before actor runtime and SQL disposal.
+PASS native apps callback joins before actor runtime and SQL disposal.
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Fixture personal-conversation-disposal/conversation-held-start: 500; service fixture: The compatibility flag nodejs_compat became the default as of 2026-08-04 so does not need to be specified anymore.
+service chatgpt-provider: The compatibility flag nodejs_compat became the default as of 2026-08-04 so does not need to be specified anymore.
+workerd/server/server.c++:6895: error: Uncaught exception: workerd/jsg/_virtual_includes/iterator/workerd/jsg/value.h:1489: failed: remote.jsg.Error: SchemaError
+stack: 101dd7158 101dd7d0f 1041fbb5f 101b72343 101b7311b 101b736df 101021dcf 103fa9edf 103faabe3 103fab577 103f714ec
+
+    at call (file:///Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/scripts/test-communication-runtime.mjs:73:3)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async file:///Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/scripts/test-communication-runtime.mjs:143:5 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v24.21.0
+[ELIFECYCLE] Command failed with exit code 1.

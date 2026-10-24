@@ -1,0 +1,65 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+stdout | tests/conversation-runner.test.ts > conversation callback admission regressions > refuses premature exhaustion while the exact callback is still running
+[21:04:14.079] ERROR (#166): Conversation job exhausted { job: 'pump' } premature failure
+
+ ❯ tests/conversation-runner.test.ts (36 tests | 2 failed) 38ms
+   ❯ conversation callback admission regressions (2)
+     × refuses an overlapping invocation of the exact same SDK callback 4ms
+     × refuses premature exhaustion while the exact callback is still running 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/conversation-runner.test.ts > conversation callback admission regressions > refuses an overlapping invocation of the exact same SDK callback
+AssertionError: expected undefined to deeply equal { rescheduleAt: Any<Number> }
+
+- Expected:
+{
+  "rescheduleAt": Any<Number>,
+}
+
++ Received:
+undefined
+
+ ❯ tests/conversation-runner.test.ts:707:57
+    705|     await started
+    706|     try {
+    707|       expect(await f.runner.onJob({ job, attempt: 1 })).toEqual({ resc…
+       |                                                         ^
+    708|       expect(f.step).toHaveBeenCalledTimes(1)
+    709|     } finally { release(); await first }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/conversation-runner.test.ts > conversation callback admission regressions > refuses premature exhaustion while the exact callback is still running
+AssertionError: expected [ { rootId: 'root', …(2) } ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   {
++     "phase": "observe",
++     "revision": 1,
++     "rootId": "root",
++   },
++ ]
+
+ ❯ tests/conversation-runner.test.ts:727:27
+    725|     try {
+    726|       await f.runner.onJobError({ job, attempt: 3 }, "premature failur…
+    727|       expect(f.committed).toEqual([])
+       |                           ^
+    728|     } finally { release(); await first }
+    729|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 34 passed (36)
+   Start at  21:04:13
+   Duration  355ms (import 67%, transform 16%, tests 14%, setup 2%, worker 1%)
+
