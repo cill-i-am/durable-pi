@@ -1,0 +1,46 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+stdout | tests/app-lifecycle.test.ts > does not spend a lease through a failure callback while its native pump is held
+[19:56:22.775] ERROR (#95): App delivery recovery exhausted overlapping callback
+
+ ❯ tests/app-lifecycle.test.ts (13 tests | 2 failed) 26ms
+   × does not admit the same SDK callback again while its native pump is held 1ms
+   × does not spend a lease through a failure callback while its native pump is held 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/app-lifecycle.test.ts > does not admit the same SDK callback again while its native pump is held
+AssertionError: expected "vi.fn()" to be called 1 times, but got 2 times
+ ❯ tests/app-lifecycle.test.ts:307:20
+    305|       "rescheduleAt"
+    306|     )
+    307|     expect(f.pump).toHaveBeenCalledTimes(1)
+       |                    ^
+    308|   } finally {
+    309|     release()
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/app-lifecycle.test.ts > does not spend a lease through a failure callback while its native pump is held
+AssertionError: expected 'exhausted' to be 'armed' // Object.is equality
+
+Expected: "armed"
+Received: "exhausted"
+
+ ❯ tests/app-lifecycle.test.ts:334:53
+    332|   try {
+    333|     await f.runner.onJobError({ job, attempt: 3 }, "overlapping callba…
+    334|     expect(readAppDiscovery(f.job().payload).state).toBe("armed")
+       |                                                     ^
+    335|     expect(f.push).toHaveBeenCalledTimes(1)
+    336|   } finally {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 11 passed (13)
+   Start at  19:56:22
+   Duration  307ms (import 68%, transform 16%, tests 12%, setup 3%, worker 1%)
+

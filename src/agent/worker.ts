@@ -614,7 +614,7 @@ class ActorServices extends LifecycleCapability {
       this.owner.compactor.dispose(),
       this.owner.backups.dispose(),
     ])
-    // Stop provider admission, account refreshes and Coordination together.
+    // Stop provider admission, account refreshes and accepted runner work together.
     // Accepted callbacks retain their runtime and SQL until native work settles;
     // their provider waiters also need provider/credential shutdown to progress.
     await Effect.runPromise(
@@ -628,6 +628,10 @@ class ActorServices extends LifecycleCapability {
           this.owner.shutdownUpstream.pipe(Effect.exit),
           nativeOperation(
             () => this.owner.coordinationRunner.dispose(),
+            (cause) => cause
+          ).pipe(Effect.exit),
+          nativeOperation(
+            () => this.owner.appEvents.dispose(),
             (cause) => cause
           ).pipe(Effect.exit),
         ],

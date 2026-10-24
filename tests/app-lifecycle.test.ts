@@ -1,12 +1,18 @@
 import type { LifecycleJob, LifecycleJobPushOptions } from "agents/lifecycle"
-import { Effect } from "effect"
+import { Cause, Context, Effect } from "effect"
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { initialTransition, transition } from "xstate"
 
 import { AppEventRunner } from "../src/apps/adapters/lifecycle"
 import { readAppDiscovery } from "../src/apps/discovery.machine"
+import { appRunnerMachine } from "../src/apps/runner.machine"
 
 vi.mock("agents/lifecycle", () => ({ LifecycleCapability: class {} }))
-afterEach(() => vi.useRealTimers())
+const runners: AppEventRunner<never>[] = []
+afterEach(async () => {
+  await Promise.allSettled(runners.splice(0).map((runner) => runner.dispose()))
+  vi.useRealTimers()
+})
 function fixture() {
   const jobs = new Map<string, LifecycleJob>()
   let pending = false,
@@ -29,6 +35,7 @@ function fixture() {
         }
       }),
   })
+  runners.push(runner)
   const push = vi.fn(async (options: LifecycleJobPushOptions) => {
     const job: LifecycleJob = {
       id: options.id!,
@@ -101,7 +108,7 @@ describe("Apps retained discovery", () => {
     expect(f.pump).toHaveBeenCalledTimes(2)
   })
   it("rejects new admission near an active lease expiry without inventing a new deadline or retry budget", async () => {
-    vi.useFakeTimers()
+    vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] })
     vi.setSystemTime(100_000)
     const f = fixture()
     await f.runner.armDiscovery()
@@ -241,7 +248,7 @@ it("stale armed callbacks cannot execute or delete a same-token spent lease", as
 })
 
 it("a failed spent-marker write cannot renew orphan execution or cross a still-live old render lease", async () => {
-  vi.useFakeTimers()
+  vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] })
   vi.setSystemTime(100_000)
   const f = fixture()
   const deadline = await f.runner.armDiscovery()
@@ -280,4 +287,225 @@ it("fresh absent-job admission fails if orphan terminal persistence is unavailab
   f.persistenceFails(false)
   await f.runner.armDiscovery()
   expect(f.exhausted()).toBe(1)
+})
+
+it("does not admit the same SDK callback again while its native pump is held", async () => {
+  const f = fixture()
+  await f.runner.armDiscovery()
+  const job = f.job()
+  let enter!: () => void, release!: () => void
+  const entered = new Promise<void>((resolve) => {
+    enter = resolve
+  })
+  const held = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  f.pump.mockImplementationOnce(async () => {
+    enter()
+    await held
+    return undefined
+  })
+  const first = f.runner.onJob({ job, attempt: 1 })
+  await entered
+  try {
+    expect(await f.runner.onJob({ job, attempt: 1 })).toHaveProperty(
+      "rescheduleAt"
+    )
+    expect(f.pump).toHaveBeenCalledTimes(1)
+  } finally {
+    release()
+    await first
+  }
+})
+
+it("does not spend a lease through a failure callback while its native pump is held", async () => {
+  const f = fixture()
+  await f.runner.armDiscovery()
+  const job = f.job()
+  let enter!: () => void, release!: () => void
+  const entered = new Promise<void>((resolve) => {
+    enter = resolve
+  })
+  const held = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  f.pump.mockImplementationOnce(async () => {
+    enter()
+    await held
+    return undefined
+  })
+  const first = f.runner.onJob({ job, attempt: 1 })
+  await entered
+  try {
+    await f.runner.onJobError({ job, attempt: 3 }, "overlapping callback")
+    expect(readAppDiscovery(f.job().payload).state).toBe("armed")
+    expect(f.push).toHaveBeenCalledTimes(1)
+  } finally {
+    release()
+    await first
+  }
+})
+
+function gate<A>() {
+  let resolve!: (value: A) => void, reject!: (error: unknown) => void
+  const promise = new Promise<A>((yes, no) => {
+    resolve = yes
+    reject = no
+  })
+  return { promise, resolve, reject }
+}
+it("closes admission and joins a held pump before disposal settles", async () => {
+  const f = fixture(),
+    entered = gate<void>(),
+    held = gate<void>()
+  await f.runner.armDiscovery()
+  const job = f.job()
+  f.pump.mockImplementationOnce(async () => {
+    entered.resolve()
+    await held.promise
+    return undefined
+  })
+  const callback = f.runner.onJob({ job, attempt: 1 })
+  await entered.promise
+  let disposed = false
+  const closing = f.runner.dispose().then(() => {
+    disposed = true
+  })
+  await f.runner.wake()
+  expect(disposed).toBe(false)
+  await expect(f.runner.armDiscovery()).rejects.toThrow("disposed")
+  await f.runner.onJob({ job, attempt: 1 })
+  await f.runner.onJobError({ job, attempt: 3 }, "late")
+  expect(f.pump).toHaveBeenCalledTimes(1)
+  held.resolve()
+  await Promise.all([closing, callback])
+  await f.runner.dispose()
+  expect(disposed).toBe(true)
+})
+it("joins accepted scheduling, rejects queued admission on close, and cannot return a late lease", async () => {
+  const f = fixture(),
+    entered = gate<void>(),
+    held = gate<void>()
+  const push = f.push.getMockImplementation()!
+  f.push.mockImplementationOnce(async (options) => {
+    entered.resolve()
+    await held.promise
+    return push(options)
+  })
+  const first = f.runner.armDiscovery().catch((error: unknown) => error)
+  await entered.promise
+  const second = f.runner.armDiscovery().catch((error: unknown) => error)
+  let disposed = false
+  const closing = f.runner.dispose().then(() => {
+    disposed = true
+  })
+  expect(await second).toMatchObject({
+    message: "App runner has been disposed",
+  })
+  expect(disposed).toBe(false)
+  held.resolve()
+  expect(await first).toMatchObject({ message: "App runner has been disposed" })
+  await closing
+  expect(f.push).toHaveBeenCalledTimes(1)
+  expect(f.pump).not.toHaveBeenCalled()
+})
+it("does not overlap scheduling or dispatch while the native queue update is held", async () => {
+  const f = fixture(),
+    entered = gate<void>(),
+    held = gate<void>()
+  await f.runner.armDiscovery()
+  const job = f.job(),
+    push = f.push.getMockImplementation()!
+  f.push.mockImplementationOnce(async (options) => {
+    entered.resolve()
+    await held.promise
+    return push(options)
+  })
+  const first = f.runner.armDiscovery()
+  await entered.promise
+  const second = f.runner.armDiscovery()
+  expect(await f.runner.onJob({ job, attempt: 1 })).toHaveProperty(
+    "rescheduleAt"
+  )
+  expect(f.push).toHaveBeenCalledTimes(2)
+  expect(f.pump).not.toHaveBeenCalled()
+  held.resolve()
+  await Promise.all([first, second])
+  expect(f.push).toHaveBeenCalledTimes(3)
+  expect(readAppDiscovery(f.job().payload).state).toBe("armed")
+})
+class NativeTrace extends Context.Service<NativeTrace, string>()(
+  "app-runner/NativeTrace"
+) {}
+it.each([false, true])(
+  "retains full native cleanup Cause at callback and disposal (defect %s)",
+  async (defect) => {
+    const f = fixture(),
+      entered = gate<void>(),
+      held = gate<void>()
+    const checked = new Error("checked cleanup"),
+      died = new Error("defect cleanup")
+    const annotation = Context.make(NativeTrace, "original")
+    const cause = Cause.fromReasons([
+      Cause.makeFailReason(checked).annotate(annotation),
+      ...(defect ? [Cause.makeDieReason(died).annotate(annotation)] : []),
+      Cause.makeInterruptReason(44206).annotate(annotation),
+    ])
+    await f.runner.armDiscovery()
+    f.pump.mockImplementationOnce(async () => {
+      entered.resolve()
+      await held.promise
+      return undefined
+    })
+    const callback = f.runner
+      .onJob({ job: f.job(), attempt: 1 })
+      .catch((error: unknown) => error)
+    await entered.promise
+    const closing = f.runner.dispose().catch((error: unknown) => error)
+    await f.runner.wake()
+    held.reject(cause)
+    for (const failure of await Promise.all([callback, closing])) {
+      expect(Cause.isCause(failure)).toBe(true)
+      if (!Cause.isCause(failure)) throw new Error("Expected full native Cause")
+      expect(failure.reasons).toHaveLength(defect ? 3 : 2)
+      for (const reason of failure.reasons)
+        expect(reason.annotations.get(NativeTrace.key)).toBe("original")
+      expect(
+        failure.reasons.some(
+          (reason) => reason._tag === "Fail" && reason.error === checked
+        )
+      ).toBe(true)
+      expect(
+        failure.reasons.some(
+          (reason) => reason._tag === "Interrupt" && reason.fiberId === 44206
+        )
+      ).toBe(true)
+      expect(
+        failure.reasons.some(
+          (reason) => reason._tag === "Die" && reason.defect === died
+        )
+      ).toBe(defect)
+    }
+  }
+)
+it("rejects malformed callback events through official runtime validation", () => {
+  const [state] = initialTransition(appRunnerMachine)
+  const [next, effects] = transition(appRunnerMachine, state, {
+    type: "ADMIT",
+    job: null,
+    token: "",
+    until: -1,
+    current: "yes",
+    spent: false,
+    reply: null,
+  } as never)
+  expect(next.value).toEqual(state.value)
+  expect(
+    effects.some(
+      (effect) =>
+        effect.kind === "builtin" &&
+        effect.type === "@xstate.deadLetter" &&
+        effect.reason === "invalidEvent"
+    )
+  ).toBe(true)
 })

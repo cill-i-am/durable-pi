@@ -1,0 +1,11 @@
+$ node --import tsx scripts/check-secrets.ts && pnpm generate-routes && pnpm db:check:agent && pnpm typecheck && pnpm lint && pnpm check
+Checked 2912 tracked files; no credential matches.
+$ tsr generate
+(node:78611) Warning: Accessing non-existent property 'replaceRouteChunk' of module exports inside circular dependency
+(Use `node --trace-warnings ...` to show where the warning was created)
+$ node scripts/generate-agent-migration-manifest.mjs --check
+$ tsc --noEmit
+$ oxlint --config oxlint.config.ts --deny-warnings
+tests/runtime/personal-agent-worker.ts:3141:34: error eslint(complexity): private async method `coordinationProbe` has a complexity of 23. Maximum allowed is 20.
+[ELIFECYCLE] Command failed with exit code 1.
+[ELIFECYCLE] Command failed with exit code 1.

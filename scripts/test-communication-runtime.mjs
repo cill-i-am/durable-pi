@@ -129,42 +129,44 @@ const config :Workerd.Config = (
 );`
   )
   await start()
-  const heldCoordination = (action) =>
-    call(`personal-coordination-disposal/coordination-held-${action}`, {})
-  const waitCoordinationHeld = async (predicate) => {
-    for (let attempt = 0; attempt < 100; attempt++) {
-      const state = await heldCoordination("inspect")
-      if (predicate(state)) return state
-      await sleep(25)
+  for (const kind of ["coordination", "apps"]) {
+    const heldRunner = (action) =>
+      call(`personal-${kind}-disposal/${kind}-held-${action}`, {})
+    const waitRunner = async (predicate) => {
+      for (let attempt = 0; attempt < 100; attempt++) {
+        const state = await heldRunner("inspect")
+        if (predicate(state)) return state
+        await sleep(25)
+      }
+      throw new Error(`Native ${kind} shutdown did not progress`)
     }
-    throw new Error("Native Coordination shutdown did not progress")
+    await heldRunner("start")
+    await waitRunner((state) => state.entered)
+    const disposal = heldRunner("dispose")
+    void disposal.catch(() => {})
+    const closing = await waitRunner((state) =>
+      state.events.includes(`${kind}.close`)
+    )
+    assert(
+      !closing.events.includes("actor.connections.close"),
+      `Actor resources closed before accepted ${kind} work joined`
+    )
+    assert(!closing.events.includes("host.dispose"))
+    await heldRunner("release")
+    const closed = await disposal
+    assert(closed.events.indexOf(`${kind}.settled`) >= 0)
+    assert(
+      closed.events.indexOf(`${kind}.settled`) <
+        closed.events.indexOf("actor.connections.close")
+    )
+    assert(
+      closed.events.indexOf("actor.connections.close") <
+        closed.events.indexOf("host.dispose")
+    )
+    console.log(
+      `PASS native ${kind} callback joins before actor runtime and SQL disposal.`
+    )
   }
-  await heldCoordination("start")
-  await waitCoordinationHeld((state) => state.entered)
-  const heldCoordinationDisposal = heldCoordination("dispose")
-  void heldCoordinationDisposal.catch(() => {})
-  const coordinationClosing = await waitCoordinationHeld((state) =>
-    state.events.includes("coordination.close")
-  )
-  assert(
-    !coordinationClosing.events.includes("actor.connections.close"),
-    "Actor resources closed before accepted Coordination work joined"
-  )
-  assert(!coordinationClosing.events.includes("host.dispose"))
-  await heldCoordination("release")
-  const coordinationClosed = await heldCoordinationDisposal
-  assert(coordinationClosed.events.indexOf("coordination.settled") >= 0)
-  assert(
-    coordinationClosed.events.indexOf("coordination.settled") <
-      coordinationClosed.events.indexOf("actor.connections.close")
-  )
-  assert(
-    coordinationClosed.events.indexOf("actor.connections.close") <
-      coordinationClosed.events.indexOf("host.dispose")
-  )
-  console.log(
-    "PASS native Coordination callback joins before actor runtime and SQL disposal."
-  )
   const maintenanceState = () => call("maintenance/inspect", {})
   const waitMaintenance = async (predicate) => {
     for (let attempt = 0; attempt < 100; attempt++) {

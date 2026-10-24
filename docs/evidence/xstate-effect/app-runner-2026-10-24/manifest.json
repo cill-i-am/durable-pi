@@ -1,0 +1,94 @@
+{
+  "base": "90c130b9728f9ab23689b48ef6c79aca38244425",
+  "artifacts": [
+    {
+      "file": "app-runner-before.log.txt",
+      "sha256": "973c5979f3334f55e5a19c96432f6cfa9b4e2d6f8d2d40730a9efbb6926a3c70",
+      "source": "/private/tmp/app-runner-before.log"
+    },
+    {
+      "file": "app-runner-after-first.log.txt",
+      "sha256": "cc4cb9ea8397f3045a061b61427d413da17171af6a950a775b1b01bb0cfa2a7a",
+      "source": "/private/tmp/app-runner-after-first.log"
+    },
+    {
+      "file": "app-runner-after-extended.log.txt",
+      "sha256": "ead858e8106b27cae0031678ab65343718e2a710148bf70ed13a59fdc309f81c",
+      "source": "/private/tmp/app-runner-after-extended.log"
+    },
+    {
+      "file": "app-runner-after-final.log.txt",
+      "sha256": "193e8130989645b10d64b608815433677fb3ffce6b2336a156fd8bb3d2d28942",
+      "source": "/private/tmp/app-runner-after-final.log"
+    },
+    {
+      "file": "app-runner-native-shutdown-before.log.txt",
+      "sha256": "3a31a6dff845893c4375ac8301ac7a04db3a76456f9771222027961da4dcf917",
+      "source": "/private/tmp/app-runner-native-shutdown-before.log"
+    },
+    {
+      "file": "app-runner-native-shutdown-after.log.txt",
+      "sha256": "67cf7dbff6ac23f7da1c05a4d998975858bb3d0a6d8f78d22bbbf9771b438c19",
+      "source": "/private/tmp/app-runner-native-shutdown-after.log"
+    },
+    {
+      "file": "app-runner-native-final.log.txt",
+      "sha256": "67cf7dbff6ac23f7da1c05a4d998975858bb3d0a6d8f78d22bbbf9771b438c19",
+      "source": "/private/tmp/app-runner-native-final.log"
+    },
+    {
+      "file": "app-runner-native-apps.log.txt",
+      "sha256": "6afc51e238602162276fbd3d2aed0e0a5adc61a99466dff71a75abdf25f7a309",
+      "source": "/private/tmp/app-runner-native-apps.log"
+    },
+    {
+      "file": "app-runner-static.log.txt",
+      "sha256": "cda0a50d662b06b89f5989bcebacb891e5129fc7e239428f60b33333a39474fd",
+      "source": "/private/tmp/app-runner-static.log"
+    },
+    {
+      "file": "app-runner-static-final.log.txt",
+      "sha256": "f7ecdbfd47eb8deca37c4c3f2bc66db352e065d57a30f00a457d6891e517f009",
+      "source": "/private/tmp/app-runner-static-final.log"
+    },
+    {
+      "file": "app-runner-unit.log.txt",
+      "sha256": "201f81730d49a1e577a56bd1bba002811963d038319eccf52db9a50ddd09be4d",
+      "source": "/private/tmp/app-runner-unit.log"
+    },
+    {
+      "file": "app-runner-build.log.txt",
+      "sha256": "09f830dc85664033e6b715b36607a6afabd091804492bd4f942334d564c4a1b0",
+      "source": "/private/tmp/app-runner-build.log"
+    },
+    {
+      "file": "app-runner-website-routes.log.txt",
+      "sha256": "f282d7dba702934a4718e64c20cb9e74ff7048a4edab5d58fc5b60b31ffb9dfa",
+      "source": "/private/tmp/app-runner-website-routes.log"
+    },
+    {
+      "file": "app-runner-workers.log.txt",
+      "sha256": "a0e2b43a5ed71962ad93a595395dc1ccb9eca2a7af4e26749d16f5bf4c600843",
+      "source": "/private/tmp/app-runner-workers.log"
+    },
+    {
+      "file": "apps-native-evidence.json.txt",
+      "sha256": "86b43e0da3bc0d8e86d132cef0515eec369b1bd1632b7b3b187d522b28f26e09",
+      "source": "/var/folders/s2/80_kxn9s19s1gyb6ylqwdh680000gn/T/apps-native-positive-78557-evidence.json"
+    },
+    {
+      "file": "app-runner-publication-secrets.log.txt",
+      "sha256": "ead9756f58987045c3375c1eb5fe9a444d830dc38096a749b0ab96283631c1a4",
+      "source": "/private/tmp/app-runner-publication-secrets.log"
+    }
+  ],
+  "sources": {
+    "scripts/test-communication-runtime.mjs": "e434b485efac8c898976f6b135969730d0ea621b25abcd63cb66a00dde458b5b",
+    "src/agent/worker.ts": "f26ddd066cb7c30ba8c2bd08f2f5948a503e633709265584ebb6f97a8fe2716c",
+    "src/apps/adapters/lifecycle.ts": "a8a72261637c0c81c30b370ea6d4277e17c4d85ea35f8f8a429096552dd5b9f1",
+    "src/apps/runner.machine.ts": "ed16a5d40743b5f8ffe947fb6ab2613a3575f16e67c0eb9ee6c035eeb4c4028a",
+    "tests/app-lifecycle.test.ts": "bc2c73b9d197497af08605d158a55c2f6eec650a071820d78ac6d52dbfab9db0",
+    "tests/runtime/communication-worker.ts": "04b59fba2184a1b13173068ba8a64be8d80c7fb018e821822f8a31d9cb2b4f9b",
+    "tests/runtime/personal-agent-worker.ts": "d245662d39784c52ea064893c8f1015596d2bbe2a388d3270d4d6ae85ddd5cbe"
+  }
+}
