@@ -44,6 +44,9 @@ interface Env {
   BOTS: DurableObjectNamespace<MailboxBot>
 }
 const personalProbeOwners = new Map([
+  ["personal-background-disposal", "personal-background-disposal-owner"],
+  ["personal-email-disposal", "personal-email-disposal-owner"],
+  ["personal-whatsapp-disposal", "personal-whatsapp-disposal-owner"],
   ["personal-apps-disposal", "personal-apps-disposal-owner"],
   ["personal-workspace-disposal", "personal-workspace-disposal-owner"],
   ["personal-communication-disposal", "personal-communication-disposal-owner"],

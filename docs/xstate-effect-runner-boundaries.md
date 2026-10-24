@@ -1,0 +1,20 @@
+# Retained runner boundary audit
+
+Invariants for this slice:
+
+- Coordination and App-event retain their existing callback/lease machines. Their native Effect executors and actual callback bindings must preserve complete failure reasons through shutdown.
+- Background and Reply domain machines and Lifecycle already own callback progression, exact row eligibility, peer job fences and bounded recovery. Add only the missing local admission/close lifetime; do not introduce another callback ledger, alarm owner or retry budget.
+- Close refuses new scheduler/domain work and joins accepted callbacks and native queue writes before the actual runtimes and SQL close. Prearm acknowledgement after closure cannot authorize a new admission.
+- Exhaustion failure can leave persistence unconfirmed without a retry loop, while a failure joining during shutdown must retain its original checked error, defects and interruption.
+
+The audit reproduces complete failure loss at four retained adapter reads and five actual native callbacks. App, Coordination, Background and Reply executors now carry `Effect.exit` through their native Promise boundary; actual PersonalAgent callbacks use the existing complete-Exit projection. Family admission also retains checked errors, defects and interruption. Coordination and Routine continue cleanup after expected authority failures but propagate defects/interruption. Summary consumes the admission Effect directly, removing a Promise round trip that reclassified its failures.
+
+Background and Reply gain domain-local admission/close machines only. Each ADMIT acknowledgement is ordered with CLOSE; the host retains native Promise handles and joins accepted work before closing its Effect scope. Coordination prearm now uses the existing runner machine for the same ordering and refuses late acknowledgement. These are local lifetimes: domain/recovery machines retain progression, native Lifecycle retains callbacks, exact persisted ownership tokens, peer fences and retry budgets. No dispatch ledger, persisted schema or alarm owner is added.
+
+The actual PersonalAgent shutdown joins Background, Email and WhatsApp alongside the already joined runners and provider shutdown. SQL and both runtimes remain available until accepted work settles. The native negative control closes actor resources while Background work is still held; the final test proves all nine runner joins in the actual host.
+
+Verification passes 89 focused tests, all 3,811 unit tests in 331 files, static checks, website/route checks and all seven Worker builds. The complete PersonalAgent native suite passes nine actual callback bindings plus four admission paths, each retaining original checked error, defect and interruption identity. Native Background Stop, Email/WhatsApp discovery/exhaustion/multipart recovery and Memory Summary recovery also pass, including their actual SIGKILL/receipt/finite-budget checks. Providers remain synthetic.
+
+Controls retain four failing adapter reads before the bridge, nine failing native binding/admission checks, and twelve failing admission/close tests when machine admission is bypassed. Accepted callback, exhaustion and queue-write barriers prove close joins work and denies later storage access; checked/defect/interruption annotations survive the adapter boundary. The full unit suite exposed a test that intercepted the original Effect object's identity to inject clock failure. It now supplies the Clock service, preserving the failure point and all recovery assertions. The first expanded native run exposed a fixture action-name collision with the existing Background provider-shutdown test; the new probes now use distinct runner action names. Both original failures and final passing logs are retained.
+
+[Raw evidence and source hashes](evidence/xstate-effect/runner-boundaries-2026-10-24/README.md) record this slice above Workspace `7a6ad90`. Draft publication and hosted CI remain open, as do the final source census and two earlier frontend CI gates. No merge, deployment or live-provider delivery is claimed.

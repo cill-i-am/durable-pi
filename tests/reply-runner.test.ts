@@ -1,11 +1,16 @@
 import type { LifecycleJob, LifecycleJobPushOptions } from "agents/lifecycle"
 import { Deferred, Effect } from "effect"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { ReplyRunner } from "../src/replies/adapters/lifecycle"
 
 vi.mock("agents/lifecycle", () => ({ LifecycleCapability: class {} }))
 
+const owners = new Set<ReplyRunner<never>>()
+afterEach(async () => {
+  await Promise.allSettled([...owners].map((owner) => owner.dispose()))
+  owners.clear()
+})
 function fixture(channel: "email" | "whatsapp") {
   const jobs = new Map<string, LifecycleJob>()
   const committed: string[] = []
@@ -29,6 +34,7 @@ function fixture(channel: "email" | "whatsapp") {
         }
       }),
   })
+  owners.add(runner)
   Object.defineProperty(runner, "lifecycle", {
     value: {
       jobs: {
@@ -251,9 +257,16 @@ describe.each(["email", "whatsapp"] as const)(
     it("does not infer absence from a queue storage failure", async () => {
       const f = fixture(channel)
       f.faultReads()
-      await expect(f.runner.reconcile()).rejects.toThrow(
-        "queue storage unavailable"
-      )
+      await expect(f.runner.reconcile()).rejects.toMatchObject({
+        reasons: [
+          {
+            _tag: "Die",
+            defect: expect.objectContaining({
+              message: "queue storage unavailable",
+            }),
+          },
+        ],
+      })
       expect(f.committed).toEqual([])
     })
 

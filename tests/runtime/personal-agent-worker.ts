@@ -20,16 +20,19 @@ import {
   AgentSynchronizationError,
   homeAgentId,
 } from "../../src/agents/domain"
+import { FamilyAdmission } from "../../src/agents/family-admission"
+import { AppStorageError } from "../../src/apps/contracts"
 import { Communication } from "../../src/communication/communication"
 import { CommunicationError } from "../../src/communication/contracts"
 import { conversationEvents } from "../../src/conversations/adapters/events"
+import { CoordinationFailure } from "../../src/coordination/contracts"
 import { backgroundRemote } from "../../src/delegation/adapters/background-rpc"
 import { backgroundNative } from "../../src/delegation/adapters/interop"
 import { piDelegationLedger } from "../../src/delegation/adapters/pi"
 import { backgroundObjectName } from "../../src/delegation/background"
 import { DelegationFailure } from "../../src/delegation/contracts"
 import { parseEmail } from "../../src/email/adapters/incoming"
-import { EmailView } from "../../src/email/contracts"
+import { EmailView, EmailStorageError } from "../../src/email/contracts"
 import { executionWorkerRequest } from "../../src/execution/worker"
 import {
   ChatGPTSignIn,
@@ -65,7 +68,10 @@ import { SkillStorageError } from "../../src/skills/contracts"
 import { localTaskControls } from "../../src/tasks/adapters/personal-agent"
 import { WebhookStorageError } from "../../src/webhooks/persistence"
 import { whatsappRpc } from "../../src/whatsapp/adapters/rpc"
-import { whatsappIdentity } from "../../src/whatsapp/contracts"
+import {
+  whatsappIdentity,
+  WhatsAppStorageError,
+} from "../../src/whatsapp/contracts"
 import { WorkspaceUnavailable } from "../../src/workspace/files"
 import { transcript } from "../audio-fixture"
 import type { BackgroundGroupProbe } from "./background-worker"
@@ -3179,18 +3185,91 @@ export class PersonalAgentProbe extends PersonalAgent {
       Cause.makeInterruptReason(918),
     ])
     this.workspaceService.extractNext = () => Effect.failCause(workspaceCause)
-    const expected = [checked, checked, mailboxFailure, workspaceFailure]
+    const coordinationFailure = new CoordinationFailure({
+      code: "unavailable",
+      message: "native coordination failure probe",
+    })
+    const appFailure = new AppStorageError({
+      operation: "native app failure probe",
+      cause: "storage unavailable",
+    })
+    const backgroundFailure = new DelegationFailure({
+      code: "unavailable",
+      message: "native background failure probe",
+    })
+    const emailFailure = new EmailStorageError({
+      operation: "native email failure probe",
+    })
+    const whatsappFailure = new WhatsAppStorageError({
+      operation: "native whatsapp failure probe",
+    })
+    const compound = <E>(error: E) =>
+      Cause.fromReasons([
+        Cause.makeFailReason(error),
+        Cause.makeDieReason(defect),
+        Cause.makeInterruptReason(918),
+      ])
+    const coordination = this.coordination.pump,
+      apps = this.appPump.run,
+      background = this.background.step,
+      email = this.emailStore.pending,
+      whatsapp = this.whatsappStore.pending
+    this.coordination.pump = () =>
+      Effect.failCause(compound(coordinationFailure))
+    this.appPump.run = () => Effect.failCause(compound(appFailure))
+    this.background.step = () => Effect.failCause(compound(backgroundFailure))
+    this.emailStore.pending = () => Effect.failCause(compound(emailFailure))
+    this.whatsappStore.pending = () =>
+      Effect.failCause(compound(whatsappFailure))
+    const admission = this.actorRuntime.runSync(FamilyAdmission),
+      admit = admission.admit
+    const expected = [
+      checked,
+      checked,
+      mailboxFailure,
+      workspaceFailure,
+      coordinationFailure,
+      appFailure,
+      backgroundFailure,
+      emailFailure,
+      whatsappFailure,
+      coordinationFailure,
+      coordinationFailure,
+      coordinationFailure,
+      coordinationFailure,
+    ]
     const conversation = this.conversationPump.run,
       routine = this.routinePump.run
     this.conversationPump.run = () => Effect.failCause(cause)
     this.routinePump.run = () => Effect.failCause(cause)
     try {
-      const observed = await Promise.allSettled([
-        this.runner.host.step(() => {}),
-        this.routineRunner.host.step(() => {}),
-        this.communicationRunner.host.step(() => {}),
-        this.extraction.host.step(() => Effect.void),
-      ])
+      const observed: PromiseSettledResult<unknown>[] =
+        await Promise.allSettled([
+          this.runner.host.step(() => {}),
+          this.routineRunner.host.step(() => {}),
+          this.communicationRunner.host.step(() => {}),
+          this.extraction.host.step(() => Effect.void),
+          this.coordinationRunner.host.step(),
+          this.appEvents.host.pump(),
+          this.backgroundRunner.host.step(),
+          this.emailRunner.host.pump(),
+          this.whatsappRunner.host.pump(),
+        ])
+      // Admission is shared by the callbacks; change it only after they settle.
+      admission.admit = Effect.failCause(compound(coordinationFailure))
+      observed.push(
+        ...(await Promise.allSettled([
+          this.familyAdmission(),
+          this.coordinationRunner.host.step(),
+          this.routineRunner.host.step(() => {}),
+          this.actorRuntime
+            .runPromise(Effect.exit(this.compactor.host.step()))
+            .then((exit) => {
+              if (Exit.isFailure(exit)) throw exit.cause
+              return undefined
+            }),
+        ]))
+      )
       return Response.json(
         observed.map((result, index) => {
           if (result.status !== "rejected" || !Cause.isCause(result.reason))
@@ -3213,6 +3292,12 @@ export class PersonalAgentProbe extends PersonalAgent {
         })
       )
     } finally {
+      admission.admit = admit
+      this.coordination.pump = coordination
+      this.appPump.run = apps
+      this.background.step = background
+      this.emailStore.pending = email
+      this.whatsappStore.pending = whatsapp
       this.workspaceService.extractNext = extract
       app.pump = communication
       this.conversationPump.run = conversation
@@ -3232,8 +3317,11 @@ export class PersonalAgentProbe extends PersonalAgent {
         "routines",
         "communication",
         "workspace",
+        "background",
+        "email",
+        "whatsapp",
       ] as const
-    ).find((kind) => action?.startsWith(`${kind}-held-`))
+    ).find((kind) => action?.startsWith(`${kind}-runner-held-`))
     if (kind) {
       const runner = {
         coordination: this.coordinationRunner,
@@ -3242,8 +3330,11 @@ export class PersonalAgentProbe extends PersonalAgent {
         routines: this.routineRunner,
         communication: this.communicationRunner,
         workspace: this.extraction,
+        background: this.backgroundRunner,
+        email: this.emailRunner,
+        whatsapp: this.whatsappRunner,
       }[kind]
-      if (action === `${kind}-held-start`) {
+      if (action === `${kind}-runner-held-start`) {
         await this.lifecycle.start()
         const held = new Promise<void>((resolve) => {
           this.releaseRunner = resolve
@@ -3267,17 +3358,23 @@ export class PersonalAgentProbe extends PersonalAgent {
           this.events.push(`${kind}.close`)
           return dispose()
         }
-        await runner.armDiscovery()
+        if ("armDiscovery" in runner) await runner.armDiscovery()
+        else if ("armReply" in runner)
+          await runner.armReply(Date.now() + 60_000)
+        else await runner.armBackground(Date.now() + 60_000)
         if (
           kind === "conversation" ||
           kind === "routines" ||
           kind === "communication" ||
-          kind === "workspace"
+          kind === "workspace" ||
+          kind === "background" ||
+          kind === "email" ||
+          kind === "whatsapp"
         )
           await runner.wake()
       }
-      if (action === `${kind}-held-release`) this.releaseRunner?.()
-      if (action === `${kind}-held-dispose`) {
+      if (action === `${kind}-runner-held-release`) this.releaseRunner?.()
+      if (action === `${kind}-runner-held-dispose`) {
         await this.lifecycle.dispose()
         this.events.push("host.dispose")
       }

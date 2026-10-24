@@ -129,14 +129,12 @@ const config :Workerd.Config = (
 );`
   )
   await start()
-  assert.deepEqual(await call("personal-runner-causes/runner-causes", {}), [
-    { complete: true },
-    { complete: true },
-    { complete: true },
-    { complete: true },
-  ])
+  assert.deepEqual(
+    await call("personal-runner-causes/runner-causes", {}),
+    Array.from({ length: 13 }, () => ({ complete: true }))
+  )
   console.log(
-    "PASS native Conversation, Routine, Communication and Workspace callback bindings preserve checked failures, cleanup defects and interruption together."
+    "PASS nine native callback bindings and four family-admission paths preserve checked failures, cleanup defects and interruption together."
   )
   for (const kind of [
     "coordination",
@@ -145,9 +143,12 @@ const config :Workerd.Config = (
     "routines",
     "communication",
     "workspace",
+    "background",
+    "email",
+    "whatsapp",
   ]) {
     const heldRunner = (action) =>
-      call(`personal-${kind}-disposal/${kind}-held-${action}`, {})
+      call(`personal-${kind}-disposal/${kind}-runner-held-${action}`, {})
     const waitRunner = async (predicate) => {
       for (let attempt = 0; attempt < 100; attempt++) {
         const state = await heldRunner("inspect")

@@ -56,6 +56,11 @@ export class AppEventRunner<E> extends LifecycleCapability {
   ) {
     super("app-events")
   }
+  private async run<A>(work: Effect.Effect<A, E>): Promise<A> {
+    const exit = await this.host.run(Effect.exit(work))
+    if (Exit.isFailure(exit)) throw exit.cause
+    return exit.value
+  }
   private getActor() {
     return (this.actor ??= Effect.runSync(
       createEffectActor(appRunnerMachine).pipe(Scope.provide(this.scope))
@@ -115,6 +120,7 @@ export class AppEventRunner<E> extends LifecycleCapability {
     return job
   }
   private owns(job: LifecycleJob) {
+    if (this.closed()) return false
     const current = this.current()
     return !!current && read(current).token === read(job).token
   }
@@ -147,7 +153,7 @@ export class AppEventRunner<E> extends LifecycleCapability {
         if (!prior) {
           // Settle orphan rows before granting a fresh lease. The machine also
           // retains any old in-flight callback until its original lease expires.
-          await this.host.run(this.host.exhaust(() => !this.current(), false))
+          await this.run(this.host.exhaust(() => !this.current(), false))
           prior = this.current()
         }
         const now = Date.now()
@@ -209,7 +215,7 @@ export class AppEventRunner<E> extends LifecycleCapability {
         }))
         if (this.closed()) return
         if (permission === "empty") {
-          await this.host.run(this.host.exhaust(() => !this.current(), false))
+          await this.run(this.host.exhaust(() => !this.current(), false))
         } else if (permission === "rearm") await this.lifecycle.jobs.rearm()
         else if (permission === "reschedule")
           await this.lifecycle.jobs.reschedule(id, Date.now())
@@ -220,7 +226,7 @@ export class AppEventRunner<E> extends LifecycleCapability {
     return this.track(() =>
       this.schedule(async () => {
         const current = this.current()
-        await this.host.run(
+        await this.run(
           this.host.exhaust(
             () => (current ? this.owns(current) : !this.current()),
             !!current && read(current).state === "armed"
@@ -249,7 +255,7 @@ export class AppEventRunner<E> extends LifecycleCapability {
       if (permission === "defer") return this.outcome(job, Date.now() + 1000)
       if (permission === "exhaust") {
         if (!this.closed() && this.owns(job))
-          await this.host.run(this.host.exhaust(() => this.owns(job), false))
+          await this.run(this.host.exhaust(() => this.owns(job), false))
         return this.outcome(
           job,
           observeAppDiscovery(lease, Date.now(), undefined)
@@ -297,7 +303,7 @@ export class AppEventRunner<E> extends LifecycleCapability {
         if (permission === "stopped") return
         if (permission !== "start") return this.outcome(job)
         try {
-          await this.host.run(
+          await this.run(
             Effect.logError("App delivery recovery exhausted", error)
           )
           if (this.closed() || !this.owns(job)) return this.outcome(job)
@@ -312,11 +318,12 @@ export class AppEventRunner<E> extends LifecycleCapability {
             ack,
           }))
           if (this.closed()) return
-          const settled = await this.host.run(
+          const settled = await this.run(
             Effect.exit(this.host.exhaust(() => this.owns(job), false))
           )
+          if (Exit.isFailure(settled) && this.closed()) throw settled.cause
           if (Exit.isFailure(settled))
-            await this.host.run(
+            await this.run(
               Effect.logError(
                 "App terminal persistence is unconfirmed; retained lease and event deadline remain",
                 settled.cause

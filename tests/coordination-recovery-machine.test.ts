@@ -176,15 +176,27 @@ it.each(["restore", "clock", "step"] as const)(
       clocks = 0
     const jobs = new Map<string, unknown>()
     const runner = new CoordinationRunner({
-      run: <A>(work: Effect.Effect<A, string>) => {
-        if (
-          Object.is(work, Clock.currentTimeMillis) &&
-          stage === "clock" &&
-          clocks++ < 3
-        )
-          return Promise.reject(new Error("Clock read unavailable"))
-        return Effect.runPromise(work)
-      },
+      run: <A>(work: Effect.Effect<A, string>) =>
+        Effect.runPromise(
+          Clock.clockWith((clock) =>
+            work.pipe(
+              Effect.provideService(Clock.Clock, {
+                currentTimeMillis: Effect.suspend(() =>
+                  stage === "clock" && clocks++ < 3
+                    ? Effect.die(new Error("Clock read unavailable"))
+                    : clock.currentTimeMillis
+                ),
+                currentTimeMillisUnsafe: () => clock.currentTimeMillisUnsafe(),
+                currentTimeNanos: clock.currentTimeNanos,
+                currentTimeNanosUnsafe: () => clock.currentTimeNanosUnsafe(),
+                monotonicTimeNanos: clock.monotonicTimeNanos,
+                monotonicTimeNanosUnsafe: () =>
+                  clock.monotonicTimeNanosUnsafe(),
+                sleep: (duration) => clock.sleep(duration),
+              })
+            )
+          )
+        ),
       restore: () =>
         stage === "restore" ? Effect.fail("Restore unavailable") : Effect.void,
       step: async () => {

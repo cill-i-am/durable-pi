@@ -1,0 +1,166 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+stdout | tests/runner-boundaries.test.ts > email retains all failure reasons when exhaustion settles during close
+[22:13:30.163] ERROR (#325): Reply job exhausted { channel: 'email', job: 'email:pump' } exhausted
+
+stdout | tests/runner-boundaries.test.ts > whatsapp retains all failure reasons when exhaustion settles during close
+[22:13:30.165] ERROR (#358): Reply job exhausted { channel: 'whatsapp', job: 'whatsapp:pump' } exhausted
+
+stdout | tests/runner-boundaries.test.ts > background retains all failure reasons when exhaustion settles during close
+[22:13:30.167] ERROR (#397): Background job exhausted { job: 'background-groups:pump' } exhausted
+
+ ❯ tests/runner-boundaries.test.ts (18 tests | 12 failed) 48ms
+   × coordination joins an accepted callback and refuses later work before storage 7ms
+   × coordination retains all failure reasons when exhaustion settles during close 3ms
+   × email joins an accepted callback and refuses later work before storage 2ms
+   × email retains all failure reasons when exhaustion settles during close 1ms
+   × whatsapp joins an accepted callback and refuses later work before storage 1ms
+   × whatsapp retains all failure reasons when exhaustion settles during close 1ms
+   × background joins an accepted callback and refuses later work before storage 1ms
+   × background retains all failure reasons when exhaustion settles during close 1ms
+   × coordination joins an accepted prearm but refuses its late acknowledgement 1ms
+   × email joins an accepted prearm but refuses its late acknowledgement 1ms
+   × whatsapp joins an accepted prearm but refuses its late acknowledgement 1ms
+   × background joins an accepted prearm but refuses its late acknowledgement 1ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 12 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/runner-boundaries.test.ts > coordination joins an accepted callback and refuses later work before storage
+AssertionError: promise resolved "1792876470145" instead of rejecting
+
+- Expected:
+Error {
+  "message": "rejected promise",
+}
+
++ Received:
+1792876470145
+
+ ❯ tests/runner-boundaries.test.ts:175:37
+    173|       })
+    174|     try {
+    175|       await expect(prearm(f.runner)).rejects.toThrow(/stopped|disposed…
+       |                                     ^
+    176|       expect(disposed).toBe(false)
+    177|       const reads = f.get.mock.calls.length,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/12]⎯
+
+ FAIL  tests/runner-boundaries.test.ts > coordination retains all failure reasons when exhaustion settles during close
+AssertionError: promise resolved "1792876470152" instead of rejecting
+
+- Expected:
+Error {
+  "message": "rejected promise",
+}
+
++ Received:
+1792876470152
+
+ ❯ tests/runner-boundaries.test.ts:224:37
+    222|       })
+    223|     try {
+    224|       await expect(prearm(f.runner)).rejects.toThrow(/stopped|disposed…
+       |                                     ^
+    225|       expect(disposed).toBe(false)
+    226|     } finally {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/12]⎯
+
+ FAIL  tests/runner-boundaries.test.ts > email joins an accepted callback and refuses later work before storage
+ FAIL  tests/runner-boundaries.test.ts > whatsapp joins an accepted callback and refuses later work before storage
+ FAIL  tests/runner-boundaries.test.ts > background joins an accepted callback and refuses later work before storage
+AssertionError: promise resolved "undefined" instead of rejecting
+
+- Expected:
+Error {
+  "message": "rejected promise",
+}
+
++ Received:
+undefined
+
+ ❯ tests/runner-boundaries.test.ts:175:37
+    173|       })
+    174|     try {
+    175|       await expect(prearm(f.runner)).rejects.toThrow(/stopped|disposed…
+       |                                     ^
+    176|       expect(disposed).toBe(false)
+    177|       const reads = f.get.mock.calls.length,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/12]⎯
+
+ FAIL  tests/runner-boundaries.test.ts > email retains all failure reasons when exhaustion settles during close
+ FAIL  tests/runner-boundaries.test.ts > whatsapp retains all failure reasons when exhaustion settles during close
+ FAIL  tests/runner-boundaries.test.ts > background retains all failure reasons when exhaustion settles during close
+AssertionError: promise resolved "undefined" instead of rejecting
+
+- Expected:
+Error {
+  "message": "rejected promise",
+}
+
++ Received:
+undefined
+
+ ❯ tests/runner-boundaries.test.ts:224:37
+    222|       })
+    223|     try {
+    224|       await expect(prearm(f.runner)).rejects.toThrow(/stopped|disposed…
+       |                                     ^
+    225|       expect(disposed).toBe(false)
+    226|     } finally {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/12]⎯
+
+ FAIL  tests/runner-boundaries.test.ts > coordination joins an accepted prearm but refuses its late acknowledgement
+AssertionError: promise resolved "1792876470169" instead of rejecting
+
+- Expected:
+Error {
+  "message": "rejected promise",
+}
+
++ Received:
+1792876470169
+
+ ❯ tests/runner-boundaries.test.ts:253:37
+    251|     })
+    252|     try {
+    253|       await expect(prearm(f.runner)).rejects.toThrow(/stopped|disposed…
+       |                                     ^
+    254|       expect(disposed).toBe(false)
+    255|     } finally {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/12]⎯
+
+ FAIL  tests/runner-boundaries.test.ts > email joins an accepted prearm but refuses its late acknowledgement
+ FAIL  tests/runner-boundaries.test.ts > whatsapp joins an accepted prearm but refuses its late acknowledgement
+ FAIL  tests/runner-boundaries.test.ts > background joins an accepted prearm but refuses its late acknowledgement
+AssertionError: promise resolved "undefined" instead of rejecting
+
+- Expected:
+Error {
+  "message": "rejected promise",
+}
+
++ Received:
+undefined
+
+ ❯ tests/runner-boundaries.test.ts:253:37
+    251|     })
+    252|     try {
+    253|       await expect(prearm(f.runner)).rejects.toThrow(/stopped|disposed…
+       |                                     ^
+    254|       expect(disposed).toBe(false)
+    255|     } finally {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/12]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  12 failed | 6 passed (18)
+   Start at  22:13:29
+   Duration  350ms (import 60%, tests 20%, transform 16%, setup 2%, worker 1%)
+

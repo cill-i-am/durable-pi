@@ -1,12 +1,14 @@
+import { createEffectActor, send, type EffectActor } from "@xstate/effect"
 import {
   LifecycleCapability,
   type LifecycleJob,
   type LifecycleJobContext,
   type LifecycleJobOutcome,
 } from "agents/lifecycle"
-import { Clock, Effect, Exit, Schema } from "effect"
+import { Cause, Clock, Deferred, Effect, Exit, Schema, Scope } from "effect"
 
 import { armReplyRecovery, observeReplyRecovery } from "../recovery.machine"
+import { replyRunnerLifetime } from "../reply-runner.machine"
 
 const JobOwner = Schema.Struct({
   version: Schema.Literal(1),
@@ -25,6 +27,10 @@ function jobOwner(job: LifecycleJob | undefined) {
  * alarm. Discovery schedules the ordinary channel pump; it never resends an
  * uncertain provider part. */
 export class ReplyRunner<E> extends LifecycleCapability {
+  private readonly scope = Scope.makeUnsafe()
+  private actor?: EffectActor<typeof replyRunnerLifetime>
+  private readonly operations = new Set<Promise<unknown>>()
+  private closing?: Promise<void>
   constructor(
     readonly channel: "email" | "whatsapp",
     readonly host: {
@@ -44,6 +50,37 @@ export class ReplyRunner<E> extends LifecycleCapability {
     super(channel)
   }
 
+  private async run<A>(work: Effect.Effect<A, E>): Promise<A> {
+    const exit = await this.host.run(Effect.exit(work))
+    if (Exit.isFailure(exit)) throw exit.cause
+    return exit.value
+  }
+  private getActor() {
+    return (this.actor ??= Effect.runSync(
+      createEffectActor(replyRunnerLifetime).pipe(Scope.provide(this.scope))
+    ))
+  }
+  private closed() {
+    // This may be read in an existing domain transaction; never start an actor there.
+    return this.actor?.getSnapshot().matches("closed") ?? false
+  }
+  private track<A>(work: () => Promise<A>): Promise<A | undefined> {
+    const actor = this.getActor()
+    if (this.closed()) return Promise.resolve(undefined)
+    const pending = Effect.runPromise(
+      Effect.gen(function* () {
+        const reply = yield* Deferred.make<boolean>()
+        yield* send(actor, { type: "ADMIT", reply })
+        return yield* Deferred.await(reply)
+      })
+    ).then((admitted) => (admitted ? work() : undefined))
+    this.operations.add(pending)
+    void pending.then(
+      () => this.operations.delete(pending),
+      () => this.operations.delete(pending)
+    )
+    return pending
+  }
   private peerId(fn: string) {
     return `${this.channel}:${fn === "recover" ? "pump" : "reply-recovery"}`
   }
@@ -61,6 +98,7 @@ export class ReplyRunner<E> extends LifecycleCapability {
     }
   }
   private ownsFailure(job: LifecycleJob) {
+    if (this.closed()) return false
     const owner = jobOwner(job)
     if (!owner) return false
     if (jobOwner(this.lifecycle.jobs.get(job.id))?.token !== owner.token)
@@ -72,8 +110,13 @@ export class ReplyRunner<E> extends LifecycleCapability {
   }
   /** Materialize retained orphan rows when storage returns. This is an
    * observation/terminalization path, never authorization to restart delivery. */
-  async reconcile() {
-    await this.host.run(
+  reconcile() {
+    return this.track(async () => {
+      if (!this.closed()) await this.reconcileQueue()
+    })
+  }
+  private async reconcileQueue() {
+    await this.run(
       this.host.exhaust(
         () =>
           !this.lifecycle.jobs.get(`${this.channel}:pump`) &&
@@ -85,7 +128,12 @@ export class ReplyRunner<E> extends LifecycleCapability {
     // delivery. Rearm existing intent without creating another job or budget.
     await this.lifecycle.jobs.rearm()
   }
-  async wake() {
+  wake() {
+    return this.track(async () => {
+      if (!this.closed()) await this.wakeQueue()
+    })
+  }
+  private async wakeQueue() {
     await this.lifecycle.jobs.push({
       id: `${this.channel}:pump`,
       fn: "pump",
@@ -97,7 +145,16 @@ export class ReplyRunner<E> extends LifecycleCapability {
       retry: { maxAttempts: 3, baseDelayMs: 100, maxDelayMs: 1000 },
     })
   }
-  async armReply(deadline: number) {
+  armReply(deadline: number) {
+    return this.track(async () => {
+      if (this.closed()) return false
+      await this.arm(deadline)
+      return true
+    }).then((armed) => {
+      if (!armed || this.closed()) throw new Error("Reply runner is stopped")
+    })
+  }
+  private async arm(deadline: number) {
     const id = `${this.channel}:reply-recovery`
     const prior = this.lifecycle.jobs.get(id)
     const payload = armReplyRecovery(
@@ -115,19 +172,27 @@ export class ReplyRunner<E> extends LifecycleCapability {
       retry: { maxAttempts: 3, baseDelayMs: 100, maxDelayMs: 1000 },
     })
   }
-  async onJobError(
+  onJobError(
+    context: LifecycleJobContext,
+    error: unknown
+  ): Promise<LifecycleJobOutcome> {
+    return this.track(async () =>
+      this.closed() ? undefined : this.failed(context, error)
+    )
+  }
+  private async failed(
     { job }: LifecycleJobContext,
     error: unknown
   ): Promise<LifecycleJobOutcome> {
-    await this.host.run(
+    await this.run(
       Effect.logError(
         "Reply job exhausted",
         { channel: this.channel, job: job.id },
         error
       )
     )
-    const now = await this.host.run(Clock.currentTimeMillis)
-    const settled = await this.host.run(
+    const now = await this.run(Clock.currentTimeMillis)
+    const settled = await this.run(
       Effect.exit(
         Effect.gen({ self: this }, function* () {
           yield* this.host.exhaust(() => this.ownsFailure(job), false)
@@ -135,8 +200,9 @@ export class ReplyRunner<E> extends LifecycleCapability {
         })
       )
     )
+    if (Exit.isFailure(settled) && this.closed()) throw settled.cause
     if (Exit.isFailure(settled))
-      await this.host.run(
+      await this.run(
         Effect.logError(
           "Reply recovery exhausted; terminal persistence is unconfirmed",
           { channel: this.channel, job: job.id },
@@ -155,11 +221,18 @@ export class ReplyRunner<E> extends LifecycleCapability {
     }))
       if (command.type === "reschedule") return { rescheduleAt: command.at }
   }
-  async onJob({ job }: LifecycleJobContext): Promise<LifecycleJobOutcome> {
+  onJob(context: LifecycleJobContext): Promise<LifecycleJobOutcome> {
+    return this.track(async () =>
+      this.closed() ? undefined : this.dispatch(context)
+    )
+  }
+  private async dispatch({
+    job,
+  }: LifecycleJobContext): Promise<LifecycleJobOutcome> {
     // Legacy jobs have no owner; future metadata must fail before domain work.
     jobOwner(job)
     if (job.fn !== "recover") return this.host.pump()
-    const observation = await this.host.run(
+    const observation = await this.run(
       Effect.gen({ self: this }, function* () {
         // An admission may commit while this scan awaits storage. Retain its
         // lease using the time the scan began, even if the deadline passes
@@ -186,5 +259,30 @@ export class ReplyRunner<E> extends LifecycleCapability {
       else outcome = { rescheduleAt: command.at }
     }
     return outcome
+  }
+  dispose() {
+    return (this.closing ??= (async () => {
+      const ack = Deferred.makeUnsafe<void>()
+      Effect.runSync(send(this.getActor(), { type: "CLOSE", ack }))
+      await Effect.runPromise(Deferred.await(ack))
+      const settled = await Promise.allSettled([...this.operations])
+      const exit = await Effect.runPromiseExit(
+        Scope.close(this.scope, Exit.void)
+      )
+      const causes = settled.flatMap((result) =>
+        result.status === "rejected"
+          ? [
+              Cause.isCause(result.reason)
+                ? result.reason
+                : Cause.fail(result.reason),
+            ]
+          : []
+      )
+      if (Exit.isFailure(exit)) causes.push(exit.cause)
+      if (causes.length)
+        throw Cause.fromReasons([
+          ...new Set(causes.flatMap((cause) => cause.reasons)),
+        ])
+    })())
   }
 }

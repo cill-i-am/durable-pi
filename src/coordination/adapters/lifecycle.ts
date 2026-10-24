@@ -41,6 +41,11 @@ export class CoordinationRunner<E> extends LifecycleCapability {
   ) {
     super("agent-coordination")
   }
+  private async run<A>(work: Effect.Effect<A, E>): Promise<A> {
+    const exit = await this.host.run(Effect.exit(work))
+    if (Exit.isFailure(exit)) throw exit.cause
+    return exit.value
+  }
   private getActor() {
     // Lifecycle's reentrant startup context is established by the first caller,
     // after construction. Restoration must retain it when it reads native Pi.
@@ -134,11 +139,17 @@ export class CoordinationRunner<E> extends LifecycleCapability {
   }
   armDiscovery() {
     return this.track(async () => {
-      if (await this.stopped())
-        throw new Error("Coordination runner has been disposed")
+      if (
+        (await this.request((reply) => ({ type: "ARM", reply }))) === "stopped"
+      )
+        return
       const now = Date.now(),
         deadline = now + 60_000
       await this.schedule(now, deadline)
+      return deadline
+    }).then(async (deadline) => {
+      if (deadline === undefined || (await this.stopped()))
+        throw new Error("Coordination runner has been disposed")
       return deadline
     })
   }
@@ -174,7 +185,7 @@ export class CoordinationRunner<E> extends LifecycleCapability {
       await this.restore()
       if (await this.stopped()) return
       if (!this.current()) {
-        const next = await this.host.run(this.host.nextWake())
+        const next = await this.run(this.host.nextWake())
         if (await this.stopped()) return
         if (next !== undefined && !this.current())
           await this.schedule(next, next)
@@ -203,7 +214,7 @@ export class CoordinationRunner<E> extends LifecycleCapability {
         )
       try {
         const { now, next } = await this.native(async () => ({
-          now: await this.host.run(Clock.currentTimeMillis),
+          now: await this.run(Clock.currentTimeMillis),
           next: await this.host.step(),
         }))
         const wake = await this.request((reply) => ({
@@ -245,24 +256,25 @@ export class CoordinationRunner<E> extends LifecycleCapability {
       try {
         return await this.native(async () => {
           const current = () => {
+            if (this.actor?.getSnapshot().matches({ admission: "closed" }))
+              return false
             const latest = this.current()
             return !!latest && this.token(latest) === this.token(job)
           }
-          const exit = await this.host.run(
-            Effect.exit(this.host.exhaust(current))
-          )
+          const exit = await this.run(Effect.exit(this.host.exhaust(current)))
+          if (Exit.isFailure(exit) && (await this.stopped())) throw exit.cause
           if (Exit.isFailure(exit))
-            await this.host.run(
+            await this.run(
               Effect.logError(
                 "Coordination recovery persistence is unconfirmed",
                 exit.cause
               )
             )
-          await this.host.run(
+          await this.run(
             Effect.logError("Coordination recovery exhausted", error)
           )
           if (await this.stopped()) return
-          const now = await this.host.run(Clock.currentTimeMillis)
+          const now = await this.run(Clock.currentTimeMillis)
           const command = observeCoordinationDiscovery(job.payload, job.time, {
             now,
             next: null,

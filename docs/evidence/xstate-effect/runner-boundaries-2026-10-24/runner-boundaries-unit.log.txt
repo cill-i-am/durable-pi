@@ -1,0 +1,43 @@
+$ vitest run
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+stdout | tests/coordination-recovery-machine.test.ts > retains discovery and records exhausted recovery after clock failure
+[22:11:20.430] ERROR (#252): Coordination recovery exhausted Error: SDK retry exhausted
+    at /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/tests/coordination-recovery-machine.test.ts:218:7
+    at async file:///Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/node_modules/.pnpm/vitest@5.0.5_@types+node@24.19.2_vite@8.3.4_@types+node@24.19.2_esbuild@0.28.2_jiti@2.7.0_tsx@4.23.15_yaml@2.9.1_/node_modules/vitest/dist/chunks/run.BPv-BBRv.js:2801:20
+
+ ❯ tests/coordination-recovery-machine.test.ts (8 tests | 1 failed) 80ms
+   × retains discovery and records exhausted recovery after clock failure 10ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/coordination-recovery-machine.test.ts > retains discovery and records exhausted recovery after clock failure
+AssertionError: expected 3 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 3
+
+ ❯ tests/coordination-recovery-machine.test.ts:221:19
+    219|     )
+    220|     expect(exhausted).toBe(1)
+    221|     expect(steps).toBe(stage === "step" ? 3 : 0)
+       |                   ^
+    222|     expect(result).toEqual({ rescheduleAt: deadline })
+    223|   }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 330 passed (331)
+      Tests  1 failed | 3809 passed (3810)
+   Start at  22:10:36
+   Duration  49.82s (tests 61%, import 35%, transform 3%, setup 1%)
+
+    Isolate  331 workers spawned · ~106ms startup each (spawn + environment, per file)
+             at least ~3.78s faster with isolate: false — reuses workers across files instead of one per file
+
+[ELIFECYCLE] Test failed. See above for more details.

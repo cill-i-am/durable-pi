@@ -67,6 +67,7 @@ export function coordinationRunnerMachine(work: {
         STEP_FAILED: Schema.Struct({ job, ack }),
         EXHAUSTED: Schema.Struct({ job, ack }),
         WAKE: Schema.Struct({ reply }),
+        ARM: Schema.Struct({ reply }),
         CLOSE: Schema.Struct({ ack }),
       },
     },
@@ -92,6 +93,17 @@ export function coordinationRunnerMachine(work: {
     type: "parallel",
     context: { owner: null, wakeRequested: false, restores: [] },
     on: {
+      ARM: (args, enq) => {
+        enq(args.actions.respond, {
+          ...args,
+          params: {
+            reply: args.event.reply,
+            permission: inRegion(args.value, "admission", "open")
+              ? "schedule"
+              : "stopped",
+          },
+        })
+      },
       ADMIT: (args, enq) => {
         enq(args.actions.respond, {
           ...args,

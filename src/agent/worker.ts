@@ -650,6 +650,18 @@ class ActorServices extends LifecycleCapability {
             () => this.owner.extraction.dispose(),
             (cause) => cause
           ).pipe(Effect.exit),
+          nativeOperation(
+            () => this.owner.backgroundRunner.dispose(),
+            (cause) => cause
+          ).pipe(Effect.exit),
+          nativeOperation(
+            () => this.owner.emailRunner.dispose(),
+            (cause) => cause
+          ).pipe(Effect.exit),
+          nativeOperation(
+            () => this.owner.whatsappRunner.dispose(),
+            (cause) => cause
+          ).pipe(Effect.exit),
         ],
         { concurrency: "unbounded" }
       ).pipe(
@@ -1833,10 +1845,16 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   }
   async stepWhatsApp(): Promise<LifecycleJobOutcome> {
     if (!(await this.familyAdmission())) return
-    if (!(await this.run(this.whatsappStore.pending())).length) return undefined
-    const identity = await this.run(this.communication.mailbox.identity())
-    const next = await this.run(this.whatsapp(identity.owner).pump())
-    return next === undefined ? undefined : { rescheduleAt: next }
+    return modelCallback(
+      this.actorRuntime.runPromiseExit(
+        Effect.gen({ self: this }, function* () {
+          if (!(yield* this.whatsappStore.pending()).length) return undefined
+          const identity = yield* this.communication.mailbox.identity()
+          const next = yield* this.whatsapp(identity.owner).pump()
+          return next === undefined ? undefined : { rescheduleAt: next }
+        }).pipe(Effect.provide(WorkerTelemetry))
+      )
+    )
   }
   async whatsappV1(raw: unknown): Promise<Schema.Json> {
     const work = Effect.gen({ self: this }, function* () {
@@ -2137,7 +2155,11 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   }
   async stepEmail(): Promise<LifecycleJobOutcome> {
     if (!(await this.familyAdmission())) return
-    const next = await this.run(this.emailPump())
+    const next = await modelCallback(
+      this.actorRuntime.runPromiseExit(
+        this.emailPump().pipe(Effect.provide(WorkerTelemetry))
+      )
+    )
     return next === undefined ? undefined : { rescheduleAt: next }
   }
   readonly retrySummary = memorySummaryRetry(
@@ -2473,7 +2495,11 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   }
   async stepBackground() {
     const authorized = !!(await this.familyAdmission())
-    return this.run(this.background.step(authorized))
+    return modelCallback(
+      this.actorRuntime.runPromiseExit(
+        this.background.step(authorized).pipe(Effect.provide(WorkerTelemetry))
+      )
+    )
   }
   readonly delegations: typeof Delegation.Service =
     this.actorRuntime.runSync(Delegation)
@@ -2634,11 +2660,13 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
   /** Every boundary gets a fresh lookup. Generation changes are owned by the
    * host scope and survive an individual caller leaving. */
   familyAdmission(signal?: AbortSignal): Promise<FamilyState | null> {
-    return this.actorRuntime.runPromise(
-      FamilyAdmission.use((service) => service.admit).pipe(
-        Effect.provide(WorkerTelemetry)
-      ),
-      { signal }
+    return modelCallback(
+      this.actorRuntime.runPromiseExit(
+        FamilyAdmission.use((service) => service.admit).pipe(
+          Effect.provide(WorkerTelemetry)
+        ),
+        { signal }
+      )
     )
   }
   private connectionAuthority(): Promise<FamilyAdmissionReceipt | null> {
@@ -3448,6 +3476,11 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         try {
           allowDispatch = !!(await this.familyAdmission())
         } catch (cause) {
+          if (
+            Cause.isCause(cause) &&
+            (Cause.hasDies(cause) || Cause.hasInterrupts(cause))
+          )
+            throw cause
           await this.actorRuntime.runPromise(
             Effect.logError(
               "Coordination authority refresh failed; continuing cleanup only",
@@ -3455,10 +3488,12 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
             ).pipe(Effect.provide(WorkerTelemetry))
           )
         }
-        return this.actorRuntime.runPromise(
-          this.coordination
-            .pump({ allowDispatch })
-            .pipe(Effect.provide(WorkerTelemetry))
+        return modelCallback(
+          this.actorRuntime.runPromiseExit(
+            this.coordination
+              .pump({ allowDispatch })
+              .pipe(Effect.provide(WorkerTelemetry))
+          )
         )
       },
       restore: () => this.coordination.restore(),
@@ -3511,8 +3546,11 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       notify: () => this.notifyConversation(),
     })
   readonly compactor: SummaryRunner<
-    MemoryError | MemorySchedulingError | ConversationError,
-    MemoryRepository | SummaryModel
+    | MemoryError
+    | MemorySchedulingError
+    | ConversationError
+    | FamilyAdmissionError,
+    MemoryRepository | SummaryModel | FamilyAdmission
   > = new SummaryRunner({
     run: (work, options) =>
       this.actorRuntime.runPromise(
@@ -3520,7 +3558,7 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
         options
       ),
     step: () =>
-      Effect.promise(() => this.familyAdmission()).pipe(
+      FamilyAdmission.use((service) => service.admit).pipe(
         Effect.flatMap((active) =>
           active ? this.memoryMaintenance.compact() : Effect.succeed(undefined)
         )
@@ -3573,8 +3611,10 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
     run: (work) => this.actorRuntime.runPromise(work),
     pump: async () => {
       if (!(await this.familyAdmission())) return undefined
-      return this.actorRuntime.runPromise(
-        this.appPump.run().pipe(Effect.provide(WorkerTelemetry))
+      return modelCallback(
+        this.actorRuntime.runPromiseExit(
+          this.appPump.run().pipe(Effect.provide(WorkerTelemetry))
+        )
       )
     },
     next: () => this.appService.nextDelivery(),
@@ -3590,6 +3630,11 @@ export class PersonalAgent extends DurableObject<AgentEnv> {
       const allowDispatch = await this.familyAdmission()
         .then(Boolean)
         .catch(async (error) => {
+          if (
+            Cause.isCause(error) &&
+            (Cause.hasDies(error) || Cause.hasInterrupts(error))
+          )
+            throw error
           await this.actorRuntime.runPromise(
             Effect.logError(
               "Routine authority refresh failed; retaining cleanup",

@@ -282,7 +282,14 @@ it("fresh absent-job admission fails if orphan terminal persistence is unavailab
   const f = fixture()
   f.pending(true)
   f.persistenceFails(true)
-  await expect(f.runner.armDiscovery()).rejects.toThrow("storage offline")
+  await expect(f.runner.armDiscovery()).rejects.toMatchObject({
+    reasons: [
+      {
+        _tag: "Die",
+        defect: expect.objectContaining({ message: "storage offline" }),
+      },
+    ],
+  })
   expect(f.push).not.toHaveBeenCalled()
   f.persistenceFails(false)
   await f.runner.armDiscovery()
