@@ -203,7 +203,9 @@ async function driveUpgrade(origin, replacement) {
     await page.screenshot({ path: join(evidence, "retired-asset.png") })
     await page.getByRole("button", { name: "Reload page", exact: true }).click()
     await expect(page).toHaveURL(/\/agents\/navi\/settings\/access$/)
-    await expect(page.getByText("Tool access", { exact: true })).toBeVisible()
+    await expect(
+      page.getByRole("heading", { name: "Tool access", exact: true })
+    ).toBeVisible()
     const newEntry = await page
       .locator('script[type="module"][src]')
       .getAttribute("src")
