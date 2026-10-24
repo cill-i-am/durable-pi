@@ -1,0 +1,15 @@
+# Independent F03 upload review
+
+Reviewed the frozen upload/query/mutation source, native cleanup helper and draft/selection callsites in `/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi`. No production edits or broad test reruns were made by this reviewer.
+
+One concrete defect was found and closed: after an initially empty inventory, a successful upload or mutation returning a pending preparation record did not update the query machine's `preparing` fact. The first subsequent list error therefore stopped polling after one failure. Both COMMIT paths now retain `context.preparing || preparingFile(event.file)`; the next authoritative read still replaces that fact. Fixed source SHA256: `e870628cda9f794846684374b5038a9fa266416cc7c32b8c4ca4bdf8243e3cbd` (`file-refresh.machine.ts`). The owner added idle and loading-phase TestClock regressions proving three failure attempts, exhaustion, retained pending cache and explicit successful recovery.
+
+The unchanged actual-makeFilesOwner reproduction is `/private/tmp/f03-upload-independent-probe.mts`, SHA256 `837cc3c209c94dc2ce6ee729f5a3886ebf98633d6c899f994aa680f1995bfab1`. Run with Node24 from the worktree:
+```
+/opt/homebrew/opt/node@24/bin/node --import tsx /private/tmp/f03-upload-independent-probe.mts
+```
+Before: reads stayed at 2 after 2200ms; expected retry failed (`/private/tmp/f03-upload-independent-probe.log`). After: reads reached 3 and the same assertion passed (`/private/tmp/f03-upload-independent-probe-after.log`). This probe replaces fetch with local synthetic responses and makes no network/provider requests.
+
+The remaining bounded review found no additional concrete defect. Explicit retries retain exact File identity, attachment intent and reservation ID; batch progression serializes requests. A matching pending backend reservation is reused once per chosen batch. Backend replay compares content hash and metadata; already-ready replay returns existing info. Each mounted agent's cache is disjoint before its new Effect owner is live, and accepted message acknowledgement removes only submitted attachment IDs. Scope finalization closes mutation/upload actors before the query they publish through; native transport settlement is joined and the observer retains complete Die-containing compound Causes after abort.
+
+Limits: this is a source/behavioral review of the browser upload slice, not a new backend lifecycle certification. Browser File bytes remain ephemeral across reload, and name/size reservation lookup semantics remain as before. No live-provider, real network-loss or hosted-delivery claim follows from the synthetic proof. Final composed application gates belong to the root integration lane.

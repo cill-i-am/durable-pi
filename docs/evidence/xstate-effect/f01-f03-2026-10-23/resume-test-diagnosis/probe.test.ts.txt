@@ -1,0 +1,71 @@
+import { Effect } from "effect"
+import { afterEach, expect, it, vi } from "vitest"
+
+import {
+  ConversationCheckpoint,
+  conversationEvents,
+} from "/Users/cillianbarron/.codex/worktrees/xstate-review-stack/durable-pi/src/conversations/adapters/events"
+import type { ChatState } from "/Users/cillianbarron/.codex/worktrees/xstate-review-stack/durable-pi/src/conversations/contracts"
+import { conversationConnection } from "/Users/cillianbarron/.codex/worktrees/xstate-review-stack/durable-pi/src/features/conversation/connection"
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+  vi.useRealTimers()
+})
+
+it("forwards only an acknowledged cursor on reconnect and stops on fresh authorization denial", async () => {
+  vi.useFakeTimers({toFake:["setTimeout","clearTimeout"]})
+  const timers=vi.spyOn(globalThis,"setTimeout")
+  console.log("PHASE fake timers",vi.getTimerCount())
+  const cursor = crypto.randomUUID(),
+    urls: string[] = []
+  vi.stubGlobal("fetch", async (url: string) => {
+    urls.push(url)
+    console.log("PHASE fetch",urls.length,url)
+    if (urls.length > 1) return new Response("Unauthorized", { status: 401 })
+    return new Response(
+      `data: ${JSON.stringify({ type: "CUSTOM", name: "durable-pi.cursor", value: cursor })}\n\n`,
+      { headers: { "content-type": "text/event-stream" } }
+    )
+  })
+  const controller = new AbortController()
+  const stream = conversationConnection("home")
+    .subscribe(controller.signal)
+    [Symbol.asyncIterator]()
+  console.log("PHASE next before", urls.length,vi.getTimerCount(),timers.mock.calls.map(([,delay])=>delay));
+  expect((await stream.next()).value).toMatchObject({
+    name: "durable-pi.connection",
+  })
+  console.log("PHASE next before", urls.length,vi.getTimerCount(),timers.mock.calls.map(([,delay])=>delay));
+  expect((await stream.next()).value).toMatchObject({
+    name: "durable-pi.cursor",
+    value: cursor,
+  })
+  console.log("PHASE third before",urls.length,vi.getTimerCount());
+  const denied = expect(stream.next()).rejects.toMatchObject({ status: 401 })
+  await vi.waitFor(()=>expect(timers.mock.calls.some(([,delay])=>delay===250)).toBe(true));
+  console.log("PHASE advance before",urls.length,vi.getTimerCount());
+  await vi.advanceTimersByTimeAsync(250)
+  console.log("PHASE advance after",urls.length,vi.getTimerCount(),timers.mock.calls.map(([,delay])=>delay))
+  await denied
+  console.log("PHASE denied",urls.length)
+  expect(
+    new URL(urls[0]!, "https://app.internal").searchParams.has("after")
+  ).toBe(false)
+  expect(
+    new URL(urls[1]!, "https://app.internal").searchParams.get("after")
+  ).toBe(cursor)
+  expect(urls).toHaveLength(2)
+  // A new view or explicit reload receives a fresh transport, not this cursor.
+  console.log("PHASE fresh before",urls.length,vi.getTimerCount());
+  await expect(
+    conversationConnection("home")
+      .subscribe(controller.signal)
+      [Symbol.asyncIterator]()
+      .next()
+  ).rejects.toMatchObject({ status: 401 })
+  expect(
+    new URL(urls[2]!, "https://app.internal").searchParams.has("after")
+  ).toBe(false)
+})
+

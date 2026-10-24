@@ -1,0 +1,17 @@
+{"stage":"first failure","reads":2,"view":{"uploads":[],"uploading":false,"loading":false,"error":"one transient post-upload list failure"},"files":[{"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","name":"proof.pdf","mime":"application/pdf","kind":"document","size":1,"createdAt":"2026-10-23T00:00:00Z","status":"ready","trashed":false,"extraction":{"status":"pending","pages":0,"readPages":0,"characters":0,"truncated":false,"error":null}}]}
+{"stage":"after retry interval","reads":2,"view":{"uploads":[],"uploading":false,"loading":false,"error":"one transient post-upload list failure"}}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: pending committed extraction must retain bounded observation after its first failed list read
+    at <anonymous> (/private/tmp/f03-upload-independent-probe.mts:20:9) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v24.21.0

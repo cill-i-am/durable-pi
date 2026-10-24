@@ -1,0 +1,31 @@
+import { createRequire } from 'node:module'
+import { createServer } from 'node:http'
+import { writeFile } from 'node:fs/promises'
+const root='/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi'
+const require=createRequire(root+'/package.json')
+const { build }=createRequire(require.resolve('alchemy'))('esbuild')
+const { chromium }=require('@playwright/test')
+const bundled=await build({stdin:{contents:`import {useState,useEffect} from 'react';import {createRoot} from 'react-dom/client';import {useFiles} from './src/features/files/use-files';import {VoiceRecorder} from './src/features/files/voice-recorder';function App(){const[agent,setAgent]=useState('alpha');const files=useFiles(agent);useEffect(()=>{window.probe={...files,setAgent}},[files]);return <><pre id='value'>{JSON.stringify({agent,files:files.files,selected:files.selected,uploads:files.uploads.map(x=>({id:x.id,status:x.status}))})}</pre><VoiceRecorder disabled={false} onRecorded={()=>Promise.resolve()}/></>}createRoot(document.getElementById('root')).render(<App/>);`,resolveDir:root,loader:'tsx'},bundle:true,write:false,platform:'browser',format:'iife',tsconfig:root+'/tsconfig.json',define:{__PI_BUILD_REVISION__:JSON.stringify('a'.repeat(40))}})
+const js=bundled.outputFiles[0].text
+const server=createServer((req,res)=>{res.setHeader('Content-Type',req.url==='/bundle.js'?'text/javascript':'text/html');res.end(req.url==='/bundle.js'?js:`<div id='root'></div><script src='/bundle.js'></script>`)})
+await new Promise(r=>server.listen(0,'127.0.0.1',r));const port=server.address().port
+const browser=await chromium.launch({headless:true});const page=await browser.newPage()
+const evidence={port,cases:{}}
+try{
+ await page.addInitScript(()=>{window.pending=[];window.calls=[];const file=agent=>({id:agent==='alpha'?'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa':'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',name:agent+'.txt',mime:'text/plain',kind:'text',size:1,createdAt:'2026-10-23T00:00:00Z',status:'ready',trashed:false});window.fetch=async(url,opts)=>{const parsed=new URL(url,location.href),agent=parsed.searchParams.get('agent');window.calls.push({agent,path:parsed.pathname,id:opts?.body instanceof FormData?opts.body.get('id'):null});if(parsed.pathname.endsWith('/upload'))return new Promise(resolve=>window.pending.push(()=>resolve(new Response(JSON.stringify(file(agent)),{headers:{'content-type':'application/json'}}))));return new Response(JSON.stringify({files:[file(agent)]}),{headers:{'content-type':'application/json'}})};let mic=0;Object.defineProperty(navigator,'mediaDevices',{value:{getUserMedia:()=>{mic++;window.micCalls=mic;return new Promise(resolve=>window.releaseMic=()=>resolve({getTracks:()=>[{stop:()=>window.trackStops=(window.trackStops??0)+1}]}))}}});class Recorder{state='inactive';mimeType='audio/ogg';constructor(stream){this.stream=stream}static isTypeSupported(){return true}start(){this.state='recording'}stop(){this.state='inactive';queueMicrotask(()=>this.onstop?.())}}Object.defineProperty(window,'MediaRecorder',{value:Recorder})})
+ await page.goto('http://127.0.0.1:'+port);await page.waitForFunction(()=>window.probe)
+ await page.evaluate(()=>{const file=new File(['a'],'same.txt',{type:'text/plain'});void window.probe.upload([file],true);void window.probe.upload([file],true)})
+ await page.waitForFunction(()=>window.pending.length===1)
+ evidence.cases.duplicateUpload=await page.evaluate(()=>({calls:window.calls.filter(x=>x.path.endsWith('/upload')).length}))
+ await page.evaluate(()=>window.probe.setAgent('beta'));await page.waitForFunction(()=>window.probe.agentId==='beta');await page.evaluate(()=>window.probe.refresh())
+ await page.evaluate(()=>window.pending.shift()());await page.waitForTimeout(50)
+ evidence.cases.lateAgent=await page.evaluate(()=>JSON.parse(document.getElementById('value').textContent))
+ await page.getByRole('button',{name:'Record voice message',exact:true}).click();await page.getByRole('button',{name:'Cancel voice recording',exact:true}).click();await page.getByRole('button',{name:'Record voice message',exact:true}).click()
+ evidence.cases.cancelAcquire=await page.evaluate(()=>({calls:window.micCalls,stops:window.trackStops??0}))
+ // Separate mount proves denied acquisition returns to an actionable state.
+ await page.reload();await page.waitForFunction(()=>window.probe)
+ await page.evaluate(()=>{navigator.mediaDevices.getUserMedia=()=>Promise.reject(new DOMException('Microphone denied','NotAllowedError'))})
+ await page.getByRole('button',{name:'Record voice message',exact:true}).click();await page.getByRole('alert').waitFor()
+ evidence.cases.denied={error:await page.getByRole('alert').textContent(),retryEnabled:await page.getByRole('button',{name:'Record voice message',exact:true}).isEnabled()}
+ console.log(JSON.stringify(evidence,null,2));await writeFile('/private/tmp/f03-before/evidence.json',JSON.stringify(evidence,null,2))
+}finally{await browser.close();await new Promise(r=>server.close(r))}

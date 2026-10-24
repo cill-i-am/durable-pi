@@ -1,0 +1,827 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-10-23T20:15:30.695006+00:00",
+  "root": "/Users/cillianbarron/.codex/worktrees/xstate-review-stack/durable-pi",
+  "scope": "Final source union, not a final composed gate result",
+  "sourceCount": 64,
+  "files": [
+    {
+      "path": "docs/f02-update-recovery.md",
+      "sha256": "4d30442b9f2eb9762a5591b0bc599d776b0f7a84a68d77190f29ca308f3ef142",
+      "bytes": 4453,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "4d30442b9f2eb9762a5591b0bc599d776b0f7a84a68d77190f29ca308f3ef142"
+        }
+      ]
+    },
+    {
+      "path": "docs/xstate-effect-files-ui.md",
+      "sha256": "7cfaa671d6a308574a3349eff616b1ddad02c5d95885cc21e87c806c19fdffb6",
+      "bytes": 10079,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "2cf26352ef02ee0c57cfb190c76663f9792a4a44a192a7d3f351b18ce2628463"
+        },
+        {
+          "manifest": "f01-f03-polling-integration.json",
+          "sha256": "7cfaa671d6a308574a3349eff616b1ddad02c5d95885cc21e87c806c19fdffb6"
+        }
+      ]
+    },
+    {
+      "path": "src/features/conversation/composer-draft-owner.ts",
+      "sha256": "a98295a57e431ccfa06c040c74a39e92e028930372f309a7d91574ed01e8a999",
+      "bytes": 2450,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "a98295a57e431ccfa06c040c74a39e92e028930372f309a7d91574ed01e8a999"
+        },
+        {
+          "manifest": "f01-native-interrupt-full-freeze.json",
+          "sha256": "a98295a57e431ccfa06c040c74a39e92e028930372f309a7d91574ed01e8a999"
+        }
+      ]
+    },
+    {
+      "path": "src/features/conversation/composer-draft.machine.ts",
+      "sha256": "3d440fe399b3033a101c3ce426c0a81266e7232416af0e6f41557e23b88183fe",
+      "bytes": 4856,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "3d440fe399b3033a101c3ce426c0a81266e7232416af0e6f41557e23b88183fe"
+        },
+        {
+          "manifest": "f01-native-interrupt-full-freeze.json",
+          "sha256": "3d440fe399b3033a101c3ce426c0a81266e7232416af0e6f41557e23b88183fe"
+        }
+      ]
+    },
+    {
+      "path": "src/features/conversation/composer-draft.ts",
+      "sha256": "42888b0565b2636fd3cc4033e435a168dc272a432f43a3e422355a4aee41a190",
+      "bytes": 956,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "42888b0565b2636fd3cc4033e435a168dc272a432f43a3e422355a4aee41a190"
+        },
+        {
+          "manifest": "f01-native-interrupt-full-freeze.json",
+          "sha256": "42888b0565b2636fd3cc4033e435a168dc272a432f43a3e422355a4aee41a190"
+        }
+      ]
+    },
+    {
+      "path": "src/features/conversation/connection-owner.ts",
+      "sha256": "ba24e41817a27ef2e307578f27731f76732889b9610cfcd52132e46587b8aba5",
+      "bytes": 6795,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "e9dc29620f1dc56135af773ad2d855a8f52ab2a54a59a98230899690ee414298"
+        },
+        {
+          "manifest": "f01-native-interrupt-full-freeze.json",
+          "sha256": "ba24e41817a27ef2e307578f27731f76732889b9610cfcd52132e46587b8aba5"
+        },
+        {
+          "manifest": "f01-resume-diagnosis/manifest.json",
+          "sha256": "ba24e41817a27ef2e307578f27731f76732889b9610cfcd52132e46587b8aba5"
+        }
+      ]
+    },
+    {
+      "path": "src/features/conversation/connection-response.ts",
+      "sha256": "d9bb06b2cb80ef2af56659c14a030b409a8399447f9b938c43629f857f4d2015",
+      "bytes": 2215,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "d9bb06b2cb80ef2af56659c14a030b409a8399447f9b938c43629f857f4d2015"
+        },
+        {
+          "manifest": "f01-native-interrupt-full-freeze.json",
+          "sha256": "d9bb06b2cb80ef2af56659c14a030b409a8399447f9b938c43629f857f4d2015"
+        },
+        {
+          "manifest": "f01-resume-diagnosis/manifest.json",
+          "sha256": "d9bb06b2cb80ef2af56659c14a030b409a8399447f9b938c43629f857f4d2015"
+        }
+      ]
+    },
+    {
+      "path": "src/features/conversation/connection.machine.ts",
+      "sha256": "16095bfbed68b8f2328a15c4107b401af3ccb7192636baed856e9bbd41dcc1c3",
+      "bytes": 5913,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "16095bfbed68b8f2328a15c4107b401af3ccb7192636baed856e9bbd41dcc1c3"
+        },
+        {
+          "manifest": "f01-native-interrupt-full-freeze.json",
+          "sha256": "16095bfbed68b8f2328a15c4107b401af3ccb7192636baed856e9bbd41dcc1c3"
+        },
+        {
+          "manifest": "f01-resume-diagnosis/manifest.json",
+          "sha256": "16095bfbed68b8f2328a15c4107b401af3ccb7192636baed856e9bbd41dcc1c3"
+        }
+      ]
+    },
+    {
+      "path": "src/features/conversation/connection.ts",
+      "sha256": "b702c04a6a51b5bfdf178a8c3ee0c1928264f74883336662fd5a5fc04d5d6228",
+      "bytes": 3178,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "b702c04a6a51b5bfdf178a8c3ee0c1928264f74883336662fd5a5fc04d5d6228"
+        },
+        {
+          "manifest": "f01-native-interrupt-full-freeze.json",
+          "sha256": "b702c04a6a51b5bfdf178a8c3ee0c1928264f74883336662fd5a5fc04d5d6228"
+        },
+        {
+          "manifest": "f01-resume-diagnosis/manifest.json",
+          "sha256": "b702c04a6a51b5bfdf178a8c3ee0c1928264f74883336662fd5a5fc04d5d6228"
+        }
+      ]
+    },
+    {
+      "path": "src/features/conversation/conversation.tsx",
+      "sha256": "6d58e866444d03348cd46b503bf0d9ced5c6206828cabd84c78db80b341a5f1f",
+      "bytes": 29417,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "6d58e866444d03348cd46b503bf0d9ced5c6206828cabd84c78db80b341a5f1f"
+        },
+        {
+          "manifest": "f01-native-interrupt-full-freeze.json",
+          "sha256": "6d58e866444d03348cd46b503bf0d9ced5c6206828cabd84c78db80b341a5f1f"
+        }
+      ]
+    },
+    {
+      "path": "src/features/conversation/draft.ts",
+      "sha256": "73142f07a633164a0b6bfc034835725c27b4d9f7d860a5647f050a2644b3b534",
+      "bytes": 2462,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "73142f07a633164a0b6bfc034835725c27b4d9f7d860a5647f050a2644b3b534"
+        },
+        {
+          "manifest": "f01-native-interrupt-full-freeze.json",
+          "sha256": "73142f07a633164a0b6bfc034835725c27b4d9f7d860a5647f050a2644b3b534"
+        }
+      ]
+    },
+    {
+      "path": "src/features/conversation/submission-owner.ts",
+      "sha256": "889c6248bec9c8e29ed92fc3cfca22dd6284fd73d4bee5160f2f0d16775d32ee",
+      "bytes": 2608,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "daed66ab1d2a10f8db5890d961a4aee96bbb56f4f4ad210450e8f91c7eb45883"
+        },
+        {
+          "manifest": "f01-native-interrupt-full-freeze.json",
+          "sha256": "889c6248bec9c8e29ed92fc3cfca22dd6284fd73d4bee5160f2f0d16775d32ee"
+        }
+      ]
+    },
+    {
+      "path": "src/features/conversation/submission.machine.ts",
+      "sha256": "d67081e51d8bbf6dc5d947b15f4642e7d6d08854f20bff7d2334e4ece99e6116",
+      "bytes": 6792,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "d67081e51d8bbf6dc5d947b15f4642e7d6d08854f20bff7d2334e4ece99e6116"
+        },
+        {
+          "manifest": "f01-native-interrupt-full-freeze.json",
+          "sha256": "d67081e51d8bbf6dc5d947b15f4642e7d6d08854f20bff7d2334e4ece99e6116"
+        }
+      ]
+    },
+    {
+      "path": "src/features/conversation/turn-command-owner.ts",
+      "sha256": "c7e48cdc4107ba7fe149d788473c830aff2afe432e42c177ea68ec36cb4caecb",
+      "bytes": 1704,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "6c0dcbe6c0b79f75630fcd72e18c147ebc2e53ef7b54ef98666f1db73a420c55"
+        },
+        {
+          "manifest": "f01-native-interrupt-full-freeze.json",
+          "sha256": "c7e48cdc4107ba7fe149d788473c830aff2afe432e42c177ea68ec36cb4caecb"
+        }
+      ]
+    },
+    {
+      "path": "src/features/conversation/turn-command.machine.ts",
+      "sha256": "9e6829532e0f99376e218f028a49441106572dae733bbb7db1af395d8fe52704",
+      "bytes": 5470,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "9e6829532e0f99376e218f028a49441106572dae733bbb7db1af395d8fe52704"
+        },
+        {
+          "manifest": "f01-native-interrupt-full-freeze.json",
+          "sha256": "9e6829532e0f99376e218f028a49441106572dae733bbb7db1af395d8fe52704"
+        }
+      ]
+    },
+    {
+      "path": "src/features/conversation/use-composer-draft.ts",
+      "sha256": "8d97356dfb830083d4c68ef166be67da412b1629f39422667a30bfae4e2e2c03",
+      "bytes": 4256,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "8d97356dfb830083d4c68ef166be67da412b1629f39422667a30bfae4e2e2c03"
+        },
+        {
+          "manifest": "f01-native-interrupt-full-freeze.json",
+          "sha256": "8d97356dfb830083d4c68ef166be67da412b1629f39422667a30bfae4e2e2c03"
+        }
+      ]
+    },
+    {
+      "path": "src/features/conversation/use-conversation-commands.ts",
+      "sha256": "65e429fe72a6c486e1c292474835882f74331ff3073b65c0fcd70d0576e9f9dc",
+      "bytes": 6689,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "65e429fe72a6c486e1c292474835882f74331ff3073b65c0fcd70d0576e9f9dc"
+        },
+        {
+          "manifest": "f01-native-interrupt-full-freeze.json",
+          "sha256": "65e429fe72a6c486e1c292474835882f74331ff3073b65c0fcd70d0576e9f9dc"
+        }
+      ]
+    },
+    {
+      "path": "src/features/conversation/use-conversation.ts",
+      "sha256": "176a46330b57fbed2a05d602eee0ec7ed3e9b14549e6d74a6135ece9a3c8b5d2",
+      "bytes": 3281,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "176a46330b57fbed2a05d602eee0ec7ed3e9b14549e6d74a6135ece9a3c8b5d2"
+        },
+        {
+          "manifest": "f01-native-interrupt-full-freeze.json",
+          "sha256": "176a46330b57fbed2a05d602eee0ec7ed3e9b14549e6d74a6135ece9a3c8b5d2"
+        }
+      ]
+    },
+    {
+      "path": "src/features/files/audio-player.tsx",
+      "sha256": "6913d075c730441b4daaadb68932e2873ae67e04cefc91a7411575f657da9aea",
+      "bytes": 1751,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "6913d075c730441b4daaadb68932e2873ae67e04cefc91a7411575f657da9aea"
+        }
+      ]
+    },
+    {
+      "path": "src/features/files/file-cache.ts",
+      "sha256": "13cc26aa07be76ca1851bb8231b101838058aad8045bbb71fe6e7cd3b2c25613",
+      "bytes": 1884,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "13cc26aa07be76ca1851bb8231b101838058aad8045bbb71fe6e7cd3b2c25613"
+        }
+      ]
+    },
+    {
+      "path": "src/features/files/file-details.machine.ts",
+      "sha256": "303eb2341f8118d2a144896eaa41b2057c7e06f3fd1733cfb93f25c3c9871411",
+      "bytes": 3509,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "303eb2341f8118d2a144896eaa41b2057c7e06f3fd1733cfb93f25c3c9871411"
+        }
+      ]
+    },
+    {
+      "path": "src/features/files/file-mutation.machine.ts",
+      "sha256": "7c0630acaf75162191d17192b2fd77e6dedcb786a9f768d90a398b3915413077",
+      "bytes": 2964,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "7c0630acaf75162191d17192b2fd77e6dedcb786a9f768d90a398b3915413077"
+        }
+      ]
+    },
+    {
+      "path": "src/features/files/file-preview-resource.ts",
+      "sha256": "2b7b5c8d505c77c5811e307176bede00279c66112dbdaf721592c38b7d45da6f",
+      "bytes": 1800,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "2b7b5c8d505c77c5811e307176bede00279c66112dbdaf721592c38b7d45da6f"
+        }
+      ]
+    },
+    {
+      "path": "src/features/files/file-preview.machine.ts",
+      "sha256": "062097a216d714ba822324a27fd07b94e54599cecf1da3545d5f6cdb0ee44dc8",
+      "bytes": 3222,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "062097a216d714ba822324a27fd07b94e54599cecf1da3545d5f6cdb0ee44dc8"
+        }
+      ]
+    },
+    {
+      "path": "src/features/files/file-refresh.machine.ts",
+      "sha256": "41791cd93755c185b13db60a88b47c66339a129565dc92a375b6a5fdde7c5fbf",
+      "bytes": 5143,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "e870628cda9f794846684374b5038a9fa266416cc7c32b8c4ca4bdf8243e3cbd"
+        },
+        {
+          "manifest": "f01-f03-polling-integration.json",
+          "sha256": "41791cd93755c185b13db60a88b47c66339a129565dc92a375b6a5fdde7c5fbf"
+        }
+      ]
+    },
+    {
+      "path": "src/features/files/file-types.ts",
+      "sha256": "aba941fb551326eaf47ba46f6e70ea03e00928954aa254cc799abf95e7268a60",
+      "bytes": 1081,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "aba941fb551326eaf47ba46f6e70ea03e00928954aa254cc799abf95e7268a60"
+        }
+      ]
+    },
+    {
+      "path": "src/features/files/files-owner.ts",
+      "sha256": "b0c354f1a2f2998d5250202de135f4bdfe618064cfe662e1c506b872f5b33b8c",
+      "bytes": 5811,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "b0c354f1a2f2998d5250202de135f4bdfe618064cfe662e1c506b872f5b33b8c"
+        }
+      ]
+    },
+    {
+      "path": "src/features/files/files-panel.tsx",
+      "sha256": "9fb711fa2017b48e21d16855ed820f3348b891a2736edb8d6658d9e790bc4f0b",
+      "bytes": 19387,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "9fb711fa2017b48e21d16855ed820f3348b891a2736edb8d6658d9e790bc4f0b"
+        }
+      ]
+    },
+    {
+      "path": "src/features/files/owned-work.ts",
+      "sha256": "56e674c2a81197da06e0612b26e8e7b1d25a432461d6a759b48d2ba576b87e68",
+      "bytes": 1095,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "56e674c2a81197da06e0612b26e8e7b1d25a432461d6a759b48d2ba576b87e68"
+        }
+      ]
+    },
+    {
+      "path": "src/features/files/upload.machine.ts",
+      "sha256": "3e020c6bd5e4efaa4a14d8caa4cc2e5a6233013301d592c5248fb38961a3c1f5",
+      "bytes": 2477,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "3e020c6bd5e4efaa4a14d8caa4cc2e5a6233013301d592c5248fb38961a3c1f5"
+        }
+      ]
+    },
+    {
+      "path": "src/features/files/uploads.machine.ts",
+      "sha256": "1fc633ad763ca88a2212406eaa96129f8b950648457f138115f54bc4c331ab93",
+      "bytes": 5724,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "1fc633ad763ca88a2212406eaa96129f8b950648457f138115f54bc4c331ab93"
+        }
+      ]
+    },
+    {
+      "path": "src/features/files/uploads.ts",
+      "sha256": "fe007286cb5d476fbbffbf41a632639075fc54b5ea5750d529a49ada7edd35e3",
+      "bytes": 1066,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "fe007286cb5d476fbbffbf41a632639075fc54b5ea5750d529a49ada7edd35e3"
+        }
+      ]
+    },
+    {
+      "path": "src/features/files/use-file-details.ts",
+      "sha256": "b44d10625d1c8e1b4db2d6977ea40763535c6363b804960ae226d6125f2bdebe",
+      "bytes": 3358,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "b44d10625d1c8e1b4db2d6977ea40763535c6363b804960ae226d6125f2bdebe"
+        }
+      ]
+    },
+    {
+      "path": "src/features/files/use-file-preview.ts",
+      "sha256": "a5f97d71baab37096d793cd1e521a5de13658c366c44b890f5090738ccab983e",
+      "bytes": 2980,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "a5f97d71baab37096d793cd1e521a5de13658c366c44b890f5090738ccab983e"
+        }
+      ]
+    },
+    {
+      "path": "src/features/files/use-files.ts",
+      "sha256": "a628d3e5e71758c3512d7fac9d24536e435ee334f7bfdce8a51f35c103d73f7a",
+      "bytes": 3114,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "a628d3e5e71758c3512d7fac9d24536e435ee334f7bfdce8a51f35c103d73f7a"
+        }
+      ]
+    },
+    {
+      "path": "src/features/files/voice-capture.ts",
+      "sha256": "f80da73d5c27aca7066ffca16a59ae8c17a8988286a5dfee58ac0a28747caf9e",
+      "bytes": 6915,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "f80da73d5c27aca7066ffca16a59ae8c17a8988286a5dfee58ac0a28747caf9e"
+        }
+      ]
+    },
+    {
+      "path": "src/features/files/voice-recorder.machine.ts",
+      "sha256": "c12cbc5ccf12f99909316f725c3fac14ba70e0e8f122165d4d784e0f8b123d21",
+      "bytes": 6260,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "c12cbc5ccf12f99909316f725c3fac14ba70e0e8f122165d4d784e0f8b123d21"
+        }
+      ]
+    },
+    {
+      "path": "src/features/files/voice-recorder.tsx",
+      "sha256": "0dadc2ae95d1a068390c71f0f4dd2d25f4de1a71c6a32a708185f4364851d5c4",
+      "bytes": 4779,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "0dadc2ae95d1a068390c71f0f4dd2d25f4de1a71c6a32a708185f4364851d5c4"
+        }
+      ]
+    },
+    {
+      "path": "src/features/updates/recovery.machine.ts",
+      "sha256": "014f3cfa3afd9d8d81c2f66b85a723cda69d1a84527296691f9e8c030728e463",
+      "bytes": 4879,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "014f3cfa3afd9d8d81c2f66b85a723cda69d1a84527296691f9e8c030728e463"
+        }
+      ]
+    },
+    {
+      "path": "src/features/updates/recovery.ts",
+      "sha256": "824c3359c52b7c7b243607f61d4550423486694c0ae75191dd1333a9fb0777ef",
+      "bytes": 7553,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "824c3359c52b7c7b243607f61d4550423486694c0ae75191dd1333a9fb0777ef"
+        }
+      ]
+    },
+    {
+      "path": "src/features/updates/update-recovery.tsx",
+      "sha256": "4ac32ac5b33db0e6d18b234aa4a4088e845b36c4e5570dbb871f6ae91d4f4e78",
+      "bytes": 5470,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "4ac32ac5b33db0e6d18b234aa4a4088e845b36c4e5570dbb871f6ae91d4f4e78"
+        }
+      ]
+    },
+    {
+      "path": "src/features/updates/version-request.ts",
+      "sha256": "004e59ed087a509148f5d36b0e308b12abba17075e7810828af620e2cb6503d8",
+      "bytes": 577,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "004e59ed087a509148f5d36b0e308b12abba17075e7810828af620e2cb6503d8"
+        }
+      ]
+    },
+    {
+      "path": "src/http/client.ts",
+      "sha256": "49febd36b66c3db158fc85324058e2f7752b55676f765ff85403039f26cd8d66",
+      "bytes": 2592,
+      "sourceManifests": [
+        {
+          "manifest": "shared-http-native-freeze.json",
+          "sha256": "49febd36b66c3db158fc85324058e2f7752b55676f765ff85403039f26cd8d66"
+        }
+      ]
+    },
+    {
+      "path": "src/shared/interop.ts",
+      "sha256": "3026be9bb101211871294ec28834a2c55710fcf1a346374ae56368af297eee99",
+      "bytes": 3269,
+      "sourceManifests": [
+        {
+          "manifest": "shared-http-native-freeze.json",
+          "sha256": "3026be9bb101211871294ec28834a2c55710fcf1a346374ae56368af297eee99"
+        }
+      ]
+    },
+    {
+      "path": "tests/browser/audio.spec.ts",
+      "sha256": "cbe89373828d892ed8e7576bbce09753e40b438ce3937a430eef537959ddf2fd",
+      "bytes": 6251,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "cbe89373828d892ed8e7576bbce09753e40b438ce3937a430eef537959ddf2fd"
+        }
+      ]
+    },
+    {
+      "path": "tests/browser/conversation-owner-lifecycle.spec.ts",
+      "sha256": "9c7753a972235b629b7aaad1ad7eee951d078bd62fc6702757b6c80fde5f7225",
+      "bytes": 6800,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "9c7753a972235b629b7aaad1ad7eee951d078bd62fc6702757b6c80fde5f7225"
+        },
+        {
+          "manifest": "f01-native-interrupt-full-freeze.json",
+          "sha256": "9c7753a972235b629b7aaad1ad7eee951d078bd62fc6702757b6c80fde5f7225"
+        }
+      ]
+    },
+    {
+      "path": "tests/browser/file-media-lifecycle.spec.ts",
+      "sha256": "2ea13e829ac4bdb21be2d9bce25b4c8c9b62615bc458f96923f847437f16e99c",
+      "bytes": 17774,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "2ea13e829ac4bdb21be2d9bce25b4c8c9b62615bc458f96923f847437f16e99c"
+        }
+      ]
+    },
+    {
+      "path": "tests/browser/files-lifecycle.spec.ts",
+      "sha256": "252dbfd60333326359a756899e1d3d366d8faefbadd5ef1b471fa54bcc22245c",
+      "bytes": 11743,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "252dbfd60333326359a756899e1d3d366d8faefbadd5ef1b471fa54bcc22245c"
+        }
+      ]
+    },
+    {
+      "path": "tests/browser/stale-tab.spec.ts",
+      "sha256": "c673fa2276698dd38d6e3579fa983595b03bdf5cc8e45457a364622406ce65e9",
+      "bytes": 8392,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "c673fa2276698dd38d6e3579fa983595b03bdf5cc8e45457a364622406ce65e9"
+        }
+      ]
+    },
+    {
+      "path": "tests/browser/update-recovery-owner.spec.ts",
+      "sha256": "b13beef1ec0b5a0f8f2a63f2e40912b74e5869ed024cb64c6ec0d5403d52b4a5",
+      "bytes": 2061,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "b13beef1ec0b5a0f8f2a63f2e40912b74e5869ed024cb64c6ec0d5403d52b4a5"
+        }
+      ]
+    },
+    {
+      "path": "tests/client-recovery.test.ts",
+      "sha256": "cc39c94ab6b2d09a98f5f3abfaf19ae5b7f504a5008e4840db2f2814f0783546",
+      "bytes": 12308,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "cc39c94ab6b2d09a98f5f3abfaf19ae5b7f504a5008e4840db2f2814f0783546"
+        }
+      ]
+    },
+    {
+      "path": "tests/composer-draft-machine.test.ts",
+      "sha256": "f0a63ce93eb34a72fce1674af1bb7fea451c61f0fb78ac35008e5a037f486230",
+      "bytes": 6032,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "f0a63ce93eb34a72fce1674af1bb7fea451c61f0fb78ac35008e5a037f486230"
+        },
+        {
+          "manifest": "f01-native-interrupt-full-freeze.json",
+          "sha256": "f0a63ce93eb34a72fce1674af1bb7fea451c61f0fb78ac35008e5a037f486230"
+        }
+      ]
+    },
+    {
+      "path": "tests/composer-draft.test.ts",
+      "sha256": "96c4e3787bf79241d3c7fb5e30587293cffbebe5098fa522067dade2c66b2d0d",
+      "bytes": 4662,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "96c4e3787bf79241d3c7fb5e30587293cffbebe5098fa522067dade2c66b2d0d"
+        },
+        {
+          "manifest": "f01-native-interrupt-full-freeze.json",
+          "sha256": "96c4e3787bf79241d3c7fb5e30587293cffbebe5098fa522067dade2c66b2d0d"
+        }
+      ]
+    },
+    {
+      "path": "tests/conversation-connection-composition.test.ts",
+      "sha256": "40d104fae4c825de71497c08ca755baa9feba159482d32683476f3fddf85e1d6",
+      "bytes": 8878,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "40d104fae4c825de71497c08ca755baa9feba159482d32683476f3fddf85e1d6"
+        },
+        {
+          "manifest": "f01-native-interrupt-full-freeze.json",
+          "sha256": "40d104fae4c825de71497c08ca755baa9feba159482d32683476f3fddf85e1d6"
+        }
+      ]
+    },
+    {
+      "path": "tests/conversation-connection-machine.test.ts",
+      "sha256": "9f6f5da4ea4296e46607f3c1857f85a6a07759ddc40af96218e522b6732aa36d",
+      "bytes": 8541,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "eeb04839a0f7a05f13fb1645d9bc577daf83af8598cab9e4d9eda8d6ad416a33"
+        },
+        {
+          "manifest": "f01-native-interrupt-full-freeze.json",
+          "sha256": "9f6f5da4ea4296e46607f3c1857f85a6a07759ddc40af96218e522b6732aa36d"
+        }
+      ]
+    },
+    {
+      "path": "tests/conversation-resume.test.ts",
+      "sha256": "161dd71152a1537bd0db06004f0eb7bccc49c0afa8247de24208587117188827",
+      "bytes": 5533,
+      "sourceManifests": [
+        {
+          "manifest": "f01-resume-diagnosis/manifest.json",
+          "sha256": "161dd71152a1537bd0db06004f0eb7bccc49c0afa8247de24208587117188827"
+        }
+      ]
+    },
+    {
+      "path": "tests/conversation-submission-machine.test.ts",
+      "sha256": "f22435110e65c192d30b98e7299230fe10481c22e79f394267c0952230a43816",
+      "bytes": 15003,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "6f0473fd3d43339ffb12c33b6471246c05768c20adfe0351011a6604845f2545"
+        },
+        {
+          "manifest": "f01-native-interrupt-full-freeze.json",
+          "sha256": "f22435110e65c192d30b98e7299230fe10481c22e79f394267c0952230a43816"
+        }
+      ]
+    },
+    {
+      "path": "tests/file-preview-machine.test.ts",
+      "sha256": "cd0105648467d05456b8f8a8f812a7421f32b249dc822ceae7ada3288c68d844",
+      "bytes": 7750,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "cd0105648467d05456b8f8a8f812a7421f32b249dc822ceae7ada3288c68d844"
+        }
+      ]
+    },
+    {
+      "path": "tests/files-lifecycle.test.ts",
+      "sha256": "1801ce6290e8f6d1d7d070c8dd048a35dc32d076034136a18069a8728d9d828f",
+      "bytes": 18679,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "362c37673b8971c40688ca96f897e6ce096e2fc518dcc865175ac20640d7c192"
+        },
+        {
+          "manifest": "f01-f03-polling-integration.json",
+          "sha256": "1801ce6290e8f6d1d7d070c8dd048a35dc32d076034136a18069a8728d9d828f"
+        }
+      ]
+    },
+    {
+      "path": "tests/http-client-lifetime.test.ts",
+      "sha256": "8c1e25b0c323880035d5132c0a8a0e4d2f6deb4828c9de45293131de845a82be",
+      "bytes": 3554,
+      "sourceManifests": [
+        {
+          "manifest": "shared-http-native-freeze.json",
+          "sha256": "8c1e25b0c323880035d5132c0a8a0e4d2f6deb4828c9de45293131de845a82be"
+        }
+      ]
+    },
+    {
+      "path": "tests/native-operation-lifetime.test.ts",
+      "sha256": "cb82bf319c9ba446039d794157afe7e0b7a5cda203267956f34aa2b6e60efca4",
+      "bytes": 3444,
+      "sourceManifests": [
+        {
+          "manifest": "shared-http-native-freeze.json",
+          "sha256": "cb82bf319c9ba446039d794157afe7e0b7a5cda203267956f34aa2b6e60efca4"
+        }
+      ]
+    },
+    {
+      "path": "tests/update-version-request.test.ts",
+      "sha256": "292a9d1586245e0833c312e5d52cd638cd4ac8585aba0e6a2900d2908abc50cd",
+      "bytes": 842,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "292a9d1586245e0833c312e5d52cd638cd4ac8585aba0e6a2900d2908abc50cd"
+        }
+      ]
+    },
+    {
+      "path": "tests/voice-recorder-machine.test.ts",
+      "sha256": "ecc0b52d000eb0a1df5db184d9353862ff14a8482d346ed5c4ea98970ea7d58e",
+      "bytes": 10206,
+      "sourceManifests": [
+        {
+          "manifest": "f01-f03-extraction-manifest.json",
+          "sha256": "ecc0b52d000eb0a1df5db184d9353862ff14a8482d346ed5c4ea98970ea7d58e"
+        }
+      ]
+    },
+    {
+      "path": "docs/xstate-effect-conversation-ui.md",
+      "sha256": "e1d997bd41f42834e913b17a695f27abcf9535d0a373df6fb8fac26a98754544",
+      "bytes": 3285,
+      "sourceManifests": [],
+      "basis": "Additional current F01 domain doc, captured with test-only resume diagnosis; no source gate implied"
+    }
+  ],
+  "testOnlyRepair": "tests/conversation-resume.test.ts preserves original assertions/default5000ms timeout, keeps Effect native scheduler and awaits actual retry timer entry",
+  "productionUnchangedDuringCuration": true
+}

@@ -1,0 +1,46 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi
+
+ ❯ ../../../../../../private/tmp/f11-independent.test.ts (3 tests | 2 failed) 2313ms
+   × joins the actual unread 401 response body before releasing its request owner 1060ms
+   × retains annotated Fail plus native Interrupt after joining a rejected held fetch 137ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  ../../../../../../private/tmp/f11-independent.test.ts > joins the actual unread 401 response body before releasing its request owner
+AssertionError: expected "vi.fn()" to be called 1 times, but got 0 times
+ ❯ ../../../../../../private/tmp/f11-independent.test.ts:17:18
+     15|   closing=Effect.runPromiseExit(Scope.close(scope,Exit.void)).then(v=>…
+     16|   await new Promise(r=>setTimeout(r,20))
+     17|   expect(cancel).toHaveBeenCalledTimes(1)
+       |                  ^
+     18|   expect(done).toBe(false)
+     19|  } finally {release(); await (closing??Effect.runPromiseExit(Scope.clo…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  ../../../../../../private/tmp/f11-independent.test.ts > retains annotated Fail plus native Interrupt after joining a rejected held fetch
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ ../../../../../../private/tmp/f11-independent.test.ts:34:33
+     32|  reject(native)
+     33|  const result=await closing
+     34|  expect(Exit.isFailure(result)).toBe(true)
+       |                                 ^
+     35|  if(Exit.isFailure(result)){
+     36|   expect(result.cause.reasons.some(r=>r._tag==='Interrupt'&&r.fiberId=…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 1 passed (3)
+   Start at  20:51:52
+   Duration  11.36s (import 47%, tests 26%, transform 23%, worker 4%)
+

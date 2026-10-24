@@ -1,36 +1,12 @@
 import { Schema } from "effect"
 
-import { SendInput } from "@/conversations/contracts"
-import { Profile, JobType } from "@/inference/policy"
-import { FileInfo } from "@/workspace/files"
+import { ComposerDraft, emptyDraft } from "./composer-draft"
+export { emptyDraft, type ComposerDraft } from "./composer-draft"
 
-const DraftFile = Schema.Struct({
-  id: FileInfo.fields.id,
-  name: FileInfo.fields.name,
-  mime: FileInfo.fields.mime,
-  kind: FileInfo.fields.kind,
-  size: FileInfo.fields.size,
-  createdAt: FileInfo.fields.createdAt,
-  status: FileInfo.fields.status,
-  trashed: FileInfo.fields.trashed,
-})
-const Draft = Schema.Struct({
-  version: Schema.Literal(1),
-  text: Schema.String.check(Schema.isMaxLength(30_000)),
-  files: Schema.Array(DraftFile).check(Schema.isMaxLength(4)),
-  profile: Profile,
-  job: JobType,
-  attempt: Schema.NullOr(SendInput),
-})
-export type ComposerDraft = typeof Draft.Type
-export const emptyDraft = (): ComposerDraft => ({
-  version: 1,
-  text: "",
-  files: [],
-  profile: "auto",
-  job: "conversation",
-  attempt: null,
-})
+export class UnreadableComposerDraft extends Schema.TaggedError<UnreadableComposerDraft>()(
+  "UnreadableComposerDraft",
+  { message: Schema.String }
+) {}
 const prefix = "pi:composer:"
 const ownerKey = "pi:composer-owner"
 export const draftKey = (ownerId: string, agentId: string) =>
@@ -53,12 +29,18 @@ export function readDraft(
 ): ComposerDraft {
   adoptDraftOwner(storage, ownerId)
   const value = storage.getItem(draftKey(ownerId, agentId))
-  if (!value || value.length > 500_000) return emptyDraft()
+  if (value === null) return emptyDraft()
+  if (value.length > 500_000)
+    throw new UnreadableComposerDraft({
+      message: "The saved draft is too large to read safely.",
+    })
   try {
-    const decoded = Schema.decodeUnknownOption(Draft)(JSON.parse(value))
-    return decoded._tag === "Some" ? decoded.value : emptyDraft()
+    return Schema.decodeUnknownSync(ComposerDraft)(JSON.parse(value))
   } catch {
-    return emptyDraft()
+    throw new UnreadableComposerDraft({
+      message:
+        "The saved draft could not be read. Its original data has been retained.",
+    })
   }
 }
 export function writeDraft(
@@ -88,7 +70,7 @@ export function writeDraft(
     })
   )
   const encoded = JSON.stringify(
-    Schema.decodeUnknownSync(Draft)({ ...draft, files })
+    Schema.decodeUnknownSync(ComposerDraft)({ ...draft, files })
   )
   if (encoded.length > 500_000)
     throw new Error("The tab-local draft is too large to preserve.")

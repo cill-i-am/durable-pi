@@ -1,0 +1,20 @@
+# F01 native interruption repair
+
+Additive repair only: three feature owners and two existing test files. Exact five-file hashes `/private/tmp/f01-native-interrupt-freeze.json`; full prior F01 scope refreshed separately `/private/tmp/f01-native-interrupt-full-freeze.json`. Shared nativeOperation dependency SHA3026be9bb101211871294ec28834a2c55710fcf1a346374ae56368af297eee99 is owned by workspace_wave. No shared, package, Git, browser storage, draft or composer changes.
+
+The actual native Promise probes showed connection, submission and turn-command cleanup retained checked failures but removed original Interrupt90101/90104/90105 and annotations through blanket reason filters. These collectors now deduplicate against observed/snapshot reasons without discarding Interrupt reasons. Pure interruption-only expected shutdown is still local. The connection collector additionally recognizes mixed interrupted failures without a Die; the public subscribeConversation caller-abort variant exposed that missing predicate. Reconnect budget, authorization denial, per-turn cancellation occupancy and explicit retry identity remain unchanged.
+
+Before: `/private/tmp/f01-f03-no-die/after-shared.log`, `commands-before-local.log` preserve the original actual probes. Strengthened repository cases fail before in `/private/tmp/f01-native-interrupt-before.log` and `/private/tmp/f01-command-native-interrupt-before.log`.
+
+After: `/private/tmp/f01-native-interrupt-final.log` passes35/35 across stream machine, actual SDK composition and submission/command suites. Both unchanged actual probes exit0: `/private/tmp/f01-native-interrupt-composed-after.log` (connection plus unchanged F02/F03) and `/private/tmp/f01-command-native-interrupt-composed-after.log` (submission and turn). The tests verify original interruption IDs/annotations and checked failure annotations with and without an original Die, plus no Die(Cause). An intermediate assertion required object identity; Effect may reconstruct reasons, so final assertions correctly verify original semantic ID and annotations.
+
+`/private/tmp/f01-native-interrupt-negative.log`: private copied owners restore the blanket filter and all8 strengthened cases fail their meaningful preserved-annotation assertion. Production source was never mutated for the negative control. Scoped typecheck `/private/tmp/f01-native-interrupt-types.json` exits0 (`f01-native-interrupt-types.log`); five-file lint and formatting clean (`f01-native-interrupt-lint.log`, `f01-native-interrupt-format.log`). No redundant broad or browser gate run for this Cause-only repair. Parent owns integration and final review.
+
+Commands use Node24 PATH:
+```
+pnpm exec vitest run tests/conversation-connection-machine.test.ts tests/conversation-connection-composition.test.ts tests/conversation-submission-machine.test.ts --maxWorkers=2
+pnpm exec tsx /private/tmp/f01-f03-no-die/probe.mts
+pnpm exec tsx /private/tmp/f01-f03-no-die/commands-probe.mts
+pnpm exec vitest run --config /private/tmp/f01-native-interrupt-control/vitest.config.mjs -t 'retains annotated' --maxWorkers=1
+pnpm exec tsc --noEmit --project /private/tmp/f01-native-interrupt-types.json
+```

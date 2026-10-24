@@ -1,0 +1,46 @@
+
+Running 6 tests using 1 worker
+
+(node:94093) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/browser/file-media-lifecycle.spec.ts:87:1 › cancelled acquisition prevents restart until the late stream is released (650ms)
+  ✓  2 tests/browser/file-media-lifecycle.spec.ts:100:1 › finish waits for native final data before releasing and uploading once (539ms)
+  ✓  3 tests/browser/file-media-lifecycle.spec.ts:112:1 › unmount joins late permission without recording or uploading (517ms)
+  ✓  4 tests/browser/file-media-lifecycle.spec.ts:121:1 › denied microphone retains an enabled explicit retry (467ms)
+  ✘  5 tests/browser/file-media-lifecycle.spec.ts:127:1 › transcript and text previews fence late results across the same file ID on another agent (746ms)
+(node:94138) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  6 tests/browser/file-media-lifecycle.spec.ts:140:1 › video preview clears prior frames and aborts pending resources on unmount (622ms)
+
+
+  1) tests/browser/file-media-lifecycle.spec.ts:127:1 › transcript and text previews fence late results across the same file ID on another agent 
+
+    Error: expect(locator).toHaveAttribute(expected) failed
+
+    Locator: locator('audio')
+    Expected pattern: /agent=beta/
+    Error: strict mode violation: locator('audio') resolved to 2 elements:
+        1) <audio controls="" preload="metadata" class="w-full max-w-full" aria-label="Play alpha.txt"></audio> aka getByLabel('Play alpha.txt')
+        2) <audio controls="" preload="metadata" class="w-full max-w-full" aria-label="Play beta.txt" src="/api/agent/files/same-file/content?agent=beta"></audio> aka getByLabel('Play beta.txt')
+
+    Call log:
+      - Expect "toHaveAttribute" locator('audio') with timeout 5000ms
+      - waiting for locator('audio')
+
+
+      136 |   await page.evaluate(()=>{for(const r of (window as unknown as Probe).reads.filter(r=>r.agent==="alpha"))r.release(`stale alpha ${r.kind}`)})
+      137 |   await expect(page.getByText(/stale alpha/)).toHaveCount(0)
+    > 138 |   await expect(page.locator("audio")).toHaveAttribute("src",/agent=beta/)
+          |                                       ^
+      139 | })
+      140 | test("video preview clears prior frames and aborts pending resources on unmount",async({page})=>{
+      141 |   await page.evaluate(()=>(window as unknown as Probe).mediaApp.setKind("video"))
+        at /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/browser/file-media-lifecycle.spec.ts:138:39
+
+    Error Context: ../../../../../../private/tmp/f03-media-browser-results/file-media-lifecycle-trans-01b20-me-file-ID-on-another-agent/error-context.md
+
+    Error Context: ../../../../../../private/tmp/f03-media-browser-results/file-media-lifecycle-trans-01b20-me-file-ID-on-another-agent/error-context.md
+
+  1 failed
+    tests/browser/file-media-lifecycle.spec.ts:127:1 › transcript and text previews fence late results across the same file ID on another agent 
+  5 passed (6.4s)

@@ -1,0 +1,13 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-review-stack/durable-pi
+
+
+ Test Files  10 passed (10)
+      Tests  81 passed (81)
+   Start at  20:58:40
+   Duration  3.64s (tests 62%, import 34%, transform 3%, setup 1%)
+
+     Import  70 modules were evaluated 142 times · 2.08s total, 34% of tracked time
+             ~352ms faster with isolate: false — shared modules are evaluated once per worker instead of once per file
+             learn more: https://vitest.dev/guide/improving-performance#test-isolation
+

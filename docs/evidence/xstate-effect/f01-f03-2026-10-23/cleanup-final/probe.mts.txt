@@ -1,0 +1,33 @@
+import assert from 'node:assert/strict'
+import {createRequire} from 'node:module'
+import {makeConversationConnection} from '/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/conversation/connection-owner.ts'
+import {makeRecovery} from '/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/updates/recovery.ts'
+import {makeFilesOwner} from '/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/files/files-owner.ts'
+import {makeFilesCache} from '/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/files/file-cache.ts'
+const require=createRequire('/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/package.json')
+const {Cause,Context,Effect,Exit,Scope}=await import(require.resolve('effect'))
+class NativeRequest extends Context.Service()('F01F03.NativeRequest'){}
+const results=[]
+for(const [name,sentinel] of [['F01',90101],['F02',90102],['F03',90103]] as const){
+ let enter!:()=>void,abort!:()=>void,reject!:(reason:unknown)=>void
+ const entered=new Promise<void>(r=>enter=r),aborted=new Promise<void>(r=>abort=r)
+ const scope=await Effect.runPromise(Scope.make()),originalFetch=globalThis.fetch
+ const native=(signal:AbortSignal)=>{signal.addEventListener('abort',abort,{once:true});enter();return new Promise<never>((_,fail)=>reject=fail)}
+ let owner:any
+ if(name==='F01') owner=await Effect.runPromise(makeConversationConnection(async function*(_cursor,signal){await native(signal)}).pipe(Scope.provide(scope)))
+ if(name==='F02') {owner=await Effect.runPromise(makeRecovery({currentRevision:'review',reload:()=>assert.fail('no reload'),version:native}).pipe(Scope.provide(scope)));await Effect.runPromise(owner.check())}
+ if(name==='F03') {globalThis.fetch=(_url,init)=>native(init!.signal!);owner=await Effect.runPromise(makeFilesOwner('review',makeFilesCache([])).pipe(Scope.provide(scope)));void Effect.runPromise(owner.refresh())}
+ await entered
+ let settled=false
+ const closing=Effect.runPromiseExit(Scope.close(scope,Exit.void)).then(x=>{settled=true;return x})
+ await aborted;assert.equal(settled,false,'close must join native settlement')
+ const annotations=Context.make(NativeRequest,name)
+ reject(Cause.fromReasons([Cause.makeFailReason(`${name} native checked`).annotate(annotations),Cause.makeInterruptReason(sentinel).annotate(annotations)]))
+ const exit=await closing;globalThis.fetch=originalFetch
+ const reasons=Exit.isFailure(exit)?exit.cause.reasons:[]
+ const interrupt=reasons.find((r:any)=>r._tag==='Interrupt'&&r.fiberId===sentinel)
+ const checked=reasons.find((r:any)=>(r._tag==='Die'&&r.defect?._tag==='Fail')||r._tag==='Fail')
+ const result={owner:name,joined:true,scopeFailure:Exit.isFailure(exit),nativeInterrupt:!!interrupt,interruptAnnotation:interrupt?.annotations.get(NativeRequest.key),nativeChecked:!!checked,checkedAnnotation:checked?._tag==='Die'?checked.defect.annotations.get(NativeRequest.key):checked?.annotations.get(NativeRequest.key)}
+ results.push(result);console.log(JSON.stringify(result))
+}
+for(const r of results){assert.equal(r.scopeFailure,true,`${r.owner} must preserve native compound failure`);assert.equal(r.nativeInterrupt,true);assert.equal(r.interruptAnnotation,r.owner);assert.equal(r.nativeChecked,true);assert.equal(r.checkedAnnotation,r.owner)}

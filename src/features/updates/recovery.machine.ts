@@ -1,0 +1,162 @@
+import { createEffectLogic, setupEffect } from "@xstate/effect"
+import { Deferred, Effect, Schema } from "effect"
+import { standardSchemaValidator } from "xstate/validation"
+
+const reply = Schema.declare((value): value is Deferred.Deferred<boolean> =>
+  Deferred.isDeferred(value)
+)
+const facts = Schema.Struct({
+  blocked: Schema.NullOr(Schema.String),
+  online: Schema.Boolean,
+})
+const context = Schema.Struct({
+  ...facts.fields,
+  revision: Schema.NullOr(Schema.String),
+  reply: Schema.NullOr(reply),
+})
+export function validUpdate(value: unknown, current: string): value is string {
+  return (
+    typeof value === "string" &&
+    /^[a-f0-9]{40}$/.test(value) &&
+    value !== current
+  )
+}
+
+/** Check occupancy and navigation admission are independent. A timed-out check
+ * keeps its invocation until the actual fetch/body cleanup has joined. */
+export function recoveryMachine(ports: {
+  currentRevision: string
+  check: Effect.Effect<unknown>
+  abortCheck: Effect.Effect<void>
+  reload: Effect.Effect<boolean>
+}) {
+  return setupEffect({
+    validator: standardSchemaValidator(),
+    schemas: {
+      context,
+      events: {
+        FACTS: facts,
+        OBSERVE: Schema.Struct({ revision: Schema.Unknown }),
+        CHECK: Schema.Struct({}),
+        RELOAD: Schema.Struct({ reply }),
+      },
+    },
+    actors: {
+      check: createEffectLogic(() => ports.check),
+      reload: createEffectLogic(() => ports.reload),
+    },
+    actions: {
+      abortCheck: (_args: unknown) => ports.abortCheck,
+      answer: ({ params }: { params?: unknown }) => {
+        const value = Schema.decodeUnknownSync(
+          Schema.Struct({ reply, accepted: Schema.Boolean })
+        )(params)
+        return Deferred.succeed(value.reply, value.accepted)
+      },
+    },
+  }).createMachine({
+    id: "update-recovery",
+    context: { blocked: null, online: true, revision: null, reply: null },
+    type: "parallel",
+    on: {
+      FACTS: ({ context, event }) => ({
+        context: { ...context, blocked: event.blocked, online: event.online },
+      }),
+      OBSERVE: ({ context, event }) =>
+        validUpdate(event.revision, ports.currentRevision)
+          ? { context: { ...context, revision: event.revision } }
+          : {},
+      RELOAD: (args, enq) => {
+        enq(args.actions.answer, {
+          ...args,
+          params: { reply: args.event.reply, accepted: false },
+        })
+        return {}
+      },
+    },
+    states: {
+      version: {
+        initial: "idle",
+        states: {
+          idle: {
+            after: {
+              300_000: ({ context }) => ({
+                target: context.online ? "checking" : "idle",
+                reenter: true,
+              }),
+            },
+            on: {
+              CHECK: ({ context }) =>
+                context.online ? { target: "checking" } : {},
+            },
+          },
+          checking: {
+            initial: "waiting",
+            states: {
+              waiting: {
+                after: {
+                  5000: (args, enq) => {
+                    enq(args.actions.abortCheck, args)
+                    return { target: "expired" }
+                  },
+                },
+              },
+              expired: {},
+            },
+            invoke: {
+              src: "check",
+              onDone: ({ context, event }) => ({
+                target: "idle",
+                context: validUpdate(event.output, ports.currentRevision)
+                  ? { ...context, revision: event.output }
+                  : context,
+              }),
+            },
+          },
+        },
+      },
+      navigation: {
+        initial: "idle",
+        states: {
+          idle: {
+            on: {
+              RELOAD: (args, enq) => {
+                if (args.context.blocked || !args.context.online) {
+                  enq(args.actions.answer, {
+                    ...args,
+                    params: { reply: args.event.reply, accepted: false },
+                  })
+                  return {}
+                }
+                return {
+                  target: "attempting",
+                  context: { ...args.context, reply: args.event.reply },
+                }
+              },
+            },
+          },
+          attempting: {
+            invoke: {
+              src: "reload",
+              onDone: (args, enq) => {
+                if (args.context.reply)
+                  enq(args.actions.answer, {
+                    ...args,
+                    params: {
+                      reply: args.context.reply,
+                      accepted: args.event.output,
+                    },
+                  })
+                return {
+                  target: args.event.output ? "reloaded" : "idle",
+                  context: { ...args.context, reply: null },
+                }
+              },
+            },
+          },
+          reloaded: {},
+        },
+      },
+    },
+  })
+}

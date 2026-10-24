@@ -1,0 +1,44 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi
+
+stderr | ../../../../../../private/tmp/f01-f02-independent.test.ts > actual TanStack response cleanup joins before replacement or consumer completion
+Event "xstate.effect.resolve" to actor "0.conversation-connection.failed" was not delivered (stopped).
+
+ ❯ ../../../../../../private/tmp/f01-f02-independent.test.ts (2 tests | 2 failed) 388ms
+   × actual TanStack response cleanup joins before replacement or consumer completion 374ms
+   × recovery scope retains a compound native check failure arriving after abort 13ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  ../../../../../../private/tmp/f01-f02-independent.test.ts > actual TanStack response cleanup joins before replacement or consumer completion
+AssertionError: expected "vi.fn()" to be called 1 times, but got 2 times
+ ❯ ../../../../../../private/tmp/f01-f02-independent.test.ts:13:85
+     11|  const fetcher=vi.fn().mockResolvedValueOnce(response).mockResolvedVal…
+     12|  let settled=false;const complete=(async()=>{try{for await(const _ of …
+     13|  try {await entered.promise;await new Promise(r=>setTimeout(r,350));ex…
+       |                                                                                     ^
+     14| })
+     15| it("recovery scope retains a compound native check failure arriving af…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  ../../../../../../private/tmp/f01-f02-independent.test.ts > recovery scope retains a compound native check failure arriving after abort
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ ../../../../../../private/tmp/f01-f02-independent.test.ts:19:113
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed (2)
+   Start at  17:24:05
+   Duration  1.05s (tests 41%, import 33%, transform 26%, setup 1%)
+

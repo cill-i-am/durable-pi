@@ -14,7 +14,9 @@ afterEach(() => {
 })
 
 it("forwards only an acknowledged cursor on reconnect and stops on fresh authorization denial", async () => {
-  vi.useFakeTimers()
+  // Keep the official actor mailbox on its native setImmediate scheduler.
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] })
+  const timers = vi.spyOn(globalThis, "setTimeout")
   const cursor = crypto.randomUUID(),
     urls: string[] = []
   vi.stubGlobal("fetch", async (url: string) => {
@@ -37,7 +39,12 @@ it("forwards only an acknowledged cursor on reconnect and stops on fresh authori
     value: cursor,
   })
   const denied = expect(stream.next()).rejects.toMatchObject({ status: 401 })
+  // The cursor acknowledgement and native reader cleanup precede backoff.
+  await vi.waitFor(() =>
+    expect(timers.mock.calls.some(([, delay]) => delay === 250)).toBe(true)
+  )
   await vi.advanceTimersByTimeAsync(250)
+  timers.mockRestore()
   await denied
   expect(
     new URL(urls[0]!, "https://app.internal").searchParams.has("after")

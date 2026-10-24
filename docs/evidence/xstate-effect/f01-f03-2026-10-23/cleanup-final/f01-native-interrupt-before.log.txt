@@ -1,0 +1,52 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi
+
+stderr | tests/conversation-connection-machine.test.ts > retains annotated native interruption when abort wins (defect: false)
+Event "xstate.effect.resolve" to actor "0.conversation-connection.closed" was not delivered (stopped).
+
+stderr | tests/conversation-connection-machine.test.ts > retains annotated native interruption when abort wins (defect: true)
+Event "xstate.effect.resolve" to actor "0.conversation-connection.closed" was not delivered (stopped).
+
+ ❯ tests/conversation-connection-machine.test.ts (11 tests | 2 failed | 9 skipped) 30ms
+   × retains annotated native interruption when abort wins (defect: false) 25ms
+   × retains annotated native interruption when abort wins (defect: true) 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/conversation-connection-machine.test.ts > retains annotated native interruption when abort wins (defect: false)
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/conversation-connection-machine.test.ts:193:35
+    191|     release.resolve(undefined)
+    192|     const result = await next
+    193|     expect(Cause.isCause(result)).toBe(true)
+       |                                   ^
+    194|     if (!Cause.isCause(result)) throw new Error("Expected native clean…
+    195|     expect(result.reasons).toContain(interrupted)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/conversation-connection-machine.test.ts > retains annotated native interruption when abort wins (defect: true)
+AssertionError: expected [ …(2) ] to include Interrupt(90101)
+ ❯ tests/conversation-connection-machine.test.ts:195:28
+    193|     expect(Cause.isCause(result)).toBe(true)
+    194|     if (!Cause.isCause(result)) throw new Error("Expected native clean…
+    195|     expect(result.reasons).toContain(interrupted)
+       |                            ^
+    196|     expect(interrupted.annotations.get("conversation/native-cleanup"))…
+    197|       "reader-after-abort"
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 9 skipped (11)
+   Start at  21:01:49
+   Duration  602ms (import 71%, transform 18%, tests 8%, setup 2%, worker 1%)
+

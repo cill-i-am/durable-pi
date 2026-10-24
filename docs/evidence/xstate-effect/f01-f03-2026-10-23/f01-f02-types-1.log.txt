@@ -1,0 +1,9 @@
+src/features/conversation/composer-draft.machine.ts(65,7): error TS2322: Type '({ params, }: { params: { pending: readonly (typeof pending.Type)[]; saved: boolean; }; }) => Effect.Effect<void, never, never>' is not assignable to type 'AnyEffectAction'.
+  Types of parameters '__0' and 'args' are incompatible.
+    Type 'EffectActionArgs<any, any>' is not assignable to type '{ params: { pending: readonly { readonly revision: number; readonly reply: Deferred<boolean, never>; }[]; saved: boolean; }; }'.
+      Types of property 'params' are incompatible.
+        Type 'unknown' is not assignable to type '{ pending: readonly { readonly revision: number; readonly reply: Deferred<boolean, never>; }[]; saved: boolean; }'.
+src/features/conversation/composer-draft.machine.ts(105,17): error TS2345: Argument of type '(((args: EffectActionArgs<any, any>) => void) & { readonly [effectActionBrand]?: any; }) | undefined' is not assignable to parameter of type '(...args: any[]) => any'.
+  Type 'undefined' is not assignable to type '(...args: any[]) => any'.
+src/features/conversation/composer-draft.machine.ts(129,17): error TS2345: Argument of type '(((args: EffectActionArgs<any, any>) => void) & { readonly [effectActionBrand]?: any; }) | undefined' is not assignable to parameter of type '(...args: any[]) => any'.
+  Type 'undefined' is not assignable to type '(...args: any[]) => any'.

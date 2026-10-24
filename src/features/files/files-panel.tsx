@@ -1,5 +1,4 @@
 import { Link } from "@tanstack/react-router"
-import { Schema } from "effect"
 import {
   Plus,
   ChevronDown,
@@ -33,15 +32,16 @@ import {
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { agentApi, agentUrl } from "@/http/client"
+import { agentUrl } from "@/http/client"
 import { parseAgentId, workspaceDestination } from "@/navigation/workspace"
 import type { FileInfo } from "@/workspace/files"
-import { VideoResult } from "@/workspace/video"
 
 import { AudioPlayer } from "./audio-player"
 import { fileSize } from "./file-attachments"
 import { attachmentSelectable, fileDescription, legacyPdf } from "./preparation"
 import { FilePicker, UploadStatus } from "./upload-controls"
+import { useFileDetails } from "./use-file-details"
+import { useFilePreview } from "./use-file-preview"
 import type { FilesState } from "./use-files"
 
 export { FilePicker, UploadStatus } from "./upload-controls"
@@ -183,7 +183,7 @@ export function FilesWorkbench({
                 aria-label={`Details for ${preview.name}`}
               >
                 <FileDetails
-                  key={`details-${preview.id}`}
+                  key={`details-${state.agentId}-${preview.id}`}
                   file={preview}
                   onPendingChange={setDetailLocked}
                   state={state}
@@ -200,7 +200,7 @@ export function FilesWorkbench({
                 />
                 {!preview.trashed && preview.status === "ready" && (
                   <FilePreview
-                    key={`preview-${preview.id}`}
+                    key={`preview-${state.agentId}-${preview.id}`}
                     file={preview}
                     agentId={state.agentId}
                     view={previewView}
@@ -249,29 +249,28 @@ function FileDetails({
   onAttach: () => void
   disabled: boolean
 }) {
-  const [editing, setEditing] = useState(false)
+  const detail = useFileDetails(file.name, (action, name) =>
+    state.mutate(file.id, action, name)
+  )
+  const { editing, busy, name } = detail
   const optionsTrigger = useRef<HTMLButtonElement>(null)
   const wasEditing = useRef(false)
   useEffect(() => {
     if (wasEditing.current && !editing) optionsTrigger.current?.focus()
     wasEditing.current = editing
   }, [editing])
-  const [name, setName] = useState(file.name)
-  const [busy, setBusy] = useState(false)
   useEffect(() => {
-    onPendingChange(editing || busy)
+    onPendingChange(!!editing || busy)
     return () => onPendingChange(false)
   }, [editing, busy, onPendingChange])
-  async function mutate(action: "trash" | "restore" | "rename" | "extract") {
-    setBusy(true)
-    try {
-      if (await state.mutate(file.id, action, name.trim())) setEditing(false)
-    } finally {
-      setBusy(false)
-    }
-  }
+  const mutate = detail.submit
   return (
     <div className="py-3">
+      {detail.failed && (
+        <p role="alert" className="text-xs text-destructive">
+          Could not update this file. Reload and try again.
+        </p>
+      )}
       {editing ? (
         <form
           className="flex flex-col gap-2"
@@ -286,7 +285,7 @@ function FileDetails({
               id={`name-${file.id}`}
               autoFocus
               value={name}
-              onChange={(event) => setName(event.target.value)}
+              onChange={(event) => detail.change(event.target.value)}
               maxLength={180}
               required
             />
@@ -300,7 +299,7 @@ function FileDetails({
               size="xs"
               variant="ghost"
               disabled={busy}
-              onClick={() => setEditing(false)}
+              onClick={detail.cancel}
             >
               Cancel
             </Button>
@@ -398,8 +397,7 @@ function FileDetails({
                     {file.status === "ready" && (
                       <DropdownMenuItem
                         onClick={() => {
-                          setName(file.name)
-                          setEditing(true)
+                          detail.edit()
                         }}
                       >
                         <Pencil /> Rename
@@ -419,6 +417,11 @@ function FileDetails({
   )
 }
 
+const readablePreview = (file: FileInfo) =>
+  file.kind !== "audio" &&
+  file.kind !== "video" &&
+  (file.kind === "text" || file.extraction?.status === "ready")
+
 function FilePreview({
   file,
   agentId,
@@ -430,32 +433,18 @@ function FilePreview({
   view: "preview" | "source"
   onViewChange: (view: "preview" | "source") => void
 }) {
-  const [text, setText] = useState("")
-  const [error, setError] = useState("")
-  const [loaded, setLoaded] = useState(false)
-  useEffect(() => {
-    if (file.kind !== "text" && file.extraction?.status !== "ready") return
-    const controller = new AbortController()
-    void agentApi(agentId)<{ text: string; next: number | null }>(
-      `files/${file.id}/text`,
-      undefined,
-      controller.signal
-    )
-      .then((result) => {
-        if (controller.signal.aborted) return
-        setLoaded(true)
-        setText(
-          result.text +
-            (result.next === null
-              ? ""
-              : "\n… Preview truncated. Download the original for the full file.")
-        )
-      })
-      .catch(() => {
-        if (!controller.signal.aborted) setError("Could not open this preview.")
-      })
-    return () => controller.abort()
-  }, [agentId, file.id, file.kind, file.extraction?.status])
+  const readable = readablePreview(file)
+  const resource = useFilePreview({
+    key: `${agentId}:${file.id}:${readable}`,
+    agentId,
+    fileId: file.id,
+    kind: "text",
+    eager: readable,
+  })
+  const text =
+    resource.value && "text" in resource.value ? resource.value.text : ""
+  const error = resource.failed ? "Could not open this preview." : ""
+  const loaded = resource.loaded
   if (file.kind === "video" && file.video?.status === "ready")
     return <VideoPreview file={file} agentId={agentId} />
   if (file.kind === "audio")
@@ -518,27 +507,18 @@ function FilePreview({
 }
 
 function VideoPreview({ file, agentId }: { file: FileInfo; agentId: string }) {
-  const [video, setVideo] = useState<VideoResult | null>(null),
-    [error, setError] = useState("")
-  useEffect(() => {
-    const controller = new AbortController()
-    void agentApi(agentId)(
-      `files/${file.id}/video`,
-      undefined,
-      controller.signal
-    )
-      .then((value) => {
-        if (!controller.signal.aborted)
-          setVideo(Schema.decodeUnknownSync(VideoResult)(value))
-      })
-      .catch(() => {
-        if (!controller.signal.aborted)
-          setError(
-            "Could not load these frames. Close the preview and try again."
-          )
-      })
-    return () => controller.abort()
-  }, [agentId, file.id])
+  const resource = useFilePreview({
+    key: `${agentId}:${file.id}`,
+    agentId,
+    fileId: file.id,
+    kind: "video",
+    eager: true,
+  })
+  const video =
+    resource.value && "frames" in resource.value ? resource.value : null
+  const error = resource.failed
+    ? "Could not load these frames. Close the preview and try again."
+    : ""
   return (
     <figure className="flex flex-col gap-3">
       <figcaption className="text-sm font-medium break-words">

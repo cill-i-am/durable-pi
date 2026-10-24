@@ -1,0 +1,21 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi
+
+ ❯ ../../../../../../private/tmp/f01-f02-independent.test.ts (3 tests | 1 failed | 2 skipped) 39ms
+   × Stop dispatch remains available while a prior retry acknowledgement is held 38ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  ../../../../../../private/tmp/f01-f02-independent.test.ts > Stop dispatch remains available while a prior retry acknowledgement is held
+AssertionError: expected [ 'retry:failed-original' ] to include 'cancel:running-retry'
+ ❯ ../../../../../../private/tmp/f01-f02-independent.test.ts:25:201
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 2 skipped (3)
+   Start at  17:28:28
+   Duration  399ms (import 71%, transform 13%, tests 13%, setup 2%, worker 1%)
+

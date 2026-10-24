@@ -78,7 +78,8 @@ export function useConversation(agentId: string, enabled = true) {
   }, [state])
   const reload = useCallback(() => setRefresh((value) => value + 1), [])
   const submit = useCallback(
-    (input: Submission) => connection.send([], input),
+    (input: Submission, signal?: AbortSignal) =>
+      connection.send([], input, signal),
     [connection]
   )
   return {

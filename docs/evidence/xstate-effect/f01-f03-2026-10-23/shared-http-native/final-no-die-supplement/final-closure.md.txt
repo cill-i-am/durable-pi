@@ -1,0 +1,7 @@
+# Final F01–F08 no-Die cleanup closure
+
+All concrete findings from the bounded native cleanup scan are closed. Both unchanged F01 actual-owner probes pass against the five-path local correction freeze and the shared nativeOperation correction. Connection native Interrupt90101, submission native Interrupt90104, and turn-command native Interrupt90105 and all corresponding checked-failure annotations survive joined cancellation. F02 and F03 continue passing in the same unchanged three-owner run.
+
+Read the three corrected production collectors freshly: they retain every missing compound reason; connection requires a defect or mixed interruption, submission requires a non-pure-interruption Cause, and turn filters pure interruption Causes before flattening. Thus expected ordinary scope cancellation remains excluded as a whole, and native Interrupt reasons inside substantive compound failures remain. Snapshot reason deduplication and acknowledgment/admission behavior are unchanged. Composer source is unchanged. Both five-path repair and full22-path F01 manifests match exactly.
+
+F03 microphone and preview after-shared probes and the seven F04–F08 owner after-shared probes were already green and no corresponding feature code changed during this closure. Scope limits remain those in review.md. Historical before/intermediate manifests, evidence, and probe bytes remain preserved; this closure and its manifest are additive. No production files were edited by this independent review.

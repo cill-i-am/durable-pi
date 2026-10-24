@@ -1,0 +1,50 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi
+
+stdout | tests/composer-draft-machine.test.ts > keeps an unreadable record fenced while allowing recoverable in-memory edits
+[17:19:22.725] ERROR (#1): Error [AssertionError]: expected true to be false // Object.is equality
+    at /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/composer-draft-machine.test.ts:21:76 {
+  actual: true,
+  expected: false,
+  showDiff: true,
+  operator: 'strictEqual',
+  [cause]: undefined
+}
+
+ ❯ tests/composer-draft-machine.test.ts (5 tests | 1 failed | 4 skipped) 27ms
+   × keeps an unreadable record fenced while allowing recoverable in-memory edits 27ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/composer-draft-machine.test.ts > keeps an unreadable record fenced while allowing recoverable in-memory edits
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ tests/composer-draft-machine.test.ts:21:76
+     19|           })
+     20|       )
+     21|       expect(yield* owner.update(() => ({ text: "Keep this in memory" …
+       |                                                                            ^
+     22|         false
+     23|       )
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/core.ts:585:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:589:27
+ ❯ node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1159:17
+ ❯ Array.<anonymous> node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1697:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 4 skipped (5)
+   Start at  17:19:22
+   Duration  535ms (import 59%, transform 31%, tests 7%, setup 2%, worker 1%)
+

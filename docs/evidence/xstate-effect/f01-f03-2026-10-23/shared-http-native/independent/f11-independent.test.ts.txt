@@ -1,0 +1,68 @@
+import { Cause, Context, Effect, Exit, Scope } from 'effect'
+import { afterEach, expect, it, vi } from 'vitest'
+import { makeAppOwner, appRequests } from '/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/apps/app-owner'
+
+const id='11111111-1111-4111-8111-111111111111'
+afterEach(()=>vi.unstubAllGlobals())
+it('joins the actual unread 401 response body before releasing its request owner',async()=>{
+ let release!:()=>void; const held=new Promise<void>(r=>{release=r}); const cancel=vi.fn(()=>held)
+ vi.stubGlobal('fetch',vi.fn(async()=>new Response(new ReadableStream({cancel}),{status:401})))
+ const scope=Effect.runSync(Scope.make());
+ const actor=Effect.runSync(makeAppOwner({agentId:'a',id,visible:true},appRequests('a',id)).pipe(Effect.provideService(Scope.Scope,scope)))
+ let done=false; let closing:Promise<unknown>|undefined
+ try {
+  await vi.waitFor(()=>expect(fetch).toHaveBeenCalledTimes(1))
+  closing=Effect.runPromiseExit(Scope.close(scope,Exit.void)).then(v=>{done=true;return v})
+  await new Promise(r=>setTimeout(r,20))
+  expect(cancel).toHaveBeenCalledTimes(1)
+  expect(done).toBe(false)
+ } finally {release(); await (closing??Effect.runPromiseExit(Scope.close(scope,Exit.void)))}
+})
+it('retains annotated Fail plus native Interrupt after joining a rejected held fetch',async()=>{
+ let reject!:(e:unknown)=>void; let signal:AbortSignal|undefined
+ const held=new Promise<never>((_,no)=>{reject=no})
+ vi.stubGlobal('fetch',vi.fn((_path,init)=>{signal=init.signal;return held}))
+ class NativeRequest extends Context.Service<NativeRequest,string>()('F11NativeRequest'){}
+ const native=Cause.fromReasons([Cause.makeFailReason('native failed'),Cause.makeInterruptReason(81234).annotate(Context.make(NativeRequest,'f11'))])
+ const scope=Effect.runSync(Scope.make())
+ Effect.runSync(makeAppOwner({agentId:'a',id,visible:true},appRequests('a',id)).pipe(Effect.provideService(Scope.Scope,scope)))
+ await vi.waitFor(()=>expect(signal).toBeDefined())
+ let done=false;const closing=Effect.runPromiseExit(Scope.close(scope,Exit.void)).then(v=>{done=true;return v})
+ await vi.waitFor(()=>expect(signal?.aborted).toBe(true));expect(done).toBe(false)
+ reject(native)
+ const result=await closing
+ expect(Exit.isFailure(result)).toBe(true)
+ if(Exit.isFailure(result)){
+  expect(result.cause.reasons.some(r=>r._tag==='Interrupt'&&r.fiberId===81234&&r.annotations.get(NativeRequest.key)==='f11')).toBe(true)
+  expect(result.cause.reasons.some(r=>r._tag==='Die'&&r.defect&&typeof r.defect==='object'&&'error' in r.defect&&r.defect.error==='native failed')).toBe(true)
+ }
+})
+
+it('the actual frame bridge requires current source, opaque origin, channel and revision and releases its listener',async()=>{
+ const {Deferred}=await import('effect')
+ const {frameWork,makeFrameOwner}=await import('/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/apps/web-canvas-owner')
+ let receive!:(event:unknown)=>void
+ const remove=vi.fn(), postMessage=vi.fn(), onAction=vi.fn(async()=>false)
+ vi.stubGlobal('addEventListener',vi.fn((type,listener)=>{if(type==='message')receive=listener}))
+ vi.stubGlobal('removeEventListener',remove)
+ vi.stubGlobal('fetch',vi.fn(async()=>new Response(JSON.stringify({id,version:1,revision:1,html:'<p>preview</p>',css:''}),{headers:{'content-type':'application/json'}})))
+ const frame={contentWindow:{postMessage}} as unknown as HTMLIFrameElement
+ const current={revision:1,disabled:false,onAction}
+ const scope=Effect.runSync(Scope.make()), ready=Effect.runSync(Deferred.make<any>())
+ const actor=Effect.runSync(makeFrameOwner({revision:1,disabled:false},frameWork({agentId:'a',id,version:1,blockId:'web',frame:()=>frame,current:()=>current},Deferred.await(ready))).pipe(Effect.provideService(Scope.Scope,scope)))
+ Effect.runSync(Deferred.succeed(ready,actor))
+ try{
+  await vi.waitFor(()=>expect(actor.getSnapshot().matches({owned:'ready'})).toBe(true))
+  const channel=actor.getSnapshot().context.source!.channel
+  const valid={origin:'null',source:frame.contentWindow,data:{channel,type:'action',name:'save',values:{}}}
+  receive({...valid,origin:'https://wrong.invalid'})
+  receive({...valid,source:{}})
+  receive({...valid,data:{...valid.data,channel:'old'}})
+  current.revision=2;receive(valid)
+  current.revision=1;current.disabled=true;receive(valid)
+  await new Promise(r=>setTimeout(r,20));expect(onAction).not.toHaveBeenCalled()
+  current.disabled=false;receive(valid)
+  await vi.waitFor(()=>expect(onAction).toHaveBeenCalledTimes(1))
+ }finally{await Effect.runPromiseExit(Scope.close(scope,Exit.void))}
+ expect(remove).toHaveBeenCalledWith('message',receive)
+})

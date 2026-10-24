@@ -1,0 +1,33 @@
+{
+  "root": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi",
+  "files": {
+    "src/features/files/voice-recorder.machine.ts": "c12cbc5ccf12f99909316f725c3fac14ba70e0e8f122165d4d784e0f8b123d21",
+    "src/features/files/voice-capture.ts": "f80da73d5c27aca7066ffca16a59ae8c17a8988286a5dfee58ac0a28747caf9e",
+    "src/features/files/voice-recorder.tsx": "0dadc2ae95d1a068390c71f0f4dd2d25f4de1a71c6a32a708185f4364851d5c4",
+    "src/features/files/file-preview.machine.ts": "062097a216d714ba822324a27fd07b94e54599cecf1da3545d5f6cdb0ee44dc8",
+    "src/features/files/file-preview-resource.ts": "2b7b5c8d505c77c5811e307176bede00279c66112dbdaf721592c38b7d45da6f",
+    "src/features/files/use-file-preview.ts": "a5f97d71baab37096d793cd1e521a5de13658c366c44b890f5090738ccab983e",
+    "src/features/files/audio-player.tsx": "6913d075c730441b4daaadb68932e2873ae67e04cefc91a7411575f657da9aea",
+    "src/features/files/file-details.machine.ts": "303eb2341f8118d2a144896eaa41b2057c7e06f3fd1733cfb93f25c3c9871411",
+    "src/features/files/use-file-details.ts": "b44d10625d1c8e1b4db2d6977ea40763535c6363b804960ae226d6125f2bdebe",
+    "src/features/files/files-panel.tsx": "9fb711fa2017b48e21d16855ed820f3348b891a2736edb8d6658d9e790bc4f0b",
+    "tests/voice-recorder-machine.test.ts": "ecc0b52d000eb0a1df5db184d9353862ff14a8482d346ed5c4ea98970ea7d58e",
+    "tests/file-preview-machine.test.ts": "cd0105648467d05456b8f8a8f812a7421f32b249dc822ceae7ada3288c68d844",
+    "tests/browser/audio.spec.ts": "cbe89373828d892ed8e7576bbce09753e40b438ce3937a430eef537959ddf2fd",
+    "tests/browser/file-media-lifecycle.spec.ts": "2ea13e829ac4bdb21be2d9bce25b4c8c9b62615bc458f96923f847437f16e99c",
+    "docs/xstate-effect-files-ui.md": "2cf26352ef02ee0c57cfb190c76663f9792a4a44a192a7d3f351b18ce2628463"
+  },
+  "shared_dependencies": {
+    "src/features/files/owned-work.ts": "56e674c2a81197da06e0612b26e8e7b1d25a432461d6a759b48d2ba576b87e68",
+    "src/shared/interop.ts": "e26c8e53d77156a55eb47b4ca25b0b0c7f93eb5740ba652e862e4950b868662c"
+  },
+  "evidence": {
+    "before": "/private/tmp/f03-before/evidence.json",
+    "unit": "/private/tmp/f03-media-unit-final.log",
+    "browser": "/private/tmp/f03-media-browser-final.log",
+    "negative": "/private/tmp/f03-media-browser-negative.log",
+    "typecheck": "/private/tmp/f03-media-types-final.log",
+    "lint": "/private/tmp/f03-media-lint-final.log",
+    "format": "/private/tmp/f03-media-format-final.log"
+  }
+}

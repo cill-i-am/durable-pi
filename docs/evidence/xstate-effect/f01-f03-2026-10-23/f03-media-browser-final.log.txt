@@ -1,0 +1,25 @@
+
+Running 16 tests using 1 worker
+
+(node:3432) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [desktop] › tests/browser/file-media-lifecycle.spec.ts:238:1 › cancelled acquisition prevents restart until the late stream is released (701ms)
+  ✓   2 [desktop] › tests/browser/file-media-lifecycle.spec.ts:277:1 › finish waits for native final data before releasing and uploading once (681ms)
+  ✓   3 [desktop] › tests/browser/file-media-lifecycle.spec.ts:313:1 › unmount joins late permission without recording or uploading (638ms)
+  ✓   4 [desktop] › tests/browser/file-media-lifecycle.spec.ts:334:1 › denied microphone retains an enabled explicit retry (783ms)
+  ✓   5 [desktop] › tests/browser/file-media-lifecycle.spec.ts:348:1 › transcript and text previews fence late results across the same file ID on another agent (804ms)
+  ✓   6 [desktop] › tests/browser/file-media-lifecycle.spec.ts:393:1 › video preview clears prior frames and aborts pending resources on unmount (744ms)
+  ✓   7 [desktop] › tests/browser/file-media-lifecycle.spec.ts:436:1 › switching agents waits for the previous microphone owner before a new acquisition (641ms)
+  ✓   8 [desktop] › tests/browser/file-media-lifecycle.spec.ts:473:1 › rename owns one immutable command, retains rejected edits and fences a former agent (680ms)
+(node:3503) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   9 [mobile] › tests/browser/file-media-lifecycle.spec.ts:238:1 › cancelled acquisition prevents restart until the late stream is released (719ms)
+  ✓  10 [mobile] › tests/browser/file-media-lifecycle.spec.ts:277:1 › finish waits for native final data before releasing and uploading once (578ms)
+  ✓  11 [mobile] › tests/browser/file-media-lifecycle.spec.ts:313:1 › unmount joins late permission without recording or uploading (500ms)
+  ✓  12 [mobile] › tests/browser/file-media-lifecycle.spec.ts:334:1 › denied microphone retains an enabled explicit retry (442ms)
+  ✓  13 [mobile] › tests/browser/file-media-lifecycle.spec.ts:348:1 › transcript and text previews fence late results across the same file ID on another agent (678ms)
+  ✓  14 [mobile] › tests/browser/file-media-lifecycle.spec.ts:393:1 › video preview clears prior frames and aborts pending resources on unmount (620ms)
+  ✓  15 [mobile] › tests/browser/file-media-lifecycle.spec.ts:436:1 › switching agents waits for the previous microphone owner before a new acquisition (576ms)
+  ✓  16 [mobile] › tests/browser/file-media-lifecycle.spec.ts:473:1 › rename owns one immutable command, retains rejected edits and fences a former agent (637ms)
+
+  16 passed (13.4s)

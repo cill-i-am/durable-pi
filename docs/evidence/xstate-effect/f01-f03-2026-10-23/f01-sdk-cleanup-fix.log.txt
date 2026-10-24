@@ -1,0 +1,33 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi
+
+ ❯ tests/conversation-connection-composition.test.ts (5 tests | 1 failed) 1402ms
+   × late compound reader cancellation failure survives caller abort and prevents replacement 6ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/conversation-connection-composition.test.ts > late compound reader cancellation failure survives caller abort and prevents replacement
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/conversation-connection-composition.test.ts:202:5
+    200|         (reason) => reason._tag === "Die" && reason.defect === defect
+    201|       )
+    202|   ).toBe(true)
+       |     ^
+    203| })
+    204|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  1 failed | 14 passed (15)
+   Start at  17:28:34
+   Duration  1.78s (tests 73%, import 22%, transform 4%, setup 1%)
+

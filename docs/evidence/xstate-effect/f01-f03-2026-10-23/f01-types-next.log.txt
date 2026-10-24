@@ -1,0 +1,11 @@
+src/features/conversation/connection.machine.ts(170,9): error TS2322: Type '{ src: "finish"; input: ({ context }: { context: any; }) => any; onDone: string; }' is not assignable to type 'SingleOrArray<SetupInvokeConfig<StateSchemasWithKeys<UncheckedSetupStateSchemas, "closed" | "done" | "failed" | "reading" | "waiting">, ActiveStateContext<UncheckedSetupStateSchema, { ...; } & MachineContext, { ...; }>, ... 10 more ..., undefined>> | undefined'.
+  Types of property 'onDone' are incompatible.
+    Type 'string' is not assignable to type 'StateTransitionConfigOrTarget<StateSchemasWithKeys<UncheckedSetupStateSchemas, "closed" | "done" | "failed" | "reading" | "waiting">, ActiveStateContext<UncheckedSetupStateSchema, { ...; } & MachineContext, { ...; }>, ... 14 more ..., void>'.
+src/features/conversation/connection.machine.ts(172,21): error TS7031: Binding element 'context' implicitly has an 'any' type.
+src/features/conversation/connection.machine.ts(177,9): error TS2322: Type '{ src: "finish"; input: () => null; onDone: string; }' is not assignable to type 'SingleOrArray<SetupInvokeConfig<StateSchemasWithKeys<UncheckedSetupStateSchemas, "closed" | "done" | "failed" | "reading" | "waiting">, ActiveStateContext<UncheckedSetupStateSchema, { ...; } & MachineContext, { ...; }>, ... 10 more ..., undefined>> | undefined'.
+  Types of property 'onDone' are incompatible.
+    Type 'string' is not assignable to type 'StateTransitionConfigOrTarget<StateSchemasWithKeys<UncheckedSetupStateSchemas, "closed" | "done" | "failed" | "reading" | "waiting">, ActiveStateContext<UncheckedSetupStateSchema, { ...; } & MachineContext, { ...; }>, ... 14 more ..., void>'.
+src/features/conversation/turn-command.machine.ts(2,10): error TS6133: 'Cause' is declared but its value is never read.
+src/features/conversation/use-conversation-commands.ts(69,28): error TS2345: Argument of type 'void' is not assignable to parameter of type 'Exit<unknown, unknown>'.
+src/features/files/file-refresh.machine.ts(31,11): error TS2502: 'commit' is referenced directly or indirectly in its own type annotation.
+tests/conversation-connection-machine.test.ts(203,22): error TS2554: Expected 1 arguments, but got 0.

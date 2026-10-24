@@ -1,0 +1,3 @@
+{"owner":"F01","joined":true,"scopeFailure":true,"nativeInterrupt":true,"interruptAnnotation":"F01","nativeChecked":true,"checkedAnnotation":"F01"}
+{"owner":"F02","joined":true,"scopeFailure":true,"nativeInterrupt":true,"interruptAnnotation":"F02","nativeChecked":true,"checkedAnnotation":"F02"}
+{"owner":"F03","joined":true,"scopeFailure":true,"nativeInterrupt":true,"interruptAnnotation":"F03","nativeChecked":true,"checkedAnnotation":"F03"}

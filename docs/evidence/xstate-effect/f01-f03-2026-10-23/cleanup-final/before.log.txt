@@ -1,0 +1,21 @@
+{"owner":"F01","joined":true,"scopeFailure":false,"nativeInterrupt":false,"nativeChecked":false}
+{"owner":"F02","joined":true,"scopeFailure":true,"nativeInterrupt":true,"interruptAnnotation":"F02","nativeChecked":true,"checkedAnnotation":"F02"}
+{"owner":"F03","joined":true,"scopeFailure":false,"nativeInterrupt":false,"nativeChecked":false}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: F01 must preserve native compound failure
+
+false !== true
+
+    at <anonymous> (/private/tmp/f01-f03-no-die/probe.mts:33:32) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.21.0

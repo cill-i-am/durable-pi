@@ -1,57 +1,224 @@
+import { it as effectIt } from "@effect/vitest"
+import { send, waitFor } from "@xstate/effect"
+import { Cause, Effect, Exit, Scope } from "effect"
+import { TestClock } from "effect/testing"
 import { describe, expect, it, vi } from "vitest"
 
-import { createRecovery, importFailure } from "../src/features/updates/recovery"
+import {
+  makeRecovery,
+  importFailure,
+  watchRecovery,
+} from "../src/features/updates/recovery"
+
+const gate = <T>() => {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((done) => {
+    resolve = done
+  })
+  return { promise, resolve }
+}
+const open = (
+  reload = vi.fn(),
+  version = vi.fn(async (_signal: AbortSignal): Promise<unknown> => null)
+) => {
+  const scope = Effect.runSync(Scope.make())
+  const recovery = Effect.runSync(
+    makeRecovery({ currentRevision: "a".repeat(40), reload, version }).pipe(
+      Effect.provideService(Scope.Scope, scope)
+    )
+  )
+  return {
+    recovery,
+    reload,
+    version,
+    scope,
+    close: () => {
+      recovery.revoke()
+      return Effect.runPromise(Scope.close(scope, Exit.void))
+    },
+  }
+}
+const settled = (recovery: ReturnType<typeof open>["recovery"]) =>
+  Effect.runPromise(
+    waitFor(recovery.actor, (state) => state.matches({ version: "idle" }))
+  )
 
 describe("explicit client recovery", () => {
-  it("requires a different valid build and never reloads just because an update arrives", () => {
-    const reload = vi.fn(),
-      recovery = createRecovery("a".repeat(40), reload)
-    for (const revision of [
-      null,
-      {},
-      "development",
-      "<script>",
-      "a".repeat(40),
-    ])
-      recovery.observe(revision)
-    expect(recovery.snapshot().revision).toBeNull()
-    recovery.observe("b".repeat(40))
-    expect(recovery.snapshot().revision).toBe("b".repeat(40))
-    expect(reload).not.toHaveBeenCalled()
-    // A mixed rollout response cannot hide a previously observed update.
-    recovery.observe("a".repeat(40))
-    expect(recovery.snapshot().revision).toBe("b".repeat(40))
+  it("retains a different valid build through mixed rollout responses without navigating", async () => {
+    const owner = open(),
+      { recovery, reload } = owner
+    try {
+      for (const revision of [
+        null,
+        {},
+        "development",
+        "<script>",
+        "a".repeat(40),
+      ])
+        await Effect.runPromise(recovery.observe(revision))
+      expect(recovery.snapshot().revision).toBeNull()
+      await Effect.runPromise(recovery.observe("b".repeat(40)))
+      await vi.waitFor(() =>
+        expect(recovery.snapshot().revision).toBe("b".repeat(40))
+      )
+      await Effect.runPromise(recovery.observe("a".repeat(40)))
+      expect(recovery.snapshot().revision).toBe("b".repeat(40))
+      expect(reload).not.toHaveBeenCalled()
+    } finally {
+      await owner.close()
+    }
   })
-  it("retains independent fences and allows a single explicit reload only after all settle", () => {
-    const reload = vi.fn(),
-      recovery = createRecovery("a".repeat(40), reload)
-    recovery.block("upload", "Wait for upload")
-    recovery.block("terminal", "Save terminal")
-    expect(recovery.reload()).toBe(false)
-    recovery.block("upload", null)
-    expect(recovery.snapshot().blocked).toBe("Save terminal")
-    expect(recovery.reload()).toBe(false)
-    recovery.block("terminal", null)
-    recovery.connection(false)
-    expect(recovery.reload()).toBe(false)
-    recovery.connection(true)
-    expect(recovery.reload()).toBe(true)
-    expect(recovery.reload()).toBe(false)
-    expect(reload).toHaveBeenCalledTimes(1)
+  it("retains independent fences and admits only one explicit reload after all settle", async () => {
+    const owner = open(),
+      { recovery, reload } = owner
+    try {
+      await Effect.runPromise(recovery.block("upload", "Wait for upload"))
+      await Effect.runPromise(recovery.block("draft", "Unreadable draft"))
+      expect(await Effect.runPromise(recovery.reload())).toBe(false)
+      await Effect.runPromise(recovery.block("upload", null))
+      await vi.waitFor(() =>
+        expect(recovery.snapshot().blocked).toBe("Unreadable draft")
+      )
+      expect(await Effect.runPromise(recovery.reload())).toBe(false)
+      await Effect.runPromise(recovery.block("draft", null))
+      await Effect.runPromise(recovery.connection(false))
+      expect(await Effect.runPromise(recovery.reload())).toBe(false)
+      await Effect.runPromise(recovery.connection(true))
+      expect(await Effect.runPromise(recovery.reload())).toBe(true)
+      expect(await Effect.runPromise(recovery.reload())).toBe(false)
+      expect(reload).toHaveBeenCalledTimes(1)
+    } finally {
+      await owner.close()
+    }
   })
-  it("recovers a rejected browser reload and releases subscribers", () => {
-    const reload = vi.fn(() => {
-      throw new Error("navigation denied")
+  it("recovers a browser reload rejection and releases subscribers", async () => {
+    const owner = open(
+        vi.fn(() => {
+          throw new Error("navigation denied")
+        })
+      ),
+      { recovery } = owner
+    const listener = vi.fn(),
+      unsubscribe = recovery.subscribe(listener)
+    try {
+      expect(await Effect.runPromise(recovery.reload())).toBe(false)
+      expect(recovery.snapshot().reloading).toBe(false)
+      unsubscribe()
+      const count = listener.mock.calls.length
+      await Effect.runPromise(recovery.connection(false))
+      expect(listener).toHaveBeenCalledTimes(count)
+    } finally {
+      await owner.close()
+    }
+  })
+  it.each(["draft", "offline"] as const)(
+    "rechecks a late %s fence at actual navigation",
+    async (kind) => {
+      const owner = open(),
+        { recovery, reload } = owner
+      const unsubscribe = recovery.subscribe(() => {
+        if (recovery.snapshot().reloading)
+          Effect.runSync(
+            kind === "draft"
+              ? recovery.block("draft", "Unsaved draft")
+              : recovery.connection(false)
+          )
+      })
+      try {
+        expect(await Effect.runPromise(recovery.reload())).toBe(false)
+        expect(reload).not.toHaveBeenCalled()
+      } finally {
+        unsubscribe()
+        await owner.close()
+      }
+    }
+  )
+  it("coalesces checks through body completion and ignores ordinary check failures", async () => {
+    const response = gate<unknown>(),
+      owner = open(
+        vi.fn(),
+        vi.fn(() => response.promise)
+      ),
+      { recovery, version } = owner
+    try {
+      await Effect.runPromise(recovery.check())
+      await vi.waitFor(() => expect(version).toHaveBeenCalledTimes(1))
+      for (let i = 0; i < 5; i++) await Effect.runPromise(recovery.check())
+      expect(version).toHaveBeenCalledTimes(1)
+      response.resolve("b".repeat(40))
+      await settled(recovery)
+      expect(recovery.snapshot().revision).toBe("b".repeat(40))
+      version.mockRejectedValueOnce(new Error("offline service"))
+      await Effect.runPromise(recovery.check())
+      await vi.waitFor(() => expect(version).toHaveBeenCalledTimes(2))
+      await settled(recovery)
+      expect(recovery.snapshot().revision).toBe("b".repeat(40))
+    } finally {
+      response.resolve(null)
+      await owner.close()
+    }
+  })
+  it("unmount revokes navigation, removes listeners and joins a late version response without publication", async () => {
+    const response = gate<unknown>(),
+      owner = open(
+        vi.fn(),
+        vi.fn(() => response.promise)
+      ),
+      { recovery, scope, version } = owner
+    const window = new EventTarget() as Window,
+      document = new EventTarget() as Document
+    Object.defineProperty(window, "navigator", { value: { onLine: true } })
+    Object.defineProperty(document, "visibilityState", { value: "visible" })
+    const removeWindow = vi.spyOn(window, "removeEventListener"),
+      removeDocument = vi.spyOn(document, "removeEventListener")
+    Effect.runSync(
+      watchRecovery(recovery, window, document).pipe(
+        Effect.forkScoped,
+        Effect.provideService(Scope.Scope, scope)
+      )
+    )
+    await vi.waitFor(() => expect(version).toHaveBeenCalledTimes(1))
+    await Effect.runPromise(recovery.block("draft", "Unsaved"))
+    const unloading = new Event("beforeunload", { cancelable: true })
+    window.dispatchEvent(unloading)
+    expect(unloading.defaultPrevented).toBe(true)
+    let closed = false
+    const close = owner.close().then(() => {
+      closed = true
     })
-    const recovery = createRecovery("a".repeat(40), reload),
-      listener = vi.fn()
-    const unsubscribe = recovery.subscribe(listener)
-    expect(recovery.reload()).toBe(false)
-    expect(recovery.snapshot().reloading).toBe(false)
-    unsubscribe()
-    const count = listener.mock.calls.length
-    recovery.connection(false)
-    expect(listener).toHaveBeenCalledTimes(count)
+    try {
+      await vi.waitFor(() =>
+        expect(version.mock.calls[0]![0].aborted).toBe(true)
+      )
+      expect(closed).toBe(false)
+      expect(await Effect.runPromise(recovery.reload())).toBe(false)
+      expect(removeWindow).toHaveBeenCalledTimes(5)
+      expect(removeDocument).toHaveBeenCalledTimes(1)
+      response.resolve("b".repeat(40))
+      await close
+      expect(recovery.snapshot().revision).toBeNull()
+      window.dispatchEvent(new Event("focus"))
+      expect(version).toHaveBeenCalledTimes(1)
+    } finally {
+      response.resolve(null)
+      await close
+    }
+  })
+  it("invalid machine facts cannot remove a real reload fence", async () => {
+    const owner = open(),
+      { recovery } = owner
+    try {
+      await Effect.runPromise(recovery.block("draft", "Unreadable"))
+      recovery.actor.send({
+        type: "FACTS",
+        blocked: null,
+        online: "true",
+      } as never)
+      expect(await Effect.runPromise(recovery.reload())).toBe(false)
+      expect(recovery.snapshot().blocked).toBe("Unreadable")
+    } finally {
+      await owner.close()
+    }
   })
   it("recognizes browser asset failures without reclassifying ordinary API or render errors", () => {
     for (const message of [
@@ -71,4 +238,114 @@ describe("explicit client recovery", () => {
     ])
       expect(importFailure(error)).toBe(false)
   })
+})
+
+effectIt.effect(
+  "check timeout retains occupancy until native cleanup joins and fences its late revision",
+  () =>
+    Effect.gen(function* () {
+      const response = gate<unknown>()
+      const version = vi.fn((_signal: AbortSignal) => response.promise)
+      const recovery = yield* makeRecovery({
+        currentRevision: "a".repeat(40),
+        reload: vi.fn(),
+        version,
+      })
+      yield* recovery.check()
+      yield* waitFor(recovery.actor, (state) =>
+        state.matches({ version: { checking: "waiting" } })
+      )
+      yield* Effect.promise(async () => {
+        await vi.waitFor(() => expect(version).toHaveBeenCalledTimes(1))
+      })
+      yield* TestClock.adjust(5000)
+      yield* waitFor(recovery.actor, (state) =>
+        state.matches({ version: { checking: "expired" } })
+      )
+      expect(version.mock.calls[0]![0].aborted).toBe(true)
+      yield* send(recovery.actor, { type: "CHECK" })
+      expect(version).toHaveBeenCalledTimes(1)
+      response.resolve("b".repeat(40))
+      yield* waitFor(recovery.actor, (state) =>
+        state.matches({ version: "idle" })
+      )
+      expect(recovery.snapshot().revision).toBeNull()
+    }).pipe(Effect.scoped)
+)
+
+it("late structured version failure preserves every original reason through scope closure", async () => {
+  let reject!: (cause: unknown) => void
+  const held = new Promise<unknown>((_resolve, fail) => {
+    reject = fail
+  })
+  const version = vi.fn((_signal: AbortSignal) => held)
+  const owner = open(vi.fn(), version)
+  const defect = new Error("late version cleanup defect")
+  const failure = Cause.combine(
+    Cause.fail("checked-version"),
+    Cause.die(defect)
+  )
+  await Effect.runPromise(owner.recovery.check())
+  await vi.waitFor(() => expect(version).toHaveBeenCalledTimes(1))
+  owner.recovery.revoke()
+  let joined = false
+  const closing = Effect.runPromiseExit(
+    Scope.close(owner.scope, Exit.void)
+  ).then((exit) => {
+    joined = true
+    return exit
+  })
+  await vi.waitFor(() => expect(version.mock.calls[0]![0].aborted).toBe(true))
+  expect(joined).toBe(false)
+  reject(failure)
+  const closed = await closing
+  expect(Exit.isFailure(closed)).toBe(true)
+  if (Exit.isFailure(closed)) {
+    expect(
+      closed.cause.reasons.some(
+        (reason) => reason._tag === "Die" && reason.defect === defect
+      )
+    ).toBe(true)
+    expect(
+      closed.cause.reasons.some(
+        (reason) =>
+          reason._tag === "Die" &&
+          typeof reason.defect === "object" &&
+          reason.defect !== null &&
+          "_tag" in reason.defect &&
+          reason.defect._tag === "Fail" &&
+          "error" in reason.defect &&
+          reason.defect.error === "checked-version"
+      )
+    ).toBe(true)
+  }
+})
+
+it("a native actor failure racing reload admission settles the caller before scope disposal", async () => {
+  let reject!: (cause: unknown) => void
+  const held = new Promise<unknown>((_resolve, fail) => {
+    reject = fail
+  })
+  const entered = gate<void>()
+  const version = vi.fn((_signal: AbortSignal) => {
+    entered.resolve()
+    return held
+  })
+  const owner = open(vi.fn(), version)
+  await Effect.runPromise(owner.recovery.check())
+  await entered.promise
+  reject(Cause.die(new Error("fatal native read")))
+  const caller = Effect.runPromise(owner.recovery.reload())
+  try {
+    const result = await Promise.race([
+      caller,
+      new Promise((resolve) => setTimeout(() => resolve("unsettled"), 100)),
+    ])
+    expect(typeof result).toBe("boolean")
+    expect(owner.reload.mock.calls.length).toBeLessThanOrEqual(1)
+  } finally {
+    owner.recovery.revoke()
+    await Effect.runPromiseExit(Scope.close(owner.scope, Exit.void))
+    await caller
+  }
 })

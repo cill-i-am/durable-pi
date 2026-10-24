@@ -1,0 +1,49 @@
+import assert from 'node:assert/strict'
+import {createRequire} from 'node:module'
+import {readFile,writeFile} from 'node:fs/promises'
+import {createHash} from 'node:crypto'
+import {openVoiceCapture} from '/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/files/voice-capture.ts'
+import {voiceRecorderMachine} from '/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/files/voice-recorder.machine.ts'
+import {filePreviewMachine} from '/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/files/file-preview.machine.ts'
+import {readFilePreview} from '/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/files/file-preview-resource.ts'
+import {fileWorkFailures} from '/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/files/owned-work.ts'
+const root='/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi'
+const require=createRequire(root+'/package.json')
+const {Effect,Scope,Exit}=await import(require.resolve('effect'))
+const {createEffectActor,send}=await import(require.resolve('@xstate/effect'))
+const manifest=JSON.parse(await readFile('/private/tmp/f03-media-final-source.json','utf8'))
+const source=Object.fromEntries(await Promise.all(Object.keys({...manifest.files,...manifest.shared_dependencies}).map(async p=>[p,createHash('sha256').update(await readFile(root+'/'+p)).digest('hex')])))
+const evidence:any={source}
+async function until(check:()=>boolean){for(let i=0;i<1000;i++){if(check())return;await new Promise(r=>setTimeout(r,1))}throw new Error('bounded wait failed')}
+const scope=await Effect.runPromise(Scope.make())
+let stops=0,uploads=0,nativeStops=0
+const recorder:any={state:'inactive',mimeType:'audio/webm',onstop:null,ondataavailable:null,onerror:null,start(){this.state='recording'},stop(){this.state='inactive';nativeStops++;this.ondataavailable?.({data:new Blob(['last chunk'])})}}
+const actor=await Effect.runPromise(Effect.gen(function*(){const observe=yield* fileWorkFailures;return yield* createEffectActor(voiceRecorderMachine({open:()=>openVoiceCapture({acquire:()=>Promise.resolve({getTracks:()=>[{stop:()=>stops++},{stop:()=>stops++}]} as any),recorder:()=>recorder},observe),upload:()=>Effect.sync(()=>{uploads++})}))}).pipe(Scope.provide(scope)))
+try{
+ await Effect.runPromise(send(actor,{type:'START'}));await until(()=>actor.getSnapshot().matches('recording'))
+ // Finish as soon as the recording state is visible, without an extra recorder-ready wait.
+ await Effect.runPromise(send(actor,{type:'FINISH'}));await until(()=>nativeStops===1)
+ await Effect.runPromise(send(actor,{type:'CANCEL'}));await until(()=>actor.getSnapshot().matches('releasing'))
+ assert.equal(stops,0,'tracks cannot release before held native onstop joins')
+ assert.equal(uploads,0)
+ recorder.onstop?.();await until(()=>actor.getSnapshot().matches('idle'))
+ evidence.voice={state:actor.getSnapshot().value,stops,uploads,nativeStops}
+ assert.deepEqual(evidence.voice,{state:'idle',stops:2,uploads:0,nativeStops:1})
+}finally{await Effect.runPromise(Scope.close(scope,Exit.void))}
+const original=globalThis.fetch
+let bodyRelease!:(value:unknown)=>void,signal!:AbortSignal,requests:string[]=[]
+globalThis.fetch=(input,options)=>{requests.push(String(input));signal=options!.signal!;return Promise.resolve({ok:true,json:()=>new Promise(r=>{bodyRelease=r})} as any)}
+const previewScope=await Effect.runPromise(Scope.make())
+try{
+ const resource={key:'alpha',agentId:'alpha',fileId:'file',kind:'transcript' as const,eager:true}
+ await Effect.runPromise(Effect.gen(function*(){const observe=yield* fileWorkFailures;return yield* createEffectActor(filePreviewMachine(input=>observe(readFilePreview(input))),{input:resource})}).pipe(Scope.provide(previewScope)))
+ await until(()=>!!bodyRelease)
+ let joined=false
+ const closing=Effect.runPromise(Scope.close(previewScope,Exit.void)).then(()=>{joined=true})
+ await until(()=>signal.aborted)
+ assert.equal(joined,false,'preview owner must join actual response-body settlement')
+ bodyRelease({text:'late first page',next:12});await closing
+ evidence.preview={joined,requests,aborted:signal.aborted}
+ assert.equal(requests.length,1,'aborted transcript must not admit its second page')
+}finally{globalThis.fetch=original;await Effect.runPromise(Scope.close(previewScope,Exit.void))}
+console.log(JSON.stringify(evidence,null,2));await writeFile('/private/tmp/f03-media-independent/evidence.json',JSON.stringify(evidence,null,2))

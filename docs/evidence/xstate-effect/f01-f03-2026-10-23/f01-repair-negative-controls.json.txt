@@ -1,0 +1,16 @@
+[
+  {
+    "name": "sdk-cleanup-join",
+    "exit": 1,
+    "before": "813f41fd06dae955f2cb817c69de2631fe845eee8c674c5ff75896f892f48f72",
+    "after": "813f41fd06dae955f2cb817c69de2631fe845eee8c674c5ff75896f892f48f72",
+    "restored": true
+  },
+  {
+    "name": "stop-during-retry",
+    "exit": 1,
+    "before": "9e6829532e0f99376e218f028a49441106572dae733bbb7db1af395d8fe52704",
+    "after": "9e6829532e0f99376e218f028a49441106572dae733bbb7db1af395d8fe52704",
+    "restored": true
+  }
+]

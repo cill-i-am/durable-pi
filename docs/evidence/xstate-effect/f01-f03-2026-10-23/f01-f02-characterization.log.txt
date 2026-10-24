@@ -1,0 +1,26 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi
+
+ ❯ tests/composer-draft.test.ts (5 tests | 1 failed) 9ms
+   × does not turn an unreadable or newer saved draft into a writable empty draft 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/composer-draft.test.ts > does not turn an unreadable or newer saved draft into a writable empty draft
+AssertionError: expected [Function] to throw an error
+ ❯ tests/composer-draft.test.ts:140:54
+    138|   for (const raw of ["{broken", JSON.stringify({ ...emptyDraft(), vers…
+    139|     store.setItem(key, raw)
+    140|     expect(() => readDraft(store, "owner", "agent")).toThrow()
+       |                                                      ^
+    141|     expect(store.getItem(key)).toBe(raw)
+    142|   }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 4 passed (5)
+   Start at  16:48:50
+   Duration  280ms (import 76%, transform 14%, tests 5%, setup 3%, worker 1%)
+

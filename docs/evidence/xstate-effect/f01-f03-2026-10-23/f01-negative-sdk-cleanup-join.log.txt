@@ -1,0 +1,29 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi
+
+stderr | tests/conversation-connection-composition.test.ts > joins the SDK's unawaited reader cancellation before replacement fetch
+Event "xstate.effect.resolve" to actor "0.conversation-connection.failed" was not delivered (stopped).
+
+ ❯ tests/conversation-connection-composition.test.ts (5 tests | 1 failed | 4 skipped) 375ms
+   × joins the SDK's unawaited reader cancellation before replacement fetch 374ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/conversation-connection-composition.test.ts > joins the SDK's unawaited reader cancellation before replacement fetch
+AssertionError: expected "vi.fn()" to be called 1 times, but got 2 times
+ ❯ tests/conversation-connection-composition.test.ts:119:19
+    117|     await cancelling
+    118|     await new Promise((resolve) => setTimeout(resolve, 350))
+    119|     expect(fetch).toHaveBeenCalledTimes(1)
+       |                   ^
+    120|     expect(settled).toBe(false)
+    121|   } finally {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 4 skipped (5)
+   Start at  17:36:40
+   Duration  861ms (tests 51%, import 34%, transform 13%, setup 1%, worker 1%)
+

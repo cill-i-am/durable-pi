@@ -1,0 +1,16 @@
+{
+  "extends": "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tsconfig.json",
+  "include": [
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/conversation/connection-owner.ts",
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/conversation/submission-owner.ts",
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/conversation/turn-command-owner.ts",
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/conversation-connection-machine.test.ts",
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/conversation-submission-machine.test.ts"
+  ],
+  "compilerOptions": {
+    "typeRoots": [
+      "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/@types",
+      "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules"
+    ]
+  }
+}

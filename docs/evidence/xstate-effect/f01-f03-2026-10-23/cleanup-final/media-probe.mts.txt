@@ -1,0 +1,24 @@
+import assert from 'node:assert/strict'
+import {createRequire} from 'node:module'
+import {openVoiceCapture} from '/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/files/voice-capture.ts'
+import {fileWorkFailures} from '/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/files/owned-work.ts'
+import {readFilePreview} from '/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/files/file-preview-resource.ts'
+import {filePreviewMachine} from '/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/files/file-preview.machine.ts'
+const require=createRequire('/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/package.json'),{Cause,Context,Effect,Exit,Scope}=await import(require.resolve('effect')),{createEffectActor}=await import(require.resolve('@xstate/effect'))
+class NativeRequest extends Context.Service()('F03Media.NativeRequest'){}
+for(const [name,sentinel] of [['voice',90106],['preview',90107]] as const){
+ let enter!:()=>void,reject!:(reason:unknown)=>void
+ const entered=new Promise<void>(r=>enter=r),scope=await Effect.runPromise(Scope.make()),oldFetch=globalThis.fetch
+ const native=()=>{enter();return new Promise<never>((_,fail)=>reject=fail)}
+ if(name==='voice')await Effect.runPromise(Effect.gen(function*(){const observe=yield* fileWorkFailures;return yield* openVoiceCapture({acquire:native,recorder:()=>assert.fail('no recorder')},observe)}).pipe(Scope.provide(scope)))
+ else{globalThis.fetch=native;await Effect.runPromise(Effect.gen(function*(){const observe=yield* fileWorkFailures;return yield* createEffectActor(filePreviewMachine(input=>observe(readFilePreview(input))),{input:{key:'review',agentId:'review',fileId:'review',kind:'text',eager:true}})}).pipe(Scope.provide(scope)))}
+ await entered;let settled=false
+ const closing=Effect.runPromiseExit(Scope.close(scope,Exit.void)).then(x=>{settled=true;return x})
+ await new Promise(r=>setImmediate(r));assert.equal(settled,false)
+ const annotation=Context.make(NativeRequest,name)
+ reject(Cause.fromReasons([Cause.makeFailReason(`${name} checked`).annotate(annotation),Cause.makeInterruptReason(sentinel).annotate(annotation)]))
+ const exit=await closing;globalThis.fetch=oldFetch;assert.ok(Exit.isFailure(exit))
+ const interrupt=exit.cause.reasons.find((r:any)=>r._tag==='Interrupt'&&r.fiberId===sentinel),checked=exit.cause.reasons.find((r:any)=>r._tag==='Die'&&r.defect?._tag==='Fail')
+ console.log(JSON.stringify({owner:name,joined:true,nativeInterrupt:!!interrupt,interruptAnnotation:interrupt?.annotations.get(NativeRequest.key),nativeChecked:!!checked,checkedAnnotation:checked?.defect.annotations.get(NativeRequest.key)}))
+ assert.equal(interrupt?.annotations.get(NativeRequest.key),name);assert.equal(checked?.defect.annotations.get(NativeRequest.key),name)
+}

@@ -1,0 +1,11 @@
+# Conversation resume integration diagnosis
+
+Only `tests/conversation-resume.test.ts` changed. All original behavioral assertions and the default 5,000 ms timeout remain. Four production connection file hashes are unchanged in `manifest.json`.
+
+The original failure happens before the first fetch. `initial-stalled.log` records the first `stream.next()` with zero URLs and zero timeout calls, followed by the unchanged 5,000 ms timeout. Default `vi.useFakeTimers()` freezes native `setImmediate`; the installed Effect Scheduler uses that to start the official actor. This is why the parent's later 250 ms barrier never ran.
+
+Leaving the scheduler native reveals a second synchronization boundary. `native-scheduler.log` receives the connection and cursor frames, but advances 250 ms with zero installed timers. The acknowledged frame still has to complete native reader cleanup and the official mailbox transition before the backoff invocation installs its timer. The test needs to await that observable native entry.
+
+The repair fakes only `setTimeout` and `clearTimeout`, matching existing conversation-connection-machine tests, then waits for the actual 250 ms timer installation before the original advance. The timer spy is restored afterward. The native scheduler remains unchanged in production. The temporary single-test proof passes in `native-entry-barrier.log`; both partial fixes are retained as failing controls. No test duration or assertion was relaxed.
+
+`focused-final.log`: 24/24 in conversation-resume, conversation-connection-machine and conversation-connection-composition. The composition suite exercises the real TanStack adapter with native clocks and synthetic responses, including cursor recovery, denial, unread cleanup and compound failure preservation. Scoped lint and formatting pass; `git diff --check` passed. Parent owns final broad gates.

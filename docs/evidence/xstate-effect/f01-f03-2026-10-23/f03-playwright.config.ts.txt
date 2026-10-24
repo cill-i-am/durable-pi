@@ -1,0 +1,2 @@
+import { defineConfig } from "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/node_modules/@playwright/test/index.mjs"
+export default defineConfig({testDir:"/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/browser",testMatch:"files-lifecycle.spec.ts",workers:1,retries:0,timeout:15000,reporter:"list",use:{browserName:"chromium",headless:true},projects:[{name:"desktop",use:{viewport:{width:1280,height:900}}},{name:"mobile",use:{viewport:{width:390,height:844},isMobile:true,hasTouch:true}}]})

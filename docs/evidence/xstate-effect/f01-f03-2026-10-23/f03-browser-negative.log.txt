@@ -1,0 +1,39 @@
+
+Running 1 test using 1 worker
+
+(node:90253) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 [desktop] › tests/browser/files-lifecycle.spec.ts:249:1 › a pre-upload list response cannot erase the published file while the fresh read is held (5.3s)
+
+
+  1) [desktop] › tests/browser/files-lifecycle.spec.ts:249:1 › a pre-upload list response cannot erase the published file while the fresh read is held 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: locator('#value')
+    Expected substring: "\"files\":[{\"id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\""
+    Received string:    "{\"agent\":\"alpha\",\"files\":[],\"selected\":[{\"id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"name\":\"alpha.txt\",\"mime\":\"text/plain\",\"kind\":\"text\",\"size\":1,\"createdAt\":\"2026-10-23T00:00:00Z\",\"status\":\"ready\",\"trashed\":false}],\"uploads\":[],\"uploading\":false,\"error\":\"\"}"
+    Timeout: 5000ms
+
+    Call log:
+      - Expect "toContainText" locator('#value') with timeout 5000ms
+      - waiting for locator('#value')
+        14 × locator resolved to <pre id="value">{"agent":"alpha","files":[],"selected":[{"id":"aa…</pre>
+           - unexpected value "{"agent":"alpha","files":[],"selected":[{"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","name":"alpha.txt","mime":"text/plain","kind":"text","size":1,"createdAt":"2026-10-23T00:00:00Z","status":"ready","trashed":false}],"uploads":[],"uploading":false,"error":""}"
+
+
+      274 |     return !scope.probe.loading || scope.lists.length === 1
+      275 |   })
+    > 276 |   await expect(page.locator("#value")).toContainText(
+          |                                        ^
+      277 |     '"files":[{"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"'
+      278 |   )
+      279 |   await page.evaluate(() => {
+        at /Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/tests/browser/files-lifecycle.spec.ts:276:40
+
+    Error Context: test-results/files-lifecycle-a-pre-uplo-e14cd-hile-the-fresh-read-is-held-desktop/error-context.md
+
+    Error Context: test-results/files-lifecycle-a-pre-uplo-e14cd-hile-the-fresh-read-is-held-desktop/error-context.md
+
+  1 failed
+    [desktop] › tests/browser/files-lifecycle.spec.ts:249:1 › a pre-upload list response cannot erase the published file while the fresh read is held 

@@ -1,0 +1,20 @@
+{"owner":"submission","joined":true,"scopeFailure":true,"nativeInterrupt":false,"nativeChecked":true,"checkedAnnotation":"submission"}
+{"owner":"turn","joined":true,"scopeFailure":true,"nativeInterrupt":false,"nativeChecked":true,"checkedAnnotation":"turn"}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+false !== true
+
+    at <anonymous> (/private/tmp/f01-f03-no-die/commands-probe.mts:26:66) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.21.0

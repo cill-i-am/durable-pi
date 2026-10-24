@@ -67,7 +67,10 @@ export const nativeOperation = <T, TError>(
     ).pipe(
       Effect.andThen(
         Effect.suspend(() =>
-          !delivered && failed && Cause.hasDies(failed)
+          !delivered &&
+          failed &&
+          (Cause.hasDies(failed) ||
+            (Cause.hasInterrupts(failed) && !Cause.hasInterruptsOnly(failed)))
             ? Effect.failCause(failed).pipe(orDieAll)
             : Effect.void
         )

@@ -1,0 +1,26 @@
+
+Running 6 tests using 1 worker
+
+(node:93251) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 tests/browser/file-media-lifecycle.spec.ts:87:1 › cancelled acquisition prevents restart until the late stream is released (0ms)
+  -  2 tests/browser/file-media-lifecycle.spec.ts:100:1 › finish waits for native final data before releasing and uploading once
+  -  3 tests/browser/file-media-lifecycle.spec.ts:112:1 › unmount joins late permission without recording or uploading
+  -  4 tests/browser/file-media-lifecycle.spec.ts:121:1 › denied microphone retains an enabled explicit retry
+  -  5 tests/browser/file-media-lifecycle.spec.ts:127:1 › transcript and text previews fence late results across the same file ID on another agent
+  -  6 tests/browser/file-media-lifecycle.spec.ts:140:1 › video preview clears prior frames and aborts pending resources on unmount
+
+
+  1) tests/browser/file-media-lifecycle.spec.ts:87:1 › cancelled acquisition prevents restart until the late stream is released 
+
+    Error: listen EPERM: operation not permitted 127.0.0.1
+
+    Error: Server is not running.
+
+    Error Context: ../../../../../../private/tmp/f03-media-browser-results/file-media-lifecycle-cance-8c352-the-late-stream-is-released/error-context.md
+
+    Error Context: ../../../../../../private/tmp/f03-media-browser-results/file-media-lifecycle-cance-8c352-the-late-stream-is-released/error-context.md
+
+  1 failed
+    tests/browser/file-media-lifecycle.spec.ts:87:1 › cancelled acquisition prevents restart until the late stream is released 
+  5 did not run

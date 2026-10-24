@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict'
+import {createRequire} from 'node:module'
+import {makeFilesOwner} from '/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/files/files-owner.ts'
+import {makeFilesCache} from '/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/files/file-cache.ts'
+const require=createRequire('/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/package.json')
+const {Effect,Scope,Exit}=await import(require.resolve('effect'))
+const original=globalThis.fetch
+let reads=0
+const pending={id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',name:'proof.pdf',mime:'application/pdf',kind:'document',size:1,createdAt:'2026-10-23T00:00:00Z',status:'ready',trashed:false,extraction:{status:'pending',pages:0,readPages:0,characters:0,truncated:false,error:null}}
+globalThis.fetch=(input)=>String(input).includes('/upload')?Promise.resolve(Response.json(pending)):++reads===1?Promise.resolve(Response.json({files:[]})):Promise.reject(new Error('one transient post-upload list failure'))
+const scope=await Effect.runPromise(Scope.make())
+try{
+ const owner=await Effect.runPromise(makeFilesOwner('alpha',makeFilesCache([])).pipe(Scope.provide(scope)))
+ while(owner.read().loading)await new Promise(done=>setTimeout(done,1))
+ await Effect.runPromise(owner.upload([new File(['a'],'proof.pdf')],true))
+ while(owner.read().loading)await new Promise(done=>setTimeout(done,1))
+ console.log(JSON.stringify({stage:'first failure',reads,view:owner.read(),files:owner.cache.read().files}))
+ await new Promise(done=>setTimeout(done,2200))
+ console.log(JSON.stringify({stage:'after retry interval',reads,view:owner.read()}))
+ assert.ok(reads>=3,'pending committed extraction must retain bounded observation after its first failed list read')
+}finally{await Effect.runPromise(Scope.close(scope,Exit.void));globalThis.fetch=original}

@@ -1,0 +1,21 @@
+{"status":"Success","reasons":[]}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ 'Success'
+- 'Failure'
+
+    at <anonymous> (/private/tmp/f03-cleanup-probe/probe.mts:23:44) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 'Success',
+  expected: 'Failure',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.21.0

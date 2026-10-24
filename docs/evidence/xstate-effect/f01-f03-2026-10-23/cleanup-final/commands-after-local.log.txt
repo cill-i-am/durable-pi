@@ -1,0 +1,2 @@
+{"owner":"submission","joined":true,"scopeFailure":true,"nativeInterrupt":true,"interruptAnnotation":"submission","nativeChecked":true,"checkedAnnotation":"submission"}
+{"owner":"turn","joined":true,"scopeFailure":true,"nativeInterrupt":true,"interruptAnnotation":"turn","nativeChecked":true,"checkedAnnotation":"turn"}

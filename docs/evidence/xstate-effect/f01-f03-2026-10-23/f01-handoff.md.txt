@@ -1,0 +1,37 @@
+# F01 conversation and F02 draft ownership handoff
+
+Worktree: `/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi`.
+Base: `e521e980c3f60992bae9b63ed113e19da0a4e9f0`.
+Exact feature source/test manifest: `/private/tmp/f01-freeze-manifest.json` (21 files).
+No Git, package, server-worker, provider, merge, deployment, or shared tracking mutations.
+
+## Contract and invariants
+
+- Separate official @xstate/effect actors own conversation transport, submission, turn retry/cancel, and composer persistence. React subscribes to state; `sending` is an actor projection. TanStack useChat/protocol internals and generation-tagged view caches remain external/plain owners.
+- Five consecutive stream failures exhaust; every accepted frame resets that budget. Cursor is decoded and replayed. ApiError auth rejection is terminal. An explicit reconnect selects a fresh SDK transport identity; it does not automatically resend.
+- Native iterator, listener, bounded queue, and Effect delay belong to the stream scope. Abort fences late frames immediately, subscription completion joins native iterator teardown, and action defects terminate the handoff. Permission responses join unread-body cancellation. Full compound Cause is retained, including late native defects.
+- Draft keys, owner/agent isolation, file-reference representation, and v1 schema remain unchanged. Unreadable/oversized/future data throws at read; the owner retains original bytes, allows only in-memory edits, blocks sending/reload, and never writes over it.
+- Draft writes serialize. Each caller receives its revision's result; a stale save cannot mark a newer failed save safe. Failed removal of an empty draft still blocks reload. Scope close joins a held write and settles waiting callers without replacement writes.
+- Persist the exact attempt before the native submission starts. Double clicks while saving/sending/acknowledging cannot dispatch twice. Restored uncertainty is inert until explicit Send, then reuses the exact original operation id. No automatic resend or fallback.
+- Acknowledgement clears only that attempt and submitted file ids; newer text/model choices survive. Model-unavailable rejection alone clears the attempt after failure. Owner teardown aborts and joins native send/control settlement, fences late acknowledgement, and retains the pending attempt.
+- Explicit retry/cancel share their own command actor; a failed retry retains its per-turn operation id. No automatic retry. Existing RecoveryControls/mailbox UI and independent recovery ownership remain intact.
+
+## Concrete pre-fix defect
+
+Existing draft/client recovery baseline passed 8 tests (`/private/tmp/f01-f02-baseline.log`). New regression then failed: `readDraft` converted malformed/future data into writable empty data (`/private/tmp/f01-f02-characterization.log`). Initial file-selection persistence could delete those original bytes and reload appeared safe. The new unreadable state fixes that loss path without resetting browser data.
+
+## Verification
+
+Environment: `PATH=/opt/homebrew/opt/node@24/bin:$PATH`.
+
+- `pnpm exec vitest run tests/conversation-connection-composition.test.ts tests/conversation-submission-machine.test.ts tests/conversation-connection-machine.test.ts tests/composer-draft.test.ts tests/composer-draft-machine.test.ts`: 32/32 pass, `/private/tmp/f01-final-focused.log`.
+- `pnpm exec tsc --noEmit`: pass, `/private/tmp/f01-final-types.log`.
+- Scoped `pnpm exec oxlint --config oxlint.config.ts --deny-warnings` over `/private/tmp/f01-owned-files.txt`: pass, `/private/tmp/f01-final-lint.log`.
+- Scoped `pnpm exec oxfmt --check`: pass, `/private/tmp/f01-final-format.log`.
+- `pnpm exec playwright test --config /private/tmp/f01-playwright.config.ts`: 26/26 desktop/mobile pass, `/private/tmp/f01-final-browser.log`. Isolated local port4463, dist/browser-f01, synthetic journey backend. Covers new unreadable/future-data retention, failed-save zero dispatch, newer text during held acknowledgement, plus existing stale-tab uncertain-send restore, queue/window, and RecoveryControls.
+- Original first browser pass was25/26; F02 owner corrected the old synchronous navigation-count assertion to await actual navigation. Final26/26 is on that correction; no assertion was removed.
+- Mutation `draft-unreadable` replaces the unreadable transition with saved; assertion fails (`expected true to be false`). Mutation `submission-before-save` admits a false persistence result; assertion fails. `/private/tmp/f01-negative-controls.json` records exit1 and identical restored before/after hashes. Raw logs: `/private/tmp/f01-negative-draft-unreadable.log`, `/private/tmp/f01-negative-submission-before-save.log`.
+
+## Limits / remaining parent work
+
+This is focused local browser/native-Promise/Effect evidence, not production provider or full repository gate proof. F02 updates owner separately owns safe-reload machine and real two-build retired-asset proof. F03 source was composed during local browser runs. Parent owns final evidence publication, shared inventory, broad gates, and independent review. Reviewer has exact frozen manifest; only concrete review repairs should change F01 now.

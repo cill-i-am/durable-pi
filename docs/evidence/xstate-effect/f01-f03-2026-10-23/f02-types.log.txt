@@ -1,0 +1,11 @@
+tests/conversation-connection-machine.test.ts(212,5): error TS2345: Argument of type '() => AsyncGenerator<{ type: "MESSAGES_SNAPSHOT"; messages: never[]; }, void, any>' is not assignable to parameter of type '(cursor: (string & Brand<"ConversationCursor">) | null, signal: AbortSignal) => AsyncIterable<AGUIEvent>'.
+  Type 'AsyncGenerator<{ type: "MESSAGES_SNAPSHOT"; messages: never[]; }, void, any>' is not assignable to type 'AsyncIterable<AGUIEvent>'.
+    The types returned by '[Symbol.asyncIterator]().next(...)' are incompatible between these types.
+      Type 'Promise<IteratorResult<{ type: "MESSAGES_SNAPSHOT"; messages: never[]; }, void>>' is not assignable to type 'Promise<IteratorResult<AGUIEvent, any>>'.
+        Type 'IteratorResult<{ type: "MESSAGES_SNAPSHOT"; messages: never[]; }, void>' is not assignable to type 'IteratorResult<AGUIEvent, any>'.
+          Type 'IteratorYieldResult<{ type: "MESSAGES_SNAPSHOT"; messages: never[]; }>' is not assignable to type 'IteratorResult<AGUIEvent, any>'.
+            Type 'IteratorYieldResult<{ type: "MESSAGES_SNAPSHOT"; messages: never[]; }>' is not assignable to type 'IteratorYieldResult<AGUIEvent>'.
+              Type '{ type: "MESSAGES_SNAPSHOT"; messages: never[]; }' is not assignable to type 'AGUIEvent'.
+                Type '{ type: "MESSAGES_SNAPSHOT"; messages: never[]; }' is not assignable to type 'MessagesSnapshotEvent'.
+                  Types of property 'type' are incompatible.
+                    Type '"MESSAGES_SNAPSHOT"' is not assignable to type 'EventType.MESSAGES_SNAPSHOT'.

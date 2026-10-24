@@ -1,0 +1,1 @@
+tests/client-recovery.test.ts(3,10): error TS2305: Module '"../src/features/updates/recovery"' has no exported member 'createRecovery'.

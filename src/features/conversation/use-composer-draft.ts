@@ -1,42 +1,93 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { Effect, Fiber } from "effect"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import type { SnapshotFrom } from "xstate"
 
 import { useFiles } from "@/features/files/use-files"
 import { useReloadGuard } from "@/features/updates/update-recovery"
 
+import { makeComposerDraft } from "./composer-draft-owner"
+import type { composerDraftMachine } from "./composer-draft.machine"
 import { emptyDraft, readDraft, writeDraft, type ComposerDraft } from "./draft"
 
+type DraftOwner = Effect.Success<ReturnType<typeof makeComposerDraft>>
+type Snapshot = SnapshotFrom<ReturnType<typeof composerDraftMachine>>
 export function useComposerDraft(ownerId: string, agentId: string) {
-  const [value, setValue] = useState<ComposerDraft>(() => {
+  const initial = useMemo(() => {
     try {
-      return readDraft(sessionStorage, ownerId, agentId)
+      return {
+        draft: readDraft(sessionStorage, ownerId, agentId),
+        unreadable: false,
+      }
     } catch {
-      return emptyDraft()
+      return { draft: emptyDraft(), unreadable: true }
     }
-  })
-  const current = useRef(value)
-  const [unsaved, setUnsaved] = useState(false)
+  }, [ownerId, agentId])
+  const owner = useRef<DraftOwner | null>(null)
+  const [observed, setObserved] = useState<{
+    initial: typeof initial
+    snapshot: Snapshot
+  } | null>(null)
+  useEffect(() => {
+    let mounted = true
+    const fiber = Effect.runFork(
+      Effect.gen(function* () {
+        const current = yield* makeComposerDraft(initial, (draft) =>
+          Effect.try({
+            try: () => writeDraft(sessionStorage, ownerId, agentId, draft),
+            catch: (cause) => cause,
+          })
+        )
+        owner.current = current
+        yield* Effect.acquireRelease(
+          Effect.sync(() =>
+            current.actor.subscribe((snapshot) => {
+              if (mounted) setObserved({ initial, snapshot })
+            })
+          ),
+          (subscription) => Effect.sync(() => subscription.unsubscribe())
+        )
+        if (mounted)
+          setObserved({ initial, snapshot: current.actor.getSnapshot() })
+        return yield* Effect.never
+      }).pipe(Effect.scoped)
+    )
+    return () => {
+      mounted = false
+      owner.current = null
+      Effect.runFork(
+        Fiber.interrupt(fiber).pipe(
+          Effect.catchCause((cause) =>
+            Effect.sync(() =>
+              console.error("Composer draft cleanup failed", cause)
+            )
+          )
+        )
+      )
+    }
+  }, [ownerId, agentId, initial])
   const update = useCallback(
     (
       change:
         | Partial<ComposerDraft>
         | ((draft: ComposerDraft) => Partial<ComposerDraft>)
     ) => {
-      const next = {
-        ...current.current,
-        ...(typeof change === "function" ? change(current.current) : change),
-      }
-      current.current = next
-      setValue(next)
-      try {
-        writeDraft(sessionStorage, ownerId, agentId, next)
-        setUnsaved(false)
-      } catch {
-        setUnsaved(!!next.text || !!next.files.length || !!next.attempt)
-      }
+      const current = owner.current
+      return current
+        ? Effect.runPromise(
+            current.update(typeof change === "function" ? change : () => change)
+          )
+        : Promise.resolve(false)
     },
-    [ownerId, agentId]
+    []
   )
-  return { value, update, unsaved }
+  const snapshot = observed?.initial === initial ? observed.snapshot : null
+  return {
+    value: snapshot?.context.draft ?? initial.draft,
+    update,
+    ready: !!snapshot,
+    unreadable: snapshot?.matches("unreadable") ?? initial.unreadable,
+    unsaved: snapshot ? !snapshot.matches("saved") : initial.unreadable,
+  }
 }
 export type ComposerDraftState = ReturnType<typeof useComposerDraft>
 
@@ -51,7 +102,7 @@ export function useComposerWorkspace(
   const { selected, refresh } = files
   const { update } = composerDraft
   useEffect(() => {
-    update({ files: selected })
+    void update({ files: selected })
   }, [selected, update])
   const restoreFiles = useRef(composerDraft.value.files.length > 0)
   useEffect(() => {
@@ -61,7 +112,9 @@ export function useComposerWorkspace(
     }
   }, [refresh])
   useReloadGuard(
-    "Your draft could not be saved in this tab. Copy it before reloading.",
+    composerDraft.unreadable
+      ? "Your saved draft could not be read. Keep this tab open; its original data has been retained."
+      : "Your draft could not be saved in this tab. Copy it before reloading.",
     composerDraft.unsaved
   )
   useReloadGuard(
