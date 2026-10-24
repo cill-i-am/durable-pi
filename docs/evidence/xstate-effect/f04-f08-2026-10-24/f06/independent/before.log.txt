@@ -1,0 +1,81 @@
+{
+  "source": {
+    "src/features/access/approval-card.tsx": "c79eee07f928a4df17d346fdf9e18dd4a2e8866a42765b1b9605e36a1cbccdac",
+    "src/features/access/access-panel.tsx": "edf5d8f3387267e13edeb384ac175d70061b59ffde3391886f5b9a072a4d131f",
+    "src/features/access/decision.ts": "8e13269cc146e24b0b37a68fbac34aedd201d4220afa272f647aae8e47b27c17",
+    "src/features/access/approval.machine.ts": "0111560907f14da3352a55509075a87376fbaccce3769b301822e486e96c9625",
+    "src/features/access/access.machine.ts": "cdc3cbfb4ff16f9c116ac84ffd6078effa882a6145b3ea7f8f5a72aed43f7b55",
+    "src/features/access/access-owner.ts": "0a460918b8be10a72d717c5ac687647b881444639862b4bb6ede5a75a96fd6fd",
+    "src/features/access/use-access.ts": "511e828366c7c2fd50d62a1b5d8cb232c9c53b018ef7b07b0b52da4e97f851b2",
+    "src/features/access/use-approval.ts": "118572fe34f4675d125167165495978c3d926eab8698bf301f3f69a1fa921509",
+    "src/features/connections/connections.machine.ts": "4e6f2196895c871a32b7065ee774b7f47c1b02a24292fc3b3d6b7bdc792c2fd1",
+    "src/features/connections/connections-owner.ts": "e90875e467542dfe1127353ebba1f8812c26edc56c6d53a1e851537c3919f494",
+    "src/features/connections/use-connections.ts": "4ef4b819b51e1ba6ea87ef9e250c3e885e68a7d06c5ff532243720625d5ccd56",
+    "src/features/connections/connections-panel.tsx": "ceeb930d92330e6bae7985b23aaf9c205fad0b53b491ffe6ff9c02bef3009931",
+    "tests/access-connections-ui.test.ts": "7b573ddf432b29c77dda708aaef4acaa3f147e9e8015af3efc4ae53ba6eb72b3",
+    "tests/approval-decision.test.ts": "63062df6539da28666d8381e0bf52362afec2aeaefd0f3c623fd059e460b8775",
+    "tests/browser/access-connections-lifecycle.spec.ts": "fa3e827ed2004e31e8976fece1d870a927a3dda138c482c57d7640c5ef06f9ae",
+    "docs/xstate-effect-access-connections-ui.md": "9971ac6a2aeaa5f053b7178840017cdda53a1e380bc2bf285f6744dac43c33fb"
+  },
+  "policy": {
+    "currentPolicy": {
+      "name": "write_note",
+      "description": "write",
+      "mode": "deny",
+      "revision": 4
+    },
+    "confirmed": {
+      "approval": {
+        "id": "a",
+        "turnId": "turn",
+        "tool": "write_note",
+        "input": "reviewed",
+        "createdAt": 1,
+        "expiresAt": 9000000000000,
+        "status": "pending",
+        "revision": 4
+      },
+      "revision": 4,
+      "approve": true,
+      "remember": true
+    },
+    "error": ""
+  },
+  "approvalCleanup": {
+    "status": "Failure",
+    "reasons": [
+      {
+        "tag": "Die"
+      },
+      {
+        "tag": "Die"
+      }
+    ]
+  },
+  "connectionsCleanup": {
+    "status": "Failure",
+    "reasons": [
+      {
+        "tag": "Die"
+      },
+      {
+        "tag": "Die"
+      }
+    ]
+  }
+}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: a stale allow response must not claim future permission after a newer deny policy
+    at <anonymous> (/private/tmp/f06-independent/probe.mts:47:8) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v24.21.0

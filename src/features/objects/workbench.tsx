@@ -17,6 +17,7 @@ import { parseAgentId, workspaceDestination } from "@/navigation/workspace"
 
 import { ChecklistView, SaveState } from "./checklist"
 import { useObjects, useObjectState } from "./context"
+import { useObjectCreation } from "./use-object-creation"
 
 export function ObjectsWorkbench({
   selected,
@@ -29,7 +30,12 @@ export function ObjectsWorkbench({
 }) {
   const context = useObjects()
   if (!context) return null
-  return <Workbench {...{ selected, onSelect, onEditing, context }} />
+  return (
+    <Workbench
+      key={context.agentId}
+      {...{ selected, onSelect, onEditing, context }}
+    />
+  )
 }
 function Workbench({
   selected,
@@ -45,21 +51,15 @@ function Workbench({
   const { store, agentId, archived } = context,
     state = useObjectState(store)
   const [editing, setEditing] = useState(false),
-    [creating, setCreating] = useState<string | null>(null),
     [title, setTitle] = useState("")
+  const creation = useObjectCreation(store, selected, onSelect),
+    creating = creation.id
   const inputId = useId(),
     locked = editing || !!creating || Object.keys(state.pending).length > 0
   useEffect(() => {
     onEditing(editing || !!creating)
     return () => onEditing(false)
   }, [editing, creating, onEditing])
-  useEffect(() => {
-    if (creating && state.saved[creating]) {
-      onSelect(creating)
-      setCreating(null)
-      setTitle("")
-    }
-  }, [state.saved, creating, onSelect])
   return (
     <>
       {!selected && (
@@ -72,7 +72,10 @@ function Workbench({
               variant="outline"
               size="sm"
               disabled={archived || locked}
-              onClick={() => setCreating(crypto.randomUUID())}
+              onClick={() => {
+                setTitle("")
+                creation.begin()
+              }}
             >
               <Plus data-icon="inline-start" />
               New checklist
@@ -156,8 +159,9 @@ function Workbench({
                 variant="outline"
                 disabled={!!state.pending[creating]}
                 onClick={() => {
-                  store.dismiss(creating)
-                  setCreating(null)
+                  void store.dismiss(creating).then((ok) => {
+                    if (ok) creation.cancel()
+                  })
                   setTitle("")
                 }}
               >

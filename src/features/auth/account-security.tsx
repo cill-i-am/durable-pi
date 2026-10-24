@@ -1,5 +1,5 @@
 import { Monitor, ShieldCheck } from "lucide-react"
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
+import { useEffect, useRef, type ReactNode } from "react"
 
 import { authClient } from "@/auth/client"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -11,15 +11,99 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog"
 
+import { useAuthBusy } from "./auth-owner"
 import { FactorSettings } from "./factor-settings"
 import { PasskeySettings } from "./passkey-settings"
-import { securityError } from "./security-errors"
+import { useSecurity } from "./security-owner"
 import { sessionLabel } from "./session-label"
 
-type BrowserSession = typeof authClient.$Infer.Session.session
-type Confirmation =
-  | { kind: "others" }
-  | { kind: "one"; session: BrowserSession }
+function securityProjection(state: ReturnType<typeof useSecurity>["snapshot"]) {
+  if (!state)
+    return {
+      sessions: [],
+      loading: true,
+      pending: false,
+      factorLocked: false,
+      passkeyLocked: false,
+      factorView: false,
+      error: "",
+      freshSignIn: false,
+      notice: "",
+      confirm: null,
+      readFailed: false,
+    }
+  const context = state.context
+  return {
+    sessions: context.sessions,
+    loading: state.matches("loading"),
+    pending:
+      state.matches("revoking") ||
+      state.matches("signingOut") ||
+      state.matches("signedOut"),
+    factorLocked: context.factorBusy,
+    passkeyLocked: context.passkeyBusy,
+    factorView: context.factorView,
+    error: context.error,
+    freshSignIn: context.freshSignIn,
+    notice: context.notice,
+    confirm: context.confirm,
+    readFailed: context.readFailed,
+  }
+}
+function useSecurityView(
+  onClose: () => void,
+  onPendingChange?: (pending: boolean) => void
+) {
+  const { data: current } = authClient.useSession()
+  const auth = useSecurity(current?.session.id ?? "signed-out", onClose)
+  const {
+    sessions,
+    loading,
+    pending,
+    factorLocked,
+    passkeyLocked,
+    factorView,
+    error,
+    freshSignIn,
+    notice,
+    confirm,
+    readFailed,
+  } = securityProjection(auth.snapshot)
+  const confirmationHeading = useRef<HTMLHeadingElement>(null)
+  useEffect(() => {
+    if (confirm) confirmationHeading.current?.focus()
+  }, [confirm])
+  useAuthBusy(pending || factorLocked || passkeyLocked, onPendingChange)
+  const refresh = () => auth.send({ type: "REFRESH" })
+  const revoke = () => auth.send({ type: "REVOKE" })
+  const close = () => auth.send({ type: "CLOSE" })
+  const others = sessions.filter(
+    (session) => session.id !== current?.session.id
+  )
+  const twoFactorEnabled = !!current?.user.twoFactorEnabled
+  const locked = pending || factorLocked || passkeyLocked || !auth.actor
+  return {
+    auth,
+    current,
+    sessions,
+    loading,
+    pending,
+    factorLocked,
+    factorView,
+    error,
+    freshSignIn,
+    notice,
+    confirm,
+    readFailed,
+    confirmationHeading,
+    refresh,
+    revoke,
+    close,
+    others,
+    twoFactorEnabled,
+    locked,
+  }
+}
 
 export function AccountSecurity({
   onClose,
@@ -30,92 +114,36 @@ export function AccountSecurity({
   onPendingChange?: (pending: boolean) => void
   embedded?: boolean
 }) {
-  const { data: current } = authClient.useSession()
-  const [sessions, setSessions] = useState<BrowserSession[]>([])
-  const [loading, setLoading] = useState(true)
-  const [pending, setPending] = useState(false)
-  const [factorLocked, setFactorLocked] = useState(false)
-  const [passkeyLocked, setPasskeyLocked] = useState(false)
-  const [factorView, setFactorView] = useState(false)
-  const [error, setError] = useState("")
-  const [freshSignIn, setFreshSignIn] = useState(false)
-  const [notice, setNotice] = useState("")
-  const [confirm, setConfirm] = useState<Confirmation | null>(null)
-  const generation = useRef(0)
-  const confirmationHeading = useRef<HTMLHeadingElement>(null)
-  useEffect(() => {
-    if (confirm) confirmationHeading.current?.focus()
-  }, [confirm])
-  const refresh = useCallback(async () => {
-    const request = ++generation.current
-    setLoading(true)
-    setError("")
-    setFreshSignIn(false)
-    try {
-      const result = await authClient.listSessions()
-      if (request !== generation.current) return
-      if (result.error) {
-        setSessions([])
-        setError(securityError(result.error))
-        setFreshSignIn(result.error.code === "SESSION_NOT_FRESH")
-      } else setSessions(result.data)
-    } catch {
-      if (request === generation.current)
-        setError("Could not load browser sessions. Try refreshing.")
-    } finally {
-      if (request === generation.current) setLoading(false)
-    }
-  }, [])
-  useEffect(() => {
-    void refresh()
-    return () => {
-      // oxlint-disable-next-line react/exhaustive-deps -- Advance the live request generation so all pending responses become stale.
-      generation.current++
-    }
-  }, [refresh, current?.session.id])
-  async function revoke() {
-    if (!confirm || locked) return
-    setPending(true)
-    setError("")
-    setNotice("")
-    try {
-      const result =
-        confirm.kind === "others"
-          ? await authClient.revokeOtherSessions()
-          : await authClient.revokeSession({ token: confirm.session.token })
-      if (result.error) setError(securityError(result.error))
-      else {
-        setConfirm(null)
-        setNotice(
-          "Browser access revoked. Open connections close within one minute."
-        )
-        await refresh()
-      }
-    } catch {
-      setError(
-        "Could not confirm revocation. Refresh the list before trying again."
-      )
-    } finally {
-      setPending(false)
-    }
-  }
-  useEffect(() => {
-    onPendingChange?.(pending || factorLocked || passkeyLocked)
-    return () => onPendingChange?.(false)
-  }, [pending, factorLocked, passkeyLocked, onPendingChange])
-  const others = sessions.filter(
-    (session) => session.id !== current?.session.id
-  )
-  const twoFactorEnabled = !!current?.user.twoFactorEnabled
-  const locked = pending || factorLocked || passkeyLocked
+  const {
+    auth,
+    current,
+    sessions,
+    loading,
+    pending,
+    factorLocked,
+    factorView,
+    error,
+    freshSignIn,
+    notice,
+    confirm,
+    readFailed,
+    confirmationHeading,
+    refresh,
+    revoke,
+    close,
+    others,
+    twoFactorEnabled,
+    locked,
+  } = useSecurityView(onClose, onPendingChange)
   return (
-    <AccountSecurityFrame embedded={embedded} locked={locked} onClose={onClose}>
+    <AccountSecurityFrame embedded={embedded} locked={locked} onClose={close}>
       {factorView ? (
         <FactorSettings
-          onBusyChange={setFactorLocked}
+          onBusyChange={(busy) =>
+            auth.send({ type: "CHILD_BUSY", child: "factor", busy })
+          }
           onDone={() => {
-            setFactorView(false)
-            void refresh()
+            auth.send({ type: "FACTOR", open: false })
           }}
         />
       ) : (
@@ -123,11 +151,13 @@ export function AccountSecurity({
           <TwoFactorCard
             enabled={twoFactorEnabled}
             pending={locked}
-            onManage={() => setFactorView(true)}
+            onManage={() => auth.send({ type: "FACTOR", open: true })}
           />
           <PasskeySettings
             disabled={pending || factorLocked}
-            onBusyChange={setPasskeyLocked}
+            onBusyChange={(busy) =>
+              auth.send({ type: "CHILD_BUSY", child: "passkey", busy })
+            }
           />
           <section
             className="space-y-4"
@@ -184,11 +214,13 @@ export function AccountSecurity({
                       ) : (
                         <Button
                           variant="outline"
-                          disabled={locked}
+                          disabled={locked || loading || readFailed}
                           aria-label={`Sign out ${sessionLabel(session.userAgent)}`}
                           onClick={() => {
-                            setError("")
-                            setConfirm({ kind: "one", session })
+                            auth.send({
+                              type: "ASK",
+                              confirmation: { kind: "one", session },
+                            })
                           }}
                         >
                           Sign out
@@ -224,13 +256,13 @@ export function AccountSecurity({
                 <Button
                   variant="outline"
                   disabled={locked}
-                  onClick={() => setConfirm(null)}
+                  onClick={() => auth.send({ type: "CANCEL" })}
                 >
                   Cancel
                 </Button>
                 <Button
                   variant="destructive"
-                  disabled={locked}
+                  disabled={locked || readFailed}
                   onClick={() => void revoke()}
                 >
                   {pending ? "Signing out…" : "Sign out browser"}
@@ -245,7 +277,8 @@ export function AccountSecurity({
                 {freshSignIn && (
                   <Button
                     variant="link"
-                    onClick={() => void authClient.signOut()}
+                    disabled={locked}
+                    onClick={() => auth.send({ type: "SIGN_OUT" })}
                   >
                     Sign out and sign in again
                   </Button>
@@ -265,15 +298,14 @@ export function AccountSecurity({
             <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"
-                disabled={locked || loading || !others.length}
+                disabled={locked || loading || readFailed || !others.length}
                 onClick={() => {
-                  setError("")
-                  setConfirm({ kind: "others" })
+                  auth.send({ type: "ASK", confirmation: { kind: "others" } })
                 }}
               >
                 Sign out other browsers
               </Button>
-              <Button variant="outline" disabled={locked} onClick={onClose}>
+              <Button variant="outline" disabled={locked} onClick={close}>
                 Done
               </Button>
             </div>

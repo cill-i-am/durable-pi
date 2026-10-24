@@ -1,0 +1,21 @@
+{"case":"late command after agent change","value":{"agent":"new","selected":"176a0f54-ecb2-422f-a304-b5041d393605","runs":[{"id":"176a0f54-ecb2-422f-a304-b5041d393605","label":"old request","status":"succeeded","createdAt":1,"finishedAt":2,"input":{"code":"return input","data":"1"},"output":{"result":"1","logs":"","error":null}}],"detail":null,"busy":false}}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ '176a0f54-ecb2-422f-a304-b5041d393605'
+- null
+
+    at file:///private/tmp/f05-tools-ui/execution-view-probe.mjs:10:1442 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: '176a0f54-ecb2-422f-a304-b5041d393605',
+  expected: null,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.21.0

@@ -1,0 +1,26 @@
+[WebServer] (node:2449) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] [plugin builtin:vite-reporter] 
+[WebServer] (!) Some chunks are larger than 500 kB after minification. Consider:
+[WebServer] - Using dynamic import() to code-split the application
+[WebServer] - Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+[WebServer] - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[WebServer] [INEFFECTIVE_DYNAMIC_IMPORT] src/features/files/files-panel.tsx is dynamically imported by src/app/workspace.tsx but also statically imported by src/features/files/index.ts, dynamic import will not move module into another chunk.
+[WebServer] 
+
+Running 8 tests using 1 worker
+
+(node:2493) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [desktop] › tests/browser/terminal-ui.spec.ts:50:1 › uncertain terminal transfer retries its original ID and immutable path (5.5s)
+  ✓  2 [desktop] › tests/browser/terminal-ui.spec.ts:94:1 › unmount during export download never begins a later Files upload (5.2s)
+  ✓  3 [desktop] › tests/browser/terminal-ui.spec.ts:139:1 › lease revocation disconnects the actual terminal socket and blocks save (4.2s)
+  ✓  4 [desktop] › tests/browser/terminal-ui.spec.ts:193:1 › unconfirmed session opening retries the same session ID (3.9s)
+(node:2695) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  5 [mobile] › tests/browser/terminal-ui.spec.ts:50:1 › uncertain terminal transfer retries its original ID and immutable path (3.6s)
+  ✓  6 [mobile] › tests/browser/terminal-ui.spec.ts:94:1 › unmount during export download never begins a later Files upload (4.5s)
+  ✓  7 [mobile] › tests/browser/terminal-ui.spec.ts:139:1 › lease revocation disconnects the actual terminal socket and blocks save (3.4s)
+  ✓  8 [mobile] › tests/browser/terminal-ui.spec.ts:193:1 › unconfirmed session opening retries the same session ID (3.5s)
+
+  8 passed (41.2s)

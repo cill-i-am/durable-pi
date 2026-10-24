@@ -1,0 +1,8 @@
+import base from '/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/playwright.config.ts'
+export default {
+  ...base,
+  testDir:'/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/browser',
+  outputDir:'/private/tmp/f05-tools-ui/playwright-results',
+  use:{...base.use,baseURL:'http://127.0.0.1:4455'},
+  webServer:{...base.webServer,command:'node --import tsx scripts/performance/server.mjs 4455',url:'http://127.0.0.1:4455',cwd:'/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi'},
+}

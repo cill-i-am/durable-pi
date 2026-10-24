@@ -1,0 +1,21 @@
+# F08 bounded independent review
+
+Reviewed the frozen 23-file auth slice in `/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi`. Final source/evidence hashes: `/private/tmp/f08-independent-review-manifest.json`, matching author `/private/tmp/f08-auth-ui/source-freeze-review-fix.json`. No production or Git edits by reviewer.
+
+## Finding repaired and independently rechecked
+
+The auth-owner finalizer stripped every Interrupt reason, including a native Interrupt(88234) accompanying checked failure and an annotated defect. Actual held native authEntry work was joined and its completion callback fenced, but its native compound Cause lost the interruption reason. `/private/tmp/f08-compound-cleanup-review.mts` failed before (`f08-compound-cleanup-before.log`) and passes unchanged after (`f08-compound-cleanup-independent-after.log`, exit0). The final owner retains all reasons, with duplicate materialized reasons suppressed by equality. The native annotation and exact interruption sentinel both survive. Author regression now explicitly asserts these.
+
+## Independent browser boundary
+
+`/private/tmp/f08-held-native-review.mjs` uses actual installed Better Auth / SimpleWebAuthn SDK and Chromium virtual CTAP2. An initial synthetic local credential registration prepares the authenticator. Subsequent actual native create and get operations are held without simulated user presence, both views unmount, and the native promises remain pending. SDK WebAuthnAbortService.cancelCeremony then settles the actual prompts. The check passes: active user activation for both operations, zero late server verification POSTs, zero late signed-in callbacks, zero external requests and zero page errors. Log `/private/tmp/f08-held-native-review.log`, exit0. This tests observer lifetime and SDK-owned cancellation rather than claiming that view unmount cancels the device prompt.
+
+An initial fixture experiment tried changing automatic presence from false to true after the native call was pending; Chromium did not settle the already waiting prompt. That timeout is preserved in `/private/tmp/f08-held-native-presence-experiment.{mjs,log}` and is not a production finding. The final fixture uses the installed SDK cancellation service; production sources remain unchanged by both probes.
+
+## Source and author evidence assessed
+
+Challenge/reset work captures redacted inputs and owns completion inside the invocation. Reset hash revision and live scope identity fence ABA re-entry. Session confirmation resolves the authoritative list entry and excludes the current session, rather than trusting an event-carried token. Parent child-busy projections protect active two-factor work and explicit recovery-code acknowledgement. Recovery code object URLs are acquired and revoked in an Effect scope. Native photo preparation remains joined, bitmap cleanup stays in its native helper, and upload is not admitted after teardown.
+
+The installed passkey SDK ignores caller signal on initial option requests and native ceremony, but passes it to final verification. No server/SDK authentication authority was moved into the application machines. Author actual create/get success evidence (`native-passkey.log`), mounted reset/session ABA/code-review/download evidence (`mounted-security-final.log`), and source-preserving cleanup negative (`negative-owner.log`) were read. No broad duplicate gates were run.
+
+No remaining concrete findings in this bounded lifecycle/resource review. This is frontend, SDK and synthetic browser proof; it does not claim real account mutation or backend cryptographic verification. Parent retains final integrated static/CI gates.

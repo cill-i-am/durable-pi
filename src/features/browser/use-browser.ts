@@ -1,94 +1,94 @@
-import { Schema } from "effect"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { send, type EffectActor } from "@xstate/effect"
+import { Cause, Effect, Exit, Fiber } from "effect"
+import { useEffect, useState } from "react"
+import type { SnapshotFrom } from "xstate"
 
-import { BrowserState } from "@/browser/contracts"
-import { agentApi } from "@/http/client"
-import { poll } from "@/http/poll"
+import {
+  browserCommand,
+  browserRequests,
+  makeBrowserOwner,
+} from "./browser-owner"
+import { browserMachine } from "./browser.machine"
 
+type Machine = ReturnType<typeof browserMachine>
 export function useBrowser(agentId: string) {
-  const [state, setState] = useState<BrowserState | null>(null)
-  const [error, setError] = useState("")
-  const [pending, setPending] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
-  const sequence = useRef(0),
-    locked = useRef(0)
-  const refresh = useCallback(async () => {
-    if (locked.current) return
-    const current = ++sequence.current
-    try {
-      const value = Schema.decodeUnknownSync(BrowserState)(
-        await agentApi(agentId)("browser")
-      )
-      if (current === sequence.current) {
-        setState(value)
-      }
-    } catch (cause) {
-      if (current === sequence.current)
-        setError(
-          cause instanceof Error ? cause.message : "Could not load the browser."
-        )
-    }
-  }, [agentId])
+  const [actor, setActor] = useState<EffectActor<Machine> | null>(null)
+  const [snapshot, setSnapshot] = useState<SnapshotFrom<Machine> | null>(null)
   useEffect(() => {
-    const stop = poll(
-      async () => {
-        if (document.visibilityState === "visible") await refresh()
-      },
-      5000,
-      true
+    let mounted = true
+    const fiber = Effect.runFork(
+      Effect.gen(function* () {
+        const owned = yield* makeBrowserOwner(
+          { agentId, visible: document.visibilityState === "visible" },
+          browserRequests(agentId)
+        )
+        yield* Effect.acquireRelease(
+          Effect.sync(() =>
+            owned.subscribe((value) => {
+              if (mounted) setSnapshot(value)
+            })
+          ),
+          (subscription) => Effect.sync(() => subscription.unsubscribe())
+        )
+        const visibility = () =>
+          Effect.runFork(
+            send(owned, {
+              type: "VISIBILITY",
+              visible: document.visibilityState === "visible",
+            })
+          )
+        yield* Effect.acquireRelease(
+          Effect.sync(() =>
+            document.addEventListener("visibilitychange", visibility)
+          ),
+          () =>
+            Effect.sync(() =>
+              document.removeEventListener("visibilitychange", visibility)
+            )
+        )
+        if (mounted) {
+          setActor(owned)
+          setSnapshot(owned.getSnapshot())
+        }
+        return yield* Effect.never
+      }).pipe(Effect.scoped)
     )
     return () => {
-      stop()
-      // oxlint-disable-next-line react/exhaustive-deps -- Advance the live request generation so all pending responses become stale.
-      sequence.current++
-    }
-  }, [refresh])
-  async function command(path: string, body: unknown, interrupt = false) {
-    if (locked.current && !interrupt) return false
-    const current = ++sequence.current
-    locked.current = current
-    setBusy(true)
-    setPending(path)
-    setError("")
-    try {
-      const input =
-        path === "close" && interrupt
-          ? {
-              generation: Schema.decodeUnknownSync(BrowserState)(
-                await agentApi(agentId)("browser")
-              ).policy.generation,
-            }
-          : body
-      const value = Schema.decodeUnknownSync(BrowserState)(
-        await agentApi(agentId)(`browser/${path}`, input)
-      )
-      if (current !== sequence.current) return false
-      setState(value)
-      return true
-    } catch (cause) {
-      if (current === sequence.current)
-        setError(
-          cause instanceof Error ? cause.message : "The browser request failed."
+      mounted = false
+      Effect.runFork(
+        Fiber.interrupt(fiber).pipe(
+          Effect.andThen(Fiber.await(fiber)),
+          Effect.flatMap((exit) =>
+            Exit.isFailure(exit) && !Cause.hasInterruptsOnly(exit.cause)
+              ? Effect.logError(exit.cause)
+              : Effect.void
+          )
         )
-      return false
-    } finally {
-      if (locked.current === current) {
-        locked.current = 0
-        setBusy(false)
-        setPending(null)
-        void refresh()
-      }
+      )
     }
-  }
+  }, [agentId])
+  const current = snapshot?.context.view.agentId === agentId ? snapshot : null
+  const owner =
+    actor?.getSnapshot().context.view.agentId === agentId ? actor : null
   return {
-    state,
-    error,
-    busy,
-    pending,
-    refresh: () => {
-      setError("")
-      return refresh()
-    },
-    command,
+    state: current?.context.state ?? null,
+    error: current?.context.error ?? "",
+    busy: !current || current.matches({ command: "requesting" }),
+    pending: current?.context.request?.path ?? null,
+    refresh: () =>
+      owner
+        ? Effect.runPromise(send(owner, { type: "REFRESH" }))
+        : Promise.resolve(),
+    command: (path: string, body: unknown, interrupt = false) =>
+      owner
+        ? Effect.runPromise(
+            browserCommand(owner, {
+              id: crypto.randomUUID(),
+              path,
+              body,
+              interrupt,
+            })
+          )
+        : Promise.resolve(false),
   }
 }

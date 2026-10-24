@@ -1,0 +1,19 @@
+{"case":"late old-agent command and reused screenshot version","previewBlocked":false,"value":{"agent":"new","state":{"controller":"owner","policy":{"generation":2,"hosts":[]},"version":7,"status":"ready","expiresAt":9999999999999,"page":null,"hasScreenshot":true,"error":null},"busy":false,"pending":null}}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: new agent/generation must wait for its own screenshot load
+
+false !== true
+
+    at file:///private/tmp/f05-browser-ui/browser-preview-negative.mjs:31:9 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.21.0

@@ -1,113 +1,175 @@
+import {
+  createEffectActor,
+  send,
+  waitFor,
+  type EffectActor,
+} from "@xstate/effect"
 import type { ITerminalAddon, Terminal } from "@xterm/xterm"
+import { Cause, Effect, Exit } from "effect"
+
+import { nativeOperation } from "@/shared/interop"
+
+import { terminalWorkFailures } from "./owned-work"
+import { terminalSocketMachine, type SocketEvent } from "./socket.machine"
 
 type ConnectionState = "connecting" | "connected" | "disconnected"
-
-/** The native PTY sends bytes plus one readiness frame; input stays bounded. */
+type Actor = EffectActor<ReturnType<typeof terminalSocketMachine>>
+/** The machine admits input/reconnect. The native capability owns socket close. */
 export class NativeTerminalAddon implements ITerminalAddon {
-  private terminal: Terminal | undefined
+  private actor: Promise<Actor> | undefined
   private socket: WebSocket | undefined
-  private timer: ReturnType<typeof setTimeout> | undefined
-  private listeners: { dispose: () => void }[] = []
-  private stopped = true
-  private ready = false
-  private queued: Uint8Array[] = []
-  private queuedBytes = 0
+  private closing: Promise<void> = Promise.resolve()
+  private completion: Promise<Exit.Exit<unknown, unknown>> = Promise.resolve(
+    Exit.void
+  )
   constructor(
     private readonly url: () => string,
     private readonly changed: (state: ConnectionState) => void
   ) {}
   activate(terminal: Terminal) {
-    this.terminal = terminal
-    this.listeners.push(
-      terminal.onData((text) => this.input(new TextEncoder().encode(text))),
-      terminal.onBinary((text) =>
-        this.input(Uint8Array.from(text, (char) => char.charCodeAt(0)))
-      ),
-      terminal.onResize(() => this.resize())
+    if (this.actor) return
+    let ready!: (actor: Actor) => void
+    this.actor = new Promise((resolve) => {
+      ready = resolve
+    })
+    this.completion = Effect.runPromiseExit(
+      Effect.gen({ self: this }, function* () {
+        const observe = yield* terminalWorkFailures
+        let actor: Actor
+        const emit = (event: SocketEvent) => Effect.runFork(send(actor, event))
+        const open = (token: number) =>
+          nativeOperation<void, unknown>(
+            (signal) => {
+              const url = new URL(this.url())
+              url.protocol = url.protocol === "https:" ? "wss:" : "ws:"
+              url.searchParams.set("cols", String(terminal.cols))
+              url.searchParams.set("rows", String(terminal.rows))
+              const socket = new WebSocket(url)
+              this.socket = socket
+              socket.binaryType = "arraybuffer"
+              const closed = new Promise<void>((resolve) => {
+                const message = (event: MessageEvent<unknown>) => {
+                  if (signal.aborted) return
+                  if (event.data === '{"type":"ready"}')
+                    emit({ type: "READY", token })
+                  else if (event.data instanceof ArrayBuffer)
+                    emit({
+                      type: "OUTPUT",
+                      token,
+                      bytes: new Uint8Array(event.data),
+                    })
+                }
+                const abort = () => socket.close()
+                socket.addEventListener("message", message)
+                socket.addEventListener(
+                  "close",
+                  () => {
+                    signal.removeEventListener("abort", abort)
+                    socket.removeEventListener("message", message)
+                    if (this.socket === socket) this.socket = undefined
+                    resolve()
+                  },
+                  { once: true }
+                )
+                signal.addEventListener("abort", abort, { once: true })
+                if (signal.aborted) abort()
+              })
+              this.closing = closed
+              return closed
+            },
+            (cause) => cause
+          )
+        actor = yield* createEffectActor(
+          terminalSocketMachine({
+            open: (token) => observe(open(token)),
+            close: () =>
+              observe(
+                Effect.promise(() => {
+                  this.socket?.close()
+                  return this.closing
+                })
+              ),
+          })
+        )
+        const listeners = [
+          actor.subscribe((snapshot) =>
+            this.changed(
+              snapshot.matches({ open: "ready" })
+                ? "connected"
+                : snapshot.matches("open")
+                  ? "connecting"
+                  : "disconnected"
+            )
+          ),
+          actor.on("output", ({ bytes }) => terminal.write(bytes)),
+          actor.on("send", ({ bytes }) => {
+            if (this.socket?.readyState === WebSocket.OPEN)
+              for (let offset = 0; offset < bytes.length; offset += 16384)
+                this.socket.send(bytes.subarray(offset, offset + 16384))
+          }),
+          actor.on("resize", () => {
+            if (this.socket?.readyState === WebSocket.OPEN)
+              this.socket.send(
+                JSON.stringify({
+                  type: "resize",
+                  cols: Math.min(240, Math.max(2, terminal.cols)),
+                  rows: Math.min(100, Math.max(2, terminal.rows)),
+                })
+              )
+          }),
+        ]
+        const inputs = [
+          terminal.onData((text) =>
+            Effect.runFork(
+              send(actor, {
+                type: "INPUT",
+                bytes: new TextEncoder().encode(text),
+              })
+            )
+          ),
+          terminal.onBinary((text) =>
+            Effect.runFork(
+              send(actor, {
+                type: "INPUT",
+                bytes: Uint8Array.from(text, (char) => char.charCodeAt(0)),
+              })
+            )
+          ),
+          terminal.onResize(() =>
+            Effect.runFork(send(actor, { type: "RESIZE" }))
+          ),
+        ]
+        yield* Effect.addFinalizer(() =>
+          Effect.sync(() => {
+            for (const subscription of listeners) subscription.unsubscribe()
+            for (const input of inputs) input.dispose()
+          })
+        )
+        ready(actor)
+        yield* waitFor(actor, (snapshot) => snapshot.status === "done")
+      }).pipe(Effect.scoped)
     )
-  }
-  private input(bytes: Uint8Array) {
-    if (this.stopped) return
-    if (bytes.length + this.queuedBytes > 65536) {
-      this.disconnect()
-      return
-    }
-    if (this.ready && this.socket?.readyState === WebSocket.OPEN) {
-      for (let offset = 0; offset < bytes.length; offset += 16384)
-        this.socket.send(bytes.subarray(offset, offset + 16384))
-      return
-    }
-    this.queued.push(bytes)
-    this.queuedBytes += bytes.length
-  }
-  private resize() {
-    if (
-      !this.ready ||
-      this.socket?.readyState !== WebSocket.OPEN ||
-      !this.terminal
-    )
-      return
-    this.socket.send(
-      JSON.stringify({
-        type: "resize",
-        cols: Math.min(240, Math.max(2, this.terminal.cols)),
-        rows: Math.min(100, Math.max(2, this.terminal.rows)),
-      })
-    )
+    void this.completion.then((exit) => {
+      if (Exit.isFailure(exit) && !Cause.hasInterruptsOnly(exit.cause))
+        Effect.runFork(Effect.logError(exit.cause))
+    })
   }
   connect() {
-    if (!this.terminal || !this.stopped) return
-    this.stopped = false
-    this.open()
-  }
-  private open() {
-    if (this.stopped || !this.terminal) return
-    this.ready = false
-    this.changed("connecting")
-    const url = new URL(this.url())
-    url.protocol = url.protocol === "https:" ? "wss:" : "ws:"
-    url.searchParams.set("cols", String(this.terminal.cols))
-    url.searchParams.set("rows", String(this.terminal.rows))
-    const socket = new WebSocket(url)
-    this.socket = socket
-    socket.binaryType = "arraybuffer"
-    socket.addEventListener("message", (event: MessageEvent<unknown>) => {
-      if (this.socket !== socket || this.stopped) return
-      if (event.data === '{"type":"ready"}') {
-        this.ready = true
-        this.resize()
-        for (const bytes of this.queued)
-          for (let offset = 0; offset < bytes.length; offset += 16384)
-            socket.send(bytes.subarray(offset, offset + 16384))
-        this.queued = []
-        this.queuedBytes = 0
-        this.changed("connected")
-      } else if (event.data instanceof ArrayBuffer)
-        this.terminal?.write(new Uint8Array(event.data))
-    })
-    socket.addEventListener("close", () => {
-      if (this.socket !== socket) return
-      this.socket = undefined
-      this.ready = false
-      this.changed("disconnected")
-      if (!this.stopped) this.timer = setTimeout(() => this.open(), 1000)
-    })
+    void this.actor?.then((actor) =>
+      Effect.runPromise(send(actor, { type: "CONNECT" }))
+    )
   }
   disconnect() {
-    this.stopped = true
-    if (this.timer) clearTimeout(this.timer)
-    this.timer = undefined
-    const socket = this.socket
-    this.socket = undefined
-    this.ready = false
-    this.queued = []
-    this.queuedBytes = 0
-    socket?.close()
-    this.changed("disconnected")
+    void this.actor?.then((actor) =>
+      Effect.runPromise(send(actor, { type: "DISCONNECT" }))
+    )
   }
   dispose() {
-    this.disconnect()
-    for (const listener of this.listeners) listener.dispose()
-    this.listeners = []
+    void this.actor?.then((actor) =>
+      Effect.runPromise(send(actor, { type: "DISPOSE" }))
+    )
+  }
+  get settled() {
+    return this.completion
   }
 }

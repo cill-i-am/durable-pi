@@ -1,0 +1,31 @@
+{
+  "status": "closed; both findings corrected and unchanged probes pass",
+  "sourceManifest": "/private/tmp/f07-objects-ui/review-source-freeze.json",
+  "sourceHashes": {
+    "src/features/objects/checklist.tsx": "254155aa3b1a977a0fcdd4a769b757ff443a2440acaf9cc9b505135fc7ff3eb4",
+    "src/features/objects/context.tsx": "8ceb9280c7fa4b9abe7bbdc93c8238cd54c28f70bcbf359cb8f8530a703c9c3b",
+    "src/features/objects/object-creation.machine.ts": "0f7944d34a8a44397eaf455484014aee6c5a7616a0d2adf29ab45919ec207058",
+    "src/features/objects/object-edit.machine.ts": "e5bf7adbad3519ec58852316b754495c23298ac66c6a1fa12ac1d6b660485349",
+    "src/features/objects/object-origin.machine.ts": "85d85b88a5e51835bfe12eee2bef57145141c938c753ab53b3c4d5807ce0ea9f",
+    "src/features/objects/object-poll.machine.ts": "c34ec6ad11d3a2a628d88c4c1cbbc5cb3c4c2bfa835145d5398e53295b2031a4",
+    "src/features/objects/object-read.machine.ts": "169dd9ad406466ed7d6aba61a7f6a18633b0658f2661bbce40908f2fdb10751d",
+    "src/features/objects/object-storage.ts": "37445e39830ee7f0623f402d7cdd574cdf39483ff1c03b7d78c9259ca12a5ef9",
+    "src/features/objects/store.ts": "4606b476bcd121f764f731b0ae41f230a08c6ef51427c1af90bf292a33652b51",
+    "src/features/objects/use-object-creation.ts": "d3d7d75e5b6739138265c26d17f7eb0f99ce9ad5f81ee14391f0ccccce934517",
+    "src/features/objects/use-object-origin.ts": "a694604978aa2942c261492b6d03452f082c7993de9dcd1a0e810c20fe991917",
+    "src/features/objects/workbench.tsx": "6a16684a3b78750af6ed6c6f5ad7d37b859b11ede22fe8d4d98d62c6dd833071",
+    "tests/working-objects-ui.test.ts": "b83caffcad3d5a26244f07d7047ba5fc06299ca65778660363e6ed287c1a1017",
+    "tests/object-ui-lifecycle.test.ts": "34b8c7799f5468a1899835fe2bd71cafa48e65bfaf11d20869033ae27fa4714c",
+    "tests/browser/objects-lifecycle.spec.ts": "1774acc92c88cdbbb82f1360852f507d37208a85c7245653e9afd03b6de7f861",
+    "docs/xstate-effect-objects-ui.md": "00d65e9e9229689e43777bd419ccb9ad2c80235243ccd337fab1c773c6f14144"
+  },
+  "evidence": {
+    "/private/tmp/f07-independent-review.md": "e0a4b4d55268d3e0f3c76876d995fcbad0768c1395e00640e9dfcb287f67e21a",
+    "/private/tmp/f07-compound-cleanup-review.mts": "6df7210ddaa8c9581cf5548abb0569475c49aec186edee3d92904037d12c04ee",
+    "/private/tmp/f07-compound-cleanup-review-before.log": "d9d8aa62bcc8df2eec8410e692a379a3a6f3fc1eaf2fd85585878c829c4fa83a",
+    "/private/tmp/f07-compound-cleanup-review-after.log": "b4c1e9df56ec2354e27447a5481cc3091af4afae0201228eaa55b744907db1db",
+    "/private/tmp/f07-storage-invariant-review.mts": "f1c470784ef966c64a0633d25d5f0c93198eb24529fc960c7889fcfbe7c54079",
+    "/private/tmp/f07-storage-invariant-review-before.log": "e58d489bb455fcbcaeebfd3432c838b49e95dd9bca8ce7b5f44cd4d3f28be220",
+    "/private/tmp/f07-storage-invariant-review-after.log": "d71df1700b423a9abd5d770894f799ad01e295015ae5bf4b7965d6c81470941f"
+  }
+}

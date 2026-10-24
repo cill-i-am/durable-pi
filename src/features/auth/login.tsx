@@ -1,7 +1,6 @@
 import { Link, useLocation } from "@tanstack/react-router"
-import { useState } from "react"
+import { Redacted } from "effect"
 
-import { authClient } from "@/auth/client"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
@@ -11,9 +10,9 @@ import {
   FieldDescription,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { errorMessage } from "@/http/client"
 import { workspaceReturnPath } from "@/navigation/workspace"
 
+import { useAuthEntry } from "./auth-entry"
 import { AuthFrame } from "./auth-frame"
 import { PasskeySignIn } from "./passkey-sign-in"
 import { PasswordInput } from "./password-input"
@@ -22,48 +21,25 @@ export function Login({ sessionError }: { sessionError?: string }) {
   const returnTo = useLocation({
     select: (location) => workspaceReturnPath(location.href),
   })
-  const [setup, setSetup] = useState(false),
-    [error, setError] = useState(sessionError ?? ""),
-    [notice, setNotice] = useState(""),
-    [pending, setPending] = useState(false)
-  async function submit(event: React.SubmitEvent<HTMLFormElement>) {
+  const auth = useAuthEntry("login", "login", undefined, sessionError)
+  const setup = auth.snapshot?.context.kind === "setup"
+  const error = auth.snapshot?.context.error ?? sessionError ?? ""
+  const notice = auth.snapshot?.context.notice ?? ""
+  const pending =
+    !auth.snapshot ||
+    auth.snapshot.matches("requesting") ||
+    auth.snapshot.context.externalBusy
+  function submit(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (pending) return
-    setError("")
-    setNotice("")
-    setPending(true)
-    const data = new FormData(event.currentTarget)
-    try {
-      if (setup) {
-        const response = await fetch("/api/setup", {
-          method: "POST",
-          headers: {
-            "content-type": "application/json",
-            "x-setup-token": String(data.get("setupToken")),
-          },
-          body: JSON.stringify({
-            name: data.get("name"),
-            password: data.get("password"),
-          }),
-        })
-        if (!response.ok) throw new Error(errorMessage(await response.json()))
-        setSetup(false)
-        setNotice(
-          "Account created. Sign in with your owner email and password."
+    const values = Object.fromEntries(new FormData(event.currentTarget))
+    auth.send({
+      type: "SUBMIT",
+      secret: Redacted.make(
+        Object.fromEntries(
+          Object.entries(values).map(([key, value]) => [key, String(value)])
         )
-      } else {
-        const result = await authClient.signIn.email({
-          email: String(data.get("email")),
-          password: String(data.get("password")),
-        })
-        if (result.error)
-          throw new Error(result.error.message ?? "Could not sign in")
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not sign in")
-    } finally {
-      setPending(false)
-    }
+      ),
+    })
   }
   return (
     <AuthFrame
@@ -79,9 +55,7 @@ export function Login({ sessionError }: { sessionError?: string }) {
           size="sm"
           disabled={pending}
           onClick={() => {
-            setSetup(!setup)
-            setError("")
-            setNotice("")
+            auth.send({ type: "MODE", kind: setup ? "login" : "setup" })
           }}
         >
           {setup ? "Back to sign in" : "First time? Set up your account"}
@@ -174,7 +148,12 @@ export function Login({ sessionError }: { sessionError?: string }) {
           </Button>
         </FieldGroup>
       </form>
-      {!setup && <PasskeySignIn disabled={pending} onBusyChange={setPending} />}
+      {!setup && (
+        <PasskeySignIn
+          disabled={pending}
+          onBusyChange={(busy) => auth.send({ type: "BUSY", busy })}
+        />
+      )}
     </AuthFrame>
   )
 }

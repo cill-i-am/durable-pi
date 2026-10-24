@@ -1,0 +1,60 @@
+import assert from 'node:assert/strict'
+import {createRequire} from 'node:module'
+import {createServer} from 'node:http'
+const root='/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi',req=createRequire(root+'/package.json')
+const {build}=createRequire(req.resolve('alchemy'))('esbuild'),{chromium}=req('@playwright/test')
+const bundle=await build({stdin:{contents:`import {WebAuthnAbortService} from '${root}/node_modules/.pnpm/@simplewebauthn+browser@13.3.0/node_modules/@simplewebauthn/browser/esm/index.js';window.cancelDevice=()=>WebAuthnAbortService.cancelCeremony();import React from'react';import{createRoot}from'react-dom/client';import{PasskeySettings}from'${root}/src/features/auth/passkey-settings.tsx';import{PasskeySignIn}from'${root}/src/features/auth/passkey-sign-in.tsx';const busy=b=>{window.busy=b};const viewRoot=createRoot(document.getElementById('root'));window.unmount=()=>viewRoot.unmount();viewRoot.render(location.search.includes('signin')?<PasskeySignIn onBusyChange={busy} onSignedIn={async()=>{window.signed=(window.signed||0)+1}}/>:<PasskeySettings disabled={false} onBusyChange={busy}/>);`,resolveDir:root,loader:'tsx'},bundle:true,write:false,format:'iife',platform:'browser',tsconfig:root+'/tsconfig.json',define:{'process.env.NODE_ENV':'"development"'}})
+const server=createServer((q,s)=>{s.setHeader('content-type',q.url==='/app.js'?'text/javascript':'text/html');s.end(q.url==='/app.js'?bundle.outputFiles[0].text:'<div id="root"></div><script src="/app.js"></script>')});await new Promise(r=>server.listen(0,'localhost',r));const origin=`http://localhost:${server.address().port}`
+const browser=await chromium.launch({headless:true}),context=await browser.newContext(),page=await context.newPage();const errors=[],unexpected=[],payloads=[];let keys=[],credentialId
+page.on('pageerror',e=>errors.push(e.message))
+const session={session:{id:'native-fixture-session',token:'synthetic-token',userId:'fixture-user',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),expiresAt:new Date(Date.now()+3600000).toISOString()},user:{id:'fixture-user',name:'Fixture',email:'fixture@example.test',emailVerified:true,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),twoFactorEnabled:false}}
+await context.route('**/*',async route=>{
+ const url=new URL(route.request().url());if(url.origin!==origin){unexpected.push(url.origin);return route.abort()}
+ const path=url.pathname.replace('/api/auth','');const json=value=>route.fulfill({contentType:'application/json',body:JSON.stringify(value)})
+ if(path==='/get-session')return json(session)
+ if(path==='/passkey/list-user-passkeys')return json(keys)
+ if(path==='/passkey/generate-register-options')return json({challenge:Buffer.alloc(32,7).toString('base64url'),rp:{id:'localhost',name:'Pi fixture'},user:{id:Buffer.from('fixture-user').toString('base64url'),name:'fixture@example.test',displayName:'Fixture'},pubKeyCredParams:[{type:'public-key',alg:-7}],timeout:60000,attestation:'none',authenticatorSelection:{residentKey:'required',userVerification:'required',authenticatorAttachment:'platform'},excludeCredentials:[]})
+ if(path==='/passkey/verify-registration'){const body=route.request().postDataJSON();payloads.push({path,body});credentialId=body.response.id;keys=[{id:'saved-fixture',name:body.name,createdAt:new Date().toISOString()}];return json({id:'saved-fixture',name:body.name})}
+ if(path==='/passkey/generate-authenticate-options')return json({challenge:Buffer.alloc(32,9).toString('base64url'),rpId:'localhost',timeout:60000,userVerification:'required',allowCredentials:[{id:credentialId,type:'public-key',transports:['internal']}]})
+ if(path==='/passkey/verify-authentication'){const body=route.request().postDataJSON();payloads.push({path,body});return json(session)}
+ if(url.pathname.startsWith('/api/')){unexpected.push(url.pathname);return route.abort()}
+ return route.continue()
+})
+await page.addInitScript(()=>{window.activations=[];for(const name of ['create','get']){const original=navigator.credentials[name].bind(navigator.credentials);navigator.credentials[name]=async(...args)=>{window.activations.push({kind:name,active:navigator.userActivation.isActive});try{return await original(...args)}finally{window.nativeSettled=(window.nativeSettled||0)+1}}}})
+const cdp=await context.newCDPSession(page);await cdp.send('WebAuthn.enable');const {authenticatorId}=await cdp.send('WebAuthn.addVirtualAuthenticator',{options:{protocol:'ctap2',transport:'internal',hasResidentKey:true,hasUserVerification:true,isUserVerified:true,automaticPresenceSimulation:true}})
+try{
+ await page.goto(origin)
+ await page.getByRole('button',{name:'Add passkey',exact:true}).click()
+ await page.getByLabel('Passkey name',{exact:true}).fill('Initial native credential')
+ await page.getByRole('button',{name:'Continue on this device',exact:true}).click()
+ await page.getByText('Passkey added. You can use it next time you sign in.',{exact:true}).waitFor()
+ assert.equal(payloads.length,1)
+ await cdp.send('WebAuthn.setAutomaticPresenceSimulation',{authenticatorId,enabled:false})
+ await page.getByRole('button',{name:'Add passkey',exact:true}).click()
+ await page.getByLabel('Passkey name',{exact:true}).fill('Held native credential')
+ await page.getByRole('button',{name:'Continue on this device',exact:true}).click()
+ await page.waitForFunction(()=>window.activations.length===2)
+ assert.equal(await page.evaluate(()=>window.nativeSettled||0),1)
+ await page.evaluate(()=>window.unmount())
+ assert.equal(await page.evaluate(()=>window.nativeSettled||0),1,'unmount must not claim to cancel the native prompt')
+ await page.evaluate(()=>window.cancelDevice())
+ await page.waitForFunction(()=>window.nativeSettled===2,{},{timeout:10000})
+ await page.waitForTimeout(200)
+ const registration=await page.evaluate(()=>window.activations[1])
+ assert.equal(payloads.length,1,'unmounted registration must not verify on server')
+ await page.goto(origin+'?signin')
+ await page.getByRole('button',{name:'Sign in with a passkey',exact:true}).click()
+ await page.waitForFunction(()=>window.activations.length===1)
+ assert.equal(await page.evaluate(()=>window.nativeSettled||0),0)
+ await page.evaluate(()=>window.unmount())
+ assert.equal(await page.evaluate(()=>window.nativeSettled||0),0,'unmount must not claim to cancel native sign-in')
+ await page.evaluate(()=>window.cancelDevice())
+ await page.waitForFunction(()=>window.nativeSettled===1,{},{timeout:10000})
+ await page.waitForTimeout(200)
+ const authentication=await page.evaluate(()=>window.activations[0])
+ assert.equal(payloads.length,1,'unmounted sign-in must not verify on server')
+ assert.equal(await page.evaluate(()=>window.signed||0),0)
+ assert.deepEqual(registration,{kind:'create',active:true});assert.deepEqual(authentication,{kind:'get',active:true})
+ assert.deepEqual(errors,[]);assert.deepEqual(unexpected,[])
+ console.log(JSON.stringify({sdk:'installed Better Auth passkey SDK',browser:'Chromium virtual CTAP2 authenticator',registration,authentication,nativePromisesHeldThroughUnmount:true,settlement:'native SDK ceremony cancellation after unmount',initialSyntheticRegistrationPosts:1,lateVerificationPosts:payloads.length-1,lateSignedIn:0,externalRequests:unexpected.length,pageErrors:errors}))
+}finally{await browser.close();await new Promise(r=>server.close(r))}

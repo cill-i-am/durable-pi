@@ -1,0 +1,117 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi
+
+F06_APPROVAL_FENCE_MUTATION_APPLIED
+F06_RECONNECT_IDENTITY_MUTATION_APPLIED
+stdout | tests/access-connections-ui.test.ts > fences a decision response after identity, input, revision or agent changes
+[17:24:47.013] ERROR (#1): Error [AssertionError]: expected { approval: { id: 'a', …(7) }, …(3) } to be null
+    at /Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/access-connections-ui.test.ts:105:55 {
+  actual: {
+    approval: {
+      id: 'a',
+      turnId: 'turn',
+      tool: 'write_note',
+      input: 'old',
+      createdAt: 1,
+      expiresAt: 9000000000000,
+      status: 'pending',
+      revision: 4
+    },
+    revision: 4,
+    approve: true,
+    remember: false
+  },
+  expected: null,
+  showDiff: true,
+  operator: 'strictEqual',
+  [cause]: undefined
+}
+
+stdout | tests/access-connections-ui.test.ts > retains reconnect identity after uncertainty, rejects conflicts and never automatically replays
+[17:24:47.024] ERROR (#20): Error [AssertionError]: expected true to be false // Object.is equality
+    at /Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/access-connections-ui.test.ts:384:9 {
+  actual: true,
+  expected: false,
+  showDiff: true,
+  operator: 'strictEqual',
+  [cause]: undefined
+}
+
+ ❯ tests/access-connections-ui.test.ts (11 tests | 2 failed | 9 skipped) 32ms
+   × fences a decision response after identity, input, revision or agent changes 23ms
+   × retains reconnect identity after uncertainty, rejects conflicts and never automatically replays 8ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/access-connections-ui.test.ts > fences a decision response after identity, input, revision or agent changes
+AssertionError: expected { approval: { id: 'a', …(7) }, …(3) } to be null
+
+- Expected:
+null
+
++ Received:
+{
+  "approval": {
+    "createdAt": 1,
+    "expiresAt": 9000000000000,
+    "id": "a",
+    "input": "old",
+    "revision": 4,
+    "status": "pending",
+    "tool": "write_note",
+    "turnId": "turn",
+  },
+  "approve": true,
+  "remember": false,
+  "revision": 4,
+}
+
+ ❯ tests/access-connections-ui.test.ts:105:55
+    103|         yield* Deferred.succeed(release, access)
+    104|         yield* waitFor(actor, (s) => s.matches("ready"))
+    105|         expect(actor.getSnapshot().context.confirmed).toBeNull()
+       |                                                       ^
+    106|       }
+    107|     }).pipe(Effect.scoped)
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/core.ts:585:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:589:27
+ ❯ node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1159:17
+ ❯ next node_modules/.pnpm/@xstate+effect@1.0.0-alpha.8_effect@4.0.5_xstate@6.0.0-alpha.68/node_modules/@xstate/effect/dist/xstate-effect.js:525:9
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/access-connections-ui.test.ts > retains reconnect identity after uncertainty, rejects conflicts and never automatically replays
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ tests/access-connections-ui.test.ts:384:9
+    382|           request("disconnect", { action: "disconnect", body: reconnec…
+    383|         )
+    384|       ).toBe(false)
+       |         ^
+    385|       expect(
+    386|         yield* connectionCommand(
+ ❯ ~effect/Effect/successCont node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1422:28
+ ❯ ~effect/Effect/evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/core.ts:585:30
+ ❯ FiberImpl.runLoop node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:654:41
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:595:23
+ ❯ FiberImpl.evaluate node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:589:27
+ ❯ Array.<anonymous> node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/internal/effect.ts:1159:17
+ ❯ doneUnsafe node_modules/.pnpm/effect@4.0.5/node_modules/effect/src/Deferred.ts:1707:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 9 skipped (11)
+   Start at  17:24:46
+   Duration  421ms (import 60%, transform 26%, tests 11%, setup 3%, worker 1%)
+

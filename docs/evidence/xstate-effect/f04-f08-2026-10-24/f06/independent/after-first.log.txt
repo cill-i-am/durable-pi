@@ -1,0 +1,100 @@
+{
+  "source": {
+    "src/features/access/approval-card.tsx": "c79eee07f928a4df17d346fdf9e18dd4a2e8866a42765b1b9605e36a1cbccdac",
+    "src/features/access/access-panel.tsx": "edf5d8f3387267e13edeb384ac175d70061b59ffde3391886f5b9a072a4d131f",
+    "src/features/access/decision.ts": "68e459e3639c19fd881a58eafd499a46825720a518fee4d2f269a229bc30d0f0",
+    "src/features/access/approval.machine.ts": "ad395534719b9c07bb582545ce419d41b0f41841c1d3f08be964d7110967f28d",
+    "src/features/access/access.machine.ts": "cdc3cbfb4ff16f9c116ac84ffd6078effa882a6145b3ea7f8f5a72aed43f7b55",
+    "src/features/access/access-owner.ts": "51523932045010a4740da6b7f2470ef25c17a8d32c85f0dff804a515c1b82cf9",
+    "src/features/access/use-access.ts": "511e828366c7c2fd50d62a1b5d8cb232c9c53b018ef7b07b0b52da4e97f851b2",
+    "src/features/access/use-approval.ts": "2fac2098f9607c1c9827b90ac651458398f062f36df1682c9d0842f40090e5c4",
+    "src/features/connections/connections.machine.ts": "4e6f2196895c871a32b7065ee774b7f47c1b02a24292fc3b3d6b7bdc792c2fd1",
+    "src/features/connections/connections-owner.ts": "09b53e3aad49dcb7dc3149575cac6a13bdd92b407f88de15ef98a65fe9bf0403",
+    "src/features/connections/use-connections.ts": "4ef4b819b51e1ba6ea87ef9e250c3e885e68a7d06c5ff532243720625d5ccd56",
+    "src/features/connections/connections-panel.tsx": "ceeb930d92330e6bae7985b23aaf9c205fad0b53b491ffe6ff9c02bef3009931",
+    "tests/access-connections-ui.test.ts": "bf531ca84375157192c1c33c16ebf94c104bc7a47abaf4cb4072d353fdd903af",
+    "tests/approval-decision.test.ts": "63062df6539da28666d8381e0bf52362afec2aeaefd0f3c623fd059e460b8775",
+    "tests/browser/access-connections-lifecycle.spec.ts": "fa3e827ed2004e31e8976fece1d870a927a3dda138c482c57d7640c5ef06f9ae",
+    "docs/xstate-effect-access-connections-ui.md": "9971ac6a2aeaa5f053b7178840017cdda53a1e380bc2bf285f6744dac43c33fb"
+  },
+  "policy": {
+    "currentPolicy": {
+      "name": "write_note",
+      "description": "write",
+      "mode": "deny",
+      "revision": 4
+    },
+    "confirmed": {
+      "approval": {
+        "id": "a",
+        "turnId": "turn",
+        "tool": "write_note",
+        "input": "reviewed",
+        "createdAt": 1,
+        "expiresAt": 9000000000000,
+        "status": "pending",
+        "revision": 4
+      },
+      "revision": 4,
+      "approve": true,
+      "remember": false,
+      "policy": {
+        "name": "write_note",
+        "description": "write",
+        "mode": "allow",
+        "revision": 3
+      }
+    },
+    "error": ""
+  },
+  "approvalCleanup": {
+    "status": "Failure",
+    "reasons": [
+      {
+        "tag": "Interrupt"
+      },
+      {
+        "tag": "Die"
+      },
+      {
+        "tag": "Die"
+      },
+      {
+        "tag": "Interrupt",
+        "fiberId": 86123
+      },
+      {
+        "tag": "Interrupt"
+      },
+      {
+        "tag": "Interrupt",
+        "fiberId": 30
+      }
+    ]
+  },
+  "connectionsCleanup": {
+    "status": "Failure",
+    "reasons": [
+      {
+        "tag": "Interrupt"
+      },
+      {
+        "tag": "Die"
+      },
+      {
+        "tag": "Die"
+      },
+      {
+        "tag": "Interrupt",
+        "fiberId": 86123
+      },
+      {
+        "tag": "Interrupt"
+      },
+      {
+        "tag": "Interrupt",
+        "fiberId": 49
+      }
+    ]
+  }
+}

@@ -1,0 +1,19 @@
+{"baseline":true,"port":60956,"state":{"agent":"new","list":[{"id":"11111111-1111-4111-8111-111111111111","type":"project_checklist","title":"old","revision":1,"completed":0,"total":0,"archived":false,"lastEvent":1}],"pending":{}},"originalHashes":{"src/features/objects/context.tsx":"eaf93814d36bbfcf0bd4145bc165dc2d54a912fbba4c4a18e525ba32fc577d7a","src/features/objects/store.ts":"d363cfa55d690eb28fe205eb1e5fe2b2cc8b06cb7672fbe097d369b7919ab861"}}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+'old' !== 'new'
+
+    at file:///private/tmp/f07-objects-ui/agent-view-probe.mjs:17:586 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 'old',
+  expected: 'new',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.21.0

@@ -1,8 +1,7 @@
-import { Schema } from "effect"
 import { ShieldQuestion } from "lucide-react"
-import { useId, useRef, useState } from "react"
+import { useId } from "react"
 
-import { AccessState, type Approval, type ToolPolicy } from "@/access/contracts"
+import { type Approval, type ToolPolicy } from "@/access/contracts"
 import { CopyButton } from "@/components/copy-button"
 import { Button } from "@/components/ui/button"
 import {
@@ -19,9 +18,9 @@ import {
   CodeBlockActions,
   CodeBlockContent,
 } from "@/components/ui/code-block"
-import { agentApi } from "@/http/client"
 
 import { approvalDecision, type ConfirmedDecision } from "./decision"
+import { useApproval } from "./use-approval"
 
 export function ApprovalCard({
   approval,
@@ -39,52 +38,13 @@ export function ApprovalCard({
   agentName?: string
 }) {
   const scopeId = useId()
-  const [busy, setBusy] = useState(false)
-  const [confirmed, setConfirmed] = useState<ConfirmedDecision | null>(null)
+  const { busy, confirmed, error, decide, blocked } = useApproval({
+    agentId,
+    approval,
+    disabled,
+    policy: toolPolicy ?? null,
+  })
   const decided = approvalDecision(approval, confirmed)
-  const [error, setError] = useState("")
-  const lock = useRef(false)
-  async function decide(approve: boolean, remember = false) {
-    if (
-      lock.current ||
-      disabled ||
-      approval.status !== "pending" ||
-      decided !== null
-    )
-      return
-    if (remember && (!toolPolicy || toolPolicy.name !== approval.tool)) return
-    lock.current = true
-    setBusy(true)
-    setError("")
-    try {
-      const state = Schema.decodeUnknownSync(AccessState)(
-        await agentApi(agentId)("access/decide", {
-          id: approval.id,
-          approve,
-          expectedRevision: approval.revision,
-          ...(remember && toolPolicy
-            ? { remember: { expectedPolicyRevision: toolPolicy.revision } }
-            : {}),
-        })
-      )
-      if (
-        remember &&
-        state.tools.find((tool) => tool.name === approval.tool)?.mode !==
-          "allow"
-      )
-        throw new Error(
-          "Tool access changed. Refresh before allowing future calls."
-        )
-      setConfirmed({ revision: approval.revision, approve, remember })
-    } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "Could not save your decision."
-      )
-    } finally {
-      setBusy(false)
-      lock.current = false
-    }
-  }
   const pending = approval.status === "pending" && decided === null
   const heading = approvalHeading(approval, decided, confirmed)
   return (
@@ -151,7 +111,7 @@ export function ApprovalCard({
           <Button
             size="sm"
             className="min-h-10"
-            disabled={busy || disabled}
+            disabled={blocked(true)}
             onClick={() => void decide(true)}
           >
             {busy ? "Saving decision…" : "Allow once"}
@@ -161,13 +121,7 @@ export function ApprovalCard({
             className="min-h-10"
             variant="outline"
             aria-describedby={scopeId}
-            disabled={
-              busy ||
-              disabled ||
-              !toolPolicy ||
-              toolPolicy.name !== approval.tool ||
-              toolPolicy.mode === "deny"
-            }
+            disabled={blocked(true, true)}
             onClick={() => void decide(true, true)}
           >
             Always allow
@@ -176,7 +130,7 @@ export function ApprovalCard({
             size="sm"
             className="min-h-10"
             variant="outline"
-            disabled={busy || disabled}
+            disabled={blocked(false)}
             onClick={() => void decide(false)}
           >
             Deny

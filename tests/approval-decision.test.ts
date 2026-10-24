@@ -14,11 +14,27 @@ it("keeps confirmed decisions through old snapshots but reopens a newer approval
     status: "pending",
     revision: 0,
   }
-  const confirmed = { revision: 0, approve: true }
+  const confirmed = { approval: pending, revision: 0, approve: true }
   expect(approvalDecision(pending, null)).toBeNull()
   expect(approvalDecision(pending, confirmed)).toBe(true)
   expect(
     approvalDecision({ ...pending, status: "approved", revision: 1 }, confirmed)
   ).toBe(true)
   expect(approvalDecision({ ...pending, revision: 2 }, confirmed)).toBeNull()
+})
+
+it("does not carry a confirmation to another action or changed immutable inputs", () => {
+  const approval: Approval = {
+    id: "one",
+    turnId: "turn",
+    tool: "write_note",
+    input: "old",
+    createdAt: 1,
+    expiresAt: 1000,
+    revision: 0,
+    status: "pending",
+  }
+  const confirmed = { approval, revision: 0, approve: true }
+  expect(approvalDecision({ ...approval, id: "two" }, confirmed)).toBeNull()
+  expect(approvalDecision({ ...approval, input: "new" }, confirmed)).toBeNull()
 })

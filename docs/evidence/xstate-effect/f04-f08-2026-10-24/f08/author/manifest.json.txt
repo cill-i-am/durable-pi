@@ -1,0 +1,77 @@
+{
+  "worktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+  "source": {
+    "src/features/auth/auth-contracts.ts": "4da73595b68e2b27d55966fbac1d038582e4032875a1d20f30d6d2619708261b",
+    "src/features/auth/auth-owner.ts": "38ce5bf539307299988a8d6c50dee85ee8cb9940020a799ff9c1f33a9cc4486f",
+    "src/features/auth/auth-entry.machine.ts": "dab5d7b557cf9c8112119774d002d2d33c141db033d28650175c31f0ceb8cdd9",
+    "src/features/auth/auth-entry.ts": "5801bb244607d481712f18ecf60e3399e553d460408d48e220f25342f44a9823",
+    "src/features/auth/login.tsx": "93d87dfadd25796732393ec86dd911f5828e922d09aa57cd0c84da35242e531f",
+    "src/features/auth/password-recovery.tsx": "3b299c69abe3ffe8b6520d605605eb58d709a7146c6523b4c5faa4321e731bb0",
+    "src/features/auth/two-factor-challenge.tsx": "01266de083cbfd6977b25132bbb4c7163e03630c8150fdc5ab65c6e92d84c5ad",
+    "src/features/auth/passkey-sign-in.tsx": "b8e3779de8b6e02c7b20c3eb520c66be7c20b29047d9943d3e9b0d21ff4d2265",
+    "src/features/auth/passkey-errors.ts": "0717ade0936f65e73f1c64613557a756e65543c67ee45b1180eb5a87b8e73be0",
+    "src/features/auth/photo.machine.ts": "946c470721c6ba9693de4a9bd283999a972356cc4e72a94724f18ddc0add7b76",
+    "src/features/auth/photo-owner.ts": "6c5f51b7ac392d72f8ccf4e2c26377f5725d2fecd508711b350734e7f624cce8",
+    "src/features/auth/profile-photo.tsx": "ba68249a34185f9c3e96cfe2d3048eb97c7de5e95e10572a3e9321f8e66e4e90",
+    "src/features/auth/factor.machine.ts": "883803a60a2c0bb6a6ef5572297c967c43a121109ba043cff1d31224c1c636d0",
+    "src/features/auth/factor-owner.ts": "760ffcf14225901e75a0bfd4d8ebeffef941f5291a06262713cafa6cf06c8598",
+    "src/features/auth/factor-settings.tsx": "15715c366d4399f61d4430fb22415cf8b40c4a416d1890d47216e1bcf3dfb5ce",
+    "src/features/auth/passkeys.machine.ts": "2f196f512c9719e6be1da71ee27a63121f73c835981ee137fc62153ac8828851",
+    "src/features/auth/passkeys-owner.ts": "abfed3aeb33a87c426bf0bd61c6b60bdce72109cec0152470f334cdfa723813a",
+    "src/features/auth/passkey-settings.tsx": "f7608e1d8209650721eb44b75d294be45e458df18c9a462a9f7909988cea327f",
+    "src/features/auth/security.machine.ts": "5c81cfad04d4b0482369b49775d67b1507b4011a4a4ec1b2e318b2e299e61033",
+    "src/features/auth/security-owner.ts": "1f239f3b55dd632c145cf13cedd2393c0ddadfc10fabffa838ec3e05fbd278fc",
+    "src/features/auth/account-security.tsx": "8b2955e2f720b8d7f6315cdba20912ac5bbc0903647a19964e66310f31263f01",
+    "tests/auth-ui-lifecycle.test.ts": "20853f160571d779688a8efc4cc4b1e61308704891746e6ed150d9aaa17103d1",
+    "docs/xstate-effect-auth-ui.md": "bd02cefcd98c44d7ad81863b6ec65097e1e5bf93e63ff9f7deccc23d96856a8c"
+  },
+  "constraints": [
+    "F05 unchanged",
+    "no Git/package/shared config changes",
+    "synthetic auth endpoints only"
+  ],
+  "supersedes": "source-freeze.json",
+  "repair": "Preserve native compound Interrupt reasons and annotated defects after joined auth cleanup",
+  "changed": [
+    "src/features/auth/auth-owner.ts",
+    "tests/auth-ui-lifecycle.test.ts"
+  ],
+  "evidence": {
+    "/private/tmp/f08-auth-ui/stale-probe.mjs": "b5e576701b2812cd8b499daec880ff4b272c0375bf0651e27beb87f45dd69b3f",
+    "/private/tmp/f08-auth-ui/before.log": "1d616fd6fc36bf594b621c5c2f9d1772d5eb842c1340a558ac9c7ec16b6a1514",
+    "/private/tmp/f08-auth-ui/final-stale.log": "f3891ba5bc63af5ac534ce49bd67f19437b9db4830d05c786cf54e4a91773f4b",
+    "/private/tmp/f08-auth-ui/negative-owner-probe.mjs": "346155b719d1ed18a52b04bceba3f6b72db723aa8f744154cb8883dbdea301f4",
+    "/private/tmp/f08-auth-ui/negative-owner.log": "fd62ad3819308b1fe1b6e90dbde9e1169c629902459fe35025490b58b1cb4175",
+    "/private/tmp/f08-auth-ui/native-passkey-probe.mjs": "55c021f920405eb11e7e5914b3702988d3f62362a4494ee56feb0c0acb769f78",
+    "/private/tmp/f08-auth-ui/final-native-passkey.log": "4cf6d2f7e8dc76557e7c7f6017039443316c5b4bacb8b42965bdf18b19e57b2b",
+    "/private/tmp/f08-auth-ui/mounted-security-probe.mjs": "f6556a57ab9456e47eef5a06980361bd0bcdcb9d2ed8225d65b61e64900bd2e7",
+    "/private/tmp/f08-auth-ui/final-mounted-security.log": "81ebbea4e93ac36b7a6dc3e7fe48823f3f2a01b40001b07e63ed44e3a79598fe",
+    "/private/tmp/f08-auth-ui/final-focused.log": "3dedb30e9f5c0d41065cd2de6e440fe0919aaeb2622ff1243138babed7cf3b76",
+    "/private/tmp/f08-auth-ui/final-types.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/private/tmp/f08-auth-ui/final-lint.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/private/tmp/f08-auth-ui/final-format.log": "77bf0c01ae65d44ef6b816839fbc085c0f9a0f7edb34b211b7f9bf15abc2d313",
+    "/private/tmp/f08-auth-ui/unknown-sdk-guard-red.log": "1031622a4665ee77dde158dec988a3a5e554ec166ba3f0d04934703ad800affb",
+    "/private/tmp/f08-auth-ui/compound-cleanup-regression-red-assertion.log": "6826c9a2e3a84dc2e87a3a941b141163d2732ea3502d143da15780ca312fb1d5",
+    "/private/tmp/f08-auth-ui/compound-cleanup-final-focused.log": "669990ec1183193b5e369763f19af28c89228a76906a2e69e960736ff4a81db4",
+    "/private/tmp/f08-auth-ui/compound-cleanup-final-lint.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/private/tmp/f08-auth-ui/source-freeze.json": "0fb81a29699922189bd3f72d8c50d31fab4cbc0bee6985f02b50b43f37bfaa79",
+    "/private/tmp/f08-auth-ui/source-freeze-review-fix.json": "f77d1435f7cd169db18bb19ca25af1e6ceabfb235849e461d96d64b1307f372f",
+    "/private/tmp/f08-independent-review.md": "b1bf783faf21139634406a6117ce17a13b83775c7e79b04825a5298d812b07f3",
+    "/private/tmp/f08-independent-review-manifest.json": "898c651b5da34112e446ce5ef813308aea3a6b67fea67664032d3f08a8cff61a",
+    "/private/tmp/f08-held-native-review.log": "62c9a79acde0e5d270ef29c9ce442953257e344542038c473ff38e491c37e967",
+    "/private/tmp/f08-compound-cleanup-independent-after.log": "114f596ec673149f8397231c6722536a34c56ae05431f21617a2c5cf329e9ab8",
+    "/private/tmp/f08-auth-ui/compound-cleanup-final-types.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "tests": {
+    "focused": "11 passed",
+    "types": "auth-only scoped check passed after narrow review repair",
+    "lint": "all auth baseline; changed owner/test clean after repair",
+    "format": "all auth baseline; changed owner/test formatted after repair"
+  },
+  "limits": [
+    "Synthetic local auth endpoints; no real account authentication or mutation.",
+    "Installed Better Auth SDK and real Chromium virtual CTAP2 credential ceremony, but no real server cryptographic verification.",
+    "Caller AbortSignal is passed only to SDK final verification; options GET/native ceremony may continue; owner joins and fences stale completion."
+  ],
+  "independent_review": "closed; no remaining concrete findings in bounded scope"
+}

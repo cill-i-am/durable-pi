@@ -1,0 +1,29 @@
+import assert from 'node:assert/strict'
+import {createRequire} from 'node:module'
+import {authOwner} from '/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/auth-owner.ts'
+import {authEntryMachine} from '/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/auth-entry.machine.ts'
+import {nativeOperation} from '/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/shared/interop.ts'
+const require=createRequire('/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/package.json')
+const {Cause,Context,Effect,Exit,Redacted,Scope}=await import(require.resolve('effect'))
+const {createEffectActor,send}=await import(require.resolve('@xstate/effect'))
+let enter!:()=>void, abort!:()=>void, reject!:(reason:unknown)=>void
+const entered=new Promise<void>(r=>enter=r),aborted=new Promise<void>(r=>abort=r)
+const scope=await Effect.runPromise(Scope.make())
+let completions=0
+const actor=await Effect.runPromise(authOwner(observe=>createEffectActor(authEntryMachine({
+ request:()=>observe(nativeOperation(async signal=>{signal.addEventListener('abort',abort);enter();return await new Promise<void>((_resolve,fail)=>reject=fail)},x=>x)),
+ completed:()=>Effect.sync(()=>{completions++})
+}),{input:{kind:'passkey',error:''}})).pipe(Scope.provide(scope)))
+await Effect.runPromise(send(actor,{type:'SUBMIT',secret:Redacted.make({})}))
+await entered
+let settled=false
+const closing=Effect.runPromiseExit(Scope.close(scope,Exit.void)).then(x=>{settled=true;return x})
+await aborted
+assert.equal(settled,false,'scope close must join the native challenge')
+class RequestId extends Context.Service<RequestId,string>()('F08CleanupReview') {}
+reject(Cause.fromReasons([Cause.makeFailReason('native checked'),Cause.makeDieReason(new Error('native defect')).annotate(Context.make(RequestId,'original')),Cause.makeInterruptReason(88234)]))
+const exit=await closing
+console.log(JSON.stringify({completions,failure:Exit.isFailure(exit),reasons:Exit.isFailure(exit)?exit.cause.reasons.map((x:any)=>({tag:x._tag,fiberId:x.fiberId,annotation:x.annotations.get(RequestId.key)})):[]}))
+assert.equal(completions,0)
+assert.ok(Exit.isFailure(exit));assert.ok(exit.cause.reasons.some((r:any)=>r._tag==='Interrupt'&&r.fiberId===88234),'native compound interruption reason must remain alongside defect')
+assert.ok(exit.cause.reasons.some((r:any)=>r._tag==='Die'&&r.annotations.get(RequestId.key)==='original'),'native annotation must survive')

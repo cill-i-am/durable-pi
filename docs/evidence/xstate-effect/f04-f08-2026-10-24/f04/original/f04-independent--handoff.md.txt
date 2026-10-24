@@ -1,0 +1,14 @@
+# F04 bounded independent review
+
+Review cleared after repairs on the exact source hashes in `closed-manifest.json`.
+
+The read-only review traced production terminal request, lease, socket/addon, interactive host and export owners. A fresh probe drove the real `makeTerminalOwner`, official Effect actors and held native promises; it did not copy the implementation or use a handwritten controller.
+
+Reproduced and cleared:
+- A request admitted while viewing A could override a later A→B→A selection. Original selected-ID comparison produced selected/emitted `submitted`. The monotonic view revision now retains A and emits nothing. The author independently identified the same issue while the reviewer prepared this probe.
+- A native rejection after abort containing Fail+Die+Interrupt lost its original Interrupt during outer-scope cleanup. The owner now retains the original compound reason, preserving typed Fail as an annotated defect payload as required by the finalizer's error channel.
+- The unchanged legacy lease suite found two compatibility regressions: a zero-delay timer deferred first renewal, and every machine snapshot emitted duplicate empty presentation callbacks. Immediate zero-delay work and deduped presentation output preserve the existing exact assertions; those tests were not weakened.
+
+The byte-identical `probe.mts` fails before and passes after both ownership repairs. `before.log`, `after-final.log`, and `evidence.json` retain the raw observations. The affected suite passed 53/53 across terminal-ui-lifecycle, terminal-native-addon, terminal-client, terminal-lease and terminal-resources. The initial affected-suite failure is retained in `focused.log`; final output is `focused-after.log`.
+
+No production files were edited by the reviewer. Scope is native Promise/resource lifetime and production-owner semantics under Node, plus source review of caller wiring. The author's built browser tests provide browser integration evidence separately. This review makes no live backend/provider or exactly-once cancellation claim. No additional hypothesis expansion remains open in this bounded review.

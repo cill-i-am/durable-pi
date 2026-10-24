@@ -1,0 +1,16 @@
+{"failure":true,"reasons":[{"tag":"Die"},{"tag":"Die"}]}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: native compound interruption reason must remain alongside defect
+    at <anonymous> (/private/tmp/f07-compound-cleanup-review.mts:14:42) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v24.21.0

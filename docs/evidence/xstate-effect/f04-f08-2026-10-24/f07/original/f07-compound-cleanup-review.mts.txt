@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict'
+import {createRequire} from 'node:module'
+import {ObjectStore} from '/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/objects/store.ts'
+const require=createRequire('/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/package.json')
+const {Cause}=await import(require.resolve('effect'))
+let enter!:()=>void, abort!:()=>void, reject!:(reason:unknown)=>void
+const entered=new Promise<void>(r=>enter=r),aborted=new Promise<void>(r=>abort=r)
+const owner=new ObjectStore(async(_path,_body,signal)=>{signal?.addEventListener('abort',abort);enter();return await new Promise((_resolve,fail)=>reject=fail)},'review')
+const reading=owner.refresh();await entered
+const closing=owner.dispose().then(()=>null,error=>error);await aborted
+reject(Cause.fromReasons([...Cause.fail('native checked').reasons,...Cause.die(new Error('native defect')).reasons,...Cause.interrupt(81234).reasons]))
+const failure=await closing;await reading
+console.log(JSON.stringify({failure:Cause.isCause(failure),reasons:failure?.reasons.map((x:any)=>({tag:x._tag,fiberId:x.fiberId}))}))
+assert.ok(Cause.isCause(failure));assert.ok(failure.reasons.some((r:any)=>r._tag==='Interrupt'&&r.fiberId===81234),'native compound interruption reason must remain alongside defect')

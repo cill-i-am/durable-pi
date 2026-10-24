@@ -1,0 +1,681 @@
+{
+  "sources": {
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/conversation/connection.ts": {
+      "lane": "F01",
+      "frozen": "b702c04a6a51b5bfdf178a8c3ee0c1928264f74883336662fd5a5fc04d5d6228",
+      "actual": "b702c04a6a51b5bfdf178a8c3ee0c1928264f74883336662fd5a5fc04d5d6228",
+      "rechecked": "b702c04a6a51b5bfdf178a8c3ee0c1928264f74883336662fd5a5fc04d5d6228"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/conversation/connection.machine.ts": {
+      "lane": "F01",
+      "frozen": "16095bfbed68b8f2328a15c4107b401af3ccb7192636baed856e9bbd41dcc1c3",
+      "actual": "16095bfbed68b8f2328a15c4107b401af3ccb7192636baed856e9bbd41dcc1c3",
+      "rechecked": "16095bfbed68b8f2328a15c4107b401af3ccb7192636baed856e9bbd41dcc1c3"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/conversation/connection-owner.ts": {
+      "lane": "F01",
+      "frozen": "e9dc29620f1dc56135af773ad2d855a8f52ab2a54a59a98230899690ee414298",
+      "actual": "e9dc29620f1dc56135af773ad2d855a8f52ab2a54a59a98230899690ee414298",
+      "rechecked": "e9dc29620f1dc56135af773ad2d855a8f52ab2a54a59a98230899690ee414298"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/conversation/composer-draft.ts": {
+      "lane": "F01",
+      "frozen": "42888b0565b2636fd3cc4033e435a168dc272a432f43a3e422355a4aee41a190",
+      "actual": "42888b0565b2636fd3cc4033e435a168dc272a432f43a3e422355a4aee41a190",
+      "rechecked": "42888b0565b2636fd3cc4033e435a168dc272a432f43a3e422355a4aee41a190"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/conversation/composer-draft.machine.ts": {
+      "lane": "F01",
+      "frozen": "3d440fe399b3033a101c3ce426c0a81266e7232416af0e6f41557e23b88183fe",
+      "actual": "3d440fe399b3033a101c3ce426c0a81266e7232416af0e6f41557e23b88183fe",
+      "rechecked": "3d440fe399b3033a101c3ce426c0a81266e7232416af0e6f41557e23b88183fe"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/conversation/composer-draft-owner.ts": {
+      "lane": "F01",
+      "frozen": "a98295a57e431ccfa06c040c74a39e92e028930372f309a7d91574ed01e8a999",
+      "actual": "a98295a57e431ccfa06c040c74a39e92e028930372f309a7d91574ed01e8a999",
+      "rechecked": "a98295a57e431ccfa06c040c74a39e92e028930372f309a7d91574ed01e8a999"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/conversation/draft.ts": {
+      "lane": "F01",
+      "frozen": "73142f07a633164a0b6bfc034835725c27b4d9f7d860a5647f050a2644b3b534",
+      "actual": "73142f07a633164a0b6bfc034835725c27b4d9f7d860a5647f050a2644b3b534",
+      "rechecked": "73142f07a633164a0b6bfc034835725c27b4d9f7d860a5647f050a2644b3b534"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/conversation/use-composer-draft.ts": {
+      "lane": "F01",
+      "frozen": "8d97356dfb830083d4c68ef166be67da412b1629f39422667a30bfae4e2e2c03",
+      "actual": "8d97356dfb830083d4c68ef166be67da412b1629f39422667a30bfae4e2e2c03",
+      "rechecked": "8d97356dfb830083d4c68ef166be67da412b1629f39422667a30bfae4e2e2c03"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/conversation/submission.machine.ts": {
+      "lane": "F01",
+      "frozen": "d67081e51d8bbf6dc5d947b15f4642e7d6d08854f20bff7d2334e4ece99e6116",
+      "actual": "d67081e51d8bbf6dc5d947b15f4642e7d6d08854f20bff7d2334e4ece99e6116",
+      "rechecked": "d67081e51d8bbf6dc5d947b15f4642e7d6d08854f20bff7d2334e4ece99e6116"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/conversation/submission-owner.ts": {
+      "lane": "F01",
+      "frozen": "daed66ab1d2a10f8db5890d961a4aee96bbb56f4f4ad210450e8f91c7eb45883",
+      "actual": "daed66ab1d2a10f8db5890d961a4aee96bbb56f4f4ad210450e8f91c7eb45883",
+      "rechecked": "daed66ab1d2a10f8db5890d961a4aee96bbb56f4f4ad210450e8f91c7eb45883"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/conversation/turn-command.machine.ts": {
+      "lane": "F01",
+      "frozen": "9e6829532e0f99376e218f028a49441106572dae733bbb7db1af395d8fe52704",
+      "actual": "9e6829532e0f99376e218f028a49441106572dae733bbb7db1af395d8fe52704",
+      "rechecked": "9e6829532e0f99376e218f028a49441106572dae733bbb7db1af395d8fe52704"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/conversation/turn-command-owner.ts": {
+      "lane": "F01",
+      "frozen": "6c0dcbe6c0b79f75630fcd72e18c147ebc2e53ef7b54ef98666f1db73a420c55",
+      "actual": "6c0dcbe6c0b79f75630fcd72e18c147ebc2e53ef7b54ef98666f1db73a420c55",
+      "rechecked": "6c0dcbe6c0b79f75630fcd72e18c147ebc2e53ef7b54ef98666f1db73a420c55"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/conversation/use-conversation-commands.ts": {
+      "lane": "F01",
+      "frozen": "65e429fe72a6c486e1c292474835882f74331ff3073b65c0fcd70d0576e9f9dc",
+      "actual": "65e429fe72a6c486e1c292474835882f74331ff3073b65c0fcd70d0576e9f9dc",
+      "rechecked": "65e429fe72a6c486e1c292474835882f74331ff3073b65c0fcd70d0576e9f9dc"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/conversation/use-conversation.ts": {
+      "lane": "F01",
+      "frozen": "176a46330b57fbed2a05d602eee0ec7ed3e9b14549e6d74a6135ece9a3c8b5d2",
+      "actual": "176a46330b57fbed2a05d602eee0ec7ed3e9b14549e6d74a6135ece9a3c8b5d2",
+      "rechecked": "176a46330b57fbed2a05d602eee0ec7ed3e9b14549e6d74a6135ece9a3c8b5d2"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/conversation/conversation.tsx": {
+      "lane": "F01",
+      "frozen": "6d58e866444d03348cd46b503bf0d9ced5c6206828cabd84c78db80b341a5f1f",
+      "actual": "6d58e866444d03348cd46b503bf0d9ced5c6206828cabd84c78db80b341a5f1f",
+      "rechecked": "6d58e866444d03348cd46b503bf0d9ced5c6206828cabd84c78db80b341a5f1f"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/conversation/connection-response.ts": {
+      "lane": "F01",
+      "frozen": "d9bb06b2cb80ef2af56659c14a030b409a8399447f9b938c43629f857f4d2015",
+      "actual": "d9bb06b2cb80ef2af56659c14a030b409a8399447f9b938c43629f857f4d2015",
+      "rechecked": "d9bb06b2cb80ef2af56659c14a030b409a8399447f9b938c43629f857f4d2015"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/updates/recovery.ts": {
+      "lane": "F02",
+      "frozen": "824c3359c52b7c7b243607f61d4550423486694c0ae75191dd1333a9fb0777ef",
+      "actual": "824c3359c52b7c7b243607f61d4550423486694c0ae75191dd1333a9fb0777ef",
+      "rechecked": "824c3359c52b7c7b243607f61d4550423486694c0ae75191dd1333a9fb0777ef"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/updates/recovery.machine.ts": {
+      "lane": "F02",
+      "frozen": "014f3cfa3afd9d8d81c2f66b85a723cda69d1a84527296691f9e8c030728e463",
+      "actual": "014f3cfa3afd9d8d81c2f66b85a723cda69d1a84527296691f9e8c030728e463",
+      "rechecked": "014f3cfa3afd9d8d81c2f66b85a723cda69d1a84527296691f9e8c030728e463"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/updates/update-recovery.tsx": {
+      "lane": "F02",
+      "frozen": "4ac32ac5b33db0e6d18b234aa4a4088e845b36c4e5570dbb871f6ae91d4f4e78",
+      "actual": "4ac32ac5b33db0e6d18b234aa4a4088e845b36c4e5570dbb871f6ae91d4f4e78",
+      "rechecked": "4ac32ac5b33db0e6d18b234aa4a4088e845b36c4e5570dbb871f6ae91d4f4e78"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/updates/version-request.ts": {
+      "lane": "F02",
+      "frozen": "004e59ed087a509148f5d36b0e308b12abba17075e7810828af620e2cb6503d8",
+      "actual": "004e59ed087a509148f5d36b0e308b12abba17075e7810828af620e2cb6503d8",
+      "rechecked": "004e59ed087a509148f5d36b0e308b12abba17075e7810828af620e2cb6503d8"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/files/file-types.ts": {
+      "lane": "F03uploads",
+      "frozen": "aba941fb551326eaf47ba46f6e70ea03e00928954aa254cc799abf95e7268a60",
+      "actual": "aba941fb551326eaf47ba46f6e70ea03e00928954aa254cc799abf95e7268a60",
+      "rechecked": "aba941fb551326eaf47ba46f6e70ea03e00928954aa254cc799abf95e7268a60"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/files/file-cache.ts": {
+      "lane": "F03uploads",
+      "frozen": "13cc26aa07be76ca1851bb8231b101838058aad8045bbb71fe6e7cd3b2c25613",
+      "actual": "13cc26aa07be76ca1851bb8231b101838058aad8045bbb71fe6e7cd3b2c25613",
+      "rechecked": "13cc26aa07be76ca1851bb8231b101838058aad8045bbb71fe6e7cd3b2c25613"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/files/uploads.ts": {
+      "lane": "F03uploads",
+      "frozen": "fe007286cb5d476fbbffbf41a632639075fc54b5ea5750d529a49ada7edd35e3",
+      "actual": "fe007286cb5d476fbbffbf41a632639075fc54b5ea5750d529a49ada7edd35e3",
+      "rechecked": "fe007286cb5d476fbbffbf41a632639075fc54b5ea5750d529a49ada7edd35e3"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/files/upload.machine.ts": {
+      "lane": "F03uploads",
+      "frozen": "3e020c6bd5e4efaa4a14d8caa4cc2e5a6233013301d592c5248fb38961a3c1f5",
+      "actual": "3e020c6bd5e4efaa4a14d8caa4cc2e5a6233013301d592c5248fb38961a3c1f5",
+      "rechecked": "3e020c6bd5e4efaa4a14d8caa4cc2e5a6233013301d592c5248fb38961a3c1f5"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/files/uploads.machine.ts": {
+      "lane": "F03uploads",
+      "frozen": "1fc633ad763ca88a2212406eaa96129f8b950648457f138115f54bc4c331ab93",
+      "actual": "1fc633ad763ca88a2212406eaa96129f8b950648457f138115f54bc4c331ab93",
+      "rechecked": "1fc633ad763ca88a2212406eaa96129f8b950648457f138115f54bc4c331ab93"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/files/file-refresh.machine.ts": {
+      "lane": "F03uploads",
+      "frozen": "41791cd93755c185b13db60a88b47c66339a129565dc92a375b6a5fdde7c5fbf",
+      "actual": "41791cd93755c185b13db60a88b47c66339a129565dc92a375b6a5fdde7c5fbf",
+      "rechecked": "41791cd93755c185b13db60a88b47c66339a129565dc92a375b6a5fdde7c5fbf"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/files/file-mutation.machine.ts": {
+      "lane": "F03uploads",
+      "frozen": "7c0630acaf75162191d17192b2fd77e6dedcb786a9f768d90a398b3915413077",
+      "actual": "7c0630acaf75162191d17192b2fd77e6dedcb786a9f768d90a398b3915413077",
+      "rechecked": "7c0630acaf75162191d17192b2fd77e6dedcb786a9f768d90a398b3915413077"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/files/files-owner.ts": {
+      "lane": "F03uploads",
+      "frozen": "b0c354f1a2f2998d5250202de135f4bdfe618064cfe662e1c506b872f5b33b8c",
+      "actual": "b0c354f1a2f2998d5250202de135f4bdfe618064cfe662e1c506b872f5b33b8c",
+      "rechecked": "b0c354f1a2f2998d5250202de135f4bdfe618064cfe662e1c506b872f5b33b8c"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/files/use-files.ts": {
+      "lane": "F03uploads",
+      "frozen": "a628d3e5e71758c3512d7fac9d24536e435ee334f7bfdce8a51f35c103d73f7a",
+      "actual": "a628d3e5e71758c3512d7fac9d24536e435ee334f7bfdce8a51f35c103d73f7a",
+      "rechecked": "a628d3e5e71758c3512d7fac9d24536e435ee334f7bfdce8a51f35c103d73f7a"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/files/owned-work.ts": {
+      "lane": "F03uploads",
+      "frozen": "56e674c2a81197da06e0612b26e8e7b1d25a432461d6a759b48d2ba576b87e68",
+      "actual": "56e674c2a81197da06e0612b26e8e7b1d25a432461d6a759b48d2ba576b87e68",
+      "rechecked": "56e674c2a81197da06e0612b26e8e7b1d25a432461d6a759b48d2ba576b87e68"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/files/voice-recorder.machine.ts": {
+      "lane": "F03media",
+      "frozen": "c12cbc5ccf12f99909316f725c3fac14ba70e0e8f122165d4d784e0f8b123d21",
+      "actual": "c12cbc5ccf12f99909316f725c3fac14ba70e0e8f122165d4d784e0f8b123d21",
+      "rechecked": "c12cbc5ccf12f99909316f725c3fac14ba70e0e8f122165d4d784e0f8b123d21"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/files/voice-capture.ts": {
+      "lane": "F03media",
+      "frozen": "f80da73d5c27aca7066ffca16a59ae8c17a8988286a5dfee58ac0a28747caf9e",
+      "actual": "f80da73d5c27aca7066ffca16a59ae8c17a8988286a5dfee58ac0a28747caf9e",
+      "rechecked": "f80da73d5c27aca7066ffca16a59ae8c17a8988286a5dfee58ac0a28747caf9e"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/files/voice-recorder.tsx": {
+      "lane": "F03media",
+      "frozen": "0dadc2ae95d1a068390c71f0f4dd2d25f4de1a71c6a32a708185f4364851d5c4",
+      "actual": "0dadc2ae95d1a068390c71f0f4dd2d25f4de1a71c6a32a708185f4364851d5c4",
+      "rechecked": "0dadc2ae95d1a068390c71f0f4dd2d25f4de1a71c6a32a708185f4364851d5c4"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/files/file-preview.machine.ts": {
+      "lane": "F03media",
+      "frozen": "062097a216d714ba822324a27fd07b94e54599cecf1da3545d5f6cdb0ee44dc8",
+      "actual": "062097a216d714ba822324a27fd07b94e54599cecf1da3545d5f6cdb0ee44dc8",
+      "rechecked": "062097a216d714ba822324a27fd07b94e54599cecf1da3545d5f6cdb0ee44dc8"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/files/file-preview-resource.ts": {
+      "lane": "F03media",
+      "frozen": "2b7b5c8d505c77c5811e307176bede00279c66112dbdaf721592c38b7d45da6f",
+      "actual": "2b7b5c8d505c77c5811e307176bede00279c66112dbdaf721592c38b7d45da6f",
+      "rechecked": "2b7b5c8d505c77c5811e307176bede00279c66112dbdaf721592c38b7d45da6f"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/files/use-file-preview.ts": {
+      "lane": "F03media",
+      "frozen": "a5f97d71baab37096d793cd1e521a5de13658c366c44b890f5090738ccab983e",
+      "actual": "a5f97d71baab37096d793cd1e521a5de13658c366c44b890f5090738ccab983e",
+      "rechecked": "a5f97d71baab37096d793cd1e521a5de13658c366c44b890f5090738ccab983e"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/files/audio-player.tsx": {
+      "lane": "F03media",
+      "frozen": "6913d075c730441b4daaadb68932e2873ae67e04cefc91a7411575f657da9aea",
+      "actual": "6913d075c730441b4daaadb68932e2873ae67e04cefc91a7411575f657da9aea",
+      "rechecked": "6913d075c730441b4daaadb68932e2873ae67e04cefc91a7411575f657da9aea"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/files/file-details.machine.ts": {
+      "lane": "F03media",
+      "frozen": "303eb2341f8118d2a144896eaa41b2057c7e06f3fd1733cfb93f25c3c9871411",
+      "actual": "303eb2341f8118d2a144896eaa41b2057c7e06f3fd1733cfb93f25c3c9871411",
+      "rechecked": "303eb2341f8118d2a144896eaa41b2057c7e06f3fd1733cfb93f25c3c9871411"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/files/use-file-details.ts": {
+      "lane": "F03media",
+      "frozen": "b44d10625d1c8e1b4db2d6977ea40763535c6363b804960ae226d6125f2bdebe",
+      "actual": "b44d10625d1c8e1b4db2d6977ea40763535c6363b804960ae226d6125f2bdebe",
+      "rechecked": "b44d10625d1c8e1b4db2d6977ea40763535c6363b804960ae226d6125f2bdebe"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/features/files/files-panel.tsx": {
+      "lane": "F03media",
+      "frozen": "9fb711fa2017b48e21d16855ed820f3348b891a2736edb8d6658d9e790bc4f0b",
+      "actual": "9fb711fa2017b48e21d16855ed820f3348b891a2736edb8d6658d9e790bc4f0b",
+      "rechecked": "9fb711fa2017b48e21d16855ed820f3348b891a2736edb8d6658d9e790bc4f0b"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/terminal/native-terminal-addon.ts": {
+      "lane": "f04",
+      "frozen": "292b03615e48a422f915e615c7f732d2bae0e52e30cb421828d7aab994ebedc3",
+      "actual": "292b03615e48a422f915e615c7f732d2bae0e52e30cb421828d7aab994ebedc3",
+      "rechecked": "292b03615e48a422f915e615c7f732d2bae0e52e30cb421828d7aab994ebedc3"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/terminal/interactive-terminal.tsx": {
+      "lane": "f04",
+      "frozen": "f0a3667517cc7b5919989dbadbe95a99a87b3b434c11332a641aecb9af0ffc4f",
+      "actual": "f0a3667517cc7b5919989dbadbe95a99a87b3b434c11332a641aecb9af0ffc4f",
+      "rechecked": "f0a3667517cc7b5919989dbadbe95a99a87b3b434c11332a641aecb9af0ffc4f"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/terminal/file-transfers.tsx": {
+      "lane": "f04",
+      "frozen": "05f4897e134e8c4092786c187f3775709b45ab6f353a34832d9873c69528f7a9",
+      "actual": "05f4897e134e8c4092786c187f3775709b45ab6f353a34832d9873c69528f7a9",
+      "rechecked": "05f4897e134e8c4092786c187f3775709b45ab6f353a34832d9873c69528f7a9"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/terminal/owned-work.ts": {
+      "lane": "f04",
+      "frozen": "1840616557aa67b2bdd2189ab3bf2e48663e3926a2960ed2894dba4b35267772",
+      "actual": "1840616557aa67b2bdd2189ab3bf2e48663e3926a2960ed2894dba4b35267772",
+      "rechecked": "1840616557aa67b2bdd2189ab3bf2e48663e3926a2960ed2894dba4b35267772"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/terminal/terminal-ui.machine.ts": {
+      "lane": "f04",
+      "frozen": "7fde6fbd4b3d259404c587d25ef9f342fccb4f265cb341acd910fd0383f0b2fb",
+      "actual": "7fde6fbd4b3d259404c587d25ef9f342fccb4f265cb341acd910fd0383f0b2fb",
+      "rechecked": "7fde6fbd4b3d259404c587d25ef9f342fccb4f265cb341acd910fd0383f0b2fb"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/terminal/interactive-host.machine.ts": {
+      "lane": "f04",
+      "frozen": "042da1ad12f381357ab51e84b7f5ac2140cf901e9c54eec14332cbb406b5f6ce",
+      "actual": "042da1ad12f381357ab51e84b7f5ac2140cf901e9c54eec14332cbb406b5f6ce",
+      "rechecked": "042da1ad12f381357ab51e84b7f5ac2140cf901e9c54eec14332cbb406b5f6ce"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/terminal/export-save.ts": {
+      "lane": "f04",
+      "frozen": "f25e922253de975db72c015ab451504bdaccdbc7cd464c3b5dd2771b3906b05c",
+      "actual": "f25e922253de975db72c015ab451504bdaccdbc7cd464c3b5dd2771b3906b05c",
+      "rechecked": "f25e922253de975db72c015ab451504bdaccdbc7cd464c3b5dd2771b3906b05c"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/terminal/session-lease.ts": {
+      "lane": "f04",
+      "frozen": "aa9c5e11333e8eeefe2bd918dc882f67c5865514cf3605a48e9f91ab7252189e",
+      "actual": "aa9c5e11333e8eeefe2bd918dc882f67c5865514cf3605a48e9f91ab7252189e",
+      "rechecked": "aa9c5e11333e8eeefe2bd918dc882f67c5865514cf3605a48e9f91ab7252189e"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/terminal/socket.machine.ts": {
+      "lane": "f04",
+      "frozen": "c054478f305fbb24f61d4f7f7e14a91aa6da6adfc9667e6018f86f3958f442ee",
+      "actual": "c054478f305fbb24f61d4f7f7e14a91aa6da6adfc9667e6018f86f3958f442ee",
+      "rechecked": "c054478f305fbb24f61d4f7f7e14a91aa6da6adfc9667e6018f86f3958f442ee"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/terminal/terminal-owner.ts": {
+      "lane": "f04",
+      "frozen": "f8d5a6e67ef7d2380de1a5b9623b4ce7ad186a09cc7646a22ef8ef25be57dbe2",
+      "actual": "f8d5a6e67ef7d2380de1a5b9623b4ce7ad186a09cc7646a22ef8ef25be57dbe2",
+      "rechecked": "f8d5a6e67ef7d2380de1a5b9623b4ce7ad186a09cc7646a22ef8ef25be57dbe2"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/terminal/terminal-workbench.tsx": {
+      "lane": "f04",
+      "frozen": "c8c4d79e91d57c280e95c6ebf5e2d1e568bf2078c50cfd1ad729075f5923e868",
+      "actual": "c8c4d79e91d57c280e95c6ebf5e2d1e568bf2078c50cfd1ad729075f5923e868",
+      "rechecked": "c8c4d79e91d57c280e95c6ebf5e2d1e568bf2078c50cfd1ad729075f5923e868"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/terminal/index.ts": {
+      "lane": "f04",
+      "frozen": "0384db184b4f259a8befe3cfe35b95d7057a3796572b7b6236658d89eefb6c3a",
+      "actual": "0384db184b4f259a8befe3cfe35b95d7057a3796572b7b6236658d89eefb6c3a",
+      "rechecked": "0384db184b4f259a8befe3cfe35b95d7057a3796572b7b6236658d89eefb6c3a"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/terminal/session-lease.machine.ts": {
+      "lane": "f04",
+      "frozen": "2fde5f9ece34204ba4d6276d2366917623dac3225b1d7c43b3b509187d91f048",
+      "actual": "2fde5f9ece34204ba4d6276d2366917623dac3225b1d7c43b3b509187d91f048",
+      "rechecked": "2fde5f9ece34204ba4d6276d2366917623dac3225b1d7c43b3b509187d91f048"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/terminal/use-terminal.ts": {
+      "lane": "f04",
+      "frozen": "2242e185b90635aec18062c221c4549c48fb676fbbf89565031a76702ff166ff",
+      "actual": "2242e185b90635aec18062c221c4549c48fb676fbbf89565031a76702ff166ff",
+      "rechecked": "2242e185b90635aec18062c221c4549c48fb676fbbf89565031a76702ff166ff"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/terminal/export-save.machine.ts": {
+      "lane": "f04",
+      "frozen": "573a0e8a06f8d41cb308653dff3bc7b6557b9fa1ff6987b03ee19e0ca11742e9",
+      "actual": "573a0e8a06f8d41cb308653dff3bc7b6557b9fa1ff6987b03ee19e0ca11742e9",
+      "rechecked": "573a0e8a06f8d41cb308653dff3bc7b6557b9fa1ff6987b03ee19e0ca11742e9"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/browser/browser.machine.ts": {
+      "lane": "f05",
+      "frozen": "838c60bcad7187948431a06e3f485aadf7e64decfdc17cbfa476b6662341f310",
+      "actual": "838c60bcad7187948431a06e3f485aadf7e64decfdc17cbfa476b6662341f310",
+      "rechecked": "838c60bcad7187948431a06e3f485aadf7e64decfdc17cbfa476b6662341f310"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/browser/browser-owner.ts": {
+      "lane": "f05",
+      "frozen": "5085109cab354cb2de9689c9b8a28f6f47d4b35fe112490e0c6c569a8971f629",
+      "actual": "5085109cab354cb2de9689c9b8a28f6f47d4b35fe112490e0c6c569a8971f629",
+      "rechecked": "5085109cab354cb2de9689c9b8a28f6f47d4b35fe112490e0c6c569a8971f629"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/browser/use-browser.ts": {
+      "lane": "f05",
+      "frozen": "ba4049df214346e0e7d7ff5bfef0604f6d7edc3d5b4077d3b55caeb186f2fb01",
+      "actual": "ba4049df214346e0e7d7ff5bfef0604f6d7edc3d5b4077d3b55caeb186f2fb01",
+      "rechecked": "ba4049df214346e0e7d7ff5bfef0604f6d7edc3d5b4077d3b55caeb186f2fb01"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/browser/browser-preview.machine.ts": {
+      "lane": "f05",
+      "frozen": "1e415623fe4e7f8bb4894ea5d75744580f8dd133443fe5220e4472323b0bc33f",
+      "actual": "1e415623fe4e7f8bb4894ea5d75744580f8dd133443fe5220e4472323b0bc33f",
+      "rechecked": "1e415623fe4e7f8bb4894ea5d75744580f8dd133443fe5220e4472323b0bc33f"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/browser/browser-preview.tsx": {
+      "lane": "f05",
+      "frozen": "fe180d275ff4fdf5fce0bcfae9d1d8897aff960105a9976c2c0fe66104c10a92",
+      "actual": "fe180d275ff4fdf5fce0bcfae9d1d8897aff960105a9976c2c0fe66104c10a92",
+      "rechecked": "fe180d275ff4fdf5fce0bcfae9d1d8897aff960105a9976c2c0fe66104c10a92"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/browser/browser-controls.tsx": {
+      "lane": "f05",
+      "frozen": "95b6b0bb3a18e03930909e6f42f5aa5ac73f9310fe2db7e99435df4a0160a0bc",
+      "actual": "95b6b0bb3a18e03930909e6f42f5aa5ac73f9310fe2db7e99435df4a0160a0bc",
+      "rechecked": "95b6b0bb3a18e03930909e6f42f5aa5ac73f9310fe2db7e99435df4a0160a0bc"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/browser/browser-workbench.tsx": {
+      "lane": "f05",
+      "frozen": "717be833b1f7bab4959e50200748d42d1837d9adc7902da8d3b311d6621f1f4b",
+      "actual": "717be833b1f7bab4959e50200748d42d1837d9adc7902da8d3b311d6621f1f4b",
+      "rechecked": "717be833b1f7bab4959e50200748d42d1837d9adc7902da8d3b311d6621f1f4b"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/execution/execution.machine.ts": {
+      "lane": "f05",
+      "frozen": "d9167c3489c7ecd9245dc0127569bd485b7f2767ee30fc320b4e76c0dd804b09",
+      "actual": "d9167c3489c7ecd9245dc0127569bd485b7f2767ee30fc320b4e76c0dd804b09",
+      "rechecked": "d9167c3489c7ecd9245dc0127569bd485b7f2767ee30fc320b4e76c0dd804b09"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/execution/execution-owner.ts": {
+      "lane": "f05",
+      "frozen": "56e3c750fb3babdc8b0e14d646170c2380779726e7caceaaa7e64fbf22febccf",
+      "actual": "56e3c750fb3babdc8b0e14d646170c2380779726e7caceaaa7e64fbf22febccf",
+      "rechecked": "56e3c750fb3babdc8b0e14d646170c2380779726e7caceaaa7e64fbf22febccf"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/execution/use-execution.ts": {
+      "lane": "f05",
+      "frozen": "355eaf2ca586eb467e9be4f427d89ce7dc6c2b30adf3e07cbdd9647d5f9df3a0",
+      "actual": "355eaf2ca586eb467e9be4f427d89ce7dc6c2b30adf3e07cbdd9647d5f9df3a0",
+      "rechecked": "355eaf2ca586eb467e9be4f427d89ce7dc6c2b30adf3e07cbdd9647d5f9df3a0"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/access/approval-card.tsx": {
+      "lane": "f06",
+      "frozen": "c79eee07f928a4df17d346fdf9e18dd4a2e8866a42765b1b9605e36a1cbccdac",
+      "actual": "c79eee07f928a4df17d346fdf9e18dd4a2e8866a42765b1b9605e36a1cbccdac",
+      "rechecked": "c79eee07f928a4df17d346fdf9e18dd4a2e8866a42765b1b9605e36a1cbccdac"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/access/access-panel.tsx": {
+      "lane": "f06",
+      "frozen": "edf5d8f3387267e13edeb384ac175d70061b59ffde3391886f5b9a072a4d131f",
+      "actual": "edf5d8f3387267e13edeb384ac175d70061b59ffde3391886f5b9a072a4d131f",
+      "rechecked": "edf5d8f3387267e13edeb384ac175d70061b59ffde3391886f5b9a072a4d131f"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/access/decision.ts": {
+      "lane": "f06",
+      "frozen": "68e459e3639c19fd881a58eafd499a46825720a518fee4d2f269a229bc30d0f0",
+      "actual": "68e459e3639c19fd881a58eafd499a46825720a518fee4d2f269a229bc30d0f0",
+      "rechecked": "68e459e3639c19fd881a58eafd499a46825720a518fee4d2f269a229bc30d0f0"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/access/approval.machine.ts": {
+      "lane": "f06",
+      "frozen": "ad395534719b9c07bb582545ce419d41b0f41841c1d3f08be964d7110967f28d",
+      "actual": "ad395534719b9c07bb582545ce419d41b0f41841c1d3f08be964d7110967f28d",
+      "rechecked": "ad395534719b9c07bb582545ce419d41b0f41841c1d3f08be964d7110967f28d"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/access/access.machine.ts": {
+      "lane": "f06",
+      "frozen": "cdc3cbfb4ff16f9c116ac84ffd6078effa882a6145b3ea7f8f5a72aed43f7b55",
+      "actual": "cdc3cbfb4ff16f9c116ac84ffd6078effa882a6145b3ea7f8f5a72aed43f7b55",
+      "rechecked": "cdc3cbfb4ff16f9c116ac84ffd6078effa882a6145b3ea7f8f5a72aed43f7b55"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/access/access-owner.ts": {
+      "lane": "f06",
+      "frozen": "51523932045010a4740da6b7f2470ef25c17a8d32c85f0dff804a515c1b82cf9",
+      "actual": "51523932045010a4740da6b7f2470ef25c17a8d32c85f0dff804a515c1b82cf9",
+      "rechecked": "51523932045010a4740da6b7f2470ef25c17a8d32c85f0dff804a515c1b82cf9"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/access/use-access.ts": {
+      "lane": "f06",
+      "frozen": "511e828366c7c2fd50d62a1b5d8cb232c9c53b018ef7b07b0b52da4e97f851b2",
+      "actual": "511e828366c7c2fd50d62a1b5d8cb232c9c53b018ef7b07b0b52da4e97f851b2",
+      "rechecked": "511e828366c7c2fd50d62a1b5d8cb232c9c53b018ef7b07b0b52da4e97f851b2"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/access/use-approval.ts": {
+      "lane": "f06",
+      "frozen": "2fac2098f9607c1c9827b90ac651458398f062f36df1682c9d0842f40090e5c4",
+      "actual": "2fac2098f9607c1c9827b90ac651458398f062f36df1682c9d0842f40090e5c4",
+      "rechecked": "2fac2098f9607c1c9827b90ac651458398f062f36df1682c9d0842f40090e5c4"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/connections/connections.machine.ts": {
+      "lane": "f06",
+      "frozen": "4e6f2196895c871a32b7065ee774b7f47c1b02a24292fc3b3d6b7bdc792c2fd1",
+      "actual": "4e6f2196895c871a32b7065ee774b7f47c1b02a24292fc3b3d6b7bdc792c2fd1",
+      "rechecked": "4e6f2196895c871a32b7065ee774b7f47c1b02a24292fc3b3d6b7bdc792c2fd1"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/connections/connections-owner.ts": {
+      "lane": "f06",
+      "frozen": "09b53e3aad49dcb7dc3149575cac6a13bdd92b407f88de15ef98a65fe9bf0403",
+      "actual": "09b53e3aad49dcb7dc3149575cac6a13bdd92b407f88de15ef98a65fe9bf0403",
+      "rechecked": "09b53e3aad49dcb7dc3149575cac6a13bdd92b407f88de15ef98a65fe9bf0403"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/connections/use-connections.ts": {
+      "lane": "f06",
+      "frozen": "4ef4b819b51e1ba6ea87ef9e250c3e885e68a7d06c5ff532243720625d5ccd56",
+      "actual": "4ef4b819b51e1ba6ea87ef9e250c3e885e68a7d06c5ff532243720625d5ccd56",
+      "rechecked": "4ef4b819b51e1ba6ea87ef9e250c3e885e68a7d06c5ff532243720625d5ccd56"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/connections/connections-panel.tsx": {
+      "lane": "f06",
+      "frozen": "ceeb930d92330e6bae7985b23aaf9c205fad0b53b491ffe6ff9c02bef3009931",
+      "actual": "ceeb930d92330e6bae7985b23aaf9c205fad0b53b491ffe6ff9c02bef3009931",
+      "rechecked": "ceeb930d92330e6bae7985b23aaf9c205fad0b53b491ffe6ff9c02bef3009931"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/objects/checklist.tsx": {
+      "lane": "f07",
+      "frozen": "254155aa3b1a977a0fcdd4a769b757ff443a2440acaf9cc9b505135fc7ff3eb4",
+      "actual": "254155aa3b1a977a0fcdd4a769b757ff443a2440acaf9cc9b505135fc7ff3eb4",
+      "rechecked": "254155aa3b1a977a0fcdd4a769b757ff443a2440acaf9cc9b505135fc7ff3eb4"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/objects/context.tsx": {
+      "lane": "f07",
+      "frozen": "8ceb9280c7fa4b9abe7bbdc93c8238cd54c28f70bcbf359cb8f8530a703c9c3b",
+      "actual": "8ceb9280c7fa4b9abe7bbdc93c8238cd54c28f70bcbf359cb8f8530a703c9c3b",
+      "rechecked": "8ceb9280c7fa4b9abe7bbdc93c8238cd54c28f70bcbf359cb8f8530a703c9c3b"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/objects/object-creation.machine.ts": {
+      "lane": "f07",
+      "frozen": "0f7944d34a8a44397eaf455484014aee6c5a7616a0d2adf29ab45919ec207058",
+      "actual": "0f7944d34a8a44397eaf455484014aee6c5a7616a0d2adf29ab45919ec207058",
+      "rechecked": "0f7944d34a8a44397eaf455484014aee6c5a7616a0d2adf29ab45919ec207058"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/objects/object-edit.machine.ts": {
+      "lane": "f07",
+      "frozen": "e5bf7adbad3519ec58852316b754495c23298ac66c6a1fa12ac1d6b660485349",
+      "actual": "e5bf7adbad3519ec58852316b754495c23298ac66c6a1fa12ac1d6b660485349",
+      "rechecked": "e5bf7adbad3519ec58852316b754495c23298ac66c6a1fa12ac1d6b660485349"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/objects/object-origin.machine.ts": {
+      "lane": "f07",
+      "frozen": "85d85b88a5e51835bfe12eee2bef57145141c938c753ab53b3c4d5807ce0ea9f",
+      "actual": "85d85b88a5e51835bfe12eee2bef57145141c938c753ab53b3c4d5807ce0ea9f",
+      "rechecked": "85d85b88a5e51835bfe12eee2bef57145141c938c753ab53b3c4d5807ce0ea9f"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/objects/object-poll.machine.ts": {
+      "lane": "f07",
+      "frozen": "c34ec6ad11d3a2a628d88c4c1cbbc5cb3c4c2bfa835145d5398e53295b2031a4",
+      "actual": "c34ec6ad11d3a2a628d88c4c1cbbc5cb3c4c2bfa835145d5398e53295b2031a4",
+      "rechecked": "c34ec6ad11d3a2a628d88c4c1cbbc5cb3c4c2bfa835145d5398e53295b2031a4"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/objects/object-read.machine.ts": {
+      "lane": "f07",
+      "frozen": "169dd9ad406466ed7d6aba61a7f6a18633b0658f2661bbce40908f2fdb10751d",
+      "actual": "169dd9ad406466ed7d6aba61a7f6a18633b0658f2661bbce40908f2fdb10751d",
+      "rechecked": "169dd9ad406466ed7d6aba61a7f6a18633b0658f2661bbce40908f2fdb10751d"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/objects/object-storage.ts": {
+      "lane": "f07",
+      "frozen": "37445e39830ee7f0623f402d7cdd574cdf39483ff1c03b7d78c9259ca12a5ef9",
+      "actual": "37445e39830ee7f0623f402d7cdd574cdf39483ff1c03b7d78c9259ca12a5ef9",
+      "rechecked": "37445e39830ee7f0623f402d7cdd574cdf39483ff1c03b7d78c9259ca12a5ef9"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/objects/store.ts": {
+      "lane": "f07",
+      "frozen": "4606b476bcd121f764f731b0ae41f230a08c6ef51427c1af90bf292a33652b51",
+      "actual": "4606b476bcd121f764f731b0ae41f230a08c6ef51427c1af90bf292a33652b51",
+      "rechecked": "4606b476bcd121f764f731b0ae41f230a08c6ef51427c1af90bf292a33652b51"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/objects/use-object-creation.ts": {
+      "lane": "f07",
+      "frozen": "d3d7d75e5b6739138265c26d17f7eb0f99ce9ad5f81ee14391f0ccccce934517",
+      "actual": "d3d7d75e5b6739138265c26d17f7eb0f99ce9ad5f81ee14391f0ccccce934517",
+      "rechecked": "d3d7d75e5b6739138265c26d17f7eb0f99ce9ad5f81ee14391f0ccccce934517"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/objects/use-object-origin.ts": {
+      "lane": "f07",
+      "frozen": "a694604978aa2942c261492b6d03452f082c7993de9dcd1a0e810c20fe991917",
+      "actual": "a694604978aa2942c261492b6d03452f082c7993de9dcd1a0e810c20fe991917",
+      "rechecked": "a694604978aa2942c261492b6d03452f082c7993de9dcd1a0e810c20fe991917"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/objects/workbench.tsx": {
+      "lane": "f07",
+      "frozen": "6a16684a3b78750af6ed6c6f5ad7d37b859b11ede22fe8d4d98d62c6dd833071",
+      "actual": "6a16684a3b78750af6ed6c6f5ad7d37b859b11ede22fe8d4d98d62c6dd833071",
+      "rechecked": "6a16684a3b78750af6ed6c6f5ad7d37b859b11ede22fe8d4d98d62c6dd833071"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/auth-contracts.ts": {
+      "lane": "f08",
+      "frozen": "4da73595b68e2b27d55966fbac1d038582e4032875a1d20f30d6d2619708261b",
+      "actual": "4da73595b68e2b27d55966fbac1d038582e4032875a1d20f30d6d2619708261b",
+      "rechecked": "4da73595b68e2b27d55966fbac1d038582e4032875a1d20f30d6d2619708261b"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/auth-owner.ts": {
+      "lane": "f08",
+      "frozen": "38ce5bf539307299988a8d6c50dee85ee8cb9940020a799ff9c1f33a9cc4486f",
+      "actual": "38ce5bf539307299988a8d6c50dee85ee8cb9940020a799ff9c1f33a9cc4486f",
+      "rechecked": "38ce5bf539307299988a8d6c50dee85ee8cb9940020a799ff9c1f33a9cc4486f"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/auth-entry.machine.ts": {
+      "lane": "f08",
+      "frozen": "dab5d7b557cf9c8112119774d002d2d33c141db033d28650175c31f0ceb8cdd9",
+      "actual": "dab5d7b557cf9c8112119774d002d2d33c141db033d28650175c31f0ceb8cdd9",
+      "rechecked": "dab5d7b557cf9c8112119774d002d2d33c141db033d28650175c31f0ceb8cdd9"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/auth-entry.ts": {
+      "lane": "f08",
+      "frozen": "5801bb244607d481712f18ecf60e3399e553d460408d48e220f25342f44a9823",
+      "actual": "5801bb244607d481712f18ecf60e3399e553d460408d48e220f25342f44a9823",
+      "rechecked": "5801bb244607d481712f18ecf60e3399e553d460408d48e220f25342f44a9823"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/login.tsx": {
+      "lane": "f08",
+      "frozen": "93d87dfadd25796732393ec86dd911f5828e922d09aa57cd0c84da35242e531f",
+      "actual": "93d87dfadd25796732393ec86dd911f5828e922d09aa57cd0c84da35242e531f",
+      "rechecked": "93d87dfadd25796732393ec86dd911f5828e922d09aa57cd0c84da35242e531f"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/password-recovery.tsx": {
+      "lane": "f08",
+      "frozen": "3b299c69abe3ffe8b6520d605605eb58d709a7146c6523b4c5faa4321e731bb0",
+      "actual": "3b299c69abe3ffe8b6520d605605eb58d709a7146c6523b4c5faa4321e731bb0",
+      "rechecked": "3b299c69abe3ffe8b6520d605605eb58d709a7146c6523b4c5faa4321e731bb0"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/two-factor-challenge.tsx": {
+      "lane": "f08",
+      "frozen": "01266de083cbfd6977b25132bbb4c7163e03630c8150fdc5ab65c6e92d84c5ad",
+      "actual": "01266de083cbfd6977b25132bbb4c7163e03630c8150fdc5ab65c6e92d84c5ad",
+      "rechecked": "01266de083cbfd6977b25132bbb4c7163e03630c8150fdc5ab65c6e92d84c5ad"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/passkey-sign-in.tsx": {
+      "lane": "f08",
+      "frozen": "b8e3779de8b6e02c7b20c3eb520c66be7c20b29047d9943d3e9b0d21ff4d2265",
+      "actual": "b8e3779de8b6e02c7b20c3eb520c66be7c20b29047d9943d3e9b0d21ff4d2265",
+      "rechecked": "b8e3779de8b6e02c7b20c3eb520c66be7c20b29047d9943d3e9b0d21ff4d2265"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/passkey-errors.ts": {
+      "lane": "f08",
+      "frozen": "0717ade0936f65e73f1c64613557a756e65543c67ee45b1180eb5a87b8e73be0",
+      "actual": "0717ade0936f65e73f1c64613557a756e65543c67ee45b1180eb5a87b8e73be0",
+      "rechecked": "0717ade0936f65e73f1c64613557a756e65543c67ee45b1180eb5a87b8e73be0"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/photo.machine.ts": {
+      "lane": "f08",
+      "frozen": "946c470721c6ba9693de4a9bd283999a972356cc4e72a94724f18ddc0add7b76",
+      "actual": "946c470721c6ba9693de4a9bd283999a972356cc4e72a94724f18ddc0add7b76",
+      "rechecked": "946c470721c6ba9693de4a9bd283999a972356cc4e72a94724f18ddc0add7b76"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/photo-owner.ts": {
+      "lane": "f08",
+      "frozen": "6c5f51b7ac392d72f8ccf4e2c26377f5725d2fecd508711b350734e7f624cce8",
+      "actual": "6c5f51b7ac392d72f8ccf4e2c26377f5725d2fecd508711b350734e7f624cce8",
+      "rechecked": "6c5f51b7ac392d72f8ccf4e2c26377f5725d2fecd508711b350734e7f624cce8"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/profile-photo.tsx": {
+      "lane": "f08",
+      "frozen": "ba68249a34185f9c3e96cfe2d3048eb97c7de5e95e10572a3e9321f8e66e4e90",
+      "actual": "ba68249a34185f9c3e96cfe2d3048eb97c7de5e95e10572a3e9321f8e66e4e90",
+      "rechecked": "ba68249a34185f9c3e96cfe2d3048eb97c7de5e95e10572a3e9321f8e66e4e90"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/factor.machine.ts": {
+      "lane": "f08",
+      "frozen": "883803a60a2c0bb6a6ef5572297c967c43a121109ba043cff1d31224c1c636d0",
+      "actual": "883803a60a2c0bb6a6ef5572297c967c43a121109ba043cff1d31224c1c636d0",
+      "rechecked": "883803a60a2c0bb6a6ef5572297c967c43a121109ba043cff1d31224c1c636d0"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/factor-owner.ts": {
+      "lane": "f08",
+      "frozen": "760ffcf14225901e75a0bfd4d8ebeffef941f5291a06262713cafa6cf06c8598",
+      "actual": "760ffcf14225901e75a0bfd4d8ebeffef941f5291a06262713cafa6cf06c8598",
+      "rechecked": "760ffcf14225901e75a0bfd4d8ebeffef941f5291a06262713cafa6cf06c8598"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/factor-settings.tsx": {
+      "lane": "f08",
+      "frozen": "15715c366d4399f61d4430fb22415cf8b40c4a416d1890d47216e1bcf3dfb5ce",
+      "actual": "15715c366d4399f61d4430fb22415cf8b40c4a416d1890d47216e1bcf3dfb5ce",
+      "rechecked": "15715c366d4399f61d4430fb22415cf8b40c4a416d1890d47216e1bcf3dfb5ce"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/passkeys.machine.ts": {
+      "lane": "f08",
+      "frozen": "2f196f512c9719e6be1da71ee27a63121f73c835981ee137fc62153ac8828851",
+      "actual": "2f196f512c9719e6be1da71ee27a63121f73c835981ee137fc62153ac8828851",
+      "rechecked": "2f196f512c9719e6be1da71ee27a63121f73c835981ee137fc62153ac8828851"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/passkeys-owner.ts": {
+      "lane": "f08",
+      "frozen": "abfed3aeb33a87c426bf0bd61c6b60bdce72109cec0152470f334cdfa723813a",
+      "actual": "abfed3aeb33a87c426bf0bd61c6b60bdce72109cec0152470f334cdfa723813a",
+      "rechecked": "abfed3aeb33a87c426bf0bd61c6b60bdce72109cec0152470f334cdfa723813a"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/passkey-settings.tsx": {
+      "lane": "f08",
+      "frozen": "f7608e1d8209650721eb44b75d294be45e458df18c9a462a9f7909988cea327f",
+      "actual": "f7608e1d8209650721eb44b75d294be45e458df18c9a462a9f7909988cea327f",
+      "rechecked": "f7608e1d8209650721eb44b75d294be45e458df18c9a462a9f7909988cea327f"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/security.machine.ts": {
+      "lane": "f08",
+      "frozen": "5c81cfad04d4b0482369b49775d67b1507b4011a4a4ec1b2e318b2e299e61033",
+      "actual": "5c81cfad04d4b0482369b49775d67b1507b4011a4a4ec1b2e318b2e299e61033",
+      "rechecked": "5c81cfad04d4b0482369b49775d67b1507b4011a4a4ec1b2e318b2e299e61033"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/security-owner.ts": {
+      "lane": "f08",
+      "frozen": "1f239f3b55dd632c145cf13cedd2393c0ddadfc10fabffa838ec3e05fbd278fc",
+      "actual": "1f239f3b55dd632c145cf13cedd2393c0ddadfc10fabffa838ec3e05fbd278fc",
+      "rechecked": "1f239f3b55dd632c145cf13cedd2393c0ddadfc10fabffa838ec3e05fbd278fc"
+    },
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/account-security.tsx": {
+      "lane": "f08",
+      "frozen": "8b2955e2f720b8d7f6315cdba20912ac5bbc0903647a19964e66310f31263f01",
+      "actual": "8b2955e2f720b8d7f6315cdba20912ac5bbc0903647a19964e66310f31263f01",
+      "rechecked": "8b2955e2f720b8d7f6315cdba20912ac5bbc0903647a19964e66310f31263f01"
+    }
+  },
+  "shared": {
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/shared/interop.ts": "3026be9bb101211871294ec28834a2c55710fcf1a346374ae56368af297eee99",
+    "/Users/cillianbarron/.codex/worktrees/xstate-native-ci-budget/durable-pi/src/http/client.ts": "49febd36b66c3db158fc85324058e2f7752b55676f765ff85403039f26cd8d66",
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/shared/interop.ts": "3026be9bb101211871294ec28834a2c55710fcf1a346374ae56368af297eee99",
+    "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/http/client.ts": "49febd36b66c3db158fc85324058e2f7752b55676f765ff85403039f26cd8d66"
+  },
+  "evidence": {
+    "/private/tmp/f01-f03-no-die/media-probe.mts": "4bf0fbcf4e6f01cc95b998fc25fddd9d49c2242fed27bb348781fe3f6871e4b7",
+    "/private/tmp/f01-f03-no-die/commands-before-local.log": "d540eda85a6f55c7f4fd249275ae97776f05bf463fd30bfaa7dbb5deab15cea3",
+    "/private/tmp/f01-f03-no-die/probe.mts": "7b97d51c119895def9ad5030cbde75068938389ba7d33f8b99e9b6b5316d22c9",
+    "/private/tmp/f01-f03-no-die/before.log": "e129cceb7d32ea2f56e5a58f4cf5750346a62053058c8eba1774eae8e058f56f",
+    "/private/tmp/f01-f03-no-die/after-shared.log": "729f0e4c33982d5cdd7d4ed8d6d6fbcb96f24a90a454bdd686aa8567b2769fb9",
+    "/private/tmp/f01-f03-no-die/commands-probe.mts": "fc7f133c18ebd5f937d8138cc97598b44c3571fd7f29c92d48496a4d98b27775",
+    "/private/tmp/f01-f03-no-die/media-after-shared.log": "8741c8004778028dc4bbf03e0f60b9ff6712aa5fe5d4be25f5dfc3c8f7fdd5f5",
+    "/private/tmp/f04-f08-no-die/probe.mts": "771bf5356f3c478de38d1e365133935fae29130c467f757e107e3d13f4c26430",
+    "/private/tmp/f04-f08-no-die/after-shared.log": "85622fe0afed3b3a1c874bc2a86455ea96e10acdd9a933c9995eb790041b7fe2"
+  }
+}

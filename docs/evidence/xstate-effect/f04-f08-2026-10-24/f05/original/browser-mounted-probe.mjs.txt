@@ -1,0 +1,32 @@
+import assert from 'node:assert/strict'
+import { createRequire } from 'node:module'
+import { createServer } from 'node:http'
+const root='/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi'
+const requireRoot=createRequire(`${root}/package.json`)
+const {build}=createRequire(requireRoot.resolve('alchemy'))('esbuild')
+const {chromium}=requireRoot('@playwright/test')
+const state=(generation)=>({controller:'owner',policy:{generation,hosts:[]},version:7,status:'ready',expiresAt:9999999999999,page:null,hasScreenshot:true,error:null})
+const bundle=await build({stdin:{contents:`import React,{useState} from 'react';import{createRoot}from'react-dom/client';import{useBrowser}from'${root}/src/features/browser/use-browser.ts';import{BrowserControls}from'${root}/src/features/browser/browser-controls.tsx';function App(){const[agent,setAgent]=useState('old');const model=useBrowser(agent);window.control={model,change:()=>setAgent('new')};const state={controller:'owner',policy:{generation:agent==='old'?1:2,hosts:[]},version:7,status:'ready',expiresAt:9999999999999,page:null,hasScreenshot:true,error:null};return <><pre>{JSON.stringify({agent,state:model.state,busy:model.busy,pending:model.pending})}</pre><BrowserControls agentId={agent} state={state} busy={false} act={async()=>true} refresh={()=>{}} /></>}createRoot(document.getElementById('root')).render(<App/>);`,resolveDir:root,loader:'tsx'},tsconfig:`${root}/tsconfig.json`,bundle:true,write:false,format:'iife',platform:'browser',define:{'process.env.NODE_ENV':'"development"'}})
+const server=createServer((req,res)=>{res.setHeader('content-type',req.url==='/app.js'?'text/javascript':'text/html');res.end(req.url==='/app.js'?bundle.outputFiles[0].text:'<div id="root"></div><script src="/app.js"></script>')})
+await new Promise(r=>server.listen(0,'127.0.0.1',r))
+const browser=await chromium.launch({headless:true})
+const page=await browser.newPage()
+let entered;const commandEntered=new Promise(r=>entered=r);let pending;let newImage
+await page.route('**/api/agent/**',async route=>{const url=new URL(route.request().url());const agent=url.searchParams.get('agent');if(url.pathname.endsWith('/screenshot')){if(agent==='new'){newImage=route;return}await route.fulfill({contentType:'image/png',body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j4X8AAAAASUVORK5CYII=','base64')});return}if(route.request().method()==='POST'){pending=route;entered();return}await route.fulfill({json:state(agent==='old'?1:2)})})
+try {
+ await page.goto(`http://127.0.0.1:${server.address().port}`)
+ await page.waitForFunction(()=>window.control?.model.state?.policy.generation===1)
+ await page.getByRole('button',{name:'Tab field',exact:true}).waitFor()
+ await page.waitForFunction(()=>!Array.from(document.querySelectorAll('button')).find(x=>x.textContent==='Tab field').disabled)
+ await page.evaluate(()=>{void window.control.model.command('open',{generation:1,url:'https://example.com'})})
+ await commandEntered
+ await page.evaluate(()=>window.control.change())
+ await page.waitForFunction(()=>document.querySelector('pre').textContent.includes('"agent":"new"'))
+ const previewBlocked=await page.getByRole('button',{name:'Tab field',exact:true}).isDisabled()
+ await pending.fulfill({json:state(1)}).catch(()=>{})
+ await page.waitForTimeout(100)
+ const value=JSON.parse(await page.locator('pre').textContent())
+ console.log(JSON.stringify({case:'late old-agent command and reused screenshot version',previewBlocked,value}))
+ assert.equal(previewBlocked,true,'new agent/generation must wait for its own screenshot load')
+ assert.equal(value.state?.policy.generation,2,'late old request/finally refresh must not populate the new agent')
+} finally {await browser.close();await new Promise(r=>server.close(r))}

@@ -1,0 +1,52 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi
+
+ ❯ tests/terminal-lease.test.ts (3 tests | 2 failed) 31ms
+   ❯ interactive terminal lease (3)
+     × recovers from a transient renewal failure before the confirmed expiry 22ms
+     × expires on a hanging request and ignores its late response 5ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/terminal-lease.test.ts > interactive terminal lease > recovers from a transient renewal failure before the confirmed expiry
+AssertionError: expected last "vi.fn()" call to have been called with [ { ended: false, …(1) } ]
+
+- Expected
++ Received
+
+  [
+    {
+      "ended": false,
+-     "error": StringContaining "Retrying",
++     "error": "",
+    },
+  ]
+
+ ❯ tests/terminal-lease.test.ts:17:23
+     15|     try {
+     16|       await vi.advanceTimersByTimeAsync(1)
+     17|       expect(changed).toHaveBeenLastCalledWith({
+       |                       ^
+     18|         ended: false,
+     19|         error: expect.stringContaining("Retrying"),
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/terminal-lease.test.ts > interactive terminal lease > expires on a hanging request and ignores its late response
+AssertionError: expected "vi.fn()" to be called once, but got 3 times
+ ❯ tests/terminal-lease.test.ts:50:23
+     48|       await vi.advanceTimersByTimeAsync(10001)
+     49|       expect(renew).toHaveBeenCalledOnce()
+     50|       expect(changed).toHaveBeenCalledOnce()
+       |                       ^
+     51|     } finally {
+     52|       stop()
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed | 4 passed (5)
+      Tests  2 failed | 51 passed (53)
+   Start at  17:33:46
+   Duration  1.33s (import 52%, tests 42%, transform 4%, setup 1%, worker 1%)
+

@@ -35,20 +35,19 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
-import { agentApi } from "@/http/client"
 import {
   type Checklist,
   ChecklistTask,
   type ObjectMutation,
   type ChecklistChange,
   ObjectId,
-  OriginConversation,
   TaskStatus,
   objectSummary,
 } from "@/objects/contracts"
 
 import { useObjects, useObjectState } from "./context"
 import type { ObjectStore } from "./store"
+import { useObjectOrigin } from "./use-object-origin"
 
 export const statusLabels = {
   pending: "To do",
@@ -130,7 +129,7 @@ export function SaveState({ store, id }: { store: ObjectStore; id: string }) {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => store.dismiss(id)}
+                onClick={() => void store.dismiss(id)}
               >
                 Keep latest saved version
               </Button>
@@ -350,8 +349,8 @@ export function ChecklistView({
   const state = useObjectState(store),
     detail = state.details[id],
     object = detail?.object
-  const [draft, setDraft] = useState<Draft | null>(null)
-  const [submitted, setSubmitted] = useState<string | null>(null)
+  const [fields, setDraft] = useState<Draft | null>(null)
+  const draft = editingDraft(state.editing[id], fields)
   useEffect(() => {
     void store.load(id)
   }, [store, id])
@@ -359,12 +358,6 @@ export function ChecklistView({
     onEditing(!!draft)
     return () => onEditing(false)
   }, [draft, onEditing])
-  useEffect(() => {
-    if (submitted && state.settled[submitted]) {
-      setDraft(null)
-      setSubmitted(null)
-    }
-  }, [submitted, state.settled])
   if (!object)
     return (
       <>
@@ -381,68 +374,25 @@ export function ChecklistView({
     summary = objectSummary(object)
   const editingDisabled =
     unavailable || object.archived || state.problems[id]?.kind === "conflict"
-  const edit = (task?: ChecklistTask, newTask = false) =>
+  const edit = (task?: ChecklistTask, newTask = false) => {
     setDraft(checklistDraft(object, task, newTask))
+    void store.beginEdit(id)
+  }
   const submit = () => {
     if (!draft) return
-    const changes: ChecklistChange[] = draft.newTask
-      ? [
-          {
-            type: "add_task",
-            task: {
-              id: crypto.randomUUID(),
-              title: draft.title,
-              notes: draft.notes,
-              status: draft.status,
-              dueDate: draft.dueDate || null,
-            },
-          },
-        ]
-      : draft.task
-        ? [
-            {
-              type: "edit_task",
-              taskId: draft.task.id,
-              patch: {
-                ...(draft.title !== draft.task.title
-                  ? { title: draft.title }
-                  : {}),
-                ...(draft.notes !== draft.task.notes
-                  ? { notes: draft.notes }
-                  : {}),
-                ...(draft.status !== draft.task.status
-                  ? { status: draft.status }
-                  : {}),
-                ...((draft.dueDate || null) !== draft.task.dueDate
-                  ? { dueDate: draft.dueDate || null }
-                  : {}),
-              },
-            },
-          ]
-        : [
-            {
-              type: "edit",
-              ...(draft.title !== draft.baseTitle
-                ? { title: draft.title }
-                : {}),
-              ...(draft.notes !== draft.baseNotes
-                ? { notes: draft.notes }
-                : {}),
-            },
-          ]
+    const changes = checklistChanges(draft)
     if (
       (changes[0]?.type === "edit_task" &&
         !Object.keys(changes[0].patch).length) ||
       (changes[0]?.type === "edit" && Object.keys(changes[0]).length === 1)
     ) {
-      setDraft(null)
+      void store.cancelEdit(id)
       return
     }
     const input = {
       ...mutation(object, changes),
       expectedRevision: draft.revision,
     }
-    setSubmitted(input.operationId)
     void store.submit(input)
   }
   return (
@@ -526,8 +476,7 @@ export function ChecklistView({
               onSave={submit}
               onCancel={() => {
                 if (!busy) {
-                  setDraft(null)
-                  store.dismiss(id)
+                  void store.cancelEdit(id)
                 }
               }}
             />
@@ -584,7 +533,6 @@ export function ChecklistView({
                   ]),
                   expectedRevision: draft.revision,
                 }
-                setSubmitted(input.operationId)
                 void store.submit(input)
               }}
             >
@@ -940,26 +888,16 @@ function ChecklistOrigin({
   agentId: string
   id: string
 }) {
-  const [origin, setOrigin] = useState<OriginConversation | null>(null),
-    [originError, setOriginError] = useState("")
+  const dialog = useObjectOrigin(agentId, id),
+    origin = dialog.origin,
+    originError = dialog.error
   return (
     <>
       {object.origin.turnId ? (
         <Button
           variant="link"
           className="h-auto justify-start p-0"
-          onClick={() => {
-            void agentApi(agentId)(`objects/${id}/origin`)
-              .then((value) => {
-                setOrigin(Schema.decodeUnknownSync(OriginConversation)(value))
-                setOriginError("")
-              })
-              .catch(() =>
-                setOriginError(
-                  "Could not open the originating conversation. Try again."
-                )
-              )
-          }}
+          onClick={dialog.show}
         >
           From the conversation
           <ArrowUpRight data-icon="inline-end" />
@@ -975,9 +913,9 @@ function ChecklistOrigin({
         </p>
       )}
       <Dialog
-        open={!!origin}
+        open={dialog.open}
         onOpenChange={(open) => {
-          if (!open) setOrigin(null)
+          if (!open) dialog.close()
         }}
       >
         <DialogContent className="max-h-[85dvh] overflow-y-auto">
@@ -998,3 +936,50 @@ function ChecklistOrigin({
     </>
   )
 }
+
+function checklistChanges(draft: Draft): ChecklistChange[] {
+  return draft.newTask
+    ? [
+        {
+          type: "add_task",
+          task: {
+            id: crypto.randomUUID(),
+            title: draft.title,
+            notes: draft.notes,
+            status: draft.status,
+            dueDate: draft.dueDate || null,
+          },
+        },
+      ]
+    : draft.task
+      ? [
+          {
+            type: "edit_task",
+            taskId: draft.task.id,
+            patch: {
+              ...(draft.title !== draft.task.title
+                ? { title: draft.title }
+                : {}),
+              ...(draft.notes !== draft.task.notes
+                ? { notes: draft.notes }
+                : {}),
+              ...(draft.status !== draft.task.status
+                ? { status: draft.status }
+                : {}),
+              ...((draft.dueDate || null) !== draft.task.dueDate
+                ? { dueDate: draft.dueDate || null }
+                : {}),
+            },
+          },
+        ]
+      : [
+          {
+            type: "edit",
+            ...(draft.title !== draft.baseTitle ? { title: draft.title } : {}),
+            ...(draft.notes !== draft.baseNotes ? { notes: draft.notes } : {}),
+          },
+        ]
+}
+
+const editingDraft = (editing: boolean | undefined, fields: Draft | null) =>
+  editing ? fields : null

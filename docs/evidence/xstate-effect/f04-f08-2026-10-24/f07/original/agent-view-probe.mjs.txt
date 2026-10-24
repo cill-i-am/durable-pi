@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict'
+import { createRequire } from 'node:module'
+import { createServer } from 'node:http'
+import { execFileSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
+const root='/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi'
+const from=createRequire(`${root}/package.json`),{build}=createRequire(from.resolve('alchemy'))('esbuild'),{chromium}=from('@playwright/test')
+const baseline=process.argv.includes('--baseline')
+const paths=['src/features/objects/context.tsx','src/features/objects/store.ts']
+const originals=Object.fromEntries(paths.map(path=>[path,execFileSync('git',['show',`HEAD:${path}`],{cwd:root,encoding:'utf8'})]))
+const bundle=await build({stdin:{contents:`import React,{useState}from'react';import{createRoot}from'react-dom/client';import{ObjectsProvider,useObjects,useObjectState}from'${root}/src/features/objects/context.tsx';function Bound({context}){const state=useObjectState(context.store);window.owner=context.store;return <pre>{JSON.stringify({agent:context.agentId,list:state.list,pending:state.pending})}</pre>}function View(){const context=useObjects();return context?<Bound context={context}/>:null}function App(){const[agent,setAgent]=useState('old');window.change=()=>setAgent('new');return <ObjectsProvider agentId={agent} archived={false} onOpen={()=>{}} onPendingChange={()=>{}}><View/></ObjectsProvider>}createRoot(document.getElementById('root')).render(<App/>);`,resolveDir:root,loader:'tsx'},tsconfig:`${root}/tsconfig.json`,bundle:true,write:false,format:'iife',platform:'browser',define:{'process.env.NODE_ENV':'"development"'},plugins:baseline?[{name:'original-source',setup(api){api.onLoad({filter:/\/features\/objects\/(context\.tsx|store\.ts)$/},args=>({contents:originals[args.path.slice(root.length+1)],loader:args.path.endsWith('tsx')?'tsx':'ts'}))}}]:[]})
+const server=createServer((req,res)=>{res.setHeader('content-type',req.url==='/app.js'?'text/javascript':'text/html');res.end(req.url==='/app.js'?bundle.outputFiles[0].text:'<div id="root"></div><script src="/app.js"></script>')})
+await new Promise(r=>server.listen(0,'127.0.0.1',r));const browser=await chromium.launch({headless:true}),page=await browser.newPage()
+let held,entered;const read=new Promise(r=>entered=r)
+const summary=title=>({id:title==='new'?'33333333-3333-4333-8333-333333333333':'11111111-1111-4111-8111-111111111111',type:'project_checklist',title,revision:1,completed:0,total:0,archived:false,lastEvent:1})
+await page.route('**/api/agent/**',async route=>{const agent=new URL(route.request().url()).searchParams.get('agent');if(agent==='old'){held=route;entered();return}await route.fulfill({json:{objects:[summary('new')]}})})
+try{await page.goto(`http://127.0.0.1:${server.address().port}`);await read;await page.evaluate(()=>window.change());await page.waitForFunction(()=>document.querySelector('pre')?.textContent.includes('"agent":"new"'));await held.fulfill({json:{objects:[summary('old')]}}).catch(()=>{});await page.waitForTimeout(100);const state=JSON.parse(await page.locator('pre').textContent());console.log(JSON.stringify({baseline,port:server.address().port,state,originalHashes:Object.fromEntries(Object.entries(originals).map(([p,s])=>[p,createHash('sha256').update(s).digest('hex')]))}));assert.equal(state.list[0]?.title,'new')}
+finally{await browser.close();await new Promise(r=>server.close(r))}

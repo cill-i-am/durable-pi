@@ -1,0 +1,121 @@
+{
+  "capturedAt": "2026-10-23T16:45:58.877614+00:00",
+  "worktree": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi",
+  "base": "e521e980c3f60992bae9b63ed113e19da0a4e9f0",
+  "node": "v24.21.0",
+  "sourceHashes": {
+    "src/features/objects/checklist.tsx": "254155aa3b1a977a0fcdd4a769b757ff443a2440acaf9cc9b505135fc7ff3eb4",
+    "src/features/objects/context.tsx": "8ceb9280c7fa4b9abe7bbdc93c8238cd54c28f70bcbf359cb8f8530a703c9c3b",
+    "src/features/objects/object-creation.machine.ts": "0f7944d34a8a44397eaf455484014aee6c5a7616a0d2adf29ab45919ec207058",
+    "src/features/objects/object-edit.machine.ts": "e5bf7adbad3519ec58852316b754495c23298ac66c6a1fa12ac1d6b660485349",
+    "src/features/objects/object-origin.machine.ts": "85d85b88a5e51835bfe12eee2bef57145141c938c753ab53b3c4d5807ce0ea9f",
+    "src/features/objects/object-poll.machine.ts": "c34ec6ad11d3a2a628d88c4c1cbbc5cb3c4c2bfa835145d5398e53295b2031a4",
+    "src/features/objects/object-read.machine.ts": "169dd9ad406466ed7d6aba61a7f6a18633b0658f2661bbce40908f2fdb10751d",
+    "src/features/objects/object-storage.ts": "d5512fedbe0b5fb7f424fdbfdd3fb62de04c509e14b730a595ff9c75e410db40",
+    "src/features/objects/store.ts": "04e355b6fce963c4a040fb29b33b1a829cf1cf2ac42eded2100510ea958304d3",
+    "src/features/objects/use-object-creation.ts": "d3d7d75e5b6739138265c26d17f7eb0f99ce9ad5f81ee14391f0ccccce934517",
+    "src/features/objects/use-object-origin.ts": "a694604978aa2942c261492b6d03452f082c7993de9dcd1a0e810c20fe991917",
+    "src/features/objects/workbench.tsx": "6a16684a3b78750af6ed6c6f5ad7d37b859b11ede22fe8d4d98d62c6dd833071",
+    "tests/working-objects-ui.test.ts": "b83caffcad3d5a26244f07d7047ba5fc06299ca65778660363e6ed287c1a1017",
+    "tests/object-ui-lifecycle.test.ts": "67a747c85168c06b53a9b61b3f30315876af3ef11ec6de1cddfe9751854d1a30",
+    "tests/browser/objects-lifecycle.spec.ts": "1774acc92c88cdbbb82f1360852f507d37208a85c7245653e9afd03b6de7f861",
+    "docs/xstate-effect-objects-ui.md": "4d236e7873d8d9dc3e69c087d2bab1f04239c2b2731b1512ed13a621e9a9070a"
+  },
+  "checks": {
+    "focusedTests": {
+      "files": 2,
+      "passed": 18
+    },
+    "browser": {
+      "passed": 6,
+      "projects": [
+        "desktop",
+        "mobile"
+      ],
+      "port": 4464,
+      "output": "dist/f07-browser",
+      "retries": 0
+    },
+    "types": 0,
+    "lint": 0,
+    "format": 0,
+    "unchangedStoreProbe": "3 red before; 3 green after",
+    "unchangedMountedAgentProbe": "red before; green after",
+    "negativeControls": "stale native cache write and coerced cancellation acknowledgement both fail intended assertions"
+  },
+  "limits": "Local UI + synthetic HTTP; one existing real SQLite/Pi journey. No external provider/workerd/production/hosted CI. Independent review pending. No Git writes.",
+  "artifacts": {
+    "README.md": {
+      "sha256": "f68b2d594531b9bb9db5249a107a59cab52ab994a46a6614014667019fe6f874",
+      "bytes": 1120
+    },
+    "after-final.log.txt": {
+      "sha256": "1ff59c630ce344e77a7d3970482d8c46bf65df85c3285d86dd37693a85393a52",
+      "bytes": 202
+    },
+    "agent-view-final-green.log.txt": {
+      "sha256": "15ea745649addf087f867c5f755981fd4b938057f8101e9f781b8f880a33ba93",
+      "bytes": 453
+    },
+    "agent-view-probe.mjs.txt": {
+      "sha256": "3b4351ef58dff1f3b6be736b9cb34b1f2b77dda1a2f9fbcb093ab6514bfcd670",
+      "bytes": 3422
+    },
+    "agent-view-red.log.txt": {
+      "sha256": "a93e4547a7e2c374ba08a88276c8bb6bed59529e7ea67e66f10d16c4befab409",
+      "bytes": 835
+    },
+    "before-probe.mts.txt": {
+      "sha256": "0d9a2dcca4f3f323123e32d5bd55a416ed197be0fe2b9cf75f70d777117634b7",
+      "bytes": 1960
+    },
+    "before.log.txt": {
+      "sha256": "7fe6680957e3782af8fab0d1723cef4cdb44837fb878e522679a8d4566f05cd6",
+      "bytes": 995
+    },
+    "browser-final.log.txt": {
+      "sha256": "c51b8e2a8bf81ce0f1d87db5ecb36ddab55381affac999c119f8c5483991194b",
+      "bytes": 2212
+    },
+    "format-final-check.log.txt": {
+      "sha256": "5c444bf9b9389195eba3425420e48ed67767b0464b7e4a47f9d1f265a32286bd",
+      "bytes": 114
+    },
+    "lint-final.log.txt": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "negative-cancel-final.log.txt": {
+      "sha256": "e957d4d6725a5fcb6dc035e60fa5e39c19983ff4bd0fab8bbca25aa37c1bc047",
+      "bytes": 1371
+    },
+    "negative-cancel.config.mjs.txt": {
+      "sha256": "376723b51c6aa4a78956e971f4f8b0880b5ed0f5e1685f4d10ede9a7682b6130",
+      "bytes": 541
+    },
+    "negative-read-final.log.txt": {
+      "sha256": "1866a36b8d3d0c74f709a6ddb77f421b393c38183b37e91d12a94abc524cbd16",
+      "bytes": 1219
+    },
+    "negative-read.config.mjs.txt": {
+      "sha256": "d5156f9f16cb8cee5d0d0a1a41decefe5bd97cad38d76919ed713211f5d94590",
+      "bytes": 623
+    },
+    "playwright.config.mjs.txt": {
+      "sha256": "0296c28ea3d4c97db5ad6ad715341566c061061ca2c1d5df3e4ec4a94b65ca4f",
+      "bytes": 553
+    },
+    "tsconfig.json.txt": {
+      "sha256": "258afffc3a1faa6a98d14de1e04ff60b8fd2ac4957b8581e9e3cb8a875b59aa3",
+      "bytes": 921
+    },
+    "types-final.log.txt": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "unit-final.log.txt": {
+      "sha256": "ee6b838ac19342dda20d6b8d6ef41ea494392c658afe8970b039eddbeda24dcf",
+      "bytes": 245
+    }
+  }
+}

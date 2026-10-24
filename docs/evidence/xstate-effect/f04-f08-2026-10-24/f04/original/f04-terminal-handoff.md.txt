@@ -1,0 +1,24 @@
+# F04 Terminal frontend handoff
+
+Worktree: /Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi
+Frozen manifest: /private/tmp/f04-review-source.json (20 files; final added legacy addon fixture only)
+
+Official @xstate/effect machines now own session lease, socket transport, terminal observation/mutation, interactive host resources and export save. Existing terminal APIs remain; lease stopper gains closed and addon gains settled completion receipts. Pure drafts/selections remain projections and remount per agent. Scoped native operations join cleanup, preserve complete compound failure information, fence socket generation and monotonic view revision, and retain original uncertain command/session/transfer identities. No new durable frontend state, provider use, Git, package/config/tracking edits, or cross-feature APIs.
+
+Checks on final frozen sources:
+-80 focused tests in8 files: /private/tmp/f04-tests-final.log
+-typecheck: /private/tmp/f04-types-final.log
+-scoped configured lint: /private/tmp/f04-lint-final.log
+-scoped formatting: /private/tmp/f04-format-final.log
+-8 production React desktop/mobile browser journeys: /private/tmp/f04-browser-final.log
+-source-preserving stale-view negative control fails intended ABA assertion: /private/tmp/f04-negative-view-final.log + /private/tmp/f04-negative.config.mjs
+-independent unchanged before/after probe: /private/tmp/f04-independent/{probe.mts,before.log,after.log,evidence.json}
+
+Tests: tests/native-terminal-addon.test.ts (async delivery/teardown fixture adaptation; assertions retained), tests/terminal-ui-lifecycle.test.ts, tests/terminal-native-addon.test.ts, tests/browser/terminal-ui.spec.ts.
+Document: docs/xstate-effect-terminal-ui.md.
+
+Review repairs: originally selected-ID equality admitted A→B→A stale completion; request now captures monotonic viewRevision. Originally cleanup collector filtered Interrupt from Die-containing compound Cause; now retains original Interrupt identity/annotations alongside typed-failure defect and actual defect. Independent unchanged probe verifies both.
+
+Limits: synthetic local HTTP/WebSocket/browser and controlled native adapters, no live Sandbox/provider acceptance. Uncertain intent retained in mounted owner; reload relies on existing backend history without resubmit. Existing Files upload cannot abort after native start; teardown joins without rollback claim. Socket/native close that never acknowledges retains occupancy rather than pretending timeout release. React cleanup requests interruption synchronously, retained Effect scope completes join. No full integration gates; parent owns combined tree verification.
+
+Browser4456 server released. Independent reviewer /root/communication_native_proof CLOSED CLEAR: /private/tmp/f04-independent/handoff.md. Reviewed19path manifest plus independent probes; final extra legacy addon fixture passed all80tests. Legacy lease compatibility also preserved: immediate initial renewal and callbacks only for changed projection.

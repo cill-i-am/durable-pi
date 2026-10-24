@@ -1,6 +1,5 @@
-import { Schema } from "effect"
 import { KeyRound } from "lucide-react"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import { authClient } from "@/auth/client"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -13,82 +12,45 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 
-import {
-  passkeyError,
-  passkeyErrorCode,
-  supportsPasskeys,
-} from "./passkey-sign-in"
-
-const SavedPasskey = Schema.Struct({
-  id: Schema.String,
-  name: Schema.optional(Schema.NullOr(Schema.String)),
-  createdAt: Schema.optional(
-    Schema.NullOr(Schema.Union([Schema.String, Schema.Date]))
-  ),
-})
-type Passkey = typeof SavedPasskey.Type
-type Editor = { kind: "add" } | { kind: "rename" | "remove"; key: Passkey }
+import { useAuthBusy } from "./auth-owner"
+import { supportsPasskeys } from "./passkey-errors"
+import { usePasskeyActor } from "./passkeys-owner"
+import type { PasskeyEditor as Editor } from "./passkeys.machine"
 
 type Props = { disabled: boolean; onBusyChange: (busy: boolean) => void }
 function usePasskeys({ disabled, onBusyChange }: Props) {
-  const [keys, setKeys] = useState<readonly Passkey[]>([])
-  const [loading, setLoading] = useState(true)
-  const [pending, setPending] = useState(false)
+  const { data: session } = authClient.useSession()
   const [available, setAvailable] = useState(false)
-  const [editor, setEditor] = useState<Editor | null>(null)
   const [name, setName] = useState("")
-  const [error, setError] = useState("")
-  const [notice, setNotice] = useState("")
-  const [freshSignIn, setFreshSignIn] = useState(false)
-  const [readFailed, setReadFailed] = useState(false)
   const [nameInvalid, setNameInvalid] = useState(false)
-  const generation = useRef(0)
+  const auth = usePasskeyActor(session?.session.id ?? "signed-out", {
+    disabled,
+    available,
+  })
+  const state = auth.snapshot
+  const {
+    keys,
+    editor,
+    error,
+    notice,
+    freshSignIn,
+    readFailed,
+    loading,
+    pending,
+  } = passkeyProjection(state)
+  useEffect(() => setAvailable(supportsPasskeys()), [])
+  const dispatch = auth.send
+  useEffect(() => {
+    dispatch({ type: "VIEW", disabled, available })
+  }, [dispatch, disabled, available])
+  useAuthBusy(pending, onBusyChange)
   const nameInput = useRef<HTMLInputElement>(null)
   const cancelRemoval = useRef<HTMLButtonElement>(null)
   const addButton = useRef<HTMLButtonElement>(null)
   const heading = useRef<HTMLHeadingElement>(null)
   const opener = useRef<HTMLButtonElement | null>(null)
   const restoreFocus = useRef(false)
-  const refresh = useCallback(async () => {
-    const request = ++generation.current
-    setLoading(true)
-    try {
-      const result = await authClient.passkey.listUserPasskeys()
-      if (request !== generation.current) return
-      if (result.error) {
-        setReadFailed(true)
-        setKeys([])
-        setError(
-          "Could not load passkeys. Refresh the list before making changes."
-        )
-      } else {
-        setReadFailed(false)
-        setKeys(
-          Schema.decodeUnknownSync(Schema.Array(SavedPasskey))(
-            result.data ?? []
-          )
-        )
-        setError("")
-      }
-    } catch {
-      if (request === generation.current) {
-        setReadFailed(true)
-        setError(
-          "Could not load passkeys. Refresh the list before making changes."
-        )
-      }
-    } finally {
-      if (request === generation.current) setLoading(false)
-    }
-  }, [])
-  useEffect(() => {
-    setAvailable(supportsPasskeys())
-    void refresh()
-    return () => {
-      // oxlint-disable-next-line react/exhaustive-deps -- Invalidate pending reads on unmount.
-      generation.current++
-    }
-  }, [refresh])
+  const refresh = () => auth.send({ type: "REFRESH" })
   useEffect(() => {
     if (editor?.kind === "remove") cancelRemoval.current?.focus()
     else if (editor) nameInput.current?.focus()
@@ -104,69 +66,25 @@ function usePasskeys({ disabled, onBusyChange }: Props) {
   }, [editor, pending, loading])
   function edit(value: Editor, target: HTMLButtonElement) {
     opener.current = target
-    setEditor(value)
+    auth.send({ type: "EDIT", editor: value })
     setName(value.kind === "rename" ? (value.key.name ?? "") : "")
-    setNotice("")
-    setError("")
-    setFreshSignIn(false)
     setNameInvalid(false)
   }
   function closeEditor() {
-    setEditor(null)
+    auth.send({ type: "CANCEL" })
     restoreFocus.current = true
   }
-  async function save(event?: React.SubmitEvent<HTMLFormElement>) {
+  function save(event?: React.SubmitEvent<HTMLFormElement>) {
     event?.preventDefault()
-    if (!editor || pending || disabled) return
-    if (editor.kind !== "remove" && !name.trim()) {
+    if (editor?.kind !== "remove" && !name.trim()) {
       setNameInvalid(true)
       nameInput.current?.focus()
       return
     }
-    setPending(true)
-    onBusyChange(true)
-    setError("")
-    setNotice("")
-    try {
-      const result =
-        editor.kind === "add"
-          ? await authClient.passkey.addPasskey({ name: name.trim() })
-          : editor.kind === "rename"
-            ? await authClient.passkey.updatePasskey({
-                id: editor.key.id,
-                name: name.trim(),
-              })
-            : await authClient.passkey.deletePasskey({ id: editor.key.id })
-      if (result.error) {
-        setError(passkeyError(result.error))
-        setFreshSignIn(passkeyErrorCode(result.error) === "SESSION_NOT_FRESH")
-      } else if (!result.data) {
-        setReadFailed(true)
-        setError(
-          "Could not confirm the change. Refresh the list before trying again."
-        )
-      } else {
-        setNotice(
-          editor.kind === "add"
-            ? "Passkey added. You can use it next time you sign in."
-            : editor.kind === "rename"
-              ? "Passkey renamed."
-              : "Passkey removed. Existing browser sessions stay signed in."
-        )
-        closeEditor()
-        await refresh()
-      }
-    } catch {
-      setReadFailed(true)
-      setError(
-        "Could not confirm the change. Refresh the list before trying again."
-      )
-    } finally {
-      setPending(false)
-      onBusyChange(false)
-    }
+    restoreFocus.current = true
+    auth.send({ type: "SAVE", name })
   }
-  const locked = disabled || pending
+  const locked = disabled || pending || !auth.actor
   return {
     keys,
     loading,
@@ -190,6 +108,34 @@ function usePasskeys({ disabled, onBusyChange }: Props) {
     locked,
     setName,
     setNameInvalid,
+    signOut: () => auth.send({ type: "SIGN_OUT" }),
+  }
+}
+
+function passkeyProjection(
+  state: ReturnType<typeof usePasskeyActor>["snapshot"]
+) {
+  const keys = state?.context.keys ?? []
+  const editor = state?.context.editor ?? null
+  const error = state?.context.error ?? ""
+  const notice = state?.context.notice ?? ""
+  const freshSignIn = state?.context.freshSignIn ?? false
+  const readFailed = state?.context.readFailed ?? false
+  const loading = !state || state.matches("loading")
+  const pending =
+    state?.matches("saving") ||
+    state?.matches("signingOut") ||
+    state?.matches("signedOut") ||
+    false
+  return {
+    keys,
+    editor,
+    error,
+    notice,
+    freshSignIn,
+    readFailed,
+    loading,
+    pending,
   }
 }
 
@@ -268,7 +214,7 @@ export function PasskeySettings(props: Props) {
           <AlertDescription>
             {error}
             {freshSignIn && (
-              <Button variant="link" onClick={() => void authClient.signOut()}>
+              <Button variant="link" disabled={locked} onClick={view.signOut}>
                 Sign out and sign in again
               </Button>
             )}

@@ -1,0 +1,15 @@
+# F08 auth frontend handoff
+
+Source is frozen in `source-freeze-review-fix.json`; `manifest.json` hashes all 23 owned source/doc/test files and evidence. Only auth-owner.ts and its regression changed after the initial freeze. The fresh review identified lost native compound Interrupt reasons during joined cleanup. Removing the blanket filter preserves the exact Interrupt(88234), Fail payload, and annotated Die. The strengthened test fails on the original filter and all 11 focused tests pass after repair. The unchanged independent probe passes, and the independent review is closed with no remaining concrete finding.
+
+The eight views retain Better Auth as authentication/security authority. Auth-local official scoped machines decide request admission, challenge/retry, passkey mutation/read uncertainty, recovery-code acknowledgement, session revocation, and photo preparation/upload/refresh. Pure values and visibility remain local UI values. Public PasskeySignIn API is unchanged.
+
+Unchanged actual mounted stale challenge/photo probe failed on the old views with one late navigation and upload, then passed with zero of both; disabling owner cleanup in an isolated bundle restores both failures. Mounted reset-token A-B-A and session A-B-A checks pass. Wrong-code retry retains trustDevice:false. Recovery-code review stays locked until explicit acknowledgement and releases its object URL once.
+
+Installed Better Auth plus a Chromium virtual CTAP2 authenticator completed synthetic registration and sign-in; both native calls observed active user activation, with matching credential and zero external requests/page errors. This proves browser SDK ceremony integration, not real backend authentication. The SDK does not wire the caller signal into options/native ceremony: observer cancellation is not device cancellation. Native Promise ownership joins the ceremony and stale completion cannot change the UI.
+
+All auth formatting and baseline scoped checks passed. The auth-only typecheck, changed owner/test lint, and all 11 focused tests passed after the final narrow repair. Parent owns integrated static checks; no new whole-tree typecheck was launched. A first regression attempt timed out under host contention; a sandboxed retry could not create Vitest config. The subsequent authorized run failed at the exact missing-sentinel assertion, preserved separately.
+
+No Git, package, shared configuration, backend/security API, provider/account mutation, or F05 source changes.
+
+Fresh independent held-native SDK/CTAP2 proof also passed: genuine create/get stay pending through unmount; installed SDK ceremony cancellation settles them; zero late verification posts, callbacks, external requests, or page errors. Independent report and manifest are hashed in the author manifest.

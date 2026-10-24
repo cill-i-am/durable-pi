@@ -1,61 +1,70 @@
-import { ApiError } from "@/http/client"
+import { createEffectActor, waitFor } from "@xstate/effect"
+import { Cause, Effect, Exit, Fiber } from "effect"
 
-export type LeaseState = { ended: boolean; error: string }
+import { ApiError } from "@/http/client"
+import { nativeOperation } from "@/shared/interop"
+
+import { terminalWorkFailures } from "./owned-work"
+import { sessionLeaseMachine, type LeaseState } from "./session-lease.machine"
+export type { LeaseState } from "./session-lease.machine"
+
 export function maintainSessionLease(
   initialExpiry: number,
   renew: (signal: AbortSignal) => Promise<{ expiresAt: number }>,
   changed: (state: LeaseState) => void
 ) {
-  const controller = new AbortController()
-  let expiresAt = initialExpiry
-  let timer: ReturnType<typeof setTimeout> | undefined
-  let expiry: ReturnType<typeof setTimeout> | undefined
-  const stop = () => {
-    clearTimeout(timer)
-    clearTimeout(expiry)
-    controller.abort()
-  }
-  const end = (error: string) => {
-    stop()
-    changed({ ended: true, error })
-  }
-  const armExpiry = () => {
-    clearTimeout(expiry)
-    expiry = setTimeout(
-      () =>
-        end(
-          "The terminal lease expired. Unsaved changes were discarded. Open a new session to continue."
+  let observing = true
+  let projected: LeaseState = { ended: false, error: "" }
+  const fiber = Effect.runFork(
+    Effect.gen(function* () {
+      const observe = yield* terminalWorkFailures
+      const actor = yield* createEffectActor(
+        sessionLeaseMachine(
+          observe(nativeOperation(renew, (cause) => cause)),
+          (cause) => {
+            const error = cause.reasons.find((reason) => reason._tag === "Fail")
+            if (
+              error?._tag !== "Fail" ||
+              !(error.error instanceof ApiError) ||
+              ![401, 403, 409].includes(error.error.status)
+            )
+              return undefined
+            return error.error.status === 401
+              ? "Sign-in expired. The terminal will stop without saving. Sign in again to continue."
+              : "This terminal session has ended. Check its result before reopening."
+          }
         ),
-      Math.max(0, expiresAt - Date.now())
-    )
+        { input: { expiresAt: initialExpiry } }
+      )
+      yield* Effect.acquireRelease(
+        Effect.sync(() =>
+          actor.subscribe((snapshot) => {
+            const next = {
+              ended: snapshot.context.ended,
+              error: snapshot.context.error,
+            }
+            if (
+              observing &&
+              (next.ended !== projected.ended || next.error !== projected.error)
+            ) {
+              projected = next
+              changed(next)
+            }
+          })
+        ),
+        (subscription) => Effect.sync(() => subscription.unsubscribe())
+      )
+      yield* waitFor(actor, (snapshot) => snapshot.status === "done")
+    }).pipe(Effect.scoped)
+  )
+  const closed = Effect.runPromise(Fiber.await(fiber))
+  const stop = () => {
+    observing = false
+    Effect.runFork(Fiber.interrupt(fiber))
   }
-  const update = async () => {
-    try {
-      const result = await renew(controller.signal)
-      if (controller.signal.aborted) return
-      expiresAt = result.expiresAt
-      changed({ ended: false, error: "" })
-      armExpiry()
-      timer = setTimeout(() => void update(), 10_000)
-    } catch (cause) {
-      if (controller.signal.aborted) return
-      if (cause instanceof ApiError && [401, 403, 409].includes(cause.status)) {
-        end(
-          cause.status === 401
-            ? "Sign-in expired. The terminal will stop without saving. Sign in again to continue."
-            : "This terminal session has ended. Check its result before reopening."
-        )
-        return
-      }
-      changed({
-        ended: false,
-        error:
-          "Connection interrupted. Retrying within the current terminal lease…",
-      })
-      timer = setTimeout(() => void update(), 2000)
-    }
-  }
-  armExpiry()
-  void update()
-  return stop
+  void closed.then((exit) => {
+    if (Exit.isFailure(exit) && !Cause.hasInterruptsOnly(exit.cause))
+      Effect.runFork(Effect.logError(exit.cause))
+  })
+  return Object.assign(stop, { closed })
 }

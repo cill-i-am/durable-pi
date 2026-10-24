@@ -1,5 +1,5 @@
 import { ArrowUpRight, Plug, RefreshCw, X } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useState, type Dispatch, type SetStateAction } from "react"
 
 import {
   executorDefaultTools,
@@ -57,11 +57,8 @@ export function ConnectionsPanel({
   onSaved: () => void
 }) {
   const assignment = agentId !== undefined
-  const state = useConnections(agentId, onSaved)
+  const state = useConnections(agentId, onSaved, open)
   const { refresh } = state
-  useEffect(() => {
-    if (open) void refresh()
-  }, [open, refresh])
   const [draft, setDraft] = useState<ReturnType<typeof newDraft> | null>(null)
   const [callback, setCallback] = useState("")
   const disabled = state.busy || state.loading || !state.ready
@@ -79,9 +76,10 @@ export function ConnectionsPanel({
   }, [assignment, callbackResult, onCallbackConsumed, refresh, setOpen])
   const notice = state.error || (!assignment && callback)
   const editing = !assignment && draft !== null
+  const mutationDisabled = disabled || !!state.uncertain
   useEffect(() => {
-    onPendingChange?.(state.busy || editing)
-  }, [state.busy, editing, onPendingChange])
+    onPendingChange?.(state.busy || editing || !!state.uncertain)
+  }, [state.busy, editing, state.uncertain, onPendingChange])
   return (
     <SettingsSection
       embedded={embedded}
@@ -129,13 +127,15 @@ export function ConnectionsPanel({
         {!assignment && (
           <ExecutorDefaults
             state={state}
-            disabled={disabled}
+            disabled={mutationDisabled || draft !== null}
             onConnect={() =>
               setDraft({ ...newDraft(), name: "Executor", url: executorUrl })
             }
           />
         )}
-        {assignment && <SelectedTools state={state} disabled={disabled} />}
+        {assignment && (
+          <SelectedTools state={state} disabled={mutationDisabled} />
+        )}
         <ConnectionCatalog
           state={state}
           disabled={disabled}
@@ -267,6 +267,15 @@ function ConnectionCatalog({
   assignment: boolean
 }) {
   const defaults = executorDefaultTools(state.connections)
+  const changeDisabled = (id: string, action: string) =>
+    disabled ||
+    !!(
+      state.uncertain &&
+      (state.uncertain.action !== action ||
+        !("id" in state.uncertain.body) ||
+        state.uncertain.body.id !== id)
+    )
+  const mutationDisabled = disabled || !!state.uncertain
   return (
     <section
       className="flex flex-col gap-4"
@@ -299,10 +308,10 @@ function ConnectionCatalog({
                       variant: "outline",
                       size: "sm",
                     })}
-                    aria-disabled={disabled || undefined}
-                    tabIndex={disabled ? -1 : undefined}
+                    aria-disabled={mutationDisabled || undefined}
+                    tabIndex={mutationDisabled ? -1 : undefined}
                     onClick={(event) => {
-                      if (disabled) event.preventDefault()
+                      if (mutationDisabled) event.preventDefault()
                     }}
                   >
                     Sign in <ArrowUpRight data-icon="inline-end" />
@@ -312,7 +321,7 @@ function ConnectionCatalog({
                   <Button
                     size="xs"
                     variant="ghost"
-                    disabled={disabled}
+                    disabled={changeDisabled(connection.id, "refresh")}
                     onClick={() => void state.change(connection, "refresh")}
                   >
                     Refresh tools
@@ -321,7 +330,7 @@ function ConnectionCatalog({
                 <Button
                   size="xs"
                   variant="ghost"
-                  disabled={disabled}
+                  disabled={changeDisabled(connection.id, "reconnect")}
                   onClick={() => void state.change(connection, "reconnect")}
                 >
                   Reconnect
@@ -330,7 +339,7 @@ function ConnectionCatalog({
                   <Button
                     size="xs"
                     variant="ghost"
-                    disabled={disabled}
+                    disabled={changeDisabled(connection.id, "disconnect")}
                     onClick={() => void state.change(connection, "disconnect")}
                   >
                     Disconnect
@@ -376,7 +385,7 @@ function ConnectionCatalog({
                           size="xs"
                           variant="outline"
                           disabled={
-                            disabled ||
+                            mutationDisabled ||
                             selected ||
                             state.selection.tools.length >= 16
                           }
@@ -425,8 +434,9 @@ function ConnectionForm({
   state: ConnectionState
   disabled: boolean
   draft: ReturnType<typeof newDraft> | null
-  setDraft: (draft: ReturnType<typeof newDraft> | null) => void
+  setDraft: Dispatch<SetStateAction<ReturnType<typeof newDraft> | null>>
 }) {
+  const draftDisabled = state.busy || state.uncertain?.action === "add"
   return draft ? (
     <form
       onSubmit={async (event) => {
@@ -438,7 +448,7 @@ function ConnectionForm({
             url: draft.url.trim(),
           })
         )
-          setDraft(null)
+          setDraft((current) => (current?.id === draft.id ? null : current))
       }}
     >
       <FieldGroup>
@@ -450,7 +460,7 @@ function ConnectionForm({
             required
             maxLength={80}
             value={draft.name}
-            disabled={state.busy}
+            disabled={draftDisabled}
             onChange={(event) =>
               setDraft({ ...draft, name: event.target.value })
             }
@@ -465,7 +475,7 @@ function ConnectionForm({
             required
             maxLength={2000}
             value={draft.url}
-            disabled={state.busy}
+            disabled={draftDisabled}
             onChange={(event) =>
               setDraft({ ...draft, url: event.target.value })
             }
@@ -483,7 +493,7 @@ function ConnectionForm({
           <Button
             size="sm"
             variant="ghost"
-            disabled={state.busy}
+            disabled={draftDisabled}
             onClick={() => setDraft(null)}
           >
             Cancel
@@ -494,7 +504,7 @@ function ConnectionForm({
   ) : (
     <Button
       variant="outline"
-      disabled={disabled || state.connections.length >= 20}
+      disabled={disabled || !!state.uncertain || state.connections.length >= 20}
       onClick={() => setDraft(newDraft())}
     >
       <Plug data-icon="inline-start" />

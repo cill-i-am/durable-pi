@@ -1,0 +1,26 @@
+[WebServer] (node:83526) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] [plugin builtin:vite-reporter] 
+[WebServer] (!) Some chunks are larger than 500 kB after minification. Consider:
+[WebServer] - Using dynamic import() to code-split the application
+[WebServer] - Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+[WebServer] - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[WebServer] [INEFFECTIVE_DYNAMIC_IMPORT] src/features/files/files-panel.tsx is dynamically imported by src/app/workspace.tsx but also statically imported by src/features/files/index.ts, dynamic import will not move module into another chunk.
+[WebServer] 
+
+Running 8 tests using 1 worker
+
+(node:83528) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [desktop] › tests/browser/browser-tools.spec.ts:40:1 › browser controls require the loaded preview and never replay an uncertain action (9.6s)
+  ✓  2 [desktop] › tests/browser/browser-tools.spec.ts:85:1 › Close interrupts a pending browser request using newly observed generation (3.6s)
+  ✓  3 [desktop] › tests/browser/execution-tools.spec.ts:33:1 › uncertain code retry preserves the saved request and never replays an interrupted result (6.4s)
+  ✓  4 [desktop] › tests/browser/execution-tools.spec.ts:80:1 › cancelling an unconfirmed code request uses its original run identity (3.8s)
+(node:83733) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  5 [mobile] › tests/browser/browser-tools.spec.ts:40:1 › browser controls require the loaded preview and never replay an uncertain action (9.8s)
+  ✓  6 [mobile] › tests/browser/browser-tools.spec.ts:85:1 › Close interrupts a pending browser request using newly observed generation (3.6s)
+  ✓  7 [mobile] › tests/browser/execution-tools.spec.ts:33:1 › uncertain code retry preserves the saved request and never replays an interrupted result (6.4s)
+  ✓  8 [mobile] › tests/browser/execution-tools.spec.ts:80:1 › cancelling an unconfirmed code request uses its original run identity (3.5s)
+
+  8 passed (49.9s)

@@ -1,0 +1,8 @@
+{
+  "scope": "Documentation and final independent evidence only; production hashes remain review-source-manifest.json.txt",
+  "files": {
+    "docs/xstate-effect-objects-ui.md": "5515ed9608cad30fe6e0625b0b7ce444cfc956ff124c8c1a53aebbc682e4e44f",
+    "docs/evidence/xstate-effect/f07-objects-ui/independent-review-final.md": "e0a4b4d55268d3e0f3c76876d995fcbad0768c1395e00640e9dfcb287f67e21a",
+    "docs/evidence/xstate-effect/f07-objects-ui/independent-review-final-manifest.json.txt": "8fd3df1eccb04fa0c623600f90b0de2146e7227df70c394ed23f0ab55f42a199"
+  }
+}

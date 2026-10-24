@@ -1,0 +1,48 @@
+import assert from 'node:assert/strict'
+import { createRequire } from 'node:module'
+import { readFile,writeFile } from 'node:fs/promises'
+import {createHash} from 'node:crypto'
+import { makeApprovalOwner } from '/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/access/access-owner.ts'
+import { makeConnectionsOwner,connectionCommand } from '/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/connections/connections-owner.ts'
+import { nativeOperation } from '/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/shared/interop.ts'
+const root='/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi'
+const require=createRequire(root+'/package.json')
+const {Effect,Deferred,Fiber,Scope,Exit,Cause}=await import(require.resolve('effect'))
+const {send,waitFor}=await import(require.resolve('@xstate/effect'))
+const manifest=JSON.parse(await readFile('/private/tmp/f06-source-freeze.json','utf8'))
+const source=Object.fromEntries(await Promise.all(Object.keys(manifest.files).map(async p=>[p,createHash('sha256').update(await readFile(root+'/'+p)).digest('hex')])))
+const policy={name:'write_note',description:'write',mode:'ask' as const,revision:2}
+const view={agentId:'one',disabled:false,policy,approval:{id:'a',turnId:'turn',tool:'write_note',input:'reviewed',createdAt:1,expiresAt:9000000000000,status:'pending' as const,revision:4}}
+const evidence:any={source}
+evidence.policy=await Effect.runPromise(Effect.gen(function*(){
+ const result=yield* Deferred.make<any>()
+ const actor=yield* makeApprovalOwner(view,()=>Deferred.await(result))
+ yield* send(actor,{type:'SUBMIT',view,approve:true,remember:true});yield* waitFor(actor,s=>s.matches('submitting'))
+ yield* send(actor,{type:'VIEW',...view,policy:{...policy,mode:'deny',revision:4}})
+ yield* waitFor(actor,s=>s.context.view.policy?.revision===4)
+ yield* Deferred.succeed(result,{tools:[{...policy,mode:'allow',revision:3}],approvals:[]})
+ yield* waitFor(actor,s=>!s.matches('submitting'))
+ return {currentPolicy:actor.getSnapshot().context.view.policy,confirmed:actor.getSnapshot().context.confirmed,error:actor.getSnapshot().context.error}
+}).pipe(Effect.scoped))
+for(const kind of ['approval','connections']){
+ evidence[kind+'Cleanup']=await Effect.runPromise(Effect.gen(function*(){
+ const scope=yield* Scope.make(),started=yield* Deferred.make<void>(),aborted=yield* Deferred.make<void>()
+ let reject!:(cause:unknown)=>void
+ const work=()=>nativeOperation(signal=>new Promise<any>((_,fail)=>{reject=fail;signal.addEventListener('abort',()=>Effect.runSync(Deferred.succeed(aborted,undefined)));Effect.runSync(Deferred.succeed(started,undefined))}),cause=>cause)
+ const connection={id:'mcp-'+'a'.repeat(32),name:'Tools',url:'https://tools.example.com/mcp',revision:3,active:true,status:'unavailable' as const,authorizeUrl:null,tools:[]}
+ const catalog={library:{connections:[connection]},selection:{revision:2,tools:[]}}
+ const actor=kind==='approval'?yield* makeApprovalOwner(view,work).pipe(Scope.provide(scope)):yield* makeConnectionsOwner({agentId:'one',open:true},{read:()=>Effect.succeed(catalog),command:work}).pipe(Scope.provide(scope))
+ let command:any
+ if(kind==='approval')yield* send(actor,{type:'SUBMIT',view,approve:true,remember:false})
+ else {yield* waitFor(actor,s=>s.matches('ready'));command=yield* Effect.forkChild(connectionCommand(actor,{requestId:'one',agentId:'one',command:{action:'reconnect',body:{id:connection.id,expectedRevision:3}}}))}
+ yield* Deferred.await(started)
+ const closing=yield* Effect.forkChild(Effect.exit(Scope.close(scope,Exit.void)))
+ yield* Deferred.await(aborted)
+ reject(Cause.fromReasons([...Cause.fail('native failure').reasons,...Cause.die(new Error('native cleanup defect')).reasons,...Cause.interrupt(86123).reasons]))
+ const exit=yield* Fiber.join(closing);if(command)yield* Fiber.join(command)
+ return {status:exit._tag,reasons:Exit.isFailure(exit)?exit.cause.reasons.map(r=>({tag:r._tag,...(r._tag==='Interrupt'?{fiberId:r.fiberId}:{})})):[]}
+ }))
+}
+console.log(JSON.stringify(evidence,null,2));await writeFile('/private/tmp/f06-independent/evidence.json',JSON.stringify(evidence,null,2))
+assert.ok(!evidence.policy.confirmed?.remember,'a stale allow response must not claim future permission after a newer deny policy')
+for(const key of ['approvalCleanup','connectionsCleanup'])assert.ok(evidence[key].reasons.some((r:any)=>r.tag==='Interrupt'&&r.fiberId===86123),'retain original native Interrupt: '+key)

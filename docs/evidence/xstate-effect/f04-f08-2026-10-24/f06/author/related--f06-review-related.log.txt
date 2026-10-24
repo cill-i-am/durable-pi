@@ -1,0 +1,12 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi
+
+
+ Test Files  6 passed (6)
+      Tests  65 passed (65)
+   Start at  17:49:28
+   Duration  3.50s (tests 53%, import 42%, transform 3%, setup 1%)
+
+    Isolate  6 workers spawned · ~77ms startup each (spawn + environment, per file)
+             at least ~387ms faster with isolate: false — reuses workers across files instead of one per file
+

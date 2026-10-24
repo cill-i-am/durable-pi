@@ -1,0 +1,490 @@
+{
+  "base": "b05da10e574393f35cc6840e5cd2343b7e4ae4a7",
+  "scope": "F04-F08 local Terminal/tools/access/Objects/authentication",
+  "source": {
+    "src/features/terminal/native-terminal-addon.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/terminal/native-terminal-addon.ts",
+      "sha256": "292b03615e48a422f915e615c7f732d2bae0e52e30cb421828d7aab994ebedc3",
+      "lane": "f04"
+    },
+    "src/features/terminal/interactive-terminal.tsx": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/terminal/interactive-terminal.tsx",
+      "sha256": "f0a3667517cc7b5919989dbadbe95a99a87b3b434c11332a641aecb9af0ffc4f",
+      "lane": "f04"
+    },
+    "src/features/terminal/file-transfers.tsx": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/terminal/file-transfers.tsx",
+      "sha256": "05f4897e134e8c4092786c187f3775709b45ab6f353a34832d9873c69528f7a9",
+      "lane": "f04"
+    },
+    "src/features/terminal/owned-work.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/terminal/owned-work.ts",
+      "sha256": "1840616557aa67b2bdd2189ab3bf2e48663e3926a2960ed2894dba4b35267772",
+      "lane": "f04"
+    },
+    "src/features/terminal/terminal-ui.machine.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/terminal/terminal-ui.machine.ts",
+      "sha256": "7fde6fbd4b3d259404c587d25ef9f342fccb4f265cb341acd910fd0383f0b2fb",
+      "lane": "f04"
+    },
+    "src/features/terminal/interactive-host.machine.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/terminal/interactive-host.machine.ts",
+      "sha256": "042da1ad12f381357ab51e84b7f5ac2140cf901e9c54eec14332cbb406b5f6ce",
+      "lane": "f04"
+    },
+    "src/features/terminal/export-save.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/terminal/export-save.ts",
+      "sha256": "f25e922253de975db72c015ab451504bdaccdbc7cd464c3b5dd2771b3906b05c",
+      "lane": "f04"
+    },
+    "src/features/terminal/session-lease.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/terminal/session-lease.ts",
+      "sha256": "aa9c5e11333e8eeefe2bd918dc882f67c5865514cf3605a48e9f91ab7252189e",
+      "lane": "f04"
+    },
+    "src/features/terminal/socket.machine.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/terminal/socket.machine.ts",
+      "sha256": "c054478f305fbb24f61d4f7f7e14a91aa6da6adfc9667e6018f86f3958f442ee",
+      "lane": "f04"
+    },
+    "src/features/terminal/terminal-owner.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/terminal/terminal-owner.ts",
+      "sha256": "f8d5a6e67ef7d2380de1a5b9623b4ce7ad186a09cc7646a22ef8ef25be57dbe2",
+      "lane": "f04"
+    },
+    "src/features/terminal/terminal-workbench.tsx": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/terminal/terminal-workbench.tsx",
+      "sha256": "c8c4d79e91d57c280e95c6ebf5e2d1e568bf2078c50cfd1ad729075f5923e868",
+      "lane": "f04"
+    },
+    "src/features/terminal/index.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/terminal/index.ts",
+      "sha256": "0384db184b4f259a8befe3cfe35b95d7057a3796572b7b6236658d89eefb6c3a",
+      "lane": "f04"
+    },
+    "src/features/terminal/session-lease.machine.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/terminal/session-lease.machine.ts",
+      "sha256": "2fde5f9ece34204ba4d6276d2366917623dac3225b1d7c43b3b509187d91f048",
+      "lane": "f04"
+    },
+    "src/features/terminal/use-terminal.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/terminal/use-terminal.ts",
+      "sha256": "2242e185b90635aec18062c221c4549c48fb676fbbf89565031a76702ff166ff",
+      "lane": "f04"
+    },
+    "src/features/terminal/export-save.machine.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/terminal/export-save.machine.ts",
+      "sha256": "573a0e8a06f8d41cb308653dff3bc7b6557b9fa1ff6987b03ee19e0ca11742e9",
+      "lane": "f04"
+    },
+    "tests/terminal-ui-lifecycle.test.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/terminal-ui-lifecycle.test.ts",
+      "sha256": "c933196f69d91d1d760cef0da873b8357825cb30609a3ca7a0861c39013ce92d",
+      "lane": "f04"
+    },
+    "tests/terminal-native-addon.test.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/terminal-native-addon.test.ts",
+      "sha256": "cd17cb0a487896c243446abab4ec015f5e06120e0d826f35378c44b6fcf3249f",
+      "lane": "f04"
+    },
+    "tests/browser/terminal-ui.spec.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/browser/terminal-ui.spec.ts",
+      "sha256": "b0ac88f38ccf2aba380159f2330f736ee75dc9fefb252cec9ec16270260ebf29",
+      "lane": "f04"
+    },
+    "docs/xstate-effect-terminal-ui.md": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/docs/xstate-effect-terminal-ui.md",
+      "sha256": "7791e294e11453e468039db5e27f75b09a5b1cff03230564a0d0716b70f719a6",
+      "lane": "f04"
+    },
+    "tests/native-terminal-addon.test.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/native-terminal-addon.test.ts",
+      "sha256": "a4a32d40752606e631d5dd3605c42a8572eac84a45ed8a5e55721e19ca0191fb",
+      "lane": "f04"
+    },
+    "src/features/browser/browser.machine.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/browser/browser.machine.ts",
+      "sha256": "838c60bcad7187948431a06e3f485aadf7e64decfdc17cbfa476b6662341f310",
+      "lane": "f05"
+    },
+    "src/features/browser/browser-owner.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/browser/browser-owner.ts",
+      "sha256": "5085109cab354cb2de9689c9b8a28f6f47d4b35fe112490e0c6c569a8971f629",
+      "lane": "f05"
+    },
+    "src/features/browser/use-browser.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/browser/use-browser.ts",
+      "sha256": "ba4049df214346e0e7d7ff5bfef0604f6d7edc3d5b4077d3b55caeb186f2fb01",
+      "lane": "f05"
+    },
+    "src/features/browser/browser-preview.machine.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/browser/browser-preview.machine.ts",
+      "sha256": "1e415623fe4e7f8bb4894ea5d75744580f8dd133443fe5220e4472323b0bc33f",
+      "lane": "f05"
+    },
+    "src/features/browser/browser-preview.tsx": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/browser/browser-preview.tsx",
+      "sha256": "fe180d275ff4fdf5fce0bcfae9d1d8897aff960105a9976c2c0fe66104c10a92",
+      "lane": "f05"
+    },
+    "src/features/browser/browser-controls.tsx": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/browser/browser-controls.tsx",
+      "sha256": "95b6b0bb3a18e03930909e6f42f5aa5ac73f9310fe2db7e99435df4a0160a0bc",
+      "lane": "f05"
+    },
+    "src/features/browser/browser-workbench.tsx": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/browser/browser-workbench.tsx",
+      "sha256": "717be833b1f7bab4959e50200748d42d1837d9adc7902da8d3b311d6621f1f4b",
+      "lane": "f05"
+    },
+    "tests/browser-ui-lifecycle.test.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/browser-ui-lifecycle.test.ts",
+      "sha256": "bfc011d2ae26e60076357539fe1d674da127c11842f33697b676f29a9d2f5186",
+      "lane": "f05"
+    },
+    "tests/browser/browser-tools.spec.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/browser/browser-tools.spec.ts",
+      "sha256": "bf4e894fa6fabf79f26d933d78f6a80ea6ad5a7454e053b410b7e2806a41fcf2",
+      "lane": "f05"
+    },
+    "src/features/execution/execution.machine.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/execution/execution.machine.ts",
+      "sha256": "d9167c3489c7ecd9245dc0127569bd485b7f2767ee30fc320b4e76c0dd804b09",
+      "lane": "f05"
+    },
+    "src/features/execution/execution-owner.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/execution/execution-owner.ts",
+      "sha256": "56e3c750fb3babdc8b0e14d646170c2380779726e7caceaaa7e64fbf22febccf",
+      "lane": "f05"
+    },
+    "src/features/execution/use-execution.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/execution/use-execution.ts",
+      "sha256": "355eaf2ca586eb467e9be4f427d89ce7dc6c2b30adf3e07cbdd9647d5f9df3a0",
+      "lane": "f05"
+    },
+    "tests/execution-ui-lifecycle.test.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/execution-ui-lifecycle.test.ts",
+      "sha256": "b833cfefa24bf15ae5dd3450061d131ab5150c36f8c76723e3c849dc124c6463",
+      "lane": "f05"
+    },
+    "tests/browser/execution-tools.spec.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/browser/execution-tools.spec.ts",
+      "sha256": "0585b82602ecf70494e1335347bf4412d05be91415784477c26ff308853c6b4d",
+      "lane": "f05"
+    },
+    "docs/xstate-effect-tools-ui.md": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/docs/xstate-effect-tools-ui.md",
+      "sha256": "315195601636eb184cf385ebda14615a6393a3740dde3a48025042613404bbdb",
+      "lane": "f05"
+    },
+    "src/features/access/approval-card.tsx": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/access/approval-card.tsx",
+      "sha256": "c79eee07f928a4df17d346fdf9e18dd4a2e8866a42765b1b9605e36a1cbccdac",
+      "lane": "f06"
+    },
+    "src/features/access/access-panel.tsx": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/access/access-panel.tsx",
+      "sha256": "edf5d8f3387267e13edeb384ac175d70061b59ffde3391886f5b9a072a4d131f",
+      "lane": "f06"
+    },
+    "src/features/access/decision.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/access/decision.ts",
+      "sha256": "68e459e3639c19fd881a58eafd499a46825720a518fee4d2f269a229bc30d0f0",
+      "lane": "f06"
+    },
+    "src/features/access/approval.machine.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/access/approval.machine.ts",
+      "sha256": "ad395534719b9c07bb582545ce419d41b0f41841c1d3f08be964d7110967f28d",
+      "lane": "f06"
+    },
+    "src/features/access/access.machine.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/access/access.machine.ts",
+      "sha256": "cdc3cbfb4ff16f9c116ac84ffd6078effa882a6145b3ea7f8f5a72aed43f7b55",
+      "lane": "f06"
+    },
+    "src/features/access/access-owner.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/access/access-owner.ts",
+      "sha256": "51523932045010a4740da6b7f2470ef25c17a8d32c85f0dff804a515c1b82cf9",
+      "lane": "f06"
+    },
+    "src/features/access/use-access.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/access/use-access.ts",
+      "sha256": "511e828366c7c2fd50d62a1b5d8cb232c9c53b018ef7b07b0b52da4e97f851b2",
+      "lane": "f06"
+    },
+    "src/features/access/use-approval.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/access/use-approval.ts",
+      "sha256": "2fac2098f9607c1c9827b90ac651458398f062f36df1682c9d0842f40090e5c4",
+      "lane": "f06"
+    },
+    "src/features/connections/connections.machine.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/connections/connections.machine.ts",
+      "sha256": "4e6f2196895c871a32b7065ee774b7f47c1b02a24292fc3b3d6b7bdc792c2fd1",
+      "lane": "f06"
+    },
+    "src/features/connections/connections-owner.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/connections/connections-owner.ts",
+      "sha256": "09b53e3aad49dcb7dc3149575cac6a13bdd92b407f88de15ef98a65fe9bf0403",
+      "lane": "f06"
+    },
+    "src/features/connections/use-connections.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/connections/use-connections.ts",
+      "sha256": "4ef4b819b51e1ba6ea87ef9e250c3e885e68a7d06c5ff532243720625d5ccd56",
+      "lane": "f06"
+    },
+    "src/features/connections/connections-panel.tsx": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/connections/connections-panel.tsx",
+      "sha256": "ceeb930d92330e6bae7985b23aaf9c205fad0b53b491ffe6ff9c02bef3009931",
+      "lane": "f06"
+    },
+    "tests/access-connections-ui.test.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/access-connections-ui.test.ts",
+      "sha256": "0e3de0ade720e45fa99b940fde0bd16e94d8581dbcbfa66017f6c85f95b9a96b",
+      "lane": "f06"
+    },
+    "tests/approval-decision.test.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/approval-decision.test.ts",
+      "sha256": "63062df6539da28666d8381e0bf52362afec2aeaefd0f3c623fd059e460b8775",
+      "lane": "f06"
+    },
+    "tests/browser/access-connections-lifecycle.spec.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/browser/access-connections-lifecycle.spec.ts",
+      "sha256": "d1c87e8465d9f3b688a0487003f5ebd9def5650795966c58d51b6767db2c240f",
+      "lane": "f06"
+    },
+    "docs/xstate-effect-access-connections-ui.md": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/docs/xstate-effect-access-connections-ui.md",
+      "sha256": "d2a51fcabe9b96a1f193fe18236b5c286cdde6c7a967edfbf5037b67808ca314",
+      "lane": "f06"
+    },
+    "src/features/objects/checklist.tsx": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/objects/checklist.tsx",
+      "sha256": "254155aa3b1a977a0fcdd4a769b757ff443a2440acaf9cc9b505135fc7ff3eb4",
+      "lane": "f07"
+    },
+    "src/features/objects/context.tsx": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/objects/context.tsx",
+      "sha256": "8ceb9280c7fa4b9abe7bbdc93c8238cd54c28f70bcbf359cb8f8530a703c9c3b",
+      "lane": "f07"
+    },
+    "src/features/objects/object-creation.machine.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/objects/object-creation.machine.ts",
+      "sha256": "0f7944d34a8a44397eaf455484014aee6c5a7616a0d2adf29ab45919ec207058",
+      "lane": "f07"
+    },
+    "src/features/objects/object-edit.machine.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/objects/object-edit.machine.ts",
+      "sha256": "e5bf7adbad3519ec58852316b754495c23298ac66c6a1fa12ac1d6b660485349",
+      "lane": "f07"
+    },
+    "src/features/objects/object-origin.machine.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/objects/object-origin.machine.ts",
+      "sha256": "85d85b88a5e51835bfe12eee2bef57145141c938c753ab53b3c4d5807ce0ea9f",
+      "lane": "f07"
+    },
+    "src/features/objects/object-poll.machine.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/objects/object-poll.machine.ts",
+      "sha256": "c34ec6ad11d3a2a628d88c4c1cbbc5cb3c4c2bfa835145d5398e53295b2031a4",
+      "lane": "f07"
+    },
+    "src/features/objects/object-read.machine.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/objects/object-read.machine.ts",
+      "sha256": "169dd9ad406466ed7d6aba61a7f6a18633b0658f2661bbce40908f2fdb10751d",
+      "lane": "f07"
+    },
+    "src/features/objects/object-storage.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/objects/object-storage.ts",
+      "sha256": "37445e39830ee7f0623f402d7cdd574cdf39483ff1c03b7d78c9259ca12a5ef9",
+      "lane": "f07"
+    },
+    "src/features/objects/store.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/objects/store.ts",
+      "sha256": "4606b476bcd121f764f731b0ae41f230a08c6ef51427c1af90bf292a33652b51",
+      "lane": "f07"
+    },
+    "src/features/objects/use-object-creation.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/objects/use-object-creation.ts",
+      "sha256": "d3d7d75e5b6739138265c26d17f7eb0f99ce9ad5f81ee14391f0ccccce934517",
+      "lane": "f07"
+    },
+    "src/features/objects/use-object-origin.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/objects/use-object-origin.ts",
+      "sha256": "a694604978aa2942c261492b6d03452f082c7993de9dcd1a0e810c20fe991917",
+      "lane": "f07"
+    },
+    "src/features/objects/workbench.tsx": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/objects/workbench.tsx",
+      "sha256": "6a16684a3b78750af6ed6c6f5ad7d37b859b11ede22fe8d4d98d62c6dd833071",
+      "lane": "f07"
+    },
+    "tests/working-objects-ui.test.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/working-objects-ui.test.ts",
+      "sha256": "b83caffcad3d5a26244f07d7047ba5fc06299ca65778660363e6ed287c1a1017",
+      "lane": "f07"
+    },
+    "tests/object-ui-lifecycle.test.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/object-ui-lifecycle.test.ts",
+      "sha256": "34b8c7799f5468a1899835fe2bd71cafa48e65bfaf11d20869033ae27fa4714c",
+      "lane": "f07"
+    },
+    "tests/browser/objects-lifecycle.spec.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/browser/objects-lifecycle.spec.ts",
+      "sha256": "1774acc92c88cdbbb82f1360852f507d37208a85c7245653e9afd03b6de7f861",
+      "lane": "f07"
+    },
+    "docs/xstate-effect-objects-ui.md": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/docs/xstate-effect-objects-ui.md",
+      "sha256": "5515ed9608cad30fe6e0625b0b7ce444cfc956ff124c8c1a53aebbc682e4e44f",
+      "lane": "f07"
+    },
+    "src/features/auth/auth-contracts.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/auth-contracts.ts",
+      "sha256": "4da73595b68e2b27d55966fbac1d038582e4032875a1d20f30d6d2619708261b",
+      "lane": "f08"
+    },
+    "src/features/auth/auth-owner.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/auth-owner.ts",
+      "sha256": "38ce5bf539307299988a8d6c50dee85ee8cb9940020a799ff9c1f33a9cc4486f",
+      "lane": "f08"
+    },
+    "src/features/auth/auth-entry.machine.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/auth-entry.machine.ts",
+      "sha256": "dab5d7b557cf9c8112119774d002d2d33c141db033d28650175c31f0ceb8cdd9",
+      "lane": "f08"
+    },
+    "src/features/auth/auth-entry.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/auth-entry.ts",
+      "sha256": "5801bb244607d481712f18ecf60e3399e553d460408d48e220f25342f44a9823",
+      "lane": "f08"
+    },
+    "src/features/auth/login.tsx": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/login.tsx",
+      "sha256": "93d87dfadd25796732393ec86dd911f5828e922d09aa57cd0c84da35242e531f",
+      "lane": "f08"
+    },
+    "src/features/auth/password-recovery.tsx": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/password-recovery.tsx",
+      "sha256": "3b299c69abe3ffe8b6520d605605eb58d709a7146c6523b4c5faa4321e731bb0",
+      "lane": "f08"
+    },
+    "src/features/auth/two-factor-challenge.tsx": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/two-factor-challenge.tsx",
+      "sha256": "01266de083cbfd6977b25132bbb4c7163e03630c8150fdc5ab65c6e92d84c5ad",
+      "lane": "f08"
+    },
+    "src/features/auth/passkey-sign-in.tsx": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/passkey-sign-in.tsx",
+      "sha256": "b8e3779de8b6e02c7b20c3eb520c66be7c20b29047d9943d3e9b0d21ff4d2265",
+      "lane": "f08"
+    },
+    "src/features/auth/passkey-errors.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/passkey-errors.ts",
+      "sha256": "0717ade0936f65e73f1c64613557a756e65543c67ee45b1180eb5a87b8e73be0",
+      "lane": "f08"
+    },
+    "src/features/auth/photo.machine.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/photo.machine.ts",
+      "sha256": "946c470721c6ba9693de4a9bd283999a972356cc4e72a94724f18ddc0add7b76",
+      "lane": "f08"
+    },
+    "src/features/auth/photo-owner.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/photo-owner.ts",
+      "sha256": "6c5f51b7ac392d72f8ccf4e2c26377f5725d2fecd508711b350734e7f624cce8",
+      "lane": "f08"
+    },
+    "src/features/auth/profile-photo.tsx": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/profile-photo.tsx",
+      "sha256": "ba68249a34185f9c3e96cfe2d3048eb97c7de5e95e10572a3e9321f8e66e4e90",
+      "lane": "f08"
+    },
+    "src/features/auth/factor.machine.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/factor.machine.ts",
+      "sha256": "883803a60a2c0bb6a6ef5572297c967c43a121109ba043cff1d31224c1c636d0",
+      "lane": "f08"
+    },
+    "src/features/auth/factor-owner.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/factor-owner.ts",
+      "sha256": "760ffcf14225901e75a0bfd4d8ebeffef941f5291a06262713cafa6cf06c8598",
+      "lane": "f08"
+    },
+    "src/features/auth/factor-settings.tsx": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/factor-settings.tsx",
+      "sha256": "15715c366d4399f61d4430fb22415cf8b40c4a416d1890d47216e1bcf3dfb5ce",
+      "lane": "f08"
+    },
+    "src/features/auth/passkeys.machine.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/passkeys.machine.ts",
+      "sha256": "2f196f512c9719e6be1da71ee27a63121f73c835981ee137fc62153ac8828851",
+      "lane": "f08"
+    },
+    "src/features/auth/passkeys-owner.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/passkeys-owner.ts",
+      "sha256": "abfed3aeb33a87c426bf0bd61c6b60bdce72109cec0152470f334cdfa723813a",
+      "lane": "f08"
+    },
+    "src/features/auth/passkey-settings.tsx": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/passkey-settings.tsx",
+      "sha256": "f7608e1d8209650721eb44b75d294be45e458df18c9a462a9f7909988cea327f",
+      "lane": "f08"
+    },
+    "src/features/auth/security.machine.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/security.machine.ts",
+      "sha256": "5c81cfad04d4b0482369b49775d67b1507b4011a4a4ec1b2e318b2e299e61033",
+      "lane": "f08"
+    },
+    "src/features/auth/security-owner.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/security-owner.ts",
+      "sha256": "1f239f3b55dd632c145cf13cedd2393c0ddadfc10fabffa838ec3e05fbd278fc",
+      "lane": "f08"
+    },
+    "src/features/auth/account-security.tsx": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/src/features/auth/account-security.tsx",
+      "sha256": "8b2955e2f720b8d7f6315cdba20912ac5bbc0903647a19964e66310f31263f01",
+      "lane": "f08"
+    },
+    "tests/auth-ui-lifecycle.test.ts": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/tests/auth-ui-lifecycle.test.ts",
+      "sha256": "20853f160571d779688a8efc4cc4b1e61308704891746e6ed150d9aaa17103d1",
+      "lane": "f08"
+    },
+    "docs/xstate-effect-auth-ui.md": {
+      "source": "/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi/docs/xstate-effect-auth-ui.md",
+      "sha256": "bd02cefcd98c44d7ad81863b6ec65097e1e5bf93e63ff9f7deccc23d96856a8c",
+      "lane": "f08"
+    }
+  },
+  "composedGateArtifacts": [
+    {
+      "path": "docs/evidence/xstate-effect/f04-f08-composed-gates/f04-f08-composed-static-initial.log.txt",
+      "sha256": "25cf8cd0a3e8f01e063ab7e61ebb9fd960aa6b7f2d621ce69c5576f415ce0be9",
+      "bytes": 655,
+      "origin": "/private/tmp/f04-f08-composed-static-initial.log"
+    },
+    {
+      "path": "docs/evidence/xstate-effect/f04-f08-composed-gates/f04-f08-composed-unit-build.log.txt",
+      "sha256": "5cdc564932a410c15c2f101a483dd225ee6cf710ae842b5377daea27e4b1bdd2",
+      "bytes": 24513,
+      "origin": "/private/tmp/f04-f08-composed-unit-build.log"
+    },
+    {
+      "path": "docs/evidence/xstate-effect/f04-f08-composed-gates/f04-f08-composed-browser.log.txt",
+      "sha256": "c8a07e37de4ffc78466ceade1ce12a7ffcada88a0e66b1e710e095f9e135eaa6",
+      "bytes": 54523,
+      "origin": "/private/tmp/f04-f08-composed-browser.log"
+    }
+  ],
+  "hostedCI": "pending",
+  "mergeAndDeployment": "not authorized",
+  "publicationDocCorrections": {
+    "docs/xstate-effect-tools-ui.md": {
+      "authorSha256": "315195601636eb184cf385ebda14615a6393a3740dde3a48025042613404bbdb",
+      "publishedSha256": "11add348ab269c092fb6fda5dac7289c8116079129a3b657bdda370613ef87ba",
+      "reason": "Repair relative evidence links to the curated verbatim publication bundle; no executable change."
+    },
+    "docs/xstate-effect-objects-ui.md": {
+      "authorSha256": "5515ed9608cad30fe6e0625b0b7ce444cfc956ff124c8c1a53aebbc682e4e44f",
+      "publishedSha256": "352372101eebbf0ce8db5f60bb33c703da9f95fe794b36f78dde6665affd4145",
+      "reason": "Repair relative evidence links to the curated verbatim publication bundle; no executable change."
+    }
+  }
+}

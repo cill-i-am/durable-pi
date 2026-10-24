@@ -5,7 +5,8 @@ import type { BrowserAction, BrowserState } from "@/browser/contracts"
 import { Button } from "@/components/ui/button"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { agentUrl } from "@/http/client"
+
+import { useBrowserPreview } from "./browser-preview"
 
 export function BrowserControls({
   agentId,
@@ -22,16 +23,14 @@ export function BrowserControls({
 }) {
   const [text, setText] = useState("")
   const [visible, setVisible] = useState(false)
-  const [loadedVersion, setLoadedVersion] = useState<number | null>(null)
-  const blocked =
-    busy || state.status !== "ready" || loadedVersion !== state.version
-  const [failed, setFailed] = useState<number | null>(null)
+  const preview = useBrowserPreview(agentId, state, refresh)
+  const blocked = busy || state.status !== "ready" || !preview.ready
   return (
     <div className="flex flex-col gap-3">
       <p className="text-sm">
         You’re in control. Bot browser tools are paused.
       </p>
-      {state.hasScreenshot && failed !== state.version && (
+      {preview.active && state.hasScreenshot && !preview.failed && (
         <button
           type="button"
           data-base-ui-swipe-ignore=""
@@ -64,20 +63,17 @@ export function BrowserControls({
           }}
         >
           <img
-            key={state.version}
-            onLoad={() => setLoadedVersion(state.version)}
+            key={preview.key}
+            onLoad={preview.loaded}
             draggable={false}
             className="block aspect-[4/3] w-full"
-            src={`${agentUrl(agentId, "browser/screenshot")}&version=${state.version}`}
+            src={preview.src}
             alt="Remote page; use the controls below for keyboard interaction"
-            onError={() => {
-              setFailed(state.version)
-              refresh()
-            }}
+            onError={preview.failedToLoad}
           />
         </button>
       )}
-      {(!state.hasScreenshot || failed === state.version) && (
+      {(!state.hasScreenshot || preview.failed) && (
         <p className="rounded-md border p-3 text-sm text-muted-foreground">
           Refresh the view to load a current preview before interacting.
         </p>

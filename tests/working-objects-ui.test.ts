@@ -7,7 +7,7 @@ import { createModels } from "@earendil-works/pi-ai"
 import { Harness, createRegistry } from "@earendil-works/pi-durable"
 import { openNodeSqliteStorage } from "@earendil-works/pi-durable/storage/sqlite/node"
 import { Effect, Schema } from "effect"
-import { expect, it } from "vitest"
+import { afterEach, expect, it } from "vitest"
 
 import { ObjectStore } from "../src/features/objects/store"
 import { ApiError } from "../src/http/client"
@@ -15,9 +15,19 @@ import { objectsRequest } from "../src/objects/adapters/http"
 import { piWorkingObjects } from "../src/objects/adapters/pi"
 import { ObjectMutation, ObjectDetail } from "../src/objects/contracts"
 
+const stores: ObjectStore[] = []
+const ownedStore = (...args: ConstructorParameters<typeof ObjectStore>) => {
+  const store = new ObjectStore(...args)
+  stores.push(store)
+  return store
+}
+afterEach(async () => {
+  await Promise.all(stores.splice(0).map((store) => store.dispose()))
+})
+
 it("unchanged empty refreshes preserve the external-store snapshot and recover a read failure", async () => {
   let offline = false
-  const store = new ObjectStore(async <T>() => {
+  const store = ownedStore(async <T>() => {
     if (offline) throw new Error("Offline")
     return { objects: [] } as T
   }, "unchanged")
@@ -83,14 +93,14 @@ it("recovers a lost UI response after browser restart, explicitly reconciles con
     action: { type: "create", title: "Release", notes: "", tasks: [] },
   })
   try {
-    const first = new ObjectStore(api, "test")
+    const first = ownedStore(api, "test")
     first.connect(storage)
     expect(await first.submit(input)).toBe(false)
     expect(first.getSnapshot().problems[input.id]?.kind).toBe("uncertain")
     expect(first.getSnapshot().pending[input.id]?.operationId).toBe(
       input.operationId
     )
-    const recovered = new ObjectStore(api, "test")
+    const recovered = ownedStore(api, "test")
     recovered.connect(storage)
     expect(writes).toBe(1)
     expect(await recovered.retry(input.id)).toBe(true)
@@ -214,6 +224,10 @@ it("ignores stale reads, refreshes after a receipt, and retains paged history ac
       })),
       nextHistory: revision > 20 ? revision - 19 : null,
     })
+  let entered!: () => void
+  const reading = new Promise<void>((done) => {
+    entered = done
+  })
   let resolve!: (value: unknown) => void,
     deferred = false,
     serverRevision = 25
@@ -237,12 +251,13 @@ it("ignores stale reads, refreshes after a receipt, and retains paged history ac
       deferred = false
       value = await new Promise((done) => {
         resolve = done
+        entered()
       })
     } else value = detail(serverRevision)
     void body
     return value as T
   }
-  const store = new ObjectStore(api, "test")
+  const store = ownedStore(api, "test")
   store.connect({ getItem: () => null, setItem: () => {} })
   await store.load(id)
   await store.history(id)
@@ -251,6 +266,7 @@ it("ignores stale reads, refreshes after a receipt, and retains paged history ac
   expect(store.getSnapshot().details[id]?.nextHistory).toBeNull()
   deferred = true
   const loading = store.load(id)
+  await reading
   const saving = store.submit({
     id,
     operationId: crypto.randomUUID(),

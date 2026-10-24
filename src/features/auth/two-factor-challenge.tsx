@@ -1,47 +1,36 @@
 import { Link, useSearch } from "@tanstack/react-router"
+import { Redacted } from "effect"
 import { useState } from "react"
 
-import { authClient } from "@/auth/client"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { authReturnPath, workspaceReturnLink } from "@/navigation/workspace"
 
+import { useAuthEntry } from "./auth-entry"
 import { AuthFrame } from "./auth-frame"
-import { securityError } from "./security-errors"
 import { VerificationCode } from "./verification-code"
 
 export function TwoFactorChallenge() {
   const { returnTo } = useSearch({ strict: false })
-  const [recovery, setRecovery] = useState(false)
   const [code, setCode] = useState("")
-  const [pending, setPending] = useState(false)
-  const [error, setError] = useState("")
-  async function submit(event: React.SubmitEvent<HTMLFormElement>) {
+  const auth = useAuthEntry("totp", `challenge:${returnTo ?? "/"}`, () => {
+    window.location.assign(
+      authReturnPath(
+        new URLSearchParams(window.location.search).get("returnTo") ?? "/"
+      )
+    )
+  })
+  const recovery = auth.snapshot?.context.kind === "backup"
+  const pending =
+    !auth.snapshot ||
+    auth.snapshot.matches("requesting") ||
+    auth.snapshot.matches("completed")
+  const error = auth.snapshot?.context.error ?? ""
+  function submit(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (pending) return
-    setPending(true)
-    setError("")
-    try {
-      const result = recovery
-        ? await authClient.twoFactor.verifyBackupCode({
-            code: code.trim(),
-            trustDevice: false,
-          })
-        : await authClient.twoFactor.verifyTotp({ code, trustDevice: false })
-      if (result.error) setError(securityError(result.error))
-      else
-        window.location.assign(
-          authReturnPath(
-            new URLSearchParams(window.location.search).get("returnTo") ?? "/"
-          )
-        )
-    } catch {
-      setError("Could not connect. Check your connection and try again.")
-    } finally {
-      setPending(false)
-    }
+    auth.send({ type: "SUBMIT", secret: Redacted.make({ code }) })
   }
   return (
     <AuthFrame
@@ -57,9 +46,8 @@ export function TwoFactorChallenge() {
             variant="link"
             disabled={pending}
             onClick={() => {
-              setRecovery(!recovery)
+              auth.send({ type: "MODE", kind: recovery ? "totp" : "backup" })
               setCode("")
-              setError("")
             }}
           >
             {recovery ? "Use your authenticator" : "Use a recovery code"}

@@ -1,0 +1,46 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi
+
+ ❯ tests/object-ui-lifecycle.test.ts (15 tests | 1 failed | 14 skipped) 25ms
+   × invalid cancellation acknowledgement cannot discard the retained operation 24ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/object-ui-lifecycle.test.ts > invalid cancellation acknowledgement cannot discard the retained operation
+AssertionError: expected undefined to deeply equal { …(4) }
+
+- Expected:
+{
+  "action": {
+    "changes": [
+      {
+        "title": "My draft",
+        "type": "edit",
+      },
+    ],
+    "type": "update",
+  },
+  "expectedRevision": 1,
+  "id": "11111111-1111-4111-8111-111111111111",
+  "operationId": "22222222-2222-4222-8222-222222222222",
+}
+
++ Received:
+undefined
+
+ ❯ tests/object-ui-lifecycle.test.ts:230:43
+    228|   owner.connect(saved)
+    229|   await owner.cancel(id)
+    230|   expect(owner.getSnapshot().pending[id]).toEqual(input)
+       |                                           ^
+    231|   expect(readObjectDrafts(saved.read())[0]?.input).toEqual(input)
+    232| })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 14 skipped (15)
+   Start at  17:38:55
+   Duration  354ms (import 59%, transform 27%, tests 10%, setup 3%, worker 1%)
+

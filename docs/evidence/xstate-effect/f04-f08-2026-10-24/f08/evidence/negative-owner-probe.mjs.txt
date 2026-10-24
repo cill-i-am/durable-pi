@@ -1,0 +1,26 @@
+import {readFile} from "node:fs/promises"
+import assert from 'node:assert/strict'
+import {createRequire} from 'node:module'
+import{createServer}from'node:http'
+const root='/Users/cillianbarron/.codex/worktrees/xstate-browser-execution/durable-pi',requireRoot=createRequire(root+'/package.json')
+const{build}=createRequire(requireRoot.resolve('alchemy'))('esbuild'),{chromium}=requireRoot('@playwright/test')
+const stub=`const session={user:{id:'fixture',name:'Fixture',image:null},session:{id:'fixture-session'}};export const authClient={useSession:()=>({data:session,refetch:async()=>{}}),getSession:async()=>({data:session,error:null}),twoFactor:{verifyTotp:()=>new Promise(resolve=>{window.releaseChallenge=()=>resolve({data:true,error:null})}),verifyBackupCode:()=>Promise.resolve({data:true,error:null})}};export const authFetch=async()=>{window.uploads=(window.uploads||0)+1;return Response.json({})}`
+const bundle=await build({stdin:{contents:`import React,{useState}from'react';import{createRoot}from'react-dom/client';import{TwoFactorChallenge}from'${root}/src/features/auth/two-factor-challenge.tsx';import{ProfilePhoto}from'${root}/src/features/auth/profile-photo.tsx';function App(){const[open,setOpen]=useState(true);window.leave=()=>setOpen(false);return open?(location.search.includes('photo')?<ProfilePhoto onPendingChange={()=>{}}/>:<TwoFactorChallenge/>):<p>Left auth view</p>}createRoot(document.getElementById('root')).render(<App/>);`,resolveDir:root,loader:'tsx'},plugins:[{name:'synthetic-auth',setup(b){b.onLoad({filter:/auth-owner\.ts$/},async args=>{let source=await readFile(args.path,'utf8');const start=source.indexOf('    return () => {\n      mounted = false'),end=source.indexOf('\n  }, [identity])',start);if(start<0||end<0)throw new Error('negative control target missing');source=source.slice(0,start)+'    return () => {}'+source.slice(end);return{contents:source,loader:'ts'}});b.onResolve({filter:/^@\/auth\/client$/},()=>({path:'auth',namespace:'fixture'}));b.onResolve({filter:/^@tanstack\/react-router$/},()=>({path:'router',namespace:'fixture'}));b.onLoad({filter:/.*/,namespace:'fixture'},a=>({contents:a.path==='auth'?stub:`import React from 'react';export const defaultParseSearch=s=>Object.fromEntries(new URLSearchParams(s));export const defaultStringifySearch=s=>'?'+new URLSearchParams(s);export const useSearch=()=>({returnTo:'/agents'});export const Link=props=>React.createElement('a',{href:'/',...props});`,loader:'jsx',resolveDir:root}))}}],tsconfig:root+'/tsconfig.json',bundle:true,write:false,format:'iife',platform:'browser',define:{'process.env.NODE_ENV':'"development"'}})
+const server=createServer((q,s)=>{s.setHeader('content-type',q.url==='/app.js'?'text/javascript':'text/html');s.end(q.url==='/app.js'?bundle.outputFiles[0].text:'<div id="root"></div><script src="/app.js"></script>')});await new Promise(r=>server.listen(0,'127.0.0.1',r))
+const browser=await chromium.launch({headless:true}),page=await browser.newPage();let navigations=0
+await page.route('**/agents*',async route=>{if(new URL(route.request().url()).pathname==='/agents'){navigations++;await route.abort()}else await route.continue()})
+try{
+ const url=`http://127.0.0.1:${server.address().port}`
+ await page.goto(url+'?returnTo=/agents')
+ await page.locator('input').fill('123456');await page.getByRole('button',{name:'Verify and sign in',exact:true}).click();await page.waitForFunction(()=>!!window.releaseChallenge)
+ await page.evaluate(()=>window.leave());await page.getByText('Left auth view').waitFor();await page.evaluate(()=>window.releaseChallenge());await page.waitForTimeout(100)
+ const challengeNavigations=navigations
+ await page.goto(url+'?photo')
+ await page.evaluate(()=>{const decode=window.createImageBitmap;window.createImageBitmap=(...args)=>new Promise((resolve,reject)=>{window.releaseImage=()=>decode(...args).then(resolve,reject)})})
+ await page.getByLabel('Choose a photo',{exact:true}).setInputFiles({name:'fixture.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAAD0lEQVR4nGOQr5j47s4qAAqJA53yuzs5AAAAAElFTkSuQmCC','base64')})
+ await page.waitForFunction(()=>!!window.releaseImage);await page.evaluate(()=>window.leave());await page.getByText('Left auth view').waitFor();await page.evaluate(()=>window.releaseImage());await page.waitForTimeout(100)
+ const uploads=await page.evaluate(()=>window.uploads||0)
+ console.log(JSON.stringify({challengeNavigations,uploads}))
+ assert.equal(challengeNavigations,0,'leaving a challenge must fence late success navigation')
+ assert.equal(uploads,0,'leaving photo preparation must prevent a later upload')
+}finally{await browser.close();await new Promise(r=>server.close(r))}

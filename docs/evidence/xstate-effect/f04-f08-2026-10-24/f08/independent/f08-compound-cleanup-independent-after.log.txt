@@ -1,0 +1,1 @@
+{"completions":0,"failure":true,"reasons":[{"tag":"Interrupt"},{"tag":"Die"},{"tag":"Die","annotation":"original"},{"tag":"Interrupt","fiberId":88234},{"tag":"Interrupt"},{"tag":"Interrupt","fiberId":14}]}
