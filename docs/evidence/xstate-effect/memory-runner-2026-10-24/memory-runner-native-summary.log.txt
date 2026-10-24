@@ -1,0 +1,48 @@
+$ node scripts/test-memory-summary-runtime.mjs
+service fixture: The compatibility flag nodejs_compat became the default as of 2026-08-04 so does not need to be specified anymore.
+service fixture: The compatibility flag nodejs_compat became the default as of 2026-08-04 so does not need to be specified anymore.
+[20:18:37.540] ERROR (#1282): Memory compaction scheduler exhausted MemoryStorageError: Memory storage failed during query
+    at worker.mjs:39922:13
+    at worker.mjs:27036:43
+    at worker.mjs:4652:23
+    at Array.map (<anonymous>)
+    at worker.mjs:4649:33
+    at Object.<anonymous> (worker.mjs:1510:18)
+    at Memory.saveNode (worker.mjs:39792:86)
+[20:18:37.796] ERROR (#1383): Memory compaction scheduler exhausted MemoryStorageError: Memory storage failed during synthetic cleanup scan
+Error in MemorySummaryProbe:cleanup fetch: Error: Summary runner is stopped
+    at AuditedSummaryRunner.recovery (worker.mjs:41480:29)
+    at MemorySummaryProbe.inspect (worker.mjs:45093:35)
+    at MemorySummaryProbe.onRequest (worker.mjs:45162:37)
+    at worker.mjs:1128:54
+    at runInLifecycleHostContext (worker.mjs:48:48)
+    at Lifecycle2.fetch (worker.mjs:1125:73)
+
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Error: Summary runner is stopped
+    at AuditedSummaryRunner.recovery (worker.mjs:41480:29)
+    at MemorySummaryProbe.inspect (worker.mjs:45093:35)
+    at MemorySummaryProbe.onRequest (worker.mjs:45162:37)
+    at worker.mjs:1128:54
+    at runInLifecycleHostContext (worker.mjs:48:48)
+    at Lifecycle2.fetch (worker.mjs:1125:73)
+
+500 !== 200
+
+    at request (file:///Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/scripts/test-memory-summary-runtime.mjs:55:10)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async until (file:///Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/scripts/test-memory-summary-runtime.mjs:62:13)
+    at async file:///Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi/scripts/test-memory-summary-runtime.mjs:304:16 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 500,
+  expected: 200,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.21.0
+[ELIFECYCLE] Command failed with exit code 1.

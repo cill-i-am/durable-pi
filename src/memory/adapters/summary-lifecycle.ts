@@ -19,6 +19,7 @@ import {
   type SummaryDispatch,
   type SummaryRecovery,
 } from "../summary-discovery.machine"
+import { MaintenanceRunnerHost } from "./runner-host"
 
 export class SummaryRecoveryChanged extends Error {}
 
@@ -54,8 +55,12 @@ export class SummaryRunner<E, R = never> extends LifecycleCapability {
   private gate: Promise<unknown> = Promise.resolve()
   private unpersisted?: SummaryController
   private observedControl?: SummaryController
-  private restoring?: Promise<void>
-  private stopped = false
+  private readonly lifetime = new MaintenanceRunnerHost(() =>
+    this.run(this.host.restore())
+  )
+  private get stopped() {
+    return this.lifetime.stopped
+  }
   constructor(
     readonly host: {
       run: <A>(
@@ -101,6 +106,21 @@ export class SummaryRunner<E, R = never> extends LifecycleCapability {
     this.gate = work.then(
       () => undefined,
       () => undefined
+    )
+    // Join accepted storage and retain fatal native settlement. Ordinary
+    // request failure (including late admission refusal) stays with its caller.
+    void this.lifetime.track(
+      work.then(
+        () => undefined,
+        (error: unknown) => {
+          if (
+            Cause.isCause(error) &&
+            (Cause.hasDies(error) ||
+              (Cause.hasInterrupts(error) && !Cause.hasInterruptsOnly(error)))
+          )
+            throw error
+        }
+      )
     )
     return work
   }
@@ -172,9 +192,12 @@ export class SummaryRunner<E, R = never> extends LifecycleCapability {
       recoveryLoop: true,
       retry,
     })
+    if (this.stopped) throw new Error("Summary runner is stopped")
     return payload.armedUntil
   }
   armDiscovery(): Promise<number> {
+    if (this.stopped)
+      return Promise.reject(new Error("Summary runner is stopped"))
     return this.serial(async () => {
       if ((await this.control()).phase === "exhausted")
         throw new SummaryRecoveryChanged(
@@ -184,6 +207,7 @@ export class SummaryRunner<E, R = never> extends LifecycleCapability {
     })
   }
   discoveryCurrent(deadline: number): boolean {
+    if (this.stopped) return false
     const job = this.current(discoveryId)
     const lease = job && readSummaryDiscovery(job.payload)
     return (
@@ -197,12 +221,16 @@ export class SummaryRunner<E, R = never> extends LifecycleCapability {
     )
   }
   recovery(): Promise<SummaryRecovery | undefined> {
+    if (this.stopped)
+      return Promise.reject(new Error("Summary runner is stopped"))
     return this.serial(async () => {
       const control = await this.control()
       return control.phase === "exhausted" ? control.recovery! : undefined
     })
   }
   armRecovery(epoch: string): Promise<number> {
+    if (this.stopped)
+      return Promise.reject(new Error("Summary runner is stopped"))
     return this.serial(async () => {
       const control = await this.control()
       if (control.phase !== "exhausted" || control.recovery?.epoch !== epoch)
@@ -213,6 +241,7 @@ export class SummaryRunner<E, R = never> extends LifecycleCapability {
     })
   }
   retryRecovery(epoch: string, deadline: number): Promise<boolean> {
+    if (this.stopped) return Promise.resolve(false)
     return this.serial(async () => {
       const control = await this.control()
       if (control.phase === "available")
@@ -255,6 +284,7 @@ export class SummaryRunner<E, R = never> extends LifecycleCapability {
     })
   }
   async wake() {
+    if (this.stopped) return
     await this.serial(async () => {
       const control = await this.control()
       if (this.stopped || control.phase === "exhausted") return
@@ -273,16 +303,19 @@ export class SummaryRunner<E, R = never> extends LifecycleCapability {
   }
   /** Only the actual Durable Object onStart invokes cold restoration. Creating
    * another facade, ordinary status and reconcile never release a live claim. */
-  async restore() {
+  restore() {
+    return this.lifetime.track(this.restoreHost())
+  }
+  private async restoreHost() {
     if (this.stopped) return
-    this.restoring ??= this.run(this.host.restore()).catch((error: unknown) => {
-      this.restoring = undefined
-      throw error
-    })
-    await this.restoring
+    await this.lifetime.restore()
     if (!this.stopped) await this.reconcile()
   }
-  async reconcile() {
+  reconcile() {
+    return this.lifetime.track(this.reconcileHost())
+  }
+  private async reconcileHost() {
+    if (this.stopped) return
     this.current(pumpId)
     this.current(discoveryId)
     const control = await this.serial(() => this.control())
@@ -401,7 +434,13 @@ export class SummaryRunner<E, R = never> extends LifecycleCapability {
     }
     return this.outcome(job, result)
   }
-  async onJob({ job }: LifecycleJobContext): Promise<LifecycleJobOutcome> {
+  onJob(context: LifecycleJobContext): Promise<LifecycleJobOutcome> {
+    return this.lifetime.track(this.dispatch(context))
+  }
+  private async dispatch({
+    job,
+  }: LifecycleJobContext): Promise<LifecycleJobOutcome> {
+    if (this.stopped) return
     const control = await this.serial(() => this.control())
     if (
       this.stopped ||
@@ -452,13 +491,20 @@ export class SummaryRunner<E, R = never> extends LifecycleCapability {
     if (owner.state.phase === "idle") this.owned.delete(token)
     return this.outcome(job, result)
   }
-  async onJobError(
+  onJobError(
+    context: LifecycleJobContext,
+    error: unknown
+  ): Promise<LifecycleJobOutcome> {
+    return this.lifetime.track(this.failed(context, error))
+  }
+  private async failed(
     { job }: LifecycleJobContext,
     error: unknown
   ): Promise<LifecycleJobOutcome> {
+    if (this.stopped) return
     const owner = this.owned.get(readJob(job).token)
     if (owner?.pending) await owner.pending
-    if (this.stopped) return this.outcome(job, undefined)
+    if (this.stopped) return
     await this.serial(async () => {
       // An unavailable read cannot establish absence. In particular a cold
       // callback must not replace a saved exact recovery epoch/retired token.
@@ -485,29 +531,30 @@ export class SummaryRunner<E, R = never> extends LifecycleCapability {
         this.host.notify?.()
       }
     })
-    if (this.stopped) return this.outcome(job, undefined)
+    if (this.stopped) return
     this.owned.delete(readJob(job).token)
     await this.run(
       Effect.logError("Memory compaction scheduler exhausted", error)
     )
     return this.outcome(job, undefined)
   }
-  async dispose() {
-    this.stopped = true
-    const owners = [...this.owned.values()]
-    for (const owner of owners) owner.controller?.abort()
-    await Promise.all(owners.map((owner) => owner.pending))
-    const errors = owners
-      .filter(
-        (owner) =>
-          owner.state.phase === "failed" || owner.state.phase === "cleanup"
-      )
-      .map((owner) => owner.state.error)
-    if (errors.length)
-      throw Cause.fromReasons(
-        errors.flatMap(
-          (error) => (Cause.isCause(error) ? error : Cause.die(error)).reasons
+  dispose() {
+    return this.lifetime.dispose(async () => {
+      const owners = [...this.owned.values()]
+      for (const owner of owners) owner.controller?.abort()
+      await Promise.all(owners.map((owner) => owner.pending))
+      const errors = owners
+        .filter(
+          (owner) =>
+            owner.state.phase === "failed" || owner.state.phase === "cleanup"
         )
-      )
+        .map((owner) => owner.state.error)
+      if (errors.length)
+        throw Cause.fromReasons(
+          errors.flatMap(
+            (error) => (Cause.isCause(error) ? error : Cause.die(error)).reasons
+          )
+        )
+    })
   }
 }

@@ -28,6 +28,7 @@ import {
   SummaryRouting,
   summaryRoutingApplication,
 } from "../../src/memory/routing"
+import { readSummaryController } from "../../src/memory/summary-discovery.machine"
 import { makeSummaryModel } from "../../src/memory/summary-execution"
 import { SummaryModel } from "../../src/memory/summary-model"
 import { nativeDatabase } from "./database"
@@ -61,6 +62,16 @@ class AuditedSummaryRunner extends SummaryRunner<MemoryError> {
   }
   queue() {
     return this.lifecycle.jobs.list()
+  }
+  async recoverySnapshot() {
+    // Fixture inspection after runner closure reads the retained native ledger,
+    // as the other inspection fields do; it does not reopen the closed owner.
+    const raw = await this.lifecycle.storage.get("memory-compactor:failure")
+    if (raw === undefined) return undefined
+    const control = readSummaryController(raw)
+    return control.phase === "exhausted"
+      ? (control.recovery ?? undefined)
+      : undefined
   }
   accelerate(id: string, at: number) {
     return this.lifecycle.jobs.reschedule(id, at)
@@ -300,7 +311,10 @@ export class MemorySummaryProbe extends DurableObject<Record<string, never>> {
         "SELECT id,source,kind,text,date,provenance FROM memory_log"
       ),
       callbacks: this.db.all("SELECT * FROM summary_probe_jobs ORDER BY id"),
-      recovery: (await this.runner.recovery()) ?? null,
+      recovery:
+        (await (this.disposal
+          ? this.runner.recoverySnapshot()
+          : this.runner.recovery())) ?? null,
       jobs: this.runner.queue(),
       alarm: await this.ctx.storage.getAlarm(),
       disposed: this.disposed,

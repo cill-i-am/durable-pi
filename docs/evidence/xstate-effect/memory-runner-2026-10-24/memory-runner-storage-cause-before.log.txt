@@ -1,0 +1,58 @@
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+ ❯ tests/memory-summary-runner.test.ts (26 tests | 2 failed | 24 skipped) 46ms
+   × retains compound storage settlement failure when closing (defect false) 40ms
+   × retains compound storage settlement failure when closing (defect true) 4ms
+ ❯ tests/memory-backup-runner.test.ts (26 tests | 2 failed | 24 skipped) 46ms
+   × retains compound storage settlement failure when closing (defect false) 40ms
+   × retains compound storage settlement failure when closing (defect true) 5ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/memory-backup-runner.test.ts > retains compound storage settlement failure when closing (defect false)
+ FAIL  tests/memory-backup-runner.test.ts > retains compound storage settlement failure when closing (defect true)
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/memory-backup-runner.test.ts:881:37
+    879|     held.release()
+    880|     for (const result of await Promise.all([admission, closing])) {
+    881|       expect(Cause.isCause(result)).toBe(true)
+       |                                     ^
+    882|       if (!Cause.isCause(result)) throw new Error("Expected full nativ…
+    883|       expect(result.reasons).toEqual(failure.reasons)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  tests/memory-summary-runner.test.ts > retains compound storage settlement failure when closing (defect false)
+ FAIL  tests/memory-summary-runner.test.ts > retains compound storage settlement failure when closing (defect true)
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/memory-summary-runner.test.ts:703:37
+    701|     held.release()
+    702|     for (const result of await Promise.all([admission, closing])) {
+    703|       expect(Cause.isCause(result)).toBe(true)
+       |                                     ^
+    704|       if (!Cause.isCause(result)) throw new Error("Expected full nativ…
+    705|       expect(result.reasons).toEqual(failure.reasons)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  4 failed | 48 skipped (52)
+   Start at  20:26:20
+   Duration  729ms (import 65%, transform 24%, tests 8%, setup 2%, worker 1%)
+

@@ -27,6 +27,8 @@ import type { MemoryStorageError } from "../domain"
 const id = "memory-backups:pump"
 const discoveryId = "memory-backups:discovery"
 const controllerKey = "memory-backups:failure"
+import { MaintenanceRunnerHost } from "./runner-host"
+
 export class BackupRecoveryChanged extends Error {}
 const Payload = Schema.Struct({
   schemaVersion: Schema.Literal(1),
@@ -68,8 +70,12 @@ type Owned = {
  * actual Effect/native ownership. Domain storage owns business retry budgets. */
 export class BackupRunner<E, R = never> extends LifecycleCapability {
   private readonly owned = new Map<string, Owned>()
-  private restoring?: Promise<void>
-  private stopped = false
+  private readonly lifetime = new MaintenanceRunnerHost(() =>
+    this.run(this.host.restore())
+  )
+  private get stopped() {
+    return this.lifetime.stopped
+  }
   private gate: Promise<unknown> = Promise.resolve()
   private unpersisted?: BackupController
   private readonly operations = new Set<Promise<unknown>>()
@@ -170,6 +176,21 @@ export class BackupRunner<E, R = never> extends LifecycleCapability {
       () => undefined,
       () => undefined
     )
+    // Join accepted storage and retain fatal native settlement. Ordinary
+    // request failure (including late admission refusal) stays with its caller.
+    void this.lifetime.track(
+      work.then(
+        () => undefined,
+        (error: unknown) => {
+          if (
+            Cause.isCause(error) &&
+            (Cause.hasDies(error) ||
+              (Cause.hasInterrupts(error) && !Cause.hasInterruptsOnly(error)))
+          )
+            throw error
+        }
+      )
+    )
     return work
   }
   private async control() {
@@ -195,6 +216,8 @@ export class BackupRunner<E, R = never> extends LifecycleCapability {
     }
   }
   recovery(): Promise<BackupSchedulerRecovery | undefined> {
+    if (this.stopped)
+      return Promise.reject(new Error("Backup runner is stopped"))
     return this.serial(async () => {
       const state = await this.control()
       return state.phase === "exhausted" ? state.recovery! : undefined
@@ -253,15 +276,14 @@ export class BackupRunner<E, R = never> extends LifecycleCapability {
       retry: { maxAttempts: 3, baseDelayMs: 100, maxDelayMs: 1000 },
     })
   }
-  async reconcile() {
+  reconcile() {
+    return this.lifetime.track(this.reconcileHost())
+  }
+  private async reconcileHost() {
     if (this.stopped) return
     this.current()
     this.current(discoveryId)
-    this.restoring ??= this.run(this.host.restore()).catch((error: unknown) => {
-      this.restoring = undefined
-      throw error
-    })
-    await this.restoring
+    await this.lifetime.restore()
     if (!this.stopped) await this.lifecycle.jobs.rearm()
   }
   private async arm(): Promise<BackupRecoveryLease> {
@@ -282,9 +304,11 @@ export class BackupRunner<E, R = never> extends LifecycleCapability {
       recoveryLoop: true,
       retry: { maxAttempts: 3, baseDelayMs: 100, maxDelayMs: 1000 },
     })
+    if (this.stopped) throw new Error("Backup runner is stopped")
     return {
       deadline: value.deadline,
       current: () => {
+        if (this.stopped) return false
         const current = this.current(discoveryId)
         if (!current) return false
         const stored = readBackupDiscovery(current.payload)
@@ -295,6 +319,8 @@ export class BackupRunner<E, R = never> extends LifecycleCapability {
     }
   }
   armDiscovery(): Promise<BackupRecoveryLease> {
+    if (this.stopped)
+      return Promise.reject(new Error("Backup runner is stopped"))
     return this.serial(async () => {
       if ((await this.control()).phase === "exhausted")
         throw new BackupRecoveryChanged(
@@ -304,6 +330,8 @@ export class BackupRunner<E, R = never> extends LifecycleCapability {
     })
   }
   armSchedulerRecovery(epoch: string): Promise<BackupRecoveryLease> {
+    if (this.stopped)
+      return Promise.reject(new Error("Backup runner is stopped"))
     return this.serial(async () => {
       const state = await this.control()
       if (
@@ -321,6 +349,7 @@ export class BackupRunner<E, R = never> extends LifecycleCapability {
     epoch: string,
     lease: BackupRecoveryLease
   ): Promise<boolean> {
+    if (this.stopped) return Promise.resolve(false)
     return this.serial(async () => {
       const state = await this.control()
       if (
@@ -355,6 +384,8 @@ export class BackupRunner<E, R = never> extends LifecycleCapability {
     )
   }
   armRecovery(): Promise<BackupRecoveryLease> {
+    if (this.stopped)
+      return Promise.reject(new Error("Backup runner is stopped"))
     return this.serial(async () => {
       const state = await this.control()
       if (
@@ -384,9 +415,11 @@ export class BackupRunner<E, R = never> extends LifecycleCapability {
       },
       Date.now()
     )
+    if (this.stopped) throw new Error("Backup runner is stopped")
     return {
       deadline,
       current: () => {
+        if (this.stopped) return false
         const job = this.current()
         if (!job) return false
         const stored = payload(job)
@@ -619,36 +652,36 @@ export class BackupRunner<E, R = never> extends LifecycleCapability {
       return { rescheduleAt: at }
     }
   }
-  async dispose() {
-    this.stopped = true
-    const owners = [...this.owned.values()]
-    for (const owner of owners) owner.controller?.abort()
-    const settled = await Promise.allSettled([
-      ...this.operations,
-      ...owners.map((owner) => owner.pending),
-      this.restoring,
-      this.gate,
-    ])
-    const operationCauses = settled.flatMap((outcome) =>
-      outcome.status === "rejected"
-        ? [
-            Cause.isCause(outcome.reason)
-              ? outcome.reason
-              : Cause.die(outcome.reason),
-          ]
-        : []
-    )
-    const causes = [
-      ...operationCauses,
-      ...owners.flatMap((owner) => {
-        if (owner.state.phase !== "failed") return []
-        const error = owner.state.error
-        const cause = Cause.isCause(error) ? error : Cause.die(error)
-        // The requested cancellation is expected; failed native cleanup is not.
-        return Cause.hasDies(cause) || Cause.hasFails(cause) ? [cause] : []
-      }),
-    ]
-    if (causes.length)
-      throw Cause.fromReasons(causes.flatMap((cause) => cause.reasons))
+  dispose() {
+    return this.lifetime.dispose(async () => {
+      const owners = [...this.owned.values()]
+      for (const owner of owners) owner.controller?.abort()
+      const settled = await Promise.allSettled([
+        ...this.operations,
+        ...owners.map((owner) => owner.pending),
+        this.gate,
+      ])
+      const operationCauses = settled.flatMap((outcome) =>
+        outcome.status === "rejected"
+          ? [
+              Cause.isCause(outcome.reason)
+                ? outcome.reason
+                : Cause.die(outcome.reason),
+            ]
+          : []
+      )
+      const causes = [
+        ...operationCauses,
+        ...owners.flatMap((owner) => {
+          if (owner.state.phase !== "failed") return []
+          const error = owner.state.error
+          const cause = Cause.isCause(error) ? error : Cause.die(error)
+          // The requested cancellation is expected; failed native cleanup is not.
+          return Cause.hasDies(cause) || Cause.hasFails(cause) ? [cause] : []
+        }),
+      ]
+      if (causes.length)
+        throw Cause.fromReasons(causes.flatMap((cause) => cause.reasons))
+    })
   }
 }

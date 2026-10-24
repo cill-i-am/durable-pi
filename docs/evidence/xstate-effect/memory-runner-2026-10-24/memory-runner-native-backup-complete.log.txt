@@ -1,0 +1,4 @@
+$ node scripts/test-memory-backup-runtime.mjs
+B18 no-object-request recovery until 2026-10-24T19:29:28.444Z
+B18 native backup retained discovery, retry budgets, CAS, checkpoint identity, and second restart passed
+B18 native evidence: /var/folders/s2/80_kxn9s19s1gyb6ylqwdh680000gn/T/durable-pi-memory-backup-YG1I2q

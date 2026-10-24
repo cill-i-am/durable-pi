@@ -826,3 +826,61 @@ it("cold controller read failure preserves the existing exhausted exact cleanup 
   expect(cold.committed).toEqual([claim])
   expect(cold.step).not.toHaveBeenCalled()
 })
+
+it("revokes retained Backup leases and rejects post-close recovery before storage access", async () => {
+  const f = fixture()
+  const lease = await f.runner.armDiscovery()
+  await f.runner.dispose()
+  f.jobs.get = () => {
+    throw new Error("closed native job store")
+  }
+  f.storage.get = () => {
+    throw new Error("closed native controller store")
+  }
+  expect(lease.current()).toBe(false)
+  await f.runner.wake()
+  await f.runner.reconcile()
+  await expect(f.runner.recovery()).rejects.toThrow("stopped")
+  await expect(f.runner.armDiscovery()).rejects.toThrow("stopped")
+  await expect(f.runner.armRecovery()).rejects.toThrow("stopped")
+  await expect(f.runner.armSchedulerRecovery("epoch")).rejects.toThrow(
+    "stopped"
+  )
+  expect(await f.runner.retrySchedulerRecovery("epoch", lease)).toBe(false)
+})
+
+it.each([false, true])(
+  "retains compound storage settlement failure when closing (defect %s)",
+  async (defect) => {
+    const f = fixture(),
+      entered = gate(),
+      held = gate()
+    const failure = Cause.fromReasons([
+      Cause.makeFailReason("checked storage settlement"),
+      ...(defect ? [Cause.makeDieReason("native storage cleanup")] : []),
+      Cause.makeInterruptReason(77104),
+    ])
+    f.get.mockImplementationOnce(async () => {
+      entered.release()
+      await held.wait
+      throw failure
+    })
+    const admission = f.runner.armDiscovery().catch((error: unknown) => error)
+    await entered.wait
+    let disposed = false
+    const closing = f.runner
+      .dispose()
+      .catch((error: unknown) => error)
+      .finally(() => {
+        disposed = true
+      })
+    await new Promise((resolve) => setImmediate(resolve))
+    expect(disposed).toBe(false)
+    held.release()
+    for (const result of await Promise.all([admission, closing])) {
+      expect(Cause.isCause(result)).toBe(true)
+      if (!Cause.isCause(result)) throw new Error("Expected full native Cause")
+      expect(result.reasons).toEqual(failure.reasons)
+    }
+  }
+)

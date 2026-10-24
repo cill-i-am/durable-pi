@@ -586,8 +586,123 @@ it("does not admit native work when disposal wins a pending controller read", as
   })
   const callback = f.runner.onJob(f.context())
   await entered.wait
-  await f.runner.dispose()
+  let disposed = false
+  const closing = f.runner.dispose().then(() => {
+    disposed = true
+  })
+  await new Promise((resolve) => setImmediate(resolve))
+  expect(disposed).toBe(false)
   release.release()
-  await callback
+  await Promise.all([callback, closing])
   expect(f.step).not.toHaveBeenCalled()
 })
+
+it("joins cold restoration before disposing the Summary runner", async () => {
+  const f = fixture(),
+    entered = gate(),
+    held = gate()
+  f.restore.mockImplementation(() =>
+    Effect.promise(async () => {
+      entered.release()
+      await held.wait
+    })
+  )
+  const restoring = f.runner.restore()
+  await entered.wait
+  let disposed = false
+  const closing = f.runner.dispose().then(() => {
+    disposed = true
+  })
+  try {
+    await new Promise((resolve) => setImmediate(resolve))
+    expect(disposed).toBe(false)
+  } finally {
+    held.release()
+    await Promise.all([restoring, closing])
+  }
+  expect(f.push).not.toHaveBeenCalled()
+  expect(f.rearm).not.toHaveBeenCalled()
+})
+it("joins accepted Summary admission storage before its resources may close", async () => {
+  const f = fixture(),
+    entered = gate(),
+    held = gate()
+  f.get.mockImplementationOnce(async () => {
+    entered.release()
+    await held.wait
+    return undefined
+  })
+  const admission = f.runner.armDiscovery().catch((error: unknown) => error)
+  await entered.wait
+  let disposed = false
+  const closing = f.runner.dispose().then(() => {
+    disposed = true
+  })
+  try {
+    await new Promise((resolve) => setImmediate(resolve))
+    expect(disposed).toBe(false)
+  } finally {
+    held.release()
+    await Promise.all([admission, closing])
+  }
+  expect(f.push).not.toHaveBeenCalled()
+})
+
+it("rejects post-close Summary calls without reading disposed storage", async () => {
+  const f = fixture()
+  const deadline = await f.runner.armDiscovery(),
+    job = f.discovery()
+  await f.runner.dispose()
+  f.jobs.get = () => {
+    throw new Error("closed native job store")
+  }
+  f.get.mockImplementation(async () => {
+    throw new Error("closed native controller store")
+  })
+  expect(f.runner.discoveryCurrent(deadline)).toBe(false)
+  await f.runner.wake()
+  await f.runner.restore()
+  await f.runner.reconcile()
+  expect(await f.runner.onJob({ job, attempt: 1 })).toBeUndefined()
+  expect(await f.runner.onJobError({ job, attempt: 3 }, "late")).toBeUndefined()
+  await expect(f.runner.recovery()).rejects.toThrow("stopped")
+  await expect(f.runner.armDiscovery()).rejects.toThrow("stopped")
+  await expect(f.runner.armRecovery("epoch")).rejects.toThrow("stopped")
+  expect(await f.runner.retryRecovery("epoch", deadline)).toBe(false)
+})
+
+it.each([false, true])(
+  "retains compound storage settlement failure when closing (defect %s)",
+  async (defect) => {
+    const f = fixture(),
+      entered = gate(),
+      held = gate()
+    const failure = Cause.fromReasons([
+      Cause.makeFailReason("checked storage settlement"),
+      ...(defect ? [Cause.makeDieReason("native storage cleanup")] : []),
+      Cause.makeInterruptReason(77104),
+    ])
+    f.get.mockImplementationOnce(async () => {
+      entered.release()
+      await held.wait
+      throw failure
+    })
+    const admission = f.runner.armDiscovery().catch((error: unknown) => error)
+    await entered.wait
+    let disposed = false
+    const closing = f.runner
+      .dispose()
+      .catch((error: unknown) => error)
+      .finally(() => {
+        disposed = true
+      })
+    await new Promise((resolve) => setImmediate(resolve))
+    expect(disposed).toBe(false)
+    held.release()
+    for (const result of await Promise.all([admission, closing])) {
+      expect(Cause.isCause(result)).toBe(true)
+      if (!Cause.isCause(result)) throw new Error("Expected full native Cause")
+      expect(result.reasons).toEqual(failure.reasons)
+    }
+  }
+)

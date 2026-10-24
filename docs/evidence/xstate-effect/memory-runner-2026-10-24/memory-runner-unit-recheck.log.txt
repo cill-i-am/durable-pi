@@ -1,0 +1,14 @@
+$ vitest run --maxWorkers=2
+
+ RUN  v5.0.5 /Users/cillianbarron/.codex/worktrees/xstate-workspace/durable-pi
+
+
+ Test Files  330 passed (330)
+      Tests  3725 passed (3725)
+   Start at  20:59:07
+   Duration  121.74s (tests 60%, import 38%, transform 1%, setup 1%)
+
+     Import  1352 modules were evaluated 2667 times · 82.57s total, 38% of tracked time
+             ~14.63s faster with isolate: false — shared modules are evaluated once per worker instead of once per file
+             learn more: https://vitest.dev/guide/improving-performance#test-isolation
+

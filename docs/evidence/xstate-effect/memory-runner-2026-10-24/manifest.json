@@ -1,0 +1,120 @@
+{
+  "base": "68014921a907a0a0c36dbd878105a9d0c99f6a04",
+  "artifacts": [
+    {
+      "file": "memory-runner-before.log.txt",
+      "sha256": "381c300834fc6d9b5fdc80cc699a0ece0a308793998eba8a56fe202ab1608eda",
+      "source": "/private/tmp/memory-runner-before.log"
+    },
+    {
+      "file": "memory-runner-after-first.log.txt",
+      "sha256": "122460f6adaa1b907488cdf6b121d9072487b56707dd07aafcf0f71a66033534",
+      "source": "/private/tmp/memory-runner-after-first.log"
+    },
+    {
+      "file": "memory-runner-after-second.log.txt",
+      "sha256": "9dd576e3b34cd23d5d507e9a00ea060f45ad17386c7322798c1140fdb2061c4a",
+      "source": "/private/tmp/memory-runner-after-second.log"
+    },
+    {
+      "file": "memory-runner-after-host.log.txt",
+      "sha256": "1e011baf3d349b6d587a4645f9c7ad5050be7e30474aed6e1ecda9d441a595a1",
+      "source": "/private/tmp/memory-runner-after-host.log"
+    },
+    {
+      "file": "memory-runner-after-enqueue.log.txt",
+      "sha256": "cc70edccc8ecb0c0857a3b49dc33a56986cb74fd3649167b424a27d7f80eecdc",
+      "source": "/private/tmp/memory-runner-after-enqueue.log"
+    },
+    {
+      "file": "memory-runner-coalescing-diagnostic.log.txt",
+      "sha256": "44cf4f71e42bc50eaba64f7a2d58f59ed4420b1d1795a44ac6837af2fb82895d",
+      "source": "/private/tmp/memory-runner-coalescing-diagnostic.log"
+    },
+    {
+      "file": "memory-runner-after-generation.log.txt",
+      "sha256": "a0dfb30c1bd485de34b1470c23e286bca78fe467208d330b0627ccda28d3d625",
+      "source": "/private/tmp/memory-runner-after-generation.log"
+    },
+    {
+      "file": "memory-runner-storage-cause-before.log.txt",
+      "sha256": "a2ea99b35fab34115c7e79e31fe4efd75b51be98537aff40783b42ec80763671",
+      "source": "/private/tmp/memory-runner-storage-cause-before.log"
+    },
+    {
+      "file": "memory-runner-focused-final.log.txt",
+      "sha256": "900867cf4e96257b17a5ab208e818af7534671de327f15f7ea9038c04c4c7849",
+      "source": "/private/tmp/memory-runner-focused-final.log"
+    },
+    {
+      "file": "memory-runner-native-summary.log.txt",
+      "sha256": "83476503d7af6d2f90fe99c30b11b72459a80e7427fae1462fbe8c7429403e5f",
+      "source": "/private/tmp/memory-runner-native-summary.log"
+    },
+    {
+      "file": "memory-runner-native-summary-complete.log.txt",
+      "sha256": "9997f9631369eac28ea6a28ef7c1750cf152dcff6bd4df2940ac642c1e5a0bee",
+      "source": "/private/tmp/memory-runner-native-summary-complete.log"
+    },
+    {
+      "file": "memory-runner-native-backup-complete.log.txt",
+      "sha256": "007010b386f5680a8780abfcbc91cf7b787b71fed238b718e9949fe22fbd9e7a",
+      "source": "/private/tmp/memory-runner-native-backup-complete.log"
+    },
+    {
+      "file": "memory-runner-native-personal-complete.log.txt",
+      "sha256": "67cf7dbff6ac23f7da1c05a4d998975858bb3d0a6d8f78d22bbbf9771b438c19",
+      "source": "/private/tmp/memory-runner-native-personal-complete.log"
+    },
+    {
+      "file": "memory-runner-static-complete.log.txt",
+      "sha256": "8836b83692e5267af4f4a54f65e8282639ed9a4ba3af0aadd3b4ff48f9e1e5b9",
+      "source": "/private/tmp/memory-runner-static-complete.log"
+    },
+    {
+      "file": "memory-runner-unit-complete.log.txt",
+      "sha256": "936f336daeb42c2bb254dec7bfa5973ffabbda014946d012d6ed754ac38ae517",
+      "source": "/private/tmp/memory-runner-unit-complete.log"
+    },
+    {
+      "file": "memory-runner-worker-start-recheck.log.txt",
+      "sha256": "622c52abcd7256448d0470b4502cd588e3e745496b799779f8e94c22e8783077",
+      "source": "/private/tmp/memory-runner-worker-start-recheck.log"
+    },
+    {
+      "file": "memory-runner-unit-recheck.log.txt",
+      "sha256": "595381184028890d3eb736d4b6948a77c48009a57bc2002adb2c4318435661f9",
+      "source": "/private/tmp/memory-runner-unit-recheck.log"
+    },
+    {
+      "file": "memory-runner-build-complete.log.txt",
+      "sha256": "65e9465ff6434d5bc1153efeb2a200e09ce2cd6c5db9e3e1c107c8514e62e247",
+      "source": "/private/tmp/memory-runner-build-complete.log"
+    },
+    {
+      "file": "memory-runner-website-routes-complete.log.txt",
+      "sha256": "f282d7dba702934a4718e64c20cb9e74ff7048a4edab5d58fc5b60b31ffb9dfa",
+      "source": "/private/tmp/memory-runner-website-routes-complete.log"
+    },
+    {
+      "file": "memory-runner-workers-complete.log.txt",
+      "sha256": "966131d03ea22c728b583f4b3283582f9add2087b1cd6efee080d2d8fcb275c2",
+      "source": "/private/tmp/memory-runner-workers-complete.log"
+    },
+    {
+      "file": "memory-runner-publication-secrets.log.txt",
+      "sha256": "08a4dfbec9b9a1c8a654bcb9f3879fb6797f94195309753cdccfe8f7ffd6bdb7",
+      "source": "/private/tmp/memory-runner-publication-secrets.log"
+    }
+  ],
+  "sources": {
+    "src/memory/adapters/backup-lifecycle.ts": "6f1253b081c923989a6c5dde188a8a5bcb9b973805354647855f99b5a8d8ac63",
+    "src/memory/adapters/runner-host.ts": "f13e5d1592002427ff49433cc05d3a2cdfc1bf2683ce8e5c8fd01fdd530e73fc",
+    "src/memory/adapters/summary-lifecycle.ts": "82cac852111780a7f8db744f0663bc834f835a00ccfc12197d2cf8e8289e3f36",
+    "src/memory/runner-host.machine.ts": "cd79d83559f9d6d49e7ed302e0b93f1ed6bb54f21837c86e802a63626e2b6c24",
+    "tests/memory-backup-runner.test.ts": "bdae45dae0c92b23320e39a4c6b6105209fcad36785ab02d69fca05ac89963e3",
+    "tests/memory-runner-host.test.ts": "48ad8ee471b3ff393cbf6f8177cd7b9301a30566728e3bbf81e07a302b8e569f",
+    "tests/memory-summary-runner.test.ts": "bbbf3e7ce2d522a575745df296852049565fb29c7a573b67168f153d12b4788e",
+    "tests/runtime/memory-summary-worker.ts": "585ace36197a235e1af40059ae48615cf7176cc4f0c75634ba169d1b2c5dc153"
+  }
+}
