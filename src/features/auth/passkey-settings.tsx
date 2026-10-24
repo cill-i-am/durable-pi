@@ -56,14 +56,37 @@ function usePasskeys({ disabled, onBusyChange }: Props) {
     else if (editor) nameInput.current?.focus()
   }, [editor])
   useEffect(() => {
-    if (editor || pending || loading || !restoreFocus.current) return
+    if (editor || pending || loading || disabled || !restoreFocus.current)
+      return
     restoreFocus.current = false
-    const target = opener.current
-    if (target?.isConnected && !target.disabled) target.focus()
-    else if (addButton.current && !addButton.current.disabled)
-      addButton.current.focus()
-    else heading.current?.focus()
-  }, [editor, pending, loading])
+    const previous = opener.current
+    const target =
+      previous?.isConnected && !previous.disabled
+        ? previous
+        : addButton.current && !addButton.current.disabled
+          ? addButton.current
+          : heading.current
+    target?.focus()
+    // Drawer restores its popup on the next frame when the focused editor is
+    // removed. Restore the opener after that bounded native restoration, only
+    // while this same editor remains closed and the user has not moved focus.
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => {
+        const state = auth.actor?.getSnapshot()
+        const active = document.activeElement
+        if (
+          state?.status === "active" &&
+          state.context.editor === null &&
+          target?.isConnected &&
+          !(target instanceof HTMLButtonElement && target.disabled) &&
+          (active === document.body ||
+            active === target.closest('[role="dialog"]'))
+        )
+          target.focus()
+      })
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [editor, pending, loading, disabled, auth.actor])
   function edit(value: Editor, target: HTMLButtonElement) {
     opener.current = target
     auth.send({ type: "EDIT", editor: value })
